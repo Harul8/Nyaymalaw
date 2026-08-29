@@ -175,6 +175,50 @@ All work goes to **`origin` → https://github.com/Harul8/Nyaymalaw**.
 The corpus is gitignored and must stay that way — twelve files exceed GitHub's
 100MB hard limit and one is 3.9GB. Never `git add -f` under `legal_database/`.
 
+## The code graph — use it before scanning files
+
+**Status, measured 29 August 2026.** Narrow scope with the graph, then read the
+source. The graph may be stale or may not model a relationship; **when the graph
+and the source disagree, the source wins**, and an empty graph result means
+"not indexed" or "not statically visible", never "does not exist".
+
+| | |
+|---|---|
+| Graph | **WORKING** — 84 nodes, 1,878 edges, 25 files, 7 Leiden communities |
+| Semantic search (embeddings) | **NOT WORKING** — see below. Full-text search works and is used instead |
+| MCP tools | **Not loaded in a session started before `.mcp.json` existed.** Restart to get them; the CLI below works either way |
+
+```bash
+code-review-graph update --brief                      # after edits; hooks also do this
+code-review-graph search <term>                       # FTS over nodes
+code-review-graph query callers_of <qualified_name>   # also callees_of, imports_of,
+                                                      # importers_of, tests_for,
+                                                      # children_of, inheritors_of,
+                                                      # file_summary
+code-review-graph impact --file <path>                # blast radius
+code-review-graph dead-code                           # no callers / no test references
+code-review-graph architecture                        # communities and cohesion
+```
+
+`query` refuses an ambiguous name and lists candidates rather than guessing —
+re-run with the `qualified_name` it returns.
+
+**Embeddings are deliberately deferred, not forgotten.** `--provider local`
+crashes in the tool's venv (`OPENSSL_Uplink: no OPENSSL_Applink`) inside
+`SentenceTransformer` model loading — a torch/OpenSSL DLL conflict, not a
+code-review-graph defect, and it reproduces with the model already cached and
+fully offline. Chasing it is the wrong trade: the declared stack is OpenAI, so
+the fix is `code-review-graph embed --provider openai` once `NM_MODEL_API_KEY`
+is set. Until then, FTS covers lookup by name and keyword.
+
+**`igraph` and `jedi` are installed** into the tool venv, which removes two
+degraded paths: community detection now runs Leiden rather than a file-based
+fallback, and Python call resolution is enriched. Reinstalling the tool with
+`--force` and a different extras list **drops the extras not named** — install
+them together or they silently disappear.
+
+---
+
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph
 
