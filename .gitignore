@@ -31,8 +31,13 @@ build/
 # and must never be committed — matter state is sealed with them.
 .env
 .env.*
+!.env.example
 *.local
 .claude/settings.local.json
+
+# Generated at run time
+.nm/
+spec/prd/node_modules/
 
 # Stores written at runtime
 *.db

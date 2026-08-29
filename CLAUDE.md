@@ -9,13 +9,30 @@ for them. Every one exists because the same mistake recurred and cost real time.
 
 ## The authority chain
 
-`docs/PRD.md` → `docs/JOURNEY.md` → `docs/GOLDEN_SCENARIOS.md` →
-`docs/NM_Build_Plan.xlsx` → the code. A change that contradicts a document above
-it is wrong, or the document is — decide which before writing either.
+**Live documents — these bind, in this order.**
 
-`docs/DEFECT_REGISTER.md` holds 164 reproduced defects. **Read the recurring
-shapes at the top before designing a control**, because a new control that has
-one of those shapes is not new.
+| | |
+|---|---|
+| `docs/Nyaymalaw_PRD.docx` | **The specification, and the source of truth.** Code is the verified build output. Organised on the JOURNEY axis, not by topic, so a slice of work is a contiguous cut. Every feature carries DOES / NEVER / PRODUCES / EVAL — a feature that cannot fill all four goes to the parking list, not into the build |
+| `docs/Nyaymalaw_Project_Plan.xlsx` | Ten vertical slices over 26 weeks, 53 tasks, 56 evals, the cumulative-regression rule, the weekly error-analysis ritual, and the measured baseline |
+| `docs/BASELINE.md` | What the corpus actually holds, **measured**. Standing product decisions about coverage. No claim about the corpus is made without checking here first |
+| `docs/DEFECT_SHAPES.md` | The eleven shapes distilled from 164 reproduced defects, each with the check that refuses it. **Read before designing any control** |
+| `docs/GOLDEN_SET.md` | **25 conversations** on verified corpus authority — 31 anchors, 42 provisions, all read back. Tagged by suite, tier, area and **earliest slice**, so a run is a filter (`smoke` every commit, `slice-N` at a slice close, `full` on approval) rather than all 25 every time |
+
+**Archived — reference, not authority.** `docs/Archives/` holds the previous
+build's specifications: `PRD.md` (28 advocate tenets in D16), `JOURNEY.md` (the
+journey and its rubric), `GOLDEN_SCENARIOS.md`, `ARCHITECTURE.md`,
+`DEFECT_REGISTER.md` (all 164 entries in full), `BACKLOG.md`, `NM_Build_Plan.xlsx`.
+
+They are **mined, never reinstated wholesale.** The rule for moving something
+from `Archives/` into a live document: it comes with the check that makes it
+enforceable, or it stays archived. The previous build's failure was not bad
+rules — it was a hundred good rules with no runner, so they became aspirations.
+A rule you cannot run is not a requirement.
+
+**And every measured claim in `Archives/` is re-measured before it is relied
+on.** Three of them were checked on 29 August 2026 and were wrong — see
+`docs/BASELINE.md` §"What the archive got wrong".
 
 ---
 
@@ -30,7 +47,7 @@ cause, and analysed a twelve-year limitation on a trespass a day old.
 
 **The twelve measured the plumbing. The client drinks the water.**
 
-So the definition of done is `docs/JOURNEY.md` §5: a stage passes its own rubric
+So the definition of done is `docs/Archives/JOURNEY.md` §5: a stage passes its own rubric
 standalone, then the journey portfolio passes end to end with no hand-authored
 inter-stage state. Structural checks remain, as a **linter**. They are necessary
 and they are not the bar.
@@ -129,10 +146,14 @@ confidently:**
    in the chunks layer, absent from parents. **A zero result must name the index
    it came from** (`B-163`).
 
-2. **Presence is not completeness.** Acts are partially ingested and the
-   manifest records only that the Act exists. Specific Relief Act 1963: 13 of 44
-   sections. Muslim Women (Divorce) Act 1986: one of seven. BNSS 2023: 162 of
-   531 (`B-164`). **State coverage before relying on it.**
+2. **THREE STORES, THREE ANSWERS, NONE CANONICAL.** The same Act is held under
+   two id conventions — `the_specific_relief_act_1963` (13 sections) and
+   `UNION OF INDIA_1963_1_THE SPECIFIC RELIEF ACT, 1963` (**all 44**) — and
+   `legal.db` is a third view that agrees with neither (Limitation Act: declares
+   32, holds 169). **Query one store and you will report a gap that is not
+   there.** This superseded `B-164`, which recorded "Acts are partially
+   ingested" from the thin copy alone. **Never state coverage from one store.**
+   Figures live in `docs/BASELINE.md`, measured, with the store named.
 
 ---
 
@@ -153,3 +174,49 @@ All work goes to **`origin` → https://github.com/Harul8/Nyaymalaw**.
 
 The corpus is gitignored and must stay that way — twelve files exceed GitHub's
 100MB hard limit and one is 3.9GB. Never `git add -f` under `legal_database/`.
+
+<!-- code-review-graph MCP tools -->
+## MCP Tools: code-review-graph
+
+**This project has a knowledge graph. Start with the code-review-graph
+MCP tools to narrow scope, then read the source.** The graph is cheaper than scanning files and
+gives you structural context (callers, dependents, test coverage) that file search cannot.
+
+### When to use graph tools FIRST
+
+- **Exploring code**: `semantic_search_nodes_tool` or `query_graph_tool` instead of Grep
+- **Understanding impact**: `get_impact_radius_tool` instead of manually tracing imports
+- **Code review**: `detect_changes_tool` + `get_review_context_tool` instead of reading entire files
+- **Finding relationships**: `query_graph_tool` with callers_of/callees_of/imports_of/tests_for
+- **Architecture questions**: `get_architecture_overview_tool` + `list_communities_tool`
+
+### Verify in the source
+
+- Narrow scope with the graph, then read the source. Do not change code from graph output alone.
+- For any non-trivial change, read the implementation and the relevant tests before concluding.
+- Verify the exact source when touching behavior, database logic, migrations, retries, fallbacks,
+  recovery, or compatibility code.
+- When the graph and the source disagree, the source wins. The graph may be stale or may not
+  model that relationship.
+- An empty graph result can mean "not indexed" or "not statically visible", not "does not exist".
+
+### Key Tools
+
+| Tool | Use when |
+| ------ | ---------- |
+| `detect_changes_tool` | Reviewing code changes — gives risk-scored analysis |
+| `get_review_context_tool` | Need source snippets for review — token-efficient |
+| `get_impact_radius_tool` | Understanding blast radius of a change |
+| `get_affected_flows_tool` | Finding which execution paths are impacted |
+| `query_graph_tool` | Tracing callers, callees, imports, tests, dependencies |
+| `semantic_search_nodes_tool` | Finding functions/classes by name or keyword |
+| `get_architecture_overview_tool` | Understanding high-level codebase structure |
+| `refactor_tool` | Planning renames, finding dead code |
+
+### Workflow
+
+1. The graph auto-updates on file changes (via hooks).
+2. Use `detect_changes_tool` for code review.
+3. Use `get_affected_flows_tool` to understand impact.
+4. Use `query_graph_tool` pattern="tests_for" to check coverage.
+<!-- /code-review-graph MCP tools -->

@@ -21,14 +21,14 @@ Read in this order. Each is bound by the one above it.
 
 | | |
 |---|---|
-| [`docs/PRD.md`](docs/PRD.md) | What the product is and what "good" means. **D16 holds the 28 advocate-behaviour tenets.** |
-| [`docs/JOURNEY.md`](docs/JOURNEY.md) | The advocate's journey end to end, nine phases, and the three-layer rubric that closes each stage |
-| [`docs/GOLDEN_SCENARIOS.md`](docs/GOLDEN_SCENARIOS.md) | Six conversations, each built on a real judgement, together forcing ~21 principles. The gold eval |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Design intent, carried forward for reference rather than as a commitment |
-| [`docs/DEFECT_REGISTER.md`](docs/DEFECT_REGISTER.md) | **164 defects that were actually reproduced.** The part of the previous build worth keeping |
-| [`docs/NM_Build_Plan.xlsx`](docs/NM_Build_Plan.xlsx) | Stories, tenets and registers |
+| [`docs/Archives/PRD.md`](docs/Archives/PRD.md) | What the product is and what "good" means. **D16 holds the 28 advocate-behaviour tenets.** |
+| [`docs/Archives/JOURNEY.md`](docs/Archives/JOURNEY.md) | The advocate's journey end to end, nine phases, and the three-layer rubric that closes each stage |
+| [`docs/Archives/GOLDEN_SCENARIOS.md`](docs/Archives/GOLDEN_SCENARIOS.md) | Six conversations, each built on a real judgement, together forcing ~21 principles. The gold eval |
+| [`docs/Archives/ARCHITECTURE.md`](docs/Archives/ARCHITECTURE.md) | Design intent, carried forward for reference rather than as a commitment |
+| [`docs/Archives/DEFECT_REGISTER.md`](docs/Archives/DEFECT_REGISTER.md) | **164 defects that were actually reproduced.** The part of the previous build worth keeping |
+| [`docs/Archives/NM_Build_Plan.xlsx`](docs/Archives/NM_Build_Plan.xlsx) | Stories, tenets and registers |
 
-`docs/reference/` describes the build being replaced. It is a measured record of
+`docs/Archives/reference/` describes the build being replaced. It is a measured record of
 what that system did, not a design to follow.
 
 ---
@@ -49,7 +49,7 @@ Structural checks — layering, exception discipline, dead-guard detection — a
 **linter**. They are necessary and they are not the bar. Every one of them passed
 on the transcript that caused this rewrite.
 
-See [`docs/JOURNEY.md`](docs/JOURNEY.md) §5.
+See [`docs/Archives/JOURNEY.md`](docs/Archives/JOURNEY.md) §5.
 
 ---
 

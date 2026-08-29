@@ -1,0 +1,53 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nyaymalaw"
+version = "0.0.1"
+description = "An expert advocate, for practising advocates in India"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# The model adapters. Deliberately optional and per-provider: nothing in
+# nm/core may import any of these, and layercheck fails the build if it does.
+openai = ["openai>=1.40"]
+anthropic = ["anthropic>=0.40"]
+knowledge = ["openpyxl>=3.1"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.6",
+    "pylint>=3.0",
+    "openpyxl>=3.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["nm"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "class_a: no corpus, no model. Runs every commit, in seconds.",
+    "class_b: needs an answer to inspect. Asserted at runtime on every served turn.",
+    "class_c: needs the corpus. Runs on every ingest or index change.",
+    "class_d: needs a rubric and a judge model. APPROVED RUNS ONLY.",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "B"]
+
+[tool.pylint.messages_control]
+# The rename sweep. pyflakes does not find these, and a stale call site after a
+# rename raised NameError on every matter for weeks in the previous build.
+disable = "all"
+enable = "E0601,E0606,E1101"
