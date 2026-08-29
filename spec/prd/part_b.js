@@ -7,7 +7,7 @@ const A = (...x) => x.forEach((e) => Array.isArray(e) ? e.forEach((y) => out.pus
 
 A(h1('Part 3 — The journey, stage by stage'));
 
-A(p('This is the spine of the document and the axis the build is sliced on. Nine phases, thirty-eight features, each in the four-field contract.'));
+A(p('This is the spine of the document and the axis the build is sliced on. Nine phases, and every feature in the four-field contract. **The count is deliberately not restated here** — `spec/features.yaml` is generated from this document and holds the authoritative number, and a count written twice is a count that goes stale.'));
 
 A(callout('**This journey is a MAP, not a RAIL.** NM does not run a phase machine. The stages below are how we build and test; the product itself works a **priority queue over gaps**, recomputed every turn across the whole file (Part 5). A phase machine owns the sequence, so it fights an advocate who wants to go elsewhere, and it must always have a next step, so it manufactures questions to stay in motion. **Every stage therefore carries the same negative check: did NM refuse to follow the advocate somewhere else?** A build that passes the stages by railroading the advocate through them has failed the whole design.'));
 

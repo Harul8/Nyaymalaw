@@ -87,6 +87,19 @@ MUTATIONS = [
      '        "bounded_by": "thread_count",',
      "test_the_boards_are_bounded_by_row_count_not_turns", "E-063"),
 
+    ("the union collapsed to a single store (defect B-164)",
+     "nm/adapters/evidence/corpus.py",
+     "            for pattern in patterns:",
+     "            for pattern in [p for p in patterns if not p.startswith('%')]:",
+     "test_the_union_retrieves_a_section_the_thin_store_does_not_hold", "E-002b"),
+
+    ("substance admitted before the screens (stop-ship #2)",
+     "nm/core/turn.py",
+     "        screens = self._run_screens(matter, turn, metrics)",
+     "        matter, _pre = self._admit_facts(matter, turn)\n"
+     "        screens = self._run_screens(matter, turn, metrics)",
+     "test_the_screens_run_before_any_substance_is_admitted", "E-016"),
+
     ("another advocate's matter disclosed",
      "nm/edge/api.py",
      "    if m is None or m.advocate_id != advocate_id:",

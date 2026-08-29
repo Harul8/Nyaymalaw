@@ -384,3 +384,48 @@ def test_another_advocates_matter_is_not_disclosed(client):
     assert r.status_code == 404
     assert "no such matter" in r.json()["detail"], \
         "the response must not distinguish 'not yours' from 'does not exist'"
+
+
+# ============================== THE SCREEN BOUNDARY =======================
+
+@pytest.mark.eval_id("E-016")
+def test_the_screens_run_before_any_substance_is_admitted(tmp_path):
+    """STOP-SHIP #2, found by external review of the PRD.
+
+    ADMIT used to extract, integrate and bind BEFORE the gating screens. That
+    both retains substance on an uncleared file and -- because extraction goes
+    through a model provider -- sends privileged client material to a third
+    party before the matter is cleared to hold it.
+
+    The screen must be reached with the matter still empty.
+    """
+    engine, _ = build(tmp_path)
+    seen: list[int] = []
+    original = engine._run_screens
+
+    def spy(matter, turn, metrics):
+        seen.append(len(matter.facts))
+        return original(matter, turn, metrics)
+
+    engine._run_screens = spy
+    engine.run(TurnInput(advocate_id="adv",
+                         message="we act for the accused in a cheque matter"))
+    assert seen == [0], (
+        "the screens must run before ANY fact is admitted; saw "
+        f"{seen} fact(s) already on the matter")
+
+
+@pytest.mark.eval_id("E-016")
+def test_an_unscreened_matter_says_so_rather_than_reading_as_screened(tmp_path):
+    """A screen that has not run must never be indistinguishable from a pass.
+
+    The conflict, competence and engagement screens are slice 10. Until they
+    exist, every turn must RECORD that it proceeded unscreened -- silence here
+    is defect shape S1 at its most consequential.
+    """
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(advocate_id="adv",
+                               message="we act for the accused in a cheque matter"))
+    rules = {v.rule for v in out.metrics.violations}
+    assert "B3" in rules, (
+        "a turn that was not screened must record that it was not screened")

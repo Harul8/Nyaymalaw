@@ -565,7 +565,8 @@ A(p('A turn has three phases separated by two hard boundaries. **Every rule belo
 A(table(
   ['Phase', 'What happens', 'What is true at the end of it'],
   [
-    ['**ADMIT**', 'Authenticate · classify the route · take in documents · extract, integrate and bind facts · run the screens that gate substance.', 'Everything that may enter the file has entered, and everything that must not has been refused. **No derivation has run.**'],
+    ['**ADMIT-A**', 'Authenticate · classify the route · minimal emergency triage on names and danger only · **names-only conflict screen** · competence, engagement and scope.', 'The matter is cleared to hold substance, or it is not. **Nothing substantive has been read, retained, or sent to a model provider.**'],
+    ['**ADMIT-B**', 'Take in documents · extract · integrate facts · bind to threads.', 'Everything that may enter the file has entered, and everything that must not has been refused. **No derivation has run.**'],
     ['**DERIVE**', 'Invalidate dependents · recompute in dependency order · request and verify evidence · cross-file passes · the gap queue · assemble the Answer, board and summary · assert invariants.', 'A complete, screened, invariant-checked Answer object exists in memory. **Nothing has been shown and nothing has been persisted.**'],
     ['**EMIT**', 'Commit state and metrics · release bytes to the transport.', 'The advocate has the answer and the file records it. **After this point nothing can be unsaid.**'],
   ],
@@ -577,7 +578,7 @@ A(spacer(140));
 A(table(
   ['Boundary', 'The rule', 'The defect it exists to refuse'],
   [
-    ['**THE SCREEN BOUNDARY** — between ADMIT and DERIVE', 'No substantive derivation runs on a matter whose gating screens have not returned. An **incomplete** screen is not a passed screen.', 'Substance merged onto a file no conflict check had cleared; merits work begun before posture was settled.'],
+    ['**THE SCREEN BOUNDARY** — inside ADMIT, between A and B', 'No substance is READ, RETAINED, or SENT TO A PROVIDER on a matter whose screens have not returned. An **incomplete** screen is not a passed screen. Only tenet 6\'s protective steps cross it, and they carry no merits and retain nothing.', 'Substance merged onto a file no conflict check had cleared — and, in the first draft of this very section, document content extracted through a model provider before the matter was cleared to hold it.'],
     ['**THE BYTE BOUNDARY** — between DERIVE and EMIT', '**Not one byte of model-generated prose reaches the transport until every screen governing it has returned and every invariant has been asserted.**', 'The duty screen running after the advice it guards had been shown. The urgency lead printing unscreened model text first. Both times the type was structured — **a type constrains shape, not content, and it does not constrain ordering at all.**'],
   ],
   [1900, 3900, 3560],
@@ -594,30 +595,32 @@ A(p('**A step\'s failure behaviour is part of its specification.** A sequence th
 A(table(
   ['#', 'Phase', 'Step', 'On failure'],
   [
-    ['1', 'ADMIT', 'Authenticate; resolve the advocate identity and firm.', 'Refuse the turn. Disclose nothing about which matters exist.'],
-    ['2', 'ADMIT', '**Classify the route** — matter or non-matter — and infer the mode. State the reading in one line.', 'Ambiguity resolves to **matter**, because a full workup on a question is wasteful while a matter read as a greeting is negligent. The reading is stated so it can be corrected.'],
-    ['3', 'ADMIT', 'Take in documents; extract; gate on confidence; always confirm dates, amounts, names and roles.', 'Extraction failure is a **visible gap**, never an empty result. An unreadable document contributes no facts and says so.'],
-    ['4', 'ADMIT', 'Integrate facts — surface conflicts, detect corrections, mark materiality.', 'A conflict is never resolved to proceed. It is carried.'],
-    ['5', 'ADMIT', 'Bind to threads. **Propose merges, never perform them.**', 'An unbindable document contributes no facts and never defaults to a thread.'],
-    ['6', 'ADMIT', '**The gating screens:** urgency triage, conflict, competence, engagement and scope.', '**A screen that could not run is `not_assessed`, which is not `clear`.** It blocks what it guards and says so. An outage in one screen fails that screen, never the turn.'],
-    ['—', '', '**⟨ SCREEN BOUNDARY ⟩**', 'Nothing below runs on unscreened substance.'],
-    ['7', 'DERIVE', 'Invalidate the dependents of every changed material fact.', 'A dependency that cannot be resolved marks its dependents stale rather than leaving them confidently current.'],
-    ['8', 'DERIVE', 'Recompute dirty derivations in dependency order. **Blocking gates short-circuit** — an unresolved posture means the thread\'s downstream derivations are not computed at all.', 'A short-circuit is a **question**, not a silent omission. Nothing wrong is generated and nothing is paid for.'],
-    ['9', 'DERIVE', 'Emit `EvidenceNeed`s; receive verified `Finding`s. **Bounded rounds** (§7.3.5).', 'Adapter failure **fails the need, not the turn.** The gap is visible in the answer.'],
-    ['10', 'DERIVE', 'Cross-file, serially: adversarial pass, cross-thread exposure, salvage, selection.', 'Cross-thread exposure is reported **or expressly returned as none**. Silence is not a pass.'],
-    ['11', 'DERIVE', 'Gap queue → the single highest-value next action.', 'An empty queue is a valid outcome and produces a turn that says so in a line.'],
-    ['12', 'DERIVE', 'Assemble the Answer, board projection and case summary — all three derived from the same state.', 'An element that is none of the four permitted kinds cannot be constructed.'],
-    ['13', 'DERIVE', '**Assert invariants.** Class-B checks run here, on the assembled object.', 'A **grounding** violation gates the output. Every other violation is recorded in `TurnMetrics.violations` and the answer still ships.'],
+    ['1', 'ADMIT-A', 'Authenticate; resolve the advocate identity and firm.', 'Refuse the turn. Disclose nothing about which matters exist.'],
+    ['2', 'ADMIT-A', '**Classify the route** — matter or non-matter — and infer the mode. State the reading in one line.', 'Ambiguity resolves to **matter**, because a full workup on a question is wasteful while a matter read as a greeting is negligent. The reading is stated so it can be corrected.'],
+    ['3', 'ADMIT-A', '**Minimal emergency triage** — danger, liberty, an irreversible step. On NAMES AND THE DANGER ONLY.', 'Tenet 6 is prior to tenet 3: an advocate whose client is being arrested tonight is not told to wait for a conflict check. **Limited to naming the danger, the protective step, its owner and time, and a referral.** Merits, strategy and drafting are refused, and nothing substantive is retained.'],
+    ['4', 'ADMIT-A', '**Names-only conflict screen** — parties, counterparties, related entities. Nothing else is read.', '**An incomplete screen never clears.** A registry unreadable in part produces `incomplete`, which blocks what it guards. An empty registry is reported as empty — a gate that has never refused is not evidence.'],
+    ['5', 'ADMIT-A', 'Competence, engagement and scope screens.', 'Recorded on the matter and sticky. A limit released by a human keeps the finding visible.'],
+    ['—', '', '**⟨ SCREEN BOUNDARY — nothing below runs, and NO PROVIDER CALL is made, until the screens have returned ⟩**', 'This is the boundary the first draft of this document got wrong: it extracted and bound documents BEFORE screening, which both retained substance on an uncleared file and sent privileged content to a model provider.'],
+    ['6', 'ADMIT-B', 'Take in documents; extract; gate on confidence; always confirm dates, amounts, names and roles.', 'Extraction failure is a **visible gap**, never an empty result. An unreadable document contributes no facts and says so.'],
+    ['7', 'ADMIT-B', 'Integrate facts — surface conflicts, detect corrections, mark materiality.', 'A conflict is never resolved to proceed. It is carried.'],
+    ['8', 'ADMIT-B', 'Bind to threads. **Propose merges, never perform them.**', 'An unbindable document contributes no facts and never defaults to a thread.'],
+    ['9', 'DERIVE', 'Invalidate the dependents of every changed material fact.', 'A dependency that cannot be resolved marks its dependents stale rather than leaving them confidently current.'],
+    ['10', 'DERIVE', 'Recompute dirty derivations in dependency order. **Blocking gates short-circuit** — an unresolved posture means the thread\'s downstream derivations are not computed at all.', 'A short-circuit is a **question**, not a silent omission. Nothing wrong is generated and nothing is paid for.'],
+    ['11', 'DERIVE', 'Emit `EvidenceNeed`s; receive verified `Finding`s. **Bounded rounds** (§7.3.5).', 'Adapter failure **fails the need, not the turn.** The gap is visible in the answer.'],
+    ['12', 'DERIVE', 'Cross-file, serially: adversarial pass, cross-thread exposure, salvage, selection.', 'Cross-thread exposure is reported **or expressly returned as none**. Silence is not a pass.'],
+    ['13', 'DERIVE', 'Gap queue → the single highest-value next action.', 'An empty queue is a valid outcome and produces a turn that says so in a line.'],
+    ['14', 'DERIVE', 'Assemble the Answer, board projection and case summary — all three derived from the same state.', 'An element that is none of the four permitted kinds cannot be constructed.'],
+    ['15', 'DERIVE', '**Assert invariants.** Class-B checks run here, on the assembled object.', 'A **grounding** violation gates the output. Every other violation is recorded in `TurnMetrics.violations` and the answer still ships.'],
     ['—', '', '**⟨ BYTE BOUNDARY ⟩**', 'Nothing above this line has been shown or saved. Nothing below can be undone.'],
-    ['14', 'EMIT', '**Commit** — state and metrics, atomically (§7.3.4).', 'A failed commit fails the turn *before* anything is shown. The advocate never receives advice the file does not record.'],
-    ['15', 'EMIT', 'Release to the transport.', 'A transport failure after commit is a delivery problem, not a state problem: the turn is recoverable on reconnect.'],
+    ['16', 'EMIT', '**Commit** — state and metrics, atomically (§7.3.4).', 'A failed commit fails the turn *before* anything is shown. The advocate never receives advice the file does not record.'],
+    ['17', 'EMIT', 'Release to the transport.', 'A transport failure after commit is a delivery problem, not a state problem: the turn is recoverable on reconnect.'],
   ],
   [400, 900, 4600, 3460],
 ));
 
 A(spacer(140));
 
-A(p('**Per-thread recomputation in step 8 runs in parallel; everything cross-file in step 10 runs after it, serially**, because each cross-file pass needs every thread settled to be correct.'));
+A(p('**Per-thread recomputation in step 10 runs in parallel; everything cross-file in step 12 runs after it, serially**, because each cross-file pass needs every thread settled to be correct.'));
 
 A(h3('7.3.3  Streaming, and why it does not move the byte boundary'));
 
@@ -627,7 +630,7 @@ A(table(
   ['Rule', 'Why'],
   [
     ['**What streams is the assembled Answer, never raw model output.**', 'The model produces content *into* the Answer; the Answer is what reaches the transport. A step that pipes provider tokens straight through has moved the byte boundary and is a defect however good it looks.'],
-    ['**Nothing streams before step 13 has completed for the elements being streamed.**', 'Progressive disclosure of *screened* content is fine. Disclosure of content whose screen has not returned is the exact measured defect.'],
+    ['**Nothing streams before the invariant assertion has completed for the elements being streamed.**', 'Progressive disclosure of *screened* content is fine. Disclosure of content whose screen has not returned is the exact measured defect.'],
     ['**Progress is not content.** While DERIVE runs, what may be shown is which stage is running — not what it is producing.', 'This gives the advocate the responsiveness streaming is for, without putting unscreened prose on the wire.'],
     ['**A streamed call is a call.** Tokens, cost and latency are recorded identically to a non-streamed one.', 'A streamed turn once recorded `llm_calls: 0`, which made an entire turn invisible to the cost baseline.'],
     ['**A stream that dies mid-flight leaves committed state**, because commit precedes emission.', 'A turn that wrote its whole opinion and then died on a context reset left the advocate with nothing and the file with nothing.'],
@@ -639,7 +642,7 @@ A(spacer(140));
 
 A(h3('7.3.4  Atomicity, restart and idempotency'));
 
-A(callout('**A turn commits once, at step 14, or not at all.** There is no state in which half a turn has been applied — no thread created without its posture, no fact integrated without the derivations that depend on it marked stale, no urgency raised without its register entry.'));
+A(callout('**A turn commits once, in EMIT, or not at all.** There is no state in which half a turn has been applied — no thread created without its posture, no fact integrated without the derivations that depend on it marked stale, no urgency raised without its register entry.'));
 
 A(
   bullet('**The commit point precedes emission.** The advocate never receives advice that the file does not record. This ordering is the opposite of the intuitive one and it is deliberate: it is better to fail before showing than to show and fail to save.'),
@@ -655,7 +658,7 @@ A(p('Three loops in a turn can run away. Each has a declared bound, and **reachi
 A(table(
   ['Bound', 'What it limits', 'What happens when it is reached'],
   [
-    ['**Evidence rounds**', 'The need → fulfil → recompute cycle in steps 8–9.', 'Recomputation stops and **the unfulfilled needs become visible gaps in the answer**. It never proceeds as though the evidence had been found. The bound is a design constant with no measurement behind it yet — see Part 8 open questions.'],
+    ['**Evidence rounds**', 'The need → fulfil → recompute cycle in steps 10–11.', 'Recomputation stops and **the unfulfilled needs become visible gaps in the answer**. It never proceeds as though the evidence had been found. The bound is a design constant with no measurement behind it yet, and it is tracked in the baseline as such rather than in prose.'],
     ['**Model calls per turn**', 'Total across all tiers.', 'Recorded and surfaced. The previous build measured 58 calls on a five-dispute file, and document intake, the adversarial pass and selection are all additive to that.'],
     ['**Context budget per call**', 'Declared per tier at the port (§7.4.4).', 'A typed error, never a truncation. **Silent truncation produces an answer that looks complete and was reasoned from a fraction of the material.**'],
   ],
@@ -716,7 +719,7 @@ A(table(
     ['**Prompt caching is a port concept with an adapter-specific implementation**', 'The port marks a cacheable prefix; an adapter that supports caching uses it, one that does not **no-ops silently and reports zero cache hits**. The product must not behave differently, only cost differently.'],
     ['**Token and cost accounting is normalised**', 'The port returns `{in, out, cost}` in one shape. Provider-native extras are carried opaquely for diagnostics and are never read by the core. Otherwise `TurnMetrics` becomes provider-shaped and the cost baseline stops being comparable across a switch.'],
     ['**Everything switchable lives in `.env`**', '`NM_MODEL_PROVIDER` · `NM_MODEL_ROUTINE` · `NM_MODEL_HARD` · `NM_MODEL_JUDGE` · `NM_MODEL_BASE_URL` · `NM_MODEL_API_KEY` · `NM_MODEL_PROVIDER_<TIER>` to point one tier at a different provider without moving the rest. **Each tier variable holds a pinned dated snapshot, never a floating alias** (§7.4.3). `NM_EMBED_MODEL` is present but is **read and verified against the indices, not chosen** (§7.4.2 carve-out). **No other file changes when the provider changes.**'],
-    ['**Failure and rate-limit behaviour is normalised too**', 'Providers signal rate limits, context overflow and content refusals differently. The port raises the same small set of typed errors so the retry, degrade and fail-the-need-not-the-turn policies in §7.5 hold identically whichever adapter is live.'],
+    ['**Failure and rate-limit behaviour is normalised too**', 'Providers signal rate limits, context overflow and content refusals differently. The port raises the same small set of typed errors so the retry, degrade and fail-the-need-not-the-turn policies in §7.4.4 hold identically whichever adapter is live.'],
   ],
   [2700, 6660],
 ));
@@ -1021,7 +1024,7 @@ A(p('`docs/GOLDEN_SET.md` §5 maps every principle to the scenarios that force i
 
 A(spacer(140));
 
-A(callout('**The golden set is sampled, never authored — and these six are not yet a sampled set.** They are anchored on verified authority, which makes them a far better starting point than composed scenarios on unverified authority, but the rule stands: **evaluation material for any extraction or judgement task is drawn by random sample from real matters and hand-vetted.** A composed example may illustrate; it may not support a measurement. **The gold set\'s provenance is recorded — sampling method, seed, size, and who vetted it.**'));
+A(callout('**The golden set is sampled, never authored — and the encoded scenarios are not yet a sampled set.** They are anchored on verified authority, which makes them a far better starting point than composed scenarios on unverified authority, but the rule stands: **evaluation material for any extraction or judgement task is drawn by random sample from real matters and hand-vetted.** A composed example may illustrate; it may not support a measurement. **The gold set\'s provenance is recorded — sampling method, seed, size, and who vetted it.**'));
 
 A(h2('8.5  Judge policy'));
 

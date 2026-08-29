@@ -129,6 +129,30 @@ in the type.
 
 ---
 
+## The previous build — `C:/Users/rahul/Agentified NM`
+
+**No code comes from there. Not a file, not a function, not a pattern.**
+That tree is the build that reached 217 stories and produced advice an
+advocate could not use. Importing any of it reintroduces the assumptions
+that failed, and they are not obvious on inspection — that is what made
+them expensive the first time.
+
+**Data and measurements outside `legal_database/` may be used.** Two
+artefacts were surveyed on 29 August 2026 and both were declined:
+
+| Artefact | Verdict |
+|---|---|
+| `.nm-artefacts/dense/` — 437MB, 284,447 provisions | **REFUSED.** Built with `sentence-transformers/all-MiniLM-L6-v2` at **384 dimensions**; this product queries with `text-embedding-3-large`. Querying an index across embedding models does not error — it returns plausible, confidently wrong neighbours, and every answer downstream inherits that silently |
+| `.nm-artefacts/provisions.json` — 170MB, 292,986 provisions | **NOT TAKEN.** It is a re-extraction of the same source `chunks.db` already serves. Adding a fourth store of one dataset is the "three stores, three answers" defect, not a fix for it |
+
+**The dense index is only knowable as unusable because it shipped an
+`identity.json`.** That is the entire argument for defect shape S11, and it
+is now enforced by `nm/knowledge/artefact.py` — using that real artefact as
+the counterexample its test must reject, because a synthetic fixture would
+prove only that the check compiles.
+
+---
+
 ## The corpus
 
 `legal_database/` is **22GB, gitignored, and attached as a directory junction**

@@ -85,8 +85,19 @@ def test_layercheck_allows_core_importing_ports():
 # --------------------------------------------------------------------------
 
 def test_trace_passes_on_the_real_spec():
+    """Trace must pass on a CURRENT spec.
+
+    The first version of this test ran trace against whatever happened to be on
+    disk, and failed twice -- not because trace was wrong, but because a
+    generator had been edited and the spec not yet regenerated. A test that
+    asserts on live repo state it does not control is testing the author's
+    editing sequence rather than the tool. So it establishes its own
+    precondition first, then asserts.
+    """
+    regen = run("export_spec.py")
+    assert regen.returncode == 0, f"export_spec failed:\n{regen.stdout}{regen.stderr}"
     r = run("trace.py", "--skip-regen")
-    assert r.returncode == 0, f"trace already failing:\n{r.stdout}"
+    assert r.returncode == 0, f"trace failing on a freshly generated spec:\n{r.stdout}"
     assert "TRACE OK" in r.stdout
 
 

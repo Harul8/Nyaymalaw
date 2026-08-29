@@ -147,6 +147,21 @@ def read_posture(message: str) -> tuple[Role, Basis]:
 # ============================================================ the turn =====
 
 
+@dataclass(frozen=True)
+class ScreenResult:
+    """The outcome of ADMIT-A. THREE STATES, not two.
+
+    `clear` false with `assessed` false means the screen COULD NOT RUN, which
+    is not the same as a refusal and is never the same as a pass.
+    """
+
+    clear: bool
+    assessed: bool
+    reason: str | None = None
+    blocking_question: str = ""
+    urgent: bool = False
+
+
 class TurnEngine:
     """Pure orchestration. Every dependency arrives as a port."""
 
@@ -200,10 +215,34 @@ class TurnEngine:
                               matter, metrics, replayed=True)
 
         expected_version = matter.version
+
+        # ---- ADMIT-A: screens, on names and danger only --------------------
+        # An external review found this code doing what the first draft of the
+        # spec described: extracting and binding substance BEFORE the screens.
+        # That both retains material on an uncleared file and sends privileged
+        # content to a model provider before the matter is cleared to hold it.
+        screens = self._run_screens(matter, turn, metrics)
+        if not screens.clear:
+            # An INCOMPLETE screen is not a passed screen. The block is the
+            # answer, and no substance is read on the way to producing it.
+            answer = Answer(
+                route=route, mode=mode, mode_statement=mode_statement,
+                elements=(Element(
+                    kind=ElementKind.QUESTION,
+                    text=screens.blocking_question,
+                    signal=Signal.EMERGENCY if screens.urgent else Signal.NONE),),
+                blocked=True, blocked_reason=screens.reason)
+            metrics.outcome = Outcome.BLOCKED
+            metrics.latency_ms = int((time.perf_counter() - started) * 1000)
+            self._store.record_metrics(metrics.as_dict())
+            return TurnOutput(turn.turn_id, answer, None, metrics)
+
+        # ======== SCREEN BOUNDARY: no substance is read, retained, or sent to
+        # a provider above this line.
+
+        # ---- ADMIT-B: substance ---------------------------------------------
         matter, thread = self._admit_facts(matter, turn)
         metrics.stages["admit_ms"] = int((time.perf_counter() - t0) * 1000)
-
-        # ======== SCREEN BOUNDARY: nothing below runs on unscreened substance.
 
         # ---------------- DERIVE ----------------
         t1 = time.perf_counter()
@@ -263,6 +302,24 @@ class TurnEngine:
         return TurnOutput(turn.turn_id, answer, matter, metrics)
 
     # ------------------------------------------------------------ helpers ---
+    def _run_screens(self, matter: Matter, turn: TurnInput,
+                     metrics: TurnMetrics) -> ScreenResult:
+        """ADMIT-A. Names and danger only.
+
+        SLICE 1 SCOPE, STATED HONESTLY: the conflict registry, competence and
+        engagement screens are features B3-B5 and are NOT BUILT (slice 10).
+        This method therefore clears every matter, and records that it did so
+        WITHOUT having screened -- because a screen that has not run must never
+        be indistinguishable from one that passed.
+
+        When B3-B5 land, they land here, above the screen boundary.
+        """
+        metrics.violate(
+            "B3", "conflict, competence and engagement screens are not built "
+                  "(slice 10). This matter was NOT screened before substance "
+                  "was admitted.")
+        return ScreenResult(clear=True, assessed=False)
+
     def _load_or_create(self, turn: TurnInput) -> Matter:
         if turn.matter_id:
             existing = self._store.load(turn.matter_id)

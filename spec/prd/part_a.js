@@ -39,7 +39,7 @@ A(p('This document keeps the same content and **re-indexes it on the journey axi
 
 A(h2('0.2  The unit of this document: the four-field feature contract'));
 
-A(p('Every feature below is stated in exactly four fields. A feature that cannot fill all four is not ready to be specified, and goes to the parking list in Appendix D rather than into the build.'));
+A(p('Every feature below is stated in **four required fields and one conditional fifth**. A feature that cannot fill all four required fields is not ready to be specified, and goes to the parking list in Appendix D rather than into the build. The fifth, **MUST FAIL**, carries the counterexample the check has to reject; it is conditional only in form — in practice every feature that has a check has one, because a check that has never rejected anything is an unexercised claim.'));
 
 A(table(
   ['Field', 'What it holds', 'Why it is mandatory'],
@@ -135,7 +135,7 @@ A(table(
   [
     ['Advising litigants directly', 'The product is sold to practising advocates and speaks to an advocate. A consumer mode would need a different register, different duties and a different liability position.'],
     ['Jurisdictions other than Telangana and the Union of India', 'The corpus is scoped to them. An answer about Kerala law drawn from this corpus is confidently wrong and nothing downstream catches it.'],
-    ['Deciding anything that is the client\'s to decide', 'NM gives a committed view and the advocate and client decide. See tenet 20 and Part 5.7.'],
+    ['Deciding anything that is the client\'s to decide', 'NM gives a committed view and the advocate and client decide. See tenet 20 and §5.5.'],
     ['Filing, e-filing and court integration', 'Part 3 Phase F specifies the controls around filing; the mechanics of any court portal are an integration, sequenced after the advising core.'],
     ['Billing, time recording and practice management', 'Adjacent products. NM records cost against estimate where it affects advice (tenet 27) and does nothing else with money.'],
   ],

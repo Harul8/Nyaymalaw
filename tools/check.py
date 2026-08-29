@@ -9,7 +9,10 @@ WHAT IT RUNS, AND WHY IN THIS ORDER
                    after it is worthless if the core has acquired I/O.
  2. export_spec -- regenerate the machine-readable spec from the generators.
  3. trace       -- spec <-> code <-> eval results. Catches status inflation.
- 4. ruff        -- style and obvious defects.
+ 4. speccheck   -- the PRD against ITSELF: counts, references, required
+                   fields, unique ids, status vocabulary. trace.py checks
+                   spec-against-code; this checks spec-against-spec.
+ 5. ruff        -- style and obvious defects.
  5. pylint E0601/E0606 -- the rename sweep. pyflakes does not find these, and
                    a stale call site after a rename raised NameError on every
                    matter for weeks in the previous build.
@@ -65,6 +68,8 @@ def main() -> int:
     results.append(("export_spec", ok))
     ok, _ = step("trace", [py, "tools/trace.py", "--skip-regen"])
     results.append(("trace", ok))
+    ok, _ = step("speccheck", [py, "tools/speccheck.py"])
+    results.append(("speccheck", ok))
     ok, _ = step("ruff", [py, "-m", "ruff", "check", "nm", "tools", "tests"])
     results.append(("ruff", ok))
     # The rename sweep. pyflakes does not find these, and a stale call site
