@@ -58,7 +58,7 @@ def _rows(ws, header_row: int) -> list[dict]:
     for row in ws.iter_rows(min_row=header_row + 1, values_only=True):
         if row[0] is None:
             continue
-        out.append({h: v for h, v in zip(headers, row) if h})
+        out.append({h: v for h, v in zip(headers, row, strict=False) if h})
     return out
 
 

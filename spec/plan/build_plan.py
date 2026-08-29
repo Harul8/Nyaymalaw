@@ -461,7 +461,7 @@ FM = [
     ["B6", "Capacity to instruct", "B", "S10", "—", "decided"],
     ["C1", "The account", "C", "S1", "E-012", "decided"],
     ["C2", "Objectives and constraints", "C", "S7", "E-070", "decided"],
-    ["C3", "Parties and posture", "C", "S3", "E-030, E-031", "decided"],
+    ["C3", "Parties and posture", "C", "S3", "E-030, E-031", "tested"],
     ["C4", "Thread identity", "C", "S3", "E-032, E-033", "decided"],
     ["C5", "The chronology", "C", "S4", "E-040, E-041", "decided"],
     ["C6", "Document intake and extraction", "C", "S10", "—", "decided"],

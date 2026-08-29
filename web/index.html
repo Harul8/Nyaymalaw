@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nyaymalaw</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="brand">
+    <span class="mark">NM</span>
+    <span class="name">Nyaymalaw</span>
+  </div>
+  <div class="who">
+    <label for="advocate">Advocate</label>
+    <input id="advocate" value="adv_demo" spellcheck="false">
+  </div>
+  <div class="health" id="health" title="Wired configuration">checking…</div>
+</header>
+
+<main>
+  <!-- ================= THE MATTER LIST / THREAD BOARD =================
+       Two surfaces, deliberately distinct. The matter list is bounded by
+       MATTER count; the thread board by THREAD count. Conflating them is how
+       a board ends up scaling on the wrong axis. -->
+  <aside class="rail" id="rail">
+    <div class="rail-head">
+      <h2 id="rail-title">Matters</h2>
+      <button id="back" class="ghost" hidden>&larr; All matters</button>
+    </div>
+    <div class="rail-meta" id="rail-meta"></div>
+    <div id="rail-body"></div>
+    <button id="new-matter" class="primary wide">Brief a new matter</button>
+  </aside>
+
+  <!-- ========================= THE ANSWER ========================= -->
+  <section class="conversation">
+    <div id="mode-line" class="mode-line" hidden></div>
+    <div id="thread" class="thread"></div>
+
+    <form id="composer" class="composer" autocomplete="off">
+      <textarea id="message" rows="3" placeholder="Brief me — who the client is, what happened, and when."></textarea>
+      <div class="composer-row">
+        <span class="hint" id="hint">Enter to send · Shift+Enter for a new line</span>
+        <button type="submit" class="primary" id="send">Send</button>
+      </div>
+    </form>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -9,8 +9,12 @@ WHAT IT RUNS, AND WHY IN THIS ORDER
                    after it is worthless if the core has acquired I/O.
  2. export_spec -- regenerate the machine-readable spec from the generators.
  3. trace       -- spec <-> code <-> eval results. Catches status inflation.
- 4. pytest -m class_a  -- the invariants. No corpus, no model, seconds.
- 5. pytest (rest)      -- everything else that does not need approval.
+ 4. ruff        -- style and obvious defects.
+ 5. pylint E0601/E0606 -- the rename sweep. pyflakes does not find these, and
+                   a stale call site after a rename raised NameError on every
+                   matter for weeks in the previous build.
+ 6. pytest -m class_a  -- the invariants. No corpus, no model, seconds.
+ 7. pytest (rest)      -- everything else that does not need approval.
 
 Class-D judged runs are NOT here and never will be: they cost money and need
 explicit per-run approval. `tools/check.py` must stay cheap enough that there is
@@ -55,11 +59,23 @@ def main() -> int:
     print("=" * 74)
 
     results = []
-    ok, _ = step("layercheck", [py, "tools/layercheck.py"]); results.append(("layercheck", ok))
-    ok, _ = step("export_spec", [py, "tools/export_spec.py"]); results.append(("export_spec", ok))
-    ok, _ = step("trace", [py, "tools/trace.py", "--skip-regen"]); results.append(("trace", ok))
+    ok, _ = step("layercheck", [py, "tools/layercheck.py"])
+    results.append(("layercheck", ok))
+    ok, _ = step("export_spec", [py, "tools/export_spec.py"])
+    results.append(("export_spec", ok))
+    ok, _ = step("trace", [py, "tools/trace.py", "--skip-regen"])
+    results.append(("trace", ok))
+    ok, _ = step("ruff", [py, "-m", "ruff", "check", "nm", "tools", "tests"])
+    results.append(("ruff", ok))
+    # The rename sweep. pyflakes does not find these, and a stale call site
+    # after a rename raised NameError on every matter for weeks.
+    ok, _ = step("pylint E0601,E0606",
+                 [py, "-m", "pylint", "--disable=all", "--enable=E0601,E0606",
+                  "--score=n", "nm"])
+    results.append(("pylint", ok))
     ok, _ = step("pytest -m class_a", [py, "-m", "pytest", "-m", "class_a", "-q"],
-                 allow_warn=True); results.append(("class_a", ok))
+                 allow_warn=True)
+    results.append(("class_a", ok))
     ok, _ = step("pytest (all local)", [py, "-m", "pytest", "-q", "-m", "not class_d"])
     results.append(("pytest", ok))
 

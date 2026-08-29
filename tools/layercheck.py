@@ -21,7 +21,6 @@ A convention degrades. A build failure does not.
 from __future__ import annotations
 
 import ast
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,13 +28,31 @@ SRC = ROOT / "nm"
 
 # layer -> the layers it may import from (in addition to the standard library)
 ALLOWED: dict[str, set[str]] = {
-    "core": {"core", "ports"},
-    "ports": {"ports"},
-    "adapters": {"adapters", "ports", "core"},
-    "knowledge": {"knowledge", "ports"},
-    "edge": {"edge", "core", "ports"},
-    "drafting": {"drafting", "ports"},
-    "obs": {"obs", "ports"},
+    # `domain` is the pure model: facts, posture, threads, the Answer type. It
+    # imports NOTHING. Extracting it resolved a real cycle -- a port must speak
+    # in domain types to be a port at all, so "ports may import only ports" was
+    # too strict and "ports may import core" would have made the two mutually
+    # dependent.
+    "domain": {"domain"},
+    "ports": {"ports", "domain"},
+    "core": {"core", "ports", "domain"},
+    # Adapters MAY read the knowledge plane: the evidence service resolves
+    # against the manifest and the indices, which is exactly the architecture's
+    # Evidence -> {graph, manifest, indices} edge. The knowledge plane is built
+    # OFFLINE and only read at turn time, so this does not put ingestion on the
+    # serving path.
+    "adapters": {"adapters", "ports", "domain", "core", "knowledge"},
+    "knowledge": {"knowledge", "ports", "domain"},
+    # The edge renders and serves. It may NOT reach an adapter: which adapter
+    # is live is the composition root's business, and letting the edge choose
+    # would put provider knowledge on the serving path.
+    "edge": {"edge", "core", "ports", "domain"},
+    "drafting": {"drafting", "ports", "domain"},
+    "obs": {"obs", "ports", "domain"},
+    # THE COMPOSITION ROOT. The one layer permitted to know every concrete
+    # adapter, because wiring them together is its entire job. Nothing imports
+    # it back, which is what keeps the dependency direction one-way.
+    "bootstrap": {"bootstrap", "domain", "ports", "core", "adapters", "knowledge", "edge"},
 }
 
 # Third-party modules that must never appear outside nm.adapters / nm.knowledge.
@@ -45,7 +62,7 @@ IO_PACKAGES = {
     "fastapi", "flask", "django", "starlette", "uvicorn",
     "faiss", "numpy", "torch", "sentence_transformers",
 }
-IO_ALLOWED_LAYERS = {"adapters", "knowledge", "edge", "obs"}
+IO_ALLOWED_LAYERS = {"adapters", "knowledge", "edge", "obs", "bootstrap"}
 
 
 def layer_of(path: Path) -> str | None:

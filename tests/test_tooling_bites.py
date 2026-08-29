@@ -94,7 +94,7 @@ def test_trace_rejects_an_implements_naming_no_feature():
     """T2 COUNTEREXAMPLE: code claiming a feature id the spec does not contain."""
     offender = ROOT / "nm" / "core" / "_trace_probe.py"
     offender.write_text(textwrap.dedent("""
-        from nm.obs.traceability import implements
+        from nm.domain.traceability import implements
 
         @implements("ZZ-99")
         def not_a_real_feature():
@@ -141,10 +141,22 @@ def test_trace_rejects_a_tested_claim_whose_evals_never_ran(tmp_path):
     probe = ROOT / "nm" / "core" / "_tested_probe.py"
     try:
         text = spec.read_text(encoding="utf8")
-        # Pick the first feature that declares at least one eval id.
+        import json
+
         import yaml
         doc = yaml.safe_load(text)
-        target = next(f for f in doc["features"] if f.get("eval_ids"))
+
+        # Pick a feature whose evals have NOT run. The first draft of this test
+        # took "the first feature with eval ids" and broke the moment real evals
+        # started running -- the TEST was wrong, not the code. The condition
+        # under test is "tested claimed with no eval run behind it", so the test
+        # must construct exactly that rather than assume it.
+        results = ROOT / ".nm" / "eval_results.json"
+        ran = set()
+        if results.exists():
+            ran = set(json.loads(results.read_text(encoding="utf8")).get("evals_run", []))
+        target = next(f for f in doc["features"]
+                      if f.get("eval_ids") and not (set(f["eval_ids"]) & ran))
         target_id = target["id"]
         for f in doc["features"]:
             if f["id"] == target_id:
@@ -155,7 +167,7 @@ def test_trace_rejects_a_tested_claim_whose_evals_never_ran(tmp_path):
 
         # Satisfy T3 so the failure we observe is unambiguously T4.
         probe.write_text(textwrap.dedent(f"""
-            from nm.obs.traceability import implements
+            from nm.domain.traceability import implements
 
             @implements({target_id!r})
             def probe():

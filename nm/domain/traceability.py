@@ -1,6 +1,13 @@
 """How code declares which PRD feature it implements.
 
-    from nm.obs.traceability import implements
+It lives in `domain` because it has ZERO dependencies and every layer must be
+able to declare what it realises -- including the domain types themselves,
+where several features (thread identity, posture derivation) are enforced by
+the type rather than by any function that calls it. Putting it in `obs` made
+`domain` unable to import it, which would have forced those declarations onto
+the wrong code.
+
+    from nm.domain.traceability import implements
 
     @implements("A2")
     def build_thread_board(summary): ...

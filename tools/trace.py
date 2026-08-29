@@ -109,12 +109,14 @@ def spec_is_current(rep: Report) -> None:
     proc = subprocess.run([sys.executable, str(ROOT / "tools" / "export_spec.py")],
                           capture_output=True, text=True, cwd=ROOT)
     if proc.returncode != 0:
-        rep.fail("T1", f"export_spec.py failed: {proc.stdout.strip()[-300:]} {proc.stderr.strip()[-300:]}")
+        rep.fail("T1", "export_spec.py failed: "
+                       f"{proc.stdout.strip()[-300:]} {proc.stderr.strip()[-300:]}")
         return
     for path, old in before.items():
         if path.read_bytes() != old:
-            rep.fail("T1", f"{path.relative_to(ROOT)} was stale -- a generator changed "
-                           f"and the spec was not regenerated. It has been rewritten; re-run trace.")
+            rep.fail("T1", f"{path.relative_to(ROOT)} was stale -- a generator "
+                           "changed and the spec was not regenerated. It has "
+                           "been rewritten; re-run trace.")
 
 
 def main() -> int:

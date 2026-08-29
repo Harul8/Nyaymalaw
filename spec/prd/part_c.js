@@ -688,9 +688,9 @@ A(callout('**A first draft of this section had two tiers, and two tiers cannot e
 A(table(
   ['Tier', 'Model today', 'Used for', 'The rule that governs it'],
   [
-    ['**`routine`**', '**OpenAI `gpt-4o-mini`**', 'The default for everything: extraction, classification, summarisation at ingest, treatment reading, the entailment first pass, question phrasing, the ordinary advising turn.', 'What a step gets unless a **measured** quality difference says otherwise.'],
-    ['**`hard`**', '**OpenAI `gpt-5.1`**', '**Rare, and only for genuinely complex reasoning** — case theory formation, the adversarial pass at its strongest, salvage coordinate variation.', 'A step moves here only on a recorded measurement showing the quality it bought. The list is short, explicit and reviewed — **an unreviewed escalation list only ever grows.**'],
-    ['**`judge`**', 'Configured **distinct** from whichever model served the tier under test', 'Class-D judged evaluation only. Never on a serving path.', '**Resolving `judge` to the same model as the step under test is a configuration error that fails the run**, not a warning. This is what makes P4 enforceable instead of aspirational.'],
+    ['**`routine`**', '**OpenAI `gpt-4o-mini-2024-07-18`**', 'Everything the product serves: extraction, classification, summarisation at ingest, treatment reading, the entailment first pass, question phrasing, the ordinary advising turn.', 'What a step gets unless a **measured** quality difference says otherwise. Today it is the only serving tier.'],
+    ['**`hard`**', '**NOT CONFIGURED**', 'Reserved for genuinely complex reasoning — case theory formation, the adversarial pass at its strongest, salvage coordinate variation.', '**Deliberately absent, and that is the honest state.** Escalation is earned by measurement and nothing has earned it yet. Requesting this tier raises `TierUnavailable` **with that reason** rather than silently serving from `routine` — a silent downgrade is defect shape S1 wearing a performance optimisation.'],
+    ['**`judge`**', '**OpenAI `gpt-5.1`**', 'Class-D judged evaluation only. Never on a serving path.', 'Genuinely different from the model under test, which is what makes P4 enforceable rather than aspirational. **Resolving `judge` to the same model as a serving tier is a configuration error that fails at startup**, not a warning.'],
     ['**`embed`**', 'The model the indices were **built with** — not a free choice at run time', 'Dense retrieval over the corpus.', 'Changing it invalidates every vector in the corpus. **It is not switchable by configuration.** See §7.4.2.'],
   ],
   [1100, 1900, 3200, 3160],
@@ -699,6 +699,8 @@ A(table(
 A(spacer(140));
 
 A(callout('**The escalation must be earned, and the drift runs one way.** Every step will look like it deserves the stronger model, because the stronger model always reads better on a sample of one. **A step is promoted to `hard` only with a measurement attached, recorded in the baseline with the figure that justified it.** And demotion needs a cadence or it never happens: every `hard` step is re-measured on the quarterly review, and one whose advantage cannot be reproduced is demoted rather than grandfathered.'));
+
+A(callout('**Three states, not two, at the tier level as everywhere else.** A tier is *configured*, *not configured*, or *configured wrong* — and the second is a legitimate state that must be distinguishable from the third. `hard` being absent is a real answer with a reason, surfaced as `TierUnavailable`; it is not the same thing as a missing environment variable, and neither is silently equivalent to serving from `routine`.'));
 
 A(h3('7.4.2  Provider independence — a hard requirement, not a nicety'));
 

@@ -354,7 +354,7 @@ features:
   title: Parties and posture
   phase: C
   slice: S3
-  status: decided
+  status: tested
   does:
   - For every thread establish who the parties are and which side the client is on, **before resolving
     any provision**.
