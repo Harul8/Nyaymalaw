@@ -1,0 +1,49 @@
+# The corpus. 22GB, and twelve files exceed GitHub's 100MB hard limit —
+# caselaws_v2.index alone is 3.9GB. It is present in a working tree as a
+# DIRECTORY JUNCTION, not a copy, so nothing is duplicated on disk:
+#
+#   New-Item -ItemType Junction -Path legal_database -Target <path to corpus>
+#
+# See README.md. Never `git add -f` any of it.
+legal_database/
+.nm-artefacts/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv*/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+
+# Secrets and local configuration. NM_MATTER_KEY and NM_MATTER_SALT live here
+# and must never be committed — matter state is sealed with them.
+.env
+.env.*
+*.local
+.claude/settings.local.json
+
+# Stores written at runtime
+*.db
+*.db-shm
+*.db-wal
+*.sqlite3
+.code-review-graph/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp

@@ -1,0 +1,298 @@
+================================================================================
+PROMPT CONSTRUCTION GUIDELINES — Agentified NM
+================================================================================
+Scope : every prompt sent to an LLM in the serving path.
+Form  : SIX PRINCIPLES, and what each one implies. Nothing here is a patch for a
+        past incident. Observed failures appear ONLY at the end, as a validation
+        suite — test cases to check a design against, never a source of rules.
+
+If a proposed instruction cannot be derived from one of the six principles, it
+does not belong in a prompt. Adding it anyway is how a prompt becomes a patch
+list, and a patch list is what limits quality.
+
+
+================================================================================
+FOUNDATION
+================================================================================
+What the system is:
+    NM answers legal questions for Indian advocates and their clients. Every
+    legal assertion it makes must be traceable to a retrieved source.
+
+What the tool is:
+    An LLM is excellent at JUDGMENT over text placed in front of it, and
+    unreliable at RECALLING specifics from memory. It knows law and language;
+    it does not know our corpus, our architecture, or what year it is.
+
+Every principle below follows from those two facts.
+
+
+================================================================================
+P1 — THE CORPUS IS THE ONLY SOURCE OF LEGAL CONTENT
+================================================================================
+Not "do not hallucinate" (a prohibition, unenforceable). Rather: every legal
+assertion HAS a source, and that source is the retrieved text.
+
+Implies:
+  1.1  Never ask the model to recall a specific: a section number, a case name,
+       a marginal heading, a rate, a multiplier, a period, a fixed head.
+       Three legitimate routes, in order of preference:
+         (a) GROUND  — retrieve it into the context window;
+         (b) COMPUTE — code or static data;
+         (c) REFUSE  — a stated inability.
+  1.2  A legally operative NUMBER is an assertion of law and carries the same
+       burden as a citation. Arithmetic on figures the CLIENT supplied is fine;
+       inventing the legal rate that arithmetic applies to is not.
+  1.3  EVERY prompt that could tempt fabrication must provide a legitimate exit
+       — UNKNOWN, gap=true, "did not surface in the retrieved evidence".
+       Without an exit, a model asked for what it lacks will invent it.
+  1.4  An honest gap is a GOOD answer, and prompts should say so. A model that
+       believes refusal is failure will fabricate to avoid failing.
+  1.5  Dates: state periods in words, anchored to the event the statute runs
+       them from. Computed dates come from code.
+
+
+================================================================================
+P2 — THE MODEL JUDGES; CODE GUARANTEES
+================================================================================
+Ask of every line: is this a JUDGMENT or a GUARANTEE?
+
+  JUDGMENT  — "does this section govern this wrong?", "which offence fits?",
+              "what register suits this client?"  -> prompt. Teach it, trust it.
+  GUARANTEE — "never ship a wrong citation", "never invent a figure"
+              -> code. A prompt lowers the RATE; only code sets the FLOOR.
+
+Implies:
+  2.1  PREVENT STRUCTURALLY WHERE POSSIBLE, rather than verify after the fact.
+       The strongest form: make the failure unexpressible. Our citation
+       mechanism is the model — the LLM emits an INDEX into a code-built list
+       of what was actually retrieved and never types a citation at all, so a
+       fabricated one is impossible rather than merely detected. Prefer a
+       schema with no field for the unwanted behaviour over any amount of
+       instruction not to produce it.
+  2.2  A prompt cannot override concrete-looking content already in its own
+       context window. If wrong material must not be used, FILTER IT OUT BEFORE
+       GENERATION. Instructing around it does not work.
+  2.3  Name the backstop. For every guarantee-shaped line, either point to the
+       deterministic check that enforces it, or record it as best-effort.
+  2.4  KNOWN LIMIT — BEHAVIOURAL GUARANTEES. Some things we want are neither
+       free judgment nor mechanically checkable (answer the question before
+       gathering; do not attribute the other side's acts to our client; hold
+       peer register). For these, no floor exists — only a reduced rate. State
+       this honestly rather than pretending a prompt secures them. Where one
+       matters enough, buy a floor with a schema, a structural split, or a
+       semantic (LLM) checker — and accept its cost knowingly.
+  2.5  INVENTORY THE GUARANTEES YOU ALREADY HAVE before building a new check.
+       Structural prevention may already cover the case: we nearly built a
+       case-law citation verifier before confirming the index mechanism (2.1)
+       already makes a fabricated citation unexpressible on the main path. Know
+       what floor exists before pouring another.
+  2.6  CALIBRATE A BACKSTOP FROM MEASURED DATA — never a guessed threshold.
+       When a guarantee needs a numeric bar (a relevance cutoff, a confidence
+       gate):
+       (a) MEASURE the real distribution of genuine vs bad, and set the bar from
+           the gap between them. If there is no gap, the check does not work —
+           find out before shipping it, not after.
+       (b) CHECK THE SIGNAL BEFORE THE THRESHOLD. A check is only as good as what
+           it scores. Measured live: the same case-fit check scored against a
+           bare issue LABEL ranked the wrong-subject case ABOVE a genuine one;
+           scored against the factual PROPOSITION it separated them ~180x. Verify
+           the input discriminates before tuning any number on top of it.
+       (c) MEASURE ON THE BASIS THE CHECK WILL RUN — same input, same scorer —
+           or the distribution you calibrate against is not the one you will see.
+       (d) PREFER A RELATIVE BAR where the absolute scale varies by context. A
+           genuine narrow-issue precedent can score low in absolute terms; "far
+           below the best candidate for THIS matter" survives that, a fixed
+           cutoff does not.
+       (e) FAIL OPEN. A backstop that cannot run — missing data, model down, too
+           few candidates — must return the input unchanged. Never degrade an
+           answer because the check itself failed.
+
+
+================================================================================
+P3 — GIVE CONTEXT, NOT PROCEDURE
+================================================================================
+The model brings the legal reasoning. What it cannot supply is knowledge of our
+system. Give exactly that, and then get out of the way.
+
+Implies:
+  3.1  PURPOSE = JOB + DESTINATION + CONSEQUENCE.
+         JOB         — what this step decides.
+         DESTINATION — where the output goes, who consumes it. Most often
+                       missing, highest value: a model that knows its text is
+                       embedded for search (never read by a human) stops
+                       inventing citations without being told to.
+         CONSEQUENCE — what breaks downstream if this is wrong.
+       State CONSEQUENCE, never IMPORTANCE. "A spurious issue costs a real
+       retrieval sweep" is actionable; "this is the most critical step" is not.
+  3.2  PURPOSE REPLACES RULES — it does not stack on them. If a rule is
+       derivable from a well-stated purpose, DELETE THE RULE.
+  3.3  FACTS THE MODEL CANNOT KNOW — state ONCE, as facts, never as repeated
+       warnings. Keep this set minimal:
+         (a) CURRENCY OF LAW — the law in force is the BNS / BNSS / BSA, 2023;
+             the IPC / CrPC / Evidence Act names the model remembers are
+             repealed. This post-dates training, so it must be explicit — but
+             ONLY in prompts that actually name statutes or sections.
+         (b) ARCHITECTURE — e.g. "the retrieved chunks are your only evidence".
+         (c) DESTINATION — see 3.1.
+  3.4  GOALS, NOT RECIPES. Never script sentence order or turn structure.
+       Over-specifying HOW starves the WHY and yields templated output.
+  3.5  Let temperature and free-form generation do the work they are good at;
+       constrain the SHAPE with schemas, not the PROSE with instructions.
+
+
+================================================================================
+P4 — EVERY CONSTRAINT MUST GENERALIZE
+================================================================================
+A constraint naming a specific Act, section, scenario, phrase or party is a
+design failure, not a fix. The single test:
+
+       WOULD THIS STILL BE CORRECT IN AN UNRELATED PRACTICE AREA?
+
+Implies:
+  4.1  Encode the PURPOSE of the constraint, not the instance that exposed it.
+         instance : "ignore section 1"
+         principle: "confirm from the section's own text that it creates the
+                     offence or right in question"
+  4.2  One sharp generalized test beats any enumeration. Enumerations drift,
+       age, and are never complete.
+  4.3  ILLUSTRATIONS ARE THE MOST DANGEROUS ELEMENT IN A PROMPT. Models follow
+       examples more literally than instructions, so an example in the wrong
+       place IS a hardcode. Label them illustrative, diversify them so they
+       teach the pattern, and audit them against the prompt's own rules — an
+       example that contradicts a rule will beat the rule.
+  4.4  Prefer bounding the ALLOWED space to listing the forbidden. A growing
+       list of prohibitions invites loophole compliance: the model obeys the
+       letter and violates the intent.
+
+
+================================================================================
+P5 — ONE DECISION, ONE PLACE
+================================================================================
+Every judgment the system makes has exactly ONE owning prompt.
+
+Implies:
+  5.1  Before adding a judgment, check whether another prompt already makes it.
+       If so, extend that one or route through it. Never duplicate.
+  5.2  Maintain a judgment map: judgment -> owning prompt. Two owners is a
+       future drift bug, not a redundancy.
+  5.3  Shared disciplines used by several paths live in ONE place and are
+       composed in — never copy-pasted, which drifts by construction.
+
+
+================================================================================
+P6 — NOTHING MAY CONTRADICT ANYTHING
+================================================================================
+Contradiction is the highest-severity prompt defect: it produces erratic
+behaviour that looks like model weakness and gets "fixed" with more
+instruction, which compounds it.
+
+Implies:
+  6.1  Read prompts AS ASSEMBLED — with every injected block, conditional
+       preface and appended fragment — not fragment by fragment.
+  6.2  When the model disobeys, look for YOUR OWN competing instruction first.
+       Remove it, or separate the two jobs structurally. Never answer
+       disobedience with a louder instruction.
+  6.3  CONDITIONAL BLOCKS MUST BE SELF-CONTAINED. If a block redefines
+       something for a case, nothing after it may restate the default. Fold the
+       definition into the block so there is nothing left to contradict.
+  6.4  HANDLE THE UNKNOWN CASE EXPLICITLY. When a conditioning value is absent,
+       teach the model to reason it out. Never fall through silently to one
+       side's default — silent defaults are invisible failures.
+  6.5  A stale purpose header is itself a contradiction. When the body changes,
+       the header changes.
+
+
+================================================================================
+OPERATING THE PRINCIPLES
+================================================================================
+
+A. ESCALATION LADDER — when a judgment underperforms, climb in this order.
+   Do not skip to the bottom, and do not stall at the top.
+     1. Sharpen the PRINCIPLE (is it stated as purpose, or as instance?)
+     2. Remove a CONTRADICTION (P6 — check this before anything else)
+     3. Raise the MODEL TIER for that task
+     4. Constrain with a SCHEMA (make the failure unexpressible)
+     5. Move the decision into CODE
+     6. ACCEPT and DOCUMENT the limit
+   Adding another instruction is not a rung on this ladder.
+
+B. MATCH THE TASK TO THE MODEL TIER. Tier selection is a first-class prompt
+   design decision, not an afterthought. Light tiers are for classification and
+   extraction over presented text; precision-critical legal judgment needs the
+   strong tier. A prompt failing on a light tier may be a tier error, not a
+   prompt error — check that before rewriting.
+
+C. POSITION MATTERS IN ASSEMBLED PROMPTS. In a long assembly, an instruction
+   competing with a large evidence block will lose. Put the governing framing
+   close to the generation point, keep the assembly as small as the task
+   allows, and re-read the full assembled text after any change.
+
+D. CHANGE DISCIPLINE.
+   D.1  A DELETION IS A CHANGE — verify it exactly like an addition.
+   D.2  Verify judgment-prompt changes 3-5x. This system has documented
+        run-to-run variance; one clean run proves little.
+   D.3  LEANNESS IS A NUMBER. Track lines/tokens per prompt. A stage that ends
+        heavier than it started was done wrong.
+   D.4  PLUMBING BEFORE PROMPTING. Confirm the prompt received the inputs it
+        needs and the pipeline is healthy before concluding the model is wrong.
+   D.5  Run the golden regression set at stage boundaries — with the user's
+        approval; it is never run unprompted.
+
+E. AUDIT FORM — for each prompt.
+     1. PURPOSE       job / destination / consequence
+     2. EXPECTED      what good output achieves; what failure looks like
+     3. LINE AUDIT    does every line serve the purpose? delete what doesn't
+     4. OWNERSHIP     which judgments does it solely own? duplicates elsewhere?
+     5. CONTRADICTION read as assembled — any conflict?
+     6. GUARANTEES    each guarantee-shaped line: name its backstop
+     7. RECALL RISK   asks for un-recallable facts? ground / compute / refuse
+     8. REFUSAL       is there a legitimate way to say "I don't have this"?
+     9. EXAMPLES      labelled, diverse, non-contradicting?
+    10. SIZE          lines before -> after
+
+
+================================================================================
+VALIDATION SUITE — general failure patterns to test any design against
+================================================================================
+These are PATTERNS, not rules. Use them to probe a prompt for weakness. Each is
+stated generally; the parenthetical is one instance we have actually seen, kept
+only as a reproducible test case.
+
+ V1  Two instructions in one assembled context pull opposite ways.
+     (a scoping rule excluded procedural items; an injected block listed them
+      as things to include)
+ V2  A conditional block is followed by an unconditional restatement of the
+     default it was meant to override.
+     (side-specific framing, then a generic paragraph reasserting the other)
+ V3  An illustration is followed as a routing rule.
+     ("fears arrest -> grant of bail" manufactured procedural issues)
+ V4  A prohibition is satisfied literally and evaded in substance.
+     (barred as "the governing provision", cited as "analogical support")
+ V5  The model is asked to recall a specific it cannot reliably recall.
+     (invented section numbers into an embedding; quantum figures from memory)
+ V6  A structural or preliminary provision is cited as governing a wrong.
+     (a short-title/commencement clause offered as the operative section)
+ V7  An index or table is mined as substantive law.
+     (a procedure code's schedule yielding another Act's repealed section)
+ V8  A silent default hides a wrong assumption.
+     (unknown side falling through to one party's framing)
+ V9  The prompt never received the input it needed.
+     (a turn asked to answer a question it was never shown)
+ V10 The environment, not the prompt, was broken.
+     (a degraded retrieval server presenting as prompt failure)
+ V11 Two prompts independently decide the same thing and drift.
+     (a checklist prompt re-deriving what counts as an issue)
+ V12 A recipe produces templated, interchangeable output.
+     (scripted sentence order yielding identical turns)
+ V13 A backstop threshold was guessed, or measured on a different basis than the
+     check runs, so the calibrated distribution is not the live one.
+     (a case-fit bar set from a rich proposition, then run on a bare label)
+ V14 A check scores an input too coarse to discriminate.
+     (issue label vs case summary ranked the wrong-subject case above a genuine
+      one; the factual proposition separated them)
+ V15 A new verifier is built for a guarantee that structural prevention already
+     covers.
+     (a fabricated-citation check, where the index mechanism already makes one
+      unexpressible)
+
+================================================================================
