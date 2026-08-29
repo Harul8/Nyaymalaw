@@ -186,7 +186,7 @@ and the source disagree, the source wins**, and an empty graph result means
 |---|---|
 | Graph | **WORKING** — 84 nodes, 1,878 edges, 25 files, 7 Leiden communities |
 | Semantic search (embeddings) | **NOT WORKING** — see below. Full-text search works and is used instead |
-| MCP tools | **Not loaded in a session started before `.mcp.json` existed.** Restart to get them; the CLI below works either way |
+| MCP tools | **WORKING** after restart — `query_graph_tool`, `get_impact_radius_tool`, `detect_changes_tool`, `build_or_update_graph_tool`, `get_architecture_overview_tool` all verified |
 
 ```bash
 code-review-graph update --brief                      # after edits; hooks also do this
@@ -202,6 +202,22 @@ code-review-graph architecture                        # communities and cohesion
 
 `query` refuses an ambiguous name and lists candidates rather than guessing —
 re-run with the `qualified_name` it returns.
+
+**`search_mode: "none"` MEANS THE SEARCH COULD NOT ANSWER — NOT THAT THE CODE
+IS ABSENT.** Measured, both on the CLI and through `semantic_search_nodes_tool`:
+
+| Query | mode | result |
+|---|---|---|
+| `implements` — matches a node NAME | `fts` | 2 nodes |
+| `status inflation check ...` — a concept | **`none`** | **0 nodes** |
+
+Without embeddings there is no conceptual search: FTS matches node names only,
+and a natural-language query returns **zero**. **Zero here reads exactly like
+"not in the codebase", which is defect shape S3** — the trap that has already
+produced three false gaps in this project against the legal corpus.
+
+*The rule: a `search_mode: "none"` result is "the graph could not answer", and
+the next step is Grep, never a conclusion that the code does not exist.*
 
 **Embeddings are deliberately deferred, not forgotten.** `--provider local`
 crashes in the tool's venv (`OPENSSL_Uplink: no OPENSSL_Applink`) inside
