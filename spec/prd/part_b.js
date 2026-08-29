@@ -67,7 +67,7 @@ A(feature('A2', 'The matter list, and the thread board', {
     'Never show a `not_assessed` screen as clear, and never show a gate **that cannot apply to this matter** as an open item. Both directions are defects.',
     'Never drop a passed deadline, and never file it under items that are still upcoming.',
   ],
-  produces: ['`MatterListProjection` and `BoardProjection` — both derived from the case summary, holding nothing the summary does not.'],
+  produces: ['`MatterListProjection` and `BoardProjection` — both derived from the **`CaseSummary`, whose full contract is Appendix E**, and holding nothing it does not. The summary was named by this feature and by G3 and was defined nowhere; two features derived from a type that did not exist.'],
   evals: [
     '**Class A** — adding a turn never adds a board line; length is asserted as a function of row count. A board that cannot be built raises rather than returning empty. A `not_assessed` screen never renders as clear. An inapplicable gate never renders as an open item.',
     '**Class B** — no board field contains a conclusion, a reason, or a piece of reasoning. The matter list is ordered by nearest deadline. A passed deadline renders as passed.',
@@ -211,7 +211,7 @@ A(feature('B5', 'Engagement, authority and scope', {
     'Never mark advice ready for reliance while identity, authority, scope or decision ownership is unrecorded.',
     'Never do work outside scope silently.',
   ],
-  produces: ['`Engagement { client, instructing_party, decision_maker, scope[], exclusions[], reliance_ready: bool, authorities[] }`.'],
+  produces: ['`Engagement` — **the full contract is Appendix E.** `reliance_ready: bool` is replaced by a three-state `reliance`, because a boolean cannot distinguish *we checked and it is not ready* from *nobody looked*; and the contract now carries `intermediary`, `payer`, `scope_exceptions`, fees, disbursements, custody, termination and the complaints route, each of which B5 requires and none of which the old shape could hold.'],
   evals: [
     '**Class A** — `reliance_ready` is false while any of identity, authority, scope or decision ownership is unset. An empty scope authorises nothing.',
     '**Class B** — every served answer states whether it is provisional or reliance-ready.',
@@ -256,7 +256,7 @@ A(feature('C1', 'The account', {
     'Never record a paraphrase as a quotation. A recorded "exact words" must be findable in the account it claims to come from.',
     'Never record a source for a basis that points nowhere.',
   ],
-  produces: ['`Fact { id, statement, date|null, certainty ∈ {documented, asserted}, basis, provenance, confirmed|null, material, conflicts_with[], superseded_by }`.'],
+  produces: ['`Fact` — **the full contract is Appendix E.** The fields the four-field summary used to list could not carry C1: no `exact_words`, so *never record a paraphrase as a quotation* was unenforceable; no `basis_source`, so *never record a source that points nowhere* had nothing to check; and no `weight`, so *explore unfavourable facts as hard as favourable ones* left no trace that it had happened.'],
   evals: [
     '**Class A** — every Fact carries provenance; a Fact without it cannot be constructed. A quoted verbatim string is present in its cited source.',
     '**Class B** — contradictions render as conflicts, never as a resolved value.',
@@ -379,7 +379,7 @@ A(feature('C7', 'Evidence inventory and preservation', {
     'Never obtain material unlawfully, and never suggest a route that would.',
     'Never contaminate a witness.',
   ],
-  produces: ['`EvidenceItem { what, fact, holder ∈ {client, opponent, third_party, court}, form, admissibility ∈ {admissible_as_held, needs(...)}, custody, preservation{owner, due} }`.'],
+  produces: ['`EvidenceItem` — **the full contract is Appendix E.** C7 requires existence, admissibility and **weight** to be three separate questions; the old shape held two of the three, so *admissible* and *persuasive* had one field between them.'],
   evals: [
     '**Class A** — every EvidenceItem carries an admissibility position. An item at risk with no preservation owner is a defect.',
     '**Class B** — existence, admissibility and weight are stated separately for every material item.',
@@ -681,7 +681,7 @@ A(feature('E4', 'The decision record', {
     'Never let a future-dated authority authorise immediately.',
     'Never obtain authority by pressure. A decision recorded under coercion is not authority.',
   ],
-  produces: ['`DecisionRecord { decided_by, options_explained[], risks_explained[], instruction, scope{matter, steps}, capacity, confirmed_at }`.'],
+  produces: ['`DecisionRecord` — **the full contract is Appendix E.** It gains `effective_from` (without which *never let a future-dated authority authorise immediately* is unrepresentable), `voluntariness` (*a decision recorded under coercion is not authority*), and explicit fields for the uncertainty, consequences, cost and irreversibility E4 requires to be explained.'],
   evals: [
     '**Class A** — an authority is bound to its matter and its step set, and does not authorise outside them. A future-dated authority does not authorise before its date.',
     '**Class B** — every material decision produces a record with all five fields.',
@@ -748,7 +748,7 @@ A(feature('F2', 'The drafter brief', {
     'Never omit what not to plead. Advocates plead selectively — an omission is a decision, and the drafter must be told what was excluded so it does not helpfully restore it.',
     'Never let the brief be lossy. If a compliant pleading cannot be drafted from the brief alone, the brief is the defect.',
   ],
-  produces: ['`DrafterBrief` — the complete typed contract listed above.'],
+  produces: ['`DrafterBrief` — **the full contract is Appendix E.** A pointer to a sentence is not a contract. It carries `facts_not_to_plead`, `arguments_parked`, `open_gaps` and a derived `lossless` flag: if a compliant pleading cannot be drafted from the brief alone, **the brief is the defect**, and that has to be computable to be enforceable.'],
   evals: [
     '**Class A** — every field is populated or explicitly marked absent. A brief from which a compliant pleading cannot be composed fails.',
     '**Class A** — the brief is derived from case-summary state, not re-assembled from the conversation.',
@@ -787,7 +787,7 @@ A(feature('F4', 'Filing control', {
     'Never complete a filing without approval, proof of filing and proof of service.',
     'Never carry forward a treatment check made at research time as though it were made at filing time.',
   ],
-  produces: ['`FilingRecord { approved_by, filed_at, fee, service{mode, proof}, consequential_deadlines[] }`.'],
+  produces: ['`FilingRecord` — **the full contract is Appendix E.** It gains `authority_recheck`, without which tenet 31 — *re-check every authority immediately before filing* — could be stated, believed and never evidenced; and a `limitation` block, so a filing can answer whether it was in time and from which Article.'],
   evals: [
     '**Class A** — a filing cannot be marked complete without all three of approval, filing proof and service proof.',
     '**Class B** — every authority in a filed document carries a treatment check timestamped at or after the approval.',
@@ -805,7 +805,7 @@ A(feature('F5', 'Witnesses and experts', {
     '**Never coach.** Preserve independent recollection.',
     'Never give an expert a partisan instruction or an incomplete material set.',
   ],
-  produces: ['`WitnessPlan` / `ExpertInstruction` records with purpose, evidence map, conflict assessment and logistics owner.'],
+  produces: ['`WitnessPlan` and `ExpertInstruction` — **the full contracts are Appendix E.** This clause was prose, which is to say it was not a contract at all. `WitnessPlan` now carries a `contact_log`, which is what makes *never coach* auditable rather than asserted, and `ExpertInstruction` carries `material_withheld`, which is the field an opponent will probe and an empty one is itself an answer.'],
   evals: [
     '**Class A** — every witness or expert record carries a lawful purpose and an evidence map.',
     '**Class D** — no preparation suggestion amounts to coaching.',
@@ -923,7 +923,7 @@ A(feature('H2', 'Closure', {
     'Never close while an unexplained deadline, asset, original document, client fund or retention obligation remains.',
     'Never put client-identifying material into a lessons record.',
   ],
-  produces: ['`ClosureRecord` and an exported file package.'],
+  produces: ['`ClosureRecord` — **the full contract is Appendix E.** It had no fields at all, so *never close while a deadline, asset, original document, client fund or retention obligation remains* had nothing to check. It now carries the money account, originals, work product, continuing obligations, retention, and a `blockers[]` that refuses closure while it is non-empty.'],
   evals: [
     '**Class A** — closure is blocked while any of the five categories is open.',
     '**Class B** — a lessons record contains no client identifiers.',
@@ -946,7 +946,7 @@ A(feature('I1', 'Session end and confidentiality', {
     'Never let encryption be a silent no-op when unconfigured — an unconfigured key is a hard failure, not a pass-through.',
     'Never swallow an audit-trail write failure.',
   ],
-  produces: ['A sealed, encrypted matter store and an audit trail whose write failures are surfaced.'],
+  produces: ['`SessionSeal { matter, sealed_at, scheme, key_id, audit_trail: AuditEntry[], write_failures: {at, what, surfaced_at}[] }` — **write failures are a FIELD, not a log line.** An audit trail that fails to write and says nothing is indistinguishable from one with nothing to record, and it is the second that the advocate is entitled to assume.'],
   evals: [
     '**Class A** — an unconfigured encryption key raises rather than returning ciphertext-as-plaintext. An audit write failure propagates.',
     '**Class B** — no confidential value appears in metrics, diagnostics or logs.',

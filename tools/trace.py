@@ -17,14 +17,19 @@ T4  no status inflation      A feature at `tested` whose evals have never run.
 T5  evals resolve            A feature references an eval id that is not defined.
 T6  counterexamples bite     An eval whose counterexample has never been rejected.
 T7  NEVER clauses covered    A `never` clause with no test declaring it (reported).
+T8  built gates are wired    A gate declared built that no code path consults.
+T9  unbuilt gates are not    A gate declared UNBUILT that code consults anyway.
+T10 no stale evidence        A recorded eval id the spec no longer defines.
 
-T6 and T7 are the ones that catch a green suite that proves nothing.
+T6 and T7 are the ones that catch a green suite that proves nothing. T8 and T9
+are the ones that keep the gate matrix from becoming a description.
 """
 from __future__ import annotations
 
 import argparse
 import ast
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -64,6 +69,47 @@ def load_spec() -> tuple[list[dict], list[dict]]:
     features = yaml.safe_load(fpath.read_text(encoding="utf8"))["features"]
     evals = yaml.safe_load(epath.read_text(encoding="utf8"))["evals"]
     return features, evals
+
+
+def load_anchors() -> dict[str, dict]:
+    """The document ids that are NOT feature contracts -- controls and
+    principles. Code declares `@implements("P1")` against these, and without
+    the registry T2 would have to either reject them or stop checking."""
+    path = SPEC / "anchors.yaml"
+    if not path.exists():
+        return {}
+    return {a["id"]: a for a in yaml.safe_load(path.read_text(encoding="utf8"))["anchors"]}
+
+
+def load_gates() -> list[dict]:
+    path = SPEC / "gates.yaml"
+    if not path.exists():
+        return []
+    return yaml.safe_load(path.read_text(encoding="utf8"))["gates"]
+
+
+def gate_consultations() -> dict[str, list[str]]:
+    """Which gate ids appear in the source, and where.
+
+    A string scan, deliberately. An AST walk would have to model every way a
+    gate id can reach `metrics.fire` -- a constant, a lookup, a mapping like
+    `_GROUNDING_STATE` -- and the ways it cannot see are exactly the ways a
+    real call site hides. `nm/domain/gates.py` is excluded because it is the
+    registry: it names every gate by definition.
+    """
+    out: dict[str, list[str]] = {}
+    registry = SRC / "domain" / "gates.py"
+    for path in sorted(SRC.rglob("*.py")):
+        if path == registry:
+            continue
+        text = path.read_text(encoding="utf8")
+        for line in text.splitlines():
+            for token in re.findall(r"\bG-[A-Z]+\b", line):
+                files = out.setdefault(token, [])
+                rel = str(path.relative_to(ROOT))
+                if rel not in files:
+                    files.append(rel)
+    return out
 
 
 def scan_decorator(tree: ast.AST, name: str) -> list[tuple]:
@@ -131,6 +177,8 @@ def main() -> int:
         spec_is_current(rep)
 
     features, evals = load_spec()
+    anchors = load_anchors()
+    gates = load_gates()
     by_id = {f["id"]: f for f in features}
     eval_ids = {e["id"] for e in evals}
 
@@ -152,10 +200,13 @@ def main() -> int:
     ran = set(results.get("evals_run", []))
     rejected = set(results.get("counterexamples_rejected", []))
 
-    # T2 -- code claims a feature that does not exist
+    # T2 -- code claims an id the document does not define. A control or a
+    # principle is a legitimate target: H8 and P1 are specified, they are simply
+    # not four-field feature contracts.
     for fid, files in sorted(impl_by_feature.items()):
-        if fid not in by_id:
-            rep.fail("T2", f"@implements({fid!r}) names no feature in the spec  [{files[0]}]")
+        if fid not in by_id and fid not in anchors:
+            rep.fail("T2", f"@implements({fid!r}) names no feature, control or "
+                           f"principle in the spec  [{files[0]}]")
 
     # T3 / T4 -- status must be supported
     for f in features:
@@ -190,6 +241,42 @@ def main() -> int:
             rep.warn("T7", f"{f['id']}: {len(missing)} of {len(nevers)} NEVER clauses "
                            f"have no test declaring @refuses")
 
+    # T11 -- a feature with EVAL prose but no numbered eval in the plan can
+    # never reach `tested`, because T4 has nothing to check it against. It is a
+    # WARNING rather than a failure: assigning an eval means writing the
+    # counterexample it must reject, and inventing 22 of those to clear a
+    # dashboard is how a suite stops biting.
+    for f in features:
+        if not (f.get("eval_ids") or []):
+            rep.warn("T11", f"{f['id']} carries EVAL prose but no numbered eval "
+                            f"in the plan -- it cannot advance past `decided`")
+
+    # T10 -- the eval record can only GROW (conftest merges rather than
+    # replaces, so a narrowed run cannot delete evidence). The price of that is
+    # that a renamed or deleted eval id would vouch for something gone, so it
+    # is checked here rather than assumed away.
+    for eid in sorted(ran - eval_ids):
+        rep.fail("T10", f"{eid} is recorded as having run and is not defined in "
+                        f"the spec -- stale evidence. Clear .nm/eval_results.json "
+                        f"and re-run, or restore the eval.")
+
+    # T8 / T9 -- the gate matrix against the code, in both directions
+    consulted = gate_consultations()
+    for g in gates:
+        seen = consulted.get(g["id"])
+        if g["built"] and not seen:
+            rep.fail("T8", f"{g['id']} is declared built and no code path "
+                           f"consults it -- the matrix promises a gate the "
+                           f"product does not run")
+        if not g["built"] and seen:
+            rep.fail("T9", f"{g['id']} is declared NOT built and is consulted in "
+                           f"{', '.join(seen)} -- the matrix tells the advocate "
+                           f"nothing evaluates this while something quietly does")
+    for gid, files in sorted(consulted.items()):
+        if gid not in {g["id"] for g in gates}:
+            rep.fail("T8", f"{gid} is used in {files[0]} and is not in the gate "
+                           f"matrix")
+
     # ---- report ----
     total_never = sum(len(f.get("never") or []) for f in features)
     covered_never = sum(len(v) for v in refuses_by_feature.values())
@@ -206,6 +293,9 @@ def main() -> int:
     print(f"  evals ever run    {len(ran):>4}")
     print(f"  counterex. bit    {len(rejected):>4}  (rejected at least once)")
     print(f"  NEVER clauses     {covered_never:>4} / {total_never} covered by @refuses")
+    print(f"  gates             {len(gates):>4}  "
+          f"({sum(1 for g in gates if g['built'])} built, "
+          f"{sum(1 for g in gates if g['response'] == 'withhold')} withholding)")
 
     if not args.summary:
         if rep.failures:

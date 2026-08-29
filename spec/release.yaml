@@ -1,0 +1,212 @@
+# THE RELEASE SCORECARD — authored thresholds, measured values.
+#
+# `tools/releasegate.py` measures each row and prints PASS / FAIL / NOT MEASURED.
+# The third state is not a formality. A scorecard that shows only PASS and FAIL
+# reports a metric nobody has computed as though it were fine, and that is the
+# single most repeated defect shape in this project (S8) applied to the release
+# decision itself.
+#
+# WHAT IS AUTHORED HERE AND WHAT IS NOT
+# -------------------------------------
+# The THRESHOLD is a product decision and lives here. The MEASUREMENT is code
+# and lives in `tools/releasegate.py`. Nothing in this file is generated, and
+# nothing in it is a measurement — a number here that claims to be measured
+# would be a second copy of a fact the tool already computes.
+#
+# `blocking: true` means the row FAILS THE RELEASE. `blocking: false` means it
+# is reported and watched. A row is never quietly downgraded to non-blocking to
+# get a release out; it is changed here, in a commit, with the reason.
+
+version: 1
+authored: "2026-08-30"
+
+scorecard:
+
+  # ---- CORPUS COVERAGE -----------------------------------------------------
+  # These decide WHAT THE PRODUCT MAY CLAIM TO COVER. A jurisdiction whose
+  # binding court has no output held is a jurisdiction the product answers
+  # about from other courts' law, and the advocate must be told that before
+  # they rely on it, not after.
+
+  - id: RG-01
+    what: "Binding-court output held for the matter's jurisdiction, current period"
+    detail: >
+      Judgments of the court that binds a Telangana matter, for the five years
+      to date. The Telangana High Court was constituted on 1 January 2019 and
+      the corpus holds NONE of its output.
+    threshold: ">= 1 judgment per year for each of the last 5 years"
+    measured_by: "caselaws_v2_parents.json, grouped by normalised court and year"
+    owner: "corpus"
+    cadence: "every ingest"
+    blocking: true
+    on_fail: >
+      The product may not claim Telangana High Court coverage. Every turn that
+      would rest on High Court authority fires G-COVERAGE and discloses the gap
+      in the answer. Release is permitted with the disclosure; the CLAIM is
+      what is gated, not the product.
+
+  - id: RG-02
+    what: "bind-1 — no post-bifurcation Andhra Pradesh judgment is silently treated as binding"
+    detail: >
+      The standing decision that Andhra Pradesh High Court judgments bind
+      Telangana was taken against a corpus whose AP range is 1954-2018 and
+      whose post-2018 count is exactly zero. It does not reach a judgment
+      decided after the bifurcation, and extending it silently would tell an
+      advocate that a 2022 Andhra judgment binds a Telangana court.
+    threshold: "== 0 Andhra Pradesh High Court judgments with year >= 2019"
+    measured_by: "caselaws_v2_parents.json, court normalised, year >= 2019"
+    owner: "corpus"
+    cadence: "every ingest"
+    blocking: true
+    on_fail: >
+      THE DECISION IS VOID, not extended. Binding status must be computed from
+      the date against 1 January 2019 for every AP judgment before the corpus
+      is served, and docs/BASELINE.md §1.1 is rewritten.
+
+  - id: RG-03
+    what: "Provision coverage against the curated manifest, union across stores"
+    detail: >
+      Every section the manifest declares as intended coverage must be
+      retrievable through the union lookup. A shortfall here is the difference
+      between an honest NOT_HELD and a HELD_NOT_FOUND defect.
+    threshold: ">= 0.95 of intended sections retrievable"
+    measured_by: "chunks.db, union across every act_pattern per manifest entry"
+    owner: "retrieval"
+    cadence: "every ingest"
+    blocking: true
+
+  - id: RG-04
+    what: "Attributable share of case paragraphs"
+    detail: >
+      Only ratio, reasoning and order paragraphs may carry a proposition
+      attributed to a court. Counsel's submission is 14.8% of the corpus and
+      reads exactly like a holding.
+    threshold: ">= 0.40 of case paragraphs classified attributable"
+    measured_by: "chunks.db, doc_type='case_law', paragraph_type"
+    owner: "corpus"
+    cadence: "every ingest"
+    blocking: false
+
+  - id: RG-05
+    what: "Subsequent-treatment coverage"
+    detail: >
+      The share of held judgments for which the citator has any entry. Below
+      this, a treatment answer is mostly NOT_CHECKED — which is honest, and
+      also means the product cannot yet promise to tell an advocate whether an
+      authority is still good law.
+    threshold: ">= 0.50 of held judgments have a citator entry"
+    measured_by: "citator.json keys matched against caselaws_v2_parents.json"
+    owner: "corpus"
+    cadence: "every ingest"
+    blocking: false
+    on_fail: >
+      The product may not claim to verify that an authority is still good law.
+      Every authority Finding carries treatment `not_checked` and cannot carry
+      a proposition alone.
+
+  - id: RG-06
+    what: "Provision-to-authority linking"
+    detail: >
+      The share of case paragraphs carrying a structured `sections_cited` link.
+      `legal.db.case_section_links` holds 0 rows, so this is the only route to
+      *which authorities interpret this provision*.
+    threshold: ">= 0.25 of attributable paragraphs carry a section link"
+    measured_by: "chunks.db, sections_cited on case_law chunks"
+    owner: "retrieval"
+    cadence: "every ingest"
+    blocking: false
+
+  - id: RG-07
+    what: "The authority index is built and current"
+    detail: >
+      Case-law retrieval reads .nm/authority.db. Absent, every authority need
+      returns HELD_NOT_FOUND naming the index — visibly, never as an empty
+      answer.
+    threshold: "built, and its source identity matches the corpus VERSION"
+    measured_by: "tools/build_authority_index.py identity record"
+    owner: "retrieval"
+    cadence: "every ingest"
+    blocking: true
+
+  # ---- SPECIFICATION INTEGRITY --------------------------------------------
+  - id: RG-10
+    what: "Every gate in the matrix is wired in both directions"
+    threshold: "trace T8 and T9 both clean"
+    measured_by: "tools/trace.py"
+    owner: "build"
+    cadence: "every commit"
+    blocking: true
+
+  - id: RG-11
+    what: "The suite bites"
+    threshold: "all mutations caught by tools/mutate.py"
+    measured_by: "tools/mutate.py"
+    owner: "build"
+    cadence: "every slice close"
+    blocking: true
+
+  - id: RG-12
+    what: "No status inflation"
+    threshold: "trace T3 and T4 clean — nothing claims `tested` whose evals never ran"
+    measured_by: "tools/trace.py"
+    owner: "build"
+    cadence: "every commit"
+    blocking: true
+
+  # ---- ANSWER QUALITY ------------------------------------------------------
+  # NOT MEASURED until the golden runner exists (S0/T-005b). Listed anyway:
+  # a threshold that is absent from the scorecard cannot be reported as
+  # unmeasured, and an unmeasured release criterion is the one that gets
+  # assumed.
+
+  - id: RG-20
+    what: "Golden set — smoke suite"
+    threshold: "100% pass"
+    measured_by: "tools/run_goldens.py --suite smoke"
+    owner: "quality"
+    cadence: "every commit"
+    blocking: true
+
+  - id: RG-21
+    what: "Golden set — full suite"
+    threshold: ">= 0.90 pass, and NO failure in the grounding or posture areas"
+    measured_by: "tools/run_goldens.py --suite full"
+    owner: "quality"
+    cadence: "release, on approval"
+    blocking: true
+
+  - id: RG-22
+    what: "Grounding violations on served turns"
+    threshold: "== 0 ungated grounding violations in the last 200 served turns"
+    measured_by: "TurnMetrics.gates_fired, response=withhold"
+    owner: "quality"
+    cadence: "weekly"
+    blocking: true
+
+  - id: RG-23
+    what: "Withheld-turn rate"
+    detail: >
+      Withholding is correct when grounding fails and useless if it happens
+      constantly. A high rate means retrieval is failing, not that the gate is
+      working.
+    threshold: "<= 0.05 of served turns withheld"
+    measured_by: "TurnMetrics.outcome == gated"
+    owner: "quality"
+    cadence: "weekly"
+    blocking: false
+
+  - id: RG-24
+    what: "Cost per served turn"
+    threshold: "<= 0.02 USD median"
+    measured_by: "TurnMetrics.cost_usd"
+    owner: "quality"
+    cadence: "weekly"
+    blocking: false
+
+  - id: RG-25
+    what: "Latency, p95, on a matter turn"
+    threshold: "<= 8000 ms"
+    measured_by: "TurnMetrics.latency_ms"
+    owner: "quality"
+    cadence: "weekly"
+    blocking: false

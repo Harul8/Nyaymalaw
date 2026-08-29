@@ -59,6 +59,18 @@ class Element:
     refs: tuple[str, ...] = ()
     signal: Signal = Signal.NONE
     collapsible: bool = False
+    disclosure: bool = False
+    """True when this element REPORTS WHAT COULD NOT BE ESTABLISHED rather than
+    asserting anything about the law -- a corpus gap, a retrieval defect, a
+    source retrieved and then dropped.
+
+    The grounding gate reads this. A disclosure names the provision it could
+    not produce, and naming it must not be mistaken for citing it; without the
+    distinction, the product is withheld precisely for being honest.
+
+    ONLY THE ENGINE SETS IT, on text it composed itself from a retrieval
+    result. Model output always lands in an asserting element, so nothing the
+    model writes can opt out of the gate."""
 
     def __post_init__(self) -> None:
         if not self.text.strip():

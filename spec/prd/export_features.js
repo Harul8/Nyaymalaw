@@ -14,4 +14,17 @@ require('./part_a');
 require('./part_b');
 require('./part_c');
 
-process.stdout.write(JSON.stringify(H.REGISTRY, null, 2));
+const { SCHEMAS } = require('./schemas');
+
+process.stdout.write(JSON.stringify({
+  features: H.REGISTRY,
+  anchors: H.ANCHORS,
+  schemas: SCHEMAS.map(([name, owner, purpose, fields]) => ({
+    name,
+    owner,
+    purpose,
+    fields: fields.map(([field, type, required, why]) => ({
+      field, type, required, why,
+    })),
+  })),
+}, null, 2));

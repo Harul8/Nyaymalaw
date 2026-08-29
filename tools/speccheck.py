@@ -40,6 +40,8 @@ DOCX = ROOT / "docs" / "Nyaymalaw_PRD.docx"
 FEATURES = ROOT / "spec" / "features.yaml"
 EVALS = ROOT / "spec" / "evals.yaml"
 GOLDEN = ROOT / "docs" / "GOLDEN_SET.md"
+GATES = ROOT / "spec" / "gates.yaml"
+SCHEMAS = ROOT / "spec" / "schemas.yaml"
 
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 STATUSES = {"decided", "built", "tested", "verified live"}
@@ -145,6 +147,78 @@ def check_required_fields(rep: Report, features: list) -> None:
                 rep.fail("SC7", f"{f['id']} has an empty {field.upper()} clause")
 
 
+def check_gates(rep: Report, text: str, gates: list) -> None:
+    """SC9 -- every gate id in the document resolves to the registry.
+
+    The matrix itself is RENDERED from `nm/domain/gates.py`, so it cannot
+    drift. What can drift is prose elsewhere in the document referring to a
+    gate by name -- and a reference to a gate that does not exist is worse than
+    no reference, because it reads as a promise that something is guarded.
+    """
+    known = {g["id"] for g in gates}
+    for m in re.finditer(r"\bG-[A-Z]{3,}\b", text):
+        if m.group(0) not in known:
+            rep.fail("SC9", f"the PRD names gate {m.group(0)}, which is not in "
+                            f"nm/domain/gates.py")
+
+
+def check_schemas(rep: Report, features: list, schemas: list) -> None:
+    """SC10/SC11/SC12 -- Appendix E against the PRODUCES clauses.
+
+    SC11 is the one that matters. A four-field summary that lists fields
+    inline, beside a full definition in the appendix, is a SECOND COPY -- and
+    the whole argument of this project is that a second copy goes stale. So an
+    inline list survives only where every field in it is a real field of the
+    registered schema; the moment it contradicts, the build fails.
+    """
+    by_name = {s["name"]: s for s in schemas}
+
+    for sch in schemas:
+        if not sch["fields"]:
+            rep.fail("SC10", f"schema {sch['name']!r} has no fields")
+        for f in sch["fields"]:
+            if not (f.get("why") or "").strip():
+                rep.fail("SC10", f"{sch['name']}.{f['field']} has no reason. A "
+                                 f"field list with no reasons is a shape, and "
+                                 f"shapes are what the previous build measured "
+                                 f"while the product was wrong throughout.")
+        if not any(f["required"] for f in sch["fields"]):
+            rep.fail("SC10", f"schema {sch['name']!r} has no required field")
+
+    produced: set[str] = set()
+    for feat in features:
+        text = " ".join(feat.get("produces") or [])
+        names = set(re.findall(r"`([A-Z][A-Za-z]+)`", text))
+        names |= set(re.findall(r"`([A-Z][A-Za-z]+)\s*\{", text))
+        if not names and not re.search(r"`", text):
+            rep.fail("SC12", f"{feat['id']} PRODUCES names no type. PRODUCES is "
+                             f"the state the next slice reads; prose cannot be "
+                             f"read by anything.")
+        produced |= names & set(by_name)
+
+        # SC11 -- an inline field list must not contradict the registry.
+        for m in re.finditer(r"`([A-Z][A-Za-z]+)\s*\{([^}]*)\}", text):
+            name, body = m.group(1), m.group(2)
+            if name not in by_name:
+                continue
+            known = {f["field"] for f in by_name[name]["fields"]}
+            for token in re.findall(r"\b([a-z_]{3,})\b", body):
+                if token in ("null", "bool", "int", "string", "date", "datetime",
+                             "enum", "true", "false"):
+                    continue
+                if token not in known:
+                    rep.fail("SC11",
+                             f"{feat['id']} PRODUCES lists {name}.{token}, which "
+                             f"Appendix E does not define. An inline list beside "
+                             f"a full definition is a second copy; make it a "
+                             f"subset or point at the appendix.")
+
+    for name in sorted(set(by_name) - produced):
+        rep.fail("SC10", f"schema {name!r} is defined in Appendix E and no "
+                         f"feature PRODUCES it. An unowned contract is one "
+                         f"nothing is held to.")
+
+
 def check_eval_references(rep: Report, features: list, evals: list) -> None:
     """SC8 -- every eval id a feature names must exist."""
     known = {e["id"] for e in evals}
@@ -162,6 +236,10 @@ def main() -> int:
     text = prd_text()
     features = yaml.safe_load(FEATURES.read_text(encoding="utf8"))["features"]
     evals = yaml.safe_load(EVALS.read_text(encoding="utf8"))["evals"]
+    gates = (yaml.safe_load(GATES.read_text(encoding="utf8"))["gates"]
+             if GATES.exists() else [])
+    schemas = (yaml.safe_load(SCHEMAS.read_text(encoding="utf8"))["schemas"]
+               if SCHEMAS.exists() else [])
     goldens = len(re.findall(r"^\| \*\*GS-\d+\*\*", GOLDEN.read_text(encoding="utf8"), re.M))
 
     check_counts(rep, text, features, evals, goldens)
@@ -171,6 +249,8 @@ def main() -> int:
     check_unique_ids(rep, features, evals)
     check_required_fields(rep, features)
     check_eval_references(rep, features, evals)
+    check_gates(rep, text, gates)
+    check_schemas(rep, features, schemas)
 
     print("=" * 70)
     print("SPECCHECK  the PRD against itself")
@@ -178,6 +258,9 @@ def main() -> int:
     print(f"  features          {len(features):>4}")
     print(f"  evals             {len(evals):>4}")
     print(f"  golden scenarios  {goldens:>4}")
+    print(f"  gates             {len(gates):>4}")
+    print(f"  schemas           {len(schemas):>4}  "
+          f"({sum(len(x['fields']) for x in schemas)} fields)")
     print(f"  PRD words         {len(text.split()):>4}")
 
     if rep.failures:

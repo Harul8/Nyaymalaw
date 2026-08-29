@@ -1,0 +1,301 @@
+[
+  {
+    "id": "G-EMERGENCY",
+    "condition": "Danger, liberty or an irreversible step is disclosed on the names-and-danger reading.",
+    "states": [
+      "live",
+      "cleared",
+      "resolved",
+      "not_assessed"
+    ],
+    "response": "block",
+    "scope": "turn",
+    "persistence": "sticky",
+    "recovery": "advocate",
+    "visible": "The protective step, its owner and its time, and nothing else. Merits are refused on this turn.",
+    "feature": "B2",
+    "built": false
+  },
+  {
+    "id": "G-CONFLICT",
+    "condition": "A party, counterparty or related entity matches the registry, or the registry could not be read in full.",
+    "states": [
+      "clear",
+      "matched",
+      "incomplete",
+      "not_run"
+    ],
+    "response": "block",
+    "scope": "turn",
+    "persistence": "sticky",
+    "recovery": "human",
+    "visible": "This matter cannot be taken further until the conflict position is settled by a person.",
+    "feature": "B3",
+    "built": false
+  },
+  {
+    "id": "G-COMPETENCE",
+    "condition": "The matter's jurisdiction or practice area is outside declared coverage, or coverage could not be established.",
+    "states": [
+      "covered",
+      "gap",
+      "not_assessed"
+    ],
+    "response": "disclose",
+    "scope": "thread",
+    "persistence": "sticky",
+    "recovery": "human",
+    "visible": "What is outside coverage is named, with what would be needed to close it. Work continues on what is inside.",
+    "feature": "B4",
+    "built": false
+  },
+  {
+    "id": "G-SCOPE",
+    "condition": "A step falls outside recorded engagement scope, or scope is unrecorded.",
+    "states": [
+      "in_scope",
+      "out_of_scope",
+      "accepted",
+      "unrecorded"
+    ],
+    "response": "block",
+    "scope": "step",
+    "persistence": "sticky",
+    "recovery": "advocate",
+    "visible": "This step is outside recorded scope. It is not done silently, and advice given without scope is not reliance-ready.",
+    "feature": "B5",
+    "built": false
+  },
+  {
+    "id": "G-CAPACITY",
+    "condition": "Capacity to instruct is doubted on a decision that would become authority.",
+    "states": [
+      "held",
+      "doubted",
+      "not_assessed"
+    ],
+    "response": "block",
+    "scope": "step",
+    "persistence": "sticky",
+    "recovery": "human",
+    "visible": "The decision is not recorded as authority while capacity is open.",
+    "feature": "B6",
+    "built": false
+  },
+  {
+    "id": "G-UNSCREENED",
+    "condition": "Substance was admitted on a matter whose screens are not built or did not run.",
+    "states": [
+      "screened",
+      "unscreened",
+      "not_assessed"
+    ],
+    "response": "disclose",
+    "scope": "turn",
+    "persistence": "turn",
+    "recovery": "system",
+    "visible": "This matter was not screened. The output says so rather than reading as though it had passed.",
+    "feature": "B3",
+    "built": true
+  },
+  {
+    "id": "G-POSTURE",
+    "condition": "The thread's role is `unknown`, or a stated posture is contradicted by a later statement.",
+    "states": [
+      "resolved",
+      "unresolved",
+      "conflicted"
+    ],
+    "response": "block",
+    "scope": "thread",
+    "persistence": "sticky",
+    "recovery": "advocate",
+    "visible": "Whose side are we on. No directive step is computed until it is settled, because the same provision helps one side and hurts the other.",
+    "feature": "C3",
+    "built": true
+  },
+  {
+    "id": "G-THREAD",
+    "condition": "An account cannot be bound to exactly one thread, or two threads look like one without a decisive identifier.",
+    "states": [
+      "bound",
+      "ambiguous",
+      "unbindable"
+    ],
+    "response": "block",
+    "scope": "step",
+    "persistence": "turn",
+    "recovery": "advocate",
+    "visible": "A merge is PROPOSED and never performed. A wrong split is visible; a wrong merge inverts the advice invisibly.",
+    "feature": "C4",
+    "built": true
+  },
+  {
+    "id": "G-DATE",
+    "condition": "An evidence need carries no governing date.",
+    "states": [
+      "dated",
+      "undated"
+    ],
+    "response": "withhold",
+    "scope": "need",
+    "persistence": "turn",
+    "recovery": "system",
+    "visible": "The query is rejected rather than defaulted to today. Retrieval against the wrong version of an Act is not a near miss.",
+    "feature": "D3",
+    "built": true
+  },
+  {
+    "id": "G-GROUND",
+    "condition": "A proposition in the answer is not supported by the span of a retrieved primary source.",
+    "states": [
+      "supported",
+      "unsupported"
+    ],
+    "response": "withhold",
+    "scope": "turn",
+    "persistence": "turn",
+    "recovery": "none",
+    "visible": "Nothing is emitted. The advocate is told the turn was withheld and why -- never given the answer with a caveat.",
+    "feature": "P1",
+    "built": true
+  },
+  {
+    "id": "G-ATTRIB",
+    "condition": "A proposition is attributed to a judgment from a paragraph that is not ratio, reasoning or order.",
+    "states": [
+      "attributable",
+      "not_attributable"
+    ],
+    "response": "withhold",
+    "scope": "turn",
+    "persistence": "turn",
+    "recovery": "none",
+    "visible": "Nothing is emitted. Counsel's losing submission is 14.8% of the case corpus and reads exactly like a holding.",
+    "feature": "P2",
+    "built": true
+  },
+  {
+    "id": "G-QUOTE",
+    "condition": "A quoted string in the answer does not appear verbatim in a retrieved span.",
+    "states": [
+      "verbatim",
+      "not_verbatim"
+    ],
+    "response": "withhold",
+    "scope": "turn",
+    "persistence": "turn",
+    "recovery": "none",
+    "visible": "Nothing is emitted. A paraphrase inside quotation marks is a fabricated quotation whether or not it is accurate.",
+    "feature": "P1",
+    "built": true
+  },
+  {
+    "id": "G-INFORCE",
+    "condition": "Retrieved text was not in force on the matter's governing date.",
+    "states": [
+      "in_force",
+      "not_in_force"
+    ],
+    "response": "withhold",
+    "scope": "need",
+    "persistence": "turn",
+    "recovery": "system",
+    "visible": "The superseded text is not served. The 2024 codes make this load-bearing: the CrPC answer to a 2025 question is wrong in a way that reads exactly like right.",
+    "feature": "H2",
+    "built": true
+  },
+  {
+    "id": "G-BINDING",
+    "condition": "Binding status for an authority cannot be computed from its court and date against the matter's jurisdiction.",
+    "states": [
+      "binding",
+      "persuasive",
+      "not_assessed"
+    ],
+    "response": "withhold",
+    "scope": "need",
+    "persistence": "turn",
+    "recovery": "human",
+    "visible": "The authority may be quoted with its status disclosed. It may not carry a proposition alone.",
+    "feature": "P2",
+    "built": true
+  },
+  {
+    "id": "G-HELDNOTFOUND",
+    "condition": "The manifest declares the provision as intended coverage and retrieval did not return it.",
+    "states": [
+      "retrieved",
+      "held_not_found"
+    ],
+    "response": "disclose",
+    "scope": "need",
+    "persistence": "turn",
+    "recovery": "none",
+    "visible": "A RETRIEVAL DEFECT, escalated. It is never shown to the advocate as though the corpus did not hold it.",
+    "feature": "H8",
+    "built": true
+  },
+  {
+    "id": "G-NOTHELD",
+    "condition": "The manifest does not declare the provision, and it was not retrieved.",
+    "states": [
+      "held",
+      "not_held"
+    ],
+    "response": "disclose",
+    "scope": "need",
+    "persistence": "turn",
+    "recovery": "system",
+    "visible": "What is missing is NAMED. A vague disclaimer is silence in more words.",
+    "feature": "M4",
+    "built": true
+  },
+  {
+    "id": "G-COVERAGE",
+    "condition": "A release-gate coverage minimum for the matter's court, period or practice area is not met.",
+    "states": [
+      "met",
+      "unmet",
+      "not_measured"
+    ],
+    "response": "disclose",
+    "scope": "thread",
+    "persistence": "turn",
+    "recovery": "human",
+    "visible": "The corpus holds no output of the binding court for this period. The advocate is told before relying on the answer, not after.",
+    "feature": "H1",
+    "built": true
+  },
+  {
+    "id": "G-MODEL",
+    "condition": "A model tier is unreachable, over budget, or returns unusable output after retries.",
+    "states": [
+      "available",
+      "degraded",
+      "unavailable"
+    ],
+    "response": "disclose",
+    "scope": "need",
+    "persistence": "turn",
+    "recovery": "system",
+    "visible": "The NEED fails, not the turn. The gap is visible and nothing is recorded as advice.",
+    "feature": "7.4.4",
+    "built": true
+  },
+  {
+    "id": "G-STALE",
+    "condition": "The matter moved underneath the turn between load and commit.",
+    "states": [
+      "current",
+      "stale"
+    ],
+    "response": "withhold",
+    "scope": "turn",
+    "persistence": "turn",
+    "recovery": "system",
+    "visible": "The turn is refused and re-derived. It is never merged over the newer state.",
+    "feature": "I1",
+    "built": true
+  }
+]

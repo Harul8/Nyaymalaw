@@ -100,12 +100,30 @@ def test_the_limitation_schedule_resolves_as_an_article(adapter):
     assert "Article_65" in result.findings[0].locator
 
 
-def test_the_era_pair_is_retrievable_on_both_sides(adapter):
-    """The era rule is only testable because both codes are held."""
-    old = adapter.fetch(need("section 447 of the indian penal code"))
-    new = adapter.fetch(need("section 329 of the bharatiya nyaya sanhita"))
-    assert old.coverage is Coverage.ANSWERED
-    assert new.coverage is Coverage.ANSWERED
+def test_the_governing_date_decides_which_code_answers(adapter):
+    """THE ERA RULE, and it now bites rather than merely being possible.
+
+    Both codes are held, so asking for each by name at today's date used to
+    return both -- which proved only that the corpus was complete. The property
+    that matters is that THE GOVERNING DATE PICKS: an offence in 2019 is
+    answered from the IPC and one in 2025 from the BNS, and asking for the IPC
+    at a 2025 date does NOT return the superseded text.
+    """
+    before = EvidenceNeed(question="section 447 of the indian penal code",
+                          governing_date=date(2019, 6, 1))
+    after = EvidenceNeed(question="section 329 of the bharatiya nyaya sanhita",
+                         governing_date=date(2025, 6, 1))
+    assert adapter.fetch(before).coverage is Coverage.ANSWERED
+    assert adapter.fetch(after).coverage is Coverage.ANSWERED
+
+    # The superseded code, asked for after its repeal. It is NOT served.
+    stale = adapter.fetch(EvidenceNeed(
+        question="section 447 of the indian penal code",
+        governing_date=date(2025, 6, 1)))
+    assert stale.coverage is not Coverage.ANSWERED
+    # And the refusal says WHY -- not in force on that date -- rather than
+    # reporting a gap in a corpus that plainly holds all 574 sections.
+    assert "not in force" in (stale.missing or "")
 
 
 def test_a_question_naming_no_provision_is_refused_rather_than_guessed(adapter):

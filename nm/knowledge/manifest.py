@@ -60,9 +60,24 @@ class ManifestEntry:
     keywords: tuple[str, ...] = ()
     in_force_from: date | None = None
     in_force_to: date | None = None
+    jurisdiction: str = "Union of India"
 
     def covers(self, section: str) -> bool:
         return section in self.intended_sections
+
+    def in_force_on(self, day: date) -> bool:
+        """Was this instrument in force on the governing date?
+
+        The 2024 codes make this load-bearing rather than pedantic: the CrPC
+        and the BNSS both match "criminal procedure", and serving the
+        superseded one for a 2025 offence is a wrong answer that reads exactly
+        like a right one.
+        """
+        if self.in_force_from and day < self.in_force_from:
+            return False
+        if self.in_force_to and day > self.in_force_to:
+            return False
+        return True
 
 
 @dataclass(frozen=True)
@@ -84,6 +99,7 @@ class Manifest:
                                if e.get("in_force_from") else None),
                 in_force_to=(date.fromisoformat(e["in_force_to"])
                              if e.get("in_force_to") else None),
+                jurisdiction=e.get("jurisdiction", "Union of India"),
             )
             for e in doc["acts"]
         )
@@ -94,20 +110,39 @@ class Manifest:
                            if doc.get("reconciled_at") else None),
         )
 
-    def resolve(self, question: str) -> ManifestEntry | None:
-        """Which Act governs the question. Keyword-scored, deliberately simple.
+    def resolve(self, question: str,
+                on: date | None = None) -> tuple[ManifestEntry | None, ManifestEntry | None]:
+        """Which Act governs the question ON THE GOVERNING DATE.
 
-        This is the resolution layer at its thinnest -- enough to make the
-        three-state answer real in slice 1. The cause-of-action graph that
-        replaces it is slice 5.
+        Returns `(entry, superseded)`. `superseded` is the best keyword match
+        that was EXCLUDED because it was not in force on that date, and it is
+        returned rather than dropped so the caller can say *"the Act you are
+        describing existed, on a different date"* instead of the flat and false
+        *"not held"*.
+
+        Dropping it silently is the failure this signature exists to prevent:
+        a 2025 criminal matter matches the CrPC on keywords, the CrPC is out of
+        force, and a bare `None` would report a corpus gap where the truth is a
+        code transition.
+
+        Keyword-scored and deliberately simple. This is the resolution layer at
+        its thinnest; the cause-of-action graph that replaces it is slice 5.
         """
         low = question.lower()
-        best, score = None, 0
+        best: ManifestEntry | None = None
+        superseded: ManifestEntry | None = None
+        best_score = superseded_score = 0
         for e in self.entries:
             hits = sum(1 for k in e.keywords if k.lower() in low)
-            if hits > score:
-                best, score = e, hits
-        return best
+            if not hits:
+                continue
+            if on is not None and not e.in_force_on(on):
+                if hits > superseded_score:
+                    superseded, superseded_score = e, hits
+                continue
+            if hits > best_score:
+                best, best_score = e, hits
+        return best, superseded
 
     def intends(self, entry: ManifestEntry, section: str) -> bool:
         return entry.covers(section)

@@ -64,17 +64,77 @@ class Provenance:
             )
 
 
+class FactBasis(str, Enum):
+    """How the client KNOWS the thing they just told you. PRD C1.
+
+    Labelling this is not bookkeeping. "He never paid me" resting on direct
+    knowledge and the same sentence resting on belief are different cases, and
+    the difference decides what has to be proved and by whom.
+    """
+
+    DIRECT_KNOWLEDGE = "direct_knowledge"
+    DOCUMENT = "document"
+    HEARSAY = "hearsay"
+    INFERENCE = "inference"
+    BELIEF = "belief"
+    NOT_ASSESSED = "not_assessed"
+
+
+class Weight(str, Enum):
+    """C1 requires unfavourable facts to be explored as hard as favourable ones.
+
+    Without a field, nothing can check that they were -- and D6's adverse-fact
+    accounting has nothing to compare its theory against.
+    """
+
+    FAVOURABLE = "favourable"
+    UNFAVOURABLE = "unfavourable"
+    NEUTRAL = "neutral"
+    NOT_ASSESSED = "not_assessed"
+
+
 @dataclass(frozen=True)
 class Fact:
+    """PRD C1. THE FULL CONTRACT IS APPENDIX E, and this type is checked
+    against it by tests/test_produces_contracts.py."""
+
     id: FactId
     statement: str
     provenance: Provenance
     certainty: Certainty = Certainty.ASSERTED
     date: date | None = None            # None means UNDATED, never estimated
     material: bool = True
-    confirmed: bool = False
+    # `None` is NOT ASSESSED. Two states would make an unconfirmed fact
+    # indistinguishable from a rejected one.
+    confirmed: bool | None = None
+    confirmed_at: str | None = None
     conflicts_with: tuple[FactId, ...] = ()
     superseded_by: FactId | None = None
+    # The quotation, IF ONE WAS RECORDED. C1 forbids recording a paraphrase as
+    # a quotation, and that rule is unenforceable unless the claimed exact
+    # words are a separate field that can be checked back against the account.
+    exact_words: str | None = None
+    basis: FactBasis = FactBasis.NOT_ASSESSED
+    basis_source: str | None = None
+    weight: Weight = Weight.NOT_ASSESSED
+
+    def __post_init__(self) -> None:
+        needs_source = (FactBasis.DOCUMENT, FactBasis.HEARSAY, FactBasis.INFERENCE)
+        if self.basis in needs_source and not (self.basis_source or "").strip():
+            # C1: never record a source for a basis that points nowhere.
+            raise ValueError(
+                f"a fact whose basis is {self.basis.value!r} must name where "
+                f"that basis points. A basis with no source cannot be walked "
+                f"back, and an advocate who cannot audit the chain has to take "
+                f"it on trust.")
+        quoted = (self.exact_words or "").strip()
+        if quoted and quoted not in self.statement:
+            # C1: never record a paraphrase as a quotation. Claimed exact words
+            # must be findable in the account they claim to come from.
+            raise ValueError(
+                "recorded `exact_words` are not present in the statement they "
+                "claim to quote. A paraphrase recorded as a quotation is the "
+                "one an advocate reads out in court.")
 
     @staticmethod
     def create(statement: str, provenance: Provenance, **kw) -> "Fact":

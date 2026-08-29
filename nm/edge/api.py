@@ -104,6 +104,7 @@ def _release(output) -> _Released:
                 "no_deadline_reason": e.no_deadline_reason,
                 "signal": e.signal.value,
                 "collapsible": e.collapsible,
+                "disclosure": e.disclosure,
                 "refs": list(e.refs),
             }
             for e in answer.elements
@@ -120,8 +121,10 @@ class TurnRequest(BaseModel):
     advocate_id: str = Field(min_length=1)
     message: str = Field(min_length=1)
     matter_id: str | None = None
+    thread_id: str | None = None
     turn_id: str | None = None
     today: date | None = None
+    jurisdiction: str = "Telangana"
 
 
 @app.get("/api/health")
@@ -156,13 +159,25 @@ def turn(req: TurnRequest) -> _Released:
         advocate_id=req.advocate_id,
         message=req.message,
         matter_id=req.matter_id,
+        # The advocate naming a thread OUTRANKS every heuristic. The only
+        # source better than a number of record is the person holding the file.
+        thread_id=req.thread_id,
         today=req.today or date.today(),
+        jurisdiction=req.jurisdiction,
         **({"turn_id": req.turn_id} if req.turn_id else {}),
     )
     try:
         output = engine.run(payload)
     except TurnRefused as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        # 422 with the REASON, not just the refusal. The disclosures assert no
+        # law -- they say what could not be established -- so passing them
+        # through the byte boundary is safe, and withholding them as well would
+        # leave the advocate with a dead end.
+        raise HTTPException(status_code=422, detail={
+            "withheld_by": list(getattr(exc, "gates", ())),
+            "why": getattr(exc, "message", str(exc)),
+            "not_established": list(getattr(exc, "disclosures", ())),
+        }) from exc
     except StaleWrite as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _release(output)

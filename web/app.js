@@ -211,12 +211,17 @@ function renderTurn(entry) {
     const d = document.createElement('div');
     // A loud signal is never collapsed, whatever the server says about
     // collapsibility -- the client does not get to quiet it.
-    d.className = `el ${el.kind}`;
+    // A DISCLOSURE is not an assertion, and it must not look like one.
+    // "Here is the law" and "here is what I could not establish" rendered
+    // identically is how a gap becomes a finding in the reader's memory.
+    d.className = `el ${el.kind}${el.disclosure ? ' disclosure' : ''}`;
     const k = document.createElement('span');
     k.className = 'k';
-    k.textContent = el.signal && el.signal !== 'none'
-      ? `${KIND_LABEL[el.kind]} · ${el.signal.replace(/_/g, ' ')}`
-      : KIND_LABEL[el.kind];
+    k.textContent = el.disclosure
+      ? 'Not established'
+      : (el.signal && el.signal !== 'none'
+        ? `${KIND_LABEL[el.kind]} · ${el.signal.replace(/_/g, ' ')}`
+        : KIND_LABEL[el.kind]);
     const body = document.createElement('div');
     body.className = 'body'; body.textContent = el.text;
     d.append(k, body);
@@ -233,6 +238,29 @@ function renderTurn(entry) {
       d.appendChild(r);
     }
     wrap.appendChild(d);
+  }
+
+  // THE GATES THAT FIRED. A gate whose response is `disclose` and which the
+  // advocate cannot see has disclosed nothing -- and G-UNSCREENED fires on
+  // every turn, because the conflict, competence and engagement screens are
+  // slice 10 and are not built.
+  const fired = (entry.answer.metrics.gates_fired || []);
+  if (fired.length) {
+    const g = document.createElement('div');
+    g.className = 'gates';
+    for (const gate of fired) {
+      const row = document.createElement('div');
+      row.className = `gate ${gate.response}`;
+      const id = document.createElement('span');
+      id.className = 'gid';
+      id.textContent = `${gate.gate} · ${gate.state}`;
+      const detail = document.createElement('span');
+      detail.className = 'gdetail';
+      detail.textContent = gate.detail;
+      row.append(id, detail);
+      g.appendChild(row);
+    }
+    wrap.appendChild(g);
   }
 
   const m = entry.answer.metrics;

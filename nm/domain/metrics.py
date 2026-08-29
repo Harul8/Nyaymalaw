@@ -13,6 +13,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from nm.domain.gates import Response, gate
+
 
 class Phase(str, Enum):
     ADMIT = "admit"
@@ -34,6 +36,23 @@ class Violation:
     gating: bool = False
 
 
+@dataclass(frozen=True)
+class GateFiring:
+    """A gate that fired on this turn, and what the MATRIX said to do about it.
+
+    The response is looked up, never passed in. That is the whole reason the
+    matrix exists: before it, each call site decided for itself whether its
+    condition blocked, withheld or was merely logged, and the specification
+    ended up claiming the product failed closed on one thing while nine others
+    quietly blocked.
+    """
+
+    gate_id: str
+    state: str
+    detail: str
+    response: str
+
+
 @dataclass
 class TurnMetrics:
     turn_id: str
@@ -52,6 +71,8 @@ class TurnMetrics:
     tier_downgrades: list[dict[str, str]] = field(default_factory=list)
     stages: dict[str, int] = field(default_factory=dict)
     violations: list[Violation] = field(default_factory=list)
+    gates_fired: list[GateFiring] = field(default_factory=list)
+    grounding: dict = field(default_factory=dict)
     evidence_rounds: int = 0
     evidence_bound_hit: bool = False
 
@@ -78,6 +99,27 @@ class TurnMetrics:
     def violate(self, rule: str, detail: str, *, gating: bool = False) -> None:
         self.violations.append(Violation(rule=rule, detail=detail, gating=gating))
 
+    def fire(self, gate_id: str, state: str, detail: str) -> Response:
+        """Record a gate firing and return what the matrix says to do.
+
+        The caller does NOT decide. It reports the condition and obeys the
+        response, so changing whether something blocks or withholds is a change
+        to one table rather than a hunt through the code for the call site that
+        got it wrong.
+        """
+        g = gate(gate_id)
+        if state not in g.states:
+            raise ValueError(
+                f"{gate_id} has no state {state!r}; its vocabulary is "
+                f"{list(g.states)}. An out-of-vocabulary state is blanked, not "
+                f"accepted (PRD D9).")
+        self.gates_fired.append(
+            GateFiring(gate_id=gate_id, state=state, detail=detail,
+                       response=g.response.value))
+        if g.response is Response.WITHHOLD:
+            self.violate(gate_id, detail, gating=True)
+        return g.response
+
     @property
     def gating_violations(self) -> list[Violation]:
         return [v for v in self.violations if v.gating]
@@ -100,6 +142,12 @@ class TurnMetrics:
             "stages": dict(self.stages),
             "evidence_rounds": self.evidence_rounds,
             "evidence_bound_hit": self.evidence_bound_hit,
+            "gates_fired": [
+                {"gate": g.gate_id, "state": g.state, "response": g.response,
+                 "detail": g.detail}
+                for g in self.gates_fired
+            ],
+            "grounding": dict(self.grounding),
             "violations": [
                 {"rule": v.rule, "detail": v.detail, "gating": v.gating}
                 for v in self.violations

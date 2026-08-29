@@ -64,9 +64,17 @@ def pytest_sessionfinish(session, exitstatus):
 
     # Only evals that ran AND passed count as run. A failing eval has not
     # established anything about the feature it is attached to.
-    passed = sorted(_ran - _failed)
+    passed_now = _ran - _failed
+
+    # MERGED, never replaced. A narrowed run -- two test files, one -k
+    # expression, one marker -- must not be able to delete evidence it simply
+    # did not exercise. `trace` T10 catches the risk this accepts: an id in the
+    # record that the spec no longer defines is stale evidence and fails.
+    passed = set(existing.get("evals_run", [])) | passed_now
+    failed = (set(existing.get("evals_failed", [])) | _failed) - passed_now
+
     RESULTS.write_text(json.dumps({
-        "evals_run": passed,
-        "evals_failed": sorted(_failed),
+        "evals_run": sorted(passed),
+        "evals_failed": sorted(failed),
         "counterexamples_rejected": existing.get("counterexamples_rejected", []),
     }, indent=2), encoding="utf8")

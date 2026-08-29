@@ -182,6 +182,32 @@ main { display: grid; grid-template-columns: 22rem 1fr; flex: 1; min-height: 0; 
   display: block; margin-top: 0.3rem; word-break: break-all;
 }
 
+/* A gate firing. The response class colours it: `withhold` is the only one
+   that means nothing was emitted, and it must not look like the others. */
+.gates { margin: 10px 0 2px; display: flex; flex-direction: column; gap: 4px; }
+.gate {
+  display: flex; gap: 8px; align-items: baseline;
+  font-size: 12px; line-height: 1.45;
+  padding: 5px 9px; border-radius: 5px;
+  border-left: 3px solid var(--rule);
+  background: var(--surface);
+}
+.gate .gid {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px; letter-spacing: .02em;
+  color: var(--ink-3); white-space: nowrap;
+}
+.gate .gdetail { color: var(--ink-2); }
+.gate.disclose { border-left-color: var(--accent); }
+.gate.block    { border-left-color: var(--signal); }
+.gate.withhold { border-left-color: var(--signal); background: var(--signal-w); }
+.gate.withhold .gid { color: var(--signal); font-weight: 600; }
+
+/* An element that reports what could NOT be established. Deliberately quieter
+   than a citation and deliberately not invisible. */
+.el.disclosure { background: transparent; border-left-style: dashed; }
+.el.disclosure .k { color: var(--ink-3); }
+
 .metrics {
   font-family: var(--f-mono); font-size: 0.64rem; color: var(--ink-3);
   border-top: 1px dashed var(--rule); padding-top: 0.4rem; margin-top: 0.6rem;

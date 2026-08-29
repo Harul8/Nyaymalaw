@@ -10,12 +10,14 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
+from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
 from nm.adapters.model.config import ModelConfig, load, load_dotenv
 from nm.adapters.model.openai_adapter import OpenAIModelAdapter
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine
+from nm.domain.gates import GATES, withholding
+from nm.knowledge.coverage import CoverageProfile
 from nm.knowledge.manifest import Manifest
 from nm.ports.model import ModelPort, Tier
 
@@ -57,9 +59,13 @@ class Application:
         self.evidence = evidence or CorpusEvidenceAdapter(
             os.environ.get("NM_CORPUS_DIR")
             or (self.root / "legal_database" / "vector_store"),
-            self.manifest)
+            self.manifest,
+            authority_index=(os.environ.get("NM_AUTHORITY_INDEX")
+                             or default_authority_index(self.root)))
         self.model = model or build_model(self.config)
-        self.engine = TurnEngine(store=self.store, evidence=self.evidence, model=self.model)
+        self.coverage = CoverageProfile.load(self.root / "spec" / "coverage.yaml")
+        self.engine = TurnEngine(store=self.store, evidence=self.evidence,
+                                 model=self.model, coverage=self.coverage)
 
     def health(self) -> dict:
         return {
@@ -71,6 +77,22 @@ class Application:
                            else "not configured"),
             "encryption": self.store.scheme,
             "corpus": "readable" if self.evidence.available else "NOT READABLE",
+            # Each retrieval capability reports its OWN readiness. One rolled-up
+            # "corpus: readable" would let an unbuilt authority index hide
+            # behind a readable provision store, and the advocate would learn
+            # about it as an empty answer.
+            "retrieval": (self.evidence.readiness()
+                          if hasattr(self.evidence, "readiness") else {}),
+            "gates": {
+                "total": len(GATES),
+                "built": sum(1 for g in GATES if g.built),
+                "withholding": [g.id for g in withholding()],
+            },
+            "coverage": {
+                "measured_at": self.coverage.measured_at or "NEVER MEASURED",
+                "corpus_version": self.coverage.corpus_version,
+                "Telangana": self.coverage.position("Telangana").state.value,
+            },
             "manifest_acts": len(self.manifest.entries),
             "manifest_corpus_version": self.manifest.corpus_version,
         }

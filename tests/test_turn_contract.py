@@ -19,7 +19,6 @@ from nm.bootstrap.main import create_app
 from nm.core.turn import (
     TurnEngine,
     TurnInput,
-    TurnRefused,
     classify_route,
     read_posture,
 )
@@ -33,6 +32,7 @@ from nm.ports.evidence import (
     Finding,
     ParaKind,
     SourceKind,
+    Treatment,
 )
 from nm.ports.model import Tier
 from nm.ports.store import StaleWrite
@@ -49,18 +49,37 @@ def _model_config() -> ModelConfig:
     })
 
 
+def finding(**kw) -> Finding:
+    """A Finding with every required field filled.
+
+    A helper, not a default. The slice-2 contract removed the defaults from
+    `binding`, `para_kind` and `treatment` precisely because a default is a
+    decision taken on behalf of every call site that forgets -- so this fills
+    them EXPLICITLY and each test overrides what it is actually testing.
+    """
+    base = dict(
+        proposition="Limitation Act, 1963 Article 65",
+        source_kind=SourceKind.PROVISION,
+        ref="Limitation Act, 1963 Article 65",
+        span="For possession of immovable property... twelve years.",
+        locator="the_limitation_act_1963::Article_65::schedule_article",
+        store="the_limitation_act_1963",
+        binding=Binding.BINDING,
+        binding_for="Telangana",
+        binding_reason="an Act of Parliament in force, applying of its own force",
+        supports=True,
+        para_kind=ParaKind.UNKNOWN,
+        treatment=Treatment.statutory(),
+    )
+    base.update(kw)
+    return Finding(**base)
+
+
 class _Evidence:
     def __init__(self, result: EvidenceResult | None = None):
         self.result = result or EvidenceResult(
             coverage=Coverage.ANSWERED,
-            findings=(Finding(
-                proposition="Limitation Act, 1963 Article 65",
-                source_kind=SourceKind.PROVISION,
-                ref="Limitation Act, 1963 Article 65",
-                span="For possession of immovable property... twelve years.",
-                locator="the_limitation_act_1963::Article_65::schedule_article",
-                store="the_limitation_act_1963",
-                binding=Binding.BINDING, binding_for="Telangana", supports=True),),
+            findings=(finding(),),
             searched_stores=("the_limitation_act_1963",))
 
     def fetch(self, need):
@@ -258,9 +277,16 @@ def test_a_held_but_not_found_result_is_a_defect_not_a_disclosure(tmp_path):
     out = engine.run(TurnInput(
         advocate_id="adv",
         message="we act for the plaintiff; what is the limitation for possession"))
-    rules = {v.rule for v in out.metrics.violations}
-    assert "H8" in rules
-    assert not any("not retrieved" in e.text for e in out.answer.elements)
+    fired = {g.gate_id: g for g in out.metrics.gates_fired}
+    assert "G-HELDNOTFOUND" in fired, "the third coverage state must fire its gate"
+    assert fired["G-HELDNOTFOUND"].response == "disclose"
+
+    # It IS disclosed -- silence would let the advocate act on an answer whose
+    # authority is missing without ever learning it. What it must never be
+    # disclosed as is a gap in the law.
+    text = " ".join(e.text for e in out.answer.elements)
+    assert "defect in my retrieval" in text
+    assert "not held in the corpus" not in text.lower()
 
 
 @pytest.mark.eval_id("E-023")
@@ -275,19 +301,31 @@ def test_a_not_held_result_names_what_is_missing(tmp_path):
 
 
 @pytest.mark.eval_id("E-020")
-def test_a_finding_whose_span_does_not_support_gates_the_output(tmp_path):
-    """A grounding violation GATES the answer. It does not soften it."""
+def test_a_finding_whose_span_does_not_support_is_never_a_ground(tmp_path):
+    """An unsupported Finding is DROPPED, and the drop is DISCLOSED.
+
+    It does not become a citation, and it does not vanish. Vanishing would
+    leave the advocate believing nothing was found, which is a different and
+    false statement about the corpus.
+
+    Withholding the whole turn on it would be wrong in the other direction:
+    once it is dropped, the answer does not rest on it and nobody has been
+    misled. The withhold lives where the risk actually is -- the answer citing
+    something that was never retrieved -- in tests/test_grounding_gate.py.
+    """
     engine, _ = build(tmp_path, evidence=_Evidence(EvidenceResult(
         coverage=Coverage.ANSWERED,
-        findings=(Finding(
-            proposition="Article 65 governs", source_kind=SourceKind.PROVISION,
-            ref="Limitation Act Article 65", span="unrelated text",
-            locator="loc", store="s", binding=Binding.BINDING,
-            binding_for="Telangana", supports=False),))))
-    with pytest.raises(TurnRefused) as exc:
-        engine.run(TurnInput(advocate_id="adv",
-                             message="we act for the plaintiff in a possession suit"))
-    assert "gated" in str(exc.value)
+        findings=(finding(proposition="Article 65 governs",
+                          ref="Limitation Act Article 65",
+                          span="unrelated text", locator="loc", store="s",
+                          supports=False),))))
+    out = engine.run(TurnInput(
+        advocate_id="adv",
+        message="we act for the plaintiff in a possession suit"))
+    text = " ".join(e.text for e in out.answer.elements)
+    assert "NOT being relied on" in text
+    assert "G-GROUND" in text
+    assert not any(e.refs and "unrelated text" in e.text for e in out.answer.elements)
 
 
 @pytest.mark.eval_id("E-022")
@@ -295,10 +333,10 @@ def test_a_judgment_proposition_cannot_come_from_counsels_submission():
     """COUNTEREXAMPLE: 14.8% of retrievable paragraphs are counsel's
     submission, and quoting one as the holding is a live risk."""
     with pytest.raises(ValueError):
-        Finding(proposition="p", source_kind=SourceKind.AUTHORITY, ref="X v Y",
+        finding(source_kind=SourceKind.AUTHORITY, ref="X v Y",
                 span="counsel submitted that...", locator="l", store="s",
-                binding=Binding.BINDING, binding_for="Telangana",
-                supports=True, para_kind=ParaKind.ARGUMENTS)
+                para_kind=ParaKind.ARGUMENTS,
+                treatment=Treatment.not_checked("no citator entry"))
 
 
 # ================================================ THE SERVED PATH =========
@@ -426,6 +464,9 @@ def test_an_unscreened_matter_says_so_rather_than_reading_as_screened(tmp_path):
     engine, _ = build(tmp_path)
     out = engine.run(TurnInput(advocate_id="adv",
                                message="we act for the accused in a cheque matter"))
-    rules = {v.rule for v in out.metrics.violations}
-    assert "B3" in rules, (
+    fired = {g.gate_id: g for g in out.metrics.gates_fired}
+    assert "G-UNSCREENED" in fired, (
         "a turn that was not screened must record that it was not screened")
+    assert fired["G-UNSCREENED"].state == "unscreened"
+    assert fired["G-UNSCREENED"].response == "disclose"
+    assert "B3-B5" in fired["G-UNSCREENED"].detail

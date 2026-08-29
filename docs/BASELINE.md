@@ -226,14 +226,64 @@ repetition and a check does**:
 
 ---
 
-## 5. Standing gaps — real, and measured
+## 4.2 And a fourth time, in the code rather than the corpus
+
+On 30 August 2026 the **second-copy** shape (S9) produced the same class of
+false gap, from the other direction. Two modules each held a pattern for
+reading a provision reference; one was hardened against `O.S. 442/2023` parsing
+as *section 442* and the other was not. A realistic brief retrieved
+**Specific Relief Act s.442**, found nothing, and reported a corpus gap in an
+Act the corpus holds in full.
+
+**The lesson is the same one and it is now enforced the same way.** The pattern
+lives in `nm/domain/citation.py`, and `tests/test_citation_patterns.py` fails
+the build if a second one appears anywhere in `nm/`.
+
+---
+
+## 5. Measured 30 August 2026 — what slice 2 needed to know
+
+| What | Measured | Store |
+|---|---:|---|
+| Provision coverage against the manifest, **union across identifier conventions** | **99.8%** of 3,038 intended sections | `chunks.db` |
+| Attributable case paragraphs (`ratio`, `reasoning`, `order`) | **451,548** of 1,015,780 — 44.5% | `chunks.db` |
+| Paragraphs carrying a structured `sections_cited` link | **22,127** of 451,548 attributable — **4.9%** | `chunks.db` |
+| Citator entries | **4,894** against 33,791 judgments — **≤14.5%**, an upper bound | `citator.json` |
+| Citator entries recording NEGATIVE treatment | 1,317 | `citator.json` |
+| Contamination denylist, applied on read | 44 chunk ids | `contamination_denylist.json` |
+
+**The citator figure is why `Treatment` has three states.** It is keyed by the
+case NAME as written by the citing judgment, not by id, so the true match rate
+is below 14.5%. **A miss means the index is silent, never that the judgment is
+undoubted** — and reporting a miss as `clean` would make *an overruled
+authority presented as good law* the default behaviour. It is `NOT_CHECKED`,
+and a Finding whose treatment is `NOT_CHECKED` cannot carry a proposition
+alone.
+
+**The `sections_cited` figure supersedes nothing and closes nothing.**
+`legal.db.case_section_links` holds 0 rows, and the chunks layer's own links
+cover 4.9% of attributable paragraphs, concentrated on the Constitution
+(33,444), the IPC (13,472), the CrPC (3,121) and the CPC (1,224). *Which
+authorities interpret this provision* is **not** answerable today for the
+Evidence Act (66 links), the NI Act (63) or the Hindu Marriage Act (4).
+
+> **CHECK `rg-01`:** these figures are measured by `tools/releasegate.py`
+> against `spec/release.yaml`, written to `spec/coverage.yaml`, and **read at
+> turn time** by `nm/knowledge/coverage.py`. The release decision and the
+> advocate-facing disclosure rest on ONE measurement, so they cannot disagree.
+
+---
+
+## 5.1 Standing gaps — real, and measured
 
 | Gap | Size | Consequence |
 |---|---|---|
 | Telangana High Court, 2019 → | 0 judgements | The binding court for every matter has no output held. `bind-1` governs what we may say meanwhile |
 | Unclassified case paragraphs | 271,020 (26.7%) | A quarter of the case corpus cannot carry a proposition |
 | Duplicate Act identifiers | present across the corpus | Coverage is a union query, never a lookup (`act-1`) |
-| `legal.db` `case_section_links` | **0 rows** | The judgement→section table is empty. *Which authorities interpret this provision* is not answerable from the graph today |
+| `legal.db` `case_section_links` | **0 rows** | The judgement→section table is empty. The chunks layer's own `sections_cited` covers **4.9%** of attributable paragraphs, so *which authorities interpret this provision* is not answerable today except for the Constitution, the IPC, the CrPC and the CPC |
+| Subsequent treatment | **≤14.5%** of judgements have any citator entry | Treatment is `NOT_CHECKED` on a miss, and a `NOT_CHECKED` authority cannot carry a proposition alone. **The product may not claim to verify that an authority is still good law** |
+| The authority index | **not built** | Every authority need returns HELD_NOT_FOUND naming `tools/build_authority_index.py`. It never falls back to a different retrieval — a silent backend swap is the three-stores defect wearing a helpful face |
 
 ---
 

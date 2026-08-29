@@ -158,6 +158,19 @@ function spacer(h = 120) {
 const REGISTRY = [];
 
 /**
+ * ANCHORS: the ids the document defines that are NOT feature contracts --
+ * the ten controls (H1-H10) and the architecture principles (P1-P6).
+ *
+ * Code declares `@implements("P1")` against these, and the gate matrix names
+ * them as owners. Without a registry they are strings in a table, and
+ * trace.py has to either reject them as orphans or stop checking ids at all.
+ */
+const ANCHORS = [];
+function anchor(id, kind, title) {
+  ANCHORS.push({ id, kind, title });
+}
+
+/**
  * The four-field feature contract. This is the unit the whole PRD is built from.
  *   DOES     - the behaviour
  *   NEVER    - the failure it must refuse
@@ -267,5 +280,5 @@ const numbering = {
 module.exports = {
   d, h1, h2, h3, h4, p, bullet, num, table, cell, callout, feature, spacer, runs,
   numbering, INK, ACCENT, MUTED, SIGNAL, WASH, WASH2, RULE, CONTENT_W,
-  REGISTRY,
+  REGISTRY, ANCHORS, anchor,
 };

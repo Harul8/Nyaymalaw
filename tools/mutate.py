@@ -105,6 +105,85 @@ MUTATIONS = [
      "    if m is None or m.advocate_id != advocate_id:",
      "    if m is None:",
      "test_another_advocates_matter_is_not_disclosed", "E-010"),
+
+    # ---- slices 2 and 3: grounding, and the frame -------------------------
+    ("a citation the answer invents (the fabricated section)",
+     "nm/core/grounding.py",
+     "    report.violations.extend(verify_citations(answer.elements, quotable))",
+     "    # report.violations.extend(verify_citations(answer.elements, quotable))",
+     "test_a_provision_the_answer_cites_but_never_retrieved_withholds_the_turn",
+     "E-020"),
+
+    ("a fabricated quotation",
+     "nm/core/grounding.py",
+     "    report.violations.extend(verify_quotes(answer.elements, quotable))",
+     "    # report.violations.extend(verify_quotes(answer.elements, quotable))",
+     "test_a_quotation_not_verbatim_in_a_retrieved_span_withholds_the_turn",
+     "E-020"),
+
+    ("an unchecked citator read as clearance (the overruled authority)",
+     "nm/ports/evidence.py",
+     "            if self.treatment.state is TreatmentState.NOT_CHECKED:",
+     "            if False and self.treatment.state is TreatmentState.NOT_CHECKED:",
+     "test_an_authority_whose_treatment_was_never_checked_cannot_carry_a_proposition",
+     "E-022"),
+
+    ("a post-bifurcation Andhra judgment silently treated as binding",
+     "nm/knowledge/jurisdiction.py",
+     "        if year < BIFURCATION.year:",
+     "        if True:",
+     "test_andhra_pradesh_after_the_bifurcation_is_not_assessed_rather_than_assumed",
+     "E-002b"),
+
+    ("superseded text served for a later governing date (the 2024 codes)",
+     "nm/ports/evidence.py",
+     "        if self.governing_date is not None and not self.in_force:",
+     "        if False and self.governing_date is not None and not self.in_force:",
+     "test_text_not_in_force_on_the_governing_date_cannot_carry_a_proposition",
+     "E-023"),
+
+    ("a thread bound by guessing instead of asking",
+     "nm/core/threading.py",
+     "    labels = \"; \".join(f\"{t.label!r}\" for t in matter.threads[:5])",
+     "    return BindResult(BindState.BOUND, matter.threads[0], False, \"guessed\")\n"
+     "    labels = \"; \".join(f\"{t.label!r}\" for t in matter.threads[:5])",
+     "test_several_threads_and_no_identifier_blocks_rather_than_guessing",
+     "E-030"),
+
+    ("a merge performed rather than proposed",
+     "nm/core/threading.py",
+     "    if len(matches) > 1:",
+     "    if False and len(matches) > 1:",
+     "test_two_threads_with_one_identifier_propose_a_merge_and_never_perform_it",
+     "E-031"),
+
+    ("the corpus gap silently not disclosed",
+     "nm/core/turn.py",
+     "            self._disclose_coverage(turn, thread, metrics, grounds)",
+     "            pass  # self._disclose_coverage(turn, thread, metrics, grounds)",
+     "test_the_corpus_gap_is_disclosed_before_the_authority_search_not_after",
+     "E-023"),
+
+    ("a gate deciding its own response instead of reading the matrix",
+     "nm/domain/metrics.py",
+     "        if g.response is Response.WITHHOLD:",
+     "        if False and g.response is Response.WITHHOLD:",
+     "test_the_response_is_read_from_the_matrix_not_passed_in",
+     "E-020"),
+
+    ("an out-of-vocabulary gate state accepted",
+     "nm/domain/metrics.py",
+     "        if state not in g.states:",
+     "        if False and state not in g.states:",
+     "test_an_out_of_vocabulary_state_is_refused",
+     "E-065"),
+
+    ("a disclosure treated as a citation (withholding the honest answer)",
+     "nm/core/grounding.py",
+     "        if element.disclosure:",
+     "        if False and element.disclosure:",
+     "test_naming_what_could_not_be_retrieved_is_not_citing_it",
+     "E-023"),
 ]
 
 

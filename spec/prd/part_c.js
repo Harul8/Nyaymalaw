@@ -1,4 +1,5 @@
 const H = require('./helpers');
+const GATES = require('./gates.json');
 const { d, h1, h2, h3, h4, p, bullet, num, table, callout, feature, spacer, SIGNAL, ACCENT } = H;
 const { Paragraph, PageBreak } = d;
 
@@ -238,6 +239,9 @@ const controls = [
    'Every derived artefact records the identity of what it was built from and is **refused on mismatch**, not used with a warning.',
    'Class C — on every ingest, each artefact\'s source identity is compared and a mismatch fails the build. The measured precedent: a native index served **411,797 documents against the source\'s 414,710**, silently, through every query.'],
 ];
+
+controls.forEach((c) => H.anchor(
+  c[0].replace(/\*\*/g, '').split('\u00b7')[0].trim(), 'control', c[1]));
 
 A(table(
   ['Control', 'The promise', 'The mechanism', 'The eval'],
@@ -526,7 +530,7 @@ A(table(
     ['**P2 · Deterministic shell, stochastic core**', 'Resolution (deterministic) → Search (stochastic) → Verification (deterministic gate).', 'A stochastic stage cannot be trusted to police itself, and **every measured failure in this system\'s history was a stochastic stage\'s output taken at face value** — a summary embedding gating an Act out, a scoring table displacing a governing Article, a model returning a vocabulary nobody validated. Determinism at the ends means the middle may be wrong without the system being wrong.'],
     ['**P3 · Dependencies run one way**', 'Analysis never calls retrieval; it consumes Findings. Drafting never retrieves. Presentation never computes.', 'Grounding holds only if there is exactly **one** audit chain. Two retrieval paths mean two grounding standards and no way to say which produced a citation.'],
     ['**P4 · Matter state is a derivation graph**', 'Every computed value records what it depends on; a corrected fact invalidates its dependents.', 'A pipeline recomputes everything or nothing. A graph recomputes exactly what changed and can say what changed and why.'],
-    ['**P5 · Fail loud by default; fail closed only on grounding**', 'Invariant violations are recorded and surfaced and the answer still ships. **The single exception is a grounding violation, which gates the output.**', 'Noise is preferable to silence, so nothing is swallowed. But a wrong answer is worse than no answer, and only grounding failures produce confidently wrong output.'],
+    ['**P5 · Every gate declares its own response**', 'A condition that refuses something declares WHAT it refuses (turn, thread, step or evidence need) and HOW (withhold, block, or disclose). Those declarations live in one table — §7.1A, generated from `nm/domain/gates.py` — and no call site decides for itself.', 'The first draft of this document said the product *fails closed only on grounding* while nine conditions elsewhere in it blocked something. Both statements were written in good faith and they cannot both be true. **A prose rule about what happens when things go wrong will always drift from the code that handles it**, so the rule is now a table the code reads and the document renders.'],
     ['**P6 · Contracts carry obligations**', '`Finding` carries binding status, validity, paragraph kind and the entailment result. `DrafterBrief` carries provenance, ranked reliefs and what not to plead.', '**An obligation not represented in the type crossing the boundary is an obligation that will be dropped.**'],
   ],
   [2300, 3200, 3860],
@@ -551,6 +555,53 @@ A(table(
 ));
 
 A(spacer(140));
+
+// P1-P6 become anchors so code may declare @implements against them.
+['P1', 'P2', 'P3', 'P4', 'P5', 'P6'].forEach((id, i) => H.anchor(
+  id, 'principle', ['Hexagonal: a pure core, adapters at the edges',
+                    'Deterministic shell, stochastic core',
+                    'Dependencies run one way',
+                    'Matter state is a derivation graph',
+                    'Every gate declares its own response',
+                    'Contracts carry obligations'][i]));
+
+A(spacer(200));
+A(h2('7.1A  The gate matrix'));
+
+A(p('**This table is generated from `nm/domain/gates.py`.** It is not a description of the code; it is the code\'s own registry rendered. A gate that appears here and is consulted nowhere fails `trace`, and a gate consulted in code and absent here cannot be constructed. That is deliberate: the previous draft of this section was prose, and prose about failure handling drifts from the handler within one slice.'));
+
+A(p('**Read RESPONSE with SCOPE, never alone.** `withhold` on a NEED fails that need and leaves the turn standing; `withhold` on a TURN emits nothing at all. **The turn is withheld by exactly three gates — G-GROUND, G-ATTRIB and G-QUOTE, the grounding family — plus G-STALE, which is a concurrency re-derive and not a quality gate.** Everything else blocks a step or discloses a limit.'));
+
+A(p('**RECOVERY names who may clear it.** A gate whose recovery is `human` may never be cleared by a model, and a gate cleared by an actor carries a THIRD state for the case where it could not be evaluated — `not_assessed`, `not_run`, `unrecorded`, `unresolved`, `ambiguous`, `not_measured`. A screen that could not run must never be indistinguishable from one that passed; that is the single most repeated defect in the previous build, and the constructor in `gates.py` refuses a gate that lacks the third state.'));
+
+A(table(
+  ['Gate', 'Fires when', 'States', 'Response · scope', 'Recovery', 'Built'],
+  GATES.map((g) => [
+    '**' + g.id + '**',
+    g.condition,
+    g.states.join(' · '),
+    '**' + g.response.toUpperCase() + '** · ' + g.scope,
+    g.recovery + ' · ' + g.persistence,
+    g.built ? 'yes' : '**no**',
+  ]),
+  [1450, 2750, 1750, 1500, 1250, 660],
+));
+
+A(spacer(140));
+
+A(h3('What the advocate sees'));
+
+A(table(
+  ['Gate', 'The visible response'],
+  GATES.map((g) => ['**' + g.id + '**', g.visible]),
+  [1450, 7910],
+));
+
+A(spacer(160));
+
+A(callout('**A gate marked `built: no` is a gate whose condition NOTHING CURRENTLY EVALUATES.** It is listed because the alternative — leaving it out until it is built — is how a specification comes to describe a product that screens matters when the product does not. `G-UNSCREENED` exists precisely to make the unbuilt screens visible on every turn that proceeds without them.', SIGNAL));
+
+A(spacer(200));
 
 A(callout('**`core/` may import only `core/` and `ports/`. Any other import fails the build.** Why a lint rule and not a convention: P1\'s entire value is the class-A test cadence, and that is lost the first time one import sneaks in quietly, in a change that looks harmless. **A convention degrades; a build failure does not.**'));
 
@@ -1198,5 +1249,7 @@ A(table(
 
 A(spacer(200));
 A(p('*End of document. Version 1.0 · 29 August 2026 · Status: every feature `decided`, nothing built.*', { align: d.AlignmentType.CENTER }));
+
+require('./schemas').render(A);
 
 module.exports = out;

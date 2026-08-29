@@ -81,11 +81,24 @@ things. Three confident diagnoses in a row were wrong on one retrieval gap, and
 each was excluded only by instrumenting the pipeline stage by stage. **Never
 report a hypothesis in the voice of a finding.**
 
-### 4. Ask what refuses the second copy
+### 4. Ask what refuses the second copy — it bit again on 30 August 2026
 The question is not "where is the other copy" but **"what makes a second copy
 impossible?"** A prompt system with two owners meant a change described as
 "global" landed in half the product, and it bit twice. If nothing structurally
 refuses the duplicate, that is the defect — not the duplicate.
+
+**The most recent instance, and it was found by a scenario and not by a test.**
+The grounding gate and the evidence adapter each held a pattern for reading a
+provision reference. The gate's was hardened against `O.S. 442/2023` parsing as
+*section 442*; the adapter's was not. A realistic brief retrieved **Specific
+Relief Act s.442**, found nothing, reported a corpus gap in an Act held in
+full, and the gate then correctly withheld the turn. Two correct components,
+one useless answer, and the defect living in the gap between them. Every unit
+test passed.
+
+`nm/domain/citation.py` is now the only module permitted to define such a
+pattern, and `tests/test_citation_patterns.py` scans `nm/` and fails the build
+on a second one.
 
 ### 5. Renames must be swept, and pyflakes is not enough
 A rename left a live call site that raised `NameError` on every matter for
@@ -110,6 +123,66 @@ The single most repeated defect, in four separate controls: a screen that could
 not run returned the shape of a clean result. Three states, always — held, not
 held, **not assessed** — and the third must be visible in the output, not only
 in the type.
+
+---
+
+## The two registries — read them before adding a rule
+
+Both are CODE, exported to YAML, rendered into the PRD. Neither is authored in
+prose anywhere, because a rule about failure handling written twice drifts from
+its handler within one slice — which is exactly what an external review found
+in the first draft of §7.1.
+
+| | |
+|---|---|
+| `nm/domain/gates.py` | **THE GATE MATRIX.** Every condition that refuses something, with its RESPONSE (`withhold` / `block` / `disclose`) and its SCOPE (turn / thread / step / need). The turn engine calls `metrics.fire(gate_id, state, detail)` and **obeys what the table returns** — no call site decides for itself |
+| `spec/prd/schemas.js` | **APPENDIX E.** The typed PRODUCES contracts, every field with the reason it exists. `tools/speccheck.py` refuses a PRODUCES clause that contradicts one; `tests/test_produces_contracts.py` refuses a dataclass that does |
+
+**What §7.1 actually says now, precisely:** the TURN is withheld by exactly
+three gates — `G-GROUND`, `G-ATTRIB`, `G-QUOTE` — plus `G-STALE`, which is a
+concurrency re-derive and not a quality gate. Everything else blocks a step or
+discloses a limit.
+
+**A gate cleared by a person carries a THIRD state** for the case where it
+could not be evaluated. The `Gate` constructor refuses one that does not, so
+the S8 shape cannot be reintroduced by adding a row.
+
+`trace` T8/T9 check the matrix against the code in both directions: a gate
+declared `built` that nothing consults fails, and a gate declared **unbuilt**
+that something consults fails harder — the matrix would be telling the advocate
+nothing evaluates a condition while something quietly does.
+
+---
+
+## Release gates — coverage is measured, then it BINDS
+
+```bash
+python tools/releasegate.py --write     # measure the corpus, score spec/release.yaml
+```
+
+`spec/release.yaml` holds authored thresholds with an owner and a cadence.
+`tools/releasegate.py` measures, scores every row **PASS / FAIL / NOT MEASURED**,
+and writes `spec/coverage.yaml`. `nm/knowledge/coverage.py` reads that same file
+at turn time, so the release decision and the advocate-facing disclosure
+(`G-COVERAGE`) rest on ONE measurement and cannot disagree.
+
+**NOT MEASURED exits non-zero exactly like FAIL.** A release criterion nobody
+computed is the one that gets assumed.
+
+The rule this exists for: *zero Telangana High Court judgements* was measured,
+dated, written into `BASELINE.md` — and changed nothing, because **a measured
+fact in a document is not a gate.**
+
+---
+
+## Long jobs — write them, do not run them
+
+`tools/build_authority_index.py` builds the FTS index over 451,553 attributable
+case paragraphs. **It is not run automatically and nothing in the repo triggers
+it.** Until it exists, every authority need returns `HELD_NOT_FOUND` naming the
+tool — it does **not** fall back to scanning `chunks.db`, because a fallback
+with different recall swapped in silently is the three-stores defect wearing a
+helpful face.
 
 ---
 

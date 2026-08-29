@@ -21,10 +21,13 @@ This module is PURE. It takes ports in and returns a result; it opens nothing.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 
+from nm.core import grounding
+from nm.core.threading import BindResult, BindState, bind
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
+from nm.domain.coverage import CoverageState
 from nm.domain.matter import (
     Basis,
     Certainty,
@@ -38,15 +41,49 @@ from nm.domain.matter import (
 )
 from nm.domain.metrics import Outcome, Phase, TurnMetrics
 from nm.domain.traceability import implements
-from nm.ports.evidence import Coverage, EvidenceNeed, EvidencePort
+from nm.ports.coverage import CoveragePort
+from nm.ports.evidence import Coverage, EvidenceNeed, EvidencePort, Finding
 from nm.ports.model import ModelError, ModelPort, Prompt, Tier
 from nm.ports.store import StaleWrite, StorePort
 
 MAX_EVIDENCE_ROUNDS = 3
 
+# The failing state each grounding gate reports. Held here rather than inside
+# `grounding.py` so the gate matrix stays the only place a state vocabulary is
+# declared, and an unknown gate id raises instead of becoming a free-text label.
+_GROUNDING_STATE = {
+    "G-QUOTE": "not_verbatim",
+    "G-GROUND": "unsupported",
+    "G-ATTRIB": "not_attributable",
+    "G-BINDING": "not_assessed",
+    "G-INFORCE": "not_in_force",
+}
+
+# An advocate asking for authority is asking a different question from one
+# asking what a section says, and the two need different retrieval. Read from
+# what the message ASKS FOR -- never from its length.
+_WANTS_AUTHORITY = (
+    "authority", "authorities", "judgment", "judgement", "judgments",
+    "precedent", "case law", "caselaw", "ruling", "citation", "cited",
+)
+
 
 class TurnRefused(Exception):
-    """Raised before anything is emitted. Nothing has been shown or saved."""
+    """Raised before any ANSWER is emitted. Nothing has been shown or saved.
+
+    It carries the gates that withheld it and the DISCLOSURES the turn had
+    already computed. Withholding the answer is not the same as withholding the
+    reason: a disclosure states what could not be established, asserts no law,
+    and can mislead nobody -- while a bare refusal leaves the advocate with
+    nothing to act on and no idea whether to try again.
+    """
+
+    def __init__(self, message: str, *, gates: tuple[str, ...] = (),
+                 disclosures: tuple[str, ...] = ()) -> None:
+        super().__init__(message)
+        self.message = message
+        self.gates = gates
+        self.disclosures = disclosures
 
 
 @dataclass
@@ -55,7 +92,9 @@ class TurnInput:
     message: str
     turn_id: str = field(default_factory=lambda: new_id("turn"))
     matter_id: str | None = None
+    thread_id: str | None = None
     today: date = field(default_factory=date.today)
+    jurisdiction: str = "Telangana"
 
 
 @dataclass
@@ -165,16 +204,30 @@ class ScreenResult:
 class TurnEngine:
     """Pure orchestration. Every dependency arrives as a port."""
 
-    def __init__(self, store: StorePort, evidence: EvidencePort, model: ModelPort) -> None:
+    def __init__(self, store: StorePort, evidence: EvidencePort, model: ModelPort,
+                 coverage: CoveragePort | None = None) -> None:
         self._store = store
         self._evidence = evidence
         self._model = model
+        # Optional, and its ABSENCE IS NOT SILENCE: with no coverage port the
+        # engine fires G-COVERAGE in the `not_measured` state rather than
+        # skipping the gate, so an unwired installation discloses that it
+        # cannot vouch for coverage instead of implying it can.
+        self._coverage = coverage
 
     def run(self, turn: TurnInput) -> TurnOutput:
         metrics = TurnMetrics(turn_id=turn.turn_id, matter_id=turn.matter_id)
         started = time.perf_counter()
         try:
             return self._run(turn, metrics, started)
+        except TurnRefused:
+            # A DELIBERATE refusal, already recorded by the branch that raised
+            # it, with its outcome and the gate that fired. Re-recording here
+            # would overwrite `gated` with `failed` and make every withheld
+            # turn look like a crash -- which is the difference between "the
+            # gate worked" and "the product is broken" in every metric built
+            # on this file.
+            raise
         except Exception as exc:
             # A turn that crashed must still leave a record, or the most
             # diagnostically valuable turns are the only ones with none.
@@ -241,18 +294,42 @@ class TurnEngine:
         # a provider above this line.
 
         # ---- ADMIT-B: substance ---------------------------------------------
-        matter, thread = self._admit_facts(matter, turn)
+        matter, bound = self._admit_facts(matter, turn)
         metrics.stages["admit_ms"] = int((time.perf_counter() - t0) * 1000)
 
         # ---------------- DERIVE ----------------
         t1 = time.perf_counter()
         metrics.failed_phase = Phase.DERIVE
         elements: list[Element] = []
+        relied_on: tuple[Finding, ...] = ()
+        retrieved: tuple[Finding, ...] = ()
 
-        if not thread.posture.resolved:
-            # A BLOCKING GATE. Downstream derivations are NOT COMPUTED AT ALL:
+        if bound.blocks:
+            # G-THREAD. The account is KEPT on the matter -- it is the binding
+            # that is refused, not the facts. Guessing here attaches one
+            # thread's posture and limitation to another thread's facts, and
+            # every citation stays correct while the advice inverts.
+            metrics.fire("G-THREAD", bound.state.value, bound.reason)
+            elements.append(Element(
+                kind=ElementKind.QUESTION, text=bound.question,
+                signal=Signal.CONTRADICTION))
+            if bound.proposal is not None:
+                elements.append(Element(
+                    kind=ElementKind.GROUND,
+                    text=(f"Proposed merge, not performed: {bound.proposal.left} "
+                          f"and {bound.proposal.right} on {bound.proposal.on}.")))
+            answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
+                            elements=tuple(elements), blocked=True,
+                            blocked_reason=f"G-THREAD: {bound.reason}")
+            thread = None
+        elif not bound.thread.posture.resolved:
+            # G-POSTURE. Downstream derivations are NOT COMPUTED AT ALL:
             # nothing wrong is generated, and nothing is paid for. The block IS
             # the answer.
+            thread = bound.thread
+            metrics.fire("G-POSTURE", "unresolved",
+                         f"thread {thread.id} has role=unknown; no directive step "
+                         f"is computed")
             elements.append(Element(
                 kind=ElementKind.QUESTION,
                 thread=thread.id,
@@ -264,14 +341,26 @@ class TurnEngine:
             ))
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=tuple(elements), blocked=True,
-                            blocked_reason="posture unresolved")
+                            blocked_reason="G-POSTURE: posture unresolved")
         else:
-            elements.extend(self._derive(thread, turn, metrics))
+            thread = bound.thread
+            derived, relied_on, retrieved = self._derive(thread, turn, metrics)
+            elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=tuple(elements))
 
         # Class-B invariants, asserted on the ASSEMBLED object, before emission.
         self._assert_invariants(answer, metrics)
+
+        # THE GROUNDING GATE, on the assembled answer and on the findings it
+        # actually rests on. It runs LAST because everything before it can
+        # still edit, reorder or truncate the text that will be emitted, and a
+        # check that runs on an earlier draft has checked a different string.
+        report = grounding.verify(answer, relied_on, retrieved)
+        metrics.grounding = report.as_dict()
+        for violation in report.violations:
+            metrics.fire(violation.gate_id,
+                         _GROUNDING_STATE[violation.gate_id], violation.detail)
         metrics.stages["derive_ms"] = int((time.perf_counter() - t1) * 1000)
 
         if metrics.gating_violations:
@@ -279,9 +368,18 @@ class TurnEngine:
             metrics.outcome = Outcome.GATED
             metrics.latency_ms = int((time.perf_counter() - started) * 1000)
             self._store.record_metrics(metrics.as_dict())
+            # NAME THE GATES. "Gated by a grounding violation" tells the
+            # advocate nothing they can act on and tells an operator nothing
+            # they can find; the gate id is the handle for both.
+            gates = tuple(sorted({v.rule for v in metrics.gating_violations}))
             raise TurnRefused(
-                "output gated by a grounding violation: "
-                + "; ".join(v.detail for v in metrics.gating_violations))
+                "output withheld by " + ", ".join(gates) + ": "
+                + "; ".join(v.detail for v in metrics.gating_violations),
+                gates=gates,
+                # The disclosures survive the withhold. They are the only part
+                # of the turn that says what could NOT be established, and they
+                # are the part the advocate most needs when they are refused.
+                disclosures=tuple(e.text for e in answer.elements if e.disclosure))
 
         # ======== BYTE BOUNDARY: nothing above has been shown or saved.
 
@@ -291,8 +389,14 @@ class TurnEngine:
         matter = matter.applied(turn.turn_id)
         try:
             matter = self._store.commit(matter, expected_version=expected_version)
-        except StaleWrite:
-            # The matter moved underneath. Re-derive rather than overwrite.
+        except StaleWrite as exc:
+            # The matter moved underneath. Re-derive rather than overwrite --
+            # and NAME the gate, so the matrix's claim is one the metrics can
+            # be checked against.
+            metrics.fire("G-STALE", "stale", str(exc))
+            metrics.outcome = Outcome.GATED
+            metrics.latency_ms = int((time.perf_counter() - started) * 1000)
+            self._store.record_metrics(metrics.as_dict())
             raise
         metrics.outcome = Outcome.BLOCKED if answer.blocked else Outcome.OK
         metrics.failed_phase = None
@@ -314,10 +418,12 @@ class TurnEngine:
 
         When B3-B5 land, they land here, above the screen boundary.
         """
-        metrics.violate(
-            "B3", "conflict, competence and engagement screens are not built "
-                  "(slice 10). This matter was NOT screened before substance "
-                  "was admitted.")
+        metrics.fire(
+            "G-UNSCREENED", "unscreened",
+            "conflict, competence and engagement screens (B3-B5) are not built "
+            "(slice 10). This matter was NOT screened before substance was "
+            "admitted, and the output says so rather than reading as though it "
+            "had passed.")
         return ScreenResult(clear=True, assessed=False)
 
     def _load_or_create(self, turn: TurnInput) -> Matter:
@@ -332,7 +438,14 @@ class TurnEngine:
         return Matter.create(advocate_id=turn.advocate_id, title=title)
 
     @implements("C1")
-    def _admit_facts(self, matter: Matter, turn: TurnInput) -> tuple[Matter, Thread]:
+    def _admit_facts(self, matter: Matter, turn: TurnInput) -> tuple[Matter, BindResult]:
+        """Take the account, then BIND it -- and keep the two separable.
+
+        The fact is recorded on the matter BEFORE binding is attempted, so an
+        account that cannot be placed is still an account that was heard.
+        Discarding the turn when binding is ambiguous teaches an advocate to
+        re-type what they have already said, and they stop volunteering detail.
+        """
         fact = Fact.create(
             statement=turn.message.strip(),
             provenance=Provenance(kind="advocate_statement", turn=turn.turn_id),
@@ -340,9 +453,11 @@ class TurnEngine:
         )
         matter = matter.with_fact(fact)
 
-        thread = matter.threads[0] if matter.threads else Thread.create(
-            label=turn.message.strip().split("\n")[0][:48] or "Thread 1")
+        bound = bind(matter, turn.message, fact, thread_hint=turn.thread_id)
+        if bound.state is not BindState.BOUND or bound.thread is None:
+            return matter, bound
 
+        thread = bound.thread
         role, basis = read_posture(turn.message)
         posture: Posture = thread.posture
         if role is not Role.UNKNOWN:
@@ -354,41 +469,134 @@ class TurnEngine:
             chronology=thread.chronology + (fact.id,),
             deferred_reason=thread.deferred_reason,
         )
-        return matter.with_thread(thread), thread
+        return matter.with_thread(thread), replace(bound, thread=thread)
 
-    def _derive(self, thread: Thread, turn: TurnInput, metrics: TurnMetrics) -> list[Element]:
+    def _derive(self, thread: Thread, turn: TurnInput,
+                metrics: TurnMetrics) -> tuple[list[Element], tuple, tuple]:
+        """Retrieve, then assemble. Returns (elements, relied_on, retrieved).
+
+        The two Finding tuples are returned SEPARATELY because the grounding
+        gate treats them differently: what the answer rests on can withhold the
+        turn, and what merely came back cannot. Collapsing them would either
+        punish the product for disclosing an unusable source, or let an
+        unusable source ground an answer.
+        """
         elements: list[Element] = []
+        retrieved: list[Finding] = []
+        relied_on: list[Finding] = []
+        grounds: list[Element] = []
 
-        need = EvidenceNeed(question=turn.message.strip(), governing_date=turn.today)
+        need = EvidenceNeed(question=turn.message.strip(),
+                            governing_date=turn.today,
+                            jurisdiction=turn.jurisdiction)
         result = self._evidence.fetch(need)
         metrics.evidence_rounds += 1
+        retrieved.extend(result.findings)
+        self._read_coverage(result, thread, metrics, grounds, relied_on)
 
-        ground: Element | None = None
-        if result.coverage is Coverage.ANSWERED and result.findings:
-            f = result.findings[0]
-            if not f.usable:
-                metrics.violate("H5", f"span does not support: {f.proposition}", gating=True)
-            else:
-                ground = Element(
-                    kind=ElementKind.GROUND, thread=thread.id,
-                    text=f"{f.ref} — \"{f.span.strip()[:400]}\" ({f.locator}; "
-                         f"{f.binding.value} for {f.binding_for}).",
-                    refs=(f.locator,))
-        elif result.coverage is Coverage.NOT_HELD:
-            ground = Element(
-                kind=ElementKind.GROUND, thread=thread.id,
-                text=f"Not held in the corpus: {result.missing}. I am telling you "
-                     f"what is missing rather than answering from memory.")
-        else:
-            # HELD BUT NOT FOUND is a DEFECT that escalates -- never disclosed
-            # to the advocate as a corpus gap.
-            metrics.violate("H8", f"held but not retrieved: {result.missing}")
+        if self._wants_authority(turn.message):
+            # G-COVERAGE, and it fires BEFORE the search rather than after it.
+            # Told afterwards, the advocate reads it as a note on a result they
+            # have already started trusting; told first, it is a fact about
+            # what this corpus can answer.
+            self._disclose_coverage(turn, thread, metrics, grounds)
+
+            # A SECOND, DIFFERENT need. Authority retrieval is not a variation
+            # on provision retrieval: different store, different attribution
+            # rules, different binding computation.
+            authority = self._evidence.fetch(replace(need, want_authority=True))
+            metrics.evidence_rounds += 1
+            retrieved.extend(authority.findings)
+            self._read_coverage(authority, thread, metrics, grounds, relied_on)
 
         recommendation = self._recommend(thread, turn, result, metrics)
         elements.append(recommendation)
-        if ground is not None:
-            elements.append(ground)
-        return elements
+        elements.extend(grounds)
+        return elements, tuple(relied_on), tuple(retrieved)
+
+    def _disclose_coverage(self, turn: TurnInput, thread: Thread,
+                           metrics: TurnMetrics, grounds: list[Element]) -> None:
+        """G-COVERAGE. What this corpus can and cannot answer for, said first.
+
+        The review's stop-ship #1: the product claims Telangana coverage
+        against a corpus holding ZERO Telangana High Court judgments. That was
+        measured, written down, and inert. It is now a gate.
+        """
+        if self._coverage is None:
+            position_state, detail = "not_measured", (
+                "no coverage measurement is wired into this installation, so I "
+                "cannot tell you whether the binding court's output is held. "
+                "Run `python tools/releasegate.py --write`.")
+        else:
+            position = self._coverage.position(turn.jurisdiction)
+            if position.state is CoverageState.MET:
+                return
+            position_state = position.state.value
+            detail = position.detail
+
+        metrics.fire("G-COVERAGE",
+                     "unmet" if position_state == "unmet" else "not_measured",
+                     detail)
+        grounds.append(Element(
+            kind=ElementKind.GROUND, thread=thread.id,
+            text=f"Before you rely on any authority I give you: {detail}",
+            disclosure=True))
+
+    @staticmethod
+    def _wants_authority(message: str) -> bool:
+        low = (message or "").lower()
+        return any(p in low for p in _WANTS_AUTHORITY)
+
+    def _read_coverage(self, result, thread: Thread, metrics: TurnMetrics,
+                       grounds: list[Element], relied_on: list[Finding]) -> None:
+        """Turn a retrieval result into elements and gate firings.
+
+        THE THREE COVERAGE STATES ARE NOT INTERCHANGEABLE, and the whole point
+        of the manifest is that this method can tell them apart:
+
+          ANSWERED        cite it, or say why the Finding cannot be used
+          NOT_HELD        an honest gap, NAMED -- disclosed to the advocate
+          HELD_NOT_FOUND  a RETRIEVAL DEFECT that escalates. It is never shown
+                          to the advocate as though the corpus lacked it
+        """
+        if result.coverage is Coverage.ANSWERED:
+            for f in result.findings:
+                if f.usable:
+                    relied_on.append(f)
+                    grounds.append(Element(
+                        kind=ElementKind.GROUND, thread=thread.id,
+                        text=(f'{f.ref} — "{f.span.strip()[:400]}" ({f.locator}; '
+                              f"{f.binding.value} for {f.binding_for} — "
+                              f"{f.binding_reason})."),
+                        refs=(f.locator,)))
+                else:
+                    # DROPPED, and the drop is DISCLOSED. Silently omitting it
+                    # would leave the advocate believing nothing was found,
+                    # which is a different and false statement about the corpus.
+                    grounds.append(Element(
+                        kind=ElementKind.GROUND, thread=thread.id,
+                        text=(f"{f.ref} was retrieved and is NOT being relied on: "
+                              f"{f.blocking_reason}"),
+                        refs=(f.locator,), disclosure=True))
+            return
+
+        if result.coverage is Coverage.NOT_HELD:
+            metrics.fire("G-NOTHELD", "not_held", result.missing or "")
+            grounds.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id,
+                text=(f"Not held in the corpus: {result.missing} I am telling you "
+                      f"what is missing rather than answering from memory."),
+                disclosure=True))
+            return
+
+        metrics.fire("G-HELDNOTFOUND", "held_not_found",
+                     f"held but not retrieved: {result.missing}")
+        grounds.append(Element(
+            kind=ElementKind.GROUND, thread=thread.id,
+            text=(f"A source this product declares it holds was not retrieved: "
+                  f"{result.missing} That is a defect in my retrieval, not a gap "
+                  f"in the law, and it is recorded as one."),
+            disclosure=True))
 
     @implements("E2")
     def _recommend(self, thread, turn, result, metrics: TurnMetrics) -> Element:
@@ -413,7 +621,7 @@ class TurnEngine:
             text = (res.text or "").strip()
         except ModelError as exc:
             # Fail the NEED, not the turn. The gap becomes visible.
-            metrics.violate("7.4.4", f"model unavailable: {exc}")
+            metrics.fire("G-MODEL", "unavailable", f"model unavailable: {exc}")
             text = ""
 
         if not text:

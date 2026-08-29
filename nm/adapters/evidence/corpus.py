@@ -1,7 +1,7 @@
 """Evidence from the real corpus.
 
-Two rules from `docs/BASELINE.md` are enforced here rather than remembered,
-because both have already produced a false gap in this project:
+Rules from `docs/BASELINE.md` are enforced here rather than remembered, because
+each has already produced a wrong answer in this project:
 
   act-1  COVERAGE IS A UNION across every store and identifier convention.
          The same Act is held under `the_specific_relief_act_1963` (13 sections)
@@ -12,16 +12,32 @@ because both have already produced a false gap in this project:
          names, so a subject search against it returns zero -- and zero reads
          exactly like "not in the corpus".
 
-Absence is therefore never inferred from a hit count. It is computed against the
+  bind-1 Binding status is COMPUTED from court and date against the matter's
+         jurisdiction (`nm/knowledge/jurisdiction.py`), never asserted here.
+
+Absence is never inferred from a hit count. It is computed against the
 manifest, which is what makes the three-state answer possible at all.
+
+THE AUTHORITY INDEX IS SEPARATE, AND ITS ABSENCE IS VISIBLE
+------------------------------------------------------------
+Case-law retrieval reads `.nm/authority.db`, built offline by
+`tools/build_authority_index.py`. When that index is absent this adapter
+returns HELD_NOT_FOUND naming it -- it does NOT fall back to scanning
+`chunks.db`. A fallback with different recall, swapped in silently, is the
+"three stores, three answers" defect wearing a helpful face: the advocate would
+have no way to know which retrieval answered them.
 """
 from __future__ import annotations
 
 import json
 import re
 import sqlite3
+from datetime import date
 from pathlib import Path
 
+from nm.domain.citation import wanted_section
+from nm.knowledge.citator import Citator
+from nm.knowledge.jurisdiction import binding_status
 from nm.knowledge.manifest import Manifest
 from nm.ports.evidence import (
     Binding,
@@ -31,26 +47,69 @@ from nm.ports.evidence import (
     Finding,
     ParaKind,
     SourceKind,
+    Treatment,
 )
 
-_SECTION_RE = re.compile(
-    r"\b(?:section|sec\.?|s\.)\s*(\d+[A-Za-z\-]*)\b", re.I)
-_ARTICLE_RE = re.compile(r"\barticle\s*(\d+)\b", re.I)
+_ATTRIBUTABLE = ("ratio", "reasoning", "order")
 
 
 class CorpusEvidenceAdapter:
-    """Reads the bare-act chunks. Read-only, and it never writes to the corpus."""
+    """Reads the bare-act chunks and, when built, the authority index.
+
+    Read-only throughout. It never writes to the corpus.
+    """
 
     def __init__(self, corpus_dir: str | Path, manifest: Manifest,
-                 jurisdiction: str = "Telangana") -> None:
-        self._db = Path(corpus_dir) / "chunks.db"
+                 jurisdiction: str = "Telangana",
+                 authority_index: str | Path | None = None) -> None:
+        self._dir = Path(corpus_dir)
+        self._db = self._dir / "chunks.db"
         self._manifest = manifest
         self._jurisdiction = jurisdiction
+        self._authority_db = Path(authority_index) if authority_index else None
+        self._citator = Citator(self._dir / "citator.json")
+        self._denied: set[str] | None = None
 
+    # ----------------------------------------------------------- readiness ---
     @property
     def available(self) -> bool:
         return self._db.exists()
 
+    @property
+    def authority_available(self) -> bool:
+        return bool(self._authority_db and self._authority_db.exists())
+
+    def readiness(self) -> dict:
+        """Three states per capability, reported at /api/health.
+
+        A capability that cannot run must be visible BEFORE a turn depends on
+        it, not discovered as an empty answer afterwards.
+        """
+        return {
+            "provisions": "readable" if self.available else "NOT READABLE",
+            "authorities": ("readable" if self.authority_available else
+                            "INDEX NOT BUILT -- run tools/build_authority_index.py"),
+            "citator": (f"{self._citator.entries} entries"
+                        if self._citator.available else "NOT READABLE"),
+            "denylist": f"{len(self._denylist())} chunk(s) excluded",
+        }
+
+    def _denylist(self) -> set[str]:
+        """Chunks the corpus itself marks as contaminated.
+
+        A denylist that ships beside the data and is never applied is worse
+        than none: it records that someone knew the text was bad.
+        """
+        if self._denied is None:
+            path = self._dir / "contamination_denylist.json"
+            if not path.exists():
+                self._denied = set()
+            else:
+                doc = json.loads(path.read_text(encoding="utf8", errors="replace"))
+                self._denied = set(doc.get("chunk_ids") or ())
+        return self._denied
+
+    # --------------------------------------------------------------- fetch ---
     def fetch(self, need: EvidenceNeed) -> EvidenceResult:
         if not self.available:
             # The corpus could not be read. That is NOT "nothing is held" --
@@ -61,15 +120,27 @@ class CorpusEvidenceAdapter:
                 searched_stores=(),
             )
 
-        entry = self._manifest.resolve(need.question)
+        if need.want_authority:
+            return self._fetch_authority(need)
+
+        entry, superseded = self._manifest.resolve(need.question, on=need.governing_date)
         if entry is None:
-            return EvidenceResult(
-                coverage=Coverage.NOT_HELD,
-                missing=("no Act in the curated manifest governs this question. "
-                         "The manifest states INTENDED coverage, so this is an "
-                         "honest gap rather than a failed lookup."),
-                searched_stores=("manifest",),
-            )
+            missing = ("no Act in the curated manifest governs this question. "
+                       "The manifest states INTENDED coverage, so this is an "
+                       "honest gap rather than a failed lookup.")
+            if superseded is not None:
+                # The keyword match WAS an Act we hold -- it was simply not in
+                # force on the governing date. Saying "not held" there would be
+                # a lie about the corpus and hide a real answer.
+                missing = (
+                    f"{superseded.act_name} matched this question but was not in "
+                    f"force on {need.governing_date.isoformat()} (in force "
+                    f"{superseded.in_force_from or 'unrecorded'} to "
+                    f"{superseded.in_force_to or 'date'}), and the successor "
+                    f"instrument is not resolvable from the manifest alone. "
+                    f"Provision correspondence across the 2024 codes is slice 5.")
+            return EvidenceResult(coverage=Coverage.NOT_HELD, missing=missing,
+                                  searched_stores=("manifest",))
 
         section = self._wanted_section(need)
         if section is None:
@@ -103,17 +174,18 @@ class CorpusEvidenceAdapter:
 
     # ------------------------------------------------------------ internals ---
     def _wanted_section(self, need: EvidenceNeed) -> str | None:
-        if need.provision_hint:
-            return need.provision_hint
-        m = _SECTION_RE.search(need.question)
-        if m:
-            return m.group(1)
-        a = _ARTICLE_RE.search(need.question)
-        if a:
-            return f"Article_{a.group(1)}"
-        return None
+        """WHICH provision the question asks for.
 
-    def _union_lookup(self, patterns: tuple[str, ...], section: str, entry, need):
+        The pattern lives in `nm/domain/citation.py` and is shared with the
+        grounding gate. It used to be a second copy here, and when the gate's
+        copy was hardened against `O.S. 442/2023` parsing as "section 442",
+        this one was not -- so a realistic brief retrieved section 442 of the
+        Specific Relief Act, found nothing, and reported a corpus gap.
+        """
+        return need.provision_hint or wanted_section(need.question)
+
+    def _union_lookup(self, patterns: tuple[str, ...], section: str, entry,
+                      need: EvidenceNeed):
         """THE UNION. Every identifier convention, and the store is NAMED."""
         stores: list[str] = []
         findings: list[Finding] = []
@@ -122,14 +194,16 @@ class CorpusEvidenceAdapter:
             for pattern in patterns:
                 stores.append(pattern)
                 row = con.execute(
-                    """select act_id, atom_type, blob from chunks
+                    """select act_id, atom_type, chunk_id, blob from chunks
                        where doc_type='bare_act' and act_id like ? and section_number=?
                        order by case atom_type when 'section_head' then 0 else 1 end
                        limit 1""",
                     (pattern, section)).fetchone()
                 if row is None:
                     continue
-                act_id, atom_type, blob = row
+                act_id, atom_type, chunk_id, blob = row
+                if chunk_id in self._denylist():
+                    continue
                 text = " ".join((json.loads(blob).get("full_text") or "").split())
                 if not text:
                     continue
@@ -142,13 +216,118 @@ class CorpusEvidenceAdapter:
                     store=act_id,
                     binding=Binding.BINDING,
                     binding_for=self._jurisdiction,
+                    binding_reason=(
+                        f"{entry.act_name} is {entry.jurisdiction} legislation in "
+                        f"force on {need.governing_date.isoformat()}; it applies of "
+                        f"its own force in {self._jurisdiction}"),
                     supports=True,
                     para_kind=ParaKind.UNKNOWN,
+                    treatment=Treatment.statutory(),
                     valid_from=entry.in_force_from,
                     valid_to=entry.in_force_to,
+                    governing_date=need.governing_date,
                     origin="resolved",
                 ))
                 break  # the first complete copy wins; the union is over PATTERNS
         finally:
             con.close()
         return tuple(findings), tuple(stores)
+
+    # ---------------------------------------------------------- authorities ---
+    def _fetch_authority(self, need: EvidenceNeed) -> EvidenceResult:
+        if not self.authority_available:
+            # NOT an empty result. The capability exists and its index does
+            # not, and those are different sentences.
+            return EvidenceResult(
+                coverage=Coverage.HELD_NOT_FOUND,
+                missing=(
+                    "the authority index is not built, so no judgment was "
+                    "searched. 451,553 attributable paragraphs are held and "
+                    "none of them was consulted on this turn. Build it with "
+                    "`python tools/build_authority_index.py`."),
+                searched_stores=("authority_index:absent",),
+            )
+
+        terms = self._terms(need)
+        if not terms:
+            return EvidenceResult(
+                coverage=Coverage.NOT_HELD,
+                missing="no searchable terms were identified in the question.",
+                searched_stores=("authority_index",))
+
+        con = sqlite3.connect(f"file:{self._authority_db}?mode=ro", uri=True)
+        try:
+            rows = con.execute(
+                """select case_id, case_name, court, year, para_type, chunk_id, text
+                   from paras where paras match ?
+                   order by rank limit 8""",
+                (" OR ".join(f'"{t}"' for t in terms),)).fetchall()
+        except sqlite3.OperationalError as exc:
+            return EvidenceResult(
+                coverage=Coverage.HELD_NOT_FOUND,
+                missing=f"the authority index could not be queried: {exc}",
+                searched_stores=("authority_index",))
+        finally:
+            con.close()
+
+        findings: list[Finding] = []
+        for case_id, case_name, court, year, para_type, chunk_id, text in rows:
+            if chunk_id in self._denylist():
+                continue
+            kind = ParaKind(para_type) if para_type in _ATTRIBUTABLE else ParaKind.UNKNOWN
+            if not kind.attributable:
+                # G-ATTRIB. Counsel's submission is 14.8% of the corpus and
+                # reads exactly like a holding, so it is dropped here rather
+                # than ranked lower.
+                continue
+            ruling = binding_status(court, year, need.jurisdiction)
+            findings.append(Finding(
+                proposition=need.question.strip()[:200],
+                source_kind=SourceKind.AUTHORITY,
+                ref=f"{case_name} ({court}, {year})",
+                span=" ".join((text or "").split()),
+                locator=f"{case_id}::{chunk_id}::{para_type}",
+                store="authority_index",
+                binding=ruling.status,
+                binding_for=need.jurisdiction,
+                binding_reason=f"{ruling.rule}: {ruling.reason}",
+                supports=True,
+                para_kind=kind,
+                treatment=self._citator.treatment(case_name),
+                governing_date=need.governing_date,
+                origin="searched",
+                confidence=0.5,
+            ))
+
+        if findings:
+            return EvidenceResult(coverage=Coverage.ANSWERED, findings=tuple(findings),
+                                  searched_stores=("authority_index",))
+        return EvidenceResult(
+            coverage=Coverage.NOT_HELD,
+            missing=(f"no attributable paragraph in the authority index matched "
+                     f"{', '.join(terms)}. The index covers ratio, reasoning and "
+                     f"order paragraphs only."),
+            searched_stores=("authority_index",))
+
+    @staticmethod
+    def _terms(need: EvidenceNeed) -> list[str]:
+        stop = {"the", "a", "an", "of", "for", "and", "our", "we", "is", "in", "to",
+                "on", "what", "which", "client", "matter", "case", "act", "under"}
+        words = re.findall(r"[a-zA-Z][a-zA-Z\-]{3,}", need.question.lower())
+        seen: list[str] = []
+        for w in words:
+            if w not in stop and w not in seen:
+                seen.append(w)
+        return seen[:6]
+
+
+def default_authority_index(root: Path) -> Path:
+    return Path(root) / ".nm" / "authority.db"
+
+
+def in_force_on(entry, day: date) -> bool:
+    if entry.in_force_from and day < entry.in_force_from:
+        return False
+    if entry.in_force_to and day > entry.in_force_to:
+        return False
+    return True

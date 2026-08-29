@@ -214,6 +214,34 @@ with the graph it described.
 **Counterexample it must reject:** a change to shared instruction text that a
 grep finds in two files.
 
+### It happened again, in this build, on 30 August 2026
+
+Two modules each held a pattern for reading a provision reference out of text:
+the grounding gate, and the evidence adapter. The gate's copy was hardened
+against a false positive — `O.S. 442/2023` parsing as *section 442*, because
+`O.S. 442` contains `S. 442`. **The adapter's copy was not, because nothing
+connected them.**
+
+One realistic brief then did this:
+
+> *"We act for the plaintiff in O.S. 442/2023 … what is the step under section 6
+> of the Specific Relief Act?"*
+
+Retrieval looked up Specific Relief Act **s.442**, found nothing, and reported
+NOT_HELD. The model answered about s.6. The grounding gate then correctly
+withheld the whole turn, because s.6 had never been retrieved.
+
+**Two components each behaving correctly, one useless answer, and the defect
+living in the gap between them.** Every unit test passed. It was found the
+first time seven realistic turns ran end to end, which is the argument for the
+journey portfolio in `JOURNEY.md` §5 restated in one afternoon.
+
+The fix is the CHECK above and not a second hardening: `nm/domain/citation.py`
+is now the only module permitted to define such a pattern, and
+`tests/test_citation_patterns.py` scans `nm/` and fails the build on a second
+one. A grep is a weak enforcement mechanism and it is a great deal stronger
+than a memo.
+
 ---
 
 ## S10 · A broad `except` that hides a programming error
