@@ -167,3 +167,58 @@ def test_a_named_act_beats_every_keyword_score():
     r = m.resolve(brief, date(2026, 8, 30))
     assert r.entry.act_name == "Transfer of Property Act, 1882"
     assert r.basis is ActBasis.NAMED
+
+
+def test_no_act_title_is_a_substring_of_another():
+    """WHAT MAKES EXACT TITLE MATCHING SAFE.
+
+    An Act is identified by its title appearing in the question. That is only
+    unambiguous while no title contains another — the moment one does, a
+    question naming the longer Act also matches the shorter, and the choice
+    between them is back to being a guess.
+
+    True of today's 17 Acts. It is a property of the manifest, not a law, so it
+    is checked rather than assumed: the eighteenth Act is where it would break.
+    """
+    from nm.knowledge.manifest import Manifest
+
+    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    titles = {e.act_name: e.act_name.split(",")[0].strip().lower()
+              for e in m.entries}
+    collisions = [(a, b) for a, ta in titles.items()
+                  for b, tb in titles.items() if ta != tb and ta in tb]
+    assert not collisions, (
+        "one Act's title contains another's, so matching on the title is "
+        f"ambiguous: {collisions}")
+
+
+def test_no_keyword_is_claimed_by_two_acts():
+    """The other half. Keyword routing only produces ONE candidate honestly
+    while each keyword belongs to one Act; a shared keyword makes the winner
+    depend on iteration order, which is a coin toss wearing a score."""
+    import collections
+
+    from nm.knowledge.manifest import Manifest
+
+    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    owners = collections.defaultdict(list)
+    for e in m.entries:
+        for k in e.keywords:
+            owners[k.lower()].append(e.act_name)
+    shared = {k: v for k, v in owners.items() if len(v) > 1}
+    assert not shared, f"keywords claimed by more than one Act: {shared}"
+
+
+def test_an_inferred_act_names_what_else_it_could_have_been():
+    """A wrong inference must be visible at a glance. The correction handle
+    matters more than the guess."""
+    from datetime import date
+
+    from nm.knowledge.manifest import Manifest
+
+    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    r = m.resolve("he was dispossessed and the claim may be time-barred",
+                  date(2026, 8, 30))
+    assert r.must_disclose
+    assert r.alternatives, "more than one Act matched and only one was named"
+    assert "also matched" in r.note()

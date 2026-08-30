@@ -946,6 +946,47 @@ d("B-022", "2026-08-30", "measurement",
   "Yes — the rule is about how coverage is computed, not about the citator.",
   "docs/BASELINE.md cit-1; tools/releasegate.py measure_citator")
 
+d("B-023", "2026-08-30", "tooling",
+  "The golden runner's Act matcher scored word overlap. It resolved 'Indian "
+  "Easements Act 1882' to 'Indian Evidence Act, 1872' on the shared word "
+  "`Indian`; after excluding generic words it resolved to 'Transfer of "
+  "Property Act, 1882' on the shared YEAR. Both verified a different Act's "
+  "s.15 and reported the golden set's authority as HELD.",
+  "Writing the authority check, and needing to map the document's short labels "
+  "('NI Act 1881') to manifest names. Fuzzy felt like the pragmatic bridge.",
+  "S3 — a confident wrong lookup, in the tool built to verify lookups",
+  "Reading which Act each label resolved to, rather than the pass count",
+  "An explicit alias table, exact lookup. A label not in it resolves to "
+  "NOTHING and is reported as a failure.",
+  "Yes — no fuzzy identity anywhere; the rule is in CLAUDE.md §5 with the "
+  "measurements behind it.",
+  "tests/test_citation_patterns.py substring and keyword-collision checks")
+
+d("B-024", "2026-08-30", "tooling",
+  "The golden runner parsed 5 scenarios from a set of 25, then reported every "
+  "later suite as naming scenarios that do not exist.",
+  "Writing the parser against §3's first table. §3 uses TWO shapes — the smoke "
+  "table splits `NM must | Must never`, every later table merges them.",
+  "One format assumed across a document that has two",
+  "The structure check failing with 25 identical-looking errors",
+  "Both shapes are matched, and a row that parses under neither EXITS rather "
+  "than being dropped.",
+  "Yes — a third shape fails loudly instead of shrinking the set.",
+  "tests/test_goldens.py asserts the count against the document's own claim")
+
+d("B-025", "2026-08-30", "corpus",
+  "The golden set relies on Indian Easements Act s.15 and the manifest never "
+  "declared the Act, so the runner reported NOT HELD for a section the corpus "
+  "holds among all 65.",
+  "Curating the manifest from the Acts the scenarios obviously needed, without "
+  "checking it against the set's own authority table.",
+  "A manifest gap reading as a corpus gap",
+  "tools/run_goldens.py --authority",
+  "Added to the manifest. The distinction only exists because the manifest "
+  "states INTENDED coverage independently of what the index contains.",
+  "Yes — the runner now checks every Act the set names, on every run.",
+  "tools/run_goldens.py, tests/test_goldens.py [E-002]")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

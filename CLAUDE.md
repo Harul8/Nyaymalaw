@@ -100,7 +100,40 @@ test passed.
 pattern, and `tests/test_citation_patterns.py` scans `nm/` and fails the build
 on a second one.
 
-### 5. Renames must be swept, and pyflakes is not enough
+### 5. Fuzzy matching may RANK, never IDENTIFY — and never an Act
+
+**Exact match decides WHICH Act.** Common words run through every Indian
+statute title, so overlap scoring is not a weak signal, it is a wrong one.
+Measured on 30 August 2026, in one hour:
+
+| Attempt | Matched |
+|---|---|
+| `Indian Easements Act 1882`, on the shared word `Indian` | **Indian Evidence Act, 1872** |
+| the same, after excluding generic words, on the shared year | **Transfer of Property Act, 1882** |
+| a s.53A question naming the TPA, keyword-scored on `possession` | **Specific Relief Act, 1963** |
+
+And in the other direction: matching case NAMES reached **0.83%** of held
+judgments; matching reporter CITATIONS — an exact key — reached **90.9%**.
+Exact matching did not merely avoid wrong answers, it beat fuzzy a hundredfold
+at the one job where both were measured.
+
+**Where fuzzy IS right.** Paragraphs and case law have no exact key to match
+on, and demanding one would retrieve nothing. Fuzzy ranks them — the FTS
+authority search — and its results carry a confidence and are never asserted as
+*the* answer. What it may never do is decide which ACT is read.
+
+**When no Act is named.** Keyword routing survives, but it cannot identify: it
+yields `ActBasis.INFERRED`, the note names what it inferred from AND what else
+matched, and the advocate can correct it in four words. That is the shape the
+product already uses for posture — `STATED` vs `INFERRED` — because a silent
+guess there advises the wrong side, and a silent guess here sends an exact
+section lookup into the wrong statute.
+
+Enforced by `tests/test_citation_patterns.py`: no Act title may be a substring
+of another, and no keyword may be claimed by two Acts. Both hold for today's 17
+Acts; the eighteenth is where they would break.
+
+### 6. Renames must be swept, and pyflakes is not enough
 A rename left a live call site that raised `NameError` on every matter for
 weeks. A conditionally-assigned local crashed every advising turn.
 
@@ -108,17 +141,17 @@ weeks. A conditionally-assigned local crashed every advising turn.
 python -m pylint --disable=all --enable=E0601,E0606 --score=n <package>
 ```
 
-### 6. A broad `except` must not hide a bug
+### 7. A broad `except` must not hide a bug
 Failing open is usually right, but `except Exception` that logs a warning made a
 `NameError` look like a model failure and silently suppressed a whole feature.
 Catch programming errors separately and log them at ERROR with a traceback.
 
-### 7. Verify on the bytes, not the return value
+### 8. Verify on the bytes, not the return value
 40/40 offline passed while every served turn crashed. **Every defect the first
 external review found lived between a correct module and the served path.** A
 guard that is right in the core and wrong in the composition root is not a guard.
 
-### 8. An absent input must never read as success
+### 9. An absent input must never read as success
 The single most repeated defect, in four separate controls: a screen that could
 not run returned the shape of a clean result. Three states, always — held, not
 held, **not assessed** — and the third must be visible in the output, not only

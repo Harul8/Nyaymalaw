@@ -102,6 +102,14 @@ class Resolution:
     basis: ActBasis | None = None
     superseded: "ManifestEntry | None" = None
     matched_on: tuple[str, ...] = ()
+    alternatives: tuple[str, ...] = ()
+    """Other Acts whose keywords also matched.
+
+    Named in the disclosure so a WRONG inference is visible at a glance rather
+    than discovered after the advocate has acted on it. The correction handle
+    matters more than the guess: an advocate who sees "I took this as the
+    Specific Relief Act; the Limitation Act also matched" fixes it in four
+    words."""
 
     @property
     def must_disclose(self) -> bool:
@@ -111,10 +119,13 @@ class Resolution:
     def note(self) -> str:
         if not self.must_disclose:
             return ""
-        return (f"I am taking this as the {self.entry.act_name} because you "
+        note = (f"I am taking this as the {self.entry.act_name} because you "
                 f"mentioned {', '.join(self.matched_on)}. You did not name an "
                 f"Act, so this is my inference and not your instruction — say "
                 f"if it is wrong.")
+        if self.alternatives:
+            note += (f" These also matched: {', '.join(self.alternatives)}.")
+        return note
 
 
 @dataclass(frozen=True)
@@ -206,7 +217,11 @@ class Manifest:
         if best is None:
             return Resolution(None, None, superseded)
         matched = tuple(k for k in best.keywords if k.lower() in low)
-        return Resolution(best, ActBasis.INFERRED, superseded, matched)
+        others = tuple(e.act_name for e in self.entries
+                       if e is not best
+                       and any(k.lower() in low for k in e.keywords)
+                       and (on is None or e.in_force_on(on)))
+        return Resolution(best, ActBasis.INFERRED, superseded, matched, others)
 
     def _named_in(self, low: str, on: date | None) -> ManifestEntry | None:
         """The Act the question NAMES, if it names one.
