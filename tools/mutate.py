@@ -123,6 +123,33 @@ MUTATIONS = [
      "test_every_declared_schema_is_satisfiable_when_nothing_was_established",
      "E-030"),
 
+    # B-041, BOTH DIRECTIONS. The gate blocks the DIRECTIVE STEP, so the
+    # boundary can fail by being too loose (a side-flavoured authority set
+    # presented as the law) or too tight (a bare question of law refused).
+    # A boundary with a counterexample on one side only is half a boundary.
+    ("an authority set assembled behind a closed posture gate",
+     "nm/core/turn.py",
+     "        if self._wants_authority(turn.message) and not side_blind:",
+     "        if self._wants_authority(turn.message):",
+     "test_nothing_side_dependent_is_computed_behind_a_closed_gate", "E-034"),
+
+    ("a directive step recommended behind a closed posture gate",
+     "nm/core/turn.py",
+     "        if not side_blind:\n"
+     "            elements.append(",
+     "        if True:\n"
+     "            elements.append(",
+     "test_nothing_side_dependent_is_computed_behind_a_closed_gate", "E-034"),
+
+    ("a bare question of law refused instead of answered",
+     "nm/core/turn.py",
+     "            derived, relied_on, retrieved = self._derive(\n"
+     "                thread, turn, metrics, memory, side_blind=True)\n"
+     "            elements.extend(derived)",
+     "            pass",
+     "test_a_provision_is_still_read_back_behind_a_closed_posture_gate",
+     "E-034"),
+
     ("a persisted field silently dropped on read",
      "nm/adapters/store/file_store.py",
      "                          for f in fields(cls) if f.name in value})",

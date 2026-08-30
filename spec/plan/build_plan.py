@@ -395,7 +395,7 @@ E = [
     ["E-031", "S3", "A", "side is a pure function of role", "side stored independently and drifting from role", "Every commit", "Yes", "C3"],
     ["E-032", "S3", "A", "A thread id survives a rename with everything attached", "A rename that orphans the chronology", "Every commit", "Yes", "C4"],
     ["E-033", "S3", "A", "Two different matters between the same parties do not merge", "A recovery suit and an eviction between the same landlord and tenant, merged", "Every commit", "Yes", "C4"],
-    ["E-034", "S3", "A", "No merits derivation is computed behind a closed gate", "Merits questions asked before posture and limitation are settled", "Every commit", "Yes", "5.1"],
+    ["E-034", "S3", "A", "Nothing SIDE-DEPENDENT is computed behind a closed gate — no directive step, no authority set, no element whose text varies with the side. A provision's text is read back, because it is the same for either party", "A bare question of law answered with 'whose side are we on?', or an authority set assembled and presented as the law with no posture on record", "Every commit", "Yes", "5.1"],
     ["E-035", "S3", "A", "A question the advocate has answered is never asked again, and one asked twice is not put a third time in the same words", "Whose side are we on? asked on five consecutive turns after it was answered on turn 2", "Every commit", "Yes", "C3"],
     ["E-036", "S3", "A", "Every model call in a turn receives the matter file, never the latest message alone", "A retrieval built from turn.message that reports a corpus gap for an Act the advocate named three turns earlier", "Every commit", "Yes", "C1"],
     ["E-040", "S4", "A", "No inferred dates exist; conflicting dates render as conflicts", "A chart completed by guessing an undated event", "Every commit", "Yes", "C5"],
@@ -1251,14 +1251,44 @@ d("B-041", "2026-08-30", "core",
   "the same statement on either side.",
   "S7 — a rule applied outside the case it was written for",
   "The six-scenario run, on GS-02",
-  "NOT FIXED. A predicate on mode + no-client + one-fact let \"a cheque was "
-  "dishonoured on 3 March\" through, which is an account of events and far "
-  "worse than the defect. It was reverted rather than sharpened.",
-  "The safe fix is structural — the gate should block the DIRECTIVE STEP so a "
-  "question of law returns its cited answer plus the blocking question and no "
-  "recommendation. That changes what E-034 (\'no merits derivation behind a "
-  "closed gate\') means, so it is a spec decision and is raised, not assumed.",
-  "—", "OPEN")
+  "G-POSTURE\'s scope is now STEP, not the turn. Behind it: PROVISION "
+  "retrieval runs (the legislature\'s words are the same bytes for either "
+  "party); AUTHORITY retrieval does not (which judgments come back is a "
+  "function of how the question was framed, so a side-flavoured selection "
+  "presented as the law is the subtler form of the same defect); the "
+  "recommendation does not. The first fix — a predicate on mode + no-client + "
+  "one-fact — let \"a cheque was dishonoured on 3 March\" through, which is "
+  "an account of events, and was REVERTED rather than sharpened.",
+  "Yes, and E-034 was SHARPENED rather than relaxed: from \'no merits "
+  "derivation is computed behind a closed gate\', which you satisfy by doing "
+  "nothing, to \'nothing SIDE-DEPENDENT is computed\', which names the three "
+  "things that are and requires knowing which of your outputs depend on the "
+  "side. Counterexamples exist in BOTH directions — too loose and too tight — "
+  "because the fix for one failure is the other failure.",
+  "tests/test_slice123_closeout.py::test_nothing_side_dependent_is_computed_"
+  "behind_a_closed_gate + ::test_a_provision_is_still_read_back_behind_a_"
+  "closed_posture_gate")
+
+d("B-043", "2026-08-30", "adapters",
+  "THE INFERENCE NOTE WAS DROPPED ON EVERY PATH EXCEPT SUCCESS. A wrong guess "
+  "that found nothing was reported as a flat fact about the Act it had "
+  "guessed: \"Specific Relief Act, 1963 is held, but no specific provision "
+  "was identified\" — on a question about LIMITATION, where the Act had been "
+  "picked off the word `possession`. Every word true, the whole misleading.",
+  "Attaching `assumption=resolved.note()` to the return that produced "
+  "findings, which is where I was looking when I wrote it. The other five "
+  "returns were written at different times and none of them carried it.",
+  "S1 — an absent input reading as success",
+  "GS-02, the moment B-041\'s fix stopped the posture gate hiding the "
+  "disclosure",
+  "The note is computed once, immediately after resolution, and every "
+  "EvidenceResult built after it carries it.",
+  "Yes — the rule is that a guess matters MOST when it produced nothing, "
+  "because that is the case where the advocate has no other signal that the "
+  "wrong Act was read. A guess disclosed only when it worked is one the "
+  "advocate learns about from the answer being right.",
+  "tests/test_matter_memory.py::test_an_inferred_act_is_disclosed_even_when_it_"
+  "finds_nothing")
 
 d("B-042", "2026-08-30", "core",
   "A REQUIRED ENUM WITH NO LEGAL VALUE FOR A LEGAL STATE. `role` may be "

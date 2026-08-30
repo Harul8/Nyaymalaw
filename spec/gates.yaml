@@ -95,11 +95,12 @@ gates:
   - unresolved
   - conflicted
   response: block
-  scope: thread
+  scope: step
   persistence: sticky
   recovery: advocate
-  visible: Whose side are we on. No directive step is computed until it is settled, because the same provision
-    helps one side and hurts the other.
+  visible: Whose side are we on. I will still read back what a provision says — that is the same on either
+    side — but no directive step and no authority set is computed until it is settled, because the same
+    provision helps one side and hurts the other.
   feature: C3
   built: true
 - id: G-THREAD

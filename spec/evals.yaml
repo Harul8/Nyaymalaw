@@ -329,8 +329,11 @@ evals:
 - id: E-034
   slice: S3
   class: A
-  asserts: No merits derivation is computed behind a closed gate
-  counterexample: Merits questions asked before posture and limitation are settled
+  asserts: Nothing SIDE-DEPENDENT is computed behind a closed gate — no directive step, no authority set,
+    no element whose text varies with the side. A provision's text is read back, because it is the same
+    for either party
+  counterexample: A bare question of law answered with 'whose side are we on?', or an authority set assembled
+    and presented as the law with no posture on record
   cadence: Every commit
   automated: 'Yes'
   prd_ref: '5.1'

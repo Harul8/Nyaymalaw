@@ -214,12 +214,21 @@ GATES: tuple[Gate, ...] = (
                   "contradicted by a later statement.",
         states=("resolved", "unresolved", "conflicted"),
         response=Response.BLOCK,
-        scope=Scope.THREAD,
+        # STEP, NOT THREAD -- and the engine used to implement it as the
+        # whole TURN, which is narrower still than what the matrix said.
+        # What is refused is the DIRECTIVE STEP: the gate's own reason is
+        # that the same provision helps one side and hurts the other WHEN A
+        # STEP IS RECOMMENDED, and the text of a statute is the same bytes
+        # for either side. Refusing to read it back applied the gate to a
+        # case it was not written for, and an advocate asking a bare
+        # question of law got "whose side are we on?" instead of an answer.
+        scope=Scope.STEP,
         persistence=Persistence.STICKY,
         recovery=Recovery.ADVOCATE,
-        visible="Whose side are we on. No directive step is computed until it is "
-                "settled, because the same provision helps one side and hurts the "
-                "other.",
+        visible="Whose side are we on. I will still read back what a provision "
+                "says — that is the same on either side — but no directive step "
+                "and no authority set is computed until it is settled, because "
+                "the same provision helps one side and hurts the other.",
         feature="C3",
         built=True,
     ),

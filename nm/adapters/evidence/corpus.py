@@ -136,6 +136,18 @@ class CorpusEvidenceAdapter:
         resolved = self._manifest.resolve(need.question, on=need.governing_date,
                                           account=need.account)
         entry, superseded = resolved.entry, resolved.superseded
+        # THE GUESS TRAVELS WITH EVERY OUTCOME, not only with success.
+        #
+        # This used to be attached to the one return that produced
+        # findings, so a WRONG inference that found nothing was reported as
+        # a flat fact about the Act it had guessed: "Specific Relief Act,
+        # 1963 is held, but no specific provision was identified" -- on a
+        # question about LIMITATION, where the Act had been picked off the
+        # word `possession`. Every word true, the whole misleading.
+        #
+        # The guess matters MOST when it produced nothing, because that is
+        # when the advocate has no other signal that the wrong Act was read.
+        note = resolved.note() or None
         if entry is None:
             missing = ("no Act in the curated manifest governs this question. "
                        "The manifest states INTENDED coverage, so this is an "
@@ -152,7 +164,8 @@ class CorpusEvidenceAdapter:
                     f"instrument is not resolvable from the manifest alone. "
                     f"Provision correspondence across the 2024 codes is slice 5.")
             return EvidenceResult(coverage=Coverage.NOT_HELD, missing=missing,
-                                  searched_stores=("manifest",))
+                                  searched_stores=("manifest",),
+                                  assumption=note)
 
         section = self._wanted_section(need)
         if section is None:
@@ -161,13 +174,13 @@ class CorpusEvidenceAdapter:
                 missing=(f"{entry.act_name} is held, but no specific provision was "
                          f"identified in the question to retrieve."),
                 searched_stores=("manifest",),
+                assumption=note,
             )
 
         findings, stores = self._union_lookup(entry.act_patterns, section, entry, need)
         if findings:
             return EvidenceResult(coverage=Coverage.ANSWERED, findings=findings,
-                                  searched_stores=stores,
-                                  assumption=resolved.note() or None)
+                                  searched_stores=stores, assumption=note)
 
         # Zero hits. The manifest -- not the hit count -- decides which of the
         # two remaining states this is.
@@ -178,11 +191,13 @@ class CorpusEvidenceAdapter:
                          f"coverage but was not retrieved from {', '.join(stores)}. "
                          f"This is a RETRIEVAL DEFECT, not a corpus gap."),
                 searched_stores=stores,
+                assumption=note,
             )
         return EvidenceResult(
             coverage=Coverage.NOT_HELD,
             missing=f"{entry.act_name} s.{section} is not held in the corpus.",
             searched_stores=stores,
+            assumption=note,
         )
 
     # ------------------------------------------------------------ internals ---

@@ -646,10 +646,15 @@ def test_nothing_is_computed_behind_a_closed_posture_gate(tmp_path):
 
     out = engine.run(TurnInput(
         advocate_id="adv", message="a cheque was dishonoured on 3 March"))
-    assert out.answer.blocked, "posture is unresolved, so the turn must block"
-    assert evidence.needs == [], (
-        "retrieval ran behind a closed gate -- E-034 says no merits derivation "
-        "is computed there")
+    assert out.answer.blocked, "posture is unresolved, so the step must be refused"
+    # E-034 as sharpened: nothing SIDE-DEPENDENT. A provision lookup is the
+    # legislature's words and the same for either party, so it runs. The
+    # AUTHORITY set does not, because which judgments come back is a function
+    # of how the question was framed.
+    assert not any(n.want_authority for n in evidence.needs), (
+        "an authority set was assembled behind a closed posture gate")
+    assert not any(e.kind is ElementKind.ACTION for e in out.answer.elements), (
+        "a directive step was produced behind a closed gate")
     # Only the reads that settle the gate. Counted separately from derivation
     # for exactly this reason.
     assert out.metrics.llm_calls == out.metrics.posture_reads, (
@@ -752,3 +757,52 @@ def test_an_account_of_events_never_settles_a_posture_on_the_engine(tmp_path):
     assert out.answer.blocked_reason.startswith("G-POSTURE")
     assert out.matter.threads[0].posture.role is Role.UNKNOWN
     assert out.matter.threads[0].posture.side is Side.UNKNOWN
+
+
+@pytest.mark.eval_id("E-023")
+def test_an_inferred_act_is_disclosed_even_when_it_finds_nothing():
+    """B-043. THE GUESS MATTERS MOST WHEN IT PRODUCED NOTHING.
+
+    The note naming what was inferred from — and what else matched — was
+    attached to the one return that produced findings. Every NOT_HELD and
+    HELD_NOT_FOUND return dropped it, so a WRONG inference that found nothing
+    was reported as a flat fact about the Act it had guessed:
+
+        Not held in the corpus: Specific Relief Act, 1963 is held, but no
+        specific provision was identified in the question.
+
+    on `what is the limitation for a suit for possession of immovable
+    property`. Every word true; the whole misleading. The advocate reads a
+    fact about the Specific Relief Act and is never told the product picked it
+    off the word `possession`, in a question about limitation, or that the
+    Limitation Act also matched.
+
+    That is backwards: an unverifiable guess is exactly the case where the
+    advocate has no other signal that the wrong Act was read.
+    """
+    from nm.knowledge.manifest import ActBasis, Manifest
+
+    manifest = Manifest.load(
+        pathlib.Path(__file__).resolve().parents[1] / "spec" / "manifest.yaml")
+    resolved = manifest.resolve(
+        "what is the limitation for a suit for possession of immovable property",
+        on=date(2025, 1, 1))
+
+    assert resolved.basis is ActBasis.INFERRED, (
+        "the question names no Act, so nothing may be resolved as NAMED")
+    assert resolved.must_disclose
+    note = resolved.note()
+    assert note and "inference" in note
+
+    # And the note reaches the disclosure on every outcome, not only success.
+    import inspect
+
+    from nm.adapters.evidence import corpus
+
+    body = inspect.getsource(corpus.CorpusEvidenceAdapter.fetch)
+    returns = body.count("return EvidenceResult(")
+    carried = body.count("assumption=note")
+    assert carried >= returns - 1, (
+        f"{returns} EvidenceResult returns and only {carried} carry the "
+        f"inference note. A guess that is disclosed only when it worked is a "
+        f"guess the advocate learns about from the answer being right.")

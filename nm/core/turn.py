@@ -346,13 +346,16 @@ class TurnEngine:
                             blocked_reason=f"G-THREAD: {bound.reason}")
             thread = None
         elif not bound.thread.posture.resolved:
-            # G-POSTURE. Downstream derivations are NOT COMPUTED AT ALL:
-            # nothing wrong is generated, and nothing is paid for. The block IS
-            # the answer.
+            # G-POSTURE, and it blocks THE DIRECTIVE STEP rather than the
+            # turn. Nothing side-dependent is computed: no recommendation,
+            # no authority set. What a provision SAYS is read back, because
+            # that is the legislature's words and they do not change with
+            # the side -- and refusing them meant an advocate asking a bare
+            # question of law was told "whose side are we on?".
             thread = bound.thread
             metrics.fire("G-POSTURE", "unresolved",
                          f"thread {thread.id} has role=unknown; no directive step "
-                         f"is computed")
+                         f"and no authority set is computed")
             described = thread.posture.client_described_as
             if described:
                 # THE QUESTION NARROWS. Repeating the general question at an
@@ -386,10 +389,16 @@ class TurnEngine:
                        f"(plaintiff, defendant, petitioner, respondent, "
                        f"appellant, accused). Everything else you have told me "
                        f"is on the file and I will not ask for it again.")
+            # THE QUESTION LEADS. It is the blocking thing, and S3 requires
+            # the first element to be an action or a question -- what
+            # follows is what could be established without knowing the side.
             elements.append(Element(
                 kind=ElementKind.QUESTION, thread=thread.id, text=ask,
                 gate="G-POSTURE", signal=Signal.UNRESOLVED_POSTURE,
             ))
+            derived, relied_on, retrieved = self._derive(
+                thread, turn, metrics, memory, side_blind=True)
+            elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=tuple(elements), blocked=True,
                             blocked_reason="G-POSTURE: posture unresolved")
@@ -616,8 +625,21 @@ class TurnEngine:
     def _derive(self, thread: Thread, turn: TurnInput,
                 metrics: TurnMetrics,
                 memory: "matter_memory.MatterSummary | None" = None,
+                *, side_blind: bool = False,
                 ) -> tuple[list[Element], tuple, tuple]:
         """Retrieve, then assemble. Returns (elements, relied_on, retrieved).
+
+        `side_blind` is the posture gate holding. It permits exactly what
+        does not depend on which side we are on -- the text of a provision,
+        which is the legislature's words and identical for both parties --
+        and refuses the two things that do:
+
+          * THE RECOMMENDATION, which is a directive step by construction
+          * THE AUTHORITY SET, because which judgments come back is a
+            function of how the question was framed. Presenting a
+            side-flavoured selection as "the law" with no posture on record
+            is a subtler form of the defect the gate exists for, and it is
+            the one that would be hardest to notice.
 
         The two Finding tuples are returned SEPARATELY because the grounding
         gate treats them differently: what the answer rests on can withhold the
@@ -645,7 +667,7 @@ class TurnEngine:
         retrieved.extend(result.findings)
         self._read_coverage(result, thread, metrics, grounds, relied_on)
 
-        if self._wants_authority(turn.message):
+        if self._wants_authority(turn.message) and not side_blind:
             # G-COVERAGE, and it fires BEFORE the search rather than after it.
             # Told afterwards, the advocate reads it as a note on a result they
             # have already started trusting; told first, it is a fact about
@@ -680,8 +702,9 @@ class TurnEngine:
                       f"were not."),
                 disclosure=True))
 
-        recommendation = self._recommend(thread, turn, result, metrics, memory)
-        elements.append(recommendation)
+        if not side_blind:
+            elements.append(
+                self._recommend(thread, turn, result, metrics, memory))
         elements.extend(grounds)
         return elements, tuple(relied_on), tuple(retrieved)
 

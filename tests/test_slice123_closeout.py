@@ -268,34 +268,96 @@ def test_a_proposition_carries_a_finding_and_an_inference_never_does():
 # ================================================== S3 · the frame ==========
 
 @pytest.mark.eval_id("E-034")
-def test_no_merits_derivation_runs_behind_a_closed_gate(tmp_path):
-    """THE COUNTEREXAMPLE: merits questions asked before posture and limitation
-    are settled.
+class _RecordingNeeds(_Evidence):
+    """Answers normally and keeps every EvidenceNeed it was handed.
 
-    The block is not a filter applied to an answer that was computed anyway.
-    Downstream derivation is NOT RUN: nothing wrong is generated, and nothing
-    is paid for. `llm_calls == 0` is the observable form of that.
+    `want_authority` is the only place the authority decision is observable,
+    and it is the one that must not be taken behind a closed posture gate.
+    """
+
+    def __init__(self, result=None):
+        super().__init__(result)
+        self.needs: list = []
+
+    def fetch(self, need):
+        self.needs.append(need)
+        return super().fetch(need)
+
+
+def test_nothing_side_dependent_is_computed_behind_a_closed_gate(tmp_path):
+    """E-034. THE COUNTEREXAMPLE: merits questions answered before posture is
+    settled, so the same provision is applied to the wrong side.
+
+    THIS USED TO ASSERT THAT NOTHING AT ALL WAS COMPUTED, and that is a claim
+    you satisfy by doing nothing. It was also wrong in one direction that cost
+    a daily interaction: `what is the limitation for a suit for possession of
+    immovable property` -- no matter, no client, nobody's side at stake -- was
+    answered with "whose side are we on?", which GS-02's NEVER column forbids
+    in terms.
+
+    The gate's own reason is that THE SAME PROVISION HELPS ONE SIDE AND HURTS
+    THE OTHER WHEN A STEP IS RECOMMENDED. The text of a statute is the
+    legislature's words and the same bytes for either party, so refusing to
+    read it back applied the gate to a case it was not written for.
+
+    So the property is now that nothing SIDE-DEPENDENT is computed, and the
+    three things that are get named. Satisfying this requires knowing which of
+    your outputs depend on the side, which is a stronger thing to know.
     """
     for message, gate in (
             ("the landlord has issued a quit notice on the shop", "G-POSTURE"),):
-        engine, _ = build(tmp_path / gate)
-        out = engine.run(TurnInput(advocate_id="adv", message=message))
+        evidence = _RecordingNeeds()
+        engine, _ = build(tmp_path / gate, evidence=evidence)
+        out = engine.run(TurnInput(
+            advocate_id="adv", message=message + " and any judgment on it"))
         assert out.answer.blocked, f"{gate}: the turn was not blocked"
+        assert any(g.gate_id == gate for g in out.metrics.gates_fired)
 
-        # THE PROPERTY, NOT A PROXY FOR IT. A blocked turn legitimately spends
-        # ONE cheap call reading what the advocate stated -- that read is what
-        # settles the gate. What it must not spend is a call on DERIVATION,
-        # which is what the gate exists to prevent. Asserting a total of zero
-        # confused the two and would have to be relaxed rather than tightened
-        # the moment the read moved to a model.
+        # (1) NO DIRECTIVE STEP. The gate exists for this one.
+        assert not any(e.kind is ElementKind.ACTION for e in out.answer.elements), (
+            f"{gate}: a directive step was produced behind a closed gate")
+
+        # (2) NO MODEL CALL BEYOND THE READS THAT SETTLE THE GATE. A blocked
+        # turn legitimately spends the cheap extraction that settles it and
+        # must spend nothing else. Asserting a total of zero would confuse the
+        # two and would have to be RELAXED, rather than tightened, the moment
+        # the read moved to a model.
         derivation_calls = out.metrics.llm_calls - out.metrics.posture_reads
         assert derivation_calls == 0, (
             f"{gate}: {derivation_calls} derivation call(s) behind a closed gate")
-        assert out.metrics.evidence_rounds == 0, (
-            f"{gate}: retrieval ran behind a closed gate")
-        assert not any(e.kind is ElementKind.ACTION for e in out.answer.elements), (
-            f"{gate}: a directive step was produced behind a closed gate")
-        assert any(g.gate_id == gate for g in out.metrics.gates_fired)
+
+        # (3) NO AUTHORITY SET. Which judgments come back is a function of how
+        # the advocate framed the question, so presenting a side-flavoured
+        # selection as "the law" with no posture on record is the subtler form
+        # of the very defect this gate exists for -- and the harder one to see.
+        assert not any(n.want_authority for n in evidence.needs), (
+            f"{gate}: an authority set was assembled behind a closed gate")
+
+        # (4) AND THE FIRST ELEMENT IS THE QUESTION. What follows it is only
+        # what could be established without knowing the side.
+        assert out.answer.elements[0].kind is ElementKind.QUESTION
+
+
+def test_a_provision_is_still_read_back_behind_a_closed_posture_gate(tmp_path):
+    """The other half of E-034, and the reason it was sharpened.
+
+    An advocate asking what a provision SAYS is asking something whose answer
+    does not depend on the side. Refusing it is not caution; it is the product
+    declining its cheapest useful act, and GS-02 exists to say so.
+    """
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(
+        advocate_id="adv",
+        message="what is the limitation for a suit for possession of immovable "
+                "property"))
+    assert out.answer.blocked, "the directive step is still refused"
+    assert out.answer.elements[0].kind is ElementKind.QUESTION
+    assert not any(e.kind is ElementKind.ACTION for e in out.answer.elements)
+    assert len(out.answer.elements) > 1, (
+        "the turn returned the blocking question and nothing else. The "
+        "provision text does not depend on which side we are on, and an "
+        "advocate asking a bare question of law was told to state a posture "
+        "they have no matter for.")
 
 
 def test_the_thread_gate_also_computes_nothing(tmp_path):
