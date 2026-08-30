@@ -1378,6 +1378,49 @@ d("B-046", "2026-08-30", "edge",
   "domain check left the served path green.",
   "tests/test_never_clauses.py::test_an_anonymous_session_cannot_create_a_matter")
 
+d("B-047", "2026-08-30", "knowledge",
+  "THE ACT TITLE WAS PARSED BY SPLITTING ON THE FIRST COMMA. That strips the "
+  "year from all 17 titles, because none contained a comma of its own. The "
+  "eighteenth does: ANDHRA PRADESH BUILDINGS (LEASE, RENT AND EVICTION) "
+  "CONTROL ACT, 1960 became \"andhra pradesh buildings (lease\" — a fragment "
+  "ending mid-parenthetical that no advocate would type, so the Act could "
+  "never be NAMED and fell through to keyword scoring.",
+  "Adding Acts to the manifest. The expression was written when every title "
+  "was `Name, Year`, and it encoded that shape rather than the intent, which "
+  "is to remove the YEAR.",
+  "S7 — a rule that holds for today's data and not for the shape of it",
+  "Adding the rent Act, the first title with an internal comma",
+  "`title_without_year()` strips a TRAILING comma-year. One owner, used by "
+  "the resolver and by the substring test, which each held their own copy.",
+  "Yes — and CLAUDE.md predicted the shape: \"both hold for today's 17 Acts; "
+  "the eighteenth is where they would break.\" It broke on the title PARSING "
+  "rather than on the collision check that sentence was written about, which "
+  "is worth recording: the prediction was right and pointed one step to the "
+  "left of the actual fault.",
+  "tests/test_citation_patterns.py::test_no_act_title_is_a_substring_of_another")
+
+d("B-048", "2026-08-30", "knowledge",
+  "THE MANIFEST DECLARED 17 ACTS AND THE CORPUS HELD MORE. GS-09 and GS-11 "
+  "were told \"no Act in the curated manifest governs this question\" on the "
+  "Industrial Disputes Act (791 chunks, 77 sections) and on rent control (264 "
+  "chunks, 38 sections). A CURATION gap reported to the advocate as a corpus "
+  "gap.",
+  "Curating the manifest against the scenarios that existed at the time. "
+  "Nothing compares what is declared against what is held, so the gap was "
+  "invisible until a scenario walked into it.",
+  "S3 — a zero from a narrower index reads as absence",
+  "The six-scenario run",
+  "Five entries added: Industrial Disputes 1947, Arbitration and Conciliation "
+  "1996, Consumer Protection 2019 and 1986 (superseded, with its window), and "
+  "the Buildings (Lease, Rent and Eviction) Control Act under all three of "
+  "its store conventions.",
+  "Partly. MOTOR VEHICLES WAS REFUSED on the measurement: 381 chunks matched "
+  "and every one is a notification, an amendment or an Andhra taxation Act — "
+  "the principal Act is NOT held, and declaring it would turn a real corpus "
+  "gap into a reported RETRIEVAL DEFECT, which is worse. The general fix is "
+  "a check comparing declared coverage against held, which does not exist yet.",
+  "verified by retrieval: all six probe sections ANSWERED from the corpus")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

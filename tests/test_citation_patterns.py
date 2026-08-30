@@ -30,6 +30,7 @@ stronger than a memo.
 from __future__ import annotations
 
 import re
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -222,3 +223,71 @@ def test_an_inferred_act_names_what_else_it_could_have_been():
     assert r.must_disclose
     assert r.alternatives, "more than one Act matched and only one was named"
     assert "also matched" in r.note()
+
+
+def test_two_acts_may_share_a_title_only_if_their_windows_do_not_overlap():
+    """THE HOLE THE SUBSTRING TEST LEAVES, closed.
+
+    `test_no_act_title_is_a_substring_of_another` skips the case where two
+    titles are EQUAL (`ta != tb`), so the manifest can hold two Acts whose
+    titles differ only by year — `Consumer Protection Act, 1986` and
+    `Consumer Protection Act, 2019` — and nothing objects.
+
+    That is safe, and it is safe for a reason rather than by luck: `_named_in`
+    filters on the governing date, so "the Consumer Protection Act" resolves to
+    the 1986 Act on a 2015 matter and the 2019 Act on a 2025 one. It stops
+    being safe the moment two same-titled Acts are in force at the same time —
+    then the title identifies nothing and the choice is a guess, which is the
+    one thing exact matching exists to prevent.
+
+    The same reasoning already carries the IPC/BNS and CrPC/BNSS pairs. This
+    makes it a checked property instead of an assumption.
+    """
+    from nm.knowledge.manifest import Manifest, title_without_year
+
+    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    by_title: dict[str, list] = {}
+    for e in m.entries:
+        by_title.setdefault(title_without_year(e.act_name).lower(), []).append(e)
+
+    for title, entries in by_title.items():
+        if len(entries) < 2:
+            continue
+        for i, a in enumerate(entries):
+            for b in entries[i + 1:]:
+                a_to = a.in_force_to or date(9999, 12, 31)
+                b_to = b.in_force_to or date(9999, 12, 31)
+                a_from = a.in_force_from or date(1, 1, 1)
+                b_from = b.in_force_from or date(1, 1, 1)
+                overlap = a_from <= b_to and b_from <= a_to
+                assert not overlap, (
+                    f"{a.act_name!r} and {b.act_name!r} share the title "
+                    f"{title!r} and are BOTH in force between "
+                    f"{max(a_from, b_from)} and {min(a_to, b_to)}. An advocate "
+                    f"naming that title identifies neither, and the resolver "
+                    f"would pick one by list order — a guess wearing the shape "
+                    f"of an exact match.")
+
+
+def test_a_superseded_act_is_declared_rather_than_dropped():
+    """A matter governed by an Act no longer in force is not a corpus gap.
+
+    Dropping the 1986 Consumer Protection Act would make a 2015 consumer
+    matter report NOT HELD for a statute the corpus holds in full — the same
+    failure the CrPC transition produces, where a keyword match on an out-of-
+    force Act must surface as "that Act existed, on a different date" rather
+    than as a flat absence.
+    """
+    from nm.knowledge.manifest import ActBasis, Manifest
+
+    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+
+    old = m.resolve("section 12 of the Consumer Protection Act",
+                    on=date(2015, 6, 1))
+    assert old.entry is not None and old.basis is ActBasis.NAMED
+    assert "1986" in old.entry.act_name, (
+        f"a 2015 consumer matter resolved to {old.entry.act_name!r}")
+
+    new = m.resolve("section 35 of the Consumer Protection Act",
+                    on=date(2025, 6, 1))
+    assert new.entry is not None and "2019" in new.entry.act_name

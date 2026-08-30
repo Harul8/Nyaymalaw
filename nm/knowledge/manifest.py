@@ -23,6 +23,7 @@ reported (check `act-1`).
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
@@ -92,6 +93,32 @@ class ActBasis(str, Enum):
 
     NAMED = "named"          # the question names the Act. Exact match.
     INFERRED = "inferred"    # keyword routing. A CANDIDATE, and disclosed.
+
+
+#: A four-digit year at the END of a title, with its separating comma.
+#: Anchored, so a year inside a title -- `Rules, 1957 (Amendment)` --
+#: is left alone.
+_TRAILING_YEAR = re.compile(r",\s*\d{4}\s*$")
+
+
+def title_without_year(act_name: str) -> str:
+    """The Act's title with its year removed. ONE COPY, and this is it.
+
+    It was `act_name.split(",")[0]`, in two places -- the resolver and the
+    test that checks no title is a substring of another. That works only
+    while no title contains a comma of its own, which was true of all 17
+    Acts and false of the eighteenth:
+
+        ANDHRA PRADESH BUILDINGS (LEASE, RENT AND EVICTION) CONTROL ACT, 1960
+
+    split on the first comma that is `andhra pradesh buildings (lease` -- a
+    fragment ending mid-parenthetical that no advocate would type, so the
+    Act could never be NAMED and would fall through to keyword scoring,
+    which is the one thing that must never decide which Act is read.
+    """
+    return _TRAILING_YEAR.sub("", (act_name or "").strip()).strip()
+
+
 
 
 @dataclass(frozen=True)
@@ -275,7 +302,7 @@ class Manifest:
         best: ManifestEntry | None = None
         best_len = 0
         for e in self.entries:
-            title = e.act_name.split(",")[0].strip().lower()
+            title = title_without_year(e.act_name).lower()
             if len(title) > 6 and title in low and len(title) > best_len:
                 if on is not None and not e.in_force_on(on):
                     continue
