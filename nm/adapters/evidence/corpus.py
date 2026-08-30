@@ -260,7 +260,7 @@ class CorpusEvidenceAdapter:
             rows = con.execute(
                 """select case_id, case_name, court, year, para_type, chunk_id, text
                    from paras where paras match ?
-                   order by rank limit 8""",
+                   order by rank limit 40""",
                 (" OR ".join(f'"{t}"' for t in terms),)).fetchall()
         except sqlite3.OperationalError as exc:
             return EvidenceResult(
@@ -271,6 +271,16 @@ class CorpusEvidenceAdapter:
             con.close()
 
         findings: list[Finding] = []
+        # THE STRUCTURAL FLOOR. A paragraph matching one incidental word of a
+        # multi-word question has not answered it -- FTS ORs the terms, so
+        # "doctrine" alone will match tens of thousands of paragraphs.
+        #
+        # This is a LEXICAL COVERAGE test, not a similarity threshold: PRD H4
+        # forbids an absolute cut on a score, because a score cut discards
+        # things that might be right and leaves no trace. Every rejection here
+        # is counted and the count is reported.
+        floor = 2 if len(terms) >= 2 else 1
+        thin = 0
         for case_id, case_name, court, year, para_type, chunk_id, text in rows:
             if chunk_id in self._denylist():
                 continue
@@ -279,6 +289,11 @@ class CorpusEvidenceAdapter:
                 # G-ATTRIB. Counsel's submission is 14.8% of the corpus and
                 # reads exactly like a holding, so it is dropped here rather
                 # than ranked lower.
+                continue
+            body = (text or "").lower()
+            matched = sum(1 for t in terms if t in body)
+            if matched < floor:
+                thin += 1
                 continue
             ruling = binding_status(court, year, need.jurisdiction)
             findings.append(Finding(
@@ -296,29 +311,58 @@ class CorpusEvidenceAdapter:
                 treatment=self._citator.treatment(case_name),
                 governing_date=need.governing_date,
                 origin="searched",
-                confidence=0.5,
+                # Lexical coverage of the question, NOT a relevance score. It
+                # says how much of what was asked this paragraph contains, and
+                # nothing at all about whether it answers it.
+                confidence=round(matched / len(terms), 2),
             ))
 
         if findings:
+            findings.sort(key=lambda f: -f.confidence)
             return EvidenceResult(coverage=Coverage.ANSWERED, findings=tuple(findings),
                                   searched_stores=("authority_index",))
         return EvidenceResult(
             coverage=Coverage.NOT_HELD,
-            missing=(f"no attributable paragraph in the authority index matched "
-                     f"{', '.join(terms)}. The index covers ratio, reasoning and "
-                     f"order paragraphs only."),
+            missing=(
+                f"no attributable paragraph in the authority index matched at "
+                f"least {floor} of the terms {', '.join(terms)}."
+                + (f" {thin} paragraph(s) matched only one term and were rejected "
+                   f"as incidental rather than served as authority." if thin else "")
+                + " The index covers ratio, reasoning and order paragraphs only."),
             searched_stores=("authority_index",))
 
-    @staticmethod
-    def _terms(need: EvidenceNeed) -> list[str]:
-        stop = {"the", "a", "an", "of", "for", "and", "our", "we", "is", "in", "to",
-                "on", "what", "which", "client", "matter", "case", "act", "under"}
+    # Words that say WHAT KIND of thing is wanted rather than what it is about.
+    # In an authority search "is there any judgment we can rely on" is entirely
+    # scaffolding -- `want_authority` already carries that meaning -- and
+    # letting those words occupy the term budget is what returned three
+    # judgments about substantial questions of law for a query about summary
+    # possession.
+    _SCAFFOLD = {
+        "the", "a", "an", "of", "for", "and", "our", "we", "is", "in", "to", "on",
+        "what", "which", "client", "matter", "case", "act", "under", "there",
+        "any", "judgment", "judgement", "judgments", "ruling", "authority",
+        "authorities", "precedent", "rely", "relied", "whether", "please",
+        "does", "should", "would", "could", "can", "tell", "give", "need",
+        "want", "know", "help", "about", "with", "from", "this", "that",
+        "have", "has", "been", "was", "were", "are", "will", "shall",
+    }
+
+    @classmethod
+    def _terms(cls, need: EvidenceNeed) -> list[str]:
+        """The search terms, in the order they will be spent.
+
+        The budget is small, so ORDER IS THE WHOLE DESIGN. The caller puts the
+        resolved provision's subject FIRST and the advocate's phrasing after,
+        because the question names the section and the section names the
+        subject -- and taking six terms positionally from the question alone
+        spends every slot on scaffolding.
+        """
         words = re.findall(r"[a-zA-Z][a-zA-Z\-]{3,}", need.question.lower())
         seen: list[str] = []
         for w in words:
-            if w not in stop and w not in seen:
+            if w not in cls._SCAFFOLD and w not in seen:
                 seen.append(w)
-        return seen[:6]
+        return seen[:8]
 
 
 def default_authority_index(root: Path) -> Path:

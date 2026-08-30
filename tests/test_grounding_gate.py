@@ -381,3 +381,19 @@ def test_a_withheld_turn_still_says_what_could_not_be_established(tmp_path):
     assert exc.value.gates == ("G-GROUND",)
     assert exc.value.disclosures, "a refusal with no reason is a dead end"
     assert any("not in force" in d for d in exc.value.disclosures)
+
+
+def test_a_year_that_arrives_as_text_does_not_crash_the_binding_rule():
+    """The corpus keeps `year` as TEXT and it is sometimes empty.
+
+    This surfaced only when one query happened to return an Andhra High Court
+    result — every earlier query had been answered by the Supreme Court branch,
+    which returns before the year is ever read. A defect reachable by 12.6% of
+    the corpus and invisible to the other 87.4% is the kind that ships.
+    """
+    assert binding_status("High Court of Andhra Pradesh", "2015").status is Binding.BINDING
+    assert binding_status("High Court of Andhra Pradesh", "2022").status is Binding.NOT_ASSESSED
+
+    # Unparseable is NOT ASSESSED, never a guess.
+    for bad in ("", "   ", "n.d.", None):
+        assert binding_status("High Court of Andhra Pradesh", bad).status is Binding.NOT_ASSESSED

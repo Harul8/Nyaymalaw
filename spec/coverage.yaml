@@ -63,7 +63,7 @@ scorecard:
   state: FAIL
   blocking: false
 - id: RG-07
-  state: FAIL
+  state: PASS
   blocking: true
 - id: RG-10
   state: NOT MEASURED

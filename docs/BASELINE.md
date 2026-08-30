@@ -283,7 +283,7 @@ Evidence Act (66 links), the NI Act (63) or the Hindu Marriage Act (4).
 | Duplicate Act identifiers | present across the corpus | Coverage is a union query, never a lookup (`act-1`) |
 | `legal.db` `case_section_links` | **0 rows** | The judgement→section table is empty. The chunks layer's own `sections_cited` covers **4.9%** of attributable paragraphs, so *which authorities interpret this provision* is not answerable today except for the Constitution, the IPC, the CrPC and the CPC |
 | Subsequent treatment | **≤14.5%** of judgements have any citator entry | Treatment is `NOT_CHECKED` on a miss, and a `NOT_CHECKED` authority cannot carry a proposition alone. **The product may not claim to verify that an authority is still good law** |
-| The authority index | **not built** | Every authority need returns HELD_NOT_FOUND naming `tools/build_authority_index.py`. It never falls back to a different retrieval — a silent backend swap is the three-stores defect wearing a helpful face |
+| The authority index | **built 30 Aug 2026** — 451,548 paragraphs in 32s, 1.1GB, 564,232 excluded as non-attributable | Lexical FTS5 only. It matches WORDS, not meaning: a question naming the provision rather than the subject returns generic results until the query is seeded from the resolved provision's marginal note (`_subject_of`). Semantic retrieval would need embeddings and is not built |
 
 ---
 

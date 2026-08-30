@@ -20,6 +20,7 @@ This module is PURE. It takes ports in and returns a result; it opens nothing.
 """
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass, field, replace
 from datetime import date
@@ -42,11 +43,22 @@ from nm.domain.matter import (
 from nm.domain.metrics import Outcome, Phase, TurnMetrics
 from nm.domain.traceability import implements
 from nm.ports.coverage import CoveragePort
-from nm.ports.evidence import Coverage, EvidenceNeed, EvidencePort, Finding
+from nm.ports.evidence import (
+    Coverage,
+    EvidenceNeed,
+    EvidencePort,
+    Finding,
+    SourceKind,
+)
 from nm.ports.model import ModelError, ModelPort, Prompt, Tier
 from nm.ports.store import StaleWrite, StorePort
 
 MAX_EVIDENCE_ROUNDS = 3
+
+# How many authorities an answer SHOWS. Retrieval keeps every candidate -- H4
+# forbids discarding what might be right -- but forty grounds in one answer is
+# not an answer, and the count not shown is stated rather than hidden.
+MAX_AUTHORITIES_SHOWN = 3
 
 # The failing state each grounding gate reports. Held here rather than inside
 # `grounding.py` so the gate matrix stays the only place a state vocabulary is
@@ -58,6 +70,34 @@ _GROUNDING_STATE = {
     "G-BINDING": "not_assessed",
     "G-INFORCE": "not_in_force",
 }
+
+def _subject_of(question: str, provisions: tuple[Finding, ...]) -> str:
+    """The question, widened by the subject of the provision it resolved to.
+
+    A provision span opens with the Act name and the marginal note -- for
+    Specific Relief Act s.6 that is *"Suit by person dispossessed of immovable
+    property"*. The marginal note is the subject; the question usually is not.
+
+    The original question is KEPT rather than replaced. Widening recall is the
+    intent; discarding what the advocate actually asked would be a different
+    and worse change, and H4 is explicit that nothing which might be right is
+    dropped before it can be considered.
+    """
+    if not provisions:
+        return question
+    span = " ".join(provisions[0].span.split())
+    # The span opens with the store's own identifier prefix -- "Union Of India
+    # 1963 1 The Specific Relief Act, 1963, - s.6:" - before the marginal note.
+    # Left in, `union` and `india` occupy two of eight term slots and deflate
+    # every confidence score, because they match nothing in a judgment.
+    marker = re.search(r"s\.\s*\d+[A-Za-z]*\s*:", span)
+    head = span[marker.end():].strip() if marker else span
+    head = head[:220]
+    # THE SUBJECT LEADS. The term budget is small and spent in order, so
+    # putting the question first spends every slot on "is there any judgment we
+    # can rely on" and none on "dispossessed of immovable property".
+    return f"{head} {question}"
+
 
 # An advocate asking for authority is asking a different question from one
 # asking what a section says, and the two need different retrieval. Read from
@@ -504,7 +544,14 @@ class TurnEngine:
             # A SECOND, DIFFERENT need. Authority retrieval is not a variation
             # on provision retrieval: different store, different attribution
             # rules, different binding computation.
-            authority = self._evidence.fetch(replace(need, want_authority=True))
+            #
+            # RESOLUTION BEFORE SEARCH (H3), in the only form available before
+            # slice 5: seed the query from the provision this turn already
+            # resolved. An advocate asks "any judgment on section 6?" and the
+            # subject words are in the SECTION, not in the question.
+            authority = self._evidence.fetch(replace(
+                need, want_authority=True,
+                question=_subject_of(need.question, result.findings)))
             metrics.evidence_rounds += 1
             retrieved.extend(authority.findings)
             self._read_coverage(authority, thread, metrics, grounds, relied_on)
@@ -560,7 +607,21 @@ class TurnEngine:
                           to the advocate as though the corpus lacked it
         """
         if result.coverage is Coverage.ANSWERED:
-            for f in result.findings:
+            shown = result.findings
+            if len(shown) > MAX_AUTHORITIES_SHOWN and any(
+                    f.source_kind is SourceKind.AUTHORITY for f in shown):
+                # A PRESENTATION cut, at the answer layer, and it is stated.
+                # The rest remain retrieved, counted, and available to the
+                # grounding gate -- nothing has been discarded.
+                shown = shown[:MAX_AUTHORITIES_SHOWN]
+                grounds.append(Element(
+                    kind=ElementKind.GROUND, thread=thread.id,
+                    text=(f"{len(result.findings) - MAX_AUTHORITIES_SHOWN} further "
+                          f"attributable paragraph(s) matched and are not shown. "
+                          f"They were retrieved, not discarded — ask and I will "
+                          f"put them up."),
+                    disclosure=True))
+            for f in shown:
                 if f.usable:
                     relied_on.append(f)
                     grounds.append(Element(
@@ -569,10 +630,29 @@ class TurnEngine:
                               f"{f.binding.value} for {f.binding_for} — "
                               f"{f.binding_reason})."),
                         refs=(f.locator,)))
+                elif f.quotable:
+                    # SHOWN, with its status disclosed, and NOT relied on.
+                    #
+                    # This is the ordinary case for case law, not an error: the
+                    # citator covers at most 14.5% of judgments, so nearly every
+                    # authority comes back with treatment unverified. Dropping
+                    # them would make the whole index worthless; asserting from
+                    # them would present an overruled case as good law. Showing
+                    # them with the limit stated is what a careful junior does.
+                    grounds.append(Element(
+                        kind=ElementKind.GROUND, thread=thread.id,
+                        text=(f'{f.ref} — "{f.span.strip()[:300]}" ({f.locator}; '
+                              f"{f.binding.value} for {f.binding_for}). "
+                              f"MY RECOMMENDATION DOES NOT REST ON THIS: "
+                              f"{f.blocking_reason.split(': ', 1)[-1]}. Verify it "
+                              f"before you rely on it."),
+                        refs=(f.locator,), disclosure=True))
                 else:
-                    # DROPPED, and the drop is DISCLOSED. Silently omitting it
-                    # would leave the advocate believing nothing was found,
-                    # which is a different and false statement about the corpus.
+                    # Not even quotable — the span does not support what it was
+                    # cited for, or the text was not in force. Named, never
+                    # silently omitted: silence would leave the advocate
+                    # believing nothing was found, which is a different and
+                    # false statement about the corpus.
                     grounds.append(Element(
                         kind=ElementKind.GROUND, thread=thread.id,
                         text=(f"{f.ref} was retrieved and is NOT being relied on: "

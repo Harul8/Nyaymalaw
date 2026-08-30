@@ -1,0 +1,209 @@
+"""Authority retrieval against the real index. Class C — runs on ingest.
+
+WHAT THIS PINS THAT THE UNIT TESTS CANNOT
+------------------------------------------
+The unit tests prove the Finding contract refuses a submission, an unassessed
+binding status and an unchecked treatment. They prove it against Findings a
+test constructed.
+
+These prove it against 451,548 paragraphs the corpus actually holds — which is
+where the interesting failures live, because the corpus is where the labels are
+noisy, the court strings are unnormalised and the citator is mostly silent.
+
+They skip cleanly when the index has not been built. A skip is visible in the
+run; a test that quietly passes with nothing behind it is not.
+"""
+from __future__ import annotations
+
+import sqlite3
+from datetime import date
+
+import pytest
+
+from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
+from nm.bootstrap.composition import ROOT
+from nm.knowledge.manifest import Manifest
+from nm.ports.evidence import (
+    Binding,
+    Coverage,
+    EvidenceNeed,
+    ParaKind,
+    SourceKind,
+    TreatmentState,
+)
+
+pytestmark = pytest.mark.class_c
+
+CORPUS = ROOT / "legal_database" / "vector_store"
+INDEX = default_authority_index(ROOT)
+
+
+@pytest.fixture(scope="module")
+def adapter():
+    manifest = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    a = CorpusEvidenceAdapter(CORPUS, manifest, authority_index=INDEX)
+    if not a.available:
+        pytest.skip("the corpus is not attached")
+    if not a.authority_available:
+        pytest.skip("the authority index is not built — "
+                    "run python tools/build_authority_index.py")
+    return a
+
+
+def need(question: str, **kw) -> EvidenceNeed:
+    return EvidenceNeed(question=question, governing_date=date(2026, 8, 30),
+                        want_authority=True, **kw)
+
+
+# ================================================= the index itself ========
+
+def test_the_index_records_what_it_was_built_from():
+    """Defect shape S11. A derived artefact with no identity cannot be refused
+    when it goes stale — it just serves old law, fluently.
+
+    The precedent is not hypothetical: the previous build's 437MB dense index
+    is only KNOWABLE as unusable because it shipped an identity record.
+    """
+    if not INDEX.exists():
+        pytest.skip("the authority index is not built")
+    con = sqlite3.connect(f"file:{INDEX}?mode=ro", uri=True)
+    try:
+        identity = dict(con.execute("select key, value from identity").fetchall())
+    finally:
+        con.close()
+
+    assert identity["corpus_version"], "an index that cannot name its source is refused"
+    assert int(identity["indexed_paragraphs"]) > 0
+    assert identity["attributable_kinds"] == "ratio,reasoning,order"
+    # The exclusions are recorded, not merely performed. A count nobody kept is
+    # a filter nobody can audit.
+    assert int(identity["excluded_not_attributable"]) > 0
+    assert identity["partial"] == "no", "a partial index must not be served as whole"
+
+
+def test_nothing_but_ratio_reasoning_and_order_is_indexed():
+    """Counsel's submission is 14.8% of the corpus and reads exactly like a
+    holding. It is excluded at BUILD time as well as at use — two independent
+    exclusions, because a filter at use can be bypassed by a new call site and
+    a filter at build cannot."""
+    if not INDEX.exists():
+        pytest.skip("the authority index is not built")
+    con = sqlite3.connect(f"file:{INDEX}?mode=ro", uri=True)
+    try:
+        kinds = {r[0] for r in con.execute(
+            "select distinct para_type from paras").fetchall()}
+    finally:
+        con.close()
+    assert kinds <= {"ratio", "reasoning", "order"}, (
+        f"the index holds non-attributable paragraphs: {kinds - {'ratio', 'reasoning', 'order'}}")
+
+
+# ================================================= retrieval ===============
+
+def test_an_authority_need_returns_attributable_paragraphs_with_locators(adapter):
+    result = adapter.fetch(need("adverse possession of immovable property title"))
+    assert result.coverage is Coverage.ANSWERED, result.missing
+    assert result.searched_stores == ("authority_index",)
+
+    for f in result.findings:
+        assert f.source_kind is SourceKind.AUTHORITY
+        assert f.para_kind.attributable, f"{f.ref} is {f.para_kind.value}"
+        assert f.span.strip()
+        assert f.locator.count("::") == 2, "a locator must read back to one paragraph"
+
+
+def test_every_authority_carries_a_computed_binding_status_and_its_rule(adapter):
+    """Binding status is COMPUTED from court and date, never asserted. The rule
+    travels with it because an advocate who cannot see why an authority was
+    called binding has to take it on trust."""
+    result = adapter.fetch(need("adverse possession of immovable property title"))
+    assert result.findings
+    for f in result.findings:
+        assert f.binding in (Binding.BINDING, Binding.PERSUASIVE, Binding.NOT_ASSESSED)
+        assert f.binding_reason.strip()
+        assert f.binding_for == "Telangana"
+        if f.binding is Binding.BINDING:
+            # Only two routes to binding on a Telangana matter today.
+            assert ("art-141" in f.binding_reason or "bind-1" in f.binding_reason
+                    or "hc-own" in f.binding_reason), f.binding_reason
+
+
+def test_treatment_is_three_state_and_a_miss_is_never_clean(adapter):
+    """The citator holds 4,894 entries against 33,791 judgments. Most lookups
+    MISS, and a miss means the index is silent — not that the judgment is
+    undoubted."""
+    result = adapter.fetch(need("adverse possession of immovable property title"))
+    assert result.findings
+    states = {f.treatment.state for f in result.findings}
+    assert states <= {TreatmentState.CLEAN, TreatmentState.NEGATIVE,
+                      TreatmentState.NOT_CHECKED}
+    for f in result.findings:
+        assert f.treatment.scope.strip(), "a bare state is a claim about the whole judgment"
+        if f.treatment.state is TreatmentState.NOT_CHECKED:
+            # Unusable alone, and still QUOTABLE with its status disclosed.
+            # Unusable is not unmentionable — that distinction is what stops
+            # the gate from silently deleting most of the corpus.
+            assert not f.usable
+            assert f.quotable
+
+
+def test_an_unusable_authority_says_which_gate_blocked_it(adapter):
+    """`usable=False` with no explanation is an absent input reading as a quiet
+    decision. The advocate is entitled to know which of five things went wrong."""
+    result = adapter.fetch(need("adverse possession of immovable property title"))
+    for f in result.blocked:
+        assert f.blocking_reason
+        assert f.blocking_reason.split(":", 1)[0].startswith("G-")
+
+
+def test_a_query_matching_nothing_names_the_index_it_searched(adapter):
+    """S3. A zero result that cannot name its index is indistinguishable from
+    absence, and that shape has produced four false gaps in this project."""
+    result = adapter.fetch(need("zzzqxwv qwertyuiop plindraxu vworbleth"))
+    assert result.coverage is not Coverage.ANSWERED
+    assert result.searched_stores == ("authority_index",)
+    assert "authority index" in (result.missing or "")
+
+
+def test_an_incidental_one_word_match_is_not_served_as_authority(adapter):
+    """FTS ORs the terms, so a question containing one common legal word
+    matches tens of thousands of paragraphs.
+
+    My first version of the test above assumed nonsense returns nothing. It
+    returned EIGHT judgments, because "doctrine" and "nonexistent" are real
+    words. The test was wrong; the behaviour it exposed was not — an advocate
+    shown eight authorities for one incidental word has been given noise
+    wearing the shape of research.
+
+    The floor is LEXICAL COVERAGE, not a similarity score. H4 forbids an
+    absolute cut on a score because a score cut leaves no trace; this one
+    counts what it rejected and says so.
+    """
+    result = adapter.fetch(need("zzzqxwv nonexistent doctrine of qwertyuiop"))
+    for f in result.findings:
+        assert f.confidence >= 0.5, (
+            f"{f.ref} matched {f.confidence:.0%} of the question and was served "
+            f"as authority")
+
+
+def test_confidence_reports_lexical_coverage_and_the_best_answer_leads(adapter):
+    """`confidence` says how much of the QUESTION a paragraph contains. It says
+    nothing about whether the paragraph answers it, and it is not a relevance
+    score — naming it honestly is what stops it being read as one."""
+    result = adapter.fetch(need("adverse possession of immovable property based on title"))
+    assert result.coverage is Coverage.ANSWERED
+    scores = [f.confidence for f in result.findings]
+    assert scores == sorted(scores, reverse=True), "the fullest match must lead"
+    assert scores[0] == 1.0
+
+
+def test_the_provision_route_is_unaffected_by_the_authority_route(adapter):
+    """Two different needs, two different stores, and neither silently answers
+    for the other."""
+    provision = adapter.fetch(EvidenceNeed(
+        question="section 6 of the specific relief act",
+        governing_date=date(2026, 8, 30)))
+    assert provision.coverage is Coverage.ANSWERED
+    assert provision.findings[0].source_kind is SourceKind.PROVISION
+    assert provision.findings[0].para_kind is ParaKind.UNKNOWN
+    assert "authority_index" not in provision.searched_stores

@@ -106,7 +106,28 @@ class BindingRuling:
         return self.status is not Binding.NOT_ASSESSED
 
 
-def binding_status(raw_court: str | None, year: int | None,
+def _year_of(raw: object) -> int | None:
+    """Coerce a year that arrives from a store, not from a caller.
+
+    The corpus keeps `year` as TEXT and it is sometimes empty. A comparison
+    against an int then raises TypeError from inside a binding computation --
+    which surfaced here only because one query happened to return an Andhra
+    High Court result, and every earlier query had been answered by the Supreme
+    Court branch, which returns before the year is read.
+
+    A defect reachable by 12.6% of the corpus and invisible to the other 87.4%
+    is exactly the kind that ships. An unparseable year returns None and the
+    caller treats it as NOT ASSESSED -- it never becomes a guess.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, int):
+        return raw
+    text = str(raw).strip()
+    return int(text) if text.isdigit() else None
+
+
+def binding_status(raw_court: str | None, year: int | str | None,
                    jurisdiction: str = "Telangana") -> BindingRuling:
     """Binding status for an authority, against the matter's jurisdiction.
 
@@ -118,6 +139,7 @@ def binding_status(raw_court: str | None, year: int | None,
     """
     court = normalise_court(raw_court)
     place = (jurisdiction or "").strip().lower()
+    year = _year_of(year)
 
     if court is Court.SUPREME_COURT:
         return BindingRuling(
