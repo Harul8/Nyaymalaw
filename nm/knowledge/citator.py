@@ -2,22 +2,32 @@
 
 WHAT IS ACTUALLY THERE, MEASURED 30 AUGUST 2026
 ------------------------------------------------
-`legal_database/vector_store/citator.json` holds 4,894 entries against 33,791
-judgments. 1,317 are negative. The treatment verbs are FOLLOWED 3,111,
-AFFIRMED 1,153, REVERSED 946, OVERRULED 283, DISTINGUISHED 279, DOUBTED 77,
-PER_INCURIAM 76, DISAPPROVED 44.
+`legal_database/vector_store/citator.json` holds 4,894 entries. 1,317 are
+negative. The verbs are FOLLOWED 3,111, AFFIRMED 1,153, REVERSED 946,
+OVERRULED 283, DISTINGUISHED 279, DOUBTED 77, PER_INCURIAM 76, DISAPPROVED 44.
 
-So roughly ONE JUDGMENT IN SEVEN has any citator entry, and the key is the case
-NAME as written by the citing judgment -- not an id. Name matching across
-Indian case-name conventions is lossy in both directions.
+THE NUMBER THAT MATTERS IS THE INTERSECTION, NOT THE RATIO. Resolved against
+the judgments actually held -- through the citation graph's 79,952 name
+variants, not merely by exact match:
+
+    281 of 33,529 held judgments have any citator entry.  0.84%.
+    94.3% of citator keys name cases the corpus does not hold at all.
+    75 held judgments have NEGATIVE treatment recorded.
+
+The first draft of this docstring said "roughly one judgment in seven", from
+dividing 4,894 by 33,791. That is a ratio of two set sizes and it was wrong by
+a factor of seventeen. The keys are case NAMES as written by citing judgments,
+and most of them are Privy Council, English and older Indian authorities that
+were never in this corpus.
 
 WHY THAT MAKES THE THIRD STATE THE ENTIRE DESIGN
 -------------------------------------------------
 A lookup miss here means "the citator has nothing to say". Reported as `clean`,
 it becomes "this case is good law" -- a claim about the whole body of Indian
-case law derived from a 14% index. That is defect shape S3 (an empty result
-from the wrong index, indistinguishable from absence) pointed at the single
-most damaging thing this product could get wrong.
+case law derived from an index that reaches under one judgment in a hundred.
+That is defect shape S3 -- an empty result from the wrong index,
+indistinguishable from absence -- pointed at the single most damaging thing
+this product could get wrong.
 
 So a miss is `NOT_CHECKED`, a Finding whose treatment is `NOT_CHECKED` cannot
 carry a proposition alone, and the advocate is told which of the two it is.
@@ -88,10 +98,13 @@ class Citator:
         key = normalise_case_name(case_name)
         entry = self._load().get(key)
         if entry is None:
+            # ONE CLAUSE, not a paragraph. This fires on ~99% of authorities,
+            # and a long explanation repeated on every line is noise that
+            # teaches the advocate to skip it -- including the 75 times it
+            # carries something.
             return Treatment.not_checked(
-                f"no citator entry for {case_name!r}. The citator holds "
-                f"{self.entries} named cases against 33,791 judgments, so a miss "
-                f"means the index is silent -- NOT that the judgment is undoubted")
+                "subsequent treatment not verified: the citator resolves to only "
+                "281 of the 33,529 judgments held (0.84%)")
 
         counts: dict[str, int] = entry.get("counts") or {}
         verbs = tuple(sorted(counts))

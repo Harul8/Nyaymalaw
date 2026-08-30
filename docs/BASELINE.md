@@ -248,17 +248,40 @@ the build if a second one appears anywhere in `nm/`.
 | Provision coverage against the manifest, **union across identifier conventions** | **99.8%** of 3,038 intended sections | `chunks.db` |
 | Attributable case paragraphs (`ratio`, `reasoning`, `order`) | **451,548** of 1,015,780 — 44.5% | `chunks.db` |
 | Paragraphs carrying a structured `sections_cited` link | **22,127** of 451,548 attributable — **4.9%** | `chunks.db` |
-| Citator entries | **4,894** against 33,791 judgments — **≤14.5%**, an upper bound | `citator.json` |
-| Citator entries recording NEGATIVE treatment | 1,317 | `citator.json` |
+| Citator entries | 4,894 — but see below | `citator.json` |
+| Held judgments the citator actually reaches | **278 of 33,529 — 0.83%** | intersection, resolved through `citation_graph.json`'s 79,952 name variants |
+| Held judgments with NEGATIVE treatment | **75** | `citator.json` ∩ parents |
+| Citator keys naming cases the corpus does not hold | **94.3%** | Privy Council, English and older Indian authorities |
+| `interprets` edges — provision → judgment | **27,164**, 100% pointing at held cases, 13,371 cases, 1,079 sections | `citation_graph.json` |
 | Contamination denylist, applied on read | 44 chunk ids | `contamination_denylist.json` |
 
-**The citator figure is why `Treatment` has three states.** It is keyed by the
-case NAME as written by the citing judgment, not by id, so the true match rate
-is below 14.5%. **A miss means the index is silent, never that the judgment is
-undoubted** — and reporting a miss as `clean` would make *an overruled
-authority presented as good law* the default behaviour. It is `NOT_CHECKED`,
-and a Finding whose treatment is `NOT_CHECKED` cannot carry a proposition
-alone.
+### The citator figure was reported wrongly first, and the correction matters
+
+This file initially recorded **≤14.5%, an upper bound** — 4,894 citator entries
+divided by 33,791 judgments. **That is a ratio of two set sizes, not a coverage
+measurement**, and calling it an upper bound made it sound careful without
+making it useful. The measured intersection is **0.83%**. Wrong by a factor of
+seventeen, because 94.3% of citator keys name cases this corpus does not hold.
+
+> **CHECK `cit-1`:** coverage is an INTERSECTION against what is held, computed
+> by `tools/releasegate.py`. A ratio of two set sizes is never reported as
+> coverage, whatever it is labelled.
+
+**What follows for the product, stated plainly.** NM does not verify whether an
+authority is still good law. It can answer that for 278 judgments and for 75 in
+the direction that matters. For the other 33,251 it is silent, and silence is
+recorded as `NOT_CHECKED` rather than read as clearance — so **no
+recommendation this product makes rests on case law.** Statute carries the
+advice; judgments are shown as reading material with the limit stated.
+
+**The `interprets` edges are the more useful artefact, and they are skewed.**
+27,164 provision→judgment links, all pointing at held cases — but 17,361 are
+Constitution, 7,182 IPC, 1,521 CrPC and 636 CPC. The Evidence Act has 57, the
+NI Act 34, the Hindu Marriage Act **2**, and the Specific Relief, Limitation
+and Transfer of Property Acts **none**. Excellent for constitutional and
+criminal work; absent for the property, contract and family matters this
+product is aimed at. Building on it would look like it works and then silently
+not.
 
 **The `sections_cited` figure supersedes nothing and closes nothing.**
 `legal.db.case_section_links` holds 0 rows, and the chunks layer's own links

@@ -195,23 +195,58 @@ def measure_provisions(manifest: Manifest) -> dict:
 
 
 def measure_citator(judgments: dict) -> dict:
+    """THE INTERSECTION, not the ratio.
+
+    The first version of this divided 4,894 citator entries by 33,791
+    judgments, called the result an upper bound, and reported 14.5%. The
+    measured intersection is 0.84% -- wrong by a factor of seventeen, because
+    94.3% of citator keys name cases this corpus does not hold.
+
+    A ratio of two set sizes is not a coverage measurement. Naming it an upper
+    bound made it sound careful without making it true.
+    """
     path = CORPUS / "citator.json"
-    if not path.exists():
+    parents = CORPUS / "caselaws_v2_parents.json"
+    if not path.exists() or not parents.exists():
         return {"available": False, "store": str(path)}
+
     raw = json.loads(path.read_text(encoding="utf8", errors="replace"))
-    negative = sum(1 for v in raw.values() if v.get("negative"))
-    held = judgments.get("total") or 0
+    held_doc = json.loads(parents.read_text(encoding="utf8", errors="replace"))
+    held_names = {normalise_case_name(r.get("case_name") or "")
+                  for r in held_doc.values()}
+    held_names.discard("")
+
+    # Resolved through the citation graph's name variants where available --
+    # exact-match-only would understate it, and understating is not honesty.
+    variants: dict[str, list] = {}
+    graph = CORPUS / "citation_graph.json"
+    if graph.exists():
+        g = json.loads(graph.read_text(encoding="utf8", errors="replace"))
+        info = g.get("case_info", {})
+        for name, ids in (g.get("name_to_ids") or {}).items():
+            variants.setdefault(normalise_case_name(name), []).extend(
+                normalise_case_name(info.get(i, {}).get("case_name") or "")
+                for i in ids)
+
+    matched, negative_matched = set(), set()
+    for key, entry in raw.items():
+        norm = normalise_case_name(key)
+        candidates = {norm} | set(variants.get(norm, ()))
+        hit = candidates & held_names
+        if hit:
+            matched |= hit
+            if entry.get("negative"):
+                negative_matched |= hit
+
     return {
         "available": True, "store": path.name,
         "entries": len(raw),
-        "negative": negative,
-        "judgments_held": held,
-        # An upper bound, and labelled as one. Entries are keyed by the case
-        # NAME as written by the citing judgment, so this ratio assumes every
-        # entry matches a held judgment -- which is generous. The real figure
-        # is lower and the threshold must not be read as if it were tight.
-        "entry_ratio_upper_bound": round(len(raw) / held, 4) if held else 0.0,
-        "normalised_keys": len({normalise_case_name(k) for k in raw}),
+        "negative_entries": sum(1 for v in raw.values() if v.get("negative")),
+        "judgments_held": len(held_names),
+        "judgments_with_treatment": len(matched),
+        "judgments_with_negative_treatment": len(negative_matched),
+        "coverage": round(len(matched) / len(held_names), 4) if held_names else 0.0,
+        "keys_naming_nothing_held": len(raw) - len(matched),
     }
 
 
@@ -279,14 +314,16 @@ def score(rows: list[dict], m: dict) -> Score:
     if not cit.get("available"):
         s.add("RG-05", UNMEASURED, "citator.json is not readable", blocking("RG-05"))
     else:
-        ratio = cit["entry_ratio_upper_bound"]
-        s.add("RG-05", PASS if ratio >= 0.50 else FAIL,
-              f"{cit['entries']:,} citator entries against "
-              f"{cit['judgments_held']:,} judgments "
-              f"(<= {ratio:.1%}, an upper bound)", blocking("RG-05"),
-              "The product may not claim to verify an authority is still good "
-              "law. Treatment is `not_checked` on a miss and cannot carry a "
-              "proposition alone.")
+        cov = cit["coverage"]
+        s.add("RG-05", PASS if cov >= 0.50 else FAIL,
+              f"{cit['judgments_with_treatment']:,} of {cit['judgments_held']:,} "
+              f"held judgments have any citator entry ({cov:.2%}); "
+              f"{cit['judgments_with_negative_treatment']:,} carry negative "
+              f"treatment", blocking("RG-05"),
+              "THE PRODUCT DOES NOT VERIFY WHETHER AN AUTHORITY IS STILL GOOD "
+              "LAW. Treatment is `not_checked` on a miss, so no recommendation "
+              "rests on case law: judgments are shown as reading material with "
+              "the limit stated, and statute carries the advice.")
 
     # RG-06 -- provision-to-authority links
     if not para.get("available"):

@@ -42,7 +42,7 @@ provisions:
   intended_total: 3038
 citator:
   entries: 4894
-  negative: 1317
+  negative: null
 scorecard:
 - id: RG-01
   state: FAIL

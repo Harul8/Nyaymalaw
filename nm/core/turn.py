@@ -49,6 +49,7 @@ from nm.ports.evidence import (
     EvidencePort,
     Finding,
     SourceKind,
+    TreatmentState,
 )
 from nm.ports.model import ModelError, ModelPort, Prompt, Tier
 from nm.ports.store import StaleWrite, StorePort
@@ -639,14 +640,23 @@ class TurnEngine:
                     # them would make the whole index worthless; asserting from
                     # them would present an overruled case as good law. Showing
                     # them with the limit stated is what a careful junior does.
+                    # NEGATIVE treatment is the one an advocate must not
+                    # miss, and it is rare -- 75 judgments in the whole corpus.
+                    # Unverified treatment is the norm at 0.84% coverage, so it
+                    # gets one clause. Giving both the same weight makes the
+                    # rare one invisible.
+                    adverse = f.treatment.state is TreatmentState.NEGATIVE
+                    note = (f"ADVERSE TREATMENT — {', '.join(f.treatment.verbs)}. "
+                            f"Do not rely on this without reading it."
+                            if adverse else
+                            "Not relied on: subsequent treatment unverified.")
                     grounds.append(Element(
                         kind=ElementKind.GROUND, thread=thread.id,
                         text=(f'{f.ref} — "{f.span.strip()[:300]}" ({f.locator}; '
-                              f"{f.binding.value} for {f.binding_for}). "
-                              f"MY RECOMMENDATION DOES NOT REST ON THIS: "
-                              f"{f.blocking_reason.split(': ', 1)[-1]}. Verify it "
-                              f"before you rely on it."),
-                        refs=(f.locator,), disclosure=True))
+                              f"{f.binding.value} for {f.binding_for}). {note}"),
+                        refs=(f.locator,),
+                        signal=Signal.ADVERSE_TREATMENT if adverse else Signal.NONE,
+                        disclosure=not adverse))
                 else:
                     # Not even quotable — the span does not support what it was
                     # cited for, or the text was not in force. Named, never
