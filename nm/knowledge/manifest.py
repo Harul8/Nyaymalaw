@@ -129,6 +129,24 @@ class Manifest:
         its thinnest; the cause-of-action graph that replaces it is slice 5.
         """
         low = question.lower()
+
+        # AN ACT NAMED IN THE QUESTION BEATS EVERY KEYWORD SCORE.
+        #
+        # "does section 53A of the Transfer of Property Act protect him?" in a
+        # brief about dispossession scored the SPECIFIC RELIEF ACT on
+        # `possession` and `dispossessed`, looked for s.53A in it, and reported
+        # "Specific Relief Act s.53A is not held in the corpus" — a corpus gap
+        # for a provision the corpus holds, with the right Act named in the
+        # same sentence as the section number.
+        #
+        # Keyword scoring reads the WHOLE question, so the more context an
+        # advocate gives, the more likely it is to be outvoted. Every extra
+        # sentence made it worse. Found on the first realistic multi-clause
+        # question put through the interface.
+        named = self._named_in(low, on)
+        if named is not None:
+            return named, None
+
         best: ManifestEntry | None = None
         superseded: ManifestEntry | None = None
         best_score = superseded_score = 0
@@ -143,6 +161,24 @@ class Manifest:
             if hits > best_score:
                 best, best_score = e, hits
         return best, superseded
+
+    def _named_in(self, low: str, on: date | None) -> ManifestEntry | None:
+        """The Act the question NAMES, if it names one.
+
+        Matched on the title without its year, so "the Transfer of Property
+        Act" finds "Transfer of Property Act, 1882". The LONGEST match wins:
+        "Code of Criminal Procedure" must not be beaten by a shorter title that
+        happens to be a substring of it.
+        """
+        best: ManifestEntry | None = None
+        best_len = 0
+        for e in self.entries:
+            title = e.act_name.split(",")[0].strip().lower()
+            if len(title) > 6 and title in low and len(title) > best_len:
+                if on is not None and not e.in_force_on(on):
+                    continue
+                best, best_len = e, len(title)
+        return best
 
     def intends(self, entry: ManifestEntry, section: str) -> bool:
         return entry.covers(section)

@@ -74,7 +74,19 @@ _QUOTED = re.compile(r'"([^"]{12,})"|“([^”]{12,})”')
 _WORDS = re.compile(r"[a-z0-9]+")
 
 def _fold(text: str) -> str:
-    return " ".join(_WORDS.findall((text or "").lower()))
+    """Words only, lower-cased, with the case-name pivot normalised.
+
+    `vs` and `v` ARE THE SAME WORD and folding them apart withheld a correct
+    turn: a retrieved authority whose `ref` reads "K. Venkata Rao And Ors. vs
+    Sunkara Venkata Ra" failed to match the same case written "... v Sunkara
+    Venkata Ra" in the answer, so the gate reported an invented citation for a
+    judgment it had itself just supplied.
+
+    A gate that fires on its own retrieval is worse than no gate: it withholds
+    good work, and the fix people reach for is to switch it off.
+    """
+    tokens = _WORDS.findall((text or "").lower())
+    return " ".join("v" if t in ("vs", "versus") else t for t in tokens)
 
 
 @dataclass(frozen=True)
@@ -172,9 +184,21 @@ __all__ = ["verify", "verify_citations", "verify_quotes", "verify_findings",
 
 
 def _covered_provisions(findings: tuple[Finding, ...]) -> set[str]:
+    """Every provision number traceable to something retrieved this turn.
+
+    THE SPAN COUNTS, and leaving it out was wrong. A retrieved judgment that
+    discusses s.53 in its own words makes s.53 *traceable to retrieved primary
+    text* — which is exactly the promise. Reading only the ref withheld turns
+    that quoted the retrieved authority accurately.
+
+    It does widen what passes: a long span naming many sections covers all of
+    them. That is the correct trade — the alternative refuses answers that are
+    grounded, and a gate whose false positives outnumber its catches is one
+    nobody leaves on.
+    """
     covered: set[str] = set()
     for f in findings:
-        for text in (f.ref, f.proposition, f.locator):
+        for text in (f.ref, f.proposition, f.locator, f.span):
             covered |= provisions_cited(text)
             # `Article_65` and `::6::` do not match the prose patterns, so the
             # locator's own conventions are read as well. A locator format the

@@ -651,6 +651,314 @@ CD = [
     ["Monthly", "Judge calibration", "Measure the judge's agreement with your own labels on a sample. A class-B half whose class-D partner has not run on its cadence is reported as UNVERIFIED, not as passing.", "You — 1 hour"],
     ["Quarterly", "Golden-set expansion by sampling", "Draw new scenarios at RANDOM from real matters and hand-vet them. The 25 encoded scenarios are a template, not yet a sampled set.", "You + a practising advocate"],
 ]
+# ============================================================== DEFECTS =====
+# Every defect found in the build, what caused it, and whether the fix is
+# general. See the module docstring in tools/mutate.py for why a fix without a
+# check is not a fix.
+
+D = []
+
+
+def d(did, when, area, what, cause, shape, found_by, fix, general, check,
+      status="Fixed"):
+    D.append([did, when, area, what, cause, shape, found_by, fix, general,
+              check, status])
+
+
+d("B-001", "2026-08-29", "tooling",
+  "The spec exporter read a column named `Evals`; the sheet header is `Evals "
+  "that prove it`. All 43 features were emitted with EMPTY eval lists.",
+  "Writing the exporter that makes 'did we build what the PRD says' "
+  "mechanically answerable. The header was retyped from memory.",
+  "S1 — an absent input reading as success",
+  "The exporter's own counterexample test",
+  "Resolve the header by prefix and EXIT if absent, rather than defaulting to "
+  "an empty list.",
+  "Yes — any renamed column now fails loudly instead of emitting silence.",
+  "tools/export_spec.py exits non-zero; tests/test_tooling_bites.py")
+
+d("B-002", "2026-08-29", "adapters",
+  "The OpenAI adapter did not enforce the port's context budget; it only "
+  "mapped the provider's error after the fact.",
+  "Adding a second model adapter. The budget logic lived in the first one.",
+  "S9 — two owners for one truth",
+  "The shared model-port contract suite, run against both adapters",
+  "Extracted nm/adapters/model/_budget.py as the single owner both adapters "
+  "call.",
+  "Yes — structural. A third adapter cannot reintroduce it.",
+  "tests/test_model_port_contract.py runs against every adapter")
+
+d("B-003", "2026-08-29", "architecture",
+  "`edge` imported `adapters` and `ports` imported `core`, so the pure core "
+  "could reach I/O and the class-A cadence was one import from being lost.",
+  "Wiring the walking skeleton end to end, taking the shortest path between "
+  "modules that needed each other.",
+  "S9 — dependency direction",
+  "tools/layercheck.py",
+  "Extracted nm/domain/ (imports nothing) and nm/bootstrap/ (the composition "
+  "root); the edge now receives the application by injection.",
+  "Yes — the lint fails the build on any import in the wrong direction.",
+  "tools/layercheck.py, run in tools/check.py")
+
+d("B-004", "2026-08-29", "web",
+  "`renderTurn` handled the answered and errored states but not the IN-FLIGHT "
+  "one, so the optimistic repaint threw on `entry.answer.elements` and every "
+  "send silently did nothing.",
+  "Adding an optimistic repaint so the brief appears before the answer "
+  "returns.",
+  "S1 — a failure that looks like nothing happening",
+  "Driving the browser, not by any test",
+  "An explicit pending branch before the answer exists.",
+  "Yes — the branch covers every turn, not one message.",
+  "Exercised on every browser pass")
+
+d("B-005", "2026-08-30", "tooling",
+  "A NARROWED pytest run rewrote `evals_run` with only that run's ids, after "
+  "which trace reported a feature as status-inflated. The feature had not "
+  "regressed; the EVIDENCE had been deleted by a smaller run.",
+  "Running two test files to check a change quickly. The NM_PARTIAL_RUN guard "
+  "covered the mutation runner and not the ordinary case.",
+  "S8 — a partial input silently replacing a complete record",
+  "trace.py reporting a failure that was not real",
+  "Passing evals MERGE; the record can only grow. T10 then catches the risk "
+  "that creates — an id in the record the spec no longer defines.",
+  "Yes — no narrowing of any kind can destroy evidence now.",
+  "tests/conftest.py merges; tools/trace.py T10")
+
+d("B-006", "2026-08-30", "tooling",
+  "speccheck SC4 accepted a match on the MAJOR part number, so `Part 5.7` "
+  "passed because Part 5 exists. Three genuinely broken cross-references "
+  "survived the check built to find them.",
+  "Writing the cross-reference checker, and testing it against a document I "
+  "believed was already correct.",
+  "S8 — a check calibrated to agree with itself",
+  "Reading the checker's output against the document by hand",
+  "Require the FULL reference to resolve to a heading.",
+  "Yes — every reference, at any depth.",
+  "tools/speccheck.py SC4")
+
+d("B-007", "2026-08-30", "core",
+  "ADMIT extracted, integrated and bound documents BEFORE the conflict screen "
+  "ran — so substance was retained on an uncleared matter, and extraction "
+  "sent privileged content to a model provider before the matter was cleared "
+  "to hold it.",
+  "Writing the turn pipeline in the order the PRD listed the steps. The PRD "
+  "had the same defect.",
+  "Ordering across a boundary",
+  "An external review of the PRD",
+  "ADMIT split at the screen boundary in both spec and code; nothing "
+  "substantive is read, retained or sent above it.",
+  "Yes — the boundary is structural and mutation-tested.",
+  "tools/mutate.py 'substance admitted before the screens'")
+
+d("B-008", "2026-08-30", "core",
+  "The grounding gate could NEVER FIRE. It verified the findings the answer "
+  "relied on, and the engine drops unusable findings before verification — so "
+  "the set it checked was clean by construction.",
+  "Building the grounding gate. I checked the obvious set without asking what "
+  "would have to be true for it to fail.",
+  "S8 — a check calibrated to agree with itself (second occurrence)",
+  "Asking what a failing case would look like",
+  "Citation coverage: every provision number and case name in the emitted "
+  "text must trace to something retrieved this turn.",
+  "Yes — it checks the ANSWER, not a set the engine curated.",
+  "tools/mutate.py 'a citation the answer invents'")
+
+d("B-009", "2026-08-30", "retrieval",
+  "`O.S. 442/2023` parsed as SECTION 442, because `O.S. 442` contains `S. "
+  "442`. Retrieval looked up Specific Relief Act s.442, found nothing and "
+  "reported a corpus gap in an Act held in full.",
+  "Hardening the grounding gate's provision pattern against exactly this, and "
+  "not knowing the evidence adapter held a second copy of it.",
+  "S9 — two owners for one truth",
+  "The first realistic seven-turn scenario, end to end",
+  "One pattern module, nm/domain/citation.py, with both guards; a test scans "
+  "nm/ and fails the build on a second pattern.",
+  "Yes — and the duplicate is now structurally refused, not just removed.",
+  "tests/test_citation_patterns.py")
+
+d("B-010", "2026-08-30", "knowledge",
+  "`year` arrives from the store as TEXT and `binding_status` compared it to "
+  "an int. It surfaced only on an Andhra High Court result — every earlier "
+  "query was answered by the Supreme Court branch, which returns before the "
+  "year is read. Reachable by 12.6% of the corpus, invisible to the other "
+  "87.4%.",
+  "Wiring the authority index into binding computation, assuming the stored "
+  "types matched the declared ones.",
+  "S1 — a type crossing a boundary unchecked",
+  "A class-C test against the real index",
+  "`_year_of` coerces anything; unparseable returns NOT_ASSESSED, never a "
+  "guess.",
+  "Yes — any store field arriving as text.",
+  "tests/test_grounding_gate.py year-as-text")
+
+d("B-011", "2026-08-30", "retrieval",
+  "A nonsense query returned EIGHT confident-looking judgments, because FTS "
+  "ORs the terms and `doctrine` is a real word.",
+  "Writing a test that asserted nonsense returns nothing. The test premise was "
+  "wrong; the behaviour it exposed was not.",
+  "Precision failure presented as a result",
+  "The test failing for the wrong reason",
+  "A LEXICAL COVERAGE floor that counts and names what it rejected — not a "
+  "similarity threshold, which H4 forbids.",
+  "Yes — any query, any term count.",
+  "tests/test_authority_retrieval.py incidental-match")
+
+d("B-012", "2026-08-30", "corpus",
+  "Bench composition was reported at 7.5% and the larger-bench-supersedes "
+  "rule was DECLINED on that figure. The real coverage is 90.2%.",
+  "Measuring the corpus. `find legal_database` returned nothing because Git "
+  "Bash does not traverse Windows junctions, and the empty result was read as "
+  "absence — so raw_data/, 34,037 source judgments, was never opened.",
+  "S3 — a zero result from the wrong index (FIFTH occurrence in this project)",
+  "The user asking me to check the legal database again",
+  "Two checks: a claim about the corpus names the LAYER it was measured from, "
+  "and a claim of absence is measured against raw_data/.",
+  "Yes — and the tooling trap is recorded so the next measurement avoids it.",
+  "docs/BASELINE.md raw-1, raw-2; CLAUDE.md tooling section")
+
+d("B-013", "2026-08-30", "corpus",
+  "The bench parser scanned to a stop keyword. Only 40% of files carry one, so "
+  "on the rest it swallowed `IN THE SUPREME COURT OF INDIA` and the case "
+  "number as judges — 1,556 apparent nine-judge benches, about a hundred times "
+  "the number in that Court's history.",
+  "Writing the header parser against the first sample file I opened, which "
+  "happened to carry a PETITIONER: block.",
+  "One format assumed across a corpus spanning 1955-2026",
+  "Reading the bench-size DISTRIBUTION rather than the coverage count",
+  "Consume name-comma-name and stop where a separator should be and is not; "
+  "reject implausible names.",
+  "Yes — the structure is the comma, in every era.",
+  "spec/release.yaml RG-09 guards the distribution")
+
+d("B-014", "2026-08-30", "corpus",
+  "`_VERB_RE` had no word boundaries, so `undoubted` matched `doubted` and "
+  "`the undoubted exercise of jurisdiction` became adverse treatment of "
+  "whatever case was cited nearby.",
+  "Building the treatment extractor and listing the verbs quickly.",
+  "A substring match presented as a finding",
+  "Reading three sample records instead of trusting the count",
+  "Word boundaries on the verb alternation.",
+  "Yes — every verb, every tense.",
+  "tools/build_identity_index.py; sampled in the class-C suite")
+
+d("B-015", "2026-08-30", "corpus",
+  "DIRECTION. `was overruled by this Court in X` names the OVERRULING case, "
+  "and the extractor recorded X as overruled — telling an advocate the case "
+  "that killed something else was itself dead.",
+  "Extracting treatment with a window around the citation, which cannot see "
+  "grammatical direction.",
+  "A relation recorded backwards",
+  "Reading the extracted spans",
+  "Only the unambiguous direction is taken: the citation must PRECEDE the "
+  "verb. Recall falls; every surviving record points the right way.",
+  "Yes — no case or verb is named in the rule.",
+  "tools/build_identity_index.py; sampled in the class-C suite")
+
+d("B-016", "2026-08-30", "retrieval",
+  "The Act was resolved by keyword-scoring the WHOLE question, so a brief "
+  "about dispossession asking about `section 53A of the Transfer of Property "
+  "Act` scored the SPECIFIC RELIEF ACT, looked for s.53A in it, and reported a "
+  "corpus gap for a provision the corpus holds. The more context an advocate "
+  "gave, the more likely it was to be outvoted.",
+  "Writing the thinnest resolution layer that could make the three-state "
+  "answer real, and testing it on questions that each named only one Act.",
+  "S3 — a confident wrong lookup",
+  "The first realistic multi-clause question put through the browser",
+  "An Act NAMED in the question beats every keyword score; longest title wins.",
+  "Yes — matched against every manifest entry's own name, so a new Act is "
+  "covered without touching the rule.",
+  "nm/knowledge/manifest.py `_named_in`")
+
+d("B-017", "2026-08-30", "core",
+  "`_fold` did not normalise `vs` to `v`, so a retrieved authority whose ref "
+  "read `... vs Sunkara Venkata Ra` failed to match the same case written "
+  "`... v Sunkara Venkata Ra` in the answer. The gate reported an invented "
+  "citation for a judgment it had itself just supplied.",
+  "Writing the case-name check, folding text to words without thinking about "
+  "the pivot token.",
+  "A gate firing on its own retrieval",
+  "The browser, on the authority path",
+  "Normalise the pivot token in the fold.",
+  "Yes — every case name.",
+  "tests/test_grounding_gate.py")
+
+d("B-018", "2026-08-30", "core",
+  "Provision coverage read only a finding's ref, proposition and locator — not "
+  "its SPAN. A turn quoting a retrieved judgment that discusses s.53 was "
+  "withheld for citing s.53.",
+  "Building citation coverage and enumerating the obviously-citation-shaped "
+  "fields.",
+  "A gate refusing grounded answers",
+  "The browser, on the authority path",
+  "The span counts: it IS retrieved primary text, which is the promise.",
+  "Yes — every finding, every source kind.",
+  "nm/core/grounding.py `_covered_provisions`")
+
+d("B-019", "2026-08-30", "knowledge",
+  "The product's OWN binding explanation read `(Constitution, Art. 141)`. The "
+  "Constitution is not in this corpus, so the product was citing law it had "
+  "not retrieved — and the grounding gate correctly withheld the turn.",
+  "Writing binding reasons to be informative, in the register a lawyer writes "
+  "in.",
+  "H9 — an inference carrying a citation",
+  "The grounding gate, on a correct turn",
+  "Composed text names the RULE (`art-141`) and never quotes a provision. "
+  "Enforced over every court, year and jurisdiction, and over every gate's "
+  "visible text.",
+  "Yes — AFTER a second pass. The first fix was the one sentence, which is a "
+  "patch; the general form is the test.",
+  "tests/test_composed_text_is_not_a_citation.py")
+
+d("B-020", "2026-08-30", "web",
+  "A withheld turn rendered its raw JSON at the advocate, throwing away the "
+  "`not_established` lines — the only part of a refusal they can act on.",
+  "Changing the 422 payload from a string to a structure and not following it "
+  "through to the renderer.",
+  "S1 — a failure rendered as noise",
+  "The browser",
+  "The error carries its structure to the renderer, which shows the gate, the "
+  "reason and every gap.",
+  "Yes — any refusal, any gate.",
+  "web/app.js refusal branch")
+
+d("B-021", "2026-08-30", "web",
+  "The conversation column measured 799px in a 514px pane: every answer "
+  "clipped at the right edge with a horizontal scrollbar under it.",
+  "Adding locators to the answer. They are long and unbroken, which made a "
+  "latent layout bug visible.",
+  "A grid child at `min-width: auto` refusing to shrink",
+  "The browser at a narrow width",
+  "`main > * { min-width: 0 }` plus explicit wrapping on long tokens.",
+  "Yes — any narrow window, any content.",
+  "web/app.css")
+
+d("B-022", "2026-08-30", "measurement",
+  "Treatment coverage was reported as '<= 14.5%, an upper bound' — 4,894 "
+  "citator entries divided by 33,791 judgments. That is a ratio of two set "
+  "sizes, not a coverage measurement. The intersection is 0.83%.",
+  "Reporting a figure quickly and labelling it an upper bound instead of "
+  "computing the intersection.",
+  "A hypothesis reported in the voice of a finding",
+  "The user asking whether 14.5% was really the number",
+  "Coverage is an INTERSECTION against what is held, computed by the release "
+  "gate.",
+  "Yes — the rule is about how coverage is computed, not about the citator.",
+  "docs/BASELINE.md cit-1; tools/releasegate.py measure_citator")
+
+sheet("Defects", ["ID", "Found", "Area", "What broke",
+                  "What I was doing that introduced it", "Shape",
+                  "How it was found", "The fix", "General?",
+                  "The check that now refuses it", "Status"],
+      D, [8, 11, 12, 60, 54, 30, 26, 54, 44, 34, 10],
+      title="Every defect, and what caused it",
+      note="The CAUSE column is the one that earns its keep. A list of bugs and "
+           "fixes is a changelog; read down CAUSE and the pattern is visible "
+           "without anyone being clever — most were introduced while hardening "
+           "something else, and several by the very check built to catch that "
+           "shape. GENERAL? applies CLAUDE.md's test: can the fix be stated "
+           "without naming the Act, section, case or phrase that exposed it?")
+
 sheet("Cadence", ["Frequency", "Ritual", "What it is, and why it is on a schedule rather than done when there is time", "Owner"],
       CD, [22, 38, 96, 26],
       title="The recurring rituals",

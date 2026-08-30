@@ -255,4 +255,37 @@ button.wide { margin: 0.5rem 0.6rem 0.8rem; }
   main { grid-template-columns: 1fr; }
   .rail { display: none; }
 }
+
+/* THE GRID CHILD MUST BE ALLOWED TO SHRINK.
+   A grid (and flex) item defaults to `min-width: auto`, which means it refuses
+   to go narrower than its content's intrinsic width. The 820px rule above
+   already collapsed to one column, and the conversation still measured 799px
+   in a 514px pane — every answer clipped at the right edge, with a horizontal
+   scrollbar under it. The locators made it visible; the bug was always there
+   and would have shown on any narrow window. */
+main > * { min-width: 0; }
+.conversation, .thread, .turn { min-width: 0; max-width: 100%; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* A refusal is structured. Rendering its JSON throws away the only part an
+   advocate can act on — what could not be established. */
+.refusal-head { font-weight: 600; color: var(--signal); margin-bottom: 0.4rem; }
+.refusal-why { font-size: 0.86rem; color: var(--ink-2); margin-bottom: 0.5rem; }
+.refusal-gap {
+  font-size: 0.86rem; color: var(--ink-2); line-height: 1.5;
+  padding: 0.4rem 0.6rem; margin-top: 0.35rem;
+  border-left: 2px dashed var(--rule); background: var(--paper);
+}
+
+/* Locators are long, unbroken and unavoidable — a paragraph reference reads
+   `SC_1995_PATEL_NATWARLAL_RUPJI_VS_..._P003_C01::ratio`. Without an explicit
+   break rule they force the whole column wider than the pane and clip every
+   answer at the right edge. The locator has to be readable back; that is what
+   it is for. */
+.el .body, .el .refs, .gate .gdetail, .refusal-why, .refusal-gap {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.el .refs { display: block; }
+#thread, .turn, .el { max-width: 100%; min-width: 0; }
+body, main { overflow-x: hidden; }

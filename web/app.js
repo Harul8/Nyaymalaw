@@ -28,6 +28,10 @@ async function api(path, options) {
     const detail = (body && (body.detail || body.message)) || `HTTP ${res.status}`;
     const err = new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
     err.status = res.status;
+    // Keep the STRUCTURE. A withheld turn carries which gate withheld it and
+    // what could not be established, and flattening that to a message string
+    // throws away the only part the advocate can act on.
+    err.detail = detail;
     throw err;
   }
   return body;
@@ -185,9 +189,31 @@ function renderTurn(entry) {
   }
 
   if (entry.error) {
+    // A WITHHELD TURN IS STRUCTURED, and dumping its JSON at the advocate
+    // wastes the one thing that makes a refusal useful — what could not be
+    // established. `not_established` asserts no law, so it is shown in full.
     const f = document.createElement('div');
     f.className = 'failure';
-    f.textContent = entry.error;
+    const refusal = entry.refusal;
+
+    if (refusal && refusal.withheld_by) {
+      const h = document.createElement('div');
+      h.className = 'refusal-head';
+      h.textContent = `Withheld by ${refusal.withheld_by.join(', ')} — nothing was emitted.`;
+      f.appendChild(h);
+      const why = document.createElement('div');
+      why.className = 'refusal-why';
+      why.textContent = refusal.why || '';
+      f.appendChild(why);
+      for (const line of (refusal.not_established || [])) {
+        const d = document.createElement('div');
+        d.className = 'refusal-gap';
+        d.textContent = line;
+        f.appendChild(d);
+      }
+    } else {
+      f.textContent = `The turn was refused: ${entry.error}`;
+    }
     wrap.appendChild(f);
     return wrap;
   }
@@ -317,7 +343,8 @@ async function send(message) {
     repaint();
     if (state.matterId) await showThreadBoard(state.matterId);
   } catch (e) {
-    entry.error = `The turn was refused: ${e.message}`;
+    entry.error = e.message;
+    entry.refusal = (e.detail && typeof e.detail === 'object') ? e.detail : null;
     repaint();
   } finally {
     btn.disabled = false;

@@ -144,7 +144,15 @@ def binding_status(raw_court: str | None, year: int | str | None,
     if court is Court.SUPREME_COURT:
         return BindingRuling(
             Binding.BINDING,
-            "the Supreme Court binds every court in India (Constitution, Art. 141)",
+            # NOT WRITTEN AS A CITATION. The grounding gate caught this and it
+            # was right: "(Constitution, Art. 141)" reads as a provision
+            # reference, and the Constitution is not in this corpus — so the
+            # product was citing law it had not retrieved, in its own
+            # explanatory text. That is principle H9 exactly: an inference must
+            # never carry a citation as though it were a retrieved proposition.
+            # The rule id `art-141` names it without pretending to quote it.
+            "the Supreme Court binds every court in India. This is a rule this "
+            "product applies, not a provision it retrieved",
             "art-141", court)
 
     if place not in ("telangana", "union of india", "india"):
