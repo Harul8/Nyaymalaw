@@ -53,7 +53,11 @@ def step(label: str, cmd: list[str], allow_warn: bool = False) -> tuple[bool, st
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--slice", type=int, default=None,
-                    help="also run the golden scenarios runnable at this slice")
+                    help="close a slice: adds the golden checks, the slice gate "
+                         "and a REQUIRED scenario run")
+    ap.add_argument("--scenarios", nargs="*", default=None,
+                    help="scenario ids to drive end to end (required with "
+                         "--slice; they make live model calls)")
     args = ap.parse_args()
 
     py = sys.executable
@@ -85,13 +89,36 @@ def main() -> int:
     results.append(("pytest", ok))
 
     if args.slice is not None:
-        runner = ROOT / "tools" / "run_goldens.py"
-        if runner.exists():
-            ok, _ = step(f"goldens slice-{args.slice}",
-                         [py, str(runner), "--suite", f"slice-{args.slice}"])
-            results.append(("goldens", ok))
+        # A SLICE DOES NOT CLOSE ON UNIT EVALS ALONE.
+        #
+        # S0-S3 were all DONE, every eval green, and six realistic scenarios
+        # then found three defects in twenty minutes: a posture reader that
+        # asked the same question forever, six persisted fields dropped on
+        # every restart, and an extraction that read the last line instead of
+        # the file. The unit tests were checking the parts; nothing was
+        # checking a conversation.
+        ok, _ = step("goldens structure + authority",
+                     [py, "tools/run_goldens.py"])
+        results.append(("goldens", ok))
+
+        ok, _ = step(f"slice gate S{args.slice}",
+                     [py, "tools/slicegate.py", "--slice", str(args.slice)])
+        results.append(("slicegate", ok))
+
+        if args.scenarios:
+            ok, _ = step(f"scenarios slice-{args.slice}",
+                         [py, "tools/run_scenario.py", "--approve",
+                          "--scenario", *args.scenarios])
+            results.append(("scenarios", ok))
         else:
-            print(f"  [SKIP] goldens slice-{args.slice:<24} not built yet (S0/T-005b)")
+            print("  [FAIL] scenarios                          none named")
+            print()
+            print("      A slice close requires a SCENARIO RUN, not only its")
+            print("      evals. Pass --scenarios GS-xx GS-yy. They make live")
+            print("      model calls, which is why they must be named")
+            print("      explicitly rather than run by default.")
+            print()
+            results.append(("scenarios", False))
 
     failed = [n for n, ok in results if not ok]
     print()

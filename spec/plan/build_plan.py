@@ -396,6 +396,8 @@ E = [
     ["E-032", "S3", "A", "A thread id survives a rename with everything attached", "A rename that orphans the chronology", "Every commit", "Yes", "C4"],
     ["E-033", "S3", "A", "Two different matters between the same parties do not merge", "A recovery suit and an eviction between the same landlord and tenant, merged", "Every commit", "Yes", "C4"],
     ["E-034", "S3", "A", "No merits derivation is computed behind a closed gate", "Merits questions asked before posture and limitation are settled", "Every commit", "Yes", "5.1"],
+    ["E-035", "S3", "A", "A question the advocate has answered is never asked again, and one asked twice is not put a third time in the same words", "Whose side are we on? asked on five consecutive turns after it was answered on turn 2", "Every commit", "Yes", "C3"],
+    ["E-036", "S3", "A", "Every model call in a turn receives the matter file, never the latest message alone", "A retrieval built from turn.message that reports a corpus gap for an Act the advocate named three turns earlier", "Every commit", "Yes", "C1"],
     ["E-040", "S4", "A", "No inferred dates exist; conflicting dates render as conflicts", "A chart completed by guessing an undated event", "Every commit", "Yes", "C5"],
     ["E-041", "S4", "B", "Every date is labelled documented or asserted at the point of the conclusion", "A limitation position resting on a recollection, presented as settled", "Every turn", "Yes", "C5"],
     ["E-042", "S4", "A", "THE INVARIANT — every chronology entry appears in the limitation coverage record", "An acknowledgment in writing on 12 June 2024, in the chronology, absent from the computation", "Every commit", "Yes", "D2"],
@@ -459,9 +461,9 @@ FM = [
     ["B4", "Competence screen", "B", "S10", "—", "decided"],
     ["B5", "Engagement, authority and scope", "B", "S10", "—", "decided"],
     ["B6", "Capacity to instruct", "B", "S10", "—", "decided"],
-    ["C1", "The account", "C", "S1", "E-012", "tested"],
+    ["C1", "The account", "C", "S1", "E-012, E-036", "tested"],
     ["C2", "Objectives and constraints", "C", "S7", "E-070", "decided"],
-    ["C3", "Parties and posture", "C", "S3", "E-030, E-031", "tested"],
+    ["C3", "Parties and posture", "C", "S3", "E-030, E-031, E-035", "tested"],
     ["C4", "Thread identity", "C", "S3", "E-032, E-033", "tested"],
     ["C5", "The chronology", "C", "S4", "E-040, E-041", "decided"],
     ["C6", "Document intake and extraction", "C", "S10", "—", "decided"],
@@ -1099,6 +1101,65 @@ d("B-033", "2026-08-30", "core",
   "checks against it.",
   "Yes — every extraction now reads the file, not the last line.",
   "tools/run_scenario.py GS-08")
+
+d("B-034", "2026-08-30", "store",
+  "`_matter()` was still a HAND-WRITTEN decoder. The ask ledger was encoded on "
+  "every commit and dropped on every load, so a question the advocate had "
+  "answered came back after a restart. The identical defect as B-032, one "
+  "level up, surviving the fix for it.",
+  "Building the matter memory. B-032 made `_decode` derive its fields from the "
+  "dataclass and I fixed the four INNER types -- Fact, Thread, Posture, "
+  "Provenance -- because those were the ones the test parametrised. `Matter` "
+  "itself was in the `covered` set of the walk test without ever being round "
+  "tripped, so it looked protected and was not. The fix was scoped to the "
+  "types the test named instead of to the rule.",
+  "S1 -- an absent input reading as success",
+  "Adding `Matter.asked` and watching it vanish across a save and load",
+  "`_matter` is now `_decode(Matter, d)`. There is no hand-written decoder "
+  "anywhere in the module.",
+  "Yes -- `Matter` joined the parametrized round trip, so the next field added "
+  "to the top-level type is protected the day it is added.",
+  "tests/test_store_roundtrip.py::test_no_persisted_type_has_a_field_the_"
+  "decoder_cannot_reach[Matter]")
+
+d("B-035", "2026-08-30", "core",
+  "THE PRODUCT READ ITS OWN BLOCKING QUESTION BACK AS THE ADVOCATE'S "
+  "INSTRUCTION. The question contains the words 'do we act for the party "
+  "moving, or the party answering?'; the memory put outstanding questions in "
+  "the prompt; the extractor quoted 'we act for the party moving' out of it; "
+  "and the verbatim guard confirmed the span was present, because it was -- in "
+  "OUR text. C3 was defeated without a single bad inference.",
+  "Fixing the repeated-question defect. Widening the prompt so the model can "
+  "see what is already outstanding is correct and necessary. What I did not "
+  "do was ask which of the two inputs the GUARD reads: I passed one string to "
+  "both, so widening the prompt silently widened the guard.",
+  "S11 -- a check that cannot fail is not a check",
+  "E-035, within minutes of the memory landing -- the ask stopped repeating "
+  "for the wrong reason",
+  "`interpret` takes `advocate_words` as a SEPARATE parameter from the prompt. "
+  "The guard reads only what the advocate wrote.",
+  "Yes -- the rule is that a verbatim guard checks against what the person "
+  "WROTE, never against what we composed. Same rule as the composed-text "
+  "citation guard, one layer up.",
+  "tests/test_matter_memory.py::test_our_own_question_can_never_settle_a_posture")
+
+d("B-036", "2026-08-30", "knowledge",
+  "Adding a field to the MIDDLE of a frozen dataclass silently rebound every "
+  "positional constructor call. `Resolution(best, INFERRED, superseded, "
+  "matched, others)` put `alternatives` into the new `carried` slot, so an "
+  "inferred Act stopped naming what else it could have been.",
+  "Adding `Resolution.carried` next to `matched_on`, where it reads best. "
+  "Field ORDER is API for a positional call, and the two call sites inside "
+  "the same file were positional.",
+  "S7 -- a change that looks local and is not",
+  "tests/test_citation_patterns.py, on the next run",
+  "Both constructions inside `resolve` now pass `matched_on` and "
+  "`alternatives` by keyword.",
+  "Partly -- the general rule is that a dataclass with more than three fields "
+  "is constructed by keyword. Not yet mechanically enforced; a lint rule for "
+  "it is the honest next step.",
+  "tests/test_citation_patterns.py::test_an_inferred_act_names_what_else_it_"
+  "could_have_been")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

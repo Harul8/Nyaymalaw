@@ -307,6 +307,44 @@ class Thread:
         )
 
 
+# ----------------------------------------------------- what we have asked ---
+
+
+@dataclass(frozen=True)
+class AskedQuestion:
+    """A question this product PUT to the advocate, and whether it came back.
+
+    THE ONLY NEW STATE THE MATTER MEMORY NEEDS, and it has to be state rather
+    than a derivation. Facts record what came back; nothing records what was
+    asked -- and "we never asked" and "we asked and were ignored" are different
+    situations calling for different next moves.
+
+    `answered_by` is the TURN that resolved it, not a boolean, so the file can
+    show when an outstanding question was finally met.
+    """
+
+    gate: str
+    text: str
+    asked_on: TurnId
+    thread: ThreadId | None = None
+    answered_by: TurnId | None = None
+    times_asked: int = 1
+
+    @property
+    def open(self) -> bool:
+        return self.answered_by is None
+
+    @property
+    def ignored(self) -> bool:
+        """Asked more than once and still unanswered.
+
+        Not a failure of the advocate. It usually means the question was the
+        wrong one, or that they do not have the answer yet -- and asking it a
+        third time in the same words is the product failing to listen.
+        """
+        return self.open and self.times_asked > 1
+
+
 # ----------------------------------------------------------------- matter ---
 
 
@@ -318,6 +356,12 @@ class Matter:
     threads: tuple[Thread, ...] = ()
     facts: tuple[Fact, ...] = ()
     turns_applied: tuple[TurnId, ...] = ()
+    asked: tuple[AskedQuestion, ...] = ()
+    """Every question put to the advocate, and whether it came back.
+
+    Persisted, because the alternative is asking again. An advocate who is
+    asked something they answered two turns ago has been told their
+    instructions were not recorded, and they stop volunteering detail."""
     version: int = 0
 
     @staticmethod
@@ -343,3 +387,43 @@ class Matter:
     def applied(self, turn_id: TurnId) -> "Matter":
         return replace(self, turns_applied=self.turns_applied + (turn_id,),
                        version=self.version + 1)
+
+    # ------------------------------------------------------ the ask ledger ---
+    def open_question(self, gate: str,
+                      thread: ThreadId | None = None) -> AskedQuestion | None:
+        return next((q for q in self.asked
+                     if q.gate == gate and q.open and q.thread == thread), None)
+
+    def asking(self, gate: str, text: str, turn: TurnId,
+               thread: ThreadId | None = None) -> "Matter":
+        """Note that a question was PUT.
+
+        The same gate asked again BUMPS the count rather than adding a row. The
+        file should show that a thing was asked three times -- which is a fact
+        about the conversation worth acting on -- not carry three near-identical
+        rows nobody reads.
+        """
+        standing = self.open_question(gate, thread)
+        if standing is not None:
+            i = self.asked.index(standing)
+            bumped = replace(standing, times_asked=standing.times_asked + 1,
+                             asked_on=turn, text=text)
+            return replace(self, asked=self.asked[:i] + (bumped,) + self.asked[i + 1:])
+        return replace(self, asked=self.asked + (
+            AskedQuestion(gate=gate, text=text, asked_on=turn, thread=thread),))
+
+    def answered(self, gates: frozenset[str], turn: TurnId) -> "Matter":
+        """Close every open question whose gate did NOT fire this turn.
+
+        THE GENERAL RULE, and it is deliberately not a list of special cases: a
+        gate stops firing exactly when the condition it names has cleared, and
+        the condition clearing is what "the advocate answered" means. Closing
+        them one by one at each call site is how a question survives its own
+        answer and gets asked again.
+        """
+        if not self.asked:
+            return self
+        out = tuple(q if (not q.open or q.gate in gates)
+                    else replace(q, answered_by=turn)
+                    for q in self.asked)
+        return self if out == self.asked else replace(self, asked=out)

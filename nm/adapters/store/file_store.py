@@ -153,13 +153,16 @@ def _thread(d: dict) -> Thread:
 
 
 def _matter(d: dict) -> Matter:
-    return Matter(
-        id=d["id"], advocate_id=d["advocate_id"], title=d["title"],
-        threads=tuple(_thread(t) for t in d.get("threads", ())),
-        facts=tuple(_fact(f) for f in d.get("facts", ())),
-        turns_applied=tuple(d.get("turns_applied", ())),
-        version=d.get("version", 0),
-    )
+    """THE SAME SYMMETRY, at the top level.
+
+    This was a hand-written field list for one release longer than the
+    inner types were, and it failed in exactly the way the inner ones had:
+    the ask ledger was encoded on every commit and dropped on every load,
+    so a question answered before a restart would be asked again after it.
+
+    There is now no hand-written decoder anywhere in this module.
+    """
+    return _decode(Matter, d)
 
 
 # ------------------------------------------------------------------ store ---

@@ -59,6 +59,20 @@ class Element:
     refs: tuple[str, ...] = ()
     signal: Signal = Signal.NONE
     collapsible: bool = False
+    gate: str | None = None
+    """The gate that caused this element, where one did.
+
+    Set at the point the element is created, never reconstructed later.
+    The first version of the ask ledger recovered it by splitting
+    `Answer.blocked_reason` on a colon, which is a second copy of the gate
+    id living in a format string -- and a question that was not gated had
+    to be given an invented id, which `tools/trace.py` rejected because an
+    id that looks like a gate and is not in the matrix is exactly the
+    inflation T8 exists to catch.
+
+    `None` means no gate caused this. That is a real state: a question can
+    be a one-off ("I could not reach the model, resend") rather than a
+    standing condition, and the two are closed differently."""
     disclosure: bool = False
     """True when this element REPORTS WHAT COULD NOT BE ESTABLISHED rather than
     asserting anything about the law -- a corpus gap, a retrieval defect, a

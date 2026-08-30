@@ -172,7 +172,8 @@ def build_prompt(message: str, account: str = ""):
     return Prompt(system=SYSTEM, user=user)
 
 
-def interpret(message: str, data: dict) -> StatedPosture:
+def interpret(message: str, data: dict,
+              advocate_words: str = "") -> StatedPosture:
     """Turn the model's answer into a posture, or REFUSE it.
 
     Refusal is not an error path. It is the ordinary outcome whenever the model
@@ -188,11 +189,20 @@ def interpret(message: str, data: dict) -> StatedPosture:
                              refused="the model reported a stated posture and "
                                      "quoted nothing to support it")
 
-    # GUARD 1 -- the span must be the advocate's actual words.
-    if _fold(quoted) not in _fold(message):
+    # GUARD 1 -- the span must be the advocate's ACTUAL WORDS.
+    #
+    # `advocate_words` is what they said on earlier turns, and it is a
+    # SEPARATE parameter from the prompt for a reason. The prompt carries
+    # this product's own outstanding questions, and one of those questions
+    # is literally "do we act for the party moving, or the party
+    # answering?" -- so checking the span against everything the model was
+    # SHOWN let the extractor quote us back to ourselves and settle a
+    # posture nobody had stated. Every other guard passed.
+    said = f"{message}\n{advocate_words}" if advocate_words else message
+    if _fold(quoted) not in _fold(said):
         return StatedPosture(Role.UNKNOWN, Basis.UNKNOWN, None, quoted,
-                             refused=f"the quoted span is not in the message: "
-                                     f"{quoted[:60]!r}")
+                             refused=f"the quoted span is in nothing the "
+                                     f"advocate wrote: {quoted[:60]!r}")
 
     # GUARD 2 -- the span must speak of the REPRESENTATION, not the events.
     if not _FIRST_PERSON.search(quoted):

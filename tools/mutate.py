@@ -31,11 +31,56 @@ MUTATIONS = [
      "    if False and not _FIRST_PERSON.search(quoted):",
      "test_posture_is_never_inferred_from_familiar_vocabulary", "E-030"),
 
-    ("a posture settled on a span that is not in the message",
+    ("a posture settled on a span the advocate never wrote",
      "nm/core/posture.py",
-     "    if _fold(quoted) not in _fold(message):",
-     "    if False and _fold(quoted) not in _fold(message):",
+     "    if _fold(quoted) not in _fold(said):",
+     "    if False and _fold(quoted) not in _fold(said):",
      "test_posture_is_never_inferred_from_familiar_vocabulary", "E-030"),
+
+    # THE GUARD READS THE ADVOCATE'S WORDS, NOT THE PROMPT. Widening it
+    # back to everything the model was shown lets the extractor quote our
+    # own blocking question -- which names both sides -- and settle a
+    # posture nobody stated. Every other guard passes.
+    # THE CALL SITE CHOOSES WHICH STRING THE GUARD SEES, and that is where
+    # this broke: handing it the PROMPT rather than the advocate's words
+    # let the extractor quote our own blocking question -- which names both
+    # sides -- and settle a posture nobody stated.
+    ("the verbatim guard handed the prompt instead of the advocate's words",
+     "nm/core/turn.py",
+     '                advocate_words=memory.advocate_words if memory else "")',
+     '                advocate_words=memory.as_context() if memory else "")',
+     "test_a_question_asked_twice_is_not_put_a_third_time_in_the_same_words",
+     "E-036"),
+
+    ("a question stays open after the gate that raised it stopped firing",
+     "nm/domain/matter.py",
+     "        out = tuple(q if (not q.open or q.gate in gates)",
+     "        out = tuple(q if True",
+     "test_a_question_the_advocate_answered_is_never_asked_again", "E-035"),
+
+    ("a question asked twice is put a third time in the same words",
+     "nm/core/turn.py",
+     "            if standing is not None and standing.ignored:",
+     "            if False and standing is not None and standing.ignored:",
+     "test_a_question_asked_twice_is_not_put_a_third_time_in_the_same_words",
+     "E-035"),
+
+    ("retrieval reads the latest message alone, not the file",
+     "nm/core/turn.py",
+     '                            account=memory.account if memory else "")',
+     '                            account="")',
+     "test_every_model_call_in_a_turn_receives_the_file", "E-036"),
+
+    # AN ACT IS CARRIED BY EXACT TITLE, NEVER BY KEYWORD. Common words run
+    # through every Indian statute, and an account is every sentence the
+    # advocate has ever said -- so keyword-scoring it is the outvoting
+    # defect with the most evidence it will ever have behind it.
+    ("the account widened the keyword scoring instead of only the title",
+     "nm/knowledge/manifest.py",
+     "            carried = self._named_in(account.lower(), on)",
+     "            low = low + ' ' + account.lower()\n"
+     "            carried = self._named_in(account.lower(), on)",
+     "test_an_act_named_earlier_is_carried_by_exact_title_only", "E-036"),
 
     ("an out-of-vocabulary role accepted instead of blanked",
      "nm/core/posture.py",

@@ -80,6 +80,36 @@ def wanted_section(text: str) -> str | None:
     return None
 
 
+def last_wanted_section(text: str) -> str | None:
+    """The provision reference an ACCOUNT is asking for: the most recent one.
+
+    `wanted_section` takes the first match, which is right for a single message
+    -- an advocate leads with what they are asking about. It is wrong for an
+    accumulated account, where the oldest sentence is the furthest from what
+    they mean now. A thread that opened on one provision and moved to another
+    would keep answering about the first, forever, and the answer would be
+    correct about a provision nobody asked about.
+
+    The rule, stated without naming a provision: IN A NARRATIVE, THE OPERATIVE
+    REFERENCE IS THE LATEST ONE. In a question, it is the first.
+    """
+    text = text or ""
+    last = None
+    for m in SECTION.finditer(text):
+        last = m.group(1)
+    if last:
+        # A section named later than any Article outranks it and vice versa, so
+        # compare positions rather than preferring one kind outright.
+        sec_at = max((m.start() for m in SECTION.finditer(text)), default=-1)
+        art_at = max((m.start() for m in ARTICLE.finditer(text)), default=-1)
+        if art_at > sec_at:
+            arts = [m.group(1) for m in ARTICLE.finditer(text)]
+            return f"Article_{arts[-1]}"
+        return last
+    arts = [m.group(1) for m in ARTICLE.finditer(text)]
+    return f"Article_{arts[-1]}" if arts else None
+
+
 def provisions_cited(text: str) -> set[str]:
     """Every provision NUMBER named in a piece of text, upper-cased."""
     out: set[str] = set()

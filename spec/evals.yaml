@@ -334,6 +334,25 @@ evals:
   cadence: Every commit
   automated: 'Yes'
   prd_ref: '5.1'
+- id: E-035
+  slice: S3
+  class: A
+  asserts: A question the advocate has answered is never asked again, and one asked twice is not put a
+    third time in the same words
+  counterexample: Whose side are we on? asked on five consecutive turns after it was answered on turn
+    2
+  cadence: Every commit
+  automated: 'Yes'
+  prd_ref: C3
+- id: E-036
+  slice: S3
+  class: A
+  asserts: Every model call in a turn receives the matter file, never the latest message alone
+  counterexample: A retrieval built from turn.message that reports a corpus gap for an Act the advocate
+    named three turns earlier
+  cadence: Every commit
+  automated: 'Yes'
+  prd_ref: C1
 - id: E-040
   slice: S4
   class: A

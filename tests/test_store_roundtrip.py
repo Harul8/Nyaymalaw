@@ -28,6 +28,7 @@ import pytest
 
 from nm.adapters.store.file_store import FileMatterStore
 from nm.domain.matter import (
+    AskedQuestion,
     Basis,
     Certainty,
     Fact,
@@ -82,9 +83,19 @@ def _fully_populated() -> Matter:
         chronology=("fact_1",),
         deferred_reason="awaiting the sale deed",
     )
-    return Matter(id="mat_1", advocate_id="adv_1", title="Kukatpally",
-                  threads=(thread,), facts=(fact,),
-                  turns_applied=("turn_1", "turn_2"), version=7)
+    return Matter(
+        id="mat_1", advocate_id="adv_1", title="Kukatpally",
+        threads=(thread,), facts=(fact,),
+        turns_applied=("turn_1", "turn_2"),
+        asked=(
+            AskedQuestion(gate="G-POSTURE", text="Whose side are we on?",
+                          asked_on="turn_1", thread="thr_1",
+                          answered_by="turn_2", times_asked=2),
+            AskedQuestion(gate="G-THREAD", text="Is this the same dispute?",
+                          asked_on="turn_2", thread="thr_1",
+                          answered_by=None, times_asked=1),
+        ),
+        version=7)
 
 
 def test_every_field_of_a_matter_survives_a_save_and_load(tmp_path):
@@ -101,9 +112,15 @@ def test_every_field_of_a_matter_survives_a_save_and_load(tmp_path):
     assert reloaded.facts[0] == original.facts[0]
     assert reloaded.threads[0] == original.threads[0]
     assert reloaded.turns_applied == original.turns_applied
+    # THE ASK LEDGER. A question that does not survive a restart is a
+    # question the advocate gets asked again on the next session, which is
+    # the failure the ledger exists to make impossible.
+    assert reloaded.asked == original.asked
+    assert [q.open for q in reloaded.asked] == [False, True]
 
 
-@pytest.mark.parametrize("cls", [Fact, Thread, Posture, Provenance])
+@pytest.mark.parametrize("cls", [Matter, Fact, Thread, Posture, Provenance,
+                                 AskedQuestion])
 def test_no_persisted_type_has_a_field_the_decoder_cannot_reach(cls, tmp_path):
     """THE GENERAL PROPERTY, checked per type.
 
@@ -116,18 +133,18 @@ def test_no_persisted_type_has_a_field_the_decoder_cannot_reach(cls, tmp_path):
     store.commit(_fully_populated(), expected_version=None)
     reloaded = FileMatterStore(tmp_path, key=KEY).load("mat_1")
 
-    found = {
-        Fact: reloaded.facts[0],
-        Thread: reloaded.threads[0],
-        Posture: reloaded.threads[0].posture,
-        Provenance: reloaded.facts[0].provenance,
-    }[cls]
-    original = {
-        Fact: _fully_populated().facts[0],
-        Thread: _fully_populated().threads[0],
-        Posture: _fully_populated().threads[0].posture,
-        Provenance: _fully_populated().facts[0].provenance,
-    }[cls]
+    def pick(m):
+        return {
+            Matter: m,
+            Fact: m.facts[0],
+            Thread: m.threads[0],
+            Posture: m.threads[0].posture,
+            Provenance: m.facts[0].provenance,
+            AskedQuestion: m.asked[0],
+        }[cls]
+
+    found = pick(reloaded)
+    original = pick(_fully_populated())
 
     for f in dataclasses.fields(cls):
         assert getattr(found, f.name) == getattr(original, f.name), (
@@ -171,7 +188,8 @@ def test_every_persisted_type_is_covered_by_this_file():
                     walk(arg)
 
     walk(domain.Matter)
-    covered = {domain.Matter, Fact, Thread, Posture, Provenance, PostureConflict}
+    covered = {domain.Matter, Fact, Thread, Posture, Provenance,
+               PostureConflict, AskedQuestion}
     missing = reachable - covered
     assert not missing, (
         f"these persisted types are not round-tripped: "

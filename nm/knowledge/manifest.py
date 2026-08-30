@@ -102,6 +102,13 @@ class Resolution:
     basis: ActBasis | None = None
     superseded: "ManifestEntry | None" = None
     matched_on: tuple[str, ...] = ()
+    carried: bool = False
+    """The Act was named on an EARLIER turn of this thread, not on this one.
+
+    Still `NAMED` — it is the advocate's own instruction and it did not stop
+    being their instruction because they moved on to the next question. But it
+    is disclosed, because carrying an instruction forward is a thing the
+    advocate should be able to see and correct."""
     alternatives: tuple[str, ...] = ()
     """Other Acts whose keywords also matched.
 
@@ -113,12 +120,25 @@ class Resolution:
 
     @property
     def must_disclose(self) -> bool:
-        """An inferred Act is stated to the advocate so they can correct it."""
-        return self.basis is ActBasis.INFERRED and self.entry is not None
+        """An inferred Act is stated to the advocate so they can correct it.
+
+        So is a CARRIED one. It is not a guess — the advocate named it — but
+        they named it on a different turn, and an Act applied to a question it
+        was not stated on is exactly the kind of carry-forward that must be
+        visible rather than assumed.
+        """
+        if self.entry is None:
+            return False
+        return self.basis is ActBasis.INFERRED or self.carried
 
     def note(self) -> str:
         if not self.must_disclose:
             return ""
+        if self.carried:
+            return (f"You did not name an Act on this turn, so I am still "
+                    f"working from the {self.entry.act_name} — you named it "
+                    f"earlier on this thread. Say if this question is about "
+                    f"something else.")
         note = (f"I am taking this as the {self.entry.act_name} because you "
                 f"mentioned {', '.join(self.matched_on)}. You did not name an "
                 f"Act, so this is my inference and not your instruction — say "
@@ -158,7 +178,8 @@ class Manifest:
                            if doc.get("reconciled_at") else None),
         )
 
-    def resolve(self, question: str, on: date | None = None) -> "Resolution":
+    def resolve(self, question: str, on: date | None = None,
+                account: str = "") -> "Resolution":
         """Which Act governs the question ON THE GOVERNING DATE.
 
         Returns a `Resolution` carrying the entry AND ITS BASIS — named or
@@ -196,6 +217,25 @@ class Manifest:
         if named is not None:
             return Resolution(named, ActBasis.NAMED)
 
+        # THE ACT THE ADVOCATE NAMED EARLIER ON THIS THREAD.
+        #
+        # An advocate names the Act once. Turn 1 is "a suit under section 6 of
+        # the Specific Relief Act"; turn 4 is "what is the limitation?" -- and
+        # reading turn 4 alone, this product had no Act at all and reported a
+        # corpus gap for a provision it had retrieved three turns earlier.
+        #
+        # EXACT TITLE ONLY, and that restriction is the whole of the safety
+        # argument. Keyword-scoring the accumulated account would be the
+        # outvoting defect at scale: scoring already reads the whole question,
+        # so the more the advocate says the more likely the wrong Act wins, and
+        # an account is every sentence they have ever said. An exact title is
+        # their instruction; a keyword hit across four turns is a guess with
+        # more evidence for it than any single turn could supply.
+        if account.strip():
+            carried = self._named_in(account.lower(), on)
+            if carried is not None:
+                return Resolution(carried, ActBasis.NAMED, carried=True)
+
         best: ManifestEntry | None = None
         superseded: ManifestEntry | None = None
         best_score = superseded_score = 0
@@ -221,7 +261,8 @@ class Manifest:
                        if e is not best
                        and any(k.lower() in low for k in e.keywords)
                        and (on is None or e.in_force_on(on)))
-        return Resolution(best, ActBasis.INFERRED, superseded, matched, others)
+        return Resolution(best, ActBasis.INFERRED, superseded,
+                          matched_on=matched, alternatives=others)
 
     def _named_in(self, low: str, on: date | None) -> ManifestEntry | None:
         """The Act the question NAMES, if it names one.

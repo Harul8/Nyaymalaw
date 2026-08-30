@@ -28,6 +28,7 @@ from datetime import date
 from nm.core import grounding
 from nm.core import posture as posture_reader
 from nm.core.threading import BindResult, BindState, bind
+from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
 from nm.domain.coverage import CoverageState
 from nm.domain.matter import (
@@ -313,6 +314,12 @@ class TurnEngine:
         matter, bound = self._admit_facts(matter, turn, metrics)
         metrics.stages["admit_ms"] = int((time.perf_counter() - t0) * 1000)
 
+        # THE FILE, BUILT ONCE AND GIVEN TO EVERYTHING THAT DERIVES.
+        # A projection over the matter, holding nothing the matter does
+        # not -- so it can never disagree with the file it summarises.
+        memory = matter_memory.build(
+            matter, bound.thread.id if bound.thread is not None else None)
+
         # ---------------- DERIVE ----------------
         t1 = time.perf_counter()
         metrics.failed_phase = Phase.DERIVE
@@ -328,7 +335,7 @@ class TurnEngine:
             metrics.fire("G-THREAD", bound.state.value, bound.reason)
             elements.append(Element(
                 kind=ElementKind.QUESTION, text=bound.question,
-                signal=Signal.CONTRADICTION))
+                gate="G-THREAD", signal=Signal.CONTRADICTION))
             if bound.proposal is not None:
                 elements.append(Element(
                     kind=ElementKind.GROUND,
@@ -362,16 +369,34 @@ class TurnEngine:
                        "party moving, or the party answering? I am not able to "
                        "recommend a step until that is settled, because the same "
                        "provision helps one side and hurts the other.")
+
+            # ASKED TWICE ALREADY AND STILL OPEN. Putting it a third time in
+            # the same words is the product failing to listen: an advocate
+            # who has passed over a question twice is telling you something,
+            # usually that they read it as rhetorical. So it stops being a
+            # question and becomes a stated blocker with the answer spelled
+            # out, which is the one form they have not yet ignored.
+            standing = matter.open_question("G-POSTURE", thread.id)
+            if standing is not None and standing.ignored:
+                ask = (f"I have asked twice and this is still open, so I am "
+                       f"stating it rather than asking again: NOTHING on this "
+                       f"thread can be advised until I know which side we are "
+                       f"on. Reply with one word — {'moving' !r} or "
+                       f"{'defending' !r} — or name the role "
+                       f"(plaintiff, defendant, petitioner, respondent, "
+                       f"appellant, accused). Everything else you have told me "
+                       f"is on the file and I will not ask for it again.")
             elements.append(Element(
                 kind=ElementKind.QUESTION, thread=thread.id, text=ask,
-                signal=Signal.UNRESOLVED_POSTURE,
+                gate="G-POSTURE", signal=Signal.UNRESOLVED_POSTURE,
             ))
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=tuple(elements), blocked=True,
                             blocked_reason="G-POSTURE: posture unresolved")
         else:
             thread = bound.thread
-            derived, relied_on, retrieved = self._derive(thread, turn, metrics)
+            derived, relied_on, retrieved = self._derive(
+                thread, turn, metrics, memory)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=tuple(elements))
@@ -413,6 +438,7 @@ class TurnEngine:
         # ---------------- EMIT ----------------
         t2 = time.perf_counter()
         metrics.failed_phase = Phase.EMIT
+        matter = self._remember_questions(matter, answer, metrics, turn)
         matter = matter.applied(turn.turn_id)
         try:
             matter = self._store.commit(matter, expected_version=expected_version)
@@ -490,13 +516,16 @@ class TurnEngine:
         # ONLY WHILE UNRESOLVED. Once the advocate has settled it, no further
         # call is made -- the extraction is cheap but it is not free, and a
         # settled posture is not re-read on every later turn.
+        thread = replace(thread, chronology=thread.chronology + (fact.id,))
+        matter = matter.with_thread(thread)
+
         if not posture.resolved:
-            # The whole account so far, not just this message. See
-            # posture.build_prompt.
-            account = "\n".join(
-                f.statement for f in matter.facts
-                if f.id in thread.chronology or f.id == fact.id)
-            stated = self._read_posture(turn, metrics, account)
+            # THE WHOLE FILE, not just this message and not just the
+            # narrative. What was already established, what has already
+            # been asked, and what came back -- so an advocate who
+            # answered on turn 2 is not asked again on turn 3.
+            stated = self._read_posture(
+                turn, metrics, matter_memory.build(matter, thread.id))
             if stated.settles_role:
                 posture = posture.enrich(stated.role, stated.basis,
                                          source_fact=fact.id)
@@ -512,16 +541,13 @@ class TurnEngine:
                 posture = replace(
                     posture, client_described_as=stated.client_described_as)
 
-        thread = Thread(
-            id=thread.id, label=thread.label, aliases=thread.aliases,
-            identifiers=thread.identifiers, posture=posture,
-            chronology=thread.chronology + (fact.id,),
-            deferred_reason=thread.deferred_reason,
-        )
+        thread = replace(thread, posture=posture)
         return matter.with_thread(thread), replace(bound, thread=thread)
 
     def _derive(self, thread: Thread, turn: TurnInput,
-                metrics: TurnMetrics) -> tuple[list[Element], tuple, tuple]:
+                metrics: TurnMetrics,
+                memory: "matter_memory.MatterSummary | None" = None,
+                ) -> tuple[list[Element], tuple, tuple]:
         """Retrieve, then assemble. Returns (elements, relied_on, retrieved).
 
         The two Finding tuples are returned SEPARATELY because the grounding
@@ -537,7 +563,15 @@ class TurnEngine:
 
         need = EvidenceNeed(question=turn.message.strip(),
                             governing_date=turn.today,
-                            jurisdiction=turn.jurisdiction)
+                            jurisdiction=turn.jurisdiction,
+                            # THE SAME DEFECT POSTURE HAD, in retrieval.
+                            # An advocate names the Act on turn 1 and asks
+                            # "and the limitation?" on turn 4; reading turn
+                            # 4 alone, this found no Act at all and reported
+                            # a corpus gap for a provision it had already
+                            # retrieved. Second-chance input only -- see
+                            # EvidenceNeed.account.
+                            account=memory.account if memory else "")
         result = self._fetch(need, metrics)
         retrieved.extend(result.findings)
         self._read_coverage(result, thread, metrics, grounds, relied_on)
@@ -577,10 +611,31 @@ class TurnEngine:
                       f"were not."),
                 disclosure=True))
 
-        recommendation = self._recommend(thread, turn, result, metrics)
+        recommendation = self._recommend(thread, turn, result, metrics, memory)
         elements.append(recommendation)
         elements.extend(grounds)
         return elements, tuple(relied_on), tuple(retrieved)
+
+    def _remember_questions(self, matter: Matter, answer: Answer,
+                            metrics: TurnMetrics, turn: TurnInput) -> Matter:
+        """Record every question PUT, and close every one that came back.
+
+        ONE PLACE, AND THE CLOSING RULE IS GENERAL. A gate stops firing
+        exactly when the condition it names has cleared, and the condition
+        clearing is what "the advocate answered it" means. Closing questions
+        one by one at each call site is how a question survives its own
+        answer and gets asked a second time -- which is the defect this
+        whole ledger exists to make impossible.
+
+        Runs before the commit, inside the same version check, so the ask
+        ledger cannot drift from the turn that produced it.
+        """
+        for e in answer.elements:
+            if e.kind is ElementKind.QUESTION:
+                matter = matter.asking(e.gate or "", e.text, turn.turn_id,
+                                       e.thread)
+        return matter.answered(
+            frozenset(g.gate_id for g in metrics.gates_fired), turn.turn_id)
 
     def _disclose_coverage(self, turn: TurnInput, thread: Thread,
                            metrics: TurnMetrics, grounds: list[Element]) -> None:
@@ -612,7 +667,7 @@ class TurnEngine:
 
     @implements("C3")
     def _read_posture(self, turn: TurnInput, metrics: TurnMetrics,
-                      account: str = ""):
+                      memory=None):
         """What the advocate STATED about whom they act for, read by model.
 
         There is no phrase list. There was one, of ten exact phrases, and an
@@ -626,14 +681,20 @@ class TurnEngine:
         """
         try:
             res = self._model.structured(
-                posture_reader.build_prompt(turn.message, account),
+                posture_reader.build_prompt(
+                    turn.message,
+                    memory.as_context() if memory is not None else ""),
                 posture_reader.POSTURE_SCHEMA, Tier.ROUTINE, max_tokens=200)
             metrics.record_call(res)
             metrics.posture_reads += 1
             # The span is checked against the whole account, because that is
             # what the model was given to read.
+            # THE GUARD READS ONLY WHAT THE ADVOCATE WROTE, never the
+            # prompt -- the prompt carries this product's own questions,
+            # and one of them names both sides.
             stated = posture_reader.interpret(
-                f"{account}\n{turn.message}", res.data or {})
+                turn.message, res.data or {},
+                advocate_words=memory.advocate_words if memory else "")
         except ModelError as exc:
             # FAIL THE READ, NOT THE TURN -- and the gate still blocks, because
             # an unread posture is an unresolved one.
@@ -784,7 +845,8 @@ class TurnEngine:
             disclosure=True))
 
     @implements("E2")
-    def _recommend(self, thread, turn, result, metrics: TurnMetrics) -> Element:
+    def _recommend(self, thread, turn, result, metrics: TurnMetrics,
+                   memory=None) -> Element:
         side = thread.posture.side.value
         cited = ""
         if result.findings:
@@ -794,12 +856,17 @@ class TurnEngine:
             "Reply with ONE imperative next step in at most 40 words. "
             "No preamble, no options, no caveats. State the step, not the law."
         )
-        prompt = Prompt(
-            system=system,
-            user=(f"The advocate acts for the {side} party.{cited}\n\n"
-                  f"Brief: {turn.message.strip()[:1500]}\n\n"
-                  f"The single next step:"),
-        )
+        # THE FILE, THEN THIS TURN. A next step recommended off the last
+        # message alone re-opens ground the advocate has already covered,
+        # which reads to them as the product having forgotten the matter --
+        # and it is, because it had.
+        file_note = memory.as_context() if memory is not None else ""
+        user = f"The advocate acts for the {side} party.{cited}"
+        if file_note:
+            user += f"\n\n{file_note}"
+        user += (f"\n\nWhat they have just asked: {turn.message.strip()[:1500]}"
+                 f"\n\nThe single next step:")
+        prompt = Prompt(system=system, user=user)
         try:
             res = self._model.complete(prompt, Tier.ROUTINE, max_tokens=120)
             metrics.record_call(res)
@@ -811,7 +878,7 @@ class TurnEngine:
 
         if not text:
             return Element(
-                kind=ElementKind.QUESTION, thread=thread.id,
+                kind=ElementKind.QUESTION, thread=thread.id, gate="G-MODEL",
                 text=("I could not reach the model to form a recommendation on "
                       "this turn. Nothing has been recorded as advice. Resend, "
                       "or tell me what you would like me to work on first."))

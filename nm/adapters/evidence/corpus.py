@@ -35,7 +35,7 @@ import sqlite3
 from datetime import date
 from pathlib import Path
 
-from nm.domain.citation import wanted_section
+from nm.domain.citation import last_wanted_section, wanted_section
 from nm.knowledge.citator import Citator
 from nm.knowledge.identity import IdentityIndex
 from nm.knowledge.jurisdiction import binding_status
@@ -133,7 +133,8 @@ class CorpusEvidenceAdapter:
         if need.want_authority:
             return self._fetch_authority(need)
 
-        resolved = self._manifest.resolve(need.question, on=need.governing_date)
+        resolved = self._manifest.resolve(need.question, on=need.governing_date,
+                                          account=need.account)
         entry, superseded = resolved.entry, resolved.superseded
         if entry is None:
             missing = ("no Act in the curated manifest governs this question. "
@@ -194,7 +195,12 @@ class CorpusEvidenceAdapter:
         this one was not -- so a realistic brief retrieved section 442 of the
         Specific Relief Act, found nothing, and reported a corpus gap.
         """
-        return need.provision_hint or wanted_section(need.question)
+        # THIS TURN FIRST, then the thread. "What is the limitation on that?"
+        # names no section; the section it means is the one named two turns
+        # ago, and the alternative is telling the advocate their own file holds
+        # no provision.
+        return (need.provision_hint or wanted_section(need.question)
+                or last_wanted_section(need.account))
 
     def _union_lookup(self, patterns: tuple[str, ...], section: str, entry,
                       need: EvidenceNeed):

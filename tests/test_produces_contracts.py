@@ -135,3 +135,53 @@ def test_weight_defaults_to_not_assessed_rather_than_neutral():
     ones. Defaulting to `neutral` would record that the question was answered
     when nobody asked it."""
     assert Fact.create("x", _prov()).weight is Weight.NOT_ASSESSED
+
+
+# ================== CaseSummary: partially built, and it SAYS SO ============
+
+
+def test_the_case_summary_section_list_matches_appendix_e():
+    """The domain's copy of the contract cannot drift from the spec.
+
+    `MatterSummary` computes `handover_blockers` from `CASE_SUMMARY_SECTIONS`,
+    which is a list of the Appendix E contract living in the code — the same
+    arrangement as the gate matrix, where the code is the source and the spec
+    is the export. The arrangement is only safe with this check: a list nothing
+    compares against is how a change described as global lands in half a
+    product, and that has bitten this project twice.
+    """
+    from nm.domain.summary import CASE_SUMMARY_SECTIONS
+
+    contract = next((s for s in load() if s["name"] == "CaseSummary"), None)
+    assert contract is not None, "CaseSummary is not in spec/schemas.yaml"
+    declared = [f["field"] for f in contract["fields"]]
+    assert list(CASE_SUMMARY_SECTIONS) == declared, (
+        "nm/domain/summary.py's section list no longer matches Appendix E. "
+        "Whichever is wrong, they cannot both stand: `handover_blockers` is "
+        "computed from the code's copy and would then be naming sections the "
+        "contract does not have, or silently omitting ones it does.")
+
+
+def test_a_partially_built_summary_never_reads_as_a_complete_handover():
+    """S1, on the most expensive surface there is.
+
+    A receiving advocate reading a summary with no proof positions cannot tell
+    whether there are none or whether the section was never built. Those are
+    opposite situations, and the second one hands over a file with work
+    silently missing from it.
+    """
+    from nm.domain.summary import CARRIES, MatterSummary
+
+    body = MatterSummary(matter_id="m", title="t").as_dict()
+    assert body["handover_complete"] is False
+    assert body["handover_blockers"], (
+        "an unbuilt handover reported no blockers, which reads as complete")
+    assert "partial" in body["contract"]
+
+    # Every blocker is a real section of the contract, and nothing carried is
+    # listed as a blocker. Derived from the code's own two lists, so this
+    # cannot be satisfied by a hand-maintained third one.
+    from nm.domain.summary import CASE_SUMMARY_SECTIONS
+
+    assert set(body["handover_blockers"]) <= set(CASE_SUMMARY_SECTIONS)
+    assert not (set(body["handover_blockers"]) & CARRIES)

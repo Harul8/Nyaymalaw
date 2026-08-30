@@ -270,6 +270,20 @@ class EvidenceNeed:
     cause_of_action: str | None = None
     provision_hint: str | None = None
     want_authority: bool = False
+    account: str = ""
+    """What the advocate has already said on this thread.
+
+    THE QUESTION IS NOT THE MATTER, and this field is what makes the docstring
+    above true rather than aspirational. Retrieval saw `turn.message` alone,
+    so an advocate who named the Act on turn 1 and asked "and the limitation?"
+    on turn 4 got a corpus gap for a provision the product had already
+    retrieved for them.
+
+    It is a SECOND-CHANCE input, never a first-choice one: what the advocate
+    asked on THIS turn is what they want answered, and the account is consulted
+    only where this turn leaves something unresolved. Widening the primary
+    query with it would let four turns of context outvote the current
+    question, which is the failure mode keyword resolution already has."""
 
     def __post_init__(self) -> None:
         if self.governing_date is None:

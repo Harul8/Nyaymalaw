@@ -21,6 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
+from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer
 from nm.domain.traceability import implements
 from nm.edge.projections import board_projection, matter_list_projection
@@ -152,6 +153,28 @@ def matter(matter_id: str, advocate_id: str) -> dict:
         # else: a failed lookup must disclose nothing about what exists.
         raise HTTPException(status_code=404, detail="no such matter")
     return board_projection(m)
+
+
+@app.get("/api/matters/{matter_id}/summary")
+def matter_summary(matter_id: str, advocate_id: str) -> dict:
+    """THE FILE. What is established, what was asked, what is still open.
+
+    A projection over the matter, exactly like the two boards, holding
+    nothing the matter does not. It is served because a memory only a
+    prompt can read is a memory nobody can audit -- and the advocate finds
+    out it was wrong by being advised from it.
+
+    An unreadable matter is an EXPLICIT failure, never an empty summary:
+    empty would tell the advocate the file holds nothing, and the product
+    would then re-ask everything it had ever been told.
+    """
+    try:
+        m = application().store.load(matter_id)
+    except Exception as exc:  # noqa: BLE001 -- reported, never swallowed
+        return matter_memory.unbuildable(f"the matter could not be read: {exc}")
+    if m is None or m.advocate_id != advocate_id:
+        raise HTTPException(status_code=404, detail="no such matter")
+    return matter_memory.build(m).as_dict()
 
 
 @app.post("/api/turn")

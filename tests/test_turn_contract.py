@@ -153,7 +153,7 @@ def test_posture_is_never_inferred_from_familiar_vocabulary():
         "states_client": True, "role": "plaintiff",
         "client_described_as": "", "quoted": "we act for the landlord"})
     assert invented.role is Role.UNKNOWN
-    assert "not in the message" in invented.refused
+    assert "advocate wrote" in invented.refused
 
 
 def test_an_advocate_who_states_their_client_is_understood_however_they_say_it():
