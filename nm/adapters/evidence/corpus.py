@@ -198,9 +198,26 @@ class CorpusEvidenceAdapter:
 
     def _union_lookup(self, patterns: tuple[str, ...], section: str, entry,
                       need: EvidenceNeed):
-        """THE UNION. Every identifier convention, and the store is NAMED."""
+        """THE UNION. EVERY identifier convention, and the store is NAMED.
+
+        The first version stopped at the first pattern that hit. It worked only
+        because the fuller store happened to be listed first in the manifest —
+        reverse the order and Specific Relief Act s.6 comes back NOT FOUND from
+        an Act that holds all 44 sections. That is B-164 exactly, sitting
+        latent behind a line of YAML.
+
+        `act-1` says coverage is the union across every store AND that the
+        answer names which store supplied it. Both halves are load-bearing: a
+        union that short-circuits is an ordering assumption, and a store name
+        that reports only where the search stopped cannot support the claim.
+
+        Where two stores both hold the section, the FULLER TEXT wins. The thin
+        copies are not merely incomplete, they are truncated, and a scattered
+        13-section copy of a 44-section Act is exactly what produced the false
+        gap in the first place.
+        """
         stores: list[str] = []
-        findings: list[Finding] = []
+        candidates: list[Finding] = []
         con = sqlite3.connect(f"file:{self._db}?mode=ro", uri=True)
         try:
             for pattern in patterns:
@@ -219,7 +236,7 @@ class CorpusEvidenceAdapter:
                 text = " ".join((json.loads(blob).get("full_text") or "").split())
                 if not text:
                     continue
-                findings.append(Finding(
+                candidates.append(Finding(
                     proposition=f"{entry.act_name} s.{section}",
                     source_kind=SourceKind.PROVISION,
                     ref=f"{entry.act_name} s.{section}",
@@ -240,10 +257,14 @@ class CorpusEvidenceAdapter:
                     governing_date=need.governing_date,
                     origin="resolved",
                 ))
-                break  # the first complete copy wins; the union is over PATTERNS
         finally:
             con.close()
-        return tuple(findings), tuple(stores)
+
+        if not candidates:
+            return (), tuple(stores)
+        # The fullest text wins, and EVERY store searched is named.
+        best = max(candidates, key=lambda f: len(f.span))
+        return (best,), tuple(stores)
 
     # ---------------------------------------------------------- authorities ---
     def _fetch_authority(self, need: EvidenceNeed) -> EvidenceResult:

@@ -166,6 +166,23 @@ class Finding:
                 f"a proposition attributed to a judgment must come from a "
                 f"ratio/reasoning/order paragraph, not {self.para_kind.value!r} "
                 f"(PRD H7, gate G-ATTRIB)")
+        if self.source_kind is SourceKind.PROVISION and self.valid_from is None \
+                and self.valid_to is None:
+            # A PROVISION IS ALWAYS IN FORCE OVER SOME WINDOW, and a Finding
+            # that cannot say which one cannot answer whether it applied on the
+            # matter's date. Judgments carry no such window -- a judgment is
+            # decided once -- so this is required of provisions only.
+            raise ValueError(
+                "a provision Finding must carry its validity window: at least "
+                "one of valid_from/valid_to. Without it, `in_force` cannot "
+                "refuse the superseded text, and the 2024 codes make that the "
+                "difference between right and confidently wrong.")
+        if not (self.binding_for or "").strip():
+            # WHO it binds is half of what binding status means. "Binding" with
+            # no jurisdiction is a word, and an advocate cannot act on it.
+            raise ValueError(
+                "a Finding must name the jurisdiction its binding status is "
+                "FOR. Binding on whom is not an optional detail.")
         if not self.binding_reason.strip():
             raise ValueError(
                 "binding status must arrive with the rule that produced it. An "

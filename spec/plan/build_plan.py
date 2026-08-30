@@ -450,7 +450,7 @@ tint(ws_e, hdr_e, len(E), 3, {"A": (ACCENT, ACCENT_L), "B": (GOOD, GOOD_L), "C":
 
 # ============================== FEATURE MAP ==============================
 FM = [
-    ["A1", "Authentication and advocate identity", "A", "S1", "E-010", "decided"],
+    ["A1", "Authentication and advocate identity", "A", "S1", "E-010", "tested"],
     ["A2", "The landing board", "A", "S6", "E-063", "tested"],
     ["A3", "Re-entry and re-orientation", "A", "S9", "E-092", "decided"],
     ["B1", "Opening-message routing", "B", "S10", "—", "decided"],
@@ -493,7 +493,7 @@ FM = [
     ["G3", "Handover and continuity", "G", "S12", "—", "decided"],
     ["H1", "Event capture", "H", "S12", "—", "decided"],
     ["H2", "Closure", "H", "S12", "—", "decided"],
-    ["I1", "Session end and confidentiality", "I", "S1", "E-011", "decided"],
+    ["I1", "Session end and confidentiality", "I", "S1", "E-011", "tested"],
 ]
 ws_f, hdr_f = sheet(
     "Feature Map", ["Feature", "Title", "Phase", "Slice", "Evals that prove it", "Status"],
@@ -986,6 +986,71 @@ d("B-025", "2026-08-30", "corpus",
   "states INTENDED coverage independently of what the index contains.",
   "Yes — the runner now checks every Act the set names, on every run.",
   "tools/run_goldens.py, tests/test_goldens.py [E-002]")
+
+d("B-026", "2026-08-30", "core",
+  "MAX_EVIDENCE_ROUNDS was declared in slice 1 and read by NOTHING, and "
+  "`evidence_bound_hit` was a metrics field no code ever set. A turn could run "
+  "unbounded evidence rounds and answer as though it had found what it sought.",
+  "Writing the turn engine with the bound in mind and incrementing the counter "
+  "at each call site instead of routing every fetch through one place.",
+  "A constant with no reader — a bound that is not enforced is not a bound",
+  "Writing E-020b, which could not fail until the mechanism existed",
+  "Every retrieval goes through `_fetch`, which counts and refuses past the "
+  "bound; reaching it emits a VISIBLE gap rather than stopping quietly.",
+  "Yes — one counter, one place, every need.",
+  "tests/test_slice123_closeout.py [E-020b]")
+
+d("B-027", "2026-08-30", "ports",
+  "A provision Finding could be constructed with NO validity window, so "
+  "`in_force` had nothing to refuse superseded text with — and most manifest "
+  "Acts recorded no commencement at all.",
+  "Making binding, para_kind and treatment non-optional in slice 2 and not "
+  "asking the same question of validity.",
+  "An obligation absent from the type crossing the boundary",
+  "Writing E-021 against what the eval actually claims",
+  "A provision Finding must carry at least one of valid_from/valid_to; the "
+  "manifest now records a lower bound for every Act, documented as the "
+  "enactment year and NOT a verified commencement date.",
+  "Yes — required of provisions, not of judgments, which are decided once "
+  "rather than in force over a window.",
+  "tests/test_slice123_closeout.py [E-021]")
+
+d("B-028", "2026-08-30", "retrieval",
+  "THE UNION SHORT-CIRCUITED. `_union_lookup` stopped at the first identifier "
+  "convention that hit, so it worked only because the fuller store happened to "
+  "be listed first in the manifest. Reversing two lines of YAML makes Specific "
+  "Relief Act s.6 come back NOT HELD from an Act that holds all 44 sections.",
+  "Writing the union with an early `break` for efficiency, and testing it "
+  "against a manifest whose ordering hid the defect.",
+  "B-164's exact shape, sitting latent behind a line of configuration",
+  "Writing E-024, which asserts the answer NAMES more than one store",
+  "Every pattern is searched, the fullest text wins, and every store searched "
+  "is named. Verified by reversing the patterns and re-running.",
+  "Yes — no ordering assumption survives, for any Act.",
+  "tests/test_corpus_evidence.py [E-024]")
+
+d("B-029", "2026-08-30", "ports",
+  "`binding_for` accepted None. A Finding could claim BINDING status while "
+  "naming no jurisdiction it was binding in.",
+  "Requiring the field as a parameter and assuming a required parameter is a "
+  "validated one.",
+  "A required field that is present and empty",
+  "Writing E-021's field-by-field check",
+  "Non-empty `binding_for` enforced at construction. Binding on whom is not an "
+  "optional detail.",
+  "Yes — every Finding, every source kind.",
+  "tests/test_slice123_closeout.py [E-021]")
+
+d("B-030", "2026-08-30", "tests",
+  "The served-path `client` fixture was private to one test file, so "
+  "'every guard is reached by a test that drives the served path' could only "
+  "ever be true of the guards that file happened to cover.",
+  "Adding the fixture where it was first needed.",
+  "A shared rule with a fixture only one file could reach",
+  "Writing E-014, which needs to drive three gate responses on the wire",
+  "Moved to conftest.py.",
+  "Yes — any test file can now reach the wire.",
+  "tests/conftest.py")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

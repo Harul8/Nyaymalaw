@@ -78,3 +78,43 @@ def pytest_sessionfinish(session, exitstatus):
         "evals_failed": sorted(failed),
         "counterexamples_rejected": existing.get("counterexamples_rejected", []),
     }, indent=2), encoding="utf8")
+
+
+# --------------------------------------------------------------- the wire ---
+
+@pytest.fixture
+def client(tmp_path, monkeypatch):
+    """Drives the real ASGI app.
+
+    Shared here rather than owned by one test file, because "every guard is
+    reached by a test that drives the SERVED PATH" (E-014) is a rule for the
+    whole suite -- and a fixture only one file can reach quietly limits how
+    many guards are checked on the wire.
+    """
+    from fastapi.testclient import TestClient
+
+    from nm.adapters.model.config import ModelConfig, TierConfig
+    from nm.adapters.model.scripted import ScriptedModelAdapter
+    from nm.adapters.store.file_store import FileMatterStore
+    from nm.bootstrap.composition import Application
+    from nm.bootstrap.main import create_app
+    from nm.ports.model import Tier
+    from tests.test_turn_contract import KEY, _Evidence
+
+    monkeypatch.setenv("NM_MATTER_KEY", KEY)
+    monkeypatch.setenv("NM_MODEL_PROVIDER", "scripted")
+    monkeypatch.setenv("NM_MODEL_ROUTINE", "scripted-1")
+    monkeypatch.setenv("NM_EMBED_MODEL", "text-embedding-3-large")
+    monkeypatch.delenv("NM_MODEL_JUDGE", raising=False)
+    monkeypatch.delenv("NM_MODEL_HARD", raising=False)
+
+    config = ModelConfig(tiers={
+        Tier.ROUTINE: TierConfig(Tier.ROUTINE, "scripted", "scripted-1", None, None),
+        Tier.EMBED: TierConfig(Tier.EMBED, "scripted", "text-embedding-3-large",
+                               None, None),
+    })
+    application = Application(
+        store=FileMatterStore(tmp_path, key=KEY), evidence=_Evidence(),
+        model=ScriptedModelAdapter(config, responses={
+            "__default__": "Issue the statutory notice and diarise the window."}))
+    return TestClient(create_app(application))

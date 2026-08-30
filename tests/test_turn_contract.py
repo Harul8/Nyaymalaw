@@ -8,14 +8,13 @@ guard -- and every defect the first external review found lived in that gap.
 from __future__ import annotations
 
 import json
+from datetime import date
 
 import pytest
-from fastapi.testclient import TestClient
 
 from nm.adapters.model.config import ModelConfig, TierConfig
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.store.file_store import EncryptionNotConfigured, FileMatterStore
-from nm.bootstrap.main import create_app
 from nm.core.turn import (
     TurnEngine,
     TurnInput,
@@ -70,6 +69,10 @@ def finding(**kw) -> Finding:
         supports=True,
         para_kind=ParaKind.UNKNOWN,
         treatment=Treatment.statutory(),
+        # A PROVISION must carry its validity window [E-021]. Without it
+        # `in_force` cannot refuse superseded text, and the 2024 codes make
+        # that the difference between right and confidently wrong.
+        valid_from=date(1964, 1, 1),
     )
     base.update(kw)
     return Finding(**base)
@@ -340,25 +343,6 @@ def test_a_judgment_proposition_cannot_come_from_counsels_submission():
 
 
 # ================================================ THE SERVED PATH =========
-
-@pytest.fixture
-def client(tmp_path, monkeypatch):
-    """Drives the real ASGI app. Everything below is ON THE WIRE."""
-    from nm.bootstrap.composition import Application
-
-    monkeypatch.setenv("NM_MATTER_KEY", KEY)
-    monkeypatch.setenv("NM_MODEL_PROVIDER", "scripted")
-    monkeypatch.setenv("NM_MODEL_ROUTINE", "scripted-1")
-    monkeypatch.setenv("NM_EMBED_MODEL", "text-embedding-3-large")
-    monkeypatch.delenv("NM_MODEL_JUDGE", raising=False)
-    monkeypatch.delenv("NM_MODEL_HARD", raising=False)
-
-    application = Application(
-        store=FileMatterStore(tmp_path, key=KEY), evidence=_Evidence(),
-        model=ScriptedModelAdapter(_model_config(), responses={
-            "__default__": "Issue the statutory notice and diarise the window."}))
-    return TestClient(create_app(application))
-
 
 @pytest.mark.eval_id("E-013", "E-064")
 def test_the_served_path_answers_end_to_end(client):

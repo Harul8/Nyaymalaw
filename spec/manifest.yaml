@@ -12,6 +12,17 @@
 # Coverage is the UNION across them (check `act-1`); a figure from one store is
 # refused, not reported.
 
+# `in_force_from` IS A LOWER BOUND, NOT A COMMENCEMENT DATE. It is 1 January of
+# the year in the Act's own title, and its only job is to refuse text from
+# before the Act existed. It is NOT the date the Act came into force — several
+# of these commenced months or years after enactment, and where that difference
+# decides a matter this manifest is not the source to rely on. The 2024 codes
+# carry REAL dates, because there the transition is the whole point.
+#
+# Recorded as an approximation rather than left absent: a Finding must be able
+# to say whether it applied on the matter's date, and two empty fields cannot
+# distinguish "in force throughout" from "nobody recorded it".
+
 corpus_version: "vector_store@2026-08-29"
 reconciled_at: "2026-08-29"
 
@@ -19,32 +30,38 @@ acts:
   - act_name: "Specific Relief Act, 1963"
     act_patterns: ["%SPECIFIC RELIEF ACT, 1963%", "the_specific_relief_act_1963"]
     intended_sections: ["1-44"]
+    in_force_from: "1963-01-01"
     keywords: ["specific relief", "specific performance", "dispossessed", "possession", "injunction", "declaration"]
 
   - act_name: "Limitation Act, 1963"
     act_patterns: ["the_limitation_act_1963", "%LIMITATION ACT, 1963%"]
     intended_sections: ["1-32", "Article_1-137"]
+    in_force_from: "1963-01-01"
     keywords: ["limitation", "time-barred", "time barred", "acknowledgment", "acknowledgement", "barred by time", "article 65", "part payment"]
 
   - act_name: "Negotiable Instruments Act, 1881"
     act_patterns: ["the_negotiable_instruments_act_1881", "%NEGOTIABLE INSTRUMENTS ACT, 1881%"]
     intended_sections: ["1-147"]
+    in_force_from: "1881-01-01"
     keywords: ["cheque", "dishonour", "dishonor", "bounced", "negotiable instrument", "section 138"]
 
   - act_name: "Indian Evidence Act, 1872"
     act_patterns: ["the_indian_evidence_act_1872", "%INDIAN EVIDENCE ACT, 1872%"]
     intended_sections: ["1-167"]
+    in_force_from: "1872-01-01"
     keywords: ["evidence", "secondary evidence", "admissib", "notice to produce", "original document"]
 
   - act_name: "Registration Act, 1908"
     act_patterns: ["the_registration_act_1908", "%THE REGISTRATION ACT, 1908%"]
     intended_sections: ["1-91"]
+    in_force_from: "1908-01-01"
     keywords: ["registration", "unregistered", "registered instrument", "collateral purpose", "sale deed"]
 
   - act_name: "Code of Criminal Procedure, 1973"
     act_patterns: ["the_code_of_criminal_procedure_1973", "%CODE OF CRIMINAL PROCEDURE, 1973%"]
     intended_sections: ["1-484"]
     in_force_to: "2024-06-30"
+    in_force_from: "1973-01-01"
     keywords: ["crpc", "criminal procedure", "anticipatory bail", "remand", "police custody", "magistrate"]
 
   - act_name: "Bharatiya Nagarik Suraksha Sanhita, 2023"
@@ -57,6 +74,7 @@ acts:
     act_patterns: ["the_indian_penal_code_1860", "%INDIAN PENAL CODE, 1860%"]
     intended_sections: ["1-511"]
     in_force_to: "2024-06-30"
+    in_force_from: "1860-01-01"
     keywords: ["ipc", "penal code", "criminal trespass", "cheating", "assault"]
 
   - act_name: "Bharatiya Nyaya Sanhita, 2023"
@@ -68,31 +86,37 @@ acts:
   - act_name: "Transfer of Property Act, 1882"
     act_patterns: ["%THE TRANSFER OF PROPERTY ACT, 1882%", "the_transfer_of_property_act_1882"]
     intended_sections: ["1-137", "53A"]
+    in_force_from: "1882-01-01"
     keywords: ["transfer of property", "part performance", "mortgage", "lease", "sale of immovable"]
 
   - act_name: "Hindu Marriage Act, 1955"
     act_patterns: ["%HINDU MARRIAGE ACT, 1955%", "the_hindu_marriage_act_1955"]
     intended_sections: ["1-30"]
+    in_force_from: "1955-01-01"
     keywords: ["hindu marriage", "divorce", "cruelty", "desertion", "restitution of conjugal"]
 
   - act_name: "Muslim Women (Protection of Rights on Divorce) Act, 1986"
     act_patterns: ["%MUSLIM WOMEN (PROTECTION OF RIGHTS ON DIVOR%", "the_muslim_women_protection_of_rights_on_divorce_act_19"]
     intended_sections: ["1-7"]
+    in_force_from: "1986-01-01"
     keywords: ["talaq", "muslim women", "iddat", "mahr", "divorced muslim"]
 
   - act_name: "Guardians and Wards Act, 1890"
     act_patterns: ["the_guardians_and_wards_act_1890", "%GUARDIANS AND WARDS ACT, 1890%"]
     intended_sections: ["1-53"]
+    in_force_from: "1890-01-01"
     keywords: ["guardian", "custody", "minor", "welfare of the child"]
 
   - act_name: "Wakf Act, 1995"
     act_patterns: ["%WAKF ACT, 1995%", "the_wakf_act_1995"]
     intended_sections: ["1-113"]
+    in_force_from: "1995-01-01"
     keywords: ["wakf", "waqf", "mutawalli", "dargah", "alienation of waqf"]
 
   - act_name: "Protection of Women from Domestic Violence Act, 2005"
     act_patterns: ["%DOMESTIC VIOLENCE ACT, 2005%", "the_protection_of_women_from_domestic_violence_act_2005"]
     intended_sections: ["1-37"]
+    in_force_from: "2005-01-01"
     keywords: ["domestic violence", "shared household", "residence order", "protection officer"]
 
   # Added 30 August 2026. The golden set relies on s.15 (easement by
@@ -103,9 +127,11 @@ acts:
   - act_name: "Indian Easements Act, 1882"
     act_patterns: ["the_indian_easements_act_1882", "%INDIAN EASEMENTS ACT, 1882%"]
     intended_sections: ["1-65"]
+    in_force_from: "1882-01-01"
     keywords: ["easement", "easements", "right of way", "prescription", "servient", "dominant heritage"]
 
   - act_name: "Code of Civil Procedure, 1908"
     act_patterns: ["the_code_of_civil_procedure_1908", "%CODE OF CIVIL PROCEDURE, 1908%"]
     intended_sections: ["1-158"]
+    in_force_from: "1908-01-01"
     keywords: ["civil procedure", "cpc", "statutory notice", "section 80", "temporary injunction", "order 39"]

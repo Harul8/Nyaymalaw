@@ -40,6 +40,7 @@ from nm.domain.matter import (
     Role,
     Thread,
 )
+from nm.domain.traceability import implements
 from nm.ports.store import StaleWrite
 
 
@@ -148,6 +149,7 @@ def _matter(d: dict) -> Matter:
 # ------------------------------------------------------------------ store ---
 
 
+@implements("I1")
 class FileMatterStore:
     def __init__(self, root: str | Path, key: str | None = None) -> None:
         self._root = Path(root)

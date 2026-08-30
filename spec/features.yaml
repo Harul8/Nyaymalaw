@@ -7,7 +7,7 @@ features:
   title: Authentication and advocate identity
   phase: A
   slice: S1
-  status: decided
+  status: tested
   does:
   - 'Establish and hold a named professional identity: the advocate, enrolment, practice, and the firm
     whose conflicts registry governs this session.'
@@ -1287,7 +1287,7 @@ features:
   title: Session end and confidentiality
   phase: I
   slice: S1
-  status: decided
+  status: tested
   does:
   - End the session leaving nothing confidential outside the sealed store.
   - Hold matter state encrypted at rest, keyed outside the repository.

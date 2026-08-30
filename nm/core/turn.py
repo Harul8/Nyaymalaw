@@ -47,6 +47,7 @@ from nm.ports.evidence import (
     Coverage,
     EvidenceNeed,
     EvidencePort,
+    EvidenceResult,
     Finding,
     SourceKind,
     TreatmentState,
@@ -54,6 +55,11 @@ from nm.ports.evidence import (
 from nm.ports.model import ModelError, ModelPort, Prompt, Tier
 from nm.ports.store import StaleWrite, StorePort
 
+#: The most evidence rounds one turn may run. DECLARED SINCE SLICE 1 AND READ
+#: BY NOTHING until now -- `evidence_bound_hit` was a field no code ever set.
+#: A bound that is not enforced is not a bound, and the failure it exists to
+#: prevent is the expensive one: a turn that keeps asking for evidence, hits no
+#: limit, and eventually answers as though it had found what it was looking for.
 MAX_EVIDENCE_ROUNDS = 3
 
 # How many authorities an answer SHOWS. Retrieval keeps every candidate -- H4
@@ -530,8 +536,7 @@ class TurnEngine:
         need = EvidenceNeed(question=turn.message.strip(),
                             governing_date=turn.today,
                             jurisdiction=turn.jurisdiction)
-        result = self._evidence.fetch(need)
-        metrics.evidence_rounds += 1
+        result = self._fetch(need, metrics)
         retrieved.extend(result.findings)
         self._read_coverage(result, thread, metrics, grounds, relied_on)
 
@@ -550,12 +555,25 @@ class TurnEngine:
             # slice 5: seed the query from the provision this turn already
             # resolved. An advocate asks "any judgment on section 6?" and the
             # subject words are in the SECTION, not in the question.
-            authority = self._evidence.fetch(replace(
+            authority = self._fetch(replace(
                 need, want_authority=True,
-                question=_subject_of(need.question, result.findings)))
-            metrics.evidence_rounds += 1
+                question=_subject_of(need.question, result.findings)), metrics)
             retrieved.extend(authority.findings)
             self._read_coverage(authority, thread, metrics, grounds, relied_on)
+
+        if metrics.evidence_bound_hit:
+            # THE BOUND PRODUCES A VISIBLE GAP, never a quiet stop. A turn that
+            # ran out of rounds and said nothing is indistinguishable from one
+            # that found everything it needed -- and the advocate would read it
+            # as the second.
+            grounds.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id,
+                text=(f"I stopped after {MAX_EVIDENCE_ROUNDS} rounds of "
+                      f"retrieval on this turn. What I have is what is below; "
+                      f"there may be more that I did not reach, and I am "
+                      f"telling you rather than answering as though there "
+                      f"were not."),
+                disclosure=True))
 
         recommendation = self._recommend(thread, turn, result, metrics)
         elements.append(recommendation)
@@ -589,6 +607,24 @@ class TurnEngine:
             kind=ElementKind.GROUND, thread=thread.id,
             text=f"Before you rely on any authority I give you: {detail}",
             disclosure=True))
+
+    def _fetch(self, need: EvidenceNeed, metrics: TurnMetrics):
+        """One evidence round, counted against the bound.
+
+        Every retrieval goes through here so the count cannot drift from the
+        rounds actually run -- incrementing at each call site is how a bound
+        stops matching reality.
+        """
+        if metrics.evidence_rounds >= MAX_EVIDENCE_ROUNDS:
+            metrics.evidence_bound_hit = True
+            return EvidenceResult(
+                coverage=Coverage.NOT_HELD,
+                missing=(f"the evidence bound of {MAX_EVIDENCE_ROUNDS} rounds "
+                         f"was reached before this need could be met, so it was "
+                         f"NOT searched."),
+                searched_stores=("bound_reached",))
+        metrics.evidence_rounds += 1
+        return self._evidence.fetch(need)
 
     @staticmethod
     def _wants_authority(message: str) -> bool:

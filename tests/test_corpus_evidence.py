@@ -130,3 +130,59 @@ def test_a_question_naming_no_provision_is_refused_rather_than_guessed(adapter):
     result = adapter.fetch(need("the limitation position on this file generally"))
     assert result.coverage is Coverage.NOT_HELD
     assert "no specific provision" in result.missing
+
+
+@pytest.mark.eval_id("E-024")
+def test_coverage_is_a_union_and_a_single_store_figure_is_refused(adapter):
+    """THE COUNTEREXAMPLE: a coverage report saying the Act holds 13 of 44
+    sections.
+
+    That is B-164, the previous build's priority-one blocker. It struck three
+    golden-scenario expectations on the strength of a figure measured from one
+    store, and the Acts were complete the whole time. The same shape has since
+    produced a false gap in this project three more times.
+
+    Two things are asserted, and the second is what makes the first honest:
+    the union finds what a single store does not, AND the single-store figure
+    is genuinely different — so a check that passed by measuring one store
+    would have been measuring a wrong number, not an unlucky one.
+    """
+    import sqlite3
+
+    from nm.knowledge.manifest import Manifest
+
+    manifest = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    entry = manifest.act("Specific Relief Act, 1963")
+    assert entry and len(entry.act_patterns) > 1, (
+        "the union rule is untestable against an Act held under one convention")
+
+    con = sqlite3.connect(f"file:{CORPUS / 'chunks.db'}?mode=ro", uri=True)
+    try:
+        per_store, union = {}, set()
+        for pattern in entry.act_patterns:
+            rows = con.execute(
+                "select distinct section_number from chunks where "
+                "doc_type='bare_act' and act_id like ? and section_number is not null",
+                (pattern,)).fetchall()
+            found = {r[0] for r in rows}
+            per_store[pattern] = found
+            union |= found
+    finally:
+        con.close()
+
+    smallest = min(per_store.values(), key=len)
+    assert len(union) > len(smallest), (
+        "the union adds nothing over the thinnest store, so this Act cannot "
+        "demonstrate the rule")
+
+    # THE SPECIFIC FALSE GAP: s.6 is absent from the thin copy and present in
+    # the union. An advocate asking about summary possession got nothing.
+    assert "6" not in smallest
+    assert "6" in union
+
+    # And the adapter, which is what actually serves, uses the union.
+    result = adapter.fetch(need("section 6 of the specific relief act"))
+    assert result.coverage is Coverage.ANSWERED
+    assert len(result.searched_stores) > 1, (
+        "a coverage answer that searched one store cannot refuse a "
+        "single-store figure")

@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
 from nm.domain.answer import Answer
+from nm.domain.traceability import implements
 from nm.edge.projections import board_projection, matter_list_projection
 from nm.ports.store import StaleWrite
 
@@ -142,6 +143,7 @@ def matters(advocate_id: str) -> dict:
 
 
 @app.get("/api/matters/{matter_id}")
+@implements("A1")
 def matter(matter_id: str, advocate_id: str) -> dict:
     """THE THREAD BOARD. One row per thread, bounded by THREAD count."""
     m = application().store.load(matter_id)
