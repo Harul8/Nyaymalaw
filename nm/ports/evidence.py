@@ -26,6 +26,8 @@ from datetime import date
 from enum import Enum
 from typing import Protocol, runtime_checkable
 
+from nm.domain.text import blank, refuses_blank_text
+
 
 class ParaKind(str, Enum):
     """Only the first three are attributable to a court."""
@@ -254,6 +256,7 @@ class Finding:
         return self.supports and self.in_force
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class EvidenceNeed:
     """The query is the MATTER, not a sentence.
@@ -307,7 +310,9 @@ class EvidenceResult:
     exact section lookup into the wrong Act."""
 
     def __post_init__(self) -> None:
-        if self.coverage is Coverage.NOT_HELD and not self.missing:
+        if self.coverage is Coverage.NOT_HELD and blank(self.missing):
+            # `blank`, not falsy: a reason of spaces is silence in NO
+            # words, and it would have satisfied the check this raises.
             raise ValueError(
                 "a NOT_HELD result must NAME what is missing. A vague "
                 "disclaimer is silence in more words (PRD M4).")

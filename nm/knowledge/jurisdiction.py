@@ -47,6 +47,7 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 
+from nm.domain.text import refuses_blank_text
 from nm.ports.evidence import Binding
 
 # The bifurcation of the composite High Court of Judicature at Hyderabad.
@@ -87,6 +88,7 @@ def normalise_court(raw: str | None) -> Court:
     return Court.UNKNOWN
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class BindingRuling:
     """The answer, with the rule that produced it attached.

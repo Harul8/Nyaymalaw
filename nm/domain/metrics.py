@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from nm.domain.gates import Response, gate
+from nm.domain.text import refuses_blank_text
 
 
 class Phase(str, Enum):
@@ -29,6 +30,7 @@ class Outcome(str, Enum):
     FAILED = "failed"
 
 
+@refuses_blank_text("detail")
 @dataclass(frozen=True)
 class Violation:
     rule: str
@@ -36,6 +38,7 @@ class Violation:
     gating: bool = False
 
 
+@refuses_blank_text("detail")
 @dataclass(frozen=True)
 class GateFiring:
     """A gate that fired on this turn, and what the MATRIX said to do about it.
@@ -53,6 +56,7 @@ class GateFiring:
     response: str
 
 
+@refuses_blank_text()
 @dataclass
 class TurnMetrics:
     turn_id: str

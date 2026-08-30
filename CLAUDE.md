@@ -56,10 +56,38 @@ and they are not the bar.
 
 ## Before any code change
 
-### 1. Generalised fixes only — never scenario-specific patches
+### 1. Generalised fixes only — and then SWEEP for every other site
 The test: **can you state the fix without naming the specific Act, section,
 case, atom type, or phrase that exposed it?** If not, it is a patch, and the
 next unseen input fails the same way.
+
+**Stating a fix generally is not the same as applying it generally, and that
+gap is where a year of whack-a-mole lives.** A fix is not finished until you
+have enumerated every other place in the codebase that could carry the same
+shape and applied the SAME mechanism there. One mechanism, everywhere it
+applies — never a different fix per site.
+
+*Measured on 30 August 2026, auditing all 52 register entries: **47 had a guard
+covering only the site the bug was found at.*** Three separate ad-hoc guards
+had been written for one rule — *a value that is present and carries nothing is
+absent* — as a regex (`names_nobody`), as a missing enum member (`role_basis`),
+and as a `.strip()` on an advocate id. Nothing would have caught the fourth.
+
+The procedure, after any fix:
+
+1. Name the SHAPE without the specifics that exposed it.
+2. **Enumerate the population from the code, not from memory** — every guard,
+   every handler, every presence check, every lookup of that kind.
+3. Apply the one mechanism across all of them, and delete the point guards it
+   subsumes.
+4. The check that proves it **draws its population from the whole product, not
+   from one module.** An enumerator scoped to a module misses the member added
+   to a sibling module an hour later — which is exactly what happened to
+   `test_every_declared_schema_is_satisfiable_when_nothing_was_established`,
+   written in the morning against `nm/core/posture.py` and already blind to
+   `nm/core/dispute.py` by the afternoon.
+
+This applies to build fixes, test fixes and stress-test findings alike.
 
 Worked example worth keeping: an unretrievable Schedule Article looked like a
 missing entry in an atom-priors table. The real defect was that `table.get(kind,

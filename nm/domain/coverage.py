@@ -14,6 +14,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from nm.domain.text import refuses_blank_text
+
 
 class CoverageState(str, Enum):
     """THREE states. `NOT_MEASURED` is the one that earns its keep.
@@ -29,6 +31,7 @@ class CoverageState(str, Enum):
     NOT_MEASURED = "not_measured"
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class CoveragePosition:
     state: CoverageState

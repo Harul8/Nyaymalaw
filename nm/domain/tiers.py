@@ -21,7 +21,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from nm.domain.text import refuses_blank_text
 
+
+@refuses_blank_text()
 @dataclass(frozen=True)
 class HardTierStep:
     """A step permitted to run on the expensive tier."""

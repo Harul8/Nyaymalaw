@@ -36,6 +36,7 @@ from dataclasses import dataclass
 from enum import Enum, IntEnum
 from pathlib import Path
 
+from nm.domain.text import refuses_blank_text
 from nm.knowledge.jurisdiction import Court, normalise_court
 from nm.ports.evidence import Treatment, TreatmentState
 
@@ -80,6 +81,7 @@ class Precedence(str, Enum):
     NOT_COMPARABLE = "not_comparable"
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class CaseIdentity:
     case_id: str

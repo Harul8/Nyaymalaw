@@ -20,6 +20,7 @@ from datetime import date
 from enum import Enum
 
 from nm.domain.matter import ThreadId
+from nm.domain.text import blank, refuses_blank_text
 
 
 class ElementKind(str, Enum):
@@ -49,6 +50,7 @@ class Signal(str, Enum):
         return self is not Signal.NONE
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class Element:
     kind: ElementKind
@@ -87,9 +89,10 @@ class Element:
     model writes can opt out of the gate."""
 
     def __post_init__(self) -> None:
-        if not self.text.strip():
+        if blank(self.text):
             raise ValueError("an Element must say something")
-        if self.kind is ElementKind.ACTION and not (self.by_when or self.no_deadline_reason):
+        if self.kind is ElementKind.ACTION and blank(self.by_when) \
+                and blank(self.no_deadline_reason):
             # An action without a date is incomplete. Where genuinely no
             # deadline applies, that is STATED rather than left blank.
             raise ValueError(
@@ -110,6 +113,7 @@ class Route(str, Enum):
     NON_MATTER = "non_matter"
 
 
+@refuses_blank_text("mode_statement")
 @dataclass(frozen=True)
 class Answer:
     route: Route

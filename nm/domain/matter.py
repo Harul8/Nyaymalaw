@@ -20,6 +20,7 @@ from datetime import date
 from enum import Enum
 from typing import Literal
 
+from nm.domain.text import refuses_blank_text
 from nm.domain.traceability import implements
 
 # --------------------------------------------------------------------- ids ---
@@ -41,6 +42,7 @@ class Certainty(str, Enum):
     ASSERTED = "asserted"
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class Provenance:
     """Where a fact came from. Non-optional by construction.
@@ -93,6 +95,7 @@ class Weight(str, Enum):
     NOT_ASSESSED = "not_assessed"
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class Fact:
     """PRD C1. THE FULL CONTRACT IS APPENDIX E, and this type is checked
@@ -256,6 +259,7 @@ class Posture:
 # ---------------------------------------------------------------- threads ---
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class Thread:
     """A dispute inside a matter.
@@ -311,6 +315,7 @@ class Thread:
 # ----------------------------------------------------- what we have asked ---
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class AskedQuestion:
     """A question this product PUT to the advocate, and whether it came back.
@@ -349,6 +354,7 @@ class AskedQuestion:
 # ----------------------------------------------------------------- matter ---
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class Matter:
     id: MatterId

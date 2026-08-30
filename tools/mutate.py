@@ -451,6 +451,16 @@ MUTATIONS = [
      "test_a_dispute_read_that_could_not_tell_asks_rather_than_merging",
      "E-033"),
 
+    # THE SWEEP MECHANISM ITSELF. One rule -- length is not content --
+    # applied to 23 types by one decorator instead of 25 hand-written
+    # guards. Removing it from a single type must be caught BY NAME.
+    ("a required string field left accepting whitespace",
+     "nm/domain/matter.py",
+     "@refuses_blank_text()\n@dataclass(frozen=True)\nclass Thread:",
+     "@dataclass(frozen=True)\nclass Thread:",
+     "test_no_required_string_field_accepts_a_value_made_of_whitespace",
+     "E-012"),
+
     ("a persisted field silently dropped on read",
      "nm/adapters/store/file_store.py",
      "                          for f in fields(cls) if f.name in value})",

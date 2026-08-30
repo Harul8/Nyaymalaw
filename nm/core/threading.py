@@ -44,6 +44,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from nm.domain.matter import Fact, Matter, Thread
+from nm.domain.text import refuses_blank_text
 from nm.domain.traceability import implements
 
 # Decisive identifiers as they are actually written in Indian practice. Each
@@ -75,6 +76,7 @@ class BindState(str, Enum):
     UNBINDABLE = "unbindable"    # nothing to bind to and nothing to create from
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class MergeProposal:
     """A proposal, and it is never applied by anything in this codebase."""
@@ -85,6 +87,7 @@ class MergeProposal:
     question: str
 
 
+@refuses_blank_text("question", "reason")
 @dataclass(frozen=True)
 class BindResult:
     state: BindState

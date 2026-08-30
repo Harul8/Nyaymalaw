@@ -36,6 +36,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from nm.domain.matter import AskedQuestion, Matter, Role, Thread
+from nm.domain.text import refuses_blank_text
 
 #: How much of the account a prompt is given. Enough to carry a matter's worth
 #: of instruction, bounded so a long file cannot crowd out the current message.
@@ -66,6 +67,7 @@ CASE_SUMMARY_SECTIONS = (
 )
 
 
+@refuses_blank_text("account")
 @dataclass(frozen=True)
 class MatterSummary:
     """What the file holds, as one readable thing. Rebuilt, never stored."""

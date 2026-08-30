@@ -59,6 +59,7 @@ from nm.domain.citation import (
     provisions_cited,
 )
 from nm.domain.gates import Response, gate
+from nm.domain.text import refuses_blank_text
 from nm.domain.traceability import implements
 from nm.ports.evidence import Finding
 
@@ -89,6 +90,7 @@ def _fold(text: str) -> str:
     return " ".join("v" if t in ("vs", "versus") else t for t in tokens)
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class GroundingViolation:
     gate_id: str

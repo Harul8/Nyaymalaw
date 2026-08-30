@@ -22,11 +22,14 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from nm.domain.text import refuses_blank_text
+
 
 class ArtefactRefused(RuntimeError):
     """The artefact does not match what it must have been built from."""
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class ArtefactIdentity:
     artefact: str

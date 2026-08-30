@@ -48,6 +48,8 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 
+from nm.domain.text import refuses_blank_text
+
 _WORDS = re.compile(r"[a-z0-9]+")
 
 
@@ -108,6 +110,7 @@ SYSTEM = (
 )
 
 
+@refuses_blank_text("quoted", "why")
 @dataclass(frozen=True)
 class DisputeRead:
     verdict: Dispute

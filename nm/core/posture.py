@@ -56,6 +56,7 @@ import re
 from dataclasses import dataclass
 
 from nm.domain.matter import Basis, Role
+from nm.domain.text import refuses_blank_text
 
 #: The permitted answers, from the product's own type. Offered to the model so
 #: it selects rather than invents -- an out-of-vocabulary role is blanked and
@@ -283,6 +284,7 @@ def interpret_role(data: dict) -> tuple["Role | None", str]:
                       f"product knows")
 
 
+@refuses_blank_text("quoted")
 @dataclass(frozen=True)
 class StatedPosture:
     role: Role

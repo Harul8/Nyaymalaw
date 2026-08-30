@@ -44,6 +44,7 @@ from nm.domain.matter import (
     new_id,
 )
 from nm.domain.metrics import Outcome, Phase, TurnMetrics
+from nm.domain.text import refuses_blank_text
 from nm.domain.traceability import implements
 from nm.ports.coverage import CoveragePort
 from nm.ports.evidence import (
@@ -136,6 +137,7 @@ class TurnRefused(Exception):
         self.disclosures = disclosures
 
 
+@refuses_blank_text()
 @dataclass
 class TurnInput:
     advocate_id: str

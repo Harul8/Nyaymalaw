@@ -20,6 +20,7 @@ from typing import Any
 
 from nm.adapters.model._budget import guard_budget
 from nm.adapters.model.config import CONTEXT_BUDGET, ModelConfig, TierConfig
+from nm.domain.text import blank
 from nm.ports.model import (
     ConfigurationError,
     ContentRefused,
@@ -52,7 +53,7 @@ class OpenAIModelAdapter:
                 "the openai package is not installed. `pip install -e .[openai]`"
             ) from exc
         cfg = config.for_tier(Tier.ROUTINE)
-        if not cfg.api_key:
+        if blank(cfg.api_key):
             raise ConfigurationError(
                 "NM_MODEL_API_KEY is not set (or is still the placeholder). "
                 "An unconfigured key is a hard failure, never a silent no-op."
