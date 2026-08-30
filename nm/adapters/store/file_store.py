@@ -37,7 +37,7 @@ from nm.domain.matter import (
     Thread,
 )
 from nm.domain.traceability import implements
-from nm.ports.store import StaleWrite
+from nm.ports.store import MatterList, StaleWrite
 
 
 class EncryptionNotConfigured(RuntimeError):
@@ -216,19 +216,22 @@ class FileMatterStore:
             raise
         return matter
 
-    def list_for(self, advocate_id: str) -> tuple[Matter, ...]:
-        out = []
+    def list_for(self, advocate_id: str) -> MatterList:
+        out, unreadable = [], []
         for p in sorted(self._matters.glob("*.nm")):
             try:
                 m = _matter(json.loads(self._cipher.decrypt(p.read_bytes()).decode("utf8")))
-            except Exception:
-                # One unreadable matter must not take the whole list down --
-                # but it must not vanish silently either. It is skipped here and
-                # reported by the caller's board state (PRD §6.2A).
+            except Exception:  # noqa: BLE001 -- named, never swallowed
+                # One unreadable matter must not take the whole list down, and
+                # it must not VANISH either. It used to `continue` here with a
+                # comment claiming the caller reported it; the caller received a
+                # bare tuple and could not tell six matters from seven with one
+                # corrupt. The id is carried out so the board can say so.
+                unreadable.append(p.stem)
                 continue
             if m.advocate_id == advocate_id:
                 out.append(m)
-        return tuple(out)
+        return MatterList(tuple(out), tuple(unreadable))
 
     def record_metrics(self, metrics: dict) -> None:
         """Written even when the turn failed, and never containing client words."""

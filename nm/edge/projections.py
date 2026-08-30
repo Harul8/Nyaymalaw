@@ -68,7 +68,17 @@ def board_projection(matter: Matter) -> dict:
 
 
 @implements("A2")
-def matter_list_projection(matters: tuple[Matter, ...]) -> dict:
+def matter_list_projection(matters) -> dict:
+    """The matter list, and what could not be read.
+
+    `matters` is a `MatterList`, not a bare tuple, and that is the whole
+    difference: a bare tuple cannot distinguish six matters from seven with one
+    corrupt, so an unreadable file vanished and the board looked complete.
+    A2 forbids rendering an unbuildable board as an empty one; this is the same
+    rule for a board that is merely INCOMPLETE, which is the harder case
+    because it looks right.
+    """
+    unreadable = tuple(getattr(matters, "unreadable", ()))
     rows = []
     for m in matters:
         unresolved = sum(1 for t in m.threads if not t.posture.resolved)
@@ -92,10 +102,19 @@ def matter_list_projection(matters: tuple[Matter, ...]) -> dict:
         -r["last_touched"],
     ))
     return {
-        "state": "ok",
+        # NOT "ok" when something could not be read. An advocate scanning a
+        # board for what needs them must be able to see that a file is missing
+        # from it, and `row_count` alone would say six either way.
+        "state": "ok" if not unreadable else "incomplete",
         "matters": rows,
         "row_count": len(rows),
         "bounded_by": "matter_count",
+        "unreadable": list(unreadable),
+        "unreadable_reason": (
+            f"{len(unreadable)} matter(s) on this file could not be read and "
+            f"are NOT in the list above: {', '.join(unreadable)}. They are not "
+            f"gone — they could not be decoded, and anything they hold is not "
+            f"shown." if unreadable else None),
     }
 
 

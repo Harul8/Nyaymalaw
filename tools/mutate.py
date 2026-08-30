@@ -461,6 +461,15 @@ MUTATIONS = [
      "test_no_required_string_field_accepts_a_value_made_of_whitespace",
      "E-012"),
 
+    # B-053. A matter that cannot be read must not VANISH -- the board
+    # then looks complete, which is worse than failing to build.
+    ("an unreadable matter dropped silently from the list",
+     "nm/adapters/store/file_store.py",
+     "                unreadable.append(p.stem)",
+     "                pass",
+     "test_a_matter_that_cannot_be_read_does_not_vanish_from_the_list",
+     "E-063b"),
+
     ("a persisted field silently dropped on read",
      "nm/adapters/store/file_store.py",
      "                          for f in fields(cls) if f.name in value})",

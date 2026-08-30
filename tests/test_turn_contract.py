@@ -115,7 +115,9 @@ def test_a_greeting_writes_nothing_to_any_file(tmp_path):
     out = engine.run(TurnInput(advocate_id="adv", message="hi"))
     assert out.answer.route is Route.NON_MATTER
     assert out.matter is None
-    assert store.list_for("adv") == (), "the non-matter route persists nothing"
+    listed = store.list_for("adv")
+    assert tuple(listed) == (), "the non-matter route persists nothing"
+    assert listed.complete, "nothing was written, so nothing can be unreadable"
 
 
 # ======================================================= posture ==========

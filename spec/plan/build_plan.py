@@ -712,7 +712,7 @@ d("B-004", "2026-08-29", "web",
   "Driving the browser, not by any test",
   "An explicit pending branch before the answer exists.",
   "Yes — the branch covers every turn, not one message.",
-  "Exercised on every browser pass")
+  "MANUAL: web/app.js — a browser pass. No JS test harness exists, so this is declared as manual rather than pointed at a runner that would not run")
 
 d("B-005", "2026-08-30", "tooling",
   "A NARROWED pytest run rewrote `evals_run` with only that run's ids, after "
@@ -1419,7 +1419,7 @@ d("B-048", "2026-08-30", "knowledge",
   "the principal Act is NOT held, and declaring it would turn a real corpus "
   "gap into a reported RETRIEVAL DEFECT, which is worse. The general fix is "
   "a check comparing declared coverage against held, which does not exist yet.",
-  "verified by retrieval: all six probe sections ANSWERED from the corpus")
+  "tests/test_manifest_covers_what_it_declares.py::test_every_declared_act_retrieves_at_least_one_intended_section")
 
 d("B-049", "2026-08-30", "tooling",
   "E-002c WAS ENFORCED BY A BRANCH THAT COULD NOT EXECUTE. The guard read "
@@ -1506,6 +1506,28 @@ d("B-052", "2026-08-30", "core",
   "could have passed.",
   "tests/test_thread_binding.py::test_a_second_dispute_does_not_inherit_the_"
   "first_thread_s_posture")
+
+d("B-053", "2026-08-30", "store",
+  "A MATTER THAT CANNOT BE READ VANISHED FROM THE ADVOCATE'S LIST. "
+  "`list_for` skipped it with `continue`, under a comment saying \"it must "
+  "not vanish silently either. It is skipped here and reported by the "
+  "caller's board state\" — and the caller received a BARE TUPLE, so it could "
+  "not tell six matters from seven with one corrupt. It reported six.",
+  "Writing the comment and the mechanism at different times. The comment "
+  "describes a design that was never built: `unbuildable()` covers the board "
+  "that could not be built AT ALL, and there was no state for the board that "
+  "WAS built with a row missing — which is the more dangerous of the two, "
+  "because it looks complete.",
+  "S1 — an absent input reading as success",
+  "Sweeping all 29 exception handlers for the shape, not by anyone hitting it",
+  "`list_for` returns a `MatterList` carrying the ids it could not decode, and "
+  "the projection reports state `incomplete` and names them.",
+  "Yes — the rule is that A COLLECTION READ THAT DROPS MEMBERS MUST SAY HOW "
+  "MANY. Three states for a list, the same discipline as everywhere else: "
+  "complete, incomplete and said so, unbuildable. A bare tuple cannot express "
+  "the middle one, so the type changed rather than the call site.",
+  "tests/test_never_clauses.py::test_a_matter_that_cannot_be_read_does_not_"
+  "vanish_from_the_list")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

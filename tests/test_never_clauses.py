@@ -396,3 +396,43 @@ def test_a_recorded_run_cannot_vouch_for_code_it_never_saw(tmp_path, monkeypatch
                         lambda *a, **k: "deadbeefdeadbeef")
     ok = releasegate.measure_mutations()
     assert ok["available"] is True and ok["caught"] == 42
+
+
+@refuses("A2", 3)
+@pytest.mark.eval_id("E-063b")
+def test_a_matter_that_cannot_be_read_does_not_vanish_from_the_list(tmp_path, client):
+    """B-053. A2 forbids rendering an unbuildable board as an EMPTY one. This
+    is the same rule for a board that is merely INCOMPLETE — the harder case,
+    because it looks right.
+
+    `list_for` skipped an unreadable matter with `continue`, under a comment
+    saying "it must not vanish silently either. It is skipped here and reported
+    by the caller's board state." The caller received a bare tuple and could
+    not tell six matters from seven with one corrupt, so it reported six. The
+    seventh, with its deadlines, was simply absent.
+
+    Found by sweeping all 29 exception handlers for this shape, not by anyone
+    hitting it.
+    """
+    from nm.adapters.store.file_store import FileMatterStore
+    from nm.edge.projections import matter_list_projection
+
+    store = FileMatterStore(tmp_path, key=KEY)
+    good = Matter.create(advocate_id="adv", title="a readable matter")
+    store.commit(good, expected_version=None)
+    # A file that is on disk and cannot be decoded -- a truncated write, a
+    # rotated key, a corrupted volume. All of them look like this.
+    (tmp_path / "matters" / "mat_corrupted.nm").write_bytes(b"not decryptable")
+
+    listed = FileMatterStore(tmp_path, key=KEY).list_for("adv")
+    assert [m.id for m in listed] == [good.id], "the readable matter was lost"
+    assert not listed.complete
+    assert "mat_corrupted" in listed.unreadable, (
+        "a matter that could not be read vanished from the list. The advocate "
+        "is told they have one matter and they have two.")
+
+    board = matter_list_projection(listed)
+    assert board["state"] == "incomplete", (
+        f"the board reports {board['state']!r} while a matter is missing from "
+        f"it. `row_count` says one either way.")
+    assert "mat_corrupted" in (board["unreadable_reason"] or "")
