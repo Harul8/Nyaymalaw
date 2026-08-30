@@ -55,6 +55,23 @@ def test_every_scenario_is_reachable_from_a_suite(scenarios):
     failures = check_structure(scenarios)
     assert not failures, "\n  ".join(failures)
 
+    # THE POSITIVE CONTROL. Asserting that a bad state is absent proves nothing
+    # about the check -- a check that always returns [] passes this too, and
+    # this one DID: the condition guarding it read `s.id not in covered and not
+    # any(s.slice <= n for n in range(1, 10))`, whose second half is False for
+    # every scenario, so the branch had never executed since it was written.
+    #
+    # So a scenario in no suite is planted, and the check must find it.
+    import copy
+
+    orphan = copy.copy(scenarios[0])
+    orphan.id = "GS-99"
+    found = check_structure([*scenarios, orphan])
+    assert any("GS-99" in f for f in found), (
+        "a scenario in no named suite was not reported. The check cannot fail, "
+        "and a check that cannot fail is not a check -- it will read OK on "
+        "every commit while coverage rots underneath it.")
+
 
 @pytest.mark.class_a
 @pytest.mark.eval_id("E-002d")

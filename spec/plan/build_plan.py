@@ -1421,6 +1421,64 @@ d("B-048", "2026-08-30", "knowledge",
   "a check comparing declared coverage against held, which does not exist yet.",
   "verified by retrieval: all six probe sections ANSWERED from the corpus")
 
+d("B-049", "2026-08-30", "tooling",
+  "E-002c WAS ENFORCED BY A BRANCH THAT COULD NOT EXECUTE. The guard read "
+  "`if s.id not in covered and not any(s.slice <= n for n in range(1, 10))`, "
+  "and the second half is False for EVERY scenario because every slice is 9 "
+  "or less. So `every scenario is reachable from at least one suite` had never "
+  "been checked, and reported OK on every commit since it was written.",
+  "Writing a guard with a second condition intended to excuse scenarios "
+  "reachable through a generated `slice-N` suite. The excuse swallowed the "
+  "whole population instead of a subset of it.",
+  "S11 — a check that cannot fail is not a check",
+  "A mutation that disabled the check and changed nothing",
+  "The dead condition is gone: a scenario in no NAMED suite is reported, "
+  "because `full` and `slice-N` are generated and prove nothing about "
+  "curation.",
+  "Yes, and the general fix is in the TEST rather than the code: it now plants "
+  "a scenario in no suite and asserts the check finds it. Asserting that a bad "
+  "state is absent proves nothing about the checker — a checker that always "
+  "returns [] passes that too, and this one did.",
+  "tests/test_goldens.py::test_every_scenario_is_reachable_from_a_suite")
+
+d("B-050", "2026-08-30", "domain",
+  "C4 NAMED AN ENFORCEMENT METHOD THAT NOTHING CALLED. Its docstring said "
+  "thread identity is \"enforced by the constructor and by "
+  "`decisive_identifier_matches`\", and that method had no callers at all — "
+  "`nm/core/threading.bind()` does the matching inline.",
+  "Declaring the feature on the TYPE and writing a method that reads like the "
+  "enforcement, while the real logic went where it had to be: the binder "
+  "distinguishes one match from many and PROPOSES a merge rather than "
+  "performing one, neither of which a boolean on a single thread can express.",
+  "S11 — a check that cannot fail is not a check",
+  "A mutation that made the method always return True and broke nothing",
+  "The method is deleted and the docstring names the binder. Two places "
+  "deciding \"do these share a decisive identifier\" is the arrangement that "
+  "produced the O.S. 442/2023 defect, where one copy was hardened and the "
+  "other was not.",
+  "Yes — this is the shape trace T8 catches for GATES (declared built, nothing "
+  "consults it), reaching a domain method where nothing was watching.",
+  "tests/test_thread_binding.py::test_two_threads_with_one_identifier_propose_"
+  "a_merge_and_never_perform_it")
+
+d("B-051", "2026-08-30", "core",
+  "The D2 invariant in `_assert_invariants` could not fire. "
+  "`Answer.__post_init__` already refuses a matter-route answer whose FIRST "
+  "element is neither an ACTION nor a QUESTION, so there is always at least "
+  "one and `not any(...)` is always False.",
+  "Adding a runtime check for something the type had already made impossible, "
+  "as a belt-and-braces. It is not one: it is a line that never executes.",
+  "S11 — a check that cannot fail is not a check",
+  "A mutation that deleted it and changed nothing",
+  "The dead branch is gone and the comment names the TYPE as the enforcement. "
+  "E-013's counterexample now breaks the constructor guard, which is what "
+  "actually holds the rule.",
+  "Yes — where a type makes something impossible, the runtime check for it is "
+  "not a second line of defence, and a reader takes the dead branch for a live "
+  "guard. Benign here; B-049 was the same shape and was not.",
+  "tests/test_never_clauses.py::test_the_first_content_element_is_an_action_or_"
+  "a_blocking_question")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

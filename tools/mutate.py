@@ -196,6 +196,241 @@ MUTATIONS = [
      '    if False and rec.get("source_fingerprint") != now:',
      "test_a_recorded_run_cannot_vouch_for_code_it_never_saw", "E-008"),
 
+    # ---- S0: the foundations. Each of these had RUN and never bitten. ----
+
+    # E-001. The whole value of a pure core is the class-A cadence, and it
+    # is lost the first time one I/O import sneaks in.
+    ("the core permitted to reach an adapter",
+     "tools/layercheck.py",
+     '    "core": {"core", "ports", "domain"},',
+     '    "core": {"core", "ports", "domain", "adapters"},',
+     "test_layercheck_fails_the_build_on_a_core_module_that_reaches_an_adapter",
+     "E-001"),
+
+    # E-004. A model identifier in the core is how a step stops declaring a
+    # TIER and starts naming a provider's model.
+    ("a model identifier planted in the core",
+     "nm/core/grounding.py",
+     "from __future__ import annotations",
+     "from __future__ import annotations\n"
+     "\n"
+     "_MODEL = \"gpt-4o-mini\"  # planted",
+     "test_no_model_name_or_provider_client_appears_in_the_core", "E-004"),
+
+    # E-003. A streamed turn once recorded llm_calls: 0, which made an
+    # entire turn invisible to the cost baseline.
+    ("a model call not counted against the turn",
+     "nm/domain/metrics.py",
+     "        self.llm_calls += 1",
+     "        self.llm_calls += 0",
+     "test_every_turn_writes_metrics_with_latency_calls_tokens_and_model_mix",
+     "E-003"),
+
+    # E-004b. Providers move aliases, and without a pin a metric that moved
+    # is indistinguishable from a regression you caused.
+    ("a floating model alias accepted instead of a dated snapshot",
+     "nm/adapters/model/config.py",
+     "    if not _PINNED.search(model):",
+     "    if False and not _PINNED.search(model):",
+     "test_every_tier_resolves_to_a_pinned_dated_snapshot", "E-004b"),
+
+    # E-004c. A judged run graded by the model that wrote the answer is not
+    # a measurement.
+    ("the judge allowed to be the model under test",
+     "nm/adapters/model/config.py",
+     "    if judge is None:",
+     "    if True:",
+     "test_the_judge_never_resolves_to_the_model_under_test", "E-004c"),
+
+    # E-004g. Every call sends privileged client material to a third party,
+    # so the allow-list is a confidentiality decision, not a technical one.
+    ("an unlisted provider accepted at startup",
+     "nm/adapters/model/config.py",
+     "    if provider not in PERMITTED_PROVIDERS:",
+     "    if False and provider not in PERMITTED_PROVIDERS:",
+     "test_an_unlisted_provider_fails_at_startup", "E-004g"),
+
+    # E-004d. An adapter that truncates silently makes a prompt that does
+    # not port pass locally.
+    ("a context overflow truncated instead of typed",
+     "nm/adapters/model/_budget.py",
+     "    if size > budget:",
+     "    if False and size > budget:",
+     "test_context_overflow_is_typed_never_a_truncation", "E-004d"),
+
+    # E-004f. Querying an index across embedding models does not error --
+    # it returns plausible, confidently wrong neighbours.
+    ("an index built with one embedding model queried with another",
+     "nm/knowledge/artefact.py",
+     "        if expected_model.lower() not in self.builder.lower():",
+     "        if False and expected_model.lower() not in self.builder.lower():",
+     "test_a_real_mismatched_index_is_refused", "E-004f"),
+
+    # E-002d. A theory scenario running at S4 fails for the wrong reason,
+    # and the suite stops meaning what its name says.
+    ("a slice suite selecting scenarios it cannot yet run",
+     "tools/run_goldens.py",
+     "        return [s for s in scenarios if s.slice <= n]",
+     "        return list(scenarios)",
+     "test_slice_n_selects_exactly_the_scenarios_runnable_by_then", "E-002d"),
+
+    # E-021b. Two turns interleaving on one derivation graph would each
+    # compute from a state neither of them saw.
+    ("a stale commit overwriting instead of refusing",
+     "nm/adapters/store/file_store.py",
+     "            if current is not None and current.version > expected_version:",
+     "            if False and current is not None:",
+     "test_a_stale_commit_is_refused_rather_than_overwriting", "E-021b"),
+
+    # E-020b. A turn that ran out of rounds and said nothing is
+    # indistinguishable from one that found everything it needed.
+    ("the evidence bound reached without a visible gap",
+     "nm/core/turn.py",
+     "        if metrics.evidence_rounds >= MAX_EVIDENCE_ROUNDS:",
+     "        if False and metrics.evidence_rounds >= MAX_EVIDENCE_ROUNDS:",
+     "test_reaching_the_evidence_bound_produces_a_visible_gap", "E-020b"),
+
+    # ---- S1-S3: the turn, the evidence contract, thread identity -------
+
+    # E-017. The advocate must never receive advice the file does not
+    # record. Better to fail before showing than to show and fail to save.
+    ("advice emitted without the commit that records it",
+     "nm/core/turn.py",
+     "            matter = self._store.commit(matter, expected_version=expected_version)",
+     "            pass  # commit skipped",
+     "test_a_turn_commits_atomically_and_the_commit_precedes_emission",
+     "E-017"),
+
+    # E-015. A streamed turn whose first token is model prose and whose
+    # duty screen returns after it. The invariants are asserted ON THE
+    # ASSEMBLED OBJECT before anything is released.
+    ("an answer handed to the transport without going through _release",
+     "nm/edge/api.py",
+     "    return _release(output)",
+     "    return output  # bypasses the single exit",
+     "test_nothing_is_released_except_through_the_byte_boundary", "E-015"),
+
+    # E-032. A rename that orphans the chronology. The label is a display
+    # name; the id is generated once and never derived from it.
+    ("a rename that drops the old label instead of keeping it as an alias",
+     "nm/domain/matter.py",
+     "        aliases = self.aliases if self.label in self.aliases"
+     " else self.aliases + (self.label,)",
+     "        aliases = self.aliases",
+     "test_a_renamed_thread_keeps_its_id_and_its_old_label", "E-032"),
+
+    # E-033. A wrong split duplicates work and is visible. A WRONG MERGE
+    # attaches the wrong posture and limitation to facts they do not
+    # govern, and inverts the advice invisibly.
+    ("a merge PERFORMED instead of proposed when two threads share a number",
+     "nm/core/threading.py",
+     "    if len(matches) > 1:",
+     "    if False and len(matches) > 1:",
+     "test_two_threads_with_one_identifier_propose_a_merge_and_never_perform_it",
+     "E-033"),
+
+    # E-006. TurnMetrics becoming provider-shaped is how the cost baseline
+    # stops comparing across a switch.
+    ("a model call whose cost is not normalised into the port's shape",
+     "nm/adapters/model/openai_adapter.py",
+     "                        cost_usd=cfg.cost(t_in, t_out), cached_tokens=cached),",
+     "                        cost_usd=0.0, cached_tokens=cached),",
+     "test_complete_returns_normalised_usage", "E-006"),
+
+    # E-002c. A scenario added to `smoke` alone silently leaves the full
+    # set, and the suite quietly becomes a different set.
+    ("a scenario in no named suite passing unnoticed",
+     "tools/run_goldens.py",
+     "        if s.id not in covered:",
+     "        if False and s.id not in covered:",
+     "test_every_scenario_is_reachable_from_a_suite", "E-002c"),
+
+    # E-002. A scenario citing a provision absent from every store. The
+    # anchors are read back FROM THE CORPUS, on the bytes.
+    ("a golden anchor accepted without reading it back from the corpus",
+     "tools/run_goldens.py",
+     "    if not adapter.available:",
+     "    if True:",
+     "test_every_golden_provision_reads_back_from_the_corpus", "E-002"),
+
+    # E-021. A DEFAULT IS A DECISION TAKEN ON BEHALF OF EVERY CALL SITE
+    # THAT FORGETS, and the three this type used to carry were each the
+    # safe-looking wrong answer: para_kind UNKNOWN makes a submission read
+    # as a holding, binding BINDING makes another State's High Court bind
+    # Telangana, absent treatment makes an overruled case read as good law.
+    ("a Finding constructible without the binding status that makes it usable",
+     "nm/ports/evidence.py",
+     "    binding: Binding",
+     "    binding: Binding = Binding.BINDING",
+     "test_a_finding_cannot_be_built_without_what_makes_it_auditable", "E-021"),
+
+    ('a Finding constructible without the paragraph kind that makes it attributable',
+     "nm/ports/evidence.py",
+     "    para_kind: ParaKind",
+     "    para_kind: ParaKind = ParaKind.UNKNOWN",
+     "test_a_finding_cannot_be_built_without_what_makes_it_auditable", "E-021"),
+
+    # E-013. A turn ending in a pros-and-cons table with no view is the
+    # junior's survey, and it is not advice.
+    # E-013. A turn ending in a pros-and-cons table with no view is the
+    # junior's survey, and it is not advice. THE TYPE is the enforcement:
+    # the metrics check that used to sit in the engine could never fire,
+    # because the constructor had already refused the case.
+    ("an answer with no recommendation and no blocking question",
+     "nm/domain/answer.py",
+     "        if first.kind not in (ElementKind.ACTION, ElementKind.QUESTION):",
+     "        if False and first.kind not in (ElementKind.ACTION,):",
+     "test_the_first_content_element_is_an_action_or_a_blocking_question",
+     "E-013"),
+
+    # E-025. An inference rendered with a citation attached. The grounding
+    # gate holds ASSERTING elements to their findings and leaves
+    # disclosures alone, and collapsing the two either punishes the product
+    # for being honest or lets an unusable source ground an answer.
+    ("an assertion citing what was never retrieved",
+     "nm/core/grounding.py",
+     "        if element.disclosure:",
+     "        if True:",
+     "test_a_proposition_carries_a_finding_and_an_inference_never_does",
+     "E-025"),
+
+    # E-004h. A prompt built to fill one provider's context does not port,
+    # and finding that out at switch time defeats the whole design. The
+    # budget is the PORT'S, declared once, not each provider's.
+    ("the context budget taken from the provider instead of the port",
+     "nm/adapters/model/config.py",
+     "    Tier.ROUTINE: 100_000,",
+     "    Tier.ROUTINE: 2_000_000,",
+     "test_context_budget_is_declared_by_the_port_not_the_provider", "E-004h"),
+
+    # E-005. An abstraction nobody has switched is an unexercised claim.
+    # The scripted adapter is the SECOND PROVIDER, and it satisfies the
+    # same Protocol or the port has quietly become OpenAI-shaped.
+    ("an adapter that no longer satisfies the port protocol",
+     "nm/adapters/model/scripted.py",
+     "    def embed(self, texts: tuple[str, ...]) -> EmbeddingResult:",
+     "    def embeddings(self, texts: tuple[str, ...]) -> EmbeddingResult:",
+     "test_adapter_satisfies_the_port_protocol", "E-005"),
+
+    # E-014. A guard proven in the core and never reached on the wire is
+    # not a guard. Every defect the first external review found lived in
+    # exactly that gap, so each response class is driven through the app.
+    ("a gate that fires in the core and never reaches the served path",
+     "nm/core/turn.py",
+     '            "G-UNSCREENED", "unscreened",',
+     '            "G-COVERAGE", "unscreened",',
+     "test_every_response_class_is_exercised_on_the_served_path", "E-014"),
+
+    # E-024. B-164, the previous build's priority-one blocker: a coverage
+    # report saying the Act holds 13 of 44 sections, measured from ONE
+    # store, which struck three golden scenarios while the Acts were
+    # complete the whole time.
+    ("coverage measured from one store instead of the union",
+     "spec/manifest.yaml",
+     "  - '%SPECIFIC RELIEF ACT, 1963%'\n  - the_specific_relief_act_1963",
+     "  - the_specific_relief_act_1963",
+     "test_coverage_is_a_union_and_a_single_store_figure_is_refused", "E-024"),
+
     ("a persisted field silently dropped on read",
      "nm/adapters/store/file_store.py",
      "                          for f in fields(cls) if f.name in value})",

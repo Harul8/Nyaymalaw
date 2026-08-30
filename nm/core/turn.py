@@ -1011,9 +1011,17 @@ class TurnEngine:
         first = answer.elements[0]
         if first.kind not in (ElementKind.ACTION, ElementKind.QUESTION):
             metrics.violate("S3", "first element is neither an action nor a question")
-        if not any(e.kind in (ElementKind.ACTION, ElementKind.QUESTION)
-                   for e in answer.elements):
-            metrics.violate("D2", "no recommendation and no blocking question")
+        # D2 -- "every turn contains a recommendation or a blocking
+        # question" -- IS ENFORCED BY THE TYPE, not here.
+        #
+        # `Answer.__post_init__` refuses a matter-route answer whose first
+        # element is neither, so there is always at least one and the check
+        # that used to sit here could never fire. A mutation deleting it
+        # changed nothing, which is how it was found.
+        #
+        # A runtime check for something a type makes impossible is not a
+        # second line of defence. It is a line that never executes, and a
+        # reader takes it for a live guard.
         for e in answer.loud_signals:
             if e.collapsible:
                 metrics.violate("S5", f"loud signal {e.signal.value} is collapsible")

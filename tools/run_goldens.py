@@ -162,9 +162,22 @@ def check_structure(scenarios: list[Scenario]) -> list[str]:
     """E-002c / E-002d. A suite is a FILTER over the set, never a different set."""
     failures = []
     covered = {i for ids in SUITES.values() for i in ids}
+    # EVERY SCENARIO IS IN A NAMED SUITE.
+    #
+    # This used to carry a second condition -- `and not any(s.slice <= n
+    # for n in range(1, 10))` -- which is False for every scenario, because
+    # every slice is 9 or less. The branch could not execute, so E-002c was
+    # enforced by a line that had never run and reported OK on every commit.
+    #
+    # `full` and `slice-N` are GENERATED and cover everything by
+    # construction, so they prove nothing about curation. A scenario in no
+    # named suite can only ever run in an everything-run, which is the one
+    # nobody does before a commit.
     for s in scenarios:
-        if s.id not in covered and not any(s.slice <= n for n in range(1, 10)):
-            failures.append(f"{s.id} is in no named suite")
+        if s.id not in covered:
+            failures.append(
+                f"{s.id} is in no named suite, so it runs only in `full` "
+                f"or a `slice-N` sweep and never in a targeted run")
 
     # Every id a suite names must exist. A suite naming a scenario that is not
     # in the set is how a suite quietly becomes a different set.

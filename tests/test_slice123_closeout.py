@@ -22,7 +22,7 @@ import json
 import pytest
 
 from nm.adapters.store.file_store import FileMatterStore
-from nm.core.turn import MAX_EVIDENCE_ROUNDS, TurnEngine, TurnInput
+from nm.core.turn import TurnEngine, TurnInput
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
 from nm.domain.gates import GATES, Response
 from nm.domain.traceability import refuses
@@ -75,14 +75,28 @@ def test_a_turn_commits_atomically_and_the_commit_precedes_emission(tmp_path):
 
 @pytest.mark.eval_id("E-020b")
 @refuses("H4", 0)
-def test_reaching_the_evidence_bound_produces_a_visible_gap(tmp_path):
+def test_reaching_the_evidence_bound_produces_a_visible_gap(tmp_path, monkeypatch):
     """THE COUNTEREXAMPLE: a turn that hit the round cap and answered as if the
     evidence had been retrieved.
 
     `MAX_EVIDENCE_ROUNDS` was declared in slice 1 and read by nothing, and
     `evidence_bound_hit` was a field no code ever set. The bound existed as a
     number in a file.
+
+    THIS TEST USED TO ASSERT `evidence_rounds <= MAX_EVIDENCE_ROUNDS`, which is
+    true whether or not the bound works: the engine makes at most two fetches a
+    turn, so three is unreachable and nothing could ever exceed it. A mutation
+    disabling the guard entirely left it green. That is a test asserting
+    CURRENT BEHAVIOUR rather than the rule, and the rule is not "the count
+    stays low" -- it is that REACHING THE BOUND IS VISIBLE.
+
+    So the bound is lowered and the engine driven into it. The bound is a guard
+    against a retrieval loop that does not exist yet, exactly as `bind-1`
+    guards a corpus that does not exist yet, and the way to test either is to
+    drive it rather than to wait for it.
     """
+    from nm.core import turn as turn_module
+
     class _Exhausting:
         """Every fetch succeeds, so only the BOUND can stop the turn."""
 
@@ -91,15 +105,27 @@ def test_reaching_the_evidence_bound_produces_a_visible_gap(tmp_path):
                 coverage=Coverage.ANSWERED, findings=(finding(),),
                 searched_stores=("s",))
 
+    monkeypatch.setattr(turn_module, "MAX_EVIDENCE_ROUNDS", 1)
     engine, _ = build(tmp_path, evidence=_Exhausting())
     out = engine.run(TurnInput(
         advocate_id="adv",
         message=("we act for the plaintiff; is there any judgment on "
                  "Article 65 possession we can rely on?")))
 
-    assert out.metrics.evidence_rounds <= MAX_EVIDENCE_ROUNDS, (
-        f"{out.metrics.evidence_rounds} rounds ran against a bound of "
-        f"{MAX_EVIDENCE_ROUNDS}")
+    assert out.metrics.evidence_rounds <= 1, (
+        f"{out.metrics.evidence_rounds} rounds ran against a bound of 1")
+    assert out.metrics.evidence_bound_hit, (
+        "the bound was reached and nothing recorded it. `evidence_bound_hit` "
+        "was a field no code ever set, which is how the bound came to exist as "
+        "a number in a file.")
+
+    # AND THE ADVOCATE IS TOLD. A turn that ran out of rounds and said nothing
+    # is indistinguishable from one that found everything it needed -- and they
+    # would read it as the second.
+    disclosed = [e.text for e in out.answer.elements if e.disclosure]
+    assert any("stopped after" in t for t in disclosed), (
+        "the turn hit the evidence bound and answered as though it had not. "
+        f"Disclosures were: {disclosed}")
 
 
 def test_the_bound_is_enforced_by_the_engine_not_by_the_caller(tmp_path):

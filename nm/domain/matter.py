@@ -283,11 +283,21 @@ class Thread:
     def _implements_c4() -> str:
         """Thread identity (feature C4) is a property of THIS TYPE.
 
-        The id is generated once and never derived from the label, aliases are
-        never keys, and merging requires a decisive identifier. Those rules are
-        enforced by the constructor and by `decisive_identifier_matches`, so
-        the feature is declared here rather than on a function that happens to
-        call it.
+        The id is generated once and never derived from the label, and
+        aliases are never keys. Those two are properties of THIS TYPE and
+        the constructor enforces them.
+
+        THE MERGE RULE IS NOT HERE, and this docstring used to say it was:
+        it named a `decisive_identifier_matches` method as the enforcement,
+        and that method had no callers at all. `nm/core/threading.bind()`
+        does the matching, and it has to -- it distinguishes one match from
+        many, and PROPOSES a merge rather than performing one, neither of
+        which a boolean on a single thread can express.
+
+        A second copy of "do these share a decisive identifier" is the
+        arrangement that produced the O.S. 442/2023 defect, where one copy
+        was hardened and the other was not. So the unused method was
+        deleted rather than given a caller.
         """
         return "C4"
 
@@ -296,15 +306,6 @@ class Thread:
         aliases = self.aliases if self.label in self.aliases else self.aliases + (self.label,)
         return replace(self, label=label, aliases=aliases)
 
-    def decisive_identifier_matches(self, other: "Thread") -> bool:
-        """Ranked identity: a decisive identifier settles it; label similarity
-        NEVER does. The failure is asymmetric -- a wrong split duplicates work
-        and is visible; a wrong merge attaches the wrong posture and limitation
-        to facts they do not govern, and inverts the advice invisibly."""
-        return any(
-            k in other.identifiers and other.identifiers[k] == v
-            for k, v in self.identifiers.items()
-        )
 
 
 # ----------------------------------------------------- what we have asked ---

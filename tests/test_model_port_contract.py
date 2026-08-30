@@ -130,7 +130,15 @@ def test_complete_returns_normalised_usage(adapter):
     assert r.text
     assert r.tier is Tier.ROUTINE
     assert r.usage.tokens_in > 0 and r.usage.tokens_out > 0
-    assert r.usage.cost_usd >= 0.0
+    # COST IS DERIVED FROM THE TIER'S DECLARED PRICING, in one shape for
+    # every provider. `>= 0.0` was satisfied by 0.0, so an adapter that
+    # reported no cost at all passed -- and the cost baseline stops
+    # comparing across a provider switch the moment one of them does.
+    cfg = _config().for_tier(Tier.ROUTINE)
+    expected = cfg.cost(r.usage.tokens_in, r.usage.tokens_out)
+    assert r.usage.cost_usd == pytest.approx(expected), (
+        f"cost {r.usage.cost_usd} is not the tier's own computation "
+        f"{expected} over {r.usage.tokens_in}/{r.usage.tokens_out} tokens")
     assert r.latency_ms >= 0
     assert r.downgraded_from is None and not r.was_downgraded
 
