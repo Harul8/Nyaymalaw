@@ -256,6 +256,26 @@ def _read_bench(text: str, head: str) -> tuple[list[str], str]:
     if signatures:
         return [f"judge {i + 1}" for i in range(len(signatures))], "signature_block"
 
+    # LAST RESORT: the authoring judge, named inline after the JUDGMENT
+    # heading. This is 2,222 of the 3,245 files with no bench notation, and it
+    # is taken as ONE JUDGE on a product decision, recorded here because the
+    # reasoning is not obvious.
+    #
+    # The objection was that "Srinivasachari, J." names who WROTE the judgment,
+    # not who heard it, so counting it demotes a Division Bench whose author
+    # signed alone. True — and the demotion only ever runs ONE WAY. One is the
+    # minimum bench, so an inferred size can rank an authority BELOW where it
+    # belongs and can never rank one above. That is a recall cost, not a
+    # confidently wrong answer, and it is paid to keep 2,222 judgments usable
+    # rather than discarding them: the principles they state are good whatever
+    # the coram was.
+    #
+    # `bench_source` carries the provenance so nothing downstream mistakes an
+    # inferred single judge for a stated one.
+    author = _INLINE_AUTHOR.search(text[:4000])
+    if author:
+        return [" ".join(author.group(1).split())], "author_inline"
+
     return [], "none"
 
 
@@ -407,15 +427,21 @@ def main() -> int:
         # a fifth of the 1950s and none of the 2010s.
         era = f"{(rec['year'] // 10) * 10}s" if rec["year"] else "unknown"
         if not rec["bench_size"]:
-            reason = ("author named inline but the BENCH is not stated — "
-                      "'Name, J.' after the JUDGMENT heading names who wrote "
-                      "it, not who heard it, and counting it as a single judge "
-                      "would demote every Division Bench whose author signed "
-                      "alone"
-                      if _INLINE_AUTHOR.search(text[:4000]) else
-                      "no bench notation found in any of: Bench:, CORAM:, "
-                      "HON'BLE list, signature block")
-            rejects.append((rec["case_id"], "bench", reason, era, rec["source_file"]))
+            rejects.append((
+                rec["case_id"], "bench",
+                "no bench notation found in any of: Bench:, CORAM:, HON'BLE "
+                "list, signature block, inline authoring judge", era,
+                rec["source_file"]))
+        elif rec["bench_source"] == "author_inline":
+            # NOT a reject -- the judgment is usable and ranked. Recorded so
+            # the inferred share stays visible and can be re-examined if a
+            # better notation is found for this era.
+            rejects.append((
+                rec["case_id"], "bench_inferred",
+                "bench size taken as ONE from the authoring judge named inline; "
+                "the coram is not stated. An inferred size can only rank this "
+                "authority lower than it belongs, never higher", era,
+                rec["source_file"]))
         if not rec["_citations"]:
             rejects.append((rec["case_id"], "citations",
                             "no `Equivalent citations:` line — this judgment "

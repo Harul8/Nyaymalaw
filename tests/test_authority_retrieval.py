@@ -357,24 +357,67 @@ def test_what_could_not_be_established_is_enumerable_not_null(identity):
     assert blank == 0, f"{blank} rejects recorded with no reason"
 
 
-def test_the_authoring_judge_is_never_counted_as_the_bench(identity):
-    """67% of the missing-bench files carry an inline `Name, J.` — the judge who
-    WROTE the judgment, not the bench that heard it.
+def test_the_authoring_judge_is_counted_as_one_and_marked_as_inferred(identity):
+    """2,222 judgments name only their authoring judge — "Srinivasachari, J."
+    after the JUDGMENT heading — and no coram.
 
-    Counting it as a single-judge bench would raise coverage from 90.5% to 97%
-    and silently demote every Division Bench whose author signed alone. Bench
-    size decides which authority governs, so the gap is left open and named.
+    THE DECISION, and the reasoning that overturned my first one. I discarded
+    these, on the ground that the author is not the bench and counting them
+    would demote a Division Bench whose author signed alone. That risk is real
+    and it RUNS ONLY ONE WAY: one is the minimum bench, so an inferred size can
+    rank an authority below where it belongs and can never rank one above. A
+    recall cost, not a confidently wrong answer — and it is paid to keep 2,223
+    judgments usable, because the principles they state are good whatever the
+    coram was.
+
+    What is kept from the objection is the PROVENANCE. "Single judge" read off
+    a signature and "single judge" read off a coram are different facts, and an
+    advocate weighing an authority is entitled to know which they hold.
     """
     import sqlite3
     con = sqlite3.connect(f"file:{IDENTITY}?mode=ro", uri=True)
     try:
-        rows = con.execute(
-            "select count(*) from rejects where field='bench' "
-            "and reason like '%names who wrote it%'").fetchone()[0]
         sources = dict(con.execute(
             "select bench_source, count(*) from cases group by 1").fetchall())
+        established = con.execute(
+            "select count(*) from cases where bench_size is not null").fetchone()[0]
+        total = con.execute("select count(*) from cases").fetchone()[0]
+        inferred_case = con.execute(
+            "select case_id from cases where bench_source='author_inline' limit 1"
+        ).fetchone()[0]
     finally:
         con.close()
-    assert rows > 1000, "the author-only rejects have stopped being recorded"
-    assert "author_inline" not in sources, (
-        "an authoring judge is being counted as a bench")
+
+    assert sources.get("author_inline", 0) > 2000
+    assert established / total > 0.95, (
+        f"bench established for only {established / total:.1%}; the inferred "
+        f"strategy has stopped contributing")
+
+    # Every inferred case is exactly one judge, and SAYS it was inferred.
+    ident = identity.case(inferred_case)
+    assert ident.bench_size == 1
+    assert ident.bench_inferred
+    assert "inferred" in ident.describe()
+    assert "no coram stated" in ident.describe()
+
+
+def test_a_ranking_that_rests_on_an_inferred_bench_discloses_it(identity):
+    """The error only runs one way, so the disclosure only needs to run one
+    way: when the LOSER's bench was inferred, say it may have been larger."""
+    import sqlite3
+
+    from nm.knowledge.identity import Precedence, supersedes
+    con = sqlite3.connect(f"file:{IDENTITY}?mode=ro", uri=True)
+    try:
+        inferred = con.execute(
+            "select case_id from cases where bench_source='author_inline' limit 1"
+        ).fetchone()[0]
+        stated = con.execute(
+            "select case_id from cases where bench_source='bench_header' "
+            "and bench_size = 3 limit 1").fetchone()[0]
+    finally:
+        con.close()
+
+    verdict, why = supersedes(identity.case(stated), identity.case(inferred))
+    assert verdict is Precedence.LEFT
+    assert "may in fact have been larger" in why

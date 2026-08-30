@@ -91,6 +91,20 @@ class CaseIdentity:
     petitioner: str | None = None
     respondent: str | None = None
     cited_by: int | None = None
+    bench_source: str | None = None
+    """HOW the bench size was established, not just what it is.
+
+    `bench_header` and `coram_header` are STATED by the judgment.
+    `author_inline` is INFERRED from the authoring judge where no coram is
+    given -- 2,223 judgments, taken as one judge so they stay usable rather
+    than being discarded.
+
+    The inference can only ever rank an authority BELOW where it belongs: one
+    is the minimum bench, so a Division Bench read as a single judge loses a
+    comparison it should win, and nothing is ever ranked higher than it is.
+    That is a recall cost, not a wrong answer — but a reader must still be able
+    to see which it was, so it travels with the record.
+    """
 
     @property
     def tier(self) -> Tier:
@@ -100,11 +114,24 @@ class CaseIdentity:
     def bench_known(self) -> bool:
         return bool(self.bench_size)
 
+    @property
+    def bench_inferred(self) -> bool:
+        """The size came from the authoring judge, not from a stated coram."""
+        return self.bench_source == "author_inline"
+
     def describe(self) -> str:
-        """One line an advocate can weigh, in the vocabulary they use."""
+        """One line an advocate can weigh, in the vocabulary they use.
+
+        An INFERRED size says so. "Single judge" read off a signature and
+        "single judge" read off a coram are different facts, and an advocate
+        deciding how much weight to give an authority is entitled to know
+        which one they have.
+        """
         n = self.bench_size
         if not n:
             return "bench not recorded"
+        if self.bench_inferred:
+            return "single judge (inferred from the authoring judge; no coram stated)"
         if n == 1:
             return "single judge"
         if n == 2:
@@ -151,8 +178,16 @@ def supersedes(left: CaseIdentity, right: CaseIdentity) -> tuple[Precedence, str
               else Precedence.RIGHT)
     bigger, smaller = ((left, right) if left.bench_size > right.bench_size
                        else (right, left))
+    caveat = ""
+    if smaller.bench_inferred:
+        # The loser's size was inferred from its authoring judge. Say so: it
+        # may have been a Division Bench that signed with one name, in which
+        # case this ranking is too harsh on it. The error can only run this
+        # way, and the advocate can check in one click.
+        caveat = (" — though the smaller one's bench was inferred from its "
+                  "authoring judge and may in fact have been larger")
     return winner, (f"{bigger.describe()} supersedes {smaller.describe()} in the "
-                    f"same court")
+                    f"same court{caveat}")
 
 
 class IdentityIndex:
@@ -223,7 +258,7 @@ class IdentityIndex:
             return None
         row = con.execute(
             "select case_id, court, year, title, bench_size, bench, petitioner,"
-            " respondent, cited_by from cases where case_id = ?",
+            " respondent, cited_by, bench_source from cases where case_id = ?",
             (case_id,)).fetchone()
         return CaseIdentity(*row) if row else None
 
