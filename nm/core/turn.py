@@ -625,11 +625,19 @@ class TurnEngine:
             for f in shown:
                 if f.usable:
                     relied_on.append(f)
+                    # THE SCOPE OF THE TREATMENT CHECK TRAVELS WITH THE
+                    # AUTHORITY. "Clean" here means nothing in the 34,037
+                    # judgments held treats it adversely -- a statement about
+                    # this corpus, not about Indian law -- and an advocate who
+                    # is not told the boundary will read it as the wider claim.
+                    checked = ""
+                    if f.source_kind is SourceKind.AUTHORITY:
+                        checked = f" Treatment: {f.treatment.scope}."
                     grounds.append(Element(
                         kind=ElementKind.GROUND, thread=thread.id,
                         text=(f'{f.ref} — "{f.span.strip()[:400]}" ({f.locator}; '
                               f"{f.binding.value} for {f.binding_for} — "
-                              f"{f.binding_reason})."),
+                              f"{f.binding_reason}).{checked}"),
                         refs=(f.locator,)))
                 elif f.quotable:
                     # SHOWN, with its status disclosed, and NOT relied on.

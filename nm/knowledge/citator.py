@@ -65,11 +65,23 @@ def normalise_case_name(name: str) -> str:
 
 
 class Citator:
-    """Read-only. Built offline, consulted at turn time."""
+    """Read-only. Built offline, consulted at turn time.
 
-    def __init__(self, path: str | Path) -> None:
+    TWO SOURCES, AND THE BETTER ONE ANSWERS FIRST. The shipped
+    `citator.json` reaches 0.83% of held judgments. The identity index, built
+    from the source files, makes 82.2% ADDRESSABLE -- so for most judgments it
+    can say *nothing in the 34,037 held treats this adversely*, which is a
+    check with a scope rather than a silence.
+
+    The shipped citator is kept as a fallback rather than discarded: it names
+    treatment by judgments outside the corpus, which the identity index cannot
+    see by construction.
+    """
+
+    def __init__(self, path: str | Path, identity=None) -> None:
         self._path = Path(path)
         self._index: dict[str, dict] | None = None
+        self._identity = identity
 
     @property
     def available(self) -> bool:
@@ -88,8 +100,15 @@ class Citator:
     def entries(self) -> int:
         return len(self._load())
 
-    def treatment(self, case_name: str) -> Treatment:
+    def treatment(self, case_name: str, case_id: str | None = None) -> Treatment:
         """Three states, always. THE MISS IS THE IMPORTANT ONE."""
+        # The rebuilt index answers first where it can, because it answers for
+        # 82.2% of judgments and this one for 0.83%.
+        if case_id and self._identity is not None and self._identity.available:
+            result = self._identity.treatment(case_id)
+            if result.state is not TreatmentState.NOT_CHECKED:
+                return result
+
         if not self.available:
             return Treatment.not_checked(
                 f"the citator is not readable at {self._path}; subsequent "

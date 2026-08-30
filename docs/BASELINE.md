@@ -278,7 +278,53 @@ party blocks. The derived layer dropped all of it.
 > follow it. Use PowerShell `Get-ChildItem -Recurse`, or Python `pathlib`,
 > both of which do.
 
-### 4.2.1 What the correction unlocks, measured
+### 4.2.1 ONE FORMAT DOES NOT FIT SEVENTY YEARS — the rejects table
+
+The files run from 1955 to 2026, and the header format drifts across them. A
+single parser silently produces a partial record, and an undifferentiated NULL
+cannot say whether a field is ABSENT from the judgment or merely written
+differently in that era.
+
+So every field that cannot be established is recorded in a `rejects` table with
+a **reason** and an **era**. Measured on the first run, and the drift runs in
+*opposite directions by field*:
+
+| Era | bench missing | citations missing | parties missing |
+|---|---:|---:|---:|
+| 1950s | 267 | 0 | 415 |
+| 1960s | 530 | 0 | 814 |
+| 1970s | 550 | 0 | 1,263 |
+| 1980s | 376 | 0 | 1,124 |
+| 1990s | 608 | 0 | 1,787 |
+| 2000s | 523 | 2 | 1,977 |
+| 2010s | **14** | 758 | 6,807 |
+| 2020s | 377 | **5,300** | 6,225 |
+
+**Bench parsing fails in the old era and is clean in the 2010s. Citations and
+parties fail in the modern one.** No single format assumption survives that.
+
+**The table paid for itself on its first run.** 49% of the citation rejects
+carried a NEUTRAL citation instead — `2025 INSC 407` — which the modern Supreme
+Court stamps in place of an `Equivalent citations:` line. Adding it lifted
+citation coverage from **82.2% to 90.9%** and halved the citation rejects,
+recovering 2,973 judgments in exactly the era an advocate is most likely to be
+citing.
+
+**What is deliberately NOT recovered.** 2,222 of the 3,245 bench rejects carry
+an inline `Name, J.` after the JUDGMENT heading. That names the judge who WROTE
+the judgment, not the bench that heard it. Counting it would lift bench coverage
+from 90.5% to about 97% and **silently demote every Division Bench whose author
+signed alone** — and bench size decides which authority governs. The gap stays
+open and named.
+
+> **CHECK `rej-1`:** an ingestion pass over a corpus spanning decades records
+> what it could not establish, with a reason and an era. A field that is merely
+> NULL cannot be worked, and a parser with no rejects is a parser that is
+> guessing.
+
+---
+
+### 4.2.2 What the correction unlocks, measured
 
 Building a citation index from the 299,965 `Equivalent citations:` keys and
 scanning every source file for blocks carrying a treatment verb:

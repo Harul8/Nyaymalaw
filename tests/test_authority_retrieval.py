@@ -207,3 +207,174 @@ def test_the_provision_route_is_unaffected_by_the_authority_route(adapter):
     assert provision.findings[0].source_kind is SourceKind.PROVISION
     assert provision.findings[0].para_kind is ParaKind.UNKNOWN
     assert "authority_index" not in provision.searched_stores
+
+
+# ============================================ the identity index ===========
+
+IDENTITY = ROOT / ".nm" / "identity.db"
+
+
+@pytest.fixture(scope="module")
+def identity():
+    from nm.knowledge.identity import IdentityIndex
+    ix = IdentityIndex(IDENTITY)
+    if not ix.available:
+        pytest.skip("the identity index is not built — "
+                    "run python tools/build_identity_index.py")
+    return ix
+
+
+def test_the_identity_index_recovers_what_the_derived_store_dropped(identity):
+    """The measurement that reversed a design decision.
+
+    `vector_store/` put bench coverage at 7.5% and a hierarchy rule was
+    declined on it. The source files carry `Bench:` on 90.2%.
+    """
+    s = identity.stats()
+    cases, bench = int(s["cases"]), int(s["with_bench"])
+    assert cases > 30_000
+    assert bench / cases > 0.85, (
+        f"bench coverage fell to {bench / cases:.1%} — the parse has regressed, "
+        f"and a wrong bench size silently changes which authority governs")
+    assert int(s["citation_keys"]) > 250_000
+
+
+def test_the_bench_distribution_stays_plausible(identity):
+    """A REGRESSION GUARD ON THE PARSE ITSELF.
+
+    The first parse scanned to a stop keyword. Only 40% of files carry a
+    `PETITIONER:` header, so on the rest it ran into the judgment body and
+    counted "IN THE SUPREME COURT OF INDIA" and the case number as judges —
+    producing 1,556 nine-judge benches, roughly a hundred times the number in
+    the Supreme Court's history. Every count looked fine; only the shape gave
+    it away.
+    """
+    import sqlite3
+    con = sqlite3.connect(f"file:{IDENTITY}?mode=ro", uri=True)
+    try:
+        rows = dict(con.execute(
+            "select bench_size, count(*) from cases where bench_size is not null "
+            "group by 1").fetchall())
+    finally:
+        con.close()
+    total = sum(rows.values())
+    small = sum(v for k, v in rows.items() if k <= 3)
+    huge = sum(v for k, v in rows.items() if k >= 8)
+    assert small / total > 0.85, (
+        f"only {small / total:.1%} of benches are 1-3 judges; real practice is "
+        f"overwhelmingly single judge and Division Bench")
+    assert huge / total < 0.005, (
+        f"{huge:,} benches of 8+ judges is not plausible — the parse is "
+        f"swallowing non-judge lines again")
+
+
+def test_treatment_is_answerable_for_the_great_majority(identity):
+    """THE POINT OF THE WHOLE EXERCISE.
+
+    The shipped citator reaches 0.83% of held judgments. What changed is not
+    that more cases have treatment — most judgments are never doubted — but
+    that the QUESTION is now answerable: *does anything in the 34,037 held
+    treat this adversely?* That is a check with a scope, not a silence.
+    """
+    import sqlite3
+    con = sqlite3.connect(f"file:{IDENTITY}?mode=ro", uri=True)
+    try:
+        cases = [r[0] for r in con.execute(
+            "select case_id from cases order by random() limit 200")]
+    finally:
+        con.close()
+    answered = sum(1 for c in cases
+                   if identity.treatment(c).state.value != "not_checked")
+    assert answered / len(cases) > 0.70, (
+        f"only {answered / len(cases):.1%} of judgments got a treatment answer; "
+        f"82.2% carry a reporter citation and should be addressable")
+
+
+def test_a_clean_answer_states_the_scope_it_was_checked_against(identity):
+    """`clean` is a statement about 34,037 judgments, NOT about Indian law.
+    An advocate not told the boundary will read it as the wider claim."""
+    import sqlite3
+    con = sqlite3.connect(f"file:{IDENTITY}?mode=ro", uri=True)
+    try:
+        cid = con.execute(
+            "select case_id from citations join cases using (case_id) limit 1"
+        ).fetchone()[0]
+    finally:
+        con.close()
+    t = identity.treatment(cid)
+    assert "34,037" in t.scope
+    assert "outside this corpus" in t.scope
+
+
+def test_an_adverse_record_is_offered_as_a_passage_to_read_not_a_holding(identity):
+    """Extraction from prose gets direction wrong some of the time — "overruled
+    by X" and "overruled X" are one word apart. So an adverse record says a
+    passage EXISTS and hands it over; it never asserts that the judgment is
+    overruled."""
+    import sqlite3
+    con = sqlite3.connect(f"file:{IDENTITY}?mode=ro", uri=True)
+    try:
+        row = con.execute("select target_case_id from treatment "
+                          "where grade='adverse' limit 1").fetchone()
+    finally:
+        con.close()
+    if row is None:
+        pytest.skip("no adverse records in this build")
+    t = identity.treatment(row[0])
+    assert t.state.value == "negative"
+    assert "appear to treat" in t.scope
+    assert "not a holding" in t.scope
+
+
+def test_what_could_not_be_established_is_enumerable_not_null(identity):
+    """THE REJECTS TABLE.
+
+    These files span 1955 to 2026 and one header format does not fit them. An
+    undifferentiated NULL conflates *this judgment states no bench* with *this
+    era writes it differently*, and neither can be worked.
+
+    Enumerated, the drift is obvious and runs in OPPOSITE DIRECTIONS by field:
+    bench parsing fails in the old era and is clean in the 2010s, while
+    citations and parties fail in the modern one. That is what found the
+    neutral-citation format — `2025 INSC 407` — which lifted citation coverage
+    from 82.2% to 90.9% on the next build.
+    """
+    rows = identity.rejects()
+    assert rows, "a corpus spanning seventy years with no rejects is a parser that lies"
+
+    fields = {f for f, _, _ in rows}
+    assert {"bench", "citations", "parties"} <= fields
+
+    # Every reject carries a REASON, not just a count.
+    import sqlite3
+    con = sqlite3.connect(f"file:{IDENTITY}?mode=ro", uri=True)
+    try:
+        blank = con.execute(
+            "select count(*) from rejects where reason is null or trim(reason) = ''"
+        ).fetchone()[0]
+    finally:
+        con.close()
+    assert blank == 0, f"{blank} rejects recorded with no reason"
+
+
+def test_the_authoring_judge_is_never_counted_as_the_bench(identity):
+    """67% of the missing-bench files carry an inline `Name, J.` — the judge who
+    WROTE the judgment, not the bench that heard it.
+
+    Counting it as a single-judge bench would raise coverage from 90.5% to 97%
+    and silently demote every Division Bench whose author signed alone. Bench
+    size decides which authority governs, so the gap is left open and named.
+    """
+    import sqlite3
+    con = sqlite3.connect(f"file:{IDENTITY}?mode=ro", uri=True)
+    try:
+        rows = con.execute(
+            "select count(*) from rejects where field='bench' "
+            "and reason like '%names who wrote it%'").fetchone()[0]
+        sources = dict(con.execute(
+            "select bench_source, count(*) from cases group by 1").fetchall())
+    finally:
+        con.close()
+    assert rows > 1000, "the author-only rejects have stopped being recorded"
+    assert "author_inline" not in sources, (
+        "an authoring judge is being counted as a bench")

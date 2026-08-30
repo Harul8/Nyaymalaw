@@ -61,7 +61,9 @@ class Application:
             or (self.root / "legal_database" / "vector_store"),
             self.manifest,
             authority_index=(os.environ.get("NM_AUTHORITY_INDEX")
-                             or default_authority_index(self.root)))
+                             or default_authority_index(self.root)),
+            identity_index=(os.environ.get("NM_IDENTITY_INDEX")
+                            or (self.root / ".nm" / "identity.db")))
         self.model = model or build_model(self.config)
         self.coverage = CoverageProfile.load(self.root / "spec" / "coverage.yaml")
         self.engine = TurnEngine(store=self.store, evidence=self.evidence,

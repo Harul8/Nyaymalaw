@@ -344,6 +344,44 @@ def score(rows: list[dict], m: dict) -> Score:
           "NOT BUILT -- run python tools/build_authority_index.py",
           blocking("RG-07"))
 
+    # RG-08 / RG-09 -- the identity index and the shape of what it parsed
+    identity = ROOT / ".nm" / "identity.db"
+    if not identity.exists():
+        for rid in ("RG-08", "RG-09"):
+            s.add(rid, FAIL, "NOT BUILT -- run python tools/build_identity_index.py",
+                  blocking(rid))
+    else:
+        con = sqlite3.connect(f"file:{identity}?mode=ro", uri=True)
+        try:
+            ident = dict(con.execute("select key, value from identity").fetchall())
+            sizes = dict(con.execute(
+                "select bench_size, count(*) from cases where bench_size is not null"
+                " group by 1").fetchall())
+        finally:
+            con.close()
+        cases, with_bench = int(ident["cases"]), int(ident["with_bench"])
+        keys = int(ident["citation_keys"])
+        ok = with_bench / cases >= 0.85 and keys >= 250_000
+        s.add("RG-08", PASS if ok else FAIL,
+              f"{with_bench:,} of {cases:,} judgments carry a parsed bench "
+              f"({with_bench / cases:.1%}); {keys:,} citation keys; "
+              f"{ident['targets_adverse']} judgments with adverse treatment; "
+              f"{ident.get('rejects', '?')} rejects recorded",
+              blocking("RG-08"),
+              "The corpus spans 1955-2026 and the header format drifts. Every "
+              "field that could not be established is recorded in `rejects` "
+              "with a reason and an era, so the gap is enumerable rather than "
+              "an undifferentiated NULL.")
+
+        total = sum(sizes.values()) or 1
+        small = sum(v for k, v in sizes.items() if k <= 3) / total
+        huge = sum(v for k, v in sizes.items() if k >= 8) / total
+        s.add("RG-09", PASS if (small >= 0.85 and huge < 0.005) else FAIL,
+              f"{small:.1%} of benches are 1-3 judges, {huge:.2%} are 8 or more",
+              blocking("RG-09"),
+              "" if small >= 0.85 else
+              "the bench parse is swallowing non-judge lines again")
+
     # Rows this tool deliberately does not measure.
     for rid, why in (
             ("RG-10", "run tools/trace.py"),

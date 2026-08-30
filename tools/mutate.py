@@ -178,6 +178,36 @@ MUTATIONS = [
      "test_an_out_of_vocabulary_state_is_refused",
      "E-065"),
 
+    ("a smaller bench treated as superseding a larger one",
+     "nm/knowledge/identity.py",
+     "    winner = (Precedence.LEFT if left.bench_size > right.bench_size",
+     "    winner = (Precedence.LEFT if left.bench_size < right.bench_size",
+     "test_a_larger_bench_supersedes_a_smaller_one_in_the_same_court", "E-022"),
+
+    ("co-ordinate benches ranked instead of referred",
+     "nm/knowledge/identity.py",
+     "    if left.bench_size == right.bench_size:",
+     "    if False and left.bench_size == right.bench_size:",
+     "test_co_ordinate_benches_do_not_supersede_each_other", "E-022"),
+
+    ("an unrecorded bench defaulting instead of blocking",
+     "nm/knowledge/identity.py",
+     "    if not (left.bench_known and right.bench_known):",
+     "    if False and not (left.bench_known and right.bench_known):",
+     "test_an_unrecorded_bench_blocks_the_comparison_rather_than_defaulting", "E-022"),
+
+    ("a High Court bench out-ranking the Supreme Court",
+     "nm/knowledge/identity.py",
+     "    if left.tier != right.tier:",
+     "    if False and left.tier != right.tier:",
+     "test_the_supreme_court_is_senior_to_every_high_court", "E-022"),
+
+    ("an unbuilt identity index clearing an authority",
+     "nm/knowledge/identity.py",
+     '                "the identity index is not built, so no judgment was searched "',
+     '                "clean, nothing found "',
+     "test_an_absent_index_answers_not_known_rather_than_defaulting", "E-023"),
+
     ("a disclosure treated as a citation (withholding the honest answer)",
      "nm/core/grounding.py",
      "        if element.disclosure:",

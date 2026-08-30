@@ -37,6 +37,7 @@ from pathlib import Path
 
 from nm.domain.citation import wanted_section
 from nm.knowledge.citator import Citator
+from nm.knowledge.identity import IdentityIndex
 from nm.knowledge.jurisdiction import binding_status
 from nm.knowledge.manifest import Manifest
 from nm.ports.evidence import (
@@ -61,13 +62,17 @@ class CorpusEvidenceAdapter:
 
     def __init__(self, corpus_dir: str | Path, manifest: Manifest,
                  jurisdiction: str = "Telangana",
-                 authority_index: str | Path | None = None) -> None:
+                 authority_index: str | Path | None = None,
+                 identity_index: str | Path | None = None) -> None:
         self._dir = Path(corpus_dir)
         self._db = self._dir / "chunks.db"
         self._manifest = manifest
         self._jurisdiction = jurisdiction
         self._authority_db = Path(authority_index) if authority_index else None
-        self._citator = Citator(self._dir / "citator.json")
+        self._identity = IdentityIndex(
+            identity_index or (Path(authority_index).parent / "identity.db"
+                               if authority_index else "nonexistent"))
+        self._citator = Citator(self._dir / "citator.json", identity=self._identity)
         self._denied: set[str] | None = None
 
     # ----------------------------------------------------------- readiness ---
@@ -91,6 +96,11 @@ class CorpusEvidenceAdapter:
                             "INDEX NOT BUILT -- run tools/build_authority_index.py"),
             "citator": (f"{self._citator.entries} entries"
                         if self._citator.available else "NOT READABLE"),
+            "identity": (
+                f"{self._identity.stats().get('cases', '?')} cases, "
+                f"{self._identity.stats().get('with_bench', '?')} with a bench"
+                if self._identity.available else
+                "INDEX NOT BUILT -- run tools/build_identity_index.py"),
             "denylist": f"{len(self._denylist())} chunk(s) excluded",
         }
 
@@ -296,10 +306,12 @@ class CorpusEvidenceAdapter:
                 thin += 1
                 continue
             ruling = binding_status(court, year, need.jurisdiction)
+            ident = self._identity.case(case_id)
+            bench = f"; {ident.describe()}" if ident else ""
             findings.append(Finding(
                 proposition=need.question.strip()[:200],
                 source_kind=SourceKind.AUTHORITY,
-                ref=f"{case_name} ({court}, {year})",
+                ref=f"{case_name} ({court}, {year}{bench})",
                 span=" ".join((text or "").split()),
                 locator=f"{case_id}::{chunk_id}::{para_type}",
                 store="authority_index",
@@ -308,7 +320,7 @@ class CorpusEvidenceAdapter:
                 binding_reason=f"{ruling.rule}: {ruling.reason}",
                 supports=True,
                 para_kind=kind,
-                treatment=self._citator.treatment(case_name),
+                treatment=self._citator.treatment(case_name, case_id=case_id),
                 governing_date=need.governing_date,
                 origin="searched",
                 # Lexical coverage of the question, NOT a relevance score. It

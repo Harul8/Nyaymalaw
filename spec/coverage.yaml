@@ -65,6 +65,12 @@ scorecard:
 - id: RG-07
   state: PASS
   blocking: true
+- id: RG-08
+  state: PASS
+  blocking: true
+- id: RG-09
+  state: PASS
+  blocking: true
 - id: RG-10
   state: NOT MEASURED
   blocking: true

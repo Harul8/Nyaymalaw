@@ -128,6 +128,38 @@ scorecard:
     cadence: "every ingest"
     blocking: true
 
+  - id: RG-08
+    what: "Case identity recovered from the source judgments"
+    detail: >
+      Bench composition, reporter citations and party names, read from
+      legal_database/raw_data/CaseLaws rather than from the derived vector
+      store. The derived layer dropped all three, and measuring it instead put
+      bench coverage at 7.5% against a true 90.2% — on which the
+      larger-bench-supersedes rule was declined.
+    threshold: ">= 0.85 of judgments carry a parsed bench, and >= 250,000 citation keys"
+    measured_by: "tools/build_identity_index.py identity record"
+    owner: "corpus"
+    cadence: "every ingest"
+    blocking: true
+    on_fail: >
+      The hierarchy rule cannot be applied. `supersedes` returns
+      NOT_COMPARABLE wherever the bench is unrecorded, which is correct and
+      also means authorities cannot be ranked.
+
+  - id: RG-09
+    what: "Bench-size distribution is plausible"
+    detail: >
+      A REGRESSION GUARD ON THE PARSE, not on the corpus. The first version
+      scanned to a stop keyword; only 40% of files carry one, so on the rest it
+      ran into the judgment body and counted headings as judges, producing
+      1,556 nine-judge benches. Every count looked fine — only the SHAPE gave
+      it away.
+    threshold: ">= 0.85 of benches are 1-3 judges, and < 0.5% are 8 or more"
+    measured_by: "identity.db, cases.bench_size distribution"
+    owner: "corpus"
+    cadence: "every ingest"
+    blocking: true
+
   # ---- SPECIFICATION INTEGRITY --------------------------------------------
   - id: RG-10
     what: "Every gate in the matrix is wired in both directions"
