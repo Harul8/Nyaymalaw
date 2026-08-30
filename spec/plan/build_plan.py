@@ -1161,6 +1161,125 @@ d("B-036", "2026-08-30", "knowledge",
   "tests/test_citation_patterns.py::test_an_inferred_act_names_what_else_it_"
   "could_have_been")
 
+d("B-037", "2026-08-30", "core",
+  "A SELF-REFERENTIAL DESCRIPTOR WAS RECORDED AS A DESCRIPTOR. The model "
+  "returned client_described_as 'our client' and the narrowed blocking "
+  "question became \"You act for the our client. Did they file...?\" — "
+  "gibberish, and unanswerable.",
+  "Adding `client_described_as` so the blocking question could NARROW instead "
+  "of repeating. I checked that a descriptor was present and never that it "
+  "identified anyone. `the workman` and `our client` are the same shape and "
+  "carry opposite amounts of information.",
+  "S1 — an absent input reading as success",
+  "The six-scenario run, on GS-12 and GS-13",
+  "`names_nobody()` — a phrase whose only content word is a noun of "
+  "representation is not recorded.",
+  "Yes — the test is GRAMMAR, a closed set of ways English refers to a person "
+  "already in mind, not a list of party words.",
+  "tests/test_matter_memory.py::test_a_descriptor_that_names_nobody_is_not_recorded")
+
+d("B-038", "2026-08-30", "core",
+  "The descriptor was WRITE-ONCE, so the first one won forever. Turn 1 gave "
+  "'our client' (which names nobody), turn 2 gave 'payee' (which does), and "
+  "the second was discarded — so with B-037 the junk descriptor also blocked "
+  "the real one.",
+  "Applying the monotonic-enrichment rule uniformly. It is right for the ROLE "
+  "— a stated posture silently flipping is the turn-5 reversal, and by then "
+  "the advocate has acted on it. A descriptor is not a decision anyone acts "
+  "on; it is a label, and a later more specific one is better information. I "
+  "copied the guard without asking what it was guarding.",
+  "S7 — a rule applied outside the case it was written for",
+  "The six-scenario run, on GS-13 turn 2",
+  "A descriptor may be replaced. The role still may not.",
+  "Yes — the distinction is between a DECISION the advocate relies on and a "
+  "LABEL, and it is stated that way in the code.",
+  "tests/test_matter_memory.py::test_a_better_descriptor_replaces_a_weaker_one")
+
+d("B-039", "2026-08-30", "core",
+  "THE ROLE WAS NEVER READ, SO POSTURE NEVER RESOLVED AND THE PRODUCT WAS "
+  "UNUSABLE PAST TURN 1. 15 of 25 scenario turns blocked; zero citations "
+  "across six scenarios. The advocate answered, was asked again, and the "
+  "conversation died — which is the phrase-list defect arriving through a "
+  "different door.",
+  "Replacing the phrase list with a model read. I put `role` in the same "
+  "five-field schema as everything else, where `not_stated` is an "
+  "always-available answer that is never wrong — so it is what came back, "
+  "every time, measured on five scenarios. I tested that the extraction "
+  "RETURNED something, never that it returned a role.",
+  "S11 — a check that cannot fail is not a check",
+  "The six-scenario run; then a probe of the same model on the same tier",
+  "A second, focused question — given this client and this account, which "
+  "procedural role — asked only where a client IS stated and no role came "
+  "back. The same model got all five right and returned cannot_tell on a "
+  "control.",
+  "Yes — the rule is that a field with an always-safe answer inside a larger "
+  "schema will get the always-safe answer. C3 is untouched: the client is "
+  "given, only the procedural label is worked out, and it is marked INFERRED.",
+  "tests/test_matter_memory.py::test_the_role_read_never_fires_without_first_"
+  "person_representation")
+
+d("B-040", "2026-08-30", "adapters",
+  "THE SCHEMA VALIDATOR LIVED IN THE TEST DOUBLE. `_require_schema` — which "
+  "checks required fields, types AND enums — was defined in scripted.py and "
+  "called only by the scripted adapter. The OpenAI adapter sends "
+  "strict:false and parsed the JSON unchecked, so on the path that ships an "
+  "`enum` was decoration. A role read declaring eleven permitted values "
+  "returned 'claimant' and reached the core.",
+  "Nothing — it was there from the start. E-005 says both adapters pass the "
+  "SAME contract suite, and they did, because the suite had written itself "
+  "an exemption: `if a.provider == \"openai\": pytest.skip(\"enum "
+  "enforcement is the provider\'s\")`. The assumption in that skip message "
+  "is false and was never checked.",
+  "S11 — a check that cannot fail is not a check",
+  "Probing the focused role read, which returned a value outside its own enum",
+  "`require_schema` moved into nm/ports/model.py — the port owns its "
+  "contract — and both adapters call it. The skip is deleted.",
+  "Yes — a guard that is right in the double and absent from the real adapter "
+  "is not a guard, and a test that skips the production path reports PASS "
+  "about something it did not run.",
+  "tests/test_model_port_contract.py::test_a_schema_violation_is_never_best_"
+  "effort_parsed")
+
+d("B-041", "2026-08-30", "core",
+  "G-POSTURE GATES A PURE QUESTION OF LAW. `what is the limitation for a suit "
+  "for possession of immovable property` — no matter, no client — is answered "
+  "with \"whose side are we on?\". GS-02\'s NEVER column reads \"Impose "
+  "matter apparatus. Ask for parties, posture or documents.\"",
+  "Wiring G-POSTURE to block the turn rather than the directive step. The "
+  "gate\'s reason is that the same provision helps one side and hurts the "
+  "other WHEN A STEP IS RECOMMENDED; a statement of what a provision says is "
+  "the same statement on either side.",
+  "S7 — a rule applied outside the case it was written for",
+  "The six-scenario run, on GS-02",
+  "NOT FIXED. A predicate on mode + no-client + one-fact let \"a cheque was "
+  "dishonoured on 3 March\" through, which is an account of events and far "
+  "worse than the defect. It was reverted rather than sharpened.",
+  "The safe fix is structural — the gate should block the DIRECTIVE STEP so a "
+  "question of law returns its cited answer plus the blocking question and no "
+  "recommendation. That changes what E-034 (\'no merits derivation behind a "
+  "closed gate\') means, so it is a spec decision and is raised, not assumed.",
+  "—", "OPEN")
+
+d("B-042", "2026-08-30", "core",
+  "A REQUIRED ENUM WITH NO LEGAL VALUE FOR A LEGAL STATE. `role` may be "
+  "`not_stated` — the ordinary case — and `role_basis` was required to be one "
+  "of [stated, inferred]. A model reporting the ordinary case had nothing "
+  "valid to return and sent \"\". The posture read then failed validation on "
+  "most messages and FAILED OPEN to \'nothing was stated\', at zero cost, "
+  "indistinguishable from the advocate having said nothing.",
+  "Fixing B-040. Enforcing the schema was right; the schema was wrong, and "
+  "had been wrong since it was written. Nobody could see it because the enum "
+  "was never enforced on the path that ships — so B-040 did not cause this, "
+  "it revealed it.",
+  "S1 — an absent input reading as success",
+  "Metrics on a blocked turn showing 0 model calls and 1.9s elapsed",
+  "`role_basis` gains `not_stated`, matching the vocabulary `role` already had.",
+  "Yes — the rule is that NOTHING-ESTABLISHED is a state every schema must be "
+  "able to express, and it is now checked across every schema this product "
+  "declares rather than on the field that broke.",
+  "tests/test_matter_memory.py::test_every_declared_schema_is_satisfiable_when_"
+  "nothing_was_established")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

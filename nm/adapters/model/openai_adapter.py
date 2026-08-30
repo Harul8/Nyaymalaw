@@ -32,6 +32,7 @@ from nm.ports.model import (
     SchemaViolation,
     Tier,
     Usage,
+    require_schema,
 )
 
 MAX_RETRIES = 3
@@ -144,6 +145,12 @@ class OpenAIModelAdapter:
                 data = json.loads(raw)
             except json.JSONDecodeError as exc:
                 raise SchemaViolation(f"response was not valid JSON: {exc}") from exc
+            # THE DECLARED SCHEMA IS ENFORCED HERE, not by the provider.
+            # `strict` is off above, so the provider treats `enum` as a
+            # hint -- and a role read declaring eleven permitted values
+            # returned "claimant", which reached the core. The port owns
+            # this check so every adapter applies the same one.
+            require_schema(data, schema)
             text = None
 
         usage = getattr(resp, "usage", None)

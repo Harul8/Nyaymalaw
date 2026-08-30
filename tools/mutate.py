@@ -88,6 +88,41 @@ MUTATIONS = [
      "        role = Role.PLAINTIFF",
      "test_a_role_outside_the_products_vocabulary_is_blanked", "E-030"),
 
+    # B-037. "our client" identifies nobody, and recording it produced
+    # "You act for the our client. Did they file...?"
+    ("a descriptor that names nobody recorded as though it named someone",
+     "nm/core/posture.py",
+     "    if described and names_nobody(described):",
+     "    if False and described and names_nobody(described):",
+     "test_a_descriptor_that_names_nobody_is_not_recorded", "E-030"),
+
+    # B-039's trigger, widened until it swallows C3. The role read must not
+    # fire on an account of events -- "the landlord has issued a quit notice
+    # to the tenant" names two parties and neither is stated to be ours.
+    ("the role read firing without the advocate stating their own side",
+     "nm/core/turn.py",
+     "                    or posture_reader.speaks_of_the_representation(said)):",
+     "                    or True):",
+     "test_an_account_of_events_never_settles_a_posture_on_the_engine", "E-030"),
+
+    # B-040. The validator was in the test double and the adapter that ships
+    # skipped it, so an `enum` was decoration on the production path.
+    ("the declared schema unenforced on the adapter that ships",
+     "nm/adapters/model/openai_adapter.py",
+     "            require_schema(data, schema)",
+     "            pass  # require_schema(data, schema)",
+     "test_a_schema_violation_is_never_best_effort_parsed", "E-004e"),
+
+    # B-042. A required enum with no member for the ordinary case. The read
+    # then fails validation, fails OPEN, and looks exactly like the advocate
+    # having said nothing.
+    ("a required enum with no value for 'nothing was established'",
+     "nm/core/posture.py",
+     '            "enum": ["stated", "inferred", "not_stated"],',
+     '            "enum": ["stated", "inferred"],',
+     "test_every_declared_schema_is_satisfiable_when_nothing_was_established",
+     "E-030"),
+
     ("a persisted field silently dropped on read",
      "nm/adapters/store/file_store.py",
      "                          for f in fields(cls) if f.name in value})",

@@ -41,7 +41,15 @@ from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput
 from nm.domain import summary as matter_memory
 from nm.domain.answer import ElementKind
-from nm.domain.matter import AskedQuestion, Basis, Matter, Posture, Role, Thread
+from nm.domain.matter import (
+    AskedQuestion,
+    Basis,
+    Matter,
+    Posture,
+    Role,
+    Side,
+    Thread,
+)
 from nm.domain.traceability import refuses
 from tests.test_turn_contract import KEY, _Evidence, _model_config
 
@@ -521,3 +529,226 @@ def test_the_file_is_served_so_the_advocate_can_audit_it(client):
     # does not exist or is not theirs.
     assert client.get(f"/api/matters/{matter_id}/summary",
                       params={"advocate_id": "other"}).status_code == 404
+
+
+# ========== what the six-scenario run found, stated as rules =================
+
+
+@refuses("C3", 2)
+@pytest.mark.eval_id("E-030")
+def test_a_descriptor_that_names_nobody_is_not_recorded():
+    """B-037. `our client` identifies no one, so recording it is worse than
+    recording nothing: the narrowed question became "You act for the our
+    client. Did they file...?" -- gibberish, and unanswerable.
+
+    The rule is GRAMMAR, not a vocabulary list. A phrase whose only content
+    word is a noun of representation names nobody, however it is inflected.
+    """
+    from nm.core.posture import interpret, names_nobody
+
+    for junk in ("our client", "my client", "the client", "client",
+                 "the party", "his client", "them"):
+        assert names_nobody(junk), f"{junk!r} identifies nobody and was accepted"
+    for real in ("the workman", "the payee", "the second respondent",
+                 "the wife", "the corporate debtor"):
+        assert not names_nobody(real), f"{real!r} identifies someone and was rejected"
+
+    out = interpret("we act for our client in this", {
+        "states_client": True, "role": "not_stated", "role_basis": "stated",
+        "client_described_as": "our client", "quoted": "we act for our client"})
+    assert out.client_described_as is None, (
+        "a descriptor naming nobody was recorded. It then blocks the real one, "
+        "because a descriptor used to be write-once.")
+
+
+@pytest.mark.eval_id("E-030")
+def test_a_better_descriptor_replaces_a_weaker_one(tmp_path):
+    """B-038. Write-once meant the FIRST descriptor won forever.
+
+    Monotonic enrichment is right for the ROLE -- a stated posture silently
+    flipping is the turn-5 reversal, and by then the advocate has acted on it.
+    A descriptor is not a decision anyone acts on; it is a label, and a later
+    more specific one is better information.
+    """
+    engine, _ = _engine(tmp_path)
+    one = engine.run(TurnInput(
+        advocate_id="adv",
+        message="there is a dispute at the shop and it concerns our client"))
+    assert one.matter is not None
+
+    two = engine.run(TurnInput(
+        advocate_id="adv", matter_id=one.matter.id,
+        message="we act for the tenant"))
+    assert two.matter is not None
+    described = two.matter.threads[0].posture.client_described_as
+    assert described != "our client", (
+        "a descriptor naming nobody survived and blocked the real one")
+
+
+@refuses("C3", 3)
+@pytest.mark.eval_id("E-030", "E-036")
+def test_the_role_read_never_fires_without_first_person_representation():
+    """B-039's trigger, and the guard that keeps it inside C3.
+
+    The role read runs once the advocate has spoken about their OWN side. C3's
+    counterexample -- *the landlord has issued a quit notice to the tenant* --
+    names two parties and speaks of neither in the first person, so it does not
+    fire, and the reinstatement defect stays impossible.
+    """
+    from nm.core.posture import speaks_of_the_representation
+
+    assert not speaks_of_the_representation(
+        "the landlord has issued a quit notice to the tenant")
+    assert not speaks_of_the_representation("a fitter was dismissed last month")
+    assert not speaks_of_the_representation(
+        "a cheque was dishonoured on 3 March")
+
+    for stated in ("we act for the workman",
+                   "we want to file a title suit over the strip",
+                   "a neighbour grabbed my client's land",
+                   "appearing on behalf of the second respondent"):
+        assert speaks_of_the_representation(stated), (
+            f"{stated!r} states the advocate's own side and did not trigger the "
+            f"role read, so the gate would block every later turn")
+
+
+@pytest.mark.eval_id("E-030")
+def test_an_out_of_vocabulary_role_is_blanked_not_coerced():
+    """B-040's third guard. The enum is in the schema AND named in the prompt,
+    and this is the last line because the first two are advisory on at least
+    one provider: `strict` is off, and `claimant` -- outside an eleven-value
+    enum -- reached the core once already.
+    """
+    from nm.core.posture import interpret_role
+
+    role, why = interpret_role({"role": "claimant", "why": "the workman"})
+    assert role is None, "an invented role was accepted"
+    assert "not a role this product knows" in why
+
+    role, why = interpret_role({"role": "cannot_tell", "why": "no proceeding named"})
+    assert role is None and "no proceeding" in why
+
+    role, _ = interpret_role({"role": "petitioner", "why": "she filed"})
+    assert role is Role.PETITIONER
+
+
+@pytest.mark.eval_id("E-030", "E-034")
+def test_nothing_is_computed_behind_a_closed_posture_gate(tmp_path):
+    """The gate's whole economic argument, and it now holds on the wire.
+
+    A blocked turn legitimately spends the cheap extraction calls that SETTLE
+    the gate and must spend nothing else. Before the fixes a blocked turn was
+    also paying for a recommendation it then discarded.
+    """
+    recorder = _Recorder()
+    evidence = _RecordingEvidence()
+    engine, _ = _engine(tmp_path, model=recorder, evidence=evidence)
+
+    out = engine.run(TurnInput(
+        advocate_id="adv", message="a cheque was dishonoured on 3 March"))
+    assert out.answer.blocked, "posture is unresolved, so the turn must block"
+    assert evidence.needs == [], (
+        "retrieval ran behind a closed gate -- E-034 says no merits derivation "
+        "is computed there")
+    # Only the reads that settle the gate. Counted separately from derivation
+    # for exactly this reason.
+    assert out.metrics.llm_calls == out.metrics.posture_reads, (
+        f"a blocked turn made {out.metrics.llm_calls} model call(s) of which "
+        f"only {out.metrics.posture_reads} were settling the gate. The rest "
+        f"were derivation behind a closed gate, and were paid for.")
+
+
+@pytest.mark.eval_id("E-030", "E-036")
+def test_every_declared_schema_is_satisfiable_when_nothing_was_established():
+    """B-042, stated as the rule rather than as the field that broke.
+
+    `role` could be `not_stated` — the ordinary case — and `role_basis` was a
+    required enum of `[stated, inferred]` with no member meaning "there is no
+    role, so there is no basis". A model reporting the ordinary case had NO
+    legal value to return.
+
+    Nobody noticed because the enum was not enforced on the path that ships.
+    The moment it was, the posture read started failing validation on most
+    messages, and it fails open to "nothing was stated" — indistinguishable
+    from the advocate having said nothing. Defect shape S1, in a schema.
+
+    THE RULE: NOTHING-ESTABLISHED IS A STATE EVERY SCHEMA MUST BE ABLE TO
+    EXPRESS. A schema that can only describe success makes the failure look
+    like success, which is the most repeated defect in this project.
+
+    Derived from the declared schemas rather than a list of them, so a schema
+    added in a later slice is covered the day it is written.
+    """
+    from nm.core import posture as reader
+    from nm.ports.model import SchemaViolation, require_schema
+
+    schemas = {n: getattr(reader, n) for n in dir(reader)
+               if n.endswith("_SCHEMA")
+               and isinstance(getattr(reader, n), dict)}
+    assert schemas, "no schemas were discovered — this test would pass vacuously"
+
+    for name, schema in schemas.items():
+        empty = {}
+        for field, spec in schema.get("properties", {}).items():
+            if field not in schema.get("required", []):
+                continue
+            if "enum" in spec:
+                # The "nothing established" member, whatever it is called.
+                escape = next((v for v in spec["enum"]
+                               if v in ("not_stated", "cannot_tell", "unknown",
+                                        "not_assessed", "not_checked")), None)
+                assert escape is not None, (
+                    f"{name}.{field} is a required enum {spec['enum']} with no "
+                    f"member for 'nothing was established'. A model reporting "
+                    f"the ordinary case has no legal value to return, and what "
+                    f"it does return fails validation — which fails open, and "
+                    f"then a check that could not run is indistinguishable from "
+                    f"one that passed.")
+                empty[field] = escape
+            elif spec.get("type") == "string":
+                empty[field] = ""
+            elif spec.get("type") == "boolean":
+                empty[field] = False
+            elif spec.get("type") in ("integer", "number"):
+                empty[field] = 0
+            elif spec.get("type") == "array":
+                empty[field] = []
+            else:
+                empty[field] = {}
+
+        try:
+            require_schema(empty, schema)
+        except SchemaViolation as exc:
+            raise AssertionError(
+                f"{name} cannot express 'nothing was established': {exc}") from exc
+
+
+@refuses("C3", 4)
+@pytest.mark.eval_id("E-030")
+def test_an_account_of_events_never_settles_a_posture_on_the_engine(tmp_path):
+    """C3'S COUNTEREXAMPLE, DRIVEN THROUGH THE ENGINE rather than the reader.
+
+    The unit test of `interpret()` cannot see this: the decision of WHEN to ask
+    the role question lives in the engine, and widening that trigger would
+    defeat C3 without touching the reader at all. A mutation proved exactly
+    that — it flipped the trigger to always-fire and every reader test stayed
+    green.
+
+    *The landlord has issued a quit notice to the tenant* names two parties and
+    says which side is ours about neither. The measured defect there told an
+    employer he could claim reinstatement from himself, with every citation
+    correct and the whole analysis on the wrong side.
+    """
+    engine, _ = _engine(tmp_path)
+    out = engine.run(TurnInput(
+        advocate_id="adv",
+        message="the landlord has issued a quit notice to the tenant"))
+
+    assert out.matter is not None
+    assert out.answer.blocked, (
+        "a posture was settled from an account of events. The advocate said "
+        "nothing about which side is theirs, and naming two parties is not "
+        "naming a client.")
+    assert out.answer.blocked_reason.startswith("G-POSTURE")
+    assert out.matter.threads[0].posture.role is Role.UNKNOWN
+    assert out.matter.threads[0].posture.side is Side.UNKNOWN

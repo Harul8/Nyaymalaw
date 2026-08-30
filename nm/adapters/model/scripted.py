@@ -30,6 +30,7 @@ from nm.ports.model import (
     SchemaViolation,
     Tier,
     Usage,
+    require_schema,
 )
 
 Responder = Callable[[Prompt, Tier], str]
@@ -65,6 +66,40 @@ def scripted_posture(message: str) -> str:
         "client_described_as": "" if role else party.split(" in ")[0],
         "quoted": m.group(0),
     })
+
+
+#: The ROLE read -- the second structured call, made once the advocate has
+#: said who they act for and the five-field extraction returned no role.
+#: Mapped from the account so the scripted provider behaves like a real one
+#: for this call; without it the call falls through to `__default__`, which
+#: is not JSON, and every offline test of the resolve path silently
+#: exercises the failure branch instead.
+_SCRIPTED_ROLE = (
+    ("dismissed", "petitioner"),
+    ("reinstatement", "petitioner"),
+    ("maintenance", "petitioner"),
+    ("talaq", "petitioner"),
+    ("bounced", "complainant"),
+    ("dishonour", "complainant"),
+    ("cheque", "complainant"),
+    ("quit notice", "respondent"),
+    ("eviction", "respondent"),
+    ("possession", "plaintiff"),
+    ("title suit", "plaintiff"),
+    ("recovery", "plaintiff"),
+)
+
+
+def scripted_role(user: str) -> str:
+    """A deterministic stand-in for the model's role read."""
+    low = (user or "").lower()
+    for needle, role in _SCRIPTED_ROLE:
+        if needle in low:
+            return json.dumps({"role": role,
+                               "why": f"the account mentions {needle}"})
+    return json.dumps({"role": "cannot_tell",
+                       "why": "the account does not say what proceeding "
+                              "exists or who moved it"})
 
 
 _tokens = estimate_tokens  # one owner: nm.adapters.model._budget
@@ -115,17 +150,21 @@ class ScriptedModelAdapter:
         self._guard_budget(prompt, tier)
         self.calls.append((tier, prompt))
         raw = self._respond(prompt, tier)
-        if "states_client" in json.dumps(schema):
+        blob = json.dumps(schema)
+        if "states_client" in blob:
             # The posture read. Answered from the message itself so the
             # scripted provider behaves like a real one for this call.
             raw = scripted_posture(prompt.user)
+        elif "cannot_tell" in blob:
+            # The role read, the second structured call.
+            raw = scripted_role(prompt.user)
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as exc:
             # NEVER best-effort parsed. Lenient parsing is how an invented
             # vocabulary once emptied a charge map.
             raise SchemaViolation(f"scripted response is not JSON: {exc}") from exc
-        _require_schema(data, schema)
+        require_schema(data, schema)
         return self._result(None, data, prompt, tier, started)
 
     def embed(self, texts: tuple[str, ...]) -> EmbeddingResult:
@@ -173,40 +212,3 @@ def _deterministic_vector(text: str, dim: int = 16) -> tuple[float, ...]:
         acc[i % dim] += (ord(ch) % 17) / 17.0
     norm = sum(v * v for v in acc) ** 0.5 or 1.0
     return tuple(round(v / norm, 6) for v in acc)
-
-
-def _require_schema(data: Any, schema: Mapping[str, Any]) -> None:
-    """The subset of JSON Schema the port promises across providers.
-
-    Deliberately small: the port contract is the INTERSECTION of what providers
-    offer, and a validator richer than that intersection would let a call site
-    depend on something the next adapter cannot honour.
-    """
-    if schema.get("type") == "object":
-        if not isinstance(data, dict):
-            raise SchemaViolation(f"expected an object, got {type(data).__name__}")
-        for key in schema.get("required", []):
-            if key not in data:
-                raise SchemaViolation(f"required property {key!r} is missing")
-        props = schema.get("properties", {})
-        for key, spec in props.items():
-            if key in data:
-                _require_type(key, data[key], spec)
-    elif schema.get("type") == "array" and not isinstance(data, list):
-        raise SchemaViolation(f"expected an array, got {type(data).__name__}")
-
-
-_TYPES = {"string": str, "integer": int, "number": (int, float),
-          "boolean": bool, "object": dict, "array": list}
-
-
-def _require_type(key: str, value: Any, spec: Mapping[str, Any]) -> None:
-    want = spec.get("type")
-    if want and want in _TYPES and not isinstance(value, _TYPES[want]):
-        raise SchemaViolation(
-            f"property {key!r} should be {want}, got {type(value).__name__}")
-    if "enum" in spec and value not in spec["enum"]:
-        # An unrecognised value is treated as ABSENT, never as valid.
-        raise SchemaViolation(
-            f"property {key!r} value {value!r} is outside the permitted "
-            f"vocabulary {spec['enum']}")

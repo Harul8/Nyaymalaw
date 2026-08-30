@@ -524,8 +524,8 @@ class TurnEngine:
             # narrative. What was already established, what has already
             # been asked, and what came back -- so an advocate who
             # answered on turn 2 is not asked again on turn 3.
-            stated = self._read_posture(
-                turn, metrics, matter_memory.build(matter, thread.id))
+            memory = matter_memory.build(matter, thread.id)
+            stated = self._read_posture(turn, metrics, memory)
             if stated.settles_role:
                 posture = posture.enrich(stated.role, stated.basis,
                                          source_fact=fact.id)
@@ -537,12 +537,81 @@ class TurnEngine:
                         "C3", f"role {stated.role.value!r} inferred from the "
                               f"account and the stated client, not named: "
                               f"{stated.quoted[:60]!r}")
-            if stated.client_described_as and posture.client_described_as is None:
+            # A BETTER DESCRIPTOR REPLACES A WEAKER ONE.
+            #
+            # This was write-once, and the first descriptor won forever.
+            # Turn 1 gave "our client", turn 2 gave "payee", and the second
+            # was thrown away -- so the narrowed question kept asking about
+            # "the our client" while the advocate had already named them.
+            #
+            # Monotonic enrichment is right for the ROLE, because a stated
+            # posture silently flipping is the turn-5 reversal. A descriptor
+            # is not a decision anyone acts on; it is a label, and a later
+            # more specific one is better information.
+            if stated.client_described_as:
                 posture = replace(
                     posture, client_described_as=stated.client_described_as)
 
+            # THE CLIENT IS KNOWN AND THE ROLE IS NOT. Ask the one question,
+            # once. The five-field extraction answers `not_stated` here
+            # every time -- measured on five scenarios -- because in a
+            # schema of five fields it is an answer that is never wrong.
+            # Asked on its own the same model got all five right.
+            #
+            # C3 is untouched: the advocate has SAID who they act for, so
+            # nothing is being inferred about the client. What is worked out
+            # is the procedural label for a client already identified, it is
+            # marked INFERRED, and it is correctable in a word.
+            said = memory.advocate_words if memory else turn.message
+            if not posture.resolved and (
+                    posture.client_described_as
+                    or posture_reader.speaks_of_the_representation(said)):
+                # EITHER a label for the client, OR the advocate speaking in
+                # the first person about their own side. The second is the
+                # commoner case and it was not covered: "we want to file a
+                # title suit" states who moves and offers no label, so five
+                # turns blocked on a question the advocate had answered on
+                # turn two.
+                role, why = self._read_role(
+                    posture.client_described_as or "", memory, metrics)
+                if role is not None:
+                    posture = posture.enrich(role, Basis.INFERRED,
+                                             source_fact=fact.id)
+                    metrics.violate(
+                        "C3", f"role {role.value!r} inferred from the account "
+                              f"and the stated client "
+                              f"({posture.client_described_as!r}): {why[:90]}")
+
         thread = replace(thread, posture=posture)
         return matter.with_thread(thread), replace(bound, thread=thread)
+
+    @implements("C3")
+    def _read_role(self, described: str, memory, metrics: TurnMetrics):
+        """Which procedural role a NAMED client occupies. Never who they are.
+
+        Failing to read it leaves posture unresolved and blocking, exactly
+        as failing to read the posture does. A role that could not be read
+        must never look like a role that was.
+        """
+        try:
+            res = self._model.structured(
+                posture_reader.build_role_prompt(
+                    described, memory.advocate_words if memory else ""),
+                posture_reader.ROLE_SCHEMA, Tier.ROUTINE, max_tokens=150)
+            metrics.record_call(res)
+            metrics.posture_reads += 1
+            return posture_reader.interpret_role(res.data or {})
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"the role could not be read: {exc}")
+            return None, str(exc)
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            # A programming error here must not read as "the model could not
+            # tell". A broad except that logs a warning once made a NameError
+            # look like a model failure and suppressed a whole feature.
+            metrics.violate("C3", f"role extraction failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return None, f"{type(exc).__name__}: {exc}"
 
     def _derive(self, thread: Thread, turn: TurnInput,
                 metrics: TurnMetrics,

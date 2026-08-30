@@ -80,10 +80,20 @@ POSTURE_SCHEMA: dict = {
         },
         "role_basis": {
             "type": "string",
-            "enum": ["stated", "inferred"],
+            # THREE STATES, and the third is not decoration.
+            #
+            # `role` may be `not_stated`, which is the ordinary case, and
+            # this field then has nothing to describe. With only two members
+            # a model reporting that ordinary case had NO legal value to
+            # return and sent "" -- which failed validation, which failed
+            # open to "nothing was stated", which is indistinguishable from
+            # the advocate having said nothing. Defect shape S1, in a schema.
+            "enum": ["stated", "inferred", "not_stated"],
             "description": "'stated' if the advocate used a procedural term or "
                            "said who filed. 'inferred' if you worked it out "
-                           "from the account plus who they act for.",
+                           "from the account plus who they act for. "
+                           "'not_stated' if role is 'not_stated' — there is "
+                           "then no basis to describe.",
         },
         "client_described_as": {
             "type": "string",
@@ -130,11 +140,147 @@ SYSTEM = (
 _FIRST_PERSON = re.compile(
     r"\b(?:we|we're|us|our|ours|my|mine|i|client'?s?|behalf)\b", re.I)
 
+#: A descriptor that names nobody. GRAMMAR, not vocabulary: these are the
+#: ways English refers to one's own client WITHOUT identifying them, and
+#: the set is closed in a way a list of party descriptors is not.
+#:
+#: Recording one is worse than recording nothing. The narrowed blocking
+#: question became "You act for the our client. Did they file...?", and a
+#: descriptor is write-once on the posture, so the junk one also blocked
+#: the real one when it arrived on the next turn.
+_NAMES_NOBODY = re.compile(
+    r"^(?:the\s+|a\s+|an\s+)?(?:my|our|his|her|their|its)?\s*"
+    r"(?:client|party|side|matter|case|them|him|her|us)$", re.I)
+
 _WORDS = re.compile(r"[a-z0-9]+")
+
+
+def speaks_of_the_representation(text: str) -> bool:
+    """Has the advocate spoken in the FIRST PERSON about their own side?
+
+    The same closed grammatical set guard 2 uses, asked of the account
+    rather than of one span. It is what separates an advocate stating their
+    position -- `we act for`, `we want to file`, `our client`, `on behalf`
+    -- from a description of events.
+
+    C3's counterexample contains none of it: *the landlord has issued a
+    quit notice to the tenant* names two parties and speaks of neither in
+    the first person, so nothing here fires and the reinstatement defect
+    stays impossible.
+    """
+    return bool(_FIRST_PERSON.search(text or ""))
+
+
+def names_nobody(descriptor: str) -> bool:
+    """True when the descriptor identifies no one.
+
+    `the workman`, `the payee`, `the second respondent` identify someone
+    and narrow the next question usefully. `our client`, `the party`,
+    `him` do not -- they are how a speaker refers to a person already in
+    mind, and this product does not have them in mind.
+    """
+    return bool(_NAMES_NOBODY.match((descriptor or "").strip()))
 
 
 def _fold(text: str) -> str:
     return " ".join(_WORDS.findall((text or "").lower()))
+
+
+# ===================================================== the role, asked ======
+#
+# A SECOND, FOCUSED QUESTION -- and only on the turns that need it.
+#
+# Measured on five scenarios: the extraction above returns `states_client:
+# true`, a good descriptor, and `role: not_stated` every single time. In one
+# schema with five fields, `not_stated` is an always-available answer that is
+# never wrong, so it is what comes back -- and the posture gate then blocks
+# every later turn while the advocate answers the same question over and over.
+#
+# Asked on its own, the SAME model on the SAME tier got all five right and
+# returned `cannot_tell` on a control that genuinely could not be told. The
+# defect was the shape of the ask.
+#
+# THIS DOES NOT RELAX C3. It runs ONLY once the advocate has said who they
+# act for; the client is given, not guessed. What is worked out is the
+# procedural label for a client already identified, it is marked INFERRED,
+# and the advocate can correct it in a word. Inferring the CLIENT from the
+# facts is the thing C3 forbids and it is not what happens here.
+ROLE_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "role": {"type": "string", "enum": [*ROLE_VALUES, "cannot_tell"]},
+        "why": {"type": "string",
+                "description": "One clause. Shown to the advocate so they "
+                               "can correct it."},
+    },
+    "required": ["role", "why"],
+}
+
+ROLE_SYSTEM = (
+    "An Indian advocate has told you WHO they act for. Your only job is to "
+    "say which PROCEDURAL ROLE that client occupies in the proceeding "
+    "described.\n\n"
+    "You are not deciding whose side they are on — they have told you. You "
+    "are naming the forum-correct label for the position that client is "
+    "already in.\n\n"
+    "Work it out from the account. A payee whose cheque bounced and who has "
+    "issued the statutory notice is the complainant. A wife bringing a "
+    "maintenance claim is the petitioner. A tenant resisting an eviction the "
+    "landlord filed is the respondent or defendant. A workman challenging a "
+    "dismissal before a Labour Court is the petitioner; his employer "
+    "answering it is the respondent.\n\n"
+    "ANSWER ONLY FROM THIS LIST: " + ", ".join(ROLE_VALUES) + ". These are "
+    "the positions this product knows how to reason about, and a role "
+    "outside them is one it could not use. Where the closest fit is "
+    "imperfect, choose the closest fit rather than inventing a word.\n\n"
+    "Answer 'cannot_tell' ONLY where the account does not say what "
+    "proceeding exists or who moved it. If it describes a proceeding and "
+    "says who the client is, the role follows and you must give it."
+)
+
+
+def build_role_prompt(described: str, account: str):
+    """Ask the one question the five-field schema kept answering 'not_stated'.
+
+    `described` is often empty, and that is an ordinary case rather than a
+    missing input: an advocate who says "we want to file a title suit" has
+    told you their side moves without giving their client a label, and the
+    labels they do give are frequently "my client", which names nobody.
+    The account carries it either way.
+    """
+    from nm.ports.model import Prompt
+
+    who = (f"The client is: {described}" if (described or "").strip()
+           else "The advocate has not given their client a separate label. "
+                "Read from the account which party is theirs — they speak "
+                "of it in the first person.")
+    return Prompt(
+        system=ROLE_SYSTEM,
+        user=(f"{who}\n\n"
+              f"The account so far:\n{account.strip()[:2500]}\n\n"
+              f"Which procedural role does the client occupy?"))
+
+
+def interpret_role(data: dict) -> tuple["Role | None", str]:
+    """The role and the reason, or (None, why not).
+
+    OUT OF VOCABULARY IS BLANKED, never coerced to something near it. The
+    enum is in the schema AND the vocabulary is named in the prompt, and
+    this is the third guard because the first two are both advisory on at
+    least one provider — `strict` is off, and a returned value outside the
+    enum reached the core once already.
+    """
+    if not isinstance(data, dict):
+        return None, "the role read returned nothing usable"
+    raw = (data.get("role") or "cannot_tell").strip().lower()
+    if raw == "cannot_tell":
+        return None, (data.get("why") or "the account does not say what "
+                                        "proceeding exists or who moved it")
+    try:
+        return Role(raw), (data.get("why") or "").strip()
+    except ValueError:
+        return None, (f"the model answered {raw!r}, which is not a role this "
+                      f"product knows")
 
 
 @dataclass(frozen=True)
@@ -212,6 +358,9 @@ def interpret(message: str, data: dict,
                                      f"{quoted[:60]!r}")
 
     described = (data.get("client_described_as") or "").strip().lower() or None
+    if described and names_nobody(described):
+        # NAMES NOBODY, so it is not recorded. See `_NAMES_NOBODY`.
+        described = None
     if described:
         described = re.sub(r"^(?:the|a|an)\s+", "", described)[:40] or None
 

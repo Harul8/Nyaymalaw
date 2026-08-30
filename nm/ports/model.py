@@ -165,6 +165,59 @@ class EmbeddingResult:
 # ------------------------------------------------------------------ port ---
 
 
+# ------------------------------------------------- the port's own validator ---
+
+
+# WHY THIS IS IN THE PORT AND NOT IN AN ADAPTER
+#
+# It was in `scripted.py`, and only the scripted adapter called it. The
+# OpenAI adapter parsed the JSON and returned it -- and the provider runs
+# with `strict` off -- so on the path that actually ships, an `enum` in a
+# schema was decoration. A role read declaring eleven permitted values
+# came back "claimant" and reached the core.
+#
+# A guard that is right in the double and absent from the real adapter is
+# not a guard, and E-005 could not see the difference because the contract
+# suite never asserted that an out-of-enum value is refused.
+#
+# The port owns its contract. Every adapter calls this.
+def require_schema(data: Any, schema: Mapping[str, Any]) -> None:
+    """The subset of JSON Schema the port promises across providers.
+
+    Deliberately small: the port contract is the INTERSECTION of what providers
+    offer, and a validator richer than that intersection would let a call site
+    depend on something the next adapter cannot honour.
+    """
+    if schema.get("type") == "object":
+        if not isinstance(data, dict):
+            raise SchemaViolation(f"expected an object, got {type(data).__name__}")
+        for key in schema.get("required", []):
+            if key not in data:
+                raise SchemaViolation(f"required property {key!r} is missing")
+        props = schema.get("properties", {})
+        for key, spec in props.items():
+            if key in data:
+                _require_type(key, data[key], spec)
+    elif schema.get("type") == "array" and not isinstance(data, list):
+        raise SchemaViolation(f"expected an array, got {type(data).__name__}")
+
+
+_TYPES = {"string": str, "integer": int, "number": (int, float),
+          "boolean": bool, "object": dict, "array": list}
+
+
+def _require_type(key: str, value: Any, spec: Mapping[str, Any]) -> None:
+    want = spec.get("type")
+    if want and want in _TYPES and not isinstance(value, _TYPES[want]):
+        raise SchemaViolation(
+            f"property {key!r} should be {want}, got {type(value).__name__}")
+    if "enum" in spec and value not in spec["enum"]:
+        # An unrecognised value is treated as ABSENT, never as valid.
+        raise SchemaViolation(
+            f"property {key!r} value {value!r} is outside the permitted "
+            f"vocabulary {spec['enum']}")
+
+
 @runtime_checkable
 class ModelPort(Protocol):
     """What the core declares. Adapters implement it; the core never imports one."""

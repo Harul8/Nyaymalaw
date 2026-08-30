@@ -78,6 +78,40 @@ TURNS: dict[str, list[str]] = {
         "Act, 1986 limits everything to the iddat period",
         "the family wants a lump sum settlement",
     ],
+    "GS-09": [
+        "our client runs a small fabrication unit and he has five things "
+        "running at once. First, a cheque he drew for 4 lakhs bounced and the "
+        "payee has filed a complaint against him.",
+        "second, a fitter he dismissed has gone to the Labour Court and our "
+        "client is the respondent employer there",
+        "third, he is a tenant at the Kukatpally shop and the landlord has "
+        "issued a quit notice; we are resisting the eviction",
+        "fourth, he was assaulted by a supplier outside the unit in June and "
+        "he is the complainant in that",
+        "fifth, he has filed his own recovery suit against a customer who owes "
+        "him 11 lakhs. Where does each of these stand?",
+    ],
+    "GS-12": [
+        "a neighbour grabbed my client's land and beat him up badly yesterday, "
+        "injuring his knee",
+        "we want to file a title suit over the strip of land. What is the "
+        "limitation for that, and is there anything under the Specific Relief "
+        "Act we should be looking at first?",
+        "actually he says the neighbour has been encroaching since 2019",
+        "no, hold on. The wall is new, put up yesterday. The 2019 encroachment "
+        "was a different strip on the other side.",
+        "what do we need to prove",
+    ],
+    "GS-13": [
+        "a cheque our client received bounced on 3 March and we sent the "
+        "statutory notice",
+        "the notice went on 15 April. We act for the payee.",
+        "what is the position under section 138 of the Negotiable Instruments "
+        "Act",
+        "can we still do something about the money",
+        "there is a second cheque from the same drawer that bounced on 2 "
+        "August, notice not yet sent",
+    ],
     "GS-10": [
         "we act for the plaintiff landlord in O.S. 442/2023, an eviction against "
         "the tenant at the Kukatpally shop",

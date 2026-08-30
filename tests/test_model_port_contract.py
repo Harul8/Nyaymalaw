@@ -181,16 +181,39 @@ def test_context_overflow_is_typed_never_a_truncation(adapter):
 @pytest.mark.eval_id("E-004e")
 def test_a_schema_violation_is_never_best_effort_parsed(adapter):
     """THE COUNTEREXAMPLE: lenient parsing is how an invented vocabulary once
-    entered the system and emptied a charge map."""
+    entered the system and emptied a charge map.
+
+    THIS TEST USED TO SKIP THE OPENAI ADAPTER, on the stated ground that
+    "enum enforcement is the provider's". It is not: the adapter sends
+    `strict: False`, so the provider treats `enum` as a hint -- and a role
+    read declaring eleven permitted values returned "claimant", which
+    reached the core.
+
+    E-005 says both adapters pass the SAME suite. They did, because the
+    suite had written itself an exemption for the one adapter that ships.
+    A test that skips the production path does not test less; it reports
+    PASS about something it did not run.
+    """
     bad = json.dumps({"side": "aggrieved_party"})  # outside the vocabulary
     a = ScriptedModelAdapter(_config(), responses={"__default__": bad}) \
         if adapter.provider == "scripted" else openai_ok(bad)
-    if a.provider == "openai":
-        pytest.skip("enum enforcement is the provider's; the scripted adapter is "
-                    "the one that must refuse it locally")
     with pytest.raises(SchemaViolation) as exc:
         a.structured(Prompt(user="which side?"), SCHEMA, Tier.ROUTINE)
     assert "vocabulary" in str(exc.value)
+
+
+def test_a_required_property_missing_is_refused_by_every_adapter(adapter):
+    """The other half of the contract, and it was never checked at all.
+
+    Stated over the adapter fixture rather than over a named pair, so an
+    adapter added later is covered the day it is added.
+    """
+    bad = json.dumps({"unrelated": "value"})
+    a = ScriptedModelAdapter(_config(), responses={"__default__": bad}) \
+        if adapter.provider == "scripted" else openai_ok(bad)
+    with pytest.raises(SchemaViolation) as exc:
+        a.structured(Prompt(user="which side?"), SCHEMA, Tier.ROUTINE)
+    assert "required" in str(exc.value)
 
 
 def test_non_json_structured_output_raises_rather_than_returning_none(adapter):
