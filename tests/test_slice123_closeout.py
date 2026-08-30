@@ -281,10 +281,20 @@ def test_no_merits_derivation_runs_behind_a_closed_gate(tmp_path):
         engine, _ = build(tmp_path / gate)
         out = engine.run(TurnInput(advocate_id="adv", message=message))
         assert out.answer.blocked, f"{gate}: the turn was not blocked"
-        assert out.metrics.llm_calls == 0, (
-            f"{gate}: {out.metrics.llm_calls} model call(s) behind a closed gate")
+
+        # THE PROPERTY, NOT A PROXY FOR IT. A blocked turn legitimately spends
+        # ONE cheap call reading what the advocate stated -- that read is what
+        # settles the gate. What it must not spend is a call on DERIVATION,
+        # which is what the gate exists to prevent. Asserting a total of zero
+        # confused the two and would have to be relaxed rather than tightened
+        # the moment the read moved to a model.
+        derivation_calls = out.metrics.llm_calls - out.metrics.posture_reads
+        assert derivation_calls == 0, (
+            f"{gate}: {derivation_calls} derivation call(s) behind a closed gate")
         assert out.metrics.evidence_rounds == 0, (
             f"{gate}: retrieval ran behind a closed gate")
+        assert not any(e.kind is ElementKind.ACTION for e in out.answer.elements), (
+            f"{gate}: a directive step was produced behind a closed gate")
         assert any(g.gate_id == gate for g in out.metrics.gates_fired)
 
 
@@ -302,7 +312,7 @@ def test_the_thread_gate_also_computes_nothing(tmp_path):
         message="the hearing yesterday went badly, what now"))
 
     assert out.answer.blocked
-    assert out.metrics.llm_calls == 0
+    assert out.metrics.llm_calls - out.metrics.posture_reads == 0
     assert out.metrics.evidence_rounds == 0
 
 

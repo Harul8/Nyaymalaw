@@ -15,12 +15,8 @@ import pytest
 from nm.adapters.model.config import ModelConfig, TierConfig
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.store.file_store import EncryptionNotConfigured, FileMatterStore
-from nm.core.turn import (
-    TurnEngine,
-    TurnInput,
-    classify_route,
-    read_posture,
-)
+from nm.core.posture import interpret
+from nm.core.turn import TurnEngine, TurnInput, classify_route
 from nm.domain.answer import Element, ElementKind, Route, Signal
 from nm.domain.matter import Basis, Matter, Posture, Role, Side, Thread
 from nm.domain.traceability import refuses
@@ -127,12 +123,67 @@ def test_a_greeting_writes_nothing_to_any_file(tmp_path):
 @refuses("C3", 1)
 @pytest.mark.eval_id("E-030")
 def test_posture_is_never_inferred_from_familiar_vocabulary():
-    """COUNTEREXAMPLE: the defect that told an employer he could claim
-    reinstatement from himself. Every citation correct, the whole analysis on
-    the wrong side."""
-    role, basis = read_posture("the landlord has issued a quit notice")
-    assert role is Role.UNKNOWN
-    assert basis is Basis.UNKNOWN
+    """C3, and it survives the move to a model reading the posture.
+
+    "The landlord has issued a quit notice" names a landlord and says NOTHING
+    about which side the client is on. The measured defect there told an
+    employer he could claim reinstatement from himself -- every citation
+    correct, the whole analysis on the wrong side.
+
+    The phrase list is gone: it could never cover the ways an advocate states
+    a client, and an advocate whose words were missing from it was asked the
+    same question forever. What replaces it is not trust. A model reads the
+    posture and TWO GUARDS refuse what the message does not support -- the
+    quoted span must be the advocate's actual words, and it must speak of the
+    representation rather than the events.
+    """
+    message = "the landlord has issued a quit notice to the tenant"
+
+    # Even if the model claims a posture, the span describes EVENTS and is
+    # refused: the guard is on grammar, not on which nouns appear.
+    stated = interpret(message, {
+        "states_client": True, "role": "plaintiff",
+        "client_described_as": "landlord",
+        "quoted": "the landlord has issued a quit notice"})
+    assert stated.role is Role.UNKNOWN
+    assert "describes events" in stated.refused
+
+    # And a span that is not in the message at all cannot settle anything.
+    invented = interpret(message, {
+        "states_client": True, "role": "plaintiff",
+        "client_described_as": "", "quoted": "we act for the landlord"})
+    assert invented.role is Role.UNKNOWN
+    assert "not in the message" in invented.refused
+
+
+def test_an_advocate_who_states_their_client_is_understood_however_they_say_it():
+    """THE LOOP THIS REPLACED. Ten exact phrases meant "we act for the workman"
+    left posture unresolved and the same question asked again."""
+    for message, role, described in (
+            ("we act for the plaintiff in O.S. 442/2023", Role.PLAINTIFF, None),
+            ("we represent the second respondent", Role.RESPONDENT, None),
+            ("appearing on behalf of the caveator", Role.UNKNOWN, "caveator"),
+            ("we act for the workman", Role.UNKNOWN, "workman"),
+    ):
+        data = {"states_client": True,
+                "role": role.value if role is not Role.UNKNOWN else "not_stated",
+                "client_described_as": described or "",
+                "quoted": message}
+        stated = interpret(message, data)
+        assert stated.refused is None, f"{message}: {stated.refused}"
+        assert stated.role is role
+        assert stated.client_described_as == described
+
+
+def test_a_role_outside_the_products_vocabulary_is_blanked():
+    """PRD D9: an out-of-vocabulary facet value is blanked and re-derived,
+    never accepted. A model returning a role this product cannot reason about
+    must not set one."""
+    stated = interpret("we act for the amicus", {
+        "states_client": True, "role": "amicus curiae",
+        "client_described_as": "", "quoted": "we act for the amicus"})
+    assert stated.role is Role.UNKNOWN
+    assert "not a role this product knows" in stated.refused
 
 
 @pytest.mark.eval_id("E-031")

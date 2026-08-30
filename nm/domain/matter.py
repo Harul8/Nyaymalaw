@@ -210,6 +210,16 @@ class Posture:
     role: Role = Role.UNKNOWN
     basis: Basis = Basis.UNKNOWN
     opponent: str | None = None
+    client_described_as: str | None = None
+    """The advocate's own word for their client -- "the workman", "the wife".
+
+    NOT a role. A descriptor identifies who the client IS; it says nothing
+    about whether they filed or are answering, and the old mapping from
+    descriptor to role (`wife` -> PETITIONER, `tenant` -> RESPONDENT) was an
+    inference about who moved, dressed as a reading of what was said.
+
+    Carried so the blocking question can NARROW rather than repeat itself at
+    an advocate who has already answered it once."""
     source_fact: FactId | None = None
     version: int = 0
     conflicts: tuple[PostureConflict, ...] = ()

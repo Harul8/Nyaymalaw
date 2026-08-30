@@ -16,6 +16,7 @@ design has quietly failed.
 from __future__ import annotations
 
 import json
+import re
 import time
 from collections.abc import Callable, Mapping
 from typing import Any
@@ -32,6 +33,38 @@ from nm.ports.model import (
 )
 
 Responder = Callable[[Prompt, Tier], str]
+
+#: Posture extraction is a STRUCTURED call the engine now makes on every turn
+#: whose posture is unresolved. The scripted adapter answers it deterministically
+#: so class-A tests keep costing nothing -- reading the advocate's own words
+#: with a small regex is fine HERE, in a test double, and was not fine in the
+#: product, where the list could never be complete.
+_SCRIPTED_POSTURE = re.compile(
+    r"\b(?:we\s+act\s+for|we\s+represent|our\s+client\s+is|we\s+appear\s+for)"
+    r"\s+(?:the\s+)?([a-z][a-z\- ]{2,30})", re.I)
+_SCRIPTED_ROLES = {
+    "plaintiff", "defendant", "complainant", "accused", "petitioner",
+    "respondent", "appellant", "applicant", "opposite party",
+    "decree holder", "judgment debtor",
+}
+
+
+def scripted_posture(message: str) -> str:
+    """A deterministic stand-in for the model's posture extraction."""
+    m = _SCRIPTED_POSTURE.search(message or "")
+    if not m:
+        return json.dumps({"states_client": False, "role": "not_stated",
+                           "role_basis": "stated", "client_described_as": "",
+                           "quoted": ""})
+    party = " ".join(m.group(1).split()).lower()
+    role = next((r for r in _SCRIPTED_ROLES if party.startswith(r)), None)
+    return json.dumps({
+        "states_client": True,
+        "role": role or "not_stated",
+        "role_basis": "stated",
+        "client_described_as": "" if role else party.split(" in ")[0],
+        "quoted": m.group(0),
+    })
 
 
 _tokens = estimate_tokens  # one owner: nm.adapters.model._budget
@@ -82,6 +115,10 @@ class ScriptedModelAdapter:
         self._guard_budget(prompt, tier)
         self.calls.append((tier, prompt))
         raw = self._respond(prompt, tier)
+        if "states_client" in json.dumps(schema):
+            # The posture read. Answered from the message itself so the
+            # scripted provider behaves like a real one for this call.
+            raw = scripted_posture(prompt.user)
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as exc:

@@ -23,21 +23,17 @@ import hashlib
 import json
 import os
 import tempfile
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, fields, is_dataclass
 from datetime import date
 from enum import Enum
 from pathlib import Path
+from types import UnionType
+from typing import Union, get_args, get_origin, get_type_hints
 
 from nm.domain.matter import (
-    Basis,
-    Certainty,
     Fact,
     Matter,
     MatterId,
-    Posture,
-    PostureConflict,
-    Provenance,
-    Role,
     Thread,
 )
 from nm.domain.traceability import implements
@@ -106,34 +102,54 @@ def _enc(obj):
     return obj
 
 
+def _decode(cls, value):
+    """Rebuild a dataclass from its own field list, not from a hand-written one.
+
+    `_enc` uses `asdict` and therefore encodes every field a type has. The
+    decoder used to name its fields by hand, so a field added later was encoded
+    faithfully and dropped on read, with nothing failing -- `client_described_as`
+    was recorded on one turn and gone by the next, and every field added
+    alongside it went the same way.
+
+    Deriving the fields from the class is what makes the two halves incapable
+    of drifting. `tests/test_store_roundtrip.py` populates every field of every
+    persisted type and asserts equality, so the day one stops surviving is the
+    day the build goes red.
+    """
+    if value is None:
+        return None
+
+    origin = get_origin(cls)
+    if origin in (Union, UnionType):
+        inner = [a for a in get_args(cls) if a is not type(None)]
+        return _decode(inner[0], value) if inner else value
+    if origin in (tuple, list):
+        args = get_args(cls)
+        item = args[0] if args else None
+        seq = [_decode(item, v) if item else v for v in value]
+        return tuple(seq) if origin is tuple else seq
+    if origin is dict:
+        return dict(value)
+
+    if isinstance(cls, type):
+        if is_dataclass(cls):
+            hints = get_type_hints(cls)
+            return cls(**{f.name: _decode(hints.get(f.name, object),
+                                          value.get(f.name))
+                          for f in fields(cls) if f.name in value})
+        if issubclass(cls, Enum):
+            return cls(value)
+        if cls is date:
+            return date.fromisoformat(value) if isinstance(value, str) else value
+    return value
+
+
 def _fact(d: dict) -> Fact:
-    p = d["provenance"]
-    return Fact(
-        id=d["id"], statement=d["statement"],
-        provenance=Provenance(kind=p["kind"], turn=p["turn"], document=p.get("document"),
-                              page=p.get("page"), span=p.get("span")),
-        certainty=Certainty(d["certainty"]),
-        date=date.fromisoformat(d["date"]) if d.get("date") else None,
-        material=d.get("material", True), confirmed=d.get("confirmed", False),
-        conflicts_with=tuple(d.get("conflicts_with", ())),
-        superseded_by=d.get("superseded_by"),
-    )
+    return _decode(Fact, d)
 
 
 def _thread(d: dict) -> Thread:
-    p = d["posture"]
-    return Thread(
-        id=d["id"], label=d["label"], aliases=tuple(d.get("aliases", ())),
-        identifiers=dict(d.get("identifiers", {})),
-        posture=Posture(
-            role=Role(p["role"]), basis=Basis(p["basis"]), opponent=p.get("opponent"),
-            source_fact=p.get("source_fact"), version=p.get("version", 0),
-            conflicts=tuple(PostureConflict(Role(c["on_record"]), Role(c["now_suggested"]),
-                                            c.get("applied", False))
-                            for c in p.get("conflicts", ()))),
-        chronology=tuple(d.get("chronology", ())),
-        deferred_reason=d.get("deferred_reason"),
-    )
+    return _decode(Thread, d)
 
 
 def _matter(d: dict) -> Matter:

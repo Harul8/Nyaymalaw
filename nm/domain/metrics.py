@@ -75,6 +75,13 @@ class TurnMetrics:
     grounding: dict = field(default_factory=dict)
     evidence_rounds: int = 0
     evidence_bound_hit: bool = False
+    posture_reads: int = 0
+    """Model calls spent READING what the advocate stated, not deriving.
+
+    Reading the posture is what settles the gate; derivation is what the gate
+    exists to prevent. Counting them together makes "nothing was computed
+    behind a closed gate" uncheckable -- a blocked turn legitimately spends one
+    cheap extraction call and must spend nothing else."""
 
     def record_call(self, result) -> None:
         """Every model call counts -- including a streamed one.
@@ -141,6 +148,7 @@ class TurnMetrics:
             "tier_downgrades": list(self.tier_downgrades),
             "stages": dict(self.stages),
             "evidence_rounds": self.evidence_rounds,
+            "posture_reads": self.posture_reads,
             "evidence_bound_hit": self.evidence_bound_hit,
             "gates_fired": [
                 {"gate": g.gate_id, "state": g.state, "response": g.response,

@@ -1052,6 +1052,54 @@ d("B-030", "2026-08-30", "tests",
   "Yes — any test file can now reach the wire.",
   "tests/conftest.py")
 
+d("B-031", "2026-08-30", "core",
+  "The posture reader was a closed list of TEN exact phrases. `we act for the "
+  "workman` was not among them, so an advocate who ANSWERED the blocking "
+  "question was asked it again — and rephrasing was precisely what had "
+  "failed. Every multi-turn conversation died there: five turns of GS-06, four "
+  "of GS-11, none reaching a single citation.",
+  "Writing C3's 'never infer posture from vocabulary' as a whitelist of the "
+  "phrases I could think of, and testing it with those phrases.",
+  "A closed list standing in for an open language",
+  "Running six golden scenarios end to end for the first time",
+  "The MODEL reads the posture; the list is deleted. Two deterministic guards "
+  "keep C3: the quoted span must be verbatim in the advocate's own words, and "
+  "it must speak of the representation rather than the events — a test on "
+  "grammar, which is closed, not on vocabulary, which is not.",
+  "Yes — no list of party words exists anywhere in the product now.",
+  "tools/mutate.py x3 on nm/core/posture.py; tests/test_turn_contract.py")
+
+d("B-032", "2026-08-30", "store",
+  "ENCODING WAS AUTOMATIC AND DECODING WAS HAND-WRITTEN. `_enc` uses asdict so "
+  "it wrote every field; `_fact`/`_thread` named their fields by hand so they "
+  "read back only the ones that existed when they were written. Every field "
+  "added later was written faithfully to disk and dropped on load, silently: "
+  "client_described_as, exact_words, basis, basis_source, weight, confirmed_at.",
+  "Adding fields to the domain types across three slices and never opening the "
+  "decoder, because encoding needed no change and nothing failed.",
+  "Asymmetric serialisation — a write with no matching read",
+  "The running product. The blocking question narrowed correctly on turn 2 and "
+  "reverted to the generic one on turn 3",
+  "The decoder derives its fields from the dataclass, so encode and decode "
+  "cannot drift.",
+  "Yes — and E-011 passed throughout, because it asserted that a matter "
+  "reloads and not that every FIELD reloads.",
+  "tests/test_store_roundtrip.py; mutate 'a persisted field silently dropped'")
+
+d("B-033", "2026-08-30", "core",
+  "The posture read and retrieval both saw ONLY THE CURRENT MESSAGE, not the "
+  "matter. `we act for the wife` cannot settle a role on its own; read against "
+  "`talaq was pronounced, there is a maintenance claim` from the turn before, "
+  "it is plain. The product asked an advocate to restate the file every turn.",
+  "Passing `turn.message` to the extraction because that is what the function "
+  "signature made easy.",
+  "Context discarded between turns",
+  "GS-08 blocking on all five turns with the answer already given",
+  "The posture read receives the thread's account so far, and the span guard "
+  "checks against it.",
+  "Yes — every extraction now reads the file, not the last line.",
+  "tools/run_scenario.py GS-08")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

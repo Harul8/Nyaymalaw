@@ -26,6 +26,7 @@ from dataclasses import dataclass, field, replace
 from datetime import date
 
 from nm.core import grounding
+from nm.core import posture as posture_reader
 from nm.core.threading import BindResult, BindState, bind
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
 from nm.domain.coverage import CoverageState
@@ -36,7 +37,6 @@ from nm.domain.matter import (
     Matter,
     Posture,
     Provenance,
-    Role,
     Thread,
     new_id,
 )
@@ -199,37 +199,6 @@ def classify_route(message: str) -> tuple[Route, Mode, str]:
         "Taking this as a matter. Say if I have that wrong."
 
 
-_ROLE_WORDS: dict[str, Role] = {
-    "our client is the accused": Role.ACCUSED,
-    "we act for the accused": Role.ACCUSED,
-    "we are the complainant": Role.COMPLAINANT,
-    "we act for the complainant": Role.COMPLAINANT,
-    "we act for the plaintiff": Role.PLAINTIFF,
-    "we act for the defendant": Role.DEFENDANT,
-    "we act for the tenant": Role.RESPONDENT,
-    "we act for the landlord": Role.PLAINTIFF,
-    "we act for the wife": Role.PETITIONER,
-    "we act for the husband": Role.RESPONDENT,
-}
-
-
-@implements("C3")
-def read_posture(message: str) -> tuple[Role, Basis]:
-    """Posture is taken from what the advocate STATED, never inferred from
-    familiar vocabulary.
-
-    "The landlord has issued a quit notice" does not tell you which side the
-    client is on. Guessing there is the defect that told an employer he could
-    claim reinstatement from himself -- every citation correct, the whole
-    analysis on the wrong side.
-    """
-    text = message.lower()
-    for phrase, role in _ROLE_WORDS.items():
-        if phrase in text:
-            return role, Basis.STATED
-    return Role.UNKNOWN, Basis.UNKNOWN
-
-
 # ============================================================ the turn =====
 
 
@@ -341,7 +310,7 @@ class TurnEngine:
         # a provider above this line.
 
         # ---- ADMIT-B: substance ---------------------------------------------
-        matter, bound = self._admit_facts(matter, turn)
+        matter, bound = self._admit_facts(matter, turn, metrics)
         metrics.stages["admit_ms"] = int((time.perf_counter() - t0) * 1000)
 
         # ---------------- DERIVE ----------------
@@ -377,13 +346,24 @@ class TurnEngine:
             metrics.fire("G-POSTURE", "unresolved",
                          f"thread {thread.id} has role=unknown; no directive step "
                          f"is computed")
+            described = thread.posture.client_described_as
+            if described:
+                # THE QUESTION NARROWS. Repeating the general question at an
+                # advocate who has already named their client is how the
+                # previous version trapped every multi-turn conversation.
+                ask = (f"You act for the {described}. Did they file, or are they "
+                       f"answering something filed against them? I am not able "
+                       f"to recommend a step until that is settled — the same "
+                       f"provision helps one side and hurts the other, and "
+                       f"{described} does not by itself say which side they are "
+                       f"on.")
+            else:
+                ask = ("Whose side are we on in this matter — do we act for the "
+                       "party moving, or the party answering? I am not able to "
+                       "recommend a step until that is settled, because the same "
+                       "provision helps one side and hurts the other.")
             elements.append(Element(
-                kind=ElementKind.QUESTION,
-                thread=thread.id,
-                text=("Whose side are we on in this matter — do we act for the "
-                      "party moving, or the party answering? I am not able to "
-                      "recommend a step until that is settled, because the same "
-                      "provision helps one side and hurts the other."),
+                kind=ElementKind.QUESTION, thread=thread.id, text=ask,
                 signal=Signal.UNRESOLVED_POSTURE,
             ))
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
@@ -485,7 +465,8 @@ class TurnEngine:
         return Matter.create(advocate_id=turn.advocate_id, title=title)
 
     @implements("C1")
-    def _admit_facts(self, matter: Matter, turn: TurnInput) -> tuple[Matter, BindResult]:
+    def _admit_facts(self, matter: Matter, turn: TurnInput,
+                     metrics: TurnMetrics) -> tuple[Matter, BindResult]:
         """Take the account, then BIND it -- and keep the two separable.
 
         The fact is recorded on the matter BEFORE binding is attempted, so an
@@ -505,10 +486,31 @@ class TurnEngine:
             return matter, bound
 
         thread = bound.thread
-        role, basis = read_posture(turn.message)
         posture: Posture = thread.posture
-        if role is not Role.UNKNOWN:
-            posture = posture.enrich(role, basis, source_fact=fact.id)
+        # ONLY WHILE UNRESOLVED. Once the advocate has settled it, no further
+        # call is made -- the extraction is cheap but it is not free, and a
+        # settled posture is not re-read on every later turn.
+        if not posture.resolved:
+            # The whole account so far, not just this message. See
+            # posture.build_prompt.
+            account = "\n".join(
+                f.statement for f in matter.facts
+                if f.id in thread.chronology or f.id == fact.id)
+            stated = self._read_posture(turn, metrics, account)
+            if stated.settles_role:
+                posture = posture.enrich(stated.role, stated.basis,
+                                         source_fact=fact.id)
+                if stated.basis is Basis.INFERRED:
+                    # DISCLOSED, not hidden. The client was stated; the
+                    # procedural role was read off the account, and the
+                    # advocate can correct it in a word.
+                    metrics.violate(
+                        "C3", f"role {stated.role.value!r} inferred from the "
+                              f"account and the stated client, not named: "
+                              f"{stated.quoted[:60]!r}")
+            if stated.client_described_as and posture.client_described_as is None:
+                posture = replace(
+                    posture, client_described_as=stated.client_described_as)
 
         thread = Thread(
             id=thread.id, label=thread.label, aliases=thread.aliases,
@@ -607,6 +609,47 @@ class TurnEngine:
             kind=ElementKind.GROUND, thread=thread.id,
             text=f"Before you rely on any authority I give you: {detail}",
             disclosure=True))
+
+    @implements("C3")
+    def _read_posture(self, turn: TurnInput, metrics: TurnMetrics,
+                      account: str = ""):
+        """What the advocate STATED about whom they act for, read by model.
+
+        There is no phrase list. There was one, of ten exact phrases, and an
+        advocate answering the blocking question in any other words was asked
+        it again -- so every multi-turn conversation trapped the person using
+        it. A longer list is the same defect at a larger size.
+
+        `posture.interpret` refuses anything the message does not support, and
+        a refusal leaves posture exactly where it was: unresolved, and
+        blocking. Failing to read a posture must never look like reading one.
+        """
+        try:
+            res = self._model.structured(
+                posture_reader.build_prompt(turn.message, account),
+                posture_reader.POSTURE_SCHEMA, Tier.ROUTINE, max_tokens=200)
+            metrics.record_call(res)
+            metrics.posture_reads += 1
+            # The span is checked against the whole account, because that is
+            # what the model was given to read.
+            stated = posture_reader.interpret(
+                f"{account}\n{turn.message}", res.data or {})
+        except ModelError as exc:
+            # FAIL THE READ, NOT THE TURN -- and the gate still blocks, because
+            # an unread posture is an unresolved one.
+            metrics.fire("G-MODEL", "unavailable",
+                         f"posture could not be read: {exc}")
+            return posture_reader.UNSTATED
+        except Exception as exc:                     # noqa: BLE001
+            metrics.violate("C3", f"posture extraction failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return posture_reader.UNSTATED
+
+        if stated.refused:
+            # The model reported a posture the message does not support. This
+            # is an ordinary outcome, recorded so a pattern of it is visible.
+            metrics.violate("C3", f"posture extraction refused: {stated.refused}")
+        return stated
 
     def _fetch(self, need: EvidenceNeed, metrics: TurnMetrics):
         """One evidence round, counted against the bound.

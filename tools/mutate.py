@@ -25,14 +25,29 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 # (label, file, original, mutation, test that must fail, eval it proves)
 MUTATIONS = [
-    ("posture inferred from vocabulary (the reinstatement defect)",
-     "nm/core/turn.py",
-     "    text = message.lower()\n    for phrase, role in _ROLE_WORDS.items():",
-     "    text = message.lower()\n"
-     '    if "landlord" in text:\n'
-     "        return Role.PLAINTIFF, Basis.INFERRED\n"
-     "    for phrase, role in _ROLE_WORDS.items():",
+    ("posture read off the events rather than off what was stated",
+     "nm/core/posture.py",
+     "    if not _FIRST_PERSON.search(quoted):",
+     "    if False and not _FIRST_PERSON.search(quoted):",
      "test_posture_is_never_inferred_from_familiar_vocabulary", "E-030"),
+
+    ("a posture settled on a span that is not in the message",
+     "nm/core/posture.py",
+     "    if _fold(quoted) not in _fold(message):",
+     "    if False and _fold(quoted) not in _fold(message):",
+     "test_posture_is_never_inferred_from_familiar_vocabulary", "E-030"),
+
+    ("an out-of-vocabulary role accepted instead of blanked",
+     "nm/core/posture.py",
+     "        role = Role(raw_role)",
+     "        role = Role.PLAINTIFF",
+     "test_a_role_outside_the_products_vocabulary_is_blanked", "E-030"),
+
+    ("a persisted field silently dropped on read",
+     "nm/adapters/store/file_store.py",
+     "                          for f in fields(cls) if f.name in value})",
+     "                          for f in list(fields(cls))[:4] if f.name in value})",
+     "test_every_field_of_a_matter_survives_a_save_and_load", "E-011"),
 
     ("a stated posture silently flipped (the turn-5 reversal)",
      "nm/domain/matter.py",
