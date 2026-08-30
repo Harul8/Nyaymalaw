@@ -431,6 +431,26 @@ MUTATIONS = [
      "  - the_specific_relief_act_1963",
      "test_coverage_is_a_union_and_a_single_store_figure_is_refused", "E-024"),
 
+    # B-052. A second thread could only be created by a NUMBER OF RECORD,
+    # so a dispute described in prose was welded onto the one already open
+    # -- and multi-thread files, which the golden set calls the normal
+    # case, were unreachable.
+    ("a new dispute welded onto the thread already open",
+     "nm/core/threading.py",
+     "        if opens_new_dispute is True:",
+     "        if False and opens_new_dispute is True:",
+     "test_a_second_dispute_does_not_inherit_the_first_thread_s_posture",
+     "E-033"),
+
+    # And the asymmetry as a DEFAULT: an unread dispute must never fall
+    # back to the merge, which is the direction with no undo.
+    ("an unread dispute defaulting to a merge",
+     "nm/core/threading.py",
+     "        if opens_new_dispute is False:",
+     "        if opens_new_dispute is not True:",
+     "test_a_dispute_read_that_could_not_tell_asks_rather_than_merging",
+     "E-033"),
+
     ("a persisted field silently dropped on read",
      "nm/adapters/store/file_store.py",
      "                          for f in fields(cls) if f.name in value})",

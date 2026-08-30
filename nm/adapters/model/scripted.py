@@ -90,6 +90,36 @@ _SCRIPTED_ROLE = (
 )
 
 
+#: The DISPUTE read. Without this the call falls through to `__default__`,
+#: which is not JSON, and every offline test of thread separation would
+#: exercise the failure branch while looking like it exercised the
+#: ordinary one -- the same trap `scripted_role` was added to close.
+_OPENS_A_DISPUTE = (
+    "second,", "third,", "fourth,", "fifth,", "separately",
+    "another matter", "a different", "unrelated",
+)
+
+
+def scripted_dispute(user: str) -> str:
+    """A deterministic stand-in for the model's dispute read."""
+    # ONLY WHAT THE ADVOCATE SAID, not the prompt around it. Taking everything
+    # after the marker swept in the closing line -- "or open a different one?"
+    # -- whose own words are on the marker list, so every message read as a new
+    # dispute. The verbatim guard in `dispute.interpret` refused the span and
+    # turned it into `cannot_tell`, which is that guard doing its job on the
+    # test double.
+    said = user.split("just said:", 1)[-1].rsplit(chr(10) * 2, 1)[0].lower()
+    for needle in _OPENS_A_DISPUTE:
+        if needle in said:
+            start = said.index(needle)
+            return json.dumps({
+                "verdict": "opens",
+                "quoted": said[start:start + len(needle)],
+                "why": f"the advocate marks it off with {needle!r}"})
+    return json.dumps({"verdict": "continues", "quoted": "",
+                       "why": "it adds detail to what is on the file"})
+
+
 def scripted_role(user: str) -> str:
     """A deterministic stand-in for the model's role read."""
     low = (user or "").lower()
@@ -155,6 +185,9 @@ class ScriptedModelAdapter:
             # The posture read. Answered from the message itself so the
             # scripted provider behaves like a real one for this call.
             raw = scripted_posture(prompt.user)
+        elif "continues" in blob:
+            # The dispute read.
+            raw = scripted_dispute(prompt.user)
         elif "cannot_tell" in blob:
             # The role read, the second structured call.
             raw = scripted_role(prompt.user)

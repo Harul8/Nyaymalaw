@@ -82,6 +82,24 @@ class TurnMetrics:
     exists to prevent. Counting them together makes "nothing was computed
     behind a closed gate" uncheckable -- a blocked turn legitimately spends one
     cheap extraction call and must spend nothing else."""
+    binding_reads: int = 0
+    """Model calls spent deciding WHICH THREAD an account belongs to.
+
+    The same category as `posture_reads` and counted separately from it only so
+    each gate's spend is attributable. A turn blocked by G-THREAD has legitimately
+    paid for the read that discovered the ambiguity -- that read is what settles
+    the gate, and refusing to spend it would mean never discovering the second
+    dispute at all."""
+
+    @property
+    def settling_reads(self) -> int:
+        """Calls spent SETTLING a gate rather than deriving behind one.
+
+        The property every "nothing was computed behind a closed gate" check
+        subtracts. Asserting a flat `llm_calls == 0` conflates the two and has
+        to be relaxed -- rather than tightened -- the moment another gate needs
+        a cheap read to settle it, which has now happened twice."""
+        return self.posture_reads + self.binding_reads
 
     def record_call(self, result) -> None:
         """Every model call counts -- including a streamed one.
@@ -149,6 +167,7 @@ class TurnMetrics:
             "stages": dict(self.stages),
             "evidence_rounds": self.evidence_rounds,
             "posture_reads": self.posture_reads,
+            "binding_reads": self.binding_reads,
             "evidence_bound_hit": self.evidence_bound_hit,
             "gates_fired": [
                 {"gate": g.gate_id, "state": g.state, "response": g.response,

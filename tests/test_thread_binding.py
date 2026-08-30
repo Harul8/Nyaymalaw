@@ -105,13 +105,49 @@ def test_several_threads_and_no_identifier_blocks_rather_than_guessing():
     assert "possession suit" in result.question
 
 
-def test_a_single_open_thread_continues_without_a_question():
-    """With one thread there is nothing to be wrong about, and asking anyway
-    would train the advocate to ignore the question when it matters."""
+def test_one_open_thread_is_not_automatically_a_continuation():
+    """THIS TEST USED TO ASSERT THE DEFECT.
+
+    It read: *"With one thread there is nothing to be wrong about"* — and there
+    was. A second dispute described in prose, with no number of record, was
+    welded onto the first. Driven three turns, a cheque complaint (he is the
+    ACCUSED), a Labour Court claim (he is the RESPONDENT EMPLOYER) and his own
+    recovery suit (he is the PLAINTIFF) produced ONE thread carrying
+    `role=accused`, so his own suit would have been advised as a defence.
+
+    A second thread was also unreachable any other way: only a number of record
+    could create one, so a matter could not hold two disputes unless the
+    advocate typed a case number. The golden set calls multi-thread files the
+    NORMAL case.
+
+    The half of the old reasoning that was right is kept: asking on every turn
+    would train the advocate to ignore the question when it matters. So a read
+    that says CONTINUES binds silently, and only a read that could not tell
+    asks.
+    """
     only = Thread.create(label="possession suit")
-    result = bind(_matter(only), "the hearing went badly yesterday", _fact())
-    assert result.state is BindState.BOUND
-    assert result.thread.id == only.id
+    matter = _matter(only)
+    account = "the hearing went badly yesterday"
+
+    # CONTINUES -- binds, silently, exactly as before.
+    cont = bind(matter, account, _fact(), opens_new_dispute=False)
+    assert cont.state is BindState.BOUND
+    assert cont.thread.id == only.id
+    assert not cont.created and not cont.question
+
+    # OPENS -- a new thread, stated, so the advocate sees the split. A wrong
+    # split is visible and recoverable; a wrong merge inverts the advice.
+    opens = bind(matter, "separately, he has filed his own recovery suit",
+                 _fact(), opens_new_dispute=True)
+    assert opens.state is BindState.BOUND
+    assert opens.created and opens.thread.id != only.id
+    assert "different dispute" in opens.reason
+
+    # COULD NOT TELL -- asks. Never assumes the merge, because that is the
+    # direction with no undo.
+    unknown = bind(matter, account, _fact(), opens_new_dispute=None)
+    assert unknown.state is BindState.AMBIGUOUS
+    assert unknown.question and "separate dispute" in unknown.question
 
 
 def test_the_advocate_naming_a_thread_outranks_everything():
@@ -190,7 +226,10 @@ def test_an_ambiguous_binding_blocks_the_turn_and_keeps_the_account(tmp_path):
     assert any(g.gate_id == "G-THREAD" for g in out.metrics.gates_fired)
     # No model call was made and no directive step was computed. The block IS
     # the answer.
-    assert out.metrics.llm_calls == 0
+    # Only the reads that SETTLE the gate. Discovering that two threads are
+    # candidates costs one cheap read, and refusing to spend it would mean
+    # never discovering the second dispute at all.
+    assert out.metrics.llm_calls == out.metrics.settling_reads
 
     # And the account survived: the fact is on the matter even though it is on
     # no thread.
@@ -215,3 +254,69 @@ def test_posture_is_settled_per_thread_not_per_matter(tmp_path):
     assert by_label["OS442/2023"].posture.role is Role.PLAINTIFF
     assert by_label["CC77/2025"].posture.role is Role.ACCUSED
     assert by_label["OS442/2023"].posture.side is not by_label["CC77/2025"].posture.side
+
+
+@refuses("C4", 1)
+@pytest.mark.eval_id("E-033")
+def test_a_second_dispute_does_not_inherit_the_first_thread_s_posture(tmp_path):
+    """B-052, ON THE ENGINE. The defect that made multi-thread files impossible.
+
+    A second thread could only ever be created by a NUMBER OF RECORD, so a
+    dispute described in prose was welded onto the one already open. Driven
+    three turns:
+
+        a cheque complaint filed against him   -> he is the ACCUSED
+        a Labour Court claim by a fitter       -> he is the RESPONDENT EMPLOYER
+        his own recovery suit for 11 lakhs     -> he is the PLAINTIFF
+
+    produced ONE thread carrying `role=accused, side=defending`. His own
+    recovery suit would have been advised as a defence, with every citation
+    correct — the measured original defect, reached through the binder instead
+    of through the posture reader.
+
+    The golden set calls multi-thread files THE NORMAL CASE (GS-08, GS-09,
+    GS-10, GS-22), and none of them could pass.
+    """
+    from nm.core.turn import TurnInput
+    from tests.test_turn_contract import build
+
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(
+        advocate_id="adv",
+        message="we act for the accused in a cheque complaint filed against him"))
+    assert out.matter is not None
+    first = out.matter.threads[0].id
+
+    out = engine.run(TurnInput(
+        advocate_id="adv", matter_id=out.matter.id,
+        message="second, he has filed his own recovery suit against a customer"))
+    assert out.matter is not None
+
+    ids = {t.id for t in out.matter.threads}
+    assert len(ids) == 2, (
+        f"a plainly different dispute joined the existing thread. Threads: "
+        f"{[t.label for t in out.matter.threads]}. The recovery suit he FILED "
+        f"now carries the posture of a complaint filed AGAINST him.")
+    assert first in ids, "the original thread was replaced rather than added to"
+
+
+@pytest.mark.eval_id("E-033")
+def test_a_dispute_read_that_could_not_tell_asks_rather_than_merging():
+    """THE ASYMMETRY, as a default rather than as a preference.
+
+    A wrong split duplicates work, is visible on the board, and is corrected in
+    a turn. A wrong merge attaches one thread's posture, chronology and
+    limitation to facts they do not govern, and the advice inverts silently.
+
+    So the unread state must never fall back to `continues`. It asks — which is
+    what rule 6 already does when several threads are open and nothing is
+    decisive.
+    """
+    only = Thread.create(label="possession suit")
+    for unread in (None,):
+        r = bind(_matter(only), "he came back about the other thing", _fact(),
+                 opens_new_dispute=unread)
+        assert r.state is BindState.AMBIGUOUS, (
+            "an unread dispute defaulted to a merge, which is the direction "
+            "with no undo")
+        assert r.blocks and r.question

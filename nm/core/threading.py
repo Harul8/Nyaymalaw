@@ -14,8 +14,19 @@ So the rules are deliberately unbalanced:
 
     a DECISIVE IDENTIFIER binds        -- a case number, an FIR number, a cheque
     an EXPLICIT REFERENCE binds        -- the advocate named the thread
-    a SINGLE OPEN THREAD continues     -- there is nothing to be wrong about
+    A NEW DISPUTE OPENS A THREAD       -- read, quoted, and stated so it can
+                                          be corrected
     ANYTHING ELSE ASKS                 -- and the question is the answer
+
+THE THIRD RULE USED TO READ *a SINGLE OPEN THREAD continues -- there is
+nothing to be wrong about*, and there was. Rule 3 creates a thread only
+when the message carries a number of record, so with one thread on the
+file and no case number, a SECOND DISPUTE was welded onto the first --
+and a matter could not hold two threads unless the advocate typed a
+number. Three disputes driven through it produced one thread carrying
+`role=accused`, which would have advised the client's own recovery suit as
+though he were defending it. The golden set calls multi-thread files the
+NORMAL case.
 
 LABEL SIMILARITY NEVER BINDS. "The Kukatpally property", "the land matter" and
 "O.S. 442/2023" can be one thread or three, and nothing in those strings tells
@@ -114,7 +125,8 @@ def identifiers_in(text: str) -> dict[str, str]:
 
 @implements("C4")
 def bind(matter: Matter, message: str, fact: Fact,
-         thread_hint: str | None = None) -> BindResult:
+         thread_hint: str | None = None,
+         opens_new_dispute: bool | None = None) -> BindResult:
     """Bind an account to exactly one thread, or refuse and ask.
 
     `thread_hint` is the advocate saying which thread they mean. It outranks
@@ -174,11 +186,38 @@ def bind(matter: Matter, message: str, fact: Fact,
             _with_identifiers(Thread.create(label=_label(message)), disclosed),
             True, "the first thread on this matter")
 
-    # 5. Exactly one open thread and nothing decisive: continuation. There is
-    #    nothing to be wrong about.
+    # 5. ONE OPEN THREAD AND NOTHING DECISIVE. Not automatically a
+    #    continuation -- that was the defect. `opens_new_dispute` is read
+    #    by the engine and passed in; this module stays pure.
     if len(matter.threads) == 1:
-        return BindResult(BindState.BOUND, matter.threads[0], False,
-                          "the only thread on this matter")
+        if opens_new_dispute is True:
+            # STATED, not silent. `created=True` puts it on the board where
+            # the advocate can see the split and say if it is wrong -- and
+            # a wrong split is the recoverable direction.
+            return BindResult(
+                BindState.BOUND,
+                _with_identifiers(Thread.create(label=_label(message)),
+                                  disclosed),
+                True,
+                "this describes a different dispute from the one on the "
+                "file, so it opens its own thread rather than inheriting "
+                "that thread's posture and limitation")
+        if opens_new_dispute is False:
+            return BindResult(BindState.BOUND, matter.threads[0], False,
+                              "the only thread on this matter, continued")
+        # NOT ASSESSED. The read did not run or could not tell, and the
+        # asymmetry forbids defaulting to the merge: ask, exactly as rule 6
+        # does when several threads are open.
+        return BindResult(
+            BindState.AMBIGUOUS, None, False,
+            "one open thread, no number of record, and it could not be "
+            "told whether this continues it",
+            question=(
+                f"Does this belong to {matter.threads[0].label!r}, or is it "
+                f"a separate dispute? I will not assume it is the same one: "
+                f"attaching it to the wrong thread puts the wrong posture "
+                f"and the wrong limitation on it, and every citation would "
+                f"still be correct."))
 
     # 6. Several threads and nothing decisive. THE QUESTION IS THE ANSWER.
     labels = "; ".join(f"{t.label!r}" for t in matter.threads[:5])

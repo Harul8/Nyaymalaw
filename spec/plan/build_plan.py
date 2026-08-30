@@ -1479,6 +1479,34 @@ d("B-051", "2026-08-30", "core",
   "tests/test_never_clauses.py::test_the_first_content_element_is_an_action_or_"
   "a_blocking_question")
 
+d("B-052", "2026-08-30", "core",
+  "A MATTER COULD HOLD ONLY ONE THREAD unless the advocate typed a case "
+  "number. Rule 5 of the binder read \"exactly one open thread and nothing "
+  "decisive: continuation — there is nothing to be wrong about\", and rule 3 "
+  "(the only other way a thread is created) fires only when the message "
+  "carries a number of record. Measured: a cheque complaint against him, a "
+  "Labour Court claim by a fitter, and his own recovery suit produced ONE "
+  "thread with role=accused — his own suit advised as a defence.",
+  "Writing rule 5 for the case where a single thread genuinely is a "
+  "continuation, and not asking what happens when it is not. The file's OWN "
+  "docstring refutes it three paragraphs above: \"a wrong MERGE attaches one "
+  "thread's posture, chronology and limitation to facts they do not govern... "
+  "the advice inverts silently, which is the failure mode this whole product "
+  "exists to refuse.\"",
+  "S7 — a rule applied outside the case it was written for",
+  "GS-09 and GS-08, the two most complex scenarios, both collapsing to one "
+  "thread",
+  "`bind` takes a three-state reading. CONTINUES binds; OPENS creates a "
+  "thread, stated; CANNOT TELL asks, exactly as rule 6 already does. The read "
+  "is `nm/core/dispute.py`, with the same two guards as the posture read.",
+  "Yes — the default now follows the asymmetry the module already stated: "
+  "never guess toward the merge, because a wrong split is visible and "
+  "recoverable and a wrong merge is neither. Multi-thread files are what the "
+  "golden set calls the NORMAL case, and none of GS-08, GS-09, GS-10 or GS-22 "
+  "could have passed.",
+  "tests/test_thread_binding.py::test_a_second_dispute_does_not_inherit_the_"
+  "first_thread_s_posture")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

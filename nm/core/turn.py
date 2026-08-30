@@ -25,9 +25,10 @@ import time
 from dataclasses import dataclass, field, replace
 from datetime import date
 
+from nm.core import dispute as dispute_reader
 from nm.core import grounding
 from nm.core import posture as posture_reader
-from nm.core.threading import BindResult, BindState, bind
+from nm.core.threading import BindResult, BindState, bind, identifiers_in
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
 from nm.domain.coverage import CoverageState
@@ -38,6 +39,7 @@ from nm.domain.matter import (
     Matter,
     Posture,
     Provenance,
+    Role,
     Thread,
     new_id,
 )
@@ -516,7 +518,17 @@ class TurnEngine:
         )
         matter = matter.with_fact(fact)
 
-        bound = bind(matter, turn.message, fact, thread_hint=turn.thread_id)
+        # IS THIS THE SAME DISPUTE? Read only when it can matter: the
+        # matter already has a thread and the message carries no number of
+        # record. With a number, rule 2 or rule 3 decides and no model call
+        # is needed; with no thread yet, there is nothing to confuse it
+        # with.
+        opens = None
+        if matter.threads and not identifiers_in(turn.message):
+            opens = self._read_dispute(matter, turn, metrics)
+
+        bound = bind(matter, turn.message, fact, thread_hint=turn.thread_id,
+                     opens_new_dispute=opens)
         if bound.state is not BindState.BOUND or bound.thread is None:
             return matter, bound
 
@@ -593,6 +605,51 @@ class TurnEngine:
 
         thread = replace(thread, posture=posture)
         return matter.with_thread(thread), replace(bound, thread=thread)
+
+    @implements("C4")
+    def _read_dispute(self, matter: Matter, turn: TurnInput,
+                      metrics: TurnMetrics) -> bool | None:
+        """Does this message continue the thread on the file, or open one?
+
+        Returns THREE STATES, and `None` is the one that earns its keep: it
+        means the read did not run or could not tell, and `bind` then ASKS
+        rather than assuming a continuation. Defaulting to `False` here
+        would restore the defect -- every failed read becoming a silent
+        merge -- which is why this returns None and not a boolean.
+        """
+        on_file = "\n".join(
+            f"- {t.label}" + (f" (we act for the {t.posture.role.value})"
+                              if t.posture.role is not Role.UNKNOWN else "")
+            for t in matter.threads)
+        try:
+            res = self._model.structured(
+                dispute_reader.build_prompt(turn.message, on_file),
+                dispute_reader.DISPUTE_SCHEMA, Tier.ROUTINE, max_tokens=200)
+            metrics.record_call(res)
+            metrics.binding_reads += 1
+            read = dispute_reader.interpret(turn.message, res.data or {})
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"the dispute read could not run: {exc}")
+            return None
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("C4", f"dispute read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return None
+
+        if read.refused:
+            metrics.violate("C4", f"dispute read refused: {read.refused}")
+            return None
+        if read.opens:
+            # DISCLOSED. A split is the recoverable direction, but it is
+            # still a decision about the advocate's file and they can see it.
+            metrics.violate(
+                "C4", f"read as a NEW dispute on {read.quoted[:50]!r}: "
+                      f"{read.why[:90]}")
+            return True
+        if read.continues:
+            return False
+        return None
 
     @implements("C3")
     def _read_role(self, described: str, memory, metrics: TurnMetrics):
