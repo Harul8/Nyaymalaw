@@ -77,6 +77,12 @@ CONTROLS: dict[str, str] = {
     # the document-fact tripwire -- control planted inline
     "test_no_path_admits_a_document_fact_without_binding_it_to_a_thread":
         "test_no_path_admits_a_document_fact_without_binding_it_to_a_thread",
+    # M3 -- one rule, one owner. Its control asserts each registered pattern
+    # matches INSIDE its own owner, so a pattern that matches nothing cannot
+    # report a clean codebase. This entry was added because THIS FILE caught
+    # M3 the moment it was written without one.
+    "test_no_rule_has_a_second_home":
+        "test_the_owner_actually_contains_the_rule",
 }
 
 #: How a sweep is recognised: it builds a list of offenders over a population

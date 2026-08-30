@@ -688,7 +688,7 @@ d("B-002", "2026-08-29", "adapters",
   "Extracted nm/adapters/model/_budget.py as the single owner both adapters "
   "call.",
   "Yes — structural. A third adapter cannot reintroduce it.",
-  "tests/test_model_port_contract.py runs against every adapter")
+  "tests/test_model_port_contract.py runs against every adapter; ALSO SWEPT BY tests/test_one_owner_per_rule.py::test_no_rule_has_a_second_home")
 
 d("B-003", "2026-08-29", "architecture",
   "`edge` imported `adapters` and `ports` imported `core`, so the pure core "
@@ -737,7 +737,7 @@ d("B-006", "2026-08-30", "tooling",
   "Reading the checker's output against the document by hand",
   "Require the FULL reference to resolve to a heading.",
   "Yes — every reference, at any depth.",
-  "tools/speccheck.py SC4")
+  "tools/speccheck.py SC4; ALSO SWEPT BY tests/test_every_sweep_has_a_positive_control.py::test_every_sweep_names_a_control_that_proves_it_can_fail")
 
 d("B-007", "2026-08-30", "core",
   "ADMIT extracted, integrated and bound documents BEFORE the conflict screen "
@@ -764,7 +764,7 @@ d("B-008", "2026-08-30", "core",
   "Citation coverage: every provision number and case name in the emitted "
   "text must trace to something retrieved this turn.",
   "Yes — it checks the ANSWER, not a set the engine curated.",
-  "tools/mutate.py 'a citation the answer invents'")
+  "tools/mutate.py 'a citation the answer invents'; ALSO SWEPT BY tests/test_every_sweep_has_a_positive_control.py::test_every_sweep_names_a_control_that_proves_it_can_fail")
 
 d("B-009", "2026-08-30", "retrieval",
   "`O.S. 442/2023` parsed as SECTION 442, because `O.S. 442` contains `S. "
@@ -777,7 +777,7 @@ d("B-009", "2026-08-30", "retrieval",
   "One pattern module, nm/domain/citation.py, with both guards; a test scans "
   "nm/ and fails the build on a second pattern.",
   "Yes — and the duplicate is now structurally refused, not just removed.",
-  "tests/test_citation_patterns.py")
+  "tests/test_citation_patterns.py; ALSO SWEPT BY tests/test_one_owner_per_rule.py::test_no_rule_has_a_second_home")
 
 d("B-010", "2026-08-30", "knowledge",
   "`year` arrives from the store as TEXT and `binding_status` compared it to "
@@ -1041,7 +1041,7 @@ d("B-029", "2026-08-30", "ports",
   "Non-empty `binding_for` enforced at construction. Binding on whom is not an "
   "optional detail.",
   "Yes — every Finding, every source kind.",
-  "tests/test_slice123_closeout.py [E-021]")
+  "tests/test_slice123_closeout.py [E-021]; ALSO SWEPT BY tests/test_blank_values.py::test_no_required_string_field_accepts_a_value_made_of_whitespace")
 
 d("B-030", "2026-08-30", "tests",
   "The served-path `client` fixture was private to one test file, so "
@@ -1176,7 +1176,7 @@ d("B-037", "2026-08-30", "core",
   "representation is not recorded.",
   "Yes — the test is GRAMMAR, a closed set of ways English refers to a person "
   "already in mind, not a list of party words.",
-  "tests/test_matter_memory.py::test_a_descriptor_that_names_nobody_is_not_recorded")
+  "tests/test_matter_memory.py::test_a_descriptor_that_names_nobody_is_not_recorded; ALSO SWEPT BY tests/test_blank_values.py::test_no_required_string_field_accepts_a_value_made_of_whitespace")
 
 d("B-038", "2026-08-30", "core",
   "The descriptor was WRITE-ONCE, so the first one won forever. Turn 1 gave "
@@ -1308,7 +1308,7 @@ d("B-042", "2026-08-30", "core",
   "able to express, and it is now checked across every schema this product "
   "declares rather than on the field that broke.",
   "tests/test_matter_memory.py::test_every_declared_schema_is_satisfiable_when_"
-  "nothing_was_established")
+  "nothing_was_established; ALSO SWEPT BY tests/test_three_states.py::test_every_outcome_enum_can_say_that_nothing_was_established")
 
 d("B-044", "2026-08-30", "release",
   "RG-01 COUNTED A COURT LABEL, NOT A BINDING RELATIONSHIP. It counted "
@@ -1354,7 +1354,7 @@ d("B-045", "2026-08-30", "release",
   "exactly like FAIL, so nine uncomputed criteria is not a stricter gate, it "
   "is a gate nobody can read. Went from 6 pass / 9 unmeasured to 15 pass / 1.",
   "tools/releasegate.py, and tests/test_never_clauses.py::test_a_recorded_run_"
-  "cannot_vouch_for_code_it_never_saw")
+  "cannot_vouch_for_code_it_never_saw; ALSO SWEPT BY tests/test_defect_register.py::test_every_check_the_register_names_actually_exists")
 
 d("B-046", "2026-08-30", "edge",
   "AN ANONYMOUS SESSION COULD OPEN A MATTER. `advocate_id` was validated with "
@@ -1376,7 +1376,7 @@ d("B-046", "2026-08-30", "edge",
   "ordinary case, this about identity. Length is not content. A mutation "
   "proved the core half was needed: with only the wire guard, disabling the "
   "domain check left the served path green.",
-  "tests/test_never_clauses.py::test_an_anonymous_session_cannot_create_a_matter")
+  "tests/test_never_clauses.py::test_an_anonymous_session_cannot_create_a_matter; ALSO SWEPT BY tests/test_blank_values.py::test_no_required_string_field_accepts_a_value_made_of_whitespace")
 
 d("B-047", "2026-08-30", "knowledge",
   "THE ACT TITLE WAS PARSED BY SPLITTING ON THE FIRST COMMA. That strips the "
@@ -1419,7 +1419,7 @@ d("B-048", "2026-08-30", "knowledge",
   "the principal Act is NOT held, and declaring it would turn a real corpus "
   "gap into a reported RETRIEVAL DEFECT, which is worse. The general fix is "
   "a check comparing declared coverage against held, which does not exist yet.",
-  "tests/test_manifest_covers_what_it_declares.py::test_every_declared_act_retrieves_at_least_one_intended_section")
+  "tests/test_manifest_covers_what_it_declares.py::test_every_declared_act_retrieves_at_least_one_intended_section; ALSO SWEPT BY tests/test_defect_register.py::test_every_check_the_register_names_actually_exists")
 
 d("B-049", "2026-08-30", "tooling",
   "E-002c WAS ENFORCED BY A BRANCH THAT COULD NOT EXECUTE. The guard read "
@@ -1439,7 +1439,7 @@ d("B-049", "2026-08-30", "tooling",
   "a scenario in no suite and asserts the check finds it. Asserting that a bad "
   "state is absent proves nothing about the checker — a checker that always "
   "returns [] passes that too, and this one did.",
-  "tests/test_goldens.py::test_every_scenario_is_reachable_from_a_suite")
+  "tests/test_goldens.py::test_every_scenario_is_reachable_from_a_suite; ALSO SWEPT BY tests/test_every_sweep_has_a_positive_control.py::test_every_sweep_names_a_control_that_proves_it_can_fail")
 
 d("B-050", "2026-08-30", "domain",
   "C4 NAMED AN ENFORCEMENT METHOD THAT NOTHING CALLED. Its docstring said "
@@ -1459,7 +1459,7 @@ d("B-050", "2026-08-30", "domain",
   "Yes — this is the shape trace T8 catches for GATES (declared built, nothing "
   "consults it), reaching a domain method where nothing was watching.",
   "tests/test_thread_binding.py::test_two_threads_with_one_identifier_propose_"
-  "a_merge_and_never_perform_it")
+  "a_merge_and_never_perform_it; ALSO SWEPT BY tests/test_no_declared_owner_is_dead.py::test_no_function_in_the_product_is_defined_and_never_reached")
 
 d("B-051", "2026-08-30", "core",
   "The D2 invariant in `_assert_invariants` could not fire. "
@@ -1552,7 +1552,7 @@ d("B-054", "2026-08-30", "core",
   "have changed nothing at all. Gates had T8 to catch this; functions now have "
   "an enumerator too.",
   "tests/test_no_declared_owner_is_dead.py::test_no_function_in_the_product_"
-  "is_defined_and_never_reached")
+  "is_defined_and_never_reached; ALSO SWEPT BY tests/test_no_declared_owner_is_dead.py::test_no_function_in_the_product_is_defined_and_never_reached")
 
 d("B-055", "2026-08-30", "knowledge",
   "`ActBasis` had two members — NAMED and INFERRED — and carried \"nothing "
@@ -1573,7 +1573,7 @@ d("B-055", "2026-08-30", "knowledge",
   "one of their values. The question is now answered at every enum including "
   "the thirtieth, rather than a category being silently skipped.",
   "tests/test_three_states.py::test_every_outcome_enum_can_say_that_nothing_"
-  "was_established")
+  "was_established; ALSO SWEPT BY tests/test_three_states.py::test_every_outcome_enum_can_say_that_nothing_was_established")
 
 d("B-056", "2026-08-30", "tests",
   "THREE SWEEPS ASSERTED THAT NOTHING WAS BROKEN AND NOTHING SHOWED THEY "
@@ -1593,7 +1593,7 @@ d("B-056", "2026-08-30", "tests",
   "naming is resolved. A sweep added without one fails the build, which is "
   "what stops the next one being written the way these three were.",
   "tests/test_every_sweep_has_a_positive_control.py::test_every_sweep_names_a_"
-  "control_that_proves_it_can_fail")
+  "control_that_proves_it_can_fail; ALSO SWEPT BY tests/test_every_sweep_has_a_positive_control.py::test_every_sweep_names_a_control_that_proves_it_can_fail")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

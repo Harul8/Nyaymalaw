@@ -89,6 +89,19 @@ The procedure, after any fix:
 
 This applies to build fixes, test fixes and stress-test findings alike.
 
+**AND BEFORE FIXING, LOOK BACK.** When a new defect is found, read the register
+first: if the same or a similar shape is already there, REUSE the mechanism
+that refuses it rather than writing another guard beside it. A shape with N
+defects and N unrelated fixes is N places for the N+1th to hide.
+
+*Measured the day this was written: none of the six recurring shapes had a
+mechanism any two of its defects pointed at.* Fifty-six rows, fifty-six
+separate checks. `tests/test_defect_register.py` now fails the build on a shape
+that has recurred with no check named by more than one of its defects — and two
+shapes, **S3** and **S7**, are declared there as having no mechanism yet, with
+the reason and what the general form would be. An admitted gap is work; a
+silent one is a surprise.
+
 Worked example worth keeping: an unretrievable Schedule Article looked like a
 missing entry in an atom-priors table. The real defect was that `table.get(kind,
 0.0)` made *any* unlisted atom type score worse than every listed one. One is a

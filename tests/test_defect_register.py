@@ -65,7 +65,8 @@ def _register() -> list[dict]:
             except Exception:  # noqa: BLE001 -- a computed arg is not a defect row
                 args.append(None)
         if len(args) >= 10 and isinstance(args[0], str):
-            rows.append({"id": args[0], "what": args[3], "check": args[9] or "",
+            rows.append({"id": args[0], "what": args[3], "shape": args[5] or "",
+                         "check": args[9] or "",
                          "status": args[10] if len(args) > 10 else "Fixed"})
     return rows
 
@@ -166,3 +167,90 @@ def test_the_register_is_getting_more_runnable_not_less():
         f"only {precise} defects name a specific test function. That number "
         f"should never fall: it is how many of the register's claims can be "
         f"checked exactly rather than approximately.")
+
+
+def test_every_recurring_shape_has_a_mechanism_more_than_one_defect_points_at():
+    """A SHAPE THAT KEEPS RECURRING MUST HAVE ONE MECHANISM, NOT N FIXES.
+
+    Every one of the register's rows named its own check and no shape had a
+    mechanism, which is the arrangement that let one sentence — *a value that
+    is present and carries nothing is absent* — be fixed three separate ways as
+    a `.strip()`, a regex and a missing enum member, with nothing to catch the
+    fourth.
+
+    So: for every shape that has produced more than one defect, at least one
+    check must be named by at least TWO of them. That is what "the fix was
+    generalised" means operationally — not that the commit message said so, but
+    that a second instance points at the same runner.
+
+    It does not demand that ALL instances share one mechanism. Two defects of
+    one shape in genuinely different subsystems can need different machinery,
+    and forcing them together would be its own kind of wrong. What it refuses
+    is a shape with N defects and N unrelated fixes.
+    """
+    import collections
+
+    by_shape: dict[str, list[tuple[str, set[str]]]] = collections.defaultdict(list)
+    for row in _register():
+        head = row.get("shape", "")
+        key = head.split("—")[0].split("--")[0].strip().rstrip(".")
+        if not (key.startswith("S") and key[1:2].isdigit()):
+            continue                       # a one-off shape, described in prose
+        # A SHARE MUST BE A FUNCTION. Two defects naming the same FILE are two
+        # fixes that happen to live together, not one mechanism -- `web/app.js`
+        # appeared "shared" by that reading and is nothing of the kind.
+        checks = {f"{p}::{f}" for p, f in PATH.findall(row["check"]) if f}
+        by_shape[key].append((row["id"], checks))
+
+    # SHAPES WITH NO MECHANISM YET, each with the reason and what the general
+    # form would be. Declared rather than skipped: a gap someone typed is a
+    # decision, and a category a check quietly omits is how the rule stops
+    # applying. Every entry here is work that has not been done.
+    no_mechanism_yet = {
+        "S3": "a zero from the wrong index reads as absence. The five "
+              "instances are measurements against five different stores with "
+              "no common interface — the derived layer instead of raw_data, "
+              "keyword scoring over a whole question, a fuzzy Act matcher, a "
+              "court LABEL instead of a binding relationship, a manifest "
+              "narrower than the corpus. The general form would be 'every "
+              "measurement declares the population it measures and is checked "
+              "against a positive control', which is M4 applied to measurement "
+              "code rather than to tests. NOT BUILT.",
+        "S7": "a rule applied outside the case it was written for. Whether a "
+              "rule's scope matches its intent is not decidable from source. "
+              "The mechanisable parts exist — a positive control proves the "
+              "rule fires where it should, and the three-state default (M5) "
+              "stops the fallback pointing at the irreversible direction. The "
+              "residue is judgement and is reviewed, not scanned.",
+    }
+
+    unshared = []
+    for shape, entries in sorted(by_shape.items()):
+        if shape in no_mechanism_yet:
+            continue
+        if len(entries) < 2:
+            continue
+        seen: collections.Counter = collections.Counter()
+        for _, checks in entries:
+            seen.update(checks)
+        if not any(n >= 2 for n in seen.values()):
+            unshared.append(
+                f"{shape}: {len(entries)} defects "
+                f"({' '.join(i for i, _ in entries)}) and no check named by "
+                f"more than one")
+
+    assert not unshared, (
+        "these shapes have recurred and have no shared mechanism:\n  "
+        + "\n  ".join(unshared)
+        + "\n\nBefore fixing a new defect, look for the same shape in the "
+          "register: if it is there, REUSE the mechanism that already refuses "
+          "it rather than writing another guard beside it. A shape with N "
+          "defects and N unrelated fixes is N places for the N+1th to hide.")
+
+    stale = sorted(set(no_mechanism_yet) - set(by_shape))
+    assert not stale, (
+        f"these shapes are declared unmechanised and no longer occur: {stale}. "
+        f"Delete the entry — an admitted gap for something gone makes the "
+        f"remaining gaps look larger than they are.")
+    print("\n  shapes with no shared mechanism yet: "
+          + ", ".join(sorted(no_mechanism_yet)))
