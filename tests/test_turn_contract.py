@@ -424,6 +424,7 @@ def test_the_served_path_blocks_on_unresolved_posture(client):
 
 
 @pytest.mark.eval_id("E-063")
+@refuses("A2", 2)
 def test_the_boards_are_bounded_by_row_count_not_turns(client):
     """THE REGRESSION TO WATCH. The previous build's board carried up to 28
     lines of analysis and grew with the conversation."""

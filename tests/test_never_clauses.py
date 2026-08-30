@@ -451,3 +451,77 @@ def test_a_matter_that_cannot_be_read_does_not_vanish_from_the_list(tmp_path, cl
         f"the board reports {board['state']!r} while a matter is missing from "
         f"it. `row_count` says one either way.")
     assert "mat_corrupted" in (board["unreadable_reason"] or "")
+
+
+@refuses("A2", 0)
+@pytest.mark.eval_id("E-012")
+def test_the_invitation_to_brief_is_one_line_and_not_a_field_set(client):
+    """A2: *Never a form. An invitation to brief is one line, not a field set.*
+
+    An advocate opens with a sentence, not a schema. A product that answers
+    "hello" with eight labelled inputs has told them it wants data entry, and
+    the thing it most needs — the uninterrupted account — is the thing a form
+    makes impossible to give.
+    """
+    r = client.post("/api/turn", json={"advocate_id": "adv", "message": "hi"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["route"] == "non_matter", "a greeting is not a matter"
+
+    text = " ".join(e["text"] for e in body["elements"])
+    assert len(body["elements"]) == 1, (
+        f"the invitation is {len(body['elements'])} elements. It is one line.")
+    assert len(text.split(".")) <= 3, f"the invitation is a paragraph: {text!r}"
+    for form in ("please enter", "field", "fill in", "select one",
+                 "1.", "2.", "a)", "b)", "*"):
+        assert form not in text.lower(), (
+            f"the invitation reads as a form ({form!r}): {text!r}")
+
+
+@refuses("A2", 1)
+@pytest.mark.eval_id("E-063")
+def test_neither_board_carries_analysis(client):
+    """A2: *Never analysis on either board.* Not the theory, not proof gaps,
+    not reasoning — those live in the case summary and the answer.
+
+    The test for status-versus-analysis is whether the line is a CONCLUSION.
+    A board is what the advocate scans to decide which file to open; a
+    conclusion on it is one they will act on without the reasoning that
+    produced it.
+    """
+
+    made = client.post("/api/turn", json={
+        "advocate_id": "adv",
+        "message": "we act for the plaintiff in a possession suit over the land"})
+    assert made.status_code == 200
+    matter_id = made.json()["matter_id"]
+
+    board = client.get(f"/api/matters/{matter_id}",
+                       params={"advocate_id": "adv"}).json()
+    listing = client.get("/api/matters", params={"advocate_id": "adv"}).json()
+
+    # STATUS FIELDS ONLY. A key outside this set is either analysis or a new
+    # status field somebody must justify — and the failure names it either way.
+    thread_keys = {"thread_id", "thread", "our_client_is", "side", "against",
+                   "forum", "stage", "next_deadline", "loud", "conflict",
+                   "deferred_reason"}
+    for row in board["threads"]:
+        extra = set(row) - thread_keys
+        assert not extra, (
+            f"the thread board carries {sorted(extra)}. A board is what the "
+            f"advocate scans to choose a file; analysis on it is a conclusion "
+            f"they will act on without the reasoning behind it.")
+
+    matter_keys = {"matter_id", "matter", "client", "threads", "next_deadline",
+                   "blocked", "last_touched"}
+    for row in listing["matters"]:
+        extra = set(row) - matter_keys
+        assert not extra, f"the matter list carries {sorted(extra)}"
+
+    # And no free text on either board reads as reasoning.
+    blob = " ".join(str(v) for row in board["threads"] for v in row.values()
+                    if isinstance(v, str))
+    for reasoning in ("because", "therefore", "it follows", "the theory",
+                      "we should argue", "likely to succeed"):
+        assert reasoning not in blob.lower(), (
+            f"the board reasons ({reasoning!r}): {blob[:140]!r}")

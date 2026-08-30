@@ -165,6 +165,40 @@ def spec_is_current(rep: Report) -> None:
                            "been rewritten; re-run trace.")
 
 
+
+#: NEVER clauses that cannot be tested until a named feature exists. Each is a
+#: DECLARED dependency, not an excuse: `tools/trace.py` refuses an entry whose
+#: blocking feature has already reached `tested`, so the exemption expires by
+#: itself the day the thing it waits for lands.
+#:
+#: A2.5 -- "never drop a passed deadline" -- is a rule about the BOARD, and the
+#: board has no deadlines to render until D3 builds the register. Writing the
+#: test now would assert a rule against an empty field, which is the vacuous
+#: check this project has already paid for three times.
+AWAITING: dict[tuple[str, int], str] = {
+    ("A2", 5): "D3, the deadline register",
+}
+
+
+def _within_frontier(slice_id: str | None, features: list[dict]) -> bool:
+    """Is this feature in a slice at or below the one being built?
+
+    THE FRONTIER is the highest slice any feature has reached `tested`. Inside
+    it, an untested NEVER clause is a hole in something that ships. Outside it,
+    it is work not started, and demanding refusal tests for unbuilt features
+    fills the suite with tests nobody can run.
+
+    Derived from the spec rather than configured, so it moves on its own the
+    day a slice starts and nobody has to remember to move it.
+    """
+    def num(sid: str | None) -> int:
+        return int(sid[1:]) if sid and sid[0] == "S" and sid[1:].isdigit() else -1
+
+    frontier = max((num(f.get("slice")) for f in features
+                    if (f.get("status") or "decided") == "tested"), default=-1)
+    return num(slice_id) <= frontier
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--summary", action="store_true")
@@ -232,14 +266,45 @@ def main() -> int:
         if e["id"] in ran and e["id"] not in rejected:
             rep.warn("T6", f"{e['id']} has run but has never rejected its counterexample")
 
-    # T7 -- the NEVER half of the contract
+    # T7 -- the NEVER half of the contract, and it FAILS inside the frontier.
+    #
+    # It warned for weeks while seventeen clauses sat untested across five
+    # features in slices already marked DONE. Nobody reads the 60th
+    # warning. They were untested because tests were derived from the DOES
+    # clauses -- the happy path -- and NEVER was treated as prose; writing
+    # them found an anonymous session able to open a matter (B-046) within
+    # the hour.
+    #
+    # Beyond the frontier it stays a warning: inventing refusal tests for
+    # features nobody has built is how a suite fills with tests that cannot
+    # run.
     for f in features:
         nevers = f.get("never") or []
         covered = refuses_by_feature.get(f["id"], set())
         missing = [i for i in range(len(nevers)) if i not in covered]
-        if (f.get("status") or "decided") in BUILT_OR_BEYOND and missing:
-            rep.warn("T7", f"{f['id']}: {len(missing)} of {len(nevers)} NEVER clauses "
-                           f"have no test declaring @refuses")
+        if not ((f.get("status") or "decided") in BUILT_OR_BEYOND and missing):
+            continue
+        blocked = [i for i in missing if (f["id"], i) in AWAITING]
+        missing = [i for i in missing if i not in blocked]
+        for i in blocked:
+            rep.warn("T7", f"{f['id']}.{i} awaits {AWAITING[(f['id'], i)]}")
+        if not missing:
+            continue
+        note = (f"{f['id']}: {len(missing)} of {len(nevers)} NEVER clauses "
+                f"have no test declaring @refuses")
+        if _within_frontier(f.get("slice"), features):
+            rep.fail("T7", note)
+        else:
+            rep.warn("T7", note)
+
+    # An AWAITING entry whose blocking feature has landed is an exemption
+    # nobody re-examined. It expires here rather than in someone's memory.
+    by_id = {f["id"]: f for f in features}
+    for (fid, idx), blocker in AWAITING.items():
+        dep = blocker.split(",")[0].strip()
+        if (by_id.get(dep, {}).get("status") or "decided") == "tested":
+            rep.fail("T7", f"{fid}.{idx} is exempted pending {dep}, and {dep} "
+                           f"is now tested. Write the clause's test.")
 
     # T11 -- a feature with EVAL prose but no numbered eval in the plan can
     # never reach `tested`, because T4 has nothing to check it against. It is a
