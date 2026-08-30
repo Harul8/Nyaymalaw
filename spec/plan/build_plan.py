@@ -1529,6 +1529,31 @@ d("B-053", "2026-08-30", "store",
   "tests/test_never_clauses.py::test_a_matter_that_cannot_be_read_does_not_"
   "vanish_from_the_list")
 
+d("B-054", "2026-08-30", "core",
+  "THREE MORE DECLARED OWNERS WITH NO CALLER, two of them holding a rule that "
+  "was ALSO implemented inline elsewhere. `TreatmentState.usable_alone` "
+  "decides whether a treatment state may carry a proposition alone — and "
+  "`Finding.blocking_reason` enumerated NEGATIVE and NOT_CHECKED itself. "
+  "`CoveragePosition.discloses` says anything but MET is disclosed — and "
+  "`turn.py` asked `state is MET` inline. `Answer.render_text` claims to be "
+  "the bytes that leave the process, and nothing calls it.",
+  "Writing the rule on the type where it belongs, then writing the call site "
+  "later and re-deciding it there. Both places look right in isolation; only "
+  "one of them runs.",
+  "S11 — a check that cannot fail is not a check",
+  "Sweeping all 214 functions in nm/ for the shape B-050 had, rather than "
+  "waiting for the next one",
+  "`blocking_reason` derives from `usable_alone`, so a fourth treatment state "
+  "is refused by default; `turn.py` asks `position.discloses`; `render_text` "
+  "and three genuinely dead helpers are deleted.",
+  "Yes — TWO OWNERS FOR ONE RULE is the shape that produced the O.S. 442/2023 "
+  "defect, where one copy was hardened and the other was not. Here it is "
+  "worse: the second copy is the one nobody consults, so hardening it would "
+  "have changed nothing at all. Gates had T8 to catch this; functions now have "
+  "an enumerator too.",
+  "tests/test_no_declared_owner_is_dead.py::test_no_function_in_the_product_"
+  "is_defined_and_never_reached")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

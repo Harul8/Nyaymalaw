@@ -34,7 +34,6 @@ from nm.domain.matter import (
     Fact,
     Matter,
     MatterId,
-    Thread,
 )
 from nm.domain.traceability import implements
 from nm.ports.store import MatterList, StaleWrite
@@ -146,10 +145,6 @@ def _decode(cls, value):
 
 def _fact(d: dict) -> Fact:
     return _decode(Fact, d)
-
-
-def _thread(d: dict) -> Thread:
-    return _decode(Thread, d)
 
 
 def _matter(d: dict) -> Matter:

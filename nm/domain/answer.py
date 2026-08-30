@@ -146,6 +146,3 @@ class Answer:
     def loud_signals(self) -> tuple[Element, ...]:
         return tuple(e for e in self.elements if e.signal.is_loud)
 
-    def render_text(self) -> str:
-        """The bytes that leave the process. Nothing else is emitted."""
-        return "\n\n".join(e.text for e in self.elements)

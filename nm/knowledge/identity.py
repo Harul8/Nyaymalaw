@@ -243,16 +243,6 @@ class IdentityIndex:
             "select field, era, count(*) from rejects group by 1, 2"
             " order by 1, 2").fetchall()
 
-    def reject_reason(self, case_id: str, field: str) -> str | None:
-        """Why one judgment's field could not be established."""
-        con = self._connect()
-        if con is None:
-            return None
-        row = con.execute(
-            "select reason from rejects where case_id = ? and field = ?",
-            (case_id, field)).fetchone()
-        return row[0] if row else None
-
     # ------------------------------------------------------------ identity ---
     def case(self, case_id: str) -> CaseIdentity | None:
         con = self._connect()

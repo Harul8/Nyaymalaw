@@ -63,8 +63,3 @@ def refuses(feature_id: str, never_index: int) -> Callable[[F], F]:
         return fn
 
     return deco
-
-
-def links() -> dict[str, list[str]]:
-    """Every (feature id -> implementing site) recorded by imports so far."""
-    return {k: sorted(set(v)) for k, v in _LINKS.items()}

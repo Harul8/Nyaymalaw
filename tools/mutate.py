@@ -470,6 +470,16 @@ MUTATIONS = [
      "test_a_matter_that_cannot_be_read_does_not_vanish_from_the_list",
      "E-063b"),
 
+    # B-050 / B-054. Inlining a rule leaves its declared owner with no
+    # callers -- the docstring then says the rule lives somewhere nothing
+    # runs, and the next person hardens the copy that never executes.
+    ("a rule inlined, leaving its declared owner consulted by nothing",
+     "nm/core/turn.py",
+     "            if not position.discloses:",
+     "            if position.state is CoverageState.MET:",
+     "test_no_function_in_the_product_is_defined_and_never_reached",
+     "E-023"),
+
     ("a persisted field silently dropped on read",
      "nm/adapters/store/file_store.py",
      "                          for f in fields(cls) if f.name in value})",

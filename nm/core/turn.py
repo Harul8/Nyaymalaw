@@ -31,7 +31,6 @@ from nm.core import posture as posture_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
-from nm.domain.coverage import CoverageState
 from nm.domain.matter import (
     Basis,
     Certainty,
@@ -810,7 +809,10 @@ class TurnEngine:
                 "Run `python tools/releasegate.py --write`.")
         else:
             position = self._coverage.position(turn.jurisdiction)
-            if position.state is CoverageState.MET:
+            # `discloses` OWNS "anything but MET is said out loud". Asking
+            # `state is MET` here was the same rule in a second place, and
+            # the owner had no callers at all.
+            if not position.discloses:
                 return
             position_state = position.state.value
             detail = position.detail

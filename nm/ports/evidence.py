@@ -226,13 +226,24 @@ class Finding:
             if not self.binding.assessed:
                 return (f"G-BINDING: binding status for {self.ref} could not be "
                         f"computed -- {self.binding_reason}")
-            if self.treatment.state is TreatmentState.NEGATIVE:
-                return (f"G-GROUND: {self.ref} has negative treatment "
-                        f"({', '.join(self.treatment.verbs)}) on "
-                        f"{self.treatment.scope}")
-            if self.treatment.state is TreatmentState.NOT_CHECKED:
-                return (f"G-GROUND: subsequent treatment of {self.ref} was not "
-                        f"checked -- {self.treatment.scope}")
+            # WHETHER A TREATMENT STATE MAY CARRY A PROPOSITION IS DECIDED
+            # ONCE, by `usable_alone` on the enum. This used to enumerate
+            # NEGATIVE and NOT_CHECKED here, which is the same rule in a
+            # second place -- and the second place was the one nobody
+            # consulted, so hardening the first would have changed nothing.
+            # A fourth treatment state is now refused by default and gets
+            # the general wording, rather than passing silently.
+            if not self.treatment.state.usable_alone:
+                if self.treatment.state is TreatmentState.NEGATIVE:
+                    return (f"G-GROUND: {self.ref} has negative treatment "
+                            f"({', '.join(self.treatment.verbs)}) on "
+                            f"{self.treatment.scope}")
+                if self.treatment.state is TreatmentState.NOT_CHECKED:
+                    return (f"G-GROUND: subsequent treatment of {self.ref} "
+                            f"was not checked -- {self.treatment.scope}")
+                return (f"G-GROUND: treatment of {self.ref} is "
+                        f"{self.treatment.state.value!r}, which cannot carry "
+                        f"a proposition alone")
         if self.governing_date is not None and not self.in_force:
             return (f"G-INFORCE: {self.ref} was not in force on "
                     f"{self.governing_date.isoformat()} (in force "
