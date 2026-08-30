@@ -106,3 +106,64 @@ def test_no_module_defines_its_own_provision_pattern():
         + " — import from nm.domain.citation instead. The last time there were "
           "two, one was hardened and the other was not, and a realistic brief "
           "retrieved the wrong section and reported a corpus gap.")
+
+
+# ============================================ no fuzzy identity ============
+
+@refuses("H3", 0)
+def test_an_act_is_named_or_it_is_inferred_and_never_silently_matched():
+    """NO FUZZY MATCH DECIDES WHICH DOCUMENT IS RETRIEVED.
+
+    Common words run through every Indian statute title, so overlap scoring is
+    not a weak signal — it is a wrong one. Measured in one session:
+
+        "Indian Easements Act 1882" -> "Indian Evidence Act, 1872"  (word)
+        "Indian Easements Act 1882" -> "Transfer of Property Act"   (year)
+        a s.53A question about the TPA -> the Specific Relief Act   (keyword)
+
+    and in the other direction, matching case NAMES reached 0.83% of judgments
+    while matching reporter CITATIONS — an exact key — reached 90.9%.
+
+    Keyword routing survives because an advocate who names no Act still needs
+    an answer. What it may no longer do is IDENTIFY: it yields a candidate
+    whose basis is `inferred`, and an inferred Act is disclosed so the advocate
+    can correct it — the same rule the product already applies to posture.
+    """
+    from datetime import date
+
+    from nm.knowledge.manifest import ActBasis, Manifest
+
+    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    on = date(2026, 8, 30)
+
+    named = m.resolve("does section 53A of the Transfer of Property Act apply", on)
+    assert named.basis is ActBasis.NAMED
+    assert named.entry.act_name == "Transfer of Property Act, 1882"
+    assert not named.must_disclose, "an Act the advocate named needs no caveat"
+
+    guessed = m.resolve("he was dispossessed yesterday and wants it back", on)
+    assert guessed.basis is ActBasis.INFERRED
+    assert guessed.must_disclose, "an inferred Act must be disclosed"
+    assert "did not name an Act" in guessed.note()
+    assert guessed.matched_on, "the note must say WHAT it was inferred from"
+
+    assert m.resolve("what is the weather in Hyderabad", on).entry is None
+
+
+def test_a_named_act_beats_every_keyword_score():
+    """B-016. Keyword scoring reads the WHOLE question, so the more context an
+    advocate gave, the more likely it was to be outvoted — a brief full of
+    `possession` and `dispossessed` asking about s.53A of the Transfer of
+    Property Act resolved to the Specific Relief Act and reported a corpus gap
+    for a provision the corpus holds."""
+    from datetime import date
+
+    from nm.knowledge.manifest import ActBasis, Manifest
+
+    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    brief = ("client was dispossessed from the property and wants possession "
+             "back; does section 53A of the Transfer of Property Act protect "
+             "him after the injunction and the declaration")
+    r = m.resolve(brief, date(2026, 8, 30))
+    assert r.entry.act_name == "Transfer of Property Act, 1882"
+    assert r.basis is ActBasis.NAMED

@@ -607,6 +607,14 @@ class TurnEngine:
           HELD_NOT_FOUND  a RETRIEVAL DEFECT that escalates. It is never shown
                           to the advocate as though the corpus lacked it
         """
+        # AN INFERENCE THE RETRIEVAL RESTED ON. Disclosed before the
+        # findings, because an advocate who is not told which Act was assumed
+        # cannot tell a right answer from a right answer to the wrong question.
+        if getattr(result, "assumption", None):
+            grounds.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id,
+                text=result.assumption, disclosure=True))
+
         if result.coverage is Coverage.ANSWERED:
             shown = result.findings
             if len(shown) > MAX_AUTHORITIES_SHOWN and any(

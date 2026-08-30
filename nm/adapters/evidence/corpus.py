@@ -133,7 +133,8 @@ class CorpusEvidenceAdapter:
         if need.want_authority:
             return self._fetch_authority(need)
 
-        entry, superseded = self._manifest.resolve(need.question, on=need.governing_date)
+        resolved = self._manifest.resolve(need.question, on=need.governing_date)
+        entry, superseded = resolved.entry, resolved.superseded
         if entry is None:
             missing = ("no Act in the curated manifest governs this question. "
                        "The manifest states INTENDED coverage, so this is an "
@@ -164,7 +165,8 @@ class CorpusEvidenceAdapter:
         findings, stores = self._union_lookup(entry.act_patterns, section, entry, need)
         if findings:
             return EvidenceResult(coverage=Coverage.ANSWERED, findings=findings,
-                                  searched_stores=stores)
+                                  searched_stores=stores,
+                                  assumption=resolved.note() or None)
 
         # Zero hits. The manifest -- not the hit count -- decides which of the
         # two remaining states this is.

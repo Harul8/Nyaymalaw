@@ -267,6 +267,13 @@ class EvidenceResult:
     findings: tuple[Finding, ...] = ()
     missing: str | None = None
     searched_stores: tuple[str, ...] = ()
+    assumption: str | None = None
+    """An inference the retrieval rested on, for the advocate to correct.
+
+    Set when the governing Act was INFERRED from keywords rather than named in
+    the question. A retrieval that guessed which statute it was reading and did
+    not say so is indistinguishable from one that knew — and the guess sends an
+    exact section lookup into the wrong Act."""
 
     def __post_init__(self) -> None:
         if self.coverage is Coverage.NOT_HELD and not self.missing:

@@ -95,6 +95,16 @@ acts:
     intended_sections: ["1-37"]
     keywords: ["domestic violence", "shared household", "residence order", "protection officer"]
 
+  # Added 30 August 2026. The golden set relies on s.15 (easement by
+  # prescription) and the manifest never declared the Act — so the runner
+  # reported it NOT HELD while the corpus holds all 65 sections. A manifest
+  # gap, not a corpus gap, and the two are only distinguishable because the
+  # manifest states INTENDED coverage independently of what the index contains.
+  - act_name: "Indian Easements Act, 1882"
+    act_patterns: ["the_indian_easements_act_1882", "%INDIAN EASEMENTS ACT, 1882%"]
+    intended_sections: ["1-65"]
+    keywords: ["easement", "easements", "right of way", "prescription", "servient", "dominant heritage"]
+
   - act_name: "Code of Civil Procedure, 1908"
     act_patterns: ["the_code_of_civil_procedure_1908", "%CODE OF CIVIL PROCEDURE, 1908%"]
     intended_sections: ["1-158"]

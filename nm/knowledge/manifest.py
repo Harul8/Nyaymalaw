@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from enum import Enum
 from pathlib import Path
 
 import yaml
@@ -80,6 +81,42 @@ class ManifestEntry:
         return True
 
 
+class ActBasis(str, Enum):
+    """How the governing Act was arrived at. The same shape as `Posture.basis`.
+
+    The product already refuses to infer a POSTURE silently, because a guess
+    there gives advice to the wrong side. An Act inferred silently is the same
+    defect against a different field: it sends an exact section lookup into the
+    wrong statute and reports the miss as a corpus gap.
+    """
+
+    NAMED = "named"          # the question names the Act. Exact match.
+    INFERRED = "inferred"    # keyword routing. A CANDIDATE, and disclosed.
+
+
+@dataclass(frozen=True)
+class Resolution:
+    """Which Act governs, and on what footing."""
+
+    entry: "ManifestEntry | None"
+    basis: ActBasis | None = None
+    superseded: "ManifestEntry | None" = None
+    matched_on: tuple[str, ...] = ()
+
+    @property
+    def must_disclose(self) -> bool:
+        """An inferred Act is stated to the advocate so they can correct it."""
+        return self.basis is ActBasis.INFERRED and self.entry is not None
+
+    def note(self) -> str:
+        if not self.must_disclose:
+            return ""
+        return (f"I am taking this as the {self.entry.act_name} because you "
+                f"mentioned {', '.join(self.matched_on)}. You did not name an "
+                f"Act, so this is my inference and not your instruction — say "
+                f"if it is wrong.")
+
+
 @dataclass(frozen=True)
 class Manifest:
     entries: tuple[ManifestEntry, ...]
@@ -110,11 +147,12 @@ class Manifest:
                            if doc.get("reconciled_at") else None),
         )
 
-    def resolve(self, question: str,
-                on: date | None = None) -> tuple[ManifestEntry | None, ManifestEntry | None]:
+    def resolve(self, question: str, on: date | None = None) -> "Resolution":
         """Which Act governs the question ON THE GOVERNING DATE.
 
-        Returns `(entry, superseded)`. `superseded` is the best keyword match
+        Returns a `Resolution` carrying the entry AND ITS BASIS — named or
+        inferred — because those are different facts and the caller must be
+        able to tell them apart. `superseded` is the best keyword match
         that was EXCLUDED because it was not in force on that date, and it is
         returned rather than dropped so the caller can say *"the Act you are
         describing existed, on a different date"* instead of the flat and false
@@ -145,7 +183,7 @@ class Manifest:
         # question put through the interface.
         named = self._named_in(low, on)
         if named is not None:
-            return named, None
+            return Resolution(named, ActBasis.NAMED)
 
         best: ManifestEntry | None = None
         superseded: ManifestEntry | None = None
@@ -160,7 +198,15 @@ class Manifest:
                 continue
             if hits > best_score:
                 best, best_score = e, hits
-        return best, superseded
+
+        # KEYWORD ROUTING NO LONGER IDENTIFIES. It offers a candidate whose
+        # basis is `inferred`, and the caller must disclose it. Silently
+        # returning it is what sent a Transfer of Property question into the
+        # Specific Relief Act and reported a corpus gap for a held provision.
+        if best is None:
+            return Resolution(None, None, superseded)
+        matched = tuple(k for k in best.keywords if k.lower() in low)
+        return Resolution(best, ActBasis.INFERRED, superseded, matched)
 
     def _named_in(self, low: str, on: date | None) -> ManifestEntry | None:
         """The Act the question NAMES, if it names one.
