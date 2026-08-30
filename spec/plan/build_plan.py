@@ -1554,6 +1554,47 @@ d("B-054", "2026-08-30", "core",
   "tests/test_no_declared_owner_is_dead.py::test_no_function_in_the_product_"
   "is_defined_and_never_reached")
 
+d("B-055", "2026-08-30", "knowledge",
+  "`ActBasis` had two members — NAMED and INFERRED — and carried \"nothing "
+  "governs this question\" as `basis=None`, OUTSIDE the vocabulary. "
+  "`must_disclose` asks `basis is INFERRED` and got its false answer by "
+  "accident rather than by decision, and no consumer was forced to handle a "
+  "state the product is routinely in.",
+  "Writing the enum for the two cases that resolve, and letting the third "
+  "arrive as a null. This project accepts null-as-third-state where it is "
+  "DOCUMENTED — `Fact.confirmed: bool | None` says so in terms — and this one "
+  "said nothing at all.",
+  "S1 — an absent input reading as success",
+  "Sweeping all 29 enums for a missing not-assessed member, not by a scenario",
+  "`ActBasis.NOT_RESOLVED`, and `Resolution.basis` is no longer optional.",
+  "Yes — THREE STATES, NEVER TWO, checked over the whole vocabulary at once. "
+  "The other 28 enums were examined in the same pass: 18 already carried an "
+  "escape, and 10 are declared CLOSED with the reason something always chose "
+  "one of their values. The question is now answered at every enum including "
+  "the thirtieth, rather than a category being silently skipped.",
+  "tests/test_three_states.py::test_every_outcome_enum_can_say_that_nothing_"
+  "was_established")
+
+d("B-056", "2026-08-30", "tests",
+  "THREE SWEEPS ASSERTED THAT NOTHING WAS BROKEN AND NOTHING SHOWED THEY "
+  "COULD FIND A BREAK. B-049 is the proof this matters: a checker whose "
+  "guarding condition could never be true reported OK on every commit for "
+  "weeks, and the test that called it asserted `not failures` and passed.",
+  "Writing each sweep to answer the question I had — is anything broken — and "
+  "not the question that makes the answer worth anything: can this find a "
+  "break at all. A checker that always returns [] satisfies an absence "
+  "assertion identically.",
+  "S11 — a check that cannot fail is not a check",
+  "Building the enumerator for it, which found three of its own siblings",
+  "Each of the three now plants a broken member and asserts it is reported: a "
+  "contract field no type carries, a second provision pattern, a "
+  "document-sourced fact.",
+  "Yes — every sweep must NAME the test that proves it can fail, and the "
+  "naming is resolved. A sweep added without one fails the build, which is "
+  "what stops the next one being written the way these three were.",
+  "tests/test_every_sweep_has_a_positive_control.py::test_every_sweep_names_a_"
+  "control_that_proves_it_can_fail")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

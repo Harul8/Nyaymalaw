@@ -108,6 +108,14 @@ def test_no_module_defines_its_own_provision_pattern():
           "two, one was hardened and the other was not, and a realistic brief "
           "retrieved the wrong section and reported a corpus gap.")
 
+    # THE POSITIVE CONTROL. The scan finding nothing is only evidence if
+    # the scan can find something -- and a regex that matches nothing
+    # passes the assertion above exactly as a clean codebase does.
+    planted = 'SECTION = re.compile(r"\\b(?:sections?|sec)\\s*(\\d+)")'
+    assert pattern.search(planted), (
+        "the scan does not recognise a second provision pattern even when "
+        "one is put in front of it, so its silence means nothing")
+
 
 # ============================================ no fuzzy identity ============
 

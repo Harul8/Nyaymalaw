@@ -206,6 +206,21 @@ def test_no_path_admits_a_document_fact_without_binding_it_to_a_thread():
         f"document to the first or largest thread. Write that binding, then "
         f"replace this tripwire with a test of it.")
 
+    # THE POSITIVE CONTROL. A tripwire that has never been tripped is not
+    # known to be connected: the scan above must actually FIND a document
+    # fact when one is put in front of it.
+    planted = ast.parse(
+        'Provenance(kind="document", turn="t", document="x.pdf", page=1)')
+    seen = [n for n in ast.walk(planted)
+            if isinstance(n, ast.Call)
+            and (getattr(n.func, "id", None) or getattr(n.func, "attr", None))
+            == "Provenance"
+            and any(k.arg == "kind" and isinstance(k.value, ast.Constant)
+                    and k.value.value == "document" for k in n.keywords)]
+    assert seen, (
+        "the scan does not recognise a document-sourced fact even when one "
+        "is put in front of it, so the tripwire is not connected")
+
     # And the type still refuses a document fact that cannot be located, which
     # is what makes the binding checkable when it arrives.
     with pytest.raises(ValueError):

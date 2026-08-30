@@ -93,6 +93,14 @@ class ActBasis(str, Enum):
 
     NAMED = "named"          # the question names the Act. Exact match.
     INFERRED = "inferred"    # keyword routing. A CANDIDATE, and disclosed.
+    NOT_RESOLVED = "not_resolved"
+    """NOTHING GOVERNS THIS QUESTION, and that is a state the product is
+    routinely in -- an advocate describing events before naming a statute.
+
+    It used to be carried by `basis=None`, outside the vocabulary, so
+    `must_disclose` answered `basis is INFERRED` falsely-negative by
+    accident rather than by decision and nothing forced a consumer to
+    handle it. Three states, and the third is a VALUE."""
 
 
 #: A four-digit year at the END of a title, with its separating comma.
@@ -126,7 +134,7 @@ class Resolution:
     """Which Act governs, and on what footing."""
 
     entry: "ManifestEntry | None"
-    basis: ActBasis | None = None
+    basis: ActBasis = ActBasis.NOT_RESOLVED
     superseded: "ManifestEntry | None" = None
     matched_on: tuple[str, ...] = ()
     carried: bool = False
@@ -282,7 +290,7 @@ class Manifest:
         # returning it is what sent a Transfer of Property question into the
         # Specific Relief Act and reported a corpus gap for a held provision.
         if best is None:
-            return Resolution(None, None, superseded)
+            return Resolution(None, ActBasis.NOT_RESOLVED, superseded)
         matched = tuple(k for k in best.keywords if k.lower() in low)
         others = tuple(e.act_name for e in self.entries
                        if e is not best

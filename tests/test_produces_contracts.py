@@ -58,6 +58,19 @@ def test_every_required_field_exists_on_the_implementing_type():
     assert not missing, (
         "Appendix E requires fields the code does not carry: " + ", ".join(missing))
 
+    # THE POSITIVE CONTROL. Asserting an absence proves nothing about the
+    # comparison -- a loop that never appends satisfies it identically, and
+    # one in this suite did exactly that for weeks (B-049).
+    ghost = {"name": "Fact", "fields": [
+        {"field": "a_field_no_type_has", "required": True, "type": "str",
+         "why": "planted"}]}
+    planted = [f"{ghost['name']}.{f['field']}" for f in ghost["fields"]
+               if f["required"]
+               and f["field"] not in {x.name for x in dataclasses.fields(Fact)}]
+    assert planted == ["Fact.a_field_no_type_has"], (
+        "a required contract field the type does not carry was NOT "
+        "reported, so the sweep above cannot fail")
+
 
 def test_the_implemented_type_adds_nothing_the_contract_does_not_declare():
     """The check in the other direction, and it matters as much.
