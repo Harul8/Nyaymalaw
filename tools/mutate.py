@@ -22,6 +22,9 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from tools._fingerprint import source_fingerprint  # noqa: E402
 
 # (label, file, original, mutation, test that must fail, eval it proves)
 MUTATIONS = [
@@ -149,6 +152,49 @@ MUTATIONS = [
      "            pass",
      "test_a_provision_is_still_read_back_behind_a_closed_posture_gate",
      "E-034"),
+
+    # A1.2. `min_length=1` counts CHARACTERS, so "   " opened a matter --
+    # an anonymous session on a file nothing can attribute.
+    ("an identifier made of whitespace accepted as an identity",
+     "nm/domain/matter.py",
+     '        if not (advocate_id or "").strip():',
+     '        if False and not (advocate_id or "").strip():',
+     "test_an_anonymous_session_cannot_create_a_matter", "E-010"),
+
+    # A1.1. A 404 that differs between "no such matter" and "not yours"
+    # is an oracle: it discloses WHICH MATTERS EXIST to someone who can
+    # read none of them.
+    ("a failed lookup disclosing whether the matter exists",
+     "nm/edge/api.py",
+     '        raise HTTPException(status_code=404, detail="no such matter")',
+     '        raise HTTPException(status_code=404,\n'
+     '                            detail=("no such matter" if m is None\n'
+     '                                    else "not your matter"))',
+     "test_a_failed_credential_discloses_nothing_about_which_matters_exist",
+     "E-010"),
+
+    # I1.2. A turn whose metrics could not be written has no record of
+    # having happened, and swallowing that leaves the advocate advised
+    # and the file silent about it.
+    ("an audit-trail write failure swallowed",
+     "nm/core/turn.py",
+     "        self._store.record_metrics(metrics.as_dict())\n"
+     "        return TurnOutput(turn.turn_id, answer, matter, metrics)",
+     "        try:\n"
+     "            self._store.record_metrics(metrics.as_dict())\n"
+     "        except Exception:\n"
+     "            pass\n"
+     "        return TurnOutput(turn.turn_id, answer, matter, metrics)",
+     "test_an_audit_trail_write_failure_is_never_swallowed", "E-019"),
+
+    # RG-11's own honesty: a recorded run that cannot say what it ran
+    # against would let a mutation pass from three commits ago certify
+    # today's code.
+    ("a recorded run vouching for code it never saw",
+     "tools/releasegate.py",
+     '    if rec.get("source_fingerprint") != now:',
+     '    if False and rec.get("source_fingerprint") != now:',
+     "test_a_recorded_run_cannot_vouch_for_code_it_never_saw", "E-008"),
 
     ("a persisted field silently dropped on read",
      "nm/adapters/store/file_store.py",
@@ -381,6 +427,16 @@ def main() -> int:
             doc = {}
     doc["counterexamples_rejected"] = sorted(
         set(doc.get("counterexamples_rejected", [])) | set(rejected))
+    # THE RUN RECORDS WHAT IT RAN AGAINST. Without this, a mutation run
+    # from three commits ago would certify today's code to RG-11 -- an
+    # artefact indistinguishable from a current one, which is the whole of
+    # defect shape S11.
+    doc["mutations"] = {
+        "caught": len(MUTATIONS) - len(survived),
+        "total": len(MUTATIONS),
+        "survived": sorted(survived),
+        "source_fingerprint": source_fingerprint(),
+    }
     results.write_text(json.dumps(doc, indent=2), encoding="utf8")
 
     print()

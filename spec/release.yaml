@@ -31,19 +31,50 @@ scorecard:
   - id: RG-01
     what: "Binding-court output held for the matter's jurisdiction, current period"
     detail: >
-      Judgments of the court that binds a Telangana matter, for the five years
-      to date. The Telangana High Court was constituted on 1 January 2019 and
-      the corpus holds NONE of its output.
-    threshold: ">= 1 judgment per year for each of the last 5 years"
-    measured_by: "caselaws_v2_parents.json, grouped by normalised court and year"
+      Judgments of the courts that BIND a Telangana matter: the Supreme Court,
+      and the High Court for the territory. Under the standing decision in
+      BASELINE.md 1.1 every held Andhra Pradesh High Court judgment binds
+      Telangana, so 4,280 of them count here.
+
+      THIS ROW USED TO COUNT THE `hc_telangana` COURT LABEL, which no record in
+      the corpus carries. It returned 0 and this criterion failed, and the
+      product told the advocate on every authority turn that no High Court
+      output was held for their jurisdiction. That was false, and it is the
+      "search the right index" trap: a zero from the wrong index reads exactly
+      like absence. Binding is a RELATIONSHIP, not a court name.
+    threshold: ">= 1 judgment per year for each of the last 5 years, across the binding courts"
+    measured_by: "caselaws_v2_parents.json, grouped by NORMALISED court and year, with AP HC counted as binding on Telangana"
     owner: "corpus"
     cadence: "every ingest"
     blocking: true
     on_fail: >
-      The product may not claim Telangana High Court coverage. Every turn that
-      would rest on High Court authority fires G-COVERAGE and discloses the gap
-      in the answer. Release is permitted with the disclosure; the CLAIM is
-      what is gated, not the product.
+      A court that binds every Telangana matter has no output held for the
+      current period. The product may not claim current binding coverage.
+      Every turn that would rest on that authority fires G-COVERAGE and
+      discloses it in the answer. Release is permitted with the disclosure; the
+      CLAIM is what is gated, not the product.
+
+  - id: RG-01b
+    what: "Binding HIGH COURT authority is current, not merely held"
+    detail: >
+      The gap that is really there, stated as itself rather than folded into
+      RG-01. High Court output binding on Telangana runs 1954-2018 and stops at
+      the bifurcation: 4,280 judgments, none later than 2018. The authority is
+      not ABSENT, it is not CURRENT, and those are different things an advocate
+      needs told apart — one means "I have nothing for you", the other means
+      "check whether anything has moved since".
+
+      Keeping them in one row is what let a recency gap be reported as an
+      absence for as long as it was.
+    threshold: ">= 1 binding High Court judgment dated 2021 or later"
+    measured_by: "caselaws_v2_parents.json, latest year across AP HC and TS HC"
+    owner: "corpus"
+    cadence: "every ingest"
+    blocking: false
+    on_fail: >
+      No recent High Court authority is held. G-COVERAGE says so in the answer,
+      naming the latest year held rather than implying there is none. Closing
+      this needs an ingest of post-2018 High Court output, not a code change.
 
   - id: RG-02
     what: "bind-1 — no post-bifurcation Andhra Pradesh judgment is silently treated as binding"

@@ -243,6 +243,7 @@ def test_a_loud_signal_cannot_be_marked_collapsible():
 # =================================================== store discipline =====
 
 @pytest.mark.eval_id("E-011")
+@refuses("I1", 1)
 def test_an_unconfigured_key_is_a_hard_failure(tmp_path):
     """COUNTEREXAMPLE: making matters durable once wrote them to disk in
     PLAINTEXT, because encryption was a silent no-op when unconfigured."""
@@ -250,6 +251,7 @@ def test_an_unconfigured_key_is_a_hard_failure(tmp_path):
         FileMatterStore(tmp_path, key="")
 
 
+@refuses("I1", 0)
 def test_matter_state_is_not_plaintext_on_disk(tmp_path):
     engine, store = build(tmp_path)
     out = engine.run(TurnInput(

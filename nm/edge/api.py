@@ -14,11 +14,12 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
 
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
 from nm.domain import summary as matter_memory
@@ -119,9 +120,32 @@ def _release(output) -> _Released:
 # ------------------------------------------------------------------ routes ---
 
 
+def _not_blank(value: str) -> str:
+    """`min_length` counts CHARACTERS, and "   " is three of them.
+
+    A whitespace advocate id passed the wire and opened a matter, which is
+    an anonymous session on an unattributable file. `Matter.create` now
+    refuses it too -- this is here so the caller gets a 422 naming the
+    field rather than a 500 from the core.
+    """
+    if not (value or "").strip():
+        raise ValueError("must not be blank")
+    return value.strip()
+
+
+NonBlank = Annotated[str, AfterValidator(_not_blank)]
+
+#: The SAME guard on the read path. A1 restores the matter list only
+#: after authentication succeeds, and a blank query parameter is not an
+#: authenticated session -- it returned 200 and an empty list, which
+#: reads to a caller as "this advocate has no matters" rather than as
+#: "you are not signed in".
+Advocate = Annotated[str, Query(min_length=1), AfterValidator(_not_blank)]
+
+
 class TurnRequest(BaseModel):
-    advocate_id: str = Field(min_length=1)
-    message: str = Field(min_length=1)
+    advocate_id: NonBlank = Field(min_length=1)
+    message: NonBlank = Field(min_length=1)
     matter_id: str | None = None
     thread_id: str | None = None
     turn_id: str | None = None
@@ -135,7 +159,7 @@ def health() -> dict:
 
 
 @app.get("/api/matters")
-def matters(advocate_id: str) -> dict:
+def matters(advocate_id: Advocate) -> dict:
     """THE MATTER LIST. One row per matter, nearest deadline first.
 
     Bounded by MATTER count -- never by threads, turns or facts.
@@ -145,7 +169,7 @@ def matters(advocate_id: str) -> dict:
 
 @app.get("/api/matters/{matter_id}")
 @implements("A1")
-def matter(matter_id: str, advocate_id: str) -> dict:
+def matter(matter_id: str, advocate_id: Advocate) -> dict:
     """THE THREAD BOARD. One row per thread, bounded by THREAD count."""
     m = application().store.load(matter_id)
     if m is None or m.advocate_id != advocate_id:
@@ -156,7 +180,7 @@ def matter(matter_id: str, advocate_id: str) -> dict:
 
 
 @app.get("/api/matters/{matter_id}/summary")
-def matter_summary(matter_id: str, advocate_id: str) -> dict:
+def matter_summary(matter_id: str, advocate_id: Advocate) -> dict:
     """THE FILE. What is established, what was asked, what is still open.
 
     A projection over the matter, exactly like the two boards, holding

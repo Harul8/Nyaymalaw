@@ -202,9 +202,23 @@ at turn time, so the release decision and the advocate-facing disclosure
 **NOT MEASURED exits non-zero exactly like FAIL.** A release criterion nobody
 computed is the one that gets assumed.
 
-The rule this exists for: *zero Telangana High Court judgements* was measured,
-dated, written into `BASELINE.md` — and changed nothing, because **a measured
-fact in a document is not a gate.**
+The rule this exists for: a coverage gap was measured, dated, written into
+`BASELINE.md` — and changed nothing, because **a measured fact in a document
+is not a gate.**
+
+**And then the gate measured the wrong thing, which is the harder half.**
+RG-01 counted the `hc_telangana` court LABEL, which no record in the corpus
+carries. It got 0, blocked the release, and made the product tell the advocate
+on every authority turn that *no High Court output is held for this
+jurisdiction.* **4,280 are held, and every one of them binds** — Andhra Pradesh
+High Court judgements are Telangana judgements, which is a standing decision
+recorded in `BASELINE.md` §1.1 and already implemented correctly in
+`nm/knowledge/jurisdiction.py`.
+
+*Binding is a RELATIONSHIP, not a court name.* A zero from the wrong index
+reads exactly like absence — the trap this file already records against the
+three provision stores — and it reached the case store, a blocking release
+criterion, and the advocate-facing disclosure at the same time (**B-044**).
 
 ---
 

@@ -23,6 +23,7 @@ import pytest
 import yaml
 
 from nm.domain.matter import Fact, FactBasis, Provenance, Weight
+from nm.domain.traceability import refuses
 
 pytestmark = pytest.mark.class_a
 
@@ -96,6 +97,7 @@ def _prov() -> Provenance:
     return Provenance(kind="advocate_statement", turn="t1")
 
 
+@refuses("C1", 3)
 def test_a_basis_that_points_nowhere_is_refused():
     """C1: never record a source for a basis that points nowhere.
 
@@ -110,6 +112,7 @@ def test_a_basis_that_points_nowhere_is_refused():
     Fact.create("I paid him myself", _prov(), basis=FactBasis.DIRECT_KNOWLEDGE)
 
 
+@refuses("C1", 2)
 def test_a_paraphrase_recorded_as_a_quotation_is_refused():
     """C1: a recorded 'exact words' must be findable in the account it claims
     to come from. This is the one an advocate reads out in court."""

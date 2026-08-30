@@ -733,9 +733,16 @@ class TurnEngine:
                            metrics: TurnMetrics, grounds: list[Element]) -> None:
         """G-COVERAGE. What this corpus can and cannot answer for, said first.
 
-        The review's stop-ship #1: the product claims Telangana coverage
-        against a corpus holding ZERO Telangana High Court judgments. That was
-        measured, written down, and inert. It is now a gate.
+        The review's stop-ship #1: the product claimed Telangana coverage it
+        had not measured. The measurement was written down and inert, because
+        a fact in a document is not a gate. It is now one.
+
+        AND THE FIRST GATE MEASURED THE WRONG THING, which is worth keeping
+        here because this method is what the advocate reads. It counted the
+        `hc_telangana` court label -- which no record carries -- got zero, and
+        told them on every authority turn that no High Court output was held
+        for their jurisdiction. 4,280 are held, and every one binds. What is
+        disclosed now is the RECENCY gap that is really there.
         """
         if self._coverage is None:
             position_state, detail = "not_measured", (

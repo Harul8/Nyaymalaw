@@ -286,14 +286,28 @@ def test_a_withheld_turn_still_writes_its_metrics(tmp_path):
 
 # ================================================ coverage =================
 
-class _NoTelangana:
-    """A measured profile with the real gap in it."""
+class _StaleHighCourt:
+    """A measured profile carrying the gap that is really there.
+
+    IT USED TO SAY "No High Court output is held for this jurisdiction", and
+    that was false: 4,280 Andhra Pradesh judgments are held and every one of
+    them BINDS Telangana under the standing decision in BASELINE.md 1.1. The
+    release gate reported zero because it counted the `hc_telangana` court
+    LABEL, which no record carries, and a zero from the wrong index reads
+    exactly like absence.
+
+    What is true is a RECENCY gap, and the two call for different actions: "I
+    have nothing for you" versus "check whether anything has moved since".
+    """
 
     def position(self, jurisdiction):
         from nm.domain.coverage import CoveragePosition, CoverageState
         return CoveragePosition(
             CoverageState.UNMET, jurisdiction,
-            "No High Court output is held for this jurisdiction after 2018.",
+            "the most recent High Court judgment binding on this jurisdiction "
+            "is from 2018, so there is no High Court authority here for the "
+            "years since. Supreme Court output runs to 2026 and binds "
+            "throughout.",
             "2026-08-30", "v1")
 
 
@@ -301,9 +315,9 @@ class _NoTelangana:
 def test_the_corpus_gap_is_disclosed_before_the_authority_search_not_after(tmp_path):
     """THE RUNTIME HALF OF THE REVIEW'S STOP-SHIP #1.
 
-    The corpus holds ZERO Telangana High Court judgments. That was measured,
-    written into docs/BASELINE.md, and inert — a fact in a document is not a
-    gate. The advocate is now told before they rely on an answer.
+    The corpus's High Court output stops in 2018. That was measured, written
+    into docs/BASELINE.md, and inert — a fact in a document is not a gate. The
+    advocate is now told before they rely on an answer.
 
     Told AFTERWARDS it reads as a footnote on a result they have already begun
     to trust. Told first it is a fact about what this corpus can answer.
@@ -320,7 +334,7 @@ def test_the_corpus_gap_is_disclosed_before_the_authority_search_not_after(tmp_p
                                           searched_stores=("authority_index",))),
         model=ScriptedModelAdapter(_model_config(), responses={
             "__default__": "Move for interim protection this week."}),
-        coverage=_NoTelangana())
+        coverage=_StaleHighCourt())
 
     out = engine.run(TurnInput(
         advocate_id="adv",
@@ -334,7 +348,14 @@ def test_the_corpus_gap_is_disclosed_before_the_authority_search_not_after(tmp_p
 
     texts = [e.text for e in out.answer.elements]
     disclosure = next(t for t in texts if "Before you rely" in t)
-    assert "after 2018" in disclosure
+    # The disclosure names the LATEST YEAR HELD, not an absence. Asserting
+    # on that number is asserting the distinction the whole fix is about:
+    # "I have nothing for you" and "nothing since 2018" are different
+    # facts and lead an advocate to different next moves.
+    assert "2018" in disclosure
+    assert "no High Court output is held" not in disclosure, (
+        "the disclosure states an absence. 4,280 High Court judgments bind "
+        "this jurisdiction; what is missing is recent ones.")
     # It precedes the retrieval account, not follows it.
     assert texts.index(disclosure) < max(
         (i for i, t in enumerate(texts) if "Not held" in t), default=len(texts))

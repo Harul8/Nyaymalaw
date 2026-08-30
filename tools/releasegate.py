@@ -6,10 +6,19 @@
 WHY THIS IS A GATE AND NOT A REPORT
 -----------------------------------
 The external review's first stop-ship finding was that the product claims
-Telangana coverage against a corpus holding ZERO Telangana High Court
-judgments. That fact was already written down, in `docs/BASELINE.md`, measured
-and dated -- and it changed nothing, because a fact in a document is not a
-gate.
+Telangana coverage it had not measured. That fact was already written down, in
+`docs/BASELINE.md`, measured and dated -- and it changed nothing, because a
+fact in a document is not a gate.
+
+AND THE FIRST VERSION OF THAT GATE MEASURED THE WRONG THING. RG-01 counted the
+`hc_telangana` court LABEL, which no record in the corpus carries, got 0, and
+reported that the binding court for every Telangana matter has no output held.
+There are 4,280 High Court judgments binding on Telangana -- every held Andhra
+Pradesh judgment is binding under the standing decision in BASELINE.md 1.1 --
+so a blocking release criterion, and the disclosure the advocate reads on every
+authority turn, both stated the opposite of the truth. A zero from the wrong
+index reads exactly like absence; that is the trap CLAUDE.md records against
+the provision stores, and it reached the case store too.
 
 The rule this project runs on is that a rule you cannot run is not a
 requirement. So the coverage position is now measured by this tool, written to
@@ -33,6 +42,7 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import os
 import sqlite3
 import sys
 import time
@@ -49,6 +59,16 @@ sys.path.insert(0, str(ROOT))
 from nm.knowledge.citator import normalise_case_name  # noqa: E402
 from nm.knowledge.jurisdiction import BIFURCATION, Court, normalise_court  # noqa: E402
 from nm.knowledge.manifest import Manifest  # noqa: E402
+from tools._fingerprint import source_fingerprint  # noqa: E402
+
+#: The first year of "the current period" for coverage purposes. Authority
+#: older than this is held and quotable; what it is not is CURRENT, and the
+#: two are different things an advocate needs told apart.
+CURRENT_PERIOD_FROM = 2021
+
+#: How many served turns the rolling rows look back over. Named once so
+#: RG-22..RG-25 cannot silently measure different windows and be compared.
+SERVED_WINDOW = 200
 
 CORPUS = ROOT / "legal_database" / "vector_store"
 RELEASE = ROOT / "spec" / "release.yaml"
@@ -110,6 +130,19 @@ def measure_judgments() -> dict:
         "ap_post_bifurcation": sum(n for y, n in ap.items() if y >= BIFURCATION.year),
         "telangana_total": sum(ts.values()),
         "telangana_years": sorted(ts),
+        # WHAT BINDS A TELANGANA MATTER, which is a relationship and not a
+        # court label. Counting the `hc_telangana` label alone returned 0 --
+        # no record carries it, the files describe themselves as "Andhra HC
+        # (Pre-Telangana)" -- and 0 from the wrong index reads exactly like
+        # "not in the corpus". Every one of these 4,280 AP judgments is
+        # BINDING on Telangana; that decision is recorded in BASELINE.md 1.1
+        # and implemented in nm/knowledge/jurisdiction.py.
+        "hc_binding_total": sum(ap.values()) + sum(ts.values()),
+        "hc_binding_years": sorted(set(ap) | set(ts)),
+        "hc_binding_latest": max([*ap, *ts], default=None),
+        "sc_years": sorted(years.get(Court.SUPREME_COURT.value, {})),
+        "sc_latest": max(years.get(Court.SUPREME_COURT.value, {}),
+                         default=None),
     }
 
 
@@ -265,16 +298,37 @@ def score(rows: list[dict], m: dict) -> Score:
         s.add("RG-01", UNMEASURED, "the judgment store is not readable",
               blocking("RG-01"))
     else:
-        ts = j["telangana_total"]
-        s.add("RG-01", PASS if ts else FAIL,
-              f"{ts} Telangana High Court judgments held; "
-              f"{j['ap_years']['total']} Andhra Pradesh "
-              f"({j['ap_years']['min']}-{j['ap_years']['max']})",
+        # BINDING-COURT OUTPUT, not one court's label. The courts that bind
+        # a Telangana matter are the Supreme Court and the High Court for
+        # its territory -- which means the Andhra Pradesh High Court, whose
+        # every held judgment is binding under the standing decision.
+        hc = j["hc_binding_total"]
+        sc = j["by_court"].get(Court.SUPREME_COURT.value, 0)
+        recent = [y for y in j["sc_years"] if y >= CURRENT_PERIOD_FROM]
+        s.add("RG-01", PASS if (hc and sc and len(recent) >= 5) else FAIL,
+              f"{hc + sc:,} binding-court judgments held: {sc:,} Supreme "
+              f"Court (through {j['sc_latest']}), {hc:,} High Court binding "
+              f"on Telangana (through {j['hc_binding_latest']})",
               blocking("RG-01"),
-              "" if ts else
-              "The binding court for every Telangana matter has NO output held. "
-              "G-COVERAGE discloses this on every turn that would rest on High "
-              "Court authority.")
+              "" if (hc and sc and len(recent) >= 5) else
+              "A court that binds every Telangana matter has no output held "
+              "for the current period.")
+
+        # RG-01b -- the gap that IS real, stated as itself. High Court
+        # output stops at the bifurcation, so the most recent binding High
+        # Court authority is years old. That is a RECENCY gap, and folding
+        # it into RG-01 made the product say the opposite of the truth:
+        # "no High Court output is held" where 4,280 judgments are held.
+        latest = j["hc_binding_latest"]
+        fresh = latest is not None and latest >= CURRENT_PERIOD_FROM
+        s.add("RG-01b", PASS if fresh else FAIL,
+              f"the most recent binding High Court judgment is {latest}; "
+              f"the current period begins {CURRENT_PERIOD_FROM}",
+              blocking("RG-01b"),
+              "" if fresh else
+              f"No High Court judgment later than {latest} is held. The "
+              f"authority is not absent — it is not current, and an advocate "
+              f"relying on it should know which.")
 
     # RG-02 -- bind-1
     if not j.get("available"):
@@ -384,17 +438,78 @@ def score(rows: list[dict], m: dict) -> Score:
 
     # Rows this tool deliberately does not measure.
     for rid, why in (
-            ("RG-10", "run tools/trace.py"),
-            ("RG-11", "run tools/mutate.py"),
-            ("RG-12", "run tools/trace.py"),
-            ("RG-20", "the golden runner is not built (S0/T-005b)"),
-            ("RG-21", "the golden runner is not built, and class-D runs need "
-                      "explicit per-run approval"),
-            ("RG-22", "needs served-turn metrics over a window"),
-            ("RG-23", "needs served-turn metrics over a window"),
-            ("RG-24", "needs served-turn metrics over a window"),
-            ("RG-25", "needs served-turn metrics over a window")):
+            ("RG-21", "a class-D judged run needs explicit per-run approval "
+                      "and none is recorded against this source"),):
         s.add(rid, UNMEASURED, why, blocking(rid))
+
+    # ---- RG-10, RG-12: the matrix and the status claims, RECOMPUTED --------
+    tr = measure_trace()
+    if not tr["available"]:
+        s.add("RG-10", UNMEASURED, tr["why"], blocking("RG-10"))
+        s.add("RG-12", UNMEASURED, tr["why"], blocking("RG-12"))
+    else:
+        broken = tr["unwired"] + tr["undeclared"] + tr["orphan_gates"]
+        s.add("RG-10", PASS if not broken else FAIL,
+              f"{tr['gates']} gates; {len(tr['unwired'])} declared built and "
+              f"unwired, {len(tr['undeclared'])} declared unbuilt and consulted, "
+              f"{len(tr['orphan_gates'])} consulted and not in the matrix",
+              blocking("RG-10"),
+              "" if not broken else
+              f"The matrix and the code disagree on {', '.join(broken)}. The "
+              f"matrix is what the advocate is told evaluates their matter.")
+        s.add("RG-12", PASS if not tr["inflated"] else FAIL,
+              f"{tr['evals_run']} evals have run; "
+              f"{len(tr['inflated'])} feature(s) claim `tested` on evals that "
+              f"never ran",
+              blocking("RG-12"),
+              "" if not tr["inflated"] else
+              f"{', '.join(tr['inflated'])} claim evidence that does not exist.")
+
+    # ---- RG-11: the suite bites, against THIS source -----------------------
+    mu = measure_mutations()
+    if not mu["available"]:
+        s.add("RG-11", UNMEASURED, mu["why"], blocking("RG-11"))
+    else:
+        ok = mu["total"] > 0 and not mu["survived"]
+        s.add("RG-11", PASS if ok else FAIL,
+              f"{mu['caught']} of {mu['total']} mutations caught",
+              blocking("RG-11"),
+              "" if ok else
+              f"These tests are decoration: {', '.join(mu['survived'])}")
+
+    # ---- RG-20: the golden smoke suite, class A and C ----------------------
+    g = measure_goldens()
+    if not g["available"]:
+        s.add("RG-20", UNMEASURED, g["why"], blocking("RG-20"))
+    else:
+        bad = g["structure_failures"] + g["authority_failures"]
+        s.add("RG-20", PASS if not bad else FAIL,
+              f"{g['scenarios']} scenarios, {g['smoke']} in `smoke`; "
+              f"{g['resolved']}/{g['authority_total']} anchors read back",
+              blocking("RG-20"),
+              "" if not bad else "; ".join(bad[:3]))
+
+    # ---- RG-22..RG-25: over the turns actually served ----------------------
+    sv = measure_served()
+    for rid in ("RG-22", "RG-23", "RG-24", "RG-25"):
+        if not sv["available"]:
+            s.add(rid, UNMEASURED, sv["why"], blocking(rid))
+    if sv["available"]:
+        n = sv["turns"]
+        s.add("RG-22", PASS if sv["ungated_grounding"] == 0 else FAIL,
+              f"{sv['ungated_grounding']} ungated grounding violation(s) in the "
+              f"last {n} served turns", blocking("RG-22"),
+              "" if sv["ungated_grounding"] == 0 else
+              "A grounding violation that did not gate means the answer went out.")
+        s.add("RG-23", PASS if sv["withheld_rate"] <= 0.05 else FAIL,
+              f"{sv['withheld']} of {n} served turns withheld "
+              f"({sv['withheld_rate']:.1%})", blocking("RG-23"))
+        s.add("RG-24", PASS if sv["median_cost"] <= 0.02 else FAIL,
+              f"median cost ${sv['median_cost']:.4f} over {n} served turns",
+              blocking("RG-24"))
+        s.add("RG-25", PASS if sv["p95_latency_ms"] <= 8000 else FAIL,
+              f"p95 latency {sv['p95_latency_ms']}ms over {n} served turns",
+              blocking("RG-25"))
     return s
 
 
@@ -423,16 +538,23 @@ def coverage_document(m: dict, s: Score) -> dict:
                                    "hc_andhra_pradesh"],
                 "held": {
                     "supreme_court": j.get("by_court", {}).get("supreme_court", 0),
-                    "hc_telangana": j.get("by_court", {}).get("hc_telangana", 0),
-                    "hc_andhra_pradesh": j.get("by_court", {}).get(
-                        "hc_andhra_pradesh", 0),
+                    "hc_binding_on_telangana": j.get("hc_binding_total", 0),
                 },
+                "hc_binding_latest": j.get("hc_binding_latest"),
+                "supreme_court_latest": j.get("sc_latest"),
+                # WHAT IS TRUE, and it is not what this used to say. There
+                # ARE High Court judgments binding on Telangana -- 4,280 of
+                # them -- and telling an advocate otherwise on every
+                # authority turn was a false gap, from counting a court
+                # label instead of a binding relationship.
                 "gap": (
-                    "No High Court output is held for this jurisdiction after "
-                    f"{j.get('ap_years', {}).get('max')}. The Telangana High "
-                    "Court was constituted on 1 January 2019 and none of its "
-                    "judgments are in the corpus."
-                    if not j.get("telangana_total") else ""),
+                    f"the most recent High Court judgment binding on this "
+                    f"jurisdiction is from {j.get('hc_binding_latest')}, so "
+                    f"there is no High Court authority here for the years "
+                    f"since. Supreme Court output runs to "
+                    f"{j.get('sc_latest')} and binds throughout."
+                    if (j.get("hc_binding_latest") or 0) < CURRENT_PERIOD_FROM
+                    else ""),
             },
         },
         "paragraphs": m["paragraphs"],
@@ -443,6 +565,152 @@ def coverage_document(m: dict, s: Score) -> dict:
         "scorecard": [{"id": r["id"], "state": r["state"], "blocking": r["blocking"]}
                       for r in s.rows],
     }
+
+
+def measure_trace() -> dict:
+    """RG-10 and RG-12, RECOMPUTED rather than read from a log.
+
+    Parsing trace's stdout would score a criterion off a run that may predate
+    the code. These call the same helpers trace does, here, now.
+    """
+    try:
+        from tools import trace as tracer
+    except Exception as exc:  # noqa: BLE001 -- reported, never swallowed
+        return {"available": False, "why": f"trace is not importable: {exc}"}
+
+    try:
+        features, evals = tracer.load_spec()
+        gates = tracer.load_gates()
+        consulted = tracer.gate_consultations()
+    except Exception as exc:  # noqa: BLE001
+        return {"available": False, "why": f"the spec could not be read: {exc}"}
+
+    # T8 / T9 -- the matrix against the code, in BOTH directions. A gate
+    # declared built that nothing consults is a promise the product does not
+    # keep; one declared unbuilt that something consults is worse, because the
+    # matrix is then telling the advocate nothing evaluates a condition while
+    # something quietly does.
+    unwired = [g["id"] for g in gates if g["built"] and not consulted.get(g["id"])]
+    undeclared = [g["id"] for g in gates
+                  if not g["built"] and consulted.get(g["id"])]
+    known = {g["id"] for g in gates}
+    orphan = sorted(set(consulted) - known)
+
+    # T3 / T4 -- status inflation. A feature at `tested` whose evals have
+    # never run is claiming evidence that does not exist.
+    ran = set(tracer.recorded_runs()) if hasattr(tracer, "recorded_runs") else set()
+    if not ran:
+        results = ROOT / ".nm" / "eval_results.json"
+        if results.exists():
+            ran = set(json.loads(results.read_text(encoding="utf8"))
+                      .get("evals_run", []))
+    inflated = []
+    for f in features:
+        if (f.get("status") or "decided") != "tested":
+            continue
+        declared = set(f.get("eval_ids") or [])
+        if declared and not (declared & ran):
+            inflated.append(f["id"])
+
+    return {"available": True, "unwired": unwired, "undeclared": undeclared,
+            "orphan_gates": orphan, "inflated": sorted(inflated),
+            "gates": len(gates), "evals_run": len(ran)}
+
+
+def measure_mutations() -> dict:
+    """RG-11. A RECORDED run, so it must say what it ran against."""
+    results = ROOT / ".nm" / "eval_results.json"
+    if not results.exists():
+        return {"available": False, "why": "no mutation run has been recorded"}
+    try:
+        doc = json.loads(results.read_text(encoding="utf8"))
+    except json.JSONDecodeError as exc:
+        return {"available": False, "why": f"the eval record is unreadable: {exc}"}
+
+    rec = doc.get("mutations")
+    if not rec:
+        return {"available": False,
+                "why": "no mutation run has been recorded since runs began "
+                       "carrying a source fingerprint. Run tools/mutate.py"}
+
+    now = source_fingerprint()
+    if rec.get("source_fingerprint") != now:
+        # STALE IS NOT MEASURED. It is never PASS, and it is not FAIL either --
+        # the suite may well still bite; nobody has checked against this code.
+        return {"available": False,
+                "why": (f"the recorded mutation run was made against source "
+                        f"{rec.get('source_fingerprint')!r} and the tree is now "
+                        f"{now!r}. A run cannot vouch for code it never saw. "
+                        f"Run tools/mutate.py")}
+    return {"available": True, "caught": rec.get("caught", 0),
+            "total": rec.get("total", 0), "survived": rec.get("survived", [])}
+
+
+def measure_goldens() -> dict:
+    """RG-20. The smoke suite's structure and authority checks, run here.
+
+    These are class A and C -- no model, no approval -- so there is no reason
+    to report them unmeasured. The class-D judged run is RG-21 and stays
+    separate, because it costs money and needs your word.
+    """
+    try:
+        from tools import run_goldens as goldens
+    except Exception as exc:  # noqa: BLE001
+        return {"available": False, "why": f"the golden runner is not importable: {exc}"}
+    try:
+        scenarios = goldens.load_scenarios()
+        structure = goldens.check_structure(scenarios)
+        authority, resolved, total = goldens.check_authority()
+    except Exception as exc:  # noqa: BLE001
+        return {"available": False, "why": f"the golden set could not be read: {exc}"}
+    smoke = goldens.expand("smoke", scenarios)
+    return {"available": True, "scenarios": len(scenarios), "smoke": len(smoke),
+            "structure_failures": structure, "authority_failures": authority,
+            "resolved": resolved, "authority_total": total}
+
+
+def measure_served() -> dict:
+    """RG-22..RG-25, over the last SERVED_WINDOW turns actually served.
+
+    Real turns, not a synthetic sample. `metrics` is written on every turn
+    including the ones that failed, which is what makes a withheld-turn rate
+    meaningful rather than a survivorship figure.
+    """
+    store = os.environ.get("NM_MATTER_STORE", ".nm/matters")
+    d = ROOT / store / "metrics"
+    if not d.is_dir():
+        return {"available": False, "why": f"no served-turn metrics at {d}"}
+    files = sorted(d.glob("turn_*.json"), key=lambda p: p.stat().st_mtime)
+    files = files[-SERVED_WINDOW:]
+    if not files:
+        return {"available": False, "why": "no served turns have been recorded"}
+
+    turns, ungated, withheld, costs, latencies = [], 0, 0, [], []
+    for f in files:
+        try:
+            m = json.loads(f.read_text(encoding="utf8"))
+        except json.JSONDecodeError:
+            continue
+        turns.append(m)
+        # A GROUNDING VIOLATION THAT DID NOT GATE is the dangerous one: the
+        # answer went out. One that gated is the system working.
+        for v in m.get("violations", []):
+            if v.get("rule", "").startswith("G-") and not v.get("gating"):
+                ungated += 1
+        if m.get("outcome") in ("gated", "failed"):
+            withheld += 1
+        costs.append(float(m.get("cost_usd") or 0.0))
+        latencies.append(int(m.get("latency_ms") or 0))
+
+    if not turns:
+        return {"available": False, "why": "every recorded turn was unreadable"}
+    costs.sort()
+    latencies.sort()
+    mid = costs[len(costs) // 2] if costs else 0.0
+    p95 = latencies[min(len(latencies) - 1, int(len(latencies) * 0.95))]
+    return {"available": True, "turns": len(turns), "ungated_grounding": ungated,
+            "withheld": withheld, "withheld_rate": withheld / len(turns),
+            "median_cost": mid, "p95_latency_ms": p95}
 
 
 def main() -> int:

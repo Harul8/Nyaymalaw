@@ -3,9 +3,16 @@
 THE FINDING THIS EXISTS TO ANSWER
 ----------------------------------
 An external review's first stop-ship was that the product claims Telangana
-coverage against a corpus holding ZERO Telangana High Court judgments. The
-figure was already measured and written down in `docs/BASELINE.md`. It changed
-nothing, because a measured fact in a document is not a gate.
+coverage it has not measured. The figures were already written down in
+`docs/BASELINE.md`. They changed nothing, because a measured fact in a document
+is not a gate.
+
+THE FIRST VERSION OF THE MEASUREMENT WAS ITSELF WRONG, and this module is what
+served it. It counted the `hc_telangana` court LABEL, which no record in the
+corpus carries, and so reported that no High Court output was held for the
+jurisdiction. There are 4,280 Andhra Pradesh judgments held and every one of
+them BINDS Telangana under the standing decision in BASELINE.md 1.1. Binding is
+a RELATIONSHIP; a zero from the wrong index reads exactly like absence.
 
 So the measurement now has one home and two consumers:
 

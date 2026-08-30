@@ -1310,6 +1310,74 @@ d("B-042", "2026-08-30", "core",
   "tests/test_matter_memory.py::test_every_declared_schema_is_satisfiable_when_"
   "nothing_was_established")
 
+d("B-044", "2026-08-30", "release",
+  "RG-01 COUNTED A COURT LABEL, NOT A BINDING RELATIONSHIP. It counted "
+  "`hc_telangana`, which no record in the corpus carries, got 0, blocked the "
+  "release, and made G-COVERAGE tell the advocate on EVERY authority turn that "
+  "\"No High Court output is held for this jurisdiction\". 4,280 High Court "
+  "judgements are held and every one of them binds Telangana.",
+  "Writing the gate from a sentence in BASELINE.md — \"zero Telangana High "
+  "Court judgements\" — which is true of the LABEL and false of the product's "
+  "own standing decision three paragraphs above it, under which every held "
+  "Andhra Pradesh judgement IS a Telangana judgement. I measured the words "
+  "rather than the decision, and the binding rule in "
+  "nm/knowledge/jurisdiction.py had it right the whole time.",
+  "S3 — a zero from the wrong index reads as absence",
+  "The user, for the third time: AP HC cases are Telangana cases",
+  "RG-01 measures binding-court output — Supreme Court plus the High Court for "
+  "the territory. The disclosure names the latest year held. RG-01b carries "
+  "the gap that IS real: High Court output stops in 2018.",
+  "Yes — binding is a RELATIONSHIP and not a court name. The same trap this "
+  "project already records against three provision stores, now reaching the "
+  "case store, a blocking release criterion and the advocate-facing "
+  "disclosure at once. An absence and a recency gap lead to different next "
+  "moves and are now separate rows.",
+  "tests/test_grounding_gate.py::test_the_corpus_gap_is_disclosed_before_the_"
+  "authority_search_not_after")
+
+d("B-045", "2026-08-30", "release",
+  "NINE RELEASE CRITERIA READ `NOT MEASURED` THAT COULD ALL BE MEASURED — six "
+  "of them blocking. The stated reasons were out of date: \"run "
+  "tools/trace.py\" (it runs T8/T9 and T3/T4 today), \"the golden runner is "
+  "not built\" (built two commits earlier), \"needs served-turn metrics\" "
+  "(264 real turns on disk).",
+  "Writing the scorecard before the tools existed and never revisiting the "
+  "rows when they landed. Each row's `why` string was a note-to-self that "
+  "aged into a false statement, and nothing compares a NOT MEASURED reason "
+  "against whether it is still true.",
+  "S1 — an absent input reading as success",
+  "Scoring the gate after fixing B-044 and finding it still blocked",
+  "All nine are measured. RG-10 and RG-12 RECOMPUTE the trace checks here "
+  "rather than parsing a log; RG-20 runs the golden structure and authority "
+  "checks in process; RG-22..25 measure the last 200 served turns.",
+  "Yes — and the rule CLAUDE.md already states: NOT MEASURED exits non-zero "
+  "exactly like FAIL, so nine uncomputed criteria is not a stricter gate, it "
+  "is a gate nobody can read. Went from 6 pass / 9 unmeasured to 15 pass / 1.",
+  "tools/releasegate.py, and tests/test_never_clauses.py::test_a_recorded_run_"
+  "cannot_vouch_for_code_it_never_saw")
+
+d("B-046", "2026-08-30", "edge",
+  "AN ANONYMOUS SESSION COULD OPEN A MATTER. `advocate_id` was validated with "
+  "`Field(min_length=1)`, which counts CHARACTERS — \"   \" is three of them "
+  "and no identity — so client material landed on a file nothing can "
+  "attribute. A1's second NEVER clause, and the reason tenets 4 and 20 both "
+  "exist.",
+  "Nothing: it was there from the start, and A1 was marked `tested` with no "
+  "test declaring @refuses against that clause. It was found by writing the "
+  "seventeen missing NEVER-clause tests rather than by anything failing.",
+  "S11 — a check that cannot fail is not a check",
+  "tests/test_never_clauses.py, the first time A1.2 was ever asserted",
+  "`Matter.create` refuses an identifier that is blank after stripping, and "
+  "the wire refuses it too so the caller gets a 422 rather than a 500. The "
+  "read endpoints are guarded the same way.",
+  "Yes — a value that is PRESENT and carries NOTHING must be treated as "
+  "absent. That is the third instance today: `names_nobody` said it about a "
+  "client descriptor, `role_basis` about an enum with no member for the "
+  "ordinary case, this about identity. Length is not content. A mutation "
+  "proved the core half was needed: with only the wire guard, disabling the "
+  "domain check left the served path green.",
+  "tests/test_never_clauses.py::test_an_anonymous_session_cannot_create_a_matter")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

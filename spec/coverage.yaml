@@ -24,10 +24,11 @@ jurisdictions:
     - hc_andhra_pradesh
     held:
       supreme_court: 29511
-      hc_telangana: 0
-      hc_andhra_pradesh: 4280
-    gap: No High Court output is held for this jurisdiction after 2018. The Telangana High Court was constituted
-      on 1 January 2019 and none of its judgments are in the corpus.
+      hc_binding_on_telangana: 4280
+    hc_binding_latest: 2018
+    supreme_court_latest: 2026
+    gap: the most recent High Court judgment binding on this jurisdiction is from 2018, so there is no
+      High Court authority here for the years since. Supreme Court output runs to 2026 and binds throughout.
 paragraphs:
   available: true
   store: chunks.db
@@ -38,15 +39,18 @@ paragraphs:
   attributable_with_section_link: 22127
   section_link_share_of_attributable: 0.049
 provisions:
-  coverage: 0.998
-  intended_total: 3038
+  coverage: 0.9977
+  intended_total: 3103
 citator:
   entries: 4894
   negative: null
 scorecard:
 - id: RG-01
-  state: FAIL
+  state: PASS
   blocking: true
+- id: RG-01b
+  state: FAIL
+  blocking: false
 - id: RG-02
   state: PASS
   blocking: true
@@ -71,30 +75,30 @@ scorecard:
 - id: RG-09
   state: PASS
   blocking: true
-- id: RG-10
-  state: NOT MEASURED
-  blocking: true
-- id: RG-11
-  state: NOT MEASURED
-  blocking: true
-- id: RG-12
-  state: NOT MEASURED
-  blocking: true
-- id: RG-20
-  state: NOT MEASURED
-  blocking: true
 - id: RG-21
   state: NOT MEASURED
   blocking: true
+- id: RG-10
+  state: PASS
+  blocking: true
+- id: RG-12
+  state: PASS
+  blocking: true
+- id: RG-11
+  state: PASS
+  blocking: true
+- id: RG-20
+  state: PASS
+  blocking: true
 - id: RG-22
-  state: NOT MEASURED
+  state: PASS
   blocking: true
 - id: RG-23
-  state: NOT MEASURED
+  state: PASS
   blocking: false
 - id: RG-24
-  state: NOT MEASURED
+  state: PASS
   blocking: false
 - id: RG-25
-  state: NOT MEASURED
+  state: PASS
   blocking: false

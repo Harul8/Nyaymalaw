@@ -55,10 +55,26 @@ a Telangana court has been misled about the weight of their own authority.
 > status must be computed from the date against 1 January 2019 before the
 > corpus is served. The check fails the build; it does not warn.
 
-**What is still absent.** Zero Telangana High Court judgements, 2019 to date.
-Seven years of the binding court's own output is not held, and nothing in the
-decision above changes that — it establishes that the AP material we *do* hold
-is usable at full weight, not that the gap is closed.
+**What is still absent, stated correctly.** The corpus holds **4,280 High
+Court judgements binding on Telangana**, running 1954–2018, and **none dated
+later than 2018**. That is a *recency* gap in binding High Court authority,
+not an absence of it.
+
+The distinction is not pedantry, and it cost something. This paragraph used
+to read *"zero Telangana High Court judgements"* — literally true of the
+court LABEL, and false of the product's own decision above, under which every
+one of those 4,280 is a Telangana judgement. `tools/releasegate.py` was
+written from this sentence: RG-01 counted the label, got 0, blocked the
+release, and made G-COVERAGE tell the advocate on every authority turn that
+*no High Court output is held for this jurisdiction.* See defect **B-044**.
+
+The two statements lead an advocate to different next moves — *"I have
+nothing for you"* against *"check whether anything has moved since 2018"* —
+so they are now separate release rows: **RG-01** (binding-court output held)
+and **RG-01b** (that output is current).
+
+Supreme Court output is continuous and binds throughout: 29,511 judgements
+running to 2026.
 
 ---
 
@@ -416,7 +432,7 @@ Evidence Act (66 links), the NI Act (63) or the Hindu Marriage Act (4).
 
 | Gap | Size | Consequence |
 |---|---|---|
-| Telangana High Court, 2019 → | 0 judgements | The binding court for every matter has no output held. `bind-1` governs what we may say meanwhile |
+| Binding High Court authority since 2018 | 0 judgements *later than 2018*; **4,280 held in total** | Recent High Court authority is not held. It is **not** the case that no High Court output is held — that framing was measured, shipped and wrong (**B-044**). Supreme Court output runs to 2026 and binds throughout |
 | Unclassified case paragraphs | 271,020 (26.7%) | A quarter of the case corpus cannot carry a proposition |
 | Duplicate Act identifiers | present across the corpus | Coverage is a union query, never a lookup (`act-1`) |
 | `legal.db` `case_section_links` | **0 rows** | The judgement→section table is empty. The chunks layer's own `sections_cited` covers **4.9%** of attributable paragraphs, so *which authorities interpret this provision* is not answerable today except for the Constitution, the IPC, the CrPC and the CPC |

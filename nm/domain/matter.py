@@ -366,7 +366,24 @@ class Matter:
 
     @staticmethod
     def create(advocate_id: str, title: str) -> "Matter":
-        return Matter(id=new_id("mat"), advocate_id=advocate_id, title=title)
+        if not (advocate_id or "").strip():
+            # AN ANONYMOUS SESSION MAY NOT OPEN A FILE (A1).
+            #
+            # Tenet 4 requires the file to know who may instruct and tenet
+            # 20 requires a decision to record who decided; an anonymous
+            # session satisfies neither. Refusing later, at the point of
+            # advice, would already have put client material on a record
+            # nothing can attribute.
+            #
+            # The wire had `min_length=1`, which counts CHARACTERS: "   "
+            # is three of them and no identity, and it opened a matter.
+            raise ValueError(
+                "a matter cannot be opened without a named advocate. An "
+                "identifier made of whitespace is not an identifier, and a "
+                "file nothing can attribute cannot record who instructed "
+                "it or who decided.")
+        return Matter(id=new_id("mat"), advocate_id=advocate_id.strip(),
+                      title=title)
 
     def thread(self, thread_id: ThreadId) -> Thread | None:
         return next((t for t in self.threads if t.id == thread_id), None)
