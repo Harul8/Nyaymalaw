@@ -233,7 +233,15 @@ prove only that the check compiles.
 about Kerala law out of it is confidently wrong and nothing downstream catches
 that.
 
-**Two measured traps, both the same shape — a wrong lookup that answers
+**`legal_database/` HAS TWO LAYERS AND THEY ARE NOT THE SAME CORPUS.**
+`raw_data/` holds 34,037 source judgments and 1,658 bare Acts with structured
+headers — `Equivalent citations:` (82.2%), `Bench:` (90.2%), `PETITIONER:` /
+`RESPONDENT:` (40.0%). `vector_store/` holds the derived chunks, indices and
+parents, and it **dropped every one of those fields**. Measuring the derived
+layer and reporting the result as a fact about the corpus understated bench
+coverage by 12x and citation coverage by 5x.
+
+**Three measured traps, all the same shape — a wrong lookup that answers
 confidently:**
 
 1. **Search the right index.** `case_name` holds party names, so a subject
@@ -262,6 +270,18 @@ regex silently. This recurred four times in one session.
 
 Git Bash converts Windows paths in arguments to native commands, which
 corrupts `mklink` targets. Use the PowerShell tool for anything path-shaped.
+
+**`find` DOES NOT TRAVERSE THE CORPUS.** `legal_database/` is a directory
+junction and Git Bash `find` will not follow it, so `find legal_database ...`
+returns nothing and looks exactly like an empty corpus. That is how
+`raw_data/` — **34,037 source judgment files, 1.1GB, carrying the bench,
+citations and party names the derived store dropped** — was reported as absent,
+and three measured claims were published from the derived layer alone.
+
+Use PowerShell `Get-ChildItem -Recurse` or Python `pathlib.rglob`. Both follow
+the junction. **And a claim of absence about the corpus is measured against
+`raw_data/`, never against `vector_store/`** (checks `raw-1`, `raw-2` in
+`docs/BASELINE.md`).
 
 ---
 

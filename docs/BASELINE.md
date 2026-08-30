@@ -226,7 +226,7 @@ repetition and a check does**:
 
 ---
 
-## 4.2 And a fourth time, in the code rather than the corpus
+## 4.2 A fourth time, in the code rather than the corpus
 
 On 30 August 2026 the **second-copy** shape (S9) produced the same class of
 false gap, from the other direction. Two modules each held a pattern for
@@ -238,6 +238,75 @@ Act the corpus holds in full.
 **The lesson is the same one and it is now enforced the same way.** The pattern
 lives in `nm/domain/citation.py`, and `tests/test_citation_patterns.py` fails
 the build if a second one appears anywhere in `nm/`.
+
+---
+
+## 4.3 A FIFTH TIME — and this one was the biggest
+
+**Measured 30 August 2026.** Every figure below about case identity was taken
+from `vector_store/`, the DERIVED layer, and reported as a fact about the
+corpus. `legal_database/raw_data/` — **34,037 source judgment files, 1.1GB** —
+was never opened.
+
+The immediate cause: `find legal_database -iname "*CaseLaws*"` returned
+nothing, and **Git Bash `find` does not traverse Windows directory junctions**,
+which is how `legal_database` is attached. An empty result was read as absence.
+That is defect shape S3 exactly, against the corpus, for the fifth time in this
+project — and this occurrence was mine, in the pass that had just finished
+writing the previous four up.
+
+**Three claims were wrong, and each was wrong in the same direction: the
+derived store's poverty was reported as the corpus's.**
+
+| Claimed, from `vector_store/` | Measured, from `raw_data/` |
+|---|---|
+| Bench composition: **7.5%** of cases, 0.7% for the AP High Court. "A hierarchy rule would answer *cannot tell* for 92.5% of judgments" | **`Bench:` header on 30,710 of 34,037 files — 90.2%** |
+| Reporter citations: **17.9%** of judgments addressable | **`Equivalent citations:` on 27,977 — 82.2%**, 299,965 distinct citation keys |
+| Party names: corrupt, 13.1% truncated, unrecoverable | `PETITIONER:`/`RESPONDENT:` on 13,625 — **40.0%**, clean |
+
+**Every source file carries a structured header**: cites/cited-by counts, court,
+title with date, `Equivalent citations:`, `Bench:`, `Author:`, and for 40% the
+party blocks. The derived layer dropped all of it.
+
+> **CHECK `raw-1`:** a claim about what the corpus holds names the LAYER it was
+> measured from — `raw_data/` or `vector_store/` — and a claim of absence must
+> be measured against `raw_data/`. The derived store is an artefact of one
+> extraction, not the corpus.
+
+> **CHECK `raw-2`:** never conclude absence from a `find` over
+> `legal_database/`. It is a directory junction and Git Bash `find` does not
+> follow it. Use PowerShell `Get-ChildItem -Recurse`, or Python `pathlib`,
+> both of which do.
+
+### 4.2.1 What the correction unlocks, measured
+
+Building a citation index from the 299,965 `Equivalent citations:` keys and
+scanning every source file for blocks carrying a treatment verb:
+
+| | |
+|---|---:|
+| Blocks containing a treatment verb | 45,509 |
+| Reporter citations inside those blocks | 40,843 |
+| Resolving to a held judgment | **18,629 — 45.6%** |
+| **Distinct judgments reachable as a treatment target** | **6,710 of 34,037 — 19.7%** |
+
+**0.83% → 19.7%, deterministic, no model call.** And that is a floor: it
+matches on reporter citations only, over crude paragraph splits, requiring an
+exact normalised key. Party-name matching against the clean `PETITIONER:` /
+`RESPONDENT:` fields is not yet used.
+
+**The bench data is real and usable.** 30,710 benches with a plausible
+distribution — 4,646 single-judge, 17,645 two-judge, 6,263 three-judge, 1,087
+five-judge, and benches of 7, 9 and 11. The larger-bench-supersedes rule is
+buildable against that; it was declined on a measurement taken from the wrong
+layer.
+
+**`bind-1` and RG-01 survive the correction unchanged.** The source folder is
+named `Telangana HC`, but the files inside label themselves *"Andhra HC
+(Pre-Telangana)"*, run 1954–2018, and hold **zero** post-2018 judgments. The
+folder is named for the jurisdiction served, not the deciding court — and the
+source's own label independently confirms these are predecessor-court
+judgments, which is the whole basis of the standing decision.
 
 ---
 
