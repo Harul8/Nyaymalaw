@@ -127,9 +127,18 @@ def test_every_gate_names_a_feature_and_a_visible_response():
 def test_unbuilt_gates_are_declared_unbuilt():
     """The screens are slice 10. Listing them as built would be the
     specification describing a product that screens matters when it does not.
+
+    `G-LIMITATION` is the odd one and it is deliberate. D2 computes the
+    position and D1 renders it BLOCKED with the reason where it could not be
+    computed — so the *state* is built. What is not built is the other half of
+    the condition the PRD states: whether the step being recommended is merits
+    work that DEPENDS on limitation. "Obtain the sale deed" does not; "file the
+    suit" does, and nothing before D5 can tell them apart. Firing on the whole
+    set would repeat G-POSTURE's recorded defect — a gate applied to a case it
+    was not written for.
     """
     unbuilt = {g.id for g in GATES if not g.built}
     assert unbuilt == {"G-EMERGENCY", "G-CONFLICT", "G-COMPETENCE", "G-SCOPE",
-                       "G-CAPACITY"}, (
+                       "G-CAPACITY", "G-LIMITATION"}, (
         "the unbuilt set changed — either something landed, or something "
         "regressed, and both need a deliberate edit here")

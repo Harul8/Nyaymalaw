@@ -45,6 +45,7 @@ ESCAPES = (
     "not_assessed", "not_measured", "not_checked", "not_stated", "not_resolved",
     "not_comparable", "not_found", "not_held", "unknown", "cannot_tell",
     "unbindable", "ambiguous", "unbuildable", "failed", "none", "undated",
+    "not_computed", "not_applicable",
 )
 
 #: The word list is this check's maintenance cost, and it is a small and
@@ -82,6 +83,14 @@ CLOSED: dict[str, str] = {
                   "that makes it auditable differs between the two.",
     "Tier": "model configuration. A step declares a tier or the build fails, "
             "so there is no tier nobody chose.",
+    "DeadlineKind": "what IMPOSES a deadline — a limitation Article, a notice "
+                    "period, a listing. `OTHER` carries the ones this list "
+                    "does not name; a deadline with no source at all cannot "
+                    "be constructed.",
+    "Threshold": "the complete list of thresholds D1 checks. The map is BUILT "
+                 "from this enum, so an unassessed threshold appears as a "
+                 "BLOCKED row rather than as a missing member — the escape is "
+                 "on ThresholdState, which is where the question is answered.",
 }
 
 
@@ -120,6 +129,17 @@ def test_every_outcome_enum_can_say_that_nothing_was_established():
     offenders: list[str] = []
     for cls, qualified in sorted(_enums().items(), key=lambda kv: kv[1]):
         if cls.__name__ in CLOSED:
+            continue
+        # AN ENUM MAY DECLARE ITS OWN ESCAPE, and that is the better answer
+        # wherever the word list would have to guess. `ThresholdState`'s escape
+        # is BLOCKED -- somebody must still answer it -- while NOT_APPLICABLE
+        # is a FINDING, and no vocabulary of substrings could tell those apart.
+        # A classmethod is not an enum member, so it declares without adding a
+        # value.
+        if callable(getattr(cls, "not_established", None)):
+            assert cls.not_established() in list(cls), (
+                f"{qualified}.not_established() does not return one of its own "
+                f"members, so the declaration points at nothing")
             continue
         names = [m.name.lower() for m in cls]
         if not any(any(e in n for e in ESCAPES) for n in names):

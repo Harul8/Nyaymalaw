@@ -209,3 +209,70 @@ def test_trace_detects_a_stale_spec(tmp_path):
         assert "was stale" in r.stdout
     finally:
         shutil.copy2(backup, spec)
+
+
+# ================== the mutation anchors, checked in seconds ================
+
+
+def _stale_anchors(mutations) -> list[str]:
+    """The scan, ONE COPY, so the control below exercises what the test does.
+
+    A control that reimplements the check proves the reimplementation works.
+    """
+    import tools.mutate as mutate
+
+    stale = []
+    for label, rel, old, *_ in mutations:
+        path = mutate.ROOT / rel
+        if not path.exists():
+            stale.append(f"{label}: {rel} does not exist")
+        elif old not in path.read_text(encoding="utf8"):
+            stale.append(f"{label}: anchor not found in {rel}")
+    return stale
+
+
+def test_every_mutation_anchor_still_matches_the_source():
+    """A MUTATION WHOSE ANCHOR NO LONGER MATCHES NEVER RUNS.
+
+    `tools/mutate.py` is right to score a missing anchor as SURVIVED — a
+    mutation that did not execute must never read as one that was caught. But
+    that verdict costs a fifteen-minute run to reach, and it arrives labelled
+    as a weak test rather than as what it is: a rename that was not swept.
+
+    It happened the day this was written. `_derive` gained a `facts` argument,
+    two call sites were updated, and the copy of one of them living inside a
+    mutation anchor was not. Ruff, pyflakes and pylint E0601/E0606 were all
+    clean — CLAUDE.md §6 exactly: a signature change is a rename and static
+    checks do not catch it.
+
+    So the same fact is asserted here, in under a second, on every commit.
+    """
+    import tools.mutate as mutate
+
+    stale = _stale_anchors(mutate.MUTATIONS)
+    assert not stale, (
+        "these mutations cannot run, so the tests they name are unproven:\n  "
+        + "\n  ".join(stale)
+        + "\n\nThe anchor is a copy of a line of source. When that line moves, "
+          "the copy has to move with it — sweeping a rename includes this file.")
+
+
+def test_the_anchor_check_can_see_a_stale_anchor():
+    """THE POSITIVE CONTROL. A scan over anchors that all happen to match
+    proves nothing about the scan; a checker that always returns [] satisfies
+    the assertion above identically.
+
+    So a mutation with an anchor the source does not contain is planted, and
+    the SAME function has to report it.
+    """
+    planted = [("a mutation whose line no longer exists", "nm/core/turn.py",
+                "    def _a_method_no_rename_ever_produced(self):",
+                "x", "some_test", "E-000")]
+    reported = _stale_anchors(planted)
+    assert len(reported) == 1 and "anchor not found" in reported[0]
+
+    # AND A FILE THAT IS GONE ENTIRELY is a different failure with its own
+    # message -- a rename of the module, not of the line.
+    moved = [("a mutation whose module moved", "nm/core/no_such_module.py",
+              "anything", "x", "some_test", "E-000")]
+    assert "does not exist" in _stale_anchors(moved)[0]

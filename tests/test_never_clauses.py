@@ -502,9 +502,15 @@ def test_neither_board_carries_analysis(client):
 
     # STATUS FIELDS ONLY. A key outside this set is either analysis or a new
     # status field somebody must justify — and the failure names it either way.
+    # STATUS FIELDS. `next_deadline_status` and `passed_deadlines` were added
+    # by D3 and this test asked the right question about them: a date and its
+    # status are STATUS -- what the advocate scans to choose a file -- while
+    # theory, proof gaps and reasoning are the analysis A2 keeps off the board.
+    # A passed deadline is on the board precisely because A2.5 requires it to
+    # be, and it carries its consequence rather than an argument about it.
     thread_keys = {"thread_id", "thread", "our_client_is", "side", "against",
-                   "forum", "stage", "next_deadline", "loud", "conflict",
-                   "deferred_reason"}
+                   "forum", "stage", "next_deadline", "next_deadline_status",
+                   "passed_deadlines", "loud", "conflict", "deferred_reason"}
     for row in board["threads"]:
         extra = set(row) - thread_keys
         assert not extra, (
@@ -512,8 +518,12 @@ def test_neither_board_carries_analysis(client):
             f"advocate scans to choose a file; analysis on it is a conclusion "
             f"they will act on without the reasoning behind it.")
 
+    # `next_deadline_status` is a STATUS field and not analysis: it says which
+    # of the three the null means -- nobody assessed a register, or one was
+    # assessed and this matter has no dated deadline. A null alone reads as
+    # the second while meaning the first, which is what it did.
     matter_keys = {"matter_id", "matter", "client", "threads", "next_deadline",
-                   "blocked", "last_touched"}
+                   "next_deadline_status", "blocked", "last_touched"}
     for row in listing["matters"]:
         extra = set(row) - matter_keys
         assert not extra, f"the matter list carries {sorted(extra)}"
@@ -525,3 +535,57 @@ def test_neither_board_carries_analysis(client):
                       "we should argue", "likely to succeed"):
         assert reasoning not in blob.lower(), (
             f"the board reasons ({reasoning!r}): {blob[:140]!r}")
+
+
+@refuses("A2", 5)
+@pytest.mark.eval_id("E-046")
+def test_a_passed_deadline_is_on_the_board_and_not_among_the_upcoming():
+    """A2.5, which was DECLARED as awaiting D3 and is now owed.
+
+    Two different mistakes, and A2 forbids both. Dropping a passed deadline
+    tells the advocate there was never one. Filing it under what is still
+    upcoming buries the thing they can no longer do among the things they
+    still can — and they scan the second list for work.
+
+    `_thread_row` carried `"next_deadline": None` hard-coded until D3, so this
+    clause was a rule about a field that never held anything. That is why it
+    was declared as awaiting rather than tested against an empty value.
+    """
+    from datetime import date, timedelta
+
+    from nm.core.deadlines import Deadline, DeadlineKind, DeadlineStatus
+    from nm.domain.matter import Thread
+    from nm.edge.projections import board_projection
+
+    today = date(2026, 8, 31)
+    thread = Thread.create("the possession suit")
+    matter = Matter.create(advocate_id="adv", title="m").with_thread(thread)
+
+    def _d(days, action):
+        return Deadline(thread=thread.id, kind=DeadlineKind.LIMITATION,
+                        source="Limitation Act, 1963 Article 65",
+                        action=action, owner="the advocate",
+                        consequence="the claim is barred",
+                        on=today + timedelta(days=days))
+
+    gone = _d(-240, "apply under s.5 to condone the delay")
+    soon = _d(12, "file the suit")
+
+    board = board_projection(matter, (gone, soon), today)
+    row = board["threads"][0]
+
+    assert row["next_deadline"] == soon.on.isoformat(), (
+        "the nearest UPCOMING deadline is not shown")
+    assert row["next_deadline_status"] == DeadlineStatus.NEAR.value
+    assert row["next_deadline"] != gone.on.isoformat(), (
+        "a deadline eight months gone is being shown as what comes next")
+
+    assert len(row["passed_deadlines"]) == 1, (
+        "the passed deadline was dropped from the board. The advocate is told "
+        "there was never one, and the relief-from-delay application with it.")
+    passed_row = row["passed_deadlines"][0]
+    assert passed_row["days_ago"] == 240
+    assert passed_row["consequence"], (
+        "a passed deadline with no consequence tells the advocate nothing they "
+        "can act on")
+    assert "condone" in passed_row["action"]

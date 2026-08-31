@@ -176,7 +176,9 @@ def spec_is_current(rep: Report) -> None:
 #: test now would assert a rule against an empty field, which is the vacuous
 #: check this project has already paid for three times.
 AWAITING: dict[tuple[str, int], str] = {
-    ("A2", 5): "D3, the deadline register",
+    # (empty) -- A2.5 was here, awaiting D3. D3 landed and the clause
+    # is tested, so the declaration was retired rather than left to
+    # stand. An exemption nobody removes is an exemption nobody reads.
 }
 
 

@@ -176,7 +176,11 @@ def matter(matter_id: str, advocate_id: Advocate) -> dict:
         # The same response whether it does not exist or belongs to someone
         # else: a failed lookup must disclose nothing about what exists.
         raise HTTPException(status_code=404, detail="no such matter")
-    return board_projection(m)
+    # `None`, WRITTEN OUT. This view computes no deadline register -- the
+    # register is derived on a turn, from the retrieval that turn made -- and
+    # `None` is what says so. It was an omitted argument defaulting to `()`,
+    # and every row then reported a file with no deadlines on it.
+    return board_projection(m, None)
 
 
 @app.get("/api/matters/{matter_id}/summary")

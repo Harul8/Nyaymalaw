@@ -147,7 +147,8 @@ MUTATIONS = [
     ("a bare question of law refused instead of answered",
      "nm/core/turn.py",
      "            derived, relied_on, retrieved = self._derive(\n"
-     "                thread, turn, metrics, memory, side_blind=True)\n"
+     "                thread, turn, metrics, memory, side_blind=True,\n"
+     "                facts=matter.facts)\n"
      "            elements.extend(derived)",
      "            pass",
      "test_a_provision_is_still_read_back_behind_a_closed_posture_gate",
@@ -480,6 +481,47 @@ MUTATIONS = [
      "test_no_function_in_the_product_is_defined_and_never_reached",
      "E-023"),
 
+    # ---- S4 ------------------------------------------------------------
+
+    # E-042. THE MEASURED DEFECT: an acknowledgment in the chronology that
+    # never reached the arithmetic. Every other part of the answer was right.
+    ("a chronology entry that never reaches the limitation computation",
+     "nm/core/limitation.py",
+     '                              "this entry was not examined against the period"))',
+     '                              "no effect"))',
+     "test_an_entry_nobody_examined_is_reported_as_not_assessed", "E-042"),
+
+    # D2.3. Three years counted in days lands a day early across a leap
+    # year, and a day is the whole of a limitation argument.
+    ("a period counted in days where the statute counts by the calendar",
+     "nm/core/limitation.py",
+     "    return _clamped(on.year + years, on.month, on.day)",
+     "    from datetime import timedelta as _t; return on + _t(days=365 * years)",
+     "test_a_period_is_counted_by_the_calendar_and_never_in_days", "E-043"),
+
+    # D3.2. A stored status cannot detect its own transition: `future`
+    # written on Tuesday is still `future` on the Friday it passes.
+    ("a deadline status that cannot reach `near`",
+     "nm/core/deadlines.py",
+     "        if self.on - today <= NEAR_WITHIN:",
+     "        if False and self.on - today <= NEAR_WITHIN:",
+     "test_a_deadline_can_reach_every_status_including_near", "E-046"),
+
+    # D3.0. Dropping it tells the advocate there was never a deadline.
+    ("a passed deadline listed among what is still upcoming",
+     "nm/core/deadlines.py",
+     "                 if d.status(today) in (DeadlineStatus.FUTURE, DeadlineStatus.NEAR))",
+     "                 if True)",
+     "test_a_passed_action_is_never_listed_among_what_will_not_wait", "E-046"),
+
+    # D1.0. An advocate reading eight rows believes the ninth was checked.
+    ("a threshold nobody assessed left off the map",
+     "nm/core/thresholds.py",
+     "        for t in Threshold)",
+     "        for t in assessed)",
+     "test_every_threshold_appears_on_the_map_even_when_nobody_assessed_it",
+     "E-044"),
+
     ("a persisted field silently dropped on read",
      "nm/adapters/store/file_store.py",
      "                          for f in fields(cls) if f.name in value})",
@@ -666,6 +708,105 @@ MUTATIONS = [
      "        if False and element.disclosure:",
      "test_naming_what_could_not_be_retrieved_is_not_citing_it",
      "E-023"),
+
+    # ---- S4 / C5. THE CHART EVERY LIMITATION READS ITS ACCRUAL FROM ------
+
+    # E-040. A date the advocate's words do not fix, taken anyway. An event
+    # missing from the chart costs a question; an event wrongly dated costs a
+    # limitation calculation the advocate acts on without knowing it was
+    # invented.
+    ("a date read from words the advocate never wrote",
+     "nm/core/chronology.py",
+     "        if _fold(expr) not in _fold(message):",
+     "        if False and _fold(expr) not in _fold(message):",
+     "test_a_date_read_from_words_the_advocate_never_wrote_is_refused",
+     "E-040"),
+
+    # E-040. Two dates for one event, silently resolved to the first. Picking
+    # one is the silent resolution C5 forbids and C1 forbids twice over.
+    ("two dates for one event collapsed instead of surfaced",
+     "nm/core/chronology.py",
+     "        if prior.date != f.date:",
+     "        if False and prior.date != f.date:",
+     "test_two_dates_for_one_event_are_surfaced_and_both_kept", "E-040"),
+
+    # E-041. A recollection presented as a documented date. The limitation
+    # position resting on it reads as settled either way.
+    ("an asserted date labelled as documented",
+     "nm/core/chronology.py",
+     '        certainty = (Certainty.DOCUMENTED if raw.get("documented")',
+     '        certainty = (Certainty.DOCUMENTED if True',
+     "test_a_documented_date_and_an_asserted_one_are_not_the_same_thing",
+     "E-041"),
+
+    # ---- S4 ON THE SERVED PATH -------------------------------------------
+    #
+    # All five were LIVE, and none was visible to the unit suite. They are the
+    # argument for CLAUDE.md §8: every defect the first external review found
+    # lived between a correct module and the served path.
+
+    # THE PERIOD THE PRODUCT SUPPLIED. `years=3` into every computation,
+    # including one that had just retrieved Article 65 and its twelve years.
+    # The Article was right, the accrual was right, every citation was right,
+    # and the answer was wrong by nine years.
+    ("a limitation period the product supplied rather than read",
+     "nm/core/limitation.py",
+     "        if found != (self.years, self.months, self.days):",
+     "        if False and found != (self.years, self.months, self.days):",
+     "test_the_period_cannot_be_supplied_by_the_product", "E-043"),
+
+    # A PERIOD OF ZERO expires on the accrual date -- state COMPUTED, a real
+    # date, a real day count, and every claim barred the day it arose.
+    ("a period of zero accepted as a computed period",
+     "nm/core/limitation.py",
+     "        if not (self.years or self.months or self.days):",
+     "        if False and (self.years or self.months or self.days):",
+     "test_a_period_of_zero_is_refused_rather_than_computed", "E-043"),
+
+    # E-045 was a class-A eval that ran only against the module. On a defending
+    # thread their limitation is often the whole answer.
+    ("the opponent's limitation never computed on a defending thread",
+     "nm/core/turn.py",
+     "        if thread.posture.side is Side.DEFENDING:",
+     "        if False and thread.posture.side is Side.DEFENDING:",
+     "test_on_a_defending_thread_the_turn_computes_the_opponents_limitation",
+     "E-045"),
+
+    # THE FIXED SENTENCE. Every recommendation carried
+    # `no_deadline_reason="no statutory window identified on this turn"` --
+    # a finding that nothing was found, asserted whether or not anything had
+    # been looked for.
+    ("an action that drops the by-when the register actually holds",
+     "nm/core/turn.py",
+     "        live = deadlines.upcoming(register, today)",
+     "        live = ()",
+     "test_a_recommended_action_carries_the_by_when_the_register_holds",
+     "E-046"),
+
+    # D3.1. A passed window presented as this action's by-when files the thing
+    # that can no longer be done among the things that still can.
+    ("a passed deadline presented as an action's by-when",
+     "nm/core/turn.py",
+     "        gone = deadlines.passed(register, today)",
+     "        gone = (); return (register[0].on if register else None), None",
+     "test_a_passed_deadline_never_becomes_the_by_when_of_an_action",
+     "E-046"),
+
+    # THE BOARD'S TWO NULLS. `deadlines=()` defaulted and the served endpoint
+    # never passed a register, so every row read as a file with no deadlines.
+    ("a board that cannot say whether a deadline register was computed",
+     "nm/edge/projections.py",
+     '                  "next_deadline_status": "not_assessed",',
+     '                  "next_deadline_status": "none_on_this_thread",',
+     "test_the_board_distinguishes_no_deadline_from_no_register", "E-046"),
+
+    # S11. The list sorts nearest-deadline-first and reads `next_deadline`
+    # first -- and that field was hard-coded None, so the rule never applied.
+    ("a matter list whose nearest-deadline ordering cannot fire",
+     "nm/edge/projections.py",
+     '            "next_deadline": live[0].on.isoformat() if live else None,',
+     '            "next_deadline": None,',
+     "test_the_matter_list_orders_by_a_deadline_it_actually_holds", "E-046"),
 ]
 
 

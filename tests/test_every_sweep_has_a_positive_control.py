@@ -83,6 +83,10 @@ CONTROLS: dict[str, str] = {
     # M3 the moment it was written without one.
     "test_no_rule_has_a_second_home":
         "test_the_owner_actually_contains_the_rule",
+    # the mutation anchors -- a stale one means the mutation never ran, and
+    # SURVIVED then reads as a weak test rather than as an unswept rename.
+    "test_every_mutation_anchor_still_matches_the_source":
+        "test_the_anchor_check_can_see_a_stale_anchor",
 }
 
 #: How a sweep is recognised: it builds a list of offenders over a population

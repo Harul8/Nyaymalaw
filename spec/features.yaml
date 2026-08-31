@@ -432,7 +432,7 @@ features:
   title: The chronology
   phase: C
   slice: S4
-  status: decided
+  status: tested
   does:
   - Build a date chart **per thread before any opinion on that thread**. Every entry carries the date,
     the event, its source, and whether it is documented or asserted.
@@ -528,7 +528,7 @@ features:
   title: The threshold map
   phase: D
   slice: S4
-  status: decided
+  status: tested
   does:
   - 'Check, per thread: jurisdiction, forum, standing, maintainability, **limitation**, statutory notice
     and preconditions, valuation, court fees, arbitration or ADR clauses, territorial and pecuniary competence,
@@ -558,7 +558,7 @@ features:
   title: Limitation as a computed date
   phase: D
   slice: S4
-  status: decided
+  status: tested
   does:
   - 'Produce, per thread: the **Article** relied on, cited to retrieved text; the accrual event and why;
     the period; each factor that extends, restarts or excludes time, **expressly applied or expressly
@@ -601,7 +601,7 @@ features:
   title: The deadline register  ⟨tenet 29⟩
   phase: D
   slice: S4
-  status: decided
+  status: tested
   does:
   - 'Hold every deadline on the file in one register: limitation, statutory notice windows, appeal and
     revision periods, objection periods, listed court dates, and **factual urgency that no statute creates**

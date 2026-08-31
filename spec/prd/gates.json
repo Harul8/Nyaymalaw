@@ -115,6 +115,22 @@
     "built": true
   },
   {
+    "id": "G-LIMITATION",
+    "condition": "Merits work is done on a thread whose limitation has not been computed.",
+    "states": [
+      "computed",
+      "not_computed",
+      "not_assessed"
+    ],
+    "response": "block",
+    "scope": "step",
+    "persistence": "sticky",
+    "recovery": "advocate",
+    "visible": "Whether limitation has been computed on this thread. Until it is, the threshold map carries it as BLOCKED with the reason, and no step is presented as though the window were known.",
+    "feature": "D1",
+    "built": false
+  },
+  {
     "id": "G-THREAD",
     "condition": "An account cannot be bound to exactly one thread, or two threads look like one without a decisive identifier.",
     "states": [

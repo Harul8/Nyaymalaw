@@ -465,12 +465,12 @@ FM = [
     ["C2", "Objectives and constraints", "C", "S7", "E-070", "decided"],
     ["C3", "Parties and posture", "C", "S3", "E-030, E-031, E-035", "tested"],
     ["C4", "Thread identity", "C", "S3", "E-032, E-033", "tested"],
-    ["C5", "The chronology", "C", "S4", "E-040, E-041", "decided"],
+    ["C5", "The chronology", "C", "S4", "E-040, E-041", "tested"],
     ["C6", "Document intake and extraction", "C", "S10", "—", "decided"],
     ["C7", "Evidence inventory and preservation", "C", "S7", "E-070", "decided"],
-    ["D1", "The threshold map", "D", "S4", "E-044", "decided"],
-    ["D2", "Limitation as a computed date", "D", "S4", "E-042, E-043, E-045", "decided"],
-    ["D3", "The deadline register", "D", "S4", "E-046", "decided"],
+    ["D1", "The threshold map", "D", "S4", "E-044", "tested"],
+    ["D2", "Limitation as a computed date", "D", "S4", "E-042, E-043, E-045", "tested"],
+    ["D3", "The deadline register", "D", "S4", "E-046", "tested"],
     ["D4", "Research plan and execution", "D", "S5", "E-050, E-051, E-054", "decided"],
     ["D5", "Elements, burden and proof", "D", "S7", "E-070, E-071", "decided"],
     ["D5.1", "The register — proof, never honesty", "D", "S7", "E-072, E-073", "decided"],
@@ -1594,6 +1594,90 @@ d("B-056", "2026-08-30", "tests",
   "what stops the next one being written the way these three were.",
   "tests/test_every_sweep_has_a_positive_control.py::test_every_sweep_names_a_"
   "control_that_proves_it_can_fail; ALSO SWEPT BY tests/test_every_sweep_has_a_positive_control.py::test_every_sweep_names_a_control_that_proves_it_can_fail")
+
+d("B-057", "2026-08-31", "core",
+  "THE LIMITATION PERIOD WAS A CONSTANT. The turn engine passed `years=3` "
+  "into every computation it made. On a turn that had just retrieved Article "
+  "65 and its TWELVE years it produced a bar three years after accrual and "
+  "reported a live claim dead. The Article was right, the accrual date was "
+  "right, every citation on the turn was right, and the answer was wrong by "
+  "nine years.",
+  "Wiring D2 into the turn and needing a period before the extraction existed. "
+  "`compute(years=..., months=..., days=...)` took three plain integers, so "
+  "supplying one read as ordinary Python rather than as an assertion about "
+  "the law.",
+  "S1 — an absent input reading as success",
+  "Probing the served path end to end after the wiring landed",
+  "The period is a TYPE. `Period` carries the retrieved span it was read out "
+  "of and verifies itself against it, and `compute` takes nothing else — so "
+  "there is no signature left through which an invented period reaches the "
+  "arithmetic. Where the text states no period the position is NOT_COMPUTED "
+  "with that reason.",
+  "Yes — this is the same mechanism `Factor.finding` already used to refuse "
+  "an extending provision asserted from memory, applied to the period. Both "
+  "are legal facts that must come from retrieved text, and both are now "
+  "refused by the type rather than by a check somebody has to remember.",
+  "tests/test_limitation.py::test_the_period_cannot_be_supplied_by_the_product; "
+  "tests/test_slice4_closeout.py::test_the_period_on_a_served_turn_is_the_one_the_retrieved_text_states")
+
+d("B-058", "2026-08-31", "core",
+  "A PERIOD OF ZERO WAS A COMPUTED ANSWER. `years`, `months` and `days` each "
+  "defaulted to zero, so a caller who supplied none of them got an expiry "
+  "equal to the accrual date — state COMPUTED, a real date, a real day count, "
+  "and every claim barred the day it arose.",
+  "Giving the three period arguments defaults so a caller could pass only the "
+  "unit that applied. The defaults were individually sensible and combined "
+  "into a computation nobody had supplied a period for.",
+  "S1 — an absent input reading as success",
+  "Reading `compute` while fixing B-057",
+  "`Period.__post_init__` refuses an all-zero period outright, so the state "
+  "cannot be reached rather than being caught downstream.",
+  "Yes — the same rule as every other three-state escape in this build: the "
+  "third state is a VALUE (NOT_COMPUTED, with the reason) and never a "
+  "degenerate case of the first.",
+  "tests/test_limitation.py::test_a_period_of_zero_is_refused_rather_than_computed")
+
+d("B-059", "2026-08-31", "edge",
+  "EVERY RECOMMENDED ACTION CARRIED A FIXED SENTENCE saying no deadline "
+  "applied. `no_deadline_reason=\"no statutory window identified on this "
+  "turn\"` was set on every recommendation the engine ever made — a finding "
+  "that nothing was found, asserted whether or not anything had been looked "
+  "for. `Element.__post_init__` was satisfied: it can see that a reason is "
+  "present and not that it is true.",
+  "Building the ACTION element before the deadline register existed, and "
+  "filling the required field with the sentence that made the constructor "
+  "pass.",
+  "S1 — an absent input reading as success",
+  "Probing the served path end to end after D3 was wired",
+  "`_by_when` is one owner for the rule and separates the three states: no "
+  "register computed, a register with no dated entry, and a live window. A "
+  "passed window is reported as passed and never becomes an action's by-when.",
+  "Yes — every future site that emits an ACTION asks the same function, so "
+  "the reason cannot drift from what was actually assessed.",
+  "tests/test_slice4_closeout.py::test_where_no_window_could_be_established_the_action_says_which; "
+  "tests/test_slice4_closeout.py::test_a_passed_deadline_never_becomes_the_by_when_of_an_action")
+
+d("B-060", "2026-08-31", "edge",
+  "THE BOARD SHOWED A FILE WITH NO DEADLINES ON IT. `board_projection` took "
+  "`deadlines=()` by default and the served endpoint never passed a register, "
+  "so every thread row rendered `next_deadline: null`. The matter list was "
+  "worse: `next_deadline` was hard-coded `None` on every row AND the sort "
+  "reads it first, so 'nearest deadline first' — the ordering rule that list "
+  "exists to obey — had never once applied.",
+  "Giving both projections a default for an argument that has no safe "
+  "default. The default decided, on behalf of every call site that forgot "
+  "one, that a gap should render as a clean sheet.",
+  "S11 — a check that cannot fail is not a check",
+  "Sweeping the callers after the register reached the turn",
+  "Both take the register with no default and three states: `None` renders "
+  "`not_assessed`, `()` renders `none_on_this_thread`, and a dated entry "
+  "renders the date. The API writes `None` explicitly, which is the honest "
+  "value for a view that computes no register.",
+  "Yes — the same three-state treatment as the thread row and the ACTION "
+  "by-when, and the same rule about defaults: an argument whose absence "
+  "changes what the advocate believes may not have one.",
+  "tests/test_slice4_closeout.py::test_the_board_distinguishes_no_deadline_from_no_register; "
+  "tests/test_slice4_closeout.py::test_the_matter_list_orders_by_a_deadline_it_actually_holds")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

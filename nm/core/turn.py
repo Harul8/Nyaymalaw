@@ -25,7 +25,7 @@ import time
 from dataclasses import dataclass, field, replace
 from datetime import date
 
-from nm.core import chronology, grounding
+from nm.core import chronology, deadlines, grounding, limitation, thresholds
 from nm.core import dispute as dispute_reader
 from nm.core import posture as posture_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
@@ -39,6 +39,7 @@ from nm.domain.matter import (
     Posture,
     Provenance,
     Role,
+    Side,
     Thread,
     new_id,
 )
@@ -400,7 +401,8 @@ class TurnEngine:
                 gate="G-POSTURE", signal=Signal.UNRESOLVED_POSTURE,
             ))
             derived, relied_on, retrieved = self._derive(
-                thread, turn, metrics, memory, side_blind=True)
+                thread, turn, metrics, memory, side_blind=True,
+                facts=matter.facts)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=tuple(elements), blocked=True,
@@ -408,7 +410,7 @@ class TurnEngine:
         else:
             thread = bound.thread
             derived, relied_on, retrieved = self._derive(
-                thread, turn, metrics, memory)
+                thread, turn, metrics, memory, facts=matter.facts)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=tuple(elements))
@@ -740,6 +742,7 @@ class TurnEngine:
                 metrics: TurnMetrics,
                 memory: "matter_memory.MatterSummary | None" = None,
                 *, side_blind: bool = False,
+                facts: tuple[Fact, ...] = (),
                 ) -> tuple[list[Element], tuple, tuple]:
         """Retrieve, then assemble. Returns (elements, relied_on, retrieved).
 
@@ -802,6 +805,20 @@ class TurnEngine:
             retrieved.extend(authority.findings)
             self._read_coverage(authority, thread, metrics, grounds, relied_on)
 
+        # D1. THE THRESHOLD MAP, BEFORE THE MERITS. A threshold disposes of a
+        # claim without reaching them, so an hour on the theory of a suit that
+        # cannot be maintained is an hour spent twice.
+        #
+        # NOT UNDER THE POSTURE GATE, because "is this claim in time" is asked
+        # of a SIDE: whose limitation, ours or theirs, is not answerable while
+        # the side is unknown, and answering it for a guessed side is the
+        # defect G-POSTURE exists for.
+        register: tuple[deadlines.Deadline, ...] | None = None
+        if not side_blind:
+            rows, register = self._thresholds(
+                thread, turn, result, metrics, facts)
+            grounds.extend(rows)
+
         if metrics.evidence_bound_hit:
             # THE BOUND PRODUCES A VISIBLE GAP, never a quiet stop. A turn that
             # ran out of rounds and said nothing is indistinguishable from one
@@ -818,7 +835,8 @@ class TurnEngine:
 
         if not side_blind:
             elements.append(
-                self._recommend(thread, turn, result, metrics, memory))
+                self._recommend(thread, turn, result, metrics, memory,
+                                register))
         elements.extend(grounds)
         return elements, tuple(relied_on), tuple(retrieved)
 
@@ -842,6 +860,159 @@ class TurnEngine:
                                        e.thread)
         return matter.answered(
             frozenset(g.gate_id for g in metrics.gates_fired), turn.turn_id)
+
+    @implements("D1")
+    def _thresholds(self, thread: Thread, turn: TurnInput, result,
+                    metrics: TurnMetrics, facts: tuple[Fact, ...],
+                    ) -> tuple[list[Element], tuple[deadlines.Deadline, ...]]:
+        """The threshold map, the limitation position, and the register.
+
+        EVERY THRESHOLD GETS A ROW whether or not it was assessed, because an
+        advocate reading eight rows believes the ninth was checked. What this
+        slice can answer is limitation; the rest are BLOCKED with the reason,
+        which is a question they can act on rather than a silence they cannot
+        see.
+
+        Returns the register alongside the elements because the recommendation
+        needs it -- an ACTION carries the by-when the file actually holds, or
+        says why it has none. It may not carry a sentence that reads like a
+        finding of no deadline when nothing was computed.
+        """
+        out: list[Element] = []
+        chart = chronology.chart(facts, thread.chronology)
+        dated = tuple(f.date for f in chart if f.date is not None)
+
+        ours = self._limitation(thread.posture.side, thread, result, chart)
+        register = self._register(thread, ours)
+        map_ = thresholds.for_thread(
+            {thresholds.Threshold.LIMITATION: thresholds.from_limitation(ours)})
+
+        # D1.1 -- arithmetic checked against THE FILE'S OWN DATES. A twelve-year
+        # clock is not absurd; one that expires before the file's earliest
+        # event is arithmetic about a different matter.
+        for problem in thresholds.absurd(map_, dated):
+            metrics.violate("D1", problem)
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"I am not putting this figure in front of you: {problem}"))
+
+        out.extend(self._limitation_elements(thread, turn, ours, "us"))
+
+        # D2 -- THEIRS TOO, and on a defending thread it is often the whole
+        # answer: it disposes of the claim without touching the merits.
+        if thread.posture.side is Side.DEFENDING:
+            theirs = self._limitation(Side.MOVING, thread, result, chart)
+            register += self._register(thread, theirs)
+            out.extend(self._limitation_elements(thread, turn, theirs, "them"))
+
+        blocked = [a for a in map_
+                   if a.state is thresholds.ThresholdState.BLOCKED]
+        if blocked:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"{len(blocked)} of {len(map_)} thresholds are not "
+                      f"assessed on this thread: "
+                      f"{', '.join(a.threshold.value for a in blocked)}. Those "
+                      f"are gaps in the map, not findings that they do not "
+                      f"arise.")))
+        return out, deadlines.register(register, turn.today)
+
+    @implements("D2")
+    def _limitation(self, for_side: Side, thread: Thread, result,
+                    chart: tuple[Fact, ...]) -> limitation.Limitation:
+        """Limitation for one side -- or NOT COMPUTED, with the reason said.
+
+        Slice 4 computes it where the retrieval produced an Article AND the
+        chart holds a dated accrual. Anything else is NOT_COMPUTED carrying
+        why, because a limitation nobody computed must never read as a
+        limitation that is fine.
+        """
+        found = next((f for f in result.findings
+                      if "Article" in f.ref or "Limitation" in f.ref), None)
+        accrual = next((f for f in chart if f.date is not None), None)
+        if found is None:
+            return limitation.not_computed(
+                for_side, "no limitation Article was retrieved for this cause",
+                thread.chronology)
+        if accrual is None:
+            return limitation.not_computed(
+                for_side, "no dated event on this thread to run the period from",
+                thread.chronology)
+
+        # THE PERIOD COMES OUT OF THE RETRIEVED TEXT. It was a constant here --
+        # `years=3` on every computation, including one that had just retrieved
+        # Article 65 and its twelve years -- and the resulting bar was reported
+        # nine years early with every citation on the turn correct.
+        period = limitation.period_in(found.span)
+        if period is None:
+            return limitation.not_computed(
+                for_side,
+                f"the period is not stated in the text retrieved for "
+                f"{found.ref} — I will not supply one from memory",
+                thread.chronology)
+        return limitation.compute(
+            for_side=for_side, article=found.ref, accrual=accrual.id,
+            accrual_on=accrual.date, accrual_reason=accrual.statement[:70],
+            chronology=thread.chronology, period=period,
+            considered={f.id: "on the chart; it neither restarts nor extends"
+                        for f in chart if f.id != accrual.id})
+
+    @implements("D3")
+    def _register(self, thread: Thread, lim: limitation.Limitation,
+                  ) -> tuple[deadlines.Deadline, ...]:
+        """The limitation window as a register entry -- COMPUTED OR NOT.
+
+        An uncomputed window is entered with `on=None`, which renders as
+        NOT_COMPUTED. Leaving it off would tell the advocate there is no
+        deadline, which is the opposite of what is known.
+        """
+        whose = "our" if lim.for_side is thread.posture.side else "their"
+        return (deadlines.Deadline(
+            thread=thread.id, kind=deadlines.DeadlineKind.LIMITATION,
+            source=lim.article or "no Article retrieved",
+            action=f"commence {whose} claim within the limitation period",
+            owner="the instructing advocate",
+            consequence="the claim is barred and the merits are never reached",
+            on=lim.expires_on),)
+
+    def _limitation_elements(self, thread: Thread, turn: TurnInput,
+                             lim: limitation.Limitation, whose: str,
+                             ) -> list[Element]:
+        """The position, and E-042's coverage gap where there is one.
+
+        ONE BUILDER FOR BOTH SIDES. Writing it twice is how the opponent's
+        limitation ends up thinner than ours -- which is the defect D2's third
+        DOES clause exists to refuse.
+        """
+        out: list[Element] = []
+        missed = lim.accounts_for_every_entry(thread.chronology)
+        if missed:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"{len(missed)} thing(s) on this file were never weighed "
+                      f"against {whose} limitation period. That is a gap in my "
+                      f"working, not a finding that they do not matter.")))
+
+        if lim.state is not limitation.LimitationState.COMPUTED:
+            return out + [Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"I have not computed the limitation position for "
+                      f"{whose} on this thread: {lim.not_computed_because}."))]
+
+        # D2 -- NEVER NARRATE IT. A date and a day count, or nothing.
+        days = lim.days_remaining(turn.today)
+        gone = lim.expired(turn.today)
+        out.append(Element(
+            kind=ElementKind.GROUND, thread=thread.id,
+            signal=Signal.LIMITATION_BAR if gone else Signal.NONE,
+            text=(f"Limitation for {whose} runs to "
+                  f"{lim.expires_on.isoformat()} on {lim.article}, from "
+                  f"{lim.accrual_reason} ({abs(days)} days "
+                  f"{'ago' if gone else 'from today'})."
+                  + ("" if not gone else
+                     " That period has run. That is not the end of the file — "
+                     "what else it offers is a separate question."))))
+        return out
 
     def _disclose_coverage(self, turn: TurnInput, thread: Thread,
                            metrics: TurnMetrics, grounds: list[Element]) -> None:
@@ -1061,8 +1232,50 @@ class TurnEngine:
             disclosure=True))
 
     @implements("E2")
+    @implements("D3")
+    def _by_when(self, register: "tuple[deadlines.Deadline, ...] | None",
+                 today: date) -> tuple[date | None, str | None]:
+        """The by-when for an ACTION, or the REASON there is none. D3.
+
+        ONE OWNER FOR THE RULE, because every future site that emits an ACTION
+        needs the same answer and a second copy of it would drift within a
+        slice. `Element.__post_init__` already refuses an ACTION carrying
+        neither; what it cannot see is whether the reason is TRUE.
+
+        And it used to be false. The engine set a fixed
+        `no_deadline_reason="no statutory window identified on this turn"` on
+        every recommendation it ever made -- a finding that nothing was found,
+        asserted whether or not anything had been looked for. That is defect
+        shape S1 wearing a helpful face, so the three states are separated
+        here:
+
+          * `None` register -- NOT ASSESSED. Nobody computed a register on this
+            path, and saying "no window applies" would be inventing a finding.
+          * a register with no date -- assessed, and no date could be
+            established. The register's own entries carry why.
+          * a dated entry -- the nearest one, which is the answer.
+        """
+        if register is None:
+            return None, ("no deadline register was computed on this turn, so "
+                          "no by-when is stated — this is not a finding that "
+                          "none applies")
+        live = deadlines.upcoming(register, today)
+        if live:
+            return live[0].on, None
+        # D3 -- NEVER FILE A PASSED DEADLINE UNDER WHAT IS STILL UPCOMING. It
+        # is reported, as passed, rather than becoming this action's by-when.
+        gone = deadlines.passed(register, today)
+        if gone:
+            return None, (f"every deadline on this thread has passed — the "
+                          f"nearest was {gone[0].on.isoformat()}, and it is "
+                          f"reported above rather than presented as a window")
+        return None, ("the register holds no deadline with an established "
+                      "date on this thread")
+
     def _recommend(self, thread, turn, result, metrics: TurnMetrics,
-                   memory=None) -> Element:
+                   memory=None,
+                   register: "tuple[deadlines.Deadline, ...] | None" = None,
+                   ) -> Element:
         side = thread.posture.side.value
         cited = ""
         if result.findings:
@@ -1098,9 +1311,10 @@ class TurnEngine:
                 text=("I could not reach the model to form a recommendation on "
                       "this turn. Nothing has been recorded as advice. Resend, "
                       "or tell me what you would like me to work on first."))
+        by_when, no_deadline = self._by_when(register, turn.today)
         return Element(
             kind=ElementKind.ACTION, thread=thread.id, text=text,
-            no_deadline_reason="no statutory window identified on this turn")
+            by_when=by_when, no_deadline_reason=no_deadline)
 
     def _non_matter_answer(self, turn, mode, mode_statement, metrics) -> Answer:
         text = ("Brief me and I will take it from there — who the client is, "
