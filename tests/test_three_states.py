@@ -80,6 +80,13 @@ CLOSED: dict[str, str] = {
                   "arrangement as Threshold, and for the same reason: a "
                   "report that varied two coordinates and called the case dead "
                   "has not done the work.",
+    "GapKind": "the four the PRD ranks by — blocking gate, deadline, "
+               "information value, consequence. THE KIND IS THE RANK, so "
+               "`Gap.kind` has no default and there is no unclassified state "
+               "to sort: a fifth member would have to sort somewhere, and "
+               "third buries an unclassified blocking gate under every "
+               "deadline while first makes everything nobody thought about "
+               "scream. Whoever writes the gap says what makes it urgent.",
     "ElementKind": "the four permitted kinds, with deliberately no fifth. An "
                    "element the product could not classify is not emitted at "
                    "all, so there is no state to express.",

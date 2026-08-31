@@ -130,11 +130,26 @@ def test_trace_rejects_a_built_claim_with_no_code(tmp_path):
     backup = tmp_path / "features.yaml"
     shutil.copy2(spec, backup)
     try:
-        text = spec.read_text(encoding="utf8")
-        # Flip exactly one feature to `built` without implementing it.
-        assert "  status: decided\n" in text
-        text = text.replace("  status: decided\n", "  status: built\n", 1)
-        spec.write_text(text, encoding="utf8")
+        import yaml
+        doc = yaml.safe_load(spec.read_text(encoding="utf8"))
+
+        # PLANT the feature rather than flipping one that is already here.
+        # Flipping whichever `decided` feature came first stopped working the
+        # moment enough of them acquired an `@implements`: T3 then had nothing
+        # to object to, and the test failed for being out of date rather than
+        # for finding a defect.
+        #
+        # A counterexample the repo has to supply is one the repo can stop
+        # supplying, and it stops supplying it exactly as the build gets
+        # healthier -- so the check goes quiet when it is most needed.
+        doc["features"].append({
+            "id": "ZZ-T3", "title": "a planted claim with no code",
+            "phase": "Z", "slice": "S1", "status": "built",
+            "does": [], "never": [], "produces": [], "eval_prose": [],
+            "eval_ids": [], "counterexample": "", "tasks": [],
+        })
+        spec.write_text(yaml.safe_dump(doc, sort_keys=False,
+                                       allow_unicode=True), encoding="utf8")
 
         r = run("trace.py", "--skip-regen")
         assert r.returncode == 1, "trace did NOT reject a built claim with no code"
@@ -157,21 +172,22 @@ def test_trace_rejects_a_tested_claim_whose_evals_never_ran(tmp_path):
         import yaml
         doc = yaml.safe_load(text)
 
-        # Pick a feature whose evals have NOT run. The first draft of this test
-        # took "the first feature with eval ids" and broke the moment real evals
-        # started running -- the TEST was wrong, not the code. The condition
-        # under test is "tested claimed with no eval run behind it", so the test
-        # must construct exactly that rather than assume it.
-        results = ROOT / ".nm" / "eval_results.json"
-        ran = set()
-        if results.exists():
-            ran = set(json.loads(results.read_text(encoding="utf8")).get("evals_run", []))
-        target = next(f for f in doc["features"]
-                      if f.get("eval_ids") and not (set(f["eval_ids"]) & ran))
-        target_id = target["id"]
-        for f in doc["features"]:
-            if f["id"] == target_id:
-                f["status"] = "tested"
+        # PLANT IT. The first draft took "the first feature with eval ids" and
+        # broke the moment real evals started running; the second draft
+        # searched for a feature whose evals had NOT run, and broke the moment
+        # every feature had one -- which is a good thing to have happened and
+        # still a broken test. Both were the repo supplying the counterexample.
+        #
+        # A planted eval id nothing has ever run is the condition under test,
+        # stated rather than found.
+        del json
+        target_id = "ZZ-T4"
+        doc["features"].append({
+            "id": target_id, "title": "a planted tested claim",
+            "phase": "Z", "slice": "S1", "status": "tested",
+            "does": [], "never": [], "produces": [], "eval_prose": [],
+            "eval_ids": ["E-ZZZ-never-run"], "counterexample": "", "tasks": [],
+        })
         spec.write_text(
             "# temporary probe\n" + yaml.safe_dump(doc, sort_keys=False, allow_unicode=True),
             encoding="utf8")

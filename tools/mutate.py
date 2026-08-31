@@ -728,6 +728,183 @@ MUTATIONS = [
      "test_naming_what_could_not_be_retrieved_is_not_citing_it",
      "E-023"),
 
+    # ---- EVALS THAT HAD RUN AND NEVER BITTEN -----------------------------
+    #
+    # T6 reports these separately from "never run", and the distinction is the
+    # point: an eval that has run is not evidence until something has failed
+    # it. Each of these was green from the day it was written.
+
+    # E-007. An abstraction nobody has switched is an unexercised claim.
+    ("a composition root that branches on something other than the provider",
+     "nm/bootstrap/composition.py",
+     "    provider = config.for_tier(Tier.ROUTINE).provider",
+     "    provider = 'openai' if config.for_tier(Tier.ROUTINE).model else 'scripted'",
+     "test_the_composition_root_branches_on_the_provider_string_alone",
+     "E-007"),
+
+    # E-063c. A receiving advocate reading a summary with no proof positions
+    # cannot tell whether there are none or whether the section was never
+    # built. Those are opposite situations and the second is the dangerous one.
+    ("a section that was never built reading as one with nothing to report",
+     "nm/domain/summary.py",
+     "        derived = {\"handover_complete\", \"handover_blockers\"}",
+     "        derived = set(CASE_SUMMARY_SECTIONS)",
+     "test_a_screen_that_was_never_run_is_not_reported_as_clear", "E-063c"),
+
+    # E-063d. The nearest window leads, regardless of which thread is legally
+    # the most interesting.
+    ("a thread board that does not put the nearest window first",
+     "nm/edge/projections.py",
+     "    rows = nearest_first([_thread_row(t, deadlines, today)\n"
+     "                          for t in matter.threads])",
+     "    rows = [_thread_row(t, deadlines, today) for t in matter.threads]",
+     "test_the_thread_board_puts_the_nearest_window_first", "E-063d"),
+
+    # E-063e. The matter list growing with the threads inside its matters.
+    ("a matter list whose length is not a function of matter count",
+     "nm/edge/projections.py",
+     "        \"bounded_by\": \"matter_count\",",
+     "        \"bounded_by\": \"thread_count\",",
+     "test_the_matter_list_is_bounded_by_matter_count", "E-063e"),
+
+    # E-064. "A turn opening with a recital of the brief." The advocate reads
+    # the first line and it is their own file read back to them.
+    ("an answer opening with something other than an action or a question",
+     "nm/core/turn.py",
+     "        if first.kind not in (ElementKind.ACTION, ElementKind.QUESTION):",
+     "        if False and first.kind not in (ElementKind.ACTION,):",
+     "test_the_first_content_element_is_an_action_or_a_blocking_question",
+     "E-064"),
+
+    # E-066. "The board citing Article 66 while the answer reasons from
+    # Article 65." Neither may hold its own copy.
+    ("a board that holds a copy instead of reading the matter",
+     "nm/edge/projections.py",
+     '        "our_client_is": posture.role.value '
+     'if posture.role is not Role.UNKNOWN else "unknown",',
+     '        "our_client_is": "unknown",',
+     "test_the_board_and_the_answer_derive_from_the_same_matter", "E-066"),
+
+    # ---- S9. THE GAP QUEUE, THE CASCADE, QUARANTINE ----------------------
+
+    # E-090. "A question asked to keep the conversation moving." The queue
+    # always yielding something IS the manufactured question with a data
+    # structure behind it.
+    ("a queue that always has something to ask",
+     "nm/core/gaps.py",
+     "    ordered = rank(gaps)\n"
+     "    return ordered[0] if ordered else None",
+     "    ordered = rank(gaps)\n"
+     "    return ordered[0] if ordered else Gap(\n"
+     "        what=\"anything else?\", blocks=\"nothing\", thread=\"\")",
+     "test_nothing_blocked_means_nothing_is_owed", "E-090"),
+
+    # E-090. An unresolved posture makes everything below it worthless,
+    # however interesting.
+    ("a queue that ranks an interesting question above a blocking gate",
+     "nm/core/gaps.py",
+     "    return tuple(sorted(gaps, key=lambda g: g.priority))",
+     "    return tuple(sorted(gaps, key=lambda g: -g.priority))",
+     "test_the_queue_ranks_a_blocking_gate_above_everything_interesting",
+     "E-090"),
+
+    # E-090. Serial single questions make the advocate do the scheduling.
+    ("questions asked across every thread at once",
+     "nm/core/gaps.py",
+     "    return tuple(g for g in rank(gaps) if g.thread == thread)",
+     "    return rank(gaps)",
+     "test_questions_are_batched_one_thread_at_a_time", "E-090"),
+
+    # E-091. "NM asking to finish the current thread first." A build that
+    # passes its stages by railroading the advocate has failed.
+    ("NM finishing its own thread before following the advocate",
+     "nm/core/gaps.py",
+     "    return asked_about, leads(gaps)",
+     "    top = leads(gaps)\n"
+     "    return (top.thread if top else asked_about), top",
+     "test_the_advocate_changes_subject_and_nm_follows_in_the_same_turn",
+     "E-091"),
+
+    # E-092. "A limitation date silently recomputed with no note that it
+    # moved." Recomputing is right; recomputing SILENTLY is the failure.
+    ("a corrected value recomputed with no note that it moved",
+     "nm/core/cascade.py",
+     "        elif old[d.name] != d.value:\n"
+     "            out.append(Change(name=d.name, was=old[d.name], now=d.value))",
+     "        elif False:\n"
+     "            out.append(Change(name=d.name, was=old[d.name], now=d.value))",
+     "test_a_corrected_fact_re_derives_dependents_and_reports_the_prior_value",
+     "E-092"),
+
+    # E-092. Silently ADDING a limitation date is the same defect as silently
+    # moving one.
+    ("a value computed for the first time, added silently",
+     "nm/core/cascade.py",
+     "        if d.name not in old:\n"
+     "            out.append(Change(name=d.name, was=\"not computed before\",\n"
+     "                              now=d.value))",
+     "        if d.name not in old:\n"
+     "            continue",
+     "test_a_value_computed_for_the_first_time_is_a_change_with_no_prior",
+     "E-092"),
+
+    # E-092. THE THIRD PART, and the one a silent recompute loses: an advocate
+    # who filed on Tuesday against a date that moved on Thursday needs telling.
+    ("earlier advice left standing after the fact it rested on moved",
+     "nm/core/cascade.py",
+     "    names = {c.name for c in moved}\n"
+     "    return tuple(a for a in prior if names & set(a.rested_on))",
+     "    return ()",
+     "test_advice_already_given_is_reported_as_superseded", "E-092"),
+
+    # E-092. An empty `undo` is not "nothing needs undoing" -- it is nobody
+    # having said.
+    ("an unanswered undo question reading as nothing to undo",
+     "nm/core/cascade.py",
+     "    return tuple(c.name for c in moved if not c.undo.strip())",
+     "    return ()",
+     "test_advice_already_given_is_reported_as_superseded", "E-092"),
+
+    # E-092's BOUND. A cascade announced every turn trains the advocate to
+    # skip the section, and the real one arrives where they have learned to
+    # ignore it.
+    ("a cascade heading with nothing under it",
+     "nm/core/cascade.py",
+     "    if not moved:\n"
+     "        return (\"Re-derived everything that rested on the corrected fact; \"\n"
+     "                \"nothing changed.\",)",
+     "    if not moved:\n"
+     "        return ()",
+     "test_where_re_derivation_changes_nothing_the_answer_is_one_line",
+     "E-092"),
+
+    # E-089. "Substance merged onto a file no conflict check had cleared."
+    ("quarantined substance reachable before clearance",
+     "nm/core/quarantine.py",
+     "        return self._released",
+     "        return True",
+     "test_quarantined_substance_is_unreachable_until_a_human_clears_it",
+     "E-089"),
+
+    # E-089. A second release is a caller that believes it is clearing
+    # something; telling it nothing happened leaves that belief in place.
+    ("a quarantine that releases more than once",
+     "nm/core/quarantine.py",
+     "        if self._released:\n"
+     "            raise AlreadyReleased(",
+     "        if False:\n"
+     "            raise AlreadyReleased(",
+     "test_a_quarantine_releases_exactly_once_and_the_second_call_raises",
+     "E-089"),
+
+    # E-089. A repr is a log line waiting to happen.
+    ("quarantined substance leaking through a repr",
+     "nm/core/quarantine.py",
+     '        return f"<Quarantined {state}: {self.held_because[:50]!r}>"',
+     '        return f"<Quarantined {state}: {self._substance[:50]!r}>"',
+     "test_quarantined_substance_is_unreachable_until_a_human_clears_it",
+     "E-089"),
+
     # ---- S8. THEORY, THE ADVERSARIAL PASS, SALVAGE ------------------------
 
     # E-080. "A theory that works only if three documents are forgotten." It

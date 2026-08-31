@@ -454,7 +454,7 @@ tint(ws_e, hdr_e, len(E), 3, {"A": (ACCENT, ACCENT_L), "B": (GOOD, GOOD_L), "C":
 FM = [
     ["A1", "Authentication and advocate identity", "A", "S1", "E-010", "tested"],
     ["A2", "The landing board", "A", "S6", "E-063", "tested"],
-    ["A3", "Re-entry and re-orientation", "A", "S9", "E-092", "decided"],
+    ["A3", "Re-entry and re-orientation", "A", "S9", "E-092", "tested"],
     ["B1", "Opening-message routing", "B", "S10", "—", "decided"],
     ["B2", "Emergency triage", "B", "S10", "—", "decided"],
     ["B3", "Conflict screen", "B", "S10", "—", "decided"],
