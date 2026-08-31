@@ -200,3 +200,79 @@ def test_the_third_state_is_a_value_and_never_a_null():
         "an unresolved Resolution does not carry the unresolved BASIS, so a "
         "consumer asking `basis is INFERRED` gets its answer by accident")
     assert not Resolution(None).must_disclose
+
+
+# ============ every metric reaches the record it is measured from ==========
+
+
+def _keys_at_any_depth(doc) -> set[str]:
+    """Every key in the record, nested included.
+
+    `as_dict` groups the token counts under `tokens`, so a flat comparison
+    would report three false offenders and teach the reader to add exemptions
+    rather than to fix the one real gap.
+    """
+    out: set[str] = set()
+    if isinstance(doc, dict):
+        for k, v in doc.items():
+            out.add(k)
+            out |= _keys_at_any_depth(v)
+    elif isinstance(doc, (list, tuple)):
+        for v in doc:
+            out |= _keys_at_any_depth(v)
+    return out
+
+
+def test_every_metric_field_survives_into_the_persisted_record():
+    """A METRIC THAT IS NOT SERIALISED CANNOT BE MEASURED.
+
+    `cause_reads` was added to `TurnMetrics` in slice 5, counted correctly on
+    every turn, included in `settling_reads`, and left out of `as_dict()` — so
+    every persisted record was missing it and every question asked of the
+    metrics store answered as though the read had never happened.
+
+    It is the shape this project keeps paying for, one layer along: a value
+    that exists in the type and never reaches the place it is read from. The
+    release gate reads these records; a field absent here is a criterion that
+    silently measures the wrong thing.
+    """
+    import dataclasses
+
+    from nm.domain.metrics import TurnMetrics
+
+    m = TurnMetrics(turn_id="t", matter_id="m")
+    #: Fields deliberately kept OFF the record, each with the reason.
+    off_record = {
+        # A monotonic clock read, not a measurement. `latency_ms` is what the
+        # record carries and is derived from it.
+        "started",
+        # Carried under `tokens` with shortened keys -- {"in", "out",
+        # "cached"} -- so they ARE written and a name match cannot see it.
+        # Declared rather than inferred: guessing which renamed key holds
+        # which field is exactly the kind of inference that passes a record
+        # missing something.
+        "tokens_in", "tokens_out", "cached_tokens",
+    }
+    written = _keys_at_any_depth(m.as_dict())
+    missing = sorted(
+        f.name for f in dataclasses.fields(TurnMetrics)
+        if f.name not in written and f.name not in off_record)
+    assert not missing, (
+        "these metrics are counted and never written, so nothing downstream "
+        f"can read them: {missing}\n\nAdd them to `as_dict`, or to "
+        "`off_record` above with the reason they are not a measurement.")
+
+
+def test_the_metric_scan_can_see_an_unserialised_field():
+    """THE POSITIVE CONTROL. A scan over a record that happens to be complete
+    proves nothing about the scan."""
+    import dataclasses
+
+    from nm.domain.metrics import TurnMetrics
+
+    written = _keys_at_any_depth(TurnMetrics(turn_id="t", matter_id="m").as_dict())
+    planted = "zz_never_serialised"
+    assert planted not in written
+    off = {"started", "tokens_in", "tokens_out", "cached_tokens"}
+    names = {f.name for f in dataclasses.fields(TurnMetrics)} | {planted}
+    assert sorted(n for n in names if n not in written and n not in off)         == [planted]

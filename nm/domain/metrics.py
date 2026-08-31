@@ -207,6 +207,7 @@ class TurnMetrics:
             "posture_reads": self.posture_reads,
             "binding_reads": self.binding_reads,
             "chronology_reads": self.chronology_reads,
+            "cause_reads": self.cause_reads,
             "evidence_bound_hit": self.evidence_bound_hit,
             "gates_fired": [
                 {"gate": g.gate_id, "state": g.state, "response": g.response,

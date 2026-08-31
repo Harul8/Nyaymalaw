@@ -91,6 +91,9 @@ CONTROLS: dict[str, str] = {
     # looks like a verdict and is not one.
     "test_every_tool_makes_its_console_survive_the_prose_it_prints":
         "test_the_console_scan_can_see_a_tool_that_does_not_call_it",
+    # every metric reaches the record the release gate reads it from
+    "test_every_metric_field_survives_into_the_persisted_record":
+        "test_the_metric_scan_can_see_an_unserialised_field",
 }
 
 #: How a sweep is recognised: it builds a list of offenders over a population

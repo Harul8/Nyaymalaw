@@ -94,7 +94,7 @@ scorecard:
   state: PASS
   blocking: true
 - id: RG-23
-  state: PASS
+  state: FAIL
   blocking: false
 - id: RG-24
   state: PASS
