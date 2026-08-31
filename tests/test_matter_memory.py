@@ -657,10 +657,15 @@ def test_nothing_is_computed_behind_a_closed_posture_gate(tmp_path):
         "a directive step was produced behind a closed gate")
     # Only the reads that settle the gate. Counted separately from derivation
     # for exactly this reason.
-    assert out.metrics.llm_calls == out.metrics.posture_reads, (
+    assert out.metrics.llm_calls == out.metrics.settling_reads, (
         f"a blocked turn made {out.metrics.llm_calls} model call(s) of which "
-        f"only {out.metrics.posture_reads} were settling the gate. The rest "
-        f"were derivation behind a closed gate, and were paid for.")
+        f"only {out.metrics.settling_reads} were ADMIT-phase reads. The rest "
+        f"were derivation behind a closed gate, and were paid for. "
+        f"`settling_reads` is what establishes the FILE and is not "
+        f"side-dependent: the posture, the thread binding, the date chart. "
+        f"Asserting against `posture_reads` alone had to be widened the moment "
+        f"a second such read existed, which is why the property is on the "
+        f"metrics rather than spelled out at each call site.")
 
 
 @pytest.mark.eval_id("E-030", "E-036")

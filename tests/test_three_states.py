@@ -44,8 +44,15 @@ pytestmark = pytest.mark.class_a
 ESCAPES = (
     "not_assessed", "not_measured", "not_checked", "not_stated", "not_resolved",
     "not_comparable", "not_found", "not_held", "unknown", "cannot_tell",
-    "unbindable", "ambiguous", "unbuildable", "failed", "none",
+    "unbindable", "ambiguous", "unbuildable", "failed", "none", "undated",
 )
+
+#: The word list is this check's maintenance cost, and it is a small and
+#: VISIBLE one: a new enum whose escape is spelled a new way fails the build
+#: with a message naming the enum and its members. That is the right trade
+#: against the alternative -- inferring which member means "not established" --
+#: which would guess, and a guess here passes an enum that has no escape at all.
+#: `DateState.UNDATED` was added this way, the moment C5 introduced it.
 
 #: Enums that are CLOSED VOCABULARIES, not outcomes. Each with the reason it
 #: cannot be "not assessed" — because something always chose it.

@@ -100,6 +100,39 @@ _OPENS_A_DISPUTE = (
 )
 
 
+#: The DATE read. `\d{1,2} Month YYYY` and a bare `yesterday` are all the
+#: scripted provider needs to behave like a real one for class-A tests; the
+#: product's own reader takes no list at all, because there is no list of the
+#: ways a date can be written.
+_SCRIPTED_DATE = re.compile(
+    r"\b(\d{1,2})\s+(january|february|march|april|may|june|july|august|"
+    r"september|october|november|december)\s+(\d{4})\b", re.I)
+_MONTHS = ("january february march april may june july august september "
+           "october november december").split()
+
+
+def scripted_dates(user: str) -> str:
+    """A deterministic stand-in for the model's date read."""
+    said = user.split("just said:", 1)[-1]
+    ref = re.search(r"Today is (\d{4}-\d{2}-\d{2})", user)
+    events = []
+    for m in _SCRIPTED_DATE.finditer(said):
+        day, month, year = m.group(1), m.group(2).lower(), m.group(3)
+        events.append({
+            "event": said.strip().split(".")[0][:70] or "an event",
+            "date_expression": m.group(0),
+            "resolved": f"{year}-{_MONTHS.index(month) + 1:02d}-{int(day):02d}",
+            "documented": "dated" in said.lower() or "notice" in said.lower(),
+        })
+    if not events and "yesterday" in said.lower() and ref:
+        import datetime
+        on = datetime.date.fromisoformat(ref.group(1)) - datetime.timedelta(days=1)
+        events.append({"event": said.strip().split(".")[0][:70] or "an event",
+                       "date_expression": "yesterday",
+                       "resolved": on.isoformat(), "documented": False})
+    return json.dumps({"events": events})
+
+
 def scripted_dispute(user: str) -> str:
     """A deterministic stand-in for the model's dispute read."""
     # ONLY WHAT THE ADVOCATE SAID, not the prompt around it. Taking everything
@@ -188,6 +221,9 @@ class ScriptedModelAdapter:
         elif "continues" in blob:
             # The dispute read.
             raw = scripted_dispute(prompt.user)
+        elif "date_expression" in blob:
+            # The date read (C5).
+            raw = scripted_dates(prompt.user)
         elif "cannot_tell" in blob:
             # The role read, the second structured call.
             raw = scripted_role(prompt.user)

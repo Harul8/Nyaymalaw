@@ -25,8 +25,8 @@ import time
 from dataclasses import dataclass, field, replace
 from datetime import date
 
+from nm.core import chronology, grounding
 from nm.core import dispute as dispute_reader
-from nm.core import grounding
 from nm.core import posture as posture_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
 from nm.domain import summary as matter_memory
@@ -538,7 +538,26 @@ class TurnEngine:
         # ONLY WHILE UNRESOLVED. Once the advocate has settled it, no further
         # call is made -- the extraction is cheap but it is not free, and a
         # settled posture is not re-read on every later turn.
-        thread = replace(thread, chronology=thread.chronology + (fact.id,))
+        # C5. THE CHART IS BUILT BEFORE ANY OPINION ON THIS THREAD, so the
+        # read happens here in ADMIT rather than in DERIVE where a gate
+        # could skip it. The account fact above is kept WHOLE -- C1 takes
+        # the account before clarifying anything -- and these are derived
+        # from it, each carrying the span it was read from.
+        dated = self._read_dates(turn, matter, thread, metrics)
+        ids = [fact.id]
+        for row in dated:
+            if not row.dated:
+                continue
+            event = Fact.create(
+                statement=row.event,
+                provenance=Provenance(kind="advocate_statement",
+                                      turn=turn.turn_id,
+                                      span=row.date_expression),
+                certainty=row.certainty, date=row.on)
+            matter = matter.with_fact(event)
+            ids.append(event.id)
+
+        thread = replace(thread, chronology=thread.chronology + tuple(ids))
         matter = matter.with_thread(thread)
 
         if not posture.resolved:
@@ -606,6 +625,43 @@ class TurnEngine:
 
         thread = replace(thread, posture=posture)
         return matter.with_thread(thread), replace(bound, thread=thread)
+
+    @implements("C5")
+    def _read_dates(self, turn: TurnInput, matter: Matter, thread: Thread,
+                    metrics: TurnMetrics):
+        """The events in this message, with their dates where dates exist.
+
+        A failed read yields NO ROWS, never a dated one. The asymmetry is the
+        point: an event missing from the chart costs a question, and an event
+        wrongly dated costs a limitation calculation the advocate acts on
+        without knowing it was invented.
+        """
+        account = "\n".join(f.statement for f in matter.facts
+                            if f.id in set(thread.chronology))
+        try:
+            res = self._model.structured(
+                chronology.build_prompt(turn.message, turn.today, account),
+                chronology.DATE_SCHEMA, Tier.ROUTINE, max_tokens=700)
+            metrics.record_call(res)
+            metrics.chronology_reads += 1
+            rows = chronology.interpret(turn.message, turn.today, res.data or {})
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"the date chart could not be read: {exc}")
+            return ()
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("C5", f"date read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return ()
+
+        for row in rows:
+            if row.refused:
+                # REFUSED IS DISCLOSED. A date this product declined to read is
+                # one the advocate can supply in four words, and silence would
+                # have them believe it was never given.
+                metrics.violate("C5", f"date not taken for "
+                                      f"{row.event[:40]!r}: {row.refused}")
+        return rows
 
     @implements("C4")
     def _read_dispute(self, matter: Matter, turn: TurnInput,

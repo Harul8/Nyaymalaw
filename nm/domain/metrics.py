@@ -95,15 +95,28 @@ class TurnMetrics:
     the gate, and refusing to spend it would mean never discovering the second
     dispute at all."""
 
+    chronology_reads: int = 0
+    """Model calls spent building the DATE CHART.
+
+    An ADMIT-phase read like the other two, and counted apart only so each
+    one's spend is attributable. C5 requires the chart before any opinion on
+    the thread, so it runs before a gate has decided anything -- and a DATE IS
+    NOT SIDE-DEPENDENT: the 15th of April is the 15th of April whichever party
+    you act for, which is the test E-034 actually applies."""
+
     @property
     def settling_reads(self) -> int:
-        """Calls spent SETTLING a gate rather than deriving behind one.
+        """Calls made in ADMIT -- establishing the FILE, not deriving an answer.
 
         The property every "nothing was computed behind a closed gate" check
         subtracts. Asserting a flat `llm_calls == 0` conflates the two and has
-        to be relaxed -- rather than tightened -- the moment another gate needs
-        a cheap read to settle it, which has now happened twice."""
-        return self.posture_reads + self.binding_reads
+        to be relaxed -- rather than tightened -- the moment another read is
+        needed before a gate can decide, which has now happened three times:
+        the posture, the thread binding, and the date chart.
+
+        What belongs here is precisely what is NOT side-dependent. A
+        recommendation is; an authority set is; a date is not."""
+        return self.posture_reads + self.binding_reads + self.chronology_reads
 
     def record_call(self, result) -> None:
         """Every model call counts -- including a streamed one.
@@ -172,6 +185,7 @@ class TurnMetrics:
             "evidence_rounds": self.evidence_rounds,
             "posture_reads": self.posture_reads,
             "binding_reads": self.binding_reads,
+            "chronology_reads": self.chronology_reads,
             "evidence_bound_hit": self.evidence_bound_hit,
             "gates_fired": [
                 {"gate": g.gate_id, "state": g.state, "response": g.response,
