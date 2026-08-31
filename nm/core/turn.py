@@ -26,7 +26,14 @@ from dataclasses import dataclass, field, replace
 from datetime import date
 
 from nm.core import cause as cause_reader
-from nm.core import chronology, deadlines, grounding, limitation, thresholds
+from nm.core import (
+    chronology,
+    deadlines,
+    grounding,
+    limitation,
+    proof,
+    thresholds,
+)
 from nm.core import dispute as dispute_reader
 from nm.core import posture as posture_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
@@ -1447,3 +1454,24 @@ class TurnEngine:
         for e in answer.loud_signals:
             if e.collapsible:
                 metrics.violate("S5", f"loud signal {e.signal.value} is collapsible")
+
+        # D5.1, MECHANICALLY, ON EVERY TURN. NM reasons about proof, never
+        # about honesty -- and the check is here, on the assembled answer,
+        # because the sentence that breaches it is model prose and the model
+        # writes it at the last moment.
+        #
+        # NM has not met the client, has not seen them answer a question, and
+        # holds no material on which a credibility finding could rest. The
+        # judgement is outside its competence rather than merely impolite, and
+        # it is MISDIRECTED: NM speaks to the advocate, not the client.
+        #
+        # A VIOLATION AND NOT A GATE. Withholding the turn would cost the
+        # advocate the analysis over one bad sentence, and D5.1's own bound
+        # says the drift to design against is SOFTENING, not accusing -- a
+        # response that made the product afraid of the topic would push the
+        # wrong way. So it is recorded loudly and the substance still ships.
+        for element in answer.elements:
+            for sentence in proof.characterises_the_client(element.text):
+                metrics.violate(
+                    "D5", f"the answer judges the client rather than the file: "
+                          f"{sentence!r}")

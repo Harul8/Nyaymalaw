@@ -728,6 +728,87 @@ MUTATIONS = [
      "test_naming_what_could_not_be_retrieved_is_not_citing_it",
      "E-023"),
 
+    # ---- S7. PROOF AND BURDEN --------------------------------------------
+
+    # E-070. THE COUNTEREXAMPLE: a conclusion where two of five elements have
+    # no proof position at all. The conclusion looked complete -- three
+    # elements worked carefully, two never mentioned. Short is invisible.
+    ("a proof-coverage gate that certifies itself",
+     "nm/core/proof.py",
+     "    have = {p.element.strip().lower() for p in positions}\n"
+     "    return tuple(e for e in elements if e.strip().lower() not in have)",
+     "    want = {e.strip().lower() for e in elements}\n"
+     "    return tuple(p.element for p in positions\n"
+     "                 if p.element.strip().lower() not in want)",
+     "test_the_coverage_gate_cannot_certify_itself", "E-070"),
+
+    # E-070. "To what standard" is half of whether the material is enough. An
+    # element HELD to the wrong standard is not held.
+    ("a proof status with no standard behind it",
+     "nm/core/proof.py",
+     "        if self.status is not ProofStatus.NOT_ASSESSED \\\n"
+     "                and self.standard is Standard.NOT_ESTABLISHED:",
+     "        if False and self.standard is Standard.NOT_ESTABLISHED:",
+     "test_a_status_without_a_standard_cannot_be_constructed", "E-070"),
+
+    # E-070. A presumption is a section, and one asserted from memory decides
+    # who loses when the evidence is silent.
+    ("a burden shifted by a presumption nobody cited",
+     "nm/core/proof.py",
+     "        if self.shifted_by and not self.shift_provision.strip():",
+     "        if False and self.shifted_by:",
+     "test_a_presumption_that_shifts_the_burden_names_its_provision", "E-070"),
+
+    # E-071. "You cannot prove the loan", full stop.
+    ("a proof gap reported as a verdict",
+     "nm/core/proof.py",
+     "        if self.status is ProofStatus.OBTAINABLE and blank(self.closing_material):",
+     "        if False and self.status is ProofStatus.OBTAINABLE:",
+     "test_a_proof_gap_is_never_a_verdict", "E-071"),
+
+    ("an absent element with no express dead end",
+     "nm/core/proof.py",
+     "        if self.status is ProofStatus.ABSENT and blank(self.dead_end):",
+     "        if False and self.status is ProofStatus.ABSENT:",
+     "test_a_proof_gap_is_never_a_verdict", "E-071"),
+
+    # E-072. "Your client is concealing the payment." NM has not met the
+    # client and holds no material on which a credibility finding could rest.
+    ("an answer that judges the client rather than the file",
+     "nm/core/turn.py",
+     "            for sentence in proof.characterises_the_client(element.text):",
+     "            for sentence in ():",
+     "test_the_served_turn_records_a_characterisation_of_the_client", "E-072"),
+
+    # E-072, THE BOUND. A check that fired on the opponent too would teach the
+    # product to hedge, and D5.1 says the drift to design against is
+    # SOFTENING, not accusing.
+    ("a restraint that spreads from the client to the opponent",
+     "nm/core/proof.py",
+     "        if _CHARACTER.search(sentence) and _OURS.search(sentence):",
+     "        if _CHARACTER.search(sentence):",
+     "test_the_restraint_does_not_extend_to_the_opponent_or_to_the_finding",
+     "E-072"),
+
+    # C7. The original agreement is with the opponent's brother and no
+    # preservation step exists. The file reads as worked and the document is
+    # gone by the time it is needed.
+    ("an item at risk with no preservation step, unreported",
+     "nm/core/evidence_item.py",
+     "    return tuple(i.what for i in items\n"
+     "                 if i.at_risk and i.preservation is None)",
+     "    return ()",
+     "test_an_item_at_risk_with_no_preservation_step_is_reported", "E-070"),
+
+    # C7. Admissible and persuasive are different questions, and the third was
+    # missing entirely from the original contract.
+    ("a weight asserted with no reason to argue or challenge",
+     "nm/core/evidence_item.py",
+     "        if self.weight is not Weight.NOT_ASSESSED and blank(self.weight_reason):",
+     "        if False and self.weight is not Weight.NOT_ASSESSED:",
+     "test_existence_admissibility_and_weight_are_three_separate_questions",
+     "E-070"),
+
     # ---- S6. THE ISSUE THAT WAS SPOTTED AND THEN LOST --------------------
 
     # E-060. THE MEASURED COUNTEREXAMPLE: classification discarded 20.1% of
