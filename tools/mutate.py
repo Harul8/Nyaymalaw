@@ -54,7 +54,14 @@ MUTATIONS = [
     # sides -- and settle a posture nobody stated.
     ("the verbatim guard handed the prompt instead of the advocate's words",
      "nm/core/turn.py",
+     # Anchored on `posture_reader.interpret(`, because the cause read added
+     # a second identical `advocate_words=` line in slice 5 and an anchor on
+     # that line alone mutates whichever comes first.
+     '            stated = posture_reader.interpret(\n'
+     '                turn.message, res.data or {},\n'
      '                advocate_words=memory.advocate_words if memory else "")',
+     '            stated = posture_reader.interpret(\n'
+     '                turn.message, res.data or {},\n'
      '                advocate_words=memory.as_context() if memory else "")',
      "test_a_question_asked_twice_is_not_put_a_third_time_in_the_same_words",
      "E-036"),
@@ -74,8 +81,8 @@ MUTATIONS = [
 
     ("retrieval reads the latest message alone, not the file",
      "nm/core/turn.py",
-     '                            account=memory.account if memory else "")',
-     '                            account="")',
+     '                            account=memory.account if memory else "",',
+     '                            account="",',
      "test_every_model_call_in_a_turn_receives_the_file", "E-036"),
 
     # AN ACT IS CARRIED BY EXACT TITLE, NEVER BY KEYWORD. Common words run
@@ -171,6 +178,7 @@ MUTATIONS = [
     # read none of them.
     ("a failed lookup disclosing whether the matter exists",
      "nm/edge/api.py",
+     '        # else: a failed lookup must disclose nothing about what exists.\n'
      '        raise HTTPException(status_code=404, detail="no such matter")',
      '        raise HTTPException(status_code=404,\n'
      '                            detail=("no such matter" if m is None\n'
@@ -571,9 +579,14 @@ MUTATIONS = [
 
     ("metrics not written when the turn fails",
      "nm/core/turn.py",
+     # Anchored on the FAILURE path's own line, because the same three-line
+     # block also closes the G-STALE path and an anchor matching both mutates
+     # whichever comes first.
+     "            metrics.failure = f\"{type(exc).__name__}: {exc}\"\n"
      "            metrics.latency_ms = int((time.perf_counter() - started) * 1000)\n"
      "            self._store.record_metrics(metrics.as_dict())\n"
      "            raise",
+     "            metrics.failure = f\"{type(exc).__name__}: {exc}\"\n"
      "            metrics.latency_ms = int((time.perf_counter() - started) * 1000)\n"
      "            raise",
      "test_metrics_are_written_even_when_the_turn_fails", "E-019"),
@@ -600,8 +613,10 @@ MUTATIONS = [
 
     ("another advocate's matter disclosed",
      "nm/edge/api.py",
-     "    if m is None or m.advocate_id != advocate_id:",
-     "    if m is None:",
+     "    if m is None or m.advocate_id != advocate_id:\n"
+     "        # The same response whether it does not exist or belongs to someone",
+     "    if m is None:\n"
+     "        # The same response whether it does not exist or belongs to someone",
      "test_another_advocates_matter_is_not_disclosed", "E-010"),
 
     # ---- slices 2 and 3: grounding, and the frame -------------------------
@@ -712,6 +727,116 @@ MUTATIONS = [
      "        if False and element.disclosure:",
      "test_naming_what_could_not_be_retrieved_is_not_citing_it",
      "E-023"),
+
+    # ---- S5. RESOLUTION BEFORE SEARCH ------------------------------------
+
+    # E-050. A need silently dated today retrieves the CURRENT text for
+    # conduct in 2023 -- confidently, with a real citation, and the 2024 codes
+    # make that the difference between right and wrong.
+    ("a query without a governing date defaulted to today",
+     "nm/ports/evidence.py",
+     "        if self.governing_date is None:\n"
+     "            raise ValueError(",
+     "        if False and self.governing_date is None:\n"
+     "            raise ValueError(",
+     "test_a_query_without_a_governing_date_is_rejected_not_defaulted_to_today",
+     "E-050"),
+
+    # E-051. THE COUNTEREXAMPLE IN THE PLAN, WORD FOR WORD: a governing
+    # Article arrived at by ranking. Two defaults made a ranked guess and an
+    # exact lookup indistinguishable from the Finding's own data.
+    ("a resolved Finding carrying a similarity score",
+     "nm/ports/evidence.py",
+     "        if self.origin is Origin.RESOLVED and self.confidence is not None:",
+     "        if False and self.origin is Origin.RESOLVED:",
+     "test_a_resolved_finding_cannot_carry_a_similarity_score", "E-051"),
+
+    # E-051. A candidate presented as an answer is the search-first design
+    # H3 replaces.
+    ("a searched Finding that drops the confidence it was ranked on",
+     "nm/ports/evidence.py",
+     "        if self.origin is Origin.SEARCHED and self.confidence is None:",
+     "        if False and self.origin is Origin.SEARCHED:",
+     "test_a_resolved_finding_cannot_carry_a_similarity_score", "E-051"),
+
+    # E-051. The graph resolving to a NEAR NEIGHBOUR instead of nothing. A
+    # cause it does not hold must fall through to search, not to the closest
+    # edge -- fuzzy may rank, never identify.
+    ("the cause graph returning a near neighbour instead of nothing",
+     "nm/knowledge/resolution.py",
+     "    return LIMITATION_ARTICLE.get(cause)",
+     "    return LIMITATION_ARTICLE.get(cause) or next(iter(LIMITATION_ARTICLE.values()))",
+     "test_the_graph_resolves_by_exact_lookup_and_never_by_similarity",
+     "E-051"),
+
+    # E-051. An out-of-vocabulary cause accepted as a routing decision.
+    ("a cause outside the closed vocabulary accepted as a route",
+     "nm/core/cause.py",
+     "        cause = CauseOfAction(raw)",
+     "        cause = CauseOfAction.GOODS_SOLD_PRICE",
+     "test_the_cause_read_refuses_a_span_the_advocate_never_wrote", "E-051"),
+
+    # E-051. The verbatim guard, which the posture reader was measured
+    # failing: the extractor quoting this product's own question back at it.
+    ("a cause settled on a span the advocate never wrote",
+     "nm/core/cause.py",
+     "    if _fold(quoted) not in _fold(said):",
+     "    if False and _fold(quoted) not in _fold(said):",
+     "test_the_cause_read_refuses_a_span_the_advocate_never_wrote", "E-051"),
+
+    # E-051. THE WIRING, and it is the half S4 proved is the one that breaks.
+    # `article_for` and `_route` can both be right while the engine never sets
+    # the field, and the served turns would look identical.
+    ("the engine never putting a cause on the need",
+     "nm/core/turn.py",
+     "        return read.cause.value if read.resolved else None",
+     "        return None",
+     "test_the_engine_sets_the_cause_so_the_graph_can_be_consulted", "E-051"),
+
+    # E-051. The advocate's own instruction outranked by the graph -- the
+    # mirror of keyword scoring outvoting a named Act on `possession`.
+    ("a section the advocate named outranked by the graph",
+     "nm/adapters/evidence/corpus.py",
+     "        if wanted_section(need.question):",
+     "        if False and wanted_section(need.question):",
+     "test_a_provision_the_advocate_named_outranks_the_graph", "E-051"),
+
+    # E-052. The silent top-k cut on a similarity order. The forty-first
+    # paragraph vanished with no count and no trace, so a miss caused by the
+    # ceiling was indistinguishable from an absence in the corpus.
+    ("a top-k cut that binds without saying so",
+     "nm/adapters/evidence/corpus.py",
+     "        truncated = len(rows) > EXAMINED_CEILING",
+     "        truncated = False",
+     "test_a_ceiling_that_binds_is_reported_and_never_silent", "E-052"),
+
+    # E-054. A BNS charge retrieving nothing because the case law cites the
+    # IPC. Case law is overwhelmingly pre-2024 and cites the old numbering.
+    ("a new-code charge that cannot reach its old-code authority",
+     "nm/knowledge/resolution.py",
+     "        if (c.old_act, c.old_provision) == key:",
+     "        if False and (c.old_act, c.old_provision) == key:",
+     "test_authority_under_the_corresponding_old_provision_is_reachable",
+     "E-054"),
+
+    # E-054. Matching the NUMBER across codes. `s.447` means different things
+    # in different codes, and matching digits is the wrong-Act defect one
+    # layer down.
+    ("a correspondence matched on the section number alone",
+     "nm/knowledge/resolution.py",
+     "    key = (act.strip(), str(provision).strip())",
+     "    key = (act.strip(), str(provision).strip())\n"
+     "    return next((c for c in CORRESPONDS\n"
+     "                 if provision in (c.old_provision, c.new_provision)), None)",
+     "test_authority_under_the_corresponding_old_provision_is_reachable",
+     "E-054"),
+
+    # E-054. The era rule: the governing date is the date of the CONDUCT.
+    ("the era rule reading the date of the advice, not of the conduct",
+     "nm/knowledge/resolution.py",
+     "    return \"the 2023 codes\" if on >= TRANSITION else \"the 1860/1898/1973 codes\"",
+     "    return \"the 2023 codes\"",
+     "test_the_governing_date_is_the_date_of_the_conduct", "E-054"),
 
     # ---- S4 / C5. THE CHART EVERY LIMITATION READS ITS ACCRUAL FROM ------
 
@@ -830,8 +955,27 @@ def main() -> int:
     for label, rel, old, new, test, eval_id in MUTATIONS:
         path = ROOT / rel
         original = path.read_text(encoding="utf8")
-        if old not in original:
-            print(f"  SKIP      {label}\n            (anchor not found in {rel})")
+        # AN AMBIGUOUS ANCHOR MUTATES THE WRONG SITE, SILENTLY.
+        #
+        # `replace(old, new, 1)` takes the FIRST match. Two mutations were
+        # measured surviving on 31 August 2026 for exactly this: as slice 5 was
+        # built, a second copy of each anchor line appeared elsewhere in its
+        # file, the mutation moved to the new site, and the named test -- still
+        # guarding the ORIGINAL site -- stayed green.
+        #
+        # Both were then reported as SURVIVED, which reads as "this test is
+        # decoration" and was really "this anchor stopped pointing at anything
+        # in particular". A checker whose failure message names the wrong
+        # cause sends the next person to rewrite a test that was fine.
+        #
+        # Zero and two are reported apart because the fixes differ: one is a
+        # rename to sweep, the other is an anchor to make specific.
+        found = original.count(old)
+        if found != 1:
+            what = ("not found" if found == 0 else
+                    f"matches {found} places, so the first would be mutated "
+                    f"rather than the one the test guards")
+            print(f"  SKIP      {label}\n            (anchor {what} in {rel})")
             survived.append(label)
             continue
         path.write_text(original.replace(old, new, 1), encoding="utf8")

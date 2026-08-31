@@ -82,6 +82,32 @@ class FactBasis(str, Enum):
     NOT_ASSESSED = "not_assessed"
 
 
+class CauseOfAction(str, Enum):
+    """THE CLOSED VOCABULARY. Everything else is `NOT_ESTABLISHED`.
+
+    Closed on purpose. An open set of causes would have to be matched
+    approximately, and approximate matching is what decides the wrong Article —
+    the failure this whole module exists to remove.
+    """
+
+    GOODS_SOLD_PRICE = "goods_sold_price"
+    MONEY_LENT = "money_lent"
+    BREACH_OF_CONTRACT = "breach_of_contract"
+    SPECIFIC_PERFORMANCE = "specific_performance"
+    POSSESSION_ON_TITLE = "possession_on_title"
+    POSSESSION_ON_PREVIOUS_POSSESSION = "possession_on_previous_possession"
+    DECLARATION = "declaration"
+    CHEQUE_DISHONOUR = "cheque_dishonour"
+
+    NOT_ESTABLISHED = "not_established"
+    """Nobody worked out what the cause is. NOT "no cause arises".
+
+    It is a value rather than an absence because the two send the product in
+    opposite directions: an unresolved cause falls through to search, and a
+    cause genuinely outside the graph is a coverage gap to report.
+    """
+
+
 class Weight(str, Enum):
     """C1 requires unfavourable facts to be explored as hard as favourable ones.
 

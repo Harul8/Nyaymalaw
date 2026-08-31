@@ -226,8 +226,15 @@ def _stale_anchors(mutations) -> list[str]:
         path = mutate.ROOT / rel
         if not path.exists():
             stale.append(f"{label}: {rel} does not exist")
-        elif old not in path.read_text(encoding="utf8"):
+            continue
+        # EXACTLY ONCE. Presence is not enough: `replace(old, new, 1)` takes
+        # the first match, so an anchor matching two lines mutates whichever
+        # comes first -- which need not be the one the named test guards.
+        found = path.read_text(encoding="utf8").count(old)
+        if found == 0:
             stale.append(f"{label}: anchor not found in {rel}")
+        elif found > 1:
+            stale.append(f"{label}: anchor matches {found} places in {rel}")
     return stale
 
 
@@ -276,6 +283,17 @@ def test_the_anchor_check_can_see_a_stale_anchor():
     moved = [("a mutation whose module moved", "nm/core/no_such_module.py",
               "anything", "x", "some_test", "E-000")]
     assert "does not exist" in _stale_anchors(moved)[0]
+
+    # AND AN ANCHOR MATCHING TWO PLACES, which is the failure that actually
+    # happened. Presence alone passed it: both mutations ran, mutated the
+    # wrong line, and were reported as SURVIVED -- which reads as a weak test
+    # and was really an anchor that had stopped being specific.
+    ambiguous = [("a mutation whose anchor is not unique", "nm/core/turn.py",
+                  "        return None", "x", "some_test", "E-000")]
+    reported = _stale_anchors(ambiguous)
+    assert reported and "matches" in reported[0], (
+        "an anchor matching many lines was accepted, so a mutation can "
+        "silently move to a site no test guards")
 
 
 # ============ the scenario runner: a run that measured nothing =============

@@ -104,6 +104,20 @@ class TurnMetrics:
     NOT SIDE-DEPENDENT: the 15th of April is the 15th of April whichever party
     you act for, which is the test E-034 actually applies."""
 
+    cause_reads: int = 0
+    """Model calls spent reading the CAUSE OF ACTION (H3).
+
+    The fourth settling read, and it is one for the same reason a date is: THE
+    CAUSE IS A PROPERTY OF THE DISPUTE, NOT OF THE SIDE. Goods supplied against
+    invoices and never paid for is a goods-sold-price cause whether we act for
+    the seller or the buyer, and the Article it routes to is the same Article
+    either way.
+
+    It runs behind a closed posture gate deliberately. What the gate refuses is
+    the directive step and the authority set; reading back the text of a
+    provision is expressly permitted, and this is what decides WHICH provision
+    to read."""
+
     @property
     def settling_reads(self) -> int:
         """Calls made in ADMIT -- establishing the FILE, not deriving an answer.
@@ -111,12 +125,19 @@ class TurnMetrics:
         The property every "nothing was computed behind a closed gate" check
         subtracts. Asserting a flat `llm_calls == 0` conflates the two and has
         to be relaxed -- rather than tightened -- the moment another read is
-        needed before a gate can decide, which has now happened three times:
-        the posture, the thread binding, and the date chart.
+        needed before a gate can decide, which has now happened four times:
+        the posture, the thread binding, the date chart, and the cause of
+        action.
+
+        THE PROPERTY IS WHY THAT WAS A ONE-LINE CHANGE. Each of those four
+        additions would have been an edit at every assertion site had the check
+        been spelled out there, and the fourth was caught by two existing tests
+        the moment the read was added rather than by anybody remembering.
 
         What belongs here is precisely what is NOT side-dependent. A
-        recommendation is; an authority set is; a date is not."""
-        return self.posture_reads + self.binding_reads + self.chronology_reads
+        recommendation is; an authority set is; a date is not; a cause is not."""
+        return (self.posture_reads + self.binding_reads
+                + self.chronology_reads + self.cause_reads)
 
     def record_call(self, result) -> None:
         """Every model call counts -- including a streamed one.

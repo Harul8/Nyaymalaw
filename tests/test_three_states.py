@@ -46,6 +46,10 @@ ESCAPES = (
     "not_comparable", "not_found", "not_held", "unknown", "cannot_tell",
     "unbindable", "ambiguous", "unbuildable", "failed", "none", "undated",
     "not_computed", "not_applicable",
+    # `Origin.NOT_ESTABLISHED`, added the moment S5 introduced it. Provenance
+    # nobody recorded is a third state and it must not read as RESOLVED, which
+    # is what the old `origin: str = "resolved"` default made it read as.
+    "not_established",
 )
 
 #: The word list is this check's maintenance cost, and it is a small and

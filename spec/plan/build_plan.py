@@ -471,7 +471,7 @@ FM = [
     ["D1", "The threshold map", "D", "S4", "E-044", "tested"],
     ["D2", "Limitation as a computed date", "D", "S4", "E-042, E-043, E-045", "tested"],
     ["D3", "The deadline register", "D", "S4", "E-046", "tested"],
-    ["D4", "Research plan and execution", "D", "S5", "E-050, E-051, E-054", "decided"],
+    ["D4", "Research plan and execution", "D", "S5", "E-050, E-051, E-054", "tested"],
     ["D5", "Elements, burden and proof", "D", "S7", "E-070, E-071", "decided"],
     ["D5.1", "The register — proof, never honesty", "D", "S7", "E-072, E-073", "decided"],
     ["D6", "Case theory", "D", "S8", "E-080, E-081", "decided"],
@@ -1834,6 +1834,75 @@ d("B-067", "2026-08-31", "tooling",
   "audit found 47 times: a guard covering only the site the bug was found at.",
   "tests/test_tooling_bites.py::test_every_tool_makes_its_console_survive_the_prose_it_prints; "
   "tests/test_tooling_bites.py::test_the_console_scan_can_see_a_tool_that_does_not_call_it")
+
+d("B-068", "2026-08-31", "ports",
+  "`Finding.origin` DEFAULTED TO \"resolved\" — the strongest provenance the "
+  "product can claim. Every Finding that failed to say otherwise asserted an "
+  "exact graph lookup with no ranking in its derivation, including every one "
+  "the search path built and every one a test constructed. `confidence` "
+  "defaulted to 1.0 beside it, a score of exactly the shape a ranker "
+  "produces. Between the two defaults, nothing in a Finding's own data could "
+  "tell a ranked guess from an exact lookup — which is E-051's counterexample "
+  "word for word: a governing Article arrived at by ranking.",
+  "Writing `origin` as a free string with the value the first caller "
+  "happened to need. A default is a decision taken for every call site that "
+  "forgets, and this one decided in favour of the strongest claim available.",
+  "S1 — an absent input reading as success",
+  "Reading the type while designing the S5 resolution layer, before any of it "
+  "was built",
+  "`Origin` is a three-member enum defaulting to NOT_ESTABLISHED — the "
+  "WEAKEST claim — and `Finding.__post_init__` refuses RESOLVED with a "
+  "similarity score and SEARCHED without one. The contradiction is now "
+  "impossible to construct rather than merely discouraged.",
+  "Yes — same mechanism as `Period` in S4 and `Factor.finding` before it: "
+  "where two facts must not be confused, the type refuses the confusion "
+  "instead of a convention asking each call site to observe it.",
+  "tests/test_resolution.py::test_a_resolved_finding_cannot_carry_a_similarity_score; "
+  "tests/test_resolution.py::test_provenance_nobody_recorded_is_not_reported_as_resolved")
+
+d("B-069", "2026-08-31", "adapters",
+  "THE SECOND PROVIDER DISPATCHED ON A SUBSTRING OF THE SCHEMA'S JSON, and "
+  "`cannot_tell` turned out to be claimed by THREE schemas — role, dispute "
+  "and cause. Which one answered was decided by the order of an `elif` chain. "
+  "When the cause read was added it lost: every cause read got a ROLE object "
+  "back, failed validation, and — because `SchemaViolation` is a `ModelError` "
+  "— fired G-MODEL `unavailable` on EVERY served turn, while the model was "
+  "perfectly available and nothing was unreachable. The class-A suite stayed "
+  "green throughout, because nothing asserted on the gate.",
+  "Adding a fifth structured read to a dispatch that identified schemas by "
+  "substring. The collision was pre-existing and latent; the new schema is "
+  "what made it fire.",
+  "S3 — a zero result that reads as absence",
+  "Probing a served turn after wiring the cause read, rather than trusting a "
+  "green suite",
+  "Dispatch is on the schema's `title` — an EXACT key on a closed vocabulary "
+  "— so a collision is impossible rather than unlikely. A schema with no "
+  "title has no responder and fails the build.",
+  "Yes — substring matching doing identification is what CLAUDE.md §5 records "
+  "as not merely weak but wrong, and the enumerator draws its population from "
+  "`nm/core` so the sixth schema cannot be added without a responder.",
+  "tests/test_provider_independence.py::test_every_schema_is_identified_by_an_exact_title_and_not_a_substring; "
+  "tests/test_provider_independence.py::test_the_scripted_provider_answers_every_schema_the_core_declares")
+
+d("B-070", "2026-08-31", "adapters",
+  "A SILENT TOP-K CUT ON A SIMILARITY ORDER. The authority query was `order "
+  "by rank limit 40`. The forty-first ranked paragraph was discarded with no "
+  "count and no trace, so a miss caused by the cut was indistinguishable from "
+  "an absence in the corpus — over an index of 451,553 attributable "
+  "paragraphs.",
+  "Bounding the query, which is right, and forgetting that a bound on a "
+  "RANKED order is a relevance decision. H4 names exactly this: no top-k or "
+  "absolute-threshold cut; any similarity exclusion is an outlier rejection "
+  "with a recorded, measured gap.",
+  "S3 — a zero result that reads as absence",
+  "Auditing the retrieval path against H4 while writing E-052's test",
+  "The ceiling stays and is over-fetched by one, so binding is DETECTABLE, "
+  "and the answer says how many were not examined when it binds.",
+  "Yes — the same mechanism `MAX_EVIDENCE_ROUNDS` already uses through "
+  "`evidence_bound_hit`: a bound that is not visible when it binds is "
+  "indistinguishable from a finding of absence.",
+  "tests/test_resolution.py::test_a_ceiling_that_binds_is_reported_and_never_silent; "
+  "tests/test_resolution.py::test_a_ceiling_that_does_not_bind_claims_nothing")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

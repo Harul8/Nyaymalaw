@@ -138,6 +138,37 @@ class SourceKind(str, Enum):
     AUTHORITY = "authority"
 
 
+class Origin(str, Enum):
+    """HOW this Finding was arrived at. PRD H3.
+
+    IT USED TO BE A STRING DEFAULTING TO `"resolved"`, which is the strongest
+    provenance the product can claim -- an exact lookup against the graph, no
+    ranking anywhere in its derivation. Every Finding that failed to say
+    otherwise asserted it, including every one the search path built and every
+    one a test constructed. E-051's counterexample is precisely *a governing
+    Article arrived at by ranking*, and the default made that Finding
+    indistinguishable from a resolved one by construction.
+
+    So it is an enum, it is REQUIRED, and the contradiction it exists to
+    prevent is refused by `Finding.__post_init__` rather than by a convention.
+    """
+
+    RESOLVED = "resolved"
+    """Exact lookup against the legal graph. NO similarity in its derivation.
+
+    H3: *where the graph resolves, the answer is exact and carries a citation,
+    and no similarity score appears in its derivation.*"""
+
+    SEARCHED = "searched"
+    """Ranked. It MUST carry its confidence, and the answer treats it as a
+    candidate rather than as the answer."""
+
+    NOT_ESTABLISHED = "not_established"
+    """Neither. The third state, and it is a value rather than a null because
+    a Finding whose provenance nobody recorded must not read as a resolved
+    one -- which is exactly what the old default did."""
+
+
 @dataclass(frozen=True)
 class Finding:
     proposition: str
@@ -155,8 +186,25 @@ class Finding:
     valid_from: date | None = None
     valid_to: date | None = None
     governing_date: date | None = None
-    origin: str = "resolved"
-    confidence: float = 1.0
+    origin: Origin = Origin.NOT_ESTABLISHED
+    """NO DEFAULT OF `RESOLVED`. See `Origin`.
+
+    The default is the weakest claim, not the strongest: a caller that forgets
+    to say gets a Finding that admits nobody recorded how it was derived, and
+    the gates can see that. It defaulted to `resolved`, so forgetting produced
+    the strongest claim the product can make."""
+
+    confidence: float | None = None
+    """THE SIMILARITY SCORE, and only a SEARCHED Finding may carry one.
+
+    It was `float = 1.0`, so a resolved Finding carried a score of exactly the
+    shape a ranker produces, and `origin` was the only thing distinguishing
+    them -- while `origin` itself defaulted to `resolved`. Between the two
+    defaults, nothing in a Finding's own data could tell an exact lookup from a
+    ranked guess.
+
+    `None` is not "confidence unknown". It is *this was not ranked*, which is
+    what H3 requires a resolved Finding to be able to say about itself."""
 
     def __post_init__(self) -> None:
         if not self.span.strip():
@@ -191,6 +239,21 @@ class Finding:
                 "advocate who cannot see why an authority was called binding has "
                 "to take it on trust, and this is the field most likely to be "
                 "wrong in a way that changes what they file.")
+        # H3 -- RESOLUTION AND RANKING ARE DIFFERENT FACTS, and the type keeps
+        # them apart rather than trusting each call site to.
+        if self.origin is Origin.RESOLVED and self.confidence is not None:
+            raise ValueError(
+                f"a RESOLVED Finding carries a similarity score of "
+                f"{self.confidence!r}. H3 is that where the graph resolves, no "
+                f"similarity appears in the derivation — a governing Article "
+                f"arrived at by ranking is the counterexample E-051 exists to "
+                f"reject, and it looks exactly like this.")
+        if self.origin is Origin.SEARCHED and self.confidence is None:
+            raise ValueError(
+                "a SEARCHED Finding must carry the confidence it was ranked "
+                "on. Without it the answer cannot treat it as a candidate, and "
+                "a candidate presented as an answer is the whole of the "
+                "search-first design H3 replaces.")
 
     # ---------------------------------------------------------------- gates ---
     @property

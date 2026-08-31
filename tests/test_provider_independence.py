@@ -164,3 +164,109 @@ def test_the_live_provider_serves_the_same_turn_and_the_delta_is_recorded(tmp_pa
           f"${s_out.metrics.cost_usd:.6f}  |  "
           f"{config.for_tier(Tier.ROUTINE).provider} "
           f"{l_out.metrics.latency_ms}ms ${l_out.metrics.cost_usd:.6f}")
+
+
+# ========= every declared schema, answerable by the SECOND provider =========
+
+
+def _declared_schemas() -> dict[str, dict]:
+    """Every `*_SCHEMA` the core declares. The population, from the tree."""
+    import importlib
+    import pkgutil
+
+    import nm.core
+    out: dict[str, dict] = {}
+    for mod in pkgutil.iter_modules(nm.core.__path__):
+        m = importlib.import_module(f"nm.core.{mod.name}")
+        for name in dir(m):
+            if name.endswith("_SCHEMA") and isinstance(getattr(m, name), dict):
+                out[f"nm.core.{mod.name}.{name}"] = getattr(m, name)
+    return out
+
+
+def test_the_suite_can_see_the_declared_schemas():
+    """A guard on the guard: an empty population passes everything below."""
+    found = _declared_schemas()
+    assert len(found) >= 4, f"only {len(found)} schemas found: {sorted(found)}"
+
+
+def test_every_schema_is_identified_by_an_exact_title_and_not_a_substring():
+    """DISPATCH WAS A SUBSTRING SEARCH OVER THE SCHEMA'S JSON.
+
+    That is fuzzy matching doing IDENTIFICATION, which CLAUDE.md §5 records as
+    not merely a weak signal but a wrong one. `cannot_tell` turned out to be
+    claimed by THREE schemas — role, dispute and cause. Which one answered was
+    decided by the order of an `elif` chain, and when the cause read was added
+    it lost: every cause read got a ROLE object back, failed validation, and
+    fired G-MODEL `unavailable` on every served turn, while the model was
+    perfectly available and nothing was unreachable.
+
+    A title is an exact key on a closed vocabulary, so the collision is not
+    possible rather than merely unlikely. Same rule as
+    `tests/test_citation_patterns.py` applies to Act keywords, one layer down.
+    """
+    from nm.adapters.model.scripted import SCRIPTED_READS
+
+    declared = _declared_schemas()
+    untitled = [q for q, s in sorted(declared.items())
+                if not (s.get("title") or "").strip()]
+    assert not untitled, (
+        "these schemas carry no title, so the second provider has no exact "
+        "key to dispatch on:\n  " + "\n  ".join(untitled))
+
+    seen: dict[str, str] = {}
+    clashes = []
+    for qualified, schema in sorted(declared.items()):
+        title = schema["title"]
+        if title in seen:
+            clashes.append(f"{qualified} and {seen[title]} both claim {title!r}")
+        seen[title] = qualified
+    assert not clashes, "two schemas answer to one name:\n  " + "\n  ".join(clashes)
+
+    missing = sorted(set(seen) - set(SCRIPTED_READS))
+    assert not missing, (
+        f"declared and unanswerable by the second provider: {missing}")
+
+
+def test_the_scripted_provider_answers_every_schema_the_core_declares():
+    """A SCHEMA THE SECOND PROVIDER CANNOT ANSWER IS A BROKEN TURN, not a
+    degraded one.
+
+    `SchemaViolation` is a `ModelError`, so the engine catches it and fires
+    G-MODEL `unavailable`. The failure therefore does not look like a missing
+    responder — it looks like the provider being down, on every single turn,
+    and the class-A suite stays green throughout because nothing asserted on
+    the gate.
+    """
+    import json
+
+    from nm.adapters.model.scripted import SCRIPTED_READS
+    from nm.ports.model import require_schema
+
+    unanswerable = []
+    for qualified, schema in sorted(_declared_schemas().items()):
+        responder = SCRIPTED_READS.get(schema.get("title") or "")
+        if responder is None:
+            unanswerable.append(f"{qualified}: no scripted responder")
+            continue
+        try:
+            require_schema(json.loads(responder("a probe of the advocate's "
+                                                "own words")), schema)
+        except Exception as exc:  # noqa: BLE001 -- any failure is the finding
+            unanswerable.append(f"{qualified}: {type(exc).__name__}: {exc}")
+
+    assert not unanswerable, (
+        "the scripted provider cannot answer these, so every turn that makes "
+        "the call fires G-MODEL `unavailable` while the model is fine:\n  "
+        + "\n  ".join(unanswerable))
+
+
+def test_the_schema_scan_can_see_a_schema_with_no_responder():
+    """THE POSITIVE CONTROL. A scan over schemas that all happen to have a
+    responder proves nothing about the scan."""
+    from nm.adapters.model.scripted import SCRIPTED_READS
+
+    planted = {"title": "zz_no_responder_claims_this", "type": "object",
+               "properties": {"x": {"type": "string"}}, "required": ["x"]}
+    assert SCRIPTED_READS.get(planted["title"]) is None, (
+        "the planted schema matched a responder, so it proves nothing")

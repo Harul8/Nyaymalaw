@@ -64,6 +64,7 @@ from nm.domain.text import refuses_blank_text
 ROLE_VALUES = tuple(r.value for r in Role if r is not Role.UNKNOWN)
 
 POSTURE_SCHEMA: dict = {
+    "title": "posture",
     "type": "object",
     "properties": {
         "states_client": {
@@ -207,6 +208,7 @@ def _fold(text: str) -> str:
 # and the advocate can correct it in a word. Inferring the CLIENT from the
 # facts is the thing C3 forbids and it is not what happens here.
 ROLE_SCHEMA: dict = {
+    "title": "role",
     "type": "object",
     "properties": {
         "role": {"type": "string", "enum": [*ROLE_VALUES, "cannot_tell"]},

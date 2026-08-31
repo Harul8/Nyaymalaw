@@ -68,6 +68,7 @@ class DateState(str, Enum):
 
 
 DATE_SCHEMA: dict = {
+    "title": "dates",
     "type": "object",
     "properties": {
         "events": {

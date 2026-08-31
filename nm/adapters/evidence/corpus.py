@@ -32,26 +32,54 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
 from nm.domain.citation import last_wanted_section, wanted_section
+from nm.domain.matter import CauseOfAction
+from nm.domain.traceability import implements
 from nm.knowledge.citator import Citator
 from nm.knowledge.identity import IdentityIndex
 from nm.knowledge.jurisdiction import binding_status
-from nm.knowledge.manifest import Manifest
+from nm.knowledge.manifest import Manifest, title_without_year
+from nm.knowledge.resolution import (
+    CODE_TITLES,
+    article_for,
+    corresponding,
+    governs,
+)
 from nm.ports.evidence import (
     Binding,
     Coverage,
     EvidenceNeed,
     EvidenceResult,
     Finding,
+    Origin,
     ParaKind,
     SourceKind,
     Treatment,
 )
 
 _ATTRIBUTABLE = ("ratio", "reasoning", "order")
+
+#: How many ranked paragraphs the authority search EXAMINES in one turn.
+#:
+#: A bound and not a filter, and the difference is the whole of H4. It caps
+#: work; it does not decide relevance. When it binds, the answer says so and
+#: says how many were not examined -- so a miss caused by the ceiling can be
+#: told apart from an absence in the corpus.
+EXAMINED_CEILING = 40
+
+
+@dataclass(frozen=True)
+class _Routed:
+    """What the graph resolved: the Act, the provision, and the disclosure."""
+
+    entry: object
+    provision: str
+    note: str
+
 
 
 class CorpusEvidenceAdapter:
@@ -133,6 +161,22 @@ class CorpusEvidenceAdapter:
         if need.want_authority:
             return self._fetch_authority(need)
 
+        # H3 — RESOLUTION BEFORE SEARCH, AND BEFORE KEYWORDS.
+        #
+        # The graph gets the first word. Where the cause of action resolves,
+        # BOTH the Act and the provision come from the edge, exactly, and no
+        # keyword is consulted at all.
+        #
+        # It has to come first to be worth anything. Run after the keyword
+        # resolver, it never fires on the case it was built for: "is the claim
+        # still in time" matches no keyword, so `resolve` returns nothing, and
+        # the turn ends at "no Act in the curated manifest governs this
+        # question" before any edge is reached. That is B-065 precisely — and
+        # it happened on twenty-three consecutive served turns.
+        routed = self._route(need)
+        if routed is not None:
+            return self._read(routed.entry, routed.provision, need, routed.note)
+
         resolved = self._manifest.resolve(need.question, on=need.governing_date,
                                           account=need.account)
         entry, superseded = resolved.entry, resolved.superseded
@@ -171,12 +215,26 @@ class CorpusEvidenceAdapter:
         if section is None:
             return EvidenceResult(
                 coverage=Coverage.NOT_HELD,
-                missing=(f"{entry.act_name} is held, but no specific provision was "
-                         f"identified in the question to retrieve."),
+                missing=(f"{entry.act_name} is held, but no specific provision "
+                         f"was identified in the question to retrieve, and the "
+                         f"cause of action was not established well enough to "
+                         f"look one up."),
                 searched_stores=("manifest",),
                 assumption=note,
             )
+        return self._read(entry, section, need, note)
 
+    def _read(self, entry, section: str, need: EvidenceNeed,
+              note: str | None) -> EvidenceResult:
+        """Look the provision up and answer in three states. ONE OWNER.
+
+        Both paths into retrieval end here — the graph's exact route and the
+        manifest's keyword match — so the union lookup, the HELD-BUT-NOT-FOUND
+        rule and the disclosure are written once. Two copies of "zero hits, and
+        the manifest decides which of the two states this is" would drift
+        within a slice, and the half that drifted would report a corpus gap for
+        an Act held in full.
+        """
         findings, stores = self._union_lookup(entry.act_patterns, section, entry, need)
         if findings:
             return EvidenceResult(coverage=Coverage.ANSWERED, findings=findings,
@@ -216,6 +274,55 @@ class CorpusEvidenceAdapter:
         # no provision.
         return (need.provision_hint or wanted_section(need.question)
                 or last_wanted_section(need.account))
+
+    @implements("D4")
+    def _route(self, need: EvidenceNeed) -> "_Routed | None":
+        """H3. The Act AND the provision the cause of action points at.
+
+        `None` where nothing resolves, and that is the ordinary case rather
+        than a failure — the question then goes to the keyword resolver and, if
+        that finds nothing either, to search, carrying its own confidence. What
+        this may never do is return a near neighbour: an exact lookup that
+        guesses is the wrong-Act defect with better manners.
+
+        THE ADVOCATE'S OWN WORDS OUTRANK THE GRAPH. Where they have named a
+        section, `_wanted_section` has it and no routing is needed or wanted;
+        this fires only where the question is determinate and unspecified.
+        """
+        if not need.cause_of_action:
+            return None
+        if wanted_section(need.question):
+            # THE ADVOCATE NAMED A PROVISION. Routing past it would substitute
+            # this product's view of the cause for their instruction, which is
+            # the one thing an exact lookup must never do.
+            return None
+        try:
+            cause = CauseOfAction(need.cause_of_action)
+        except ValueError:
+            # OUT OF VOCABULARY IS NOT A ROUTE. It reaches here only if a
+            # caller bypassed the reader's guard, and accepting it would make
+            # an unvetted string a routing decision.
+            return None
+        edge = article_for(cause)
+        if edge is None:
+            return None
+        entry = self._manifest.act(edge.act)
+        if entry is None or not entry.in_force_on(need.governing_date):
+            # THE GRAPH ROUTES TO AN ACT THE MANIFEST DOES NOT DECLARE, or does
+            # not declare as in force on this date. The edge is not wrong; the
+            # corpus simply cannot serve it, and pretending otherwise would
+            # report a retrieval defect as a legal answer.
+            return None
+
+        note = (f"You named no provision, so I resolved one: the cause reads as "
+                f"{cause.value.replace('_', ' ')}, which the graph routes to "
+                f"{edge.act} {edge.provision.replace('_', ' ')} "
+                f"({edge.curated_from})")
+        if edge.alternatives:
+            # WHAT ELSE IT COULD HAVE BEEN, named. A wrong route is then
+            # visible at a glance instead of after the advocate has acted on it.
+            note += f". Also arguable: {'; '.join(edge.alternatives)}"
+        return _Routed(entry=entry, provision=edge.provision, note=note)
 
     def _union_lookup(self, patterns: tuple[str, ...], section: str, entry,
                       need: EvidenceNeed):
@@ -276,7 +383,7 @@ class CorpusEvidenceAdapter:
                     valid_from=entry.in_force_from,
                     valid_to=entry.in_force_to,
                     governing_date=need.governing_date,
-                    origin="resolved",
+                    origin=Origin.RESOLVED,
                 ))
         finally:
             con.close()
@@ -314,8 +421,9 @@ class CorpusEvidenceAdapter:
             rows = con.execute(
                 """select case_id, case_name, court, year, para_type, chunk_id, text
                    from paras where paras match ?
-                   order by rank limit 40""",
-                (" OR ".join(f'"{t}"' for t in terms),)).fetchall()
+                   order by rank limit ?""",
+                (" OR ".join(f'"{t}"' for t in terms),
+                 EXAMINED_CEILING + 1)).fetchall()
         except sqlite3.OperationalError as exc:
             return EvidenceResult(
                 coverage=Coverage.HELD_NOT_FOUND,
@@ -323,6 +431,23 @@ class CorpusEvidenceAdapter:
                 searched_stores=("authority_index",))
         finally:
             con.close()
+
+        # H4 — A CEILING THAT BINDS IS REPORTED, never silent.
+        #
+        # This was `limit 40`, and forty is a TOP-K CUT ON A SIMILARITY ORDER,
+        # which is the one thing H4 names: *no top-k or absolute-threshold
+        # cut... any similarity exclusion is an outlier rejection with a
+        # recorded, measured gap, and it names what it rejected.* The
+        # forty-first paragraph was discarded with no count and no trace, so a
+        # miss caused by the cut was indistinguishable from an absence in the
+        # corpus — the defect shape this whole product is organised against.
+        #
+        # The ceiling stays, because an unbounded scan of 451,553 attributable
+        # paragraphs on every turn is not a retrieval strategy. What changes is
+        # that it is VISIBLE when it binds, exactly as `MAX_EVIDENCE_ROUNDS` is
+        # visible through `evidence_bound_hit`.
+        truncated = len(rows) > EXAMINED_CEILING
+        rows = rows[:EXAMINED_CEILING]
 
         findings: list[Finding] = []
         # THE STRUCTURAL FLOOR. A paragraph matching one incidental word of a
@@ -366,7 +491,7 @@ class CorpusEvidenceAdapter:
                 para_kind=kind,
                 treatment=self._citator.treatment(case_name, case_id=case_id),
                 governing_date=need.governing_date,
-                origin="searched",
+                origin=Origin.SEARCHED,
                 # Lexical coverage of the question, NOT a relevance score. It
                 # says how much of what was asked this paragraph contains, and
                 # nothing at all about whether it answers it.
@@ -374,9 +499,17 @@ class CorpusEvidenceAdapter:
             ))
 
         if findings:
-            findings.sort(key=lambda f: -f.confidence)
-            return EvidenceResult(coverage=Coverage.ANSWERED, findings=tuple(findings),
-                                  searched_stores=("authority_index",))
+            findings.sort(key=lambda f: -(f.confidence or 0.0))
+            era = self._era_note(need)
+            cut = (f"The index returned more than {EXAMINED_CEILING} ranked "
+                   f"matches and only the first {EXAMINED_CEILING} were "
+                   f"examined. There may be authority I did not reach; this is "
+                   f"a bound on my search, not a statement about the corpus."
+                   if truncated else None)
+            return EvidenceResult(
+                coverage=Coverage.ANSWERED, findings=tuple(findings),
+                searched_stores=("authority_index",),
+                assumption=". ".join(x for x in (era, cut) if x) or None)
         return EvidenceResult(
             coverage=Coverage.NOT_HELD,
             missing=(
@@ -418,7 +551,77 @@ class CorpusEvidenceAdapter:
         for w in words:
             if w not in cls._SCAFFOLD and w not in seen:
                 seen.append(w)
+        # D3B — THE SUBJECT UNDER THE OTHER CODE, ADDED TO THE TERMS.
+        #
+        # "Case law is overwhelmingly pre-2024 and cites the old numbering, so
+        # a system searching only the new number retrieves almost nothing"
+        # (T-051). A charge under BNS s.329 has its authority under IPC s.447,
+        # and searching the new number alone finds a corpus that appears empty
+        # on a subject it holds thousands of judgments about.
+        #
+        # ADDED, never substituted. H4 forbids discarding anything that might
+        # be right, and the advocate's own words stay at the front of the
+        # budget — this widens recall rather than redirecting it.
+        seen.extend(w for w in cls._corresponding_terms(need) if w not in seen)
         return seen[:8]
+
+    @implements("D4")
+    def _era_note(self, need: EvidenceNeed) -> str | None:
+        """THE ERA RULE, said out loud when a code is named.
+
+        *The governing date is the date of the CONDUCT*, not the date of the
+        advice — and the two now sit on opposite sides of 1 July 2024 for most
+        of what an advocate carries. An advocate reading authority under IPC
+        s.447 on a 2025 charge needs to know which of those the retrieval
+        thought it was answering, because both answers are defensible and only
+        one is theirs.
+
+        `None` where no code is named: this speaks only when there is something
+        to be wrong about.
+        """
+        low = need.question.lower()
+        named = [act for act in CODE_TITLES
+                 if title_without_year(act).lower() in low]
+        if not named:
+            return None
+        return (f"Conduct on {need.governing_date.isoformat()} is governed by "
+                f"{governs(need.governing_date)}. If the conduct happened on a "
+                f"different date from the one on this file, say so — the "
+                f"governing date is the date of the conduct, not of the advice.")
+
+    @classmethod
+    @implements("D4")
+    def _corresponding_terms(cls, need: EvidenceNeed) -> list[str]:
+        """Subject words for the same provision under the other code.
+
+        Returns nothing when the question names no provision this graph holds a
+        verified pair for, which is the ordinary case. The pair list is short
+        and deliberately so: an unverified correspondence would send the
+        advocate to authority on a different subject, which is worse than
+        retrieving nothing.
+        """
+        section = wanted_section(need.question)
+        if not section:
+            return []
+        # WHICH CODE THE SECTION IS IN MUST BE STATED, never inferred from the
+        # digits. `s.447` means different things in different codes, and a
+        # lookup on the number alone is the wrong-Act defect one level down --
+        # the one CLAUDE.md §5 measured matching the Indian Easements Act to
+        # the Indian Evidence Act on the shared word `Indian`.
+        low = need.question.lower()
+        named = [act for act in CODE_TITLES
+                 if title_without_year(act).lower() in low]
+        for act in named:
+            match = corresponding(act, section)
+            if match is None:
+                continue
+            # The SUBJECT, not the number: the old judgment says "criminal
+            # trespass", and matching digits across codes is exactly the
+            # wrong-Act defect one level down.
+            return [w for w in re.findall(r"[a-zA-Z][a-zA-Z\-]{3,}",
+                                          match.subject.lower())
+                    if w not in cls._SCAFFOLD]
+        return []
 
 
 def default_authority_index(root: Path) -> Path:

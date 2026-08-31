@@ -25,6 +25,7 @@ import time
 from dataclasses import dataclass, field, replace
 from datetime import date
 
+from nm.core import cause as cause_reader
 from nm.core import chronology, deadlines, grounding, limitation, thresholds
 from nm.core import dispute as dispute_reader
 from nm.core import posture as posture_reader
@@ -628,6 +629,50 @@ class TurnEngine:
         thread = replace(thread, posture=posture)
         return matter.with_thread(thread), replace(bound, thread=thread)
 
+    @implements("D4")
+    def _read_cause(self, turn: TurnInput, memory, metrics: TurnMetrics,
+                    grounds: list[Element]) -> str | None:
+        """H3. Which cause of action, so the Article can be LOOKED UP.
+
+        `None` on any doubt, and `None` is cheap: retrieval falls through to
+        the keyword resolver and then to search, which answers with a
+        confidence and as a candidate. A cause read WRONGLY is not cheap — it
+        sends an exact lookup into the wrong Article and produces a limitation
+        date with real text behind it that governs a different suit.
+
+        THE REFUSAL IS DISCLOSED, not swallowed. A cause this product declined
+        to read is one the advocate can supply in four words, and silence would
+        have them believe it was never in question.
+        """
+        account = memory.account if memory else ""
+        try:
+            res = self._model.structured(
+                cause_reader.build_prompt(turn.message, account),
+                cause_reader.CAUSE_SCHEMA, Tier.ROUTINE, max_tokens=300)
+            metrics.record_call(res)
+            metrics.cause_reads += 1
+            read = cause_reader.interpret(
+                turn.message, res.data or {},
+                advocate_words=memory.advocate_words if memory else "")
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"the cause of action could not be read: {exc}")
+            return None
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("D4", f"cause read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return None
+
+        if read.refused:
+            metrics.violate("D4", f"cause not taken: {read.refused}")
+            grounds.append(Element(
+                kind=ElementKind.GROUND, disclosure=True,
+                text=(f"I did not settle what cause of action this is, so I "
+                      f"have not looked up a limitation Article for it: "
+                      f"{read.refused}")))
+            return None
+        return read.cause.value if read.resolved else None
+
     @implements("C5")
     def _read_dates(self, turn: TurnInput, matter: Matter, thread: Thread,
                     metrics: TurnMetrics):
@@ -779,7 +824,13 @@ class TurnEngine:
                             # a corpus gap for a provision it had already
                             # retrieved. Second-chance input only -- see
                             # EvidenceNeed.account.
-                            account=memory.account if memory else "")
+                            account=memory.account if memory else "",
+                            # H3 — WHAT THE CAUSE IS, so a determinate question
+                            # can be resolved rather than ranked. The field
+                            # existed on this type since slice 2 and nothing
+                            # ever set it; the graph that reads it is slice 5.
+                            cause_of_action=self._read_cause(
+                                turn, memory, metrics, grounds))
         result = self._fetch(need, metrics)
         retrieved.extend(result.findings)
         self._read_coverage(result, thread, metrics, grounds, relied_on)

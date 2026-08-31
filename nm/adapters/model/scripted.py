@@ -165,6 +165,73 @@ def scripted_role(user: str) -> str:
                               "exists or who moved it"})
 
 
+#: Words an advocate uses for a cause, and the cause they name. TEST DOUBLE.
+#:
+#: A phrase list is fine HERE and is not fine in the product, for exactly the
+#: reason `scripted_posture` gives about its own regex: this stands in for a
+#: model on a deterministic path, and the product's own answer is a model read
+#: with guards (`nm/core/cause.py`) precisely because no list can be complete.
+_SCRIPTED_CAUSE = (
+    ("goods were supplied", "goods_sold_price"),
+    ("goods sold", "goods_sold_price"),
+    ("invoices", "goods_sold_price"),
+    ("money lent", "money_lent"),
+    ("loan", "money_lent"),
+    ("specific performance", "specific_performance"),
+    ("agreement of sale", "specific_performance"),
+    ("breach of contract", "breach_of_contract"),
+    ("dispossessed", "possession_on_previous_possession"),
+    ("title suit", "possession_on_title"),
+    ("declaration", "declaration"),
+    ("cheque", "cheque_dishonour"),
+)
+
+
+def scripted_cause(user: str) -> str:
+    """A deterministic stand-in for the model's cause read.
+
+    THE QUOTED SPAN IS THE ADVOCATE'S OWN WORDS, taken from `user`, because
+    `nm.core.cause.interpret` refuses a span that is not — and a double that
+    could not satisfy the product's own guard would prove the guard untested
+    rather than satisfied.
+    """
+    said = user.split("just asked:", 1)[-1]
+    whole = user or ""
+    for needle, cause in _SCRIPTED_CAUSE:
+        for haystack in (said, whole):
+            i = haystack.lower().find(needle)
+            if i >= 0:
+                return json.dumps({
+                    "cause": cause,
+                    "quoted": haystack[i:i + len(needle)],
+                    "why": f"the account mentions {needle}",
+                })
+    return json.dumps({"cause": "cannot_tell", "quoted": "",
+                       "why": "the account does not name a cause this "
+                              "product routes on"})
+
+
+#: Schema TITLE -> the responder that answers it. AN EXACT KEY, NOT A SUBSTRING.
+#:
+#: It was a substring search over the schema's JSON, and that is fuzzy matching
+#: doing identification — the thing CLAUDE.md §5 measures as not merely weak
+#: but wrong. `cannot_tell` turned out to be claimed by THREE schemas (role,
+#: dispute, cause); which one answered was decided by the order of an `elif`
+#: chain, and the cause read lost. Every cause read got a role object back and
+#: fired G-MODEL `unavailable` on every served turn.
+#:
+#: A title is an exact key on a closed vocabulary, so a collision is not
+#: possible rather than merely unlikely, and a schema with no title has no
+#: responder at all — which `tests/test_provider_independence.py` fails on
+#: rather than degrading at runtime.
+SCRIPTED_READS: dict[str, object] = {
+    "posture": scripted_posture,
+    "dispute": scripted_dispute,
+    "dates": scripted_dates,
+    "role": scripted_role,
+    "cause": scripted_cause,
+}
+
 _tokens = estimate_tokens  # one owner: nm.adapters.model._budget
 
 
@@ -213,20 +280,20 @@ class ScriptedModelAdapter:
         self._guard_budget(prompt, tier)
         self.calls.append((tier, prompt))
         raw = self._respond(prompt, tier)
-        blob = json.dumps(schema)
-        if "states_client" in blob:
-            # The posture read. Answered from the message itself so the
-            # scripted provider behaves like a real one for this call.
-            raw = scripted_posture(prompt.user)
-        elif "continues" in blob:
-            # The dispute read.
-            raw = scripted_dispute(prompt.user)
-        elif "date_expression" in blob:
-            # The date read (C5).
-            raw = scripted_dates(prompt.user)
-        elif "cannot_tell" in blob:
-            # The role read, the second structured call.
-            raw = scripted_role(prompt.user)
+        responder = SCRIPTED_READS.get(schema.get("title") or "")
+        if responder is not None:
+            # ONE responder, or the dispatch is ambiguous and the FIRST match
+            # silently wins. That is what happened when the cause read was
+            # added: `CAUSE_SCHEMA` contains `cannot_tell`, which was the role
+            # read's discriminator, so every cause read got a role object back,
+            # failed validation, and fired G-MODEL `unavailable` on every
+            # served turn while the model was perfectly available.
+            #
+            # `tests/test_provider_independence.py` refuses a second claimant
+            # on a discriminator, which is the same rule
+            # `tests/test_citation_patterns.py` already applies to Act
+            # keywords: no keyword may be claimed by two Acts.
+            raw = responder(prompt.user)
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as exc:
