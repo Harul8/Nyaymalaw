@@ -98,6 +98,7 @@ def build(tmp_path, evidence=None, responses=None):
 
 @refuses("B1", 0)
 @pytest.mark.eval_id("E-012")
+@pytest.mark.eval_id("E-100")
 def test_route_is_not_decided_on_message_length():
     """COUNTEREXAMPLE: 'police arrested my son tonight' read as a greeting
     because it is five words -- measured live, in both directions."""

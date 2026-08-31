@@ -744,6 +744,14 @@ MUTATIONS = [
      "test_answer_length_is_a_function_of_live_threads_not_turn_number",
      "E-093"),
 
+    # E-104. A block the advocate cannot see the reason for is one they
+    # cannot answer -- and an emergency is the worst one to state blankly.
+    ("a screen that blocks and does not say what on",
+     "nm/core/screens.py",
+     "        if self.state is ScreenState.BLOCKED and blank(self.detail):",
+     "        if False and self.state is ScreenState.BLOCKED:",
+     "test_a_blocking_screen_says_what_it_blocked_on", "E-104"),
+
     # ---- S10. THE FRONT DOOR ---------------------------------------------
     #
     # Every one of these screens fails the same way: by not running and
