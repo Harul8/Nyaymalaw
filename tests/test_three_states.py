@@ -62,6 +62,16 @@ ESCAPES = (
 #: Enums that are CLOSED VOCABULARIES, not outcomes. Each with the reason it
 #: cannot be "not assessed" — because something always chose it.
 CLOSED: dict[str, str] = {
+    "DispositionState": "D9 names exactly four — run, parked(reason), "
+                        "blocked(needs), closed(reason) — and every issue "
+                        "carries one by construction. There is no 'nobody "
+                        "decided' state BECAUSE THE DEFAULT IS `RUN`, and that "
+                        "is the safe direction: this whole feature exists "
+                        "because classification LOST 641 of 3,192 issues, so "
+                        "an issue nobody has ruled on is live, not pending. A "
+                        "fifth member meaning 'undecided' would be somewhere "
+                        "for an issue to sit unread, which is the defect "
+                        "wearing a permitted name.",
     "ElementKind": "the four permitted kinds, with deliberately no fifth. An "
                    "element the product could not classify is not emitted at "
                    "all, so there is no state to express.",

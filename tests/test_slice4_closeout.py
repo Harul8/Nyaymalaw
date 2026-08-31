@@ -305,6 +305,7 @@ def test_the_board_distinguishes_no_deadline_from_no_register(tmp_path):
 
 
 @pytest.mark.eval_id("E-046")
+@pytest.mark.eval_id("E-063d")
 def test_the_matter_list_orders_by_a_deadline_it_actually_holds():
     """THE RULE THAT COULD NOT FIRE.
 
@@ -342,6 +343,7 @@ def test_the_matter_list_orders_by_a_deadline_it_actually_holds():
 
 
 @pytest.mark.eval_id("E-046")
+@pytest.mark.eval_id("E-063d")
 def test_the_thread_board_puts_the_nearest_window_first():
     """D3: *Where several threads are live, the thread carrying the nearest
     deadline is addressed first, regardless of which is legally the most

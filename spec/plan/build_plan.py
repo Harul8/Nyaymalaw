@@ -477,7 +477,7 @@ FM = [
     ["D6", "Case theory", "D", "S8", "E-080, E-081", "decided"],
     ["D7", "The adversarial pass", "D", "S8", "E-082, E-083, E-085", "decided"],
     ["D8", "Salvage — the weak case", "D", "S8", "E-084", "decided"],
-    ["D9", "Issue facets and disposition", "D", "S6", "E-060, E-061, E-062", "decided"],
+    ["D9", "Issue facets and disposition", "D", "S6", "E-060, E-061, E-062", "tested"],
     ["E1", "Scenarios and contingencies", "E", "S12", "—", "decided"],
     ["E2", "The recommendation", "E", "S1", "E-013, E-064", "tested"],
     ["E3", "Proportionality", "E", "S12", "—", "decided"],

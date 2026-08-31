@@ -728,6 +728,77 @@ MUTATIONS = [
      "test_naming_what_could_not_be_retrieved_is_not_citing_it",
      "E-023"),
 
+    # ---- S6. THE ISSUE THAT WAS SPOTTED AND THEN LOST --------------------
+
+    # E-060. THE MEASURED COUNTEREXAMPLE: classification discarded 20.1% of
+    # all issue labels ever spotted -- 641 of 3,192 -- led by limitation,
+    # bail, and forum or jurisdiction.
+    ("a classifier that filters instead of dispositioning",
+     "nm/domain/issue.py",
+     "    return tuple(replace(i, disposition=given[i.id]) if i.id in given else i\n"
+     "                 for i in spotted)",
+     "    return tuple(replace(i, disposition=given[i.id]) if i.id in given else i\n"
+     "                 for i in spotted if i.kind is not IssueKind.THRESHOLD)",
+     "test_every_issue_that_enters_classification_comes_out_of_it", "E-060"),
+
+    # E-060. A conservation check that reports a NUMBER cannot say which three
+    # were lost, and which three is the whole difference between a rounding
+    # error and an advocate missing a deadline.
+    ("a conservation check that cannot name what was lost",
+     "nm/domain/issue.py",
+     "    return tuple(i.statement[:80] for i in spotted if i.id not in out)",
+     "    return ()",
+     "test_the_conservation_check_names_what_was_lost", "E-060"),
+
+    # E-060. A deletion with extra steps is still a deletion.
+    ("an issue parked with no reason",
+     "nm/domain/issue.py",
+     "        if self.state in (DispositionState.PARKED, DispositionState.CLOSED) \\\n"
+     "                and blank(self.reason):",
+     "        if False and self.state in (DispositionState.PARKED,):",
+     "test_an_issue_stopped_without_a_reason_cannot_be_constructed", "E-060"),
+
+    # E-061. "A limitation point labelled `bar` regardless of side." The label
+    # carries an opinion about whose problem it is, and it is wrong for half
+    # the advocates who read it.
+    ("an effect that does not turn with the posture",
+     "nm/domain/issue.py",
+     "        if self.runs_against is posture.side:\n"
+     "            return Effect.OPPOSES, posture.version\n"
+     "        return Effect.SUPPORTS, posture.version",
+     "        return Effect.OPPOSES, posture.version",
+     "test_the_same_issue_on_opposite_postures_yields_opposite_effect", "E-061"),
+
+    # E-061. An unresolved posture yielding `neutral` is a finding that the
+    # issue helps nobody, which nobody established.
+    ("an unassessed effect rendered as neutral",
+     "nm/domain/issue.py",
+     "            return Effect.NOT_ASSESSED, posture.version",
+     "            return Effect.NEUTRAL, posture.version",
+     "test_an_effect_is_never_stored_and_so_cannot_survive_its_own_reversal",
+     "E-061"),
+
+    # E-062. `tracks {'civil': 2, 'revenue': 1}` passing unvalidated and
+    # emptying the charge map. It entered through the path nobody guarded.
+    ("an out-of-vocabulary facet value propagated",
+     "nm/domain/issue.py",
+     "    except (ValueError, AttributeError):\n"
+     "        return default",
+     "    except (ValueError, AttributeError):\n"
+     "        return value",
+     "test_an_out_of_vocabulary_facet_value_is_blanked_whichever_path_supplied_it",
+     "E-062"),
+
+    # E-063f. A thread the advocate deferred vanishing from the board. They
+    # deprioritised it believing they would see it again.
+    ("a deferred thread dropped from the board",
+     "nm/edge/projections.py",
+     "    rows = nearest_first([_thread_row(t, deadlines, today)\n"
+     "                          for t in matter.threads])",
+     "    rows = nearest_first([_thread_row(t, deadlines, today)\n"
+     "                          for t in matter.threads if not t.deferred_reason])",
+     "test_a_deferred_thread_stays_on_the_board_with_its_deadline", "E-063f"),
+
     # ---- S5. RESOLUTION BEFORE SEARCH ------------------------------------
 
     # E-050. A need silently dated today retrieves the CURRENT text for
