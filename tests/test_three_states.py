@@ -72,6 +72,14 @@ CLOSED: dict[str, str] = {
                         "fifth member meaning 'undecided' would be somewhere "
                         "for an issue to sit unread, which is the defect "
                         "wearing a permitted name.",
+    "Coordinate": "D8's seven dimensions of a claim — party, cause, relief, "
+                  "forum, timing, procedure, burden. `unvaried` builds from "
+                  "this enum, so a coordinate NOBODY MOVED appears as a named "
+                  "gap rather than as a missing member; the escape lives on "
+                  "the result, where the question is answered. Same "
+                  "arrangement as Threshold, and for the same reason: a "
+                  "report that varied two coordinates and called the case dead "
+                  "has not done the work.",
     "ElementKind": "the four permitted kinds, with deliberately no fifth. An "
                    "element the product could not classify is not emitted at "
                    "all, so there is no state to express.",

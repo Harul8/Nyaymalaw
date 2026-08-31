@@ -728,6 +728,126 @@ MUTATIONS = [
      "test_naming_what_could_not_be_retrieved_is_not_citing_it",
      "E-023"),
 
+    # ---- S8. THEORY, THE ADVERSARIAL PASS, SALVAGE ------------------------
+
+    # E-080. "A theory that works only if three documents are forgotten." It
+    # reads perfectly -- the three are simply not mentioned.
+    ("adverse facts the theory never accounts for, unreported",
+     "nm/core/theory.py",
+     "    handled = set(theory.explains) | set(theory.concedes)\n"
+     "    return tuple(f for f in adverse if f not in handled)",
+     "    return ()",
+     "test_every_adverse_fact_is_explained_or_expressly_conceded", "E-080"),
+
+    # E-080. No theory disposes of nothing. Returning () there would make a
+    # thread with no theory look fully accounted for.
+    ("no theory reading as every adverse fact handled",
+     "nm/core/theory.py",
+     "    if theory is None:\n"
+     "        return tuple(adverse)",
+     "    if theory is None:\n"
+     "        return ()",
+     "test_every_adverse_fact_is_explained_or_expressly_conceded", "E-080"),
+
+    # E-080. A menu is the survey D6 rejects.
+    ("two theories offered in parallel",
+     "nm/core/theory.py",
+     "    if len(mine) > 1:",
+     "    if False and len(mine) > 1:",
+     "test_exactly_one_theory_per_thread", "E-080"),
+
+    # E-080. "The complainant has not proved his case" is a hope that the
+    # other side fails, not a theory.
+    ("a bare denial arrived at by default",
+     "nm/core/theory.py",
+     "        if self.stance is Stance.DENIAL and blank(self.chosen_because):",
+     "        if False and self.stance is Stance.DENIAL:",
+     "test_a_bare_denial_is_a_chosen_strategy_and_never_a_default", "E-080"),
+
+    # E-081. "I never signed it" alongside "I signed it under a
+    # misrepresentation". No string comparison shows it.
+    ("two arguments needing opposite factual accounts, unflagged",
+     "nm/core/theory.py",
+     "                if fact in b.requires and b.requires[fact] != needed:",
+     "                if False and fact in b.requires:",
+     "test_two_arguments_needing_opposite_facts_are_flagged", "E-081"),
+
+    # E-081. The alternative flag must not become an opt-out: "I never
+    # borrowed the money, and in any event I repaid it" loses either way.
+    ("the alternative plea used to suppress the inconsistency check",
+     "nm/core/theory.py",
+     "            if a.thread != b.thread:\n"
+     "                continue",
+     "            if a.thread != b.thread or b.in_the_alternative:\n"
+     "                continue",
+     "test_two_arguments_needing_opposite_facts_are_flagged", "E-081"),
+
+    # E-081's positive control, in production. An argument committing to
+    # nothing contradicts nothing, so a file of them reports health forever.
+    ("an argument with no declared factual commitments, unreported",
+     "nm/core/theory.py",
+     "    return tuple(a.statement[:60] for a in arguments if not a.requires)",
+     "    return ()",
+     "test_an_argument_declaring_no_facts_cannot_be_silently_consistent",
+     "E-081"),
+
+    # E-082. "Emitted twice, or SILENTLY OMITTED." Omitted reads as "nothing
+    # found" when nobody looked.
+    ("a cross-file pass that never ran reading as one that found nothing",
+     "nm/core/adversarial.py",
+     "    if found is None:\n"
+     "        return ExposureReport(\n"
+     "            ExposureState.NOT_RUN,\n"
+     "            not_run_because=\"the cross-file pass did not run on this turn\")",
+     "    if found is None:\n"
+     "        return ExposureReport(ExposureState.NONE_FOUND)",
+     "test_cross_thread_exposure_is_produced_exactly_once_empty_or_not",
+     "E-082"),
+
+    # E-082. A section that appears only sometimes is one the advocate cannot
+    # rely on being there.
+    ("a single-thread file given no exposure report at all",
+     "nm/core/adversarial.py",
+     "    if len(threads) < 2:\n"
+     "        return ExposureReport(ExposureState.NONE_FOUND)",
+     "    if len(threads) < 2:\n"
+     "        return ExposureReport(ExposureState.NOT_RUN,\n"
+     "                              not_run_because=\"one thread\")",
+     "test_cross_thread_exposure_is_produced_exactly_once_empty_or_not",
+     "E-082"),
+
+    # E-083. An attack with no answer and one expressly unanswerable are
+    # different findings: work not done, versus a fact about the case.
+    ("a recommended step with no stated opposing case",
+     "nm/core/adversarial.py",
+     "        if not self.no_answer and blank(self.our_answer):",
+     "        if False and not self.no_answer:",
+     "test_every_attack_carries_our_answer_or_says_there_is_none", "E-083"),
+
+    # E-084. "Consider a different forum", with no forum named.
+    ("a salvage route stated at category level",
+     "nm/core/adversarial.py",
+     "        if self.route and not self.findings:",
+     "        if False and self.route:",
+     "test_no_salvage_route_is_stated_at_category_level", "E-084"),
+
+    # E-084. An unmarked route reads as a recommendation NM would run.
+    ("a salvage route carrying no strength",
+     "nm/core/adversarial.py",
+     "        if self.route and self.strength is Strength.NOT_ASSESSED:",
+     "        if False and self.route:",
+     "test_no_salvage_route_is_stated_at_category_level", "E-084"),
+
+    # E-084. A report that varied two coordinates and concluded the case is
+    # dead has not done the work, and the two make it look as though it had.
+    ("coordinates nobody moved, unreported",
+     "nm/core/adversarial.py",
+     "    done = {s.coordinate for s in considered}\n"
+     "    return tuple(c.value for c in Coordinate if c not in done)",
+     "    return tuple(s.coordinate.value for s in considered\n"
+     "                 if s.coordinate not in {x.coordinate for x in considered})",
+     "test_coordinates_nobody_moved_are_named", "E-084"),
+
     # ---- S7. PROOF AND BURDEN --------------------------------------------
 
     # E-070. THE COUNTEREXAMPLE: a conclusion where two of five elements have
