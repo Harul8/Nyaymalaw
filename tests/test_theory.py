@@ -275,6 +275,8 @@ def test_every_attack_carries_our_answer_or_says_there_is_none():
 
 
 @refuses("D8", 1)
+@refuses("D8", 2)
+@refuses("D8", 3)
 @pytest.mark.eval_id("E-084")
 def test_no_salvage_route_is_stated_at_category_level():
     """E-084's counterexample: *"Consider a different forum", with no forum

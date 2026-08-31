@@ -87,6 +87,11 @@ CLOSED: dict[str, str] = {
                "third buries an unclassified blocking gate under every "
                "deadline while first makes everything nobody thought about "
                "scream. Whoever writes the gap says what makes it urgent.",
+    "ScreenKind": "the five front-door screens B2-B6 name. `unscreened` "
+                  "builds from this enum, so a screen NOBODY RAN appears as a "
+                  "named row rather than as a missing member -- the escape is "
+                  "on ScreenState, where the question is answered. Same "
+                  "arrangement as Threshold and Coordinate.",
     "ElementKind": "the four permitted kinds, with deliberately no fifth. An "
                    "element the product could not classify is not emitted at "
                    "all, so there is no state to express.",

@@ -257,6 +257,7 @@ def test_the_restraint_does_not_extend_to_the_opponent_or_to_the_finding():
 # ============ C7 — existence, admissibility and weight are three ============
 
 
+@refuses("C7", 0)
 @pytest.mark.eval_id("E-070")
 def test_existence_admissibility_and_weight_are_three_separate_questions():
     """C7. The original contract held two of the three, so *admissible* and

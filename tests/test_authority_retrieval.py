@@ -22,6 +22,7 @@ import pytest
 
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
 from nm.bootstrap.composition import ROOT
+from nm.domain.traceability import refuses
 from nm.knowledge.manifest import Manifest
 from nm.ports.evidence import (
     Binding,
@@ -100,6 +101,7 @@ def test_nothing_but_ratio_reasoning_and_order_is_indexed():
 
 # ================================================= retrieval ===============
 
+@refuses("D4", 2)
 def test_an_authority_need_returns_attributable_paragraphs_with_locators(adapter):
     result = adapter.fetch(need("adverse possession of immovable property title"))
     assert result.coverage is Coverage.ANSWERED, result.missing

@@ -181,9 +181,40 @@ def spec_is_current(rep: Report) -> None:
 #: test now would assert a rule against an empty field, which is the vacuous
 #: check this project has already paid for three times.
 AWAITING: dict[tuple[str, int], str] = {
-    # (empty) -- A2.5 was here, awaiting D3. D3 landed and the clause
-    # is tested, so the declaration was retired rather than left to
-    # stand. An exemption nobody removes is an exemption nobody reads.
+    # A2.5 was here, awaiting D3. D3 landed and the clause is tested, so the
+    # declaration was retired rather than left to stand. An exemption nobody
+    # removes is an exemption nobody reads.
+    #
+    # WHAT FOLLOWS WAS DECLARED ON 31 AUGUST 2026, when marking A3 `tested`
+    # moved the frontier to S9 and T7 stopped warning about these and started
+    # failing on them. Each is a clause whose FEATURE has landed and whose
+    # rule has nothing yet to bite on -- the alternative was tagging a test
+    # that does not really refuse the clause, which is the "test pinned to
+    # behaviour" defect S7's own retrospective names.
+    #
+    # A3 re-orientation: the trigger is a computed CATEGORY CHANGE across a
+    # session boundary, and nothing yet computes one -- `cascade.py` handles a
+    # corrected fact within a session, which is a different event.
+    ("A3", 0): "A3's re-entry trigger, which nothing computes yet",
+    ("A3", 1): "A3's re-entry trigger, which nothing computes yet",
+    # C7: obtaining material and witness contact are ACTIONS the product does
+    # not yet take. `EvidenceItem.lawful_source` records the question; the
+    # route that would breach it does not exist to be refused.
+    ("C7", 1): "F-phase conduct, where a route to obtain material is proposed",
+    ("C7", 2): "F5, witnesses -- there is no witness contact to contaminate",
+    # D4: the resolution layer satisfies D4's EVALS (E-050/051/054) and none
+    # of its NEVER clauses, which are about RESEARCH EXECUTION -- browsing
+    # with a stop condition, disclosing adverse authority. That work is not
+    # built, and saying so here is more honest than the status alone.
+    ("D4", 0): "D4's research executor, which does not exist yet",
+    ("D4", 1): "D4's research executor, which does not exist yet",
+    ("D4", 3): "D4's research executor, which does not exist yet",
+    # D6: revising a theory needs a theory that has been REVISED, which needs
+    # the turn engine to hold one across turns. It holds none yet.
+    ("D6", 3): "D6 wired into the turn, so a theory can change between turns",
+    # D7: weakening a point before answering it is a property of PROSE the
+    # model writes, and nothing yet composes an adversarial pass to inspect.
+    ("D7", 1): "D7 wired into the turn, so there is composed prose to check",
 }
 
 
