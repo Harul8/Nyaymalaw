@@ -57,17 +57,35 @@ def test_the_composition_root_branches_on_the_provider_string_alone():
     variable". If it grows a branch on anything but the provider name, the
     switch has stopped being a configuration change and nothing fails."""
     tree = ast.parse(inspect.getsource(build_model))
-    compared = set()
+
+    def named(node) -> set[str]:
+        out: set[str] = set()
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Name):
+                out.add(sub.id)
+            elif isinstance(sub, ast.Attribute):
+                out.add(sub.attr)
+        return out
+
+    # EVERY BRANCH, not only comparisons. The first version walked `Compare`
+    # nodes alone, and a mutation replacing the provider lookup with
+    # `'openai' if config.for_tier(...).model else 'scripted'` SURVIVED — that
+    # is a truthiness test, not a comparison, so the scan never saw it. A
+    # `build_model` branching on the MODEL NAME would have passed while the
+    # switch had quietly stopped being a configuration change.
+    branched: set[str] = set()
     for node in ast.walk(tree):
-        if isinstance(node, ast.Compare):
-            left = node.left
-            if isinstance(left, ast.Name):
-                compared.add(left.id)
-            elif isinstance(left, ast.Attribute):
-                compared.add(left.attr)
-    assert compared <= {"provider"}, (
-        f"build_model branches on {compared - {'provider'}} as well as the "
-        f"provider name")
+        if isinstance(node, (ast.If, ast.IfExp)):
+            branched |= named(node.test)
+        elif isinstance(node, ast.Compare):
+            branched |= named(node.left)
+
+    # Names that are plumbing rather than a decision: getting AT the provider
+    # is not branching on something else.
+    plumbing = {"config", "for_tier", "Tier", "ROUTINE", "provider"}
+    assert branched <= plumbing, (
+        f"build_model branches on {sorted(branched - plumbing)} as well as the "
+        f"provider name — the switch has stopped being a configuration change")
 
 
 @pytest.mark.class_a

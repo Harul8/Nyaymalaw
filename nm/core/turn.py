@@ -1437,9 +1437,16 @@ class TurnEngine:
         """Class-B checks, on the assembled Answer, BEFORE the byte boundary."""
         if answer.route is Route.NON_MATTER:
             return
-        first = answer.elements[0]
-        if first.kind not in (ElementKind.ACTION, ElementKind.QUESTION):
-            metrics.violate("S3", "first element is neither an action nor a question")
+        # S3 -- "the first content element is an action or a blocking
+        # question" -- IS ENFORCED BY THE TYPE TOO, and the check that used to
+        # sit here could no more fire than the D2 one described below.
+        #
+        # `Answer.__post_init__` raises on exactly this condition, so the
+        # answer never reaches this line with a background element first. A
+        # mutation disabling the runtime check SURVIVED, which is how it was
+        # found -- and the paragraph immediately below had already written the
+        # rule it was breaking three lines further up.
+        #
         # D2 -- "every turn contains a recommendation or a blocking
         # question" -- IS ENFORCED BY THE TYPE, not here.
         #

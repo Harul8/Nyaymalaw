@@ -769,8 +769,11 @@ MUTATIONS = [
 
     # E-064. "A turn opening with a recital of the brief." The advocate reads
     # the first line and it is their own file read back to them.
+    # Aimed at the TYPE, which is where the guard actually lives. Aimed at
+    # the engine it SURVIVED -- because `Answer.__post_init__` refuses the
+    # same condition, so the runtime copy could never fire.
     ("an answer opening with something other than an action or a question",
-     "nm/core/turn.py",
+     "nm/domain/answer.py",
      "        if first.kind not in (ElementKind.ACTION, ElementKind.QUESTION):",
      "        if False and first.kind not in (ElementKind.ACTION,):",
      "test_the_first_content_element_is_an_action_or_a_blocking_question",
