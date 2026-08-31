@@ -40,6 +40,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tools._console import utf8_console  # noqa: E402
+
+utf8_console()
+
+from nm.domain.identity import source_fingerprint  # noqa: E402
+
 CORPUS = ROOT / "legal_database" / "vector_store" / "chunks.db"
 BASE = "http://127.0.0.1:8078"
 
@@ -112,6 +118,39 @@ TURNS: dict[str, list[str]] = {
         "there is a second cheque from the same drawer that bounced on 2 "
         "August, notice not yet sent",
     ],
+    # A CUSTODY CLOCK THAT IS ARITHMETIC, NOT NARRATION. The default-bail
+    # entitlement is a computed date, and "no escort was available" is not a
+    # ground the statute gives.
+    "GS-07": [
+        "our client was remanded on 12 June 2026 and the magistrate has kept "
+        "extending it. We act for the accused.",
+        "the charge is an offence punishable with imprisonment up to seven "
+        "years and the investigation is still not complete",
+        "the last two extensions were because no police escort was available "
+        "to produce him",
+        "where does that leave us on default bail under section 167(2)",
+    ],
+    # THE MEASURED DEFECT, and the reason D2's coverage record exists. The debt
+    # looks dead on the invoices; a written acknowledgment sits in the
+    # chronology, is repeated back, and must reach the arithmetic.
+    "GS-14": [
+        "we act for the plaintiff in a recovery matter. The goods were "
+        "supplied against invoices dated 14 March 2023 and nothing was paid.",
+        "the defendant wrote to us on 12 June 2024 admitting the amount was "
+        "outstanding and asking for time",
+        "is the claim still in time",
+        "what does that letter have to say for it to count",
+    ],
+    # THE DATE CORRECTED MID-CONVERSATION. Everything computed off the first
+    # date has to be re-derived and the earlier position marked superseded.
+    "GS-15": [
+        "we act for the plaintiff on an agreement of sale. What is the "
+        "limitation for specific performance?",
+        "the agreement is dated 15-4-1984",
+        "sorry, that is wrong. It is dated 15-4-2024.",
+        "the agreement was never registered",
+        "so where do we stand now",
+    ],
     "GS-10": [
         "we act for the plaintiff landlord in O.S. 442/2023, an eviction against "
         "the tenant at the Kukatpally shop",
@@ -126,6 +165,29 @@ TURNS: dict[str, list[str]] = {
         "is there any judgment on reinstatement we can rely on",
     ],
 }
+
+
+def server_fingerprint() -> tuple[str | None, str]:
+    """What code the SERVED PROCESS loaded, asked of the process itself.
+
+    Three states, and the middle one is why this returns a pair. `None` is
+    "could not be established" -- the server is down, too old to carry the
+    field, or answering something else -- and it is not the same as a
+    fingerprint that differs. Returning a sentinel string for both would make
+    an unreachable server compare unequal and read as a stale one, which sends
+    the reader to restart a process that is not running.
+    """
+    try:
+        with urllib.request.urlopen(BASE + "/api/health", timeout=10) as r:
+            doc = json.loads(r.read())
+    except Exception as exc:  # noqa: BLE001 -- any failure is "not established"
+        return None, f"{type(exc).__name__}: {exc}"
+    fp = doc.get("serving")
+    if not isinstance(fp, str) or not fp or fp.startswith("unknown"):
+        return None, (f"the server reports serving={fp!r}. A process that "
+                      f"cannot say what it loaded cannot be trusted to be "
+                      f"current.")
+    return fp, "ok"
 
 
 def post(payload: dict) -> tuple[int, dict]:
@@ -205,13 +267,54 @@ def main() -> int:
         print("Re-run with --approve.")
         return 2
 
+    # ---- WHAT CODE IS THE SERVER RUNNING? ------------------------------
+    #
+    # Measured on 31 August 2026: this ran five scenarios against a server
+    # started the previous evening, made live model calls, found none of the
+    # slice it existed to prove, and EXITED 0. Every element it printed was
+    # about code that had been superseded that morning.
+    #
+    # A run that measured the wrong code must not be distinguishable only by
+    # someone noticing the output looks thin. It is refused here, before a
+    # single paid call.
+    serving, why = server_fingerprint()
+    mine = source_fingerprint()
+    if serving is None:
+        print(f"REFUSED. The server at {BASE} could not be asked what code it "
+              f"is running: {why}")
+        print("This run would cost money and prove nothing. Start the server, "
+              "or fix the health endpoint.")
+        return 2
+    if serving != mine:
+        print(f"REFUSED. The server at {BASE} is running DIFFERENT CODE.")
+        print(f"    serving:      {serving}")
+        print(f"    working tree: {mine}")
+        print()
+        print("  Restart it and run again. On Windows `pkill` does not exist "
+              "and a failed kill is silent, so use:")
+        print("    Get-CimInstance Win32_Process -Filter \"Name like "
+              "'%python%'\" | Where-Object { $_.CommandLine -match '8078' } "
+              "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }")
+        return 2
+
+    # ---- EVERY NAMED SCENARIO MUST BE RUNNABLE -------------------------
+    #
+    # `continue` on a scenario with no scripted turns is the same defect: the
+    # caller named five, three had no turns, and the run reported success. A
+    # scenario that could not run must never read as one that passed.
+    unscripted = [g for g in args.scenario if not TURNS.get(g)]
+    if unscripted:
+        print(f"REFUSED. {len(unscripted)} named scenario(s) have no scripted "
+              f"turns: {', '.join(unscripted)}")
+        print("They exist in docs/GOLDEN_SET.md and cannot be driven from "
+              "here, so naming them proves nothing. Script them in TURNS, or "
+              "do not name them.")
+        return 2
+
     ledger, failures = [], []
     t0 = time.time()
     for gid in args.scenario:
-        turns = TURNS.get(gid)
-        if not turns:
-            print(f"  no turns scripted for {gid}")
-            continue
+        turns = TURNS[gid]
         print("\n" + "=" * 78)
         print(f"{gid}   {len(turns)} turn(s)")
         print("=" * 78)

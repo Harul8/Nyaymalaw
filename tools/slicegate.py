@@ -41,6 +41,11 @@ except ImportError:
     sys.exit("pyyaml is required: pip install pyyaml")
 
 ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(ROOT))
+from tools._console import utf8_console  # noqa: E402
+
+utf8_console()
 RESULTS = ROOT / ".nm" / "eval_results.json"
 GOLDEN_RUNNER = ROOT / "tools" / "run_goldens.py"
 

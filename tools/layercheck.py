@@ -24,6 +24,13 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+import sys  # noqa: E402
+
+sys.path.insert(0, str(ROOT))
+from tools._console import utf8_console  # noqa: E402
+
+utf8_console()
 SRC = ROOT / "nm"
 
 # layer -> the layers it may import from (in addition to the standard library)

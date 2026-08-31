@@ -73,6 +73,11 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(ROOT))
+from tools._console import utf8_console  # noqa: E402
+
+utf8_console()
 STAGING = ROOT / ".nm" / "staging" / "judgments"
 
 API = "https://api.indiankanoon.org"

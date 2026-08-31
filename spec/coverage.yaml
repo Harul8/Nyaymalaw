@@ -3,7 +3,7 @@
 # nm/knowledge/coverage.py reads this at turn time so the release
 # gate and the advocate-facing disclosure rest on ONE measurement.
 
-measured_at: '2026-08-30'
+measured_at: '2026-08-31'
 corpus_version: legacy-2026-08-27
 judgments:
   total: 33791

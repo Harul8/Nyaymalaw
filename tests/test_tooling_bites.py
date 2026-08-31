@@ -276,3 +276,199 @@ def test_the_anchor_check_can_see_a_stale_anchor():
     moved = [("a mutation whose module moved", "nm/core/no_such_module.py",
               "anything", "x", "some_test", "E-000")]
     assert "does not exist" in _stale_anchors(moved)[0]
+
+
+# ============ the scenario runner: a run that measured nothing =============
+
+
+def test_the_served_process_reports_which_code_it_loaded():
+    """A RUNNING PROCESS IS AN ARTEFACT AND CARRIES ITS IDENTITY.
+
+    Measured on 31 August 2026: five golden scenarios were run against an API
+    server started the previous evening. They made live model calls, found none
+    of the slice they existed to prove, and the run exited 0. Every element
+    printed was about code superseded that morning.
+
+    The fingerprint is captured at IMPORT, never per request. Read from disk
+    when the request arrives it would describe the working tree — which a stale
+    server matches perfectly while serving yesterday's code, so the check would
+    pass exactly when it needed to fail.
+    """
+    import nm.edge.api as api
+    from nm.domain.identity import source_fingerprint
+
+    assert api.SERVING == source_fingerprint(), (
+        "the module-level fingerprint does not match the tree it was imported "
+        "from")
+    assert not api.SERVING.startswith("unknown"), api.SERVING
+
+    # IT IS A CONSTANT, not a call. The check depends on this: a property or a
+    # function evaluated per request would re-read the disk.
+    assert isinstance(api.SERVING, str)
+    assert "SERVING = source_fingerprint()" in (
+        Path(api.__file__).read_text(encoding="utf8")), (
+        "the fingerprint is no longer captured once at import — a per-request "
+        "computation describes the working tree, not the running process")
+
+
+def test_the_fingerprint_has_one_owner():
+    """`tools/_fingerprint.py` re-exports and defines nothing.
+
+    Two digests would agree until the day they did not, and the disagreement
+    would look like a code change rather than like a bug in the checker.
+    """
+    import tools._fingerprint as shim
+    from nm.domain.identity import source_fingerprint
+
+    assert shim.source_fingerprint is source_fingerprint
+    src = Path(shim.__file__).read_text(encoding="utf8")
+    assert "hashlib" not in src, (
+        "tools/_fingerprint.py computes a digest of its own again")
+
+
+def test_a_fingerprint_notices_a_changed_source_file(tmp_path):
+    """THE POSITIVE CONTROL. A digest that never changes would let every stale
+    server pass, and it would look exactly like this one."""
+    from nm.domain.identity import source_fingerprint
+
+    (tmp_path / "nm").mkdir()
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "nm" / "a.py").write_text("x = 1", encoding="utf8")
+    before = source_fingerprint(tmp_path)
+
+    (tmp_path / "nm" / "a.py").write_text("x = 2", encoding="utf8")
+    assert source_fingerprint(tmp_path) != before, "content change not seen"
+
+    # A NEW FILE COUNTS TOO — the S4 wiring was mostly new modules.
+    (tmp_path / "nm" / "b.py").write_text("x = 2", encoding="utf8")
+    assert source_fingerprint(tmp_path) != before, "an added module not seen"
+
+    # AND A MISSING TREE IS NOT SILENTLY SKIPPED. Digesting nothing would make
+    # a deployment without `tests/` match across changes it never looked at.
+    import shutil
+    shutil.rmtree(tmp_path / "tests")
+    assert source_fingerprint(tmp_path) != before
+
+
+def test_the_runner_tells_an_unreachable_server_from_a_stale_one():
+    """THREE STATES, and the middle one is why this returns a pair.
+
+    `None` is "could not be established" — the server is down, or too old to
+    carry the field. That is not the same as a fingerprint that differs, and
+    collapsing them would tell the reader to restart a process that is not
+    running.
+    """
+    import tools.run_scenario as runner
+
+    fp, why = runner.server_fingerprint()
+    assert (fp is None) == (why != "ok")
+    if fp is None:
+        assert why and why != "ok", "no reason was given for the refusal"
+    else:
+        assert not fp.startswith("unknown")
+
+
+def test_a_scenario_with_no_scripted_turns_is_refused_not_skipped():
+    """THE THIRD S1 IN ONE RUN. Five scenarios were named, three had no
+    scripted turns, and the runner printed a note, continued, and reported
+    success. A scenario that could not run must never read as one that passed.
+    """
+    import tools.run_scenario as runner
+
+    src = Path(runner.__file__).read_text(encoding="utf8")
+    assert "no turns scripted" not in src, (
+        "the skip is back: a named scenario with no turns is being passed over "
+        "rather than refused")
+    assert "have no scripted" in src
+
+    # AND THE NAMES IT KNOWS ARE REAL. A TURNS key that matches no scenario in
+    # the golden set would script a conversation nothing is graded against.
+    golden = (Path(runner.ROOT) / "docs" / "GOLDEN_SET.md").read_text(
+        encoding="utf8")
+    unknown = [g for g in runner.TURNS if g not in golden]
+    assert not unknown, f"scripted scenarios not in the golden set: {unknown}"
+
+
+# ============ the console every tool writes its verdict to =================
+
+
+def _entry_point_tools() -> list[Path]:
+    """Every tool that can be run directly. The population, from the tree."""
+    return [p for p in sorted((ROOT / "tools").glob("*.py"))
+            if not p.name.startswith("_")
+            and "__main__" in p.read_text(encoding="utf8")]
+
+
+def test_every_tool_makes_its_console_survive_the_prose_it_prints():
+    """A REPORT THAT DIES HALFWAY IS WORSE THAN ONE THAT DOES NOT RUN.
+
+    `run_goldens.py --suite full` raised `UnicodeEncodeError: 'charmap' codec
+    can't encode character '\u2194'` on scenario sixteen — `IPC s.447 <-> BNS
+    s.329`. Ten of the twenty-five never printed. It had already printed
+    fifteen rows so it looked like a report, and it exited non-zero so it
+    looked like a verdict, and nothing said the list was cut short.
+
+    Windows gives these processes a cp1252 stdout and the docstrings in this
+    repo are written with en-dashes and arrows, so it was latent in all
+    fourteen. `check.py` runs most of them as subprocesses, which captures
+    through a different encoding path — which is exactly why it stayed hidden
+    until one was run directly.
+    """
+    offenders = [p.name for p in _entry_point_tools()
+                 if "utf8_console()" not in p.read_text(encoding="utf8")]
+    assert not offenders, (
+        "these tools can die partway through their own report on a dash:\n  "
+        + "\n  ".join(offenders)
+        + "\n\nAdd `from tools._console import utf8_console` and call it. One "
+          "definition, called everywhere — a line copied into fourteen files "
+          "is fourteen chances to differ and one guarantee the fifteenth tool "
+          "will not have it.")
+
+
+def test_the_console_scan_can_see_a_tool_that_does_not_call_it():
+    """THE POSITIVE CONTROL, and it plants a real file.
+
+    A scan over tools that all happen to call it proves nothing about the scan.
+    """
+    probe = ROOT / "tools" / "zz_console_probe.py"
+    probe.write_text('print("no guard here")\nif __name__ == "__main__":\n'
+                     '    pass\n', encoding="utf8")
+    try:
+        offenders = [p.name for p in _entry_point_tools()
+                     if "utf8_console()" not in p.read_text(encoding="utf8")]
+        assert "zz_console_probe.py" in offenders, (
+            "the scan did not see a tool with no console guard")
+    finally:
+        probe.unlink()
+
+
+def test_utf8_console_survives_a_stream_it_cannot_reconfigure():
+    """It runs under pytest's capture, under a pipe, and inside a subprocess
+    wrapper. None of those is a failure and none may raise — a guard that
+    crashes on the ordinary case would be worse than the bug."""
+    from tools._console import utf8_console
+
+    utf8_console()
+    utf8_console()  # idempotent
+
+
+def test_an_unscored_golden_suite_is_not_reported_as_a_pass():
+    """NOT MEASURED EXITS NON-ZERO EXACTLY LIKE FAIL.
+
+    `--suite full` printed `NOT ASSESSED` twenty-five times and returned 0.
+    The honest half of the job was done and the half that matters was not:
+    every caller reads the exit code, not the prose, and RG-21 is a BLOCKING
+    release criterion. A criterion nobody computed is the one that gets
+    assumed.
+    """
+    r = run("run_goldens.py", "--suite", "full", "--approve")
+    assert r.returncode != 0, (
+        "an all-unscored judged suite reported success:\n" + r.stdout[-2000:])
+    assert "NOT MEASURED" in r.stdout
+    assert "not a pass" in r.stdout
+
+    # AND EVERY SCENARIO IS LISTED. The report was being truncated by the
+    # encoding crash at fifteen of twenty-five, with nothing saying so.
+    assert r.stdout.count("NOT ASSESSED") == 25, (
+        f"only {r.stdout.count('NOT ASSESSED')} of 25 scenarios reached the "
+        f"report")

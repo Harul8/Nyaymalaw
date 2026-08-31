@@ -24,6 +24,7 @@ from pydantic import AfterValidator, BaseModel, Field
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer
+from nm.domain.identity import source_fingerprint
 from nm.domain.traceability import implements
 from nm.edge.projections import board_projection, matter_list_projection
 from nm.ports.store import StaleWrite
@@ -153,9 +154,36 @@ class TurnRequest(BaseModel):
     jurisdiction: str = "Telangana"
 
 
+#: THE CODE THIS PROCESS ACTUALLY LOADED, captured ONCE at import.
+#:
+#: Computed here and never per-request, and that is the whole mechanism. A
+#: fingerprint read from disk when the request arrives describes the working
+#: tree, which a stale server would match perfectly while serving code from
+#: yesterday. Frozen at import, it describes what is RUNNING.
+#:
+#: Measured on 31 August 2026: a scenario run made live model calls against a
+#: server started the previous evening, found none of the slice it was meant to
+#: prove, and exited 0. Three of the five scenarios also had no scripted turns.
+#: The run cost money, measured nothing, and reported success -- defect shape
+#: S1, on the tool whose whole job is to catch S1 in the product.
+#:
+#: The mechanism is not new. `nm/domain/identity.py` already existed (in
+#: `tools/`) so a mutation record could not certify code it never saw, and
+#: `nm/knowledge/artefact.py` makes the same argument about the dense index:
+#: the only reason that index was KNOWABLY unusable is that it shipped an
+#: identity. A running process is an artefact and needs one too.
+try:
+    SERVING = source_fingerprint()
+except Exception as exc:  # noqa: BLE001 -- NOT ASSESSED, said as a value
+    # Never a digest that happens to differ, and never one that happens to
+    # match: a value that cannot be computed says so in words no comparison
+    # will read as agreement.
+    SERVING = f"unknown: {type(exc).__name__}"
+
+
 @app.get("/api/health")
 def health() -> dict:
-    return application().health()
+    return {**application().health(), "serving": SERVING}
 
 
 @app.get("/api/matters")

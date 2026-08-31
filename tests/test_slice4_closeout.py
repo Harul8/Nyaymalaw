@@ -116,12 +116,12 @@ def test_on_a_defending_thread_the_turn_computes_the_opponents_limitation(
     answer = run(tmp_path, DEFENDING)
     text = grounds(answer)
 
-    assert "Limitation for them" in text, (
+    assert "Limitation for their side" in text, (
         f"a defending thread and the opponent's limitation was never "
         f"computed:\n{text}")
     # AND OURS IS STILL THERE. Replacing one with the other would be the same
     # defect facing the other way.
-    assert "Limitation for us" in text
+    assert "Limitation for our side" in text
 
 
 @pytest.mark.eval_id("E-045")
@@ -131,7 +131,7 @@ def test_a_moving_thread_does_not_invent_an_opponents_position(tmp_path):
     unconditionally — including where there is no claim of theirs to compute.
     """
     answer = run(tmp_path, MOVING)
-    assert "Limitation for them" not in grounds(answer)
+    assert "Limitation for their side" not in grounds(answer)
 
 
 # ================== D1 — the map, and its silence ===========================
@@ -253,8 +253,8 @@ def test_an_unresolved_posture_computes_no_limitation_for_either_side(tmp_path):
     answer = run(tmp_path, "the landlord issued a quit notice on 15 April 2019")
     assert answer.blocked
     text = grounds(answer)
-    assert "Limitation for us" not in text
-    assert "Limitation for them" not in text
+    assert "Limitation for our side" not in text
+    assert "Limitation for their side" not in text
 
 
 # ================= the board says WHICH null it is showing ==================
@@ -380,3 +380,58 @@ def test_the_thread_board_puts_the_nearest_window_first():
     # AND THE ROW COUNT IS UNCHANGED. An ordering that drops a row is worse
     # than one that does not order.
     assert board["row_count"] == 2
+
+
+@pytest.mark.eval_id("E-042")
+def test_an_uncomputed_limitation_reports_itself_once_and_not_as_a_gap(
+        tmp_path):
+    """E-042 IS ABOUT A COMPUTATION THAT HAPPENED AND SKIPPED AN ENTRY.
+
+    Measured on a real turn, 31 August 2026: the answer carried BOTH *"6
+    thing(s) on this file were never weighed against the limitation period —
+    that is a gap in my working"* AND *"I have not computed the limitation
+    position"*. Nothing had been weighed because nothing had been computed, and
+    the count climbed every turn as facts accumulated, so a total absence read
+    as a growing defect in a computation that had never run.
+
+    Firing the invariant where no computation happened spends its credibility
+    on a case it was not written for — the same failure as a gate whose
+    condition can never be false.
+    """
+    silent_text = _Evidence(EvidenceResult(
+        coverage=Coverage.ANSWERED,
+        findings=(finding(ref="Specific Relief Act, 1963 s.6",
+                          proposition="Specific Relief Act, 1963 s.6",
+                          span="Suit by person dispossessed of immovable "
+                               "property.",
+                          locator="the_specific_relief_act_1963::6::section_head",
+                          store="the_specific_relief_act_1963"),),
+        searched_stores=("the_specific_relief_act_1963",)))
+    answer = run(tmp_path, MOVING, evidence=silent_text)
+    text = grounds(answer)
+
+    assert "have not computed the limitation position" in text
+    assert "gap in my working" not in text, (
+        "a total absence was reported as a partial computation that missed "
+        "things:\n" + text)
+
+
+def test_the_limitation_lines_read_as_english_to_an_advocate(tmp_path):
+    """"against us limitation period" reached a served turn.
+
+    The side marker sits in a POSSESSIVE slot in one sentence and an ordinary
+    one in another, and a single word cannot be both. Small, and it is the
+    sentence an advocate reads immediately before deciding whether to trust the
+    arithmetic beside it.
+
+    Asserted on the RENDERED TEXT rather than on the source, because the defect
+    was in what the advocate saw.
+    """
+    text = grounds(run(tmp_path, DEFENDING))
+
+    for wrong in ("us limitation", "them limitation", "for us on this",
+                  "for them on this"):
+        assert wrong not in text, (
+            f"{wrong!r} is in the served answer:" + "\n" + text)
+    assert "our limitation period" in text or "our side" in text
+    assert "their limitation period" in text or "their side" in text

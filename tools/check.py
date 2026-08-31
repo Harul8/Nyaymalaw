@@ -35,6 +35,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+sys.path.insert(0, str(ROOT))
+from tools._console import utf8_console  # noqa: E402
+
+utf8_console()
+
 
 def step(label: str, cmd: list[str], allow_warn: bool = False) -> tuple[bool, str]:
     t0 = time.time()

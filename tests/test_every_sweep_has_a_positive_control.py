@@ -87,6 +87,10 @@ CONTROLS: dict[str, str] = {
     # SURVIVED then reads as a weak test rather than as an unswept rename.
     "test_every_mutation_anchor_still_matches_the_source":
         "test_the_anchor_check_can_see_a_stale_anchor",
+    # the console guard -- a tool whose report dies partway through on a dash
+    # looks like a verdict and is not one.
+    "test_every_tool_makes_its_console_survive_the_prose_it_prints":
+        "test_the_console_scan_can_see_a_tool_that_does_not_call_it",
 }
 
 #: How a sweep is recognised: it builds a list of offenders over a population

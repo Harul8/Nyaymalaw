@@ -896,14 +896,14 @@ class TurnEngine:
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 text=f"I am not putting this figure in front of you: {problem}"))
 
-        out.extend(self._limitation_elements(thread, turn, ours, "us"))
+        out.extend(self._limitation_elements(thread, turn, ours, "our"))
 
         # D2 -- THEIRS TOO, and on a defending thread it is often the whole
         # answer: it disposes of the claim without touching the merits.
         if thread.posture.side is Side.DEFENDING:
             theirs = self._limitation(Side.MOVING, thread, result, chart)
             register += self._register(thread, theirs)
-            out.extend(self._limitation_elements(thread, turn, theirs, "them"))
+            out.extend(self._limitation_elements(thread, turn, theirs, "their"))
 
         blocked = [a for a in map_
                    if a.state is thresholds.ThresholdState.BLOCKED]
@@ -985,6 +985,29 @@ class TurnEngine:
         DOES clause exists to refuse.
         """
         out: list[Element] = []
+        if lim.state is not limitation.LimitationState.COMPUTED:
+            # ONE LINE, NOT TWO. The coverage gap is deliberately NOT reported
+            # here, and that is a fix rather than an omission.
+            #
+            # `not_computed` marks every chronology entry NOT_ASSESSED, so the
+            # gap is total by construction and reporting it said the same thing
+            # twice -- the second time in words that imply a computation which
+            # ran and missed things. Measured on a real turn: "6 thing(s) on
+            # this file were never weighed against the limitation period",
+            # climbing every turn as facts accumulated, beside "I have not
+            # computed the limitation position". Nothing was weighed because
+            # nothing was computed, and the growing number read as a growing
+            # defect.
+            #
+            # E-042 IS ABOUT A COMPUTATION THAT HAPPENED AND SKIPPED AN ENTRY.
+            # Firing it where none happened spends the signal's credibility on
+            # a case it was not written for.
+            return [Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"I have not computed the limitation position for "
+                      f"{whose} side on this thread: "
+                      f"{lim.not_computed_because}."))]
+
         missed = lim.accounts_for_every_entry(thread.chronology)
         if missed:
             out.append(Element(
@@ -993,19 +1016,13 @@ class TurnEngine:
                       f"against {whose} limitation period. That is a gap in my "
                       f"working, not a finding that they do not matter.")))
 
-        if lim.state is not limitation.LimitationState.COMPUTED:
-            return out + [Element(
-                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
-                text=(f"I have not computed the limitation position for "
-                      f"{whose} on this thread: {lim.not_computed_because}."))]
-
         # D2 -- NEVER NARRATE IT. A date and a day count, or nothing.
         days = lim.days_remaining(turn.today)
         gone = lim.expired(turn.today)
         out.append(Element(
             kind=ElementKind.GROUND, thread=thread.id,
             signal=Signal.LIMITATION_BAR if gone else Signal.NONE,
-            text=(f"Limitation for {whose} runs to "
+            text=(f"Limitation for {whose} side runs to "
                   f"{lim.expires_on.isoformat()} on {lim.article}, from "
                   f"{lim.accrual_reason} ({abs(days)} days "
                   f"{'ago' if gone else 'from today'})."

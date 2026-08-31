@@ -1,43 +1,21 @@
-"""Source identity, so a recorded run cannot vouch for code it never saw.
+"""Source identity for recorded runs. THE OWNER IS `nm/domain/identity.py`.
 
-WHY THIS EXISTS
----------------
-`tools/mutate.py` records which counterexamples were rejected, and
-`tools/releasegate.py` reads that record to score RG-11 ("the suite bites").
-A record with no identity would let a mutation run from three commits ago
-certify today's code.
+This module is a re-export and holds no definition of its own.
 
-That is defect shape S11 -- an artefact that cannot be told apart from a
-current one -- and it is the same argument `nm/knowledge/artefact.py` makes
-about the dense index. The only reason that index was KNOWABLY unusable is
-that it shipped an `identity.json`; every artefact this project produces
-carries its identity for the same reason.
+It used to hold the definition, and that was wrong in a way that only showed up
+on 31 August 2026: a scenario run made live model calls against an API server
+started the previous evening, found none of the slice it existed to prove, and
+exited 0. The fix is for the SERVED PROCESS to report which code it loaded —
+and `tools/` is not shipped, so the product could not have answered from here.
+
+Moving it into `nm/` put the definition where both callers can reach it. Two
+copies of a digest would be worse than none: they would agree until the day
+they did not, and the disagreement would look like a code change.
 """
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+from nm.domain.identity import FINGERPRINTED, ROOT, source_fingerprint
 
-#: What a run's verdict depends on. `tests/` is included because a mutation
-#: proves a TEST bites, so a changed test invalidates the record exactly as a
-#: changed source file does.
-FINGERPRINTED = ("nm", "tests")
-
-
-def source_fingerprint(root: Path | None = None) -> str:
-    """A stable digest of the code a recorded run was made against.
-
-    Path-and-content, sorted, so it is reproducible across machines and does
-    not move with mtimes. Cheap enough to compute on every run.
-    """
-    root = root or ROOT
-    h = hashlib.sha256()
-    for top in FINGERPRINTED:
-        for p in sorted((root / top).rglob("*.py")):
-            if "__pycache__" in p.parts:
-                continue
-            h.update(str(p.relative_to(root)).replace("\\", "/").encode("utf8"))
-            h.update(p.read_bytes())
-    return h.hexdigest()[:16]
+__all__ = ["FINGERPRINTED", "ROOT", "Path", "source_fingerprint"]

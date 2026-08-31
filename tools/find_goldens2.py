@@ -9,10 +9,16 @@ because a judgement whose on-point passages sit only in `arguments` or `unknown`
 cannot carry a proposition.
 """
 import json
+import pathlib  # noqa: E402
 import re
 import sqlite3
 import sys
 from collections import defaultdict
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from tools._console import utf8_console  # noqa: E402
+
+utf8_console()
 
 SUMMARIES = "legal_database/vector_store/case_summaries_v3_chunks.json"
 CHUNKS = "legal_database/vector_store/chunks.db"

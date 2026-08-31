@@ -47,6 +47,11 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(ROOT))
+from tools._console import utf8_console  # noqa: E402
+
+utf8_console()
 CORPUS = ROOT / "legal_database" / "vector_store"
 OUT = ROOT / ".nm" / "authority.db"
 

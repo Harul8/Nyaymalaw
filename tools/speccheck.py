@@ -36,6 +36,11 @@ except ImportError:
     sys.exit("pyyaml is required: pip install pyyaml")
 
 ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(ROOT))
+from tools._console import utf8_console  # noqa: E402
+
+utf8_console()
 DOCX = ROOT / "docs" / "Nyaymalaw_PRD.docx"
 FEATURES = ROOT / "spec" / "features.yaml"
 EVALS = ROOT / "spec" / "evals.yaml"

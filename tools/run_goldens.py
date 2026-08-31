@@ -52,6 +52,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tools._console import utf8_console  # noqa: E402
+
+utf8_console()
+
 GOLDEN = ROOT / "docs" / "GOLDEN_SET.md"
 
 PASS, FAIL, UNASSESSED = "PASS", "FAIL", "NOT ASSESSED"
@@ -331,7 +335,20 @@ def main() -> int:
         print("  ASSESSED rather than skipped silently:")
         for s in picked:
             print(f"     [{UNASSESSED}] {s.id}  S{s.slice}  {s.text[:52]}")
-        return 0
+        # NOT MEASURED EXITS NON-ZERO EXACTLY LIKE FAIL.
+        #
+        # This returned 0. Printing `NOT ASSESSED` twenty-five times and then
+        # reporting success is the honest half of the job done and the half
+        # that matters left undone: `check.py` and every other caller read the
+        # exit code, not the prose, and RG-21 is a BLOCKING release criterion.
+        #
+        # It is the rule `tools/releasegate.py` already enforces and the reason
+        # CLAUDE.md states it: a release criterion nobody computed is the one
+        # that gets assumed.
+        print(f"\n  NOT MEASURED — {len(picked)} scenario(s), none scored. This "
+              f"is not a pass.")
+        print("  RG-21 stays unmeasured until the class-D judge harness exists.")
+        return 1
 
     print()
     if bad or auth_failures:

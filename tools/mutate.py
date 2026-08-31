@@ -24,6 +24,10 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tools._console import utf8_console  # noqa: E402
+
+utf8_console()
+
 from tools._fingerprint import source_fingerprint  # noqa: E402
 
 # (label, file, original, mutation, test that must fail, eval it proves)

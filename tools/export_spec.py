@@ -35,6 +35,10 @@ except ImportError:
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tools._console import utf8_console  # noqa: E402
+
+utf8_console()
+
 PRD_DIR = ROOT / "spec" / "prd"
 PLAN_XLSX = ROOT / "docs" / "Nyaymalaw_Project_Plan.xlsx"
 FEATURES_OUT = ROOT / "spec" / "features.yaml"

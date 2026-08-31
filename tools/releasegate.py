@@ -56,6 +56,10 @@ except ImportError:
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from tools._console import utf8_console  # noqa: E402
+
+utf8_console()
+
 from nm.knowledge.citator import normalise_case_name  # noqa: E402
 from nm.knowledge.jurisdiction import BIFURCATION, Court, normalise_court  # noqa: E402
 from nm.knowledge.manifest import Manifest  # noqa: E402

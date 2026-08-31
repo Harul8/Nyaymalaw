@@ -1679,6 +1679,162 @@ d("B-060", "2026-08-31", "edge",
   "tests/test_slice4_closeout.py::test_the_board_distinguishes_no_deadline_from_no_register; "
   "tests/test_slice4_closeout.py::test_the_matter_list_orders_by_a_deadline_it_actually_holds")
 
+d("B-061", "2026-08-31", "tooling",
+  "THE SCENARIO RUN MEASURED YESTERDAY'S CODE AND EXITED 0. Five golden "
+  "scenarios were driven against the API server with live model calls. The "
+  "server had been started the previous evening, before any of slice 4 "
+  "existed, so not one served turn carried a threshold map, a limitation "
+  "position or a by-when — and the run reported success. The output looked "
+  "thin rather than wrong, which is the only symptom there was.",
+  "Running the scenarios without asking what code the server had loaded. The "
+  "product's own rule — an artefact carries its identity — had been applied "
+  "to mutation records and to the dense index, and never to the running "
+  "process, which is the artefact every scenario verdict rests on.",
+  "S11 — an artefact indistinguishable from a current one",
+  "Reading the report and noticing S4 was absent from every turn, then "
+  "checking the server's start time: 30 August 18:02, against a slice built "
+  "on 31 August",
+  "`/api/health` reports `serving`, a source fingerprint captured ONCE at "
+  "import — never per request, because a digest read from disk when the "
+  "request arrives describes the working tree, which a stale server matches "
+  "perfectly. `run_scenario.py` compares it and REFUSES before the first "
+  "paid call, with three states: matching, differing, and could-not-be-asked.",
+  "Yes — `source_fingerprint` moved from `tools/` to `nm/domain/identity.py` "
+  "so the served process can answer for itself; `tools/_fingerprint.py` "
+  "re-exports and defines nothing. `tools/` is not shipped, so leaving the "
+  "owner there would have degraded the check to `unknown` in exactly the "
+  "deployment where it matters.",
+  "tests/test_tooling_bites.py::test_the_served_process_reports_which_code_it_loaded; "
+  "tests/test_tooling_bites.py::test_a_fingerprint_notices_a_changed_source_file; "
+  "tests/test_tooling_bites.py::test_the_fingerprint_has_one_owner")
+
+d("B-062", "2026-08-31", "tooling",
+  "A NAMED SCENARIO WITH NO SCRIPTED TURNS WAS SKIPPED AND THE RUN PASSED. "
+  "Five were named and three — GS-07, GS-14, GS-15 — had no turns in `TURNS`. "
+  "The runner printed `no turns scripted`, continued, and exited 0. GS-14 is "
+  "the acknowledgment-restarts-the-clock case that D2 exists for, so the eval "
+  "with the most evidence behind it was the one silently not run.",
+  "Writing the loop to tolerate a gap in the script rather than to refuse "
+  "one. `continue` on a missing key reads as defensive and is an assertion "
+  "that the scenario needed no verdict.",
+  "S1 — an absent input reading as success",
+  "The same report as B-061 — three `no turns scripted` lines above a green "
+  "exit",
+  "Every named scenario is checked against `TURNS` before the run starts and "
+  "an unscripted one is REFUSED, so a caller cannot spend money on a batch "
+  "that was never going to grade what they asked for.",
+  "Yes — same rule as B-061 and as the release gate's NOT MEASURED: a thing "
+  "that could not be evaluated exits non-zero exactly like a failure. A "
+  "criterion nobody computed is the one that gets assumed.",
+  "tests/test_tooling_bites.py::test_a_scenario_with_no_scripted_turns_is_refused_not_skipped")
+
+d("B-063", "2026-08-31", "core",
+  "A LIMITATION NOBODY COMPUTED WAS REPORTED AS A COMPUTATION THAT MISSED "
+  "THINGS. Every turn carried both \"6 thing(s) on this file were never "
+  "weighed against the limitation period — that is a gap in my working\" AND "
+  "\"I have not computed the limitation position\". Nothing had been weighed "
+  "because nothing had been computed, and the count climbed each turn as facts "
+  "accumulated, so a total absence read as a growing defect in a computation "
+  "that had never run.",
+  "Emitting the E-042 coverage gap before checking the state. `not_computed` "
+  "marks every chronology entry NOT_ASSESSED, so the gap is total by "
+  "construction — the invariant reported it faithfully and the report was "
+  "about nothing.",
+  "S11 — a check that cannot fail is not a check",
+  "Reading a served scenario transcript after the stale-server fix",
+  "The coverage gap is emitted only where the position is COMPUTED. Where it "
+  "is not, the NOT_COMPUTED line says so once and says more.",
+  "Yes — the general rule is that an invariant fires on the case it was "
+  "written for and stays silent on the escape state. Firing it everywhere "
+  "spends the signal's credibility, which is the same accounting as an "
+  "assertion that can never be false.",
+  "tests/test_slice4_closeout.py::test_an_uncomputed_limitation_reports_itself_once_and_not_as_a_gap")
+
+d("B-064", "2026-08-31", "edge",
+  "\"6 thing(s) on this file were never weighed against US limitation "
+  "period\" reached a served turn. The side marker was `us`/`them` and it sits "
+  "in a possessive slot in one sentence and an ordinary one in another.",
+  "Passing one string for two grammatical roles. It read correctly in the "
+  "sentence I wrote first and was never read aloud in the other.",
+  "S1 — an absent input reading as success",
+  "Reading a served scenario transcript",
+  "The marker is `our`/`their` and the sentences carry `side` where the "
+  "ordinary form is needed.",
+  "Yes — asserted on the RENDERED TEXT of a served turn rather than on the "
+  "source, because what was wrong was what the advocate saw.",
+  "tests/test_slice4_closeout.py::test_the_limitation_lines_read_as_english_to_an_advocate")
+
+d("B-065", "2026-08-31", "knowledge",
+  "D2 COMPUTED NOTHING ON ANY OF TWENTY-THREE REAL TURNS. Across GS-07, "
+  "GS-12, GS-13, GS-14 and GS-15 the limitation position was NOT_COMPUTED "
+  "every time, because no limitation Article was ever retrieved. GS-14 turn 3 "
+  "is the advocate asking \"is the claim still in time\" and the manifest "
+  "answered \"no Act in the curated manifest governs this question\" — the "
+  "Limitation Act is in the manifest, and its keywords are `limitation`, "
+  "`time-barred`, `acknowledgment`. The advocate's actual words contained "
+  "none of them.",
+  "Nothing introduced it: keyword routing is what slice 2 shipped, with its "
+  "limits recorded. What the scenario run established is the SIZE of the gap "
+  "— it is not an edge case, it is every realistic limitation conversation.",
+  "S3 — a zero result that reads as absence",
+  "The re-run against current code, which is the first time D2 was exercised "
+  "on real input at all",
+  "NOT FIXED, AND DELIBERATELY NOT PATCHED. Adding `in time`, `still in "
+  "time`, `barred` to the keyword list is the phrase-list defect this project "
+  "already paid for once: ten exact phrases meant \"we act for the workman\" "
+  "and an advocate whose words were missing was asked forever. That was fixed "
+  "by a model read with guards, and Act resolution gets the same treatment.",
+  "Owned by H3 in S5 — \"resolution before search\", E-051. The turn engine "
+  "already carries the comment marking its current form as the only one "
+  "available before slice 5. Recorded here so the gap is work rather than a "
+  "surprise, and so S5 starts against a measured number instead of a guess.",
+  "docs/GOLDEN_SET.md; spec/plan/build_plan.py (E-051, S5, H3)",
+  "Open")
+
+d("B-066", "2026-08-31", "tooling",
+  "A JUDGED SUITE WITH NOTHING SCORED RETURNED 0. `run_goldens.py --suite "
+  "full --approve` printed `[NOT ASSESSED]` for all twenty-five scenarios, "
+  "said plainly that scenario execution is not built, and then reported "
+  "success. RG-21 is a BLOCKING release criterion and every caller reads the "
+  "exit code, not the prose.",
+  "Writing the honest half — the per-scenario NOT ASSESSED lines — and "
+  "leaving the return statement at the value it had when the branch did "
+  "nothing. The output was truthful and the verdict was not.",
+  "S1 — an absent input reading as success",
+  "Running RG-21 on approval and reading the exit code rather than the report",
+  "The branch returns 1 and prints `NOT MEASURED — 25 scenario(s), none "
+  "scored. This is not a pass.`",
+  "Yes — it is the rule `tools/releasegate.py` already enforces and that "
+  "CLAUDE.md states: NOT MEASURED exits non-zero exactly like FAIL, because a "
+  "release criterion nobody computed is the one that gets assumed.",
+  "tests/test_tooling_bites.py::test_an_unscored_golden_suite_is_not_reported_as_a_pass")
+
+d("B-067", "2026-08-31", "tooling",
+  "A TOOL DIED PARTWAY THROUGH ITS OWN REPORT. `run_goldens.py --suite full` "
+  "raised `UnicodeEncodeError: 'charmap' codec can't encode character "
+  "'\\u2194'` on scenario sixteen, whose text contains `IPC s.447 <-> BNS "
+  "s.329`. Fifteen of twenty-five rows had printed, ten never did, and nothing "
+  "in the output said the list was cut short. It looked like a report and it "
+  "exited non-zero, so it also looked like a verdict.",
+  "Nothing introduced it — it was latent in all fourteen entry-point tools "
+  "from the day they were written. Windows gives the process a cp1252 stdout "
+  "and every docstring in this repo is prose with en-dashes and arrows. "
+  "`tools/check.py` runs most tools as subprocesses, which captures through a "
+  "different encoding path, so it only ever surfaced when a tool was run "
+  "directly.",
+  "S1 — an absent input reading as success",
+  "Running RG-21 directly for the first time",
+  "`tools/_console.py` holds one `utf8_console()` and every entry-point tool "
+  "calls it. `errors=\"replace\"` and not strict: a tool whose job is to "
+  "report a verdict must not lose the verdict over a dash — a replacement "
+  "character is a legible defect and a truncated report is an invisible one.",
+  "Yes — the population is derived from the tree (`tools/*.py` with a "
+  "`__main__`) and a tool that does not call it fails the build, so the "
+  "fifteenth tool cannot be written without it. This is the shape the register "
+  "audit found 47 times: a guard covering only the site the bug was found at.",
+  "tests/test_tooling_bites.py::test_every_tool_makes_its_console_survive_the_prose_it_prints; "
+  "tests/test_tooling_bites.py::test_the_console_scan_can_see_a_tool_that_does_not_call_it")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

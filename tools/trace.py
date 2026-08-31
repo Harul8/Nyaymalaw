@@ -40,6 +40,11 @@ except ImportError:
     sys.exit("pyyaml is required: pip install pyyaml")
 
 ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(ROOT))
+from tools._console import utf8_console  # noqa: E402
+
+utf8_console()
 SPEC = ROOT / "spec"
 SRC = ROOT / "nm"
 TESTS = ROOT / "tests"
