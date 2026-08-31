@@ -181,6 +181,43 @@ class EmbeddingResult:
 # suite never asserted that an out-of-enum value is refused.
 #
 # The port owns its contract. Every adapter calls this.
+#: Keys THIS PRODUCT adds to a declared schema for its own use.
+#:
+#: They are ours, they are namespaced so they cannot be mistaken for JSON
+#: Schema, and they are STRIPPED at the provider boundary by `on_the_wire`.
+NM_SCHEMA_KEYS = ("x-nm-read",)
+
+
+def on_the_wire(schema) -> dict:
+    """The schema as the PROVIDER sees it. Our metadata removed.
+
+    WHY THIS EXISTS, MEASURED ON 31 AUGUST 2026
+    --------------------------------------------
+    The scripted provider needs to know which read a schema is, so a key was
+    added to each schema naming it. It was called `title`, which is ordinary
+    JSON Schema, and the whole schema was passed to OpenAI verbatim.
+
+    The live date read then stopped returning `events` — every call raised
+    `SchemaViolation: required property 'events' is missing`. Because
+    `SchemaViolation` is a `ModelError`, the engine caught it, fired G-MODEL
+    `unavailable`, and returned no rows. NO DATED FACT WAS CREATED ON ANY LIVE
+    TURN, and since that path fires a gate rather than recording a violation,
+    nothing in the output said so. Limitation was NOT_COMPUTED on every served
+    turn for want of an accrual date, which read as an ordinary silence.
+
+    The entire offline suite was green throughout, because the scripted
+    provider answers from the key and never validates the way the real one
+    does. CLAUDE.md §8: a guard that is right in the core and wrong at the
+    composition root is not a guard.
+
+    So our metadata is namespaced `x-nm-*` — obviously not JSON Schema, and
+    impossible to mistake for something the provider should see — and this is
+    the one place it comes off. A future key is covered by adding it to
+    `NM_SCHEMA_KEYS`, not by remembering to strip it at each adapter.
+    """
+    return {k: v for k, v in dict(schema).items() if k not in NM_SCHEMA_KEYS}
+
+
 def require_schema(data: Any, schema: Mapping[str, Any]) -> None:
     """The subset of JSON Schema the port promises across providers.
 

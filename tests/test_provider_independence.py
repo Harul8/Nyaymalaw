@@ -190,7 +190,7 @@ def test_the_suite_can_see_the_declared_schemas():
     assert len(found) >= 4, f"only {len(found)} schemas found: {sorted(found)}"
 
 
-def test_every_schema_is_identified_by_an_exact_title_and_not_a_substring():
+def test_every_schema_is_identified_by_an_exact_key_and_not_a_substring():
     """DISPATCH WAS A SUBSTRING SEARCH OVER THE SCHEMA'S JSON.
 
     That is fuzzy matching doing IDENTIFICATION, which CLAUDE.md §5 records as
@@ -209,15 +209,15 @@ def test_every_schema_is_identified_by_an_exact_title_and_not_a_substring():
 
     declared = _declared_schemas()
     untitled = [q for q, s in sorted(declared.items())
-                if not (s.get("title") or "").strip()]
+                if not (s.get("x-nm-read") or "").strip()]
     assert not untitled, (
-        "these schemas carry no title, so the second provider has no exact "
+        "these schemas carry no `x-nm-read`, so the second provider has no exact "
         "key to dispatch on:\n  " + "\n  ".join(untitled))
 
     seen: dict[str, str] = {}
     clashes = []
     for qualified, schema in sorted(declared.items()):
-        title = schema["title"]
+        title = schema["x-nm-read"]
         if title in seen:
             clashes.append(f"{qualified} and {seen[title]} both claim {title!r}")
         seen[title] = qualified
@@ -245,7 +245,7 @@ def test_the_scripted_provider_answers_every_schema_the_core_declares():
 
     unanswerable = []
     for qualified, schema in sorted(_declared_schemas().items()):
-        responder = SCRIPTED_READS.get(schema.get("title") or "")
+        responder = SCRIPTED_READS.get(schema.get("x-nm-read") or "")
         if responder is None:
             unanswerable.append(f"{qualified}: no scripted responder")
             continue
@@ -266,7 +266,62 @@ def test_the_schema_scan_can_see_a_schema_with_no_responder():
     responder proves nothing about the scan."""
     from nm.adapters.model.scripted import SCRIPTED_READS
 
-    planted = {"title": "zz_no_responder_claims_this", "type": "object",
+    planted = {"x-nm-read": "zz_no_responder_claims_this", "type": "object",
                "properties": {"x": {"type": "string"}}, "required": ["x"]}
-    assert SCRIPTED_READS.get(planted["title"]) is None, (
+    assert SCRIPTED_READS.get(planted["x-nm-read"]) is None, (
         "the planted schema matched a responder, so it proves nothing")
+
+
+def test_no_metadata_of_ours_is_sent_to_the_provider():
+    """OUR KEYS NEVER GO OVER THE WIRE, and the reason is measured.
+
+    The scripted provider needs to know which read a schema is, so each schema
+    names itself. That key was called `title` — ordinary JSON Schema — and the
+    whole schema went to OpenAI verbatim.
+
+    The live date read then stopped returning `events`. Every call raised
+    `SchemaViolation`, which is a `ModelError`, so the engine caught it, fired
+    G-MODEL `unavailable`, and returned no rows. NO DATED FACT WAS CREATED ON
+    ANY LIVE TURN. That path fires a gate rather than recording a violation, so
+    nothing in the output said so — limitation came back NOT_COMPUTED for want
+    of an accrual date on every served turn, reading as an ordinary silence.
+
+    The whole offline suite was green throughout, because the scripted provider
+    answers from the key and never validates the way the real one does.
+    """
+    from nm.ports.model import NM_SCHEMA_KEYS, on_the_wire
+
+    for qualified, schema in sorted(_declared_schemas().items()):
+        wire = on_the_wire(schema)
+        leaked = [k for k in wire if k in NM_SCHEMA_KEYS]
+        assert not leaked, f"{qualified} sends {leaked} to the provider"
+        # AND NOTHING ELSE IS LOST. Stripping too much would be the same
+        # failure facing the other way: a provider given a schema missing its
+        # `required` list validates nothing at all.
+        for key in ("type", "properties", "required"):
+            assert wire.get(key) == schema.get(key), (
+                f"{qualified}: `{key}` did not survive the boundary")
+
+
+def test_the_wire_scan_can_see_a_leak():
+    """THE POSITIVE CONTROL. `on_the_wire` returning its input unchanged would
+    satisfy the test above identically."""
+    from nm.ports.model import on_the_wire
+
+    planted = {"x-nm-read": "probe", "type": "object",
+               "properties": {"a": {"type": "string"}}, "required": ["a"]}
+    wire = on_the_wire(planted)
+    assert "x-nm-read" not in wire, "our metadata reached the wire"
+    assert wire["required"] == ["a"], "the strip took the schema with it"
+
+
+def test_the_adapter_that_ships_is_the_one_that_strips():
+    """B-040's lesson, on a new field: the validator lived in the test double
+    and the adapter that ships skipped it, so an `enum` was decoration on the
+    production path. The strip has to be where the request is built."""
+    src = (ROOT / "nm" / "adapters" / "model" / "openai_adapter.py").read_text(
+        encoding="utf8")
+    assert "on_the_wire(schema)" in src, (
+        "the OpenAI adapter sends the schema verbatim, so any metadata we add "
+        "changes what the provider does")
+    assert "dict(schema)}" not in src

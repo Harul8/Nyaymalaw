@@ -33,6 +33,7 @@ from nm.ports.model import (
     SchemaViolation,
     Tier,
     Usage,
+    on_the_wire,
     require_schema,
 )
 
@@ -126,7 +127,10 @@ class OpenAIModelAdapter:
         if schema is not None:
             kwargs["response_format"] = {
                 "type": "json_schema",
-                "json_schema": {"name": "nm_result", "strict": False, "schema": dict(schema)},
+                "json_schema": {"name": "nm_result", "strict": False,
+                                # OUR METADATA NEVER GOES OVER THE WIRE.
+                                # See `nm.ports.model.on_the_wire`.
+                                "schema": on_the_wire(schema)},
             }
 
         resp, retries = self._retrying_counted(

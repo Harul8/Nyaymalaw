@@ -66,7 +66,7 @@ class Dispute(str, Enum):
 
 
 DISPUTE_SCHEMA: dict = {
-    "title": "dispute",
+    "x-nm-read": "dispute",
     "type": "object",
     "properties": {
         "verdict": {

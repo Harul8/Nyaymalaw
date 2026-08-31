@@ -435,3 +435,35 @@ def test_the_limitation_lines_read_as_english_to_an_advocate(tmp_path):
             f"{wrong!r} is in the served answer:" + "\n" + text)
     assert "our limitation period" in text or "our side" in text
     assert "their limitation period" in text or "their side" in text
+
+
+@pytest.mark.eval_id("E-042")
+def test_a_fact_nobody_examined_is_never_recorded_as_having_no_effect(tmp_path):
+    """THE MEASURED DEFECT, AND E-042's WHOLE PURPOSE — caught on a served
+    turn on 31 August 2026, once S5 made limitation computable at all.
+
+    GS-14: invoices of 14 March 2023, then *"the defendant wrote to us on 12
+    June 2024 admitting the amount was outstanding"*. The product answered
+    **limitation runs to 2026-03-14** — unchanged by the acknowledgment,
+    expired, the claim reported dead when it is alive to June 2027. The fact
+    was on the file, was repeated back, and never reached the arithmetic.
+
+    E-042 exists to catch exactly that. What stopped it was the engine passing
+    every non-accrual entry to `compute` as `considered` with the reason "on
+    the chart; it neither restarts nor extends" — a legal conclusion about each
+    fact that nothing had reached. Whether a letter is an acknowledgment under
+    s.18 is a question about its words, and nothing in this slice reads them.
+
+    Every entry marked NO_EFFECT is an entry ACCOUNTED FOR, so the coverage
+    record was complete and the gap never fired. A false statement about each
+    fact bought silence about all of them.
+    """
+    answer = run(tmp_path, MOVING)
+    text = grounds(answer)
+
+    assert "Limitation for our side runs to" in text, (
+        "the fixture no longer computes a limitation, so this proves nothing")
+    assert "gap in my working" in text, (
+        "facts on the file were never weighed against the period and the "
+        "answer did not say so:\n" + text)
+    assert "not a finding that they do not matter" in text

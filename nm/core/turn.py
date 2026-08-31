@@ -1001,12 +1001,35 @@ class TurnEngine:
                 f"the period is not stated in the text retrieved for "
                 f"{found.ref} — I will not supply one from memory",
                 thread.chronology)
+        # NOTHING IS PASSED AS `considered`, AND THAT IS THE POINT.
+        #
+        # This passed every non-accrual entry with the reason "on the chart; it
+        # neither restarts nor extends" -- a legal conclusion about each fact
+        # that nothing had reached. Whether a letter is an acknowledgment under
+        # s.18 is a question about its words, and nothing in this slice reads
+        # them.
+        #
+        # MEASURED ON A SERVED TURN, 31 August 2026, and it is the exact defect
+        # D2 was built for. GS-14: invoices of 14 March 2023, then "the
+        # defendant wrote to us on 12 June 2024 admitting the amount was
+        # outstanding". The product answered "limitation runs to 2026-03-14" --
+        # unchanged, expired, and the claim reported dead when it is alive to
+        # June 2027. The acknowledgment was on the file, was repeated back, and
+        # never reached the arithmetic.
+        #
+        # E-042 exists to catch precisely that, and this dictionary was what
+        # stopped it: every entry marked NO_EFFECT is an entry accounted for,
+        # so `accounts_for_every_entry` returned nothing and the coverage gap
+        # never fired. A false statement about each fact bought silence about
+        # all of them.
+        #
+        # With it gone, every unexamined entry lands NOT_ASSESSED and the
+        # advocate is told how many things were never weighed. That is a worse
+        # answer and an honest one, and it is the one they can act on.
         return limitation.compute(
             for_side=for_side, article=found.ref, accrual=accrual.id,
             accrual_on=accrual.date, accrual_reason=accrual.statement[:70],
-            chronology=thread.chronology, period=period,
-            considered={f.id: "on the chart; it neither restarts nor extends"
-                        for f in chart if f.id != accrual.id})
+            chronology=thread.chronology, period=period)
 
     @implements("D3")
     def _register(self, thread: Thread, lim: limitation.Limitation,

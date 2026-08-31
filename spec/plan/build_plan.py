@@ -1875,13 +1875,13 @@ d("B-069", "2026-08-31", "adapters",
   "S3 — a zero result that reads as absence",
   "Probing a served turn after wiring the cause read, rather than trusting a "
   "green suite",
-  "Dispatch is on the schema's `title` — an EXACT key on a closed vocabulary "
+  "Dispatch is on the schema's `x-nm-read` — an EXACT key on a closed vocabulary "
   "— so a collision is impossible rather than unlikely. A schema with no "
   "title has no responder and fails the build.",
   "Yes — substring matching doing identification is what CLAUDE.md §5 records "
   "as not merely weak but wrong, and the enumerator draws its population from "
   "`nm/core` so the sixth schema cannot be added without a responder.",
-  "tests/test_provider_independence.py::test_every_schema_is_identified_by_an_exact_title_and_not_a_substring; "
+  "tests/test_provider_independence.py::test_every_schema_is_identified_by_an_exact_key_and_not_a_substring; "
   "tests/test_provider_independence.py::test_the_scripted_provider_answers_every_schema_the_core_declares")
 
 d("B-070", "2026-08-31", "adapters",
@@ -1903,6 +1903,97 @@ d("B-070", "2026-08-31", "adapters",
   "indistinguishable from a finding of absence.",
   "tests/test_resolution.py::test_a_ceiling_that_binds_is_reported_and_never_silent; "
   "tests/test_resolution.py::test_a_ceiling_that_does_not_bind_claims_nothing")
+
+d("B-071", "2026-08-31", "adapters",
+  "NO DATED FACT WAS CREATED ON ANY LIVE TURN. Fixing B-069 gave each schema "
+  "a key naming which read it is, so the scripted provider could dispatch on "
+  "an exact value instead of a substring. The key was called `title` — "
+  "ordinary JSON Schema — and the OpenAI adapter passed the whole schema over "
+  "the wire verbatim. The live date read then stopped returning `events`: "
+  "every call raised SchemaViolation, which is a ModelError, so the engine "
+  "caught it, fired G-MODEL `unavailable`, and returned no rows. Limitation "
+  "came back NOT_COMPUTED for want of an accrual date on every served turn, "
+  "which reads as an ordinary silence — and because that path fires a GATE "
+  "rather than recording a violation, nothing in the output said otherwise.",
+  "Adding a field to a shared structure and reasoning about the consumer I "
+  "was thinking about. The scripted provider reads the key and never "
+  "validates the way the real one does, so the whole offline suite was green "
+  "while the served product had lost its chronology.",
+  "S1 — an absent input reading as success",
+  "The S5 scenario run, then instrumenting the date read directly. The run "
+  "itself only showed `no dated event on this thread`, which is what an "
+  "advocate who had genuinely given no date would see.",
+  "Our metadata is namespaced `x-nm-*` and `nm.ports.model.on_the_wire` "
+  "strips it at the provider boundary, in the adapter that builds the "
+  "request. A future key is covered by adding it to `NM_SCHEMA_KEYS`, not by "
+  "remembering to strip it at each adapter.",
+  "Yes — and the general rule is CLAUDE.md §8 restated for shared structures: "
+  "a field added for one consumer travels to every consumer, and the ones "
+  "that matter are across a boundary the offline suite does not cross. The "
+  "test asserts BOTH directions: nothing of ours reaches the wire, and "
+  "nothing of the schema's is lost on the way.",
+  "tests/test_provider_independence.py::test_no_metadata_of_ours_is_sent_to_the_provider; "
+  "tests/test_provider_independence.py::test_the_wire_scan_can_see_a_leak; "
+  "tests/test_provider_independence.py::test_the_adapter_that_ships_is_the_one_that_strips")
+
+d("B-072", "2026-08-31", "core",
+  "THE MEASURED DEFECT D2 EXISTS FOR, REPRODUCED ON A SERVED TURN. GS-14: "
+  "invoices of 14 March 2023, then \"the defendant wrote to us on 12 June "
+  "2024 admitting the amount was outstanding\". The product answered "
+  "\"limitation runs to 2026-03-14\" — unchanged by the acknowledgment, "
+  "expired, and the claim reported dead when it is alive to June 2027. The "
+  "fact was on the file, was repeated back to the advocate, and never reached "
+  "the arithmetic. E-042 exists to catch exactly this and it did not fire.",
+  "The engine passed every non-accrual chronology entry to `compute` as "
+  "`considered`, with the reason \"on the chart; it neither restarts nor "
+  "extends\" — a legal conclusion about each fact that nothing had reached. "
+  "Whether a letter is an acknowledgment under s.18 is a question about its "
+  "words and nothing in this slice reads them. It looked like diligence: the "
+  "coverage record came out complete.",
+  "S1 — an absent input reading as success",
+  "The S5 scenario run, once resolution made limitation computable at all. It "
+  "was invisible before, because no Article was ever retrieved and the "
+  "position was NOT_COMPUTED for a different reason.",
+  "Nothing is passed as `considered`. Every unexamined entry lands "
+  "NOT_ASSESSED, `accounts_for_every_entry` reports the gap, and the advocate "
+  "is told how many things on the file were never weighed against the period.",
+  "Yes — and it is the sharpest instance yet of the rule the register already "
+  "carries twice (B-057, B-068): a value the product supplied where one had "
+  "to be established. Here the supplied value was not merely wrong, it "
+  "SILENCED THE INVARIANT built for this exact scenario — every entry marked "
+  "NO_EFFECT is an entry accounted for, so a false statement about each fact "
+  "bought silence about all of them.",
+  "tests/test_slice4_closeout.py::test_a_fact_nobody_examined_is_never_recorded_as_having_no_effect")
+
+d("B-073", "2026-08-31", "core",
+  "NOTHING PRODUCES A `Factor`, so no acknowledgment, part payment, exclusion "
+  "or disability ever moves a limitation date. `nm/core/limitation.py` has "
+  "carried the type since slice 4, with `Factor.finding` required so one "
+  "cannot be asserted from memory, and `compute` applies restarts and "
+  "extensions correctly — and no call site anywhere builds one. On GS-14 the "
+  "advocate's acknowledgment of 12 June 2024 is now DISCLOSED as never "
+  "weighed, which is honest, and the period still runs from the March 2023 "
+  "invoices.",
+  "Nothing introduced it. Slice 4 built the arithmetic and the type that "
+  "guards it; extracting a factor from the advocate's account needs the "
+  "letter read against s.18 and s.19, which is a retrieval and a model read "
+  "nothing has been wired to do. It was invisible until slice 5 made "
+  "limitation computable at all — before that the position was NOT_COMPUTED "
+  "for want of an Article and no factor could have applied anyway.",
+  "S1 — an absent input reading as success",
+  "The GS-14 served run, after B-072 stopped the engine claiming it had "
+  "considered facts it never read",
+  "NOT FIXED. What closes it: retrieve Limitation Act s.18/s.19, read the "
+  "advocate's account for a writing that acknowledges the debt, and build a "
+  "`Factor` cited to that retrieved text. The type already refuses one "
+  "without it, so the mechanism is in place and the producer is not.",
+  "Open, and visible rather than silent: E-042's coverage gap names how many "
+  "entries were never weighed on every turn that computes a period, so an "
+  "advocate is told the arithmetic is incomplete rather than shown a "
+  "complete-looking date. That is the whole reason the invariant exists.",
+  "tests/test_limitation.py::test_every_chronology_entry_appears_in_the_coverage_record; "
+  "tests/test_slice4_closeout.py::test_a_fact_nobody_examined_is_never_recorded_as_having_no_effect",
+  "Open")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

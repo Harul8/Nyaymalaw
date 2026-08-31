@@ -48,7 +48,7 @@ CAUSE_VALUES = tuple(c.value for c in CauseOfAction
                      if c is not CauseOfAction.NOT_ESTABLISHED)
 
 CAUSE_SCHEMA: dict = {
-    "title": "cause",
+    "x-nm-read": "cause",
     "type": "object",
     "properties": {
         # `cannot_tell` IS A REQUIRED MEMBER, not a courtesy. A schema whose

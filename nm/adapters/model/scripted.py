@@ -280,7 +280,7 @@ class ScriptedModelAdapter:
         self._guard_budget(prompt, tier)
         self.calls.append((tier, prompt))
         raw = self._respond(prompt, tier)
-        responder = SCRIPTED_READS.get(schema.get("title") or "")
+        responder = SCRIPTED_READS.get(schema.get("x-nm-read") or "")
         if responder is not None:
             # ONE responder, or the dispatch is ambiguous and the FIRST match
             # silently wins. That is what happened when the cause read was
