@@ -253,6 +253,38 @@
     "built": true
   },
   {
+    "id": "G-CASCADE",
+    "condition": "A value derived on an earlier turn has MOVED, because a fact it rested on was corrected.",
+    "states": [
+      "moved",
+      "unchanged",
+      "not_assessed"
+    ],
+    "response": "disclose",
+    "scope": "thread",
+    "persistence": "turn",
+    "recovery": "system",
+    "visible": "\u00a75.4: a corrected fact re-derives its dependents and reports each changed value WITH ITS PRIOR \u2014 a number the advocate cannot reconcile against what they remember reads as though they misread it the first time. And where earlier advice rested on it, that is said in terms: an advocate who filed on Tuesday against a date that moved on Thursday needs telling, and showing them a corrected number is not telling them.",
+    "feature": "A3",
+    "built": true
+  },
+  {
+    "id": "G-GAP",
+    "condition": "Something is missing that BLOCKS a named action, ranked across the whole file: blocking gates, then deadline urgency, then information value, then consequence.",
+    "states": [
+      "open",
+      "none",
+      "not_assessed"
+    ],
+    "response": "block",
+    "scope": "step",
+    "persistence": "turn",
+    "recovery": "advocate",
+    "visible": "\u00a75.2: there is NO OBLIGATION to ask something in order to advance, because there is nothing to advance \u2014 the manufactured question is removed by construction rather than by prohibition. A `Gap` cannot be built without the action it blocks, and a `Question` cannot be built without its gap, so a question that blocks nothing has nowhere to come from.",
+    "feature": "A3",
+    "built": true
+  },
+  {
     "id": "G-SALVAGE",
     "condition": "A claim is about to be reported as failing: which of the seven coordinates was moved, and which were not.",
     "states": [

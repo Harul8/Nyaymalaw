@@ -66,11 +66,16 @@ def test_an_item_at_risk_with_no_preservation_step_becomes_a_question(tmp_path):
     preservation step is recorded" at the foot of an answer has been told; one
     who cannot proceed until they say who is writing to whom has been stopped.
     """
-    questions = " ".join(_of(_run(tmp_path), ElementKind.QUESTION))
-    assert "preserve" in questions.lower(), (
+    # THE QUESTION NOW COMES OUT OF THE GAP QUEUE (A3), batched with whatever
+    # else is open on this thread — so this asserts the PROPERTY rather than
+    # the sentence: the item is named, and a date is asked for.
+    questions = " ".join(_of(_run(tmp_path), ElementKind.QUESTION)).lower()
+    assert "preserv" in questions, (
         "an item held by someone with an interest in it not surviving reached "
         "the advocate with no preservation question:\n" + questions[:500])
-    assert "by when" in questions.lower(), (
+    assert "original agreement" in questions, (
+        "the question does not name the item it is about")
+    assert "by when" in questions, (
         "a preservation instruction with no date is a wish; the question must "
         "ask for one")
 

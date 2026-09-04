@@ -55,12 +55,6 @@ ENTRY_POINTS: dict[str, str] = {
 #: behaviour does not, and the difference is invisible to every other check in
 #: this build.
 UNWIRED: dict[str, str] = {
-    "nm.core.gaps":
-        "A3 / §5.1-5.3. The gap queue is built; the turn still asks its "
-        "questions from the gates directly rather than from a ranked queue.",
-    "nm.core.cascade":
-        "A3 / §5.4. The correction cascade is built; nothing detects that a "
-        "material fact CHANGED between turns, which is its trigger.",
     "nm.core.quarantine":
         "B4. Deliberate — the conflict screen that quarantines is slice 10 "
         "and is declared unbuilt in the gate matrix.",
@@ -205,8 +199,6 @@ def test_the_scan_can_see_an_unreached_module():
 #: was actually wrong, was the one it could not see. A join that silently
 #: drops members is the same defect as a scan whose population went to zero.
 OWNER: dict[str, tuple[str, ...]] = {
-    "nm.core.gaps": ("A3",),
-    "nm.core.cascade": ("A3",),
     "nm.core.quarantine": ("B4",),
     "nm.core.screens": ("B2", "B3", "B5", "B6"),
     "nm.core.intake": ("C6",),

@@ -395,12 +395,19 @@ def scripted_inventory(user: str) -> str:
     block = block[start:] if start >= 0 else block
     lower = block.lower()
 
-    rows, seen = [], set()
+    rows, taken = [], []
     for needle, holder, form in _SCRIPTED_EVIDENCE:
         i = lower.find(needle)
-        if i < 0 or needle in seen:
+        # A NEEDLE INSIDE ONE ALREADY MATCHED IS THE SAME DOCUMENT.
+        #
+        # "original agreement" and "original" both fired, so one document
+        # arrived as two inventory items and the batched ask read "who is
+        # preserving the original agreement, and by when; who is preserving
+        # the original, and by when". A double that duplicates rows makes
+        # every count over them wrong.
+        if i < 0 or any(needle in t or t in needle for t in taken):
             continue
-        seen.add(needle)
+        taken.append(needle)
         rows.append({
             "what": f"the {needle}",
             "holder": holder,

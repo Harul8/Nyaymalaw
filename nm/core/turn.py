@@ -27,6 +27,7 @@ from datetime import date, datetime, timezone
 
 from nm.core import (
     adversarial,
+    cascade,
     chronology,
     deadlines,
     grounding,
@@ -38,6 +39,7 @@ from nm.core import cause as cause_reader
 from nm.core import dispute as dispute_reader
 from nm.core import evidence_item as inventory
 from nm.core import factors as factor_reader
+from nm.core import gaps as gap_queue
 from nm.core import issues as issue_reader
 from nm.core import posture as posture_reader
 from nm.core import theory as theory_reader
@@ -363,6 +365,15 @@ class TurnEngine:
                             elements=tuple(elements), blocked=True,
                             blocked_reason=f"G-THREAD: {bound.reason}")
             thread = None
+            # DERIVED NOTHING, SAID SO. This branch never reaches `_derive`,
+            # so `derived_values` was UNBOUND and `_record_turn` raised on
+            # every G-THREAD block — CLAUDE.md §6 exactly, and pylint E0601
+            # exists in the gate for it.
+            #
+            # `()` and not `None`: a turn that derived nothing is a real
+            # answer, and the cascade needs it to be one. `None` would mean
+            # "no turn to compare against", which is a different claim.
+            derived_values: tuple = ()
         elif not bound.thread.posture.resolved:
             # G-POSTURE, and it blocks THE DIRECTIVE STEP rather than the
             # turn. Nothing side-dependent is computed: no recommendation,
@@ -414,17 +425,18 @@ class TurnEngine:
                 kind=ElementKind.QUESTION, thread=thread.id, text=ask,
                 gate="G-POSTURE", signal=Signal.UNRESOLVED_POSTURE,
             ))
-            derived, relied_on, retrieved = self._derive(
+            derived, relied_on, retrieved, derived_values = self._derive(
                 thread, turn, metrics, memory, side_blind=True,
-                facts=matter.facts)
+                facts=matter.facts, matter_id=matter.id)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=tuple(elements), blocked=True,
                             blocked_reason="G-POSTURE: posture unresolved")
         else:
             thread = bound.thread
-            derived, relied_on, retrieved = self._derive(
-                thread, turn, metrics, memory, facts=matter.facts)
+            derived, relied_on, retrieved, derived_values = self._derive(
+                thread, turn, metrics, memory, facts=matter.facts,
+                matter_id=matter.id)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=tuple(elements))
@@ -510,11 +522,12 @@ class TurnEngine:
         metrics.stages["emit_ms"] = int((time.perf_counter() - t2) * 1000)
         metrics.latency_ms = int((time.perf_counter() - started) * 1000)
         self._store.record_metrics(metrics.as_dict())
-        self._record_turn(turn, answer, matter, metrics)
+        self._record_turn(turn, answer, matter, metrics, derived_values)
         return TurnOutput(turn.turn_id, answer, matter, metrics)
 
     def _record_turn(self, turn: TurnInput, answer: Answer, matter: Matter,
-                     metrics: TurnMetrics) -> None:
+                     metrics: TurnMetrics,
+                     derived: tuple = ()) -> None:
         """The served turn, kept. AFTER the commit, and never instead of it.
 
         Nothing else held this. The matter keeps facts and questions, the
@@ -558,6 +571,19 @@ class TurnEngine:
                 "violations": [
                     {"rule": v.rule, "detail": v.detail}
                     for v in metrics.violations],
+                # A3 §5.4. WHAT THIS TURN DERIVED, so the NEXT turn has a
+                # `before` to compare against. Without it the cascade has no
+                # trigger: `changes(before, after)` needs both, and a turn
+                # only ever has an after.
+                #
+                # Re-deriving the previous position from today's facts would
+                # not do: the matter holds facts, not derivations, so it would
+                # be computed FROM the corrected fact and would always agree
+                # with itself.
+                "derived": [
+                    {"name": d.name, "value": d.value,
+                     "from_facts": list(d.from_facts)}
+                    for d in derived],
                 "cost_usd": metrics.cost_usd,
                 "llm_calls": metrics.llm_calls,
             })
@@ -881,7 +907,8 @@ class TurnEngine:
                 memory: "matter_memory.MatterSummary | None" = None,
                 *, side_blind: bool = False,
                 facts: tuple[Fact, ...] = (),
-                ) -> tuple[list[Element], tuple, tuple]:
+                matter_id: str = "",
+                ) -> tuple[list[Element], tuple, tuple, tuple]:
         """Retrieve, then assemble. Returns (elements, relied_on, retrieved).
 
         `side_blind` is the posture gate holding. It permits exactly what
@@ -906,6 +933,11 @@ class TurnEngine:
         retrieved: list[Finding] = []
         relied_on: list[Finding] = []
         grounds: list[Element] = []
+        # A3 §5.1. THE GAP QUEUE, filled during derivation and drained at the
+        # end. Questions emitted where they are DETECTED arrive in the order
+        # the code happens to be written in; a senior asks the one that
+        # matters most next, which cannot be decided until they are all in.
+        gaps: list[gap_queue.Gap] = []
 
         need = EvidenceNeed(question=turn.message.strip(),
                             governing_date=turn.today,
@@ -973,7 +1005,8 @@ class TurnEngine:
             # C7 -- WHAT THE EVIDENCE IS AND WHO HAS IT. After the issues,
             # because an inventory is only readable against what has to be
             # proved.
-            grounds.extend(self._inventory(turn, thread, memory, metrics))
+            grounds.extend(
+                self._inventory(turn, thread, memory, metrics, gaps))
 
             # D6 -- THE SPINE, LAST, because it is what the issues and the
             # evidence hang off. S8's whole point: stop producing a list of
@@ -1004,8 +1037,22 @@ class TurnEngine:
             elements.append(
                 self._recommend(thread, turn, result, metrics, memory,
                                 register, position))
+        # A3 §5.4. WHAT THIS TURN DERIVED, and what MOVED since the last one.
+        #
+        # Run before the queue is drained so a changed value can raise its own
+        # gap -- a corrected fact that moves a limitation date is the most
+        # urgent thing on the file, and it would otherwise arrive as a note
+        # underneath questions about something else.
+        derived = self._derived_now(thread, position)
+        elements.extend(
+            self._cascade(thread, matter_id, derived, metrics, gaps))
+
+        # A3 §5.2-5.3. THE QUEUE IS DRAINED HERE, once, after everything that
+        # could raise a gap has run. Draining it earlier would rank a partial
+        # queue, which is the detection order wearing a sort.
         elements.extend(grounds)
-        return elements, tuple(relied_on), tuple(retrieved)
+        elements.extend(self._ask(gaps, thread, metrics))
+        return elements, tuple(relied_on), tuple(retrieved), derived
 
     def _remember_questions(self, matter: Matter, answer: Answer,
                             metrics: TurnMetrics, turn: TurnInput) -> Matter:
@@ -1817,9 +1864,157 @@ class TurnEngine:
                 text=f"No theory formed yet: {read.why_not}"))
         return out
 
+    @implements("A3")
+    def _derived_now(self, thread: Thread, position) -> tuple:
+        """What this turn computed, and WHICH FACTS each value rests on.
+
+        `from_facts` is what makes the cascade possible at all: without it a
+        correction has to re-run everything and cannot say what it touched.
+        """
+        if position is None or position.state is not \
+                limitation.LimitationState.COMPUTED:
+            return ()
+        return (cascade.Derived(
+            name=f"limitation on {thread.id}",
+            value=position.expires_on.isoformat(),
+            from_facts=tuple(thread.chronology)),)
+
+    @implements("A3")
+    def _cascade(self, thread: Thread, matter_id: str, derived: tuple,
+                 metrics: TurnMetrics, gaps: list) -> list[Element]:
+        """A3 §5.4. What MOVED since the last turn, and what rested on it.
+
+        THE BOUND IS AS IMPORTANT AS THE CASCADE. *Where re-derivation changes
+        nothing the answer is one line* — a product that announced a cascade
+        every turn would train the advocate to skip the section, and the real
+        one would arrive in a place they had learned to ignore. So nothing is
+        emitted at all where nothing moved, and the one-line form is kept for
+        the turn that FOLLOWS a correction.
+
+        A VALUE THAT APPEARS is a change with no prior and is reported as one.
+        Silently adding a limitation date is the same defect as silently
+        moving one.
+        """
+        if not derived:
+            return []
+
+        before = self._last_derived(matter_id)
+        if before is None:
+            # FIRST TURN ON THIS THREAD. Nothing has moved because there was
+            # nothing to move from — which is not the same as "re-derived and
+            # nothing changed", and saying the second would be a claim about a
+            # comparison nobody made.
+            return []
+
+        moved = cascade.changes(before, derived)
+        if not moved:
+            return []
+
+        metrics.fire("G-CASCADE", "moved", ", ".join(c.name for c in moved))
+        lines = cascade.report(moved)
+
+        # NOBODY SAID WHETHER ANYTHING NEEDS UNDOING, and empty is not "no".
+        # An advocate who filed on Tuesday against a date that moved on
+        # Thursday needs to be told; showing them a corrected number is not
+        # telling them.
+        for name in cascade.unresolved_undo(moved):
+            gaps.append(gap_queue.Gap(
+                what=f"whether anything already done on {name} needs undoing",
+                blocks="relying on advice given before it moved",
+                thread=thread.id,
+                kind=gap_queue.GapKind.BLOCKING_GATE))
+
+        return [Element(
+            kind=ElementKind.FINDING, thread=thread.id,
+            signal=Signal.CONTRADICTION,
+            text="A value on this thread has MOVED since the last turn. "
+                 + " ".join(lines))]
+
+    def _last_derived(self, matter_id: str) -> tuple | None:
+        """The previous turn's derived values, or `None` if there is no
+        previous turn to compare against.
+
+        `None` AND `()` ARE DIFFERENT. An empty tuple is a turn that derived
+        nothing; `None` is no turn at all, and treating them alike would
+        report every first computation on a thread as a change.
+        """
+        # THE MATTER ID IS PASSED IN, NOT GUESSED OFF THE THREAD.
+        #
+        # This read `thread.matter_id`, which `Thread` does not have — so it
+        # degraded SILENTLY to `None` and the cascade could never fire. The
+        # same mistake the factor read made and had corrected an hour earlier:
+        # a `getattr` against a type this module already imports is a guess
+        # that fails quietly, in the direction of doing nothing at all.
+        if not matter_id or not hasattr(self._store, "transcripts_for"):
+            return None
+        try:
+            past = self._store.transcripts_for(matter_id)
+        except Exception:  # noqa: BLE001 -- an unreadable record is not a change
+            return None
+        for doc in reversed(past):
+            if doc.get("unreadable") or "derived" not in doc:
+                continue
+            rows = doc.get("derived") or []
+            return tuple(cascade.Derived(
+                name=str(r.get("name", "")), value=str(r.get("value", "")),
+                from_facts=tuple(r.get("from_facts") or ()))
+                for r in rows if r.get("name"))
+        return None
+
+    @implements("A3")
+    def _ask(self, gaps: list, thread: Thread,
+             metrics: TurnMetrics) -> list[Element]:
+        """A3 §5.2-5.3. ONE BATCHED ASK on this thread, then what is still open.
+
+        NOTHING IS OWED WHEN NOTHING IS BLOCKED. `leads` returns `None` on an
+        empty queue and this returns nothing, which is §5.2's whole design:
+        *there is no obligation to ask something in order to advance, because
+        there is nothing to advance.* A queue that always yields something is
+        the manufactured question with a data structure behind it.
+
+        SERIAL SINGLE QUESTIONS MAKE THE ADVOCATE DO THE SCHEDULING, so the
+        gaps on this thread go out together and the advocate answers a dispute
+        in one go rather than ping-ponging across five.
+
+        AND THE QUEUE IS ADVICE, NOT A RAIL. §5.3: where the highest-value gap
+        is on ANOTHER thread, that is said as a note and the answer stays on
+        the thread the advocate asked about. A build that passes its stages by
+        railroading the advocate through them has failed.
+        """
+        if not gaps:
+            return []
+
+        out: list[Element] = []
+        mine = gap_queue.batched(tuple(gaps), thread.id)
+        if mine:
+            out.append(Element(
+                kind=ElementKind.QUESTION, thread=thread.id,
+                gate="G-GAP",
+                text=("To take this further I need: "
+                      + "; ".join(g.what for g in mine) + ".")))
+
+        # §5.3, and it is carried rather than obeyed.
+        top = gap_queue.leads(tuple(gaps))
+        if top is not None and top.thread != thread.id:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"The most urgent thing on this file is on another "
+                      f"thread: {top.what} — needed for: {top.blocks}. I have "
+                      f"answered here because that is what you asked about.")))
+
+        # §5.2's closing line: *still missing, and why it matters*. It is what
+        # stops an assessment reading as more settled than it is.
+        metrics.fire("G-GAP", "open", f"{len(gaps)} gap(s)")
+        out.append(Element(
+            kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+            text=("Still missing: "
+                  + "; ".join(gap_queue.still_missing(tuple(gaps))) + ".")))
+        return out
+
     @implements("C7")
     def _inventory(self, turn: TurnInput, thread: Thread, memory,
-                   metrics: TurnMetrics) -> list[Element]:
+                   metrics: TurnMetrics,
+                   gaps: list) -> list[Element]:
         """C7. The inventory, and the three sweeps over it.
 
         THE COUNTEREXAMPLE IS THE POINT: *a file where the original agreement
@@ -1875,29 +2070,31 @@ class TurnEngine:
                 text=(f"{item.what} — held by {item.holder.value}, "
                       f"{item.form.value}")))
 
-        # AT RISK AND NOBODY ASKED. This is the whole feature.
+        # AT RISK AND NOBODY ASKED. This is the whole feature -- and it goes
+        # into the GAP QUEUE rather than straight into the answer.
+        #
+        # §5.1: a senior does not run a script, they ask the question that
+        # matters most next. A question emitted where it was detected is a
+        # question that arrives in detection order, which is the order the
+        # code happens to be written in.
         for what in inventory.unpreserved(read.items):
             metrics.fire("G-PRESERVE", "unpreserved", what)
-            out.append(Element(
-                kind=ElementKind.QUESTION, thread=thread.id,
-                # THE GATE THAT RAISED IT. A question with no gate cannot be
-                # recorded on the ask ledger, so the same one is put again next
-                # turn -- which is how a product comes to ask an advocate the
-                # same thing forever.
-                gate="G-PRESERVE",
-                text=(f"{what} is held by someone with an interest in it not "
-                      f"surviving, and no preservation step is on this file. "
-                      f"Who is being asked to preserve it, and by when?")))
+            gaps.append(gap_queue.Gap(
+                what=f"who is preserving {what}, and by when",
+                blocks="relying on that document at trial",
+                thread=thread.id,
+                # A document leaving the file is a DEADLINE, not a curiosity:
+                # the window closes when it is gone, and it closes silently.
+                kind=gap_queue.GapKind.DEADLINE))
 
         # WRITTEN AND NEVER ISSUED. Distinct from the above, and the document
-        # is gone either way -- so it is reported separately rather than
-        # counted as preserved.
+        # is gone either way -- so it is a gap of its own rather than counted
+        # as preserved.
         for what in inventory.undelivered(read.items):
-            out.append(Element(
-                kind=ElementKind.QUESTION, thread=thread.id,
-                gate="G-PRESERVE",
-                text=(f"The preservation instruction for {what} has not been "
-                      f"issued. When does it go out?")))
+            gaps.append(gap_queue.Gap(
+                what=f"when the preservation instruction for {what} goes out",
+                blocks="relying on that document at trial",
+                thread=thread.id, kind=gap_queue.GapKind.DEADLINE))
 
         # THE QUESTIONS NOBODY PUT. An inventory that lists ten items and
         # answered two questions of the thirty reads as an inventory that was

@@ -157,9 +157,9 @@ MUTATIONS = [
 
     ("a bare question of law refused instead of answered",
      "nm/core/turn.py",
-     "            derived, relied_on, retrieved = self._derive(\n"
+     "            derived, relied_on, retrieved, derived_values = self._derive(\n"
      "                thread, turn, metrics, memory, side_blind=True,\n"
-     "                facts=matter.facts)\n"
+     "                facts=matter.facts, matter_id=matter.id)\n"
      "            elements.extend(derived)",
      "            pass",
      "test_a_provision_is_still_read_back_behind_a_closed_posture_gate",
@@ -192,12 +192,12 @@ MUTATIONS = [
     ("an audit-trail write failure swallowed",
      "nm/core/turn.py",
      "        self._store.record_metrics(metrics.as_dict())\n"
-     "        self._record_turn(turn, answer, matter, metrics)",
+     "        self._record_turn(turn, answer, matter, metrics, derived_values)",
      "        try:\n"
      "            self._store.record_metrics(metrics.as_dict())\n"
      "        except Exception:\n"
      "            pass\n"
-     "        self._record_turn(turn, answer, matter, metrics)",
+     "        self._record_turn(turn, answer, matter, metrics, derived_values)",
      "test_an_audit_trail_write_failure_is_never_swallowed", "E-019"),
 
     # RG-11's own honesty: a recorded run that cannot say what it ran
@@ -735,7 +735,7 @@ MUTATIONS = [
     ("an answer that recites the file back, growing every turn",
      "nm/core/turn.py",
      "        elements.extend(grounds)\n"
-     "        return elements, tuple(relied_on), tuple(retrieved)",
+     "        elements.extend(self._ask(gaps, thread, metrics))",
      "        elements.extend(grounds)\n"
      "        elements.extend(Element(kind=ElementKind.GROUND, thread=thread.id,\n"
      "                                text=f\"On the file: {f.statement[:60]}\")\n"
