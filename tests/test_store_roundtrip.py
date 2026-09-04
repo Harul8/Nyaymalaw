@@ -228,7 +228,9 @@ def test_a_served_turn_is_recorded_in_full_and_sealed(tmp_path):
     # SEALED. A transcript is the advocate's own words and the advice served
     # back — privileged material, and the metrics directory's plaintext
     # convention would have put it on disk in the clear.
-    raw = (tmp_path / "transcripts" / "turn_1.nm").read_bytes()
+    # The name carries the MATTER as well as the turn, so a transcript can be
+    # attributed without being decrypted (B-083).
+    raw = (tmp_path / "transcripts" / "mat_1__turn_1.nm").read_bytes()
     assert b"plaintiff" not in raw, "the transcript is on disk in plaintext"
     assert b"recovery suit" not in raw
 
@@ -249,13 +251,30 @@ def test_an_unreadable_transcript_is_reported_rather_than_dropped(tmp_path):
     store.record_turn({"turn_id": "good", "matter_id": "mat_1",
                        "at": "2026-08-31T10:00:00", "message": "x",
                        "elements": []})
-    (tmp_path / "transcripts" / "corrupt.nm").write_bytes(b"not a ciphertext")
+    store.record_turn({"turn_id": "bad", "matter_id": "mat_1",
+                       "at": "2026-08-31T10:01:00", "message": "y",
+                       "elements": []})
+    (tmp_path / "transcripts" / "mat_1__bad.nm").write_bytes(b"not a ciphertext")
 
     back = store.transcripts_for("mat_1")
     broken = [t for t in back if t.get("unreadable")]
     assert broken, "the corrupt transcript vanished from the review"
-    assert broken[0]["turn_id"] == "corrupt"
+    assert broken[0]["turn_id"] == "bad"
     assert broken[0]["why"]
+
+    # AND IT BELONGS TO ONE MATTER (B-083).
+    #
+    # THIS TEST USED TO ASSERT THE DEFECT. It wrote `corrupt.nm` -- a name
+    # carrying no matter -- and required it to appear in `mat_1`'s review,
+    # which was the only behaviour available when attribution needed the key.
+    # The consequence was that one corrupt file marked EVERY matter's record
+    # incomplete and put a stranger's turn id on each of them.
+    #
+    # The rule it was written for survives and is the half worth keeping: a
+    # turn that could not be read is NAMED, never dropped. What changed is
+    # that it is named to the matter it actually belongs to.
+    assert store.transcripts_for("mat_other") == (), (
+        "another matter's unreadable transcript appeared in this review")
 
 
 def test_a_transcript_that_cannot_be_written_never_costs_the_advocate_the_turn(

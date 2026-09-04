@@ -385,6 +385,23 @@ GATES: tuple[Gate, ...] = (
         built=True,
     ),
     Gate(
+        id="G-NOTASSESSED",
+        condition="The store that would answer this need could not be consulted "
+                  "at all — absent, unopenable, or never built.",
+        states=("assessed", "not_assessed"),
+        response=Response.DISCLOSE,
+        scope=Scope.NEED,
+        persistence=Persistence.TURN,
+        recovery=Recovery.SYSTEM,
+        visible="NOT LOOKED AT, said in those words. Both neighbours here make a "
+                "claim about a search that RAN — G-NOTHELD that the corpus does "
+                "not hold it, G-HELDNOTFOUND that retrieval failed on something "
+                "it does — and a search that never happened borrowing either of "
+                "them tells the advocate something untrue.",
+        feature="M4",
+        built=True,
+    ),
+    Gate(
         id="G-NOTHELD",
         condition="The manifest does not declare the provision, and it was not "
                   "retrieved.",

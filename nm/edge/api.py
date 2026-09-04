@@ -204,8 +204,21 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
     if m is None or m.advocate_id != advocate_id:
         raise HTTPException(status_code=404, detail="no such matter")
 
-    turns = application().store.transcripts_for(matter_id)
+    store = application().store
+    turns = store.transcripts_for(matter_id)
     unreadable = [t for t in turns if t.get("unreadable")]
+
+    # A FACT ABOUT THE STORE, NOT ABOUT THIS CONVERSATION.
+    #
+    # A transcript written before the filename carried its matter can only be
+    # attributed by decrypting it, so one that will not decrypt belongs to no
+    # known matter. It used to be appended to whichever matter was being
+    # asked about, which marked every matter `incomplete` over one corrupt
+    # file and put a stranger's turn id on each of them. It is disclosed here,
+    # separately, because dropping it silently is the other half of that
+    # defect.
+    lost = (store.unattributable()
+            if hasattr(store, "unattributable") else ())
     return {
         # NOT "ok" when a turn could not be decrypted. A review that renders
         # nine of ten turns and says "ok" is reviewing a different
@@ -220,6 +233,12 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
             f"{len(unreadable)} turn(s) on this matter could not be read back "
             f"and are missing from what follows."
             if unreadable else None),
+        "unattributable_count": len(lost),
+        "unattributable_reason": (
+            f"{len(lost)} transcript(s) in the store could not be read back at "
+            f"all, so which matter they belong to is unknown. They may or may "
+            f"not be from this one."
+            if lost else None),
     }
 
 
@@ -299,6 +318,59 @@ def turn(req: TurnRequest) -> _Released:
     except StaleWrite as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _release(output)
+
+
+@app.get("/api/search")
+@implements("A4")
+def search(q: str, advocate_id: Advocate, court: str | None = None,
+           from_year: int | None = None, to_year: int | None = None,
+           limit: int = 20) -> dict:
+    """A4 — SEARCH THE CORPUS. Ranked paragraphs, never an identified Act.
+
+    THE RESPONSE ALWAYS CARRIES `coverage` AND `index`, including at zero.
+    A bare `{"hits": []}` is the defect this whole feature is shaped around:
+    the advocate reads it as "the law is not in the corpus" when it may mean
+    the index is not built, the filter excluded everything, or they searched
+    party names in a store that holds paragraphs (B-163).
+
+    IT TAKES AN ADVOCATE and returns nothing matter-specific. The corpus is
+    not privileged — every advocate may read the same law — but an
+    unattributable search is still refused, because A1 requires the file to
+    know who is acting and a search is how a matter starts.
+    """
+    result = application().search.search(
+        q, court=court, from_year=from_year, to_year=to_year, limit=limit)
+    return {
+        "query": result.query,
+        "index": result.index,
+        "coverage": result.coverage.value,
+        "why": result.why,
+        "filters": result.filters,
+        "hit_count": result.hit_count,
+        "identity": None if result.identity is None else {
+            "built_at": result.identity.built_at,
+            "source": result.identity.source,
+            "corpus_version": result.identity.corpus_version,
+            "held": result.identity.held,
+            "of_source": result.identity.of_source,
+            # THE SCOPE, ON EVERY RESULT. An advocate with a Kerala question
+            # reads an empty result as an answer about Kerala law unless the
+            # answer says what law was searched.
+            "scope": result.identity.scope,
+            # `None` when unknown, never 0.0 -- a ratio of zero says the index
+            # is empty, which is a different claim from not knowing.
+            "fraction_of_source": result.identity.fraction_of_source,
+        },
+        "hits": [{
+            "case_id": h.case_id, "case_name": h.case_name, "court": h.court,
+            "year": h.year, "para_type": h.para_type, "snippet": h.snippet,
+            "confidence": round(h.confidence, 3),
+            # ALWAYS ON THE WIRE. The client renders it, and a hit that
+            # reached the browser without it could be styled like an exact
+            # lookup by whoever writes the next template.
+            "origin": h.origin.value,
+        } for h in result.hits],
+    }
 
 
 # ------------------------------------------------------------------- static ---

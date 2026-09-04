@@ -126,11 +126,23 @@ class Treatment:
 
 
 class Coverage(str, Enum):
-    """Three states, never two."""
+    """FOUR states, and the fourth was the one nobody had.
+
+    ANSWERED, NOT_HELD and HELD_NOT_FOUND are all claims about a search that
+    RAN. There was no way to say a search did not run at all, so a store that
+    could not be opened had to borrow one of the three -- and every one of them
+    is a lie in a different direction. NOT_HELD tells the advocate the law is
+    not in the corpus. HELD_NOT_FOUND tells them there is a retrieval defect.
+    ANSWERED needs no comment.
+
+    NOT_ASSESSED is a VALUE because §9 requires the third state to be visible
+    in the output and not only in the type: held, not held, and NOT LOOKED AT.
+    """
 
     ANSWERED = "answered"
     NOT_HELD = "not_held"
     HELD_NOT_FOUND = "held_not_found"   # a DEFECT that escalates
+    NOT_ASSESSED = "not_assessed"       # the search did not happen
 
 
 class SourceKind(str, Enum):

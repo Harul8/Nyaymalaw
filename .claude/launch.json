@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "nm",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "nm.bootstrap.main", "--port", "8071"],
+      "port": 8071
+    }
+  ]
+}

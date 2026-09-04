@@ -78,6 +78,16 @@ body {
 .health.bad { color: var(--signal); background: var(--signal-w); border-color: var(--signal); }
 
 /* ---------------------------------------------------------------- layout --- */
+/* `hidden` MUST WIN OVER A LAYOUT RULE.
+ *
+ * `[hidden]` is a user-agent style with the lowest specificity there is, and
+ * `main { display: grid }` beats it -- so the three panes all rendered at
+ * once, stacked, and the tab bar did nothing. The element was hidden by every
+ * measure the code could see (`el.hidden === true`) and visible to the
+ * advocate, which is the gap between a correct component and a served page
+ * that CLAUDE.md §8 is about: verify on the bytes, not the return value. */
+[hidden] { display: none !important; }
+
 main { display: grid; grid-template-columns: 22rem 1fr; flex: 1; min-height: 0; }
 
 /* ------------------------------------------------------------------ rail --- */
@@ -289,3 +299,191 @@ main > * { min-width: 0; }
 .el .refs { display: block; }
 #thread, .turn, .el { max-width: 100%; min-width: 0; }
 body, main { overflow-x: hidden; }
+
+/* ============================ THE TABS ============================ */
+
+.tabs { display: flex; gap: 2px; margin-left: 28px; }
+
+.tabs .tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: .01em;
+  padding: 8px 14px 7px;
+}
+
+.tabs .tab:hover { color: var(--ink); }
+
+.tabs .tab.is-on {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+main.single {
+  display: block;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 28px 64px;
+}
+
+/* ====================== A4 — SEARCH THE CORPUS ==================== */
+
+.search-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px 96px 96px auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.search-bar input {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 11px;
+}
+
+.search-bar input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* WHAT WAS SEARCHED. Never hidden behind a disclosure control: a zero is
+ * unreadable without it, and unreadable in the direction that hurts. */
+.index-line {
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 14px 0 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.index-detail { opacity: .85; }
+
+.result-count {
+  color: var(--ink-3);
+  font-size: 12px;
+  margin: 16px 0 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.hit {
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 0;
+}
+
+.hit header {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.hit-name { font-weight: 600; font-size: 14px; }
+
+.hit-meta { color: var(--ink-3); font-size: 12px; }
+
+.hit-text {
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.66;
+  margin: 0;
+}
+
+/* PROVENANCE IS NOT DECORATION. `searched` must never be able to pass for
+ * `resolved` at a glance -- so they differ in WEIGHT and OUTLINE and not only
+ * in colour, and both are drawn from the theme's own variables so the
+ * distinction survives dark mode. A hardcoded pair here is legible in one
+ * theme and invisible in the other, which loses exactly the signal that
+ * separates a ranked guess from an exact lookup. */
+.pill.searched {
+  background: transparent;
+  border: 1px dashed var(--rule);
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+.pill.resolved {
+  background: var(--accent-w);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* =========================== THE RECORD =========================== */
+
+.record-head {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 12px;
+}
+
+.record-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
+
+.record-head select {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 13px;
+  min-width: 260px;
+  padding: 7px 9px;
+}
+
+.recorded-turn {
+  border-bottom: 1px solid var(--rule);
+  padding: 16px 0;
+}
+
+.recorded-turn header {
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: .06em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.recorded-asked {
+  border-left: 2px solid var(--accent);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 10px;
+  padding-left: 12px;
+}
+
+.recorded-turn summary {
+  color: var(--ink-3);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.recorded-raw {
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  margin-top: 8px;
+  max-height: 420px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 860px) {
+  .search-bar { grid-template-columns: 1fr; }
+  .tabs { margin-left: 12px; }
+}

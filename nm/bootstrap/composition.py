@@ -14,6 +14,7 @@ from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority
 from nm.adapters.model.config import ModelConfig, load, load_dotenv
 from nm.adapters.model.openai_adapter import OpenAIModelAdapter
 from nm.adapters.model.scripted import ScriptedModelAdapter
+from nm.adapters.search.authority import AuthorityIndexSearch
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine
 from nm.domain.gates import GATES, withholding
@@ -42,7 +43,7 @@ def build_model(config: ModelConfig) -> ModelPort:
 
 class Application:
     def __init__(self, *, root: Path | None = None, model: ModelPort | None = None,
-                 store=None, evidence=None) -> None:
+                 store=None, evidence=None, search=None) -> None:
         load_dotenv(ROOT / ".env")
         self.root = root or ROOT
         self.config = load()
@@ -64,6 +65,14 @@ class Application:
                              or default_authority_index(self.root)),
             identity_index=(os.environ.get("NM_IDENTITY_INDEX")
                             or (self.root / ".nm" / "identity.db")))
+        # A4. The SAME index the evidence adapter reads, named once. Two
+        # paths to one file, configured separately, is how the grounding gate
+        # and the evidence adapter came to hold different provision patterns
+        # (CLAUDE.md §4) -- so the search surface takes the resolved path
+        # rather than re-reading the environment.
+        self.search = search or AuthorityIndexSearch(
+            os.environ.get("NM_AUTHORITY_INDEX")
+            or default_authority_index(self.root))
         self.model = model or build_model(self.config)
         self.coverage = CoverageProfile.load(self.root / "spec" / "coverage.yaml")
         self.engine = TurnEngine(store=self.store, evidence=self.evidence,

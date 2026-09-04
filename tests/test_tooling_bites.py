@@ -570,3 +570,35 @@ def test_a_failure_with_no_recognised_marker_says_so():
     assert "no line matched" in said, (
         "output with no recognisable failure was reported as though the tail "
         "were the reason:\n" + said)
+
+
+def test_the_fallback_never_lets_a_constant_warning_stand_in_for_a_diagnosis():
+    """B-081, THE SECOND HALF.
+
+    The first fix picked failure lines out of the output, which was right and
+    was not enough: when nothing matched, it still printed a blended tail of
+    stdout+stderr — and stderr carries the same urllib3 warning on every run
+    in this environment, so the "explanation" was reliably that warning.
+
+    A report that cannot say why the step failed must say THAT, with enough
+    about the run to diagnose it next time.
+    """
+    sys.path.insert(0, str(ROOT))
+    from tools.check import _why
+
+    proc = subprocess.run(
+        [sys.executable, "-c",
+         "import sys\n"
+         "print('nothing here names a failure')\n"
+         "print('RequestsDependencyWarning: urllib3 does not match', file=sys.stderr)\n"
+         "sys.exit(7)\n"],
+        capture_output=True, text=True)
+
+    said = _why(proc)
+    assert "urllib3" not in said, (
+        "a warning printed on every run was offered as the reason this one "
+        "failed")
+    assert "exit=7" in said, "the report does not carry the exit code"
+    assert "stdout tail" in said and "stderr tail" in said, (
+        "the two streams are blended again; that is what let the warning "
+        "displace the failure")

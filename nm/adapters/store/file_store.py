@@ -163,6 +163,14 @@ def _matter(d: dict) -> Matter:
 # ------------------------------------------------------------------ store ---
 
 
+#: Separates the matter from the turn in a transcript filename.
+#:
+#: Two underscores, because a MatterId is `mat_<hex>` and a single one would
+#: split at the wrong place. The name has to be parseable WITHOUT THE KEY --
+#: that is the whole point of putting the matter in it.
+_SEP = "__"
+
+
 @implements("I1")
 class FileMatterStore:
     def __init__(self, root: str | Path, key: str | None = None) -> None:
@@ -255,9 +263,22 @@ class FileMatterStore:
 
         Sealed with the same key as the matter, because a transcript nobody
         can open is useless and one anybody can open is a disclosure.
+
+        THE MATTER IS IN THE FILENAME, and that is not a convenience.
+
+        It was keyed by turn id alone, so the only way to learn which matter a
+        transcript belonged to was to DECRYPT it -- and a transcript that
+        cannot be decrypted is exactly the one whose attribution matters.
+        `transcripts_for` therefore had to append every undecryptable file to
+        whichever matter was being asked about, so a single corrupt turn
+        marked EVERY matter `incomplete` and put a stranger's turn id on each
+        of them.
+
+        Attribution must not depend on being able to read the payload.
         """
         self._transcripts.mkdir(parents=True, exist_ok=True)
-        path = self._transcripts / f"{transcript['turn_id']}.nm"
+        matter = str(transcript.get("matter_id") or "unattributed")
+        path = self._transcripts / f"{matter}{_SEP}{transcript['turn_id']}.nm"
         blob = self._cipher.encrypt(
             json.dumps(transcript, indent=2, default=str).encode("utf8"))
         path.write_bytes(blob)
@@ -274,14 +295,54 @@ class FileMatterStore:
         if not self._transcripts.exists():
             return ()
         out: list[dict] = []
+
+        # THE FILES THIS MATTER OWNS, by name. An unreadable one among these
+        # is genuinely this matter's and is reported as missing FROM THIS
+        # RECORD; an unreadable file belonging to another matter is not.
+        for p in sorted(self._transcripts.glob(f"{matter_id}{_SEP}*.nm")):
+            try:
+                out.append(json.loads(
+                    self._cipher.decrypt(p.read_bytes()).decode("utf8")))
+            except Exception as exc:  # noqa: BLE001 -- reported, never dropped
+                out.append({"turn_id": p.name.split(_SEP, 1)[1][:-3],
+                            "matter_id": matter_id, "unreadable": True,
+                            "why": f"{type(exc).__name__}: {exc}"})
+
+        # TRANSCRIPTS WRITTEN BEFORE THE NAME CARRIED THE MATTER. Their
+        # attribution still requires decryption, and one that fails is
+        # UNATTRIBUTABLE -- so it is reported by `unattributable()`, once,
+        # rather than added to whichever matter happened to ask.
         for p in sorted(self._transcripts.glob("*.nm")):
+            if _SEP in p.name:
+                continue
             try:
                 doc = json.loads(
                     self._cipher.decrypt(p.read_bytes()).decode("utf8"))
-            except Exception as exc:  # noqa: BLE001 -- reported, never dropped
-                out.append({"turn_id": p.stem, "unreadable": True,
-                            "why": f"{type(exc).__name__}: {exc}"})
+            except Exception:  # noqa: BLE001 -- counted by unattributable()
                 continue
             if doc.get("matter_id") == matter_id:
                 out.append(doc)
+
         return tuple(sorted(out, key=lambda d: d.get("at", "")))
+
+    def unattributable(self) -> tuple[str, ...]:
+        """Transcripts on disk that belong to NO KNOWN MATTER.
+
+        A legacy file that will not decrypt cannot be attributed at all -- its
+        matter is inside the ciphertext. Silently dropping it would be the
+        absent-input shape, and adding it to every matter's record was the
+        defect this replaced. So it is neither: it is counted here, and the
+        edge discloses it as a fact about the STORE rather than about any one
+        conversation.
+        """
+        if not self._transcripts.exists():
+            return ()
+        lost: list[str] = []
+        for p in sorted(self._transcripts.glob("*.nm")):
+            if _SEP in p.name:
+                continue
+            try:
+                self._cipher.decrypt(p.read_bytes())
+            except Exception:  # noqa: BLE001 -- that IS the finding
+                lost.append(p.stem)
+        return tuple(lost)

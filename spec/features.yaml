@@ -109,7 +109,7 @@ features:
   title: Search the corpus — acts and judgments
   phase: A
   slice: S10
-  status: decided
+  status: built
   does:
   - '**Free-text search over judgments** — the FTS index of **451,548 attributable case paragraphs**,
     ranked, each hit carrying case, court, year and the paragraph that matched.'

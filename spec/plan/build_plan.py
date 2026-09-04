@@ -490,8 +490,12 @@ FM = [
     ["A1", "Authentication and advocate identity", "A", "S1", "E-010", "decided"],
     ["A2", "The landing board", "A", "S6", "E-063", "tested"],
     ["A3", "Re-entry and re-orientation", "A", "S9", "E-092", "tested"],
+    # `built`, not `tested`. E-116 and E-117 are class A and have run; E-118
+    # is class C at weekly cadence and has NOT. B-080's rule cuts both ways --
+    # a feature does not reach `tested` on the evals that happened to be
+    # cheap.
     ["A4", "Search the corpus — acts and judgments", "A", "S10",
-     "E-116, E-117, E-118", "decided"],
+     "E-116, E-117, E-118", "built"],
     ["B1", "Opening-message routing", "B", "S10", "E-100, E-101, E-102", "decided"],
     ["B2", "Emergency triage", "B", "S10", "E-103, E-104, E-105", "decided"],
     ["B3", "Conflict screen", "B", "S10", "E-106, E-107", "decided"],
@@ -2203,9 +2207,15 @@ d("B-081", "2026-09-04", "tooling",
   "S3 — a zero reading as absence",
   "Reading the background gate output after the GS-14 fixes and finding it "
   "unusable: the run had to be repeated by hand to learn which test was red.",
-  "`_why()` selects the lines that name a failure and prints those first, and "
-  "when no line matches a known marker it says so explicitly rather than "
-  "printing a tail that looks like an explanation.",
+  "`_why()` selects the lines that name a failure and prints those first. THE "
+  "FIRST FIX WAS INCOMPLETE and the gate caught it the same day: markers "
+  "written with trailing spaces (`ERROR `) missed `ERROR: not found:`, and "
+  "the fallback still printed a BLENDED tail of both streams — so the "
+  "constant urllib3 warning stood in as the explanation a second time. Now "
+  "the noise line is filtered, the markers carry no punctuation, and the "
+  "fallback labels the two streams separately and reports the exit code and "
+  "each stream's line count, so a report that cannot diagnose the failure at "
+  "least diagnoses itself.",
   "Yes — this is §9 pointed at the tooling. A gate whose failure output "
   "carries no failure is the absent-input shape: the report has the SHAPE of "
   "a diagnosis and none of the content, so the next person re-runs the suite "
@@ -2239,6 +2249,33 @@ d("B-082", "2026-09-04", "edge",
   "tests/test_reached_from_production.py::"
   "test_every_produces_contract_has_a_type_or_is_declared_untyped",
   "Open")
+
+d("B-083", "2026-09-04", "store",
+  "ONE CORRUPT TRANSCRIPT MARKED EVERY MATTER'S RECORD INCOMPLETE, and put a "
+  "stranger's turn id on each of them. `transcripts_for` appended an "
+  "undecryptable file to WHICHEVER matter was asking, so an advocate opening "
+  "a complete conversation was told turns were missing from it — and shown "
+  "the id of a turn on a file they may not read.",
+  "`record_turn` keyed the file by turn id alone, so the only way to learn "
+  "which matter a transcript belonged to was to DECRYPT it — and the one that "
+  "will not decrypt is exactly the one whose attribution matters. The "
+  "unreadable branch therefore ran BEFORE the matter check, because at that "
+  "point there was nothing to check against.",
+  "S1 — an absent input reading as success",
+  "Building the record tab and reading `transcripts_for` while checking why "
+  "six matters showed zero turns. The zero was correct — those matters "
+  "predate the feature — and the code beside it was not.",
+  "The matter is in the FILENAME (`<matter>__<turn>.nm`), so attribution "
+  "survives a payload that cannot be read. A legacy file that will not "
+  "decrypt belongs to no known matter and is reported once by "
+  "`unattributable()` as a fact about the STORE, never charged to a "
+  "conversation.",
+  "Yes, and the general form is worth more than the fix: ANYTHING THAT ROUTES "
+  "A RECORD — which matter, which advocate, which thread — must be readable "
+  "from OUTSIDE the thing being routed. Where it is not, the failure case has "
+  "nowhere to go but everywhere.",
+  "tests/test_transcript_attribution.py::"
+  "test_an_unreadable_transcript_belongs_to_one_matter_only")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

@@ -1399,14 +1399,44 @@ class TurnEngine:
                 disclosure=True))
             return
 
-        metrics.fire("G-HELDNOTFOUND", "held_not_found",
-                     f"held but not retrieved: {result.missing}")
-        grounds.append(Element(
-            kind=ElementKind.GROUND, thread=thread.id,
-            text=(f"A source this product declares it holds was not retrieved: "
-                  f"{result.missing} That is a defect in my retrieval, not a gap "
-                  f"in the law, and it is recorded as one."),
-            disclosure=True))
+        if result.coverage is Coverage.NOT_ASSESSED:
+            # THE SEARCH DID NOT HAPPEN, and that is its own sentence.
+            #
+            # This branch exists because the one below used to be the `else`.
+            # Any Coverage member added later fell into it and was announced to
+            # the advocate as "a defect in my retrieval" -- a state nobody
+            # assessed, reported as a state that was assessed and failed. The
+            # absent-input shape, arriving by construction rather than by
+            # mistake.
+            metrics.fire("G-NOTASSESSED", "not_assessed", result.missing or "")
+            grounds.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id,
+                text=(f"This was NOT looked up: {result.missing} I am not "
+                      f"telling you the law is silent, and I am not telling "
+                      f"you my retrieval failed. Nothing was searched."),
+                disclosure=True))
+            return
+
+        if result.coverage is Coverage.HELD_NOT_FOUND:
+            metrics.fire("G-HELDNOTFOUND", "held_not_found",
+                         f"held but not retrieved: {result.missing}")
+            grounds.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id,
+                text=(f"A source this product declares it holds was not "
+                      f"retrieved: {result.missing} That is a defect in my "
+                      f"retrieval, not a gap in the law, and it is recorded "
+                      f"as one."),
+                disclosure=True))
+            return
+
+        # NO `else`. A member added tomorrow raises here instead of borrowing
+        # whichever branch happened to be last -- the same reason `Gate` refuses
+        # a row without a third state rather than trusting the author.
+        raise AssertionError(
+            f"unhandled Coverage member {result.coverage!r}. Every state a "
+            f"retrieval can be in has to be SAID to the advocate; falling "
+            f"through to the nearest branch tells them something untrue about "
+            f"what was searched.")
 
     @implements("E2")
     @implements("D3")

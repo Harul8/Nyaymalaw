@@ -15,6 +15,17 @@
     <span class="mark">NM</span>
     <span class="name">Nyaymalaw</span>
   </div>
+
+  <!-- THE TABS. Three surfaces, and they do not share state on purpose:
+       advising is bounded by a matter, search is bounded by nothing, and the
+       record is what was already served. A search hit does not become a fact
+       on a matter by being looked at. -->
+  <nav class="tabs" id="tabs">
+    <button class="tab is-on" data-tab="advise">Advise</button>
+    <button class="tab" data-tab="search">Search the corpus</button>
+    <button class="tab" data-tab="record">The record</button>
+  </nav>
+
   <div class="who">
     <label for="advocate">Advocate</label>
     <input id="advocate" value="adv_demo" spellcheck="false">
@@ -22,7 +33,7 @@
   <div class="health" id="health" title="Wired configuration">checking…</div>
 </header>
 
-<main>
+<main id="pane-advise">
   <!-- ================= THE MATTER LIST / THREAD BOARD =================
        Two surfaces, deliberately distinct. The matter list is bounded by
        MATTER count; the thread board by THREAD count. Conflating them is how
@@ -49,6 +60,44 @@
         <button type="submit" class="primary" id="send">Send</button>
       </div>
     </form>
+  </section>
+</main>
+
+<!-- ===================== A4 — SEARCH THE CORPUS =====================
+     Ranked case paragraphs. It cannot identify an Act and does not try:
+     the surface has no Act lookup, so the exact-match path stays the only
+     way a statute is read. -->
+<main id="pane-search" class="single" hidden>
+  <section class="searcher">
+    <form id="search-form" class="search-bar" autocomplete="off">
+      <input id="q" type="search" placeholder="Search judgments — a proposition, a phrase, a section as you would cite it">
+      <input id="f-court" type="text" placeholder="Court (optional)">
+      <input id="f-from" type="number" placeholder="From yr" min="1800" max="2100">
+      <input id="f-to" type="number" placeholder="To yr" min="1800" max="2100">
+      <button type="submit" class="primary">Search</button>
+    </form>
+
+    <!-- WHAT WAS SEARCHED, ALWAYS. A result of zero is unreadable without
+         it, and unreadable in the direction that hurts: it reads as a corpus
+         that does not hold the law. -->
+    <div id="search-index" class="index-line" hidden></div>
+    <div id="search-state"></div>
+    <div id="search-results"></div>
+  </section>
+</main>
+
+<!-- ======================== THE RECORD ========================
+     Every turn as it was SERVED, read back from the encrypted transcript
+     store. Nothing else keeps it: the matter holds facts, the metrics hold
+     counts and no client words, and the answer was held by neither. -->
+<main id="pane-record" class="single" hidden>
+  <section class="recorder">
+    <div class="record-head">
+      <h2>Conversations, as they were served</h2>
+      <select id="record-matter"><option value="">Choose a matter…</option></select>
+    </div>
+    <div id="record-state"></div>
+    <div id="record-body"></div>
   </section>
 </main>
 

@@ -59,21 +59,45 @@ def step(label: str, cmd: list[str], allow_warn: bool = False) -> tuple[bool, st
 #: a run where eight tests were red -- the warning is on stderr, stderr is
 #: appended last, and the tail took the end. A gate that reports FAIL without
 #: naming the failure is a gate people re-run by hand to find out what happened.
-_VERDICT = ("FAILED ", "ERROR ", "error:", "Error:", "E   ", "assert",
-            "AssertionError", "no tests ran", "exit code", "SyntaxError")
+#: NO TRAILING SPACES. `ERROR ` missed `ERROR: not found:`, which is the line
+#: that says what happened -- a marker list that is precise about punctuation
+#: is a marker list that misses the case it was written for.
+_VERDICT = ("FAILED", "ERROR", "error:", "Error:", "E   ", "AssertionError",
+            "no tests ran", "short test summary", "exit code", "SyntaxError",
+            "Traceback", "INTERNALERROR")
+
+#: Lines that appear on EVERY run and say nothing about this one.
+_NOISE = ("RequestsDependencyWarning", "warnings.warn(")
 
 
 def _why(proc: subprocess.CompletedProcess) -> str:
-    """The failing lines first, then context, rather than whatever came last."""
-    lines = [ln for ln in ((proc.stdout or "") + "\n" + (proc.stderr or "")).splitlines()
-             if ln.strip()]
-    verdicts = [ln for ln in lines if any(k in ln for k in _VERDICT)]
+    """The failing lines first, then context, rather than whatever came last.
+
+    THE FALLBACK REPORTS ITS OWN FAILURE. When no marker matches, the previous
+    version printed a blended tail of stdout+stderr -- and since stderr is
+    appended last and carries a urllib3 warning on every single run, the
+    "explanation" was reliably that warning. A report that cannot explain the
+    failure has to say SO, and say enough to be diagnosed next time.
+    """
+    def useful(text: str) -> list[str]:
+        return [ln for ln in text.splitlines()
+                if ln.strip() and not any(n in ln for n in _NOISE)]
+
+    out, err = useful(proc.stdout or ""), useful(proc.stderr or "")
+    verdicts = [ln for ln in out + err if any(k in ln for k in _VERDICT)]
     if verdicts:
         head = "\n".join(verdicts[:40])
         return head if len(head) <= 3000 else head[:3000] + "\n      ... truncated"
+
     # NOT ASSESSED, and it must not read as "there was nothing to say".
-    return ("(no line matched a known failure marker — showing the last 2000 "
-            "characters)\n" + "\n".join(lines)[-2000:])
+    # The two streams are shown SEPARATELY and labelled: blending them is what
+    # let a constant warning stand in for a diagnosis.
+    return "\n".join([
+        f"(no line matched a known failure marker. exit={proc.returncode}, "
+        f"{len(out)} stdout line(s), {len(err)} stderr line(s) after noise)",
+        "--- stdout tail ---", *(out[-25:] or ["(empty)"]),
+        "--- stderr tail ---", *(err[-15:] or ["(empty)"]),
+    ])
 
 
 def main() -> int:

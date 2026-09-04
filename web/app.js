@@ -390,3 +390,249 @@ $('new-matter').addEventListener('click', () => {
 
 loadHealth();
 showMatterList();
+
+/* ============================== THE TABS ==============================
+ *
+ * Three surfaces that deliberately do NOT share state. A hit found in the
+ * corpus is not a fact on a matter until the advocate puts it there, and the
+ * quickest way to break that is a shared object both panes write to.
+ */
+
+const PANES = ['advise', 'search', 'record'];
+
+function showTab(name) {
+  PANES.forEach((p) => { $(`pane-${p}`).hidden = (p !== name); });
+  document.querySelectorAll('#tabs .tab').forEach((b) => {
+    b.classList.toggle('is-on', b.dataset.tab === name);
+  });
+  if (name === 'search') $('q').focus();
+  if (name === 'record') loadRecordMatters();
+}
+
+document.querySelectorAll('#tabs .tab').forEach((b) => {
+  b.addEventListener('click', () => showTab(b.dataset.tab));
+});
+
+/* ========================= A4 — SEARCH THE CORPUS =====================
+ *
+ * The client renders what the server said and adds nothing. In particular it
+ * NEVER renders an empty result on its own account: `coverage` and `index`
+ * come down on every response and both are shown, because a bare "no results"
+ * is read as "the law is not in the corpus" when it may mean the index was
+ * never built.
+ */
+
+function renderIndexLine(d) {
+  const el = $('search-index');
+  if (!d.index) { el.hidden = true; return; }
+  el.hidden = false;
+  el.textContent = '';
+
+  // THE QUERY, ON THE RESULTS. Hits that do not say what they answer are
+  // read as answering whatever is in the box -- and the box changes before
+  // the request returns. Naming it is the same rule as naming the index: a
+  // result the advocate cannot attribute is a result they can misread.
+  const what = document.createElement('span');
+  what.textContent = `Searched: ${d.index} · for “${d.query}”`;
+  el.appendChild(what);
+
+  if (d.identity) {
+    const frac = d.identity.fraction_of_source;
+    const held = d.identity.held.toLocaleString();
+    const of = d.identity.of_source ? d.identity.of_source.toLocaleString() : null;
+    const detail = document.createElement('span');
+    detail.className = 'index-detail';
+    // BOTH NUMBERS, because the RATIO is the disclosure. "451,548 paragraphs"
+    // reads as the corpus; "451,548 of 1,015,780" does not.
+    const size = of
+      ? `${held} of ${of} source paragraphs (${(frac * 100).toFixed(1)}%)`
+      : `${held} paragraphs · source size not recorded`;
+    // SCOPE FIRST. It is the disclosure that changes whether the whole result
+    // means anything: an empty answer to a Kerala question is not an answer
+    // about Kerala law, and only this line says so.
+    detail.textContent = ` · ${d.identity.scope} · ${size} · built ${d.identity.built_at}`;
+    el.appendChild(detail);
+  }
+}
+
+function renderSearch(d) {
+  renderIndexLine(d);
+  const st = $('search-state');
+  const body = $('search-results');
+  st.textContent = ''; body.textContent = '';
+
+  if (d.coverage === 'not_assessed') {
+    // NOT A ZERO. Nothing was searched, and saying "no results" here would be
+    // the most repeated defect in this project, in the advocate's face.
+    st.appendChild(stateBlock('loud', `NOT SEARCHED — ${d.why}`));
+    return;
+  }
+
+  if (!d.hit_count) {
+    st.appendChild(stateBlock('quiet', d.why || 'No paragraph matched.'));
+    return;
+  }
+
+  const count = document.createElement('p');
+  count.className = 'result-count';
+  count.textContent = `${d.hit_count} ranked paragraph${d.hit_count === 1 ? '' : 's'}`;
+  body.appendChild(count);
+
+  d.hits.forEach((h) => {
+    const card = document.createElement('article');
+    card.className = 'hit';
+
+    const head = document.createElement('header');
+    const name = document.createElement('span');
+    name.className = 'hit-name';
+    name.textContent = h.case_name;
+    const meta = document.createElement('span');
+    meta.className = 'hit-meta';
+    meta.textContent = `${h.court}${h.year ? ` · ${h.year}` : ''} · ${h.para_type}`;
+    head.append(name, meta);
+
+    // ORIGIN ON EVERY CARD. A ranked paragraph must never be readable as an
+    // exact lookup, and the way that happens is a template that omits this.
+    const prov = document.createElement('span');
+    prov.className = `pill ${h.origin === 'searched' ? 'searched' : 'resolved'}`;
+    prov.textContent = `${h.origin} · ${(h.confidence * 100).toFixed(0)}%`;
+    head.appendChild(prov);
+
+    const text = document.createElement('p');
+    text.className = 'hit-text';
+    text.textContent = h.snippet;
+
+    card.append(head, text);
+    body.appendChild(card);
+  });
+}
+
+$('search-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const params = new URLSearchParams({
+    q: $('q').value,
+    advocate_id: state.advocate,
+    limit: '25',
+  });
+  const court = $('f-court').value.trim();
+  const from = $('f-from').value.trim();
+  const to = $('f-to').value.trim();
+  if (court) params.set('court', court);
+  if (from) params.set('from_year', from);
+  if (to) params.set('to_year', to);
+
+  // CLEARED BEFORE THE REQUEST, not after it. Leaving the previous hits up
+  // while a new query runs shows the advocate an answer to a question they
+  // have already replaced -- and if the request then fails, it stays up.
+  $('search-results').textContent = '';
+  $('search-index').hidden = true;
+  $('search-state').textContent = '';
+  $('search-state').appendChild(stateBlock('quiet', 'Searching…'));
+  try {
+    renderSearch(await api(`/api/search?${params}`));
+  } catch (err) {
+    // AN ERROR IS NOT A ZERO. Rendering a failed request as "no results" is
+    // the same defect the coverage field exists to prevent.
+    $('search-results').textContent = '';
+    $('search-state').textContent = '';
+    $('search-state').appendChild(stateBlock('loud',
+      `The search did not run: ${err.message}. This says nothing about what the corpus holds.`));
+  }
+});
+
+/* ============================ THE RECORD =============================
+ *
+ * Read back from the encrypted transcript store. An unreadable turn is
+ * COUNTED and named rather than skipped: a review that renders nine of ten
+ * turns and calls itself complete is reviewing a different conversation from
+ * the one that ran.
+ */
+
+async function loadRecordMatters() {
+  const sel = $('record-matter');
+  try {
+    const d = await api(`/api/matters?advocate_id=${encodeURIComponent(state.advocate)}`);
+    const rows = d.matters || [];
+    sel.textContent = '';
+    const first = document.createElement('option');
+    first.value = '';
+    // AN UNREADABLE LIST IS NOT AN EMPTY ONE. `state` says which, and a
+    // dropdown reading "No matters yet" over a list that failed to build is
+    // the same defect the rail already refuses.
+    first.textContent = d.state !== 'ok'
+      ? 'The matter list could not be read'
+      : (rows.length ? 'Choose a matter…' : 'No matters yet');
+    sel.appendChild(first);
+    if (d.state !== 'ok') {
+      $('record-state').appendChild(stateBlock('loud', d.unreadable_reason
+        || 'The matter list could not be built.'));
+    }
+    rows.forEach((m) => {
+      const o = document.createElement('option');
+      o.value = m.matter_id;
+      // `matter` is the projection's own name for it. Falling back to the id
+      // was showing every row as `mat_65fc8d70d72a`, which is a list nobody
+      // can choose from.
+      o.textContent = m.matter || m.matter_id;
+      sel.appendChild(o);
+    });
+  } catch (err) {
+    $('record-state').textContent = '';
+    $('record-state').appendChild(stateBlock('loud',
+      `The matter list could not be read: ${err.message}`));
+  }
+}
+
+async function showRecord(matterId) {
+  const st = $('record-state');
+  const body = $('record-body');
+  st.textContent = ''; body.textContent = '';
+  if (!matterId) return;
+
+  let d;
+  try {
+    d = await api(`/api/matters/${matterId}/transcript?advocate_id=${encodeURIComponent(state.advocate)}`);
+  } catch (err) {
+    st.appendChild(stateBlock('loud', `The record could not be read: ${err.message}`));
+    return;
+  }
+
+  if (d.state !== 'ok') {
+    // LOUD, and ABOVE the transcript rather than below it.
+    st.appendChild(stateBlock('loud', d.unreadable_reason
+      || 'Some turns on this matter could not be read back.'));
+  }
+
+  const head = document.createElement('p');
+  head.className = 'result-count';
+  head.textContent = `${d.turn_count} turn${d.turn_count === 1 ? '' : 's'} on ${d.title}`;
+  body.appendChild(head);
+
+  d.turns.forEach((t, i) => {
+    const card = document.createElement('article');
+    card.className = 'recorded-turn';
+
+    const h = document.createElement('header');
+    h.textContent = `Turn ${i + 1} · ${t.turn_id || ''}`;
+    card.appendChild(h);
+
+    const asked = document.createElement('p');
+    asked.className = 'recorded-asked';
+    asked.textContent = t.message || t.asked
+      || '(what the advocate wrote was not recorded on this turn)';
+    card.appendChild(asked);
+
+    const pre = document.createElement('pre');
+    pre.className = 'recorded-raw';
+    pre.textContent = JSON.stringify(t, null, 2);
+    const wrap = document.createElement('details');
+    const sum = document.createElement('summary');
+    sum.textContent = 'The turn as it was served';
+    wrap.append(sum, pre);
+    card.appendChild(wrap);
+
+    body.appendChild(card);
+  });
+}
+
+$('record-matter').addEventListener('change', (ev) => showRecord(ev.target.value));
