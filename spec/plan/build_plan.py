@@ -519,7 +519,12 @@ FM = [
     ["D5.1", "The register — proof, never honesty", "D", "S7", "E-072, E-073", "built"],
     ["D6", "Case theory", "D", "S8", "E-080, E-081", "tested"],
     ["D7", "The adversarial pass", "D", "S8", "E-082, E-083, E-085", "built"],
-    ["D8", "Salvage — the weak case", "D", "S8", "E-084", "built"],
+    # `tested` NOW, and it went built -> tested by being wired rather than by
+    # anyone re-running anything. B-080 moved it DOWN for the right reason:
+    # E-084 is class B at every-turn cadence and no turn produced a salvage
+    # route at all, so the eval had run against a module the product never
+    # called. It runs on a served turn now.
+    ["D8", "Salvage — the weak case", "D", "S8", "E-084", "tested"],
     ["D9", "Issue facets and disposition", "D", "S6", "E-060, E-061, E-062", "tested"],
     ["E1", "Scenarios and contingencies", "E", "S12", "—", "decided"],
     ["E2", "The recommendation", "E", "S1", "E-013, E-064", "tested"],

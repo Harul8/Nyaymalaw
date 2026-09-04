@@ -844,7 +844,7 @@ features:
   title: Salvage — the weak case
   phase: D
   slice: S8
-  status: built
+  status: tested
   does:
   - Treat a claim as a set of coordinates — **party, cause, relief, forum, timing, procedure, burden**
     — and ask which coordinate can move. Almost every "you lose" is the failure of one of them, not of
