@@ -926,8 +926,9 @@ class TurnEngine:
         # the side is unknown, and answering it for a guessed side is the
         # defect G-POSTURE exists for.
         register: tuple[deadlines.Deadline, ...] | None = None
+        position: limitation.Limitation | None = None
         if not side_blind:
-            rows, register = self._thresholds(
+            rows, register, position = self._thresholds(
                 thread, turn, result, metrics, facts)
             grounds.extend(rows)
 
@@ -948,7 +949,7 @@ class TurnEngine:
         if not side_blind:
             elements.append(
                 self._recommend(thread, turn, result, metrics, memory,
-                                register))
+                                register, position))
         elements.extend(grounds)
         return elements, tuple(relied_on), tuple(retrieved)
 
@@ -976,7 +977,8 @@ class TurnEngine:
     @implements("D1")
     def _thresholds(self, thread: Thread, turn: TurnInput, result,
                     metrics: TurnMetrics, facts: tuple[Fact, ...],
-                    ) -> tuple[list[Element], tuple[deadlines.Deadline, ...]]:
+                    ) -> tuple[list[Element], tuple[deadlines.Deadline, ...],
+                               limitation.Limitation]:
         """The threshold map, the limitation position, and the register.
 
         EVERY THRESHOLD GETS A ROW whether or not it was assessed, because an
@@ -994,10 +996,29 @@ class TurnEngine:
         chart = chronology.chart(facts, thread.chronology)
         dated = tuple(f.date for f in chart if f.date is not None)
 
-        ours = self._limitation(thread.posture.side, thread, result, chart)
-        register = self._register(thread, ours)
+        # WHOSE CLAIM DOES THE CHART DESCRIBE? On a defending thread it is
+        # THEIRS — the advocate is describing the claim being made against
+        # their client, and the accrual on the file is that claim's accrual.
+        #
+        # This computed BOTH from the same chart and labelled one "ours" and
+        # one "theirs", so a defending turn reported two limitation positions
+        # with the same Article, the same accrual and the same date. It read
+        # as two findings and was one, and the "our side" figure asserted a
+        # claim of ours that nothing on the thread describes. Measured on a
+        # served turn, 31 August 2026 (B-075).
+        defending = thread.posture.side is Side.DEFENDING
+        claimant = self._limitation(
+            Side.MOVING if defending else thread.posture.side,
+            thread, result, chart)
+        ours = (limitation.not_computed(
+            thread.posture.side,
+            "we are defending and nothing on this thread describes a claim of "
+            "ours; a counterclaim would have its own accrual",
+            thread.chronology) if defending else claimant)
+        register = self._register(thread, claimant)
         map_ = thresholds.for_thread(
-            {thresholds.Threshold.LIMITATION: thresholds.from_limitation(ours)})
+            {thresholds.Threshold.LIMITATION:
+             thresholds.from_limitation(claimant)})
 
         # D1.1 -- arithmetic checked against THE FILE'S OWN DATES. A twelve-year
         # clock is not absurd; one that expires before the file's earliest
@@ -1012,10 +1033,14 @@ class TurnEngine:
 
         # D2 -- THEIRS TOO, and on a defending thread it is often the whole
         # answer: it disposes of the claim without touching the merits.
-        if thread.posture.side is Side.DEFENDING:
-            theirs = self._limitation(Side.MOVING, thread, result, chart)
-            register += self._register(thread, theirs)
-            out.extend(self._limitation_elements(thread, turn, theirs, "their"))
+        if defending:
+            # THE ONE THAT MATTERS ON A DEFENDING THREAD, and D2 says why:
+            # their limitation is often the whole answer, disposing of the
+            # claim without touching the merits. `ours` above says plainly
+            # that no claim of ours is on this thread rather than repeating
+            # this figure under a second name.
+            out.extend(
+                self._limitation_elements(thread, turn, claimant, "their"))
 
         blocked = [a for a in map_
                    if a.state is thresholds.ThresholdState.BLOCKED]
@@ -1027,7 +1052,7 @@ class TurnEngine:
                       f"{', '.join(a.threshold.value for a in blocked)}. Those "
                       f"are gaps in the map, not findings that they do not "
                       f"arise.")))
-        return out, deadlines.register(register, turn.today)
+        return out, deadlines.register(register, turn.today), claimant
 
     @implements("D2")
     def _limitation(self, for_side: Side, thread: Thread, result,
@@ -1427,22 +1452,86 @@ class TurnEngine:
     def _recommend(self, thread, turn, result, metrics: TurnMetrics,
                    memory=None,
                    register: "tuple[deadlines.Deadline, ...] | None" = None,
+                   position: "limitation.Limitation | None" = None,
                    ) -> Element:
         side = thread.posture.side.value
         cited = ""
         if result.findings:
             cited = f" The provision to work from is {result.findings[0].ref}."
+
+        # WHAT THE ANSWER BENEATH THIS ONE SAYS. Measured on a served turn,
+        # 31 August 2026: the ACTION read "file the recovery suit, ensuring it
+        # is within the limitation period" while the GROUND directly below it
+        # read "that period has run" -- 174 days ago. On the next turn it told
+        # the advocate to "calculate the limitation period and determine if the
+        # claim is still within time", which is the calculation the product had
+        # just done and printed underneath (B-074).
+        #
+        # Nothing was wrong with either component. The limitation was computed
+        # correctly and the step was composed correctly GIVEN WHAT IT WAS TOLD,
+        # and it was told nothing about the limitation. Two right components,
+        # one incoherent answer, the defect in the gap between them.
+        worked = ""
+        if position is not None:
+            if position.state is limitation.LimitationState.COMPUTED:
+                gone = position.expired(turn.today)
+                worked = (
+                    f"\n\nALREADY WORKED OUT, and your step must be consistent "
+                    f"with it: limitation on {position.article} expires "
+                    f"{position.expires_on.isoformat()}, which "
+                    + ("HAS ALREADY PASSED. Do NOT advise filing within a "
+                       "period that has run."
+                       if gone else
+                       "is still open. Do not tell them to compute it; it is "
+                       "computed."))
+                missed = position.accounts_for_every_entry(thread.chronology)
+                if missed:
+                    # WHAT HAS NOT BEEN WEIGHED, AND THE BAN ON GUESSING IT.
+                    #
+                    # The first version of this prompt told the model to
+                    # "advise on what the file offers now: an acknowledgment or
+                    # part payment that restarts it". That INVITED the
+                    # assertion, and the model took it: acting for the debtor
+                    # it said "the acknowledgment on 12 June 2024 does not
+                    # operate to restart the limitation period", flatly, on a
+                    # turn where nothing had computed whether it does.
+                    #
+                    # Worse, it hedged the same point acting for the creditor
+                    # -- "to POTENTIALLY revive" -- so the same unfounded
+                    # question was stated tentatively when the answer would
+                    # hurt our client and definitively when it would hurt
+                    # theirs. That is E-073's failure exactly, and the judge
+                    # found it (B-077).
+                    #
+                    # Nothing produces a `Factor` yet (B-073), so the honest
+                    # instruction is: name the fact, ask for it to be checked,
+                    # and assert nothing about its effect.
+                    worked += (
+                        f" {len(missed)} thing(s) on this file have NOT been "
+                        f"weighed against that period. You may tell them to "
+                        f"have those examined. You may NOT say whether any of "
+                        f"them restarts, extends or fails to restart it -- "
+                        f"that has not been computed, and stating it either "
+                        f"way is an assertion nobody made.")
+            else:
+                worked = (f"\n\nNOT worked out: {position.not_computed_because}. "
+                          f"Do not assume a position either way.")
+
         system = (
             "You are senior counsel advising an instructing advocate in India. "
             "Reply with ONE imperative next step in at most 40 words. "
-            "No preamble, no options, no caveats. State the step, not the law."
+            "No preamble, no options, no caveats. State the step, not the law.\n"
+            "NEVER restate a calculation already made for them, and never "
+            "recommend a step the worked position rules out. They are a "
+            "professional peer: 'file within the limitation period' tells them "
+            "nothing they did not know before they called."
         )
         # THE FILE, THEN THIS TURN. A next step recommended off the last
         # message alone re-opens ground the advocate has already covered,
         # which reads to them as the product having forgotten the matter --
         # and it is, because it had.
         file_note = memory.as_context() if memory is not None else ""
-        user = f"The advocate acts for the {side} party.{cited}"
+        user = f"The advocate acts for the {side} party.{cited}{worked}"
         if file_note:
             user += f"\n\n{file_note}"
         user += (f"\n\nWhat they have just asked: {turn.message.strip()[:1500]}"

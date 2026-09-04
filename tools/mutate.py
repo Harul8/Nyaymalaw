@@ -1500,8 +1500,8 @@ MUTATIONS = [
     # thread their limitation is often the whole answer.
     ("the opponent's limitation never computed on a defending thread",
      "nm/core/turn.py",
-     "        if thread.posture.side is Side.DEFENDING:",
-     "        if False and thread.posture.side is Side.DEFENDING:",
+     "        defending = thread.posture.side is Side.DEFENDING",
+     "        defending = False"
      "test_on_a_defending_thread_the_turn_computes_the_opponents_limitation",
      "E-045"),
 

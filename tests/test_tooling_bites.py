@@ -331,10 +331,26 @@ def test_the_served_process_reports_which_code_it_loaded():
     import nm.edge.api as api
     from nm.domain.identity import source_fingerprint
 
-    assert api.SERVING == source_fingerprint(), (
-        "the module-level fingerprint does not match the tree it was imported "
-        "from")
     assert not api.SERVING.startswith("unknown"), api.SERVING
+
+    # HELD, NOT HELD, OR NOT ASSESSED -- and the third state is visible.
+    #
+    # Comparing SERVING against the tree is the check that caught B-061, and
+    # its home is `tools/run_scenario.py`, where a LIVE SERVER is asked what it
+    # is running. In-process the same comparison can only fail if the tree
+    # changed between this module's import and this line -- which is what an
+    # editor does, not what a defect does. It fired that way three times in one
+    # session, and an alarm that is wrong in the direction of alarm is one
+    # people learn to overrule.
+    before = source_fingerprint()
+    quiet = before == source_fingerprint()
+    if not quiet:
+        pytest.skip("NOT ASSESSED: the tree changed while this test ran, so "
+                    "the comparison would describe the editor, not the code. "
+                    "The live check is tools/run_scenario.py::server_fingerprint")
+    assert api.SERVING == before, (
+        "the module-level fingerprint does not match the tree it was imported "
+        "from, and the tree held still while it was measured")
 
     # IT IS A CONSTANT, not a call. The check depends on this: a property or a
     # function evaluated per request would re-read the disk.
@@ -506,3 +522,51 @@ def test_an_unscored_golden_suite_is_not_reported_as_a_pass():
     assert r.stdout.count("NOT ASSESSED") == 25, (
         f"only {r.stdout.count('NOT ASSESSED')} of 25 scenarios reached the "
         f"report")
+
+
+def test_a_failing_step_names_what_failed():
+    """A GATE WHOSE FAILURE OUTPUT CARRIES NO FAILURE IS NOT A REPORT.
+
+    Measured on 4 September 2026: `tools/check.py` printed
+    `CHECK FAILED -- pytest` and, beneath it, a urllib3 version warning. The
+    failing test name was in the captured output and never reached the screen,
+    because the tail of `stdout + stderr` is whatever stderr said last.
+
+    This is §9 aimed at the tooling: the report had the SHAPE of a diagnosis
+    and none of the content, so the suite had to be re-run by hand to learn
+    what the gate already knew.
+    """
+    sys.path.insert(0, str(ROOT))
+    from tools.check import _why
+
+    proc = subprocess.run(
+        [sys.executable, "-c",
+         "import sys\n"
+         "print('FAILED tests/test_x.py::test_the_one_that_matters')\n"
+         "print('ordinary chatter')\n"
+         "print('RequestsDependencyWarning: urllib3 does not match', file=sys.stderr)\n"],
+        capture_output=True, text=True)
+
+    said = _why(proc)
+    assert "test_the_one_that_matters" in said, (
+        "the failure report did not name the failing test:\n" + said)
+    assert "urllib3" not in said, (
+        "a stderr warning displaced the failure it was printed beside")
+
+
+def test_a_failure_with_no_recognised_marker_says_so():
+    """THE THIRD STATE. When nothing in the output matches a failure marker,
+    the report must say it could not find one — not print a tail that reads
+    like an explanation. An absent diagnosis must never look like a diagnosis.
+    """
+    sys.path.insert(0, str(ROOT))
+    from tools.check import _why
+
+    proc = subprocess.run(
+        [sys.executable, "-c", "print('something happened and nobody named it')"],
+        capture_output=True, text=True)
+
+    said = _why(proc)
+    assert "no line matched" in said, (
+        "output with no recognisable failure was reported as though the tail "
+        "were the reason:\n" + said)

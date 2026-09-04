@@ -50,9 +50,30 @@ def step(label: str, cmd: list[str], allow_warn: bool = False) -> tuple[bool, st
     print(f"  [{mark}] {label:<34} {dt:5.1f}s")
     out = (proc.stdout or "") + (proc.stderr or "")
     if not ok:
-        tail = "\n".join(line for line in out.splitlines() if line.strip())[-2500:]
-        print("\n" + "\n".join("      " + ln for ln in tail.splitlines()) + "\n")
+        print("\n" + "\n".join("      " + ln for ln in _why(proc).splitlines()) + "\n")
     return ok or allow_warn, out
+
+
+#: Lines that say WHICH THING FAILED, as opposed to lines that merely appeared.
+#: A tail of stdout+stderr showed a urllib3 version warning and nothing else on
+#: a run where eight tests were red -- the warning is on stderr, stderr is
+#: appended last, and the tail took the end. A gate that reports FAIL without
+#: naming the failure is a gate people re-run by hand to find out what happened.
+_VERDICT = ("FAILED ", "ERROR ", "error:", "Error:", "E   ", "assert",
+            "AssertionError", "no tests ran", "exit code", "SyntaxError")
+
+
+def _why(proc: subprocess.CompletedProcess) -> str:
+    """The failing lines first, then context, rather than whatever came last."""
+    lines = [ln for ln in ((proc.stdout or "") + "\n" + (proc.stderr or "")).splitlines()
+             if ln.strip()]
+    verdicts = [ln for ln in lines if any(k in ln for k in _VERDICT)]
+    if verdicts:
+        head = "\n".join(verdicts[:40])
+        return head if len(head) <= 3000 else head[:3000] + "\n      ... truncated"
+    # NOT ASSESSED, and it must not read as "there was nothing to say".
+    return ("(no line matched a known failure marker — showing the last 2000 "
+            "characters)\n" + "\n".join(lines)[-2000:])
 
 
 def main() -> int:

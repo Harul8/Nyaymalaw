@@ -809,6 +809,36 @@ evals:
   cadence: Every turn
   automated: 'Yes'
   prd_ref: C6
+- id: E-116
+  slice: S10
+  class: A
+  asserts: A zero result names the index it came from and that index’s identity; an index that cannot
+    be opened yields not_assessed, never an empty hit list
+  counterexample: A search returning [] with no index named, read by the advocate as ‘the corpus does
+    not hold it’
+  cadence: Every commit
+  automated: 'Yes'
+  prd_ref: A4
+- id: E-117
+  slice: S10
+  class: A
+  asserts: An Act is identified by exact title only — a query naming an Act not held returns not-found
+    for that Act and never a different Act at any score
+  counterexample: ‘Indian Easements Act 1882’ answered with the Indian Evidence Act, 1872 on the shared
+    word Indian
+  cadence: Every commit
+  automated: 'Yes'
+  prd_ref: A4
+- id: E-118
+  slice: S10
+  class: C
+  asserts: A judgment held by the index is retrieved by its reporter citation, and every hit carries SEARCHED
+    with a confidence rather than RESOLVED
+  counterexample: A search hit presented as a resolved authority, with no confidence and no way to tell
+    it from an exact lookup
+  cadence: Weekly
+  automated: 'Yes'
+  prd_ref: A4
 - id: E-J01
   slice: All
   class: D

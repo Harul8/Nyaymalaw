@@ -110,6 +110,30 @@ A(table(
 ));
 A(spacer(140));
 
+A(feature('A4', 'Search the corpus — acts and judgments', {
+  does: [
+    '**Free-text search over judgments** — the FTS index of **451,548 attributable case paragraphs**, ranked, each hit carrying case, court, year and the paragraph that matched.',
+    '**Exact lookup of an Act section.** The Act is identified by **exact title match**; the section is read from the store that holds the Act in full.',
+    'Filter by **court** and by **year range**, and disclose which filter narrowed a result set to nothing.',
+    '**Name the index every result came from — including a result of zero**, together with the index\'s own identity: when it was built, from what source, and how many of the source\'s paragraphs it holds.',
+    'Let the advocate carry a hit onto a matter **as a deliberate act**, recorded as searched-and-placed rather than as a fact the product established.',
+  ],
+  never: [
+    '**Never identify an Act by fuzzy match.** Measured: `Indian Easements Act 1882` scored to the **Indian Evidence Act, 1872** on the shared word *Indian*, and to the **Transfer of Property Act, 1882** on the shared year. Ranking paragraphs is right because they have no exact key; scoring Act titles is a wrong signal, not a weak one.',
+    '**Never render a zero result as absence.** A zero names the index it came from and what that index holds — `case_name` holds party names, so a subject search against it returns nothing and reads exactly like an empty corpus. Bail returned **0** by name across 33,791 cases and **1,452** against the summaries.',
+    '**Never present a searched hit as a resolved authority.** A search result carries `Origin.SEARCHED` and a confidence, always. `RESOLVED` is for an exact key and a search box has none.',
+    'Never search outside what the corpus holds without saying so. It is scoped to **Telangana and the Union of India**, and an answer about another state\'s law out of it is confidently wrong.',
+    '**Never let a hit enter a matter as an established fact.** The advocate places it; the product does not.',
+  ],
+  produces: ['`CorpusSearch { query, index, index_identity, filters, hits, hit_count, coverage }` with `SearchHit { case_id, case_name, court, year, para_type, snippet, rank, origin, confidence }` and `coverage ∈ {held, held_not_found, not_assessed}` — the third state is a VALUE, because an index that could not be opened must not read as a corpus that holds nothing.'],
+  evals: [
+    '**Class A** — a zero result carries the index name and the index identity, never an empty list alone. An unopenable index yields `not_assessed`, never `held_not_found` and never an empty `hits`. Every hit carries `SEARCHED` and a confidence; none carries `RESOLVED`.',
+    '**Class A** — a query naming an Act the corpus does not hold returns not-found for that Act. It never returns a different Act, at any score.',
+    '**Class C** — measured recall against the corpus: a judgment held by the index is retrieved by its reporter citation.',
+  ],
+  counter: 'The measured original: matching case NAMES reached **0.83%** of held judgments, while matching reporter CITATIONS — an exact key — reached **90.9%**. Exact matching did not merely avoid wrong answers; it beat fuzzy a hundredfold at the one job where both were measured.',
+}));
+
 A(feature('B1', 'Opening-message routing', {
   does: [
     'Classify the opening message on **what it discloses**, and state the reading in one line so the advocate can correct it.',

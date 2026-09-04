@@ -119,9 +119,20 @@ def test_on_a_defending_thread_the_turn_computes_the_opponents_limitation(
     assert "Limitation for their side" in text, (
         f"a defending thread and the opponent's limitation was never "
         f"computed:\n{text}")
-    # AND OURS IS STILL THERE. Replacing one with the other would be the same
-    # defect facing the other way.
-    assert "Limitation for our side" in text
+    # AND OURS IS NOT COMPUTED, WITH THE REASON. This used to assert that BOTH
+    # appeared, and both did — with the same Article, the same accrual and the
+    # same date, because ONE computation was being labelled twice.
+    #
+    # Measured on a served turn, 31 August 2026 (B-075): a defending turn
+    # reported "Limitation for our side runs to 2026-03-14" and "Limitation for
+    # their side runs to 2026-03-14" from the identical accrual. It read as two
+    # findings, it was one, and the "our side" figure asserted a claim of ours
+    # that nothing on the thread described.
+    assert "Limitation for our side runs to" not in text, (
+        "a limitation is asserted for our side on a defending thread, where "
+        "nothing on the thread describes a claim of ours")
+    assert "nothing on this thread describes a claim of ours" in text, (
+        "our side is silent rather than saying why it was not computed")
 
 
 @pytest.mark.eval_id("E-045")
