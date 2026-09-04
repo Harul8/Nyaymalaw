@@ -385,6 +385,28 @@ GATES: tuple[Gate, ...] = (
         built=True,
     ),
     Gate(
+        id="G-PRESERVE",
+        condition="An inventoried item is held by someone with an interest in "
+                  "it not surviving, and no preservation step is on the file.",
+        # THE THIRD STATE IS `not_assessed`, and the constructor refused
+        # this row without it. An inventory that could not be read is not
+        # an inventory with nothing at risk in it -- and this gate blocks
+        # a step, so the difference decides whether the advocate proceeds.
+        states=("preserved", "unpreserved", "not_assessed"),
+        response=Response.BLOCK,
+        scope=Scope.STEP,
+        persistence=Persistence.STICKY,
+        recovery=Recovery.ADVOCATE,
+        visible="C7's counterexample, refused: the original agreement is with "
+                "the opponent's brother, the item is inventoried, the holder "
+                "is recorded, and nothing was ever asked of anyone — so the "
+                "file reads as WORKED and the document is gone by the time it "
+                "is needed. It blocks a step rather than noting a risk, "
+                "because a note has been read and a block has been answered.",
+        feature="C7",
+        built=True,
+    ),
+    Gate(
         id="G-NOTASSESSED",
         condition="The store that would answer this need could not be consulted "
                   "at all — absent, unopenable, or never built.",

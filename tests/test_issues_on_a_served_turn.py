@@ -39,8 +39,21 @@ def _run(tmp_path, message):
 
 
 def _findings(out):
+    """The ISSUE findings, not every finding on the turn.
+
+    This took all of them, and it was wrong the moment a second feature
+    emitted one: C7's inventory rows are findings too, and the next test
+    asserted every finding carries a posture version. An inventory row has no
+    posture and should not.
+
+    `runs against` is the issue renderer's own vocabulary, asserted in this
+    same file, so the filter and the format cannot drift apart silently. The
+    deeper point is that FINDING elements from different features are
+    indistinguishable to any consumer — worth a marker on `Element` if a third
+    feature needs to tell them apart.
+    """
     return [e.text for e in out.answer.elements
-            if e.kind is ElementKind.FINDING]
+            if e.kind is ElementKind.FINDING and "runs against" in e.text]
 
 
 @pytest.mark.eval_id("E-060")

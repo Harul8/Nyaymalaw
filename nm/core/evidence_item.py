@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 
+from nm.core.posture import _fold
 from nm.domain.matter import FactId
 from nm.domain.text import blank, refuses_blank_text
 from nm.domain.traceability import implements
@@ -230,3 +231,162 @@ def unasked(items: tuple[EvidenceItem, ...]) -> tuple[str, ...]:
         if missing:
             out.append(f"{i.what}: {', '.join(missing)} not assessed")
     return tuple(out)
+
+
+# ============================ READING AN INVENTORY ==========================
+#
+# WHY THIS CAN BE WIRED BEFORE DOCUMENT INTAKE EXISTS
+# -----------------------------------------------------
+# C7 reads as though it needs C6 -- documents in, items out -- and it does not.
+# Its own counterexample is a sentence an advocate writes in a brief: *the
+# original agreement is with the opponent's brother and no preservation or
+# production step exists*. That is an inventory entry, a holder, and a missing
+# instruction, all before anything is uploaded.
+#
+# Waiting for intake would have left the one control that catches a document
+# walking out of the file unwired for another slice.
+
+MAX_ITEMS = 10
+
+INVENTORY_SCHEMA: dict = {
+    "x-nm-read": "inventory",
+    "type": "object",
+    "properties": {
+        "items": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "what": {
+                        "type": "string",
+                        "description": "The item, in a few words — 'the "
+                                       "original agreement', 'the WhatsApp "
+                                       "exchange', 'the site engineer'.",
+                    },
+                    "holder": {
+                        "type": "string",
+                        "enum": [h.value for h in Holder],
+                    },
+                    "form": {
+                        "type": "string",
+                        "enum": [f.value for f in Form],
+                    },
+                    "quoted": {
+                        "type": "string",
+                        "description": "The advocate's OWN words describing "
+                                       "this item, verbatim.",
+                    },
+                },
+                "required": ["what", "holder", "form", "quoted"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["items"],
+    "additionalProperties": False,
+}
+
+INVENTORY_SYSTEM = (
+    "You read an Indian advocate's account of a matter and list the EVIDENCE "
+    "it mentions — documents, records, messages, and people who saw "
+    "something.\n\n"
+    "For each, say WHO HAS IT and WHAT FORM it is in. `form` matters because a "
+    "photocopy is not the document: whether secondary evidence is admissible "
+    "under s.65 is the whole answer on a file where the original sits with the "
+    "other side.\n\n"
+    "Use `not_assessed` for anything the account does not say. Do NOT decide "
+    "whether an item is admissible or how much weight it carries — those are "
+    "separate questions and they are not yours.\n\n"
+    "`quoted` must be the advocate's own words, copied exactly. Return an "
+    "empty list if no evidence is mentioned."
+)
+
+
+@dataclass(frozen=True)
+class ReadInventory:
+    """THREE STATES. An empty inventory is not an unread one."""
+
+    items: tuple["EvidenceItem", ...] = ()
+    examined: bool = False
+    why_not: str = "nothing has read this account for evidence"
+    refused: tuple[str, ...] = ()
+
+    @property
+    def state(self) -> str:
+        if not self.examined:
+            return "not_assessed"
+        return "listed" if self.items else "none_mentioned"
+
+
+UNREAD_INVENTORY = ReadInventory()
+
+
+def inventory_not_assessed(why: str) -> ReadInventory:
+    return ReadInventory(examined=False, why_not=why)
+
+
+@implements("C7")
+def build_inventory_prompt(message: str, account: str):
+    from nm.ports.model import Prompt
+
+    return Prompt(
+        system=INVENTORY_SYSTEM,
+        user=(f"THE FILE SO FAR:\n{account or '(nothing recorded yet)'}\n\n"
+              f"THIS TURN:\n{message}"),
+    )
+
+
+@implements("C7")
+def read_inventory(said: dict, account: str) -> ReadInventory:
+    """Build items. EXISTENCE, ADMISSIBILITY AND WEIGHT ARE LEFT UNASKED.
+
+    Deliberately. The model is told what the advocate SAID they have and who
+    has it; whether it goes in, and whether it moves a judge, are two further
+    questions nobody has put. Filling them here from the same read would be
+    the collapse this module separates three enums to prevent -- and `unasked`
+    exists precisely so the gap is visible rather than answered.
+    """
+    rows = said.get("items")
+    if not isinstance(rows, list):
+        return inventory_not_assessed("the inventory read returned no list")
+
+    items: list[EvidenceItem] = []
+    refused: list[str] = []
+    for row in rows[:MAX_ITEMS]:
+        if not isinstance(row, dict):
+            refused.append("an item that was not an object")
+            continue
+        what = str(row.get("what") or "").strip()
+        if not what:
+            refused.append("an item with no description")
+            continue
+
+        quoted = str(row.get("quoted") or "")
+        if quoted.strip() and _fold(quoted) not in _fold(account):
+            refused.append(f"{what[:50]}: the quoted words are not in the "
+                           f"advocate's account")
+            continue
+
+        items.append(EvidenceItem(
+            what=what,
+            holder=_facet(Holder, row.get("holder"), Holder.UNKNOWN),
+            form=_facet(Form, row.get("form"), Form.NOT_ASSESSED),
+        ))
+
+    return ReadInventory(items=tuple(items), examined=True,
+                         refused=tuple(refused),
+                         why_not=("the account mentions no evidence yet"
+                                  if not items and not refused else ""))
+
+
+def _facet(enum_type, value, default):
+    """An out-of-vocabulary value is the DEFAULT, never an invented member.
+
+    Same rule as `issue.facet`: a value outside the enum is blanked and
+    re-derived rather than carried, because a `Holder` nobody defined is a
+    holder nothing can act on.
+    """
+    try:
+        return enum_type(str(value))
+    except ValueError:
+        return default

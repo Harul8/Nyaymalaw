@@ -253,6 +253,22 @@
     "built": true
   },
   {
+    "id": "G-PRESERVE",
+    "condition": "An inventoried item is held by someone with an interest in it not surviving, and no preservation step is on the file.",
+    "states": [
+      "preserved",
+      "unpreserved",
+      "not_assessed"
+    ],
+    "response": "block",
+    "scope": "step",
+    "persistence": "sticky",
+    "recovery": "advocate",
+    "visible": "C7's counterexample, refused: the original agreement is with the opponent's brother, the item is inventoried, the holder is recorded, and nothing was ever asked of anyone \u2014 so the file reads as WORKED and the document is gone by the time it is needed. It blocks a step rather than noting a risk, because a note has been read and a block has been answered.",
+    "feature": "C7",
+    "built": true
+  },
+  {
     "id": "G-NOTASSESSED",
     "condition": "The store that would answer this need could not be consulted at all \u2014 absent, unopenable, or never built.",
     "states": [

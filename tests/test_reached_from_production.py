@@ -55,9 +55,6 @@ ENTRY_POINTS: dict[str, str] = {
 #: behaviour does not, and the difference is invisible to every other check in
 #: this build.
 UNWIRED: dict[str, str] = {
-    "nm.core.evidence_item":
-        "C7. The inventory is built; nothing takes documents in or holds an "
-        "evidence position on a matter.",
     "nm.core.theory":
         "D6. One theory per thread, and nothing in the turn forms one.",
     "nm.core.adversarial":
@@ -213,7 +210,6 @@ def test_the_scan_can_see_an_unreached_module():
 #: was actually wrong, was the one it could not see. A join that silently
 #: drops members is the same defect as a scan whose population went to zero.
 OWNER: dict[str, tuple[str, ...]] = {
-    "nm.core.evidence_item": ("C7",),
     "nm.core.theory": ("D6",),
     "nm.core.adversarial": ("D7", "D8"),
     "nm.core.gaps": ("A3",),

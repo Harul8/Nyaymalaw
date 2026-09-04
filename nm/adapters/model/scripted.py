@@ -363,6 +363,53 @@ def scripted_issues(user: str) -> str:
     return json.dumps({"issues": rows})
 
 
+#: Evidence an account might mention, paired with WHO usually has it and what
+#: FORM it is in.
+#:
+#: `third_party` on the original agreement is the important row: it is C7's
+#: own counterexample -- the original with the opponent's brother, no
+#: preservation step, the file reading as worked -- and a double that never
+#: produced an at-risk item would leave `unpreserved` untested offline.
+_SCRIPTED_EVIDENCE = (
+    ("original agreement", "third_party", "original"),
+    ("original", "third_party", "original"),
+    ("photocopy", "client", "photocopy"),
+    ("whatsapp", "client", "electronic"),
+    ("invoices", "client", "original"),
+    ("cheque", "client", "original"),
+    ("notice", "client", "certified_copy"),
+    ("witness", "third_party", "oral"),
+)
+
+
+def scripted_inventory(user: str) -> str:
+    """A deterministic stand-in for the model's evidence inventory read.
+
+    IT ANSWERS ONLY EXISTENCE-ADJACENT FACTS -- what the item is, who has it,
+    what form it is in -- and leaves admissibility and weight alone, because
+    the product's own reader does. A double that filled all three would make
+    `unasked` return nothing and the sweep would pass having swept nothing.
+    """
+    block = user or ""
+    start = block.find("THE FILE SO FAR")
+    block = block[start:] if start >= 0 else block
+    lower = block.lower()
+
+    rows, seen = [], set()
+    for needle, holder, form in _SCRIPTED_EVIDENCE:
+        i = lower.find(needle)
+        if i < 0 or needle in seen:
+            continue
+        seen.add(needle)
+        rows.append({
+            "what": f"the {needle}",
+            "holder": holder,
+            "form": form,
+            "quoted": block[i:i + len(needle)],
+        })
+    return json.dumps({"items": rows})
+
+
 #: Schema TITLE -> the responder that answers it. AN EXACT KEY, NOT A SUBSTRING.
 #:
 #: It was a substring search over the schema's JSON, and that is fuzzy matching
@@ -384,6 +431,7 @@ SCRIPTED_READS: dict[str, object] = {
     "cause": scripted_cause,
     "factors": scripted_factors,
     "issues": scripted_issues,
+    "inventory": scripted_inventory,
 }
 
 _tokens = estimate_tokens  # one owner: nm.adapters.model._budget

@@ -35,6 +35,7 @@ from nm.core import (
     thresholds,
 )
 from nm.core import dispute as dispute_reader
+from nm.core import evidence_item as inventory
 from nm.core import factors as factor_reader
 from nm.core import issues as issue_reader
 from nm.core import posture as posture_reader
@@ -941,6 +942,11 @@ class TurnEngine:
             # that cannot be maintained.
             grounds.extend(self._issues(turn, thread, memory, metrics))
 
+            # C7 -- WHAT THE EVIDENCE IS AND WHO HAS IT. After the issues,
+            # because an inventory is only readable against what has to be
+            # proved.
+            grounds.extend(self._inventory(turn, thread, memory, metrics))
+
         if metrics.evidence_bound_hit:
             # THE BOUND PRODUCES A VISIBLE GAP, never a quiet stop. A turn that
             # ran out of rounds and said nothing is indistinguishable from one
@@ -1467,6 +1473,107 @@ class TurnEngine:
             f"what was searched.")
 
     @implements("E2")
+    @implements("C7")
+    def _inventory(self, turn: TurnInput, thread: Thread, memory,
+                   metrics: TurnMetrics) -> list[Element]:
+        """C7. The inventory, and the three sweeps over it.
+
+        THE COUNTEREXAMPLE IS THE POINT: *a file where the original agreement
+        is with the opponent\'s brother and no preservation or production step
+        exists.* The item is inventoried, its holder is recorded, and nothing
+        was ever asked of anyone — so the file reads as worked and the
+        document is gone by the time it is needed.
+
+        `unpreserved` becomes a QUESTION rather than a note, because a
+        question BLOCKS an action and a note does not. An advocate reading
+        "no preservation step is recorded" at the bottom of an answer has been
+        told; an advocate who cannot proceed until they say who is writing to
+        whom has been stopped.
+        """
+        account = memory.account if memory else ""
+        if not account.strip() and not turn.message.strip():
+            return []
+
+        try:
+            res = self._model.structured(
+                inventory.build_inventory_prompt(turn.message, account),
+                inventory.INVENTORY_SCHEMA, Tier.ROUTINE, max_tokens=700)
+            metrics.record_call(res)
+            read = inventory.read_inventory(res.data or {}, account)
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"the evidence could not be inventoried: {exc}")
+            # THE THIRD STATE, FIRED. G-PRESERVE declares `not_assessed` and a
+            # declared state nothing reaches is a state that does not exist —
+            # the advocate would see no preservation question and have no way
+            # to tell that from nothing being at risk.
+            metrics.fire("G-PRESERVE", "not_assessed",
+                         "the inventory could not be read on this turn")
+            return [Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"I have not inventoried the evidence on this file: "
+                      f"{exc}. That is a gap in this turn, not a finding that "
+                      f"there is none."))]
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("C7", f"inventory read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return []
+
+        out: list[Element] = []
+        for refused in read.refused:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"I did not take one item the reading offered: {refused}"))
+
+        for item in read.items:
+            out.append(Element(
+                kind=ElementKind.FINDING, thread=thread.id,
+                text=(f"{item.what} — held by {item.holder.value}, "
+                      f"{item.form.value}")))
+
+        # AT RISK AND NOBODY ASKED. This is the whole feature.
+        for what in inventory.unpreserved(read.items):
+            metrics.fire("G-PRESERVE", "unpreserved", what)
+            out.append(Element(
+                kind=ElementKind.QUESTION, thread=thread.id,
+                # THE GATE THAT RAISED IT. A question with no gate cannot be
+                # recorded on the ask ledger, so the same one is put again next
+                # turn -- which is how a product comes to ask an advocate the
+                # same thing forever.
+                gate="G-PRESERVE",
+                text=(f"{what} is held by someone with an interest in it not "
+                      f"surviving, and no preservation step is on this file. "
+                      f"Who is being asked to preserve it, and by when?")))
+
+        # WRITTEN AND NEVER ISSUED. Distinct from the above, and the document
+        # is gone either way -- so it is reported separately rather than
+        # counted as preserved.
+        for what in inventory.undelivered(read.items):
+            out.append(Element(
+                kind=ElementKind.QUESTION, thread=thread.id,
+                gate="G-PRESERVE",
+                text=(f"The preservation instruction for {what} has not been "
+                      f"issued. When does it go out?")))
+
+        # THE QUESTIONS NOBODY PUT. An inventory that lists ten items and
+        # answered two questions of the thirty reads as an inventory that was
+        # done.
+        unasked = inventory.unasked(read.items)
+        if unasked:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"{len(unasked)} item(s) carry questions nobody has put: "
+                      f"{'; '.join(unasked[:3])}"
+                      f"{' ...' if len(unasked) > 3 else ''}. Existence, "
+                      f"admissibility and weight are three separate questions "
+                      f"and none of them is answered by listing the item.")))
+
+        if read.state == "none_mentioned" and read.why_not:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"No evidence inventoried yet: {read.why_not}"))
+        return out
+
     @implements("D9")
     def _issues(self, turn: TurnInput, thread: Thread, memory,
                 metrics: TurnMetrics) -> list[Element]:
