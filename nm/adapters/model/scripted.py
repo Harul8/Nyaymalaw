@@ -410,6 +410,73 @@ def scripted_inventory(user: str) -> str:
     return json.dumps({"items": rows})
 
 
+#: Words in a chronology entry that make it ADVERSE to the client.
+#:
+#: Deliberately about DELAY, ADMISSION and ABSENCE -- the three shapes the
+#: other side actually relies on. A double that found nothing adverse would
+#: leave `unaccounted` measuring against an empty population, and E-080 would
+#: pass on every turn having checked nothing.
+_ADVERSE_WORDS = (
+    "admitting", "admitted", "acknowledg", "signed", "no receipt",
+    "never paid", "not paid", "delay", "dispossessed", "expired",
+)
+
+
+def scripted_adverse(user: str) -> str:
+    """A deterministic stand-in for the adverse-fact read.
+
+    IDS COME OFF THE CHRONOLOGY BLOCK. Inventing one would be dropped by
+    `read_adverse`, which is the product refusing a fact the file does not
+    hold -- correct, and it would leave this double producing nothing.
+    """
+    block = user or ""
+    start = block.find("THE CHRONOLOGY")
+    end = block.find("THE FILE")
+    block = block[start:end] if start >= 0 and end > start else block
+
+    rows = []
+    for line in block.splitlines():
+        if "\t" not in line:
+            continue
+        fid = line.strip().split("\t", 1)[0].strip()
+        lower = line.lower()
+        hit = next((w for w in _ADVERSE_WORDS if w in lower), None)
+        if fid and hit:
+            rows.append({"fact_id": fid,
+                         "why": f"the other side relies on {hit!r}"})
+    return json.dumps({"adverse": rows})
+
+
+def scripted_theory(user: str) -> str:
+    """A deterministic stand-in for the theory read.
+
+    IT ACCOUNTS FOR EVERY ADVERSE FACT IT WAS GIVEN, so the offline suite
+    exercises the ACCOUNTED path. E-080's failing path is driven directly in
+    `tests/test_theory_on_a_served_turn.py` by handing the reader a theory that
+    explains nothing -- which is a better test than a double that sometimes
+    forgets, because it fails for a stated reason rather than a coincidence.
+    """
+    ids = []
+    for line in (user or "").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("f") and ":" in stripped:
+            candidate = stripped.split(":", 1)[0].strip()
+            if candidate and " " not in candidate:
+                ids.append(candidate)
+
+    return json.dumps({
+        "theme": "The client is entitled to the relief claimed on the "
+                 "documents already on the file",
+        "account": "the account as the advocate has given it",
+        "legal_theory": "the cause of action pleaded",
+        "relief": "the relief claimed",
+        "stance": "affirmative",
+        "chosen_because": "",
+        "explains": ids,
+        "concedes": [],
+    })
+
+
 #: Schema TITLE -> the responder that answers it. AN EXACT KEY, NOT A SUBSTRING.
 #:
 #: It was a substring search over the schema's JSON, and that is fuzzy matching
@@ -432,6 +499,8 @@ SCRIPTED_READS: dict[str, object] = {
     "factors": scripted_factors,
     "issues": scripted_issues,
     "inventory": scripted_inventory,
+    "adverse": scripted_adverse,
+    "theory": scripted_theory,
 }
 
 _tokens = estimate_tokens  # one owner: nm.adapters.model._budget

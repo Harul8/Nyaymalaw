@@ -385,6 +385,24 @@ GATES: tuple[Gate, ...] = (
         built=True,
     ),
     Gate(
+        id="G-ADVERSE",
+        condition="An adverse fact on the thread is neither explained nor "
+                  "expressly conceded by the theory — or no theory has been "
+                  "formed, in which case every adverse fact is unaccounted.",
+        states=("accounted", "unaccounted", "not_assessed"),
+        response=Response.DISCLOSE,
+        scope=Scope.THREAD,
+        persistence=Persistence.TURN,
+        recovery=Recovery.ADVOCATE,
+        visible="E-080's counterexample, made visible: a theory that works only "
+                "if three documents are forgotten READS PERFECTLY, because the "
+                "three are simply not mentioned. Absence is invisible, so the "
+                "unaccounted facts are listed by name rather than counted — "
+                "which one it is decides what is pleaded.",
+        feature="D6",
+        built=True,
+    ),
+    Gate(
         id="G-PRESERVE",
         condition="An inventoried item is held by someone with an interest in "
                   "it not surviving, and no preservation step is on the file.",

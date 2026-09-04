@@ -253,6 +253,22 @@
     "built": true
   },
   {
+    "id": "G-ADVERSE",
+    "condition": "An adverse fact on the thread is neither explained nor expressly conceded by the theory \u2014 or no theory has been formed, in which case every adverse fact is unaccounted.",
+    "states": [
+      "accounted",
+      "unaccounted",
+      "not_assessed"
+    ],
+    "response": "disclose",
+    "scope": "thread",
+    "persistence": "turn",
+    "recovery": "advocate",
+    "visible": "E-080's counterexample, made visible: a theory that works only if three documents are forgotten READS PERFECTLY, because the three are simply not mentioned. Absence is invisible, so the unaccounted facts are listed by name rather than counted \u2014 which one it is decides what is pleaded.",
+    "feature": "D6",
+    "built": true
+  },
+  {
     "id": "G-PRESERVE",
     "condition": "An inventoried item is held by someone with an interest in it not surviving, and no preservation step is on the file.",
     "states": [

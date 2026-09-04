@@ -39,6 +39,7 @@ from nm.core import evidence_item as inventory
 from nm.core import factors as factor_reader
 from nm.core import issues as issue_reader
 from nm.core import posture as posture_reader
+from nm.core import theory as theory_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
 from nm.domain import issue
 from nm.domain import summary as matter_memory
@@ -947,6 +948,12 @@ class TurnEngine:
             # proved.
             grounds.extend(self._inventory(turn, thread, memory, metrics))
 
+            # D6 -- THE SPINE, LAST, because it is what the issues and the
+            # evidence hang off. S8's whole point: stop producing a list of
+            # issues and produce a spine with the issues hanging off it.
+            grounds.extend(
+                self._theory(turn, thread, memory, metrics, facts))
+
         if metrics.evidence_bound_hit:
             # THE BOUND PRODUCES A VISIBLE GAP, never a quiet stop. A turn that
             # ran out of rounds and said nothing is indistinguishable from one
@@ -1473,6 +1480,100 @@ class TurnEngine:
             f"what was searched.")
 
     @implements("E2")
+    @implements("D6")
+    def _theory(self, turn: TurnInput, thread: Thread, memory,
+                metrics: TurnMetrics,
+                facts: tuple[Fact, ...]) -> list[Element]:
+        """D6. One theory per thread, and every adverse fact accounted for.
+
+        TWO READS, AND THE ORDER IS THE MECHANISM. The adverse facts are read
+        FIRST, from the chronology, without the model knowing what theory will
+        be built on them. If one read produced both, the theory would choose
+        its own population -- it would name three adverse facts and account
+        for three, every time, and `unaccounted` could not fail. Same argument
+        the factor read makes about the un-extended expiry: the thing being
+        tested against has to exist before the thing being tested.
+
+        E-080'S COUNTEREXAMPLE IS *a theory that works only if three documents
+        are forgotten*, and it reads perfectly because the three are simply
+        not mentioned. Absence is invisible; this makes it a list, by name.
+        """
+        chart = chronology.chart(facts, thread.chronology)
+        if not chart:
+            return []
+        account = memory.account if memory else ""
+
+        try:
+            adverse_said = self._model.structured(
+                theory_reader.build_adverse_prompt(account, chart),
+                theory_reader.ADVERSE_SCHEMA, Tier.ROUTINE, max_tokens=500)
+            metrics.record_call(adverse_said)
+            adverse, why = theory_reader.read_adverse(
+                adverse_said.data or {}, chart)
+
+            lines = tuple(f"{fid}: {next(f.statement for f in chart if f.id == fid)}"
+                          f" — {why.get(fid, '')}" for fid in adverse)
+            said = self._model.structured(
+                theory_reader.build_theory_prompt(
+                    account, lines, thread.posture.side.value),
+                theory_reader.THEORY_SCHEMA, Tier.ROUTINE, max_tokens=800)
+            metrics.record_call(said)
+            read = theory_reader.read_theory(
+                said.data or {}, thread.id, thread.posture.side, adverse)
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"no theory could be formed: {exc}")
+            metrics.fire("G-ADVERSE", "not_assessed",
+                         "no theory was formed on this turn")
+            return [Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"I have not formed a theory on this thread: {exc}. "
+                      f"Nothing here has been weighed against the adverse "
+                      f"facts."))]
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("D6", f"theory read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return []
+
+        out: list[Element] = []
+        if read.refused:
+            # THE TYPE REFUSED IT and the advocate is told, because what was
+            # refused is usually "the complainant has not proved his case" --
+            # a hope that the other side fails, handed back as though it were
+            # a theory.
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"I did not take the theory that was formed: {read.refused}"))
+        elif read.theory is not None:
+            t = read.theory
+            out.append(Element(
+                kind=ElementKind.FINDING, thread=thread.id,
+                text=(f"Theory: {t.theme}"
+                      + (f" Relief: {t.relief}." if t.relief else ""))))
+
+        # E-080. THE ADVERSE FACTS NOBODY ANSWERED, BY NAME.
+        left = theory_reader.unaccounted(read.adverse, read.theory)
+        if left:
+            metrics.fire("G-ADVERSE", "unaccounted", ", ".join(left))
+            named = "; ".join(
+                next((f.statement[:70] for f in chart if f.id == fid), fid)
+                for fid in left)
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"{len(left)} adverse fact(s) on this thread are neither "
+                      f"explained nor conceded by the theory: {named}. A "
+                      f"theory that works only because these went unmentioned "
+                      f"reads perfectly and loses.")))
+        elif read.adverse:
+            metrics.fire("G-ADVERSE", "accounted",
+                         f"{len(read.adverse)} adverse fact(s) accounted for")
+
+        if read.state == "none_formed" and read.why_not:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"No theory formed yet: {read.why_not}"))
+        return out
+
     @implements("C7")
     def _inventory(self, turn: TurnInput, thread: Thread, memory,
                    metrics: TurnMetrics) -> list[Element]:
