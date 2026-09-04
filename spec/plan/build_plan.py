@@ -482,12 +482,14 @@ tint(ws_e, hdr_e, len(E), 3, {"A": (ACCENT, ACCENT_L), "B": (GOOD, GOOD_L), "C":
 
 # ============================== FEATURE MAP ==============================
 FM = [
-    # `built` would overstate and `decided` understates by a little: A1's
-    # non-disclosure clause IS implemented and mutation-covered. What does not
-    # exist is authentication -- no credential, session or token anywhere in
-    # `nm/` -- and `AdvocateIdentity`, its whole PRODUCES contract. A feature
-    # whose identity record does not exist has not been built. See B-082.
-    ["A1", "Authentication and advocate identity", "A", "S1", "E-010", "decided"],
+    # `tested`, and it went decided -> tested in one step because it was
+    # never really `built`: E-010 passed for the whole time the product had
+    # no authentication (B-082). It now has a credential, a session bound to
+    # the device that authenticated, an expiry, and an identity record --
+    # and E-010 is twenty class-A invariants over the three NEVER clauses
+    # rather than two over a blank string. NOT `verified live`: an advocate
+    # has not signed in and read the answer yet.
+    ["A1", "Authentication and advocate identity", "A", "S1", "E-010", "tested"],
     ["A2", "The landing board", "A", "S6", "E-063", "tested"],
     ["A3", "Re-entry and re-orientation", "A", "S9", "E-092", "tested"],
     # `built`, not `tested`. E-116 and E-117 are class A and have run; E-118
@@ -2238,17 +2240,27 @@ d("B-082", "2026-09-04", "edge",
   "S1 — an absent input reading as success",
   "Looking at A1 before building the login page the advocate asked for, and "
   "grepping for any credential primitive. Zero hits.",
-  "NOT FIXED. Authentication is the work, not a check. `firm_id` reaches "
-  "further than A1: B3's conflicts registry is supposed to be scoped by the "
-  "firm, and there is no firm.",
+  "FIXED. `AdvocateIdentity` exists with every field required — `firm_id` "
+  "most of all, since B3 screens against it. A credential is scrypt with "
+  "its cost recorded alongside the hash, so raising the cost later cannot "
+  "lock out anyone already enrolled. A session is bound to the device that "
+  "authenticated and expires in twelve hours; what is stored is a "
+  "fingerprint of the token, so a stolen store is not a set of live "
+  "logins. The edge derives the advocate from that session and the turn "
+  "request no longer has a field to assert one with. And the unknown "
+  "advocate pays the key derivation anyway, because an identical message "
+  "returned in microseconds for a stranger and tens of milliseconds for a "
+  "wrong password is the same oracle wearing a stopwatch.",
   "Yes — and the general form is the one that matters. Nothing joined a "
   "PRODUCES clause to a type in the code, because the only check over "
   "PRODUCES starts from Appendix E's ten schemas rather than from the "
   "clauses. Seven features at `tested` declare a type `nm/` does not define; "
   "four have ZERO mentions.",
-  "tests/test_reached_from_production.py::"
-  "test_every_produces_contract_has_a_type_or_is_declared_untyped",
-  "Open")
+  "tests/test_authentication.py::"
+  "test_the_turn_request_has_no_field_to_assert_an_identity_with, and "
+  "test_every_matter_route_requires_a_session, whose population is the "
+  "ROUTE TABLE — a route added next month that forgets the dependency is "
+  "exactly the one a hand-written list would not hold")
 
 d("B-083", "2026-09-04", "store",
   "ONE CORRUPT TRANSCRIPT MARKED EVERY MATTER'S RECORD INCOMPLETE, and put a "
@@ -2276,6 +2288,38 @@ d("B-083", "2026-09-04", "store",
   "nowhere to go but everywhere.",
   "tests/test_transcript_attribution.py::"
   "test_an_unreadable_transcript_belongs_to_one_matter_only")
+
+d("B-084", "2026-09-04", "tooling",
+  "THE GATE REPORTED A FAILURE WITH NOTHING UNDER IT, TWICE, while eight "
+  "tests were red. `proc.stdout` and `proc.stderr` were both None and the "
+  "exit code was 1 — so the run had failed, and the reason had vanished "
+  "between the child and the report.",
+  "A child process on Windows encodes its stdout with the OS LOCALE (cp1252) "
+  "when piped, not with the `encoding=` the parent decodes by. pytest printed "
+  "an em-dash from a test name, the parent's utf-8 decoder raised inside "
+  "subprocess's reader THREAD, and that exception was swallowed there — "
+  "`subprocess.run` returned normally with `stdout=None`. Nearly every "
+  "failure message in this codebase carries an em-dash, so this was not an "
+  "edge case; it was the ordinary path, and it only became visible when a "
+  "test that failed had one.",
+  "S1 — an absent input reading as success",
+  "B-081's own fallback, which had been changed the same day to report the "
+  "exit code and each stream's line count when no failure marker matched. It "
+  "printed `exit=1, 0 stdout line(s), 0 stderr line(s)`, which named the "
+  "defect exactly. The instrumentation found what two rounds of guessing had "
+  "not.",
+  "`PYTHONIOENCODING=utf-8` in the child's environment so it writes utf-8, "
+  "AND `errors=\"replace\"` on the parent's decode so a child that ignores "
+  "the variable still yields a readable report rather than None. Both halves: "
+  "the first keeps the text intact, the second keeps the report alive.",
+  "Yes — and it is the project's own shape aimed at the project's own gate. "
+  "A tool whose job is to find absent-input defects had one, in the path that "
+  "reports them. The general form: A DIAGNOSTIC THAT CAN BE SILENCED BY THE "
+  "CONTENT IT IS DIAGNOSING is not a diagnostic. Anything that reads a "
+  "subprocess, a file or a wire to report on it must survive bytes it did not "
+  "expect, because the unexpected bytes are correlated with the failure.",
+  "tests/test_tooling_bites.py::"
+  "test_a_child_that_prints_non_ascii_still_reports_its_failure")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

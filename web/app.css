@@ -487,3 +487,104 @@ main.single {
   .search-bar { grid-template-columns: 1fr; }
   .tabs { margin-left: 12px; }
 }
+
+/* ========================= A1 — THE GATE ========================= */
+
+.gate {
+  align-items: center;
+  background: var(--paper);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  /* ABOVE EVERYTHING. If the board can ever paint over this, the gate is
+   * decoration. */
+  z-index: 100;
+}
+
+.login {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 380px;
+  padding: 32px 30px 26px;
+  width: 100%;
+}
+
+.login-brand {
+  align-items: center;
+  display: flex;
+  font-size: 19px;
+  gap: 10px;
+  letter-spacing: -.01em;
+  margin-bottom: 2px;
+}
+
+.login-lede {
+  color: var(--ink-3);
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+
+.login label {
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: .07em;
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+
+.login input {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 11px;
+}
+
+.login input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.login button.primary { margin-top: 18px; }
+.login button:disabled { cursor: wait; opacity: .6; }
+
+.login-state:empty { display: none; }
+.login-state { margin-top: 14px; }
+
+.login-foot {
+  border-top: 1px solid var(--rule);
+  color: var(--ink-3);
+  font-size: 11.5px;
+  line-height: 1.6;
+  margin: 20px 0 0;
+  padding-top: 14px;
+}
+
+.login-foot code {
+  background: var(--surface-2);
+  border-radius: 2px;
+  font-size: 11px;
+  padding: 1px 4px;
+}
+
+/* ------------------------------------------------- who is signed in --- */
+
+.who-name { font-size: 13px; font-weight: 600; }
+
+.who-detail {
+  color: var(--ink-3);
+  font-size: 11px;
+  margin-left: 8px;
+}
+
+#signout {
+  font-size: 11px;
+  margin-left: 12px;
+}

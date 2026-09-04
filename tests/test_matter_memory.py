@@ -527,8 +527,15 @@ def test_the_file_is_served_so_the_advocate_can_audit_it(client):
 
     # ANOTHER ADVOCATE'S MATTER DISCLOSES NOTHING -- the same 404 whether it
     # does not exist or is not theirs.
-    assert client.get(f"/api/matters/{matter_id}/summary",
-                      params={"advocate_id": "other"}).status_code == 404
+    # A SECOND ADVOCATE, WITH A SESSION.
+    #
+    # This named a different `advocate_id` in the query string and
+    # asserted a 404. True, and empty: naming one was all it took to be
+    # one, so the test passed while any caller could read any matter
+    # (B-082). The other advocate now has to authenticate.
+    other = client.sign_in("other", fresh=True)
+    assert other.get(
+        f"/api/matters/{matter_id}/summary").status_code == 404
 
 
 # ========== what the six-scenario run found, stated as rules =================

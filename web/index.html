@@ -10,7 +10,35 @@
 </head>
 <body>
 
-<header class="masthead">
+<!-- ================== A1 — THE GATE ==================
+     Rendered FIRST and on top, and the application below it stays hidden
+     until a session resolves. Not a redirect and not a modal over a loaded
+     board: a board that paints for an instant before the gate covers it has
+     already shown the matter list to whoever is holding the laptop. -->
+<div id="gate" class="gate">
+  <form id="login" class="login" autocomplete="on">
+    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
+    <p class="login-lede">Sign in to reach your matters.</p>
+
+    <label for="login-id">Advocate</label>
+    <input id="login-id" name="username" autocomplete="username" spellcheck="false" required>
+
+    <label for="login-password">Password</label>
+    <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+
+    <button type="submit" class="primary wide" id="login-go">Sign in</button>
+    <div id="login-state" class="login-state"></div>
+
+    <p class="login-foot">
+      Enrolment is not self-service. An advocate is enrolled by
+      <code>tools/enrol.py</code>, which records the Bar Council number and the
+      firm whose conflicts registry governs the session.
+    </p>
+  </form>
+</div>
+
+
+<header class="masthead" id="masthead" hidden>
   <div class="brand">
     <span class="mark">NM</span>
     <span class="name">Nyaymalaw</span>
@@ -27,13 +55,17 @@
   </nav>
 
   <div class="who">
-    <label for="advocate">Advocate</label>
-    <input id="advocate" value="adv_demo" spellcheck="false">
+    <!-- NOT AN INPUT ANY MORE. A text box naming the advocate was the whole
+         of authentication (B-082); this renders who the SERVER says is
+         signed in, and cannot be edited into someone else. -->
+    <span class="who-name" id="who-name">—</span>
+    <span class="who-detail" id="who-detail"></span>
+    <button id="signout" class="ghost">Sign out</button>
   </div>
   <div class="health" id="health" title="Wired configuration">checking…</div>
 </header>
 
-<main id="pane-advise">
+<main id="pane-advise" hidden>
   <!-- ================= THE MATTER LIST / THREAD BOARD =================
        Two surfaces, deliberately distinct. The matter list is bounded by
        MATTER count; the thread board by THREAD count. Conflating them is how

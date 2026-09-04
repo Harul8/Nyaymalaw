@@ -459,7 +459,14 @@ def test_the_matter_list_is_bounded_by_matter_count(client):
 def test_another_advocates_matter_is_not_disclosed(client):
     mine = client.post("/api/turn", json={
         "advocate_id": "adv", "message": "we act for the accused in a cheque matter"}).json()
-    r = client.get(f"/api/matters/{mine['matter_id']}?advocate_id=someone_else")
+    # A SECOND ADVOCATE, WITH A SESSION.
+    #
+    # This named a different `advocate_id` in the query string and
+    # asserted a 404. True, and empty: naming one was all it took to be
+    # one, so the test passed while any caller could read any matter
+    # (B-082). The other advocate now has to authenticate.
+    someone_else = client.sign_in("someone_else", fresh=True)
+    r = someone_else.get(f"/api/matters/{mine['matter_id']}")
     assert r.status_code == 404
     assert "no such matter" in r.json()["detail"], \
         "the response must not distinguish 'not yours' from 'does not exist'"

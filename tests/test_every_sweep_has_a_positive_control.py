@@ -59,6 +59,9 @@ CONTROLS: dict[str, str] = {
     # the manifest, over every declared Act
     "test_every_declared_act_retrieves_at_least_one_intended_section":
         "test_an_act_the_corpus_cannot_serve_is_caught",
+    # A1 -- every matter route requires a session, over the ROUTE TABLE
+    "test_every_matter_route_requires_a_session":
+        "test_the_route_sweep_can_see_an_unguarded_route",
     # the golden set -- the sweep B-049 was hiding in
     "test_every_scenario_is_reachable_from_a_suite":
         "test_every_scenario_is_reachable_from_a_suite",

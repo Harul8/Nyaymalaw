@@ -101,6 +101,9 @@ def client(tmp_path, monkeypatch):
     from nm.ports.model import Tier
     from tests.test_turn_contract import KEY, _Evidence
 
+    # Long enough for `enrol`, which refuses under twelve characters.
+    password = "fixture-password-not-a-secret"
+
     monkeypatch.setenv("NM_MATTER_KEY", KEY)
     monkeypatch.setenv("NM_MODEL_PROVIDER", "scripted")
     monkeypatch.setenv("NM_MODEL_ROUTINE", "scripted-1")
@@ -113,8 +116,46 @@ def client(tmp_path, monkeypatch):
         Tier.EMBED: TierConfig(Tier.EMBED, "scripted", "text-embedding-3-large",
                                None, None),
     })
+    # A1. THE FIXTURE SIGNS IN, because there is no other way in now.
+    #
+    # `advocate_id` used to be a query parameter, so every test asserted its
+    # own identity and the product believed it. A fixture that still worked
+    # without authenticating would mean the suite drives a path no advocate
+    # can, which is the "correct in the core, wrong on the wire" gap CLAUDE.md
+    # §8 is about -- and it is exactly where B-082 lived.
+    from nm.adapters.store.directory import FileDirectory
+    from nm.domain.advocate import AdvocateIdentity, Enrolment, enrol
+
+    directory = FileDirectory(tmp_path, key=KEY)
     application = Application(
         store=FileMatterStore(tmp_path, key=KEY), evidence=_Evidence(),
+        directory=directory,
         model=ScriptedModelAdapter(config, responses={
             "__default__": "Issue the statutory notice and diarise the window."}))
-    return TestClient(create_app(application))
+
+    c = TestClient(create_app(application))
+
+    def sign_in(advocate_id: str = "adv_demo", *, password: str = password,
+                fresh: bool = False):
+        """Enrol if new, then authenticate. Returns the client used.
+
+        `fresh=True` returns a SEPARATE client, so a test can hold two
+        advocates at once -- which E-010 needs: the whole point is that a
+        stranger asking about someone else's matter learns nothing.
+        """
+        if not (tmp_path / "advocates" / f"{advocate_id}.nm").exists():
+            directory.enrol(Enrolment(
+                identity=AdvocateIdentity(
+                    id=advocate_id, name=f"Advocate {advocate_id}",
+                    enrolment=f"AP/{abs(hash(advocate_id)) % 9999:04d}/2010",
+                    practice="Hyderabad", firm_id=f"firm_{advocate_id}"),
+                credential=enrol(password)))
+        target = TestClient(create_app(application)) if fresh else c
+        r = target.post("/api/login",
+                        json={"advocate_id": advocate_id, "password": password})
+        assert r.status_code == 200, r.text
+        return target
+
+    c.sign_in = sign_in
+    sign_in()
+    return c

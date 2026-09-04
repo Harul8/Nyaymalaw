@@ -16,13 +16,14 @@ from datetime import date
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, Field
 
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
 from nm.domain import summary as matter_memory
+from nm.domain.advocate import utcnow
 from nm.domain.answer import Answer
 from nm.domain.identity import source_fingerprint
 from nm.domain.traceability import implements
@@ -136,16 +137,53 @@ def _not_blank(value: str) -> str:
 
 NonBlank = Annotated[str, AfterValidator(_not_blank)]
 
-#: The SAME guard on the read path. A1 restores the matter list only
-#: after authentication succeeds, and a blank query parameter is not an
-#: authenticated session -- it returned 200 and an empty list, which
-#: reads to a caller as "this advocate has no matters" rather than as
-#: "you are not signed in".
-Advocate = Annotated[str, Query(min_length=1), AfterValidator(_not_blank)]
+#: A1 — WHO IS ACTING, DERIVED FROM A SESSION THE SERVER ISSUED.
+#:
+#: This was `Annotated[str, Query(...)]`: the caller named whichever advocate
+#: they liked and the product believed them. It was the only thing between one
+#: advocate's client file and another's (B-082), and it satisfied E-010
+#: because `anonymous` in the code meant the empty string while `anonymous` in
+#: the spec meant unauthenticated.
+#:
+#: THE IDENTITY IS NO LONGER AN INPUT. It is read from a session cookie the
+#: server minted, bound to the device that authenticated, and expiring.
+
+
+#: How a device is recognised across requests. The cookie alone would follow a
+#: copied jar; the user agent alone is shared by every Chrome on earth. Bound
+#: together, a session presented from another browser -- the borrowed laptop
+#: A1's first NEVER is about -- does not resolve.
+def _device(device_cookie: str | None, user_agent: str | None) -> str:
+    import hashlib
+    return hashlib.sha256(
+        f"{device_cookie or ''}|{user_agent or ''}".encode("utf8")).hexdigest()
+
+
+def signed_in(nm_session: str | None = Cookie(default=None),
+              nm_device: str | None = Cookie(default=None),
+              user_agent: str | None = Header(default=None)) -> str:
+    """The advocate id, or 401. NEVER a default and never a fallback.
+
+    ONE FAILURE, in the same words, for no cookie / unknown token / expired /
+    ended / wrong device. A1's second NEVER is that a failed or expired
+    credential discloses nothing about what exists, and a message that
+    distinguishes "expired" from "no such session" discloses that a session
+    existed. The reason is written to the directory's audit instead.
+    """
+    session = application().directory.session(
+        nm_session or "", _device(nm_device, user_agent), utcnow())
+    if session is None:
+        raise HTTPException(status_code=401, detail="not signed in")
+    return session.advocate_id
+
+
+Advocate = Annotated[str, Depends(signed_in)]
 
 
 class TurnRequest(BaseModel):
-    advocate_id: NonBlank = Field(min_length=1)
+    # NO `advocate_id`. It came from the body, which means the caller asserted
+    # who they were and the product recorded that assertion on the file. It now
+    # comes from the session, and there is no field here to override it with.
     message: NonBlank = Field(min_length=1)
     matter_id: str | None = None
     thread_id: str | None = None
@@ -290,10 +328,10 @@ def matter_summary(matter_id: str, advocate_id: Advocate) -> dict:
 
 
 @app.post("/api/turn")
-def turn(req: TurnRequest) -> _Released:
+def turn(req: TurnRequest, advocate_id: Advocate) -> _Released:
     engine: TurnEngine = application().engine
     payload = TurnInput(
-        advocate_id=req.advocate_id,
+        advocate_id=advocate_id,
         message=req.message,
         matter_id=req.matter_id,
         # The advocate naming a thread OUTRANKS every heuristic. The only
@@ -371,6 +409,78 @@ def search(q: str, advocate_id: Advocate, court: str | None = None,
             "origin": h.origin.value,
         } for h in result.hits],
     }
+
+
+class Credentials(BaseModel):
+    advocate_id: NonBlank = Field(min_length=1)
+    password: str = Field(min_length=1)
+
+
+#: THE ONLY THING A FAILED SIGN-IN EVER SAYS.
+#:
+#: A1: the error must be identical whether the advocate has one matter or
+#: forty. It is one constant rather than a string written at three call sites,
+#: because three copies of a message drift and the drift IS the disclosure --
+#: "no such advocate" at one door and "incorrect password" at another tells an
+#: attacker which accounts exist without either message meaning to.
+_REFUSED = "those credentials were not accepted"
+
+
+@app.post("/api/login")
+@implements("A1")
+def login(body: Credentials, response: Response,
+          nm_device: str | None = Cookie(default=None),
+          user_agent: str | None = Header(default=None)) -> dict:
+    """Authenticate, and issue a session bound to this device.
+
+    THE DEVICE COOKIE IS MINTED HERE when the browser has none. That is what
+    makes A1's first NEVER enforceable: a session cannot be presented from a
+    machine that never authenticated, because the device half of the binding
+    was never set there.
+    """
+    identity = application().directory.authenticate(
+        body.advocate_id, body.password)
+    if identity is None:
+        # 401 AND NOTHING ELSE. Not 404 for an unknown advocate and 401 for a
+        # wrong password -- the status code is a message too.
+        raise HTTPException(status_code=401, detail=_REFUSED)
+
+    import secrets
+    device_id = nm_device or secrets.token_urlsafe(16)
+    token = application().directory.open_session(
+        identity.id, _device(device_id, user_agent), utcnow())
+
+    for name, value in (("nm_session", token), ("nm_device", device_id)):
+        # httponly: script cannot read it, so an XSS bug is not a stolen
+        # session. samesite=lax: a cross-site POST cannot ride the cookie.
+        response.set_cookie(name, value, httponly=True, samesite="lax",
+                            max_age=60 * 60 * 12, path="/")
+    return {"advocate": identity.as_dict()}
+
+
+@app.post("/api/logout")
+def logout(response: Response,
+           nm_session: str | None = Cookie(default=None)) -> dict:
+    """Ends the session server-side, THEN clears the cookie.
+
+    Clearing the cookie alone would leave a live session behind a token the
+    browser merely forgot -- which is not a sign-out, it is a tidier screen.
+    """
+    application().directory.close_session(nm_session or "", "signed out")
+    response.delete_cookie("nm_session", path="/")
+    return {"signed_out": True}
+
+
+@app.get("/api/session")
+def whoami(advocate_id: Advocate) -> dict:
+    """Who is signed in. 401 through the same dependency as everything else."""
+    identity = application().directory.identity(advocate_id)
+    if identity is None:
+        # A LIVE SESSION FOR AN ADVOCATE WHO IS NOT THERE. The record was
+        # deleted or will not open; either way this session must stop working
+        # now rather than at expiry.
+        raise HTTPException(status_code=401, detail="not signed in")
+    return {"advocate": identity.as_dict()}
 
 
 # ------------------------------------------------------------------- static ---

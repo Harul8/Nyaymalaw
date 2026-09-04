@@ -50,16 +50,20 @@ def test_a_failed_credential_discloses_nothing_about_which_matters_exist(client)
     property is byte equality of the response, not merely the same status code.
     """
     made = client.post("/api/turn", json={
-        "advocate_id": "adv_with_matters",
         "message": "we act for the plaintiff in O.S. 442/2023 over the land"})
     assert made.status_code == 200
     real_id = made.json()["matter_id"]
 
-    # Someone else asks for a matter that EXISTS, and for one that does not.
-    exists = client.get(f"/api/matters/{real_id}",
-                        params={"advocate_id": "stranger"})
-    absent = client.get("/api/matters/mat_000000000000",
-                        params={"advocate_id": "stranger"})
+    # SOMEONE ELSE, WITH A SESSION OF THEIR OWN.
+    #
+    # This was a query parameter naming a different advocate, which asked
+    # the question at the wrong level entirely: anybody could be anybody, so
+    # "the stranger sees the same 404" was true and proved nothing about
+    # access. The stranger now has to authenticate before they can ask.
+    stranger = client.sign_in("stranger", fresh=True)
+
+    exists = stranger.get(f"/api/matters/{real_id}")
+    absent = stranger.get("/api/matters/mat_000000000000")
 
     assert exists.status_code == absent.status_code == 404
     assert exists.json() == absent.json(), (
@@ -75,17 +79,25 @@ def test_an_anonymous_session_cannot_create_a_matter(client):
     requires a decision to record who decided. An anonymous session satisfies
     neither, so it may not open a file at all — refusing later, at the point of
     advice, would leave client material on an unattributable record."""
-    for anonymous in ("", "   "):
-        r = client.post("/api/turn", json={
-            "advocate_id": anonymous,
-            "message": "we act for the plaintiff in a possession suit"})
-        assert r.status_code == 422, (
-            f"an anonymous session ({anonymous!r}) was allowed to open a "
-            f"matter. Nothing downstream can attribute the instruction or the "
-            f"decision, and client material is now on an unattributable file.")
+    # ANONYMOUS NOW MEANS UNAUTHENTICATED, which is what A1 always said and
+    # not what this test used to check.
+    #
+    # It asserted that a BLANK STRING could not open a matter. True, and far
+    # narrower than the clause: `advocate_id` was a query parameter, so every
+    # NON-blank string was an accepted identity and this eval passed green
+    # while the product had no authentication at all (B-082). The identity
+    # now comes from a session, and there is no field left to assert it with.
+    client.cookies.clear()
 
-    assert client.get("/api/matters", params={"advocate_id": ""}).status_code \
-        in (404, 422), "an anonymous session read a matter list"
+    r = client.post("/api/turn", json={
+        "message": "we act for the plaintiff in a possession suit"})
+    assert r.status_code == 401, (
+        "an unauthenticated session was allowed to open a matter. Nothing "
+        "downstream can attribute the instruction or the decision, and "
+        "client material is now on an unattributable file.")
+
+    assert client.get("/api/matters").status_code == 401, (
+        "an unauthenticated session read a matter list")
 
     # AND THE CORE REFUSES IT TOO, not only the wire.
     #

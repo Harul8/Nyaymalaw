@@ -28,6 +28,7 @@ A red result blocks the claim. Not the work -- the claim.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 import time
@@ -41,9 +42,31 @@ from tools._console import utf8_console  # noqa: E402
 utf8_console()
 
 
+#: THE CHILD MUST WRITE UTF-8, AND WE MUST SURVIVE IT IF IT DOES NOT.
+#:
+#: Measured on 4 September 2026. A child process on Windows encodes its stdout
+#: with the OS locale (cp1252) when piped -- NOT with the `encoding=` this
+#: parent decodes by. pytest printed an em-dash from a test name, the parent's
+#: utf-8 decoder raised inside subprocess's reader THREAD, the exception was
+#: swallowed there, and `proc.stdout` came back as `None`.
+#:
+#: The gate then reported `CHECK FAILED -- pytest` with nothing under it, twice,
+#: and the reason was that the reason could not be decoded. That is defect shape
+#: S1 aimed at the tool whose whole job is to find S1 in the product.
+#:
+#: Both halves are needed. The environment variable makes the child write utf-8;
+#: `errors="replace"` means a child that ignores it -- a shell, a wrapper, a
+#: tool with its own encoding -- still yields a readable report instead of None.
+def _child_env() -> dict:
+    env = dict(os.environ)
+    env["PYTHONIOENCODING"] = "utf-8"
+    return env
+
+
 def step(label: str, cmd: list[str], allow_warn: bool = False) -> tuple[bool, str]:
     t0 = time.time()
-    proc = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True, encoding="utf8")
+    proc = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True,
+                          encoding="utf8", errors="replace", env=_child_env())
     dt = time.time() - t0
     ok = proc.returncode == 0
     mark = "PASS" if ok else ("WARN" if allow_warn else "FAIL")
@@ -79,8 +102,8 @@ def _why(proc: subprocess.CompletedProcess) -> str:
     "explanation" was reliably that warning. A report that cannot explain the
     failure has to say SO, and say enough to be diagnosed next time.
     """
-    def useful(text: str) -> list[str]:
-        return [ln for ln in text.splitlines()
+    def useful(text: str | None) -> list[str]:
+        return [ln for ln in (text or "").splitlines()
                 if ln.strip() and not any(n in ln for n in _NOISE)]
 
     out, err = useful(proc.stdout or ""), useful(proc.stderr or "")

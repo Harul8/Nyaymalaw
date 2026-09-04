@@ -7,7 +7,7 @@ features:
   title: Authentication and advocate identity
   phase: A
   slice: S1
-  status: decided
+  status: tested
   does:
   - 'Establish and hold a named professional identity: the advocate, enrolment, practice, and the firm
     whose conflicts registry governs this session.'

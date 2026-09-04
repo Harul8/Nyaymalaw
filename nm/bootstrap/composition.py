@@ -15,11 +15,13 @@ from nm.adapters.model.config import ModelConfig, load, load_dotenv
 from nm.adapters.model.openai_adapter import OpenAIModelAdapter
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.search.authority import AuthorityIndexSearch
+from nm.adapters.store.directory import FileDirectory
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine
 from nm.domain.gates import GATES, withholding
 from nm.knowledge.coverage import CoverageProfile
 from nm.knowledge.manifest import Manifest
+from nm.ports.directory import DirectoryPort
 from nm.ports.model import ModelPort, Tier
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -43,7 +45,8 @@ def build_model(config: ModelConfig) -> ModelPort:
 
 class Application:
     def __init__(self, *, root: Path | None = None, model: ModelPort | None = None,
-                 store=None, evidence=None, search=None) -> None:
+                 store=None, evidence=None, search=None,
+                 directory=None) -> None:
         load_dotenv(ROOT / ".env")
         self.root = root or ROOT
         self.config = load()
@@ -56,6 +59,10 @@ class Application:
             key = _ensure_local_key(self.root)
 
         self.store = store or FileMatterStore(
+            os.environ.get("NM_MATTER_STORE") or (self.root / ".nm"), key=key)
+        # A1. THE SAME KEY AS THE MATTERS, and the same root. Two stores with
+        # two keys is two things to configure and one of them to forget.
+        self.directory: DirectoryPort = directory or FileDirectory(
             os.environ.get("NM_MATTER_STORE") or (self.root / ".nm"), key=key)
         self.evidence = evidence or CorpusEvidenceAdapter(
             os.environ.get("NM_CORPUS_DIR")

@@ -13,7 +13,10 @@
 const $ = (id) => document.getElementById(id);
 
 const state = {
-  advocate: 'adv_demo',
+  /* WHO THE SERVER SAYS WE ARE. Never typed, never a default: it is
+   * filled from /api/session and cleared on sign-out. It used to be an
+   * editable text box, which was the whole of authentication (B-082). */
+  advocate: null,
   matterId: null,
   turns: [],
 };
@@ -90,7 +93,7 @@ async function showMatterList() {
 
   let data;
   try {
-    data = await api(`/api/matters?advocate_id=${encodeURIComponent(state.advocate)}`);
+    data = await api('/api/matters');
   } catch (e) {
     // NEVER render an unreadable board as an empty one.
     body.replaceChildren(stateBlock(
@@ -135,7 +138,7 @@ async function showThreadBoard(matterId) {
 
   let data;
   try {
-    data = await api(`/api/matters/${matterId}?advocate_id=${encodeURIComponent(state.advocate)}`);
+    data = await api(`/api/matters/${matterId}`);
   } catch (e) {
     body.replaceChildren(stateBlock(
       'unbuildable', `The thread board could not be built: ${e.message}`));
@@ -331,7 +334,6 @@ async function send(message) {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        advocate_id: state.advocate,
         message,
         matter_id: state.matterId,
       }),
@@ -370,12 +372,6 @@ $('message').addEventListener('keydown', (ev) => {
   }
 });
 
-$('advocate').addEventListener('change', (ev) => {
-  state.advocate = ev.target.value.trim() || 'adv_demo';
-  state.turns = [];
-  repaint();
-  showMatterList();
-});
 
 $('back').addEventListener('click', showMatterList);
 
@@ -388,8 +384,12 @@ $('new-matter').addEventListener('click', () => {
   showMatterList();
 });
 
-loadHealth();
-showMatterList();
+/* THE GATE RUNS FIRST.
+ *
+ * These two ran at load, unconditionally, so the board fetched and
+ * painted before anything asked whether this browser was signed in.
+ * `boot()` resolves the session and only then starts the application. */
+boot();
 
 /* ============================== THE TABS ==============================
  *
@@ -511,7 +511,6 @@ $('search-form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const params = new URLSearchParams({
     q: $('q').value,
-    advocate_id: state.advocate,
     limit: '25',
   });
   const court = $('f-court').value.trim();
@@ -551,7 +550,7 @@ $('search-form').addEventListener('submit', async (ev) => {
 async function loadRecordMatters() {
   const sel = $('record-matter');
   try {
-    const d = await api(`/api/matters?advocate_id=${encodeURIComponent(state.advocate)}`);
+    const d = await api('/api/matters');
     const rows = d.matters || [];
     sel.textContent = '';
     const first = document.createElement('option');
@@ -591,7 +590,7 @@ async function showRecord(matterId) {
 
   let d;
   try {
-    d = await api(`/api/matters/${matterId}/transcript?advocate_id=${encodeURIComponent(state.advocate)}`);
+    d = await api(`/api/matters/${matterId}/transcript`);
   } catch (err) {
     st.appendChild(stateBlock('loud', `The record could not be read: ${err.message}`));
     return;
@@ -636,3 +635,100 @@ async function showRecord(matterId) {
 }
 
 $('record-matter').addEventListener('change', (ev) => showRecord(ev.target.value));
+
+/* ========================= A1 — THE GATE =========================
+ *
+ * The application does not start until a session resolves. Not a redirect and
+ * not an overlay dropped on a loaded board: `showMatterList()` used to run at
+ * load, so the matters fetched and painted first and the question of who was
+ * holding the laptop came second. A board that appears for an instant has
+ * already been read.
+ *
+ * A FAILED SIGN-IN SAYS ONE THING. The server sends one message for an
+ * unknown advocate and for a wrong password, and the client must not improve
+ * on it — a helpful "no such advocate" here would undo the whole arrangement
+ * from the outside.
+ */
+
+function showGate(message) {
+  $('gate').hidden = false;
+  $('masthead').hidden = true;
+  PANES.forEach((p) => { $(`pane-${p}`).hidden = true; });
+  const st = $('login-state');
+  st.textContent = '';
+  if (message) st.appendChild(stateBlock('loud', message));
+  $('login-id').focus();
+}
+
+function showApplication(advocate) {
+  state.advocate = advocate.id;
+  $('who-name').textContent = advocate.name;
+  // ENROLMENT AND FIRM, ON SCREEN. The firm is what B3's conflicts registry
+  // is scoped by, so an advocate signed in under the wrong one should be able
+  // to see that before they brief a matter, not after.
+  $('who-detail').textContent = `${advocate.enrolment} · ${advocate.practice} · ${advocate.firm_id}`;
+  $('gate').hidden = true;
+  $('masthead').hidden = false;
+  showTab('advise');
+  loadHealth();
+  showMatterList();
+}
+
+async function boot() {
+  try {
+    const me = await api('/api/session');
+    showApplication(me.advocate);
+  } catch (err) {
+    // 401 IS THE ORDINARY CASE, not an error to report. Anything else is a
+    // server that could not answer, and saying so beats a bare sign-in box
+    // that looks like a rejected password.
+    showGate(err.status === 401 ? null
+      : `The server could not be reached: ${err.message}`);
+  }
+}
+
+$('login').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const go = $('login-go');
+  go.disabled = true;
+  $('login-state').textContent = '';
+  try {
+    const r = await api('/api/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        advocate_id: $('login-id').value.trim(),
+        password: $('login-password').value,
+      }),
+    });
+    // THE PASSWORD LEAVES THE PAGE. It stays in the DOM otherwise, readable
+    // by anything running later on this document.
+    $('login-password').value = '';
+    showApplication(r.advocate);
+  } catch (err) {
+    $('login-password').value = '';
+    showGate(err.message);
+  } finally {
+    go.disabled = false;
+  }
+});
+
+$('signout').addEventListener('click', async () => {
+  try {
+    await api('/api/logout', { method: 'POST' });
+  } finally {
+    // THE SCREEN CLEARS EVEN IF THE CALL FAILED. Leaving a matter list up
+    // after someone pressed Sign out is the worst of both: they believe they
+    // are out and the board is still on the glass. The server-side session is
+    // what actually ends it, and that is the call above.
+    state.advocate = null;
+    state.matterId = null;
+    state.turns = [];
+    $('thread').textContent = '';
+    $('rail-body').textContent = '';
+    $('search-results').textContent = '';
+    $('record-body').textContent = '';
+    $('login-id').value = '';
+    showGate(null);
+  }
+});

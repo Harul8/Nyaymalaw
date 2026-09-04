@@ -49,6 +49,10 @@ ROOT = Path(__file__).resolve().parents[1]
 REACHED_ELSEWHERE = {
     # FastAPI routes -- the router calls them by registration, not by name.
     "health", "matters", "matter", "matter_summary", "turn", "index",
+    # A1's three. `search` is absent from this list ONLY because the word
+    # occurs elsewhere in the tree, which is worth noticing: this check finds
+    # a route with a distinctive name and misses one with a common name.
+    "login", "logout", "whoami",
     # `@implements` markers: their whole purpose is to be SCANNED by
     # tools/trace.py rather than called.
     "_implements_c4",

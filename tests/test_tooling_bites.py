@@ -602,3 +602,54 @@ def test_the_fallback_never_lets_a_constant_warning_stand_in_for_a_diagnosis():
     assert "stdout tail" in said and "stderr tail" in said, (
         "the two streams are blended again; that is what let the warning "
         "displace the failure")
+
+
+def test_a_child_that_prints_non_ascii_still_reports_its_failure():
+    """B-084. THE REPORT WAS EMPTY BECAUSE THE REASON COULD NOT BE DECODED.
+
+    Measured on 4 September 2026. A child process on Windows encodes its
+    stdout with the OS locale when piped -- NOT with the encoding the parent
+    decodes by. pytest printed an em-dash from a test name, the parent's utf-8
+    decoder raised inside subprocess's reader THREAD, that exception was
+    swallowed there, and `proc.stdout` came back as None.
+
+    The gate reported `CHECK FAILED -- pytest` with nothing under it, twice,
+    while eight tests were red. Defect shape S1, aimed at the tool whose whole
+    job is to find S1 in the product.
+
+    Nearly every failure message in this codebase carries an em-dash, so this
+    was not an edge case: it was the ordinary path.
+    """
+    sys.path.insert(0, str(ROOT))
+    from tools.check import step
+
+    ok, out = step("probe", [
+        sys.executable, "-c",
+        "import sys\n"
+        "print('FAILED tests/x.py::test_y \u2014 the em dash that blanked it')\n"
+        "sys.exit(1)\n"])
+
+    assert ok is False
+    assert "test_y" in out, (
+        "the child's output did not survive decoding, so the gate would "
+        "report a failure with no reason again")
+
+
+def test_the_child_is_told_to_write_utf8():
+    """The mechanism, not only its effect.
+
+    `errors="replace"` alone would make the report READABLE and mojibake --
+    the em-dash would arrive as a replacement character. Both halves are
+    needed: the environment variable makes the child write utf-8 in the first
+    place, and the replacement is what saves a child that ignores it.
+    """
+    sys.path.insert(0, str(ROOT))
+    from tools.check import _child_env, step
+
+    assert _child_env()["PYTHONIOENCODING"] == "utf-8"
+
+    ok, out = step("probe", [
+        sys.executable, "-c", "print('an em dash: \u2014')"])
+    assert "\u2014" in out, (
+        "the em dash did not survive intact, so the child is not writing "
+        "utf-8 and only the replacement is saving the report")
