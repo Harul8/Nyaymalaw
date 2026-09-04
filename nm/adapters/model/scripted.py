@@ -311,6 +311,58 @@ def _fact_id_near(user: str, index: int) -> str | None:
     return head or None
 
 
+#: What a scripted issue is spotted FROM. Each pairs a phrase the advocate
+#: might use with the kind of issue it raises and whose claim it runs against.
+#:
+#: `runs_against` is a fact about the ISSUE, not about who we act for -- a
+#: limitation point runs against whoever asserts the claim. A double that got
+#: that backwards would make E-061 pass for the wrong reason, since the effect
+#: is derived from this and the posture together.
+_SCRIPTED_ISSUES = (
+    ("never paid", "substantive", "defending"),
+    ("not paid", "substantive", "defending"),
+    ("possession", "substantive", "defending"),
+    ("supplied", "substantive", "defending"),
+    ("dispossessed", "substantive", "defending"),
+    ("cheque", "substantive", "defending"),
+    ("notice", "procedural", "moving"),
+    ("limitation", "threshold", "moving"),
+    ("jurisdiction", "threshold", "moving"),
+)
+
+
+def scripted_issues(user: str) -> str:
+    """A deterministic stand-in for the model's issue read.
+
+    THE QUOTED SPAN IS TAKEN FROM THE PROMPT, because `issues.read` refuses a
+    quotation that is not in the advocate's account -- a double that could not
+    satisfy the product's own guard would prove the guard untested rather than
+    satisfied.
+
+    It reads the FILE block only. The instructions above it contain words like
+    "limitation" and "notice", and matching those would spot issues from the
+    product's own prompt -- which is not a defect a real model would have, so
+    a double with it would test something no advocate can reach.
+    """
+    block = user or ""
+    start = block.find("THE FILE SO FAR")
+    block = block[start:] if start >= 0 else block
+    lower = block.lower()
+
+    rows = []
+    for needle, kind, against in _SCRIPTED_ISSUES:
+        i = lower.find(needle)
+        if i < 0:
+            continue
+        rows.append({
+            "statement": f"Whether the {needle} point is made out",
+            "kind": kind,
+            "runs_against": against,
+            "quoted": block[i:i + len(needle)],
+        })
+    return json.dumps({"issues": rows})
+
+
 #: Schema TITLE -> the responder that answers it. AN EXACT KEY, NOT A SUBSTRING.
 #:
 #: It was a substring search over the schema's JSON, and that is fuzzy matching
@@ -331,6 +383,7 @@ SCRIPTED_READS: dict[str, object] = {
     "role": scripted_role,
     "cause": scripted_cause,
     "factors": scripted_factors,
+    "issues": scripted_issues,
 }
 
 _tokens = estimate_tokens  # one owner: nm.adapters.model._budget

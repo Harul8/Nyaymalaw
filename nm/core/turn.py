@@ -36,8 +36,10 @@ from nm.core import (
 )
 from nm.core import dispute as dispute_reader
 from nm.core import factors as factor_reader
+from nm.core import issues as issue_reader
 from nm.core import posture as posture_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
+from nm.domain import issue
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
 from nm.domain.matter import (
@@ -933,6 +935,12 @@ class TurnEngine:
                 thread, turn, result, metrics, facts)
             grounds.extend(rows)
 
+            # D9 -- THE ISSUES, AFTER the thresholds and never before them.
+            # A threshold disposes of a claim without reaching the merits, so
+            # an issue list read first invites an hour on the theory of a suit
+            # that cannot be maintained.
+            grounds.extend(self._issues(turn, thread, memory, metrics))
+
         if metrics.evidence_bound_hit:
             # THE BOUND PRODUCES A VISIBLE GAP, never a quiet stop. A turn that
             # ran out of rounds and said nothing is indistinguishable from one
@@ -1459,6 +1467,85 @@ class TurnEngine:
             f"what was searched.")
 
     @implements("E2")
+    @implements("D9")
+    def _issues(self, turn: TurnInput, thread: Thread, memory,
+                metrics: TurnMetrics) -> list[Element]:
+        """D9. Spot the issues, and account for every one that was spotted.
+
+        `nm/domain/issue.py` carried the whole register from slice 6 and
+        nothing ever produced an `Issue` (B-079), so none of it ran on a
+        served turn: not the conservation invariant, not the derived effect,
+        not the considered-not-pursued line.
+
+        EVERY SPOTTED ISSUE IS ACCOUNTED FOR, and the check is here rather
+        than trusted. The measured original discarded 20.1% of all issue
+        labels ever spotted -- 641 of 3,192, led by limitation, bail and forum
+        -- through a filter that decided what was relevant enough. Nothing was
+        wrong with the labels. `classify` has no filter in it by construction,
+        and this asserts that the construction held.
+        """
+        account = memory.account if memory else ""
+        if not account.strip() and not turn.message.strip():
+            return []
+
+        try:
+            res = self._model.structured(
+                issue_reader.build_prompt(turn.message, account),
+                issue_reader.ISSUE_SCHEMA, Tier.ROUTINE, max_tokens=700)
+            metrics.record_call(res)
+            read = issue_reader.read(res.data or {}, thread.id, account)
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"the issues could not be read: {exc}")
+            return [Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"I have not identified the issues on this thread: "
+                      f"{exc}. That is a gap in this turn, not a finding that "
+                      f"there are none."))]
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("D9", f"issue read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return []
+
+        classified = issue.classify(read.issues)
+
+        # E-060. THE CONSERVATION INVARIANT, RUN -- not assumed because
+        # `classify` looks like it cannot lose anything.
+        lost = issue.accounted_for(read.issues, classified)
+        if lost:
+            metrics.violate("D9", f"issues spotted and not accounted for: "
+                                  f"{'; '.join(lost)}")
+
+        out: list[Element] = []
+        for refused in read.refused:
+            # A REFUSED ISSUE IS DISCLOSED, not dropped. Dropping it silently
+            # is the measured defect exactly, with a better excuse.
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"I did not take one issue the reading offered: {refused}"))
+
+        for i in classified:
+            effect, basis = i.effect_for(thread.posture)
+            # THE POSTURE VERSION TRAVELS WITH THE EFFECT. A reading recorded
+            # without it is one nobody can later tell is stale, which is the
+            # whole reason `effect` is not a field.
+            out.append(Element(
+                kind=ElementKind.FINDING, thread=thread.id,
+                text=(f"{i.statement} [{i.kind.value}; runs against "
+                      f"{i.runs_against.value}; {effect.value} our case "
+                      f"on posture v{basis}]")))
+
+        for line in issue.considered_not_pursued(classified):
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"Considered, not pursued: {line}"))
+
+        if read.state == "none_spotted" and read.why_not:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"No issues identified yet: {read.why_not}"))
+        return out
+
     @implements("D2")
     def _factors(self, turn: TurnInput, thread: Thread,
                  chart: tuple[Fact, ...], metrics: TurnMetrics,
