@@ -186,6 +186,43 @@ def health() -> dict:
     return {**application().health(), "serving": SERVING}
 
 
+@app.get("/api/matters/{matter_id}/transcript")
+def transcript(matter_id: str, advocate_id: Advocate) -> dict:
+    """THE CONVERSATION, AS IT WAS SERVED. For review, later.
+
+    Every turn on this matter in full — what the advocate wrote, what came
+    back, which gates fired and what was violated. Nothing else keeps it: the
+    matter holds facts, the metrics hold counts and no client words, and the
+    answer was held by neither.
+
+    THE SAME 404 AS EVERY OTHER MATTER LOOKUP, and for the same reason: a
+    failed lookup must disclose nothing about what exists. A transcript is the
+    most privileged thing on the file, so the ownership check comes before the
+    read rather than after it.
+    """
+    m = application().store.load(matter_id)
+    if m is None or m.advocate_id != advocate_id:
+        raise HTTPException(status_code=404, detail="no such matter")
+
+    turns = application().store.transcripts_for(matter_id)
+    unreadable = [t for t in turns if t.get("unreadable")]
+    return {
+        # NOT "ok" when a turn could not be decrypted. A review that renders
+        # nine of ten turns and says "ok" is reviewing a different
+        # conversation from the one that ran.
+        "state": "ok" if not unreadable else "incomplete",
+        "matter_id": matter_id,
+        "title": m.title,
+        "turns": [t for t in turns if not t.get("unreadable")],
+        "turn_count": len(turns),
+        "unreadable": [t["turn_id"] for t in unreadable],
+        "unreadable_reason": (
+            f"{len(unreadable)} turn(s) on this matter could not be read back "
+            f"and are missing from what follows."
+            if unreadable else None),
+    }
+
+
 @app.get("/api/matters")
 def matters(advocate_id: Advocate) -> dict:
     """THE MATTER LIST. One row per matter, nearest deadline first.

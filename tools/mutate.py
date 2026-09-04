@@ -192,12 +192,12 @@ MUTATIONS = [
     ("an audit-trail write failure swallowed",
      "nm/core/turn.py",
      "        self._store.record_metrics(metrics.as_dict())\n"
-     "        return TurnOutput(turn.turn_id, answer, matter, metrics)",
+     "        self._record_turn(turn, answer, matter, metrics)",
      "        try:\n"
      "            self._store.record_metrics(metrics.as_dict())\n"
      "        except Exception:\n"
      "            pass\n"
-     "        return TurnOutput(turn.turn_id, answer, matter, metrics)",
+     "        self._record_turn(turn, answer, matter, metrics)",
      "test_an_audit_trail_write_failure_is_never_swallowed", "E-019"),
 
     # RG-11's own honesty: a recorded run that cannot say what it ran

@@ -197,3 +197,94 @@ def test_every_persisted_type_is_covered_by_this_file():
         f"checked across a save and load will lose them silently, which is "
         f"exactly how `client_described_as` was recorded on one turn and gone "
         f"by the next.")
+
+
+# ================ the transcript: what the advocate actually read ==========
+
+
+def test_a_served_turn_is_recorded_in_full_and_sealed(tmp_path):
+    """NOTHING ELSE HELD THE ANSWER.
+
+    The matter keeps facts and questions. The metrics keep counts and carry no
+    client words BY DESIGN. The answer — the thing the advocate read — was held
+    by neither, so a run could be inspected only while its stdout was still on
+    screen. That is no way to review a conversation a week later, and it is why
+    every scenario finding this week had to be caught in the moment.
+    """
+    from nm.adapters.store.file_store import FileMatterStore
+
+    store = FileMatterStore(tmp_path, key="k")
+    store.record_turn({
+        "turn_id": "turn_1", "matter_id": "mat_1", "at": "2026-08-31T10:00:00",
+        "message": "we act for the plaintiff; the goods were never paid for",
+        "elements": [{"kind": "action", "text": "File the recovery suit."}],
+    })
+
+    back = store.transcripts_for("mat_1")
+    assert len(back) == 1
+    assert back[0]["message"].startswith("we act for the plaintiff")
+    assert back[0]["elements"][0]["text"] == "File the recovery suit."
+
+    # SEALED. A transcript is the advocate's own words and the advice served
+    # back — privileged material, and the metrics directory's plaintext
+    # convention would have put it on disk in the clear.
+    raw = (tmp_path / "transcripts" / "turn_1.nm").read_bytes()
+    assert b"plaintiff" not in raw, "the transcript is on disk in plaintext"
+    assert b"recovery suit" not in raw
+
+    # AND SCOPED TO ITS MATTER.
+    assert store.transcripts_for("mat_other") == ()
+
+
+def test_an_unreadable_transcript_is_reported_rather_than_dropped(tmp_path):
+    """A review that silently drops the turn it could not decrypt is reviewing
+    a different conversation from the one that ran.
+
+    Same shape as `list_for` reporting an unreadable matter: it carries
+    `unreadable` and the reason instead of vanishing.
+    """
+    from nm.adapters.store.file_store import FileMatterStore
+
+    store = FileMatterStore(tmp_path, key="k")
+    store.record_turn({"turn_id": "good", "matter_id": "mat_1",
+                       "at": "2026-08-31T10:00:00", "message": "x",
+                       "elements": []})
+    (tmp_path / "transcripts" / "corrupt.nm").write_bytes(b"not a ciphertext")
+
+    back = store.transcripts_for("mat_1")
+    broken = [t for t in back if t.get("unreadable")]
+    assert broken, "the corrupt transcript vanished from the review"
+    assert broken[0]["turn_id"] == "corrupt"
+    assert broken[0]["why"]
+
+
+def test_a_transcript_that_cannot_be_written_never_costs_the_advocate_the_turn(
+        tmp_path):
+    """FAILING TO RECORD MUST NOT FAIL THE TURN — and must not be silent.
+
+    The advocate has been given advice and the file has it. Losing the review
+    copy is a real defect and not one worth throwing their answer away over, so
+    it is a VIOLATION and the turn stands. A transcript store that has quietly
+    stopped writing is then visible now rather than discovered by someone
+    coming to look months later.
+    """
+    from datetime import date as _date
+
+    from nm.core.turn import TurnInput
+    from tests.test_turn_contract import build
+
+    engine, store = build(tmp_path)
+
+    def _refuse(_transcript):
+        raise OSError("the transcript volume is full")
+
+    store.record_turn = _refuse
+
+    out = engine.run(TurnInput(
+        advocate_id="adv", today=_date(2026, 8, 31),
+        message="we act for the plaintiff. the goods were never paid for."))
+
+    assert out.answer.elements, "the advocate lost their answer over a log write"
+    assert any(v.rule == "I1" and "not recorded" in v.detail
+               for v in out.metrics.violations), (
+        "the transcript write failed and nothing said so")

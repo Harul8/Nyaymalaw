@@ -169,6 +169,7 @@ class FileMatterStore:
         self._root = Path(root)
         self._matters = self._root / "matters"
         self._metrics = self._root / "metrics"
+        self._transcripts = self._root / "transcripts"
         self._matters.mkdir(parents=True, exist_ok=True)
         self._metrics.mkdir(parents=True, exist_ok=True)
         self._cipher = _Cipher(
@@ -232,3 +233,55 @@ class FileMatterStore:
         """Written even when the turn failed, and never containing client words."""
         path = self._metrics / f"{metrics['turn_id']}.json"
         path.write_text(json.dumps(metrics, indent=2), encoding="utf8")
+
+    # ------------------------------------------------------- transcripts ---
+    #
+    # A TRANSCRIPT IS NOT A METRIC, and the difference decides how it is
+    # written. `record_metrics` is plaintext BECAUSE it carries no client
+    # words; a transcript is the advocate's own message and the answer served
+    # back, so it is privileged material and gets the matter cipher.
+    #
+    # Writing them beside the metrics as JSON would have been the obvious
+    # move and would have put client instructions on disk in the clear, in a
+    # directory whose whole convention is that its contents are safe to read.
+
+    def record_turn(self, transcript: dict) -> None:
+        """The served turn, in full, for later review.
+
+        Nothing else keeps it. The matter holds facts and questions, the
+        metrics hold counts, and the ANSWER -- the thing the advocate actually
+        read -- was held by neither, so a run could be inspected only while its
+        stdout was still on screen.
+
+        Sealed with the same key as the matter, because a transcript nobody
+        can open is useless and one anybody can open is a disclosure.
+        """
+        self._transcripts.mkdir(parents=True, exist_ok=True)
+        path = self._transcripts / f"{transcript['turn_id']}.nm"
+        blob = self._cipher.encrypt(
+            json.dumps(transcript, indent=2, default=str).encode("utf8"))
+        path.write_bytes(blob)
+
+    def transcripts_for(self, matter_id: MatterId) -> tuple[dict, ...]:
+        """Every recorded turn on one matter, oldest first.
+
+        AN UNREADABLE TRANSCRIPT IS SKIPPED AND SAID SO, in the same shape
+        `list_for` reports an unreadable matter: it carries `unreadable: True`
+        and the reason rather than vanishing, because a review that silently
+        drops the turn it could not decrypt is reviewing a different
+        conversation from the one that ran.
+        """
+        if not self._transcripts.exists():
+            return ()
+        out: list[dict] = []
+        for p in sorted(self._transcripts.glob("*.nm")):
+            try:
+                doc = json.loads(
+                    self._cipher.decrypt(p.read_bytes()).decode("utf8"))
+            except Exception as exc:  # noqa: BLE001 -- reported, never dropped
+                out.append({"turn_id": p.stem, "unreadable": True,
+                            "why": f"{type(exc).__name__}: {exc}"})
+                continue
+            if doc.get("matter_id") == matter_id:
+                out.append(doc)
+        return tuple(sorted(out, key=lambda d: d.get("at", "")))

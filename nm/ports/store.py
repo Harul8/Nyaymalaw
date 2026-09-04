@@ -66,6 +66,14 @@ class StorePort(Protocol):
         """
         ...
 
+    def record_turn(self, transcript: dict) -> None:
+        """The served turn, in full. Sealed -- it carries client words."""
+        ...
+
+    def transcripts_for(self, matter_id: MatterId) -> tuple[dict, ...]:
+        """Every recorded turn on one matter, oldest first."""
+        ...
+
     def record_metrics(self, metrics: dict) -> None:
         """Written even when the turn failed."""
         ...

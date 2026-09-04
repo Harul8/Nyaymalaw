@@ -23,7 +23,7 @@ from __future__ import annotations
 import re
 import time
 from dataclasses import dataclass, field, replace
-from datetime import date
+from datetime import date, datetime, timezone
 
 from nm.core import cause as cause_reader
 from nm.core import (
@@ -478,7 +478,61 @@ class TurnEngine:
         metrics.stages["emit_ms"] = int((time.perf_counter() - t2) * 1000)
         metrics.latency_ms = int((time.perf_counter() - started) * 1000)
         self._store.record_metrics(metrics.as_dict())
+        self._record_turn(turn, answer, matter, metrics)
         return TurnOutput(turn.turn_id, answer, matter, metrics)
+
+    def _record_turn(self, turn: TurnInput, answer: Answer, matter: Matter,
+                     metrics: TurnMetrics) -> None:
+        """The served turn, kept. AFTER the commit, and never instead of it.
+
+        Nothing else held this. The matter keeps facts and questions, the
+        metrics keep counts and carry no client words by design, and the
+        ANSWER -- the thing the advocate actually read -- was held by neither.
+        A run could be inspected only while its stdout was still on screen,
+        which is no way to review a conversation a week later.
+
+        FAILING TO RECORD MUST NOT FAIL THE TURN. The advocate has been given
+        advice and the file has it; losing the review copy is a real defect and
+        it is not one worth throwing their answer away over. So it is caught,
+        recorded as a violation, and the turn stands -- and because it is a
+        violation rather than a silence, a transcript store that has quietly
+        stopped writing is visible rather than discovered when someone comes
+        looking months later.
+        """
+        try:
+            self._store.record_turn({
+                "turn_id": turn.turn_id,
+                "matter_id": matter.id,
+                "advocate_id": turn.advocate_id,
+                "at": datetime.now(timezone.utc).isoformat(),
+                "today": turn.today.isoformat(),
+                "message": turn.message,
+                "route": answer.route.value,
+                "mode": answer.mode.value,
+                "mode_statement": answer.mode_statement,
+                "blocked": answer.blocked,
+                "blocked_reason": answer.blocked_reason,
+                "elements": [
+                    {"kind": e.kind.value, "text": e.text, "thread": e.thread,
+                     "signal": e.signal.value, "disclosure": e.disclosure,
+                     "gate": e.gate, "collapsible": e.collapsible,
+                     "by_when": e.by_when.isoformat() if e.by_when else None,
+                     "no_deadline_reason": e.no_deadline_reason,
+                     "refs": list(e.refs)}
+                    for e in answer.elements],
+                "gates_fired": [
+                    {"gate": g.gate_id, "state": g.state}
+                    for g in metrics.gates_fired],
+                "violations": [
+                    {"rule": v.rule, "detail": v.detail}
+                    for v in metrics.violations],
+                "cost_usd": metrics.cost_usd,
+                "llm_calls": metrics.llm_calls,
+            })
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a silence
+            metrics.violate(
+                "I1", f"the turn was served and not recorded for review: "
+                      f"{type(exc).__name__}: {exc}")
 
     # ------------------------------------------------------------ helpers ---
     def _run_screens(self, matter: Matter, turn: TurnInput,
