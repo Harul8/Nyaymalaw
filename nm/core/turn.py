@@ -35,6 +35,7 @@ from nm.core import (
     thresholds,
 )
 from nm.core import dispute as dispute_reader
+from nm.core import factors as factor_reader
 from nm.core import posture as posture_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
 from nm.domain import summary as matter_memory
@@ -1009,7 +1010,7 @@ class TurnEngine:
         defending = thread.posture.side is Side.DEFENDING
         claimant = self._limitation(
             Side.MOVING if defending else thread.posture.side,
-            thread, result, chart)
+            thread, result, chart, turn, metrics, out)
         ours = (limitation.not_computed(
             thread.posture.side,
             "we are defending and nothing on this thread describes a claim of "
@@ -1056,7 +1057,9 @@ class TurnEngine:
 
     @implements("D2")
     def _limitation(self, for_side: Side, thread: Thread, result,
-                    chart: tuple[Fact, ...]) -> limitation.Limitation:
+                    chart: tuple[Fact, ...], turn: TurnInput,
+                    metrics: TurnMetrics,
+                    grounds: list[Element]) -> limitation.Limitation:
         """Limitation for one side -- or NOT COMPUTED, with the reason said.
 
         Slice 4 computes it where the retrieval produced an Article AND the
@@ -1112,10 +1115,27 @@ class TurnEngine:
         # With it gone, every unexamined entry lands NOT_ASSESSED and the
         # advocate is told how many things were never weighed. That is a worse
         # answer and an honest one, and it is the one they can act on.
-        return limitation.compute(
+        # COMPUTED TWICE, ON PURPOSE.
+        #
+        # s.18 and s.19 both apply only to an acknowledgment or payment made
+        # "before the expiration of the prescribed period" -- so the
+        # un-extended expiry has to EXIST before any factor can be judged
+        # against it. The first pass is pure arithmetic over dates already on
+        # the file and costs nothing. Ordering it the other way would test a
+        # factor against a date that factor had already moved.
+        bare = limitation.compute(
             for_side=for_side, article=found.ref, accrual=accrual.id,
             accrual_on=accrual.date, accrual_reason=accrual.statement[:70],
             chronology=thread.chronology, period=period)
+
+        read = self._factors(turn, thread, chart, metrics, grounds,
+                             bare.expires_on)
+
+        return limitation.compute(
+            for_side=for_side, article=found.ref, accrual=accrual.id,
+            accrual_on=accrual.date, accrual_reason=accrual.statement[:70],
+            chronology=thread.chronology, period=period,
+            factors=read.factors)
 
     @implements("D3")
     def _register(self, thread: Thread, lim: limitation.Limitation,
@@ -1439,6 +1459,96 @@ class TurnEngine:
             f"what was searched.")
 
     @implements("E2")
+    @implements("D2")
+    def _factors(self, turn: TurnInput, thread: Thread,
+                 chart: tuple[Fact, ...], metrics: TurnMetrics,
+                 grounds: list[Element],
+                 unextended_expiry) -> "factor_reader.ReadFactors":
+        """B-073. WHAT MOVED THE CLOCK, retrieved and read rather than assumed.
+
+        Nothing produced a `Factor` until this existed, so no acknowledgment,
+        part payment, exclusion or disability had ever moved a limitation
+        date. Measured on GS-14: an acknowledgment dated 12 June 2024 was on
+        the file, was repeated back to the advocate, and never reached the
+        arithmetic -- the claim was reported dead when it was alive to June
+        2027.
+
+        EVERY FAILURE HERE IS `not_assessed` AND SAYS SO. Not "no factor
+        applies": the difference between "nothing on this file restarts the
+        period" and "nobody looked" is the whole of defect shape S1, and it is
+        the difference between an advocate filing and an advocate not.
+        """
+        dated = tuple(f for f in chart if f.date is not None)
+        if not dated:
+            return factor_reader.not_assessed(
+                "no dated entry on this thread could carry an acknowledgment")
+
+        # THE SECTIONS FIRST. `Factor.finding` is required by the type so an
+        # extending provision cannot be asserted from memory -- and filling it
+        # with a summary would satisfy the type while defeating it. What goes
+        # in is the span the corpus returned.
+        provisions: dict[str, str] = {}
+        for section in ("18", "19"):
+            found = self._fetch(EvidenceNeed(
+                question=f"Limitation Act 1963 section {section}",
+                governing_date=turn.today,
+                jurisdiction=turn.jurisdiction), metrics)
+            span = next((f.span for f in found.findings
+                         if f.span and f".{section}" in f.ref
+                         or f.span and f" {section}" in f.ref), None)
+            if span:
+                provisions[section] = span
+
+        if not provisions:
+            return factor_reader.not_assessed(
+                "sections 18 and 19 of the Limitation Act were not retrieved "
+                "on this turn, so nothing here can move the period. That is a "
+                "gap in what I read, not a finding that nothing restarts it.")
+
+        # THE ACCOUNT IS THE CHART, not a second read of the store.
+        #
+        # `getattr(thread, "matter_id", None)` was a guess about a type this
+        # module already imports, and it would have degraded SILENTLY to an
+        # empty account — weakening the quotation guard exactly where it
+        # matters. The chart holds the dated statements a quotation has to be
+        # found in, and it is already in hand.
+        account = "\n".join(f.statement for f in chart)
+
+        try:
+            res = self._model.structured(
+                factor_reader.build_prompt(turn.message, account, dated),
+                factor_reader.FACTOR_SCHEMA, Tier.ROUTINE, max_tokens=400)
+            metrics.record_call(res)
+            read = factor_reader.read(
+                res.data or {}, dated, account, provisions, unextended_expiry)
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"acknowledgments could not be read: {exc}")
+            return factor_reader.not_assessed(
+                f"nothing read this account for an acknowledgment or part "
+                f"payment: {exc}")
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("D2", f"factor read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return factor_reader.not_assessed(
+                f"the acknowledgment read failed: {type(exc).__name__}")
+
+        # A REFUSAL IS DISCLOSED. The advocate can correct it in a sentence,
+        # and silence would have them believe it was never in question.
+        if read.refused:
+            metrics.violate("D2", f"factor not taken: {read.refused}")
+            grounds.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"I did not accept a restart of the limitation period: "
+                      f"{read.refused}")))
+        elif read.state == "none_found" and read.why_not:
+            grounds.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"I read this file for anything that restarts the "
+                      f"period under sections 18 or 19 and found none: "
+                      f"{read.why_not}")))
+        return read
+
     @implements("D3")
     def _by_when(self, register: "tuple[deadlines.Deadline, ...] | None",
                  today: date) -> tuple[date | None, str | None]:
@@ -1514,6 +1624,30 @@ class TurnEngine:
                        if gone else
                        "is still open. Do not tell them to compute it; it is "
                        "computed."))
+                if position.factors:
+                    # B-073 CLOSED THE OTHER HALF OF B-077.
+                    #
+                    # The ban below was the honest instruction while NOTHING
+                    # produced a `Factor`: with no computed answer, any
+                    # statement about the acknowledgment was an assertion
+                    # nobody had made, and the model duly made it in both
+                    # directions -- flatly against the opponent, hedged
+                    # against our own client.
+                    #
+                    # A computed factor removes the guess rather than
+                    # forbidding it. The restart is IN the figure above, so
+                    # the model is told what was applied and may rely on it.
+                    # Silence here would be its own defect: the advocate would
+                    # read an unexplained later date and not know why.
+                    applied = "; ".join(
+                        f"{f.kind.value.replace('_', ' ')} on "
+                        f"{f.restarts_from.isoformat()}"
+                        for f in position.factors if f.restarts_from)
+                    worked += (
+                        f" The period above ALREADY accounts for: {applied} — "
+                        f"computed against the section retrieved for it. Say "
+                        f"so if it matters to the step; do not re-argue it.")
+
                 missed = position.accounts_for_every_entry(thread.chronology)
                 if missed:
                     # WHAT HAS NOT BEEN WEIGHED, AND THE BAN ON GUESSING IT.

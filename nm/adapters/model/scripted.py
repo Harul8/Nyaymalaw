@@ -111,6 +111,14 @@ _MONTHS = ("january february march april may june july august september "
            "october november december").split()
 
 
+def _sentence_around(text: str, index: int) -> str:
+    """The sentence containing `index`, which is what a model would return."""
+    start = max(text.rfind(".", 0, index), text.rfind("\n", 0, index)) + 1
+    end = text.find(".", index)
+    return (text[start:end if end > index else len(text)].strip()[:70]
+            or "an event")
+
+
 def scripted_dates(user: str) -> str:
     """A deterministic stand-in for the model's date read."""
     said = user.split("just said:", 1)[-1]
@@ -119,7 +127,17 @@ def scripted_dates(user: str) -> str:
     for m in _SCRIPTED_DATE.finditer(said):
         day, month, year = m.group(1), m.group(2).lower(), m.group(3)
         events.append({
-            "event": said.strip().split(".")[0][:70] or "an event",
+            # THE SENTENCE THE DATE IS IN, not the first sentence of the
+            # message. Every event used to carry the opening line, so a brief
+            # with three dated events produced three chronology entries with
+            # IDENTICAL text -- and anything reading an entry's words saw the
+            # same words three times.
+            #
+            # It hid a real defect end to end: the factor read could not find
+            # the acknowledgment because the entry describing it said "We act
+            # for the plaintiff, a supplier at Hyderabad". A double whose rows
+            # are indistinguishable makes every check over them vacuous.
+            "event": _sentence_around(said, m.start()),
             "date_expression": m.group(0),
             "resolved": f"{year}-{_MONTHS.index(month) + 1:02d}-{int(day):02d}",
             "documented": "dated" in said.lower() or "notice" in said.lower(),
@@ -211,6 +229,88 @@ def scripted_cause(user: str) -> str:
                               "product routes on"})
 
 
+#: Words an account uses for a writing that admits the liability. Narrow on
+#: purpose: a scripted double that recognised more than the product's own
+#: guards do would prove the guards untested rather than satisfied.
+_ACKNOWLEDGES = ("admitting", "acknowledg", "admitted the", "admits the")
+
+#: A payment on account is a DIFFERENT section (s.19), so it is a different
+#: needle. Collapsing the two here would let a test pass s.18's text as the
+#: finding for a part payment, which is the one thing `SECTION_FOR` exists to
+#: stop.
+_PAID = ("part payment", "paid on account", "made a payment")
+
+
+def scripted_factors(user: str) -> str:
+    """A deterministic stand-in for the acknowledgment read.
+
+    IT QUOTES THE ACCOUNT AND NAMES A REAL FACT ID, because `factors.read`
+    refuses a quotation that is not in the account and a fact that is not on
+    the chronology. A double that could not satisfy those guards would prove
+    them untested rather than satisfied -- the same argument
+    `scripted_cause` makes about its own span.
+
+    `in_writing` is decided by the presence of the word, not assumed: s.18
+    requires a signed writing, and a double that always said `true` would mean
+    the spoken-admission path never ran offline.
+    """
+    # THE CHRONOLOGY BLOCK ONLY, and this was a real defect.
+    #
+    # Searching the whole prompt matched "admitting" in the FILE SO FAR
+    # section, where there is no id to read, so the double returned the entire
+    # brief as a `fact_id`. The product refused it correctly -- "which is not
+    # on this chronology" -- which is the guard working and the double lying.
+    #
+    # Caught end to end, not by a unit test: the double satisfied every guard
+    # in isolation and produced a refusal on a served turn.
+    block = (user or "")
+    start = block.find("THE CHRONOLOGY")
+    end = block.find("THE FILE SO FAR")
+    block = block[start:end] if start >= 0 and end > start else block
+    lower = block.lower()
+    user = block
+
+    for needles, kind in ((_ACKNOWLEDGES, "acknowledgment"), (_PAID, "part_payment")):
+        for needle in needles:
+            i = lower.find(needle)
+            if i < 0:
+                continue
+            # THE FACT ID COMES OFF THE CHRONOLOGY BLOCK the prompt carries.
+            # Inventing one would be refused by the product, which is the
+            # point: the double has to work the way a model would.
+            fact_id = _fact_id_near(user, i)
+            if fact_id is None:
+                continue
+            return json.dumps({
+                "kind": kind,
+                "fact_id": fact_id,
+                "quoted": user[i:i + len(needle) + 24].split("\n")[0].strip(),
+                "in_writing": "wrote" in lower or "writing" in lower
+                              or "letter" in lower,
+                "why": f"the account says {needle!r}",
+            })
+
+    return json.dumps({"kind": "none", "fact_id": "", "quoted": "",
+                       "in_writing": False,
+                       "why": "the account describes no acknowledgment or "
+                              "part payment"})
+
+
+def _fact_id_near(user: str, index: int) -> str | None:
+    """The id on the chronology line the match fell in.
+
+    The prompt lays the chronology out as `  <id>\t<date>\t<statement>`, so the
+    id is the first field of the line containing the match. Reading it back
+    rather than guessing keeps the double honest about which entry it means --
+    and which entry it means is what the period restarts from.
+    """
+    line_start = user.rfind("\n", 0, index) + 1
+    line = user[line_start:user.find("\n", index) if user.find("\n", index) > 0
+                else len(user)]
+    head = line.strip().split("\t", 1)[0].strip()
+    return head or None
+
+
 #: Schema TITLE -> the responder that answers it. AN EXACT KEY, NOT A SUBSTRING.
 #:
 #: It was a substring search over the schema's JSON, and that is fuzzy matching
@@ -230,6 +330,7 @@ SCRIPTED_READS: dict[str, object] = {
     "dates": scripted_dates,
     "role": scripted_role,
     "cause": scripted_cause,
+    "factors": scripted_factors,
 }
 
 _tokens = estimate_tokens  # one owner: nm.adapters.model._budget

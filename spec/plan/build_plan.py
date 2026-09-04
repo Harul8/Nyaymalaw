@@ -2034,9 +2034,10 @@ d("B-073", "2026-08-31", "core",
   "entries were never weighed on every turn that computes a period, so an "
   "advocate is told the arithmetic is incomplete rather than shown a "
   "complete-looking date. That is the whole reason the invariant exists.",
-  "tests/test_limitation.py::test_every_chronology_entry_appears_in_the_coverage_record; "
-  "tests/test_slice4_closeout.py::test_a_fact_nobody_examined_is_never_recorded_as_having_no_effect",
-  "Open")
+  "tests/test_factors.py::"
+  "test_an_acknowledgment_on_the_file_reaches_the_arithmetic, and "
+  "test_an_unretrieved_section_is_not_assessed_and_never_none_found — "
+  "the half that would rot silently")
 
 d("B-074", "2026-08-31", "core",
   "THE RECOMMENDATION CONTRADICTED THE FINDING BENEATH IT, IN THE SAME ANSWER. "
@@ -2115,15 +2116,24 @@ d("B-077", "2026-08-31", "core",
   "E-073 put to the judge as a DIFFERENTIAL over the paired run. The first "
   "pairing PASSED trivially, because B-075 meant both sides printed identical "
   "text; the asymmetry became visible only once B-074's fix made them differ.",
-  "The prompt names how many chronology entries are unweighed, permits "
-  "telling the advocate to have them examined, and FORBIDS saying whether any "
-  "of them restarts, extends or fails to restart the period.",
+  "FIXED, and in two stages. The prompt first FORBADE saying whether "
+  "anything restarts the period, which was the honest instruction while "
+  "nothing computed it — a ban, not an answer. B-073 then made the "
+  "answer EXIST: an acknowledgment is computed into the figure now, and "
+  "the prompt names what was applied so the model may rely on it. The "
+  "ban survives for entries that genuinely were not weighed. A guess "
+  "removed beats a guess forbidden, because a forbidden guess still "
+  "leaves the advocate without the answer.",
   "Yes — and it is D5.1's own warning arriving from the direction the PRD "
   "predicted: the drift is not toward accusing the client, it is toward "
   "softening the finding against them. A mechanical check could not have seen "
   "this; the differential judge did.",
-  "tools/judge.py --eval E-073 --paired (the differential); docs/GOLDEN_SET.md GS-14",
-  "Open")
+  "tests/test_factors.py::"
+  "test_an_acknowledgment_after_the_bar_revives_nothing — the assertion "
+  "the recommendation was making in BOTH directions is settled by "
+  "arithmetic now. The differential E-073 is still the only check that "
+  "could see the ASYMMETRY, and confirming it needs a judged run.",
+  "Fixed — unverified on a served turn")
 
 d("B-078", "2026-08-31", "edge",
   "E-102 FAILS: the register is instructional rather than peer-to-peer. The "
