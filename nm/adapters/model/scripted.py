@@ -477,6 +477,107 @@ def scripted_theory(user: str) -> str:
     })
 
 
+#: Grounds the other side runs, paired with the shape of the answer.
+#:
+#: The third row has NO good answer, deliberately: D7 requires an unanswerable
+#: attack resolved into what we DO about it, and a double that always found an
+#: answer would leave that half of the contract unexercised offline.
+_SCRIPTED_ATTACKS = (
+    ("never paid", "the debt was discharged and the ledger shows it",
+     "the ledger is ours and unaudited; press for their bank statements", False),
+    ("limitation", "the suit is out of time on the invoice date",
+     "the acknowledgment restarts the period from the date it was signed",
+     False),
+    ("no receipt", "the repayment is unproved because nothing was written",
+     "", True),
+)
+
+
+def scripted_attacks(user: str) -> str:
+    """A deterministic stand-in for the read that puts the other side's case.
+
+    Where a row is unanswerable it fills `no_answer_because`, because `Attack`
+    refuses one that stops at the problem -- a double producing refusals on
+    every turn would exercise the refusal path and nothing else.
+    """
+    lower = (user or "").lower()
+    rows = []
+    for ground, their_case, our_answer, none in _SCRIPTED_ATTACKS:
+        if ground.split()[-1] not in lower:
+            continue
+        rows.append({
+            "ground": ground,
+            "their_case": their_case,
+            "our_answer": our_answer,
+            "no_answer": none,
+            "no_answer_because": ("concede it early and put the client on "
+                                  "notice that it will be put to them"
+                                  if none else ""),
+        })
+    return json.dumps({"attacks": rows})
+
+
+def scripted_exposure(user: str) -> str:
+    """A deterministic stand-in for the cross-file pass.
+
+    RETURNS NOTHING BY DEFAULT, which is the honest answer on most files and
+    the one D7 warns against manufacturing: *do not invent a connection
+    between unrelated disputes*. It fires only where two disputes on the same
+    file take opposite positions on a debt -- D7's own counterexample.
+    """
+    lines = [ln.strip() for ln in (user or "").splitlines()
+             if "\t" in ln]
+    ids = [ln.split("\t", 1)[0].strip() for ln in lines]
+    labels = [ln.split("\t", 1)[1].lower() for ln in lines]
+
+    recovery = next((i for i, lab in enumerate(labels) if "recovery" in lab), None)
+    cheque = next((i for i, lab in enumerate(labels) if "cheque" in lab), None)
+    if recovery is None or cheque is None or recovery == cheque:
+        return json.dumps({"exposures": []})
+
+    return json.dumps({"exposures": [{
+        "from_thread": ids[recovery],
+        "to_thread": ids[cheque],
+        "what": "our own recovery suit asserts the client was owed this money",
+        "consequence": "it contradicts the defence that the debt was never owed",
+    }]})
+
+
+def scripted_salvage(user: str) -> str:
+    """A deterministic stand-in for the salvage read.
+
+    IT CITES FROM THE RETRIEVED BLOCK the prompt carries. Inventing a citation
+    would be dropped by `read_salvage` -- correct, and it would leave the
+    double producing no route at all, so the path that offers one would never
+    run offline.
+
+    It moves THREE coordinates and not seven, on purpose: `unvaried` must have
+    something to report, or the sweep would pass having swept nothing.
+    """
+    block = user or ""
+    start = block.find("RETRIEVED ON THIS TURN")
+    end = block.find("THE FILE:")
+    refs = [ln.strip() for ln in block[start:end].splitlines()[1:]
+            if ln.strip() and not ln.strip().startswith("(")]
+
+    varied = [
+        {"coordinate": "timing",
+         "varied_result": "an acknowledgment or part payment would restart the "
+                          "period from the date it was signed",
+         "route": ("sue on the restarted period" if refs else ""),
+         "strength": ("arguable" if refs else "not_assessed"),
+         "citations": refs[:1]},
+        {"coordinate": "relief",
+         "varied_result": "a declaration is barred on the same facts, so "
+                          "changing what is asked for does not help",
+         "route": "", "strength": "not_assessed", "citations": []},
+        {"coordinate": "party",
+         "varied_result": "a guarantor would carry its own period, if one exists",
+         "route": "", "strength": "not_assessed", "citations": []},
+    ]
+    return json.dumps({"failure_scope": "framing", "varied": varied})
+
+
 #: Schema TITLE -> the responder that answers it. AN EXACT KEY, NOT A SUBSTRING.
 #:
 #: It was a substring search over the schema's JSON, and that is fuzzy matching
@@ -501,6 +602,9 @@ SCRIPTED_READS: dict[str, object] = {
     "inventory": scripted_inventory,
     "adverse": scripted_adverse,
     "theory": scripted_theory,
+    "attacks": scripted_attacks,
+    "exposure": scripted_exposure,
+    "salvage": scripted_salvage,
 }
 
 _tokens = estimate_tokens  # one owner: nm.adapters.model._budget

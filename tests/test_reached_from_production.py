@@ -55,9 +55,6 @@ ENTRY_POINTS: dict[str, str] = {
 #: behaviour does not, and the difference is invisible to every other check in
 #: this build.
 UNWIRED: dict[str, str] = {
-    "nm.core.adversarial":
-        "D7 and D8. The adversarial pass runs across the whole file AFTER "
-        "per-thread analysis, and the turn has no such phase yet.",
     "nm.core.gaps":
         "A3 / §5.1-5.3. The gap queue is built; the turn still asks its "
         "questions from the gates directly rather than from a ranked queue.",
@@ -208,7 +205,6 @@ def test_the_scan_can_see_an_unreached_module():
 #: was actually wrong, was the one it could not see. A join that silently
 #: drops members is the same defect as a scan whose population went to zero.
 OWNER: dict[str, tuple[str, ...]] = {
-    "nm.core.adversarial": ("D7", "D8"),
     "nm.core.gaps": ("A3",),
     "nm.core.cascade": ("A3",),
     "nm.core.quarantine": ("B4",),

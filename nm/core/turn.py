@@ -25,8 +25,8 @@ import time
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timezone
 
-from nm.core import cause as cause_reader
 from nm.core import (
+    adversarial,
     chronology,
     deadlines,
     grounding,
@@ -34,6 +34,7 @@ from nm.core import (
     proof,
     thresholds,
 )
+from nm.core import cause as cause_reader
 from nm.core import dispute as dispute_reader
 from nm.core import evidence_item as inventory
 from nm.core import factors as factor_reader
@@ -427,6 +428,32 @@ class TurnEngine:
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=tuple(elements))
+
+        # D7 -- THE CROSS-FILE PASS, AFTER the threads and EXACTLY ONCE.
+        #
+        # Not a step inside each thread. D7's counterexample says why: *the
+        # client's own recovery suit undermines his defence in the cheque
+        # matter, and NO SINGLE THREAD REVEALS IT.* A per-thread pass cannot
+        # see it however carefully each thread is worked, because the exposure
+        # exists only in the pair.
+        #
+        # E-082 is precise about the shape: produced *exactly once on every
+        # multi-thread file, empty or not*, and its counterexample is *emitted
+        # twice, or silently omitted*. Both are defects and they fail in
+        # opposite directions — twice is noise the advocate learns to skip,
+        # and omitted reads as "nothing found" when nobody looked.
+        # NOT ON A BLOCKED TURN, and that is not an exception to "exactly
+        # once". E-082 is about a turn that PRODUCES ANALYSIS: the exposure
+        # line belongs to an answer, and a blocked turn has none — it asked a
+        # question and stopped.
+        #
+        # Running it anyway cost a model call on every blocked turn, which a
+        # slice-1 invariant already refused: a turn that blocks because the
+        # thread binding is ambiguous must be CHEAP, or the product charges
+        # the advocate for its own uncertainty.
+        if not answer.blocked:
+            answer = replace(answer, elements=tuple(
+                [*answer.elements, *self._exposure(matter, metrics)]))
 
         # Class-B invariants, asserted on the ASSEMBLED object, before emission.
         self._assert_invariants(answer, metrics)
@@ -954,6 +981,11 @@ class TurnEngine:
             grounds.extend(
                 self._theory(turn, thread, memory, metrics, facts))
 
+            # D7 -- THE OTHER SIDE'S CASE, at its strongest. After the theory,
+            # because an attack is read against a spine: "they will say X" is
+            # only useful once there is something for X to be against.
+            grounds.extend(self._attacks(turn, thread, memory, metrics))
+
         if metrics.evidence_bound_hit:
             # THE BOUND PRODUCES A VISIBLE GAP, never a quiet stop. A turn that
             # ran out of rounds and said nothing is indistinguishable from one
@@ -1052,6 +1084,17 @@ class TurnEngine:
                 text=f"I am not putting this figure in front of you: {problem}"))
 
         out.extend(self._limitation_elements(thread, turn, ours, "our"))
+
+        # D8 -- SALVAGE, exactly where the claim is reported as failing.
+        #
+        # The line above ends "that is not the end of the file — what else it
+        # offers is a separate question", and this is what makes good on it.
+        # Run on every turn instead, it would be seven paragraphs of
+        # hypothetical restructuring attached to a claim that is fine, which
+        # is the survey this product rejects.
+        if ours.state is limitation.LimitationState.COMPUTED \
+                and ours.expired(turn.today):
+            out.extend(self._salvage(turn, thread, result, metrics, ours))
 
         # D2 -- THEIRS TOO, and on a defending thread it is often the whole
         # answer: it disposes of the claim without touching the merits.
@@ -1480,6 +1523,206 @@ class TurnEngine:
             f"what was searched.")
 
     @implements("E2")
+    @implements("D8")
+    def _salvage(self, turn: TurnInput, thread: Thread, result,
+                 metrics: TurnMetrics, position) -> list[Element]:
+        """D8. Which coordinate can move, BEFORE the claim is called dead.
+
+        *Almost every "you lose" is the failure of one of them, not of the
+        case.* The measured original error was advice that a claim was dead
+        where a different framing on the same facts was available — so
+        `failure_scope` distinguishes **we lose** from **we lose on this
+        framing**, and the second is the overwhelming majority.
+
+        AND THE BOUND, WHICH IS THE HARDER HALF. *A system rewarded for always
+        finding a way out will invent one.* A route may cite only what this
+        turn actually retrieved; anything else is dropped, and dropping it
+        takes the route with it because `Salvage` refuses a route resting on
+        nothing. That is the intended outcome, not a limitation of the reader.
+        """
+        retrieved = tuple(dict.fromkeys(
+            f.ref for f in result.findings if f.ref))
+        why = (f"limitation for our side ran on "
+               f"{position.expires_on.isoformat()} under {position.article}")
+
+        try:
+            res = self._model.structured(
+                adversarial.build_salvage_prompt(
+                    thread.label, why, retrieved),
+                adversarial.SALVAGE_SCHEMA, Tier.ROUTINE, max_tokens=1200)
+            metrics.record_call(res)
+            read = adversarial.read_salvage(res.data or {}, retrieved)
+        except ModelError as exc:
+            metrics.fire("G-SALVAGE", "not_assessed", str(exc))
+            return [Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"I have NOT varied the coordinates of this claim: "
+                      f"{exc}. The period has run and nothing here says a "
+                      f"different framing is unavailable — nobody looked."))]
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("D8", f"salvage read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return []
+
+        out: list[Element] = []
+        for refused in read.refused:
+            # A MANUFACTURED ROUTE, REFUSED AND SAID. Silence here would hide
+            # the one behaviour D8 warns about most.
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"I did not offer a way out that rests on nothing: {refused}"))
+
+        for sv in read.considered:
+            body = (f"{sv.coordinate.value}: {sv.varied_result}")
+            if sv.route:
+                body += (f" Route: {sv.route} [{sv.strength.value}; "
+                         f"{', '.join(sv.findings)}]")
+            out.append(Element(
+                kind=ElementKind.FINDING, thread=thread.id, text=body))
+
+        # THE COORDINATES NOBODY MOVED. A report that varied two and concluded
+        # the case is dead has not done the work -- and the two it did vary
+        # would make it look as though it had.
+        left = adversarial.unvaried(read.considered)
+        if left:
+            metrics.fire("G-SALVAGE", "unvaried", ", ".join(left))
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"{len(left)} of the seven coordinates were not moved: "
+                      f"{', '.join(left)}. Those are gaps in the salvage pass, "
+                      f"not dimensions that cannot help.")))
+        else:
+            metrics.fire("G-SALVAGE", "varied", "all seven coordinates moved")
+
+        if read.failure_scope is not adversarial.FailureScope.NOT_ASSESSED:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=("We lose on THIS FRAMING; a different framing on these "
+                      "same facts is set out above."
+                      if read.failure_scope is adversarial.FailureScope.FRAMING
+                      else "We lose on the case, not merely on this framing.")))
+        return out
+
+    @implements("D7")
+    def _attacks(self, turn: TurnInput, thread: Thread, memory,
+                 metrics: TurnMetrics) -> list[Element]:
+        """D7. The case the other side will run, on the grounds they will run it.
+
+        A SOFTENED VERSION OF THEIR CASE IS WORTH NOTHING to prepare against,
+        so the prompt asks for it at its strongest and the type refuses the
+        two ways it degrades: an attack with no answer that does not SAY it
+        has none, and one marked unanswerable that stops at the problem.
+        Those are different findings — the first is work not done, the second
+        is a fact about the case — and D7 requires the second resolved into
+        what we DO about it.
+        """
+        account = memory.account if memory else ""
+        if not account.strip():
+            return []
+
+        try:
+            res = self._model.structured(
+                adversarial.build_attack_prompt(
+                    account, thread.posture.side.value),
+                adversarial.ATTACK_SCHEMA, Tier.ROUTINE, max_tokens=900)
+            metrics.record_call(res)
+            read = adversarial.read_attacks(res.data or {}, thread.id)
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"the other side's case was not put: {exc}")
+            return [Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"I have not put the other side's case on this thread: "
+                      f"{exc}. That is a gap in this turn, not a finding that "
+                      f"they have none."))]
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("D7", f"attack read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return []
+
+        out: list[Element] = []
+        for refused in read.refused:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"I put an attack and could not resolve it: {refused}"))
+
+        for a in read.attacks:
+            answer = (f"No good answer: {a.no_answer_because}"
+                      if a.no_answer else a.our_answer)
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id,
+                text=f"They will say, on {a.ground}: {a.their_case} — {answer}"))
+
+        # E-083. Should be empty, because the type refuses one at construction.
+        # Computed anyway: a type guard says nothing about objects decoded from
+        # an older store, and this is what a recommendation is measured against.
+        left = adversarial.unanswered(read.attacks)
+        if left:
+            metrics.violate("D7", f"attacks with no answer and no statement "
+                                  f"that there is none: {', '.join(left)}")
+
+        if read.state == "none_put" and read.why_not:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"The other side's case, as I read it: {read.why_not}"))
+        return out
+
+    @implements("D7")
+    def _exposure(self, matter: Matter, metrics: TurnMetrics) -> list[Element]:
+        """E-082. ONE report per file, whatever the answer.
+
+        A SINGLE-THREAD FILE STILL GETS ONE, saying none was found, because
+        there is no pair for an exposure to exist in. A section that appears
+        only sometimes is one the advocate cannot rely on being there — and
+        cannot distinguish from one that found nothing.
+        """
+        threads = tuple(t.id for t in matter.threads)
+
+        found: tuple | None
+        if len(threads) < 2:
+            # NOT a skip. `cross_thread` returns NONE_FOUND for a single-thread
+            # file, which is a finding: there is no pair.
+            found = ()
+        else:
+            try:
+                res = self._model.structured(
+                    adversarial.build_exposure_prompt(
+                        tuple((t.id, t.label) for t in matter.threads)),
+                    adversarial.EXPOSURE_SCHEMA, Tier.ROUTINE, max_tokens=700)
+                metrics.record_call(res)
+                found = adversarial.read_exposures(res.data or {}, threads)
+            except ModelError as exc:
+                metrics.fire("G-MODEL", "unavailable",
+                             f"the cross-file pass did not run: {exc}")
+                found = None
+            except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+                metrics.violate("D7", f"exposure read failed: "
+                                      f"{type(exc).__name__}: {exc}")
+                found = None
+
+        report = adversarial.cross_thread(threads, found)
+        metrics.fire("G-EXPOSURE", report.state.value,
+                     f"{len(report.exposures)} exposure(s)")
+
+        if report.state is adversarial.ExposureState.NOT_RUN:
+            return [Element(
+                kind=ElementKind.GROUND, disclosure=True,
+                text=(f"THE CROSS-FILE PASS DID NOT RUN: "
+                      f"{report.not_run_because}. Nothing here says these "
+                      f"disputes do not damage each other — nobody looked."))]
+
+        if report.state is adversarial.ExposureState.NONE_FOUND:
+            return [Element(
+                kind=ElementKind.GROUND, disclosure=True,
+                text=("Across this file: I looked for a position on one "
+                      "dispute that damages another and found none."))]
+
+        return [Element(
+            kind=ElementKind.GROUND, disclosure=True, signal=Signal.CONTRADICTION,
+            text=(f"Across this file: {e.what} on {e.from_thread} — "
+                  f"{e.consequence} on {e.to_thread}."))
+            for e in report.exposures]
+
     @implements("D6")
     def _theory(self, turn: TurnInput, thread: Thread, memory,
                 metrics: TurnMetrics,

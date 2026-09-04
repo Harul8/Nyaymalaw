@@ -225,6 +225,38 @@ gates:
     hold it.
   feature: H8
   built: true
+- id: G-SALVAGE
+  condition: 'A claim is about to be reported as failing: which of the seven coordinates was moved, and
+    which were not.'
+  states:
+  - varied
+  - unvaried
+  - not_assessed
+  response: disclose
+  scope: thread
+  persistence: turn
+  recovery: system
+  visible: 'D8: almost every `you lose` is the failure of ONE coordinate, not of the case. A report that
+    varied two and concluded the claim is dead has not done the work — and the two it DID vary make it
+    look as though it had, which is why the ones nobody moved are named.'
+  feature: D8
+  built: true
+- id: G-EXPOSURE
+  condition: 'The cross-file pass over every pair of threads: a position on one dispute that damages another.'
+  states:
+  - found
+  - none_found
+  - not_run
+  response: disclose
+  scope: turn
+  persistence: turn
+  recovery: system
+  visible: 'EXACTLY ONCE ON EVERY FILE, empty or not. E-082''s counterexample is *emitted twice, or silently
+    omitted*, and the two fail in opposite directions: twice is noise the advocate learns to skip, and
+    omitted reads as `nothing found` when nobody looked. `not_run` is a state for that reason — an absent
+    pass and an empty one are opposite facts.'
+  feature: D7
+  built: true
 - id: G-ADVERSE
   condition: An adverse fact on the thread is neither explained nor expressly conceded by the theory —
     or no theory has been formed, in which case every adverse fact is unaccounted.
