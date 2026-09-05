@@ -206,7 +206,7 @@ def test_a_summary_that_cannot_be_built_is_an_explicit_failure():
 
 
 @pytest.mark.eval_id("E-036")
-def test_a_long_account_is_trimmed_from_the_front_never_the_back():
+def test_a_long_account_keeps_what_this_turn_is_about():
     """The advocate's LATEST instruction is the one that decides this turn.
 
     Trimming the tail would silently discard the thing they just said, which is
@@ -225,11 +225,23 @@ def test_a_long_account_is_trimmed_from_the_front_never_the_back():
     matter = matter.with_fact(_fact("turn LAST: the notice was served today"))
 
     built = matter_memory.build(matter)
-    assert len(built.account) <= matter_memory.ACCOUNT_BUDGET + 40
+    assert len(built.account) <= matter_memory.ACCOUNT_BUDGET
+
+    # THE RULE SURVIVED A CHANGE OF MECHANISM. The account is SELECTED now
+    # rather than tailed, and the latest statement is PINNED rather than
+    # merely lucky — selection by relevance would have dropped it on a matter
+    # with nothing to rank against, which is exactly what this test caught.
     assert "turn LAST" in built.account, (
-        "the most recent instruction was trimmed away. The account is trimmed "
-        "from the FRONT: what the advocate just said decides this turn.")
-    assert "trimmed" in built.account.split("\n")[0]
+        "the most recent instruction was dropped. What the advocate just said "
+        "is what this turn is ABOUT, and losing it is the failure that looks "
+        "most like the product ignoring them.")
+
+    # AND WHAT WAS LEFT OUT IS COUNTED, not merely hinted at.
+    # "[...trimmed...]" tells a reader that a boundary exists; a count tells
+    # them how much of their own file they are not looking at.
+    assert built.left_out > 0
+    assert f"{built.left_out} earlier statement" in built.account
+    assert "on the file and not repeated" in built.account
 
 
 def _fact(statement: str):
@@ -818,3 +830,62 @@ def test_an_inferred_act_is_disclosed_even_when_it_finds_nothing():
         f"{returns} EvidenceResult returns and only {carried} carry the "
         f"inference note. A guess that is disclosed only when it worked is a "
         f"guess the advocate learns about from the answer being right.")
+
+
+# ================= a withheld turn keeps what they said ===================
+
+@pytest.mark.eval_id("E-036")
+def test_a_withheld_turn_keeps_the_advocates_words(tmp_path):
+    """THE ANSWER IS REFUSED. THE NOTE IS NOT TORN UP.
+
+    The commit sat below the grounding gates, so a withheld turn saved
+    nothing at all — GS-15 turn 1 was refused and the matter was never
+    created, so the next turn opened a fresh one and everything the advocate
+    had written was gone.
+
+    The gates that withhold — G-GROUND, G-ATTRIB, G-QUOTE — are about whether
+    the ANSWER is supported by what was retrieved. None of them is a finding
+    about the input, so the input survives and the answer does not.
+
+    THE TURN IS WITHHELD BY INVENTING A CITATION, which is how the grounding
+    suite does it. An earlier version of this test used an evidence adapter
+    that returned nothing and asserted a withholding that never happened: the
+    turn succeeded, and the test failed on `turns_applied` — telling me the
+    fixture was wrong rather than the product.
+    """
+    from nm.core.turn import TurnRefused
+    from nm.ports.evidence import Coverage, EvidenceResult
+    from tests.test_turn_contract import finding
+
+    store = FileMatterStore(tmp_path, key=KEY)
+    engine = TurnEngine(
+        store=store,
+        evidence=_Evidence(EvidenceResult(
+            coverage=Coverage.ANSWERED, findings=(finding(),),
+            searched_stores=("the_limitation_act_1963",))),
+        model=ScriptedModelAdapter(
+            _model_config(),
+            responses={"__default__":
+                       "File the suit under section 27 of the Limitation Act."}))
+
+    said = ("We act for the plaintiff in O.S. 442/2023 over the Kukatpally "
+            "land, and the builder has not delivered possession.")
+
+    with pytest.raises(TurnRefused) as refused:
+        engine.run(TurnInput(advocate_id="adv", message=said))
+
+    matter_id = refused.value.matter_id
+    assert matter_id, (
+        "the refusal did not name the file. A caller that cannot name the "
+        "matter opens a new one next turn, which is how GS-15 ran four turns "
+        "across four different files.")
+
+    kept = store.load(matter_id)
+    assert kept is not None, "the matter was not committed on a withheld turn"
+    assert any("Kukatpally" in f.statement for f in kept.facts), (
+        "the advocate's words were discarded along with the answer")
+
+    # AND THE TURN IS NOT MARKED DONE. It was refused, so a retry must
+    # re-derive rather than replay a no-op against an id already applied.
+    assert kept.turns_applied == (), (
+        "a withheld turn was marked applied; retrying it would be a replay")

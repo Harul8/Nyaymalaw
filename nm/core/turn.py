@@ -136,7 +136,14 @@ _WANTS_AUTHORITY = (
 
 
 class TurnRefused(Exception):
-    """Raised before any ANSWER is emitted. Nothing has been shown or saved.
+    """Raised before any ANSWER is emitted. THE ANSWER is not saved.
+
+    What the advocate SAID is. The docstring said "nothing has been shown or
+    saved" and that was true and was a leak: a withheld turn discarded their
+    own words along with the answer, so GS-15 turn 1 was refused and the
+    matter was never created. The gates that withhold are about whether the
+    ANSWER is supported by what was retrieved — none of them is a finding
+    about the input.
 
     It carries the gates that withheld it and the DISCLOSURES the turn had
     already computed. Withholding the answer is not the same as withholding the
@@ -146,11 +153,18 @@ class TurnRefused(Exception):
     """
 
     def __init__(self, message: str, *, gates: tuple[str, ...] = (),
-                 disclosures: tuple[str, ...] = ()) -> None:
+                 disclosures: tuple[str, ...] = (),
+                 matter_id: str | None = None) -> None:
         super().__init__(message)
         self.message = message
         self.gates = gates
         self.disclosures = disclosures
+        self.matter_id = matter_id
+        """The file the refused turn was about, where there is one.
+
+        A caller that cannot name the matter opens a new one on the next
+        turn — which is how GS-15 came to run four turns across four
+        different files, each blocking on a posture nobody had stated."""
 
 
 @refuses_blank_text()
@@ -353,8 +367,13 @@ class TurnEngine:
         # THE FILE, BUILT ONCE AND GIVEN TO EVERYTHING THAT DERIVES.
         # A projection over the matter, holding nothing the matter does
         # not -- so it can never disagree with the file it summarises.
+        # SELECTED, NOT TAILED. The account is chosen against what this turn
+        # is about, with every dated fact and every fact a live derivation
+        # rests on pinned so it cannot be dropped for a character count.
         memory = matter_memory.build(
-            matter, bound.thread.id if bound.thread is not None else None)
+            matter, bound.thread.id if bound.thread is not None else None,
+            about=turn.message,
+            load_bearing=self._load_bearing(matter, bound.thread))
 
         # ---------------- DERIVE ----------------
         t1 = time.perf_counter()
@@ -500,8 +519,32 @@ class TurnEngine:
         if metrics.gating_violations:
             # A grounding violation GATES the output. It does not soften it.
             metrics.outcome = Outcome.GATED
+
+            # THE ANSWER IS REFUSED. WHAT THEY SAID IS KEPT.
+            #
+            # The commit used to sit below this, so a withheld turn saved
+            # NOTHING — GS-15 turn 1 was withheld and the matter was never
+            # created, so the next turn opened a fresh one and everything the
+            # advocate had written was gone.
+            #
+            # These gates are about whether the ANSWER is supported by what
+            # was retrieved. None of them is a finding about the input, so the
+            # input is committed and the answer is not. `turns_applied` is
+            # deliberately NOT set: the turn is not done, and a retry must
+            # re-derive rather than replay a no-op.
+            try:
+                matter = self._store.commit(
+                    matter, expected_version=expected_version)
+            except Exception as exc:  # noqa: BLE001 -- reported, never fatal
+                # Losing the note is worse than the refusal and is not worth
+                # turning the refusal into a crash over.
+                metrics.violate(
+                    "I1", f"a withheld turn did not keep what the advocate "
+                          f"said: {type(exc).__name__}: {exc}")
+
             metrics.latency_ms = int((time.perf_counter() - started) * 1000)
             self._store.record_metrics(metrics.as_dict())
+            self._record_turn(turn, answer, matter, metrics, derived_values)
             # NAME THE GATES. "Gated by a grounding violation" tells the
             # advocate nothing they can act on and tells an operator nothing
             # they can find; the gate id is the handle for both.
@@ -513,7 +556,11 @@ class TurnEngine:
                 # The disclosures survive the withhold. They are the only part
                 # of the turn that says what could NOT be established, and they
                 # are the part the advocate most needs when they are refused.
-                disclosures=tuple(e.text for e in answer.elements if e.disclosure))
+                disclosures=tuple(e.text for e in answer.elements if e.disclosure),
+                # THE FILE THEY ARE ON. Without it a caller cannot continue
+                # the conversation and opens a new matter on the next turn,
+                # which is how GS-15 came to run four turns on four files.
+                matter_id=matter.id)
 
         # ======== BYTE BOUNDARY: nothing above has been shown or saved.
 
@@ -723,7 +770,9 @@ class TurnEngine:
             # narrative. What was already established, what has already
             # been asked, and what came back -- so an advocate who
             # answered on turn 2 is not asked again on turn 3.
-            memory = matter_memory.build(matter, thread.id)
+            memory = matter_memory.build(
+                matter, thread.id, about=turn.message,
+                load_bearing=self._load_bearing(matter, thread))
             stated = self._read_posture(turn, metrics, memory)
             if stated.settles_role:
                 posture = posture.enrich(stated.role, stated.basis,
@@ -1954,6 +2003,34 @@ class TurnEngine:
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 text=f"No theory formed yet: {read.why_not}"))
         return out
+
+    def _load_bearing(self, matter: Matter, thread) -> frozenset[str]:
+        """Facts a LIVE DERIVATION rests on. These are never trimmed away.
+
+        This is what recording derivations bought that was not obvious: the
+        product now knows which facts it actually USED to compute something,
+        so it can refuse to forget exactly those. A fact that a limitation
+        position or an issue set rests on is not an old sentence — it is an
+        input to a number the advocate is acting on.
+
+        Read from the last recorded turn, because that is where the previous
+        derivations are; this turn's are not computed yet when the account is
+        built, which is the ordering that makes the account available to the
+        reads in the first place.
+        """
+        if thread is None or not hasattr(self._store, "transcripts_for"):
+            return frozenset()
+        try:
+            past = self._store.transcripts_for(matter.id)
+        except Exception:  # noqa: BLE001 -- an unreadable record pins nothing
+            return frozenset()
+        for doc in reversed(past):
+            if doc.get("unreadable") or "derived" not in doc:
+                continue
+            return frozenset(
+                fid for row in (doc.get("derived") or [])
+                for fid in (row.get("from_facts") or []))
+        return frozenset()
 
     @implements("A3")
     def _derived_now(self, thread: Thread, position) -> tuple:

@@ -42,6 +42,9 @@ from nm.domain.text import refuses_blank_text
 #: of instruction, bounded so a long file cannot crowd out the current message.
 ACCOUNT_BUDGET = 3000
 
+#: Room kept for the line that says what was left out.
+_NOTE_RESERVE = 110
+
 #: What THIS type carries of the Appendix E `CaseSummary` contract.
 #:
 #: `CaseSummary` is the G3 HANDOVER summary -- complete enough that another
@@ -77,6 +80,10 @@ class MatterSummary:
     threads: tuple[dict, ...] = ()
     established: tuple[str, ...] = ()
     account: str = ""
+    left_out: int = 0
+    """How many facts did not fit the budget. NOT a flag: a reader who is told
+    something was trimmed learns that a boundary exists, and a reader told
+    `left_out=7` learns how much of the file they are not looking at."""
     open_questions: tuple[AskedQuestion, ...] = ()
     answered: tuple[AskedQuestion, ...] = ()
     facts_recorded: int = 0
@@ -215,7 +222,9 @@ def _established_on(thread: Thread) -> list[str]:
     return out
 
 
-def build(matter: Matter, thread_id: str | None = None) -> MatterSummary:
+def build(matter: Matter, thread_id: str | None = None,
+          about: str = "", load_bearing: frozenset[str] = frozenset(),
+          ) -> MatterSummary:
     """Rebuild the summary from the matter. Nothing is stored twice.
 
     `thread_id` narrows the ACCOUNT to one dispute while leaving what is
@@ -242,21 +251,13 @@ def build(matter: Matter, thread_id: str | None = None) -> MatterSummary:
     thread = matter.thread(thread_id) if thread_id else None
     in_scope = set(thread.chronology) if thread is not None else None
 
-    said: list[str] = []
-    for f in matter.facts:
-        if in_scope is not None and f.id not in in_scope:
-            continue
-        stamp = f"[{f.date.isoformat()}] " if f.date else ""
-        said.append(f"{stamp}{f.statement.strip()}")
+    on_thread = [f for f in matter.facts
+                 if in_scope is None or f.id in in_scope]
+    for f in on_thread:
         if f.date:
             established.append(f"{f.date.isoformat()}: {f.statement.strip()[:120]}")
 
-    # The account is trimmed from the FRONT. When a matter outgrows the budget
-    # it is the recent instruction that decides the current turn, and dropping
-    # the tail would silently discard the thing the advocate just said.
-    account = "\n".join(said)
-    if len(account) > ACCOUNT_BUDGET:
-        account = "[...earlier turns trimmed...]\n" + account[-ACCOUNT_BUDGET:]
+    account, left_out = _account(on_thread, thread, about, load_bearing)
 
     return MatterSummary(
         matter_id=matter.id,
@@ -264,6 +265,7 @@ def build(matter: Matter, thread_id: str | None = None) -> MatterSummary:
         threads=tuple(threads),
         established=tuple(dict.fromkeys(established)),
         account=account,
+        left_out=left_out,
         open_questions=tuple(q for q in matter.asked if q.open),
         answered=tuple(q for q in matter.asked if not q.open),
         facts_recorded=len(matter.facts),
@@ -280,3 +282,87 @@ def unbuildable(reason: str) -> dict:
     """
     return {"state": "unbuildable", "reason": reason, "established": [],
             "open_questions": [], "answered": []}
+
+
+def _account(facts: list, thread, about: str,
+             load_bearing: frozenset[str]) -> tuple[str, int]:
+    """The account, SELECTED to fit. Returns it and how much did not.
+
+    PINNED FIRST, and this is the half that makes truncation safe:
+
+      * every DATED fact, because the chronology is what the arithmetic reads
+        and a date dropped from the account is a date the next read cannot see;
+      * the fact the POSTURE rests on, because losing it re-opens a question
+        the advocate has already answered;
+      * every fact a LIVE DERIVATION named in `from_facts` — the product knows
+        which facts it actually used, so it can refuse to forget those.
+
+    Then the rest, ranked against what this turn is about. Ranking is fuzzy
+    and identifies nothing: the worst case is a less useful sentence carried
+    instead of a more useful one, and both are still on the file.
+    """
+    pinned, rest = [], []
+    source = getattr(getattr(thread, "posture", None), "source_fact", None)
+
+    # THE LATEST STATEMENT IS PINNED, and it is not pinned for being recent.
+    # It is what this turn is ABOUT: dropping it is the failure that looks
+    # most like the product ignoring the advocate, and selection by relevance
+    # would have dropped it on a matter with nothing to rank against.
+    latest = facts[-1].id if facts else None
+
+    for f in facts:
+        if (f.date is not None or f.id in load_bearing
+                or f.id == source or f.id == latest):
+            pinned.append(f)
+        else:
+            rest.append(f)
+
+    def line(f) -> str:
+        stamp = f"[{f.date.isoformat()}] " if f.date else ""
+        return f"{stamp}{f.statement.strip()}"
+
+    kept = [line(f) for f in pinned]
+    # THE NOTE COUNTS AGAINST THE BUDGET, because it is sent to the model like
+    # everything else. Appending it after the check made the account exceed
+    # the budget by exactly the length of the sentence explaining that it had
+    # been kept within the budget.
+    used = sum(len(x) + 1 for x in kept) + _NOTE_RESERVE
+
+    # THE PINNED SET ALONE CAN EXCEED THE BUDGET on a long matter, and it is
+    # still carried. Dropping a dated fact to respect a character count would
+    # trade a number the advocate acts on for a number nobody chose.
+    for f in _ranked(rest, about):
+        text = line(f)
+        if used + len(text) + 1 > ACCOUNT_BUDGET and kept:
+            break
+        kept.append(text)
+        used += len(text) + 1
+
+    left_out = len(facts) - len(kept)
+    account = "\n".join(kept)
+    if left_out > 0:
+        account += (f"\n[{left_out} earlier statement(s) are on the file and "
+                    f"not repeated here. Every dated event is above.]")
+    return account, max(left_out, 0)
+
+
+def _ranked(facts: list, about: str) -> list:
+    """Undated facts, most relevant to THIS turn first.
+
+    Overlap on content words. It is a weak signal and it is the right KIND of
+    signal: it decides what to carry, never what is true, and everything it
+    ranks down is still on the file and still retrievable next turn.
+
+    With nothing to rank against, the order is the order they arrived — which
+    is the honest default, not a judgement nobody made.
+    """
+    words = {w for w in _words(about) if len(w) > 3}
+    if not words:
+        return facts
+    return sorted(facts,
+                  key=lambda f: -len(words & set(_words(f.statement))))
+
+
+def _words(text: str) -> set[str]:
+    import re
+    return set(re.findall(r"[a-z0-9]+", (text or "").lower()))
