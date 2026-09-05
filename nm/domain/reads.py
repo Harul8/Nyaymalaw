@@ -122,3 +122,25 @@ BY_KEY: dict[str, Read] = {r.key: r for r in READS}
 #: not ahead of it, so what this module offers today is the TABLE: a place
 #: where a twelfth read cannot be added without someone deciding which kind
 #: it is.
+
+
+def is_decisive(key: str) -> bool:
+    """Does being wrong about this read change a number the advocate acts on?
+
+    THE ONE OWNER OF THAT QUESTION. It was asked in two places for a day --
+    here, and a private `_decisive` in the traced model adapter -- which is
+    S9 in miniature: a seventh decisive read would have been guarded by
+    whichever copy someone remembered.
+
+    It returns a BOOLEAN and not a tier, because a tier is a ports concept and
+    this is a domain fact. `nm.domain` may not import `nm.ports`, and the
+    layer check said so the minute this was written the other way -- correctly:
+    the table decides what is decisive, and the caller decides what to do
+    about it.
+
+    A read not in the table is not decisive, which is the safe direction and
+    is not a silent default: `tests/test_reads_registry.py` fails the build on
+    a schema the product sends that is not declared here.
+    """
+    entry = BY_KEY.get(key)
+    return bool(entry and entry.decisive)

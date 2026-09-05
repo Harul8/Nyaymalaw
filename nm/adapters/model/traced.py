@@ -48,12 +48,12 @@ visible in `dropped` rather than discovered months later by its absence.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Mapping
 
-from nm.domain.reads import BY_KEY
+from nm.domain.reads import is_decisive
 from nm.domain.text import refuses_blank_text
-from nm.ports.model import EmbeddingResult, ModelPort, ModelResult, Prompt, Tier
+from nm.ports.model import EmbeddingResult, ModelPort, ModelResult, Prompt, Tier, TierUnavailable
 
 #: How much of a prompt or an answer is kept per call.
 #:
@@ -182,8 +182,7 @@ def _decisive(read: str) -> bool:
     Asked of `nm.domain.reads`, which is the ONE table that decides it. A list
     here would be a second owner for one truth.
     """
-    entry = BY_KEY.get(read)
-    return bool(entry and entry.decisive)
+    return is_decisive(read)
 
 
 @dataclass
@@ -229,10 +228,30 @@ class TracedModel:
     def structured(self, prompt: Prompt, schema: Mapping[str, Any],
                    tier: Tier, *,
                    max_tokens: int | None = None) -> ModelResult:
+        def run() -> ModelResult:
+            try:
+                return self.inner.structured(prompt, schema, tier,
+                                             max_tokens=max_tokens)
+            except TierUnavailable:
+                # THE TIER IS NOT CONFIGURED HERE, AND THE ANSWER IS WORTH
+                # LESS FOR IT. `nm/domain/reads.py` is explicit: a decisive
+                # read that quietly falls back to the cheap tier is the same
+                # defect as a screen that could not run returning a clean
+                # result -- the answer looks identical and is worth less.
+                #
+                # So it degrades rather than failing the turn, and it says so:
+                # `downgraded_from` is a field the port already has for
+                # exactly this, and `TurnMetrics.record_call` already routes
+                # it into `tier_downgrades`. Nothing new is invented; a
+                # mechanism that existed and was never fed now is.
+                if tier is Tier.ROUTINE:
+                    raise
+                result = self.inner.structured(prompt, schema, Tier.ROUTINE,
+                                               max_tokens=max_tokens)
+                return replace(result, downgraded_from=tier)
+
         return self._traced("structured", read_name(schema), prompt, tier,
-                            lambda: self.inner.structured(
-                                prompt, schema, tier, max_tokens=max_tokens),
-                            schema=schema)
+                            run, schema=schema)
 
     def embed(self, texts: tuple[str, ...]) -> EmbeddingResult:
         """NOT TRACED, and that is a decision rather than an omission.

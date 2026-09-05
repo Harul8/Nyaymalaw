@@ -187,9 +187,14 @@ def test_every_hard_tier_step_carries_a_recorded_measurement():
         text = path.read_text(encoding="utf8")
         for m in re.finditer(r"Tier\.HARD", text):
             line = text[:m.start()].count("\n") + 1
-            uses.append(f"{path.relative_to(ROOT)}:{line}")
+            # FORWARD SLASHES, ALWAYS. `relative_to` renders with the OS
+            # separator, so a register entry written on Windows would not
+            # match the same file on CI -- a guard that permits a step on one
+            # machine and refuses it on another is worse than either.
+            rel = path.relative_to(ROOT).as_posix()
+            uses.append(f"{rel}:{line}")
 
-    undeclared = [u for u in uses if u.split(":")[0] not in PERMITTED]
+    undeclared = [u for u in uses if u.rsplit(":", 1)[0] not in PERMITTED]
     assert not undeclared, (
         "these steps request the expensive tier and are not in "
         "nm/domain/tiers.py with the measurement that justifies them: "

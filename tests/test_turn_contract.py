@@ -40,6 +40,18 @@ KEY = "test-key-not-a-secret"
 def _model_config() -> ModelConfig:
     return ModelConfig(tiers={
         Tier.ROUTINE: TierConfig(Tier.ROUTINE, "scripted", "scripted-1", None, None),
+        # THE HARD TIER IS CONFIGURED HERE BECAUSE IT IS CONFIGURED IN
+        # PRODUCTION, as of 5 September 2026. A fixture without it tests a
+        # deployment that no longer ships, and the six decisive reads would
+        # raise TierUnavailable on every turn of every test -- which is what
+        # happened the moment the escalation landed.
+        #
+        # Its ABSENCE is exercised deliberately instead, in
+        # tests/test_reads_registry.py::test_an_absent_hard_tier_degrades_out_loud,
+        # by an adapter that refuses the tier. That is the right shape: the
+        # ordinary fixture matches production, and the degraded path is driven
+        # rather than left as the default nobody chose.
+        Tier.HARD: TierConfig(Tier.HARD, "scripted", "scripted-hard", None, None),
         Tier.EMBED: TierConfig(Tier.EMBED, "scripted", "text-embedding-3-large", None, None),
     })
 

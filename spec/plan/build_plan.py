@@ -2491,7 +2491,9 @@ d("B-088", "2026-09-05", "core",
   "test_a_correction_that_was_taken_raises_no_question, without which an "
   "advocate who corrected something SUCCESSFULLY would be asked to confirm "
   "it \u2014 B-090\u2019s noise, one layer down.",
-  "Partly fixed \u2014 the miss is asked about for the CORRECTION read only; the general form is declared not built (B-099)")
+  "Partly fixed \u2014 escalated to the hard tier on 5 September 2026 (gpt-5.2, "
+  "see nm/domain/tiers.py); the miss is asked about; QUALITY OF THE STRONGER "
+  "TIER IS NOT YET MEASURED and needs a GS-15 rerun")
 
 d("B-090", "2026-09-05", "core",
   "THE CASCADE FIRED ON EVERY TURN OF A PASSING RUN. GS-15 finally passed its "

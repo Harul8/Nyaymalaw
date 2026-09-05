@@ -284,3 +284,181 @@ def test_the_turn_discloses_which_read_came_back_empty(tmp_path):
         + said)
     assert any(g.gate_id == "G-READ" for g in out.metrics.gates_fired), (
         "G-READ did not fire")
+
+
+# ==================== the escalation, earned and bounded ====================
+
+def test_every_decisive_read_asks_for_the_hard_tier():
+    """B-088's remainder. THE POPULATION IS THE TABLE.
+
+    Read off the SOURCE rather than by driving a turn, because a turn only
+    exercises the reads that branch happened to reach — the factor read runs
+    on a limitation turn and not on an opening one, so a driven check would
+    pass while a call site nobody hit still said `Tier.ROUTINE`.
+    """
+    import ast
+
+    source = (ROOT / "nm" / "core" / "turn.py").read_text(encoding="utf8")
+    tree = ast.parse(source)
+
+    asked: dict[str, set[str]] = {}
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "structured"):
+            continue
+        if len(node.args) < 3:
+            continue
+        schema, tier = ast.unparse(node.args[1]), ast.unparse(node.args[2])
+        asked.setdefault(schema, set()).add(tier)
+
+    assert asked, "no structured call sites were found at all"
+
+    #: schema expression -> the read key it carries.
+    owns = {
+        "cause_reader.CAUSE_SCHEMA": "cause",
+        "chronology.DATE_SCHEMA": "dates",
+        "posture_reader.ROLE_SCHEMA": "role",
+        "posture_reader.POSTURE_SCHEMA": "posture",
+        "factor_reader.FACTOR_SCHEMA": "factors",
+    }
+    wrong = []
+    for schema, tiers in sorted(asked.items()):
+        key = owns.get(schema)
+        if key is None:
+            # Not a decisive schema. It must NOT ask for the hard tier: the
+            # measurement that earned the escalation was about these six, and
+            # PRD 7.4.1 does not license the rest on their coat-tails.
+            if any("HARD" in t for t in tiers):
+                wrong.append(f"{schema} asks for the hard tier and is not "
+                             f"declared decisive")
+            continue
+        # COMPARED AS `ast.unparse` RENDERS IT, which quotes with single
+        # quotes. The first version hand-wrote double quotes and failed on the
+        # quote style alone -- a test pinned to how source is rendered rather
+        # than to the rule it is checking.
+        if tiers != {f"_tier({key!r})"}:
+            wrong.append(f"{schema} should ask _tier({key!r}), asks {tiers}")
+
+    assert not wrong, (
+        "the tier a read runs on must come from nm.domain.reads, so a seventh "
+        "decisive read is escalated the day it is declared:\n  "
+        + "\n  ".join(wrong))
+
+
+def test_the_tier_helper_reads_the_table_and_nothing_else():
+    """One owner. `is_decisive` answers WHAT, `_tier` answers SO WHAT, and
+    the split is the layer boundary -- `nm.domain` may not name a Tier, which
+    the layer check said the minute this was first written the other way."""
+    from nm.core.turn import _tier
+    from nm.ports.model import Tier
+
+    for read in reads.READS:
+        expected = Tier.HARD if read.decisive else Tier.ROUTINE
+        assert _tier(read.key) is expected, read.key
+
+    assert _tier("a read that does not exist") is Tier.ROUTINE, (
+        "an unknown read escalated. ROUTINE is the safe direction, and an "
+        "unlisted read is already a build failure in "
+        "test_every_read_the_product_makes_is_declared")
+
+
+def test_the_judge_is_not_the_model_under_test():
+    """TENET P4, now that the hard tier is configured and not before.
+
+    A judge sharing a model with the step it grades has the same blind spot,
+    and a correlated failure passes itself. This was enforceable-in-principle
+    while `hard` was absent; it is enforceable in fact from today.
+    """
+    from nm.adapters.model.config import load, load_dotenv
+    from nm.ports.model import Tier
+
+    load_dotenv(ROOT / ".env")
+    config = load()
+    if not (config.configured(Tier.HARD) and config.configured(Tier.JUDGE)):
+        pytest.skip("both tiers must be configured for P4 to be testable")
+
+    assert config.for_tier(Tier.JUDGE).model != config.for_tier(Tier.HARD).model
+    assert (config.for_tier(Tier.JUDGE).model
+            != config.for_tier(Tier.ROUTINE).model)
+
+
+def test_an_absent_hard_tier_degrades_out_loud():
+    """`nm/domain/reads.py`: a decisive read that quietly falls back to the
+    cheap tier is the same defect as a screen that could not run returning a
+    clean result -- the answer looks identical and is worth less.
+
+    `downgraded_from` is a field the port has carried since slice 0 and
+    nothing ever set it. It is set here, and `TurnMetrics.record_call` already
+    routes it into `tier_downgrades`.
+    """
+    from nm.adapters.model.scripted import ScriptedModelAdapter
+    from nm.adapters.model.traced import TracedModel
+    from nm.ports.model import Prompt, Tier, TierUnavailable
+    from tests.test_turn_contract import _model_config
+
+    class _NoHardTier(ScriptedModelAdapter):
+        def structured(self, prompt, schema, tier, **kw):
+            if tier is Tier.HARD:
+                raise TierUnavailable("the hard tier is not configured")
+            return super().structured(prompt, schema, Tier.ROUTINE, **kw)
+
+    traced = TracedModel(inner=_NoHardTier(_model_config()))
+    result = traced.structured(Prompt(user="the agreement is dated 1 May 2024"),
+                               {"x-nm-read": "dates"}, Tier.HARD)
+
+    assert result.downgraded_from is Tier.HARD, (
+        "a decisive read fell back to the cheap tier and the result does not "
+        "say so, which is the silence the tier exists to remove")
+
+
+def test_a_routine_read_that_cannot_run_is_not_swallowed():
+    """THE BOUND. Degrading a HARD call to ROUTINE is a real answer worth
+    less; degrading a ROUTINE call has nowhere to go, and pretending otherwise
+    would turn an unconfigured provider into a silent no-op."""
+    from nm.adapters.model.scripted import ScriptedModelAdapter
+    from nm.adapters.model.traced import TracedModel
+    from nm.ports.model import Prompt, Tier, TierUnavailable
+    from tests.test_turn_contract import _model_config
+
+    class _NothingWorks(ScriptedModelAdapter):
+        def structured(self, prompt, schema, tier, **kw):
+            raise TierUnavailable("nothing is configured")
+
+    traced = TracedModel(inner=_NothingWorks(_model_config()))
+    with pytest.raises(TierUnavailable):
+        traced.structured(Prompt(user="anything"), {"x-nm-read": "issues"},
+                          Tier.ROUTINE)
+
+
+def test_the_composition_root_applies_the_degradation():
+    """THE GUARANTEE MUST NOT DEPEND ON BEING WRAPPED.
+
+    The downgrade lives in `TracedModel`, which the composition root applies
+    once. That is the right layer -- degrading is a deployment policy, not a
+    property of the port -- and it is exactly the arrangement CLAUDE.md 8
+    warns about: a guard that is right in the core and absent at the edge is
+    not a guard, and every defect the first external review found lived
+    between a correct module and the served path.
+
+    So the root is asserted to apply it, on the SOURCE. Building an
+    Application here would need a key, a corpus and a live config; reading the
+    wiring answers the only question that matters, which is whether the served
+    path gets the wrapper.
+    """
+    import ast
+
+    source = (ROOT / "nm" / "bootstrap" / "composition.py").read_text(
+        encoding="utf8")
+    tree = ast.parse(source)
+
+    wrapped = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Assign)
+        and any(getattr(t, "attr", "") == "model" for t in node.targets)
+        and "TracedModel" in ast.unparse(node.value)
+    ]
+    assert wrapped, (
+        "the composition root does not wrap the model port, so a decisive "
+        "read on an installation with no hard tier would raise instead of "
+        "degrading, and the advocate would be told nothing at all")

@@ -432,11 +432,14 @@ NO_REPRODUCTION: dict[str, str] = {
         "of didactic phrasing would be a phrase list, and this project has "
         "already paid for one of those.",
     "B-088":
-        "PARTLY FIXED, and the remainder needs a model this installation does "
-        "not have. The general form -- a decisive read whose DECISIVE FIELD is "
-        "absent -- reproduces only against the hard tier, which is `not "
-        "configured` on /api/health. A reproduction driven with a stub would "
-        "prove the stub.",
+        "THE REMAINDER IS A MEASUREMENT, NOT A DEFECT. The escalation landed "
+        "on 5 September 2026 -- the six decisive reads run on gpt-5.2, "
+        "recorded in nm/domain/tiers.py with the cost. What is unproven is "
+        "whether the stronger tier actually fails less often on the same "
+        "input, and that is a GS-15 rerun rather than a test: the original "
+        "defect appeared on one run of two, so no offline check can "
+        "reproduce it on demand. Declaring it reproducible would be claiming "
+        "a coincidence can be scheduled.",
 }
 
 

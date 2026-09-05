@@ -44,7 +44,7 @@ from nm.core import issues as issue_reader
 from nm.core import posture as posture_reader
 from nm.core import theory as theory_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
-from nm.domain import issue
+from nm.domain import issue, reads
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
 from nm.domain.matter import (
@@ -250,6 +250,27 @@ class ScreenResult:
     reason: str | None = None
     blocking_question: str = ""
     urgent: bool = False
+
+
+def _tier(read: str) -> Tier:
+    """The tier a read runs on, from the ONE table that decides it.
+
+    B-088, earned rather than assumed. PRD 7.4.1: a step moves to `hard` only
+    with a recorded measurement showing the quality it bought. The measurement
+    is B-088 -- the correction read fired on one run and returned nothing on
+    the next, on identical input, and the answer computed a limitation from a
+    date the advocate had withdrawn, with every citation on the turn verbatim.
+
+    Measured before the switch, on GS-15's own transcripts: the decisive reads
+    are 3 calls of 10 and 35% of a turn's input tokens, so escalating only
+    them costs 131% of a turn rather than the 600% escalating everything would.
+
+    `nm.domain.reads.is_decisive` answers WHAT; this answers SO WHAT. The
+    split is the layer boundary -- domain may not name a Tier -- and it is
+    also the right seam: the table is a statement about the product, and the
+    tier is a statement about this deployment.
+    """
+    return Tier.HARD if reads.is_decisive(read) else Tier.ROUTINE
 
 
 def _record(into: list, what: str, thread: Thread,
@@ -535,7 +556,8 @@ class TurnEngine:
         # the alternative is six call sites each remembering to ask, which is
         # the arrangement that produced one guard for one read.
         answer = replace(answer, elements=tuple(
-            [*answer.elements, *self._decisive_empties(metrics)]))
+            [*answer.elements, *self._decisive_empties(metrics),
+             *self._tier_degraded(metrics)]))
 
         # Class-B invariants, asserted on the ASSEMBLED object, before emission.
         self._assert_invariants(answer, metrics)
@@ -583,7 +605,8 @@ class TurnEngine:
                     elements=tuple([*head, *derived, *exposure,
                                     *self._late_note(late)]))
                 answer = replace(answer, elements=tuple(
-                    [*answer.elements, *self._decisive_empties(metrics)]))
+                    [*answer.elements, *self._decisive_empties(metrics),
+                     *self._tier_degraded(metrics)]))
                 self._assert_invariants(answer, metrics)
                 report = grounding.verify(answer, relied_on, retrieved)
 
@@ -1028,7 +1051,7 @@ class TurnEngine:
         try:
             res = self._model.structured(
                 cause_reader.build_prompt(turn.message, account),
-                cause_reader.CAUSE_SCHEMA, Tier.ROUTINE, max_tokens=300)
+                cause_reader.CAUSE_SCHEMA, _tier("cause"), max_tokens=300)
             metrics.record_call(res)
             metrics.cause_reads += 1
             read = cause_reader.interpret(
@@ -1069,7 +1092,7 @@ class TurnEngine:
             res = self._model.structured(
                 chronology.build_prompt(turn.message, turn.today, account,
                                         existing),
-                chronology.DATE_SCHEMA, Tier.ROUTINE, max_tokens=700)
+                chronology.DATE_SCHEMA, _tier("dates"), max_tokens=700)
             metrics.record_call(res)
             metrics.chronology_reads += 1
             rows = chronology.interpret(
@@ -1150,7 +1173,7 @@ class TurnEngine:
             res = self._model.structured(
                 posture_reader.build_role_prompt(
                     described, memory.advocate_words if memory else ""),
-                posture_reader.ROLE_SCHEMA, Tier.ROUTINE, max_tokens=150)
+                posture_reader.ROLE_SCHEMA, _tier("role"), max_tokens=150)
             metrics.record_call(res)
             metrics.posture_reads += 1
             return posture_reader.interpret_role(res.data or {})
@@ -1706,7 +1729,7 @@ class TurnEngine:
                 posture_reader.build_prompt(
                     turn.message,
                     memory.as_context() if memory is not None else ""),
-                posture_reader.POSTURE_SCHEMA, Tier.ROUTINE, max_tokens=200)
+                posture_reader.POSTURE_SCHEMA, _tier("posture"), max_tokens=200)
             metrics.record_call(res)
             metrics.posture_reads += 1
             # The span is checked against the whole account, because that is
@@ -2108,6 +2131,30 @@ class TurnEngine:
         return out
 
     @implements("D7")
+    def _tier_degraded(self, metrics: TurnMetrics) -> list[Element]:
+        """A DECISIVE READ RAN ON THE CHEAP TIER, said to the advocate.
+
+        `nm/domain/reads.py`: a decisive read that quietly falls back is the
+        same defect as a screen that could not run returning a clean result --
+        the answer looks identical and is worth less. `tier_downgrades` has
+        been on TurnMetrics since slice 0 and nothing ever read it, so the
+        downgrade was recorded where an operator might find it and never where
+        the person acting on the answer would.
+
+        ONE LINE PER TURN, not per call. Three decisive reads degrade together
+        whenever the tier is absent, and three identical sentences is the
+        noise B-090 exists to refuse.
+        """
+        if not metrics.tier_downgrades:
+            return []
+        return [Element(
+            kind=ElementKind.GROUND, disclosure=True, signal=Signal.NONE,
+            text=("The reads that decide a date, an amount, or which law is "
+                  "read ran on the cheaper model this turn, because the "
+                  "stronger one is not configured here. The answer below is "
+                  "the same shape it would otherwise be and it is worth less "
+                  "than it looks."))]
+
     def _decisive_empties(self, metrics: TurnMetrics) -> list[Element]:
         """G-READ. WHICH decisive read answered with nothing, said out loud.
 
@@ -2769,7 +2816,7 @@ class TurnEngine:
         try:
             res = self._model.structured(
                 factor_reader.build_prompt(turn.message, account, dated),
-                factor_reader.FACTOR_SCHEMA, Tier.ROUTINE, max_tokens=400)
+                factor_reader.FACTOR_SCHEMA, _tier("factors"), max_tokens=400)
             metrics.record_call(res)
             read = factor_reader.read(
                 res.data or {}, dated, account, provisions, unextended_expiry)

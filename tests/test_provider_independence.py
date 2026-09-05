@@ -46,6 +46,13 @@ BRIEF = "we act for the plaintiff in a possession suit at Hyderabad"
 def _config(provider: str, model: str) -> ModelConfig:
     return ModelConfig(tiers={
         Tier.ROUTINE: TierConfig(Tier.ROUTINE, provider, model, None, None),
+        # THE HARD TIER MOVES WITH THE PROVIDER, which is the point of this
+        # file: a switch is a change to configuration and nothing else. Left
+        # out, the six decisive reads raised TierUnavailable under BOTH
+        # providers and the turn recorded no calls at all -- so the test that
+        # proves the abstraction holds would have passed on a turn where
+        # nothing ran, had it not also asserted `model_mix`.
+        Tier.HARD: TierConfig(Tier.HARD, provider, model, None, None),
         Tier.EMBED: TierConfig(Tier.EMBED, provider, "text-embedding-3-large",
                                None, None),
     })
