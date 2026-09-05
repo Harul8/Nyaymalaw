@@ -2471,7 +2471,7 @@ d("B-088", "2026-09-05", "core",
   "test_a_correction_that_was_taken_raises_no_question, without which an "
   "advocate who corrected something SUCCESSFULLY would be asked to confirm "
   "it \u2014 B-090\u2019s noise, one layer down.",
-  "Fixed \u2014 the miss is asked about; the read is unchanged")
+  "Partly fixed \u2014 the miss is asked about for the CORRECTION read only; the general form is declared not built (B-099)")
 
 d("B-090", "2026-09-05", "core",
   "THE CASCADE FIRED ON EVERY TURN OF A PASSING RUN. GS-15 finally passed its "
@@ -2837,6 +2837,54 @@ d("B-098", "2026-09-05", "tooling",
   "positive control \u2014 declared in "
   "tests/test_every_sweep_has_a_positive_control.py, which caught BOTH new "
   "sweeps having no control at all.")
+
+d("B-099", "2026-09-05", "core",
+  "A REAL ANSWER WAS REPORTED AS AN ABSENCE, BY THE MECHANISM BUILT TO REFUSE "
+  "THAT. G-READ was added to disclose a decisive read that came back empty, "
+  "and it treated `{\u2018events\u2019: []}` \u2014 a schema-conformant answer "
+  "meaning THERE ARE NO DATES IN THIS MESSAGE \u2014 as nothing. It fired on "
+  "37 of 48 turns (77%) across all 13 scripted scenarios, every one of them "
+  "the date read, on turns where the limitation line ALREADY said \u2018no "
+  "dated event on this thread to run the period from\u2019.\n\n"
+  "AND IT DID NOT FIRE ON B-088, THE DEFECT IT CLAIMED TO GENERALISE. "
+  "Measured on B-088\u2019s own case: in the failing GS-15 run the date read "
+  "ANSWERED \u2014 the 2024 date reached the file \u2014 and only `corrects` "
+  "was empty. There was no empty answer to notice.",
+  "The generalisation was taken on the wrong AXIS. B-088 is \u2018a decisive "
+  "read produced no value for the thing that makes it decisive\u2019; what was "
+  "built was \u2018a decisive read produced nothing at all\u2019, across six "
+  "reads. Those are different conditions, and the second is both commoner and "
+  "usually correct: for most reads on most turns, none is the true answer.",
+  "S1 \u2014 an absent input reading as success",
+  "AN OFFLINE SCENARIO RUN THAT COST NOTHING, driven before a judged run on "
+  "the advocate\u2019s standing rule that golden runs need approval. Both "
+  "errors were invisible to the unit suite, which drove the mechanism with "
+  "inputs chosen to exercise it.",
+  "`_is_empty` now distinguishes a NON-ANSWER from an answer of NONE: `data` "
+  "missing, an empty object, or an object omitting a key the schema declares "
+  "REQUIRED. An empty list under a required key is an answer and is left "
+  "alone. Rate on the same 48 turns: 0. It still fires when driven with a "
+  "genuine non-answer.\n\n"
+  "THE CLAIM IS WITHDRAWN WHERE IT WAS FALSE. B-088 is no longer listed in "
+  "the ENUMERATORS table, the registry\u2019s docstring no longer says "
+  "\u2018B-088 generalised\u2019, and the real general form \u2014 a decisive "
+  "read whose DECISIVE FIELD is absent \u2014 is declared NOT BUILT. "
+  "B-088\u2019s catch remains the phrase-list question, which measurably fires "
+  "on its own case.",
+  "Yes, and the general lesson is about generalising rather than about reads. "
+  "A generalisation is a claim that a mechanism covers a population, and it "
+  "is checkable in two directions that were both skipped: does it fire on the "
+  "ORIGINAL defect, and how often does it fire on ORDINARY input? Neither "
+  "question needs a model or a judge, and both were answered in one offline "
+  "run for nothing. A mechanism that fires on three turns in four is not a "
+  "guard, it is B-090\u2019s noise \u2014 and one that misses the case it was "
+  "named for is not a generalisation at all.",
+  "tests/test_reads_registry.py::"
+  "test_a_read_that_is_not_decisive_is_allowed_to_be_empty and "
+  "test_the_turn_discloses_which_read_came_back_empty, the second now driven "
+  "with `{}` rather than `{\u2018events\u2019: []}` \u2014 the distinction IS "
+  "the defect, so a test that could not tell them apart was asserting the "
+  "wrong behaviour and did.")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

@@ -12,20 +12,30 @@ table had already drifted: it declared a `correction` read, and there is no
 `x-nm-read: "correction"` schema anywhere, because B-086 folded the correction
 into the DATE row. The table named a read the product does not make.
 
-THE ENUMERATOR, AND WHY B-088'S FIX NEEDED REPLACING
-------------------------------------------------------
-B-088 was the correction read returning nothing on one run and not the next.
-The fix guarded THAT read: a phrase list noticing the advocate say "that is
-wrong". It worked. It was a patch.
+WHAT THIS SWEEP IS, AND WHAT IT IS NOT
+----------------------------------------
+A decisive read that produces NO ANSWER AT ALL is disclosed: `data` missing, an
+empty object, or an object omitting a key the schema declares required. Six
+reads are declared decisive on one narrow test — does the output change a
+DATE, an AMOUNT, or WHICH LAW IS READ — and the population is the TABLE, so a
+seventh is covered the day someone declares it.
 
-The same silence in `cause` sends an exact section lookup into the wrong
-statute. In `factors` it reports a live claim as dead. In `dates` it drops the
-accrual the whole limitation runs from. Six reads are declared DECISIVE on one
-narrow test — does the output change a DATE, an AMOUNT, or WHICH LAW IS READ —
-and only one of them had a consequence for answering nothing.
+IT IS NOT B-088 GENERALISED, AND IT WAS CLAIMED TO BE FOR ONE AFTERNOON.
+Measured: G-READ does not fire on B-088's own case. In the failing GS-15 run
+the date read ANSWERED — the 2024 date reached the file — and only `corrects`
+was empty. There was no empty answer to notice.
 
-So the population is the TABLE. A seventh decisive read is covered the day
-someone declares it, and nobody has to remember this file exists.
+Worse, the first version fired on `{"events": []}`, which is a CORRECT
+schema-conformant answer meaning "there are no dates in this message". It hit
+77% of turns across all 13 scripted scenarios, every one of them the date read,
+and the turn already says so in its limitation line. A real answer reported as
+an absence is the S1 shape, committed inside the mechanism built to refuse it.
+Both were found by an offline scenario run that cost nothing, before a judged
+run that would have cost money and returned a verdict on noise.
+
+THE GENERAL FORM OF B-088 IS ONE AXIS FURTHER IN and is NOT BUILT: a decisive
+read whose DECISIVE FIELD is absent, which is not the same as the read
+returning nothing. B-088's catch remains the phrase-list question.
 """
 from __future__ import annotations
 
@@ -240,13 +250,21 @@ def test_the_turn_discloses_which_read_came_back_empty(tmp_path):
     from tests.test_turn_contract import KEY, _Evidence, _model_config
 
     class NoDates(ScriptedModelAdapter):
-        """Answers everything normally and the DATE read with nothing."""
+        """Answers everything normally and the DATE read with a NON-ANSWER.
+
+        `{}` and not `{"events": []}`, and the difference is the whole point.
+        An empty list is a schema-conformant answer meaning "there are no
+        dates in this message" — the turn already says so, in the limitation
+        line, and disclosing it again put G-READ on 77% of turns across all
+        13 scripted scenarios. `{}` omits a key the schema declares required,
+        which is the model failing to answer at all.
+        """
 
         def structured(self, prompt, schema, tier, **kw):
             result = super().structured(prompt, schema, tier, **kw)
             if schema.get("x-nm-read") == "dates":
                 from dataclasses import replace as _replace
-                return _replace(result, data={"events": []}, text=None)
+                return _replace(result, data={}, text=None)
             return result
 
     store = FileMatterStore(tmp_path, key=KEY)

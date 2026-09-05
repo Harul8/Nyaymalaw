@@ -149,28 +149,38 @@ class Call:
         }
 
 
-def _is_empty(result: ModelResult) -> bool:
-    """Did the model answer with nothing?
+def _is_empty(result: ModelResult, schema: Mapping[str, Any] | None = None
+              ) -> bool:
+    """Did the model fail to ANSWER — which is not the same as answering none.
 
-    `ModelResult` refuses to hold neither text nor data, so an empty answer
-    arrives as an EMPTY CONTAINER rather than as absence -- `{"events": []}`
-    from the date read, `{}` from a refused extraction. Both are the case
-    B-088 turns on, and neither is distinguishable from a real "nothing
-    happened" answer anywhere downstream.
+    THE DISTINCTION THIS FUNCTION EXISTS FOR, and it was got wrong first.
+    `{"events": []}` from the date read is a CORRECT, schema-conformant answer
+    meaning "there are no dates in this message". Treating it as an absence
+    made G-READ fire on 77% of turns across all 13 scripted scenarios, every
+    one of them the date read — which is a real answer reported as a failure,
+    the S1 shape committed inside the mechanism built to refuse S1.
+
+    A NON-ANSWER is `data` missing altogether, an empty object, or an object
+    that omits a key the schema declares REQUIRED. That is the model failing
+    to produce the shape it was asked for, and it is rare.
     """
-    if result.data is not None:
-        return not any(v not in (None, "", [], {}, ()) for v in
-                       result.data.values())
-    return not (result.text or "").strip()
+    if result.data is None:
+        return not (result.text or "").strip()
+    if not result.data:
+        return True
+    required = list((schema or {}).get("required") or ())
+    if required:
+        return any(key not in result.data for key in required)
+    # No schema to check against: an object with nothing in any field is the
+    # best available reading of a non-answer.
+    return not any(v not in (None, "", [], {}, ()) for v in result.data.values())
 
 
 def _decisive(read: str) -> bool:
     """Does being wrong about this read change a number the advocate acts on?
 
-    Asked of `nm.domain.reads`, which is the ONE table that decides it. The
-    alternative -- a list here -- is a second owner for one truth, and this
-    module exists partly because tracing inside each adapter would have been
-    exactly that.
+    Asked of `nm.domain.reads`, which is the ONE table that decides it. A list
+    here would be a second owner for one truth.
     """
     entry = BY_KEY.get(read)
     return bool(entry and entry.decisive)
@@ -221,7 +231,8 @@ class TracedModel:
                    max_tokens: int | None = None) -> ModelResult:
         return self._traced("structured", read_name(schema), prompt, tier,
                             lambda: self.inner.structured(
-                                prompt, schema, tier, max_tokens=max_tokens))
+                                prompt, schema, tier, max_tokens=max_tokens),
+                            schema=schema)
 
     def embed(self, texts: tuple[str, ...]) -> EmbeddingResult:
         """NOT TRACED, and that is a decision rather than an omission.
@@ -237,7 +248,8 @@ class TracedModel:
     # ------------------------------------------------------ the record -----
 
     def _traced(self, kind: str, read: str, prompt: Prompt, tier: Tier,
-                run) -> ModelResult:
+                run, schema: Mapping[str, Any] | None = None
+                ) -> ModelResult:
         started = time.perf_counter()
         try:
             result = run()
@@ -265,7 +277,7 @@ class TracedModel:
             system=_clip(prompt.system), user=_clip(prompt.user),
             answer=_clip(result.text if result.text is not None
                          else str(result.data)),
-            empty=_is_empty(result)))
+            empty=_is_empty(result, schema)))
         return result
 
     def _keep(self, call: Call) -> None:

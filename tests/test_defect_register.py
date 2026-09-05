@@ -296,9 +296,17 @@ ENUMERATORS: dict[str, tuple[str, ...]] = {
         ("B-086", "B-091", "B-092"),
     "tests/test_what_the_model_is_told.py::test_every_field_is_told_or_declared":
         ("B-093", "B-094", "B-096"),
-    "tests/test_reads_registry.py::test_every_decisive_read_says_so_when_it_"
-    "answers_with_nothing":
-        ("B-088",),
+    # B-088 IS NOT HERE, AND THAT IS A CORRECTION. It was listed, on the claim
+    # that the decisive-read sweep generalised it. Measured the same afternoon:
+    # G-READ does NOT fire on B-088's own case. In the failing GS-15 run the
+    # date read ANSWERED -- the 2024 date reached the file -- and only
+    # `corrects` was empty, so there was no empty answer to notice.
+    #
+    # The general form of B-088 is one axis further in: a decisive read whose
+    # DECISIVE FIELD is absent, which is not the same as the read returning
+    # nothing. That is not built. B-088's catch remains the phrase-list
+    # question, which measurably fires on its own case, and the register says
+    # so rather than claiming a mechanism that does not cover it.
 }
 
 
