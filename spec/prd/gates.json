@@ -427,6 +427,22 @@
     "built": true
   },
   {
+    "id": "G-READ",
+    "condition": "A DECISIVE read answered with nothing. Its output is a date, an amount, or which law is read, so an empty answer is indistinguishable from 'that thing is not present' and the arithmetic proceeds from the wrong value.",
+    "states": [
+      "answered",
+      "empty",
+      "not_run"
+    ],
+    "response": "disclose",
+    "scope": "turn",
+    "persistence": "turn",
+    "recovery": "advocate",
+    "visible": "The turn says WHICH decisive read came back empty, so an advocate who can see the answer was computed without it can supply the missing thing in a sentence.",
+    "feature": "7.4.1",
+    "built": true
+  },
+  {
     "id": "G-MODEL",
     "condition": "A model tier is unreachable, over budget, or returns unusable output after retries.",
     "states": [

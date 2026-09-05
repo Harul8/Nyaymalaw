@@ -56,6 +56,12 @@ CONTROLS: dict[str, str] = {
         "test_the_register_can_be_read_at_all",
     "test_every_named_test_function_is_really_in_that_file":
         "test_the_register_can_be_read_at_all",
+    # an enumerator owns its population, over every subsumed defect row
+    "test_every_defect_an_enumerator_subsumes_names_that_enumerator":
+        "test_the_enumerator_scan_can_see_a_defect_that_ignores_its_sweep",
+    # one owner for which reads are decisive, over every literal in nm/
+    "test_no_second_copy_of_the_decisive_set_exists":
+        "test_the_second_copy_scan_can_see_a_second_copy",
     # the manifest, over every declared Act
     "test_every_declared_act_retrieves_at_least_one_intended_section":
         "test_an_act_the_corpus_cannot_serve_is_caught",

@@ -51,6 +51,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
+from nm.domain.reads import BY_KEY
 from nm.domain.text import refuses_blank_text
 from nm.ports.model import EmbeddingResult, ModelPort, ModelResult, Prompt, Tier
 
@@ -163,6 +164,18 @@ def _is_empty(result: ModelResult) -> bool:
     return not (result.text or "").strip()
 
 
+def _decisive(read: str) -> bool:
+    """Does being wrong about this read change a number the advocate acts on?
+
+    Asked of `nm.domain.reads`, which is the ONE table that decides it. The
+    alternative -- a list here -- is a second owner for one truth, and this
+    module exists partly because tracing inside each adapter would have been
+    exactly that.
+    """
+    entry = BY_KEY.get(read)
+    return bool(entry and entry.decisive)
+
+
 @dataclass
 class TracedModel:
     """Any `ModelPort`, with every call kept.
@@ -263,6 +276,16 @@ class TracedModel:
 
     # -------------------------------------------------------- drained ------
 
+    def empty_decisive(self) -> tuple[str, ...]:
+        """The decisive reads that answered with nothing THIS TURN.
+
+        Read WITHOUT draining, because the turn asks this while deriving and
+        the trace is drained after the commit. Two consumers of one list, and
+        the one that resets is the later of them.
+        """
+        return tuple(sorted({c.read for c in self.calls
+                             if c.empty and _decisive(c.read)}))
+
     def take(self) -> dict:
         """The trace for one turn, and RESET.
 
@@ -276,6 +299,16 @@ class TracedModel:
         self.dropped = 0
         return {
             "calls": [c.as_dict() for c in calls],
+            # WHICH DECISIVE READS ANSWERED WITH NOTHING.
+            #
+            # `empty` alone is a count and most empties are ordinary -- the
+            # issues read finds no issue, the adverse read finds nothing
+            # against us, and both are real answers. A DECISIVE read is the
+            # one whose output IS a date, an amount, or which law is read, so
+            # an empty answer there is indistinguishable from "that thing is
+            # not present" and the arithmetic proceeds from the wrong value.
+            "empty_decisive": sorted({c.read for c in calls if c.empty
+                                      and _decisive(c.read)}),
             # COUNTS THAT ARE ALSO ANSWERS. `empty` is what B-088 needed and
             # no existing record held: how many reads answered with nothing.
             "count": len(calls),

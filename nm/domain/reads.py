@@ -65,11 +65,13 @@ READS: tuple[Read, ...] = (
     Read("dates", True,
          "Every date on the chronology comes from here, and the accrual is one "
          "of them. A missed or misread date moves the limitation period and "
-         "every deadline derived from it."),
-    Read("correction", True,
-         "It decides which of two contradictory facts the arithmetic reads. "
-         "B-088: it returned nothing on one run and the answer computed from a "
-         "date the advocate had withdrawn — correctly, from the wrong fact."),
+         "every deadline derived from it. THE CORRECTION RIDES IN THIS READ "
+         "and is not a second one — `corrects` is a field on the date row, "
+         "because the sentence that identifies a correction is the same "
+         "sentence the date was read out of (B-086). It was listed here as a "
+         "separate `correction` read for a day, naming a schema that does not "
+         "exist, which is what this module’s own docstring claimed a test "
+         "prevented; the test did not exist either."),
     Read("cause", True,
          "It decides WHICH ACT is looked up. CLAUDE.md §5 measures what a wrong "
          "one costs: an exact section lookup sent into the wrong statute, "

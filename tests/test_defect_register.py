@@ -65,8 +65,8 @@ def _register() -> list[dict]:
             except Exception:  # noqa: BLE001 -- a computed arg is not a defect row
                 args.append(None)
         if len(args) >= 10 and isinstance(args[0], str):
-            rows.append({"id": args[0], "what": args[3], "shape": args[5] or "",
-                         "check": args[9] or "",
+            rows.append({"id": args[0], "when": args[1] or "", "what": args[3],
+                         "shape": args[5] or "", "check": args[9] or "",
                          "status": args[10] if len(args) > 10 else "Fixed"})
     return rows
 
@@ -254,3 +254,128 @@ def test_every_recurring_shape_has_a_mechanism_more_than_one_defect_points_at():
         f"remaining gaps look larger than they are.")
     print("\n  shapes with no shared mechanism yet: "
           + ", ".join(sorted(no_mechanism_yet)))
+
+
+
+# ===================== an enumerator owns its population ====================
+#
+# THE RULE ABOVE IS VACUOUS FOR NEW ROWS, MEASURED 5 SEPTEMBER 2026.
+#
+# It asks whether SOME pair in a shape shares a check. S1 satisfied that long
+# ago -- three of its 39 defects name `test_three_states`. So the bar was met
+# once and can never bite again: ten S1 defects were added in one session, each
+# with its own private check, not one sharing a mechanism with the 39 before
+# it, and the suite stayed green. Of those 39, one check is shared by three and
+# ELEVEN name no check at all.
+#
+# THE FIRST ATTEMPT AT A FIX WAS WRONG AND IS WORTH RECORDING. It demanded that
+# every S1 defect found after the shape had "a mechanism" point at it -- and
+# flagged thirty historical rows, because it had decided `test_three_states`
+# was THE S1 mechanism. It is a mechanism for one narrow sub-shape. Demanding
+# that a provider-metadata leak point at a three-state enum check is the
+# "forcing them together would be its own kind of wrong" the docstring above
+# already warns about. S1 is a bucket, not a population.
+#
+# THE RIGHT QUESTION IS NARROWER: does this defect belong to a population some
+# ENUMERATOR already sweeps? An enumerator draws its population from the whole
+# product and finds the members nobody has looked for yet, which is what
+# "generalised" means operationally. So each one DECLARES the defects it
+# subsumes, and those defects' register rows must name it. A defect that is an
+# instance of a swept population and points only at its own scenario test reads
+# as a patch, and the next instance has nowhere to be caught.
+
+#: enumerator check -> the defects it subsumes.
+#:
+#: Read from the TESTS, not listed here, would be better; it is listed here
+#: because the declaration belongs with the rule that uses it and a `SUBSUMES`
+#: constant in each test file would be a second place to look. Adding an
+#: enumerator means adding a line.
+ENUMERATORS: dict[str, tuple[str, ...]] = {
+    "tests/test_every_persisted_field_has_a_writer.py::"
+    "test_every_persisted_field_has_a_writer_or_is_declared_reserved":
+        ("B-086", "B-091", "B-092"),
+    "tests/test_what_the_model_is_told.py::test_every_field_is_told_or_declared":
+        ("B-093", "B-094", "B-096"),
+    "tests/test_reads_registry.py::test_every_decisive_read_says_so_when_it_"
+    "answers_with_nothing":
+        ("B-088",),
+}
+
+
+def test_every_defect_an_enumerator_subsumes_names_that_enumerator():
+    """A DEFECT IN A SWEPT POPULATION POINTS AT THE SWEEP.
+
+    `Posture.opponent` (B-092) was not a lucky find; it came out of the
+    writers enumerator, and its register row named only its own scenario test.
+    Read a year from now, the register would show six separate patches where
+    there are two mechanisms and their findings — and the seventh instance
+    would get a seventh patch, because nothing in the record says a sweep
+    owns that ground.
+    """
+    rows = {r["id"]: r for r in _register()}
+    offenders: list[str] = []
+    for mechanism, ids in ENUMERATORS.items():
+        for did in ids:
+            row = rows.get(did)
+            if row is None:
+                offenders.append(f"{did}: declared subsumed and not in the "
+                                 f"register at all")
+                continue
+            named = {f"{p}::{f}" for p, f in PATH.findall(row["check"]) if f}
+            if mechanism not in named:
+                offenders.append(
+                    f"{did} is swept by {mechanism.split('::')[-1]} and its "
+                    f"check names only {sorted(named) or 'nothing'}")
+    assert not offenders, (
+        "these defects are instances of a population an enumerator already "
+        "sweeps, and their rows do not say so. A register that reads as N "
+        "patches where there are two mechanisms is N places for the N+1th to "
+        "hide:\n  " + "\n  ".join(offenders))
+
+
+def test_every_declared_enumerator_exists_and_draws_from_the_product():
+    """A POSITIVE CONTROL ON THE TABLE ABOVE.
+
+    An entry naming a test that was renamed protects nothing and reads as
+    though it does — the same failure `test_every_check_the_register_names_
+    actually_exists` was written for, one level up.
+    """
+    for mechanism in ENUMERATORS:
+        path, _, func = mechanism.partition("::")
+        source = ROOT / path
+        assert source.exists(), f"{path} does not exist"
+        tree = ast.parse(source.read_text(encoding="utf8"))
+        names = {n.name for n in ast.walk(tree)
+                 if isinstance(n, ast.FunctionDef)}
+        assert func in names, f"{path} has no {func}"
+
+
+def test_the_enumerator_scan_can_see_a_defect_that_ignores_its_sweep():
+    """THE POSITIVE CONTROL for the rule above.
+
+    The rule passes when every subsumed defect names its enumerator, and it
+    would pass identically if the comparison were inverted, or if `checks_of`
+    returned everything, or if `ENUMERATORS` were empty. A sweep asserting
+    that nothing is broken must be shown finding a break — B-049 was a checker
+    that always returned `[]` and passed on every commit for weeks.
+
+    Planted on the REAL comparison, with a register row that is subsumed and
+    names only its own scenario test — which is exactly the shape the audit of
+    5 September 2026 found in seven live rows.
+    """
+    mechanism = ("tests/test_every_persisted_field_has_a_writer.py::"
+                 "test_every_persisted_field_has_a_writer_or_is_declared_reserved")
+    planted = {"id": "B-999", "when": "2026-09-05", "what": "a planted row",
+               "shape": "S1 — an absent input reading as success",
+               "check": "tests/test_a_scenario.py::test_one_situation",
+               "status": "Fixed"}
+
+    named = {f"{p}::{f}" for p, f in PATH.findall(planted["check"]) if f}
+    assert named, "the planted row's check did not parse at all"
+    assert mechanism not in named, (
+        "the control cannot fail: its planted row already names the mechanism")
+
+    # And the real rule, run against it, must call it an offender.
+    assert not (named & {mechanism}), (
+        "a row naming only its own scenario test was treated as pointing at "
+        "the enumerator")

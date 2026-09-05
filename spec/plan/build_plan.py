@@ -2387,6 +2387,7 @@ d("B-086", "2026-09-04", "core",
   "that state, and three of them were found only by driving a real "
   "conversation. The audit is mechanical — every optional field on a "
   "persisted type, asked which code ever assigns it.",
+  "THE POPULATION IT BELONGS TO, enumerated later: `superseded_by` was a field on the persisted record that nothing wrote, and tests/test_every_persisted_field_has_a_writer.py::test_every_persisted_field_has_a_writer_or_is_declared_reserved sweeps exactly that — it would have found this before an advocate did. Beneath it: "
   "docs/GOLDEN_SET.md GS-15; the run of 4 September 2026",
   "Open")
 
@@ -2461,6 +2462,7 @@ d("B-088", "2026-09-05", "core",
   "read produces that answer. A read whose failure mode is `returns nothing` "
   "passes every test in the suite. The scenario runs are the only thing that "
   "sees it, and they see it only when they happen to.",
+  "tests/test_reads_registry.py::test_every_decisive_read_says_so_when_it_answers_with_nothing — THE GENERAL MECHANISM, whose population is the reads table and not a list of guarded reads. Beneath it, the correction read's own invariant: "
   "tests/test_correction_supersedes.py::"
   "test_a_missed_correction_becomes_a_blocking_question, driven with a "
   "model that NEVER fills `corrects` \u2014 waiting for the real one to miss "
@@ -2541,6 +2543,7 @@ d("B-091", "2026-09-05", "domain",
   "specifically. CLAUDE.md\u2019s own rule: a shape with N defects and N "
   "unrelated fixes is N places for the N+1th to hide. This is the N+1th "
   "already \u2014 `conflicts_with` was found by accident, not by a check.",
+  "tests/test_every_persisted_field_has_a_writer.py::test_every_persisted_field_has_a_writer_or_is_declared_reserved — THE ENUMERATOR ITSELF. "
   "tests/test_every_persisted_field_has_a_writer.py, with TWO positive "
   "controls because it has two ways to be vacuous: "
   "test_the_scan_can_see_the_record catches a closure walk that stopped at "
@@ -2582,6 +2585,7 @@ d("B-092", "2026-09-05", "core",
   "relation to the speaker, which is the same grammar and carries the same "
   "nothing. Extended IN PLACE rather than guarded again beside it \u2014 "
   "three ad-hoc copies of that one rule is what CLAUDE.md already records.",
+  "tests/test_every_persisted_field_has_a_writer.py::test_every_persisted_field_has_a_writer_or_is_declared_reserved owns the population and this defect is ONE MEMBER of it, found by the sweep rather than by hand. The member's own invariant: "
   "tests/test_the_opponent_is_remembered.py, verified ON A SERVED TURN and "
   "not on the read\u2019s return value: this defect lived entirely between a "
   "correct read and a record that never received the value, which is "
@@ -2627,6 +2631,7 @@ d("B-093", "2026-09-05", "domain",
   "page for that kind \u2014 a guard right in the core and assumed at the "
   "edge is CLAUDE.md \u00a78, the shape that let 40/40 offline pass while "
   "every served turn crashed.",
+  "tests/test_what_the_model_is_told.py::test_every_field_is_told_or_declared owns the population — which fields the record holds and the model is never told. The member's own invariant: "
   "tests/test_the_account_says_where_a_fact_came_from.py, stated as a "
   "DIFFERENCE (`_context(said) != _context(deed)`) rather than as a "
   "substring \u2014 asserting the document name appears would pass on an "
@@ -2680,6 +2685,7 @@ d("B-094", "2026-09-05", "domain",
   "two members of this population found first and fixed one at a time. The "
   "same argument as B-091: a population discovered one member at a time has "
   "no enumerator.",
+  "tests/test_what_the_model_is_told.py::test_every_field_is_told_or_declared — THE ENUMERATOR ITSELF. "
   "tests/test_what_the_model_is_told.py \u2014 the enumerator, with the "
   "decisions declared in WITHHELD and a positive control on the population "
   "(the sibling walk returned `Matter` alone on its first attempt). It "
@@ -2745,6 +2751,7 @@ d("B-096", "2026-09-05", "domain",
   "that knows the side is disputed and advises confidently anyway is doing "
   "exactly what C3 exists to prevent, with the evidence of the dispute on its "
   "own record.",
+  "tests/test_what_the_model_is_told.py::test_every_field_is_told_or_declared owns the population; this is one member of it. The member's own invariant: "
   "tests/test_what_the_model_is_told.py::test_a_contested_side_reaches_the_"
   "model, with test_an_uncontested_posture_says_nothing_about_a_dispute as "
   "its bound")
@@ -2786,6 +2793,50 @@ d("B-097", "2026-09-05", "domain",
   "test_first_person_language_never_arrives_from_our_own_notes, which checks "
   "the account still contains the word that caused it \u2014 without that, "
   "the test would stop exercising the case it was written for.")
+
+d("B-098", "2026-09-05", "tooling",
+  "THE RULE THAT ENFORCES GENERALISATION COULD NOT BITE ON A NEW ROW. "
+  "`test_every_recurring_shape_has_a_mechanism_more_than_one_defect_points_at` "
+  "asks whether SOME pair in a shape shares a check. S1 satisfied that long "
+  "ago \u2014 three of its defects name `test_three_states` \u2014 so the bar "
+  "was met once and could never be tested again. TEN S1 defects were then "
+  "added in a single session, every one with its own private check and NOT ONE "
+  "sharing a mechanism with the 39 before it, and the suite stayed green "
+  "throughout. Measured across those 39: ONE check is named by more than one "
+  "defect, and ELEVEN name no check at all.",
+  "The rule was written per SHAPE and the shapes are buckets. S1 spans "
+  "three-state enums, blank strings, missing writers, zero counts, decoder "
+  "gaps and provider leaks; one pair of them sharing a runner says nothing "
+  "about the next one. A per-shape rule can only ever be satisfied once.",
+  "S11 \u2014 a check that cannot fail",
+  "An audit the ADVOCATE asked for on 5 September 2026: are this session\u2019s "
+  "fixes generalised, or are they old shapes in new clothes? Nothing in the "
+  "build asked that question, which is why it had to be asked by a person.",
+  "AN ENUMERATOR DECLARES THE DEFECTS IT SUBSUMES, and those defects\u2019 "
+  "rows must name it. That is a narrower and more useful question than "
+  "\u2018does this shape have a mechanism\u2019: an enumerator draws its "
+  "population from the whole product and finds the members nobody has looked "
+  "for yet, which is what GENERALISED means operationally. Seven rows were "
+  "corrected to point at the three enumerators that own them.\n\n"
+  "THE FIRST ATTEMPT AT THIS FIX WAS WRONG AND IS RECORDED IN THE TEST. It "
+  "demanded that every S1 defect found after the shape had \u2018a "
+  "mechanism\u2019 name it \u2014 and flagged THIRTY historical rows, having "
+  "decided `test_three_states` was THE S1 mechanism. Demanding that a "
+  "provider-metadata leak point at a three-state enum check is the \u2018"
+  "forcing them together would be its own kind of wrong\u2019 the original "
+  "docstring already warns about.",
+  "Yes, and it is the reason the seven rows were wrong in the first place. "
+  "B-092 was not a lucky find \u2014 it came out of the writers enumerator "
+  "\u2014 and its row named only its own scenario test. Read a year from now "
+  "the register would show six separate patches where there are two "
+  "mechanisms and their findings, and the seventh instance would get a "
+  "seventh patch.",
+  "tests/test_defect_register.py::"
+  "test_every_defect_an_enumerator_subsumes_names_that_enumerator, with "
+  "test_the_enumerator_scan_can_see_a_defect_that_ignores_its_sweep as its "
+  "positive control \u2014 declared in "
+  "tests/test_every_sweep_has_a_positive_control.py, which caught BOTH new "
+  "sweeps having no control at all.")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

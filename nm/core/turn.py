@@ -506,6 +506,25 @@ class TurnEngine:
             answer = replace(answer, elements=tuple(
                 [*answer.elements, *self._exposure(matter, metrics)]))
 
+        # A DECISIVE READ CAME BACK EMPTY, AND THE ANSWER WAS COMPUTED ANYWAY.
+        #
+        # THE GENERAL FORM OF B-088, and it replaces the guard that was
+        # written for the correction read alone. Six reads are declared
+        # DECISIVE in `nm/domain/reads.py` -- dates, cause, factors, posture,
+        # role, and the correction that rides inside dates -- on one narrow
+        # test: does the output change a DATE, an AMOUNT, or WHICH LAW IS
+        # READ? For those, an empty answer is indistinguishable from "that
+        # thing is not present", and every number downstream is derived from
+        # it, so no later check can catch it.
+        #
+        # The population is the TABLE, not a list here: a seventh decisive
+        # read is covered the day it is declared. Asked of the model port,
+        # which is the single place every structured read passes through --
+        # the alternative is six call sites each remembering to ask, which is
+        # the arrangement that produced one guard for one read.
+        answer = replace(answer, elements=tuple(
+            [*answer.elements, *self._decisive_empties(metrics)]))
+
         # Class-B invariants, asserted on the ASSEMBLED object, before emission.
         self._assert_invariants(answer, metrics)
 
@@ -1939,6 +1958,54 @@ class TurnEngine:
         return out
 
     @implements("D7")
+    def _decisive_empties(self, metrics: TurnMetrics) -> list[Element]:
+        """G-READ. WHICH decisive read answered with nothing, said out loud.
+
+        B-088 GENERALISED. That defect was the correction read returning
+        nothing on one run and not the next, and the fix guarded that one
+        read: a phrase list that noticed the advocate saying "that is wrong"
+        and raised a question. It worked, and it was a patch -- the same
+        silence in the `cause` read sends an exact section lookup into the
+        wrong statute, and in `factors` it reports a live claim as dead, and
+        nothing would have said a word.
+
+        THE POPULATION IS `nm.domain.reads`, which was built for this and had
+        no production caller until now. Six reads are decisive on one narrow
+        test: does the output change a date, an amount, or which law is read?
+        A seventh is covered the day someone declares it.
+
+        WHY IT DISCLOSES RATHER THAN WITHHOLDS. §7.1 withholds a turn for
+        exactly three gates, all of them about whether the answer is supported
+        by what was RETRIEVED. This is about what was READ from the advocate,
+        and the answer may be perfectly good without it -- a turn with no
+        dates in it is not a broken turn. What is not acceptable is computing
+        confidently and saying nothing, so the advocate is told which read
+        came back empty and can supply the missing thing in a sentence.
+        """
+        empties = getattr(self._model, "empty_decisive", None)
+        if not callable(empties):
+            return []
+        try:
+            reads = empties()
+        except Exception as exc:  # noqa: BLE001 -- never fail a turn
+            metrics.violate("I1", f"the decisive-read check could not run: "
+                                  f"{type(exc).__name__}: {exc}")
+            return []
+        if not reads:
+            return []
+
+        metrics.fire("G-READ", "empty",
+                     f"decisive read(s) answered with nothing: "
+                     f"{', '.join(reads)}")
+        named = ", ".join(reads)
+        return [Element(
+            kind=ElementKind.GROUND, disclosure=True, signal=Signal.NONE,
+            text=(f"I read your message for {named} and got nothing back. "
+                  f"That is not the same as there being none — it is the "
+                  f"read coming up empty, and everything below was worked "
+                  f"out without it. If there is something there, tell me in "
+                  f"a sentence and I will re-derive."))]
+
     def _exposure(self, matter: Matter, metrics: TurnMetrics) -> list[Element]:
         """E-082. ONE report per file, whatever the answer.
 
