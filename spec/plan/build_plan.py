@@ -2969,10 +2969,21 @@ d("B-101", "2026-09-05", "tooling",
   "serving two uses that pull apart, widened for one and silently wrong for "
   "the other. There it was the account and the guard input; here it is the "
   "transcript for review and the transcript for judging.",
-  "None yet. The check to write asserts that no element of a withheld turn "
-  "reaches a judge prompt \u2014 a positive control on the harness, not on "
-  "the product.",
-  "Open")
+  "FIXED. The transcript carries `withheld_by` \u2014 A LIST AND NEVER A NULL, "
+  "so the three states are values: `[]` is a turn that was served, a populated "
+  "list is one withheld naming the gates. `blocked` keeps meaning what it "
+  "always meant, the ANSWER\u2019s own flag, and is no longer asked to carry "
+  "something it does not know. The judge does not skip a withheld turn "
+  "SILENTLY \u2014 it is told the turn was withheld and that the advocate was "
+  "shown a refusal, because a judge told nothing about turn 4 would score a "
+  "conversation that jumps from 3 to 5, and a gap it cannot see is one it "
+  "explains to itself some other way. A transcript from BEFORE the field "
+  "existed says NOT KNOWN rather than being guessed at in either direction. "
+  "tests/test_no_internal_id_reaches_the_advocate.py drives the same served "
+  "conversation including a withheld turn. THE GAP THAT REMAINS, named rather "
+  "than closed: no check yet reads a judge PROMPT and asserts no withheld "
+  "element is in it.",
+  "Fixed \u2014 the harness-side control is still to write")
 
 d("B-102", "2026-09-05", "core",
   "A VALUE THAT HAD NEVER BEEN COMPUTED WAS ANNOUNCED AS HAVING MOVED. GS-15 "
@@ -2998,9 +3009,19 @@ d("B-102", "2026-09-05", "core",
   "cover. The rule there was that a signal firing always carries no "
   "information; this fires on the FIRST turn any value appears, which on a "
   "growing file is most of them.",
-  "None yet. tests/test_gaps_and_cascade_on_a_served_turn.py is where it "
-  "belongs, beside the count-that-grew case B-090 added.",
-  "Open")
+  "FIXED. `Change.arrived` is a FIELD and not a comparison against `was`: the "
+  "sentinel string ‘not computed before’ is prose, and a rule that depends on "
+  "prose breaks silently the day someone improves the wording. An arrival "
+  "raises no undo question — nothing said before can need undoing — and reads "
+  "‘computed for the first time’, under a heading that no longer claims a "
+  "movement. It is still ANNOUNCED: silently adding a limitation date is the "
+  "defect `changes` was written for, and suppressing the arrival would trade "
+  "one for the other. tools/mutate.py carries the arrival anchor, so a silent "
+  "add still fails a mutation, and the existing E-092 cases in "
+  "tests/test_gaps.py are the bound — a change with no prior still cannot be "
+  "built, which is what caught the field-ordering slip that had quietly made "
+  "`was` and `now` optional.",
+  "Fixed")
 
 d("B-103", "2026-09-05", "edge",
   "AN INTERNAL THREAD ID WAS PUT TO THE ADVOCATE, TWICE IN A QUESTION. GS-15 "
@@ -3024,9 +3045,20 @@ d("B-103", "2026-09-05", "edge",
   "Yes. The same shape as B-097 in a mild form: this product\u2019s own "
   "vocabulary crossing into text meant for a person. There it defeated a "
   "guard; here it makes a question unanswerable.",
-  "None yet. The sweep is over served elements and belongs beside the other "
-  "answer-shape invariants.",
-  "Open")
+  "FIXED. `Derived` and `Change` carry a `shown` label beside the `name` key, "
+  "because ONE STRING CANNOT BE BOTH: the key must stay unique across threads "
+  "and the label must stay readable. Renaming the key to the label would make "
+  "two threads’ limitations collide, which is a worse defect wearing a "
+  "friendlier name. A derivation read back from an older transcript has no "
+  "label and falls back to the key — worse to read and TRUE, which is the "
+  "right way round. The check is "
+  "tests/test_no_internal_id_reaches_the_advocate.py, whose population is "
+  "EVERY ELEMENT OF A SERVED ANSWER across a four-turn conversation, "
+  "including the refusal text of a withheld turn, which is advocate-facing "
+  "too. Drawn from the whole product rather than from the cascade, so a leak "
+  "from the gap queue or a module written next month fails here as well, with "
+  "test_the_sweep_can_see_a_planted_leak as its positive control.",
+  "Fixed")
 
 d("B-104", "2026-09-05", "core",
   "A WITHHELD TURN IS A DEAD END, AND THE MODEL WAS RIGHT. GS-15 turn 4: the "

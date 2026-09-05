@@ -63,8 +63,23 @@ class Derived:
     """
 
     name: str
+    """THE KEY, and it is not for reading. It carries the thread id so two
+    threads' limitations are different values; that is a lookup, not a noun."""
     value: str
     from_facts: tuple[FactId, ...]
+    shown: str = ""
+    """WHAT AN ADVOCATE IS CALLED ON TO READ. Falls back to `name`.
+
+    B-103, measured on GS-15's served run of 5 September 2026: the product
+    asked "whether anything already done on limitation on thr_380e2b97f5a6
+    needs undoing". A person cannot answer a question addressed to a database
+    key, and the thread has a LABEL that every other line of the turn uses.
+
+    Separate rather than renamed, because the key must stay unique and the
+    label must stay readable, and one string cannot be both -- the same shape
+    as `advocate_words` sharing the account (B-097) and the transcript serving
+    review and scoring (B-101).
+    """
     kind: Kind = Kind.POSITION
     """POSITION or MEASUREMENT, and the difference decides what is news.
 
@@ -99,6 +114,29 @@ class Change:
     name: str
     was: str
     now: str
+    """`was` AND `now` STAY REQUIRED, and `shown` goes after them.
+
+    Putting an optional field before them gave both a default and quietly
+    made §5.4's rule -- a change is reported WITH its prior -- unenforceable.
+    Two tests caught it within the minute; the ordering of fields on a frozen
+    dataclass is load-bearing and does not look it.
+    """
+    shown: str = ""
+    """The advocate-facing name. See `Derived.shown`."""
+    arrived: bool = False
+    """This value was COMPUTED FOR THE FIRST TIME, not moved.
+
+    B-102, measured on GS-15's served run of 5 September 2026: turn 2 said
+    "limitation: was not computed before, now 1987-04-15" and then asked the
+    advocate whether anything already done needed undoing. Nothing had been
+    done -- turn 1 had said, correctly, that it computed no limitation. The
+    question was unanswerable and the announcement claimed a movement that
+    had not happened.
+
+    A FIELD AND NOT A COMPARISON AGAINST `was`. The sentinel string "not
+    computed before" is prose that will be reworded, and a rule that depends
+    on prose is one that breaks silently when someone improves the wording.
+    """
     undo: str = ""
     """What already done needs undoing, where anything does.
 
@@ -160,10 +198,12 @@ def changes(before: tuple[Derived, ...],
         if d.kind is Kind.MEASUREMENT:
             continue
         if d.name not in old:
-            out.append(Change(name=d.name, was="not computed before",
-                              now=d.value))
+            out.append(Change(name=d.name, shown=d.shown or d.name,
+                              was="not computed before", now=d.value,
+                              arrived=True))
         elif old[d.name] != d.value:
-            out.append(Change(name=d.name, was=old[d.name], now=d.value))
+            out.append(Change(name=d.name, shown=d.shown or d.name,
+                              was=old[d.name], now=d.value))
     return tuple(out)
 
 
@@ -218,7 +258,16 @@ def unresolved_undo(moved: tuple[Change, ...]) -> tuple[str, ...]:
     answered, and the two must not read alike. This is the third state, made
     into a list so it cannot be silent.
     """
-    return tuple(c.name for c in moved if not c.undo.strip())
+    # AN ARRIVAL HAS NO PRIOR ADVICE TO UNDO, and asking about one is a
+    # question the advocate cannot answer. B-102: the first turn a limitation
+    # could be computed at all raised "whether anything already done on
+    # limitation needs undoing" against a turn that had computed none.
+    #
+    # This is NOT the same as suppressing the arrival. Silently adding a
+    # limitation date is the defect `changes` reasons about, and the value
+    # still appears in the report -- as an arrival, which is what it is.
+    return tuple(c.shown or c.name for c in moved
+                 if not c.undo.strip() and not c.arrived)
 
 
 @implements("A3")
@@ -233,7 +282,9 @@ def report(moved: tuple[Change, ...],
     if not moved:
         return ("Re-derived everything that rested on the corrected fact; "
                 "nothing changed.",)
-    lines = [f"{c.name}: was {c.was}, now {c.now}"
+    lines = [(f"{c.shown or c.name}: computed for the first time — {c.now}"
+              if c.arrived
+              else f"{c.shown or c.name}: was {c.was}, now {c.now}")
              + (f" — {c.undo}" if c.undo else "")
              for c in moved]
     lines.extend(

@@ -242,6 +242,43 @@ def transcript_material(matter_id: str) -> str:
         if t.get("unreadable"):
             out.append(f"[turn {i} could not be read back: {t.get('why')}]")
             continue
+        # B-101. A WITHHELD TURN IS NOT PART OF WHAT THE PRODUCT SAID.
+        #
+        # Measured on GS-15, 5 September 2026: E-102 FAILED quoting "part
+        # performance under Section 53A" -- text from turn 4, which G-GROUND
+        # WITHHELD. The advocate never saw the words the product was marked
+        # down for.
+        #
+        # The transcript keeps the refused draft on purpose: reviewing a
+        # refusal without it is reviewing nothing. SCORING it is a different
+        # matter -- the judge grades what the advocate WAS SHOWN, and a
+        # withheld turn shows them a refusal.
+        #
+        # It is not skipped silently. A judge told nothing about turn 4 would
+        # score a conversation that jumps from 3 to 5, and a gap it cannot see
+        # is one it will explain to itself some other way.
+        withheld = t.get("withheld_by")
+        if withheld:
+            out.append(f"--- TURN {i} ---")
+            out.append(f"ADVOCATE: {t.get('message', '')}")
+            out.append(f"[WITHHELD by {', '.join(withheld)}. The advocate was "
+                       f"shown a refusal and none of the analysis this turn "
+                       f"produced. It is not part of what the product said, "
+                       f"and it is not yours to score.]")
+            continue
+        if withheld is None:
+            # AN OLDER TRANSCRIPT, from before `withheld_by` was recorded.
+            # Said rather than guessed at: scoring it as served would repeat
+            # the defect, and dropping it silently would hide that the run
+            # predates the fix.
+            out.append(f"--- TURN {i} ---")
+            out.append(f"ADVOCATE: {t.get('message', '')}")
+            out.append("[this transcript predates the withheld-turn record, "
+                       "so whether the advocate saw this turn is NOT KNOWN. "
+                       "Score it only if the run is known to be later.]")
+            for e in t.get("elements", []):
+                out.append(f"[{e.get('kind')}] {e.get('text', '')}")
+            continue
         out.append(f"--- TURN {i} ---")
         out.append(f"ADVOCATE: {t.get('message', '')}")
         for e in t.get("elements", []):

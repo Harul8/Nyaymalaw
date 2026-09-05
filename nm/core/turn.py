@@ -263,7 +263,10 @@ def _record(into: list, what: str, thread: Thread,
     """
     if produced:
         into.append(cascade.Derived(
+            # THE KEY carries the thread id, so two threads' counts are
+            # different values. THE LABEL is what a person reads. B-103.
             name=f"{what} on {thread.id}",
+            shown=f"{what} on {thread.label!r}",
             value=str(produced),
             from_facts=tuple(from_facts),
             # A COUNT. It grows as the file grows, so its growth is not a
@@ -618,7 +621,10 @@ class TurnEngine:
 
             metrics.latency_ms = int((time.perf_counter() - started) * 1000)
             self._store.record_metrics(metrics.as_dict())
-            self._record_turn(turn, answer, matter, metrics, derived_values)
+            gates_withheld = tuple(sorted({v.rule
+                                           for v in metrics.gating_violations}))
+            self._record_turn(turn, answer, matter, metrics, derived_values,
+                              withheld_by=gates_withheld)
             # NAME THE GATES. "Gated by a grounding violation" tells the
             # advocate nothing they can act on and tells an operator nothing
             # they can find; the gate id is the handle for both.
@@ -664,7 +670,8 @@ class TurnEngine:
 
     def _record_turn(self, turn: TurnInput, answer: Answer, matter: Matter,
                      metrics: TurnMetrics,
-                     derived: tuple = ()) -> None:
+                     derived: tuple = (), withheld_by: tuple[str, ...] = ()
+                     ) -> None:
         """The served turn, kept. AFTER the commit, and never instead of it.
 
         Nothing else held this. The matter keeps facts and questions, the
@@ -724,6 +731,21 @@ class TurnEngine:
                 **({"model_calls": trace} if trace is not None else {}),
                 "advocate_id": turn.advocate_id,
                 "at": datetime.now(timezone.utc).isoformat(),
+                # B-101. WAS THIS SHOWN TO THE ADVOCATE?
+                #
+                # A LIST AND NEVER A NULL, so the three states are on the
+                # record as values: `[]` is a turn that was served, and a
+                # populated list is a turn withheld naming the gates that
+                # withheld it. `blocked` below is a DIFFERENT thing -- the
+                # ANSWER's own blocked flag, set when a gate stops a step --
+                # and it reads False on a withheld turn, which is how the
+                # judge came to grade text the advocate never saw.
+                #
+                # The transcript is kept for REVIEW, where the refused draft
+                # is exactly what you want, and used for SCORING, where it is
+                # exactly what you must not have. One record, two uses; this
+                # field is what lets a reader tell them apart.
+                "withheld_by": list(withheld_by),
                 "today": turn.today.isoformat(),
                 "message": turn.message,
                 "route": answer.route.value,
@@ -755,7 +777,7 @@ class TurnEngine:
                 # be computed FROM the corrected fact and would always agree
                 # with itself.
                 "derived": [
-                    {"name": d.name, "value": d.value,
+                    {"name": d.name, "shown": d.shown, "value": d.value,
                      "from_facts": list(d.from_facts)}
                     for d in derived],
                 "cost_usd": metrics.cost_usd,
@@ -2323,6 +2345,7 @@ class TurnEngine:
             return ()
         return (cascade.Derived(
             name=f"limitation on {thread.id}",
+            shown=f"the limitation on {thread.label!r}",
             value=position.expires_on.isoformat(),
             from_facts=tuple(thread.chronology)),)
 
@@ -2409,7 +2432,14 @@ class TurnEngine:
         return [*out, Element(
             kind=ElementKind.FINDING, thread=thread.id,
             signal=Signal.CONTRADICTION,
-            text="A value on this thread has MOVED since the last turn. "
+            # B-102. THE HEADING MUST BE TRUE OF EVERY LINE UNDER IT, which
+            # is B-093's rule arriving in a different place. "A value has
+            # MOVED" over a value computed for the first time is a claim about
+            # the file that is simply false, and it is the loudest line on the
+            # turn.
+            text=("A value on this thread has MOVED since the last turn. "
+                  if any(not c.arrived for c in moved)
+                  else "This thread now has a value it did not have before. ")
                  + " ".join(lines))]
 
     def _last_derived(self, matter_id: str) -> tuple | None:
@@ -2439,6 +2469,11 @@ class TurnEngine:
             rows = doc.get("derived") or []
             return tuple(cascade.Derived(
                 name=str(r.get("name", "")), value=str(r.get("value", "")),
+                # AN OLDER TRANSCRIPT HAS NO LABEL, and `shown` falls back to
+                # `name` rather than being invented here -- a reconstructed
+                # label would be a different string from the one the earlier
+                # turn actually showed.
+                shown=str(r.get("shown") or ""),
                 from_facts=tuple(r.get("from_facts") or ()))
                 for r in rows if r.get("name"))
         return None

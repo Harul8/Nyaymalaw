@@ -985,9 +985,11 @@ MUTATIONS = [
     ("a corrected value recomputed with no note that it moved",
      "nm/core/cascade.py",
      "        elif old[d.name] != d.value:\n"
-     "            out.append(Change(name=d.name, was=old[d.name], now=d.value))",
+     "            out.append(Change(name=d.name, shown=d.shown or d.name,\n"
+     "                              was=old[d.name], now=d.value))",
      "        elif False:\n"
-     "            out.append(Change(name=d.name, was=old[d.name], now=d.value))",
+     "            out.append(Change(name=d.name, shown=d.shown or d.name,\n"
+     "                              was=old[d.name], now=d.value))",
      "test_a_corrected_fact_re_derives_dependents_and_reports_the_prior_value",
      "E-092"),
 
@@ -996,8 +998,9 @@ MUTATIONS = [
     ("a value computed for the first time, added silently",
      "nm/core/cascade.py",
      "        if d.name not in old:\n"
-     "            out.append(Change(name=d.name, was=\"not computed before\",\n"
-     "                              now=d.value))",
+     "            out.append(Change(name=d.name, shown=d.shown or d.name,\n"
+     "                              was=\"not computed before\", now=d.value,\n"
+     "                              arrived=True))",
      "        if d.name not in old:\n"
      "            continue",
      "test_a_value_computed_for_the_first_time_is_a_change_with_no_prior",
@@ -1016,7 +1019,8 @@ MUTATIONS = [
     # having said.
     ("an unanswered undo question reading as nothing to undo",
      "nm/core/cascade.py",
-     "    return tuple(c.name for c in moved if not c.undo.strip())",
+     "    return tuple(c.shown or c.name for c in moved\n"
+     "                 if not c.undo.strip() and not c.arrived)",
      "    return ()",
      "test_advice_already_given_is_reported_as_superseded", "E-092"),
 
