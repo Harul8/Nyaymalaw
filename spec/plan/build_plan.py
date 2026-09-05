@@ -2653,24 +2653,39 @@ d("B-094", "2026-09-05", "domain",
   "fields nothing WRITES, but which fields the record HOLDS and the model is "
   "never TOLD. Both were found by walking the persisted closure rather than "
   "by reading code.",
-  "OPEN, AND DELIBERATELY NOT MECHANICAL. Unlike B-091 this cannot be "
-  "settled by a sweep, because the account has a MEASURED CHARACTER BUDGET "
-  "(`ACCOUNT_BUDGET`, 3000) and every grading marker added is paid for in "
-  "facts that then do not fit \u2014 the trade B-085 was fixed to make "
-  "visible. Which of the six earn their characters is a product judgement "
-  "and belongs to the advocate, not to a check. What a check CAN do is force "
-  "the answer to be written down: an enumerator over the closure with a "
-  "WITHHELD table, each entry naming either \u2018structure, not content\u2019 "
-  "or the channel that carries it instead. Held in the backlog on the "
-  "advocate\u2019s instruction, 5 September 2026.",
+  "DECIDED FIELD BY FIELD, AND THE REASONING IS IN THE TABLE. "
+  "TOLD: `Fact.basis` and `basis_source`, because the enum\u2019s own "
+  "docstring says why \u2014 \u2018the difference decides what has to be "
+  "proved and by whom\u2019 \u2014 and a source travels with a basis for "
+  "the reason a page number travels with a document. `Fact.certainty` where "
+  "`documented`, which is NOT what B-093 renders: B-093 says the product "
+  "read this off a document it holds, `documented` says the ADVOCATE says a "
+  "document evidences it, and for a limitation a date on a registered deed "
+  "and a date the client remembers are not the same date. "
+  "`Posture.client_described_as`, which was rendered only on the "
+  "`role is UNKNOWN` branch \u2014 so the moment the role settled, "
+  "\u2018the workman\u2019 left the file note for good.\n\n"
+  "WITHHELD: `Fact.weight`, and for a second reason beyond having no "
+  "writer \u2014 it is the PRODUCT\u2019S own grading, and feeding our view "
+  "back to the model that must weigh the case invites it to treat its own "
+  "earlier view as evidence. `Fact.material`, which defaults TRUE and would "
+  "today mark every fact with the ordinary case. Each names what REOPENS "
+  "it.\n\n"
+  "THE BUDGET IS RESPECTED BY TWO RULES, not by leaving things out. Only a "
+  "NON-DEFAULT value is marked, the same rule as B-093\u2019s source "
+  "prefix; and the ungraded third state is said ONCE about the file rather "
+  "than on each of fifteen facts \u2014 60 characters instead of 240, with "
+  "the state still visible, which is what S8 requires.",
   "Yes \u2014 and it is the general form of B-092 and B-093, which were the "
   "two members of this population found first and fixed one at a time. The "
   "same argument as B-091: a population discovered one member at a time has "
   "no enumerator.",
-  "None yet. The check to write is the WITHHELD enumerator, and it cannot be "
-  "written before the six are decided \u2014 a declaration table authored "
-  "without the decision would record a guess as a policy.",
-  "Open")
+  "tests/test_what_the_model_is_told.py \u2014 the enumerator, with the "
+  "decisions declared in WITHHELD and a positive control on the population "
+  "(the sibling walk returned `Matter` alone on its first attempt). It "
+  "found TWO MORE members while being written, which is the argument for "
+  "it: B-096 and B-097.",
+  "Fixed")
 
 d("B-095", "2026-09-05", "adapters",
   "A TURN\u2019S RECORD COULD SAY IT MADE NO MODEL CALLS WHILE IT MADE "
@@ -2707,6 +2722,70 @@ d("B-095", "2026-09-05", "adapters",
   "silence as its POSITIVE CONTROL \u2014 planted on the real served path "
   "with a tracer that drops everything, because a check for a silence has to "
   "be shown failing on a silence.")
+
+d("B-096", "2026-09-05", "domain",
+  "THE MODEL WAS NEVER TOLD THE SIDE WAS IN DISPUTE. `Posture.conflicts` "
+  "appeared NOWHERE in `nm/domain/summary.py`. The board rendered `loud` and "
+  "`conflict` from it, so the ADVOCATE saw a warning \u2014 while every "
+  "derivation on the same turn reasoned as though the side were settled.",
+  "The conflict was written for the BOARD and the account was never asked to "
+  "carry it. Two consumers of one fact, one of which nobody checked.",
+  "S1 \u2014 an absent input reading as success",
+  "The B-094 enumerator, which listed `PostureConflict.on_record` and "
+  "`now_suggested` as undeclared and forced the question.",
+  "The dispute is stated in `established`, as an INSTRUCTION and not as a "
+  "field: which two roles are contested, and \u2018do not choose between "
+  "them \u2014 say what holds either way, and ask\u2019. A model told "
+  "`conflicts: 1` has a number; a model told what to do has something it can "
+  "act on. Bounded by a check that an UNCONTESTED posture says nothing, "
+  "because a dispute line on every matter is B-090 one layer down.",
+  "Yes, and it is the sharpest member of this population. The side is the one "
+  "thing in this product that REVERSES the advice rather than weakening it "
+  "\u2014 the same provision helps one party and hurts the other. A product "
+  "that knows the side is disputed and advises confidently anyway is doing "
+  "exactly what C3 exists to prevent, with the evidence of the dispute on its "
+  "own record.",
+  "tests/test_what_the_model_is_told.py::test_a_contested_side_reaches_the_"
+  "model, with test_an_uncontested_posture_says_nothing_about_a_dispute as "
+  "its bound")
+
+d("B-097", "2026-09-05", "domain",
+  "C3 DEFEATED AGAIN BY WIDENING AN INPUT, AND THIS TIME BY THE DAY\u2019S "
+  "OWN WORK. `MatterSummary.advocate_words` \u2014 the GUARD INPUT for every "
+  "verbatim posture check \u2014 returned `self.account`. Three changes on 5 "
+  "September put this product\u2019s own words into that account: a document "
+  "name (B-093), a basis marker (B-094), and a note reading \u2018How the "
+  "client KNOWS any of this has not been assessed\u2019. `_FIRST_PERSON` "
+  "matches `client`, so `speaks_of_the_representation` became TRUE ON EVERY "
+  "MATTER and a COMPLAINANT posture was settled out of \u2018a cheque was "
+  "dishonoured on 3 March\u2019 \u2014 an account of events stating no side.",
+  "One string serving two uses that pull in opposite directions. The PROMPT "
+  "must get richer as the product learns to say more; the GUARD must stay "
+  "exactly the advocate\u2019s words. `advocate_words` returning `account` "
+  "was safe only for as long as nobody added anything to the account, which "
+  "is a property no code enforced.",
+  "S1 \u2014 an absent input reading as success",
+  "`tools/check.py`, on three tests in test_matter_memory. Confirmed as MINE "
+  "rather than pre-existing by stashing the change and re-running: at HEAD "
+  "the turn correctly blocks with posture unknown.",
+  "THE TWO STRINGS ARE BUILT APART. `_account` returns the rendered account "
+  "AND the advocate\u2019s sentences alone, and `advocate_words` returns the "
+  "second. Rewording the note would have fixed the note; this fixes the next "
+  "one. The account KEEPS its markers \u2014 a model that cannot see the "
+  "basis cannot weigh it \u2014 so the split had to separate two uses rather "
+  "than remove information, and there is a check that asserts exactly that.",
+  "Yes, and its own docstring had already recorded the first occurrence with "
+  "the general rule: \u2018C3 was defeated by widening an input, not by a bad "
+  "inference.\u2019 A rule written in a docstring and enforced by nothing is "
+  "an aspiration \u2014 which is the whole argument of CLAUDE.md, arriving as "
+  "a defect in the file that states it.",
+  "tests/test_what_the_model_is_told.py::test_the_guard_input_carries_no_word"
+  "_this_product_composed, plus test_the_account_and_the_guard_input_are_not_"
+  "the_same_string, which asserts the account STILL carries the marker so the "
+  "split cannot be \u2018fixed\u2019 by deleting information, and "
+  "test_first_person_language_never_arrives_from_our_own_notes, which checks "
+  "the account still contains the word that caused it \u2014 without that, "
+  "the test would stop exercising the case it was written for.")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

@@ -35,15 +35,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from nm.domain.matter import AskedQuestion, Matter, Role, Thread
+from nm.domain.matter import AskedQuestion, Certainty, FactBasis, Matter, Role, Thread
 from nm.domain.text import refuses_blank_text
 
 #: How much of the account a prompt is given. Enough to carry a matter's worth
 #: of instruction, bounded so a long file cannot crowd out the current message.
 ACCOUNT_BUDGET = 3000
 
-#: Room kept for the line that says what was left out.
-_NOTE_RESERVE = 110
+#: Room kept for the lines this product appends to the account: what was left
+#: out, and whether any basis was assessed.
+#:
+#: BOTH ARE RESERVED, because both are appended AFTER the fitting loop and a
+#: note that is not reserved for is a note that breaks the budget. That is not
+#: hypothetical -- the left-out note did it once, and the basis note did it
+#: again the day it was added (3065 characters against a 3000 budget). The
+#: reserve is the mechanism; adding an unreserved note is the way past it.
+_NOTE_RESERVE = 110 + 100
 
 #: What THIS type carries of the Appendix E `CaseSummary` contract.
 #:
@@ -80,6 +87,13 @@ class MatterSummary:
     threads: tuple[dict, ...] = ()
     established: tuple[str, ...] = ()
     account: str = ""
+    words: str = ""
+    """The advocate's own sentences, and NOTHING this product composed.
+
+    Separate from `account` on purpose -- see `advocate_words`, which is the
+    guard input for every verbatim check and must never widen when the
+    account does.
+    """
     left_out: int = 0
     """How many facts did not fit the budget. NOT a flag: a reader who is told
     something was trimmed learns that a boundary exists, and a reader told
@@ -122,8 +136,21 @@ class MatterSummary:
         guard confirmed the span was present -- because it was, in OUR text --
         and the product settled a posture nobody had stated. C3 was defeated
         by widening an input, not by a bad inference.
+
+        AND AGAIN, ON 5 SEPTEMBER 2026, WHICH IS WHY THIS IS NO LONGER THE
+        ACCOUNT. This returned `self.account`, which was safe only while the
+        account held nothing but the advocate's sentences. Three changes in
+        one day put our own words in it -- a document name, a basis marker,
+        and a note reading "How the client KNOWS any of this has not been
+        assessed". `_FIRST_PERSON` matches `client`, so
+        `speaks_of_the_representation` became true on EVERY matter and a
+        COMPLAINANT posture was settled out of "a cheque was dishonoured on 3
+        March".
+
+        It is now built from the facts' statements alone, apart from the
+        account, so the two cannot drift back together.
         """
-        return self.account
+        return self.words
 
     @property
     def empty(self) -> bool:
@@ -212,7 +239,30 @@ def _established_on(thread: Thread) -> list[str]:
         out.append(
             f"On {thread.label!r}: we act for the {p.role.value} — the "
             f"{p.side.value} party ({p.basis.value})."
-            + (f" Against: {p.opponent}." if p.opponent else ""))
+            + (f" Against: {p.opponent}." if p.opponent else "")
+            # THE ADVOCATE'S OWN WORD FOR THEIR CLIENT, kept once the role is
+            # known rather than dropped. B-094: it was rendered only on the
+            # `role is UNKNOWN` branch, so the moment the role settled, "the
+            # workman" or "the wife" left the file note for good. It is not a
+            # role and never was -- it is who the client IS, it costs a dozen
+            # characters ONCE per thread rather than per fact, and a product
+            # that stops using the advocate's own word for their client is
+            # one they have to keep re-introducing.
+            + (f" Our client is {p.client_described_as}."
+               if p.client_described_as else ""))
+
+    # THE POSTURE IS CONTESTED, AND THE MODEL WAS NEVER TOLD.
+    #
+    # B-096, found by the enumerator in test_what_the_model_is_told. The board
+    # rendered `loud` and `conflict` from `posture.conflicts` and the ACCOUNT
+    # said nothing, so the advocate saw a warning while every derivation on
+    # the same turn reasoned as though the side were settled -- and the side
+    # is the one thing in this product that reverses the advice rather than
+    # weakening it.
+    #
+    # Stated as an instruction, not as a field. A model told `conflicts: 1`
+    # has a number; a model told which two roles are in dispute and that it
+    # must not pick one has something it can act on.
     elif p.client_described_as:
         # NOT the same as knowing the posture, and the distinction is the whole
         # of C3: naming the client does not say which side they are on. Recorded
@@ -220,6 +270,12 @@ def _established_on(thread: Thread) -> list[str]:
         out.append(
             f"On {thread.label!r}: the client is the {p.client_described_as}. "
             f"Their procedural role is NOT yet settled.")
+    for c in p.conflicts:
+        out.append(
+            f"On {thread.label!r}: THE SIDE IS IN DISPUTE. The file records "
+            f"our client as the {c.on_record.value}; this turn reads as the "
+            f"{c.now_suggested.value}. Do not choose between them — say what "
+            f"holds either way, and ask.")
     for kind, value in sorted(thread.identifiers.items()):
         out.append(f"On {thread.label!r}: {kind.replace('_', ' ')} is {value}.")
     if thread.deferred_reason:
@@ -262,7 +318,8 @@ def build(matter: Matter, thread_id: str | None = None,
         if f.date:
             established.append(f"{f.date.isoformat()}: {f.statement.strip()[:120]}")
 
-    account, left_out = _account(on_thread, thread, about, load_bearing)
+    account, left_out, words = _account(
+        on_thread, thread, about, load_bearing)
 
     return MatterSummary(
         matter_id=matter.id,
@@ -270,6 +327,7 @@ def build(matter: Matter, thread_id: str | None = None,
         threads=tuple(threads),
         established=tuple(dict.fromkeys(established)),
         account=account,
+        words=words,
         left_out=left_out,
         open_questions=tuple(q for q in matter.asked if q.open),
         answered=tuple(q for q in matter.asked if not q.open),
@@ -319,6 +377,46 @@ def _source(f) -> str:
     return f"{where}{page}: "
 
 
+def _marks(f) -> str:
+    """WHAT THE FILE KNOWS ABOUT THIS FACT beyond the words of it.
+
+    B-094. Measured on 5 September 2026: of 29 scalars on the persisted
+    record, SEVEN reached the model. Six of the rest were held and never told,
+    and this renders the two that change the advice.
+
+    BASIS, because its own docstring says why -- "the difference decides what
+    has to be proved and by whom". "He never paid me" resting on direct
+    knowledge and the same sentence resting on belief are different cases, and
+    a model given only the sentence cannot tell them apart. `basis_source`
+    travels with it for the reason a page number travels with a document: it
+    is what makes the claim checkable rather than merely asserted.
+
+    CERTAINTY, AND IT IS NOT WHAT `_source` ALREADY RENDERS. `_source` says
+    the product read this off a document it holds; `documented` says the
+    ADVOCATE says a document evidences it. For a limitation those are
+    different facts -- a date on a registered deed and a date the client
+    remembers are not the same date, and the arithmetic is identical either
+    way while the risk is not.
+
+    WHAT IS DELIBERATELY WITHHELD is declared in
+    tests/test_what_the_model_is_told.py rather than decided here, because a
+    field left out silently and a field left out on purpose look identical
+    from inside this function.
+
+    ONLY THE NON-DEFAULT VALUE IS MARKED, the same rule as `_source`. Marking
+    the ordinary case spends a measured budget saying the ordinary thing.
+    """
+    marks: list[str] = []
+    if f.certainty is Certainty.DOCUMENTED:
+        marks.append("advocate says documented")
+    if f.basis is not FactBasis.NOT_ASSESSED:
+        basis = f.basis.value.replace("_", " ")
+        if (f.basis_source or "").strip():
+            basis += f" - {f.basis_source.strip()}"
+        marks.append(basis)
+    return f" ({'; '.join(marks)})" if marks else ""
+
+
 def _account(facts: list, thread, about: str,
              load_bearing: frozenset[str]) -> tuple[str, int]:
     """The account, SELECTED to fit. Returns it and how much did not.
@@ -354,9 +452,12 @@ def _account(facts: list, thread, about: str,
 
     def line(f) -> str:
         stamp = f"[{f.date.isoformat()}] " if f.date else ""
-        return f"{stamp}{_source(f)}{f.statement.strip()}"
+        return f"{stamp}{_source(f)}{f.statement.strip()}{_marks(f)}"
 
     kept = [line(f) for f in pinned]
+    #: The FACTS behind the rendered lines. `kept` holds strings that carry
+    #: this product's own words; the guard input is built from these.
+    shown: list = list(pinned)
     # THE NOTE COUNTS AGAINST THE BUDGET, because it is sent to the model like
     # everything else. Appending it after the check made the account exceed
     # the budget by exactly the length of the sentence explaining that it had
@@ -371,14 +472,50 @@ def _account(facts: list, thread, about: str,
         if used + len(text) + 1 > ACCOUNT_BUDGET and kept:
             break
         kept.append(text)
+        shown.append(f)
         used += len(text) + 1
 
     left_out = len(facts) - len(kept)
     account = "\n".join(kept)
+
+    # THE THIRD STATE, SAID ONCE AND NOT FIFTEEN TIMES.
+    #
+    # `not_assessed` is the honest answer when no basis read has run, and a
+    # third state that is invisible is the S8 shape -- the model reads every
+    # unmarked line as ordinary rather than as ungraded. Marking each fact
+    # would spend roughly 240 characters of a 3000-character budget repeating
+    # one sentence, and those characters are paid for in facts that then do
+    # not fit. So it is stated once, about the file.
+    if kept and not any(f.basis is not FactBasis.NOT_ASSESSED for f in facts):
+        account += ("\n[How the client KNOWS any of this has not been "
+                    "assessed. Nothing above is marked for basis.]")
     if left_out > 0:
         account += (f"\n[{left_out} earlier statement(s) are on the file and "
                     f"not repeated here. Every dated event is above.]")
-    return account, max(left_out, 0)
+
+    # THE GUARD INPUT, BUILT APART AND FROM THE STATEMENTS ALONE.
+    #
+    # `advocate_words` used to return the account, which was safe only while
+    # the account was nothing but what the advocate wrote. It stopped being
+    # that: `_source` prefixes a document name (B-093), `_marks` appends a
+    # basis (B-094), and the two notes above are whole sentences this product
+    # composed.
+    #
+    # THE COST OF GETTING THIS WRONG HAS NOW BEEN PAID TWICE. The first time,
+    # the posture extractor read "we act for the party moving" out of OUR OWN
+    # blocking question and the verbatim guard confirmed the span -- because
+    # it was there, in our text. The second time was this very change: the
+    # note above reads "How the client KNOWS any of this has not been
+    # assessed", `_FIRST_PERSON` matches the word `client`, and
+    # `speaks_of_the_representation` became TRUE ON EVERY MATTER. A posture of
+    # COMPLAINANT was then settled out of "a cheque was dishonoured on 3
+    # March" -- C3 exactly, the reinstatement defect, reached by widening an
+    # input rather than by a bad inference.
+    #
+    # Rewording the note would have fixed this note. Building the two strings
+    # apart fixes the next one.
+    words = "\n".join(f.statement.strip() for f in shown)
+    return account, max(left_out, 0), words
 
 
 def _ranked(facts: list, about: str) -> list:
