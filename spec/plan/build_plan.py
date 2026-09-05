@@ -2336,6 +2336,113 @@ d("B-084", "2026-09-04", "tooling",
   "tests/test_tooling_bites.py::"
   "test_a_child_that_prints_non_ascii_still_reports_its_failure")
 
+d("B-085", "2026-09-04", "tooling",
+  "THE SCENARIO RUNNER DID NOT SURVIVE AUTHENTICATION, and it would have "
+  "failed AFTER the fingerprint check passed — the point in a run where "
+  "everything looks ready to go. It posted `advocate_id` in a body that no "
+  "longer has the field and never signed in, so every turn would have "
+  "returned 401.",
+  "A1 moved the advocate off the request and onto a session, and the sweep "
+  "covered `nm/` and `tests/` and NOT `tools/`. CLAUDE.md \u00a71 in one "
+  "line: stating a fix generally is not the same as applying it generally. "
+  "The population for `who calls /api/turn` is the whole repo, not the two "
+  "directories I happened to be editing.",
+  "S1 — an absent input reading as success",
+  "Preparing the GS-15 run. Caught before any paid call, by reading the "
+  "runner rather than by watching it fail.",
+  "The runner enrols nothing and chooses nothing: it signs in with a "
+  "password from the environment, carries the session in a cookie jar, and "
+  "REFUSES BEFORE SPENDING if it cannot authenticate — for the same reason "
+  "the fingerprint check refuses, since a run that cannot sign in produces "
+  "five 401s and an empty report that reads like a product answering "
+  "nothing.",
+  "Yes — and the sweep is the lesson, not the fix. `grep -rln api/turn tools/` "
+  "was the whole population and took a second; not running it cost a defect "
+  "that would have surfaced mid-run with money already spent.",
+  "tools/run_scenario.py refuses before the first paid call unless a session "
+  "is live")
+
+d("B-086", "2026-09-04", "core",
+  "A CORRECTION ADDS A SECOND FACT INSTEAD OF SUPERSEDING THE FIRST, so "
+  "GS-15\u2019s entire spine failed. The advocate said the agreement is dated "
+  "15-4-1984, then \u201csorry, that is wrong. It is dated 15-4-2024\u201d — "
+  "and BOTH dates sit on the chronology as separate events. The limitation "
+  "runs from the earliest dated fact, so turn 5 reported a period that "
+  "expired on 1987-04-15 for an agreement the advocate had corrected to 2024.",
+  "`Fact.superseded_by` has existed since slice 1 and NOTHING IN THE PRODUCT "
+  "EVER SETS IT. The date reader adds events; nothing reads a turn as a "
+  "correction of an earlier one, so the cascade has no fact-level trigger and "
+  "the arithmetic silently prefers the older date.",
+  "S1 — an absent input reading as success",
+  "The GS-15 served run, then reading the matter summary: both 1984-04-15 and "
+  "2024-04-15 on the chart, and `grep superseded_by= nm/` returning nothing.",
+  "NOT FIXED. It is B-073\u2019s shape exactly — a mechanism with no "
+  "producer — and it is the second time that shape has cost a whole scenario. "
+  "What closes it: read a turn for whether it CORRECTS a fact already on the "
+  "file, set `superseded_by` on the one it replaces, and exclude superseded "
+  "facts from the chart the arithmetic reads.",
+  "Yes, and the general form is worth more than the fix: A FIELD THE TYPE "
+  "DECLARES AND NOTHING WRITES IS INVISIBLE TO EVERY CHECK IN THIS BUILD. "
+  "`superseded_by`, `Factor`, `AdvocateIdentity` and `Salvage` were all in "
+  "that state, and three of them were found only by driving a real "
+  "conversation. The audit is mechanical — every optional field on a "
+  "persisted type, asked which code ever assigns it.",
+  "docs/GOLDEN_SET.md GS-15; the run of 4 September 2026",
+  "Open")
+
+d("B-087", "2026-09-04", "core",
+  "TWO OF FIVE TURNS ON GS-15 WERE WITHHELD BY G-GROUND, including the "
+  "correction turn. The advocate\u2019s correction produced nothing at all, "
+  "and on a fresh run of the same first turn the same input was served "
+  "normally — so it is not deterministic on the input.",
+  "NOT ESTABLISHED. The withheld turns carried a D1.1 absurdity disclosure "
+  "(\u201cI am not putting this figure in front of you: limitation expires "
+  "1987-04-15, before events the file holds\u201d), which is that control "
+  "working correctly on B-086\u2019s wrong date — but whether the withholding "
+  "follows from it is a hypothesis and is recorded as one.",
+  "S1 — an absent input reading as success",
+  "The GS-15 served run. A reproduction of turn 1 alone succeeded, which is "
+  "what makes the input-determinism claim measurable rather than assumed.",
+  "NOT FIXED, AND THE CAUSE IS NOT MEASURED. Fixing B-086 removes the absurd "
+  "date and may remove this with it; if it does not, the next step is to "
+  "instrument which assertion the grounding gate found unsupported rather "
+  "than to guess a second time.",
+  "Unknown until measured. Recorded now so it is not rediscovered as a "
+  "surprise, and marked as an observation rather than a diagnosis.",
+  "docs/GOLDEN_SET.md GS-15; the run of 4 September 2026",
+  "Open")
+
+d("B-088", "2026-09-05", "core",
+  "THE CORRECTION READ FIRES ON ONE RUN AND NOT THE NEXT, ON IDENTICAL "
+  "INPUT. Measured across two GS-15 runs against the same code: the first "
+  "recorded `G-CORRECTION: superseded` on \u201csorry, that is wrong. It is "
+  "dated 15-4-2024\u201d; the second fired nothing, left both dates live, and "
+  "computed the period from 1984 again \u2014 reporting a claim that expired "
+  "in 1987 for an agreement dated 2024.",
+  "B-086\u2019s mechanism is right and its TRIGGER is a model read on the "
+  "cheap tier. Every guard around it holds: the ids are checked against the "
+  "file, the replacement must come from this turn, nothing is deleted. None "
+  "of that helps when the read simply returns an empty list.",
+  "S1 \u2014 an absent input reading as success",
+  "Two consecutive served runs of GS-15, then the recorded transcripts: "
+  "`G-CORRECTION` present on one and absent on the other for the same "
+  "sentence. The unit tests pass in both worlds, because they drive the "
+  "reader with an answer rather than asking for one.",
+  "NOT FIXED, AND NOT BY A BETTER PROMPT. A correction changes every number "
+  "downstream of it, which is exactly the case CLAUDE.md reserves the "
+  "expensive tier for: `reserve the expensive one for where it changes the "
+  "answer`. The hard tier is NOT CONFIGURED on this installation "
+  "(`hard_tier: not configured` on /api/health), so the read cannot be moved "
+  "there yet. Declared rather than done.",
+  "Yes, and it names a gap in how this build is tested. Every reader in the "
+  "product is unit-tested by handing it a model answer and checking the "
+  "guards \u2014 which proves the guards and says NOTHING about whether the "
+  "read produces that answer. A read whose failure mode is `returns nothing` "
+  "passes every test in the suite. The scenario runs are the only thing that "
+  "sees it, and they see it only when they happen to.",
+  "docs/GOLDEN_SET.md GS-15; the two runs of 4-5 September 2026",
+  "Open")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

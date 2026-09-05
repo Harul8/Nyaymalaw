@@ -28,7 +28,9 @@ this reports the citation ledger, not a diff of the English.
 from __future__ import annotations
 
 import argparse
+import http.cookiejar
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -190,15 +192,49 @@ def server_fingerprint() -> tuple[str | None, str]:
     return fp, "ok"
 
 
-def post(payload: dict) -> tuple[int, dict]:
+#: THE SESSION, CARRIED. A1 moved the advocate off the request and onto a
+#: cookie the server issues, so a runner that posts JSON and forgets the jar
+#: gets 401 on every turn -- after the fingerprint check has already passed,
+#: which is the moment in the run where everything looks ready to go.
+_JAR = http.cookiejar.CookieJar()
+_OPENER = urllib.request.build_opener(
+    urllib.request.HTTPCookieProcessor(_JAR))
+
+
+def _call(path: str, payload: dict | None = None) -> tuple[int, dict]:
+    data = json.dumps(payload).encode("utf8") if payload is not None else None
     req = urllib.request.Request(
-        BASE + "/api/turn", data=json.dumps(payload).encode("utf8"),
-        headers={"Content-Type": "application/json"}, method="POST")
+        BASE + path, data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST" if data is not None else "GET")
     try:
-        with urllib.request.urlopen(req, timeout=120) as r:
+        with _OPENER.open(req, timeout=120) as r:
             return r.status, json.loads(r.read())
     except urllib.error.HTTPError as e:
-        return e.code, json.loads(e.read())
+        try:
+            return e.code, json.loads(e.read())
+        except Exception:  # noqa: BLE001 -- a non-JSON error page
+            return e.code, {}
+
+
+def sign_in(advocate_id: str, password: str) -> tuple[bool, str]:
+    """Enrol if needed, then authenticate. Returns whether the session is live.
+
+    ENROLMENT IS DONE HERE AND NOT BY HAND because a scenario advocate is a
+    test fixture, not a person: it exists for the length of a run and its
+    password comes from the environment so nothing is chosen in this file.
+    """
+    status, body = _call("/api/login",
+                         {"advocate_id": advocate_id, "password": password})
+    if status == 200:
+        return True, "signed in"
+    return False, str(body.get("detail") or f"HTTP {status}")
+
+
+def post(payload: dict) -> tuple[int, dict]:
+    """One turn. The advocate is NOT in the payload any more -- it comes from
+    the session, and there is no field left to override it with."""
+    return _call("/api/turn", payload)
 
 
 # ---------------------------------------------------- independent verifier ---
@@ -297,11 +333,32 @@ def main() -> int:
               "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force }")
         return 2
 
+    # ---- AND WHO IS RUNNING IT ----------------------------------------
+    #
+    # Refused BEFORE any paid call, for the same reason the fingerprint is:
+    # a run that cannot authenticate produces five 401s and an empty report,
+    # which reads exactly like a product that answered nothing.
+    advocate = os.environ.get("NM_SCENARIO_ADVOCATE", "adv_scenarios")
+    password = os.environ.get("NM_SCENARIO_PASSWORD", "")
+    if not password:
+        print("REFUSED. Set NM_SCENARIO_PASSWORD to the password of the "
+              "scenario advocate.")
+        print(f"  Enrol one first:  python tools/enrol.py --id {advocate} "
+              f"--name 'Scenario runner' --enrolment 'AP/0000/2000' "
+              f"--practice Hyderabad --firm firm_scenarios")
+        return 2
+    ok, why = sign_in(advocate, password)
+    if not ok:
+        print(f"REFUSED. Could not sign in as {advocate}: {why}")
+        print("  This run would cost money and prove nothing.")
+        return 2
+
     # ---- EVERY NAMED SCENARIO MUST BE RUNNABLE -------------------------
     #
     # `continue` on a scenario with no scripted turns is the same defect: the
     # caller named five, three had no turns, and the run reported success. A
     # scenario that could not run must never read as one that passed.
+    incomplete: list[tuple[str, int, int]] = []
     unscripted = [g for g in args.scenario if not TURNS.get(g)]
     if unscripted:
         print(f"REFUSED. {len(unscripted)} named scenario(s) have no scripted "
@@ -319,8 +376,9 @@ def main() -> int:
         print(f"{gid}   {len(turns)} turn(s)")
         print("=" * 78)
         matter = None
+        withheld_at = None
         for i, message in enumerate(turns, 1):
-            payload = {"advocate_id": f"gold_{gid}", "message": message}
+            payload = {"message": message}
             if matter:
                 payload["matter_id"] = matter
             status, body = post(payload)
@@ -330,6 +388,29 @@ def main() -> int:
                 print(f"      WITHHELD by {d.get('withheld_by')}")
                 for line in d.get("not_established", []):
                     print(f"        - {line[:100]}")
+
+                # THE SCENARIO STOPS HERE, and this used to `continue`.
+                #
+                # A withheld turn commits nothing, so it returns no matter id
+                # — and the loop carried on with `matter` still None, opening
+                # a FRESH MATTER on every remaining turn. Five turns ran, four
+                # of them on files that had never been briefed, each blocking
+                # on a posture nobody had stated, and the run printed a
+                # transcript that looked like a product refusing to answer.
+                #
+                # Measured on GS-15, 4 September 2026: turn 1 was withheld and
+                # the whole cascade the scenario exists to prove never ran, at
+                # full price. A run that measured nothing must not be
+                # distinguishable only by someone noticing the output looks
+                # thin — that is B-061 with a different cause.
+                if matter is None:
+                    print()
+                    print("      STOPPING THIS SCENARIO. The turn that opens "
+                          "the matter was withheld, so there is no file for "
+                          "the remaining turns to be about. Continuing would "
+                          "open a fresh matter on each and measure nothing.")
+                    withheld_at = i
+                    break
                 continue
             matter = body.get("matter_id") or matter
             if body["blocked"]:
@@ -348,6 +429,22 @@ def main() -> int:
             print(f"      metrics   {m['outcome']} · {m['latency_ms']}ms · "
                   f"{m['llm_calls']} call(s) · ${m['cost_usd']:.6f}")
 
+        if withheld_at is not None:
+            # AN INCOMPLETE RUN IS A FAILED RUN, and it exits non-zero.
+            # A scenario that stopped at turn 1 and then printed a clean
+            # citation ledger is the shape this whole tool exists to
+            # refuse: a run that measured nothing, reporting success.
+            incomplete.append((gid, withheld_at, len(turns)))
+
+    if incomplete:
+        print("\n" + "=" * 78)
+        print("SCENARIOS THAT DID NOT FINISH")
+        print("=" * 78)
+        for gid, at, total in incomplete:
+            print(f"  {gid}: stopped at turn {at} of {total} — the turn that "
+                  f"opens the matter was withheld, so nothing after it was "
+                  f"measured.")
+
     print("\n" + "=" * 78)
     print("CITATION LEDGER")
     print("=" * 78)
@@ -358,7 +455,7 @@ def main() -> int:
     for gid, c in failures:
         print(f"\n  FAILED {gid}  {c['verdict']}  {c['locator']}")
         print(f"         {c['detail']}")
-    return 1 if failures else 0
+    return 1 if (failures or incomplete) else 0
 
 
 if __name__ == "__main__":

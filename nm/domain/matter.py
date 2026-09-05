@@ -429,7 +429,39 @@ class Matter:
         return replace(self, threads=others + (thread,), version=self.version + 1)
 
     def with_fact(self, fact: Fact) -> "Matter":
+        """ADD a fact. Refuses one whose id is already on the file.
+
+        A matter holding two facts with one id is a matter where every lookup
+        is ambiguous and the FIRST one wins by accident of order. It happened:
+        marking a fact superseded went through here, appended a second copy,
+        and `chart` kept the un-superseded one — so the correction was applied
+        and had no effect (B-086's fix, defeated by its own write).
+
+        Amending an existing fact is `amending`, which says so.
+        """
+        if any(f.id == fact.id for f in self.facts):
+            raise ValueError(
+                f"fact {fact.id} is already on this matter. `with_fact` adds; "
+                f"use `amending` to replace one, so that a second copy cannot "
+                f"be created by a caller who meant to change the first.")
         return replace(self, facts=self.facts + (fact,), version=self.version + 1)
+
+    def amending(self, fact: Fact) -> "Matter":
+        """REPLACE the fact with this id, keeping its position on the file.
+
+        Position is kept because the chart sorts dated facts by date and lists
+        undated ones in the order they arrived; re-appending an amended fact
+        would move it, and an advocate reading their own chronology would find
+        it had rearranged itself.
+        """
+        if not any(f.id == fact.id for f in self.facts):
+            raise ValueError(
+                f"fact {fact.id} is not on this matter, so there is nothing "
+                f"to amend. `with_fact` is how a new one is added.")
+        return replace(
+            self, facts=tuple(fact if f.id == fact.id else f
+                              for f in self.facts),
+            version=self.version + 1)
 
     def has_applied(self, turn_id: TurnId) -> bool:
         return turn_id in self.turns_applied

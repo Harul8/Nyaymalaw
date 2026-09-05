@@ -287,8 +287,22 @@ def chart(facts: tuple[Fact, ...], chronology: tuple[FactId, ...]) -> tuple[Fact
     silently omits what it could not date is the same defect as one that
     guesses, arriving as an absence rather than as a wrong number.
     """
-    on_thread = [f for f in facts if f.id in set(chronology)]
-    dated = sorted((f for f in on_thread if f.date is not None),
-                   key=lambda f: f.date)
-    undated = [f for f in on_thread if f.date is None]
+    # A SUPERSEDED FACT LEAVES THE CHART AND STAYS ON THE FILE.
+    #
+    # This is the ONE place the arithmetic stops reading a corrected entry,
+    # and it is one place on purpose: the limitation, the coverage record, the
+    # adverse-fact read and the theory all take their facts from here, so a
+    # correction applied in four places is a correction that will be applied
+    # in three of them next month.
+    #
+    # Measured on GS-15: "the agreement is dated 15-4-1984" then "sorry, that
+    # is wrong. It is dated 15-4-2024" left BOTH on the chart, and the period
+    # ran from the earlier — reporting a claim that expired in 1987 for an
+    # agreement dated 2024. Nothing was deleted then and nothing is deleted
+    # now; `superseded_by` marks it, and §5.4 needs the prior value to still
+    # exist so a change can be reported WITH what it was before.
+    live = [f for f in facts
+            if f.id in set(chronology) and f.superseded_by is None]
+    dated = sorted((f for f in live if f.date is not None), key=lambda f: f.date)
+    undated = [f for f in live if f.date is None]
     return tuple(dated + undated)

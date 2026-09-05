@@ -385,6 +385,23 @@ GATES: tuple[Gate, ...] = (
         built=True,
     ),
     Gate(
+        id="G-CORRECTION",
+        condition="Something the advocate just said REPLACES an entry already "
+                  "on the file, rather than adding to it.",
+        states=("superseded", "none", "not_assessed"),
+        response=Response.DISCLOSE,
+        scope=Scope.THREAD,
+        persistence=Persistence.STICKY,
+        recovery=Recovery.SYSTEM,
+        visible="NOTHING IS DELETED. The replaced entry stays on the file and "
+                "leaves the CHART, which is where the arithmetic reads — an "
+                "advocate needs to see what they said as well as what replaced "
+                "it, and §5.4 needs the prior value to still exist so a change "
+                "can be reported with what it was before.",
+        feature="A3",
+        built=True,
+    ),
+    Gate(
         id="G-CASCADE",
         condition="A value derived on an earlier turn has MOVED, because a "
                   "fact it rested on was corrected.",

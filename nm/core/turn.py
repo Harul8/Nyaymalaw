@@ -29,6 +29,7 @@ from nm.core import (
     adversarial,
     cascade,
     chronology,
+    correction,
     deadlines,
     grounding,
     limitation,
@@ -666,7 +667,14 @@ class TurnEngine:
         # the account before clarifying anything -- and these are derived
         # from it, each carrying the span it was read from.
         dated = self._read_dates(turn, matter, thread, metrics)
+
+        # WHAT WAS ALREADY THERE, captured BEFORE this turn's events are added.
+        # The correction read needs both sides and cannot tell them apart
+        # afterwards.
+        existing = chronology.chart(matter.facts, thread.chronology)
+
         ids = [fact.id]
+        added: list[Fact] = []
         for row in dated:
             if not row.dated:
                 continue
@@ -677,10 +685,22 @@ class TurnEngine:
                                       span=row.date_expression),
                 certainty=row.certainty, date=row.on)
             matter = matter.with_fact(event)
+            added.append(event)
             ids.append(event.id)
 
         thread = replace(thread, chronology=thread.chronology + tuple(ids))
         matter = matter.with_thread(thread)
+
+        # B-086. DOES ANY OF THIS REPLACE SOMETHING ALREADY RECORDED?
+        #
+        # `Fact.superseded_by` existed from slice 1 and nothing ever set it,
+        # so a correction added a second event beside the first. GS-15: the
+        # agreement dated 15-4-1984, corrected to 15-4-2024, and BOTH stayed
+        # on the chart -- the period ran from the earlier and reported a claim
+        # that expired in 1987. Every citation on that turn was right.
+        if added and existing:
+            matter = self._supersede(turn, matter, existing, tuple(added),
+                                     metrics)
 
         if not posture.resolved:
             # THE WHOLE FILE, not just this message and not just the
@@ -791,6 +811,48 @@ class TurnEngine:
                       f"{read.refused}")))
             return None
         return read.cause.value if read.resolved else None
+
+    @implements("A3")
+    def _supersede(self, turn: TurnInput, matter: Matter,
+                   existing: tuple[Fact, ...], added: tuple[Fact, ...],
+                   metrics: TurnMetrics) -> Matter:
+        """Mark what this turn replaced. NOTHING IS DELETED.
+
+        The superseded fact stays on the matter and stays on the thread\'s
+        chronology; it leaves the CHART, which is where the arithmetic reads.
+        §5.4 needs the prior value to still exist so a change can be reported
+        with what it was before, and an advocate needs to see what they said
+        as well as what replaced it.
+        """
+        try:
+            res = self._model.structured(
+                correction.build_prompt(turn.message, existing, added),
+                correction.CORRECTION_SCHEMA, Tier.ROUTINE, max_tokens=400)
+            metrics.record_call(res)
+            read = correction.read(res.data or {}, existing, added)
+        except ModelError as exc:
+            # NOT ASSESSED. A correction that could not be read leaves both
+            # entries standing, which is the state this defect was about --
+            # so it is said rather than passed over.
+            metrics.fire("G-MODEL", "unavailable",
+                         f"corrections were not read: {exc}")
+            return matter
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("A3", f"correction read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return matter
+
+        for refused in read.refused:
+            metrics.violate("A3", f"correction not taken: {refused}")
+
+        for c in read.corrections:
+            old = next((f for f in matter.facts if f.id == c.supersedes), None)
+            if old is None:
+                continue
+            metrics.fire("G-CORRECTION", "superseded",
+                         f"{c.supersedes} replaced by {c.replaced_by}")
+            matter = matter.amending(replace(old, superseded_by=c.replaced_by))
+        return matter
 
     @implements("C5")
     def _read_dates(self, turn: TurnInput, matter: Matter, thread: Thread,
@@ -1178,17 +1240,28 @@ class TurnEngine:
         why, because a limitation nobody computed must never read as a
         limitation that is fine.
         """
+        # THE LIVE ENTRIES, not the raw chronology. A superseded fact is
+        # still on the thread and must not be reported as one the arithmetic
+        # never weighed — it is one the arithmetic is not supposed to weigh.
+        #
+        # Taken straight off the CHART, which has already dropped them. The
+        # first version called `live_ids(chart, thread.chronology)` and was
+        # wrong in the quiet direction: the chart holds no superseded facts,
+        # so it would have found none to drop and returned the whole
+        # chronology — the exact bug it was written to fix, one layer up.
+        live = tuple(f.id for f in chart)
+
         found = next((f for f in result.findings
                       if "Article" in f.ref or "Limitation" in f.ref), None)
         accrual = next((f for f in chart if f.date is not None), None)
         if found is None:
             return limitation.not_computed(
                 for_side, "no limitation Article was retrieved for this cause",
-                thread.chronology)
+                live)
         if accrual is None:
             return limitation.not_computed(
                 for_side, "no dated event on this thread to run the period from",
-                thread.chronology)
+                live)
 
         # THE PERIOD COMES OUT OF THE RETRIEVED TEXT. It was a constant here --
         # `years=3` on every computation, including one that had just retrieved
@@ -1200,7 +1273,7 @@ class TurnEngine:
                 for_side,
                 f"the period is not stated in the text retrieved for "
                 f"{found.ref} — I will not supply one from memory",
-                thread.chronology)
+                live)
         # NOTHING IS PASSED AS `considered`, AND THAT IS THE POINT.
         #
         # This passed every non-accrual entry with the reason "on the chart; it
@@ -1237,7 +1310,7 @@ class TurnEngine:
         bare = limitation.compute(
             for_side=for_side, article=found.ref, accrual=accrual.id,
             accrual_on=accrual.date, accrual_reason=accrual.statement[:70],
-            chronology=thread.chronology, period=period)
+            chronology=live, period=period)
 
         read = self._factors(turn, thread, chart, metrics, grounds,
                              bare.expires_on)
@@ -1245,7 +1318,7 @@ class TurnEngine:
         return limitation.compute(
             for_side=for_side, article=found.ref, accrual=accrual.id,
             accrual_on=accrual.date, accrual_reason=accrual.statement[:70],
-            chronology=thread.chronology, period=period,
+            chronology=live, period=period,
             factors=read.factors)
 
     @implements("D3")

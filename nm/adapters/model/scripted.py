@@ -585,6 +585,50 @@ def scripted_salvage(user: str) -> str:
     return json.dumps({"failure_scope": "framing", "varied": varied})
 
 
+#: Words an advocate uses when REPLACING something rather than adding to it.
+#:
+#: Narrow on purpose. A new event on a different day is not a correction, and
+#: a double that treated it as one would erase a real part of the chronology --
+#: which is a worse defect than the one being fixed.
+_CORRECTS = ("sorry, that is wrong", "that is wrong", "i meant",
+             "it is actually", "correction:", "not 20", "rather than")
+
+
+def scripted_correction(user: str) -> str:
+    """A deterministic stand-in for the correction read.
+
+    It pairs the FIRST entry already on the file with the FIRST entry added by
+    this turn, which is what a correction of a single dated fact looks like.
+    Both ids are read off the prompt: `correction.read` refuses a pair the
+    file cannot support, so a double that invented one would produce a refusal
+    and nothing else.
+    """
+    block = user or ""
+    lower = block.lower()
+    if not any(n in lower for n in _CORRECTS):
+        return json.dumps({"corrections": []})
+
+    def first_id(header: str) -> str | None:
+        start = block.find(header)
+        if start < 0:
+            return None
+        rest = block[start + len(header):]
+        for line in rest.splitlines():
+            if "	" in line:
+                return line.strip().split("	", 1)[0].strip()
+            if line.strip().startswith("(none)"):
+                return None
+        return None
+
+    old = first_id("ALREADY ON THE FILE:")
+    new = first_id("ADDED BY THIS TURN:")
+    if not old or not new or old == new:
+        return json.dumps({"corrections": []})
+    return json.dumps({"corrections": [{
+        "supersedes": old, "replaced_by": new,
+        "why": "the advocate says the earlier entry was wrong"}]})
+
+
 #: Schema TITLE -> the responder that answers it. AN EXACT KEY, NOT A SUBSTRING.
 #:
 #: It was a substring search over the schema's JSON, and that is fuzzy matching
@@ -612,6 +656,7 @@ SCRIPTED_READS: dict[str, object] = {
     "attacks": scripted_attacks,
     "exposure": scripted_exposure,
     "salvage": scripted_salvage,
+    "correction": scripted_correction,
 }
 
 _tokens = estimate_tokens  # one owner: nm.adapters.model._budget
