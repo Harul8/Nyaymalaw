@@ -1827,7 +1827,16 @@ d("B-065", "2026-08-31", "knowledge",
   "S3 — a zero result that reads as absence",
   "The re-run against current code, which is the first time D2 was exercised "
   "on real input at all",
-  "NOT FIXED, AND DELIBERATELY NOT PATCHED. Adding `in time`, `still in "
+  "FIXED, AND RE-MEASURED ON 5 SEPTEMBER 2026. Five causes of action put "
+  "to the LIVE corpus, every one returning its Article verbatim and "
+  "binding for Telangana: possession_on_title \u2192 Art.65 (twelve "
+  "years), specific_performance \u2192 Art.54, money_lent \u2192 Art.19, "
+  "breach_of_contract \u2192 Art.55, goods_sold_price \u2192 Art.14. "
+  "GS-15\u2019s served run of 4-5 September computed a position end to "
+  "end. THIS ROW WENT ON SAYING NOT FIXED AFTER IT STOPPED BEING TRUE, "
+  "and was nearly quoted as the reason not to run the goldens \u2014 "
+  "B-100.\n\nWhat it said while it was true: NOT FIXED, AND "
+  "DELIBERATELY NOT PATCHED. Adding `in time`, `still in "
   "time`, `barred` to the keyword list is the phrase-list defect this project "
   "already paid for once: ten exact phrases meant \"we act for the workman\" "
   "and an advocate whose words were missing was asked forever. That was fixed "
@@ -1836,8 +1845,11 @@ d("B-065", "2026-08-31", "knowledge",
   "already carries the comment marking its current form as the only one "
   "available before slice 5. Recorded here so the gap is work rather than a "
   "surprise, and so S5 starts against a measured number instead of a guess.",
-  "docs/GOLDEN_SET.md; spec/plan/build_plan.py (E-051, S5, H3)",
-  "Open")
+  "docs/GOLDEN_SET.md; spec/plan/build_plan.py (E-051, S5, H3). "
+  "Re-measured 5 September 2026 against the live corpus \u2014 a "
+  "READ-ONLY query costing nothing, which is why it should have been run "
+  "days earlier than the question that prompted it",
+  "Fixed")
 
 d("B-066", "2026-08-31", "tooling",
   "A JUDGED SUITE WITH NOTHING SCORED RETURNED 0. `run_goldens.py --suite "
@@ -2376,6 +2388,12 @@ d("B-086", "2026-09-04", "core",
   "S1 — an absent input reading as success",
   "The GS-15 served run, then reading the matter summary: both 1984-04-15 and "
   "2024-04-15 on the chart, and `grep superseded_by= nm/` returning nothing.",
+  "FIXED on 4-5 September 2026 and verified ON A SERVED TURN. The date "
+  "read carries `corrects`, `superseded_by` is set on the fact it "
+  "replaces, and `chronology.chart` excludes superseded facts in ONE "
+  "place \u2014 so the limitation, the coverage record, the adverse-fact "
+  "read and the theory all stop reading it together. THIS ROW ALSO STOOD "
+  "OPEN AFTER IT WAS FIXED (B-100).\n\nWhat it said while it was true: "
   "NOT FIXED. It is B-073\u2019s shape exactly — a mechanism with no "
   "producer — and it is the second time that shape has cost a whole scenario. "
   "What closes it: read a turn for whether it CORRECTS a fact already on the "
@@ -2388,8 +2406,10 @@ d("B-086", "2026-09-04", "core",
   "conversation. The audit is mechanical — every optional field on a "
   "persisted type, asked which code ever assigns it.",
   "THE POPULATION IT BELONGS TO, enumerated later: `superseded_by` was a field on the persisted record that nothing wrote, and tests/test_every_persisted_field_has_a_writer.py::test_every_persisted_field_has_a_writer_or_is_declared_reserved sweeps exactly that — it would have found this before an advocate did. Beneath it: "
-  "docs/GOLDEN_SET.md GS-15; the run of 4 September 2026",
-  "Open")
+  "tests/test_correction_supersedes.py::"
+  "test_a_corrected_date_replaces_the_old_one_on_a_served_turn; "
+  "docs/GOLDEN_SET.md GS-15, the run of 4-5 September 2026",
+  "Fixed")
 
 d("B-087", "2026-09-04", "core",
   "TWO OF FIVE TURNS ON GS-15 WERE WITHHELD BY G-GROUND, including the "
@@ -2885,6 +2905,41 @@ d("B-099", "2026-09-05", "core",
   "with `{}` rather than `{\u2018events\u2019: []}` \u2014 the distinction IS "
   "the defect, so a test that could not tell them apart was asserting the "
   "wrong behaviour and did.")
+
+d("B-100", "2026-09-05", "tooling",
+  "AN OPEN DEFECT THAT HAS BEEN FIXED GOES ON READING AS OPEN, AND NOTHING "
+  "NOTICES. Two rows \u2014 B-065, no limitation Article was ever retrieved, "
+  "and B-086, a correction adds a second fact instead of superseding \u2014 "
+  "were both fixed and both still said NOT FIXED. Asked whether the build was "
+  "ready for a judged run, the answer read straight off the register was "
+  "\u2018no: five golden scenarios compute no limitation\u2019. Measured "
+  "against the live corpus in one read-only query, all five causes return "
+  "their Article, verbatim and binding.",
+  "`test_every_check_the_register_names_actually_exists` verifies that a "
+  "FIXED row names a real test. NOTHING asks anything of an OPEN row. The "
+  "register is verified in one direction only, and the unverified direction "
+  "is the one a person reads when deciding what to do next.",
+  "S1 \u2014 an absent input reading as success",
+  "The advocate asking \u2018are we ready for the golden run?\u2019 on 5 "
+  "September 2026. Answering honestly meant CHECKING the open rows rather "
+  "than quoting them, and two of the three did not survive the check.",
+  "NOT FIXED YET, AND THE MECHANISM IS NAMED. An OPEN row must carry a "
+  "REPRODUCTION THAT RUNS \u2014 a test marked `xfail(strict=True)`, so the "
+  "day the defect stops reproducing the build FAILS and says the row is "
+  "stale. Same arrangement as `UNWIRED` in test_reached_from_production and "
+  "`AWAITING` in tools/trace.py: a declaration expires against the code "
+  "rather than in someone\u2019s memory. It does not fit every row \u2014 "
+  "B-078 is a design question with no reproduction to write \u2014 and those "
+  "are declared, which is the same shape once more.",
+  "Yes, and the rule is not about defects. A RECORD IS ONLY AS GOOD AS THE "
+  "DIRECTION IT IS VERIFIED IN, and a record verified in one direction gets "
+  "trusted in both. Every other table here that carries a state \u2014 the "
+  "gate matrix, the reads registry, UNWIRED, RESERVED, WITHHELD \u2014 "
+  "expires its entries against the code. The defect register expires only its "
+  "Fixed half, and the Open half is the half that decides what happens next.",
+  "None yet. The check to write is the xfail reproduction; until it exists, "
+  "an Open row is a claim nobody re-runs.",
+  "Open")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
