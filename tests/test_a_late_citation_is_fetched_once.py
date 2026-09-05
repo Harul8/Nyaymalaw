@@ -188,3 +188,43 @@ def test_an_ordinary_turn_makes_no_extra_round(tmp_path):
 
     assert hints == [], (
         f"an ordinary turn triggered a late-citation fetch for {hints}")
+
+
+def test_the_fetch_names_the_act_the_answer_named(tmp_path):
+    """THE DEFECT THAT MADE THE FIX DO NOTHING, and it is CLAUDE.md 5.
+
+    GS-15's second served run, 5 September 2026: both withheld turns stayed
+    withheld and the late round never fired. The query was `f"section
+    {number}"` -- a bare number naming no Act -- and retrieval answered "no Act
+    in the curated manifest governs this question".
+
+    Measured afterwards against the live corpus:
+
+        "section 49"                           0 findings
+        "Registration Act 1908 section 49"     1 usable
+        "section 53A Transfer of Property Act" 1 usable
+
+    Both provisions were held the whole time. Exact match decides WHICH Act,
+    and the Act was sitting in the answer's own sentence.
+    """
+    asked: list = []
+
+    class _Recording(_Evidence):
+        def fetch(self, need):
+            if need.provision_hint:
+                asked.append(need.question)
+            return super().fetch(need)
+
+    engine, _ = _engine(tmp_path, evidence=_Recording())
+    try:
+        engine.run(TurnInput(advocate_id="adv_1", today=TODAY,
+                             message=OPENING))
+    except TurnRefused:
+        pass
+
+    assert asked, "no late fetch was attempted at all"
+    for question in asked:
+        assert "Transfer of Property" in question, (
+            "the late fetch asked for a bare section number and named no Act. "
+            "A section number without an Act cannot be resolved -- that is the "
+            f"whole of CLAUDE.md 5:\n  {question!r}")

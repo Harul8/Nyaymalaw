@@ -3162,6 +3162,99 @@ d("B-105", "2026-09-05", "core",
   "which failed on exactly this and is the reason the interaction was found "
   "before it shipped.")
 
+d("B-106", "2026-09-05", "core",
+  "B-104\u2019S FIX RAN AND FETCHED NOTHING, so both withheld turns stayed "
+  "withheld. GS-15\u2019s second served run: turn 2 cited Limitation Act s.21 "
+  "and turn 4 cited Registration Act s.49, both correctly and neither "
+  "retrieved. The late-citation round asked retrieval for "
+  "`f\u2018section {number}\u2019` \u2014 A BARE NUMBER NAMING NO ACT \u2014 "
+  "and got back \u2018no Act in the curated manifest governs this "
+  "question\u2019.",
+  "The query was built from the citation NUMBER and threw away the sentence "
+  "it came from. That sentence names the Act: \u2018section 49 of the "
+  "Registration Act\u2019. Measured after the run: `section 49` returns 0 "
+  "findings, `Registration Act 1908 section 49` returns 1 usable, and "
+  "`section 53A Transfer of Property Act` returns 1 usable. Both provisions "
+  "were held the whole time.",
+  "S3 \u2014 a zero result from the wrong index",
+  "The second served run of GS-15, comparing it against predictions written "
+  "down BEFORE the run. \u2018Turns 3 and 4 served\u2019 was one of them and "
+  "it failed, which is why the query was inspected at all.",
+  "The fetch is given the ELEMENT\u2019S OWN TEXT as the question, with the "
+  "number still carried as `provision_hint`. The Act travels with the number "
+  "because the answer already put them in one sentence.",
+  "Yes, and it is CLAUDE.md \u00a75 in its purest form \u2014 exact match "
+  "decides WHICH Act, and a bare section number names none. The rule is "
+  "written at the top of the file that governs this build, the failure it "
+  "describes is the one that produced it, and the code still asked for "
+  "`section 49`. A rule you have read is not a rule you have applied.",
+  "tests/test_a_late_citation_is_fetched_once.py::"
+  "test_the_fetch_names_the_act_the_answer_named, which asserts on the "
+  "QUESTION the fetch sends rather than on whether a finding came back "
+  "\u2014 a fixture that happens to answer any query would hide this exactly "
+  "as the first version of the test did.")
+
+d("B-107", "2026-09-05", "core",
+  "THE SAME SENTENCE IS RECORDED AS TWO FACTS, and once as two IDENTICAL "
+  "ones. GS-15\u2019s second run left 8 facts on a 5-turn matter: "
+  "\u2018the agreement is dated 15-4-1984\u2019 exists undated AND dated from "
+  "the same turn, and \u2018Corrected: the agreement is dated 15-4-2024\u2019 "
+  "exists TWICE with the same statement and the same date. The account then "
+  "shows the advocate their own sentence twice, inside a budget measured in "
+  "characters.",
+  "The turn records the advocate\u2019s message as a fact AND the date read "
+  "produces a dated fact from the same sentence. `Matter.with_fact` refuses a "
+  "duplicate ID and nothing refuses duplicate CONTENT, so two extractions of "
+  "one sentence are two facts.",
+  "S9 \u2014 two owners for one truth",
+  "Reading the cause read\u2019s actual prompt out of the call trace, which "
+  "is the record built for exactly this on the same day. The duplicate is "
+  "visible in the prompt bytes.",
+  "NOT FIXED. The shape of it: a fact is the advocate\u2019s statement, and "
+  "one sentence yielding two of them means two paths are creating facts "
+  "without either knowing about the other. What refuses the second copy is "
+  "the question, not where the duplicate is.",
+  "Yes. It costs three ways \u2014 the account budget pays for the same words "
+  "twice, the model reads a file that looks like it says something twice, and "
+  "the limitation reads a chronology with two entries where the advocate "
+  "described one event.",
+  "None yet.",
+  "Open")
+
+d("B-108", "2026-09-05", "core",
+  "A STRONGER MODEL QUOTED THIS PRODUCT\u2019S OWN TEXT BACK AT IT, and the "
+  "guard correctly refused the read. On the first turn after the hard-tier "
+  "escalation, the cause read quoted a span running across THREE lines of the "
+  "account including our own `[1984-04-15]` date stamp. The verbatim guard "
+  "refused it \u2014 the span is not in anything the advocate wrote \u2014 "
+  "the cause was not taken, and the turn was withheld.",
+  "The prompt shows the account, which is the file as the product renders it: "
+  "statements, date stamps, source prefixes and notes. The GUARD is the "
+  "advocate\u2019s sentences alone (B-097). A weaker model quoted one "
+  "sentence and passed; a stronger one quoted the block it was actually shown "
+  "and failed. The gap between what a model is SHOWN and what it may QUOTE "
+  "widened the moment the model got better at using its context.",
+  "S1 \u2014 an absent input reading as success",
+  "GS-15\u2019s second served run, the first with gpt-5.2 on the decisive "
+  "reads. It is a BEHAVIOUR CHANGE FROM THE ESCALATION and would not have "
+  "appeared without it \u2014 which is an argument for rerunning a scenario "
+  "after a model change rather than assuming a better model is strictly "
+  "better.",
+  "NOT FIXED, and the guard is not what is wrong. Refusing a span that "
+  "includes our own stamp is exactly right: accepting it would let a model "
+  "settle a cause by quoting our own rendering back. What is wrong is that "
+  "the prompt invites it \u2014 the account is handed over as one block with "
+  "no mark saying which parts are the advocate\u2019s words. The shape of the "
+  "fix is that the prompt distinguishes what may be quoted from what may not, "
+  "so the model is not asked to guess.",
+  "Yes, and it is the third face of one thing. B-097 was the guard input "
+  "widening with the account. B-101 was the transcript serving review and "
+  "scoring. This is the PROMPT and the GUARD disagreeing about the same "
+  "text \u2014 and the disagreement only became visible when the model got "
+  "good enough to exploit it.",
+  "None yet.",
+  "Open")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

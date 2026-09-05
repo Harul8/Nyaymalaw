@@ -1773,23 +1773,40 @@ class TurnEngine:
         before, and the advocate is told what was looked for.
         """
         covered = grounding._covered_provisions(tuple(retrieved))
-        wanted: list[str] = []
+        wanted: list[tuple[str, str]] = []
+        seen: set[str] = set()
         for element in answer.elements:
             if element.disclosure:
                 continue
             for number in grounding.provisions_cited(element.text):
-                if number not in covered and number not in wanted:
-                    wanted.append(number)
+                if number not in covered and number not in seen:
+                    seen.add(number)
+                    # The element's own text carries the Act. Kept WITH the
+                    # number so the fetch can name what the answer named.
+                    wanted.append((number, element.text[:400]))
         if not wanted:
             return ()
 
         found: list = []
-        for number in wanted[:2]:
+        for number, sentence in wanted[:2]:
             # TWO AT MOST, and it is the same bound as the round itself. An
             # answer naming eight unretrieved provisions is not a turn one
             # more lookup will rescue; it is a turn that should be withheld.
+            # THE SENTENCE THAT CITED IT, NOT THE BARE NUMBER.
+            #
+            # The first version asked for `f"section {number}"` and retrieval
+            # returned NOTHING -- "no Act in the curated manifest governs this
+            # question" -- so the round never ran and both withheld turns of
+            # GS-15 stayed withheld. Measured afterwards: `section 49` gets 0
+            # findings, `Registration Act 1908 section 49` gets 1, and
+            # `section 53A Transfer of Property Act` gets 1. Both provisions
+            # were held all along.
+            #
+            # It is CLAUDE.md 5 in its purest form: exact match decides WHICH
+            # Act, and a bare section number names none. The Act was in the
+            # answer's own sentence and the query threw it away.
             need = EvidenceNeed(
-                question=f"section {number}", governing_date=turn.today,
+                question=sentence, governing_date=turn.today,
                 jurisdiction=turn.jurisdiction, provision_hint=number,
                 account="")
             result = self._fetch(need, metrics, exploratory=False)

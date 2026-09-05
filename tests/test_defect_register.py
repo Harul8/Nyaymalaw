@@ -431,6 +431,18 @@ NO_REPRODUCTION: dict[str, str] = {
         "tone made by a model against a rubric. A test asserting the absence "
         "of didactic phrasing would be a phrase list, and this project has "
         "already paid for one of those.",
+    "B-107":
+        "A DUPLICATE THE SCRIPTED PATH DOES NOT PRODUCE. Both extractions have "
+        "to run on the same sentence for the second fact to appear, and the "
+        "scripted date reader answers from a regex rather than from the "
+        "message the fact extractor saw. A reproduction would be driving two "
+        "stubs into agreement, which proves the stubs.",
+    "B-108":
+        "A MODEL BEHAVIOUR, and specifically a STRONGER model's. The read "
+        "quoted across three lines of the account because gpt-5.2 uses the "
+        "context it is given; the scripted double quotes whatever the fixture "
+        "tells it to. A test that made the double quote a stamp would be "
+        "asserting the fixture.",
     "B-088":
         "THE REMAINDER IS A MEASUREMENT, NOT A DEFECT. The escalation landed "
         "on 5 September 2026 -- the six decisive reads run on gpt-5.2, "
