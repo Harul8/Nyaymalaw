@@ -55,6 +55,12 @@ ENTRY_POINTS: dict[str, str] = {
 #: behaviour does not, and the difference is invisible to every other check in
 #: this build.
 UNWIRED: dict[str, str] = {
+    "nm.domain.reads":
+        "The read registry: which model calls are DECISIVE — their output IS a "
+        "date, an amount, or which law is read. Built with B-088's measurement "
+        "behind it, and unwired because escalation needs a hard-tier model "
+        "that is not the judge, which the config correctly refuses to let "
+        "collide. One env var away.",
     "nm.core.quarantine":
         "B4. Deliberate — the conflict screen that quarantines is slice 10 "
         "and is declared unbuilt in the gate matrix.",
@@ -263,6 +269,7 @@ def test_every_unwired_module_names_a_feature_that_exists():
 
     unowned = sorted(m for m in UNWIRED
                      if m not in OWNER and not m.startswith(("nm.domain.tiers",
+                                                            "nm.domain.reads",
                                                             "nm.knowledge.artefact")))
     assert not unowned, (
         f"these modules are UNWIRED and name no feature, so the status check "

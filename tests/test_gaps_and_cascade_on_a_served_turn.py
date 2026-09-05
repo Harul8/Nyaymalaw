@@ -230,3 +230,66 @@ def test_advice_that_rested_on_a_moved_value_is_named():
     (at_risk,) = cascade.advice_at_risk(prior, moved)
     assert at_risk.what.startswith("file the recovery suit")
     assert any("superseded" in line for line in cascade.report(moved, (at_risk,)))
+
+
+# ============ the conservation invariant: nothing is silently lost =========
+
+@pytest.mark.eval_id("E-092")
+def test_a_derivation_that_stopped_being_computed_is_reported():
+    """THE DIRECTION `changes` CANNOT SEE.
+
+    `changes` walks `after` and asks what moved, so a value present BEFORE and
+    absent now produces nothing from it — the function's own docstring reasons
+    carefully about a value that appears and never about one that vanishes.
+    Asked in that direction it cannot find forgetting, which is the one thing
+    it is for.
+
+    This matters most because nearly everything the product derives is
+    re-derived from scratch by a model read every turn. A read that found
+    three issues on turn 2 and nothing on turn 9 does not fail — it succeeds,
+    quietly, with less, and nothing else in the build could tell.
+    """
+    before = (cascade.Derived(name="issues on th_1", value="3",
+                              from_facts=("f1",)),
+              cascade.Derived(name="limitation on th_1", value="2027-06-12",
+                              from_facts=("f1",)))
+    after = (cascade.Derived(name="limitation on th_1", value="2027-06-12",
+                             from_facts=("f1",)),)
+
+    assert cascade.changes(before, after) == (), (
+        "if this ever reports something, the test below is measuring the "
+        "wrong thing")
+    (vanished,) = cascade.lost(before, after)
+    assert vanished.name == "issues on th_1"
+    assert vanished.value == "3", (
+        "the prior value must survive: 'issues on th_1, which was 3' is "
+        "actionable and '1 derivation lost' is not")
+
+
+@pytest.mark.eval_id("E-092")
+def test_nothing_lost_reports_nothing():
+    """A guard on the guard. If this fired on every turn the advocate would
+    learn to skip the line, and the real one would arrive in a place they had
+    stopped reading."""
+    same = (cascade.Derived(name="issues on th_1", value="3",
+                            from_facts=("f1",)),)
+    assert cascade.lost(same, same) == ()
+
+
+@pytest.mark.eval_id("E-092")
+def test_a_derivation_that_produced_nothing_records_no_row():
+    """THE ABSENCE IS THE SIGNAL.
+
+    Recording a row with a count of zero would make "this read found nothing
+    this turn" look like an ordinary value that happens to be small, and
+    `lost` would never see it.
+    """
+    from nm.core.turn import _record
+    from nm.domain.matter import Thread
+
+    thread = Thread.create(label="a thread")
+    rows: list = []
+    _record(rows, "issues", thread, ("f1",), 0)
+    assert rows == []
+    _record(rows, "issues", thread, ("f1",), 3)
+    assert len(rows) == 1 and rows[0].value == "3"

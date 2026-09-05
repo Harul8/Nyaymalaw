@@ -107,9 +107,22 @@ DATE_SCHEMA: dict = {
                                        "date comes from a DOCUMENT. Their "
                                        "recollection is not a document.",
                     },
+                    "corrects": {
+                        "type": "string",
+                        "description": "If this event REPLACES one already on "
+                                       "the file, its id, copied exactly from "
+                                       "the chronology you were given. Empty "
+                                       "otherwise, which is the ordinary "
+                                       "answer. Use it when they say the "
+                                       "earlier entry was wrong — 'sorry, that "
+                                       "is wrong', 'I meant', 'it is actually' "
+                                       "— or when they give the same event a "
+                                       "different date. A NEW event on a "
+                                       "different day is NOT a correction.",
+                    },
                 },
                 "required": ["event", "date_expression", "resolved",
-                             "documented"],
+                             "documented", "corrects"],
             },
         },
     },
@@ -146,6 +159,14 @@ class DatedEvent:
     reference: str = ""
     certainty: Certainty = Certainty.ASSERTED
     refused: str | None = None
+    corrects: str = ""
+    """The id of the entry this REPLACES, or empty.
+
+    On the row rather than in a separate read, because the sentence that
+    identifies a correction is the same sentence the date was read out of. A
+    second read had to rebuild that relationship from two ids without it, and
+    returned nothing on one run of GS-15 — the answer then computed correctly
+    from a date the advocate had withdrawn (B-088)."""
 
     @property
     def dated(self) -> bool:
@@ -177,7 +198,8 @@ class DateConflict:
                 f"position, so it is not mine to pick.")
 
 
-def build_prompt(message: str, reference: date, account: str = ""):
+def build_prompt(message: str, reference: date, account: str = "",
+                 existing: tuple = ()):
     """The message, the reference date, and what was already said.
 
     The reference is passed EXPLICITLY and appears in the prompt. "Yesterday"
@@ -190,11 +212,21 @@ def build_prompt(message: str, reference: date, account: str = ""):
             f"against that.\n\n")
     if account.strip():
         user += (f"Already on the file:\n{account.strip()[:1500]}\n\n")
+    if existing:
+        # THE IDS, so `corrects` has something to name. Without them the field
+        # cannot be filled and the read degrades to what it was before.
+        rows = "\n".join(
+            f"  {f.id}\t{f.date.isoformat() if f.date else 'undated'}\t"
+            f"{f.statement[:70]}" for f in existing)
+        user += (f"The chronology so far — if anything below is being "
+                 f"REPLACED, name its id in `corrects`:\n{rows}\n\n")
     user += f"The advocate has just said:\n{message.strip()[:1500]}"
     return Prompt(system=SYSTEM, user=user)
 
 
-def interpret(message: str, reference: date, data: dict) -> tuple[DatedEvent, ...]:
+def interpret(message: str, reference: date, data: dict,
+              known: frozenset[str] = frozenset(),
+              ) -> tuple[DatedEvent, ...]:
     """Turn the model's answer into chart rows, REFUSING what it cannot support.
 
     Every refusal lands on UNDATED, never on a date. That asymmetry is the
@@ -215,10 +247,18 @@ def interpret(message: str, reference: date, data: dict) -> tuple[DatedEvent, ..
         certainty = (Certainty.DOCUMENTED if raw.get("documented")
                      else Certainty.ASSERTED)
 
+        # AN ID THE FILE DOES NOT HOLD IS DROPPED, not carried. A correction
+        # pointing at nothing would supersede nothing and read as one that
+        # had — the silent direction.
+        corrects = str(raw.get("corrects") or "").strip()
+        if corrects and corrects not in known:
+            corrects = ""
+
         if not iso:
             # NO DATE IS AN ANSWER. The event is on the chart, undated.
             out.append(DatedEvent(event=event, state=DateState.UNDATED,
-                                  certainty=certainty))
+                                  certainty=certainty,
+                                  corrects=corrects))
             continue
 
         if not expr:
@@ -246,7 +286,7 @@ def interpret(message: str, reference: date, data: dict) -> tuple[DatedEvent, ..
         out.append(DatedEvent(
             event=event, state=DateState.RESOLVED, on=on,
             date_expression=expr, reference=reference.isoformat(),
-            certainty=certainty))
+            certainty=certainty, corrects=corrects))
     return tuple(out)
 
 

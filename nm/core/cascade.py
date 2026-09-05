@@ -133,6 +133,34 @@ def changes(before: tuple[Derived, ...],
 
 
 @implements("A3")
+def lost(before: tuple[Derived, ...],
+         after: tuple[Derived, ...]) -> tuple[Derived, ...]:
+    """Derivations that were computed BEFORE and are not computed now.
+
+    THE POPULATION IS `before`, AND THAT IS THE WHOLE POINT. `changes` walks
+    `after` and asks what moved, so a value that simply STOPPED BEING
+    COMPUTED produces nothing from it — the docstring above reasons carefully
+    about a value that appears and never about one that vanishes. Asked in
+    that direction the check cannot find forgetting, which is the one thing it
+    is for.
+
+    This is why it matters here more than anywhere else. Most of what the
+    product derives is re-derived from scratch every turn by a model read: the
+    issues, the theory, the opponent's case, the evidence inventory. A read
+    that returns nothing on turn 9 having returned three issues on turn 2 does
+    not fail — it succeeds, quietly, with less. The answer is thinner and
+    nothing in the product could tell.
+
+    Returns the PRIOR rows rather than their names, because what the advocate
+    needs is what was lost, not a count of it: "the limitation position on
+    thread 2, which was 2027-06-12" is actionable and "1 derivation lost" is
+    not.
+    """
+    now = {d.name for d in after}
+    return tuple(d for d in before if d.name not in now)
+
+
+@implements("A3")
 def advice_at_risk(prior: tuple[PriorAdvice, ...],
                    moved: tuple[Change, ...]) -> tuple[PriorAdvice, ...]:
     """§5.4's THIRD PART, and the one a silent recompute loses.

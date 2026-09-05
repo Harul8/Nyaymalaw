@@ -402,6 +402,26 @@ GATES: tuple[Gate, ...] = (
         built=True,
     ),
     Gate(
+        id="G-CONSERVE",
+        condition="Something derived on an earlier turn is NOT derived on this "
+                  "one — not withdrawn, not superseded, simply absent.",
+        states=("complete", "lost", "not_assessed"),
+        response=Response.BLOCK,
+        scope=Scope.THREAD,
+        persistence=Persistence.TURN,
+        recovery=Recovery.ADVOCATE,
+        visible="A SILENTLY THINNER ANSWER IS THE FAILURE THIS EXISTS TO "
+                "REFUSE. Nearly everything the product derives is re-read from "
+                "scratch every turn, so a read that found three issues on turn "
+                "2 and nothing on turn 9 does not fail — it succeeds, quietly, "
+                "with less. `cascade.changes` cannot see it: that walks the "
+                "values computed NOW and a value that vanished produces "
+                "nothing from it. So the population here is what was derived "
+                "BEFORE, and what is missing is named with its prior value.",
+        feature="A3",
+        built=True,
+    ),
+    Gate(
         id="G-CASCADE",
         condition="A value derived on an earlier turn has MOVED, because a "
                   "fact it rested on was corrected.",

@@ -111,6 +111,24 @@ _MONTHS = ("january february march april may june july august september "
            "october november december").split()
 
 
+#: What an advocate says when REPLACING a date rather than adding one.
+_CORRECTS_DATE = ("sorry, that is wrong", "that is wrong", "i meant",
+                  "it is actually", "correction:")
+
+
+def _first_dated_id(user: str) -> str:
+    """The first id on the `chronology so far` block the prompt carries."""
+    start = (user or "").find("The chronology so far")
+    if start < 0:
+        return ""
+    for line in user[start:].splitlines()[1:]:
+        if "	" in line:
+            return line.strip().split("	", 1)[0].strip()
+        if not line.strip():
+            break
+    return ""
+
+
 def _sentence_around(text: str, index: int) -> str:
     """The sentence containing `index`, which is what a model would return."""
     start = max(text.rfind(".", 0, index), text.rfind("\n", 0, index)) + 1
@@ -141,6 +159,13 @@ def scripted_dates(user: str) -> str:
             "date_expression": m.group(0),
             "resolved": f"{year}-{_MONTHS.index(month) + 1:02d}-{int(day):02d}",
             "documented": "dated" in said.lower() or "notice" in said.lower(),
+            # WHAT THIS REPLACES, filled the way a model would: only where the
+            # advocate says the earlier entry was wrong, and naming the FIRST
+            # dated id the prompt shows. `interpret` drops an id the file does
+            # not hold, so a double that guessed would produce nothing.
+            "corrects": (_first_dated_id(user)
+                         if any(w in said.lower() for w in _CORRECTS_DATE)
+                         else ""),
         })
     if not events and "yesterday" in said.lower() and ref:
         import datetime
@@ -585,50 +610,6 @@ def scripted_salvage(user: str) -> str:
     return json.dumps({"failure_scope": "framing", "varied": varied})
 
 
-#: Words an advocate uses when REPLACING something rather than adding to it.
-#:
-#: Narrow on purpose. A new event on a different day is not a correction, and
-#: a double that treated it as one would erase a real part of the chronology --
-#: which is a worse defect than the one being fixed.
-_CORRECTS = ("sorry, that is wrong", "that is wrong", "i meant",
-             "it is actually", "correction:", "not 20", "rather than")
-
-
-def scripted_correction(user: str) -> str:
-    """A deterministic stand-in for the correction read.
-
-    It pairs the FIRST entry already on the file with the FIRST entry added by
-    this turn, which is what a correction of a single dated fact looks like.
-    Both ids are read off the prompt: `correction.read` refuses a pair the
-    file cannot support, so a double that invented one would produce a refusal
-    and nothing else.
-    """
-    block = user or ""
-    lower = block.lower()
-    if not any(n in lower for n in _CORRECTS):
-        return json.dumps({"corrections": []})
-
-    def first_id(header: str) -> str | None:
-        start = block.find(header)
-        if start < 0:
-            return None
-        rest = block[start + len(header):]
-        for line in rest.splitlines():
-            if "	" in line:
-                return line.strip().split("	", 1)[0].strip()
-            if line.strip().startswith("(none)"):
-                return None
-        return None
-
-    old = first_id("ALREADY ON THE FILE:")
-    new = first_id("ADDED BY THIS TURN:")
-    if not old or not new or old == new:
-        return json.dumps({"corrections": []})
-    return json.dumps({"corrections": [{
-        "supersedes": old, "replaced_by": new,
-        "why": "the advocate says the earlier entry was wrong"}]})
-
-
 #: Schema TITLE -> the responder that answers it. AN EXACT KEY, NOT A SUBSTRING.
 #:
 #: It was a substring search over the schema's JSON, and that is fuzzy matching
@@ -656,7 +637,6 @@ SCRIPTED_READS: dict[str, object] = {
     "attacks": scripted_attacks,
     "exposure": scripted_exposure,
     "salvage": scripted_salvage,
-    "correction": scripted_correction,
 }
 
 _tokens = estimate_tokens  # one owner: nm.adapters.model._budget

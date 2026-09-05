@@ -1,26 +1,34 @@
-"""B-086 — a correction replaces the fact it corrects. GS-15's spine.
+"""B-086 / B-088 — a correction replaces the fact it corrects. GS-15's spine.
 
 THE MEASURED DEFECT
 --------------------
 GS-15, served, 4 September 2026. The advocate said the agreement is dated
 15-4-1984, then *"sorry, that is wrong. It is dated 15-4-2024"* — and BOTH
-dates sat on the chronology as separate events. The limitation runs from the
-earliest dated fact, so turn 5 reported a period that expired on 1987-04-15
-for an agreement the advocate had corrected to 2024.
+dates sat on the chronology. The limitation runs from the earliest dated fact,
+so the answer reported a period that expired on 1987-04-15 for an agreement
+the advocate had corrected to 2024.
 
-Every citation on that turn was verbatim and correct. The arithmetic was
-correct. The answer was about a date the advocate had withdrawn.
+Every citation on that turn was verbatim. The arithmetic was correct. The
+answer was about a date the advocate had withdrawn.
 
-`Fact.superseded_by` had existed since slice 1 and nothing ever set it — the
-same shape as B-073, and the second time that shape has cost a whole scenario.
+WHY IT WAS FRAGILE, AND IT WAS THE DESIGN
+-------------------------------------------
+The first fix made "is this a correction?" a SECOND read. That read had to
+reconstruct, from two fact ids, a relationship the FIRST read already knew:
+the 2024 date was extracted from *"sorry, that is wrong. It is dated
+15-4-2024"*, and that sentence was in front of the date reader when it produced
+the event. Splitting them threw the evidence away and asked a harder question
+without it — and on one run of GS-15 the second read returned nothing (B-088).
 
-NOTHING IS DELETED
--------------------
-The superseded fact stays on the matter and on the thread's chronology. It
-leaves the CHART, which is the one place the arithmetic reads. §5.4 needs the
-prior value to still exist so a change can be reported with what it was
-before, and an advocate needs to see what they said as well as what replaced
-it.
+One read now. The read that creates the fact says what it replaces.
+
+TWO LAYERS, AND ONLY ONE OF THEM IS A MODEL
+---------------------------------------------
+1. `corrects` on the date row, guarded: an id the file does not hold is
+   dropped, an entry already superseded is not superseded twice.
+2. THE SAFETY NET, which holds when every read fails: the limitation names the
+   dated entry it ran from AND the ones it did not. An advocate who corrected
+   a date sees their correction in the "not used" list.
 """
 from __future__ import annotations
 
@@ -29,7 +37,7 @@ from datetime import date
 
 import pytest
 
-from nm.core import chronology, correction
+from nm.core import chronology
 from nm.core.turn import TurnInput
 from nm.domain.matter import Fact, Provenance
 from tests.test_turn_contract import build
@@ -46,6 +54,51 @@ def _fact(fid, statement, on=None):
 OLD = _fact("f1", "the agreement is dated 15-4-1984", date(1984, 4, 15))
 NEW = _fact("f2", "It is dated 15-4-2024", date(2024, 4, 15))
 
+MSG = "sorry, that is wrong. It is dated 15-4-2024"
+
+
+def _row(**kw):
+    base = {"event": "It is dated", "date_expression": "15-4-2024",
+            "resolved": "2024-04-15", "documented": False, "corrects": ""}
+    return {"events": [{**base, **kw}]}
+
+
+# ===================== the read that creates the fact ======================
+
+def test_the_date_row_says_what_it_replaces():
+    """One read. The sentence that identifies a correction is the same
+    sentence the date was read out of."""
+    (row,) = chronology.interpret(MSG, date(2026, 9, 5), _row(corrects="f1"),
+                                  known=frozenset({"f1"}))
+    assert row.corrects == "f1"
+    assert row.dated
+
+
+def test_an_id_the_file_does_not_hold_is_dropped():
+    """A correction pointing at nothing would supersede nothing and read as
+    one that had — the silent direction."""
+    (row,) = chronology.interpret(MSG, date(2026, 9, 5),
+                                  _row(corrects="f_nowhere"),
+                                  known=frozenset({"f1"}))
+    assert row.corrects == ""
+
+
+def test_an_ordinary_event_corrects_nothing():
+    """Empty is the ordinary answer. A new event on a different day is not a
+    correction, and treating it as one would erase a real part of the
+    chronology."""
+    (row,) = chronology.interpret(MSG, date(2026, 9, 5), _row(),
+                                  known=frozenset({"f1"}))
+    assert row.corrects == ""
+
+
+def test_the_prompt_carries_the_ids_there_are_to_name():
+    """Without them `corrects` cannot be filled and the read degrades to what
+    it was before this change."""
+    prompt = chronology.build_prompt(MSG, date(2026, 9, 5), "", (OLD,))
+    assert "f1" in prompt.user
+    assert "corrects" in prompt.user
+
 
 # ========================= the chart, which is the fix =====================
 
@@ -58,14 +111,13 @@ def test_a_superseded_fact_leaves_the_chart():
     them next month.
     """
     superseded = replace(OLD, superseded_by="f2")
-    got = chronology.chart((superseded, NEW), ("f1", "f2"))
-    assert [f.id for f in got] == ["f2"]
+    assert [f.id for f in chronology.chart((superseded, NEW), ("f1", "f2"))] \
+        == ["f2"]
 
 
 def test_the_superseded_fact_is_still_on_the_file():
-    """Marked, not removed. An advocate needs to see what they said as well as
-    what replaced it, and §5.4 needs the prior value to report a change WITH
-    what it was before."""
+    """Marked, not removed. §5.4 needs the prior value to report a change WITH
+    what it was before, and an advocate needs to see what they said."""
     superseded = replace(OLD, superseded_by="f2")
     assert superseded.date == date(1984, 4, 15)
     assert superseded.statement == OLD.statement
@@ -78,68 +130,46 @@ def test_the_chart_is_unchanged_where_nothing_was_superseded():
         ["f1", "f2"]
 
 
-# ============================ what may be paired ===========================
+# ===================== a fact id names exactly one fact ====================
 
-def test_a_correction_pairs_an_earlier_entry_with_one_from_this_turn():
-    read = correction.read(
-        {"corrections": [{"supersedes": "f1", "replaced_by": "f2",
-                          "why": "the advocate says the date was wrong"}]},
-        existing=(OLD,), added=(NEW,))
-    assert read.state == "corrected"
-    (c,) = read.corrections
-    assert (c.supersedes, c.replaced_by) == ("f1", "f2")
+def test_adding_a_fact_that_is_already_on_the_file_is_refused():
+    """A matter holding two facts with one id is a matter where every lookup
+    is ambiguous and the FIRST wins by accident of order.
 
+    It happened: marking a fact superseded went through `with_fact`, appended
+    a second copy, and `chart` kept the un-superseded one — the fix defeated
+    by its own write.
+    """
+    from nm.domain.matter import Matter
 
-def test_an_entry_the_file_does_not_hold_cannot_be_superseded():
-    read = correction.read(
-        {"corrections": [{"supersedes": "f_nowhere", "replaced_by": "f2",
-                          "why": "x"}]}, existing=(OLD,), added=(NEW,))
-    assert read.corrections == ()
-    assert "not on this file" in read.refused[0]
+    m = Matter.create(advocate_id="adv_1", title="t").with_fact(OLD)
+    with pytest.raises(ValueError, match="already on this matter"):
+        m.with_fact(OLD)
 
 
-def test_a_correction_must_come_from_this_turn():
-    """Pairing two entries that were BOTH already on the file is a re-reading
-    of history, not a correction — and the advocate said nothing to license
-    it."""
-    other = _fact("f3", "an unrelated earlier event", date(2000, 1, 1))
-    read = correction.read(
-        {"corrections": [{"supersedes": "f1", "replaced_by": "f3",
-                          "why": "x"}]}, existing=(OLD, other), added=(NEW,))
-    assert read.corrections == ()
-    assert "not a correction" in read.refused[0]
+def test_amending_replaces_in_place():
+    """Position is kept, or an advocate reading their own chronology would
+    find it had rearranged itself when something was corrected."""
+    from nm.domain.matter import Matter
+
+    m = (Matter.create(advocate_id="adv_1", title="t")
+         .with_fact(OLD).with_fact(NEW))
+    amended = m.amending(replace(OLD, superseded_by="f2"))
+    assert [f.id for f in amended.facts] == ["f1", "f2"]
+    assert amended.facts[0].superseded_by == "f2"
 
 
-def test_an_entry_cannot_supersede_itself():
-    read = correction.read(
-        {"corrections": [{"supersedes": "f2", "replaced_by": "f2",
-                          "why": "x"}]}, existing=(NEW,), added=(NEW,))
-    assert read.corrections == ()
+def test_amending_a_fact_the_matter_does_not_hold_is_refused():
+    from nm.domain.matter import Matter
 
-
-def test_an_already_superseded_entry_is_not_superseded_twice():
-    already = replace(OLD, superseded_by="f9")
-    read = correction.read(
-        {"corrections": [{"supersedes": "f1", "replaced_by": "f2",
-                          "why": "x"}]}, existing=(already,), added=(NEW,))
-    assert read.corrections == ()
-    assert "already superseded" in read.refused[0]
-
-
-def test_nothing_corrected_is_a_different_state_from_nothing_read():
-    assert correction.read({"corrections": []}, (OLD,), (NEW,)).state == \
-        "none_found"
-    assert correction.UNREAD.state == "not_assessed"
+    with pytest.raises(ValueError, match="nothing.*to amend"):
+        Matter.create(advocate_id="adv_1", title="t").amending(OLD)
 
 
 # ============================== on the wire ================================
 
 def test_a_corrected_date_replaces_the_old_one_on_a_served_turn(tmp_path):
-    """GS-15'S SPINE, END TO END.
-
-    Two turns: a date, then a correction of it. The chart must hold ONE dated
-    agreement afterwards, and it must be the corrected one.
-    """
+    """GS-15'S SPINE, END TO END."""
     engine, store = build(tmp_path)
     first = engine.run(TurnInput(
         advocate_id="adv_1", today=date(2026, 9, 5),
@@ -150,16 +180,36 @@ def test_a_corrected_date_replaces_the_old_one_on_a_served_turn(tmp_path):
         message="sorry, that is wrong. It is dated 15 April 2024."))
 
     matter = store.load(first.matter.id)
-    thread = matter.threads[0]
-    chart = chronology.chart(matter.facts, thread.chronology)
+    chart = chronology.chart(matter.facts, matter.threads[0].chronology)
     years = {f.date.year for f in chart if f.date}
 
     assert 1984 not in years, (
         f"the withdrawn date is still on the chart: "
-        f"{[(f.id, f.date, f.statement[:40]) for f in chart if f.date]}")
+        f"{[(f.id, f.date) for f in chart if f.date]}")
     assert 2024 in years, "the corrected date never reached the chart"
 
-    # AND IT IS STILL ON THE FILE, marked rather than deleted.
     superseded = [f for f in matter.facts if f.superseded_by is not None]
     assert superseded, "nothing was marked superseded; it was just dropped"
     assert superseded[0].date.year == 1984
+
+
+def test_the_limitation_names_the_entries_it_did_not_run_from(tmp_path):
+    """THE SAFETY NET, and it does not depend on any read succeeding.
+
+    The accrual is the earliest dated entry — right on most files and an
+    arbitrary tiebreak on a file that holds two dates for one event. Naming
+    the alternatives costs a clause and makes a wrong choice visible on the
+    face of the answer, whatever the model did.
+    """
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(
+        advocate_id="adv_1", today=date(2026, 9, 5),
+        message=("We act for the plaintiff at Hyderabad. Goods were supplied "
+                 "on 14 March 2019 and a demand notice went on 2 May 2021.")))
+
+    text = " ".join(e.text for e in out.answer.elements)
+    assert "not from:" in text, (
+        "the answer did not say which dated entries the period was NOT "
+        "computed from:\n" + text[:700])
+    assert "say which" in text, (
+        "the advocate is shown the alternatives and not told they can choose")

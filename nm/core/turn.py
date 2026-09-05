@@ -29,7 +29,6 @@ from nm.core import (
     adversarial,
     cascade,
     chronology,
-    correction,
     deadlines,
     grounding,
     limitation,
@@ -237,6 +236,22 @@ class ScreenResult:
     reason: str | None = None
     blocking_question: str = ""
     urgent: bool = False
+
+
+def _record(into: list, what: str, thread: Thread,
+            from_facts: tuple, produced: int) -> None:
+    """Record a derivation, or record NOTHING and let the absence speak.
+
+    `produced == 0` appends no row on purpose. A row carrying a count of zero
+    would make "this read found nothing this turn" look like an ordinary
+    value that happens to be small, and `cascade.lost` would never see it.
+    The absence of the row IS the loss.
+    """
+    if produced:
+        into.append(cascade.Derived(
+            name=f"{what} on {thread.id}",
+            value=str(produced),
+            from_facts=tuple(from_facts)))
 
 
 class TurnEngine:
@@ -666,12 +681,11 @@ class TurnEngine:
         # could skip it. The account fact above is kept WHOLE -- C1 takes
         # the account before clarifying anything -- and these are derived
         # from it, each carrying the span it was read from.
-        dated = self._read_dates(turn, matter, thread, metrics)
-
-        # WHAT WAS ALREADY THERE, captured BEFORE this turn's events are added.
-        # The correction read needs both sides and cannot tell them apart
-        # afterwards.
+        # WHAT IS ALREADY THERE, captured BEFORE the read rather than after.
+        # The date read is now the correction read, so it needs the ids in
+        # front of it to name one.
         existing = chronology.chart(matter.facts, thread.chronology)
+        dated = self._read_dates(turn, matter, thread, metrics, existing)
 
         ids = [fact.id]
         added: list[Fact] = []
@@ -688,19 +702,21 @@ class TurnEngine:
             added.append(event)
             ids.append(event.id)
 
+            # THE ROW SAYS WHAT IT REPLACES, so nothing has to rebuild the
+            # relationship afterwards. `interpret` has already dropped an id
+            # the file does not hold.
+            if row.corrects:
+                superseded = next(
+                    (f for f in matter.facts if f.id == row.corrects), None)
+                if superseded is not None and superseded.superseded_by is None:
+                    metrics.fire("G-CORRECTION", "superseded",
+                                 f"{row.corrects} replaced by {event.id}")
+                    matter = matter.amending(
+                        replace(superseded, superseded_by=event.id))
+
         thread = replace(thread, chronology=thread.chronology + tuple(ids))
         matter = matter.with_thread(thread)
 
-        # B-086. DOES ANY OF THIS REPLACE SOMETHING ALREADY RECORDED?
-        #
-        # `Fact.superseded_by` existed from slice 1 and nothing ever set it,
-        # so a correction added a second event beside the first. GS-15: the
-        # agreement dated 15-4-1984, corrected to 15-4-2024, and BOTH stayed
-        # on the chart -- the period ran from the earlier and reported a claim
-        # that expired in 1987. Every citation on that turn was right.
-        if added and existing:
-            matter = self._supersede(turn, matter, existing, tuple(added),
-                                     metrics)
 
         if not posture.resolved:
             # THE WHOLE FILE, not just this message and not just the
@@ -812,51 +828,9 @@ class TurnEngine:
             return None
         return read.cause.value if read.resolved else None
 
-    @implements("A3")
-    def _supersede(self, turn: TurnInput, matter: Matter,
-                   existing: tuple[Fact, ...], added: tuple[Fact, ...],
-                   metrics: TurnMetrics) -> Matter:
-        """Mark what this turn replaced. NOTHING IS DELETED.
-
-        The superseded fact stays on the matter and stays on the thread\'s
-        chronology; it leaves the CHART, which is where the arithmetic reads.
-        §5.4 needs the prior value to still exist so a change can be reported
-        with what it was before, and an advocate needs to see what they said
-        as well as what replaced it.
-        """
-        try:
-            res = self._model.structured(
-                correction.build_prompt(turn.message, existing, added),
-                correction.CORRECTION_SCHEMA, Tier.ROUTINE, max_tokens=400)
-            metrics.record_call(res)
-            read = correction.read(res.data or {}, existing, added)
-        except ModelError as exc:
-            # NOT ASSESSED. A correction that could not be read leaves both
-            # entries standing, which is the state this defect was about --
-            # so it is said rather than passed over.
-            metrics.fire("G-MODEL", "unavailable",
-                         f"corrections were not read: {exc}")
-            return matter
-        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
-            metrics.violate("A3", f"correction read failed: "
-                                  f"{type(exc).__name__}: {exc}")
-            return matter
-
-        for refused in read.refused:
-            metrics.violate("A3", f"correction not taken: {refused}")
-
-        for c in read.corrections:
-            old = next((f for f in matter.facts if f.id == c.supersedes), None)
-            if old is None:
-                continue
-            metrics.fire("G-CORRECTION", "superseded",
-                         f"{c.supersedes} replaced by {c.replaced_by}")
-            matter = matter.amending(replace(old, superseded_by=c.replaced_by))
-        return matter
-
     @implements("C5")
     def _read_dates(self, turn: TurnInput, matter: Matter, thread: Thread,
-                    metrics: TurnMetrics):
+                    metrics: TurnMetrics, existing: tuple = ()):
         """The events in this message, with their dates where dates exist.
 
         A failed read yields NO ROWS, never a dated one. The asymmetry is the
@@ -868,11 +842,14 @@ class TurnEngine:
                             if f.id in set(thread.chronology))
         try:
             res = self._model.structured(
-                chronology.build_prompt(turn.message, turn.today, account),
+                chronology.build_prompt(turn.message, turn.today, account,
+                                        existing),
                 chronology.DATE_SCHEMA, Tier.ROUTINE, max_tokens=700)
             metrics.record_call(res)
             metrics.chronology_reads += 1
-            rows = chronology.interpret(turn.message, turn.today, res.data or {})
+            rows = chronology.interpret(
+                turn.message, turn.today, res.data or {},
+                known=frozenset(f.id for f in existing))
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
                          f"the date chart could not be read: {exc}")
@@ -1001,6 +978,15 @@ class TurnEngine:
         # matters most next, which cannot be decided until they are all in.
         gaps: list[gap_queue.Gap] = []
 
+        # WHAT THIS TURN DERIVED, recorded as it happens.
+        #
+        # A row is appended only where something was actually produced, and
+        # the ABSENCE of a row is the signal: a read that found three issues
+        # on turn 2 and nothing on turn 9 leaves no row, and `cascade.lost`
+        # reports it. Recording a row with a count of zero would make
+        # forgetting look like an ordinary value.
+        derived: list[cascade.Derived] = []
+
         need = EvidenceNeed(question=turn.message.strip(),
                             governing_date=turn.today,
                             jurisdiction=turn.jurisdiction,
@@ -1062,24 +1048,39 @@ class TurnEngine:
             # A threshold disposes of a claim without reaching the merits, so
             # an issue list read first invites an hour on the theory of a suit
             # that cannot be maintained.
-            grounds.extend(self._issues(turn, thread, memory, metrics))
+            issues_out = self._issues(turn, thread, memory, metrics)
+            grounds.extend(issues_out)
+            _record(derived, "issues", thread, thread.chronology,
+                    sum(1 for e in issues_out
+                        if e.kind is ElementKind.FINDING))
 
             # C7 -- WHAT THE EVIDENCE IS AND WHO HAS IT. After the issues,
             # because an inventory is only readable against what has to be
             # proved.
-            grounds.extend(
-                self._inventory(turn, thread, memory, metrics, gaps))
+            inventory_out = self._inventory(
+                turn, thread, memory, metrics, gaps)
+            grounds.extend(inventory_out)
+            _record(derived, "evidence", thread, thread.chronology,
+                    sum(1 for e in inventory_out
+                        if e.kind is ElementKind.FINDING))
 
             # D6 -- THE SPINE, LAST, because it is what the issues and the
             # evidence hang off. S8's whole point: stop producing a list of
             # issues and produce a spine with the issues hanging off it.
-            grounds.extend(
-                self._theory(turn, thread, memory, metrics, facts))
+            theory_out = self._theory(turn, thread, memory, metrics, facts)
+            grounds.extend(theory_out)
+            _record(derived, "theory", thread, thread.chronology,
+                    sum(1 for e in theory_out
+                        if e.text.startswith("Theory:")))
 
             # D7 -- THE OTHER SIDE'S CASE, at its strongest. After the theory,
             # because an attack is read against a spine: "they will say X" is
             # only useful once there is something for X to be against.
-            grounds.extend(self._attacks(turn, thread, memory, metrics))
+            attacks_out = self._attacks(turn, thread, memory, metrics)
+            grounds.extend(attacks_out)
+            _record(derived, "the opponent's case", thread, thread.chronology,
+                    sum(1 for e in attacks_out
+                        if e.text.startswith("They will say")))
 
         if metrics.evidence_bound_hit:
             # THE BOUND PRODUCES A VISIBLE GAP, never a quiet stop. A turn that
@@ -1105,16 +1106,16 @@ class TurnEngine:
         # gap -- a corrected fact that moves a limitation date is the most
         # urgent thing on the file, and it would otherwise arrive as a note
         # underneath questions about something else.
-        derived = self._derived_now(thread, position)
+        derived.extend(self._derived_now(thread, position))
         elements.extend(
-            self._cascade(thread, matter_id, derived, metrics, gaps))
+            self._cascade(thread, matter_id, tuple(derived), metrics, gaps))
 
         # A3 §5.2-5.3. THE QUEUE IS DRAINED HERE, once, after everything that
         # could raise a gap has run. Draining it earlier would rank a partial
         # queue, which is the detection order wearing a sort.
         elements.extend(grounds)
         elements.extend(self._ask(gaps, thread, metrics))
-        return elements, tuple(relied_on), tuple(retrieved), derived
+        return elements, tuple(relied_on), tuple(retrieved), tuple(derived)
 
     def _remember_questions(self, matter: Matter, answer: Answer,
                             metrics: TurnMetrics, turn: TurnInput) -> Matter:
@@ -1192,7 +1193,7 @@ class TurnEngine:
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 text=f"I am not putting this figure in front of you: {problem}"))
 
-        out.extend(self._limitation_elements(thread, turn, ours, "our"))
+        out.extend(self._limitation_elements(thread, turn, ours, "our", chart))
 
         # D8 -- SALVAGE, exactly where the claim is reported as failing.
         #
@@ -1214,7 +1215,7 @@ class TurnEngine:
             # that no claim of ours is on this thread rather than repeating
             # this figure under a second name.
             out.extend(
-                self._limitation_elements(thread, turn, claimant, "their"))
+                self._limitation_elements(thread, turn, claimant, "their", chart))
 
         blocked = [a for a in map_
                    if a.state is thresholds.ThresholdState.BLOCKED]
@@ -1341,6 +1342,7 @@ class TurnEngine:
 
     def _limitation_elements(self, thread: Thread, turn: TurnInput,
                              lim: limitation.Limitation, whose: str,
+                             chart: tuple[Fact, ...] = (),
                              ) -> list[Element]:
         """The position, and E-042's coverage gap where there is one.
 
@@ -1383,6 +1385,21 @@ class TurnEngine:
         # D2 -- NEVER NARRATE IT. A date and a day count, or nothing.
         days = lim.days_remaining(turn.today)
         gone = lim.expired(turn.today)
+        # WHICH DATED FACT IT RAN FROM, AND WHAT ELSE WAS THERE.
+        #
+        # The accrual is the earliest dated entry — right on most files, and
+        # an arbitrary tiebreak on a file that holds two dates for one event.
+        # Naming the alternatives costs a clause and makes a wrong choice
+        # visible on the face of the answer, whatever any model read did.
+        others = ", ".join(
+            f"{f.statement[:44]} ({f.date.isoformat()})"
+            for f in chart
+            if f.date is not None and f.id != lim.accrual)
+        alternatives = (
+            f" It ran from that entry and not from: {others}. If the period "
+            f"should run from one of those, say which."
+            if others else "")
+
         out.append(Element(
             kind=ElementKind.GROUND, thread=thread.id,
             signal=Signal.LIMITATION_BAR if gone else Signal.NONE,
@@ -1392,7 +1409,8 @@ class TurnEngine:
                   f"{'ago' if gone else 'from today'})."
                   + ("" if not gone else
                      " That period has run. That is not the end of the file — "
-                     "what else it offers is a separate question."))))
+                     "what else it offers is a separate question.")
+                  + alternatives)))
         return out
 
     def _disclose_coverage(self, turn: TurnInput, thread: Thread,
@@ -1980,8 +1998,43 @@ class TurnEngine:
             return []
 
         moved = cascade.changes(before, derived)
+
+        # WHAT STOPPED BEING DERIVED. `changes` walks `after` and cannot see
+        # this: a value present before and absent now produces nothing from
+        # it. Most of what the product derives is re-read from scratch every
+        # turn, so a read that found three issues on turn 2 and nothing on
+        # turn 9 does not fail — it succeeds, quietly, with less.
+        gone = cascade.lost(before, derived)
+        if gone:
+            metrics.fire("G-CONSERVE", "lost", ", ".join(d.name for d in gone))
+            out = [Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                signal=Signal.CONTRADICTION,
+                text=("This turn derived LESS than the last one. "
+                      + "; ".join(f"{d.name} was {d.value} and is not "
+                                  f"computed now" for d in gone)
+                      + ". Nothing on the file was withdrawn — the reading "
+                        "simply did not produce it this turn, and it is said "
+                        "rather than left as a thinner answer."))]
+            # AND IT BLOCKS, because a silently thinner answer is the failure
+            # this whole mechanism exists to make impossible.
+            gaps.append(gap_queue.Gap(
+                what=(f"whether {gone[0].name} still holds — it was computed "
+                      f"before and not on this turn"),
+                blocks="relying on this turn as a complete picture",
+                thread=thread.id,
+                kind=gap_queue.GapKind.BLOCKING_GATE))
+        else:
+            # `complete` IS FIRED, not merely declared. A state in the matrix
+            # that no code path reaches is a state that does not exist, and
+            # the matrix would be telling the advocate something is checked
+            # when nothing checks it.
+            metrics.fire("G-CONSERVE", "complete",
+                         f"{len(derived)} derivation(s) still computed")
+            out = []
+
         if not moved:
-            return []
+            return out
 
         metrics.fire("G-CASCADE", "moved", ", ".join(c.name for c in moved))
         lines = cascade.report(moved)
@@ -1997,7 +2050,7 @@ class TurnEngine:
                 thread=thread.id,
                 kind=gap_queue.GapKind.BLOCKING_GATE))
 
-        return [Element(
+        return [*out, Element(
             kind=ElementKind.FINDING, thread=thread.id,
             signal=Signal.CONTRADICTION,
             text="A value on this thread has MOVED since the last turn. "
