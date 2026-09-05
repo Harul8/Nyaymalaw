@@ -385,6 +385,12 @@ class TurnEngine:
         elements: list[Element] = []
         relied_on: tuple[Finding, ...] = ()
         retrieved: tuple[Finding, ...] = ()
+        # THE NON-DERIVED ELEMENTS, bound BEFORE the branch and not inside the
+        # one that happens to need it. B-104's second assembly reads this, and
+        # binding it in a single branch left it unbound on the two that block
+        # -- pylint E0601, which is in the gate for exactly this and has now
+        # caught the same shape twice in one session.
+        head: list[Element] = []
 
         if bound.blocks:
             # G-THREAD. The account is KEPT on the matter -- it is the binding
@@ -473,6 +479,7 @@ class TurnEngine:
                             blocked_reason="G-POSTURE: posture unresolved")
         else:
             thread = bound.thread
+            head = list(elements)
             derived, relied_on, retrieved, derived_values = self._derive(
                 thread, turn, metrics, memory, facts=matter.facts,
                 matter_id=matter.id)
@@ -502,9 +509,11 @@ class TurnEngine:
         # slice-1 invariant already refused: a turn that blocks because the
         # thread binding is ambiguous must be CHEAP, or the product charges
         # the advocate for its own uncertainty.
+        exposure: list[Element] = []
         if not answer.blocked:
+            exposure = list(self._exposure(matter, metrics))
             answer = replace(answer, elements=tuple(
-                [*answer.elements, *self._exposure(matter, metrics)]))
+                [*answer.elements, *exposure]))
 
         # A DECISIVE READ CAME BACK EMPTY, AND THE ANSWER WAS COMPUTED ANYWAY.
         #
@@ -533,6 +542,48 @@ class TurnEngine:
         # still edit, reorder or truncate the text that will be emitted, and a
         # check that runs on an earlier draft has checked a different string.
         report = grounding.verify(answer, relied_on, retrieved)
+
+        # B-104. A BOUNDED SECOND ROUND, BEFORE THE REPORT IS RECORDED.
+        #
+        # Measured on GS-15's served run of 5 September 2026: the advocate
+        # said "the agreement was never registered", the answer reached for
+        # TRANSFER OF PROPERTY ACT s.53A -- part performance, which is the
+        # correct provision for that question -- and the turn was withheld
+        # because s.53A had not been retrieved. Two of five turns produced no
+        # advice. THE GATE WAS RIGHT EVERY TIME. What was missing is that the
+        # withholding named a provision the product could simply look up.
+        #
+        # So a citation the answer names and retrieval did not fetch is
+        # treated as a RETRIEVAL NEED THE TURN DISCOVERED LATE: fetch it, and
+        # if it is held, DERIVE AGAIN with the text in front of the reads that
+        # write the answer. Re-verifying the old answer against a newly
+        # fetched provision would be worse than withholding -- the prose was
+        # composed without it, so passing the citation check would certify
+        # text nobody wrote from the source.
+        #
+        # ONCE, AND THE BOUND IS THE WHOLE SAFETY ARGUMENT. An unbounded loop
+        # lets a model conjure citations until one lands, which is the failure
+        # G-GROUND exists to stop. A second failure withholds, exactly as
+        # before.
+        #
+        # Recorded BEFORE `metrics.fire`, because a violation the second round
+        # clears must not sit on the record as a gate the turn failed. What IS
+        # recorded is the round itself, and the advocate is told.
+        if report.violations and not answer.blocked:
+            late = self._fetch_late_citations(answer, retrieved, turn, metrics)
+            if late:
+                derived, relied_on, retrieved, derived_values = self._derive(
+                    thread, turn, metrics, memory, facts=matter.facts,
+                    matter_id=matter.id, seed=late)
+                answer = Answer(
+                    route=route, mode=mode, mode_statement=mode_statement,
+                    elements=tuple([*head, *derived, *exposure,
+                                    *self._late_note(late)]))
+                answer = replace(answer, elements=tuple(
+                    [*answer.elements, *self._decisive_empties(metrics)]))
+                self._assert_invariants(answer, metrics)
+                report = grounding.verify(answer, relied_on, retrieved)
+
         metrics.grounding = report.as_dict()
         for violation in report.violations:
             metrics.fire(violation.gate_id,
@@ -1099,6 +1150,7 @@ class TurnEngine:
                 *, side_blind: bool = False,
                 facts: tuple[Fact, ...] = (),
                 matter_id: str = "",
+                seed: tuple[Finding, ...] = (),
                 ) -> tuple[list[Element], tuple, tuple, tuple]:
         """Retrieve, then assemble. Returns (elements, relied_on, retrieved).
 
@@ -1157,6 +1209,16 @@ class TurnEngine:
                             cause_of_action=self._read_cause(
                                 turn, memory, metrics, grounds))
         result = self._fetch(need, metrics)
+        # B-104. A PROVISION THE LAST PASS NAMED AND THIS ONE WAS GIVEN.
+        #
+        # Seeded in FRONT of the fetch so every derivation below sees it
+        # exactly as though it had been retrieved by the ordinary query --
+        # which is the point. The failure being fixed is an answer written
+        # without a provision it went on to cite; handing the text to the
+        # reads that write the answer is the only thing that makes the second
+        # attempt different from the first.
+        if seed:
+            result = replace(result, findings=tuple(seed) + tuple(result.findings))
         retrieved.extend(result.findings)
         self._read_coverage(result, thread, metrics, grounds, relied_on)
 
@@ -1650,14 +1712,80 @@ class TurnEngine:
             metrics.violate("C3", f"posture extraction refused: {stated.refused}")
         return stated
 
-    def _fetch(self, need: EvidenceNeed, metrics: TurnMetrics):
+    def _fetch_late_citations(self, answer, retrieved, turn: TurnInput,
+                              metrics: TurnMetrics) -> tuple:
+        """B-104. The provisions the answer named and retrieval did not fetch.
+
+        Recomputed from the ANSWER and the RETRIEVED SET rather than parsed
+        out of the violation prose. A message written for a person is a bad
+        machine input, and `grounding` already owns both halves of this
+        judgement -- reading it back out of a sentence would be a second copy
+        of the rule that decides what counts as cited.
+
+        Returns only findings that came back USABLE. A provision the corpus
+        does not hold cannot ground anything, and fetching it changes nothing
+        about whether the turn may be served -- so the turn is withheld as
+        before, and the advocate is told what was looked for.
+        """
+        covered = grounding._covered_provisions(tuple(retrieved))
+        wanted: list[str] = []
+        for element in answer.elements:
+            if element.disclosure:
+                continue
+            for number in grounding.provisions_cited(element.text):
+                if number not in covered and number not in wanted:
+                    wanted.append(number)
+        if not wanted:
+            return ()
+
+        found: list = []
+        for number in wanted[:2]:
+            # TWO AT MOST, and it is the same bound as the round itself. An
+            # answer naming eight unretrieved provisions is not a turn one
+            # more lookup will rescue; it is a turn that should be withheld.
+            need = EvidenceNeed(
+                question=f"section {number}", governing_date=turn.today,
+                jurisdiction=turn.jurisdiction, provision_hint=number,
+                account="")
+            result = self._fetch(need, metrics, exploratory=False)
+            found.extend(f for f in result.findings if f.usable)
+        return tuple(found)
+
+    def _late_note(self, late: tuple) -> list[Element]:
+        """WHAT HAPPENED, said out loud. A second round that is invisible is a
+        product that quietly retries until it gets an answer out, which is the
+        shape the bound exists to refuse -- and an advocate who cannot see it
+        cannot judge it."""
+        named = ", ".join(dict.fromkeys(f.ref for f in late if f.ref))
+        return [Element(
+            kind=ElementKind.GROUND, disclosure=True, signal=Signal.NONE,
+            text=(f"My first draft of this answer named {named} without "
+                  f"having retrieved it. I fetched it and worked the answer "
+                  f"again with the text in front of me. What is below is the "
+                  f"second pass, not the first."))]
+
+    def _fetch(self, need: EvidenceNeed, metrics: TurnMetrics, *,
+               exploratory: bool = True):
         """One evidence round, counted against the bound.
 
         Every retrieval goes through here so the count cannot drift from the
         rounds actually run -- incrementing at each call site is how a bound
         stops matching reality.
+
+        `exploratory=False` IS A DIFFERENT BOUND, NOT AN EXEMPTION FROM THIS
+        ONE. MAX_EVIDENCE_ROUNDS limits how far a turn may WANDER looking for
+        what it needs. B-104's late lookup is not wandering: the answer has
+        already named one specific provision, and the lookup either finds that
+        provision or does not. Measured on the first run of B-104's fix, the
+        ordinary rounds had used all three before the answer was assembled, so
+        the named lookup was refused a search it had not asked to compete for
+        -- and the advocate got the withheld turn the fix exists to prevent.
+        Its own bound is at the call site: at most two provisions, once.
+
+        It is still COUNTED, because a retrieval that happened and is not in
+        the count is exactly the drift this docstring warns about.
         """
-        if metrics.evidence_rounds >= MAX_EVIDENCE_ROUNDS:
+        if exploratory and metrics.evidence_rounds >= MAX_EVIDENCE_ROUNDS:
             metrics.evidence_bound_hit = True
             return EvidenceResult(
                 coverage=Coverage.NOT_HELD,

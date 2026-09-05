@@ -3042,7 +3042,23 @@ d("B-104", "2026-09-05", "core",
   "S6 \u2014 a clean verdict from an input known to be incomplete",
   "GS-15\u2019s served run of 5 September 2026: turns 3 and 4 withheld, "
   "citing provisions 18 and 53A against a retrieved set of [54].",
-  "NOT FIXED, AND IT IS A DESIGN DECISION RATHER THAN A BUG. A citation the "
+  "FIXED 5 SEPTEMBER 2026. A citation the answer names and retrieval did "
+  "not fetch is treated as a RETRIEVAL NEED THE TURN DISCOVERED LATE: "
+  "the provision is fetched and the turn DERIVES AGAIN with the text in "
+  "front of the reads that write the answer.\n\n"
+  "IT RE-DERIVES RATHER THAN RE-CHECKING, AND THE CHEAP VERSION WOULD "
+  "HAVE BEEN WORSE THAN WITHHOLDING. Fetching the provision and running "
+  "the citation check again would pass \u2014 the provision is in the "
+  "retrieved set now \u2014 while the prose was still composed WITHOUT "
+  "it. That certifies a sentence nobody wrote from the source and turns "
+  "G-GROUND into a formality any fetch satisfies.\n\n"
+  "ONCE, and the bound is the whole safety argument: at most two "
+  "provisions, one extra derivation, and a second failure withholds "
+  "exactly as before. An unbounded loop lets a model conjure citations "
+  "until one lands, which is what the gate exists to stop. The second "
+  "pass is DISCLOSED \u2014 a retry nobody can see is a product quietly "
+  "trying again until something comes out.\n\n"
+  "What the row said while it was open: A citation the "
   "answer names and retrieval did not fetch is a RETRIEVAL NEED the turn "
   "discovered late. The shape of the fix is a bounded second round: fetch the "
   "named provision, re-derive once, and withhold only if it still fails \u2014 "
@@ -3054,9 +3070,45 @@ d("B-104", "2026-09-05", "core",
   "could simply have looked up. An advocate who asks about an unregistered "
   "agreement and is told nothing has been given a worse answer than the "
   "product could support.",
-  "None yet. Approval needed: a second retrieval round is a cost change as "
-  "well as a design change.",
-  "Open")
+  "tests/test_a_late_citation_is_fetched_once.py, whose sharpest checks "
+  "are on the BOUND rather than on the fix: a model made to cite a "
+  "provision that cannot exist is still withheld, and the fetch runs at "
+  "most twice. Both are asserted on FETCH COUNTS and not on a flag \u2014 "
+  "a flag records the intention, the count records what happened. "
+  "test_an_ordinary_turn_makes_no_extra_round is the cost bound: the "
+  "round is for the turn that would otherwise be withheld, not a tax on "
+  "every turn.",
+  "Fixed")
+
+d("B-105", "2026-09-05", "core",
+  "THE LATE LOOKUP WAS STARVED BY THE EXPLORATORY ROUNDS, so B-104\u2019s fix "
+  "did not fire at all on its first run. `evidence_rounds` was already at "
+  "MAX_EVIDENCE_ROUNDS (3) by the time the answer was assembled, so `_fetch` "
+  "short-circuited and the named provision was never looked up \u2014 and the "
+  "advocate got exactly the withheld turn the fix exists to prevent.",
+  "ONE BOUND WAS DOING TWO JOBS. MAX_EVIDENCE_ROUNDS limits how far a turn may "
+  "WANDER looking for what it needs, which is a bound on exploration. The late "
+  "lookup is not exploration: the answer has already named one specific "
+  "provision and the lookup either finds it or does not. Making them share a "
+  "budget let the exploratory half spend the targeted half\u2019s allowance.",
+  "S1 \u2014 an absent input reading as success",
+  "The first run of B-104\u2019s own test. The fix was correct and did "
+  "nothing, and the failing test said only that no fetch had happened \u2014 "
+  "the cause was three layers down and was found by instrumenting the round "
+  "counter rather than by reading the code.",
+  "`_fetch(..., exploratory=False)` skips the WANDERING bound and keeps the "
+  "COUNT, because a retrieval that happened and is not in the count is exactly "
+  "the drift `_fetch`\u2019s own docstring warns about. Its bound lives at the "
+  "call site instead: at most two provisions, once.",
+  "Yes. The general rule is that a bound is a statement about ONE kind of "
+  "spending, and a second kind of spending sharing it is a bound that means "
+  "neither thing. The same shape as `advocate_words` sharing a string with the "
+  "account (B-097) and the transcript serving both review and judging (B-101) "
+  "\u2014 one artefact, two uses that pull apart.",
+  "tests/test_a_late_citation_is_fetched_once.py::"
+  "test_a_provision_the_answer_named_is_fetched_and_the_answer_rewritten, "
+  "which failed on exactly this and is the reason the interaction was found "
+  "before it shipped.")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

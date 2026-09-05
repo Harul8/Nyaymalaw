@@ -299,7 +299,7 @@ MUTATIONS = [
     # indistinguishable from one that found everything it needed.
     ("the evidence bound reached without a visible gap",
      "nm/core/turn.py",
-     "        if metrics.evidence_rounds >= MAX_EVIDENCE_ROUNDS:",
+     "        if exploratory and metrics.evidence_rounds >= MAX_EVIDENCE_ROUNDS:",
      "        if False and metrics.evidence_rounds >= MAX_EVIDENCE_ROUNDS:",
      "test_reaching_the_evidence_bound_produces_a_visible_gap", "E-020b"),
 
