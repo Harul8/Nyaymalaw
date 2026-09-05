@@ -443,15 +443,6 @@ NO_REPRODUCTION: dict[str, str] = {
         "context it is given; the scripted double quotes whatever the fixture "
         "tells it to. A test that made the double quote a stamp would be "
         "asserting the fixture.",
-    "B-088":
-        "THE REMAINDER IS A MEASUREMENT, NOT A DEFECT. The escalation landed "
-        "on 5 September 2026 -- the six decisive reads run on gpt-5.2, "
-        "recorded in nm/domain/tiers.py with the cost. What is unproven is "
-        "whether the stronger tier actually fails less often on the same "
-        "input, and that is a GS-15 rerun rather than a test: the original "
-        "defect appeared on one run of two, so no offline check can "
-        "reproduce it on demand. Declaring it reproducible would be claiming "
-        "a coincidence can be scheduled.",
 }
 
 

@@ -288,79 +288,58 @@ def test_the_turn_discloses_which_read_came_back_empty(tmp_path):
 
 # ==================== the escalation, earned and bounded ====================
 
-def test_every_decisive_read_asks_for_the_hard_tier():
-    """B-088's remainder. THE POPULATION IS THE TABLE.
+def test_no_read_asks_for_the_hard_tier_while_none_is_earned():
+    """THE ESCALATION WAS TAKEN AND WITHDRAWN, and this is the withdrawal.
 
-    Read off the SOURCE rather than by driving a turn, because a turn only
-    exercises the reads that branch happened to reach — the factor read runs
-    on a limitation turn and not on an opening one, so a driven check would
-    pass while a call site nobody hit still said `Tier.ROUTINE`.
+    Measured 6 September 2026 by replaying recorded prompts 30 times each:
+    the correction read was 30/30 on BOTH tiers, and the cause read was 10/30
+    on gpt-5.2 against 29/30 on gpt-4o-mini. The escalation bought nothing on
+    the read it was justified by and cost three-quarters of the read beside
+    it.
+
+    So this is the inverse of the check it replaces. It was
+    `test_every_decisive_read_asks_for_the_hard_tier`; the register in
+    nm/domain/tiers.py is empty again, and the slice-0 guard already fails the
+    build on a `Tier.HARD` that is not declared there. This asserts the other
+    half -- that the reads went BACK, rather than being left half-escalated by
+    an incomplete revert.
     """
     import ast
 
     source = (ROOT / "nm" / "core" / "turn.py").read_text(encoding="utf8")
-    tree = ast.parse(source)
-
-    asked: dict[str, set[str]] = {}
-    for node in ast.walk(tree):
+    asking_hard = []
+    for node in ast.walk(ast.parse(source)):
         if not (isinstance(node, ast.Call)
                 and isinstance(node.func, ast.Attribute)
                 and node.func.attr == "structured"):
             continue
-        if len(node.args) < 3:
-            continue
-        schema, tier = ast.unparse(node.args[1]), ast.unparse(node.args[2])
-        asked.setdefault(schema, set()).add(tier)
+        if len(node.args) >= 3 and "HARD" in ast.unparse(node.args[2]):
+            asking_hard.append(ast.unparse(node.args[1]))
 
-    assert asked, "no structured call sites were found at all"
-
-    #: schema expression -> the read key it carries.
-    owns = {
-        "cause_reader.CAUSE_SCHEMA": "cause",
-        "chronology.DATE_SCHEMA": "dates",
-        "posture_reader.ROLE_SCHEMA": "role",
-        "posture_reader.POSTURE_SCHEMA": "posture",
-        "factor_reader.FACTOR_SCHEMA": "factors",
-    }
-    wrong = []
-    for schema, tiers in sorted(asked.items()):
-        key = owns.get(schema)
-        if key is None:
-            # Not a decisive schema. It must NOT ask for the hard tier: the
-            # measurement that earned the escalation was about these six, and
-            # PRD 7.4.1 does not license the rest on their coat-tails.
-            if any("HARD" in t for t in tiers):
-                wrong.append(f"{schema} asks for the hard tier and is not "
-                             f"declared decisive")
-            continue
-        # COMPARED AS `ast.unparse` RENDERS IT, which quotes with single
-        # quotes. The first version hand-wrote double quotes and failed on the
-        # quote style alone -- a test pinned to how source is rendered rather
-        # than to the rule it is checking.
-        if tiers != {f"_tier({key!r})"}:
-            wrong.append(f"{schema} should ask _tier({key!r}), asks {tiers}")
-
-    assert not wrong, (
-        "the tier a read runs on must come from nm.domain.reads, so a seventh "
-        "decisive read is escalated the day it is declared:\n  "
-        + "\n  ".join(wrong))
+    from nm.domain.tiers import HARD_TIER_STEPS
+    if HARD_TIER_STEPS:
+        pytest.skip("an escalation is declared again; this check is the "
+                    "withdrawal and does not apply")
+    assert not asking_hard, (
+        "these reads ask for the hard tier while nm/domain/tiers.py declares "
+        f"no step has earned it: {asking_hard}")
 
 
-def test_the_tier_helper_reads_the_table_and_nothing_else():
-    """One owner. `is_decisive` answers WHAT, `_tier` answers SO WHAT, and
-    the split is the layer boundary -- `nm.domain` may not name a Tier, which
-    the layer check said the minute this was first written the other way."""
-    from nm.core.turn import _tier
-    from nm.ports.model import Tier
+def test_the_reads_table_still_owns_what_is_decisive():
+    """`is_decisive` SURVIVED THE REVERT, and that is deliberate.
 
-    for read in reads.READS:
-        expected = Tier.HARD if read.decisive else Tier.ROUTINE
-        assert _tier(read.key) is expected, read.key
+    The tier mapping is withdrawn; the table is not. It is what makes G-READ
+    fire on a decisive read that answers with nothing, which is a separate
+    mechanism from which model runs it -- and conflating them would have made
+    the revert delete a guard that had nothing to do with the escalation.
+    """
+    assert reads.is_decisive("dates")
+    assert reads.is_decisive("cause")
+    assert not reads.is_decisive("issues")
 
-    assert _tier("a read that does not exist") is Tier.ROUTINE, (
-        "an unknown read escalated. ROUTINE is the safe direction, and an "
-        "unlisted read is already a build failure in "
-        "test_every_read_the_product_makes_is_declared")
+    from nm.adapters.model.traced import _decisive
+    assert _decisive("dates") and not _decisive("issues"), (
+        "the traced adapter no longer agrees with the table it delegates to")
 
 
 def test_the_judge_is_not_the_model_under_test():

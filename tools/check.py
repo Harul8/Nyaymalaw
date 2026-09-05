@@ -37,6 +37,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 sys.path.insert(0, str(ROOT))
+from nm.domain.identity import source_fingerprint  # noqa: E402
 from tools._console import utf8_console  # noqa: E402
 
 utf8_console()
@@ -138,28 +139,74 @@ def main() -> int:
     print("CHECK  the per-task gate")
     print("=" * 74)
 
+    # WHAT TREE IS THIS RUN ABOUT? Taken now and checked again at the end.
+    #
+    # Measured on 6 September 2026, twice in one hour, in OPPOSITE directions.
+    # One run edited the register while the gate was going: `class_a` saw the
+    # half-edited state and went red, `pytest (all local)` ran ten minutes
+    # later against the finished state and went green, and the gate printed
+    # CHECK OK over two failures. Another had a pytest running concurrently,
+    # which planted `nm/core/_trace_probe.py` and removed it while pylint was
+    # parsing it -- so the gate went red on a file that does not exist.
+    #
+    # A GATE THAT SHARES A WORKING TREE WITH ANYTHING ELSE MEASURES NOTHING,
+    # and it fails in both directions, which is worse than failing in one. The
+    # fingerprint already exists for exactly this question -- it is what
+    # `run_scenario` uses to refuse a run against a server on other code -- so
+    # this is the same mechanism asked of the same tree.
+    # SAMPLED AFTER EVERY STAGE, not just at the ends. A file planted and
+    # removed inside one stage returns the fingerprint to where it started --
+    # proved, not assumed -- so a before/after pair is blind to exactly the
+    # transient that broke the pylint stage. Sampling between stages catches
+    # anything that outlives a stage boundary, which is what an edit made while
+    # the gate runs looks like.
+    #
+    # WHAT IT STILL CANNOT SEE: a change made and undone entirely within one
+    # stage. That is a narrower hole than the one it closes, and it is stated
+    # here rather than left for someone to find.
+    prints: list[tuple[str, str]] = [("start", source_fingerprint())]
+
     results = []
     ok, _ = step("layercheck", [py, "tools/layercheck.py"])
     results.append(("layercheck", ok))
+    prints.append(("layercheck", source_fingerprint()))
     ok, _ = step("export_spec", [py, "tools/export_spec.py"])
     results.append(("export_spec", ok))
+    prints.append(("export_spec", source_fingerprint()))
     ok, _ = step("trace", [py, "tools/trace.py", "--skip-regen"])
     results.append(("trace", ok))
+    prints.append(("trace", source_fingerprint()))
     ok, _ = step("speccheck", [py, "tools/speccheck.py"])
     results.append(("speccheck", ok))
+    prints.append(("speccheck", source_fingerprint()))
     ok, _ = step("ruff", [py, "-m", "ruff", "check", "nm", "tools", "tests"])
     results.append(("ruff", ok))
+    prints.append(("ruff", source_fingerprint()))
     # The rename sweep. pyflakes does not find these, and a stale call site
     # after a rename raised NameError on every matter for weeks.
     ok, _ = step("pylint E0601,E0606",
                  [py, "-m", "pylint", "--disable=all", "--enable=E0601,E0606",
                   "--score=n", "nm"])
     results.append(("pylint", ok))
-    ok, _ = step("pytest -m class_a", [py, "-m", "pytest", "-m", "class_a", "-q"],
-                 allow_warn=True)
+    prints.append(("pylint", source_fingerprint()))
+    # NOT allow_warn, AND IT WAS FOR MONTHS WITH NO REASON GIVEN.
+    #
+    # class_a is the every-commit tier -- the logic checks. Letting it WARN
+    # printed a yellow line and a green CHECK OK over two red tests on 6
+    # September 2026, and the reader (me) moved on. The gate was not unsound:
+    # `pytest (all local)` runs the same tests and cannot warn, so a real
+    # failure still failed the build one stage later. What was wrong is that
+    # the SUMMARY said something the run did not support, which is the whole
+    # shape this project refuses everywhere else.
+    #
+    # An exemption someone typed is a decision; this one was typed by nobody
+    # and explained by nothing.
+    ok, _ = step("pytest -m class_a", [py, "-m", "pytest", "-m", "class_a", "-q"])
     results.append(("class_a", ok))
+    prints.append(("class_a", source_fingerprint()))
     ok, _ = step("pytest (all local)", [py, "-m", "pytest", "-q", "-m", "not class_d"])
     results.append(("pytest", ok))
+    prints.append(("pytest", source_fingerprint()))
 
     if args.slice is not None:
         # A SLICE DOES NOT CLOSE ON UNIT EVALS ALONE.
@@ -192,6 +239,20 @@ def main() -> int:
             print("      explicitly rather than run by default.")
             print()
             results.append(("scenarios", False))
+
+    prints.append(("end", source_fingerprint()))
+    moved = [(a[0], b[0]) for a, b in zip(prints, prints[1:], strict=False)
+             if a[1] != b[1]]
+    if moved:
+        print()
+        print("CHECK VOID  -- the tree changed while the gate ran")
+        for was_after, before_next in moved:
+            print(f"    it moved between {was_after!r} and {before_next!r}")
+        print(f"    started on  {prints[0][1]}")
+        print(f"    ended on    {prints[-1][1]}")
+        print("  Every result above is about some mixture of trees and none "
+              "of them is about any one of them. Re-run on a quiet tree.")
+        return 1
 
     failed = [n for n, ok in results if not ok]
     print()

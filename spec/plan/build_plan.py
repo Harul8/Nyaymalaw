@@ -2491,9 +2491,9 @@ d("B-088", "2026-09-05", "core",
   "test_a_correction_that_was_taken_raises_no_question, without which an "
   "advocate who corrected something SUCCESSFULLY would be asked to confirm "
   "it \u2014 B-090\u2019s noise, one layer down.",
-  "Partly fixed \u2014 escalated to the hard tier on 5 September 2026 (gpt-5.2, "
-  "see nm/domain/tiers.py); the miss is asked about; QUALITY OF THE STRONGER "
-  "TIER IS NOT YET MEASURED and needs a GS-15 rerun")
+  "Fixed \u2014 and the escalation it earned was WITHDRAWN on measurement "
+  "(B-109): the read is 30/30 on both tiers, and B-088 itself was observed "
+  "on a second correction read that B-086 deleted")
 
 d("B-090", "2026-09-05", "core",
   "THE CASCADE FIRED ON EVERY TURN OF A PASSING RUN. GS-15 finally passed its "
@@ -3254,6 +3254,120 @@ d("B-108", "2026-09-05", "core",
   "good enough to exploit it.",
   "None yet.",
   "Open")
+
+d("B-109", "2026-09-06", "adapters",
+  "THE HARD-TIER ESCALATION WAS A REGRESSION, AND THE MEASUREMENT THAT EARNED "
+  "IT WAS OF DELETED CODE. Replaying recorded prompts 30 times each: the "
+  "CORRECTION read was 30/30 on gpt-5.2 AND 30/30 on gpt-4o-mini, same fact id "
+  "every time \u2014 so the escalation bought nothing on the read it was "
+  "justified by. The CAUSE read was 10/30 on gpt-5.2 against 29/30 on "
+  "gpt-4o-mini \u2014 three times worse. At temperature 0 it fell to 2/30, so "
+  "it is not sampling noise: the stronger model settles DETERMINISTICALLY on "
+  "the wrong answer.",
+  "TWO CAUSES, and the first is mine. B-088 was observed on a SECOND "
+  "correction read that reconstructed the relationship from two fact ids; "
+  "B-086 folded that question into the date row and deleted it. The "
+  "justification for a 131% cost increase was a measurement of code that no "
+  "longer runs, and nothing connected the two \u2014 the register recorded the "
+  "defect and the redesign in separate rows.\n\n"
+  "The second is why a better model is WORSE here. gpt-5.2 quotes the whole "
+  "relevant block of the account; the verbatim guard demands a span in the "
+  "advocate\u2019s OWN words, and the account carries our date stamps and "
+  "notes. The model is not being stupid, it is using the context it was given "
+  "\u2014 and OUR PROMPT DOES NOT SAY WHICH PART MAY BE QUOTED (B-108). A "
+  "stronger model exploits that ambiguity harder.",
+  "S7 \u2014 a rule applied outside the case it was written for",
+  "`tools/read_stability.py`, built for this question: it replays ONE recorded "
+  "call rather than rerunning a scenario. A dates replay is $0.0015 against "
+  "$0.018 for a full run, so 30 trials cost four cents and a minute. THE "
+  "ADVOCATE ASKED THE RIGHT QUESTION \u2014 \u2018how many runs?\u2019 \u2014 "
+  "and the answer was that runs were the wrong instrument.",
+  "The escalation is WITHDRAWN. The five call sites ask for ROUTINE again, "
+  "HARD_TIER_STEPS is empty, and NM_MODEL_HARD is commented out rather than "
+  "deleted \u2014 one line to restore once B-108 is fixed. "
+  "`nm.domain.reads.is_decisive` STAYS: it is what makes G-READ fire on a "
+  "decisive read that answers with nothing, which is a separate mechanism "
+  "from which model runs it, and conflating them would have made the revert "
+  "delete a guard that had nothing to do with the escalation.",
+  "Yes, and the general rule is about MEASUREMENT rather than about tiers. A "
+  "measurement justifies a change only while the thing it measured still "
+  "exists \u2014 and nothing in this build checked that. The rule PRD "
+  "\u00a77.4.1 states (escalation is earned by a recorded measurement) was "
+  "followed to the letter and still produced a regression, because the letter "
+  "does not say the measurement must be of CURRENT code. It does now, in "
+  "nm/domain/tiers.py.\n\n"
+  "It is also a caution about \u2018better model\u2019 as a fix: a stronger "
+  "model does not fail LESS, it fails DIFFERENTLY, and where a guard was "
+  "tuned to the weaker one\u2019s habits the change reads as a regression.",
+  "nm/domain/tiers.py records the round trip \u2014 the entry that was added "
+  "and withdrawn, with all three numbers \u2014 and "
+  "tests/test_reads_registry.py::"
+  "test_no_read_asks_for_the_hard_tier_while_none_is_earned asserts the "
+  "reads went BACK rather than being left half-escalated by an incomplete "
+  "revert, with test_the_reads_table_still_owns_what_is_decisive as the bound "
+  "that the revert did not take the table with it.")
+
+d("B-110", "2026-09-06", "tooling",
+  "THE GATE PRINTED CHECK OK OVER TWO RED TESTS. `pytest -m class_a` was "
+  "declared `allow_warn=True`, so a failure printed a yellow WARN line and did "
+  "not fail the gate. Two tests were red, the summary said CHECK OK, and it "
+  "was read as a pass.",
+  "An exemption typed by nobody and explained by nothing. There is no comment "
+  "anywhere saying why the every-commit tier was permitted to warn, and the "
+  "flag has been in the file long enough that nobody remembers.",
+  "S11 \u2014 a check that cannot fail",
+  "Reading a gate log carefully after a suspicious result. The `class_a` "
+  "STAGE LINE was missing from the summary block entirely \u2014 neither PASS "
+  "nor FAIL \u2014 which is what prompted looking at it at all.",
+  "`allow_warn` removed from the class_a stage. No stage may warn now. THE "
+  "GATE WAS NOT UNSOUND: `pytest (all local)` runs the same tests and cannot "
+  "warn, so a genuine failure still failed the build one stage later. What "
+  "was wrong is that the SUMMARY said something the run did not support, "
+  "which is the shape this project refuses everywhere else.",
+  "Yes. \u2018A declared exemption is work; a silent one is a surprise\u2019 "
+  "is the rule this build applies to UNWIRED, RESERVED, WITHHELD, AWAITING "
+  "and CLOSED \u2014 and the gate that enforces those tables carried an "
+  "undeclared exemption of its own.",
+  "tools/check.py: no stage passes `allow_warn`, and the parameter now has no "
+  "caller. Its removal from the signature is deliberately NOT done \u2014 a "
+  "future stage may genuinely need it, and it must then be declared with the "
+  "reason rather than found lying about.")
+
+d("B-111", "2026-09-06", "tooling",
+  "THE GATE DID NOT KNOW WHAT TREE IT WAS MEASURING, and failed in BOTH "
+  "DIRECTIONS within one hour. One run: the register was edited while the gate "
+  "was going, `class_a` saw the half-edited state and went red, `pytest (all "
+  "local)` ran ten minutes later against the finished state and went green. "
+  "Another: a pytest running concurrently planted `nm/core/_trace_probe.py` "
+  "and removed it while pylint was parsing it, so the gate went RED ON A FILE "
+  "THAT DOES NOT EXIST.",
+  "Every stage is a subprocess against the working tree, and nothing recorded "
+  "which tree. A gate that shares a tree with an editor or another test run is "
+  "measuring a mixture, and the result is about none of the trees it saw.",
+  "S1 \u2014 an absent input reading as success",
+  "Two gate logs an hour apart, disagreeing about the same code. A "
+  "consistently red gate would have been caught immediately; one that is red "
+  "and green in turn reads as flakiness, which is the thing people learn to "
+  "re-run rather than investigate.",
+  "`source_fingerprint` is sampled after EVERY STAGE and a mismatch prints "
+  "CHECK VOID naming the stages it moved between. The same mechanism "
+  "`run_scenario` already uses to refuse a run against a server on other "
+  "code, asked of the same tree.\n\n"
+  "SAMPLED BETWEEN STAGES AND NOT JUST AT THE ENDS, because a file planted "
+  "and removed returns the fingerprint to where it started \u2014 proved, not "
+  "assumed \u2014 so a before/after pair is blind to exactly the transient "
+  "that broke the pylint stage. What it still cannot see is a change made and "
+  "undone inside ONE stage; that is a narrower hole than the one it closes "
+  "and it is stated in the code rather than left to be found.",
+  "Yes, and the general rule is that A RESULT MUST NAME THE THING IT IS "
+  "ABOUT. It is the same rule as the source fingerprint on a served run, the "
+  "index identity on a derived artefact (S11), and the store named beside a "
+  "zero result (B-163). A measurement whose subject is not recorded is a "
+  "measurement of whatever was there at the time.",
+  "tools/check.py returns 1 with CHECK VOID when the fingerprint moves "
+  "between any two stages. Proved by planting a file and watching the "
+  "fingerprint move and return \u2014 which is also how the residual hole was "
+  "found rather than assumed away.")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

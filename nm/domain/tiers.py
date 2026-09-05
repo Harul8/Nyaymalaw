@@ -46,42 +46,43 @@ class HardTierStep:
                 f"not a measurement.")
 
 
-#: One entry. See the module docstring.
-HARD_TIER_STEPS: tuple[HardTierStep, ...] = (
-    HardTierStep(
-        # THE FILE, because that is the granularity the check can see:
-        # it scans for `Tier.HARD` and knows the path it found it in.
-        # `nm.core.turn._tier` is the ONLY site in this file, which is
-        # the whole design -- one place turns "is this read decisive"
-        # into a tier, so a second site would be a second owner.
-        step="nm/core/turn.py",
-        measurement=(
-            "B-088. The correction read fired on one run of GS-15 and returned "
-            "NOTHING on the next, on identical input -- so the answer computed "
-            "a limitation period from a date the advocate had explicitly "
-            "withdrawn, and reported a claim as expired in 1987 for an "
-            "agreement dated 2024. Every citation on that turn was verbatim "
-            "and the arithmetic was correct. Two runs, same code, same "
-            "sentence, opposite answers: that is a read that is not reliable "
-            "enough at the cheap tier for an output nothing downstream can "
-            "check."),
-        measured_at="2026-09-05",
-        delta=(
-            "COST, measured on GS-15's own transcripts before the switch: the "
-            "decisive reads are 3 calls of 10 and 1611 in / 115 out tokens, "
-            "which is 35% of a turn's input and 10% of its output. Escalating "
-            "ONLY them takes a turn from $0.001449 to $0.003353 (+131%); "
-            "escalating everything would be roughly 600%. gpt-5.2 direct at "
-            "0.875/7.00 per Mtok is cheaper than the judge (gpt-5.1, "
-            "1.25/10.00), which is what made it affordable. "
-            "QUALITY IS NOT YET MEASURED, and this entry says so rather than "
-            "implying it. B-088 measures what the CHEAP tier costs when it "
-            "fails; whether the expensive one fails less often on the same "
-            "input is a rerun of GS-15 that has not happened. The promotion "
-            "rests on the failure being unacceptable, not on the replacement "
-            "being proven -- and that distinction belongs in the register "
-            "rather than in a commit message."),
-    ),
-)
+#: EMPTY AGAIN, AND THE ROUND TRIP IS THE POINT.
+#:
+#: One entry was added on 5 September 2026 and withdrawn on 6 September when it
+#: was measured. Both belong in the history: an escalation that was taken and
+#: reversed on evidence is a different thing from one that was never taken, and
+#: a register that only records the promotions is a register that reads as
+#: though every promotion held.
+#:
+#: WHAT WAS CLAIMED. B-088 -- the correction read fired on one run of GS-15 and
+#: returned nothing on the next -- with the cost measured at +131% a turn for
+#: the six decisive reads.
+#:
+#: WHAT MEASURING IT SHOWED, replaying the recorded prompts 30 times each:
+#:
+#:     correction read   30/30 on gpt-5.2 AND 30/30 on gpt-4o-mini
+#:     cause read        10/30 on gpt-5.2, 29/30 on gpt-4o-mini
+#:     cause at temp 0    2/30 on gpt-5.2
+#:
+#: The first line says the escalation bought nothing: B-088 had been observed
+#: on a SECOND correction read that B-086 deleted, so the justification rested
+#: on code that no longer runs. The second says it cost something real -- the
+#: cause read got three times worse. The third says it is not sampling noise:
+#: at temperature 0 the stronger model settles deterministically on the wrong
+#: answer.
+#:
+#: WHY THE STRONGER MODEL IS WORSE HERE, which is the part worth keeping.
+#: gpt-5.2 quotes the whole relevant block of the account; the verbatim guard
+#: demands a span that is in the advocate's own words, and the account carries
+#: our date stamps and notes. The model is not being stupid -- it is using the
+#: context it was given, and OUR PROMPT DOES NOT SAY WHICH PART MAY BE QUOTED.
+#: A better model exploits that ambiguity harder. Fixing the prompt (B-108) may
+#: make gpt-5.2 viable; until then the measurement says what it says.
+#:
+#: The other four decisive reads -- posture, role, factors and the date read's
+#: own extraction -- were NOT measured, and reverting all six on evidence from
+#: two is deliberate: no read showed a benefit, one showed serious harm, and
+#: the cost was real.
+HARD_TIER_STEPS: tuple[HardTierStep, ...] = ()
 
 PERMITTED = {s.step for s in HARD_TIER_STEPS}
