@@ -2941,6 +2941,123 @@ d("B-100", "2026-09-05", "tooling",
   "an Open row is a claim nobody re-runs.",
   "Open")
 
+d("B-101", "2026-09-05", "tooling",
+  "THE JUDGE GRADED AN ANSWER THE PRODUCT REFUSED TO SERVE. E-102 was run on "
+  "GS-15 and FAILED, quoting \u2018specific performance can still be sought "
+  "based on the theory of part performance under Section 53A\u2019. That text "
+  "is turn 4, which G-GROUND WITHHELD \u2014 for citing s.53A when only "
+  "Article 54 had been retrieved. The advocate never saw the words the "
+  "product was marked down for.",
+  "A withheld turn now records its draft, which is right for review and wrong "
+  "as judge input, and NOTHING separates the two. Worse, the transcript\u2019s "
+  "`blocked` field is FALSE on a withheld turn \u2014 it records the "
+  "ANSWER\u2019s blocked flag, which is a different thing from the turn being "
+  "gated \u2014 so a reader cannot tell a served turn from a refused one "
+  "without inspecting `gates_fired`.",
+  "S1 \u2014 an absent input reading as success",
+  "The first judged run after the withheld-turn commit landed, 5 September "
+  "2026. THE DEFECT IS DOWNSTREAM OF THAT FIX: before it, a withheld turn "
+  "recorded nothing at all, so there was no draft to grade. Closing a memory "
+  "leak opened an eval-integrity hole, and no check connected the two.",
+  "NOT FIXED. The judge\u2019s input must be WHAT THE ADVOCATE WAS SHOWN, "
+  "which is a property the transcript can state rather than a rule the judge "
+  "has to remember: a turn carries `withheld_by` naming the gates, and the "
+  "judge skips or separately scores those turns. The general form is that a "
+  "record kept for REVIEW and a record used for SCORING are different "
+  "artefacts, and one field cannot serve both without saying which it is.",
+  "Yes, and it is the same shape as B-097 one layer out: a single record "
+  "serving two uses that pull apart, widened for one and silently wrong for "
+  "the other. There it was the account and the guard input; here it is the "
+  "transcript for review and the transcript for judging.",
+  "None yet. The check to write asserts that no element of a withheld turn "
+  "reaches a judge prompt \u2014 a positive control on the harness, not on "
+  "the product.",
+  "Open")
+
+d("B-102", "2026-09-05", "core",
+  "A VALUE THAT HAD NEVER BEEN COMPUTED WAS ANNOUNCED AS HAVING MOVED. GS-15 "
+  "turn 2, served: \u2018A value on this thread has MOVED since the last "
+  "turn. limitation: was not computed before, now 1987-04-15\u2019, followed "
+  "by a blocking question asking \u2018whether anything already done on "
+  "limitation needs undoing\u2019. Nothing had been done. Turn 1 had said, "
+  "correctly, that it had not computed a limitation position.",
+  "B-090 sorted derivations into POSITION and MEASUREMENT so a growing count "
+  "would stop cascading. A limitation date IS a position, so it cascades "
+  "correctly \u2014 but the transition is ABSENT to PRESENT, which is the "
+  "file acquiring a value, not a value changing. There is no prior advice for "
+  "the question to be about.",
+  "S1 \u2014 an absent input reading as success",
+  "GS-15\u2019s served run of 5 September 2026, on the first turn where a "
+  "limitation could be computed at all.",
+  "NOT FIXED. A derivation with NO PRIOR VALUE has not moved, and the "
+  "cascade\u2019s question \u2014 what needs undoing \u2014 is unanswerable "
+  "for it. The kind is right and the transition is the missing half: absent "
+  "to present is arrival, present to present is a move, present to absent is "
+  "the LOSS `G-CONSERVE` already watches and the more dangerous direction.",
+  "Yes, and it is B-090 recurring in the shape B-090\u2019s own fix did not "
+  "cover. The rule there was that a signal firing always carries no "
+  "information; this fires on the FIRST turn any value appears, which on a "
+  "growing file is most of them.",
+  "None yet. tests/test_gaps_and_cascade_on_a_served_turn.py is where it "
+  "belongs, beside the count-that-grew case B-090 added.",
+  "Open")
+
+d("B-103", "2026-09-05", "edge",
+  "AN INTERNAL THREAD ID WAS PUT TO THE ADVOCATE, TWICE IN A QUESTION. GS-15 "
+  "turn 2, served: \u2018To take this further I need: whether anything "
+  "already done on limitation on thr_380e2b97f5a6 needs undoing.\u2019 An "
+  "advocate cannot answer a question addressed to a database key, and the "
+  "thread already has a LABEL that every other line uses.",
+  "The cascade names its derivations `<what> on <thread_id>` for uniqueness "
+  "inside the product, and that internal name was rendered straight into "
+  "advocate-facing text. An identifier that is correct for a lookup is not a "
+  "noun a person can use.",
+  "S1 \u2014 an absent input reading as success",
+  "GS-15\u2019s served run of 5 September 2026, reading the turn as an "
+  "advocate rather than as a diff.",
+  "NOT FIXED. The general form is that NO INTERNAL IDENTIFIER may appear in "
+  "advocate-facing text, and it is mechanically checkable: a sweep over the "
+  "elements of a served answer for anything matching the product\u2019s own "
+  "id prefixes (`mat_`, `thr_`, `fact_`, `turn_`). That is a check with a "
+  "population drawn from the whole product, and it would have caught this on "
+  "any scenario.",
+  "Yes. The same shape as B-097 in a mild form: this product\u2019s own "
+  "vocabulary crossing into text meant for a person. There it defeated a "
+  "guard; here it makes a question unanswerable.",
+  "None yet. The sweep is over served elements and belongs beside the other "
+  "answer-shape invariants.",
+  "Open")
+
+d("B-104", "2026-09-05", "core",
+  "A WITHHELD TURN IS A DEAD END, AND THE MODEL WAS RIGHT. GS-15 turn 4: the "
+  "advocate said \u2018the agreement was never registered\u2019, the model "
+  "reached for TRANSFER OF PROPERTY ACT s.53A \u2014 part performance, which "
+  "is the correct provision for exactly that question \u2014 and G-GROUND "
+  "withheld the turn because s.53A had never been retrieved. Two of five "
+  "turns produced no advice. THE GATE WAS RIGHT EVERY TIME; the product has "
+  "no answer to being right.",
+  "Retrieval runs BEFORE the derivation, so a provision the model reaches for "
+  "mid-answer cannot be fetched. The only responses available are to serve "
+  "unsupported law or to serve nothing, and the gate correctly picks nothing.",
+  "S6 \u2014 a clean verdict from an input known to be incomplete",
+  "GS-15\u2019s served run of 5 September 2026: turns 3 and 4 withheld, "
+  "citing provisions 18 and 53A against a retrieved set of [54].",
+  "NOT FIXED, AND IT IS A DESIGN DECISION RATHER THAN A BUG. A citation the "
+  "answer names and retrieval did not fetch is a RETRIEVAL NEED the turn "
+  "discovered late. The shape of the fix is a bounded second round: fetch the "
+  "named provision, re-derive once, and withhold only if it still fails \u2014 "
+  "bounded because an unbounded loop lets a model conjure citations until one "
+  "lands, which is the failure the gate exists to stop.",
+  "Yes. The general rule is that a REFUSAL IS NOT AN ANSWER unless the "
+  "advocate can act on it. \u00a77.1 is right that the turn must be withheld; "
+  "what is missing is that the withholding names a provision the product "
+  "could simply have looked up. An advocate who asks about an unregistered "
+  "agreement and is told nothing has been given a worse answer than the "
+  "product could support.",
+  "None yet. Approval needed: a second retrieval round is a cost change as "
+  "well as a design change.",
+  "Open")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",
