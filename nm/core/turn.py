@@ -611,10 +611,47 @@ class TurnEngine:
         stopped writing is visible rather than discovered when someone comes
         looking months later.
         """
+        # THE CALL TRACE, where the model port keeps one.
+        #
+        # Asked of the port by DUCK TYPE rather than by import: the core must
+        # not know an adapter exists, and a `hasattr` here is the whole of the
+        # coupling. A port that does not trace contributes nothing and the
+        # transcript simply has no `model_calls` key -- absent, not an empty
+        # list, because an empty list would claim the turn made no calls.
+        trace = None
+        take = getattr(self._model, "take", None)
+        if callable(take):
+            try:
+                trace = take()
+            except Exception as exc:  # noqa: BLE001 -- never fail a turn
+                metrics.violate("I1", f"the call trace could not be drained: "
+                                      f"{type(exc).__name__}: {exc}")
+
+        # TWO COUNTS OF ONE THING MUST AGREE, and this is not belt-and-braces.
+        #
+        # `llm_calls` is incremented by the turn after a read returns; the
+        # trace is written by the port as the call is made. They count the
+        # same calls by different routes, so a disagreement means one of them
+        # is wrong -- and the failure mode is a trace that records NOTHING,
+        # which reads exactly like a turn that made no calls.
+        #
+        # Measured, 5 September 2026: the tracer read `usage.input_tokens`,
+        # which this port does not have. It raised inside every read, the
+        # reads' own `except` recorded the AttributeError as a violation, and
+        # the transcript then said the turn made zero calls. The product was
+        # right and the record was silent about which half had failed.
+        if trace is not None and trace["count"] != metrics.llm_calls:
+            metrics.violate(
+                "I1", f"the call trace and the turn disagree about how many "
+                      f"model calls were made: traced {trace['count']}, "
+                      f"counted {metrics.llm_calls}. One of them is wrong and "
+                      f"the transcript cannot be read as a record of this turn.")
+
         try:
             self._store.record_turn({
                 "turn_id": turn.turn_id,
                 "matter_id": matter.id,
+                **({"model_calls": trace} if trace is not None else {}),
                 "advocate_id": turn.advocate_id,
                 "at": datetime.now(timezone.utc).isoformat(),
                 "today": turn.today.isoformat(),

@@ -2636,6 +2636,78 @@ d("B-093", "2026-09-05", "domain",
   "provenance the constructor would refuse so the degraded path is exercised "
   "rather than assumed away.")
 
+d("B-094", "2026-09-05", "domain",
+  "SIX FIELDS ARE ON THE RECORD AND THE MODEL IS NEVER TOLD THEM. Measured "
+  "across the persisted closure on 5 September 2026: of 29 scalars, SEVEN "
+  "reach `as_context()`. Provenance was the eighth and is B-093. These six "
+  "remain \u2014 `Fact.certainty` (documented vs asserted), `Fact.basis` and "
+  "`Fact.basis_source` (direct knowledge vs hearsay), `Fact.weight` "
+  "(favourable vs adverse), `Fact.material`, and "
+  "`Posture.client_described_as`, which is dropped the moment a role is "
+  "known. Every derivation reasons without them.",
+  "The account renders `statement` and `date`. Everything else the advocate "
+  "or a read established about a fact stays on disk. Nothing fails, because "
+  "an ungraded fact and a fact graded adverse produce the same line.",
+  "S1 \u2014 an absent input reading as success",
+  "The same enumerator as B-091, asked of a second population: not which "
+  "fields nothing WRITES, but which fields the record HOLDS and the model is "
+  "never TOLD. Both were found by walking the persisted closure rather than "
+  "by reading code.",
+  "OPEN, AND DELIBERATELY NOT MECHANICAL. Unlike B-091 this cannot be "
+  "settled by a sweep, because the account has a MEASURED CHARACTER BUDGET "
+  "(`ACCOUNT_BUDGET`, 3000) and every grading marker added is paid for in "
+  "facts that then do not fit \u2014 the trade B-085 was fixed to make "
+  "visible. Which of the six earn their characters is a product judgement "
+  "and belongs to the advocate, not to a check. What a check CAN do is force "
+  "the answer to be written down: an enumerator over the closure with a "
+  "WITHHELD table, each entry naming either \u2018structure, not content\u2019 "
+  "or the channel that carries it instead. Held in the backlog on the "
+  "advocate\u2019s instruction, 5 September 2026.",
+  "Yes \u2014 and it is the general form of B-092 and B-093, which were the "
+  "two members of this population found first and fixed one at a time. The "
+  "same argument as B-091: a population discovered one member at a time has "
+  "no enumerator.",
+  "None yet. The check to write is the WITHHELD enumerator, and it cannot be "
+  "written before the six are decided \u2014 a declaration table authored "
+  "without the decision would record a guess as a policy.",
+  "Open")
+
+d("B-095", "2026-09-05", "adapters",
+  "A TURN\u2019S RECORD COULD SAY IT MADE NO MODEL CALLS WHILE IT MADE "
+  "ELEVEN. Found while building the call trace: the tracer read "
+  "`usage.input_tokens`, which this port does not have \u2014 the field is "
+  "`tokens_in`. It raised inside EVERY read. Each read\u2019s own `except` "
+  "did the right thing and recorded an AttributeError as a violation, and "
+  "the transcript then reported `llm_calls: 0`, which is exactly what a turn "
+  "that made no calls looks like.",
+  "One number, one route. `llm_calls` is incremented by the turn after a read "
+  "returns, so anything that makes every read fail also makes the count "
+  "read zero \u2014 and zero is a legitimate value. Nothing else counted the "
+  "calls, so nothing could disagree.",
+  "S1 \u2014 an absent input reading as success",
+  "Building the trace, on the bytes: `TracedModel.structured` was entered 11 "
+  "times and the transcript said 0. THE PRODUCT WAS RIGHT AND I IGNORED IT "
+  "\u2014 four violations naming the AttributeError and the attribute were "
+  "on the record, and the zero was read as \u2018this turn was quiet\u2019. "
+  "That is the whole defect: a correct signal beside a wrong one that is "
+  "easier to believe.",
+  "TWO COUNTS OF ONE THING, BY DIFFERENT ROUTES. The trace is written by the "
+  "PORT as the call is made; `llm_calls` is written by the TURN after the "
+  "read returns. They cannot both be wrong in the same direction by "
+  "accident, so a disagreement is a violation naming both numbers and saying "
+  "the transcript cannot be read as a record of that turn.",
+  "Yes, and it is the general form of \u00a79 in CLAUDE.md \u2014 an absent "
+  "input must never read as success \u2014 applied to a COUNT. A count of "
+  "zero and a counter that never ran are the same integer, and the only "
+  "thing that separates them is a second, independent count. Where a number "
+  "gates a decision and one path produces it, that number cannot report its "
+  "own failure.",
+  "tests/test_model_calls_are_kept.py::test_the_two_counts_of_one_thing_must"
+  "_agree, with test_a_tracer_that_records_nothing_is_a_violation_and_not_a_"
+  "silence as its POSITIVE CONTROL \u2014 planted on the real served path "
+  "with a tracer that drops everything, because a check for a silence has to "
+  "be shown failing on a silence.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

@@ -14,6 +14,7 @@ from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority
 from nm.adapters.model.config import ModelConfig, load, load_dotenv
 from nm.adapters.model.openai_adapter import OpenAIModelAdapter
 from nm.adapters.model.scripted import ScriptedModelAdapter
+from nm.adapters.model.traced import TracedModel
 from nm.adapters.search.authority import AuthorityIndexSearch
 from nm.adapters.store.directory import FileDirectory
 from nm.adapters.store.file_store import FileMatterStore
@@ -80,7 +81,18 @@ class Application:
         self.search = search or AuthorityIndexSearch(
             os.environ.get("NM_AUTHORITY_INDEX")
             or default_authority_index(self.root))
-        self.model = model or build_model(self.config)
+        # EVERY MODEL CALL IS KEPT, and the wrapping happens HERE.
+        #
+        # `TurnMetrics` already counts the calls; it does not say which read
+        # each was, what it was given, or which returned nothing. B-088 was
+        # diagnosed by diffing two scenario runs by hand for exactly that
+        # reason. Tracing inside each adapter would have been two owners of
+        # one decision -- the shape CLAUDE.md §4 records -- so it is a
+        # decorator over the port, applied once, and nothing in the core knows.
+        #
+        # The trace rides in the TRANSCRIPT, which is sealed with the matter
+        # cipher, because a prompt carries everything the advocate has said.
+        self.model = TracedModel(inner=model or build_model(self.config))
         self.coverage = CoverageProfile.load(self.root / "spec" / "coverage.yaml")
         self.engine = TurnEngine(store=self.store, evidence=self.evidence,
                                  model=self.model, coverage=self.coverage)
