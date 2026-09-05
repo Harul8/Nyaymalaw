@@ -2436,20 +2436,40 @@ d("B-088", "2026-09-05", "core",
   "`G-CORRECTION` present on one and absent on the other for the same "
   "sentence. The unit tests pass in both worlds, because they drive the "
   "reader with an answer rather than asking for one.",
-  "NOT FIXED, AND NOT BY A BETTER PROMPT. A correction changes every number "
-  "downstream of it, which is exactly the case CLAUDE.md reserves the "
-  "expensive tier for: `reserve the expensive one for where it changes the "
-  "answer`. The hard tier is NOT CONFIGURED on this installation "
-  "(`hard_tier: not configured` on /api/health), so the read cannot be moved "
-  "there yet. Declared rather than done.",
+  "THE READ IS UNCHANGED AND STILL UNRELIABLE. What is fixed is the "
+  "CONSEQUENCE, which is the half that made this dangerous: a miss was "
+  "SILENT. Both dates stayed on the chart, the period ran from the earlier "
+  "one, and the answer was confidently about a date the advocate had "
+  "withdrawn. `chronology.looks_like_a_correction` now detects that a "
+  "correction is being ATTEMPTED \u2014 a phrase, not a judgement \u2014 and where "
+  "the read named nothing while other dated entries are live, the turn "
+  "fires `G-CORRECTION: not_assessed` and asks, quoting their own words "
+  "back and carrying both dates. Four words settle it.\n\n"
+  "THIS IS NOT THE FUZZY MATCHING \u00a75 FORBIDS. That rule forbids fuzzy "
+  "matching that IDENTIFIES. The phrase list never decides WHICH entry is "
+  "meant; it decides only that the product must not proceed as though "
+  "nothing was said. Putting a question to the advocate identifies "
+  "nothing.\n\n"
+  "MOVING THE READ TO THE HARD TIER REMAINS RIGHT AND REMAINS UNDONE. A "
+  "correction changes every number downstream of it, which is what CLAUDE.md reserves "
+  "the expensive tier for. It is NOT CONFIGURED here (`hard_tier: not "
+  "configured` on /api/health) and that is a cost decision, not a code one. "
+  "The question is what makes the gap survivable in the meantime.",
   "Yes, and it names a gap in how this build is tested. Every reader in the "
   "product is unit-tested by handing it a model answer and checking the "
   "guards \u2014 which proves the guards and says NOTHING about whether the "
   "read produces that answer. A read whose failure mode is `returns nothing` "
   "passes every test in the suite. The scenario runs are the only thing that "
   "sees it, and they see it only when they happen to.",
-  "docs/GOLDEN_SET.md GS-15; the two runs of 4-5 September 2026",
-  "Open")
+  "tests/test_correction_supersedes.py::"
+  "test_a_missed_correction_becomes_a_blocking_question, driven with a "
+  "model that NEVER fills `corrects` \u2014 waiting for the real one to miss "
+  "would be waiting on a coincidence, and the test would pass on the runs "
+  "where the defect is absent. Bounded by "
+  "test_a_correction_that_was_taken_raises_no_question, without which an "
+  "advocate who corrected something SUCCESSFULLY would be asked to confirm "
+  "it \u2014 B-090\u2019s noise, one layer down.",
+  "Fixed \u2014 the miss is asked about; the read is unchanged")
 
 d("B-090", "2026-09-05", "core",
   "THE CASCADE FIRED ON EVERY TURN OF A PASSING RUN. GS-15 finally passed its "
@@ -2481,6 +2501,36 @@ d("B-090", "2026-09-05", "core",
   "tests/test_gaps_and_cascade_on_a_served_turn.py::"
   "test_a_count_that_grew_is_not_announced_as_a_correction, with "
   "test_a_measurement_that_vanishes_is_still_reported_lost as its bound")
+
+d("B-091", "2026-09-05", "domain",
+  "A FIELD DECLARED ON A PERSISTED TYPE THAT NOTHING EVER WRITES. Three found "
+  "one at a time, all on `Fact` or beside it: `superseded_by` (B-086, a "
+  "correction had nowhere to land), `Factor` (B-073, the s.18 acknowledgement "
+  "read did not exist), and `conflicts_with`, found while fixing B-088 and "
+  "still unwritten by anything.",
+  "A dataclass field is a PROMISE that something computes it, and nothing in "
+  "the build checks the promise. The field reads as a capability from every "
+  "direction that matters \u2014 the schema, the PRODUCES contract, the "
+  "advocate-facing record \u2014 and its permanent emptiness is "
+  "indistinguishable from a matter where the thing genuinely never happened.",
+  "S1 \u2014 an absent input reading as success",
+  "Three separate defects, none of which looked for the other two. Found by "
+  "hand each time, which is the tell: a population being discovered one "
+  "member at a time is a population with no enumerator.",
+  "NOT FIXED. The mechanism is a sweep over every optional field on every "
+  "persisted type, asking which code assigns it \u2014 the same shape as "
+  "`test_reached_from_production` (a module nothing calls) and "
+  "`test_every_declared_schema_is_satisfiable` (a schema nothing can fill), "
+  "both of which draw their population from the whole tree. A field with no "
+  "writer is then either wired or deleted, and the ones deliberately reserved "
+  "are DECLARED with the reason, so an admitted gap is work rather than a "
+  "surprise.",
+  "Yes, and it is the general form of three defects that were each fixed "
+  "specifically. CLAUDE.md\u2019s own rule: a shape with N defects and N "
+  "unrelated fixes is N places for the N+1th to hide. This is the N+1th "
+  "already \u2014 `conflicts_with` was found by accident, not by a check.",
+  "None yet. The check to write is the enumerator, not another wiring.",
+  "Open")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

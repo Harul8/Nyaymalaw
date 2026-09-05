@@ -213,3 +213,100 @@ def test_the_limitation_names_the_entries_it_did_not_run_from(tmp_path):
         "computed from:\n" + text[:700])
     assert "say which" in text, (
         "the advocate is shown the alternatives and not told they can choose")
+
+
+# ============ B-088: a missed correction is a question, not a silence =====
+
+def test_the_phrase_list_detects_an_attempt_and_decides_nothing():
+    """CLAUDE.md §5 forbids fuzzy matching that IDENTIFIES.
+
+    This detects that a correction is being ATTEMPTED and never decides which
+    entry is meant. Putting a question to the advocate identifies nothing, and
+    four words from them settle what no amount of scoring could.
+    """
+    assert chronology.looks_like_a_correction(
+        "sorry, that is wrong. It is dated 15-4-2024") == "sorry, that is wrong"
+    assert chronology.looks_like_a_correction("my mistake, it was March") \
+        == "my mistake"
+    assert chronology.looks_like_a_correction(
+        "the agreement was never registered") is None
+
+
+def test_it_returns_the_phrase_so_the_question_can_quote_them():
+    """"You said 'sorry, that is wrong'" is answerable. "A correction was
+    detected" is not."""
+    assert isinstance(
+        chronology.looks_like_a_correction("i meant the 14th"), str)
+
+
+def test_a_missed_correction_becomes_a_blocking_question(tmp_path):
+    """B-088 ON THE WIRE.
+
+    The read is not reliable at the routine tier — it fires on one run and
+    returns nothing on the next, on identical input, and no prompt fixes that.
+    What is fixed is the CONSEQUENCE: a miss was silent, both dates stayed on
+    the chart, and the period ran from the earlier one.
+
+    Driven with a model that never fills `corrects`, because waiting for the
+    real one to miss would be waiting on a coincidence.
+    """
+
+    from nm.adapters.model.scripted import ScriptedModelAdapter
+    from nm.adapters.store.file_store import FileMatterStore
+    from nm.core.turn import TurnEngine
+    from tests.test_turn_contract import KEY, _Evidence, _model_config
+
+    class _NeverCorrects(ScriptedModelAdapter):
+        """Answers normally and always says nothing was replaced."""
+
+        def structured(self, prompt, schema, tier, **kw):
+            res = super().structured(prompt, schema, tier, **kw)
+            if schema.get("x-nm-read") == "dates" and res.data:
+                for row in res.data.get("events", []):
+                    row["corrects"] = ""
+            return res
+
+    store = FileMatterStore(tmp_path, key=KEY)
+    engine = TurnEngine(
+        store=store, evidence=_Evidence(),
+        model=_NeverCorrects(_model_config(), responses={
+            "__default__": "Issue the notice and diarise the window."}))
+
+    first = engine.run(TurnInput(
+        advocate_id="adv_1", today=date(2026, 9, 5),
+        message=("We act for the plaintiff at Hyderabad. The agreement is "
+                 "dated 15 April 1984.")))
+    engine.run(TurnInput(
+        advocate_id="adv_1", matter_id=first.matter.id, today=date(2026, 9, 5),
+        message="sorry, that is wrong. It is dated 15 April 2024."))
+
+    matter = store.load(first.matter.id)
+    asked = [q.text for q in matter.asked if q.gate == "G-CORRECTION"]
+    assert asked, (
+        "the read named nothing and the advocate said 'sorry, that is wrong' "
+        "— and the product said nothing back. Both dates are on the chart and "
+        "the period runs from the earlier one.")
+    assert "1984" in asked[0] and "2024" in asked[0], (
+        "the question does not carry both dates, so the advocate cannot "
+        "answer it without going back through the file:\n" + asked[0])
+    assert "sorry, that is wrong" in asked[0], (
+        "the question does not quote their own words back")
+
+
+def test_a_correction_that_was_taken_raises_no_question(tmp_path):
+    """A guard on the guard. If this fired whenever the phrase appeared, an
+    advocate who corrected something successfully would be asked to confirm
+    it — and a question that arrives after the product already did the right
+    thing is the noise §5.4 warns about, one layer down."""
+    engine, store = build(tmp_path)
+    first = engine.run(TurnInput(
+        advocate_id="adv_1", today=date(2026, 9, 5),
+        message=("We act for the plaintiff at Hyderabad. The agreement is "
+                 "dated 15 April 1984.")))
+    engine.run(TurnInput(
+        advocate_id="adv_1", matter_id=first.matter.id, today=date(2026, 9, 5),
+        message="sorry, that is wrong. It is dated 15 April 2024."))
+
+    matter = store.load(first.matter.id)
+    assert [q for q in matter.asked if q.gate == "G-CORRECTION"] == [], (
+        "the correction was applied AND the advocate was asked about it")

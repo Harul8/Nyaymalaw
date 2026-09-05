@@ -203,6 +203,36 @@ class DateConflict:
                 f"position, so it is not mine to pick.")
 
 
+#: What an advocate writes when they are REPLACING something, not adding to it.
+#:
+#: This list DETECTS AN ATTEMPT. It never decides which entry is meant — that
+#: is the read's job, and where the read comes back with nothing the product
+#: ASKS. CLAUDE.md §5 forbids fuzzy matching that IDENTIFIES; putting a
+#: question to the advocate identifies nothing, and four words from them
+#: settles what no amount of scoring could.
+#:
+#: B-088: the read fires on one run and not the next on identical input, and a
+#: miss was SILENT — both dates stayed live and the period ran from the
+#: earlier one. A miss is a question now.
+CORRECTING = (
+    "sorry, that is wrong", "that is wrong", "that's wrong", "i meant",
+    "it is actually", "it's actually", "correction:", "i was wrong",
+    "not right", "should be", "rather than", "instead of", "my mistake",
+    "apologies", "scratch that",
+)
+
+
+def looks_like_a_correction(message: str) -> str | None:
+    """The phrase that says one is being made, or `None`.
+
+    Returns the PHRASE rather than a boolean, so the question put to the
+    advocate can quote their own words back — "you said 'sorry, that is
+    wrong'" is answerable and "a correction was detected" is not.
+    """
+    lower = (message or "").lower()
+    return next((p for p in CORRECTING if p in lower), None)
+
+
 def build_prompt(message: str, reference: date, account: str = "",
                  existing: tuple = ()):
     """The message, the reference date, and what was already said.

@@ -768,6 +768,39 @@ class TurnEngine:
         thread = replace(thread, chronology=thread.chronology + tuple(ids))
         matter = matter.with_thread(thread)
 
+        # B-088. THE READ SAID NOTHING AND THE ADVOCATE SAID "THAT IS WRONG".
+        #
+        # The correction read is not reliable at the routine tier: it fires on
+        # one run and returns nothing on the next, on identical input. No
+        # prompt fixes that. What can be fixed is that a miss was SILENT —
+        # both dates stayed on the chart, the period ran from the earlier, and
+        # the answer was confidently about a date they had withdrawn.
+        #
+        # So a miss becomes a QUESTION with both dates in it. The phrase list
+        # detects that a correction is being attempted and decides nothing:
+        # where the read has already named an entry this is quiet, and where
+        # it has not, four words from the advocate settle what no amount of
+        # scoring could.
+        phrase = chronology.looks_like_a_correction(turn.message)
+        if phrase and added and not any(r.corrects for r in dated):
+            live = chronology.chart(matter.facts, thread.chronology)
+            others = [f for f in live
+                      if f.date is not None
+                      and f.id not in {e.id for e in added}]
+            if others:
+                metrics.fire("G-CORRECTION", "not_assessed",
+                             f"the advocate said {phrase!r} and no entry was "
+                             f"named as replaced")
+                matter = matter.asking(
+                    "G-CORRECTION",
+                    (f"You said {phrase!r}. I have not taken anything as "
+                     f"replaced, so both are still on the file: "
+                     + "; ".join(f"{f.statement[:44]} ({f.date.isoformat()})"
+                                 for f in [*others, *added]
+                                 if f.date is not None)
+                     + ". Which one is right?"),
+                    turn.turn_id, thread.id)
+
 
         if not posture.resolved:
             # THE WHOLE FILE, not just this message and not just the
