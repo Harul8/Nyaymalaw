@@ -62,6 +62,14 @@ CONTROLS: dict[str, str] = {
     # one owner for which reads are decisive, over every literal in nm/
     "test_no_second_copy_of_the_decisive_set_exists":
         "test_the_second_copy_scan_can_see_a_second_copy",
+    # an open row is a claim someone re-runs, over every open defect
+    "test_every_open_defect_can_be_reproduced_or_says_why_not":
+        "test_the_open_row_scan_can_see_an_undeclared_one",
+    "test_no_reproduction_declaration_outlives_its_row":
+        "test_the_stale_declaration_scan_can_see_a_closed_row",
+    # no internal key in advocate-facing text, over every served element
+    "test_no_internal_id_reaches_the_advocate":
+        "test_the_sweep_can_see_a_planted_leak",
     # the manifest, over every declared Act
     "test_every_declared_act_retrieves_at_least_one_intended_section":
         "test_an_act_the_corpus_cannot_serve_is_caught",

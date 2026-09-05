@@ -387,3 +387,137 @@ def test_the_enumerator_scan_can_see_a_defect_that_ignores_its_sweep():
     assert not (named & {mechanism}), (
         "a row naming only its own scenario test was treated as pointing at "
         "the enumerator")
+
+
+# ================= an open row is a claim someone re-runs ===================
+#
+# B-100, measured 5 September 2026. `test_every_check_the_register_names_
+# actually_exists` verifies a FIXED row. Nothing asked anything of an OPEN one,
+# so the register was verified in one direction only -- and the unverified
+# direction is the one a person reads when deciding what to do next.
+#
+# It cost a wrong answer the same day. Asked whether the build was ready for a
+# judged run, the answer read straight off the register was "no: five golden
+# scenarios compute no limitation" (B-065). One read-only corpus query showed
+# all five causes returning their Article. B-086 was the same: fixed, verified
+# on a served turn, and still saying NOT FIXED.
+#
+# A row that has stopped being true must expire against the CODE, which is the
+# arrangement `UNWIRED`, `AWAITING`, `RESERVED` and `WITHHELD` all use.
+
+def _still_open(row) -> bool:
+    """Is there anything left to do on this row?
+
+    ONE PREDICATE, OWNED ONCE, because the two checks below disagreed about it
+    within the minute of being written: one read "Open" and the other read
+    "not Fixed", and `B-088: Partly fixed` fell between them. A status is
+    prose, so anything that does not begin `Fixed` has a remainder -- which is
+    the reading that puts a partly-fixed row where a person will look for it.
+    """
+    return not str(row.get("status", "")).strip().startswith("Fixed")
+
+
+#: Open defects with no runnable reproduction, and why not.
+#:
+#: DECLARED, NEVER ASSUMED. An entry here is a claim that the defect cannot be
+#: demonstrated by code -- which is true of a judged verdict and of a gap in
+#: something not yet built, and is NOT true of most defects. Without the table
+#: the honest answer for every row would be "no reproduction", and the rule
+#: would mean nothing.
+NO_REPRODUCTION: dict[str, str] = {
+    "B-078":
+        "A JUDGED PROPERTY. The defect is that the register reads as "
+        "instructional rather than peer-to-peer, which is a judgement about "
+        "tone made by a model against a rubric. A test asserting the absence "
+        "of didactic phrasing would be a phrase list, and this project has "
+        "already paid for one of those.",
+    "B-088":
+        "PARTLY FIXED, and the remainder needs a model this installation does "
+        "not have. The general form -- a decisive read whose DECISIVE FIELD is "
+        "absent -- reproduces only against the hard tier, which is `not "
+        "configured` on /api/health. A reproduction driven with a stub would "
+        "prove the stub.",
+}
+
+
+def test_every_open_defect_can_be_reproduced_or_says_why_not():
+    """AN OPEN ROW IS A CLAIM, AND A CLAIM NOBODY RE-RUNS GOES STALE.
+
+    This does not demand a reproduction for every open defect -- some cannot
+    have one, and pretending otherwise would fill the suite with tests that
+    assert nothing. It demands that the QUESTION IS ANSWERED for each of them,
+    which is what `UNWIRED` does for a module nothing calls and `RESERVED` for
+    a field nothing writes.
+
+    The next open row cannot be added without someone deciding whether it can
+    be demonstrated, which is the whole of the fix.
+    """
+    open_rows = [r for r in _register() if _still_open(r)]
+    undeclared = [r["id"] for r in open_rows if r["id"] not in NO_REPRODUCTION]
+
+    assert not undeclared, (
+        "these defects are OPEN and nothing says whether they can be "
+        "reproduced. An open row nobody re-runs is one that goes on being "
+        "read after it has stopped being true — B-065 and B-086 both did, "
+        "and one of them was nearly quoted as a reason not to run the "
+        "goldens. Write a reproduction, or declare it:\n  "
+        + "\n  ".join(undeclared))
+
+
+def test_no_reproduction_declaration_outlives_its_row():
+    """The half that keeps the table honest.
+
+    A declaration table rots in one direction: the defect is fixed, the entry
+    stays, and the next reader believes a gap that has been closed. Same
+    arrangement as `UNWIRED` in test_reached_from_production, whose stale
+    `nm.domain.reads` entry failed the build the hour that module was wired.
+    """
+    rows = {r["id"]: r for r in _register()}
+    stale = []
+    for did in NO_REPRODUCTION:
+        row = rows.get(did)
+        if row is None:
+            stale.append(f"{did}: declared and not in the register at all")
+        elif not _still_open(row):
+            stale.append(f"{did}: declared un-reproducible and is "
+                         f"{row['status']!r}")
+    assert not stale, (
+        "delete the entry:\n  " + "\n  ".join(stale))
+
+
+def test_the_open_row_scan_can_see_an_undeclared_one():
+    """A POSITIVE CONTROL, on the real predicate.
+
+    The check passes on a register where every open row is declared, and would
+    go on passing if the status test were inverted, or if `_register` returned
+    nothing. Planted on the same comparison rather than on a fixture.
+    """
+    planted = {"id": "B-999", "when": "2026-09-05", "what": "a planted row",
+               "shape": "S1", "check": "none", "status": "Open"}
+    assert _still_open(planted)
+    assert not _still_open({"status": "Fixed"}), (
+        "the predicate calls a fixed row open, so every row would need a "
+        "declaration and the rule would mean nothing")
+    assert planted["id"] not in NO_REPRODUCTION, (
+        "the control cannot fail: its planted row is already declared")
+
+
+def test_the_stale_declaration_scan_can_see_a_closed_row():
+    """A POSITIVE CONTROL on the staleness half.
+
+    That check passes while every declaration matches an open row, and would
+    pass identically if `_still_open` were inverted or `_register` returned
+    nothing. Planted on the same predicate the real check uses, because a
+    control that exercises a copy proves the copy.
+    """
+    closed = {"id": "B-999", "status": "Fixed"}
+    assert not _still_open(closed), (
+        "the control cannot fail: the predicate calls a fixed row open")
+
+    # And the real comparison, run against it: a declaration naming this row
+    # would be reported.
+    stale = [did for did, _ in [("B-999", "declared")]
+             if not _still_open(closed)]
+    assert stale == ["B-999"], (
+        "the staleness comparison does not report a declaration whose row is "
+        "closed")

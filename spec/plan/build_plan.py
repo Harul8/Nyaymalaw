@@ -2937,9 +2937,22 @@ d("B-100", "2026-09-05", "tooling",
   "gate matrix, the reads registry, UNWIRED, RESERVED, WITHHELD \u2014 "
   "expires its entries against the code. The defect register expires only its "
   "Fixed half, and the Open half is the half that decides what happens next.",
-  "None yet. The check to write is the xfail reproduction; until it exists, "
-  "an Open row is a claim nobody re-runs.",
-  "Open")
+  "FIXED, and not with an xfail after all. Most open rows cannot be "
+  "reproduced by code at all — a judged verdict on tone (B-078), a gap "
+  "needing a model this installation lacks (B-088) — so a rule demanding "
+  "reproductions would have filled the suite with tests asserting nothing. "
+  "What binds instead is that the QUESTION IS ANSWERED for every open row: "
+  "either a reproduction, or an entry in NO_REPRODUCTION with the reason. The "
+  "next open row cannot be added without someone deciding which, which is the "
+  "whole of it. tests/test_defect_register.py::"
+  "test_every_open_defect_can_be_reproduced_or_says_why_not, with "
+  "test_no_reproduction_declaration_outlives_its_row as the half that stops "
+  "the table rotting, and a positive control on each. "
+  "IT CAUGHT SOMETHING IN ITS FIRST MINUTE. The two checks disagreed about "
+  "`B-088: Partly fixed` — one read ‘Open’, the other read "
+  "‘not Fixed’ — so the predicate is now owned once, and "
+  "anything not beginning `Fixed` has a remainder.",
+  "Fixed")
 
 d("B-101", "2026-09-05", "tooling",
   "THE JUDGE GRADED AN ANSWER THE PRODUCT REFUSED TO SERVE. E-102 was run on "
@@ -2982,8 +2995,13 @@ d("B-101", "2026-09-05", "tooling",
   "tests/test_no_internal_id_reaches_the_advocate.py drives the same served "
   "conversation including a withheld turn. THE GAP THAT REMAINS, named rather "
   "than closed: no check yet reads a judge PROMPT and asserts no withheld "
-  "element is in it.",
-  "Fixed \u2014 the harness-side control is still to write")
+  "element is in it. NOW WRITTEN: "
+  "tests/test_the_judge_scores_what_was_served.py asks the question of the "
+  "string that actually reaches the model \u2014 asked anywhere upstream it would "
+  "pass while the judge still read the draft, which is exactly what happened. "
+  "Bounded by test_a_served_turn_is_still_scored_in_full, because a harness "
+  "that dropped every turn would satisfy the first check and score nothing.",
+  "Fixed")
 
 d("B-102", "2026-09-05", "core",
   "A VALUE THAT HAD NEVER BEEN COMPUTED WAS ANNOUNCED AS HAVING MOVED. GS-15 "
