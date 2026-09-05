@@ -2517,20 +2517,78 @@ d("B-091", "2026-09-05", "domain",
   "Three separate defects, none of which looked for the other two. Found by "
   "hand each time, which is the tell: a population being discovered one "
   "member at a time is a population with no enumerator.",
-  "NOT FIXED. The mechanism is a sweep over every optional field on every "
-  "persisted type, asking which code assigns it \u2014 the same shape as "
-  "`test_reached_from_production` (a module nothing calls) and "
-  "`test_every_declared_schema_is_satisfiable` (a schema nothing can fill), "
-  "both of which draw their population from the whole tree. A field with no "
-  "writer is then either wired or deleted, and the ones deliberately reserved "
-  "are DECLARED with the reason, so an admitted gap is work rather than a "
-  "surprise.",
+  "THE ENUMERATOR. The population is the persisted closure of `Matter`, "
+  "walked at RUNTIME by field type rather than listed \u2014 so a field "
+  "added to a sibling type tomorrow is swept without anyone remembering to "
+  "add it, which is the failure "
+  "`test_every_declared_schema_is_satisfiable` had within one morning. A "
+  "writer is a keyword argument, which is how a frozen dataclass gets a "
+  "value through either a constructor or `replace`.\n\n"
+  "IT ASKED WRITERS AND NOT READERS, DELIBERATELY. A reader can only be "
+  "found by attribute NAME and names collide across types \u2014 `applied` "
+  "belongs to `PostureConflict` and is also an enum member read in "
+  "`limitation.py`; `document` belongs to both `Provenance` and "
+  "`DocumentFact`. A scan counting those as readers passes for the wrong "
+  "reason, which is S11. Asking a question the scan can answer beats asking "
+  "the fuller one badly.\n\n"
+  "THE COUNT WAS TWELVE, NOT THREE. Eleven are declared in RESERVED with "
+  "the reason and the guard behind them, and FOUR of those are named OPEN "
+  "(`Fact.confirmed`, `Fact.confirmed_at`, `Fact.conflicts_with`, "
+  "`PostureConflict.applied`) rather than dressed as settled \u2014 a "
+  "check enforces that an entry citing this defect reads as open. The "
+  "twelfth was a live defect reaching the advocate and is B-092.",
   "Yes, and it is the general form of three defects that were each fixed "
   "specifically. CLAUDE.md\u2019s own rule: a shape with N defects and N "
   "unrelated fixes is N places for the N+1th to hide. This is the N+1th "
   "already \u2014 `conflicts_with` was found by accident, not by a check.",
-  "None yet. The check to write is the enumerator, not another wiring.",
-  "Open")
+  "tests/test_every_persisted_field_has_a_writer.py, with TWO positive "
+  "controls because it has two ways to be vacuous: "
+  "test_the_scan_can_see_the_record catches a closure walk that stopped at "
+  "`Matter` (it did, on the first attempt \u2014 annotations were strings "
+  "and nothing recursed), and test_the_scan_can_see_a_field_nothing_writes "
+  "catches a writer set matching so broadly that every field looks "
+  "written. test_no_reservation_outlives_its_writer is the half that keeps "
+  "the table honest, and it fired immediately: two entries were written on "
+  "the day they were declared.",
+  "Fixed")
+
+d("B-092", "2026-09-05", "core",
+  "THE PRODUCT NEVER KNEW WHO THE OTHER SIDE WAS. `Posture.opponent` was "
+  "declared, typed, persisted and written by NOTHING, with two consumers that "
+  "each had a fallback: the board rendered `\u201cagainst\u201d: unknown` and "
+  "the matter summary omitted the line. An advocate who wrote \u201cwe act for "
+  "the plaintiff against Sharma\u201d was told for the life of the matter that "
+  "the opponent was unknown, and EVERY model call after that reasoned about "
+  "the matter without the other side\u2019s name in front of it.",
+  "The field was added when the posture type was designed and the read that "
+  "fills it was never written. Both consumers coalesced to a default, so "
+  "there was no turn on which anything looked wrong \u2014 the record simply "
+  "said `unknown`, which is what it says when the advocate has not told us.",
+  "S1 \u2014 an absent input reading as success",
+  "THE ENUMERATOR IN B-091, not a scenario and not a person. Eleven of the "
+  "twelve fields it found were legitimately reserved; this was the one that "
+  "was reaching the advocate.",
+  "A field on the read that ALREADY SEES THE SENTENCE \u2014 B-086\u2019s "
+  "lesson, not a second read. `opponent` joins the five-field posture "
+  "extraction, gated by `states_client` exactly as the rest of it is, so an "
+  "account that merely describes events still names nobody. It is a NAME, "
+  "recorded and shown back: nothing is looked up with it, so CLAUDE.md "
+  "\u00a75 is untouched. Written MONOTONICALLY, unlike the descriptor beside "
+  "it \u2014 a descriptor is a label and a later one is better information, "
+  "while a party silently changing between turns is the turn-5 reversal.",
+  "Yes, and it reached the shared guard. `names_nobody` was written for "
+  "descriptors of one\u2019s OWN client and did not cover the mirror: `the "
+  "opposite party` and `the other side` identify the far side only by its "
+  "relation to the speaker, which is the same grammar and carries the same "
+  "nothing. Extended IN PLACE rather than guarded again beside it \u2014 "
+  "three ad-hoc copies of that one rule is what CLAUDE.md already records.",
+  "tests/test_the_opponent_is_remembered.py, verified ON A SERVED TURN and "
+  "not on the read\u2019s return value: this defect lived entirely between a "
+  "correct read and a record that never received the value, which is "
+  "CLAUDE.md \u00a78 exactly. Four checks the read alone would pass: it "
+  "reaches the persisted posture, it reaches the board the advocate looks at, "
+  "it survives a turn that does not mention it, and it reaches the account "
+  "every later model call is given.")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

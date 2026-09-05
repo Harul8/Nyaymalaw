@@ -103,6 +103,12 @@ POSTURE_SCHEMA: dict = {
                            "gave one without a procedural role -- 'the "
                            "workman', 'the wife'. Empty string if none.",
         },
+        "opponent": {
+            "type": "string",
+            "description": "Who the client is AGAINST, in the advocate's own "
+                           "words -- 'Sharma', 'the tenant', 'the State'. Only "
+                           "where they said it. Empty string if they did not.",
+        },
         "quoted": {
             "type": "string",
             "description": "The EXACT words from the message that state this. "
@@ -111,8 +117,10 @@ POSTURE_SCHEMA: dict = {
         },
     },
     "additionalProperties": False,
+    # Every property, because strict mode compiles the grammar from `required`
+    # and a property left out of it cannot be emitted at all.
     "required": ["states_client", "role", "role_basis",
-                 "client_described_as", "quoted"],
+                 "client_described_as", "opponent", "quoted"],
 }
 
 SYSTEM = (
@@ -133,6 +141,10 @@ SYSTEM = (
     "Where the role genuinely cannot be told even knowing the client, return "
     "role 'not_stated' and put their own word for the client in "
     "client_described_as.\n\n"
+    "`opponent` is who the client is AGAINST, in the advocate's own words, "
+    "and ONLY where they said it -- 'against Sharma', 'the tenant has "
+    "filed'. Do not work it out from the events. Empty string if they did "
+    "not name one.\n\n"
     "`quoted` must be the exact words from the message, copied character for "
     "character."
 )
@@ -144,16 +156,30 @@ _FIRST_PERSON = re.compile(
     r"\b(?:we|we're|us|our|ours|my|mine|i|client'?s?|behalf)\b", re.I)
 
 #: A descriptor that names nobody. GRAMMAR, not vocabulary: these are the
-#: ways English refers to one's own client WITHOUT identifying them, and
-#: the set is closed in a way a list of party descriptors is not.
+#: ways English refers to a person WITHOUT identifying them -- by their
+#: relation to the speaker -- and the set is closed in a way a list of party
+#: descriptors is not.
 #:
 #: Recording one is worse than recording nothing. The narrowed blocking
 #: question became "You act for the our client. Did they file...?", and a
 #: descriptor is write-once on the posture, so the junk one also blocked
 #: the real one when it arrived on the next turn.
+#:
+#: THE SECOND CLAUSE IS THE MIRROR, and it is the same rule rather than a
+#: second guard. `our client` identifies the near side only by its relation
+#: to the speaker; `the opposite party`, `the other side` identify the far
+#: side the same way. Recording one as the OPPONENT says "we are against the
+#: side we are against" and makes the record report that the other side is
+#: known. Where `opposite party` is the advocate's PROCEDURAL role -- it is
+#: one, in consumer and execution practice -- it arrives as `role` and never
+#: through here.
 _NAMES_NOBODY = re.compile(
-    r"^(?:the\s+|a\s+|an\s+)?(?:my|our|his|her|their|its)?\s*"
-    r"(?:client|party|side|matter|case|them|him|her|us)$", re.I)
+    r"^(?:the\s+|a\s+|an\s+)?(?:"
+    r"(?:my|our|his|her|their|its)?\s*"
+    r"(?:client|party|side|matter|case|them|him|her|us)"
+    r"|(?:opposite|opposing|other|another|adverse|rival)\s+"
+    r"(?:party|parties|side|counsel)"
+    r")$", re.I)
 
 _WORDS = re.compile(r"[a-z0-9]+")
 
@@ -296,6 +322,15 @@ class StatedPosture:
     client_described_as: str | None
     quoted: str
     refused: str | None = None
+    opponent: str | None = None
+    """Who the client is against, as the advocate said it.
+
+    A NAME, recorded and shown back. Nothing is ever looked up with it, so
+    CLAUDE.md 5 does not reach here: it neither identifies an Act nor routes
+    a retrieval. Keyword-only in position so every existing construction of
+    this type is unchanged -- there are eight, and a positional insertion
+    would have silently shifted `refused` into it.
+    """
 
     @property
     def settles_role(self) -> bool:
@@ -370,9 +405,17 @@ def interpret(message: str, data: dict,
     if described:
         described = re.sub(r"^(?:the|a|an)\s+", "", described)[:40] or None
 
+    # NAMES NOBODY applies here too, and it is the same mechanism rather than
+    # a second one: "the opposite party" is a grammatical placeholder, not a
+    # name, and recording it would make the record say the opponent is known.
+    against = (data.get("opponent") or "").strip()[:60] or None
+    if against and names_nobody(against):
+        against = None
+
     raw_role = (data.get("role") or "not_stated").strip().lower()
     if raw_role == "not_stated":
-        return StatedPosture(Role.UNKNOWN, Basis.UNKNOWN, described, quoted)
+        return StatedPosture(Role.UNKNOWN, Basis.UNKNOWN, described, quoted,
+                             opponent=against)
     try:
         role = Role(raw_role)
     except ValueError:
@@ -391,4 +434,4 @@ def interpret(message: str, data: dict,
     # advocate sees it and can correct it in a word.
     basis = (Basis.STATED if (data.get("role_basis") or "").strip().lower()
              == "stated" else Basis.INFERRED)
-    return StatedPosture(role, basis, described, quoted)
+    return StatedPosture(role, basis, described, quoted, opponent=against)

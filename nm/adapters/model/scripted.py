@@ -50,20 +50,32 @@ _SCRIPTED_ROLES = {
 }
 
 
+#: Who the client is AGAINST, where the advocate said it. Same reasoning as
+#: the pattern above: a regex is fine in a test double and was not fine in the
+#: product. Without it the offline path never carries an opponent, and the
+#: field would look wired while every class-A test ran with it empty -- which
+#: is how `Posture.opponent` came to have no producer for a whole slice.
+_SCRIPTED_OPPONENT = re.compile(
+    r"\bagainst\s+(?:the\s+)?([a-z][a-z\-. ]{2,40}?)"
+    r"(?=[,.;]|\s+(?:in|for|on|at|who|which|and)\b|$)", re.I)
+
+
 def scripted_posture(message: str) -> str:
     """A deterministic stand-in for the model's posture extraction."""
     m = _SCRIPTED_POSTURE.search(message or "")
     if not m:
         return json.dumps({"states_client": False, "role": "not_stated",
                            "role_basis": "stated", "client_described_as": "",
-                           "quoted": ""})
+                           "opponent": "", "quoted": ""})
     party = " ".join(m.group(1).split()).lower()
     role = next((r for r in _SCRIPTED_ROLES if party.startswith(r)), None)
+    against = _SCRIPTED_OPPONENT.search(message or "")
     return json.dumps({
         "states_client": True,
         "role": role or "not_stated",
         "role_basis": "stated",
         "client_described_as": "" if role else party.split(" in ")[0],
+        "opponent": " ".join(against.group(1).split()) if against else "",
         "quoted": m.group(0),
     })
 

@@ -837,6 +837,16 @@ class TurnEngine:
                 posture = replace(
                     posture, client_described_as=stated.client_described_as)
 
+            # THE OPPONENT, and MONOTONIC unlike the descriptor above.
+            #
+            # A descriptor is a label and a later, more specific one is better
+            # information. The opponent is a party: one that changed silently
+            # between turns would be the turn-5 reversal wearing a different
+            # hat, so the first name recorded stands until the advocate
+            # corrects it -- which is the correction path, not this one.
+            if stated.opponent and not posture.opponent:
+                posture = replace(posture, opponent=stated.opponent)
+
             # THE CLIENT IS KNOWN AND THE ROLE IS NOT. Ask the one question,
             # once. The five-field extraction answers `not_stated` here
             # every time -- measured on five scenarios -- because in a
