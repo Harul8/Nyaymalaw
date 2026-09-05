@@ -142,8 +142,13 @@ class MatterSummary:
         """
         blocks: list[str] = []
         if self.account:
-            blocks.append("WHAT THE ADVOCATE HAS ALREADY TOLD ME ON THIS "
-                          "MATTER:\n" + self.account)
+            # THE HEADING NAMES A SOURCE, so it must be true of every line
+            # under it. It said "WHAT THE ADVOCATE HAS ALREADY TOLD ME" while
+            # document-sourced facts sat beneath it unmarked -- a heading that
+            # is wrong about provenance is worse than none, because a reader
+            # who trusts it stops looking.
+            blocks.append("WHAT IS ON THIS MATTER — the advocate's own words "
+                          "unless a source is named:\n" + self.account)
         if self.established:
             blocks.append("ALREADY ESTABLISHED — do not ask for any of this "
                           "again:\n"
@@ -284,6 +289,36 @@ def unbuildable(reason: str) -> dict:
             "open_questions": [], "answered": []}
 
 
+def _source(f) -> str:
+    """WHERE THIS CAME FROM, where it is not the advocate's own word.
+
+    Measured on the bytes, 5 September 2026: the file note was BYTE-IDENTICAL
+    for a fact the advocate stated and the same fact read off page 3 of a sale
+    deed -- under a heading that says "WHAT THE ADVOCATE HAS ALREADY TOLD ME".
+    A document's content was handed to every extraction and every derivation
+    labelled as the advocate's claim.
+
+    Those are opposite things. A claim is what the client says happened; a
+    document is what will be put to a court, and the whole of the product's
+    grounding posture rests on the difference. The model could not see it.
+
+    NOT REACHING AN ADVOCATE YET -- `nm.core.intake` is unwired, so no
+    document facts exist. Fixed now precisely because of that: once intake
+    lands, this failure is silent, and the first person to notice would be
+    someone relying on a "documented" fact that was never in a document.
+
+    An advocate statement carries no prefix. Adding one would put four words
+    on every line of every account to say the ordinary thing, and the budget
+    those words come out of is measured in facts that then do not fit.
+    """
+    prov = getattr(f, "provenance", None)
+    if prov is None or getattr(prov, "kind", "") != "document":
+        return ""
+    where = prov.document or "a document"
+    page = f" p.{prov.page}" if prov.page else ""
+    return f"{where}{page}: "
+
+
 def _account(facts: list, thread, about: str,
              load_bearing: frozenset[str]) -> tuple[str, int]:
     """The account, SELECTED to fit. Returns it and how much did not.
@@ -319,7 +354,7 @@ def _account(facts: list, thread, about: str,
 
     def line(f) -> str:
         stamp = f"[{f.date.isoformat()}] " if f.date else ""
-        return f"{stamp}{f.statement.strip()}"
+        return f"{stamp}{_source(f)}{f.statement.strip()}"
 
     kept = [line(f) for f in pinned]
     # THE NOTE COUNTS AGAINST THE BUDGET, because it is sent to the model like

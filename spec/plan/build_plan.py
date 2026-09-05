@@ -2590,6 +2590,52 @@ d("B-092", "2026-09-05", "core",
   "it survives a turn that does not mention it, and it reaches the account "
   "every later model call is given.")
 
+d("B-093", "2026-09-05", "domain",
+  "A DOCUMENT\u2019S CONTENT WAS HANDED TO EVERY MODEL CALL AS THE "
+  "ADVOCATE\u2019S CLAIM. `MatterSummary.as_context()` \u2014 which its own "
+  "docstring describes as given to every extraction and every derivation "
+  "\u2014 produced BYTE-IDENTICAL output for the advocate saying \u2018the "
+  "agreement was registered\u2019 and for page 3 of a sale deed reading the "
+  "same words, under a heading asserting \u2018WHAT THE ADVOCATE HAS ALREADY "
+  "TOLD ME ON THIS MATTER\u2019. A claim is what the client says happened; a "
+  "document is what will be put to a court, and the model could not tell "
+  "them apart.",
+  "The account renders `statement` and `date` and nothing else. Provenance "
+  "was recorded, persisted and read by no code that forms a prompt \u2014 "
+  "measured: outside `matter.py` and the store, nothing reads it at all. The "
+  "heading then supplied a provenance claim of its own, which was false for "
+  "any document-sourced fact.",
+  "S1 \u2014 an absent input reading as success",
+  "THE SAME QUESTION AS B-091, ASKED OF A SECOND POPULATION: not which fields "
+  "nothing writes, but which fields the record HOLDS and the model is never "
+  "TOLD. Measured across the persisted closure \u2014 of 29 scalars, SEVEN "
+  "reach `as_context()`. Some of the other 22 are correctly structural (ids, "
+  "versions, `superseded_by`, which `chart` deliberately excludes); "
+  "provenance was not.",
+  "`_source(fact)` prefixes a document-sourced line with the document and "
+  "page, and the heading now says \u2018the advocate\u2019s own words unless "
+  "a source is named\u2019 so it is TRUE of every line beneath it. An "
+  "advocate statement carries NO prefix: marking the ordinary case would put "
+  "four words on every line of a measured character budget, paid for in "
+  "facts that then do not fit. A document kind whose name was lost renders "
+  "\u2018a document\u2019 rather than falling back to the advocate \u2014 "
+  "the degraded path must not reproduce the defect.",
+  "Yes. The rule is that a heading naming a source is a CLAIM about every "
+  "line under it, and a heading wrong about provenance is worse than none "
+  "because a reader who trusts it stops looking. The renderer also refuses to "
+  "lean on `Provenance.__post_init__`, which already demands a document and "
+  "page for that kind \u2014 a guard right in the core and assumed at the "
+  "edge is CLAUDE.md \u00a78, the shape that let 40/40 offline pass while "
+  "every served turn crashed.",
+  "tests/test_the_account_says_where_a_fact_came_from.py, stated as a "
+  "DIFFERENCE (`_context(said) != _context(deed)`) rather than as a "
+  "substring \u2014 asserting the document name appears would pass on an "
+  "account that names the document while still presenting it as something "
+  "the advocate said. Bounded by "
+  "test_an_advocate_statement_carries_no_prefix, and driven through a "
+  "provenance the constructor would refuse so the degraded path is exercised "
+  "rather than assumed away.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",
