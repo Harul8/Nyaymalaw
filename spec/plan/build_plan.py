@@ -2395,22 +2395,30 @@ d("B-087", "2026-09-04", "core",
   "correction turn. The advocate\u2019s correction produced nothing at all, "
   "and on a fresh run of the same first turn the same input was served "
   "normally — so it is not deterministic on the input.",
-  "NOT ESTABLISHED. The withheld turns carried a D1.1 absurdity disclosure "
-  "(\u201cI am not putting this figure in front of you: limitation expires "
-  "1987-04-15, before events the file holds\u201d), which is that control "
-  "working correctly on B-086\u2019s wrong date — but whether the withholding "
-  "follows from it is a hypothesis and is recorded as one.",
+  "MEASURED, and the hypothesis recorded here was WRONG — the absurdity "
+  "disclosure had nothing to do with it. The withheld turn's own record "
+  "says: `G-GROUND: the answer cites provision 7, which was not retrieved "
+  "on this turn. Retrieved: [54]`. The RECOMMENDATION invented a section "
+  "number. The gate is right to withhold — a citation nobody looked up is "
+  "the defect this product exists to refuse — so B-087 was never a defect "
+  "in the gate but in what feeds it.",
   "S1 — an absent input reading as success",
   "The GS-15 served run. A reproduction of turn 1 alone succeeded, which is "
   "what makes the input-determinism claim measurable rather than assumed.",
-  "NOT FIXED, AND THE CAUSE IS NOT MEASURED. Fixing B-086 removes the absurd "
-  "date and may remove this with it; if it does not, the next step is to "
-  "instrument which assertion the grounding gate found unsupported rather "
-  "than to guess a second time.",
-  "Unknown until measured. Recorded now so it is not rediscovered as a "
-  "surprise, and marked as an observation rather than a diagnosis.",
-  "docs/GOLDEN_SET.md GS-15; the run of 4 September 2026",
-  "Open")
+  "FIXED. The recommendation prompt said 'state the step, not the law' and "
+  "forbade nothing: no rule about citations, and it was never told which "
+  "provisions had been retrieved. It now names NO section, article or rule "
+  "number at all — the law is carried by the GROUND elements, which quote "
+  "what was actually retrieved. THE DISPROPORTION IS WHAT MADE IT WORTH "
+  "FIXING: one invented number in a forty-word sentence cost the advocate "
+  "the ENTIRE turn — the limitation, the issues, the theory, the inventory "
+  "and the opponent's case, all discarded, with the step itself sound.",
+  "Yes, and the lesson is about the RECORD rather than the prompt. The "
+  "cause was found for FREE, from the withheld turn's own transcript — "
+  "which exists only because a withheld turn now records itself, committed "
+  "the same afternoon. The first attempt at this cost two paid runs and "
+  "produced a hypothesis that turned out to be wrong.",
+  "docs/GOLDEN_SET.md GS-15; the runs of 4-5 September 2026")
 
 d("B-088", "2026-09-05", "core",
   "THE CORRECTION READ FIRES ON ONE RUN AND NOT THE NEXT, ON IDENTICAL "
@@ -2442,6 +2450,37 @@ d("B-088", "2026-09-05", "core",
   "sees it, and they see it only when they happen to.",
   "docs/GOLDEN_SET.md GS-15; the two runs of 4-5 September 2026",
   "Open")
+
+d("B-090", "2026-09-05", "core",
+  "THE CASCADE FIRED ON EVERY TURN OF A PASSING RUN. GS-15 finally passed its "
+  "spine \u2014 the correction re-derived the limitation and reported it with "
+  "its prior \u2014 and all five turns announced `a value has MOVED`, each "
+  "raising a blocking question about what needed undoing. Evidence appeared "
+  "on turn 2, the issues went 1 to 2 on turn 4, the opponent\u2019s case "
+  "changed on turn 5.",
+  "Every derivation was recorded as one kind of thing. A limitation date "
+  "moving from 1987 to 2027 is a CORRECTION; an issue count moving from 1 to "
+  "2 is the file growing, which is what a conversation does. `changes` could "
+  "not tell them apart because nothing said which was which.",
+  "S11 \u2014 a check that cannot fail is not a check",
+  "The run where the scenario passed. THE DEFECT WAS INVISIBLE WHILE THE "
+  "FEATURE WAS BROKEN: a cascade that never fired could not be too chatty, "
+  "and only a working one could show it.",
+  "`Derived` carries a KIND. A POSITION \u2014 a date, an amount, a holding "
+  "\u2014 cascades when it moves; a MEASUREMENT does not. BOTH ARE STILL "
+  "WATCHED FOR LOSS: quieting a count\u2019s growth must not quiet its "
+  "disappearance, which is the forgetting the mechanism exists to find and "
+  "the more dangerous direction. An unclassified derivation defaults to "
+  "POSITION, so a value nobody classified is announced rather than silently "
+  "filed as accumulation.",
+  "Yes \u2014 and it is \u00a75.4\u2019s own bound arriving as a defect. The "
+  "spec says a product that announces a cascade every turn trains the "
+  "advocate to skip the section, and the real one then arrives in a place "
+  "they have learned to ignore. A signal that fires always carries no "
+  "information, which is the same failure as one that never fires.",
+  "tests/test_gaps_and_cascade_on_a_served_turn.py::"
+  "test_a_count_that_grew_is_not_announced_as_a_correction, with "
+  "test_a_measurement_that_vanishes_is_still_reported_lost as its bound")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

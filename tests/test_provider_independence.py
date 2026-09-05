@@ -343,3 +343,59 @@ def test_the_adapter_that_ships_is_the_one_that_strips():
         "the OpenAI adapter sends the schema verbatim, so any metadata we add "
         "changes what the provider does")
     assert "dict(schema)}" not in src
+
+
+def test_every_read_schema_can_be_compiled_by_strict_mode():
+    """STRICT MODE IS ALL OR NOTHING, AND ITS REQUIREMENTS ARE NOT OBVIOUS.
+
+    The provider compiles the schema into a grammar and masks any token that
+    would break it — but only if EVERY object declares
+    `additionalProperties: false` and lists every property in `required`. A
+    schema that misses either is rejected at the call, so a twelfth read added
+    without them breaks every turn that makes it rather than degrading
+    quietly.
+
+    Measured when strict was turned on: nine of thirteen already complied and
+    four did not, which is exactly the ratio that makes this worth a check
+    rather than a convention.
+    """
+    import importlib
+    import pkgutil
+
+    import nm
+
+    def walk(node, path, problems):
+        if not isinstance(node, dict):
+            return
+        if node.get("type") == "object":
+            props = node.get("properties", {})
+            if node.get("additionalProperties") is not False:
+                problems.append(f"{path}: additionalProperties is not False")
+            missing = set(props) - set(node.get("required") or [])
+            if missing:
+                problems.append(f"{path}: not in `required` -> {sorted(missing)}")
+            for key, value in props.items():
+                walk(value, f"{path}.{key}", problems)
+        if node.get("type") == "array":
+            walk(node.get("items") or {}, f"{path}[]", problems)
+
+    checked, bad = 0, []
+    for mod in pkgutil.walk_packages(nm.__path__, "nm."):
+        try:
+            module = importlib.import_module(mod.name)
+        except Exception:  # noqa: BLE001 -- an unimportable module is another test's problem
+            continue
+        for name in dir(module):
+            schema = getattr(module, name)
+            if not (name.endswith("SCHEMA") and isinstance(schema, dict)
+                    and "x-nm-read" in schema):
+                continue
+            checked += 1
+            problems: list[str] = []
+            walk(schema, schema["x-nm-read"], problems)
+            bad.extend(problems)
+
+    assert checked >= 10, f"only {checked} read schemas found; the scan is blind"
+    assert not bad, (
+        "these read schemas cannot be compiled under strict mode:\n  "
+        + "\n  ".join(bad))

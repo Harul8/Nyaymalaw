@@ -127,7 +127,18 @@ class OpenAIModelAdapter:
         if schema is not None:
             kwargs["response_format"] = {
                 "type": "json_schema",
-                "json_schema": {"name": "nm_result", "strict": False,
+                # STRICT. The provider compiles the schema into a grammar and
+                # MASKS any token that would break it, so an enum violation
+                # becomes unemittable rather than caught afterwards — a role
+                # read declaring eleven permitted values returned "claimant"
+                # and it reached the core.
+                #
+                # `require_schema` in the port STAYS. One mechanism at the
+                # wire and one at the boundary is not duplication here: the
+                # scripted adapter has no grammar, and a second provider might
+                # treat `strict` as advisory. The port's check is the one that
+                # applies to every adapter.
+                "json_schema": {"name": "nm_result", "strict": True,
                                 # OUR METADATA NEVER GOES OVER THE WIRE.
                                 # See `nm.ports.model.on_the_wire`.
                                 "schema": on_the_wire(schema)},

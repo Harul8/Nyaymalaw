@@ -123,10 +123,15 @@ DATE_SCHEMA: dict = {
                 },
                 "required": ["event", "date_expression", "resolved",
                              "documented", "corrects"],
+                "additionalProperties": False,
             },
         },
     },
     "required": ["events"],
+    # STRICT MODE REQUIRES IT. Without `additionalProperties: false` on
+    # every object the provider cannot compile the grammar, and the
+    # schema silently degrades to a hint.
+    "additionalProperties": False,
 }
 
 SYSTEM = (

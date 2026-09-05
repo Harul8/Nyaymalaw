@@ -42,10 +42,18 @@ def test_the_pinned_snapshot_is_real_and_answers(adapter):
 
 
 def test_structured_output_matches_the_shape_the_adapter_assumes(adapter):
+    # STRICT MODE REJECTS THIS SCHEMA WITHOUT `additionalProperties`.
+    #
+    # Caught the moment strict was turned on: a 400 naming `context=()`, the
+    # root object. Worth keeping in mind for anyone writing a schema by hand —
+    # the provider does not degrade to a hint, it refuses the call, which is
+    # the failure mode you want and is not the one people expect.
     schema = {
         "type": "object",
         "required": ["side"],
-        "properties": {"side": {"type": "string", "enum": ["moving", "defending", "unknown"]}},
+        "additionalProperties": False,
+        "properties": {"side": {"type": "string",
+                                "enum": ["moving", "defending", "unknown"]}},
     }
     r = adapter.structured(
         Prompt(user="A landlord issued a quit notice to our client. "

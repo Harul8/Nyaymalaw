@@ -62,6 +62,14 @@ ESCAPES = (
 #: Enums that are CLOSED VOCABULARIES, not outcomes. Each with the reason it
 #: cannot be "not assessed" — because something always chose it.
 CLOSED: dict[str, str] = {
+    "Kind": "A POSITION or a MEASUREMENT, chosen by the code that RECORDS the "
+            "derivation, not read from the matter. The limitation knows it is "
+            "a date and `_record` knows it is emitting a count — there is no "
+            "world in which the product derived something and could not say "
+            "which kind it was. And the default is POSITION, so an "
+            "unclassified value is announced when it moves rather than "
+            "silently filed as accumulation: the third state would be the "
+            "quiet direction here, which is backwards.",
     "DispositionState": "D9 names exactly four — run, parked(reason), "
                         "blocked(needs), closed(reason) — and every issue "
                         "carries one by construction. There is no 'nobody "

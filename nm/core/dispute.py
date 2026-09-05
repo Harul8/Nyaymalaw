@@ -91,6 +91,10 @@ DISPUTE_SCHEMA: dict = {
         },
     },
     "required": ["verdict", "quoted", "why"],
+    # STRICT MODE REQUIRES IT. Without `additionalProperties: false` on
+    # every object the provider cannot compile the grammar, and the
+    # schema silently degrades to a hint.
+    "additionalProperties": False,
 }
 
 SYSTEM = (

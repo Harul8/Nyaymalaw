@@ -36,6 +36,7 @@ nothing under it.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 
 from nm.domain.matter import FactId
 from nm.domain.text import refuses_blank_text
@@ -43,6 +44,16 @@ from nm.domain.traceability import implements
 
 
 @refuses_blank_text()
+class Kind(str, Enum):
+    """What sort of derived value this is. See `Derived.kind`."""
+
+    POSITION = "position"
+    """A value the advocate acts on: a date, an amount, a holding."""
+
+    MEASUREMENT = "measurement"
+    """A count of what the file now contains. Grows as the matter does."""
+
+
 @dataclass(frozen=True)
 class Derived:
     """One value computed from facts, and WHICH facts.
@@ -54,6 +65,25 @@ class Derived:
     name: str
     value: str
     from_facts: tuple[FactId, ...]
+    kind: Kind = Kind.POSITION
+    """POSITION or MEASUREMENT, and the difference decides what is news.
+
+    A limitation date moving from 1987 to 2027 is a CORRECTION: something the
+    advocate relied on is now different and §5.4 requires it reported with its
+    prior. An issue count moving from 1 to 2 is ACCUMULATION: the file grew,
+    which is what a conversation does.
+
+    Measured on GS-15, 5 September 2026 — the run where the spine finally
+    passed. The cascade fired on all five turns, because evidence appeared on
+    turn 2, the issues went 1 to 2 on turn 4 and the opponent's case changed
+    on turn 5. Every one raised a blocking "does anything need undoing" gap.
+    §5.4's own bound says why that is a defect: a product that announces a
+    cascade every turn trains the advocate to skip the section, and the real
+    one then arrives in a place they have learned to ignore.
+
+    BOTH KINDS ARE STILL WATCHED FOR LOSS. A measurement that stops being
+    computed is exactly the forgetting `lost` exists to find; what changes is
+    that its GROWTH is not announced as a correction."""
 
 
 @refuses_blank_text("undo")
@@ -124,6 +154,11 @@ def changes(before: tuple[Derived, ...],
     old = {d.name: d.value for d in before}
     out: list[Change] = []
     for d in after:
+        # ACCUMULATION IS NOT A CORRECTION. A measurement that grew is the
+        # file growing, which is what a conversation does; announcing it as a
+        # cascade spends the signal that a real correction needs.
+        if d.kind is Kind.MEASUREMENT:
+            continue
         if d.name not in old:
             out.append(Change(name=d.name, was="not computed before",
                               now=d.value))

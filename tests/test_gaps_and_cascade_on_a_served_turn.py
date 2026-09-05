@@ -293,3 +293,55 @@ def test_a_derivation_that_produced_nothing_records_no_row():
     assert rows == []
     _record(rows, "issues", thread, ("f1",), 3)
     assert len(rows) == 1 and rows[0].value == "3"
+
+
+@pytest.mark.eval_id("E-092")
+def test_a_count_that_grew_is_not_announced_as_a_correction():
+    """§5.4'S BOUND, WHICH THE PASSING RUN BROKE.
+
+    GS-15 finally passed its spine on 5 September 2026 — and the cascade
+    fired on all five turns. Evidence appeared on turn 2, the issues went 1 to
+    2 on turn 4, the opponent's case changed on turn 5, each announced as "a
+    value has MOVED" and each raising a blocking question about what needed
+    undoing.
+
+    A limitation date moving from 1987 to 2027 is a CORRECTION. An issue count
+    moving from 1 to 2 is the file growing, which is what a conversation does.
+    §5.4 says why the difference matters: a product that announces a cascade
+    every turn trains the advocate to skip the section, and the real one then
+    arrives in a place they have learned to ignore.
+    """
+    grew = (cascade.Derived(name="issues on th_1", value="1",
+                            from_facts=("f1",), kind=cascade.Kind.MEASUREMENT),)
+    more = (cascade.Derived(name="issues on th_1", value="2",
+                            from_facts=("f1",), kind=cascade.Kind.MEASUREMENT),)
+    assert cascade.changes(grew, more) == (), (
+        "a count that grew was reported as a correction")
+
+
+@pytest.mark.eval_id("E-092")
+def test_a_position_that_moved_is_still_announced():
+    """The bound must not silence the thing it bounds."""
+    before = (cascade.Derived(name="limitation on th_1", value="1987-04-15",
+                              from_facts=("f1",)),)
+    after = (cascade.Derived(name="limitation on th_1", value="2027-04-15",
+                             from_facts=("f1",)),)
+    (moved,) = cascade.changes(before, after)
+    assert moved.was == "1987-04-15" and moved.now == "2027-04-15"
+
+
+@pytest.mark.eval_id("E-092")
+def test_a_measurement_that_vanishes_is_still_reported_lost():
+    """BOTH KINDS ARE WATCHED FOR LOSS. Quieting the growth of a count must
+    not quiet its disappearance — that is the forgetting the whole mechanism
+    exists to find, and it is the more dangerous direction."""
+    had = (cascade.Derived(name="issues on th_1", value="3",
+                           from_facts=("f1",), kind=cascade.Kind.MEASUREMENT),)
+    assert cascade.lost(had, ()) == had
+
+
+def test_an_unclassified_derivation_is_treated_as_a_position():
+    """The safe direction. A value nobody classified is announced when it
+    moves, rather than silently filed as accumulation."""
+    assert cascade.Derived(name="x", value="1", from_facts=()).kind \
+        is cascade.Kind.POSITION

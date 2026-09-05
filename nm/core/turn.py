@@ -265,7 +265,11 @@ def _record(into: list, what: str, thread: Thread,
         into.append(cascade.Derived(
             name=f"{what} on {thread.id}",
             value=str(produced),
-            from_facts=tuple(from_facts)))
+            from_facts=tuple(from_facts),
+            # A COUNT. It grows as the file grows, so its growth is not a
+            # correction — but it is still watched for LOSS, which is the
+            # forgetting this whole mechanism exists to find.
+            kind=cascade.Kind.MEASUREMENT))
 
 
 class TurnEngine:
@@ -2626,7 +2630,28 @@ class TurnEngine:
             "NEVER restate a calculation already made for them, and never "
             "recommend a step the worked position rules out. They are a "
             "professional peer: 'file within the limitation period' tells them "
-            "nothing they did not know before they called."
+            "nothing they did not know before they called.\n"
+            # NAME NO SECTION. This is not a style rule.
+            #
+            # The grounding gate withholds the WHOLE TURN when the answer
+            # cites a provision that was not retrieved, and it is right to: a
+            # citation nobody looked up is the defect this product exists to
+            # refuse. But the citation arrives in the RECOMMENDATION, which is
+            # one sentence — and the limitation, the issues, the theory, the
+            # inventory and the opponent's case are all thrown away with it.
+            #
+            # Measured on GS-15, twice: "the answer cites provision '7', which
+            # was not retrieved on this turn. Retrieved: ['54']". The step
+            # itself was sound. The section number was invented, and it cost
+            # the advocate the entire turn.
+            #
+            # The law is carried by the GROUND elements, which quote what was
+            # actually retrieved. The step does not need a citation.
+            "Name NO section, article or rule number. The provisions are "
+            "quoted elsewhere in the answer from what was actually retrieved; "
+            "your sentence is the STEP. A number you have not been given here "
+            "is one nobody looked up, and it will cost the advocate the whole "
+            "turn."
         )
         # THE FILE, THEN THIS TURN. A next step recommended off the last
         # message alone re-opens ground the advocate has already covered,

@@ -110,6 +110,7 @@ POSTURE_SCHEMA: dict = {
                            "stated.",
         },
     },
+    "additionalProperties": False,
     "required": ["states_client", "role", "role_basis",
                  "client_described_as", "quoted"],
 }
@@ -217,6 +218,7 @@ ROLE_SCHEMA: dict = {
                                "can correct it."},
     },
     "required": ["role", "why"],
+    "additionalProperties": False,
 }
 
 ROLE_SYSTEM = (
