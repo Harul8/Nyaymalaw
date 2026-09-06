@@ -50,6 +50,13 @@ ESCAPES = (
     # nobody recorded is a third state and it must not read as RESOLVED, which
     # is what the old `origin: str = "resolved"` default made it read as.
     "not_established",
+    # `DecidedBy.NOT_RECORDED`, added the moment the decisions section
+    # introduced it. It is NOT a synonym for `not_assessed`: nobody looked and
+    # someone decided but the record does not say who are different states,
+    # and the second is the one that must never be guessed at -- guessing
+    # ADVOCATE promotes our own inference to their instruction, which the
+    # merge then refuses to overwrite, so a wrong guess becomes permanent.
+    "not_recorded",
 )
 
 #: The word list is this check's maintenance cost, and it is a small and

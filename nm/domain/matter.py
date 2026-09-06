@@ -323,6 +323,22 @@ class Thread:
     module, so naming `Issue` here is a cycle. `nm.domain.issue.from_stored`
     reads it back.
     """
+    decisions: tuple[object, ...] = ()
+    """WHAT HAS BEEN SETTLED ON THIS THREAD, and by whom.
+
+    The product routes a cause to an Act, settles a posture and takes a
+    theory on every turn, discloses each as a sentence, and keeps none of
+    them. GS-15 made the same routing decision five times from scratch
+    with nothing checking the answer was the same.
+
+    An advocate does not re-decide a settled question every time they are
+    asked something. Recorded, a decision can be held stable, shown to
+    have moved, and OVERRULED BY THE ADVOCATE -- which is what naming the
+    alternatives is for.
+
+    Untyped for the cycle reason above; `nm.domain.decision.from_stored`
+    reads it back.
+    """
     theory: "object | None" = None
     """THE CASE THEORY THIS THREAD IS RUNNING ON. Persisted, and REVISED.
 

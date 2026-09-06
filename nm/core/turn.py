@@ -44,7 +44,7 @@ from nm.core import issues as issue_reader
 from nm.core import posture as posture_reader
 from nm.core import theory as theory_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
-from nm.domain import issue
+from nm.domain import decision, issue
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
 from nm.domain.matter import (
@@ -260,6 +260,23 @@ class ScreenResult:
 # `nm.domain.reads.is_decisive` STAYS and still has callers: it is what makes
 # G-READ fire on a decisive read that answers with nothing. What is withdrawn
 # is the tier mapping, not the table.
+
+
+def _arguable(assumption: str) -> tuple[str, ...]:
+    """The rivals the routing named, out of its own sentence.
+
+    The corpus adapter already writes them: ". Also arguable: X; Y". Parsed
+    back rather than plumbed through a new field because the sentence is the
+    contract the adapter already keeps -- and a second channel for the same
+    fact is the shape this build refuses. If the wording changes, this returns
+    nothing and the decision records no alternatives, which is worse than a
+    wrong list and is visibly worse.
+    """
+    marker = "Also arguable:"
+    if marker not in (assumption or ""):
+        return ()
+    tail = assumption.split(marker, 1)[1]
+    return tuple(a.strip() for a in tail.split(";") if a.strip())
 
 
 def _record(into: list, what: str, thread: Thread,
@@ -542,7 +559,24 @@ class TurnEngine:
         # concluded nothing, and writing an empty conclusion over a standing
         # theory would lose it exactly as regeneration did.
         if concluded:
-            settled = replace(thread, **concluded)
+            # WRITTEN BY NAME, NOT BY `**concluded`.
+            #
+            # The dynamic form worked and was invisible: the sweep that asks
+            # which persisted fields nothing ever writes could not see it, and
+            # reported `Thread.decisions` as a field that reads as a capability
+            # and is permanently empty. It was being written the whole time --
+            # by a keyword nothing could read.
+            #
+            # A write no check can see is a write no check can VERIFY, and the
+            # two neighbouring fields passed only because `issues=` and
+            # `theory=` happen to appear as keywords on unrelated types. That
+            # is passing for the wrong reason, which is worse than failing.
+            settled = replace(
+                thread,
+                theory=concluded.get("theory", thread.theory),
+                issues=concluded.get("issues", thread.issues),
+                decisions=concluded.get("decisions", thread.decisions),
+            )
             matter = matter.with_thread(settled)
             thread = settled
 
@@ -1286,7 +1320,8 @@ class TurnEngine:
         if seed:
             result = replace(result, findings=tuple(seed) + tuple(result.findings))
         retrieved.extend(result.findings)
-        self._read_coverage(result, thread, metrics, grounds, relied_on)
+        self._read_coverage(result, thread, metrics, grounds, relied_on,
+                            turn, concluded)
 
         if self._wants_authority(turn.message) and not side_blind:
             # G-COVERAGE, and it fires BEFORE the search rather than after it.
@@ -1307,7 +1342,8 @@ class TurnEngine:
                 need, want_authority=True,
                 question=_subject_of(need.question, result.findings)), metrics)
             retrieved.extend(authority.findings)
-            self._read_coverage(authority, thread, metrics, grounds, relied_on)
+            self._read_coverage(authority, thread, metrics, grounds,
+                                relied_on, turn, concluded)
 
         # D1. THE THRESHOLD MAP, BEFORE THE MERITS. A threshold disposes of a
         # claim without reaching them, so an hour on the theory of a suit that
@@ -1887,7 +1923,9 @@ class TurnEngine:
         return any(p in low for p in _WANTS_AUTHORITY)
 
     def _read_coverage(self, result, thread: Thread, metrics: TurnMetrics,
-                       grounds: list[Element], relied_on: list[Finding]) -> None:
+                       grounds: list[Element], relied_on: list[Finding],
+                       turn: TurnInput | None = None,
+                       concluded: dict | None = None) -> None:
         """Turn a retrieval result into elements and gate firings.
 
         THE THREE COVERAGE STATES ARE NOT INTERCHANGEABLE, and the whole point
@@ -1905,6 +1943,40 @@ class TurnEngine:
             grounds.append(Element(
                 kind=ElementKind.GROUND, thread=thread.id,
                 text=result.assumption, disclosure=True))
+
+            # AND IT IS RECORDED AS A DECISION, not only said.
+            #
+            # Routing a cause to an Act is a choice with a reason and, where
+            # the graph offers them, alternatives. GS-15 made that choice five
+            # times from scratch and disclosed it five times, with nothing
+            # checking the answer was the same on turn 5 as on turn 1.
+            #
+            # Recorded, it can be held stable, shown to have MOVED, and
+            # overruled by the advocate in four words -- which is what naming
+            # the alternatives was always for.
+            # ONLY WHERE THERE IS A TURN AND A PLACE TO PUT IT. The authority
+            # round calls this too, and a decision with no turn id is a record
+            # nobody can date.
+            if turn is None or concluded is None:
+                return
+            first, _, rest = str(result.assumption).partition(":")
+            settled = decision.Decision(
+                what=f"the provision this rests on:{rest or ' ' + first}",
+                because=first.strip() or "retrieval resolved it",
+                at_turn=turn.turn_id, thread=thread.id,
+                by=decision.DecidedBy.PRODUCT,
+                alternatives=_arguable(result.assumption))
+            standing = decision.from_stored(thread.decisions)
+            for was, now in decision.moved(standing, (settled,)):
+                # A SETTLED QUESTION ANSWERED DIFFERENTLY, with its prior.
+                # An advocate shown only the new answer cannot tell it moved.
+                grounds.append(Element(
+                    kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                    text=(f"This turn resolved the provision differently from "
+                          f"the last one. Before: {was.what}. Now: {now.what}. "
+                          f"If the earlier one was right, say so and I will "
+                          f"hold it.")))
+            concluded["decisions"] = decision.merge(standing, (settled,))
 
         if result.coverage is Coverage.ANSWERED:
             shown = result.findings
