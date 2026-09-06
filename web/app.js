@@ -677,7 +677,41 @@ function showApplication(advocate) {
   showMatterList();
 }
 
+// IS THE SERVER RUNNING THE CODE THAT IS ON DISK?
+//
+// The server answers this, because it is the only party holding both numbers:
+// the fingerprint it froze at import and the fingerprint of the tree now. The
+// browser cannot see the tree and the tree cannot see the process.
+//
+// RUN AT BOOT, BEFORE THE SESSION RESOLVES, because what this catches happens
+// on the gate. On 6 September 2026 a registration was refused by a password
+// rule that had been changed three commits earlier, and the screenshot of the
+// old message was the only evidence that anything was wrong.
+//
+// THE THIRD STATE IS SHOWN. "Could not be checked" is not "current" -- a
+// banner that appears only on a proven mismatch reads as an all-clear on
+// every run where the check itself failed.
+async function checkBuild() {
+  const el = $('build-warning');
+  try {
+    const h = await api('/api/health');
+    if (h.code_state === 'current') { el.hidden = true; return; }
+    el.className = `build-warning${h.code_state === 'stale' ? '' : ' unknown'}`;
+    el.textContent = h.code_state === 'stale'
+      ? `This server is running code that is no longer on disk (${h.serving},`
+        + ` tree is ${h.tree}). Everything below is the older build. Restart it.`
+      : `The build could not be identified: ${h.why || 'no reason given'}.`;
+    el.hidden = false;
+  } catch (e) {
+    // A HEALTH CALL THAT FAILS IS ALSO NOT AN ALL-CLEAR.
+    el.className = 'build-warning unknown';
+    el.textContent = `The build could not be identified: ${e.message}.`;
+    el.hidden = false;
+  }
+}
+
 async function boot() {
+  checkBuild();
   try {
     const me = await api('/api/session');
     showApplication(me.advocate);

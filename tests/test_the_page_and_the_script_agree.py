@@ -96,6 +96,48 @@ def test_every_password_reveal_is_a_button_and_not_a_submit():
             f"a reveal control without type=button submits the form: {tag}")
 
 
+# ============================ what is actually visible ======================
+
+#: COMMENTS STRIPPED FIRST, and this is not fastidiousness. The first version
+#: of this read `z-index: 100` out of a COMMENT in the `.build-warning` rule --
+#: the comment explaining that `.gate` is at 100 -- and reported the banner as
+#: stacking at 100 when it is declared at 200. A value inside a comment is not
+#: a declaration, and a check that cannot tell the difference is reading prose.
+STYLE = re.sub(r"/\*.*?\*/", "", (WEB / "app.css").read_text(encoding="utf-8"),
+               flags=re.S)
+
+
+def _z_index(selector: str) -> int:
+    """The `z-index` declared in the LAST rule for this selector.
+
+    Read from the text rather than from a browser, so it runs in the class-A
+    cadence. That is a real limit -- a cascade this cannot see could still
+    bury the banner -- and it catches the case that actually happened.
+    """
+    block = STYLE.rsplit(selector + " {", 1)[1].split("}", 1)[0]
+    found = re.search(r"z-index:\s*(\d+)", block)
+    assert found, f"{selector} declares no z-index"
+    return int(found.group(1))
+
+
+def test_the_build_banner_draws_above_the_gate():
+    """MEASURED, 6 September 2026, and it nearly shipped.
+
+    The banner was in the DOM, `hidden` was false, and the text was right --
+    and it was drawn UNDERNEATH the sign-in screen, because `.gate` is
+    `position: fixed; inset: 0; z-index: 100` and covers the viewport. It was
+    invisible in the one place the staleness it warns about was refusing
+    registrations.
+
+    `hidden === false` was true and meant nothing. A control that is correct
+    and unreachable is the shape this whole build keeps paying for, and the
+    only thing that found it was looking at the pixels.
+    """
+    assert _z_index(".build-warning") > _z_index(".gate"), (
+        "the build banner stacks below the sign-in gate, so it is invisible "
+        "on the screen where a stale server does its damage")
+
+
 # ============================== the positive control ========================
 
 def test_the_scan_would_catch_a_missing_element():

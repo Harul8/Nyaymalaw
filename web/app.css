@@ -594,6 +594,36 @@ main.single {
    not the only thing: the heading says which it is in words. A result carried
    by colour alone is a result nobody reads on a projector, on a phone in
    sunlight, or with the commonest colour-vision difference there is. */
+/* THE BUILD BANNER. Loud on purpose: it is telling someone that what they
+   are looking at is not what they think they are looking at, and every
+   conclusion drawn from the screen below it is about the wrong code. */
+.build-warning {
+  background: #7a2018;
+  color: #fff;
+  font-size: 12.5px;
+  left: 0;
+  line-height: 1.5;
+  padding: 10px 16px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  /* ABOVE THE GATE, which is `position: fixed; inset: 0; z-index: 100` and
+     therefore covers the whole viewport. The first version of this banner sat
+     at z-index 30: present in the DOM, not hidden, correct text, and drawn
+     UNDERNEATH the sign-in screen -- invisible in the one place the thing it
+     warns about was refusing registrations.
+
+     `hidden === false` was true and meant nothing. It took looking at the
+     pixels, which is the same rule as verifying on the bytes. */
+  z-index: 200;
+}
+.build-warning.unknown { background: #6A4E1F; }
+.build-warning code {
+  background: rgba(255, 255, 255, .16);
+  border-radius: 2px;
+  padding: 0 4px;
+}
+
 .outcome-title {
   font-size: 17px;
   font-weight: 600;

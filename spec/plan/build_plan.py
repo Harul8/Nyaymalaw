@@ -3477,6 +3477,53 @@ d("B-113", "2026-09-06", "edge",
   "the three ids already on disk are asserted canonical, because a rule that "
   "made existing records unreadable would be worse than the defect.")
 
+d("B-114", "2026-09-06", "edge",
+  "A SERVER RUNNING OLD CODE LOOKED EXACTLY LIKE A PRODUCT DEFECT, three "
+  "times in one session. The browser held a cached `app.js` and Register did "
+  "nothing; :8071 had no `/api/register` at all, three commits behind; :8078 "
+  "served the 12-character password rule after it had become 8. The last was "
+  "reported with a SCREENSHOT OF THE OLD REFUSAL MESSAGE against a fix that "
+  "was already committed and green on a full gate.",
+  "Editing the product and looking at it in a browser, which is the ordinary "
+  "loop. Nothing restarts the server on a source change and nothing had to \u2014 "
+  "the fingerprint existed and was already served at `/api/health`, and NOTHING "
+  "COMPARED IT TO ANYTHING.",
+  "S1 \u2014 an absent input reading as success",
+  "The advocate\u2019s screenshot. Diagnosed on the bytes rather than guessed: "
+  "posting a short password to both ports and reading which rule came back, "
+  "which is how :8071 was found to predate the route entirely.",
+  "`serving_state()` compares the fingerprint FROZEN AT IMPORT \u2014 what "
+  "this process is running \u2014 against the fingerprint of the tree NOW, "
+  "and `/api/health` carries the verdict. The server is the only party "
+  "holding both numbers: the browser cannot see the tree and the tree cannot "
+  "see the process.\n\n"
+  "IN THE SERVER AND NOT IN A TOOL. A tool would have caught all three and "
+  "nobody would have run it, which is R-6 in this plan\u2019s own risk "
+  "register. The page asks at BOOT, before the session resolves, because what "
+  "this catches happens on the gate \u2014 a check wired after sign-in would "
+  "have missed every one of the three.\n\n"
+  "AND THE BANNER WAS INVISIBLE, which nearly shipped. It was in the DOM, "
+  "`hidden` was false, the text was right, and it drew UNDERNEATH the "
+  "sign-in screen: `.gate` is `position: fixed; inset: 0; z-index: 100` and "
+  "the banner was at 30. Found by looking at the pixels. `hidden === false` "
+  "was true and meant nothing \u2014 the same lesson as verifying on the "
+  "bytes rather than on the return value, one layer further out.",
+  "Yes, and it is the same rule as B-111 one layer out: A RESULT MUST NAME "
+  "THE THING IT IS ABOUT. B-111 gave the gate a fingerprint so it could not "
+  "measure a moving tree; this gives the SERVED PRODUCT one, so a person "
+  "cannot draw a conclusion about code that is not running. Same rule as the "
+  "index identity on a derived artefact (S11) and the store named beside a "
+  "zero result (B-163).",
+  "tests/test_a_stale_server_says_so.py \u2014 including both NOT_ASSESSED "
+  "paths, because a fingerprint that could not be computed must not read as "
+  "\u2018nothing has changed\u2019, which is S1 arriving on the check built "
+  "to catch S1. Proved end to end by planting a file in `nm/`, watching the "
+  "banner appear on the sign-in screen, and removing it. AND "
+  "tests/test_the_page_and_the_script_agree.py asserts the banner outranks "
+  "the gate \u2014 which found a flaw in ITSELF first: it read `z-index: 100` "
+  "out of the comment that explains the gate\u2019s stacking, so it now "
+  "strips comments before reading declarations.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

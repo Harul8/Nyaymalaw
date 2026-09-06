@@ -219,9 +219,58 @@ except Exception as exc:  # noqa: BLE001 -- NOT ASSESSED, said as a value
     SERVING = f"unknown: {type(exc).__name__}"
 
 
+def serving_state() -> dict:
+    """WHAT THIS PROCESS IS RUNNING, AND WHETHER THE TREE HAS MOVED PAST IT.
+
+    `SERVING` is frozen at import and describes what is RUNNING. Recomputing
+    the fingerprint now describes what is ON DISK. The comparison is the whole
+    point, and the server is the only party that has both numbers -- the
+    browser cannot see the tree and the tree cannot see the process.
+
+    WHY THIS IS HERE RATHER THAN IN A TOOL. It happened three times on
+    6 September 2026, in one session, and each time it looked like a product
+    defect and cost a round trip:
+
+        the browser held a cached app.js and Register did nothing;
+        :8071 had no /api/register at all, three commits behind;
+        :8078 served the 12-character password rule after it became 8.
+
+    The last one was reported with a screenshot of the OLD refusal message,
+    against a fix that was already committed and green. The code was right,
+    the running thing was old, and nothing anywhere said so. A tool would
+    have caught it and nobody would have run it -- R-6's failure, which this
+    plan already names.
+
+    THREE STATES, and the third is why `stale` is not a bool. A fingerprint
+    that could not be computed must not read as "nothing has changed": that is
+    S1 on the check built to catch S1, and it has happened here before.
+    """
+    if SERVING.startswith("unknown:"):
+        return {"serving": SERVING, "tree": "not assessed",
+                "code_state": "not_assessed",
+                "why": "the fingerprint of the running code could not be "
+                       "computed, so nothing can be said about whether the "
+                       "tree has moved past it"}
+    try:
+        tree = source_fingerprint()
+    except Exception as exc:  # noqa: BLE001 -- NOT ASSESSED, said as a value
+        return {"serving": SERVING, "tree": f"unknown: {type(exc).__name__}",
+                "code_state": "not_assessed",
+                "why": "the working tree could not be fingerprinted"}
+
+    if tree == SERVING:
+        return {"serving": SERVING, "tree": tree, "code_state": "current"}
+    return {
+        "serving": SERVING, "tree": tree, "code_state": "stale",
+        "why": f"this process loaded {SERVING} and the working tree is now "
+               f"{tree}. Everything it serves -- pages, refusals, gate "
+               f"decisions -- is the older code. Restart it.",
+    }
+
+
 @app.get("/api/health")
 def health() -> dict:
-    return {**application().health(), "serving": SERVING}
+    return {**application().health(), **serving_state()}
 
 
 @app.get("/api/matters/{matter_id}/transcript")
