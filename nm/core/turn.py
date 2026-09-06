@@ -308,6 +308,76 @@ def _record(into: list, what: str, thread: Thread,
             kind=cascade.Kind.MEASUREMENT))
 
 
+
+#: How much of a retrieved span an ANSWER shows. B-078.
+#:
+#: E-102's judge read a turn that reproduced the whole bare text of Article 14
+#: as its ground. An advocate knows what the Article says; what they need from
+#: a ground is WHICH provision was read and a handle to read the rest, which is
+#: the locator sitting beside it.
+EXCERPT = 180
+
+
+def _excerpt(span: str, cap: int = EXCERPT) -> str:
+    """The first sentence of a span, capped. NEVER with the ellipsis inside.
+
+    THE ELLIPSIS GOES OUTSIDE THE QUOTATION MARKS at the call site, and that
+    is load-bearing rather than typographic: `nm.core.grounding` pulls quoted
+    runs out of an element and looks for them in the retrieved text, so an
+    ellipsis inside the quotes would make the product fail to find its own
+    excerpt and withhold the turn on its own rendering.
+
+    A SENTENCE RATHER THAN A CHARACTER COUNT. `[:400]` cuts mid-word, and text
+    that reads as broken is text an advocate discounts -- which is the
+    opposite of what a ground is for.
+    """
+    text = " ".join((span or "").split())
+    if len(text) <= cap:
+        return text
+    stop = text.rfind(". ", 0, cap + 1)
+    if stop > cap // 3:
+        return text[:stop + 1]
+    cut = text.rfind(" ", 0, cap + 1)
+    return text[:cut if cut > 0 else cap]
+
+
+def _shortened(span: str, cap: int = EXCERPT) -> bool:
+    """Whether `_excerpt` dropped anything, so the caller can say so."""
+    return _excerpt(span, cap) != " ".join((span or "").split())
+
+
+
+def _positions_note(thread) -> str:
+    """What the file establishes, for the read that recommends the next step.
+
+    B-078. THE STEP HAD NOTHING SPECIFIC TO BE ABOUT, so it described the
+    general case -- what a compliant letter would contain rather than what
+    the letter on the file does. These positions were already computed and
+    already persisted; showing them is the whole change.
+
+    ONLY WHAT IS SETTLED ENOUGH TO ACT ON. A NOT_ASSESSED position says
+    nobody worked it out, and handing that to a read whose output is an
+    imperative invites a step recommended on an element nobody examined.
+    """
+    from nm.domain import proof as _proof
+    from nm.domain.proof import ProofStatus as Status
+
+    positions = _proof.from_stored(getattr(thread, "proof", ()) or ())
+    lines = []
+    for p in positions:
+        if p.status is Status.HELD:
+            lines.append(f"  ESTABLISHED — {p.element}: {'; '.join(p.material)}")
+        elif p.status is Status.OBTAINABLE:
+            lines.append(f"  NOT YET — {p.element}: {p.closing_material}")
+        elif p.status is Status.ABSENT:
+            lines.append(f"  NOTHING WOULD ESTABLISH — {p.element}: {p.dead_end}")
+    if not lines:
+        return ""
+    return ("\n\nWHAT THIS FILE ESTABLISHES, element by element. A step about "
+            "any of these is about THE MATERIAL NAMED, not about what such "
+            "material should look like:\n" + "\n".join(lines))
+
+
 class TurnEngine:
     """Pure orchestration. Every dependency arrives as a port."""
 
@@ -2081,7 +2151,9 @@ class TurnEngine:
                         checked = f" Treatment: {f.treatment.scope}."
                     grounds.append(Element(
                         kind=ElementKind.GROUND, thread=thread.id,
-                        text=(f'{f.ref} — "{f.span.strip()[:400]}" ({f.locator}; '
+                        text=(f'{f.ref} — "{_excerpt(f.span)}"'
+                              f'{" [...]" if _shortened(f.span) else ""} '
+                              f"({f.locator}; "
                               f"{f.binding.value} for {f.binding_for} — "
                               f"{f.binding_reason}).{checked}"),
                         refs=(f.locator,)))
@@ -2106,7 +2178,9 @@ class TurnEngine:
                             "Not relied on: subsequent treatment unverified.")
                     grounds.append(Element(
                         kind=ElementKind.GROUND, thread=thread.id,
-                        text=(f'{f.ref} — "{f.span.strip()[:300]}" ({f.locator}; '
+                        text=(f'{f.ref} — "{_excerpt(f.span)}"'
+                              f'{" [...]" if _shortened(f.span) else ""} '
+                              f"({f.locator}; "
                               f"{f.binding.value} for {f.binding_for}). {note}"),
                         refs=(f.locator,),
                         signal=Signal.ADVERSE_TREATMENT if adverse else Signal.NONE,
@@ -3420,6 +3494,27 @@ class TurnEngine:
             "recommend a step the worked position rules out. They are a "
             "professional peer: 'file within the limitation period' tells them "
             "nothing they did not know before they called.\n"
+            # THE PEER REGISTER, AS A RULE ABOUT SUBJECT MATTER (B-078).
+            #
+            # E-102's judge read "Ensure the letter explicitly acknowledges the
+            # debt and contains a promise to pay" as guiding a lay client on
+            # drafting rather than analysing with a peer whether the letter
+            # they ALREADY HOLD satisfies s.18.
+            #
+            # That is not a tone failure and a tone instruction will not fix
+            # it -- D5.1 says so in as many words about the sibling problem.
+            # The step described WHAT A COMPLIANT DOCUMENT WOULD CONTAIN,
+            # which is the section restated, and the advocate can read the
+            # section. What they cannot read off the section is whether the
+            # thing in their file does the job.
+            #
+            # The frame carries it: the model is shown WHAT THIS FILE HOLDS
+            # below, so the step has something specific to be about.
+            "WHERE THE FILE ALREADY HOLDS THE DOCUMENT A STEP CONCERNS, the "
+            "step is about THAT document -- what it does and does not "
+            "establish -- and never a description of what such a document "
+            "ought to contain. They know what the section requires; they are "
+            "asking whether what they have satisfies it.\n"
             # NAME NO SECTION. This is not a style rule.
             #
             # The grounding gate withholds the WHOLE TURN when the answer
@@ -3447,7 +3542,14 @@ class TurnEngine:
         # which reads to them as the product having forgotten the matter --
         # and it is, because it had.
         file_note = memory.as_context() if memory is not None else ""
-        user = f"The advocate acts for the {side} party.{cited}{worked}"
+
+        # WHAT THIS FILE CAN ESTABLISH, ELEMENT BY ELEMENT (B-078). Nothing
+        # here is new work: the positions were computed earlier in the turn
+        # and persisted on the thread. They were simply not shown to the one
+        # read whose whole job is to say what to do next -- so the step had
+        # nothing specific to be about and described the general case.
+        held = _positions_note(thread)
+        user = f"The advocate acts for the {side} party.{cited}{worked}{held}"
         if file_note:
             user += f"\n\n{file_note}"
         user += (f"\n\nWhat they have just asked: {turn.message.strip()[:1500]}"

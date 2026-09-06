@@ -1,0 +1,33 @@
+#!/bin/sh
+# The canonical pre-commit hook for this repository.
+#
+# INSTALL:  cp tools/hooks/pre-commit .git/hooks/pre-commit
+# REMOVE:   rm .git/hooks/pre-commit
+# BYPASS:   git commit --no-verify
+#
+# WHY IT EXISTS. On 6 September 2026 a commit relied on a green gate that was
+# about a tree which no longer existed: run the gate, edit, commit. A
+# `spec/plan/build_plan.py` that did not parse reached HEAD, and the register
+# could not be read at all for the length of one commit.
+#
+# The gate had already caught nothing wrong, because it had not seen the
+# change. That is the rule this repository keeps arriving at from different
+# directions -- A RESULT MUST NAME THE THING IT IS ABOUT -- reaching the
+# commit: B-111 gave the gate a fingerprint, B-114 gave the served product
+# one, and this gives the commit one.
+#
+# IT BLOCKS RATHER THAN WARNS, and `--no-verify` is the deliberate override.
+# A warning printed above a successful commit is a warning nobody reads; the
+# point is that an unchecked commit becomes a decision somebody makes rather
+# than one they discover.
+
+# The graph's own hook, kept. It was here first and it is not ours to drop.
+if command -v code-review-graph >/dev/null 2>&1; then
+    code-review-graph update || true
+    code-review-graph detect-changes --brief || true
+fi
+
+# Is the tree the one the gate passed on?
+if command -v python >/dev/null 2>&1; then
+    python tools/gatestamp.py --quiet || exit 1
+fi

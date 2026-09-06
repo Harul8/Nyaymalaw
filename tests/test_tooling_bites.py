@@ -523,6 +523,91 @@ REACHES_A_MODEL = (
 )
 
 
+def test_the_gate_stamp_covers_what_the_gate_checks_not_what_the_server_runs():
+    """B-121. THE DIGEST THAT WOULD NOT HAVE CAUGHT ITS OWN DEFECT.
+
+    `source_fingerprint` covers `nm` and `tests`, because it answers "what
+    code is this process running". The file that broke and reached HEAD was
+    `spec/plan/build_plan.py` -- which the gate CHECKS and the server never
+    RUNS -- so that digest would not have moved, and a stamp built on it would
+    have passed on the very commit that prompted it.
+
+    Two questions, two digests. Conflating them is the defect the whole tool
+    is about, arriving inside it.
+    """
+    from nm.domain.identity import FINGERPRINTED
+    from tools.gatestamp import CHECKED
+
+    assert "spec" in CHECKED and "tools" in CHECKED
+    assert set(FINGERPRINTED) < set(CHECKED), (
+        "the gate stamp covers no more than the served fingerprint, so a "
+        "change to spec/ or tools/ would commit against a green that never "
+        "saw it")
+
+
+def test_the_gate_stamp_notices_a_tree_that_moved(tmp_path):
+    """S11. A stamp that always agreed would be a green rubber stamp, which
+    is worse than none: it would make the pre-commit hook a formality."""
+    from tools import gatestamp
+
+    (tmp_path / "nm").mkdir()
+    planted = tmp_path / "nm" / "a.py"
+
+    planted.write_text("x = 1" + chr(10), encoding="utf8")
+    before = gatestamp.tree_digest(tmp_path)
+
+    planted.write_text("x = 2" + chr(10), encoding="utf8")
+    assert gatestamp.tree_digest(tmp_path) != before, (
+        "the digest did not move on a changed file")
+
+    # CONTENT-ADDRESSED, NOT MTIME. A checkout that restores a file must not
+    # read as a change, or every branch switch would demand a fresh gate and
+    # the hook would be uninstalled within a day.
+    planted.write_text("x = 1" + chr(10), encoding="utf8")
+    assert gatestamp.tree_digest(tmp_path) == before
+
+
+def test_an_absent_tree_is_not_read_as_unchanged(tmp_path):
+    """A digest that skipped a missing directory would match across a change
+    it never looked at -- the absent-input shape on the tool built to catch a
+    result about the wrong thing."""
+    from tools import gatestamp
+
+    (tmp_path / "nm").mkdir()
+    (tmp_path / "nm" / "a.py").write_text("x = 1" + chr(10), encoding="utf8")
+    without = gatestamp.tree_digest(tmp_path)
+
+    (tmp_path / "spec").mkdir()
+    (tmp_path / "spec" / "b.py").write_text("y = 2" + chr(10), encoding="utf8")
+    assert gatestamp.tree_digest(tmp_path) != without, (
+        "a tree that appeared did not move the digest")
+
+
+def test_the_gate_stamp_has_a_third_state():
+    """`not_assessed` when no gate has run here -- which is NOT "stale" and
+    NOT "current". Reporting it as either is the absent-input defect on the
+    tool built to catch a stale result."""
+    from tools.gatestamp import state
+
+    verdict, sentence = state()
+    assert verdict in ("current", "stale", "not_assessed")
+    assert sentence.strip(), "a verdict with no sentence tells nobody anything"
+
+
+def test_the_hook_keeps_the_hook_that_was_there_first():
+    """The graph's pre-commit hook was installed before this one. Replacing it
+    would take a working tool away to add ours, which is not a trade anybody
+    agreed to."""
+    hook = (ROOT / "tools" / "hooks" / "pre-commit").read_text(encoding="utf8")
+    assert "code-review-graph" in hook, (
+        "the canonical hook dropped the graph's update, so installing ours "
+        "silently disables theirs")
+    assert "gatestamp.py" in hook
+    assert "--no-verify" in hook, (
+        "a blocking hook that does not say how to override it is one people "
+        "uninstall rather than bypass")
+
+
 def test_the_golden_suite_path_cannot_reach_a_model():
     """B-119. THE TEST BELOW SUPPLIES `--approve` ON EVERY GATE RUN.
 

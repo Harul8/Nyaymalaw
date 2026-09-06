@@ -2166,14 +2166,53 @@ d("B-078", "2026-08-31", "edge",
   "S7 — a test pinned to behaviour instead of a rule",
   "The first judged run, E-102 to the judge; its control failed correctly "
   "first, so the verdict is from a judge shown to discriminate",
-  "NOT FIXED. The two halves need separating: how much of a retrieved span "
-  "the ANSWER renders is a presentation question, and the verbatim "
-  "requirement is about what can be READ BACK. Conflating them is why the "
-  "whole Article arrives in the advocate's face.",
-  "Open — and it needs a decision rather than a patch: a peer register is not "
-  "a shorter prompt, it is knowing what an advocate already knows.",
-  "tools/judge.py --eval E-102 (its control fails first); docs/GOLDEN_SET.md GS-14",
-  "Open")
+  "BOTH STRUCTURAL HALVES FIXED; THE VERDICT ITSELF IS A JUDGED RUN.\n\n"
+  "ONE — WHAT IS SHOWN IS NOT WHAT IS VERIFIED. The ground rendered "
+  "`span[:400]`, so the whole bare text of Article 14 arrived in the "
+  "advocate’s face. The gate reads `findings[].span` and never the "
+  "element text, so rendering less cannot verify less — which is the "
+  "separation this row asked for. `_excerpt` cuts at a SENTENCE rather "
+  "than a character count, because text that reads as broken is text an "
+  "advocate discounts.\n\n"
+  "AND THE ELLIPSIS GOES OUTSIDE THE QUOTATION MARKS, which is "
+  "load-bearing rather than typographic: `grounding` pulls quoted runs "
+  "out of an element and looks for them in the retrieved text, so an "
+  "ellipsis inside the quotes would make the product fail to find its OWN "
+  "excerpt and withhold the turn on its own rendering — the gate "
+  "firing on the product’s prose, which is what B-019 was.\n\n"
+  "TWO — A STEP WITH NOTHING SPECIFIC TO BE ABOUT. The judge read "
+  "‘Ensure the letter explicitly acknowledges the debt’ as guiding "
+  "a lay client on drafting rather than analysing whether the 12 June "
+  "letter they ALREADY HOLD satisfies s.18. That is not a tone failure "
+  "and a tone instruction will not fix it — D5.1 says so in as many "
+  "words about the sibling problem. The step described what a compliant "
+  "document would contain, which is the section restated, and the "
+  "advocate can read the section.\n\n"
+  "THE FRAME CARRIES IT, and the material became available only today: "
+  "`ProofPosition` says HELD on named material, OBTAINABLE with the "
+  "material named, ABSENT with the dead end. It was computed earlier in "
+  "the turn and persisted on the thread, and the ONE read whose whole job "
+  "is to say what to do next was not being shown it. A NOT_ASSESSED "
+  "position is withheld from it: handing ‘nobody worked this out’ "
+  "to a read whose output is an imperative invites a step recommended on "
+  "an element nobody examined.",
+  "Yes. The general rule is WHAT IS SHOWN IS NOT WHAT IS VERIFIED, and "
+  "the register half is D5.1’s rule applied a second time: a register "
+  "problem is fixed by changing what the model is GIVEN, never by an "
+  "adjective about how to sound. This row said it needed a decision "
+  "rather than a patch — the decision is that a peer register is a "
+  "rule about SUBJECT MATTER: where the file holds the thing, the step "
+  "is about the thing.",
+  "tests/test_the_register_is_peer_to_peer.py asserts both structural "
+  "properties — including the safety one, that the gate still "
+  "verifies the product’s own shortened ground, checked rather than "
+  "reasoned about.\n\n"
+  "WHETHER IT READS AS PEER-TO-PEER IS STILL E-102, which is JUDGED and "
+  "needs explicit per-run approval. That is why the status is not "
+  "‘Fixed’: the structural causes are removed and the verdict has "
+  "not been re-taken. tools/judge.py --eval E-102 (its control fails "
+  "first); docs/GOLDEN_SET.md GS-14.",
+  "Structural causes fixed; E-102 needs a judged re-run")
 
 d("B-079", "2026-09-04", "build",
   "TEN MODULES BUILT ACROSS S6 TO S10 WERE IMPORTED BY NOTHING. `issue`, "
@@ -3818,6 +3857,48 @@ d("B-120", "2026-09-06", "core",
   "NEW or a facet MOVED; the rest are counted in one constant line, "
   "because silence would leave the advocate unable to tell a short "
   "list from a short answer.")
+
+d("B-121", "2026-09-06", "tooling",
+  "A COMMIT RELIED ON A GREEN GATE THAT WAS ABOUT A TREE WHICH NO LONGER "
+  "EXISTED. The order was: run the gate, edit, commit. A "
+  "`spec/plan/build_plan.py` that did not parse reached HEAD, and the defect "
+  "register could not be read at all for the length of one commit.",
+  "A heredoc collapsing an escape inside a nested string literal — the "
+  "eighth time in one session, against a rule CLAUDE.md states in as many "
+  "words. The earlier seven cost a round trip each and were caught "
+  "immediately; this one got past because the gate had already run.",
+  "S1 — an absent input reading as success",
+  "The next gate run, which would have caught it — after the push.",
+  "`tools/gatestamp.py` records the digest of the tree the gate passed on, "
+  "and the pre-commit hook refuses a commit whose tree is not that one. "
+  "THREE STATES: `current`, `stale`, and `not_assessed` when no gate has ever "
+  "run on this machine — which is neither of the others, and reporting it "
+  "as either would be the absent-input defect on the tool built to catch a "
+  "stale result.\n\n"
+  "THE DIGEST IS NOT `source_fingerprint`, and that distinction is the whole "
+  "of whether this works. That one covers `nm` and `tests`, because it "
+  "answers WHAT CODE IS THIS PROCESS RUNNING. The file that broke was in "
+  "`spec/`, which the gate CHECKS and the server never RUNS — so a stamp "
+  "built on it would have passed on the very commit that prompted it. This "
+  "covers what the gate checks: `nm`, `tests`, `tools`, `spec`.\n\n"
+  "IT BLOCKS RATHER THAN WARNS, with `--no-verify` named in the message as "
+  "the deliberate override. A warning printed above a successful commit is a "
+  "warning nobody reads; the point is that an unchecked commit becomes a "
+  "decision somebody makes rather than one they discover.\n\n"
+  "AND THE HOOK THAT WAS THERE FIRST IS KEPT. `code-review-graph` installed "
+  "its own pre-commit; replacing it would take a working tool away to add "
+  "ours, which is not a trade anybody agreed to. The previous file is saved "
+  "at `.git/hooks/pre-commit.before-gatestamp`.",
+  "Yes, and it is the same rule for the third time in one day, reached from "
+  "three directions: A RESULT MUST NAME THE THING IT IS ABOUT. B-111 gave the "
+  "GATE a fingerprint so it could not measure a moving tree; B-114 gave the "
+  "SERVED PRODUCT one so nobody could draw a conclusion about code that is "
+  "not running; this gives the COMMIT one.",
+  "tests/test_tooling_bites.py — the digest moves on a changed file and "
+  "returns on a restored one (content, not mtime, or every branch switch "
+  "would demand a fresh gate and the hook would be uninstalled within a day), "
+  "an appearing tree moves it, the third state exists, and the canonical hook "
+  "still runs the graph’s update and still names `--no-verify`.")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

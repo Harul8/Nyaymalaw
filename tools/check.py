@@ -260,6 +260,23 @@ def main() -> int:
         print(f"CHECK FAILED  -- {', '.join(failed)}")
         print("Do not claim the task is done.")
         return 1
+    # THE GREEN IS STAMPED WITH THE TREE IT IS ABOUT.
+    #
+    # A gate result is a fact about one tree, and on 6 September 2026 a commit
+    # relied on one that no longer existed: gate, edit, commit, and a
+    # `spec/plan/build_plan.py` that did not parse reached HEAD. Recording the
+    # digest here is what lets `tools/gatestamp.py` -- and the pre-commit hook
+    # that calls it -- tell a green tree from a green memory.
+    try:
+        from tools.gatestamp import record
+
+        record()
+    except Exception as exc:  # noqa: BLE001 -- never fail a green gate on this
+        # SAID, NOT SWALLOWED. A stamp that silently did not get written would
+        # make every later check report `not_assessed` with no reason, which is
+        # the absent-input shape on the tool built to catch a stale result.
+        print(f"  (gate stamp not recorded: {type(exc).__name__}: {exc})")
+
     print("CHECK OK")
     return 0
 
