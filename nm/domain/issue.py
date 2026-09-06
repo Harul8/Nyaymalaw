@@ -238,3 +238,82 @@ def facet(enum_type, value, *, default=None):
         return enum_type(str(value).strip().lower())
     except (ValueError, AttributeError):
         return default
+
+
+@implements("D9")
+def merge(standing: tuple[Issue, ...], spotted: tuple[Issue, ...],
+          ) -> tuple[Issue, ...]:
+    """The issues on the thread after this turn. THE LIST IS NOT REPLACED.
+
+    THE MEASURED DEFECT. GS-15, 6 September 2026: the issue count went 1, 1,
+    1, 0, 2 across five turns. On turn 4 the thread had NO ISSUES AT ALL,
+    having had one for the three turns before it. Nothing disposed of it --
+    the read simply did not mention it, and the list was whatever the read
+    returned.
+
+    `DispositionState` already says this must not happen: *"THE COMPLETE SET,
+    and there is no fifth member meaning 'gone'"*, and `Disposition` refuses
+    PARKED or CLOSED without a reason because *"a stopped issue with no reason
+    is indistinguishable from a deleted one at the point it matters -- when
+    the advocate asks why they are not running it."*
+
+    The type forbade the delete path and the ARCHITECTURE deleted every issue
+    on every turn by rebuilding the list. A rule the data model enforces and
+    the pipeline routes around is not enforced.
+
+    IDENTITY IS THE STATEMENT, folded. An `Issue` gets a fresh id from every
+    read, so ids cannot match across turns; two issues asking the court the
+    same question are the same issue, which is also what a person would say.
+    The standing one WINS on a match -- it carries a disposition that a fresh
+    read knows nothing about, and overwriting it would be the deletion again
+    wearing an update's clothes.
+    """
+    out = list(standing)
+    seen = {_fold(i.statement) for i in standing}
+    for issue in spotted:
+        key = _fold(issue.statement)
+        if key and key not in seen:
+            seen.add(key)
+            out.append(issue)
+    return tuple(out)
+
+
+def _fold(text: str) -> str:
+    return " ".join((text or "").lower().split())
+
+
+@implements("D9")
+def from_stored(values) -> tuple[Issue, ...]:
+    """Issues read back off a thread, whatever shape the store returned.
+
+    `Thread.issues` is untyped for the same reason `Thread.theory` is: this
+    module imports `nm.domain.matter`, so `matter` cannot name `Issue` without
+    a cycle. The generic decoder therefore hands back plain dicts, and the
+    NEXT turn would merge dicts against Issues and match nothing -- every
+    issue would look new, every turn, which is the defect this exists to fix
+    arriving through its own repair.
+
+    A row that cannot be rebuilt is DROPPED AND THE REST KEPT. Losing one
+    issue to a record written before a rule existed is bad; losing the whole
+    list to it is worse.
+    """
+    if not values:
+        return ()
+    out: list[Issue] = []
+    for v in values:
+        if isinstance(v, Issue):
+            out.append(v)
+            continue
+        if not isinstance(v, dict) or not str(v.get("statement") or "").strip():
+            continue
+        try:
+            out.append(Issue(
+                thread=ThreadId(str(v.get("thread") or "")),
+                statement=str(v["statement"]),
+                kind=IssueKind(v.get("kind") or IssueKind.NOT_ESTABLISHED),
+                runs_against=Side(v.get("runs_against") or Side.UNKNOWN),
+                proof=str(v.get("proof") or ""),
+            ))
+        except (ValueError, TypeError):
+            continue
+    return tuple(out)

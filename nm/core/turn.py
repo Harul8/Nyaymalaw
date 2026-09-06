@@ -1328,7 +1328,8 @@ class TurnEngine:
             # A threshold disposes of a claim without reaching the merits, so
             # an issue list read first invites an hour on the theory of a suit
             # that cannot be maintained.
-            issues_out = self._issues(turn, thread, memory, metrics)
+            issues_out = self._issues(turn, thread, memory, metrics,
+                                      concluded)
             grounds.extend(issues_out)
             _record(derived, "issues", thread, thread.chronology,
                     sum(1 for e in issues_out
@@ -2738,7 +2739,7 @@ class TurnEngine:
 
     @implements("D9")
     def _issues(self, turn: TurnInput, thread: Thread, memory,
-                metrics: TurnMetrics) -> list[Element]:
+                metrics: TurnMetrics, concluded: dict) -> list[Element]:
         """D9. Spot the issues, and account for every one that was spotted.
 
         `nm/domain/issue.py` carried the whole register from slice 6 and
@@ -2776,11 +2777,18 @@ class TurnEngine:
                                   f"{type(exc).__name__}: {exc}")
             return []
 
-        classified = issue.classify(read.issues)
+        # THE LIST IS MERGED, NOT REPLACED. An issue on the file that this
+        # read did not mention stays on the file: `DispositionState` has no
+        # member meaning "gone", and rebuilding the list from one read is the
+        # delete path the type refuses, taken by the pipeline instead.
+        standing = issue.from_stored(thread.issues)
+        live = issue.merge(standing, read.issues)
+        concluded["issues"] = live
+        classified = issue.classify(live)
 
         # E-060. THE CONSERVATION INVARIANT, RUN -- not assumed because
         # `classify` looks like it cannot lose anything.
-        lost = issue.accounted_for(read.issues, classified)
+        lost = issue.accounted_for(live, classified)
         if lost:
             metrics.violate("D9", f"issues spotted and not accounted for: "
                                   f"{'; '.join(lost)}")

@@ -303,6 +303,26 @@ class Thread:
     posture: Posture = field(default_factory=Posture)
     chronology: tuple[FactId, ...] = ()
     deferred_reason: str | None = None
+    # `tuple[object, ...]` AND NOT A BARE `tuple`. The store's decoder
+    # dispatches on `get_origin`, which is None for a bare tuple, so the
+    # field came back a LIST and the round-trip guard failed it within the
+    # minute -- "a field written faithfully and dropped on read fails
+    # nothing until an advocate notices the product forgot what they told
+    # it". The element type stays `object` for the cycle reason below.
+    issues: tuple[object, ...] = ()
+    """THE ISSUES ON THIS THREAD. Persisted, and MERGED rather than replaced.
+
+    Phase 1, the same shape as `theory`. Measured on GS-15: the issue count
+    went 1, 1, 1, 0, 2 across five turns and the thread had NO issues on turn
+    4 having had one for three turns. `DispositionState` already says there is
+    no member meaning "gone" and `Disposition` refuses a stop with no reason --
+    the type forbade the delete path and the pipeline deleted every issue on
+    every turn by rebuilding the list.
+
+    UNTYPED for the same reason as `theory`: `nm.domain.issue` imports this
+    module, so naming `Issue` here is a cycle. `nm.domain.issue.from_stored`
+    reads it back.
+    """
     theory: "object | None" = None
     """THE CASE THEORY THIS THREAD IS RUNNING ON. Persisted, and REVISED.
 
