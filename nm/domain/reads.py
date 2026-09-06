@@ -95,6 +95,21 @@ READS: tuple[Read, ...] = (
     Read("issues", False,
          "A missed issue makes the answer thinner and the advocate can SEE it "
          "is thinner. It changes no number."),
+    Read("proof", False,
+         "What the file can establish, element by element. NOT DECISIVE on "
+         "the narrow test this table applies -- it moves no date, no amount "
+         "and no choice of law -- and the reason it is close is worth "
+         "recording rather than leaving to be re-argued.\n\n"
+         "An empty answer here is already visible without the gate. Every "
+         "curated element gets a position whether or not the read mentioned "
+         "it, so a read that answers nothing produces a full list of "
+         "NOT_ASSESSED rather than a short list that looks complete, and "
+         "`uncovered` draws its population from the ELEMENTS. The disclosure "
+         "G-READ would add is the one the turn already makes.\n\n"
+         "What it CAN cost is a gap the advocate does not go looking for, and "
+         "that is D5.1's drift rather than an empty read: the answer arrives "
+         "full and soft. The type refuses an OBTAINABLE with nothing named "
+         "that would obtain it, which turns the soft answer into work."),
     Read("inventory", False,
          "What evidence is mentioned and who holds it. A missed item costs a "
          "preservation question; it moves no date."),

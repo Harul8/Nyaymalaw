@@ -3590,6 +3590,92 @@ d("B-115", "2026-09-06", "core",
   "re-listing sentences it only means to annotate.",
   "Open")
 
+d("B-116", "2026-09-06", "core",
+  "D5 WAS COMPLETE AND NOTHING EVER RAN IT. `nm/domain/proof.py` has carried "
+  "the whole contract since slice 7: a position that cannot be HELD without "
+  "material, cannot be OBTAINABLE without saying what would obtain it, cannot "
+  "be ABSENT without naming the dead end, and `uncovered` drawing its "
+  "population from the ELEMENTS so the coverage gate cannot certify itself. "
+  "NOTHING EVER BUILT A `ProofPosition`, so an advocate never saw one.",
+  "Nobody wrote the producer. The types were built first, correctly, and the "
+  "thing that would have caught it \u2014 a test on a served turn \u2014 "
+  "cannot exist while the producer does not, so the unit tests passed "
+  "beautifully on a type nobody constructs.",
+  "S1 \u2014 an absent input reading as success",
+  "Working the Phase 1 list. It is B-079 exactly, one feature along: D9's "
+  "issue register was complete and unreachable in the same way, and the "
+  "resemblance is what made this the next thing to build rather than the "
+  "next thing to survey.",
+  "THE LAW IS CURATED AND THE FILE IS READ, and that split is the design. "
+  "`nm/knowledge/elements.py` holds what each cause requires, with "
+  "`curated_from` required by the type; `nm/core/proof_read.py` asks the "
+  "model only what THIS FILE can do about each one.\n\n"
+  "A model asked \u2018what are the elements of specific performance\u2019 "
+  "answers plausibly and differently every call. Every position downstream "
+  "would rest on a list nobody authored, `uncovered` would report complete "
+  "coverage of whatever came back, and D5's third NEVER would be defeated ONE "
+  "LAYER ABOVE where it looks. That is CLAUDE.md \u00a75 reaching somewhere "
+  "the rule does not obviously go \u2014 fuzzy matching may rank, never "
+  "identify, and what is identified here is what the advocate has to prove.\n\n"
+  "SIX CAUSES CURATED, TWO WITHHELD WITH THE REASON RECORDED. s.138 is a "
+  "CRIMINAL offence proved beyond reasonable doubt with presumptions that "
+  "reverse the burden, and putting it in a table whose other rows are civil "
+  "claims on the balance of probabilities is how a standard reaches the wrong "
+  "case. Possession on previous possession has two routes with different "
+  "ingredients \u2014 SRA s.6 forbids any question of title and runs six "
+  "months; Article 64 leaves title open \u2014 and one list for both would "
+  "ask for material the section they are on does not need.\n\n"
+  "EVERY CURATED ELEMENT GETS A POSITION whether or not the read mentioned "
+  "it, so a read that answers on two of five produces three NOT_ASSESSED "
+  "rather than a short list that looks complete. That is E-070's "
+  "counterexample refused by construction rather than by a check.",
+  "Yes, and the general rule is THE LAW IS CURATED AND THE FILE IS READ. "
+  "Same shape as `LIMITATION_ARTICLE`, and curated the same way: a cause "
+  "whose elements are genuinely arguable is LEFT OUT rather than guessed, "
+  "because an absent entry falls through to a named refusal while a wrong "
+  "list is a confident answer nothing downstream catches.",
+  "tests/test_proof_on_a_served_turn.py \u2014 23 tests including the "
+  "invented element dropped and disclosed, the OBTAINABLE with nothing named "
+  "refused, the ABSENT with no dead end refused, HELD checked against the "
+  "advocate's own words through the same `Quotable` the prompt was built "
+  "from, and the s.19(b) defence NOT listed as ours when we act for the "
+  "plaintiff. The population check draws from `CauseOfAction` itself, so a "
+  "cause added tomorrow fails on the day it is added rather than silently "
+  "producing no proof section.")
+
+d("B-117", "2026-09-06", "tooling",
+  "THE WRITER SWEEP RETIRED A LIVE RESERVATION ON A FIELD OF ANOTHER CLASS. "
+  "`written_in` collected keyword-argument NAMES across the whole package "
+  "with no attribution, so `ProofPosition(material=...)` \u2014 written the "
+  "same afternoon \u2014 made `Fact.material` look written and the check "
+  "said DELETE THE ENTRY.",
+  "Adding a second dataclass with a field called `material`. The sweep was "
+  "written when only one existed, and a name-keyed population is exact until "
+  "the second name arrives.",
+  "S3 \u2014 a result from the wrong index, read as an answer",
+  "Wiring D5. The gate went red on `Fact.material` immediately, which is the "
+  "sweep working \u2014 and it was telling me to delete a reservation "
+  "carrying a real reason.",
+  "A direct constructor call is ATTRIBUTED to its class: "
+  "`ProofPosition(material=...)` writes `ProofPosition.material` and nothing "
+  "else. `replace(x, material=...)` cannot be attributed statically \u2014 "
+  "`x` is a name, not a type \u2014 so those stay bare and still match by "
+  "name.\n\n"
+  "PRECISE WHERE IT CAN BE, CONSERVATIVE WHERE IT CANNOT, and the residual "
+  "imprecision now fails in the direction that asks a question rather than "
+  "the one that deletes an answer. That asymmetry is the point: flagging a "
+  "field that does have a writer costs a look, and retiring a reservation "
+  "costs its reason.",
+  "Yes. The general rule is that A CHECK KEYED ON A NAME MUST SAY WHOSE NAME "
+  "IT IS \u2014 the same thing as naming the store beside a zero result "
+  "(B-163) and naming the tree beside a gate result (B-111). A population "
+  "identified by a bare name is one where the second thing with that name is "
+  "invisible.",
+  "tests/test_every_persisted_field_has_a_writer.py, whose own reservation "
+  "on `Fact.material` is the standing counterexample: it survives "
+  "`ProofPosition(material=...)` and would still fail on a real "
+  "`Fact(material=...)`.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

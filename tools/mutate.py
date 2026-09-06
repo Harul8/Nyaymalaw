@@ -1204,7 +1204,7 @@ MUTATIONS = [
     # E-070. "To what standard" is half of whether the material is enough. An
     # element HELD to the wrong standard is not held.
     ("a proof status with no standard behind it",
-     "nm/core/proof.py",
+     "nm/domain/proof.py",
      "        if self.status is not ProofStatus.NOT_ASSESSED \\\n"
      "                and self.standard is Standard.NOT_ESTABLISHED:",
      "        if False and self.standard is Standard.NOT_ESTABLISHED:",
@@ -1213,20 +1213,20 @@ MUTATIONS = [
     # E-070. A presumption is a section, and one asserted from memory decides
     # who loses when the evidence is silent.
     ("a burden shifted by a presumption nobody cited",
-     "nm/core/proof.py",
+     "nm/domain/proof.py",
      "        if self.shifted_by and not self.shift_provision.strip():",
      "        if False and self.shifted_by:",
      "test_a_presumption_that_shifts_the_burden_names_its_provision", "E-070"),
 
     # E-071. "You cannot prove the loan", full stop.
     ("a proof gap reported as a verdict",
-     "nm/core/proof.py",
+     "nm/domain/proof.py",
      "        if self.status is ProofStatus.OBTAINABLE and blank(self.closing_material):",
      "        if False and self.status is ProofStatus.OBTAINABLE:",
      "test_a_proof_gap_is_never_a_verdict", "E-071"),
 
     ("an absent element with no express dead end",
-     "nm/core/proof.py",
+     "nm/domain/proof.py",
      "        if self.status is ProofStatus.ABSENT and blank(self.dead_end):",
      "        if False and self.status is ProofStatus.ABSENT:",
      "test_a_proof_gap_is_never_a_verdict", "E-071"),

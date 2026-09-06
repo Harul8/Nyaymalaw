@@ -33,6 +33,7 @@ from nm.core import (
     grounding,
     limitation,
     proof,
+    proof_read,
     thresholds,
 )
 from nm.core import cause as cause_reader
@@ -49,6 +50,7 @@ from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
 from nm.domain.matter import (
     Basis,
+    CauseOfAction,
     Certainty,
     Fact,
     Matter,
@@ -60,10 +62,12 @@ from nm.domain.matter import (
     new_id,
 )
 from nm.domain.metrics import Outcome, Phase, TurnMetrics
+from nm.domain.proof import ProofStatus
 from nm.domain.quotable import Quotable
 from nm.domain.text import refuses_blank_text
 from nm.domain.traceability import implements
 from nm.ports.coverage import CoveragePort
+from nm.ports.elements import ElementsPort
 from nm.ports.evidence import (
     Coverage,
     EvidenceNeed,
@@ -307,10 +311,17 @@ class TurnEngine:
     """Pure orchestration. Every dependency arrives as a port."""
 
     def __init__(self, store: StorePort, evidence: EvidencePort, model: ModelPort,
-                 coverage: CoveragePort | None = None) -> None:
+                 coverage: CoveragePort | None = None,
+                 elements: "ElementsPort | None" = None) -> None:
         self._store = store
         self._evidence = evidence
         self._model = model
+        # D5's ELEMENT TABLE, and its absence is not silence either. With no
+        # port the proof read does not run and the turn SAYS SO, in the same
+        # `not_assessed` shape everything else here uses -- an advocate who
+        # sees no proof positions must be able to tell "nothing was worked
+        # out" from "everything is held".
+        self._elements = elements
         # Optional, and its ABSENCE IS NOT SILENCE: with no coverage port the
         # engine fires G-COVERAGE in the `not_measured` state rather than
         # skipping the gate, so an unwired installation discloses that it
@@ -1323,6 +1334,7 @@ class TurnEngine:
         # forgetting look like an ordinary value.
         derived: list[cascade.Derived] = []
 
+        cause_read = self._read_cause(turn, memory, metrics, grounds)
         need = EvidenceNeed(question=turn.message.strip(),
                             governing_date=turn.today,
                             jurisdiction=turn.jurisdiction,
@@ -1338,8 +1350,13 @@ class TurnEngine:
                             # can be resolved rather than ranked. The field
                             # existed on this type since slice 2 and nothing
                             # ever set it; the graph that reads it is slice 5.
-                            cause_of_action=self._read_cause(
-                                turn, memory, metrics, grounds))
+                            #
+                            # READ ONCE AND PASSED. D5's element list is chosen
+                            # by the same cause, and a second read of one
+                            # question on one turn is two answers that can
+                            # disagree -- at model prices, with the downstream
+                            # one recorded nowhere.
+                            cause_of_action=cause_read)
         result = self._fetch(need, metrics)
         # B-104. A PROVISION THE LAST PASS NAMED AND THIS ONE WAS GIVEN.
         #
@@ -1401,6 +1418,17 @@ class TurnEngine:
             grounds.extend(issues_out)
             _record(derived, "issues", thread, thread.chronology,
                     sum(1 for e in issues_out
+                        if e.kind is ElementKind.FINDING))
+
+            # D5 -- WHAT HAS TO BE PROVED, AND WHAT THE FILE CAN DO ABOUT
+            # IT. Between the issues and the inventory, and that order is the
+            # inventory's own argument turned into a sequence: an inventory is
+            # only readable against what has to be proved, so what has to be
+            # proved is worked out first.
+            proof_out = self._proof(turn, thread, memory, metrics, cause_read)
+            grounds.extend(proof_out)
+            _record(derived, "proof", thread, thread.chronology,
+                    sum(1 for e in proof_out
                         if e.kind is ElementKind.FINDING))
 
             # C7 -- WHAT THE EVIDENCE IS AND WHO HAS IT. After the issues,
@@ -2941,6 +2969,138 @@ class TurnEngine:
             out.append(Element(
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 text=f"No issues identified yet: {read.why_not}"))
+        return out
+
+    @implements("D5")
+    def _proof(self, turn: TurnInput, thread: Thread, memory,
+               metrics: TurnMetrics, cause_read: str | None) -> list[Element]:
+        """D5. What the file can establish, element by element.
+
+        `nm/domain/proof.py` carried the whole contract from slice 7 and
+        NOTHING EVER BUILT A `ProofPosition`, so none of it ran: not the
+        refusal of an OBTAINABLE with nothing named that would obtain it, not
+        the refusal of an ABSENT with no dead end, not `uncovered` drawing its
+        population from the elements so the coverage gate cannot certify
+        itself. The same shape as B-079, one feature along.
+
+        THE ELEMENTS COME FROM THE TABLE AND THE STATUSES FROM THE FILE. A
+        model asked what specific performance requires answers plausibly and
+        differently each time; a model asked whether this file holds the
+        agreement is answering about material in front of it.
+
+        EVERY FAILURE HERE IS NOT_ASSESSED AND SAYS SO. "No proof positions"
+        and "nobody worked out the proof positions" are the two states S1 is
+        about, and an advocate reading a conclusion with no proof section has
+        to be able to tell which one they are looking at.
+        """
+        if self._elements is None:
+            metrics.fire("G-PROOF", "not_assessed",
+                         "no element table is wired, so nothing decomposed "
+                         "this claim into what has to be proved")
+            return [Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=("I have not worked out what has to be proved on this "
+                      "claim: no element table is configured. That is a gap "
+                      "in this installation, not a finding that everything "
+                      "is established."))]
+
+        # THE CAUSE COMES FROM THE READ, not from the thread: this product
+        # does not store one. `_read_cause` returns `None` on any doubt, and
+        # `None` here is NOT_ESTABLISHED -- which `why_not` turns into a
+        # sentence saying the cause itself was never settled, rather than one
+        # implying the elements are missing.
+        cause = CauseOfAction.NOT_ESTABLISHED
+        if cause_read:
+            try:
+                cause = CauseOfAction(cause_read)
+            except ValueError:
+                # OUT OF VOCABULARY IS NOT_ESTABLISHED, never a near
+                # neighbour. The list is closed because the lookup is exact.
+                cause = CauseOfAction.NOT_ESTABLISHED
+
+        elements = self._elements.elements_for(cause)
+        if elements is None:
+            why = self._elements.why_not(cause)
+            metrics.fire("G-PROOF", "not_assessed", why)
+            return [Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"I have not decomposed this claim into elements: {why}")]
+
+        account = memory.account if memory else ""
+        quotable = Quotable(
+            turn=turn.message,
+            file=memory.advocate_words if memory else "",
+            context=account)
+        try:
+            res = self._model.structured(
+                proof_read.build_prompt(quotable, elements),
+                proof_read.PROOF_SCHEMA, Tier.ROUTINE, max_tokens=900)
+            metrics.record_call(res)
+            read = proof_read.read(res.data or {}, elements, quotable)
+        except ModelError as exc:
+            metrics.fire("G-PROOF", "not_assessed",
+                         f"the proof positions could not be read: {exc}")
+            return [Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"I have not worked out what this file can establish: "
+                      f"{exc}. That is a gap in this turn, not a finding that "
+                      f"the elements are held."))]
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("D5", f"proof read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return []
+
+        out: list[Element] = []
+        for refused in read.refused:
+            # A REFUSED POSITION IS DISCLOSED. Most of these are the drift D5.1
+            # names -- OBTAINABLE with nothing named that would obtain it --
+            # and an advocate who cannot see the refusal reads a shorter list
+            # as a shorter case.
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"I did not take one proof position: {refused}"))
+
+        for pos in read.positions:
+            falls = pos.burden.falls_on_us(thread.posture)
+            whose = ("ours" if falls is True
+                     else "theirs" if falls is False
+                     else f"on the {pos.burden.on.value} party; which side we "
+                          f"are is not settled")
+            detail = (f"held on {'; '.join(pos.material)}"
+                      if pos.status is ProofStatus.HELD
+                      else f"obtainable: {pos.closing_material}"
+                      if pos.status is ProofStatus.OBTAINABLE
+                      else f"absent: {pos.dead_end}"
+                      if pos.status is ProofStatus.ABSENT
+                      else "not assessed")
+            out.append(Element(
+                kind=ElementKind.FINDING, thread=thread.id,
+                text=(f"{pos.element} [burden {whose}; "
+                      f"{elements.standard.value.replace('_', ' ')}; "
+                      f"{detail}]")))
+
+        # E-070'S INVARIANT, RUN. The population is the ELEMENTS, so a read
+        # that answered on two of five reports three gaps rather than
+        # complete coverage of the two it happened to reach.
+        missing = proof.uncovered(
+            tuple(i.element for i in elements.ingredients), read.positions)
+        if missing:
+            metrics.violate("D5", f"elements with no proof position: "
+                                  f"{'; '.join(missing)}")
+
+        # D5's FOURTH DOES: every gap resolves into an action or an express
+        # finding that nothing can. `unclosed` is the check that it did.
+        open_gaps = proof.unclosed(read.positions)
+        if open_gaps:
+            metrics.violate("D5", f"proof gaps with no action and no dead "
+                                  f"end: {'; '.join(open_gaps)}")
+
+        ours = proof_read.against_us(read.positions, thread.posture)
+        if ours:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=("What is not yet established, and OURS to establish: "
+                      + "; ".join(p.element for p in ours))))
         return out
 
     @implements("D2")

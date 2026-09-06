@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
+from nm.adapters.knowledge.elements import CuratedElements
 from nm.adapters.model.config import ModelConfig, load, load_dotenv
 from nm.adapters.model.openai_adapter import OpenAIModelAdapter
 from nm.adapters.model.scripted import ScriptedModelAdapter
@@ -94,8 +95,16 @@ class Application:
         # cipher, because a prompt carries everything the advocate has said.
         self.model = TracedModel(inner=model or build_model(self.config))
         self.coverage = CoverageProfile.load(self.root / "spec" / "coverage.yaml")
+        # D5'S ELEMENT TABLE, WIRED. `nm.core` may not import `nm.knowledge`,
+        # so the curated lists reach the turn through a port -- the same route
+        # the evidence plane already uses for the cause-to-Article edge. An
+        # unwired installation fires G-PROOF `not_assessed` rather than
+        # producing a conclusion with no proof section, which reads as though
+        # everything were established.
+        self.elements = CuratedElements()
         self.engine = TurnEngine(store=self.store, evidence=self.evidence,
-                                 model=self.model, coverage=self.coverage)
+                                 model=self.model, coverage=self.coverage,
+                                 elements=self.elements)
 
     def health(self) -> dict:
         return {

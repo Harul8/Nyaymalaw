@@ -24,7 +24,7 @@ from typing import Any
 from nm.adapters.model._budget import estimate_tokens, guard_budget
 from nm.adapters.model.config import CONTEXT_BUDGET, ModelConfig, TierConfig
 from nm.core.chronology import CHART_HEADING
-from nm.domain.quotable import WORDS_HEADING
+from nm.domain.quotable import CONTEXT_HEADING, WORDS_HEADING
 from nm.ports.model import (
     EmbeddingResult,
     ModelResult,
@@ -652,6 +652,53 @@ def scripted_salvage(user: str) -> str:
 #: chain, and the cause read lost. Every cause read got a role object back and
 #: fired G-MODEL `unavailable` on every served turn.
 #:
+def scripted_proof(user: str) -> str:
+    """A proof position per element the PROMPT names. D5.
+
+    IT READS THE ELEMENT LIST OUT OF THE PROMPT, which is the only honest
+    thing a double can do here. Carrying its own list would test the double:
+    the whole design is that the elements come from the curated table and the
+    model reports against them, so a double that invents elements is
+    exercising the path the product forbids.
+
+    HELD requires the material to be in what the advocate wrote, and this
+    supplies a span taken from the quotable block for the FIRST element only.
+    Everything else comes back `not_assessed` -- which is E-070's shape, and
+    the case that would otherwise never be exercised on a served turn.
+    """
+    lines = [ln.strip() for ln in (user or "").splitlines()]
+    elements = [ln.split(". ", 1)[1] for ln in lines
+                if ln[:2].rstrip(".").isdigit() and ". " in ln]
+
+    # THE FIRST SENTENCE OF WHAT MAY BE QUOTED, for the one HELD position.
+    # Taken from the section the prompt labelled, not from the whole prompt:
+    # a span lifted from our own instructions is what the guard refuses, and
+    # a double that produced one would be testing the guard rather than the
+    # read.
+    start = (user or "").find(WORDS_HEADING)
+    quotable = (user or "")[start:] if start >= 0 else (user or "")
+    end = quotable.find(CONTEXT_HEADING)
+    if end > 0:
+        quotable = quotable[:end]
+    sentences = [t.strip() for t in quotable.replace("\n", " ").split(".")
+                 if len(t.strip().split()) >= 4
+                 and not t.strip().startswith("[")
+                 and WORDS_HEADING not in t]
+    span = sentences[-1] if sentences else ""
+
+    rows = []
+    for i, element in enumerate(elements):
+        held = i == 0 and bool(span)
+        rows.append({
+            "element": element,
+            "status": "held" if held else "not_assessed",
+            "material": [span] if held else [],
+            "closing_material": "",
+            "dead_end": "",
+        })
+    return json.dumps({"positions": rows})
+
+
 #: A title is an exact key on a closed vocabulary, so a collision is not
 #: possible rather than merely unlikely, and a schema with no title has no
 #: responder at all — which `tests/test_provider_independence.py` fails on
@@ -665,6 +712,7 @@ SCRIPTED_READS: dict[str, object] = {
     "factors": scripted_factors,
     "issues": scripted_issues,
     "inventory": scripted_inventory,
+    "proof": scripted_proof,
     "adverse": scripted_adverse,
     "theory": scripted_theory,
     "attacks": scripted_attacks,

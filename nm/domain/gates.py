@@ -535,6 +535,39 @@ GATES: tuple[Gate, ...] = (
         built=True,
     ),
     Gate(
+        id="G-PROOF",
+        condition="The claim has not been decomposed into what must be proved: "
+                  "no element table is wired, the cause is not one this "
+                  "product curates elements for, or the read could not run.",
+        # THREE STATES, AND THE THIRD IS THE WHOLE ROW. "Every element has a
+        # position" and "nobody worked out the positions" are what defect
+        # shape S1 is about, and a conclusion with no proof section reads as
+        # the first while being the second. An advocate who cannot tell them
+        # apart cannot tell whether to go looking for the material.
+        states=("assessed", "gaps_open", "not_assessed"),
+        response=Response.DISCLOSE,
+        scope=Scope.TURN,
+        persistence=Persistence.TURN,
+        # SYSTEM, and it is the honest one. Two of the three ways this fires
+        # -- no element table wired, no curated elements for this cause -- are
+        # gaps in the PRODUCT, and neither the advocate nor a named person can
+        # clear them by doing anything. It goes away when the table covers the
+        # cause, which is work here and not an action there.
+        recovery=Recovery.SYSTEM,
+        visible="D5's counterexample, and it ran for a whole slice: "
+                "`nm/domain/proof.py` refused an OBTAINABLE position with "
+                "nothing named that would obtain it, refused an ABSENT one "
+                "with no dead end, and drew `uncovered` from the ELEMENTS so "
+                "the coverage gate could not certify itself \u2014 and "
+                "nothing ever built a `ProofPosition`, so none of it ran on a "
+                "served turn. It DISCLOSES rather than blocks because a "
+                "missing element list is a gap in this product, and stopping "
+                "the advocate over our own gap teaches them to work around "
+                "the gate.",
+        feature="D5",
+        built=True,
+    ),
+    Gate(
         id="G-NOTASSESSED",
         condition="The store that would answer this need could not be consulted "
                   "at all — absent, unopenable, or never built.",

@@ -381,6 +381,22 @@
     "built": true
   },
   {
+    "id": "G-PROOF",
+    "condition": "The claim has not been decomposed into what must be proved: no element table is wired, the cause is not one this product curates elements for, or the read could not run.",
+    "states": [
+      "assessed",
+      "gaps_open",
+      "not_assessed"
+    ],
+    "response": "disclose",
+    "scope": "turn",
+    "persistence": "turn",
+    "recovery": "system",
+    "visible": "D5's counterexample, and it ran for a whole slice: `nm/domain/proof.py` refused an OBTAINABLE position with nothing named that would obtain it, refused an ABSENT one with no dead end, and drew `uncovered` from the ELEMENTS so the coverage gate could not certify itself \u2014 and nothing ever built a `ProofPosition`, so none of it ran on a served turn. It DISCLOSES rather than blocks because a missing element list is a gap in this product, and stopping the advocate over our own gap teaches them to work around the gate.",
+    "feature": "D5",
+    "built": true
+  },
+  {
     "id": "G-NOTASSESSED",
     "condition": "The store that would answer this need could not be consulted at all \u2014 absent, unopenable, or never built.",
     "states": [

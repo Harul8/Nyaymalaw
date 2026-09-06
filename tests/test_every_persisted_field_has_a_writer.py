@@ -114,22 +114,63 @@ def optional_fields() -> tuple[tuple[type, dataclasses.Field], ...]:
 
 # ================================ the writers ===============================
 
-def _keywords(tree: ast.AST) -> set[str]:
-    return {n.arg for n in ast.walk(tree)
-            if isinstance(n, ast.keyword) and n.arg}
+def _keywords(tree: ast.AST) -> tuple[set[str], set[str]]:
+    """(`Class.field` where the write could be attributed, bare `field` else).
+
+    A DIRECT CONSTRUCTOR CALL SAYS WHICH TYPE IT WRITES. `replace(x, ...)`
+    does not -- `x` is a name and its type is not statically known here -- so
+    those stay bare and match any class holding that field.
+
+    A class is a capitalised callable, which is the one convention this
+    codebase actually follows. A helper named like a class would make this
+    MORE precise, never less: the write would be attributed to a type that has
+    no such field, and match nothing.
+    """
+    attributed: set[str] = set()
+    bare: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        target = (node.func.id if isinstance(node.func, ast.Name)
+                  else node.func.attr if isinstance(node.func, ast.Attribute)
+                  else "")
+        named = bool(target) and target[0].isupper()
+        for kw in node.keywords:
+            if not kw.arg:
+                continue
+            (attributed if named else bare).add(
+                f"{target}.{kw.arg}" if named else kw.arg)
+    return attributed, bare
+
+
+def _swept(package: str) -> tuple[set[str], set[str]]:
+    attributed: set[str] = set()
+    bare: set[str] = set()
+    for path in sorted((ROOT / package).rglob("*.py")):
+        a, b = _keywords(ast.parse(path.read_text(encoding="utf8")))
+        attributed |= a
+        bare |= b
+    return attributed, bare
 
 
 def written_in(package: str) -> set[str]:
-    """Field names passed as a keyword argument anywhere under `package`.
+    """Every field name written anywhere under `package`, BARE.
 
-    Constructors and `replace()` both go through keywords, and both are how a
-    frozen dataclass gets a value. An attribute assignment would not be seen,
-    and cannot happen on a frozen type.
+    What "is this field ever written at all" wants, and what the two coverage
+    checks below ask. The reservation check asks a narrower question and uses
+    `written_precisely`.
     """
-    names: set[str] = set()
-    for path in sorted((ROOT / package).rglob("*.py")):
-        names |= _keywords(ast.parse(path.read_text(encoding="utf8")))
-    return names
+    attributed, bare = _swept(package)
+    return bare | {name.split(".")[-1] for name in attributed}
+
+
+def written_precisely(package: str) -> tuple[set[str], set[str]]:
+    """(`Class.field` writes, bare writes that could not be attributed).
+
+    Kept separate so a caller has to decide which it means. Collapsing them is
+    what let `ProofPosition(material=...)` retire `Fact.material`.
+    """
+    return _swept(package)
 
 
 # ========================== the declared reservations =======================
@@ -251,8 +292,17 @@ def test_no_reservation_outlives_its_writer():
     closed. Same arrangement as `UNWIRED` in test_reached_from_production and
     `CLOSED` in test_three_states.
     """
-    written = written_in("nm")
-    stale = [name for name in RESERVED if name.split(".")[-1] in written]
+    attributed, bare = written_precisely("nm")
+    # ATTRIBUTED FIRST, AND THE BARE SET IS THE FALLBACK. A constructor call
+    # says which type it writes: `ProofPosition(material=...)` is not a writer
+    # of `Fact.material`, and reading the bare name alone said it was -- which
+    # would have deleted a reservation carrying a real reason.
+    #
+    # `replace(x, field=...)` stays bare and still matches by name, so this is
+    # conservative where it cannot be precise: it asks a question rather than
+    # retiring an answer.
+    stale = [name for name in RESERVED
+             if name in attributed or name.split(".")[-1] in bare]
     assert not stale, (
         "these are declared as having no writer and something now writes "
         "them. Delete the entry:\n  " + "\n  ".join(stale))
