@@ -37,11 +37,7 @@ from nm.domain.advocate import (
     token_fingerprint,
 )
 from nm.domain.traceability import implements
-
-
-class AlreadyEnrolled(RuntimeError):
-    """Raised loudly. Silently overwriting an advocate replaces a credential
-    without anyone deciding to."""
+from nm.ports.directory import AlreadyEnrolled  # noqa: F401
 
 
 @implements("A1")

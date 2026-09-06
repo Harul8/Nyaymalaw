@@ -59,10 +59,33 @@ class AdvocateIdentity:
     enrolment: str
     practice: str
     firm_id: str
+    email: str = ""
+    """How to reach them. OPTIONAL, and that is not an oversight.
+
+    Added for self-service registration, where the email is what an advocate
+    types to sign in. Every advocate enrolled by `tools/enrol.py` before this
+    field existed has none, and requiring it would have made those records
+    unreadable -- a field added to a persisted type is a field every OLD
+    record lacks, which is the migration this build has not needed until now.
+
+    IT IS ALSO THE ID, on a self-service registration, and the alternative was
+    considered and rejected. A generated id would be stable when an email
+    changes -- which is the textbook answer -- but this product's ids are
+    already human-chosen strings (`adv_scenarios`, `adv_demo`, whatever
+    `tools/enrol.py --id` was given), and an advocate cannot sign in with an
+    identifier nobody showed them.
+
+    So the id is the normalised email and the trade is stated rather than
+    hidden: if an advocate changes email, their id does not follow, and the
+    file store keys every matter on the id. That is a migration whichever
+    design is chosen, and it is a smaller problem than a login handle the
+    advocate never sees.
+    """
 
     def as_dict(self) -> dict:
         return {"id": self.id, "name": self.name, "enrolment": self.enrolment,
-                "practice": self.practice, "firm_id": self.firm_id}
+                "practice": self.practice, "firm_id": self.firm_id,
+                "email": self.email}
 
 
 @dataclass(frozen=True)

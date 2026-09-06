@@ -27,12 +27,56 @@
     <input id="login-password" name="password" type="password" autocomplete="current-password" required>
 
     <button type="submit" class="primary wide" id="login-go">Sign in</button>
+    <div class="login-alt"><a href="#" id="show-register">Register</a></div>
     <div id="login-state" class="login-state"></div>
 
     <p class="login-foot">
-      Enrolment is not self-service. An advocate is enrolled by
-      <code>tools/enrol.py</code>, which records the Bar Council number and the
-      firm whose conflicts registry governs the session.
+      Registration records the Bar Council number and the firm whose conflicts
+      registry governs the session. The firm is not bookkeeping: it is what
+      detects acting for both sides.
+    </p>
+  </form>
+
+  <!-- SEPARATE FORM, NOT A MODE OF THE FIRST. A single form that changes
+       meaning by a flag is one where a mis-set flag posts a password to the
+       wrong route. -->
+  <form id="register" class="login" hidden autocomplete="on">
+    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
+    <p class="login-lede">Enrol to reach your matters.</p>
+
+    <label for="reg-name">Name</label>
+    <input id="reg-name" name="name" autocomplete="name" required>
+
+    <label for="reg-email">Email</label>
+    <input id="reg-email" name="username" type="email"
+           autocomplete="username" spellcheck="false" required>
+
+    <label for="reg-enrolment">Bar Council enrolment number</label>
+    <input id="reg-enrolment" name="enrolment" spellcheck="false"
+           placeholder="AP/1234/2010" required>
+
+    <label for="reg-practice">Where you practise</label>
+    <input id="reg-practice" name="practice" placeholder="Hyderabad" required>
+
+    <label for="reg-firm">Firm</label>
+    <input id="reg-firm" name="organization" autocomplete="organization"
+           required>
+
+    <label for="reg-password">Password</label>
+    <input id="reg-password" name="password" type="password" minlength="12"
+           autocomplete="new-password" required>
+
+    <label for="reg-password2">Retype password</label>
+    <input id="reg-password2" name="password2" type="password" minlength="12"
+           autocomplete="new-password" required>
+
+    <button type="submit" class="primary wide" id="register-go">Register</button>
+    <div class="login-alt"><a href="#" id="show-login">Back to sign in</a></div>
+    <div id="register-state" class="login-state"></div>
+
+    <p class="login-foot">
+      At least 12 characters. It is the only thing standing between one
+      advocate&rsquo;s client file and another&rsquo;s.
     </p>
   </form>
 </div>

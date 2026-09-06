@@ -416,6 +416,31 @@ class Credentials(BaseModel):
     password: str = Field(min_length=1)
 
 
+class Registration(BaseModel):
+    """A self-service enrolment. A1.
+
+    ENROLMENT AND FIRM ARE REQUIRED, and that is a legal decision rather than
+    a form-design one. The Bar Council number identifies a real advocate, and
+    the FIRM is what the conflicts registry is keyed on -- an advocate in a
+    firm of one has nothing to screen against, so acting for both sides
+    becomes undetectable rather than refused.
+
+    SELF-SERVICE IS PERMITTED AS OF 6 SEPTEMBER 2026, on the advocate's
+    instruction, and it reverses a decision the sign-in page used to state.
+    What that decision was FOR survives: it recorded the Bar Council number
+    and the firm, and those are still recorded. Reversing who may enrol is not
+    the same as reversing what enrolment captures.
+    """
+
+    name: NonBlank = Field(min_length=1)
+    email: NonBlank = Field(min_length=3)
+    enrolment: NonBlank = Field(min_length=1)
+    practice: NonBlank = Field(min_length=1)
+    firm_id: NonBlank = Field(min_length=1)
+    password: str = Field(min_length=1)
+    password_again: str = Field(min_length=1)
+
+
 #: THE ONLY THING A FAILED SIGN-IN EVER SAYS.
 #:
 #: A1: the error must be identical whether the advocate has one matter or
@@ -424,6 +449,61 @@ class Credentials(BaseModel):
 #: "no such advocate" at one door and "incorrect password" at another tells an
 #: attacker which accounts exist without either message meaning to.
 _REFUSED = "those credentials were not accepted"
+
+
+@app.post("/api/register")
+@implements("A1")
+def register(body: Registration) -> dict:
+    """Enrol an advocate, and DO NOT sign them in.
+
+    Registration and authentication are separate acts. Issuing a session here
+    would mean a form post that creates an account also creates a logged-in
+    session on whatever machine sent it -- and A1's first NEVER is that a
+    session cannot be presented from a machine that never authenticated. They
+    register, then they sign in, and the sign-in is where the device binding
+    is minted.
+
+    THE PASSWORD MINIMUM IS NOT RESTATED HERE. `advocate.enrol` raises on a
+    short one, and it is reached by this route, the enrolment tool, a
+    migration and every test fixture. Its own docstring says why: *"a rule
+    that lives at one door is a rule with a back one."* This route catches
+    that refusal and passes the reason through rather than inventing a second
+    threshold that will drift from the first.
+    """
+    from nm.domain.advocate import AdvocateIdentity, Enrolment, enrol
+    from nm.ports.directory import AlreadyEnrolled
+
+    if body.password != body.password_again:
+        # BEFORE the credential is derived, so a typo costs nothing and the
+        # two strings never both reach the hash.
+        raise HTTPException(
+            status_code=400,
+            detail="The two passwords do not match. Nothing was saved.")
+
+    try:
+        credential = enrol(body.password)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # THE EMAIL IS THE ID, normalised. An advocate cannot sign in with an
+    # identifier nobody showed them, and this product's ids are already
+    # human-chosen strings. See `AdvocateIdentity.email` for the trade.
+    email = body.email.strip().lower()
+    identity = AdvocateIdentity(
+        id=email, name=body.name.strip(),
+        enrolment=body.enrolment.strip(), practice=body.practice.strip(),
+        firm_id=body.firm_id.strip(), email=email)
+    try:
+        application().directory.enrol(
+            Enrolment(identity=identity, credential=credential,
+                      created_at=utcnow()))
+    except AlreadyEnrolled as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    # RETURNED BECAUSE IT IS WHAT THEY SIGN IN WITH. A registration that
+    # succeeds and does not say what to type next has enrolled someone who
+    # cannot get in.
+    return {"advocate_id": identity.id, "name": identity.name}
 
 
 @app.post("/api/login")

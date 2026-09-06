@@ -732,3 +732,83 @@ $('signout').addEventListener('click', async () => {
     showGate(null);
   }
 });
+
+// ------------------------------------------------------------- registration
+//
+// SELF-SERVICE, as of 6 September 2026. The sign-in page used to say enrolment
+// was not, and pointed at a tool an advocate cannot run.
+//
+// TWO FORMS, NOT ONE IN TWO MODES. A single form that changes meaning by a
+// flag is one where a mis-set flag posts a password to the wrong route.
+function showForm(which) {
+  $('login').hidden = which !== 'login';
+  $('register').hidden = which !== 'register';
+  $('login-state').textContent = '';
+  $('register-state').textContent = '';
+}
+
+$('show-register').addEventListener('click', (ev) => {
+  ev.preventDefault();
+  showForm('register');
+});
+
+$('show-login').addEventListener('click', (ev) => {
+  ev.preventDefault();
+  showForm('login');
+});
+
+$('register').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const go = $('register-go');
+  const state = $('register-state');
+  const password = $('reg-password').value;
+  const again = $('reg-password2').value;
+
+  // CHECKED HERE AND ON THE SERVER. Not because the browser is trusted -- it
+  // is not, and the route checks it again -- but because a typo that costs a
+  // round trip and a stern sentence is a typo the advocate reads as a
+  // rejection rather than as a slip.
+  if (password !== again) {
+    state.textContent = 'The two passwords do not match. Nothing was saved.';
+    $('reg-password2').value = '';
+    return;
+  }
+
+  go.disabled = true;
+  state.textContent = '';
+  try {
+    const r = await api('/api/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: $('reg-name').value.trim(),
+        email: $('reg-email').value.trim(),
+        enrolment: $('reg-enrolment').value.trim(),
+        practice: $('reg-practice').value.trim(),
+        firm_id: $('reg-firm').value.trim(),
+        password: password,
+        password_again: again,
+      }),
+    });
+    // THE PASSWORDS LEAVE THE PAGE. They stay in the DOM otherwise, readable
+    // by anything running later on this document -- the same rule the sign-in
+    // handler already follows.
+    $('reg-password').value = '';
+    $('reg-password2').value = '';
+
+    // REGISTERED, NOT SIGNED IN. A form post that created a session would mean
+    // creating an account also logs in whatever machine sent it, and the
+    // device binding is minted at sign-in for exactly that reason.
+    showForm('login');
+    $('login-id').value = r.advocate_id;
+    $('login-state').textContent =
+      `Enrolled as ${r.name}. Sign in with ${r.advocate_id}.`;
+    $('login-password').focus();
+  } catch (err) {
+    $('reg-password').value = '';
+    $('reg-password2').value = '';
+    state.textContent = err.message;
+  } finally {
+    go.disabled = false;
+  }
+});

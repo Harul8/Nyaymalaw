@@ -20,6 +20,18 @@ from typing import Protocol
 from nm.domain.advocate import AdvocateIdentity, Enrolment, Session
 
 
+class AlreadyEnrolled(RuntimeError):
+    """An id that is already enrolled. DECLARED BY THE PORT, not the adapter.
+
+    It lived on `FileDirectory` and the register route had to import the
+    adapter to catch it -- which layercheck refused, correctly: the edge must
+    not know which adapter is live, and an exception is part of a contract as
+    much as a return type is. The model port declares `ModelError` and its
+    kin for the same reason, so the retry and degrade policies hold whichever
+    adapter is serving.
+    """
+
+
 class DirectoryPort(Protocol):
     def enrol(self, enrolment: Enrolment) -> None:
         """Record an advocate. Refuses an id that already exists."""

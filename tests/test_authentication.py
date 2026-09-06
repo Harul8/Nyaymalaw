@@ -65,7 +65,8 @@ def test_the_identity_carries_every_field_the_contract_names():
     """A1's PRODUCES had NO CLASS and no field of it anywhere in `nm/`, and the
     feature stood at `tested` (B-082)."""
     i = _identity()
-    assert set(i.as_dict()) == {"id", "name", "enrolment", "practice", "firm_id"}
+    assert set(i.as_dict()) == {"id", "name", "enrolment", "practice",
+                            "firm_id", "email"}
 
 
 @pytest.mark.eval_id("E-010")

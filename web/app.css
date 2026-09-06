@@ -555,6 +555,14 @@ main.single {
 .login button.primary { margin-top: 18px; }
 .login button:disabled { cursor: wait; opacity: .6; }
 
+/* RIGHT-ALIGNED UNDER THE BUTTON, which is where a returning user is not
+   looking and a new one is. A register link with the same weight as the
+   primary action competes with it; one that is invisible sends a new advocate
+   to the tool they cannot run. */
+.login-alt { margin-top: 10px; text-align: right; font-size: 13px; }
+.login-alt a { color: var(--ink-2, #5a6472); text-decoration: none; }
+.login-alt a:hover, .login-alt a:focus { text-decoration: underline; }
+
 .login-state:empty { display: none; }
 .login-state { margin-top: 14px; }
 
