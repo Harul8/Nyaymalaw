@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from nm.domain.matter import FactId, Side, ThreadId
+from nm.domain.register import PEER
 from nm.domain.text import blank, refuses_blank_text
 from nm.domain.traceability import implements
 
@@ -268,7 +269,8 @@ ADVERSE_SYSTEM = (
     "You are not building an argument and you are not deciding what to do "
     "about any of this. List the entries by their id. An empty list is a real "
     "answer where the chronology holds nothing against the client."
-)
+
+    "\n\n" + PEER)
 
 THEORY_SCHEMA: dict = {
     "x-nm-read": "theory",
@@ -326,7 +328,8 @@ THEORY_SYSTEM = (
     "proved his case\" is a hope that the other side fails; if you answer "
     "`denial`, `chosen_because` must say why that is the right strategy on "
     "these facts."
-)
+
+    "\n\n" + PEER)
 
 
 @dataclass(frozen=True)

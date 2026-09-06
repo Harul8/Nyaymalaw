@@ -425,12 +425,6 @@ def _still_open(row) -> bool:
 #: the honest answer for every row would be "no reproduction", and the rule
 #: would mean nothing.
 NO_REPRODUCTION: dict[str, str] = {
-    "B-078":
-        "A JUDGED PROPERTY. The defect is that the register reads as "
-        "instructional rather than peer-to-peer, which is a judgement about "
-        "tone made by a model against a rubric. A test asserting the absence "
-        "of didactic phrasing would be a phrase list, and this project has "
-        "already paid for one of those.",
 }
 
 

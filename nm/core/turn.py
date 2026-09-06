@@ -65,6 +65,7 @@ from nm.domain.matter import (
 from nm.domain.metrics import Outcome, Phase, TurnMetrics
 from nm.domain.proof import ProofStatus
 from nm.domain.quotable import Quotable
+from nm.domain.register import PEER
 from nm.domain.text import refuses_blank_text
 from nm.domain.traceability import implements
 from nm.ports.coverage import CoveragePort
@@ -3510,11 +3511,7 @@ class TurnEngine:
             #
             # The frame carries it: the model is shown WHAT THIS FILE HOLDS
             # below, so the step has something specific to be about.
-            "WHERE THE FILE ALREADY HOLDS THE DOCUMENT A STEP CONCERNS, the "
-            "step is about THAT document -- what it does and does not "
-            "establish -- and never a description of what such a document "
-            "ought to contain. They know what the section requires; they are "
-            "asking whether what they have satisfies it.\n"
+            + PEER + "\n"
             # NAME NO SECTION. This is not a style rule.
             #
             # The grounding gate withholds the WHOLE TURN when the answer

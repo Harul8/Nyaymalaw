@@ -2207,12 +2207,17 @@ d("B-078", "2026-08-31", "edge",
   "properties — including the safety one, that the gate still "
   "verifies the product’s own shortened ground, checked rather than "
   "reasoned about.\n\n"
-  "WHETHER IT READS AS PEER-TO-PEER IS STILL E-102, which is JUDGED and "
-  "needs explicit per-run approval. That is why the status is not "
-  "‘Fixed’: the structural causes are removed and the verdict has "
-  "not been re-taken. tools/judge.py --eval E-102 (its control fails "
-  "first); docs/GOLDEN_SET.md GS-14.",
-  "Structural causes fixed; E-102 needs a judged re-run")
+  "AND E-102 NOW PASSES, judged 6 September 2026 on `mat_bf1b5f744dbc` "
+  "with the control failing first, so the judge is shown to "
+  "discriminate. The pass quotes the proof positions and the limitation "
+  "line as evidence of the register: ‘no lay-friendly definition of "
+  "basic concepts and no deferential or salesy reassurance’.\n\n"
+  "IT TOOK TWO ROUNDS AND THE SECOND IS THE INTERESTING ONE. The first "
+  "re-judge, after both structural fixes, STILL FAILED — and the "
+  "judge quoted somewhere else entirely: the theory and the adversarial "
+  "reads. See B-122. The verdict moving is what told me the fix had "
+  "worked and had been applied to one site out of six.",
+  "Fixed")
 
 d("B-079", "2026-09-04", "build",
   "TEN MODULES BUILT ACROSS S6 TO S10 WERE IMPORTED BY NOTHING. `issue`, "
@@ -3899,6 +3904,54 @@ d("B-121", "2026-09-06", "tooling",
   "would demand a fresh gate and the hook would be uninstalled within a day), "
   "an appearing tree moves it, the third state exists, and the canonical hook "
   "still runs the graph’s update and still names `--no-verify`.")
+
+d("B-122", "2026-09-06", "core",
+  "THE PEER-REGISTER RULE WAS APPLIED TO ONE PROMPT AND SIX NEEDED IT. "
+  "E-102 was re-judged after B-078’s two structural fixes and STILL "
+  "FAILED — with the judge quoting somewhere else entirely:\n"
+  "    ‘The acknowledgment letter from 12 June 2024 is sufficient to "
+  "reset the limitation period…’   — the THEORY\n"
+  "    ‘Under the applicable law, a recovery action must be commenced "
+  "within three years…’      — an ADVERSARIAL read\n"
+  "    ‘We will be prepared to negotiate a settlement if necessary, but "
+  "the fact remains that a legitimate claim exists’  — ADVERSARIAL",
+  "Fixing B-078 the same afternoon. The recommendation was the prompt E-102 "
+  "had named, so it was the prompt that got the rule — and the rule was "
+  "written into it rather than into anything the other five could reach.",
+  "S7 — a fix applied at the site that exposed it",
+  "The judged re-run itself. THE VERDICT MOVING IS THE FINDING: the judge "
+  "stopped quoting the recommendation and the bare Act, which is both fixes "
+  "confirmed, and started quoting two reads nobody had touched.",
+  "`nm/domain/register.py` holds ONE clause, and every prompt whose words "
+  "reach the advocate carries it. The recommendation’s own wording is "
+  "gone — six copies of a sentence drift within a slice, which is what a "
+  "register rule cannot survive.\n\n"
+  "IT SAYS WHAT MAY NOT BE EXPLAINED, NOT HOW TO SOUND. D5.1 is explicit "
+  "that this family needs A RULE AND NOT A TONE INSTRUCTION, and every one "
+  "of these prompts already said something like ‘you are senior "
+  "counsel’ and every one still failed. What is checkable by a writer "
+  "against their own sentence is what they may not DO: do not explain what a "
+  "term means, do not state the general rule, do not reassure.\n\n"
+  "THE THIRD IS NOT POLITENESS IN REVERSE. ‘A legitimate claim exists’ "
+  "is the drift D5.1 names running the other way — agreeable language is "
+  "the path of least resistance, and confidence offered in place of a "
+  "finding is softening wearing a confident face.\n\n"
+  "THE POPULATION IS DECLARED because it cannot be inferred: `theory` "
+  "returns a schema whose fields are rendered verbatim and `cause` returns a "
+  "schema this product formats, so the same call has different answers. "
+  "Every `*_SYSTEM` constant in `nm/core/` is in one list or the other, and "
+  "one in neither fails the build.",
+  "Yes — and it is CLAUDE.md §1 in its plainest form. The fix was "
+  "STATED generally (‘a peer register is a rule about subject matter’) "
+  "and APPLIED at one site, which is exactly the gap that section says a "
+  "year of whack-a-mole lives in. Measured: 47 of 52 register entries once "
+  "had a guard covering only the site the bug was found at.",
+  "tests/test_one_register.py — the population from the code, both "
+  "directions (a prompt in neither list fails; a declaration naming a prompt "
+  "that is gone fails), the BOUND that a structured-only prompt does NOT "
+  "carry the clause (budget spent on nothing, every turn, for ever), and a "
+  "positive control planting both ways the seventh prompt actually arrives. "
+  "AND THE JUDGED RUN: E-102 PASS on mat_bf1b5f744dbc, control failing first.")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

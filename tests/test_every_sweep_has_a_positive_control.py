@@ -51,6 +51,11 @@ CONTROLS: dict[str, str] = {
     # M2 -- every declared owner is reached, over every function in nm/
     "test_no_function_in_the_product_is_defined_and_never_reached":
         "test_the_scan_can_see_the_product",
+    # E-102's register, over every prompt constant in nm/core/
+    "test_every_advocate_facing_prompt_carries_the_clause":
+        "test_the_scan_can_see_a_prompt_that_lost_its_clause",
+    "test_every_prompt_is_declared_one_kind_or_the_other":
+        "test_the_scan_can_see_a_prompt_that_lost_its_clause",
     # the register, over every defect row
     "test_every_check_the_register_names_actually_exists":
         "test_the_register_can_be_read_at_all",

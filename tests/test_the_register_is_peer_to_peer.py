@@ -187,10 +187,20 @@ def test_the_rule_is_about_subject_matter_and_not_about_tone():
     import inspect
 
     from nm.core.turn import TurnEngine
+    from nm.domain.register import PEER
 
     body = inspect.getsource(TurnEngine._recommend)
-    assert "WHERE THE FILE ALREADY HOLDS THE DOCUMENT A STEP CONCERNS" in body
-    assert "never a description of what such a document" in body
+
+    # THE WORDS MOVED, AND THAT IS THE POINT. This rule got its own wording
+    # here first, because the recommendation was the only prompt E-102 had
+    # caught. Re-judged on 6 September the judge quoted the theory and the
+    # adversarial reads instead -- five more prompts with no register rule at
+    # all -- so the clause moved to `nm.domain.register` and this reaches it.
+    # Six copies of a sentence drift within a slice.
+    assert "+ PEER +" in body
+    assert "Where the file already holds the material" in PEER
+    assert "the section restated" in PEER
+
     assert "_positions_note(thread)" in body, (
         "the rule is in the prompt and the material it needs is not, which "
         "makes it exactly the tone instruction D5.1 says will not work")

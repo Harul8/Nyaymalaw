@@ -45,6 +45,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from nm.domain.matter import ThreadId
+from nm.domain.register import PEER
 from nm.domain.text import blank, refuses_blank_text
 from nm.domain.traceability import implements
 
@@ -303,7 +304,8 @@ ATTACK_SYSTEM = (
     "`no_answer` true — and then say what we DO about it: concede it early, "
     "settle, plead in the alternative, prepare the client. An unanswerable "
     "attack reported and left there is half a finding."
-)
+
+    "\n\n" + PEER)
 
 EXPOSURE_SCHEMA: dict = {
     "x-nm-read": "exposure",
@@ -343,7 +345,8 @@ EXPOSURE_SYSTEM = (
     "owed. Neither dispute reveals it alone.\n\n"
     "Name the threads by their ids. An empty list is a real answer and the "
     "usual one — do not manufacture a connection between unrelated disputes."
-)
+
+    "\n\n" + PEER)
 
 
 @dataclass(frozen=True)
@@ -545,7 +548,8 @@ SALVAGE_SYSTEM = (
     "you would not run as though you would.\n\n"
     "`failure_scope` is `framing` where a different framing on these same "
     "facts is available, and `case` only where none is."
-)
+
+    "\n\n" + PEER)
 
 
 @dataclass(frozen=True)
