@@ -215,7 +215,13 @@ def test_a_long_account_keeps_what_this_turn_is_about():
     matter = Matter.create(advocate_id="adv", title="long")
     thread = Thread.create("t")
     matter = matter.with_thread(thread)
-    for i in range(400):
+    # SIZED FROM THE BUDGET, NOT PINNED AT 400. The rule is "when the account
+    # cannot hold everything, the latest statement survives and the remainder
+    # is counted" -- and a fixture with a hard-coded count stops exercising it
+    # the moment the budget changes. It did: the budget went from 3,000 to
+    # 40,000 on 6 September 2026 and 400 facts no longer filled it.
+    enough = (matter_memory.ACCOUNT_BUDGET // 50) + 200
+    for i in range(enough):
         f = _fact(f"turn {i}: something happened, filler filler filler")
         matter = matter.with_fact(f)
         thread = matter.threads[0]
@@ -889,3 +895,45 @@ def test_a_withheld_turn_keeps_the_advocates_words(tmp_path):
     # re-derive rather than replay a no-op against an id already applied.
     assert kept.turns_applied == (), (
         "a withheld turn was marked applied; retrying it would be a replay")
+
+
+@pytest.mark.class_a
+def test_the_account_budget_stays_a_fraction_of_the_window_it_must_fit_in():
+    """THE BOUND THAT KEEPS THE BOUND HONEST.
+
+    `ACCOUNT_BUDGET` was 3,000 characters against a 100,000-token window --
+    0.75% of what the model could hold -- and the product was discarding a
+    matter to save a rounding error. It is 40,000 now, on the advocate's
+    instruction that losing what has been discussed is a washout.
+
+    THE FAILURE IN THE OTHER DIRECTION IS WORSE AND SILENT. A matter that
+    outgrows the CONTEXT WINDOW does not get truncated, it gets a failed call.
+    The account appears in about ten prompts a turn, so it has to stay a
+    fraction of the window rather than most of it.
+
+    This lives in the tests because it CROSSES A LAYER: `nm.domain.summary`
+    may not import the adapter that knows the window, and the two numbers
+    would otherwise drift with nothing watching. A test is allowed to know
+    both.
+    """
+    from nm.adapters.model.config import CONTEXT_BUDGET
+    from nm.ports.model import Tier
+
+    #: Characters per token, deliberately pessimistic. English averages ~4;
+    #: 3 assumes worse-than-average text so the check errs toward refusing a
+    #: budget that is too large rather than permitting one.
+    chars_per_token = 3
+    window_chars = min(CONTEXT_BUDGET[t] for t in (Tier.ROUTINE, Tier.HARD)
+                       if t in CONTEXT_BUDGET) * chars_per_token
+
+    share = matter_memory.ACCOUNT_BUDGET / window_chars
+    assert share <= 0.25, (
+        f"the account is {share:.0%} of the smallest context window it has to "
+        f"fit inside, and it is sent in roughly ten prompts a turn. A matter "
+        f"that outgrows the window fails the call outright, which is worse "
+        f"than a turn that ran on most of the file and said which part it did "
+        f"not have.")
+    assert share >= 0.02, (
+        f"the account is only {share:.1%} of the window. That is the defect "
+        f"this test was written after: 3,000 characters against 100,000 "
+        f"tokens, discarding a matter to save a rounding error.")

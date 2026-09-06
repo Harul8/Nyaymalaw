@@ -303,6 +303,26 @@ class Thread:
     posture: Posture = field(default_factory=Posture)
     chronology: tuple[FactId, ...] = ()
     deferred_reason: str | None = None
+    theory: "object | None" = None
+    """THE CASE THEORY THIS THREAD IS RUNNING ON. Persisted, and REVISED.
+
+    Phase 1 of the analysis carrying across turns. Measured on GS-15, 6
+    September 2026: five turns produced FIVE DIFFERENT THEORIES while the
+    advocate supplied a date, corrected it, and mentioned non-registration.
+    The issue count went 1, 1, 1, 0, 2 — the thread had no issues at all on
+    turn 4 having had one for three turns. Nothing the advocate said asked for
+    any of that; the theory was simply rebuilt from the account every turn.
+
+    An advocate who reconsidered their whole theory each time you gave them a
+    date would not be trusted with the matter. NM remembered what the advocate
+    SAID and forgot what it had CONCLUDED, and this is the first of the twelve
+    handover sections that fixes.
+
+    TYPED `object` AND NOT `Theory`, DELIBERATELY. `nm.core.theory` imports
+    from here, so naming the type would be a cycle — and the layer rule is
+    that domain holds the state while core holds the reading of it. The store
+    round-trips it structurally either way.
+    """
 
     @staticmethod
     def create(label: str, **kw) -> "Thread":

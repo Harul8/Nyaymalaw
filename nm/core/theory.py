@@ -64,6 +64,20 @@ class Theory:
     thread: ThreadId
     theme: str
     """The sentence a judge could repeat back."""
+    revises_because: str = ""
+    """WHY THIS REPLACED THE LAST ONE, or empty if it is the first.
+
+    A theory that changes for no stated reason is not a revision, it is a
+    regeneration. Measured on GS-15, 6 September 2026: FIVE turns produced
+    FIVE different theories while the advocate supplied a date, corrected it,
+    and mentioned non-registration. The issue count went 1, 1, 1, 0, 2 -- the
+    thread had NO issues on turn 4 having had one for three turns.
+
+    An advocate who reconsidered their whole theory each time you gave them a
+    date would not be trusted with the matter. So a theory now lives on the
+    thread and is REVISED: the read is shown the current one and must name
+    what stopped fitting before it may replace it.
+    """
     account: str = ""
     """The factual account, consistent with the record."""
     legal_theory: str = ""
@@ -287,9 +301,17 @@ THEORY_SCHEMA: dict = {
             "type": "array", "items": {"type": "string"},
             "description": "Adverse fact ids this theory expressly CONCEDES.",
         },
+        "revises_because": {
+            "type": "string",
+            "description": "EMPTY STRING if the theory already on the thread "
+                           "still holds and you are restating it. If you are "
+                           "CHANGING it, name what in the file no longer fits "
+                           "the old one -- a fact, a date, a provision. "
+                           "'It could be phrased better' is not a reason.",
+        },
     },
     "required": ["theme", "account", "legal_theory", "relief", "stance",
-                 "chosen_because", "explains", "concedes"],
+                 "chosen_because", "explains", "concedes", "revises_because"],
     "additionalProperties": False,
 }
 
@@ -346,13 +368,34 @@ def build_adverse_prompt(account: str, chronology):
 
 @implements("D6")
 def build_theory_prompt(account: str, adverse_lines: tuple[str, ...],
-                        acting_for: str):
+                        acting_for: str, standing: "Theory | None" = None):
+    """`standing` is THE THEORY ALREADY ON THIS THREAD, and it changes the job.
+
+    Without it the read forms a theory from the file, every turn, and produces
+    a fresh one every turn — measured on GS-15, 6 September 2026: five turns,
+    five theories, while the advocate supplied a date, corrected it, and
+    mentioned non-registration. The issue count went 1, 1, 1, 0, 2.
+
+    With it the job is to REVISE: keep what still holds, and name what stopped
+    fitting before replacing it.
+    """
     from nm.ports.model import Prompt
 
     listed = "\n".join(f"  {line}" for line in adverse_lines) or "  (none)"
+    current = (
+        f"THE THEORY ALREADY ON THIS THREAD:\n"
+        f"  {standing.theme}\n"
+        f"  relief: {standing.relief or '(none stated)'}\n\n"
+        f"Your job is to REVISE it, not to replace it. If it still fits the "
+        f"file, restate it and leave `revises_because` EMPTY. Change it only "
+        f"where something in the file no longer fits, and say in "
+        f"`revises_because` what that was.\n\n"
+        if standing is not None else
+        "No theory has been formed on this thread yet. Form one and leave "
+        "`revises_because` empty.\n\n")
     return Prompt(
         system=THEORY_SYSTEM,
-        user=(f"WE ACT FOR: {acting_for}\n\n"
+        user=(f"WE ACT FOR: {acting_for}\n\n{current}"
               f"ADVERSE FACTS, every one of which must be explained or "
               f"conceded:\n{listed}\n\nTHE FILE:\n{account}"))
 
@@ -435,3 +478,46 @@ def _ids(value) -> tuple[str, ...]:
     if not isinstance(value, list):
         return ()
     return tuple(str(v).strip() for v in value if str(v).strip())
+
+
+@implements("D6")
+def from_stored(value) -> "Theory | None":
+    """A theory read back off a thread, whatever shape the store returned.
+
+    THE STORE CANNOT TYPE IT, AND THAT IS THE LAYER RULE WORKING. `Thread`
+    holds the theory as `object` because `nm.domain` may not import
+    `nm.core.theory` -- domain holds the state, core holds the reading of it --
+    so the generic decoder hands back a plain dict.
+
+    Left implicit that would be a defect with a delay on it: the value round
+    trips fine, and the NEXT turn touches `.theme` on a dict and the whole
+    revision path fails. Measured within the minute of persisting the first
+    theory, which is the only reason it is a function rather than a surprise.
+
+    A dict from an older record and a live `Theory` both work. Anything else
+    returns None -- a theory nobody can read is not a theory, and forming a
+    fresh one is the honest outcome.
+    """
+    if value is None or isinstance(value, Theory):
+        return value
+    if not isinstance(value, dict) or not str(value.get("theme") or "").strip():
+        return None
+    try:
+        return Theory(
+            thread=ThreadId(str(value.get("thread") or "")),
+            theme=str(value["theme"]),
+            revises_because=str(value.get("revises_because") or ""),
+            account=str(value.get("account") or ""),
+            legal_theory=str(value.get("legal_theory") or ""),
+            relief=str(value.get("relief") or ""),
+            stance=Stance(value.get("stance") or Stance.NOT_ESTABLISHED),
+            for_side=Side(value.get("for_side") or Side.UNKNOWN),
+            explains=tuple(FactId(f) for f in value.get("explains") or ()),
+            concedes=tuple(FactId(f) for f in value.get("concedes") or ()),
+            chosen_because=str(value.get("chosen_because") or ""),
+        )
+    except (ValueError, TypeError):
+        # THE TYPE REFUSED WHAT WAS STORED. A record written before a rule
+        # existed can fail today's constructor, and forming a fresh theory is
+        # better than crashing a turn on history.
+        return None

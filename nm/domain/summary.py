@@ -38,9 +38,31 @@ from dataclasses import dataclass
 from nm.domain.matter import AskedQuestion, Certainty, FactBasis, Matter, Role, Thread
 from nm.domain.text import refuses_blank_text
 
-#: How much of the account a prompt is given. Enough to carry a matter's worth
-#: of instruction, bounded so a long file cannot crowd out the current message.
-ACCOUNT_BUDGET = 3000
+#: How much of the account a prompt is given.
+#:
+#: RAISED FROM 3,000 TO 40,000 ON 6 SEPTEMBER 2026, on the advocate's
+#: instruction: losing what has been discussed is a washout, and 3,000
+#: characters was 0.75% of the 100,000-token window the tier declares. The
+#: product was throwing away a matter to save a rounding error.
+#:
+#: IT IS NOT REMOVED, AND THE REASON IS NOT TIMIDITY. A matter that outgrows
+#: the CONTEXT WINDOW does not get truncated, it gets a failed call -- and a
+#: turn that could not run is worse than a turn that ran on most of the file
+#: and said which part it did not have. The bound has to exist; what was wrong
+#: was its size.
+#:
+#: SIZED AGAINST THE WINDOW, NOT PICKED. 100,000 tokens is roughly 400,000
+#: characters, and the account appears in about ten prompts a turn, so it must
+#: be a small fraction of the window rather than most of it. 40,000 characters
+#: is ~10,000 tokens, ~10% of the window per prompt, and holds roughly 650
+#: facts -- a matter with years of history rather than a conversation.
+#:
+#: `tests/test_matter_memory.py` asserts the relationship against the tier's
+#: declared CONTEXT_BUDGET. It lives in the tests because the check crosses a
+#: layer -- `nm.domain` may not import the adapter that knows the window --
+#: and a number that drifts past what the window can hold is the failure this
+#: comment exists to prevent.
+ACCOUNT_BUDGET = 40_000
 
 #: Room kept for the lines this product appends to the account: what was left
 #: out, and whether any basis was assessed.

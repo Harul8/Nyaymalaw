@@ -404,6 +404,14 @@ class TurnEngine:
         # -- pylint E0601, which is in the gate for exactly this and has now
         # caught the same shape twice in one session.
         head: list[Element] = []
+        # WHAT THIS TURN CONCLUDED, bound before the branch for the same
+        # reason `head` is: the blocking branches do not derive, and a
+        # variable assigned in one branch and read after it is the E0601
+        # shape this file has now produced three times in one session.
+        # EMPTY on a blocked turn is the right value, not a missing one --
+        # a turn that asked a question concluded nothing, and nothing is
+        # what must be written over the standing theory.
+        concluded: dict = {}
 
         if bound.blocks:
             # G-THREAD. The account is KEPT on the matter -- it is the binding
@@ -495,7 +503,7 @@ class TurnEngine:
             head = list(elements)
             derived, relied_on, retrieved, derived_values = self._derive(
                 thread, turn, metrics, memory, facts=matter.facts,
-                matter_id=matter.id)
+                matter_id=matter.id, concluded=concluded)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=tuple(elements))
@@ -522,6 +530,22 @@ class TurnEngine:
         # slice-1 invariant already refused: a turn that blocks because the
         # thread binding is ambiguous must be CHEAP, or the product charges
         # the advocate for its own uncertainty.
+        # WHAT THE TURN CONCLUDED GOES ON THE THREAD, before the commit.
+        #
+        # Phase 1. Until 6 September 2026 the matter held facts and forgot
+        # conclusions, so every turn rebuilt the theory from the account and
+        # GS-15 produced five different ones in five turns. This is where a
+        # conclusion stops being this turn's output and starts being the
+        # thread's state.
+        #
+        # ONLY ON A TURN THAT DERIVED. A blocked turn asked a question and
+        # concluded nothing, and writing an empty conclusion over a standing
+        # theory would lose it exactly as regeneration did.
+        if concluded:
+            settled = replace(thread, **concluded)
+            matter = matter.with_thread(settled)
+            thread = settled
+
         exposure: list[Element] = []
         if not answer.blocked:
             exposure = list(self._exposure(matter, metrics))
@@ -586,9 +610,10 @@ class TurnEngine:
         if report.violations and not answer.blocked:
             late = self._fetch_late_citations(answer, retrieved, turn, metrics)
             if late:
+                concluded.clear()
                 derived, relied_on, retrieved, derived_values = self._derive(
                     thread, turn, metrics, memory, facts=matter.facts,
-                    matter_id=matter.id, seed=late)
+                    matter_id=matter.id, seed=late, concluded=concluded)
                 answer = Answer(
                     route=route, mode=mode, mode_statement=mode_statement,
                     elements=tuple([*head, *derived, *exposure,
@@ -1185,6 +1210,7 @@ class TurnEngine:
                 facts: tuple[Fact, ...] = (),
                 matter_id: str = "",
                 seed: tuple[Finding, ...] = (),
+                concluded: dict | None = None,
                 ) -> tuple[list[Element], tuple, tuple, tuple]:
         """Retrieve, then assemble. Returns (elements, relied_on, retrieved).
 
@@ -1206,6 +1232,12 @@ class TurnEngine:
         punish the product for disclosing an unusable source, or let an
         unusable source ground an answer.
         """
+        # WHAT THIS DERIVATION CONCLUDED, for the caller to persist. A dict
+        # rather than a return value because Phase 1 adds issues, proof and
+        # the rest to it, and a five-tuple that grows to nine is a signature
+        # nobody reads.
+        if concluded is None:
+            concluded = {}
         elements: list[Element] = []
         retrieved: list[Finding] = []
         relied_on: list[Finding] = []
@@ -1315,7 +1347,8 @@ class TurnEngine:
             # D6 -- THE SPINE, LAST, because it is what the issues and the
             # evidence hang off. S8's whole point: stop producing a list of
             # issues and produce a spine with the issues hanging off it.
-            theory_out = self._theory(turn, thread, memory, metrics, facts)
+            theory_out = self._theory(turn, thread, memory, metrics, facts,
+                                      concluded)
             grounds.extend(theory_out)
             _record(derived, "theory", thread, thread.chronology,
                     sum(1 for e in theory_out
@@ -2266,8 +2299,8 @@ class TurnEngine:
 
     @implements("D6")
     def _theory(self, turn: TurnInput, thread: Thread, memory,
-                metrics: TurnMetrics,
-                facts: tuple[Fact, ...]) -> list[Element]:
+                metrics: TurnMetrics, facts: tuple[Fact, ...],
+                concluded: dict) -> list[Element]:
         """D6. One theory per thread, and every adverse fact accounted for.
 
         TWO READS, AND THE ORDER IS THE MECHANISM. The adverse facts are read
@@ -2299,7 +2332,8 @@ class TurnEngine:
                           f" — {why.get(fid, '')}" for fid in adverse)
             said = self._model.structured(
                 theory_reader.build_theory_prompt(
-                    account, lines, thread.posture.side.value),
+                    account, lines, thread.posture.side.value,
+                    standing=theory_reader.from_stored(thread.theory)),
                 theory_reader.THEORY_SCHEMA, Tier.ROUTINE, max_tokens=800)
             metrics.record_call(said)
             read = theory_reader.read_theory(
@@ -2330,10 +2364,27 @@ class TurnEngine:
                 text=f"I did not take the theory that was formed: {read.refused}"))
         elif read.theory is not None:
             t = read.theory
+            # WHAT CHANGED, AND WHY -- or nothing, which is the ordinary case
+            # and the one that was impossible before. A theory that is the
+            # same as last turn's says so by saying nothing.
+            moved = ""
+            was = theory_reader.from_stored(thread.theory)
+            if was is not None and t.revises_because:
+                moved = f" (revised: {t.revises_because})"
+            elif was is not None and t.theme != was.theme:
+                # CHANGED WITH NO REASON GIVEN. Disclosed rather than
+                # accepted quietly: the read was shown the standing theory
+                # and told to name what stopped fitting, and it did not.
+                moved = (" (this differs from the theory on the file and no "
+                         "reason was given for the change)")
+            # WHAT THE TURN CONCLUDED, kept so the next turn revises it
+            # rather than rebuilding it. This is the whole of Phase 1.
+            concluded["theory"] = t
             out.append(Element(
                 kind=ElementKind.FINDING, thread=thread.id,
                 text=(f"Theory: {t.theme}"
-                      + (f" Relief: {t.relief}." if t.relief else ""))))
+                      + (f" Relief: {t.relief}." if t.relief else "")
+                      + moved)))
 
         # E-080. THE ADVERSE FACTS NOBODY ANSWERED, BY NAME.
         left = theory_reader.unaccounted(read.adverse, read.theory)

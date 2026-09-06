@@ -518,6 +518,13 @@ def scripted_theory(user: str) -> str:
         "chosen_because": "",
         "explains": ids,
         "concedes": [],
+        # EMPTY, WHICH IS THE ORDINARY ANSWER AND THE ONE WORTH SCRIPTING.
+        # A double that always revised would make the persisted theory look
+        # unstable in every offline test; one that never can would hide the
+        # revision path entirely. Empty is what a read says when the standing
+        # theory still fits, and the revising case is driven deliberately in
+        # tests/test_the_theory_survives_a_turn.py.
+        "revises_because": "",
     })
 
 
