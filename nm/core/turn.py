@@ -590,6 +590,7 @@ class TurnEngine:
                 issues=concluded.get("issues", thread.issues),
                 decisions=concluded.get("decisions", thread.decisions),
                 proof=concluded.get("proof", thread.proof),
+                evidence=concluded.get("evidence", thread.evidence),
             )
             matter = matter.with_thread(settled)
             thread = settled
@@ -1446,7 +1447,7 @@ class TurnEngine:
             # because an inventory is only readable against what has to be
             # proved.
             inventory_out = self._inventory(
-                turn, thread, memory, metrics, gaps)
+                turn, thread, memory, metrics, gaps, concluded)
             grounds.extend(inventory_out)
             _record(derived, "evidence", thread, thread.chronology,
                     sum(1 for e in inventory_out
@@ -2782,7 +2783,7 @@ class TurnEngine:
     @implements("C7")
     def _inventory(self, turn: TurnInput, thread: Thread, memory,
                    metrics: TurnMetrics,
-                   gaps: list) -> list[Element]:
+                   gaps: list, concluded: dict) -> list[Element]:
         """C7. The inventory, and the three sweeps over it.
 
         THE COUNTEREXAMPLE IS THE POINT: *a file where the original agreement
@@ -2810,11 +2811,13 @@ class TurnEngine:
                 file=memory.advocate_words if memory else "",
                 context=memory.notes if memory else "",
                 context_is="notes this product wrote about the file")
+            standing = inventory.from_stored(thread.evidence)
             res = self._model.structured(
-                inventory.build_inventory_prompt(quotable),
+                inventory.build_inventory_prompt(quotable, standing),
                 inventory.INVENTORY_SCHEMA, Tier.ROUTINE, max_tokens=700)
             metrics.record_call(res)
-            read = inventory.read_inventory(res.data or {}, quotable)
+            read = inventory.read_inventory(res.data or {}, quotable,
+                                            standing)
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
                          f"the evidence could not be inventoried: {exc}")
@@ -2834,17 +2837,51 @@ class TurnEngine:
                                   f"{type(exc).__name__}: {exc}")
             return []
 
+        # MERGED, NOT REPLACED. Measured going 2, 2, 1, 0, 2 across five turns
+        # with nothing happening to the evidence: an item the read did not
+        # mention was simply gone. `Preservation` makes it worse than untidy
+        # -- it records that a step was TAKEN, which is history and not
+        # re-derivable, so losing it means G-PRESERVE asks a question the
+        # advocate has already answered.
+        live = inventory.merge(standing, read.items)
+        concluded["evidence"] = live
+
         out: list[Element] = []
         for refused in read.refused:
             out.append(Element(
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 text=f"I did not take one item the reading offered: {refused}"))
 
-        for item in read.items:
+        # WHAT CHANGED, NOT THE WHOLE LIST. E-093: *length growing with turn
+        # count -- recitation bloat returning.* Persisting the inventory made
+        # every turn recite one more item than the last (13, 13, 14, 15, 16 on
+        # one thread), and the failure is agreeable: restating context reads
+        # as thorough, and by turn eight the advocate is scrolling past their
+        # own file to find the answer.
+        #
+        # Persisting and reciting are different things. The turn was doing the
+        # second because it had never had the first.
+        was = {i.id: i for i in standing}
+        carried = 0
+        for item in live:
+            prior = was.get(item.id)
+            if prior is not None and (
+                    (prior.what, prior.holder, prior.form)
+                    == (item.what, item.holder, item.form)):
+                carried += 1
+                continue
             out.append(Element(
                 kind=ElementKind.FINDING, thread=thread.id,
                 text=(f"{item.what} — held by {item.holder.value}, "
                       f"{item.form.value}")))
+        if carried:
+            # ONE LINE, CONSTANT. Silence would leave the advocate unable to
+            # tell a short list from a short answer, which is the third state
+            # going missing in the place it is easiest to miss.
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"{carried} item(s) already on the file are unchanged "
+                      f"and not repeated here.")))
 
         # AT RISK AND NOBODY ASKED. This is the whole feature -- and it goes
         # into the GAP QUEUE rather than straight into the answer.
@@ -2853,7 +2890,7 @@ class TurnEngine:
         # matters most next. A question emitted where it was detected is a
         # question that arrives in detection order, which is the order the
         # code happens to be written in.
-        for what in inventory.unpreserved(read.items):
+        for what in inventory.unpreserved(live):
             metrics.fire("G-PRESERVE", "unpreserved", what)
             gaps.append(gap_queue.Gap(
                 what=f"who is preserving {what}, and by when",
@@ -2866,7 +2903,7 @@ class TurnEngine:
         # WRITTEN AND NEVER ISSUED. Distinct from the above, and the document
         # is gone either way -- so it is a gap of its own rather than counted
         # as preserved.
-        for what in inventory.undelivered(read.items):
+        for what in inventory.undelivered(live):
             gaps.append(gap_queue.Gap(
                 what=f"when the preservation instruction for {what} goes out",
                 blocks="relying on that document at trial",
@@ -2875,7 +2912,7 @@ class TurnEngine:
         # THE QUESTIONS NOBODY PUT. An inventory that lists ten items and
         # answered two questions of the thirty reads as an inventory that was
         # done.
-        unasked = inventory.unasked(read.items)
+        unasked = inventory.unasked(live)
         if unasked:
             out.append(Element(
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,

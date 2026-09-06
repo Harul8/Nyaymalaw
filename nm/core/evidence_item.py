@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 
-from nm.domain.matter import FactId
+from nm.domain.matter import FactId, new_id
 from nm.domain.quotable import Quotable
 from nm.domain.text import blank, refuses_blank_text
 from nm.domain.traceability import implements
@@ -132,6 +132,14 @@ class EvidenceItem:
     """One item, with the three questions kept apart. Appendix E."""
 
     what: str
+    id: str = ""
+    """STABLE ACROSS TURNS, so a later read can say "this one" rather than
+    describing it again.
+
+    Empty on an item built without one, which the merge treats as new -- the
+    same reading `Issue.id` gets. It is a field rather than a derived hash of
+    `what`: a hash would make the id change whenever the model reworded the
+    description, which is exactly the case the id exists to survive."""
     fact: tuple[FactId, ...] = ()
     holder: Holder = Holder.UNKNOWN
     form: Form = Form.NOT_ASSESSED
@@ -276,8 +284,16 @@ INVENTORY_SCHEMA: dict = {
                         "description": "The advocate's OWN words describing "
                                        "this item, verbatim.",
                     },
+                    "already": {
+                        "type": "string",
+                        "description": "EMPTY STRING for an item you have not "
+                                       "been shown before. If this is one of "
+                                       "the items already on the file, put "
+                                       "its id here instead of describing it "
+                                       "again.",
+                    },
                 },
-                "required": ["what", "holder", "form", "quoted"],
+                "required": ["what", "holder", "form", "quoted", "already"],
                 "additionalProperties": False,
             },
         },
@@ -326,21 +342,38 @@ def inventory_not_assessed(why: str) -> ReadInventory:
 
 
 @implements("C7")
-def build_inventory_prompt(quotable: Quotable):
+def build_inventory_prompt(quotable: Quotable, standing=()):
     """C7. THE PROMPT AND THE GUARD ARE ONE VALUE (B-108).
 
     This showed the rendered file and the message, and checked a
     quotation against the rendered file alone -- so an item the advocate
     had just described could be refused for quoting the sentence that
     described it.
+
+    `standing` IS WHAT IS ALREADY ON THE FILE, WITH IDS. Without it the read
+    cannot say "this one" and every rewording is a new item -- which is how
+    the inventory went 2, 2, 1, 0, 2 across five turns with nothing happening
+    to the evidence.
+
+    NOTHING COMPARES TWO DESCRIPTIONS. "The original agreement" and "the
+    original sale agreement" are one document and share two words; two
+    photocopies of different deeds read almost identically. A similarity test
+    gets both wrong, and merging two real items loses one silently, so the
+    READ names the id -- the same move `restates` makes on the issue read.
     """
     from nm.ports.model import Prompt
 
-    return Prompt(system=INVENTORY_SYSTEM, user=quotable.block())
+    listed = "\n".join(f"  {i.id}\t{i.what}" for i in standing if i.id)
+    already = (f"ITEMS ALREADY ON THIS FILE. If you are describing one of "
+               f"these again, put its id in `already` rather than listing it "
+               f"as new:\n{listed}\n\n" if listed else "")
+    return Prompt(system=INVENTORY_SYSTEM,
+                  user=f"{already}{quotable.block()}")
 
 
 @implements("C7")
-def read_inventory(said: dict, quotable: Quotable) -> ReadInventory:
+def read_inventory(said: dict, quotable: Quotable,
+                   standing=()) -> ReadInventory:
     """Build items. EXISTENCE, ADMISSIBILITY AND WEIGHT ARE LEFT UNASKED.
 
     Deliberately. The model is told what the advocate SAID they have and who
@@ -371,8 +404,17 @@ def read_inventory(said: dict, quotable: Quotable) -> ReadInventory:
                            f"anything the advocate wrote")
             continue
 
+        # THE ID THE READ NAMED, where it named one this file actually holds.
+        # An id the file does not hold is DROPPED rather than carried: an
+        # `already` pointing at nothing would silently become a new item
+        # anyway, and one pointing at another thread's item would merge two
+        # threads' evidence. Both are the silent direction. Same rule as
+        # `restates` on the issue read.
+        known = {i.id for i in standing if i.id}
+        already = str(row.get("already") or "").strip()
         items.append(EvidenceItem(
             what=what,
+            id=already if already in known else new_id("evi"),
             holder=_facet(Holder, row.get("holder"), Holder.UNKNOWN),
             form=_facet(Form, row.get("form"), Form.NOT_ASSESSED),
         ))
@@ -394,3 +436,101 @@ def _facet(enum_type, value, default):
         return enum_type(str(value))
     except ValueError:
         return default
+
+
+@implements("C7")
+def merge(standing: tuple[EvidenceItem, ...],
+          fresh: tuple[EvidenceItem, ...]) -> tuple[EvidenceItem, ...]:
+    """One entry per item, keeping what a read did not mention.
+
+    MEASURED, driven, 6 September 2026: the inventory went 2, 2, 1, 0, 2
+    across five turns with nothing happening to the evidence. An item the
+    read did not mention was simply gone, and came back when a later read
+    happened to mention it again.
+
+    KEYED ON THE ID, WHICH THE READ NAMED. Nothing here compares two
+    descriptions: "the original agreement" and "the original sale agreement"
+    are one document and share two words, while two photocopies of different
+    deeds read almost identically. A similarity test gets both wrong, and the
+    wrong direction -- merging two real items -- loses one silently.
+
+    THE STANDING ITEM WINS ON EVERYTHING A FRESH READ DOES NOT ESTABLISH, and
+    `preservation` is why this matters rather than being tidy. It records that
+    a step was TAKEN, with an owner and a date. That is history, not something
+    re-derivable from an account that will never mention it again, and losing
+    it means G-PRESERVE blocks a step and asks a question the advocate has
+    already answered.
+    """
+    from dataclasses import replace as _replace
+
+    by_id = {i.id: i for i in standing if i.id}
+    out: list[EvidenceItem] = []
+    taken: set[str] = set()
+
+    for new in fresh:
+        held = by_id.get(new.id)
+        if held is None:
+            out.append(new)
+            continue
+        taken.add(held.id)
+        # A FRESH READ MAY SHARPEN A FACET AND MAY NOT BLANK ONE. `UNKNOWN`
+        # and `NOT_ASSESSED` are what a read that did not look returns, and
+        # taking them over an answer somebody established is the flicker one
+        # field down.
+        out.append(_replace(
+            held,
+            what=new.what or held.what,
+            holder=(new.holder if new.holder is not Holder.UNKNOWN
+                    else held.holder),
+            form=(new.form if new.form is not Form.NOT_ASSESSED
+                  else held.form),
+        ))
+
+    out.extend(i for i in standing if i.id and i.id not in taken)
+    return tuple(out)
+
+
+@implements("C7")
+def from_stored(values) -> tuple[EvidenceItem, ...]:
+    """Items read back off a thread, whatever shape the store returned.
+
+    A ROW THAT CANNOT BE REBUILT IS DROPPED AND THE REST KEPT. Losing one item
+    to a record written before a field existed is bad; losing the inventory to
+    it is worse.
+    """
+    out: list[EvidenceItem] = []
+    for row in values or ():
+        if isinstance(row, EvidenceItem):
+            out.append(row)
+            continue
+        if not isinstance(row, dict):
+            continue
+        what = str(row.get("what") or "").strip()
+        if not what:
+            continue
+        pres = row.get("preservation") or None
+        try:
+            out.append(EvidenceItem(
+                what=what,
+                id=str(row.get("id") or "") or new_id("evi"),
+                holder=_facet(Holder, row.get("holder"), Holder.UNKNOWN),
+                form=_facet(Form, row.get("form"), Form.NOT_ASSESSED),
+                existence=_facet(Existence, row.get("existence"),
+                                 Existence.NOT_ASSESSED),
+                admissibility=_facet(Admissibility, row.get("admissibility"),
+                                     Admissibility.NOT_ASSESSED),
+                admissibility_needs=tuple(
+                    str(x) for x in (row.get("admissibility_needs") or ())),
+                metadata=str(row.get("metadata") or ""),
+                preservation=(Preservation(
+                    owner=str(pres.get("owner") or ""),
+                    due=date.fromisoformat(pres["due"]),
+                    issued_at=(date.fromisoformat(pres["issued_at"])
+                               if pres.get("issued_at") else None))
+                    if isinstance(pres, dict) and pres.get("owner")
+                    and pres.get("due") else None),
+                lawful_source=row.get("lawful_source"),
+            ))
+        except (ValueError, TypeError, KeyError):
+            continue
+    return tuple(out)

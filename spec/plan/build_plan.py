@@ -3764,6 +3764,63 @@ d("B-119", "2026-09-06", "tooling",
   "`Application` and asserts the scan sees it \u2014 a scan over a "
   "module that happens to import none of these proves nothing about the "
   "scan.")
+d("B-120", "2026-09-06", "core",
+  "AN INVENTORIED ITEM VANISHED WHEN THE READ DID NOT MENTION IT, AND THE "
+  "PRESERVATION STEP WENT WITH IT. Driven: 2, 2, 1, 0, 2 items across five "
+  "turns with nothing happening to the evidence.\n\n"
+  "The item flickering is confusing. THE PRESERVATION FLICKERING IS C7\u2019S "
+  "OWN COUNTEREXAMPLE arriving through the repair \u2014 `Preservation` "
+  "records that a step was TAKEN, with an owner and a date, which is HISTORY "
+  "and not re-derivable from an account that will never mention it again. "
+  "Losing it means G-PRESERVE blocks a step and asks who is preserving a "
+  "document the advocate has already answered for.",
+  "Working down the Phase 1 shape. The theory, the issues and the proof "
+  "positions were persisted in turn; the inventory was the last value of "
+  "that shape the turn still rebuilt from one read.",
+  "S1 \u2014 an absent input reading as success",
+  "The sweep obligation again, taken before a scenario asked: a list "
+  "rebuilt from a single read is the pattern, and the pattern was already "
+  "written down three times.",
+  "`Thread.evidence`, `EvidenceItem.id`, and `merge` keyed ON THE ID THE "
+  "READ NAMED \u2014 the `restates` mechanism from the issue read, reused "
+  "rather than reinvented beside it (CLAUDE.md \u00a71).\n\n"
+  "NOTHING COMPARES TWO DESCRIPTIONS. \u2018The original agreement\u2019 and "
+  "\u2018the original sale agreement\u2019 are one document and share two "
+  "words; two photocopies of different deeds read almost identically. A "
+  "similarity test gets both wrong, and the wrong direction \u2014 merging "
+  "two real items \u2014 loses one silently.\n\n"
+  "A FRESH READ MAY SHARPEN A FACET AND MAY NOT BLANK ONE. `UNKNOWN` and "
+  "`NOT_ASSESSED` are what a read that did not look returns, and taking them "
+  "over an answer somebody established is the same flicker one field down.\n\n"
+  "AND EVERY SWEEP READS THE MERGED LIST. `unpreserved`, `undelivered` and "
+  "`unasked` are the whole of C7\u2019s value; running them on this turn\u2019s "
+  "read alone would ask only about the items that read happened to mention, "
+  "so an item that vanished would stop being asked about \u2014 which is the "
+  "document going quietly missing that the counterexample is about.",
+  "Yes, and it completes the rule `nm/core/issues.py` states: a value that "
+  "is a FUNCTION of something else is re-derived to stay true; a value that "
+  "is a CONCLUSION somebody reached, or a THING SOMEBODY DID, is persisted. "
+  "The limitation position and the deadline register stay derived under the "
+  "same rule and for the same reason \u2014 they are functions of the "
+  "chronology and re-deriving is how they stay true.",
+  "tests/test_the_inventory_survives_a_turn.py \u2014 14 tests, including "
+  "the preservation step surviving a read that knew nothing about it, an "
+  "unissued instruction round-tripping as unissued (issued, it would silence "
+  "the second gap), and the assertion that all three sweeps run on the "
+  "merged list rather than the fresh read.
+
+"
+  "AND THE FIX BROKE E-093 BEFORE IT FIXED THIS. Persisting the "
+  "inventory made every turn recite one more item than the last — "
+  "13, 13, 14, 15, 16 elements across five turns on ONE thread, which "
+  "is E-093’s counterexample in as many words: length growing "
+  "with turn count, recitation bloat returning. PERSISTING AND "
+  "RECITING ARE DIFFERENT THINGS, and the turn was doing the second "
+  "because it had never had the first. An item is rendered when it is "
+  "NEW or a facet MOVED; the rest are counted in one constant line, "
+  "because silence would leave the advocate unable to tell a short "
+  "list from a short answer.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

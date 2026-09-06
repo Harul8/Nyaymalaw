@@ -339,6 +339,30 @@ class Thread:
     Untyped for the cycle reason above; `nm.domain.decision.from_stored`
     reads it back.
     """
+    evidence: tuple[object, ...] = ()
+    """WHAT THE FILE HAS AND WHO HOLDS IT. C7.
+
+    MEASURED, driven, 6 September 2026:
+
+        turn 1  2 items  ['the original agreement', 'the invoices']
+        turn 2  2 items
+        turn 3  1 item   the read did not mention the agreement
+        turn 4  0 items
+        turn 5  2 items  it mentioned them again
+
+    Nothing happened to the evidence. An item the read did not mention was
+    simply gone, and came back when a later read happened to describe it.
+
+    AND `Preservation` IS NOT A DERIVATION AT ALL. It records that a step was
+    TAKEN, with an owner and a date -- history, not something re-derivable
+    from an account that will never mention it again. Losing it means
+    G-PRESERVE blocks a step and asks a question the advocate has already
+    answered, which is the one thing the question machinery is built not to
+    do.
+
+    Untyped for the cycle reason `issues`, `decisions` and `proof` carry;
+    `nm.core.evidence_item.from_stored` reads it back.
+    """
     proof: tuple[object, ...] = ()
     """WHAT THIS THREAD CAN ESTABLISH, element by element. D5.
 
