@@ -157,6 +157,14 @@ class ProofPosition:
     dead_end: str = ""
     """For ABSENT: why nothing would establish it."""
     serves: str = ""
+    withdrawn_because: str = ""
+    """Why a HELD position stopped being held. Empty is the ordinary case.
+
+    Set only by `withdrawn`, when the material a position rested on has left
+    the file -- a fact the advocate corrected. It carries the reason so the
+    advocate reads "this was established on the 1984 date you withdrew" rather
+    than watching an element quietly become unassessed, which is the same
+    silence B-086 was: the correction applied and had no visible effect."""
 
     def __post_init__(self) -> None:
         if self.status is ProofStatus.OBTAINABLE and blank(self.closing_material):
@@ -188,3 +196,123 @@ class ProofPosition:
     def is_gap(self) -> bool:
         return self.status in (ProofStatus.OBTAINABLE, ProofStatus.ABSENT,
                                ProofStatus.NOT_ASSESSED)
+
+
+def merge(standing: tuple[ProofPosition, ...],
+          fresh: tuple[ProofPosition, ...]) -> tuple[ProofPosition, ...]:
+    """One position per element, keeping what a silent read did not mention.
+
+    KEYED ON THE ELEMENT, EXACTLY. The element text comes from the curated
+    table on both sides, so it is a key and not a resemblance -- nothing here
+    compares two sentences and decides they are the same element (CLAUDE.md
+    §5). A fresh position whose element is not among the standing ones is
+    simply added, which is what happens when the cause is re-read and the
+    table hands over a different list.
+
+    THE ORDER IS THE FRESH LIST'S, because that is the curated order for the
+    cause this turn established. Standing elements the fresh list does not
+    name follow, rather than being dropped: an element that has left the list
+    is one the advocate was told about, and losing it silently is the defect
+    this function exists for.
+    """
+    by_element = {p.element: p for p in standing}
+    out: list[ProofPosition] = []
+    taken: set[str] = set()
+
+    for new in fresh:
+        held = by_element.get(new.element)
+        taken.add(new.element)
+        if held is None:
+            out.append(new)
+            continue
+        # SILENCE CHANGES NOTHING. The read did not mention this element, so
+        # it has said nothing about it -- and nothing is not a finding.
+        if new.status is ProofStatus.NOT_ASSESSED \
+                and held.status is not ProofStatus.NOT_ASSESSED:
+            out.append(held)
+            continue
+        out.append(new)
+
+    out.extend(p for p in standing if p.element not in taken)
+    return tuple(out)
+
+
+def still_supported(position: ProofPosition, on_file) -> bool:
+    """Is a HELD position's material still the advocate's words?
+
+    THE FILE OVERRULES THE READ, in the one direction neither can wobble in.
+    A position HELD on a fact the advocate has since corrected is a position
+    resting on a withdrawn date, and `chart` already drops such a fact from
+    the chronology for exactly this reason -- B-086 was the correction that
+    was applied and had no effect.
+
+    `on_file` is anything with an `accepts(str) -> bool`: the same `Quotable`
+    the read was guarded with, so what counts as the advocate's words is one
+    definition here too.
+
+    A position that is not HELD is not supported by material and returns True
+    -- there is nothing for the file to withdraw.
+    """
+    if position.status is not ProofStatus.HELD:
+        return True
+    return bool(position.material) and all(
+        on_file.accepts(m) for m in position.material)
+
+
+def withdrawn(position: ProofPosition, why: str) -> ProofPosition:
+    """A HELD position whose material has left the file, made NOT_ASSESSED.
+
+    NOT `ABSENT`. Absent means nothing identified would establish it, which is
+    a finding nobody made -- the material was withdrawn, and whether something
+    else would establish the element has not been looked at since. Recording
+    the stronger answer here would be the product deciding a question it did
+    not ask.
+    """
+    from dataclasses import replace
+
+    return replace(position, status=ProofStatus.NOT_ASSESSED, material=(),
+                   standard=Standard.NOT_ESTABLISHED,
+                   closing_material="", dead_end="",
+                   serves=position.serves or "", withdrawn_because=why)
+
+
+def from_stored(values) -> tuple[ProofPosition, ...]:
+    """Positions read back off a thread, whatever shape the store returned.
+
+    The store round-trips `Thread.proof` structurally, so these arrive as
+    plain dicts. Left implicit, the next turn would merge dicts against
+    positions, match nothing, and every element would look freshly unassessed
+    every turn -- this defect arriving through its own repair, which is what
+    happened to the issues.
+
+    A ROW THAT CANNOT BE REBUILT IS DROPPED AND THE REST KEPT. Losing one
+    position to a record written before a field existed is bad; losing the
+    whole list to it is worse.
+    """
+    out: list[ProofPosition] = []
+    for row in values or ():
+        if isinstance(row, ProofPosition):
+            out.append(row)
+            continue
+        if not isinstance(row, dict):
+            continue
+        try:
+            burden = row.get("burden") or {}
+            out.append(ProofPosition(
+                element=str(row.get("element") or ""),
+                burden=Burden(
+                    on=Side(burden.get("on") or Side.UNKNOWN.value),
+                    shifted_by=str(burden.get("shifted_by") or ""),
+                    shift_provision=str(burden.get("shift_provision") or "")),
+                standard=Standard(row.get("standard")
+                                  or Standard.NOT_ESTABLISHED.value),
+                status=ProofStatus(row.get("status")
+                                   or ProofStatus.NOT_ASSESSED.value),
+                material=tuple(str(m) for m in (row.get("material") or ())),
+                closing_material=str(row.get("closing_material") or ""),
+                dead_end=str(row.get("dead_end") or ""),
+                serves=str(row.get("serves") or ""),
+                withdrawn_because=str(row.get("withdrawn_because") or "")))
+        except (ValueError, TypeError):
+            continue
+    return tuple(out)

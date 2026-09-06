@@ -3676,6 +3676,78 @@ d("B-117", "2026-09-06", "tooling",
   "`ProofPosition(material=...)` and would still fail on a real "
   "`Fact(material=...)`.")
 
+d("B-118", "2026-09-06", "core",
+  "A PROOF POSITION VANISHED WHEN THE READ FORGOT TO MENTION IT. Driven, "
+  "because a live read cannot be made to forget on demand: held, held, "
+  "NOT_ASSESSED, held \u2014 with the material never moving. An advocate "
+  "told on turn 2 that an element is established, and on turn 3 that nobody "
+  "worked it out, is watching the product lose its place.",
+  "Building D5's producer the same afternoon. `theory`, `issues` and "
+  "`decisions` are all persisted on the thread; the positions were derived "
+  "every turn and dropped, which is the defect those three fixed arriving on "
+  "the fourth.",
+  "S1 \u2014 an absent input reading as success",
+  "The sweep obligation, taken rather than waited for: a producer of "
+  "per-turn state was added to a product where every sibling is persisted, "
+  "so the question was asked before a scenario asked it.",
+  "`Thread.proof`, and `nm.domain.proof.merge` with the asymmetry stated: "
+  "SILENCE NEVER OVERWRITES, because a read that did not mention an element "
+  "has said nothing about it and nothing is not a finding. A POSITIVE "
+  "STATEMENT ALWAYS WINS, including a regression from HELD to ABSENT \u2014 "
+  "deliberately, because D5.1 says the drift runs toward the comfortable "
+  "answer, and a merge that only ever let a position improve would build the "
+  "drift into the mechanism.\n\n"
+  "AND THE FILE OVERRULES BOTH. `still_supported` checks a HELD position's "
+  "material against the FILE, so a position resting on a fact the advocate "
+  "corrected falls whatever the read says \u2014 the one direction neither "
+  "party can wobble in. It falls to NOT_ASSESSED and never to ABSENT: absent "
+  "means nothing identified would establish it, which is a finding nobody "
+  "made.",
+  "Yes, and the general rule is the one `nm/core/issues.py` states: a value "
+  "that is a FUNCTION of something else is re-derived to stay true, and a "
+  "value that is a CONCLUSION somebody reached is persisted, because "
+  "re-deriving it does not refresh it \u2014 it discards it whenever the "
+  "read has an off turn. The staleness that argument has to answer is "
+  "handled by checking the file, not by re-reading.",
+  "tests/test_the_proof_survives_a_turn.py \u2014 17 tests, including both "
+  "bounds: a positive regression to ABSENT still wins, and a merge that "
+  "always kept the standing list would freeze the thread on turn one.")
+
+d("B-119", "2026-09-06", "tooling",
+  "A TEST SUPPLIES `--approve` TO THE GOLDEN RUNNER ON EVERY GATE RUN. "
+  "`tests/test_tooling_bites.py::test_an_unscored_golden_suite_is_not_"
+  "reported_as_a_pass` runs `run_goldens.py --suite full --approve`, and "
+  "`--approve` is the whole of the standing constraint that a judged run "
+  "needs a per-run decision.",
+  "Nothing recent. It has been there since the runner was built, and it is "
+  "FREE TODAY BY CONSTRUCTION \u2014 scenario execution is not implemented, "
+  "so the suite branch prints NOT ASSESSED and returns 1 without importing "
+  "`Application`, `TurnEngine` or any model.",
+  "S11 \u2014 a check that cannot fail, inverted: a guard that cannot bite "
+  "YET",
+  "Seeing `run_goldens.py --suite full --approve` in the process list during "
+  "a gate and killing everything, on the assumption it was spending money. "
+  "IT WAS NOT \u2014 reading the tool settled it, and the alarm was mine. "
+  "The finding survives the false alarm: what is free today is free only "
+  "because the feature is missing.",
+  "NOT FIXED. The shape of it: the day scenario execution is built, that "
+  "line starts making judged calls on every commit, and the tool's own "
+  "docstring says why that is wrong \u2014 *an eval run that happens because "
+  "a tool defaulted to running it is an eval run nobody decided to pay for.* "
+  "A test is a caller that defaults to running it.\n\n"
+  "The fix is to make the FREENESS structural rather than incidental: the "
+  "test asserts that `run_goldens.py` constructs no model on the suite path, "
+  "so the day it does, the test fails and somebody decides \u2014 rather "
+  "than the gate quietly starting to spend.",
+  "Yes. The general rule is that A CONSTRAINT ENFORCED BY A FLAG IS "
+  "ENFORCED ONLY WHERE THE FLAG IS TYPED BY A PERSON. Every automated "
+  "caller that passes the flag has to carry its own reason for being "
+  "allowed to, and the reason here is that the path costs nothing \u2014 "
+  "which is a fact about the code and can therefore be checked.",
+  "None yet. `tests/test_tooling_bites.py` asserts the NOT MEASURED "
+  "behaviour and asserts nothing about the cost of getting it.",
+  "Open")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

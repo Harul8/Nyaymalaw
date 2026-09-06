@@ -339,6 +339,38 @@ class Thread:
     Untyped for the cycle reason above; `nm.domain.decision.from_stored`
     reads it back.
     """
+    proof: tuple[object, ...] = ()
+    """WHAT THIS THREAD CAN ESTABLISH, element by element. D5.
+
+    Persisted for the reason the theory and the issues are, and MEASURED the
+    same way -- driven, because a live read cannot be made to forget on
+    demand:
+
+        turn 1  held          ('we hold the original',)
+        turn 2  held          ('we hold the original',)
+        turn 3  NOT_ASSESSED  ()          <- the read did not mention it
+        turn 4  held          ('we hold the original',)
+
+    The material never moved. An advocate told on turn 2 that an element is
+    established, and on turn 3 that nobody worked it out, is watching the
+    product lose its place.
+
+    A POSITION IS NOT A FUNCTION OF THE FILE ALONE, which is why storing it is
+    right where storing an `effect` would be wrong. `effect` is derived from
+    the posture, so re-deriving keeps it true. A position is what a READ
+    concluded from the file, and re-deriving it every turn does not refresh it
+    -- it discards it whenever the read has an off turn.
+
+    The staleness that argument has to answer is real and is handled where it
+    belongs: `still_supported` checks a HELD position's material against the
+    FILE, so a position resting on a corrected fact falls whatever the read
+    says. See `nm.domain.proof.merge` for the asymmetry.
+
+    `tuple[object, ...]` and not `tuple[ProofPosition, ...]`: the store's
+    decoder needs `get_origin` to see a parameterised tuple, and a bare
+    `tuple` gave back a list. The type is untyped for the same cycle reason as
+    `issues` and `decisions`; `nm.domain.proof.from_stored` reads it back.
+    """
     theory: "object | None" = None
     """THE CASE THEORY THIS THREAD IS RUNNING ON. Persisted, and REVISED.
 

@@ -361,7 +361,7 @@ def test_a_cause_with_no_curated_elements_names_the_reason(tmp_path):
 
     out = engine._proof(
         TurnInput(advocate_id="adv_1", today=TODAY, message="where now?"),
-        thread, _M(), _metrics(), "cheque_dishonour")
+        thread, _M(), _metrics(), "cheque_dishonour", {})
     text = " ".join(e.text for e in out)
     assert "CRIMINAL" in text, text
 
@@ -386,7 +386,7 @@ def test_the_positions_reach_the_answer_on_a_served_turn(tmp_path):
 
     out = engine._proof(
         TurnInput(advocate_id="adv_1", today=TODAY, message="where now?"),
-        thread, _M(), _metrics(), "specific_performance")
+        thread, _M(), _metrics(), "specific_performance", {})
     text = " ".join(e.text for e in out)
 
     assert "concluded and enforceable agreement" in text, text
@@ -417,7 +417,7 @@ def test_a_gap_on_our_side_is_named(tmp_path):
 
     out = engine._proof(
         TurnInput(advocate_id="adv_1", today=TODAY, message="where now?"),
-        thread, _M(), _metrics(), "specific_performance")
+        thread, _M(), _metrics(), "specific_performance", {})
     ours = [e for e in out if "OURS to establish" in e.text]
     assert ours, "no line told the advocate which gaps are theirs to close"
     assert "subsequent transferee" not in ours[0].text, (

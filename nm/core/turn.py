@@ -46,6 +46,7 @@ from nm.core import posture as posture_reader
 from nm.core import theory as theory_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
 from nm.domain import decision, issue
+from nm.domain import proof as domain_proof
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
 from nm.domain.matter import (
@@ -588,6 +589,7 @@ class TurnEngine:
                 theory=concluded.get("theory", thread.theory),
                 issues=concluded.get("issues", thread.issues),
                 decisions=concluded.get("decisions", thread.decisions),
+                proof=concluded.get("proof", thread.proof),
             )
             matter = matter.with_thread(settled)
             thread = settled
@@ -1425,7 +1427,8 @@ class TurnEngine:
             # inventory's own argument turned into a sequence: an inventory is
             # only readable against what has to be proved, so what has to be
             # proved is worked out first.
-            proof_out = self._proof(turn, thread, memory, metrics, cause_read)
+            proof_out = self._proof(turn, thread, memory, metrics,
+                                    cause_read, concluded)
             grounds.extend(proof_out)
             _record(derived, "proof", thread, thread.chronology,
                     sum(1 for e in proof_out
@@ -2973,7 +2976,8 @@ class TurnEngine:
 
     @implements("D5")
     def _proof(self, turn: TurnInput, thread: Thread, memory,
-               metrics: TurnMetrics, cause_read: str | None) -> list[Element]:
+               metrics: TurnMetrics, cause_read: str | None,
+               concluded: dict) -> list[Element]:
         """D5. What the file can establish, element by element.
 
         `nm/domain/proof.py` carried the whole contract from slice 7 and
@@ -3050,6 +3054,27 @@ class TurnEngine:
                                   f"{type(exc).__name__}: {exc}")
             return []
 
+        # MERGED, NOT REPLACED. A read that did not mention an element has
+        # said nothing about it, and nothing is not a finding -- measured
+        # going held, held, NOT_ASSESSED, held with the material untouched on
+        # the file. A POSITIVE statement still wins, including a regression to
+        # ABSENT, because a product that could not lower its own confidence
+        # would have a proof section that only ever improved, which is D5.1's
+        # drift with a mechanism behind it.
+        standing = domain_proof.from_stored(thread.proof)
+        live = domain_proof.merge(standing, read.positions)
+
+        # AND THE FILE OVERRULES BOTH. A HELD position rests on material, and
+        # material the advocate has since corrected takes the position with
+        # it. Checked against the FILE rather than against the read, which is
+        # the one direction neither can wobble in.
+        live = tuple(
+            p if domain_proof.still_supported(p, quotable)
+            else domain_proof.withdrawn(
+                p, "the material it rested on is no longer on the file")
+            for p in live)
+        concluded["proof"] = live
+
         out: list[Element] = []
         for refused in read.refused:
             # A REFUSED POSITION IS DISCLOSED. Most of these are the drift D5.1
@@ -3060,7 +3085,7 @@ class TurnEngine:
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 text=f"I did not take one proof position: {refused}"))
 
-        for pos in read.positions:
+        for pos in live:
             falls = pos.burden.falls_on_us(thread.posture)
             whose = ("ours" if falls is True
                      else "theirs" if falls is False
@@ -3083,19 +3108,19 @@ class TurnEngine:
         # that answered on two of five reports three gaps rather than
         # complete coverage of the two it happened to reach.
         missing = proof.uncovered(
-            tuple(i.element for i in elements.ingredients), read.positions)
+            tuple(i.element for i in elements.ingredients), live)
         if missing:
             metrics.violate("D5", f"elements with no proof position: "
                                   f"{'; '.join(missing)}")
 
         # D5's FOURTH DOES: every gap resolves into an action or an express
         # finding that nothing can. `unclosed` is the check that it did.
-        open_gaps = proof.unclosed(read.positions)
+        open_gaps = proof.unclosed(live)
         if open_gaps:
             metrics.violate("D5", f"proof gaps with no action and no dead "
                                   f"end: {'; '.join(open_gaps)}")
 
-        ours = proof_read.against_us(read.positions, thread.posture)
+        ours = proof_read.against_us(live, thread.posture)
         if ours:
             out.append(Element(
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,

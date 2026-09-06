@@ -128,19 +128,86 @@ def _keywords(tree: ast.AST) -> tuple[set[str], set[str]]:
     """
     attributed: set[str] = set()
     bare: set[str] = set()
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        target = (node.func.id if isinstance(node.func, ast.Name)
-                  else node.func.attr if isinstance(node.func, ast.Attribute)
-                  else "")
-        named = bool(target) and target[0].isupper()
-        for kw in node.keywords:
-            if not kw.arg:
-                continue
-            (attributed if named else bare).add(
-                f"{target}.{kw.arg}" if named else kw.arg)
+
+    def visit(node: ast.AST, annotations: dict[str, str]) -> None:
+        """ONE VISIT PER NODE, in its innermost scope.
+
+        The first version collected the module and every function separately
+        and walked each, so a call inside a function was seen TWICE -- once
+        with that function's annotations and once from the module with none.
+        The union of the two answers is the weaker one, and `Fact.material`
+        failed again on a fix that had already worked.
+        """
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            annotations = {**annotations, **_annotations(node)}
+        if isinstance(node, ast.Call):
+            target = _class_called(node, annotations)
+            for kw in node.keywords:
+                if not kw.arg:
+                    continue
+                if target:
+                    attributed.add(f"{target}.{kw.arg}")
+                else:
+                    bare.add(kw.arg)
+        for child in ast.iter_child_nodes(node):
+            visit(child, annotations)
+
+    visit(tree, {})
     return attributed, bare
+
+
+def _annotations(scope: ast.AST) -> dict[str, str]:
+    """Parameter name -> annotated class name, for simple `Name` annotations.
+
+    `x: ProofPosition` is read; `x: ProofPosition | None` and `x: "Thread"`
+    are not, and stay bare. Reading more would need real type inference, and
+    a sweep that half-infers is one whose failures cannot be reasoned about.
+    """
+    if not isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        return {}
+    out: dict[str, str] = {}
+    a = scope.args
+    for arg in (*a.posonlyargs, *a.args, *a.kwonlyargs):
+        if isinstance(arg.annotation, ast.Name) \
+                and arg.annotation.id[:1].isupper():
+            out[arg.arg] = arg.annotation.id
+    return out
+
+
+def _class_called(node: ast.Call, annotations: dict[str, str]) -> str:
+    """The class a call writes to, or "" where it cannot be told.
+
+    THREE SHAPES, all of them this repository's idiom:
+
+        Fact(...)          a constructor
+        Fact.create(...)   the classmethod nearly everything is built through
+        replace(x, ...)    where `x` is an annotated parameter
+
+    WHAT STAYS BARE, stated so the next reader does not assume otherwise: a
+    `replace` on a local built inline, on an attribute, or on a parameter with
+    no annotation. Those still match by name, which is conservative in the
+    direction that asks a question rather than the one that deletes an answer.
+    """
+    func = node.func
+    if isinstance(func, ast.Name):
+        if func.id[:1].isupper():
+            return func.id                      # Fact(...)
+        if func.id == "replace" and node.args:
+            first = node.args[0]
+            if isinstance(first, ast.Name):
+                return annotations.get(first.id, "")   # replace(position, ...)
+        return ""
+    if isinstance(func, ast.Attribute):
+        # `Fact.create(...)`: the CLASS is the value, not the attribute --
+        # reading `.attr` gave `create`, which is lower case, so every
+        # classmethod construction in this codebase fell through to bare.
+        if isinstance(func.value, ast.Name) and func.value.id[:1].isupper():
+            return func.value.id
+        if func.attr == "replace" and node.args:
+            first = node.args[0]
+            if isinstance(first, ast.Name):
+                return annotations.get(first.id, "")
+    return ""
 
 
 def _swept(package: str) -> tuple[set[str], set[str]]:
@@ -306,6 +373,75 @@ def test_no_reservation_outlives_its_writer():
     assert not stale, (
         "these are declared as having no writer and something now writes "
         "them. Delete the entry:\n  " + "\n  ".join(stale))
+
+
+def _planted(*lines: str) -> ast.AST:
+    """Source built from LINES, joined at use.
+
+    Not one string with newlines in it: nothing here should depend on an
+    escape surviving whatever tool next rewrites this file.
+    """
+    return ast.parse(chr(10).join(lines) + chr(10))
+
+
+def test_the_sweep_tells_two_classes_with_one_field_name_apart():
+    """S11, AND THIS SWEEP HAS BEEN WRONG TWICE.
+
+    `ProofPosition(material=...)` retired the reservation on `Fact.material`,
+    which is a different field on a different type. The first repair
+    attributed constructor calls and missed two shapes this codebase uses
+    everywhere; the second visited every call inside a function TWICE, once
+    with the function's annotations and once from the module with none, and
+    took the union -- which is the weaker answer.
+
+    Both were found by the gate rather than by this test, which is the wrong
+    way round for a sweep. So the shapes are planted here.
+    """
+    tree = _planted(
+        "from dataclasses import replace",
+        "def f(position: ProofPosition, other):",
+        "    a = ProofPosition(material=1)",
+        "    b = Fact.create(material=2)",
+        "    c = replace(position, material=3)",
+        "    d = replace(other, material=4)",
+        "    e = replace(build_one(), material=5)",
+    )
+    attributed, bare = _keywords(tree)
+
+    assert "ProofPosition.material" in attributed, "a plain constructor call"
+    assert "Fact.material" in attributed, (
+        "`Fact.create(...)` was not attributed. Reading `node.func.attr` gives "
+        "`create`, which is lower case, so every classmethod construction in "
+        "this codebase fell through to bare")
+
+    # AND WHAT STAYS BARE IS ASSERTED, not hoped for. A `replace` on an
+    # unannotated parameter or on an inline expression cannot be attributed
+    # without real type inference, and those still match by name -- which is
+    # conservative in the direction that asks a question rather than the one
+    # that deletes an answer.
+    assert "material" in bare, (
+        "every shape was attributed, so the conservative fallback is gone -- "
+        "and a `replace` this cannot read would then retire a reservation "
+        "silently, which is the failure this whole check exists to prevent")
+
+
+def test_the_sweep_does_not_attribute_a_call_twice():
+    """The second failure, as its own assertion.
+
+    A node visited under two sets of assumptions yields the union, and the
+    union of attributed and bare is bare -- so the fix looked applied and
+    changed nothing.
+    """
+    tree = _planted(
+        "from dataclasses import replace",
+        "def f(position: ProofPosition):",
+        "    return replace(position, material=())",
+    )
+    attributed, bare = _keywords(tree)
+    assert attributed == {"ProofPosition.material"}
+    assert bare == set(), (
+        "the call was counted bare as well, so it was visited from the module "
+        "scope as well as from the function's")
 
 
 def test_every_reservation_names_a_field_that_exists():
