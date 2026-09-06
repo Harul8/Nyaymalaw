@@ -239,65 +239,105 @@ def test_nothing_quotable_is_said_rather_than_left_silent():
     assert not q.accepts("anything at all")
 
 
-def test_the_duplication_is_measured_not_assumed():
-    """B-115, REPRODUCED. The fix for B-108 shows some sentences TWICE.
+def _matter_with_three_facts():
+    from dataclasses import replace
+    from datetime import date
 
-    Four reads render the advocate's words as the quotable block AND this
-    product's rendering of the same sentences as the context block, and the
-    account budget pays for both. The rendering carries the date stamps and
-    the basis note, which are real information -- dropping it to save the
-    words would be the loss the advocate specifically ruled out -- so the
-    duplication stands and this pins it.
+    from nm.domain.matter import (
+        Certainty,
+        Fact,
+        Matter,
+        Provenance,
+        Thread,
+    )
 
-    A REPRODUCTION, NOT A FIX. It fails if the duplication grows, and it fails
-    if the duplication is closed and nobody closed the row: an open register
-    entry nobody re-runs goes on being read after it has stopped being true,
-    which B-065 and B-086 both did.
+    matter = Matter.create(advocate_id="adv_1", title="t")
+    thread = Thread.create(label="the sale agreement")
+    matter = matter.with_thread(thread)
+    for text, on in (
+        ("We act for the plaintiff at Hyderabad.", None),
+        ("The agreement to sell is dated 15-4-2024.", date(2024, 4, 15)),
+        ("The defendant refused to execute the sale deed on 2-1-2025.",
+         date(2025, 1, 2)),
+    ):
+        matter, _ = matter.recording(Fact.create(
+            statement=text,
+            provenance=Provenance(kind="advocate_statement", turn="turn_1"),
+            certainty=Certainty.ASSERTED, date=on))
+    return matter.with_thread(
+        replace(thread, chronology=tuple(f.id for f in matter.facts)))
 
-    THE TRADE, STATED. Sixteen extra words in a prompt is cheaper than a turn
-    withheld because the model quoted the only copy it was shown. The shape of
-    the real fix is in the register: `nm/domain/summary.py` builds `words` and
-    `account` from the same facts, so it can render the ANNOTATIONS without
-    re-listing the sentences they annotate.
-    """
-    from nm.domain.quotable import Quotable
+
+def _duplicated(file_text: str, context: str) -> int:
+    """Words the prompt carries TWICE: sentences in both blocks."""
     from nm.domain.text import fold
 
-    #: Lines, not one string with newlines in it, so nothing here depends on
-    #: an escape surviving a tool that rewrites this file.
-    own = ("The agreement to sell is dated 15-4-2024.",
-           "We act for the plaintiff at Hyderabad.")
-    rendered_lines = ("[2024-04-15] The agreement to sell is dated 15-4-2024.",
-                "We act for the plaintiff at Hyderabad.",
-                "[How the client KNOWS any of this has not been assessed.]")
+    return sum(len(fold(line).split()) for line in file_text.splitlines()
+               if fold(line) and fold(line) in fold(context))
 
-    q = Quotable(turn="and is it in time?",
-                 file=chr(10).join(own),
-                 context=chr(10).join(rendered_lines))
-    rendered = fold(chr(10).join(rendered_lines))
 
-    twice = [line for line in own if fold(line) in rendered]
-    assert twice, (
-        "the advocate's sentences are no longer duplicated between the "
-        "quotable block and the context block. If `summary` now renders the "
-        "annotations without re-listing what they annotate, B-115 is FIXED "
-        "and this should be replaced by a test that it stays fixed.")
+def test_a_read_that_cannot_use_the_stamps_is_not_shown_them_twice():
+    """B-115, MEASURED ON WHAT THE PRODUCT ACTUALLY BUILDS.
 
-    # AND THE BLOCK REALLY CARRIES BOTH. Folding the two inputs proves they
-    # overlap; this proves the prompt pays for the overlap.
-    block = q.block()
-    for line in twice:
-        assert block.count(line) == 2, (
-            f"{line!r} appears {block.count(line)} time(s) in the prompt, not "
-            f"2 -- the measurement below is about a rendering that changed")
+    The labelling fix for B-108 handed four reads the advocate's sentences
+    clean AND this product's rendering of the same sentences, and the account
+    budget paid for both -- 28 words against a 51-word account.
 
-    # THE COST, AS A NUMBER. Not a bound anyone chose: the count of words the
-    # prompt carries twice, so a change that makes it worse is visible.
-    words_twice = sum(len(fold(line).split()) for line in twice)
-    assert words_twice == 16, (   # 9 + 7, counted rather than guessed
-        f"the duplicated word count moved to {words_twice}. That is not a "
-        f"failure in itself; it means the rendering changed and B-115's "
-        f"measurement needs re-reading rather than re-pinning.")
+    THE ANSWER WAS NOT TO DROP THE CONTEXT. It was to hand each read what it
+    uses. A date stamp does not decide which cause of action a claim is, nor
+    what evidence exists and who holds it, nor whether the file holds the
+    agreement -- so those three take the NOTES, which carry no sentences.
+
+    Measured here rather than on a fixture, because a fixture-based count
+    would go on passing whatever the product does.
+    """
+    from nm.domain import summary as matter_memory
+
+    matter = _matter_with_three_facts()
+    memory = matter_memory.build(matter, matter.threads[0].id,
+                                 about="where do we stand?")
+
+    assert memory.words, "the fixture established nothing to duplicate"
+    assert _duplicated(memory.words, memory.account) > 0, (
+        "the account no longer re-lists the advocate's sentences at all, so "
+        "there is nothing for this test to be about -- which would mean the "
+        "rendering changed and B-115 needs re-reading, not re-pinning")
+
+    assert _duplicated(memory.words, memory.notes) == 0, (
+        "the notes carry the advocate's sentences, so a read handed them as "
+        "context is paying for those sentences twice -- which is the whole "
+        "of B-115")
+
+
+def test_the_issue_read_keeps_the_account_and_the_reason_is_recorded():
+    """THE BOUND, AND IT IS A DELIBERATE COST.
+
+    Limitation is an issue and it turns on dates, so the `[2024-04-15]`
+    stamps are information this read uses. It pays the duplication, and the
+    difference between paying it and not noticing it is this test.
+    """
+    turn = (pathlib.Path(__file__).resolve().parents[1]
+            / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
+    issues = turn[turn.index("def _issues("):]
+    issues = issues[:issues.index("\n    @implements")]
+    assert "context=account" in issues, (
+        "the issue read stopped taking the account. If that is deliberate, "
+        "the reason limitation turns on dates has to be answered somewhere")
+    assert "B-115" in issues, (
+        "the issue read carries the cost and does not say so, which is how a "
+        "deliberate cost becomes an oversight nobody can date")
+
+
+def test_the_reads_that_take_notes_say_which_they_take():
+    """A call site passing `memory.notes` where another passes
+    `memory.account` is a decision, and a decision with no reason beside it
+    reads as an inconsistency to whoever finds it next."""
+    turn = (pathlib.Path(__file__).resolve().parents[1]
+            / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
+    assert turn.count("context=memory.notes if memory else \"\"") == 3, (
+        "the cause, inventory and proof reads take the notes; if a fourth "
+        "joined them or one left, the trade was re-made and this is where it "
+        "gets re-stated")
 
 
 def test_the_refusal_says_which_of_the_three_things_went_wrong():

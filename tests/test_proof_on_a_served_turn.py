@@ -358,6 +358,7 @@ def test_a_cause_with_no_curated_elements_names_the_reason(tmp_path):
     class _M:
         account = ACCOUNT
         advocate_words = ACCOUNT
+        notes = ""
 
     out = engine._proof(
         TurnInput(advocate_id="adv_1", today=TODAY, message="where now?"),
@@ -383,6 +384,7 @@ def test_the_positions_reach_the_answer_on_a_served_turn(tmp_path):
     class _M:
         account = ACCOUNT
         advocate_words = ACCOUNT
+        notes = ""
 
     out = engine._proof(
         TurnInput(advocate_id="adv_1", today=TODAY, message="where now?"),
@@ -414,6 +416,7 @@ def test_a_gap_on_our_side_is_named(tmp_path):
     class _M:
         account = ACCOUNT
         advocate_words = ACCOUNT
+        notes = ""
 
     out = engine._proof(
         TurnInput(advocate_id="adv_1", today=TODAY, message="where now?"),

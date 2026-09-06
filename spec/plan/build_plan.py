@@ -3569,26 +3569,35 @@ d("B-115", "2026-09-06", "core",
   "rendered twice, in one prompt",
   "Reading the built prompt back after the rewire rather than assuming the "
   "gap was the only thing that changed.",
-  "NOT FIXED, and the trade is stated rather than hidden. The duplication is "
-  "the price of the labelling, and it is the right way round: a prompt that "
-  "costs 28 extra words is cheaper than a turn withheld because the model "
-  "quoted the only copy it was shown.\n\n"
-  "The shape of the fix, when it is worth doing: `nm/domain/summary.py` "
-  "builds `words` and `account` from the SAME facts (B-097), so it can render "
-  "the annotations \u2014 the stamps, the notes \u2014 WITHOUT re-listing "
-  "the sentences they annotate. That is a change to one module and it needs a "
-  "measurement first: whether a cause or posture read is worse off with the "
-  "stamps removed entirely, which would be cheaper still.",
+  "FIXED AT THREE OF THE FOUR SITES, and the fourth pays the cost "
+  "deliberately.\n\n"
+  "THE ANSWER WAS NOT TO DROP THE CONTEXT, which loses the stamps and "
+  "the notes. It was to hand each read what it USES \u2014 a per-read "
+  "decision that was being made once, globally, by passing the whole "
+  "rendering everywhere:\n"
+  "    cause      a stamp does not decide WHICH CAUSE a claim is -> notes\n"
+  "    inventory  nor what evidence exists and who holds it      -> notes\n"
+  "    proof      nor whether the file HOLDS the agreement       -> notes\n"
+  "    issues     limitation is an issue and turns on dates      -> account\n"
+  "\n"
+  "`MatterSummary.notes` exposes what this product wrote ABOUT the file "
+  "without the file. The notes were built inline and appended to the "
+  "account, which made \u2018the account minus the sentences\u2019 "
+  "unavailable to anyone who wanted it.\n\n"
+  "MEASURED AFTER: 0 duplicated words at the three, and the prompt falls "
+  "from 146 words to 112 \u2014 23% off those three prompts. The issue "
+  "read still carries 28, with the reason in the code beside it.",
   "Yes. The general question is what a prompt may say TWICE, and the answer "
   "is that a budget measured in tokens must be spent on what a read needs, "
   "not on the same sentence wearing two labels.",
-  "tests/test_one_quotable.py::test_the_duplication_is_measured_not_assumed "
-  "REPRODUCES it and pins the number, so this row cannot go stale in "
-  "either direction: it fails if the duplication grows, and it fails if "
-  "the duplication is fixed and nobody closed the row. A REPRODUCTION AND "
-  "NOT A FIX \u2014 the row stays Open until the rendering stops "
-  "re-listing sentences it only means to annotate.",
-  "Open")
+  "tests/test_one_quotable.py, MEASURING THE LIVE READS rather than a "
+  "fixture \u2014 the fixture version pinned a number that would have "
+  "gone on passing whatever the product did, which is a test measuring "
+  "itself. Three assertions: the notes carry no sentences, the issue "
+  "read still takes the account AND says why in the code, and exactly "
+  "three call sites take the notes, so a fourth joining them or one "
+  "leaving re-states the trade rather than drifting.",
+  "Fixed at three of four sites; the fourth is a recorded cost")
 
 d("B-116", "2026-09-06", "core",
   "D5 WAS COMPLETE AND NOTHING EVER RAN IT. `nm/domain/proof.py` has carried "
@@ -3730,24 +3739,31 @@ d("B-119", "2026-09-06", "tooling",
   "IT WAS NOT \u2014 reading the tool settled it, and the alarm was mine. "
   "The finding survives the false alarm: what is free today is free only "
   "because the feature is missing.",
-  "NOT FIXED. The shape of it: the day scenario execution is built, that "
-  "line starts making judged calls on every commit, and the tool's own "
-  "docstring says why that is wrong \u2014 *an eval run that happens because "
-  "a tool defaulted to running it is an eval run nobody decided to pay for.* "
-  "A test is a caller that defaults to running it.\n\n"
-  "The fix is to make the FREENESS structural rather than incidental: the "
-  "test asserts that `run_goldens.py` constructs no model on the suite path, "
-  "so the day it does, the test fails and somebody decides \u2014 rather "
-  "than the gate quietly starting to spend.",
+  "THE FREENESS IS A CHECKED PROPERTY NOW, not an accident of scheduling. "
+  "`test_the_golden_suite_path_cannot_reach_a_model` scans "
+  "`tools/run_goldens.py` for the names that make a model call \u2014 "
+  "`Application`, `TurnEngine`, the adapter, the port, `structured` \u2014 "
+  "and fails if any appears.\n\n"
+  "WHEN IT FAILS IT IS NOT A BUG IN THE RUNNER. It means scenario "
+  "execution has landed, and the decision it forces is what the other "
+  "test does now: stop passing `--approve`, or stop running the suite. "
+  "Whichever it is, it becomes a decision somebody makes rather than a "
+  "bill somebody finds.\n\n"
+  "WHAT IT DOES NOT PROVE, said rather than implied: that no model call "
+  "happens. It proves the module does not NAME the things that make one, "
+  "which is a weaker claim and the only one available BEFORE the call "
+  "\u2014 and by the time a call is observable the gate has already made "
+  "it.",
   "Yes. The general rule is that A CONSTRAINT ENFORCED BY A FLAG IS "
   "ENFORCED ONLY WHERE THE FLAG IS TYPED BY A PERSON. Every automated "
   "caller that passes the flag has to carry its own reason for being "
   "allowed to, and the reason here is that the path costs nothing \u2014 "
   "which is a fact about the code and can therefore be checked.",
-  "None yet. `tests/test_tooling_bites.py` asserts the NOT MEASURED "
-  "behaviour and asserts nothing about the cost of getting it.",
-  "Open")
-
+  "tests/test_tooling_bites.py::test_the_golden_suite_path_cannot_reach_"
+  "a_model, with a positive control that plants a runner importing "
+  "`Application` and asserts the scan sees it \u2014 a scan over a "
+  "module that happens to import none of these proves nothing about the "
+  "scan.")
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

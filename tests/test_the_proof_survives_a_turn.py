@@ -250,6 +250,7 @@ def _engine(tmp_path, inner=None):
 class _Memory:
     account = ACCOUNT
     advocate_words = ACCOUNT
+    notes = ""
 
 
 def _thread():
@@ -330,6 +331,7 @@ def test_a_position_on_material_no_longer_on_the_file_falls_on_the_turn(tmp_path
     class _Corrected:
         account = "We act for the plaintiff."
         advocate_words = "We act for the plaintiff."
+        notes = ""
 
     thread = replace(_thread(), proof=(_held(),))
     concluded: dict = {}

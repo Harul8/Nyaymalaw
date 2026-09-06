@@ -11,6 +11,7 @@ reported reason, not merely on a non-zero exit code.
 """
 from __future__ import annotations
 
+import ast
 import shutil
 import subprocess
 import sys
@@ -508,6 +509,76 @@ def test_utf8_console_survives_a_stream_it_cannot_reconfigure():
 
     utf8_console()
     utf8_console()  # idempotent
+
+
+#: What a module has to reach to make a model call. Names rather than a
+#: behaviour, because the point is to notice the WIRING on the day it lands --
+#: and by the time a call is observable, the gate has already made it.
+REACHES_A_MODEL = (
+    "Application",          # the composition root, which builds the adapter
+    "TurnEngine",           # the only thing that runs a scenario
+    "OpenAIModelAdapter",
+    "ModelPort",
+    "structured",           # the one method that spends
+)
+
+
+def test_the_golden_suite_path_cannot_reach_a_model():
+    """B-119. THE TEST BELOW SUPPLIES `--approve` ON EVERY GATE RUN.
+
+    That is the standing constraint's entire mechanism handed over by a
+    caller, and `run_goldens.py` says in its own docstring why that is wrong:
+    *an eval run that happens because a tool defaulted to running it is an
+    eval run nobody decided to pay for.* A test is such a caller.
+
+    It costs nothing today ONLY because scenario execution is not built. That
+    is an accident of scheduling and not a property anyone checks, so this
+    checks it: the runner may not reach a model at all.
+
+    WHEN THIS FAILS, IT IS NOT A BUG IN THE RUNNER. It means scenario
+    execution has landed, and the decision it forces is what to do about the
+    test below -- which must stop passing `--approve`, or stop running the
+    suite, before the gate starts spending on every commit.
+
+    WHAT IT DOES NOT PROVE: that no model call happens. It proves the module
+    does not NAME the things that make one, which is a weaker claim and the
+    one that can be checked before the call is made rather than after.
+    """
+    source = (ROOT / "tools" / "run_goldens.py").read_text(encoding="utf8")
+    tree = ast.parse(source)
+
+    reached = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            reached |= {a.name for a in node.names if a.name in REACHES_A_MODEL}
+        elif isinstance(node, ast.Name) and node.id in REACHES_A_MODEL:
+            reached.add(node.id)
+        elif isinstance(node, ast.Attribute) and node.attr in REACHES_A_MODEL:
+            reached.add(node.attr)
+
+    assert not reached, (
+        f"`tools/run_goldens.py` now reaches {sorted(reached)}, so "
+        f"`--suite ... --approve` can make model calls -- and "
+        f"`test_an_unscored_golden_suite_is_not_reported_as_a_pass` supplies "
+        f"`--approve` on EVERY GATE RUN.\n\n"
+        f"This is not a bug in the runner. It means scenario execution has "
+        f"landed, and the decision is what that test does now: stop passing "
+        f"`--approve`, or stop running the suite. Whichever, it is a decision "
+        f"somebody makes rather than a bill somebody finds.")
+
+
+def test_the_model_scan_can_see_a_runner_that_would_spend():
+    """S11. A scan over a module that happens to import none of these proves
+    nothing about the scan."""
+    planted = ast.parse(chr(10).join((
+        "from nm.bootstrap.composition import Application",
+        "def go():",
+        "    return Application().engine",
+    )) + chr(10))
+    reached = {a.name for n in ast.walk(planted)
+               if isinstance(n, ast.ImportFrom)
+               for a in n.names if a.name in REACHES_A_MODEL}
+    assert reached == {"Application"}
 
 
 def test_an_unscored_golden_suite_is_not_reported_as_a_pass():

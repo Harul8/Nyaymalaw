@@ -1127,10 +1127,18 @@ class TurnEngine:
         # account is CONTEXT -- its `[1984-04-15]` stamps and notes are
         # ours, not the advocate's -- and `advocate_words` is what may
         # be quoted. Passing the two separately is how they drifted.
+        #
+        # THE NOTES AND NOT THE WHOLE RENDERING (B-115). A date stamp does
+        # not decide WHICH CAUSE OF ACTION a claim is, so handing this read
+        # the account beside the same sentences clean was paying for them
+        # twice. The notes are what the rendering adds that this read could
+        # use -- that the basis is unassessed, that earlier statements were
+        # left out -- and they carry no sentences at all.
         quotable = Quotable(
             turn=turn.message,
             file=memory.advocate_words if memory else "",
-            context=memory.account if memory else "")
+            context=memory.notes if memory else "",
+            context_is="notes this product wrote about the file")
         try:
             res = self._model.structured(
                 cause_reader.build_prompt(quotable),
@@ -2794,10 +2802,14 @@ class TurnEngine:
             return []
 
         try:
+            # THE NOTES, NOT THE ACCOUNT (B-115). What evidence exists and
+            # who holds it does not turn on a date stamp, so the rendering
+            # was a second copy of the sentences already in `file`.
             quotable = Quotable(
                 turn=turn.message,
                 file=memory.advocate_words if memory else "",
-                context=account)
+                context=memory.notes if memory else "",
+                context_is="notes this product wrote about the file")
             res = self._model.structured(
                 inventory.build_inventory_prompt(quotable),
                 inventory.INVENTORY_SCHEMA, Tier.ROUTINE, max_tokens=700)
@@ -2906,6 +2918,11 @@ class TurnEngine:
             # rendered account alone while the prompt showed the message
             # under "THIS TURN", so an issue arising from what the
             # advocate had just written was refused for quoting it.
+            #
+            # AND THIS ONE KEEPS THE WHOLE RENDERING (B-115). Limitation is
+            # an issue and it turns on dates, so the `[2024-04-15]` stamps
+            # are information this read uses -- unlike the cause and
+            # inventory reads, which were handed them and could not.
             quotable = Quotable(
                 turn=turn.message,
                 file=memory.advocate_words if memory else "",
@@ -3030,11 +3047,14 @@ class TurnEngine:
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 text=f"I have not decomposed this claim into elements: {why}")]
 
-        account = memory.account if memory else ""
+        # THE NOTES (B-115). Whether the file HOLDS the agreement is a
+        # question about the sentences, which are in `file` already; the
+        # stamps would be the same sentences a second time.
         quotable = Quotable(
             turn=turn.message,
             file=memory.advocate_words if memory else "",
-            context=account)
+            context=memory.notes if memory else "",
+            context_is="notes this product wrote about the file")
         try:
             res = self._model.structured(
                 proof_read.build_prompt(quotable, elements),

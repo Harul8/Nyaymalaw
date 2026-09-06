@@ -116,6 +116,20 @@ class MatterSummary:
     guard input for every verbatim check and must never widen when the
     account does.
     """
+    notes: str = ""
+    """What this product wrote ABOUT the file, without the file. B-115.
+
+    The account is the advocate's sentences plus per-fact stamps plus these
+    file-level notes. A read that is shown the clean sentences as quotable
+    text and the whole rendering as context pays for the sentences twice --
+    28 words against a 51-word account when it was measured -- and the four
+    reads doing that were doing it because passing the whole rendering was
+    the only thing available.
+
+    A read that uses nothing the stamps add takes THIS instead. That is a
+    per-read decision and belongs at the call site, which is why this is a
+    field and not a mode.
+    """
     left_out: int = 0
     """How many facts did not fit the budget. NOT a flag: a reader who is told
     something was trimmed learns that a boundary exists, and a reader told
@@ -340,7 +354,7 @@ def build(matter: Matter, thread_id: str | None = None,
         if f.date:
             established.append(f"{f.date.isoformat()}: {f.statement.strip()[:120]}")
 
-    account, left_out, words = _account(
+    account, left_out, words, notes = _account(
         on_thread, thread, about, load_bearing)
 
     return MatterSummary(
@@ -350,6 +364,7 @@ def build(matter: Matter, thread_id: str | None = None,
         established=tuple(dict.fromkeys(established)),
         account=account,
         words=words,
+        notes=notes,
         left_out=left_out,
         open_questions=tuple(q for q in matter.asked if q.open),
         answered=tuple(q for q in matter.asked if not q.open),
@@ -499,6 +514,7 @@ def _account(facts: list, thread, about: str,
 
     left_out = len(facts) - len(kept)
     account = "\n".join(kept)
+    notes: list[str] = []
 
     # THE THIRD STATE, SAID ONCE AND NOT FIFTEEN TIMES.
     #
@@ -509,11 +525,23 @@ def _account(facts: list, thread, about: str,
     # one sentence, and those characters are paid for in facts that then do
     # not fit. So it is stated once, about the file.
     if kept and not any(f.basis is not FactBasis.NOT_ASSESSED for f in facts):
-        account += ("\n[How the client KNOWS any of this has not been "
-                    "assessed. Nothing above is marked for basis.]")
+        notes.append("[How the client KNOWS any of this has not been "
+                     "assessed. Nothing above is marked for basis.]")
     if left_out > 0:
-        account += (f"\n[{left_out} earlier statement(s) are on the file and "
-                    f"not repeated here. Every dated event is above.]")
+        notes.append(f"[{left_out} earlier statement(s) are on the file and "
+                     f"not repeated here. Every dated event is above.]")
+    # BUILT APART AND THEN JOINED, so `account` is unchanged for every caller
+    # while the notes are also available ALONE.
+    #
+    # B-115. Four reads were handed the whole rendering as context beside the
+    # advocate's clean sentences as quotable text, and the budget paid for the
+    # sentences twice. Two of the four -- the cause read and the evidence
+    # inventory -- use nothing the rendering adds: a date stamp does not
+    # decide which cause of action a claim is, nor what evidence exists and
+    # who holds it. They take the notes; the issue read, where limitation
+    # turns on dates, still takes the account.
+    if notes:
+        account += "\n" + "\n".join(notes)
 
     # THE GUARD INPUT, BUILT APART AND FROM THE STATEMENTS ALONE.
     #
@@ -537,7 +565,7 @@ def _account(facts: list, thread, about: str,
     # Rewording the note would have fixed this note. Building the two strings
     # apart fixes the next one.
     words = "\n".join(f.statement.strip() for f in shown)
-    return account, max(left_out, 0), words
+    return account, max(left_out, 0), words, "\n".join(notes)
 
 
 def _ranked(facts: list, about: str) -> list:
