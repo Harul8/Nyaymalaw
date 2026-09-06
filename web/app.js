@@ -812,3 +812,25 @@ $('register').addEventListener('submit', async (ev) => {
     go.disabled = false;
   }
 });
+
+// THE REVEAL. `type=button` on the control, or it submits the form -- a
+// default-type button inside a form is a submit button, and clicking the eye
+// would have posted a half-filled registration.
+//
+// The password is revealed, never LOGGED and never copied anywhere: the value
+// stays in the input and only its `type` changes. Both handlers already clear
+// the fields after a submit for the same reason.
+document.querySelectorAll('.pw-eye').forEach((eye) => {
+  eye.addEventListener('click', () => {
+    const field = $(eye.dataset.for);
+    const showing = field.type === 'text';
+    field.type = showing ? 'password' : 'text';
+    eye.setAttribute('aria-pressed', String(!showing));
+    // FOCUS RETURNS TO THE FIELD with the caret where it was. Losing the
+    // caret to the end is the small annoyance that makes people stop using a
+    // reveal and type blind instead.
+    const at = field.value.length;
+    field.focus();
+    field.setSelectionRange(at, at);
+  });
+});

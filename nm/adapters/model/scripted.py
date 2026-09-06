@@ -396,6 +396,12 @@ def scripted_issues(user: str) -> str:
             "kind": kind,
             "runs_against": against,
             "quoted": block[i:i + len(needle)],
+            # EMPTY, WHICH IS THE ORDINARY ANSWER. A double that always
+            # restated would make the merge look like it deduplicated
+            # everything; one that never can would leave the restatement path
+            # unexercised. The restating case is driven deliberately in
+            # tests/test_the_issues_survive_a_turn.py.
+            "restates": "",
         })
     return json.dumps({"issues": rows})
 

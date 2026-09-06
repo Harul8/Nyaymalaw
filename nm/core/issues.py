@@ -8,23 +8,34 @@ what was LOST rather than a count, and `effect_for` deriving the effect from
 the posture so a stale reading is impossible. Nothing ever produced an
 `Issue`, so none of it ran on a served turn (B-079).
 
-DERIVED EVERY TURN, NOT STORED — AND THAT IS THE SAME ARGUMENT D9 MAKES
-------------------------------------------------------------------------
-D9 refuses a stored `effect` because a stored effect cannot detect its own
-reversal: the advocate corrects the posture on turn 4 and a field written on
-turn 2 still says `opposes`. The identical objection applies one level up. An
-issue spotted on turn 2 from facts that turn 5 has since corrected is an issue
-about a file that no longer exists.
+STORED AND MERGED, AS OF 6 SEPTEMBER 2026 — AND THE OLD ARGUMENT WAS WRONG
+---------------------------------------------------------------------------
+This said, until that date, that issues were DERIVED EVERY TURN AND NOT
+STORED, reasoning by analogy from D9's refusal to store an `effect`: a stored
+effect cannot detect its own reversal, so a stored issue would go stale the
+same way.
 
-So issues are re-derived from the WHOLE ACCOUNT each turn, exactly as the
-limitation position is. Nothing is lost by that — the account still holds the
-facts that produced the issue — and nothing goes stale.
+The analogy does not hold, and GS-15 showed why. `effect` is a FUNCTION of the
+posture, so re-deriving it is how it stays true. An issue is not a function of
+anything — it is a question somebody noticed — and re-deriving it every turn
+does not keep it fresh, it makes it VANISH when the read has an off turn. The
+count went 1, 1, 1, 0, 2 across five turns and the thread had no issues at all
+on turn 4, having carried one for three turns. `DispositionState` says in its
+own docstring that there is no member meaning "gone"; the pipeline deleted
+every issue on every turn by rebuilding the list.
 
-The cost is real and worth naming: ids are not stable across turns, so a
-disposition cannot yet be attached to an issue and carried forward. Nothing
-parks an issue today, so nothing depends on it. The day something does, this
-needs a persisted register keyed on something stabler than a generated id, and
-that is a change to `Matter`, not a change here.
+So issues live on the thread and are MERGED. The staleness the old argument
+feared is real and is handled where it belongs: an issue whose facts have been
+corrected is one to PARK with a reason, which is what `Disposition` is for —
+not one to make disappear by not mentioning it.
+
+WHAT THAT COST WAS PREDICTED TO BE, AND WHAT IT ACTUALLY WAS. The note here
+used to say ids were unstable so a disposition could not be carried. Ids are
+stable now, and the cost turned out to be elsewhere: the same question came
+back in three phrasings and accumulated. `build_prompt` below is where that is
+answered — the read is shown what is on the thread and names the id it is
+restating, because nothing may compare two sentences and decide they are one
+issue (CLAUDE.md 5).
 
 THE VOCABULARY IS CLOSED, AND OUT-OF-VOCABULARY IS NOT_ESTABLISHED
 --------------------------------------------------------------------
@@ -67,6 +78,14 @@ ISSUE_SCHEMA: dict = {
                         "enum": [k.value for k in IssueKind
                                  if k is not IssueKind.NOT_ESTABLISHED],
                     },
+                    "restates": {
+                        "type": "string",
+                        "description": "EMPTY STRING for a new issue. If this "
+                                       "is the SAME QUESTION as one already "
+                                       "on the thread, worded differently, "
+                                       "put that issue's id here instead of "
+                                       "adding a second copy of it.",
+                    },
                     "runs_against": {
                         "type": "string",
                         # WHOSE CLAIM IT RUNS AGAINST -- a fact about the
@@ -83,7 +102,7 @@ ISSUE_SCHEMA: dict = {
                                        "arises from, verbatim.",
                     },
                 },
-                "required": ["statement", "kind", "runs_against", "quoted"],
+                "required": ["statement", "kind", "runs_against", "quoted", "restates"],
                 "additionalProperties": False,
             },
         },
@@ -132,18 +151,50 @@ def not_assessed(why: str) -> ReadIssues:
 
 
 @implements("D9")
-def build_prompt(message: str, account: str):
+def build_prompt(message: str, account: str, standing=()):
+    """`standing` is THE ISSUES ALREADY ON THIS THREAD, with their ids.
+
+    MEASURED ON GS-15, 6 September 2026, the run where issues first survived.
+    The count went 1, 2, 3, 4, 8 and three of the six were the same question:
+
+        What is the limitation period for the claim of specific performance?
+        What is the limitation period that applies to the claim for specific
+          performance?
+        Is the plaintiff's claim for specific performance time-barred?
+
+    Never losing an issue had bought a list that repeats itself, and an
+    advocate reading eight lines where there are three questions is reading
+    noise.
+
+    THE READ NAMES THE ID; NOTHING COMPARES SENTENCES. Deciding that two
+    phrasings are one issue by similarity is IDENTIFICATION BY FUZZY
+    MATCHING, which CLAUDE.md 5 forbids for exactly the reason it would fail
+    here -- "is the claim time-barred" and "what is the limitation period"
+    share almost no words and are the same question, while two issues about
+    different provisions can read nearly identically.
+
+    So the read is shown what is already there and says which one it means.
+    Same move as `corrects` on the date row: the reader that has the evidence
+    in front of it answers, instead of something downstream reconstructing the
+    relationship without it.
+    """
     from nm.ports.model import Prompt
 
+    listed = "\n".join(f"  {i.id}\t{i.statement}" for i in standing)
+    already = (f"ISSUES ALREADY ON THIS THREAD. If you are asking one of these "
+               f"again in different words, put its id in `restates` rather "
+               f"than repeating it:\n{listed}\n\n" if listed else "")
     return Prompt(
         system=SYSTEM,
-        user=(f"THE FILE SO FAR:\n{account or '(nothing recorded yet)'}\n\n"
+        user=(f"{already}"
+              f"THE FILE SO FAR:\n{account or '(nothing recorded yet)'}\n\n"
               f"THIS TURN:\n{message}"),
     )
 
 
 @implements("D9")
-def read(said: dict, thread: ThreadId, account: str) -> ReadIssues:
+def read(said: dict, thread: ThreadId, account: str,
+         standing=()) -> ReadIssues:
     """Build issues, refusing each one that is not grounded.
 
     A REFUSAL IS PER ISSUE, not per read. One unquotable issue among five must
@@ -174,9 +225,17 @@ def read(said: dict, thread: ThreadId, account: str) -> ReadIssues:
                            f"advocate's account")
             continue
 
+        # THE ID THE READ NAMED, where it named one this thread actually
+        # holds. An id the file does not hold is DROPPED rather than carried:
+        # a restatement pointing at nothing would silently become a new issue
+        # anyway, and one pointing at another thread's issue would merge two
+        # threads' work -- the silent direction in both cases.
+        known = {i.id for i in standing}
+        restates = str(row.get("restates") or "").strip()
         spotted.append(Issue(
             thread=thread,
             statement=statement,
+            **({"id": restates} if restates in known else {}),
             # OUT-OF-VOCABULARY IS NOT_ESTABLISHED, via the one mechanism that
             # already decides it. A second place mapping strings to kinds is a
             # second place for the vocabulary to drift.

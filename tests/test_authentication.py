@@ -41,7 +41,13 @@ from nm.domain.traceability import refuses
 
 pytestmark = pytest.mark.class_a
 
-PASSWORD = "a-password-long-enough-to-enrol"
+#: Satisfies every clause `advocate.enrol` enforces: 8 or more, and an
+#: upper-case letter, a lower-case letter, a numeral and a special
+#: character. It read "a-password-long-enough-to-enrol" until 6 September
+#: 2026, which was long enough and had no capital and no digit -- a
+#: fixture that stops satisfying the rule turns every test using it into a
+#: test of the refusal.
+PASSWORD = "A-password-long-enough-2-enrol"
 
 
 def _identity(advocate_id: str = "adv_1") -> AdvocateIdentity:
@@ -70,14 +76,47 @@ def test_the_identity_carries_every_field_the_contract_names():
 
 
 @pytest.mark.eval_id("E-010")
-def test_no_field_of_the_identity_may_be_blank():
-    """`firm_id` most of all: B3's conflicts registry is SCOPED by the firm, so
-    a blank one is a conflict screen run against nothing — the absent-input
-    shape aimed at the control that exists to stop the product acting against a
-    client it already acts for."""
-    for field in ("id", "name", "enrolment", "practice", "firm_id"):
+def test_the_identifying_fields_may_not_be_blank():
+    """`id`, `name` and `email` are what an advocate IS to this product: no id
+    is no file, and no email is no way to sign in.
+
+    ENROLMENT, PRACTICE AND FIRM BECAME OPTIONAL on 6 September 2026, on the
+    advocate's instruction, so registration asks for three things rather than
+    seven. The test that pinned them non-blank said `firm_id` most of all,
+    because B3's conflicts registry is SCOPED by the firm and a blank one is a
+    screen run against a registry of one.
+
+    THAT COST IS NOT GONE, IT IS DEFERRED, and the next test is where it now
+    lives. `nm.core.screens` is declared UNWIRED, so nothing live is weakened
+    today — and when the screen is built a blank firm must read NOT_ASSESSED
+    and never CLEAR.
+    """
+    for field in ("id", "name"):
         with pytest.raises(ValueError):
             AdvocateIdentity(**{**_identity().as_dict(), field: "   "})
+
+    # EMAIL IS REQUIRED AT THE REGISTRATION DOOR AND NOT ON THE TYPE, and the
+    # difference is not an oversight. Every advocate enrolled by
+    # `tools/enrol.py` before the field existed has none, and requiring it on
+    # the type would make those records unreadable. The route that MINTS a new
+    # advocate insists on it; the type that reads an old one cannot.
+    AdvocateIdentity(**{**_identity().as_dict(), "email": ""})
+
+
+def test_an_advocate_with_no_firm_is_a_conflicts_registry_of_one():
+    """THE DEFERRED COST, WRITTEN DOWN WHERE IT WILL BE FOUND.
+
+    This does not assert a control that exists. It asserts the SHAPE the
+    control must have when it is built: an advocate with no firm cannot be
+    screened, and "cannot be screened" is not "clear". A blank firm reaching a
+    future screen as a clean result is the absent-input defect aimed at the
+    one control that stops the product advising both sides of a dispute.
+    """
+    lone = AdvocateIdentity(id="r@x.com", name="R Kumar", email="r@x.com")
+    assert lone.firm_id == "", (
+        "a blank firm must stay blank rather than being defaulted to "
+        "something -- a placeholder firm would put every unaffiliated "
+        "advocate in ONE registry together, which is worse than none")
 
 
 # ================ clause 2: a failure discloses nothing ====================
@@ -230,7 +269,7 @@ def test_an_unverifiable_algorithm_is_refused_at_construction():
 def test_a_short_password_is_refused_in_the_domain_not_at_the_door():
     """An enrolment tool, a migration and a fixture all reach `enrol`. A rule
     that lives at one door is a rule with a back one."""
-    with pytest.raises(ValueError, match="12 characters"):
+    with pytest.raises(ValueError, match="8 characters"):
         enrol("short")
 
 

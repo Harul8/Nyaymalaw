@@ -269,11 +269,22 @@ def merge(standing: tuple[Issue, ...], spotted: tuple[Issue, ...],
     wearing an update's clothes.
     """
     out = list(standing)
+    by_id = {i.id for i in standing}
     seen = {_fold(i.statement) for i in standing}
     for issue in spotted:
+        # THE ID FIRST, because the READ decided it. GS-15 accumulated three
+        # phrasings of one question when identity was the statement alone:
+        # "is the claim time-barred" and "what is the limitation period" share
+        # almost no words and are the same question. Nothing here compares
+        # sentences -- `issues.read` shows the reader what is already on the
+        # thread and it names the id, which is the `corrects` move on the date
+        # row rather than fuzzy matching downstream.
+        if issue.id in by_id:
+            continue
         key = _fold(issue.statement)
         if key and key not in seen:
             seen.add(key)
+            by_id.add(issue.id)
             out.append(issue)
     return tuple(out)
 

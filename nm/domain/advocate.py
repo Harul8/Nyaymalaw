@@ -49,16 +49,34 @@ DK_LEN = 32
 SESSION_HOURS = 12
 
 
-@refuses_blank_text()
+@refuses_blank_text("enrolment", "practice", "firm_id")
 @dataclass(frozen=True)
 class AdvocateIdentity:
-    """A1's PRODUCES contract. Referenced by every later record."""
+    """A1's PRODUCES contract. Referenced by every later record.
+
+    THREE FIELDS BECAME OPTIONAL ON 6 SEPTEMBER 2026, on the advocate's
+    instruction, so self-service registration asks for a name, an email and a
+    password and nothing else. `id`, `name` and `email` remain non-blank: an
+    advocate with no id has no file, and one with no email cannot sign in.
+
+    WHAT A BLANK `firm_id` COSTS, recorded here because it will be paid later.
+    B3's conflicts registry is SCOPED BY THE FIRM: it is what detects the
+    product advising both sides of one dispute. An advocate with no firm is in
+    a registry of one, and a screen run against a registry of one finds
+    nothing — which is not the same as there being nothing to find.
+
+    THE SCREEN IS NOT BUILT YET (`nm.core.screens` is declared UNWIRED), so
+    this weakens no live control today. When it is built, a blank firm must
+    make the conflicts screen report NOT_ASSESSED and never CLEAR. That is the
+    three-state rule this whole build turns on, and it is written down now
+    rather than discovered by whoever wires the screen.
+    """
 
     id: str
     name: str
-    enrolment: str
-    practice: str
-    firm_id: str
+    enrolment: str = ""
+    practice: str = ""
+    firm_id: str = ""
     email: str = ""
     """How to reach them. OPTIONAL, and that is not an oversight.
 
@@ -128,16 +146,43 @@ class Credential:
 def enrol(password: str) -> Credential:
     """THE ONLY WAY A PASSWORD BECOMES A CREDENTIAL.
 
-    A minimum length is enforced here rather than at the edge, because the
-    edge is not the only caller — an enrolment tool, a migration and a test
-    fixture all reach this, and a rule that lives at one door is a rule with a
-    back one.
+    THE RULE IS ENFORCED HERE AND NOT AT THE EDGE, because the edge is not the
+    only caller — an enrolment tool, a migration, a registration form and
+    every test fixture reach this, and a rule that lives at one door is a rule
+    with a back one.
+
+    EIGHT CHARACTERS WITH FOUR CLASSES, from 6 September 2026 on the
+    advocate's instruction. The trade is worth recording rather than
+    pretending it is free: a twelve-character passphrase carries more entropy
+    than an eight-character complex password, and complexity rules are what
+    produce `Password1!`. Eight-plus-classes is the common standard and it is
+    the advocate's product.
+
+    WHAT DOES NOT CHANGE is that this is the only thing standing between one
+    advocate's client file and another's, and the product still has no rate
+    limit. The classes are checked as CHARACTER CATEGORIES rather than against
+    a list of permitted symbols: a list would refuse a keyboard this product
+    has never seen.
     """
-    if len(password or "") < 12:
+    pw = password or ""
+    if len(pw) < 8:
         raise ValueError(
-            "a password under 12 characters is refused. This is the only "
-            "thing standing between one advocate's client file and another's, "
-            "and the product has no rate limit yet.")
+            "a password under 8 characters is refused. This is the only thing "
+            "standing between one advocate's client file and another's, and "
+            "the product has no rate limit yet.")
+    missing = [name for name, ok in (
+        ("an upper-case letter", any(c.isupper() for c in pw)),
+        ("a lower-case letter", any(c.islower() for c in pw)),
+        ("a numeral", any(c.isdigit() for c in pw)),
+        ("a special character", any(not c.isalnum() for c in pw)),
+    ) if not ok]
+    if missing:
+        # NAMED, NOT COUNTED. "Does not meet complexity requirements" makes
+        # the advocate guess which one; the list is the difference between a
+        # rule and an obstacle.
+        raise ValueError(
+            "a password must contain " + ", ".join(missing[:-1])
+            + (" and " if len(missing) > 1 else "") + missing[-1] + ".")
     salt = secrets.token_hex(16)
     return Credential(algorithm="scrypt", salt=salt,
                       hash=_derive(password, salt, SCRYPT_N, SCRYPT_R, SCRYPT_P))

@@ -44,39 +44,59 @@
     <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
     <p class="login-lede">Enrol to reach your matters.</p>
 
-    <label for="reg-name">Name</label>
+    <label for="reg-name">Name <span class="req" aria-hidden="true">*</span></label>
     <input id="reg-name" name="name" autocomplete="name" required>
 
-    <label for="reg-email">Email</label>
+    <label for="reg-email">Email <span class="req" aria-hidden="true">*</span></label>
     <input id="reg-email" name="username" type="email"
            autocomplete="username" spellcheck="false" required>
 
-    <label for="reg-enrolment">Bar Council enrolment number</label>
+    <label for="reg-enrolment">Bar Council enrolment number <span class="opt">optional</span></label>
     <input id="reg-enrolment" name="enrolment" spellcheck="false"
-           placeholder="AP/1234/2010" required>
+           placeholder="AP/1234/2010">
 
-    <label for="reg-practice">Where you practise</label>
-    <input id="reg-practice" name="practice" placeholder="Hyderabad" required>
+    <label for="reg-practice">Where you practise <span class="opt">optional</span></label>
+    <input id="reg-practice" name="practice" placeholder="Hyderabad">
 
-    <label for="reg-firm">Firm</label>
+    <label for="reg-firm">Firm <span class="opt">optional</span></label>
     <input id="reg-firm" name="organization" autocomplete="organization"
-           required>
+          >
 
-    <label for="reg-password">Password</label>
-    <input id="reg-password" name="password" type="password" minlength="12"
-           autocomplete="new-password" required>
+    <label for="reg-password">Password <span class="req" aria-hidden="true">*</span></label>
+    <div class="pw-wrap">
+      <input id="reg-password" name="password" type="password" minlength="8"
+             autocomplete="new-password" required>
+      <!-- type=button, or it submits the form. aria-pressed carries the
+           state to a screen reader; the glyph carries it to the eye. -->
+      <button type="button" class="pw-eye" data-for="reg-password"
+              aria-label="Show password" aria-pressed="false">
+        &#128065;
+      </button>
+    </div>
 
-    <label for="reg-password2">Retype password</label>
-    <input id="reg-password2" name="password2" type="password" minlength="12"
-           autocomplete="new-password" required>
+    <label for="reg-password2">Retype password <span class="req" aria-hidden="true">*</span></label>
+    <div class="pw-wrap">
+      <input id="reg-password2" name="password2" type="password" minlength="8"
+             autocomplete="new-password" required>
+      <!-- type=button, or it submits the form. aria-pressed carries the
+           state to a screen reader; the glyph carries it to the eye. -->
+      <button type="button" class="pw-eye" data-for="reg-password2"
+              aria-label="Show retype password" aria-pressed="false">
+        &#128065;
+      </button>
+    </div>
 
     <button type="submit" class="primary wide" id="register-go">Register</button>
     <div class="login-alt"><a href="#" id="show-login">Back to sign in</a></div>
     <div id="register-state" class="login-state"></div>
 
     <p class="login-foot">
-      At least 12 characters. It is the only thing standing between one
-      advocate&rsquo;s client file and another&rsquo;s.
+      <span class="req" aria-hidden="true">*</span> required. The password must be at
+      least 8 characters and contain an upper-case letter, a lower-case
+      letter, a numeral and a special character &mdash; it is the only thing
+      standing between one advocate&rsquo;s client file and another&rsquo;s. The firm is what
+      the conflicts registry is scoped by; without it, a conflict check has
+      only your own matters to look at.
     </p>
   </form>
 </div>

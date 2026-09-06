@@ -102,7 +102,13 @@ def client(tmp_path, monkeypatch):
     from tests.test_turn_contract import KEY, _Evidence
 
     # Long enough for `enrol`, which refuses under twelve characters.
-    password = "fixture-password-not-a-secret"
+    # Satisfies every clause `advocate.enrol` enforces. It read
+    # "fixture-password-not-a-secret" until 6 September 2026 -- long
+    # enough, with no capital and no digit -- and a shared fixture that
+    # stops satisfying the rule fails every test that signs in, at the
+    # fixture rather than at the assertion, which is the hardest place to
+    # read a failure from.
+    password = "Fixture-password-not-a-secret-1"
 
     monkeypatch.setenv("NM_MATTER_KEY", KEY)
     monkeypatch.setenv("NM_MODEL_PROVIDER", "scripted")

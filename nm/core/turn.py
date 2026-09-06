@@ -2831,11 +2831,13 @@ class TurnEngine:
             return []
 
         try:
+            standing = issue.from_stored(thread.issues)
             res = self._model.structured(
-                issue_reader.build_prompt(turn.message, account),
+                issue_reader.build_prompt(turn.message, account, standing),
                 issue_reader.ISSUE_SCHEMA, Tier.ROUTINE, max_tokens=700)
             metrics.record_call(res)
-            read = issue_reader.read(res.data or {}, thread.id, account)
+            read = issue_reader.read(res.data or {}, thread.id, account,
+                                     standing)
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
                          f"the issues could not be read: {exc}")
@@ -2853,7 +2855,6 @@ class TurnEngine:
         # read did not mention stays on the file: `DispositionState` has no
         # member meaning "gone", and rebuilding the list from one read is the
         # delete path the type refuses, taken by the pipeline instead.
-        standing = issue.from_stored(thread.issues)
         live = issue.merge(standing, read.issues)
         concluded["issues"] = live
         classified = issue.classify(live)

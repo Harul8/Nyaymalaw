@@ -189,3 +189,86 @@ def test_a_stored_row_that_cannot_be_rebuilt_is_dropped_and_the_rest_kept():
         [good, {"statement": ""}, "not an issue", {"thread": "t"}])
     assert len(rebuilt) == 1
     assert rebuilt[0].statement == "Is it enforceable?"
+
+
+# ================== the same question, asked differently ===================
+
+def test_the_read_is_shown_what_is_already_on_the_thread():
+    """Without this the read cannot restate anything — it does not know what
+    is there, so every phrasing is a new issue."""
+    from nm.core.issues import build_prompt
+
+    standing = (Issue(thread="t", statement="What is the limitation period?",
+                      kind=IssueKind.THRESHOLD, runs_against=Side.MOVING,
+                      proof="x", id="iss_aaa"),)
+    prompt = build_prompt("and is it time-barred?", "the account", standing)
+    assert "iss_aaa" in prompt.user
+    assert "What is the limitation period?" in prompt.user
+    assert "restates" in prompt.user
+
+    first = build_prompt("an opening message", "the account")
+    assert "ISSUES ALREADY ON THIS THREAD" not in first.user, (
+        "a thread with no issues must not be told to restate one")
+
+
+def test_a_restated_question_does_not_become_a_second_issue():
+    """THE DEFECT, AS A RULE.
+
+    GS-15's issue count went 1, 2, 3, 4, 8 and three of the six were one
+    question:
+
+        What is the limitation period for the claim of specific performance?
+        What is the limitation period that applies to the claim...?
+        Is the plaintiff's claim for specific performance time-barred?
+
+    Note what those three share: almost no words. "Is the claim time-barred"
+    and "what is the limitation period" are the same question and would defeat
+    any similarity test — which is why NOTHING HERE COMPARES SENTENCES. The
+    read is shown the thread and names the id.
+    """
+    from nm.core.issues import read
+
+    standing = (Issue(thread="t", statement="What is the limitation period?",
+                      kind=IssueKind.THRESHOLD, runs_against=Side.MOVING,
+                      proof="the account", id="iss_aaa"),)
+    said = {"issues": [{"statement": "Is the claim time-barred?",
+                        "kind": "threshold", "runs_against": "moving",
+                        "quoted": "the account", "restates": "iss_aaa"}]}
+    spotted = read(said, "t", "the account", standing).issues
+    assert [i.id for i in spotted] == ["iss_aaa"], (
+        "the read named an id and it was not carried, so the merge has "
+        "nothing to match on and falls back to comparing sentences")
+    assert len(issue_domain.merge(standing, spotted)) == 1
+
+
+def test_an_id_the_thread_does_not_hold_is_dropped():
+    """A restatement pointing at nothing would silently become a new issue
+    anyway; one pointing at ANOTHER thread's issue would merge two threads'
+    work. Both are the silent direction, so the id is checked against what
+    this thread actually holds."""
+    from nm.core.issues import read
+
+    standing = (Issue(thread="t", statement="What is the limitation period?",
+                      kind=IssueKind.THRESHOLD, runs_against=Side.MOVING,
+                      proof="the account", id="iss_aaa"),)
+    said = {"issues": [{"statement": "A genuinely different question?",
+                        "kind": "threshold", "runs_against": "moving",
+                        "quoted": "the account", "restates": "iss_elsewhere"}]}
+    spotted = read(said, "t", "the account", standing).issues
+    assert spotted and spotted[0].id != "iss_elsewhere"
+    assert len(issue_domain.merge(standing, spotted)) == 2
+
+
+def test_nothing_decides_two_sentences_are_one_issue_by_comparing_them():
+    """CLAUDE.md 5, on the one axis where it is tempting to break it.
+
+    Two issues about DIFFERENT provisions can read nearly identically, and two
+    phrasings of one question can share no words. A similarity threshold gets
+    both wrong, and the wrong direction — merging two real issues — loses one
+    silently.
+    """
+    a = _issue("Is the claim under Article 54 time-barred?")
+    b = _issue("Is the claim under Article 65 time-barred?")
+    assert len(issue_domain.merge((a,), (b,))) == 2, (
+        "two issues about different Articles were folded into one. The only "
+        "thing that may decide they are the same is the READ naming an id")

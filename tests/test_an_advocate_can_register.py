@@ -33,8 +33,10 @@ GOOD = {
     "enrolment": "AP/1234/2010",
     "practice": "Hyderabad",
     "firm_id": "firm_rk",
-    "password": "cinder-lantern-meadow",
-    "password_again": "cinder-lantern-meadow",
+    #: Satisfies the rule `advocate.enrol` enforces: 8+, and all four
+#: character classes. A fixture that did not would test the refusal.
+    "password": "Cinder-lantern-42",
+    "password_again": "Cinder-lantern-42",
 }
 
 
@@ -108,33 +110,70 @@ def test_two_passwords_that_differ_save_nothing(client):
     assert client.post("/api/register", json=GOOD).status_code == 200
 
 
-def test_a_short_password_is_refused_by_the_rule_that_already_exists(client):
-    """THE MINIMUM IS NOT RESTATED AT THIS DOOR.
+@pytest.mark.parametrize(("password", "says"), [
+    ("Ab1!", "8 characters"),
+    ("alllower1!", "upper-case"),
+    ("ALLUPPER1!", "lower-case"),
+    ("NoDigits!!", "numeral"),
+    ("NoSpecial1A", "special character"),
+])
+def test_the_password_rule_is_reached_rather_than_restated(client, password,
+                                                           says):
+    """THE RULE IS NOT RESTATED AT THIS DOOR.
 
-    `advocate.enrol` raises on a short password and is reached by this route,
-    the enrolment tool, a migration and every test fixture. Its own docstring
-    says why: "a rule that lives at one door is a rule with a back one." This
-    asserts the route REACHES that rule rather than carrying a second copy of
-    the number.
+    `advocate.enrol` enforces 8 characters and four character classes, and is
+    reached by this route, the enrolment tool, a migration and every test
+    fixture. Its own docstring says why: "a rule that lives at one door is a
+    rule with a back one." This asserts the route REACHES it rather than
+    carrying a second copy of the numbers.
+
+    AND THAT THE REFUSAL NAMES WHAT IS MISSING. "Does not meet complexity
+    requirements" makes the advocate guess which of four rules they broke; the
+    named class is the difference between a rule and an obstacle.
     """
     r = client.post("/api/register",
-                    json={**GOOD, "password": "short", "password_again": "short"})
-    assert r.status_code == 400
-    assert "12 characters" in r.json()["detail"]
+                    json={**GOOD, "password": password,
+                          "password_again": password})
+    assert r.status_code == 400, r.text
+    assert says in r.json()["detail"], r.json()["detail"]
 
 
-def test_the_bar_number_and_the_firm_are_required(client):
-    """Reversing WHO may enrol is not reversing WHAT enrolment captures.
-
-    The firm is what the conflicts registry is keyed on. An advocate in a firm
-    of one has nothing to screen against, so acting for both sides becomes
-    undetectable rather than refused — which is a worse failure than a longer
-    form.
-    """
-    for field in ("enrolment", "firm_id", "practice", "name"):
+def test_name_email_and_password_are_required(client):
+    """What an advocate IS to this product. No name, no email, no password is
+    not an advocate — and the form marks each with a red asterisk while the
+    input carries `required`, so a screen reader hears it from the attribute
+    rather than from a character it cannot see."""
+    for field in ("name", "email"):
         r = client.post("/api/register", json={**GOOD, field: "   "})
         assert r.status_code == 422, (
-            f"{field} was accepted blank. {r.status_code}: {r.text[:120]}")
+            f"{field} was accepted blank: {r.status_code} {r.text[:100]}")
+
+
+def test_the_bar_number_practice_and_firm_are_optional(client):
+    """OPTIONAL as of 6 September 2026, on the advocate's instruction: a form
+    that refuses someone who does not have their Bar number to hand is one
+    they abandon.
+
+    THE COST IS DEFERRED, NOT GONE. B3's conflicts registry is scoped by the
+    firm, so a blank one is a registry of ONE. `nm.core.screens` is declared
+    UNWIRED, so nothing live is weakened today — and when the screen is built
+    a blank firm must read NOT_ASSESSED and never CLEAR.
+    """
+    lean = {k: v for k, v in GOOD.items()
+            if k not in ("enrolment", "practice", "firm_id")}
+    r = client.post("/api/register", json=lean)
+    assert r.status_code == 200, r.text
+
+    signed = client.post("/api/login",
+                         json={"advocate_id": r.json()["advocate_id"],
+                               "password": GOOD["password"]})
+    assert signed.status_code == 200, (
+        "an advocate who registered without a firm cannot sign in, which "
+        "makes the field required in fact whatever the form says")
+    assert signed.json()["advocate"]["firm_id"] == "", (
+        "a blank firm was defaulted to something. A placeholder would put "
+        "every unaffiliated advocate in ONE registry together, which is worse "
+        "than none")
 
 
 def test_enrolling_the_same_email_twice_is_refused(client):

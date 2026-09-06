@@ -89,17 +89,30 @@ def main() -> int:
 
 
 def _generated() -> str:
-    """Five words and a number. Long, and typable from a phone.
+    """Five words, a capital and a number. Long, and typable from a phone.
 
     A generated string of symbols gets written on paper beside the machine,
     which is a worse outcome than a passphrase somebody can remember for the
     length of a working day.
+
+    THE CAPITAL IS HERE BECAUSE THE RULE MOVED. `advocate.enrol` requires an
+    upper-case letter, a lower-case letter, a numeral and a special character
+    as of 6 September 2026 — and this generator produced none of the first, so
+    the tool would have minted passphrases its own product refuses. A
+    generator that cannot satisfy the rule it enforces is the two-owners
+    defect with the owners one function apart.
+
+    The hyphens supply the special character and the trailing number the
+    numeral; capitalising ONE word supplies the rest without making the
+    passphrase harder to read aloud, which is what it is for.
     """
     words = ("harbour", "lantern", "meadow", "cinder", "gallery", "thistle",
              "quarry", "ember", "current", "marble", "ridge", "willow",
              "beacon", "hollow", "pigment", "trellis", "anchor", "vellum")
-    return "-".join(secrets.choice(words) for _ in range(5)) + \
-        f"-{secrets.randbelow(90) + 10}"
+    chosen = [secrets.choice(words) for _ in range(5)]
+    lift = secrets.randbelow(len(chosen))
+    chosen[lift] = chosen[lift].capitalize()
+    return "-".join(chosen) + f"-{secrets.randbelow(90) + 10}"
 
 
 if __name__ == "__main__":

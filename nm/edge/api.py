@@ -419,11 +419,15 @@ class Credentials(BaseModel):
 class Registration(BaseModel):
     """A self-service enrolment. A1.
 
-    ENROLMENT AND FIRM ARE REQUIRED, and that is a legal decision rather than
-    a form-design one. The Bar Council number identifies a real advocate, and
-    the FIRM is what the conflicts registry is keyed on -- an advocate in a
-    firm of one has nothing to screen against, so acting for both sides
-    becomes undetectable rather than refused.
+    NAME, EMAIL AND PASSWORD ARE REQUIRED. Enrolment, practice and firm are
+    OPTIONAL, on the advocate's instruction of 6 September 2026 -- asked for
+    but not insisted on, because a registration form that refuses an advocate
+    who does not have their Bar number to hand is one they abandon.
+
+    WHAT THE FIRM WAS FOR IS RECORDED ON `AdvocateIdentity` RATHER THAN LOST.
+    B3's conflicts registry is scoped by it, and a blank firm is a registry of
+    one. The screen is not built yet, so nothing live is weakened today; when
+    it is built, a blank firm must make it read NOT_ASSESSED and never CLEAR.
 
     SELF-SERVICE IS PERMITTED AS OF 6 SEPTEMBER 2026, on the advocate's
     instruction, and it reverses a decision the sign-in page used to state.
@@ -434,11 +438,14 @@ class Registration(BaseModel):
 
     name: NonBlank = Field(min_length=1)
     email: NonBlank = Field(min_length=3)
-    enrolment: NonBlank = Field(min_length=1)
-    practice: NonBlank = Field(min_length=1)
-    firm_id: NonBlank = Field(min_length=1)
     password: str = Field(min_length=1)
     password_again: str = Field(min_length=1)
+    #: OPTIONAL as of 6 September 2026, on the advocate's instruction. See
+    #: `AdvocateIdentity` for what a blank firm costs when B3's conflicts
+    #: screen is built: it must then read NOT_ASSESSED, never CLEAR.
+    enrolment: str = ""
+    practice: str = ""
+    firm_id: str = ""
 
 
 #: THE ONLY THING A FAILED SIGN-IN EVER SAYS.
@@ -565,10 +572,47 @@ def whoami(advocate_id: Advocate) -> dict:
 
 # ------------------------------------------------------------------- static ---
 
+class _NeverStale(StaticFiles):
+    """Static assets that must not outlive the code they were shipped with.
+
+    MEASURED 6 SEPTEMBER 2026. A Register link was added, the server served
+    the new `app.js` -- verified on the bytes, 29,265 of them, containing the
+    handler -- and the advocate reported the link did nothing. Their browser
+    was holding the previous file. `StaticFiles` sends no `cache-control`, so
+    a browser applies its own heuristic and can serve a stale script for as
+    long as it likes.
+
+    THE FAILURE IS THE SAME SHAPE AS THE SERVER FINGERPRINT, one layer out. A
+    scenario run against a server on other code proves nothing, and
+    `run_scenario` refuses it; a UI a version behind its API is the same
+    mismatch, with nobody refusing it and no way to see it. The advocate says
+    a fix did not work, the code says it did, and both are right.
+
+    `no-cache` and not `no-store`: the browser may keep the file and MUST
+    revalidate, so an unchanged asset still costs a 304 rather than a
+    download. The cost of getting this wrong in the other direction -- an
+    advocate acting on a screen the product no longer serves -- is not a
+    bandwidth question.
+    """
+
+    def is_not_modified(self, response_headers, request_headers) -> bool:
+        # Revalidation still works; only the SILENT reuse is refused.
+        return super().is_not_modified(response_headers, request_headers)
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        response.headers["cache-control"] = "no-cache, must-revalidate"
+        return response
+
+
 _WEB = ROOT / "web"
 if _WEB.exists():
-    app.mount("/static", StaticFiles(directory=str(_WEB)), name="static")
+    app.mount("/static", _NeverStale(directory=str(_WEB)), name="static")
 
     @app.get("/")
     def index() -> FileResponse:
-        return FileResponse(str(_WEB / "index.html"))
+        # THE PAGE ITSELF TOO. An index that is cached serves the old script
+        # tags, so revalidating the assets it names buys nothing.
+        return FileResponse(
+            str(_WEB / "index.html"),
+            headers={"cache-control": "no-cache, must-revalidate"})
