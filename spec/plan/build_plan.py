@@ -3807,9 +3807,7 @@ d("B-120", "2026-09-06", "core",
   "the preservation step surviving a read that knew nothing about it, an "
   "unissued instruction round-tripping as unissued (issued, it would silence "
   "the second gap), and the assertion that all three sweeps run on the "
-  "merged list rather than the fresh read.
-
-"
+  "merged list rather than the fresh read.\n\n"
   "AND THE FIX BROKE E-093 BEFORE IT FIXED THIS. Persisting the "
   "inventory made every turn recite one more item than the last — "
   "13, 13, 14, 15, 16 elements across five turns on ONE thread, which "
