@@ -40,8 +40,8 @@ MUTATIONS = [
 
     ("a posture settled on a span the advocate never wrote",
      "nm/core/posture.py",
-     "    if _fold(quoted) not in _fold(said):",
-     "    if False and _fold(quoted) not in _fold(said):",
+     "    if fold(quoted) not in fold(said):",
+     "    if False and fold(quoted) not in fold(said):",
      "test_posture_is_never_inferred_from_familiar_vocabulary", "E-030"),
 
     # THE GUARD READS THE ADVOCATE'S WORDS, NOT THE PROMPT. Widening it
@@ -1388,8 +1388,8 @@ MUTATIONS = [
     # failing: the extractor quoting this product's own question back at it.
     ("a cause settled on a span the advocate never wrote",
      "nm/core/cause.py",
-     "    if _fold(quoted) not in _fold(said):",
-     "    if False and _fold(quoted) not in _fold(said):",
+     "    if fold(quoted) not in fold(said):",
+     "    if False and fold(quoted) not in fold(said):",
      "test_the_cause_read_refuses_a_span_the_advocate_never_wrote", "E-051"),
 
     # E-051. THE WIRING, and it is the half S4 proved is the one that breaks.
@@ -1454,8 +1454,8 @@ MUTATIONS = [
     # invented.
     ("a date read from words the advocate never wrote",
      "nm/core/chronology.py",
-     "        if _fold(expr) not in _fold(message):",
-     "        if False and _fold(expr) not in _fold(message):",
+     "        if fold(expr) not in fold(message):",
+     "        if False and fold(expr) not in fold(message):",
      "test_a_date_read_from_words_the_advocate_never_wrote_is_refused",
      "E-040"),
 

@@ -586,6 +586,30 @@ main.single {
 .login-state:empty { display: none; }
 .login-state { margin-top: 14px; }
 
+/* THE OUTCOME CARD. It reuses `.login` so it is the same card in the same
+   place -- an advocate who pressed Register is looking there, and a result
+   that appears somewhere else has to be found before it can be read.
+
+   The colour is the ONLY thing that differs between the two states, and it is
+   not the only thing: the heading says which it is in words. A result carried
+   by colour alone is a result nobody reads on a projector, on a phone in
+   sunlight, or with the commonest colour-vision difference there is. */
+.outcome-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 14px 0 6px;
+}
+.outcome-title.good { color: #146c2e; }
+.outcome-title.bad  { color: #b3261e; }
+
+.outcome-body {
+  color: var(--ink-2, #5a6472);
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
 .login-foot {
   border-top: 1px solid var(--rule);
   color: var(--ink-3);

@@ -52,8 +52,8 @@ from dataclasses import dataclass
 from datetime import date
 
 from nm.core.limitation import Factor, FactorKind
-from nm.core.posture import _fold
 from nm.domain.matter import Fact, FactId
+from nm.domain.text import fold
 from nm.domain.traceability import implements
 
 #: The two this reads. Exclusion, disability, fraud, notice periods and
@@ -231,7 +231,7 @@ def read(said: dict, chronology: tuple[Fact, ...], account: str,
     quoted = str(said.get("quoted") or "")
     if not quoted.strip():
         return _refused("the model gave no quotation for the writing")
-    if _fold(quoted) not in _fold(f"{account}\n{entry.statement}"):
+    if fold(quoted) not in fold(f"{account}\n{entry.statement}"):
         return _refused(
             "the quoted words are not in the advocate's account. A paraphrase "
             "presented as a quotation is a finding with evidence it does not "

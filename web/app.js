@@ -654,9 +654,12 @@ function showGate(message) {
   $('gate').hidden = false;
   $('masthead').hidden = true;
   PANES.forEach((p) => { $(`pane-${p}`).hidden = true; });
-  const st = $('login-state');
-  st.textContent = '';
-  if (message) st.appendChild(stateBlock('loud', message));
+  // THE GATE IS ALWAYS THE SIGN-IN FORM. It is reached from a failed sign-in,
+  // from Sign out, and from a session that did not resolve -- and whichever
+  // card happened to be up last is not the answer to any of those. Called
+  // BEFORE the message, because it clears the line the message goes on.
+  showForm('login');
+  if (message) $('login-state').appendChild(stateBlock('loud', message));
   $('login-id').focus();
 }
 
@@ -743,9 +746,45 @@ $('signout').addEventListener('click', async () => {
 function showForm(which) {
   $('login').hidden = which !== 'login';
   $('register').hidden = which !== 'register';
+  $('outcome').hidden = which !== 'outcome';
   $('login-state').textContent = '';
-  $('register-state').textContent = '';
 }
+
+// WHAT HAPPENED, ON ITS OWN CARD, in both directions.
+//
+// The result of a registration used to be one line appended to the sign-in
+// form -- which is also where "wrong password" and "the server could not be
+// reached" appear. So the sentence that means START HERE arrived in the same
+// grey text, in the same place, as the one that means you got it wrong.
+//
+// The FAILURE goes to the same card rather than staying on the form, because
+// an advocate who has just pressed Register is looking at the button they
+// pressed and not at a line below it. The form keeps its values -- it is
+// hidden, not reset -- so Back returns them to a filled form. The passwords
+// are the exception and they are cleared, which is the rule the sign-in
+// handler already follows.
+function showOutcome(kind, title, body) {
+  $('outcome-title').textContent = title;
+  $('outcome-body').textContent = body;
+  $('outcome-title').className = `outcome-title ${kind}`;
+  $('outcome-signin').hidden = kind !== 'good';
+  $('outcome-back').hidden = kind === 'good';
+  showForm('outcome');
+  (kind === 'good' ? $('outcome-signin') : $('outcome-back')).focus();
+}
+
+$('outcome-signin').addEventListener('click', () => {
+  showForm('login');
+  // THE PASSWORD FIELD, NOT THE EMAIL. The email is already filled from the
+  // registration, and landing on a filled field means the first thing typed
+  // goes to the end of it.
+  $('login-password').focus();
+});
+
+$('outcome-back').addEventListener('click', () => {
+  showForm('register');
+  $('reg-password').focus();
+});
 
 $('show-register').addEventListener('click', (ev) => {
   ev.preventDefault();
@@ -760,7 +799,6 @@ $('show-login').addEventListener('click', (ev) => {
 $('register').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const go = $('register-go');
-  const state = $('register-state');
   const password = $('reg-password').value;
   const again = $('reg-password2').value;
 
@@ -769,13 +807,13 @@ $('register').addEventListener('submit', async (ev) => {
   // round trip and a stern sentence is a typo the advocate reads as a
   // rejection rather than as a slip.
   if (password !== again) {
-    state.textContent = 'The two passwords do not match. Nothing was saved.';
     $('reg-password2').value = '';
+    showOutcome('bad', 'Registration failed',
+      'The two passwords do not match. Nothing was saved.');
     return;
   }
 
   go.disabled = true;
-  state.textContent = '';
   try {
     const r = await api('/api/register', {
       method: 'POST',
@@ -799,15 +837,19 @@ $('register').addEventListener('submit', async (ev) => {
     // REGISTERED, NOT SIGNED IN. A form post that created a session would mean
     // creating an account also logs in whatever machine sent it, and the
     // device binding is minted at sign-in for exactly that reason.
-    showForm('login');
+    //
+    // THE EMAIL IS FILLED FROM WHAT THE SERVER RETURNED, not from what was
+    // typed. The route lower-cases it to make the handle, so echoing the
+    // typed capitals back would offer the advocate a string that is not their
+    // id -- and on a case-sensitive filesystem it is not their advocate.
     $('login-id').value = r.advocate_id;
-    $('login-state').textContent =
-      `Enrolled as ${r.name}. Sign in with ${r.advocate_id}.`;
-    $('login-password').focus();
+    showOutcome('good', 'Registration successful',
+      `Enrolled as ${r.name}. Sign in with ${r.advocate_id} and the password `
+      + 'you just chose.');
   } catch (err) {
     $('reg-password').value = '';
     $('reg-password2').value = '';
-    state.textContent = err.message;
+    showOutcome('bad', 'Registration failed', err.message);
   } finally {
     go.disabled = false;
   }

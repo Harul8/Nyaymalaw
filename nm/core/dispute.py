@@ -44,17 +44,10 @@ product's own questions and would otherwise let it quote itself.
 """
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from enum import Enum
 
-from nm.domain.text import refuses_blank_text
-
-_WORDS = re.compile(r"[a-z0-9]+")
-
-
-def _fold(text: str) -> str:
-    return " ".join(_WORDS.findall((text or "").lower()))
+from nm.domain.text import fold, refuses_blank_text
 
 
 class Dispute(str, Enum):
@@ -177,7 +170,7 @@ def interpret(message: str, data: dict) -> DisputeRead:
         return DisputeRead(Dispute.CANNOT_TELL, why=why,
                            refused="the model said this opens a new dispute and "
                                    "quoted nothing to support it")
-    if _fold(quoted) not in _fold(message):
+    if fold(quoted) not in fold(message):
         # The span must be the ADVOCATE'S words. Checked against the message
         # rather than the prompt: the prompt carries the file, and a span
         # lifted from there would let an old dispute open a new thread.

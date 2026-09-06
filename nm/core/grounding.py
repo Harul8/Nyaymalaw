@@ -59,7 +59,7 @@ from nm.domain.citation import (
     provisions_cited,
 )
 from nm.domain.gates import Response, gate
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import fold, refuses_blank_text
 from nm.domain.traceability import implements
 from nm.ports.evidence import Finding
 
@@ -72,10 +72,18 @@ _QUOTED = re.compile(r'"([^"]{12,})"|“([^”]{12,})”')
 # Text is compared on WORDS, not characters. The corpus stores hard-wrapped
 # text with runs of whitespace and stray hyphenation, so a character-exact
 # comparison would fail on formatting and teach everyone to disable the gate.
-_WORDS = re.compile(r"[a-z0-9]+")
+# THAT base fold is `nm.domain.text.fold` and this composes on it -- see the
+# docstring below for what it adds and why that addition is not general.
 
-def _fold(text: str) -> str:
-    """Words only, lower-cased, with the case-name pivot normalised.
+
+def _citation_fold(text: str) -> str:
+    """`text.fold`, PLUS the case-name pivot. A citation fold, not a text one.
+
+    THE ADDITION IS ABOUT CITATIONS, NOT ABOUT TEXT, which is why it lives
+    here and not in `nm.domain.text`. Folding `vs` to `v` is right for a case
+    name and wrong for an advocate's sentence: "the notice vs the reply" is
+    not "the notice v the reply", and a fold that erased the difference would
+    quietly merge two facts on the chronology.
 
     `vs` and `v` ARE THE SAME WORD and folding them apart withheld a correct
     turn: a retrieved authority whose `ref` reads "K. Venkata Rao And Ors. vs
@@ -86,8 +94,8 @@ def _fold(text: str) -> str:
     A gate that fires on its own retrieval is worse than no gate: it withholds
     good work, and the fix people reach for is to switch it off.
     """
-    tokens = _WORDS.findall((text or "").lower())
-    return " ".join("v" if t in ("vs", "versus") else t for t in tokens)
+    return " ".join("v" if t in ("vs", "versus") else t
+                    for t in fold(text).split())
 
 
 @refuses_blank_text()
@@ -140,11 +148,11 @@ def verify_quotes(elements: tuple[Element, ...],
     fabricated even if it happens to be accurate, because accuracy that cannot
     be demonstrated is indistinguishable from luck.
     """
-    corpus = [_fold(f.span) for f in findings]
+    corpus = [_citation_fold(f.span) for f in findings]
     out: list[GroundingViolation] = []
     for element in elements:
         for quote in quoted_spans(element.text):
-            folded = _fold(quote)
+            folded = _citation_fold(quote)
             if not folded:
                 continue
             if not any(folded in span for span in corpus):
@@ -226,7 +234,7 @@ def verify_citations(elements: tuple[Element, ...],
     sentence claims, or a case that does not exist.
     """
     covered = _covered_provisions(findings)
-    known_cases = {_fold(f.ref) for f in findings}
+    known_cases = {_citation_fold(f.ref) for f in findings}
     out: list[GroundingViolation] = []
 
     for element in elements:
@@ -243,7 +251,7 @@ def verify_citations(elements: tuple[Element, ...],
                     f"retrieved on this turn. Retrieved: "
                     f"{sorted(covered) or 'nothing'}"))
         for case in cases_named(element.text):
-            folded = _fold(case)
+            folded = _citation_fold(case)
             if not any(folded in ref for ref in known_cases):
                 out.append(GroundingViolation(
                     "G-GROUND",

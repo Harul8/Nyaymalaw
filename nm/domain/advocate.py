@@ -33,7 +33,7 @@ import secrets
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
-from nm.domain.text import blank, refuses_blank_text
+from nm.domain.text import blank, clean, refuses_blank_text
 
 #: scrypt parameters. Deliberately named rather than defaulted inside the
 #: call, because they are recorded WITH each credential: raising the cost
@@ -47,6 +47,30 @@ DK_LEN = 32
 #: applies. Twelve hours: long enough for a working day, short enough that a
 #: borrowed laptop is not a standing grant.
 SESSION_HOURS = 12
+
+
+def canonical_id(value: str | None) -> str:
+    """THE ONE FORM AN ADVOCATE ID TAKES. Stripped, and lower-cased.
+
+    WHY LOWER-CASING IS NOT COSMETIC HERE. The id is the email on a
+    self-service registration, and `FileDirectory` names the record file after
+    it. So `R.Kumar@X.com` and `r.kumar@x.com` are one advocate on Windows,
+    where the filesystem folds case for you, and TWO on Linux, where it does
+    not -- an advocate who registers with a capital signs in on the developer's
+    machine and cannot sign in on the server.
+
+    The register route already lower-cased the email. That was one door
+    deciding the canonical form while the sign-in door, the identity lookup
+    and the failed-attempt note all took the string as typed: the same rule
+    with four owners, three of which did not know it existed.
+
+    ENFORCED BY THE TYPE rather than applied by each caller, because applying
+    it is what four callers were already supposed to be doing. The constructor
+    refuses a non-canonical id, so a second form cannot be enrolled at all --
+    and `FileDirectory` folds what comes off the wire, so a capital an
+    advocate types is not a different advocate.
+    """
+    return clean(value).lower()
 
 
 @refuses_blank_text("enrolment", "practice", "firm_id")
@@ -99,6 +123,15 @@ class AdvocateIdentity:
     design is chosen, and it is a smaller problem than a login handle the
     advocate never sees.
     """
+
+    def __post_init__(self) -> None:
+        if self.id != canonical_id(self.id):
+            raise ValueError(
+                f"advocate id {self.id!r} is not in canonical form "
+                f"({canonical_id(self.id)!r}). Two spellings of one id are two "
+                f"advocates with two files on a case-sensitive filesystem and "
+                f"one advocate on a case-insensitive one, which is a defect "
+                f"that only appears in production. Use `canonical_id`.")
 
     def as_dict(self) -> dict:
         return {"id": self.id, "name": self.name, "enrolment": self.enrolment,

@@ -42,7 +42,7 @@ from dataclasses import dataclass, field, replace
 from enum import Enum
 
 from nm.domain.matter import Posture, Side, ThreadId, new_id
-from nm.domain.text import blank, refuses_blank_text
+from nm.domain.text import blank, fold, refuses_blank_text
 from nm.domain.traceability import implements
 
 
@@ -270,7 +270,7 @@ def merge(standing: tuple[Issue, ...], spotted: tuple[Issue, ...],
     """
     out = list(standing)
     by_id = {i.id for i in standing}
-    seen = {_fold(i.statement) for i in standing}
+    seen = {fold(i.statement) for i in standing}
     for issue in spotted:
         # THE ID FIRST, because the READ decided it. GS-15 accumulated three
         # phrasings of one question when identity was the statement alone:
@@ -281,16 +281,12 @@ def merge(standing: tuple[Issue, ...], spotted: tuple[Issue, ...],
         # row rather than fuzzy matching downstream.
         if issue.id in by_id:
             continue
-        key = _fold(issue.statement)
+        key = fold(issue.statement)
         if key and key not in seen:
             seen.add(key)
             by_id.add(issue.id)
             out.append(issue)
     return tuple(out)
-
-
-def _fold(text: str) -> str:
-    return " ".join((text or "").lower().split())
 
 
 @implements("D9")

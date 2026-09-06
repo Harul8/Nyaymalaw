@@ -43,7 +43,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from nm.domain.matter import ThreadId, TurnId
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import fold, refuses_blank_text
 from nm.domain.traceability import implements
 
 
@@ -92,10 +92,6 @@ class Decision:
         return self.by is not DecidedBy.ADVOCATE
 
 
-def _fold(text: str) -> str:
-    return " ".join((text or "").lower().split())
-
-
 @implements("A3")
 def merge(standing: tuple[Decision, ...], made: tuple[Decision, ...],
           ) -> tuple[Decision, ...]:
@@ -140,7 +136,7 @@ def moved(standing: tuple[Decision, ...], made: tuple[Decision, ...],
     out = []
     for decision in made:
         was = index.get(_question(decision.what))
-        if was is not None and _fold(was.what) != _fold(decision.what):
+        if was is not None and fold(was.what) != fold(decision.what):
             out.append((was, decision))
     return tuple(out)
 
@@ -154,7 +150,7 @@ def _question(what: str) -> str:
     honest reading of a sentence that does not separate the two.
     """
     head = (what or "").split(":", 1)[0]
-    return _fold(head)
+    return fold(head)
 
 
 @implements("A3")

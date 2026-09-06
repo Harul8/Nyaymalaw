@@ -558,5 +558,7 @@ def _ranked(facts: list, about: str) -> list:
 
 
 def _words(text: str) -> set[str]:
-    import re
-    return set(re.findall(r"[a-z0-9]+", (text or "").lower()))
+    """The product's one tokenising, as a set. Overlap SCORES here; it never
+    decides that two things are the same (CLAUDE.md §5)."""
+    from nm.domain.text import words
+    return set(words(text))

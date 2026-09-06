@@ -949,14 +949,28 @@ class TurnEngine:
                                       turn=turn.turn_id,
                                       span=row.date_expression),
                 certainty=row.certainty, date=row.on)
-            matter = matter.with_fact(event)
-            added.append(event)
-            ids.append(event.id)
+            # B-107. `recording` DECIDES WHETHER THIS IS A SECOND FACT and
+            # returns the one that is now on the file -- which is this event
+            # when the sentence is new, and the AMENDED account fact when the
+            # date read has restated the whole message. One sentence was
+            # becoming two entries: the account undated and the reading dated,
+            # both charged to the account budget and both read by limitation.
+            matter, event = matter.recording(event)
+            # DEDUPED SEPARATELY, and not by folding the two lists together:
+            # the account fact's id is already in `ids`, so an amended one
+            # would never reach `added` -- and `added` is what the correction
+            # question below subtracts to find the entries that were ALREADY
+            # on the file. It would then offer the advocate this turn's own
+            # sentence as the thing their correction might have replaced.
+            if event.id not in {e.id for e in added}:
+                added.append(event)
+            if event.id not in ids:
+                ids.append(event.id)
 
             # THE ROW SAYS WHAT IT REPLACES, so nothing has to rebuild the
             # relationship afterwards. `interpret` has already dropped an id
             # the file does not hold.
-            if row.corrects:
+            if row.corrects and row.corrects != event.id:
                 superseded = next(
                     (f for f in matter.facts if f.id == row.corrects), None)
                 if superseded is not None and superseded.superseded_by is None:

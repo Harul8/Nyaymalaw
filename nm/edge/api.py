@@ -477,7 +477,12 @@ def register(body: Registration) -> dict:
     that refusal and passes the reason through rather than inventing a second
     threshold that will drift from the first.
     """
-    from nm.domain.advocate import AdvocateIdentity, Enrolment, enrol
+    from nm.domain.advocate import (
+        AdvocateIdentity,
+        Enrolment,
+        canonical_id,
+        enrol,
+    )
     from nm.ports.directory import AlreadyEnrolled
 
     if body.password != body.password_again:
@@ -495,7 +500,13 @@ def register(body: Registration) -> dict:
     # THE EMAIL IS THE ID, normalised. An advocate cannot sign in with an
     # identifier nobody showed them, and this product's ids are already
     # human-chosen strings. See `AdvocateIdentity.email` for the trade.
-    email = body.email.strip().lower()
+    #
+    # `canonical_id` RATHER THAN `.strip().lower()` HERE. That expression was
+    # this route's own copy of a rule the directory and the sign-in door also
+    # needed, and only this one had it -- so an advocate registered lower-case
+    # and then signed in with the capital they typed, which worked on Windows
+    # and would not have on the server.
+    email = canonical_id(body.email)
     identity = AdvocateIdentity(
         id=email, name=body.name.strip(),
         enrolment=body.enrolment.strip(), practice=body.practice.strip(),

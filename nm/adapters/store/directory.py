@@ -32,6 +32,7 @@ from nm.domain.advocate import (
     Credential,
     Enrolment,
     Session,
+    canonical_id,
     dummy,
     open_session,
     token_fingerprint,
@@ -56,7 +57,19 @@ class FileDirectory:
     # ------------------------------------------------------------ advocates ---
 
     def _advocate_path(self, advocate_id: str) -> Path:
-        return self._advocates / f"{advocate_id}.nm"
+        """FOLDED HERE, once, for every door.
+
+        `enrol`, `identity`, `authenticate` and the failed-attempt note all
+        reach the store through this, so a capital an advocate types at
+        sign-in is not a different advocate -- and cannot be, rather than
+        being one that four call sites each remember not to make.
+
+        `AdvocateIdentity` refuses a non-canonical id, so nothing can be
+        enrolled under a second spelling either. Two mechanisms, one rule:
+        the type refuses bad data going in, this folds queries coming from
+        outside, and neither is sufficient alone.
+        """
+        return self._advocates / f"{canonical_id(advocate_id)}.nm"
 
     def enrol(self, enrolment: Enrolment) -> None:
         path = self._advocate_path(enrolment.identity.id)

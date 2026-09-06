@@ -48,9 +48,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from nm.core.posture import _fold
 from nm.domain.issue import Issue, IssueKind, facet
 from nm.domain.matter import Side, ThreadId
+from nm.domain.text import fold
 from nm.domain.traceability import implements
 
 #: The most this reads from one turn. An answer carrying twenty issues has not
@@ -217,7 +217,7 @@ def read(said: dict, thread: ThreadId, account: str,
             continue
 
         quoted = str(row.get("quoted") or "")
-        if quoted.strip() and _fold(quoted) not in _fold(account):
+        if quoted.strip() and fold(quoted) not in fold(account):
             # THE SAME GUARD THE CAUSE AND FACTOR READS USE. An issue carrying
             # a quotation the advocate never wrote has evidence it does not
             # have -- and an issue is what the rest of the answer hangs off.

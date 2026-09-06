@@ -56,7 +56,7 @@ import re
 from dataclasses import dataclass
 
 from nm.domain.matter import Basis, Role
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import fold, refuses_blank_text
 
 #: The permitted answers, from the product's own type. Offered to the model so
 #: it selects rather than invents -- an out-of-vocabulary role is blanked and
@@ -181,7 +181,6 @@ _NAMES_NOBODY = re.compile(
     r"(?:party|parties|side|counsel)"
     r")$", re.I)
 
-_WORDS = re.compile(r"[a-z0-9]+")
 
 
 def speaks_of_the_representation(text: str) -> bool:
@@ -209,10 +208,6 @@ def names_nobody(descriptor: str) -> bool:
     mind, and this product does not have them in mind.
     """
     return bool(_NAMES_NOBODY.match((descriptor or "").strip()))
-
-
-def _fold(text: str) -> str:
-    return " ".join(_WORDS.findall((text or "").lower()))
 
 
 # ===================================================== the role, asked ======
@@ -386,7 +381,7 @@ def interpret(message: str, data: dict,
     # SHOWN let the extractor quote us back to ourselves and settle a
     # posture nobody had stated. Every other guard passed.
     said = f"{message}\n{advocate_words}" if advocate_words else message
-    if _fold(quoted) not in _fold(said):
+    if fold(quoted) not in fold(said):
         return StatedPosture(Role.UNKNOWN, Basis.UNKNOWN, None, quoted,
                              refused=f"the quoted span is in nothing the "
                                      f"advocate wrote: {quoted[:60]!r}")

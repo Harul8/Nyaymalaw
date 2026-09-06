@@ -20,7 +20,7 @@ from datetime import date
 from enum import Enum
 from typing import Literal
 
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import fold, refuses_blank_text
 from nm.domain.traceability import implements
 
 # --------------------------------------------------------------------- ids ---
@@ -494,13 +494,88 @@ class Matter:
         and had no effect (B-086's fix, defeated by its own write).
 
         Amending an existing fact is `amending`, which says so.
+
+        THE CONTENT RULE IS `recording`, AND THIS GOES THROUGH IT so that no
+        caller reaches the raw append. A caller that needs to know which fact
+        ended up on the file calls `recording` directly.
+        """
+        return self.recording(fact)[0]
+
+    def recording(self, fact: Fact) -> tuple["Matter", Fact]:
+        """Put this fact on the file, and say which fact is now there.
+
+        B-107. ONE SENTENCE WAS BECOMING TWO FACTS. `with_fact` refused a
+        duplicate ID and nothing refused duplicate CONTENT, and two paths
+        create facts from one turn — the account is recorded whole (C1 takes
+        it before clarifying anything) and the date read then produces a dated
+        fact from the same sentence. Measured on GS-15's second run: 8 facts
+        on a 5-turn matter, with "the agreement is dated 15-4-1984" held
+        undated AND dated from one turn, and "Corrected: the agreement is
+        dated 15-4-2024" held TWICE with the same statement and the same date.
+
+        It cost three ways. The account budget paid for the same words twice,
+        the model read a file that looked like it said something twice, and
+        the limitation read a chronology with two entries where the advocate
+        had described one event.
+
+        WHAT THIS IS NOT. It is not "refuse the duplicate" — the right outcome
+        is better than that. A dated reading of a sentence already on the file
+        is THE SAME FACT, NOW DATED, so the held one is amended and the
+        advocate sees one entry carrying its date instead of two entries
+        carrying half the information each.
+
+        THE FOUR CASES, and the third is the one that must not be collapsed:
+
+            held undated, this dated   ── AMEND. One fact, now dated.
+            held dated, same date      ── nothing to add.
+            held dated, DIFFERENT date ── BOTH KEPT. That is a date conflict,
+                                          `chronology.conflicts` surfaces it,
+                                          and picking one here would be the
+                                          silent resolution C5 forbids.
+            neither dated              ── nothing to add.
+
+        SAME TURN ONLY. The match is scoped to facts from this turn, because
+        the defect is two extractions of ONE sentence and that is what a turn
+        is. An advocate who says the same thing again on turn 4 has said it
+        again — recording that once would lose the repetition, and the
+        cross-turn case is the conflict path above, which already works.
+
+        A SUPERSEDED FACT IS NOT A CANDIDATE. It has left the chart, and
+        amending it would put a date on a record the advocate has withdrawn.
+
+        The statement is compared with `nm.domain.text.fold` — the one fold,
+        exact after typography (CLAUDE.md §5: no threshold, no score).
         """
         if any(f.id == fact.id for f in self.facts):
             raise ValueError(
                 f"fact {fact.id} is already on this matter. `with_fact` adds; "
                 f"use `amending` to replace one, so that a second copy cannot "
                 f"be created by a caller who meant to change the first.")
-        return replace(self, facts=self.facts + (fact,), version=self.version + 1)
+
+        key = fold(fact.statement)
+        held = next(
+            (f for f in self.facts
+             if f.superseded_by is None
+             and f.provenance.turn == fact.provenance.turn
+             and fold(f.statement) == key), None) if key else None
+
+        if held is None:
+            return (replace(self, facts=self.facts + (fact,),
+                            version=self.version + 1), fact)
+
+        if fact.date is not None and held.date is None:
+            dated = replace(
+                held, date=fact.date,
+                provenance=replace(held.provenance,
+                                   span=fact.provenance.span or held.provenance.span))
+            return (self.amending(dated), dated)
+
+        # Same date, or no new date: nothing is added. A DIFFERENT date is a
+        # conflict and both are kept.
+        if fact.date is not None and held.date != fact.date:
+            return (replace(self, facts=self.facts + (fact,),
+                            version=self.version + 1), fact)
+        return (self, held)
 
     def amending(self, fact: Fact) -> "Matter":
         """REPLACE the fact with this id, keeping its position on the file.

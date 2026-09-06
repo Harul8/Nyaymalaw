@@ -3210,16 +3210,34 @@ d("B-107", "2026-09-05", "core",
   "Reading the cause read\u2019s actual prompt out of the call trace, which "
   "is the record built for exactly this on the same day. The duplicate is "
   "visible in the prompt bytes.",
-  "NOT FIXED. The shape of it: a fact is the advocate\u2019s statement, and "
-  "one sentence yielding two of them means two paths are creating facts "
-  "without either knowing about the other. What refuses the second copy is "
-  "the question, not where the duplicate is.",
+  "`Matter.recording` is the ONE DOOR and it decides whether this is a second "
+  "fact. NOT by refusing the duplicate \u2014 the right outcome is better "
+  "than refusal. A dated reading of a sentence already on the file is THE "
+  "SAME FACT, NOW DATED, so the held one is AMENDED and the advocate sees one "
+  "entry carrying its date instead of two entries carrying half the "
+  "information each.\n\n"
+  "FOUR CASES, and the third is the one that must not be collapsed: held "
+  "undated + this dated AMENDS; same date adds nothing; a DIFFERENT date "
+  "keeps BOTH, because that is a date conflict and picking one here would be "
+  "the silent resolution C5 forbids; neither dated adds nothing. Scoped to "
+  "ONE TURN, because the defect is two extractions of one sentence and that "
+  "is what a turn is \u2014 an advocate repeating themselves on turn 4 has "
+  "repeated themselves, and the cross-turn case is the conflict path, which "
+  "only works if both are on the file.\n\n"
+  "`with_fact` DELEGATES rather than keeping its own append, so the older "
+  "door cannot bypass the rule \u2014 which is the actual question "
+  "(CLAUDE.md \u00a74), since every existing caller uses it.",
   "Yes. It costs three ways \u2014 the account budget pays for the same words "
   "twice, the model reads a file that looks like it says something twice, and "
   "the limitation reads a chronology with two entries where the advocate "
-  "described one event.",
-  "None yet.",
-  "Open")
+  "described one event. AND THE FIX EXPOSED A WIDER ONE: the comparison needs "
+  "a fold, and the product had SIX, two of which disagreed. See B-112.",
+  "tests/test_one_sentence_is_one_fact.py \u2014 including the two bounds "
+  "that make it safe rather than tidy: two dates for one sentence stay on "
+  "the file and `chronology.conflicts` still sees them, and a SUPERSEDED "
+  "fact never absorbs a new reading (amending it would date a record the "
+  "advocate withdrew, which is B-086 arriving through the repair).",
+  "Fixed")
 
 d("B-108", "2026-09-05", "core",
   "A STRONGER MODEL QUOTED THIS PRODUCT\u2019S OWN TEXT BACK AT IT, and the "
@@ -3368,6 +3386,96 @@ d("B-111", "2026-09-06", "tooling",
   "between any two stages. Proved by planting a file and watching the "
   "fingerprint move and return \u2014 which is also how the residual hole was "
   "found rather than assumed away.")
+
+d("B-112", "2026-09-06", "core",
+  "SIX DEFINITIONS OF \u201cTHIS IS THE SAME TEXT\u201d, AND TWO OF THEM "
+  "DISAGREED. `chronology`, `dispute`, `posture` and `grounding` folded to "
+  "WORDS; `issue` and `decision` collapsed WHITESPACE ONLY and kept "
+  "punctuation. So the answer to \u2018are these the same sentence\u2019 "
+  "depended on which module was asking:\n\n"
+  "    \u201cIs the agreement enforceable?\u201d vs \u201cIs the agreement "
+  "enforceable\u201d\n"
+  "        chronology.conflicts \u2014 the same event\n"
+  "        issue.merge          \u2014 TWO ISSUES\n\n"
+  "The second is the duplicate-issue defect surviving its own fix, which had "
+  "landed hours earlier: `restates` let the READ name an id, and the folded "
+  "statement was the fallback for when it did not.",
+  "Building B-107\u2019s content check, which needed a fold in "
+  "`nm.domain.matter` \u2014 and asking, before writing a seventh, where the "
+  "existing one lived. None of the six was written by someone ignoring a "
+  "rule. They were written by six people who each needed a fold, found no one "
+  "place to get it, and wrote the two-line version.",
+  "S9 \u2014 two owners for one truth",
+  "`grep -rn \u2018def _fold\u2019`, then MEASURED rather than assumed: the "
+  "two implementations run against four sentence pairs, with "
+  "`issue.merge(a, b)` returning 2 where `chronology` returned one event. The "
+  "package scan written afterwards found TWO MORE the grep had missed \u2014 "
+  "`nm/core/intake.py` and `nm/domain/summary.py` compile the same pattern "
+  "without wrapping it in a `def`.",
+  "`nm.domain.text.fold` is the one definition, with `words` as the "
+  "tokenising underneath it for the two callers that want a set. The module "
+  "that already owns \u2018this value carries nothing\u2019 now owns "
+  "\u2018this is the same text\u2019, which is the same kind of rule.\n\n"
+  "A caller needing MORE normalisation composes and says why: "
+  "`grounding._citation_fold` folds `vs` and `versus` to `v` because a case "
+  "name written both ways is one case \u2014 and that is a fact about "
+  "CITATIONS, not about text. Applying it generally would merge \u2018the "
+  "notice vs the reply\u2019 with \u2018the notice v the reply\u2019, so "
+  "the test asserts the base fold does NOT do it.",
+  "Yes, and the population came from the code rather than from memory \u2014 "
+  "which is the only reason the two regex-only copies are in it. NOT FUZZY "
+  "MATCHING (CLAUDE.md \u00a75): no threshold, no score, no ranking. Two "
+  "strings fold to the same words or they do not; what is removed is "
+  "typography, which is not information about whether two sentences say the "
+  "same thing.",
+  "tests/test_one_fold.py scans `nm/` by AST and fails on any function whose "
+  "name says it folds and whose body does not CALL `fold` \u2014 the body, "
+  "not the name, since renaming the six would have satisfied a name check and "
+  "changed nothing \u2014 and on any module outside `text.py` compiling the "
+  "base pattern. With a POSITIVE CONTROL that plants each, and with the known "
+  "limit ASSERTED rather than hoped for: a fold named nothing like one is not "
+  "caught, and what the scan buys is that the obvious way to write the "
+  "seventh copy is refused, which is how all six were written.")
+
+d("B-113", "2026-09-06", "edge",
+  "A CAPITAL MADE A SECOND ADVOCATE, AND ONLY ON THE SERVER. "
+  "`POST /api/register` lower-cased the email to make the id; nothing else "
+  "did. `FileDirectory` names the record file after the id AS GIVEN, so "
+  "registering `R.Kumar@X.com` stored `r.kumar@x.com.nm` and signing in with "
+  "the same string looked for `R.Kumar@X.com.nm`. Windows and macOS fold case "
+  "in the filesystem and find it. Linux does not. What the advocate sees "
+  "there is ‘advocate or password not recognised’, which is "
+  "indistinguishable from having mistyped the password.",
+  "Wiring the registration outcome screen, and asking what the sign-in form "
+  "should be pre-filled with. The answer — the id the SERVER returned, "
+  "not what was typed — is only interesting if the two can differ, and "
+  "they could.",
+  "S9 — two owners for one truth",
+  "Reading `_advocate_path` while wiring the form. NOT by a test: every "
+  "existing test runs on this machine, where the filesystem hides it. A "
+  "defect that only appears on the deployment target is invisible to a green "
+  "suite by construction.",
+  "`canonical_id` in `nm.domain.advocate` is the one form, and TWO "
+  "MECHANISMS APPLY IT because neither is sufficient alone. "
+  "`AdvocateIdentity` REFUSES a non-canonical id, so a second spelling "
+  "cannot be enrolled; `FileDirectory._advocate_path` FOLDS what comes off "
+  "the wire, so a capital an advocate types is not a different advocate. "
+  "The type alone would still fail the sign-in; the fold alone would let two "
+  "spellings be stored and then silently collapse them, losing whichever was "
+  "written first.\n\n"
+  "The route’s `.strip().lower()` is gone — it was one door "
+  "holding a rule that the sign-in door, the identity lookup and the "
+  "failed-attempt note also needed, and only it had.",
+  "Yes, and the general rule is that WHERE A VALUE NAMES A RECORD, THE "
+  "CANONICAL FORM IS DECIDED ONCE. The same shape as the three provision "
+  "stores and as B-112’s six folds: a lookup that answers confidently "
+  "from a key nobody agreed on.",
+  "tests/test_one_advocate_one_id.py — register with capitals, sign in "
+  "with them AND with the lower-cased form, both through the route. Plus the "
+  "bound that matters: a wrong password is still wrong, since a fold that "
+  "reached the right record would be worthless if it stopped checking. AND "
+  "the three ids already on disk are asserted canonical, because a rule that "
+  "made existing records unreadable would be worse than the defect.")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

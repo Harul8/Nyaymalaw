@@ -44,19 +44,12 @@ number nobody can trace.
 """
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 
 from nm.domain.matter import Certainty, Fact, FactId
-from nm.domain.text import refuses_blank_text
-
-_WORDS = re.compile(r"[a-z0-9]+")
-
-
-def _fold(text: str) -> str:
-    return " ".join(_WORDS.findall((text or "").lower()))
+from nm.domain.text import fold, refuses_blank_text
 
 
 class DateState(str, Enum):
@@ -303,7 +296,7 @@ def interpret(message: str, reference: date, data: dict,
             continue
 
         # GUARD 1 -- the span must be the ADVOCATE'S words, not the prompt's.
-        if _fold(expr) not in _fold(message):
+        if fold(expr) not in fold(message):
             out.append(DatedEvent(
                 event=event, state=DateState.UNDATED, certainty=certainty,
                 refused=f"the date was read from {expr!r}, which is not in "
@@ -341,7 +334,7 @@ def conflicts(facts: tuple[Fact, ...]) -> tuple[DateConflict, ...]:
     for f in facts:
         if f.date is None:
             continue
-        key = _fold(f.statement)[:90]
+        key = fold(f.statement)[:90]
         if not key:
             continue
         prior = seen.get(key)

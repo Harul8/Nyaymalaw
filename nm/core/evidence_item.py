@@ -30,9 +30,8 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 
-from nm.core.posture import _fold
 from nm.domain.matter import FactId
-from nm.domain.text import blank, refuses_blank_text
+from nm.domain.text import blank, fold, refuses_blank_text
 from nm.domain.traceability import implements
 
 
@@ -362,7 +361,7 @@ def read_inventory(said: dict, account: str) -> ReadInventory:
             continue
 
         quoted = str(row.get("quoted") or "")
-        if quoted.strip() and _fold(quoted) not in _fold(account):
+        if quoted.strip() and fold(quoted) not in fold(account):
             refused.append(f"{what[:50]}: the quoted words are not in the "
                            f"advocate's account")
             continue

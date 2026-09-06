@@ -40,8 +40,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from nm.core.posture import _fold
 from nm.domain.matter import CauseOfAction
+from nm.domain.text import fold
 from nm.domain.traceability import implements
 
 CAUSE_VALUES = tuple(c.value for c in CauseOfAction
@@ -175,7 +175,7 @@ def interpret(message: str, data: dict, advocate_words: str = "") -> ReadCause:
                          refused=f"a cause of {cause.value!r} was reported "
                                  f"with nothing quoted to support it")
     said = f"{message}\n{advocate_words}" if advocate_words else message
-    if _fold(quoted) not in _fold(said):
+    if fold(quoted) not in fold(said):
         return ReadCause(quoted=quoted, why=why,
                          refused=f"the quoted span is in nothing the advocate "
                                  f"wrote: {quoted[:60]!r}")

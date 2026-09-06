@@ -31,11 +31,11 @@ analysis flips on a field the extractor was least sure about.
 """
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from enum import Enum
 
 from nm.domain.text import blank, refuses_blank_text
+from nm.domain.text import words as text_words
 from nm.domain.traceability import implements
 
 
@@ -128,9 +128,10 @@ def already_answered(question: str, facts: tuple[DocumentFact, ...],
     """
     # PUNCTUATION STRIPPED FIRST. Splitting on whitespace alone left `paid?`
     # as a token, which matches nothing -- so a question ending in a question
-    # mark, which is all of them, lost its last word.
-    words = {w for w in re.findall(r"[a-z0-9]+", (question or "").lower())
-             if len(w) > 4}
+    # mark, which is all of them, lost its last word. The tokenising is
+    # `nm.domain.text`'s, which is the same one every comparison in the
+    # product uses; only the length filter and the scoring are local.
+    words = {w for w in text_words(question) if len(w) > 4}
     if not words:
         return ()
     # THE THRESHOLD CANNOT EXCEED WHAT IS AVAILABLE. It was a flat `max(2,

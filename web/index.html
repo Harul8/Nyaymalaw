@@ -20,8 +20,17 @@
     <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
     <p class="login-lede">Sign in to reach your matters.</p>
 
-    <label for="login-id">Advocate</label>
-    <input id="login-id" name="username" autocomplete="username" spellcheck="false" required>
+    <!-- EMAIL, because that is what registration makes the id: the route
+         lower-cases it and uses it as the handle, so an advocate cannot be
+         asked for an identifier nobody showed them.
+
+         NOT `type=email`. Advocates enrolled by `tools/enrol.py` have ids
+         like `adv_demo`, and a browser-side email check would lock them out
+         of a door that works today. The server decides what a valid handle
+         is; this field only has to carry it. -->
+    <label for="login-id">Email</label>
+    <input id="login-id" name="username" autocomplete="username"
+           spellcheck="false" placeholder="you@chambers.in" required>
 
     <label for="login-password">Password</label>
     <input id="login-password" name="password" type="password" autocomplete="current-password" required>
@@ -88,7 +97,6 @@
 
     <button type="submit" class="primary wide" id="register-go">Register</button>
     <div class="login-alt"><a href="#" id="show-login">Back to sign in</a></div>
-    <div id="register-state" class="login-state"></div>
 
     <p class="login-foot">
       <span class="req" aria-hidden="true">*</span> required. The password must be at
@@ -99,6 +107,22 @@
       only your own matters to look at.
     </p>
   </form>
+
+  <!-- WHAT HAPPENED, ON ITS OWN CARD. The result of a registration used to be
+       one line appended to the sign-in form, which is where every other
+       message on this page also appears -- so "enrolled" and "wrong password"
+       arrived in the same grey sentence in the same place, and the one that
+       means START HERE looked like the one that means you got it wrong.
+
+       Two buttons, not one that changes meaning by a flag. That is the same
+       reason the register form is separate from the sign-in form. -->
+  <section id="outcome" class="login" hidden aria-live="polite">
+    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
+    <h2 id="outcome-title" class="outcome-title"></h2>
+    <p id="outcome-body" class="outcome-body"></p>
+    <button type="button" class="primary wide" id="outcome-signin" hidden>Sign in</button>
+    <button type="button" class="primary wide" id="outcome-back" hidden>Back to the form</button>
+  </section>
 </div>
 
 
