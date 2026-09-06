@@ -31,7 +31,8 @@ from datetime import date
 from enum import Enum
 
 from nm.domain.matter import FactId
-from nm.domain.text import blank, fold, refuses_blank_text
+from nm.domain.quotable import Quotable
+from nm.domain.text import blank, refuses_blank_text
 from nm.domain.traceability import implements
 
 
@@ -325,18 +326,21 @@ def inventory_not_assessed(why: str) -> ReadInventory:
 
 
 @implements("C7")
-def build_inventory_prompt(message: str, account: str):
+def build_inventory_prompt(quotable: Quotable):
+    """C7. THE PROMPT AND THE GUARD ARE ONE VALUE (B-108).
+
+    This showed the rendered file and the message, and checked a
+    quotation against the rendered file alone -- so an item the advocate
+    had just described could be refused for quoting the sentence that
+    described it.
+    """
     from nm.ports.model import Prompt
 
-    return Prompt(
-        system=INVENTORY_SYSTEM,
-        user=(f"THE FILE SO FAR:\n{account or '(nothing recorded yet)'}\n\n"
-              f"THIS TURN:\n{message}"),
-    )
+    return Prompt(system=INVENTORY_SYSTEM, user=quotable.block())
 
 
 @implements("C7")
-def read_inventory(said: dict, account: str) -> ReadInventory:
+def read_inventory(said: dict, quotable: Quotable) -> ReadInventory:
     """Build items. EXISTENCE, ADMISSIBILITY AND WEIGHT ARE LEFT UNASKED.
 
     Deliberately. The model is told what the advocate SAID they have and who
@@ -361,9 +365,10 @@ def read_inventory(said: dict, account: str) -> ReadInventory:
             continue
 
         quoted = str(row.get("quoted") or "")
-        if quoted.strip() and fold(quoted) not in fold(account):
-            refused.append(f"{what[:50]}: the quoted words are not in the "
-                           f"advocate's account")
+        if quoted.strip() and not quotable.accepts(quoted):
+            # THE SAME `quotable` THE PROMPT WAS BUILT FROM (B-108).
+            refused.append(f"{what[:50]}: the quoted words are not in "
+                           f"anything the advocate wrote")
             continue
 
         items.append(EvidenceItem(

@@ -342,15 +342,23 @@ def test_the_served_process_reports_which_code_it_loaded():
     # editor does, not what a defect does. It fired that way three times in one
     # session, and an alarm that is wrong in the direction of alarm is one
     # people learn to overrule.
-    before = source_fingerprint()
-    quiet = before == source_fingerprint()
-    if not quiet:
-        pytest.skip("NOT ASSESSED: the tree changed while this test ran, so "
-                    "the comparison would describe the editor, not the code. "
-                    "The live check is tools/run_scenario.py::server_fingerprint")
-    assert api.SERVING == before, (
+    # AGAINST THE TREE AS IT WAS WHEN THE SESSION STARTED, not against two
+    # readings taken microseconds apart. The old guard caught a tree moving
+    # during those microseconds and nothing else, so an edit made partway
+    # through a two-minute run -- and finished before this line -- agreed with
+    # itself perfectly and reported the editor as a defect. It did exactly
+    # that twice on 6 September 2026, on correct code.
+    from tests.conftest import SESSION_TREE
+
+    now = source_fingerprint()
+    if SESSION_TREE.startswith("unknown") or now != SESSION_TREE:
+        pytest.skip(f"NOT ASSESSED: the tree moved during this session "
+                    f"({SESSION_TREE} -> {now}), so the comparison would "
+                    f"describe the editor and not the code. The live check is "
+                    f"tools/run_scenario.py::server_fingerprint")
+    assert api.SERVING == now, (
         "the module-level fingerprint does not match the tree it was imported "
-        "from, and the tree held still while it was measured")
+        "from, and the tree has not moved since this session began")
 
     # IT IS A CONSTANT, not a call. The check depends on this: a property or a
     # function evaluated per request would re-read the disk.

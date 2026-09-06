@@ -3258,20 +3258,47 @@ d("B-108", "2026-09-05", "core",
   "appeared without it \u2014 which is an argument for rerunning a scenario "
   "after a model change rather than assuming a better model is strictly "
   "better.",
-  "NOT FIXED, and the guard is not what is wrong. Refusing a span that "
-  "includes our own stamp is exactly right: accepting it would let a model "
-  "settle a cause by quoting our own rendering back. What is wrong is that "
-  "the prompt invites it \u2014 the account is handed over as one block with "
-  "no mark saying which parts are the advocate\u2019s words. The shape of the "
-  "fix is that the prompt distinguishes what may be quoted from what may not, "
-  "so the model is not asked to guess.",
+  "`nm/domain/quotable.py`. ONE VALUE GOES TO THE PROMPT AND TO THE GUARD: "
+  "`block()` renders the labelled section and `accepts()` is the check, off "
+  "the same three fields \u2014 `turn` (what the advocate said this turn), "
+  "`file` (what they said earlier) and `context` (our rendering, shown and "
+  "NOT quotable, with a sentence saying why).\n\n"
+  "THE GUARD WAS NEVER WHAT WAS WRONG. Refusing a span that includes our own "
+  "stamp is exactly right \u2014 accepting it would let a model settle a "
+  "cause by quoting our rendering back at us. What was wrong is that the "
+  "prompt invited it, and the reason it could is that the two took SEPARATE "
+  "parameters: `build_prompt(message, account)` beside `interpret(message, "
+  "data, advocate_words)`. Passing different things to them was not a mistake "
+  "anyone could see; it is what the signatures asked for.\n\n"
+  "AND IT WAS NOT ONE READ. Measured across all six before touching any of "
+  "them, on a three-fact matter with one follow-up question:\n"
+  "    cause       6 of 8 spans shown and unquotable\n"
+  "    posture     6 of 8\n"
+  "    chronology  13 of 14 \u2014 the entire file\n"
+  "    dispute     8 of 9\n"
+  "    issues      2 of 7 \u2014 INCLUDING THIS TURN\u2019S MESSAGE\n"
+  "    factors     6 of 11\n"
+  "Two reads could not quote the file they were shown; two could not quote "
+  "the message they were handed. Fixing only the one B-108 named would have "
+  "left five.",
   "Yes, and it is the third face of one thing. B-097 was the guard input "
   "widening with the account. B-101 was the transcript serving review and "
   "scoring. This is the PROMPT and the GUARD disagreeing about the same "
   "text \u2014 and the disagreement only became visible when the model got "
-  "good enough to exploit it.",
-  "None yet.",
-  "Open")
+  "good enough to exploit it. The general rule: WHERE A CHECK CONSTRAINS AN "
+  "ANSWER, THE THING BEING ASKED MUST BE TOLD THE CONSTRAINT, FROM THE SAME "
+  "VALUE.",
+  "tests/test_one_quotable.py scans `nm/` by AST and fails on any module "
+  "comparing a quotation against text by hand (`fold(a) in fold(b)`), and on "
+  "any module whose prompt builder takes the `Quotable` while its reader does "
+  "not, or the reverse \u2014 both halves, since one of each is exactly how "
+  "this arose. Named coverage for the six, so removing a guard fails here "
+  "rather than passing quietly. With positive controls that plant a hand "
+  "guard and a mismatched pair, and a BOUND: `grounding._citation_fold` asks "
+  "a different question \u2014 is this quotation in the retrieved authority "
+  "\u2014 and a scan that swept it would push the citation pivot into the "
+  "base fold to satisfy itself.",
+  "Fixed")
 
 d("B-109", "2026-09-06", "adapters",
   "THE HARD-TIER ESCALATION WAS A REGRESSION, AND THE MEASUREMENT THAT EARNED "
@@ -3523,6 +3550,45 @@ d("B-114", "2026-09-06", "edge",
   "the gate \u2014 which found a flaw in ITSELF first: it read `z-index: 100` "
   "out of the comment that explains the gate\u2019s stacking, so it now "
   "strips comments before reading declarations.")
+
+d("B-115", "2026-09-06", "core",
+  "THE FIX FOR B-108 SHOWS THE ADVOCATE\u2019S SENTENCES TWICE, and the "
+  "account budget pays for both. Four reads \u2014 cause, posture, issues and "
+  "the evidence inventory \u2014 now render the advocate\u2019s words as the "
+  "quotable block AND the product\u2019s rendering of the same sentences as "
+  "the context block. Measured on a three-fact matter: 28 words duplicated "
+  "against a 51-word account, and pinned at 16 on the two-sentence "
+  "fixture the reproduction uses \u2014 a number that was GUESSED at 15 "
+  "first and corrected by the test that was meant to hold it, which is "
+  "the rule about measuring before reporting arriving on its own row.",
+  "Closing B-108 without losing context. The rendering carries the date "
+  "stamps and the basis note, which are real information; dropping it to "
+  "avoid the duplication would be the loss the advocate specifically ruled "
+  "out.",
+  "S9 \u2014 two owners for one truth, in its mildest form: one truth, "
+  "rendered twice, in one prompt",
+  "Reading the built prompt back after the rewire rather than assuming the "
+  "gap was the only thing that changed.",
+  "NOT FIXED, and the trade is stated rather than hidden. The duplication is "
+  "the price of the labelling, and it is the right way round: a prompt that "
+  "costs 28 extra words is cheaper than a turn withheld because the model "
+  "quoted the only copy it was shown.\n\n"
+  "The shape of the fix, when it is worth doing: `nm/domain/summary.py` "
+  "builds `words` and `account` from the SAME facts (B-097), so it can render "
+  "the annotations \u2014 the stamps, the notes \u2014 WITHOUT re-listing "
+  "the sentences they annotate. That is a change to one module and it needs a "
+  "measurement first: whether a cause or posture read is worse off with the "
+  "stamps removed entirely, which would be cheaper still.",
+  "Yes. The general question is what a prompt may say TWICE, and the answer "
+  "is that a budget measured in tokens must be spent on what a read needs, "
+  "not on the same sentence wearing two labels.",
+  "tests/test_one_quotable.py::test_the_duplication_is_measured_not_assumed "
+  "REPRODUCES it and pins the number, so this row cannot go stale in "
+  "either direction: it fails if the duplication grows, and it fails if "
+  "the duplication is fixed and nobody closed the row. A REPRODUCTION AND "
+  "NOT A FIX \u2014 the row stays Open until the rendering stops "
+  "re-listing sentences it only means to annotate.",
+  "Open")
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

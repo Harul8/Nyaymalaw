@@ -27,6 +27,7 @@ import pytest
 from nm.core import factors
 from nm.core.limitation import FactorKind
 from nm.domain.matter import Fact, Provenance
+from nm.domain.quotable import Quotable
 
 pytestmark = pytest.mark.class_a
 
@@ -66,7 +67,8 @@ SAID = {
 
 
 def _read(said=None, provisions=None, expiry=date(2026, 3, 14), chron=CHRON):
-    return factors.read(said if said is not None else SAID, chron, ACCOUNT,
+    return factors.read(said if said is not None else SAID, chron,
+                        Quotable(file=ACCOUNT),
                         provisions if provisions is not None else {"18": S18},
                         expiry)
 
@@ -122,7 +124,7 @@ def test_an_undated_entry_cannot_carry_a_factor():
     """Nothing can run FROM an undated event. Refused, and named as refused —
     not returned as an account that describes no acknowledgment."""
     undated = (_fact("f2", "he admitted it in writing at some point", None),)
-    read = factors.read(SAID, undated, ACCOUNT, {"18": S18}, date(2026, 3, 14))
+    read = factors.read(SAID, undated, Quotable(file=ACCOUNT), {"18": S18}, date(2026, 3, 14))
     assert read.state == "refused"
     assert "carries no date" in read.refused
 
@@ -167,9 +169,9 @@ def test_a_part_payment_needs_section_19_and_not_section_18():
     not support — which reads, to an advocate, exactly like one that does."""
     payment = {**SAID, "kind": "part_payment",
                "quoted": "admitting the amount was outstanding"}
-    assert factors.read(payment, CHRON, ACCOUNT, {"18": S18},
+    assert factors.read(payment, CHRON, Quotable(file=ACCOUNT), {"18": S18},
                         date(2026, 3, 14)).state == "not_assessed"
-    assert factors.read(payment, CHRON, ACCOUNT, {"19": S19},
+    assert factors.read(payment, CHRON, Quotable(file=ACCOUNT), {"19": S19},
                         date(2026, 3, 14)).state == "found"
 
 
@@ -239,6 +241,7 @@ def test_the_prompt_carries_the_chronology_ids_the_answer_must_name():
     """The model has to name WHICH entry. A free-text date would have to be
     matched back by parsing, which is a second place for the date to be wrong
     — and the date is what the period restarts from."""
-    prompt = factors.build_prompt("is it in time?", ACCOUNT, CHRON)
+    prompt = factors.build_prompt(
+        Quotable(turn="is it in time?", file=ACCOUNT), CHRON)
     assert "f2" in prompt.user
     assert "2024-06-12" in prompt.user

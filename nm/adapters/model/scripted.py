@@ -23,6 +23,8 @@ from typing import Any
 
 from nm.adapters.model._budget import estimate_tokens, guard_budget
 from nm.adapters.model.config import CONTEXT_BUDGET, ModelConfig, TierConfig
+from nm.core.chronology import CHART_HEADING
+from nm.domain.quotable import WORDS_HEADING
 from nm.ports.model import (
     EmbeddingResult,
     ModelResult,
@@ -129,8 +131,14 @@ _CORRECTS_DATE = ("sorry, that is wrong", "that is wrong", "i meant",
 
 
 def _first_dated_id(user: str) -> str:
-    """The first id on the `chronology so far` block the prompt carries."""
-    start = (user or "").find("The chronology so far")
+    """The first id on the chart block the prompt carries.
+
+    THE HEADING IS IMPORTED, not copied. A literal here went stale when
+    the prompt started saying ids may be NAMED and not QUOTED: `find`
+    returned -1, this returned "", and the correction stopped being
+    applied on a served turn with nothing in the double complaining.
+    """
+    start = (user or "").find(CHART_HEADING)
     if start < 0:
         return ""
     for line in user[start:].splitlines()[1:]:
@@ -302,7 +310,7 @@ def scripted_factors(user: str) -> str:
     # in isolation and produced a refusal on a served turn.
     block = (user or "")
     start = block.find("THE CHRONOLOGY")
-    end = block.find("THE FILE SO FAR")
+    end = block.find(WORDS_HEADING)
     block = block[start:end] if start >= 0 and end > start else block
     lower = block.lower()
     user = block
@@ -382,7 +390,7 @@ def scripted_issues(user: str) -> str:
     a double with it would test something no advocate can reach.
     """
     block = user or ""
-    start = block.find("THE FILE SO FAR")
+    start = block.find(WORDS_HEADING)
     block = block[start:] if start >= 0 else block
     lower = block.lower()
 
@@ -434,7 +442,7 @@ def scripted_inventory(user: str) -> str:
     `unasked` return nothing and the sweep would pass having swept nothing.
     """
     block = user or ""
-    start = block.find("THE FILE SO FAR")
+    start = block.find(WORDS_HEADING)
     block = block[start:] if start >= 0 else block
     lower = block.lower()
 

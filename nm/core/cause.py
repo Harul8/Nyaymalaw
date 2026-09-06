@@ -41,7 +41,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from nm.domain.matter import CauseOfAction
-from nm.domain.text import fold
+from nm.domain.quotable import Quotable
 from nm.domain.traceability import implements
 
 CAUSE_VALUES = tuple(c.value for c in CauseOfAction
@@ -108,25 +108,28 @@ class ReadCause:
 UNREAD = ReadCause()
 
 
-def build_prompt(message: str, account: str = ""):
+def build_prompt(quotable: Quotable):
     """This turn, read against the file.
 
     The cause lives in the ACCOUNT far more often than in the latest message —
     "is the claim still in time" carries no cause at all, and the invoices two
     turns earlier carry it completely. Reading the message alone is what makes
     a product ask an advocate to restate their file every turn.
+
+    THE PROMPT AND THE GUARD ARE ONE VALUE (B-108). This used to take
+    `account` -- the rendered file, with `[1984-04-15]` stamps and our own
+    notes in it -- while `interpret` checked the span against the advocate's
+    sentences alone. A model good enough to use its whole context quoted the
+    block it was shown, the guard refused it correctly, and the turn was
+    withheld. Nothing had told it the two differed.
     """
     from nm.ports.model import Prompt
 
-    user = f"What the advocate has just asked:\n{message.strip()[:1500]}"
-    if account.strip():
-        user = (f"What the advocate has already said on this matter:\n"
-                f"{account.strip()[:2500]}\n\n" + user)
-    return Prompt(system=SYSTEM, user=user)
+    return Prompt(system=SYSTEM, user=quotable.block())
 
 
 @implements("D4")
-def interpret(message: str, data: dict, advocate_words: str = "") -> ReadCause:
+def interpret(quotable: Quotable, data: dict) -> ReadCause:
     """The model's answer, or a REFUSAL. Never a guess.
 
     Every refusal lands on `NOT_ESTABLISHED`, which falls through to search.
@@ -164,20 +167,16 @@ def interpret(message: str, data: dict, advocate_words: str = "") -> ReadCause:
 
     # GUARD 2 -- the span must be the advocate's ACTUAL WORDS.
     #
-    # `advocate_words` is a SEPARATE parameter from the prompt, and that is
-    # load-bearing. The prompt carries this product's own outstanding
-    # questions; checking against everything the model was SHOWN would let the
-    # extractor quote our own question about the goods back at us and settle a
-    # cause nobody described. The posture reader was measured failing exactly
-    # that way, and this imports its guard rather than restating it.
-    if not quoted:
-        return ReadCause(why=why,
-                         refused=f"a cause of {cause.value!r} was reported "
-                                 f"with nothing quoted to support it")
-    said = f"{message}\n{advocate_words}" if advocate_words else message
-    if fold(quoted) not in fold(said):
+    # The prompt carries this product's own outstanding questions; accepting a
+    # span from everything the model was SHOWN would let the extractor quote
+    # our own question about the goods back at us and settle a cause nobody
+    # described. The posture reader was measured failing exactly that way.
+    #
+    # THE SAME `quotable` THE PROMPT WAS BUILT FROM, so what the model was
+    # told it may quote and what this accepts cannot differ.
+    if not quotable.accepts(quoted):
         return ReadCause(quoted=quoted, why=why,
-                         refused=f"the quoted span is in nothing the advocate "
-                                 f"wrote: {quoted[:60]!r}")
+                         refused=(f"a cause of {cause.value!r} was reported "
+                                  f"and {quotable.refusal(quoted)}"))
 
     return ReadCause(cause=cause, quoted=quoted, why=why)

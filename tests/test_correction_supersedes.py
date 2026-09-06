@@ -40,6 +40,7 @@ import pytest
 from nm.core import chronology
 from nm.core.turn import TurnInput
 from nm.domain.matter import Fact, Provenance
+from nm.domain.quotable import Quotable
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -68,7 +69,7 @@ def _row(**kw):
 def test_the_date_row_says_what_it_replaces():
     """One read. The sentence that identifies a correction is the same
     sentence the date was read out of."""
-    (row,) = chronology.interpret(MSG, date(2026, 9, 5), _row(corrects="f1"),
+    (row,) = chronology.interpret(Quotable(turn=MSG), date(2026, 9, 5), _row(corrects="f1"),
                                   known=frozenset({"f1"}))
     assert row.corrects == "f1"
     assert row.dated
@@ -77,7 +78,7 @@ def test_the_date_row_says_what_it_replaces():
 def test_an_id_the_file_does_not_hold_is_dropped():
     """A correction pointing at nothing would supersede nothing and read as
     one that had — the silent direction."""
-    (row,) = chronology.interpret(MSG, date(2026, 9, 5),
+    (row,) = chronology.interpret(Quotable(turn=MSG), date(2026, 9, 5),
                                   _row(corrects="f_nowhere"),
                                   known=frozenset({"f1"}))
     assert row.corrects == ""
@@ -87,7 +88,7 @@ def test_an_ordinary_event_corrects_nothing():
     """Empty is the ordinary answer. A new event on a different day is not a
     correction, and treating it as one would erase a real part of the
     chronology."""
-    (row,) = chronology.interpret(MSG, date(2026, 9, 5), _row(),
+    (row,) = chronology.interpret(Quotable(turn=MSG), date(2026, 9, 5), _row(),
                                   known=frozenset({"f1"}))
     assert row.corrects == ""
 
@@ -95,7 +96,7 @@ def test_an_ordinary_event_corrects_nothing():
 def test_the_prompt_carries_the_ids_there_are_to_name():
     """Without them `corrects` cannot be filled and the read degrades to what
     it was before this change."""
-    prompt = chronology.build_prompt(MSG, date(2026, 9, 5), "", (OLD,))
+    prompt = chronology.build_prompt(Quotable(turn=MSG), date(2026, 9, 5), (OLD,))
     assert "f1" in prompt.user
     assert "corrects" in prompt.user
 

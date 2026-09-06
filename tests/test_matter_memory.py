@@ -50,6 +50,7 @@ from nm.domain.matter import (
     Side,
     Thread,
 )
+from nm.domain.quotable import Quotable
 from nm.domain.traceability import refuses
 from tests.test_turn_contract import KEY, _Evidence, _model_config
 
@@ -502,8 +503,10 @@ def test_our_own_question_can_never_settle_a_posture():
     }
 
     # The advocate said nothing about sides on this turn or any earlier one.
-    settled = interpret("What is the position on the shop?", model_said,
-                        advocate_words="A quit notice was issued last month.")
+    settled = interpret(
+        Quotable(turn="What is the position on the shop?",
+                 file="A quit notice was issued last month."),
+        model_said)
     assert not settled.settles_role, (
         "a posture was settled from THIS PRODUCT'S OWN words. Widening a prompt "
         "must never widen the guard: the span has to appear in something the "
@@ -512,7 +515,7 @@ def test_our_own_question_can_never_settle_a_posture():
 
     # And the same span, actually written by the advocate, IS accepted -- the
     # guard must not have become a blanket refusal.
-    real = interpret(lifted, model_said)
+    real = interpret(Quotable(turn=lifted), model_said)
     assert real.settles_role and real.role is Role.PLAINTIFF
 
 
@@ -578,7 +581,7 @@ def test_a_descriptor_that_names_nobody_is_not_recorded():
                  "the wife", "the corporate debtor"):
         assert not names_nobody(real), f"{real!r} identifies someone and was rejected"
 
-    out = interpret("we act for our client in this", {
+    out = interpret(Quotable(turn="we act for our client in this"), {
         "states_client": True, "role": "not_stated", "role_basis": "stated",
         "client_described_as": "our client", "quoted": "we act for our client"})
     assert out.client_described_as is None, (

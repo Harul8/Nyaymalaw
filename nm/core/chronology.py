@@ -49,6 +49,7 @@ from datetime import date
 from enum import Enum
 
 from nm.domain.matter import Certainty, Fact, FactId
+from nm.domain.quotable import Quotable
 from nm.domain.text import fold, refuses_blank_text
 
 
@@ -226,33 +227,50 @@ def looks_like_a_correction(message: str) -> str | None:
     return next((p for p in CORRECTING if p in lower), None)
 
 
-def build_prompt(message: str, reference: date, account: str = "",
-                 existing: tuple = ()):
+#: THE CHART'S HEADING, as a constant. The scripted model double finds
+#: this section to name an id in `corrects`, and it held a literal copy
+#: that went stale the moment the wording changed -- `find` returned -1,
+#: the double stopped naming ids, and the correction silently stopped
+#: being applied. Two tests caught it; nothing in the double did.
+CHART_HEADING = "THE CHRONOLOGY SO FAR"
+
+
+def build_prompt(quotable: Quotable, reference: date, existing: tuple = ()):
     """The message, the reference date, and what was already said.
 
     The reference is passed EXPLICITLY and appears in the prompt. "Yesterday"
     has no meaning without it, and a resolution that cannot say what it counted
     from is a guess with a date's confidence.
+
+    A DATE EXPRESSION MUST COME FROM THIS TURN, and now the prompt says so
+    (B-108). The guard has always checked `date_expression` against the
+    message alone -- reading one out of the file would re-date an entry the
+    chart already holds -- while the prompt showed the whole file and the id
+    table beside it. Measured on a three-fact matter: 13 of the 14 spans in
+    this prompt were shown and unquotable, with nothing marking them.
     """
     from nm.ports.model import Prompt
 
     user = (f"Today is {reference.isoformat()}. Resolve every relative date "
             f"against that.\n\n")
-    if account.strip():
-        user += (f"Already on the file:\n{account.strip()[:1500]}\n\n")
     if existing:
         # THE IDS, so `corrects` has something to name. Without them the field
         # cannot be filled and the read degrades to what it was before.
+        #
+        # NAMED, NOT QUOTED, and the distinction is real rather than pedantic:
+        # an id here is exactly what `corrects` wants, and a date expression
+        # copied out of the same table is what the guard refuses.
         rows = "\n".join(
             f"  {f.id}\t{f.date.isoformat() if f.date else 'undated'}\t"
             f"{f.statement[:70]}" for f in existing)
-        user += (f"The chronology so far — if anything below is being "
-                 f"REPLACED, name its id in `corrects`:\n{rows}\n\n")
-    user += f"The advocate has just said:\n{message.strip()[:1500]}"
+        user += (f"{CHART_HEADING}. Name an id from here in `corrects` "
+                 f"if an entry is being REPLACED. Do NOT copy a date "
+                 f"expression out of it:\n{rows}\n\n")
+    user += quotable.block()
     return Prompt(system=SYSTEM, user=user)
 
 
-def interpret(message: str, reference: date, data: dict,
+def interpret(quotable: Quotable, reference: date, data: dict,
               known: frozenset[str] = frozenset(),
               ) -> tuple[DatedEvent, ...]:
     """Turn the model's answer into chart rows, REFUSING what it cannot support.
@@ -296,7 +314,8 @@ def interpret(message: str, reference: date, data: dict,
             continue
 
         # GUARD 1 -- the span must be the ADVOCATE'S words, not the prompt's.
-        if fold(expr) not in fold(message):
+        # The same `quotable` the prompt was built from (B-108).
+        if not quotable.accepts(expr):
             out.append(DatedEvent(
                 event=event, state=DateState.UNDATED, certainty=certainty,
                 refused=f"the date was read from {expr!r}, which is not in "

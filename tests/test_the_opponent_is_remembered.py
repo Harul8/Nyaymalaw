@@ -31,6 +31,7 @@ import pytest
 
 from nm.core import posture
 from nm.core.turn import TurnInput
+from nm.domain.quotable import Quotable
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -41,7 +42,7 @@ TODAY = date(2026, 9, 5)
 def _read(message: str, **over):
     data = {"states_client": True, "role": "plaintiff", "role_basis": "stated",
             "client_described_as": "", "opponent": "", "quoted": message}
-    return posture.interpret(message, {**data, **over})
+    return posture.interpret(Quotable(turn=message), {**data, **over})
 
 
 # ============================== the read ===================================

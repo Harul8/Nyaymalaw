@@ -431,12 +431,6 @@ NO_REPRODUCTION: dict[str, str] = {
         "tone made by a model against a rubric. A test asserting the absence "
         "of didactic phrasing would be a phrase list, and this project has "
         "already paid for one of those.",
-    "B-108":
-        "A MODEL BEHAVIOUR, and specifically a STRONGER model's. The read "
-        "quoted across three lines of the account because gpt-5.2 uses the "
-        "context it is given; the scripted double quotes whatever the fixture "
-        "tells it to. A test that made the double quote a stamp would be "
-        "asserting the fixture.",
 }
 
 
@@ -451,9 +445,18 @@ def test_every_open_defect_can_be_reproduced_or_says_why_not():
 
     The next open row cannot be added without someone deciding whether it can
     be demonstrated, which is the whole of the fix.
+
+    A ROW SATISFIES THIS EITHER WAY, and until 6 September 2026 only one of
+    the two was mechanically possible: every open row had to appear in
+    NO_REPRODUCTION whether or not a reproduction existed, so the honest half
+    of the rule -- the half that is work rather than a note -- could not be
+    taken. A row whose CHECK column names a file `test_every_check...` can
+    find is reproduced, and that check is already asserted to exist.
     """
     open_rows = [r for r in _register() if _still_open(r)]
-    undeclared = [r["id"] for r in open_rows if r["id"] not in NO_REPRODUCTION]
+    undeclared = [r["id"] for r in open_rows
+                  if r["id"] not in NO_REPRODUCTION
+                  and not PATH.findall(r["check"])]
 
     assert not undeclared, (
         "these defects are OPEN and nothing says whether they can be "

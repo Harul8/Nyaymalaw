@@ -38,6 +38,7 @@ from nm.core.evidence_item import (
 )
 from nm.core.turn import TurnInput
 from nm.domain.answer import ElementKind
+from nm.domain.quotable import Quotable
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -140,7 +141,7 @@ def test_a_read_leaves_admissibility_and_weight_unasked():
         "what": "the original agreement", "holder": "opponent",
         "form": "original",
         "quoted": "the original agreement is with the opponent brother"}]},
-        account)
+        Quotable(file=account))
     (item,) = read.items
     assert item.admissibility is Admissibility.NOT_ASSESSED
     assert item.existence is Existence.NOT_ASSESSED
@@ -156,7 +157,7 @@ def test_an_ungrounded_item_is_refused_and_the_rest_survive():
          "quoted": "we hold the invoices"},
         {"what": "a fabrication", "holder": "client", "form": "original",
          "quoted": "words never written"},
-    ]}, account)
+    ]}, Quotable(file=account))
     assert len(read.items) == 1
     assert len(read.refused) == 1
 
@@ -165,7 +166,7 @@ def test_an_out_of_vocabulary_holder_becomes_unknown_not_an_invented_member():
     """A `Holder` nobody defined is a holder nothing can act on."""
     read = read_inventory({"items": [{
         "what": "a document", "holder": "the bank manager", "form": "invented",
-        "quoted": ""}]}, "an account")
+        "quoted": ""}]}, Quotable(file="an account"))
     (item,) = read.items
     assert item.holder is Holder.UNKNOWN
     assert item.form is Form.NOT_ASSESSED
@@ -174,5 +175,5 @@ def test_an_out_of_vocabulary_holder_becomes_unknown_not_an_invented_member():
 def test_nothing_mentioned_is_a_different_state_from_nothing_read():
     from nm.core.evidence_item import UNREAD_INVENTORY
 
-    assert read_inventory({"items": []}, "an account").state == "none_mentioned"
+    assert read_inventory({"items": []}, Quotable(file="an account")).state == "none_mentioned"
     assert UNREAD_INVENTORY.state == "not_assessed"

@@ -40,29 +40,32 @@ MUTATIONS = [
 
     ("a posture settled on a span the advocate never wrote",
      "nm/core/posture.py",
-     "    if fold(quoted) not in fold(said):",
-     "    if False and fold(quoted) not in fold(said):",
+     "    if not quotable.accepts(quoted):",
+     "    if False and not quotable.accepts(quoted):",
      "test_posture_is_never_inferred_from_familiar_vocabulary", "E-030"),
 
     # THE GUARD READS THE ADVOCATE'S WORDS, NOT THE PROMPT. Widening it
     # back to everything the model was shown lets the extractor quote our
     # own blocking question -- which names both sides -- and settle a
     # posture nobody stated. Every other guard passes.
-    # THE CALL SITE CHOOSES WHICH STRING THE GUARD SEES, and that is where
-    # this broke: handing it the PROMPT rather than the advocate's words
-    # let the extractor quote our own blocking question -- which names both
+    # THE CALL SITE CHOOSES WHAT THE GUARD SEES, and that is where this
+    # broke: handing it the PROMPT rather than the advocate's words let
+    # the extractor quote our own blocking question -- which names both
     # sides -- and settle a posture nobody stated.
+    #
+    # SHARPER SINCE B-108. It used to swap one keyword argument, which was
+    # possible only because the prompt and the guard took SEPARATE
+    # parameters -- the drift this mutation was imitating is now
+    # unexpressible. So the mutation moves onto the one value: put the
+    # rendering into `file`, where it is quotable, instead of `context`,
+    # where it is not. That is the same defect stated in the new shape,
+    # and it must still be caught.
     ("the verbatim guard handed the prompt instead of the advocate's words",
      "nm/core/turn.py",
-     # Anchored on `posture_reader.interpret(`, because the cause read added
-     # a second identical `advocate_words=` line in slice 5 and an anchor on
-     # that line alone mutates whichever comes first.
-     '            stated = posture_reader.interpret(\n'
-     '                turn.message, res.data or {},\n'
-     '                advocate_words=memory.advocate_words if memory else "")',
-     '            stated = posture_reader.interpret(\n'
-     '                turn.message, res.data or {},\n'
-     '                advocate_words=memory.as_context() if memory else "")',
+     '            file=memory.advocate_words if memory else "",\n'
+     '            context=memory.as_context() if memory is not None else "",',
+     '            file=memory.as_context() if memory is not None else "",\n'
+     '            context="",',
      "test_a_question_asked_twice_is_not_put_a_third_time_in_the_same_words",
      "E-036"),
 
@@ -1388,8 +1391,8 @@ MUTATIONS = [
     # failing: the extractor quoting this product's own question back at it.
     ("a cause settled on a span the advocate never wrote",
      "nm/core/cause.py",
-     "    if fold(quoted) not in fold(said):",
-     "    if False and fold(quoted) not in fold(said):",
+     "    if not quotable.accepts(quoted):",
+     "    if False and not quotable.accepts(quoted):",
      "test_the_cause_read_refuses_a_span_the_advocate_never_wrote", "E-051"),
 
     # E-051. THE WIRING, and it is the half S4 proved is the one that breaks.
@@ -1454,8 +1457,8 @@ MUTATIONS = [
     # invented.
     ("a date read from words the advocate never wrote",
      "nm/core/chronology.py",
-     "        if fold(expr) not in fold(message):",
-     "        if False and fold(expr) not in fold(message):",
+     "        if not quotable.accepts(expr):",
+     "        if False and not quotable.accepts(expr):",
      "test_a_date_read_from_words_the_advocate_never_wrote_is_refused",
      "E-040"),
 

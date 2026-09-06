@@ -21,6 +21,7 @@ import pytest
 from nm.adapters.evidence.corpus import EXAMINED_CEILING
 from nm.core.cause import interpret
 from nm.domain.matter import CauseOfAction
+from nm.domain.quotable import Quotable
 from nm.domain.traceability import refuses
 from nm.knowledge.resolution import (
     CODE_TITLES,
@@ -194,29 +195,29 @@ def test_the_cause_read_refuses_a_span_the_advocate_never_wrote():
     """
     said = "the goods were supplied against invoices and nothing was paid"
 
-    good = interpret(said, {"cause": "goods_sold_price",
+    good = interpret(Quotable(turn=said), {"cause": "goods_sold_price",
                             "quoted": "the goods were supplied", "why": "x"})
     assert good.cause is CauseOfAction.GOODS_SOLD_PRICE
     assert good.refused is None
 
-    invented = interpret(said, {"cause": "money_lent",
+    invented = interpret(Quotable(turn=said), {"cause": "money_lent",
                                 "quoted": "we lent him the money", "why": "x"})
     assert invented.cause is CauseOfAction.NOT_ESTABLISHED
     assert "nothing the advocate wrote" in (invented.refused or "")
 
     # OUT OF VOCABULARY IS BLANKED, never accepted (B-042, B-055).
-    out = interpret(said, {"cause": "wibble", "quoted": "the goods", "why": "x"})
+    out = interpret(Quotable(turn=said), {"cause": "wibble", "quoted": "the goods", "why": "x"})
     assert out.cause is CauseOfAction.NOT_ESTABLISHED
     assert "closed" in (out.refused or "")
 
     # `cannot_tell` IS AN ORDINARY ANSWER and not a refusal: nothing was
     # established, nothing was declined, and the two are different facts.
-    unsure = interpret(said, {"cause": "cannot_tell", "quoted": "", "why": "x"})
+    unsure = interpret(Quotable(turn=said), {"cause": "cannot_tell", "quoted": "", "why": "x"})
     assert unsure.cause is CauseOfAction.NOT_ESTABLISHED
     assert unsure.refused is None
 
     # A CAUSE WITH NOTHING QUOTED settles nothing.
-    bare = interpret(said, {"cause": "money_lent", "quoted": "", "why": "x"})
+    bare = interpret(Quotable(turn=said), {"cause": "money_lent", "quoted": "", "why": "x"})
     assert bare.cause is CauseOfAction.NOT_ESTABLISHED
     assert "nothing quoted" in (bare.refused or "")
 

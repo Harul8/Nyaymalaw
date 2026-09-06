@@ -30,6 +30,7 @@ from nm.core.chronology import (
     interpret,
 )
 from nm.domain.matter import Certainty, Fact, Provenance
+from nm.domain.quotable import Quotable
 from nm.domain.traceability import refuses
 
 pytestmark = pytest.mark.class_a
@@ -66,7 +67,7 @@ def test_a_date_the_words_do_not_fix_is_recorded_as_undated():
     message = "the notice went some time last year and he never replied"
 
     # The model declines to fix a date. That is the ORDINARY answer.
-    rows = interpret(message, TODAY, _model_said(
+    rows = interpret(Quotable(turn=message), TODAY, _model_said(
         event="the notice went", date_expression="some time last year",
         resolved=""))
     assert len(rows) == 1
@@ -91,7 +92,7 @@ def test_a_date_read_from_words_the_advocate_never_wrote_is_refused():
     """
     message = "he was arrested and produced the next morning"
 
-    rows = interpret(message, TODAY, _model_said(
+    rows = interpret(Quotable(turn=message), TODAY, _model_said(
         event="the arrest",
         date_expression="on 14 March 2026",   # nowhere in the message
         resolved="2026-03-14"))
@@ -101,7 +102,7 @@ def test_a_date_read_from_words_the_advocate_never_wrote_is_refused():
     assert "not in what the advocate wrote" in rows[0].refused
 
     # A date is also refused when NO span supports it at all.
-    bare = interpret(message, TODAY, _model_said(
+    bare = interpret(Quotable(turn=message), TODAY, _model_said(
         event="the arrest", date_expression="", resolved="2026-03-14"))
     assert bare[0].state is DateState.UNDATED
     assert "no words to support it" in bare[0].refused
@@ -109,7 +110,7 @@ def test_a_date_read_from_words_the_advocate_never_wrote_is_refused():
     # THE POSITIVE CONTROL. The guard must not be a blanket refusal: a span the
     # advocate DID write resolves normally, or this test proves only that
     # nothing ever works.
-    good = interpret("the cheque bounced on 3 March 2026", TODAY, _model_said(
+    good = interpret(Quotable(turn="the cheque bounced on 3 March 2026"), TODAY, _model_said(
         event="the cheque bounced", date_expression="3 March 2026",
         resolved="2026-03-03"))
     assert good[0].dated and good[0].on == date(2026, 3, 3)
@@ -125,7 +126,7 @@ def test_a_resolved_date_names_what_it_was_counted_from():
     a query built from a text string with no date silently degrades the whole
     design back to search-first, and nothing downstream notices.
     """
-    rows = interpret("the quit notice was served yesterday", TODAY, _model_said(
+    rows = interpret(Quotable(turn="the quit notice was served yesterday"), TODAY, _model_said(
         event="the quit notice was served", date_expression="yesterday",
         resolved="2026-08-30"))
     assert rows[0].dated
@@ -134,7 +135,7 @@ def test_a_resolved_date_names_what_it_was_counted_from():
     assert rows[0].date_expression == "yesterday"
 
     # And the reference reaches the model, rather than being assumed by it.
-    prompt = build_prompt("served yesterday", TODAY)
+    prompt = build_prompt(Quotable(turn="served yesterday"), TODAY)
     assert TODAY.isoformat() in prompt.user
     assert "NEVER ESTIMATE" in prompt.system
 
@@ -143,7 +144,7 @@ def test_a_malformed_date_is_undated_and_never_partially_parsed():
     """Lenient parsing is how an invented vocabulary once emptied a charge map.
     A date that will not parse is not a date."""
     for bad in ("2026-13-45", "next Tuesday", "15/04/2026", ""):
-        rows = interpret("it happened then", TODAY, _model_said(
+        rows = interpret(Quotable(turn="it happened then"), TODAY, _model_said(
             event="it happened", date_expression="then", resolved=bad))
         assert rows[0].state is DateState.UNDATED, f"{bad!r} was accepted"
 
@@ -210,13 +211,13 @@ def test_a_documented_date_and_an_asserted_one_are_not_the_same_thing():
     where it starts: what the advocate remembers is asserted, however
     confidently they say it.
     """
-    documented = interpret("the notice is dated 15 April 2026", TODAY,
+    documented = interpret(Quotable(turn="the notice is dated 15 April 2026"), TODAY,
                            _model_said(event="the notice",
                                        date_expression="15 April 2026",
                                        resolved="2026-04-15", documented=True))
     assert documented[0].certainty is Certainty.DOCUMENTED
 
-    remembered = interpret("I think it went out on 15 April 2026", TODAY,
+    remembered = interpret(Quotable(turn="I think it went out on 15 April 2026"), TODAY,
                            _model_said(event="the notice",
                                        date_expression="15 April 2026",
                                        resolved="2026-04-15", documented=False))
@@ -226,7 +227,7 @@ def test_a_documented_date_and_an_asserted_one_are_not_the_same_thing():
 
     # AND AN UNDATED EVENT KEEPS ITS CERTAINTY TOO. Losing the label on the
     # rows that have no date is how it goes missing from the ones that do.
-    undated = interpret("the deed was registered, I don't recall when", TODAY,
+    undated = interpret(Quotable(turn="the deed was registered, I don't recall when"), TODAY,
                         _model_said(event="the deed was registered",
                                     resolved="", documented=True))
     assert undated[0].state is DateState.UNDATED

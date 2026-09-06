@@ -44,6 +44,7 @@ from nm.core.turn import TurnEngine, TurnInput
 from nm.domain import issue as issue_domain
 from nm.domain.issue import Issue, IssueKind
 from nm.domain.matter import Side
+from nm.domain.quotable import Quotable
 from tests.test_turn_contract import KEY, _Evidence, _model_config
 
 pytestmark = pytest.mark.class_a
@@ -201,12 +202,14 @@ def test_the_read_is_shown_what_is_already_on_the_thread():
     standing = (Issue(thread="t", statement="What is the limitation period?",
                       kind=IssueKind.THRESHOLD, runs_against=Side.MOVING,
                       proof="x", id="iss_aaa"),)
-    prompt = build_prompt("and is it time-barred?", "the account", standing)
+    prompt = build_prompt(Quotable(turn="and is it time-barred?",
+                                   file="the account"), standing)
     assert "iss_aaa" in prompt.user
     assert "What is the limitation period?" in prompt.user
     assert "restates" in prompt.user
 
-    first = build_prompt("an opening message", "the account")
+    first = build_prompt(Quotable(turn="an opening message",
+                                  file="the account"))
     assert "ISSUES ALREADY ON THIS THREAD" not in first.user, (
         "a thread with no issues must not be told to restate one")
 
@@ -234,7 +237,7 @@ def test_a_restated_question_does_not_become_a_second_issue():
     said = {"issues": [{"statement": "Is the claim time-barred?",
                         "kind": "threshold", "runs_against": "moving",
                         "quoted": "the account", "restates": "iss_aaa"}]}
-    spotted = read(said, "t", "the account", standing).issues
+    spotted = read(said, "t", Quotable(file="the account"), standing).issues
     assert [i.id for i in spotted] == ["iss_aaa"], (
         "the read named an id and it was not carried, so the merge has "
         "nothing to match on and falls back to comparing sentences")
@@ -254,7 +257,7 @@ def test_an_id_the_thread_does_not_hold_is_dropped():
     said = {"issues": [{"statement": "A genuinely different question?",
                         "kind": "threshold", "runs_against": "moving",
                         "quoted": "the account", "restates": "iss_elsewhere"}]}
-    spotted = read(said, "t", "the account", standing).issues
+    spotted = read(said, "t", Quotable(file="the account"), standing).issues
     assert spotted and spotted[0].id != "iss_elsewhere"
     assert len(issue_domain.merge(standing, spotted)) == 2
 

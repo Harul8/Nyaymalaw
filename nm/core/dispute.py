@@ -47,7 +47,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from nm.domain.text import fold, refuses_blank_text
+from nm.domain.quotable import Quotable
+from nm.domain.text import refuses_blank_text
 
 
 class Dispute(str, Enum):
@@ -128,18 +129,23 @@ class DisputeRead:
 UNREAD = DisputeRead(Dispute.CANNOT_TELL, why="the dispute read did not run")
 
 
-def build_prompt(message: str, on_file: str):
-    """What is on the file, and what was just said."""
+def build_prompt(quotable: Quotable):
+    """What is on the file, and what was just said.
+
+    THE FILE IS CONTEXT AND THE MESSAGE IS THE EVIDENCE (B-108). Opening a
+    thread is the answer that creates something, so it carries a quotation --
+    and a span lifted out of the file would let an old dispute open a new
+    thread. The guard has always said so; the prompt now does too.
+    """
     from nm.ports.model import Prompt
 
     return Prompt(
         system=SYSTEM,
-        user=(f"Already on the file:\n{on_file.strip()[:2000]}\n\n"
-              f"The advocate has just said:\n{message.strip()[:1200]}\n\n"
+        user=(f"{quotable.block()}\n\n"
               f"Does this continue that dispute, or open a different one?"))
 
 
-def interpret(message: str, data: dict) -> DisputeRead:
+def interpret(quotable: Quotable, data: dict) -> DisputeRead:
     """Turn the model's answer into a verdict, or REFUSE it.
 
     A refusal lands on CANNOT_TELL, never on CONTINUES. Falling back to
@@ -166,15 +172,11 @@ def interpret(message: str, data: dict) -> DisputeRead:
 
     # OPENING A THREAD IS THE ANSWER THAT CREATES SOMETHING, so it carries the
     # evidence. `continues` and `cannot_tell` both leave the file as it was.
-    if not quoted:
-        return DisputeRead(Dispute.CANNOT_TELL, why=why,
-                           refused="the model said this opens a new dispute and "
-                                   "quoted nothing to support it")
-    if fold(quoted) not in fold(message):
-        # The span must be the ADVOCATE'S words. Checked against the message
-        # rather than the prompt: the prompt carries the file, and a span
-        # lifted from there would let an old dispute open a new thread.
+    if not quotable.accepts(quoted):
+        # The span must be the ADVOCATE'S words. The file is CONTEXT on this
+        # read and not quotable, because a span lifted from there would let an
+        # old dispute open a new thread.
         return DisputeRead(Dispute.CANNOT_TELL, quoted, why,
-                           refused=f"the quoted span is not in what the advocate "
-                                   f"just wrote: {quoted[:60]!r}")
+                           refused=(f"the model said this opens a new dispute "
+                                    f"and {quotable.refusal(quoted)}"))
     return DisputeRead(Dispute.OPENS, quoted, why)

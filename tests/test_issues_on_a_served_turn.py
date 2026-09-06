@@ -20,6 +20,7 @@ from nm.core.turn import TurnInput
 from nm.domain.answer import ElementKind
 from nm.domain.issue import Disposition, DispositionState, Issue, IssueKind
 from nm.domain.matter import Side
+from nm.domain.quotable import Quotable
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -118,7 +119,7 @@ def test_an_issue_the_reading_offered_and_the_product_refused_is_disclosed(
         {"issues": [{"statement": "An issue from nowhere",
                      "kind": "substantive", "runs_against": "moving",
                      "quoted": "words the advocate never wrote"}]},
-        "th_1", "the advocate wrote something else entirely")
+        "th_1", Quotable(file="the advocate wrote something else entirely"))
     assert read.refused, "an ungrounded issue was accepted"
     assert read.issues == ()
 
@@ -138,7 +139,7 @@ def test_one_refused_issue_does_not_discard_the_others():
          "runs_against": "moving", "quoted": "never said this"},
         {"statement": "Sound two", "kind": "threshold",
          "runs_against": "moving", "quoted": "never paid for"},
-    ]}, "th_1", account)
+    ]}, "th_1", Quotable(file=account))
 
     assert len(read.issues) == 2
     assert len(read.refused) == 1
@@ -169,6 +170,7 @@ def test_nothing_spotted_is_a_different_answer_from_nothing_read():
     are different sentences, and only one of them is a finding."""
     from nm.core import issues
 
-    none_spotted = issues.read({"issues": []}, "th_1", "an account")
+    none_spotted = issues.read({"issues": []}, "th_1",
+                               Quotable(file="an account"))
     assert none_spotted.state == "none_spotted"
     assert issues.UNREAD.state == "not_assessed"

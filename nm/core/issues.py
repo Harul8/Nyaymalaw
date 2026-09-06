@@ -50,7 +50,7 @@ from dataclasses import dataclass
 
 from nm.domain.issue import Issue, IssueKind, facet
 from nm.domain.matter import Side, ThreadId
-from nm.domain.text import fold
+from nm.domain.quotable import Quotable
 from nm.domain.traceability import implements
 
 #: The most this reads from one turn. An answer carrying twenty issues has not
@@ -151,7 +151,7 @@ def not_assessed(why: str) -> ReadIssues:
 
 
 @implements("D9")
-def build_prompt(message: str, account: str, standing=()):
+def build_prompt(quotable: Quotable, standing=()):
     """`standing` is THE ISSUES ALREADY ON THIS THREAD, with their ids.
 
     MEASURED ON GS-15, 6 September 2026, the run where issues first survived.
@@ -184,16 +184,11 @@ def build_prompt(message: str, account: str, standing=()):
     already = (f"ISSUES ALREADY ON THIS THREAD. If you are asking one of these "
                f"again in different words, put its id in `restates` rather "
                f"than repeating it:\n{listed}\n\n" if listed else "")
-    return Prompt(
-        system=SYSTEM,
-        user=(f"{already}"
-              f"THE FILE SO FAR:\n{account or '(nothing recorded yet)'}\n\n"
-              f"THIS TURN:\n{message}"),
-    )
+    return Prompt(system=SYSTEM, user=f"{already}{quotable.block()}")
 
 
 @implements("D9")
-def read(said: dict, thread: ThreadId, account: str,
+def read(said: dict, thread: ThreadId, quotable: Quotable,
          standing=()) -> ReadIssues:
     """Build issues, refusing each one that is not grounded.
 
@@ -217,12 +212,20 @@ def read(said: dict, thread: ThreadId, account: str,
             continue
 
         quoted = str(row.get("quoted") or "")
-        if quoted.strip() and fold(quoted) not in fold(account):
+        if quoted.strip() and not quotable.accepts(quoted):
             # THE SAME GUARD THE CAUSE AND FACTOR READS USE. An issue carrying
             # a quotation the advocate never wrote has evidence it does not
             # have -- and an issue is what the rest of the answer hangs off.
-            refused.append(f"{statement[:60]}: the quoted words are not in the "
-                           f"advocate's account")
+            #
+            # AND THIS TURN'S MESSAGE IS NOW QUOTABLE (B-108). It was not: the
+            # guard checked the rendered account alone while the prompt showed
+            # the message under "THIS TURN", so an issue arising from what the
+            # advocate had just written was refused for quoting it. The
+            # rendering's date stamps stopped being quotable in the same
+            # move, which is the other half of the same rule -- a quotation is
+            # the advocate's words, wherever they wrote them.
+            refused.append(f"{statement[:60]}: the quoted words are not in "
+                           f"anything the advocate wrote")
             continue
 
         # THE ID THE READ NAMED, where it named one this thread actually

@@ -53,7 +53,7 @@ from datetime import date
 
 from nm.core.limitation import Factor, FactorKind
 from nm.domain.matter import Fact, FactId
-from nm.domain.text import fold
+from nm.domain.quotable import Quotable
 from nm.domain.traceability import implements
 
 #: The two this reads. Exclusion, disability, fraud, notice periods and
@@ -165,7 +165,7 @@ def not_assessed(why: str) -> ReadFactors:
 
 
 @implements("D2")
-def build_prompt(message: str, account: str, chronology: tuple[Fact, ...]):
+def build_prompt(quotable: Quotable, chronology: tuple[Fact, ...]):
     """This turn, read against the file AND against the dated entries.
 
     The chronology is included because the model must name WHICH entry it
@@ -182,14 +182,14 @@ def build_prompt(message: str, account: str, chronology: tuple[Fact, ...]):
     # why `Prompt` holds only those two fields.
     return Prompt(
         system=SYSTEM,
-        user=(f"THE CHRONOLOGY (id, date, what it says):\n{entries}\n\n"
-              f"THE FILE SO FAR:\n{account or '(nothing recorded yet)'}\n\n"
-              f"THIS TURN:\n{message}"),
+        user=(f"THE CHRONOLOGY (id, date, what it says). Name an id from here "
+              f"in `entry`; the statements are shown so you know which entry "
+              f"is which:\n{entries}\n\n{quotable.block()}"),
     )
 
 
 @implements("D2")
-def read(said: dict, chronology: tuple[Fact, ...], account: str,
+def read(said: dict, chronology: tuple[Fact, ...], quotable: Quotable,
          provisions: dict[str, str], unextended_expiry: date | None,
          ) -> ReadFactors:
     """Turn what the model said into a Factor, or refuse it and say why.
@@ -231,7 +231,12 @@ def read(said: dict, chronology: tuple[Fact, ...], account: str,
     quoted = str(said.get("quoted") or "")
     if not quoted.strip():
         return _refused("the model gave no quotation for the writing")
-    if fold(quoted) not in fold(f"{account}\n{entry.statement}"):
+    # THE ENTRY IS ADDED TO WHAT MAY BE QUOTED, not checked separately.
+    # The prompt SHOWS the entry's statement in the chronology table, and the
+    # account it was also shown may have been cut by the budget while the
+    # entry itself is whole -- so a quotation from it is exactly what the
+    # prompt invited, and refusing it would be B-108 in miniature.
+    if not quotable.plus(entry.statement).accepts(quoted):
         return _refused(
             "the quoted words are not in the advocate's account. A paraphrase "
             "presented as a quotation is a finding with evidence it does not "

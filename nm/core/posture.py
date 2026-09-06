@@ -56,7 +56,8 @@ import re
 from dataclasses import dataclass
 
 from nm.domain.matter import Basis, Role
-from nm.domain.text import fold, refuses_blank_text
+from nm.domain.quotable import Quotable
+from nm.domain.text import refuses_blank_text
 
 #: The permitted answers, from the product's own type. Offered to the model so
 #: it selects rather than invents -- an out-of-vocabulary role is blanked and
@@ -335,7 +336,7 @@ class StatedPosture:
 UNSTATED = StatedPosture(Role.UNKNOWN, Basis.UNKNOWN, None, "")
 
 
-def build_prompt(message: str, account: str = ""):
+def build_prompt(quotable: Quotable):
     """The message, AND what the advocate has already said on this thread.
 
     Reading only the latest message throws the conversation away. "We act for
@@ -344,18 +345,20 @@ def build_prompt(message: str, account: str = ""):
     it is plain. An advocate builds context across turns and expects it held —
     being asked to restate the file every turn is the same failure as being
     asked the same question twice.
+
+    AND THE FILE IS SHOWN AS CONTEXT, NOT AS QUOTABLE TEXT (B-108). This read
+    has the sharpest version of the trap: the prompt carries this product's
+    own outstanding questions, one of which is literally "do we act for the
+    party moving, or the party answering?" -- so a span quoted from the
+    rendering could settle a posture nobody stated. The guard already refused
+    that; now the prompt says so.
     """
     from nm.ports.model import Prompt
 
-    user = f"Message:\n{message.strip()[:1500]}"
-    if account.strip():
-        user = (f"What the advocate has already said on this matter:\n"
-                f"{account.strip()[:2500]}\n\n" + user)
-    return Prompt(system=SYSTEM, user=user)
+    return Prompt(system=SYSTEM, user=quotable.block())
 
 
-def interpret(message: str, data: dict,
-              advocate_words: str = "") -> StatedPosture:
+def interpret(quotable: Quotable, data: dict) -> StatedPosture:
     """Turn the model's answer into a posture, or REFUSE it.
 
     Refusal is not an error path. It is the ordinary outcome whenever the model
@@ -366,25 +369,21 @@ def interpret(message: str, data: dict,
         return UNSTATED
 
     quoted = (data.get("quoted") or "").strip()
-    if not quoted:
-        return StatedPosture(Role.UNKNOWN, Basis.UNKNOWN, None, "",
-                             refused="the model reported a stated posture and "
-                                     "quoted nothing to support it")
 
     # GUARD 1 -- the span must be the advocate's ACTUAL WORDS.
     #
-    # `advocate_words` is what they said on earlier turns, and it is a
-    # SEPARATE parameter from the prompt for a reason. The prompt carries
-    # this product's own outstanding questions, and one of those questions
-    # is literally "do we act for the party moving, or the party
-    # answering?" -- so checking the span against everything the model was
-    # SHOWN let the extractor quote us back to ourselves and settle a
-    # posture nobody had stated. Every other guard passed.
-    said = f"{message}\n{advocate_words}" if advocate_words else message
-    if fold(quoted) not in fold(said):
+    # The prompt carries this product's own outstanding questions, and one of
+    # those questions is literally "do we act for the party moving, or the
+    # party answering?" -- so accepting a span from everything the model was
+    # SHOWN let the extractor quote us back to ourselves and settle a posture
+    # nobody had stated. Every other guard passed.
+    #
+    # THE SAME `quotable` THE PROMPT WAS BUILT FROM (B-108), so the section
+    # the model was told to copy from is the section this accepts.
+    if not quotable.accepts(quoted):
         return StatedPosture(Role.UNKNOWN, Basis.UNKNOWN, None, quoted,
-                             refused=f"the quoted span is in nothing the "
-                                     f"advocate wrote: {quoted[:60]!r}")
+                             refused=(f"the model reported a stated posture "
+                                      f"and {quotable.refusal(quoted)}"))
 
     # GUARD 2 -- the span must speak of the REPRESENTATION, not the events.
     if not _FIRST_PERSON.search(quoted):

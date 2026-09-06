@@ -60,6 +60,7 @@ from nm.domain.matter import (
     new_id,
 )
 from nm.domain.metrics import Outcome, Phase, TurnMetrics
+from nm.domain.quotable import Quotable
 from nm.domain.text import refuses_blank_text
 from nm.domain.traceability import implements
 from nm.ports.coverage import CoveragePort
@@ -1109,16 +1110,21 @@ class TurnEngine:
         to read is one the advocate can supply in four words, and silence would
         have them believe it was never in question.
         """
-        account = memory.account if memory else ""
+        # ONE VALUE TO THE PROMPT AND TO THE GUARD (B-108). The rendered
+        # account is CONTEXT -- its `[1984-04-15]` stamps and notes are
+        # ours, not the advocate's -- and `advocate_words` is what may
+        # be quoted. Passing the two separately is how they drifted.
+        quotable = Quotable(
+            turn=turn.message,
+            file=memory.advocate_words if memory else "",
+            context=memory.account if memory else "")
         try:
             res = self._model.structured(
-                cause_reader.build_prompt(turn.message, account),
+                cause_reader.build_prompt(quotable),
                 cause_reader.CAUSE_SCHEMA, Tier.ROUTINE, max_tokens=300)
             metrics.record_call(res)
             metrics.cause_reads += 1
-            read = cause_reader.interpret(
-                turn.message, res.data or {},
-                advocate_words=memory.advocate_words if memory else "")
+            read = cause_reader.interpret(quotable, res.data or {})
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
                          f"the cause of action could not be read: {exc}")
@@ -1148,17 +1154,23 @@ class TurnEngine:
         wrongly dated costs a limitation calculation the advocate acts on
         without knowing it was invented.
         """
-        account = "\n".join(f.statement for f in matter.facts
-                            if f.id in set(thread.chronology))
+        # THE FILE IS CONTEXT ON THIS READ AND ONLY THIS TURN IS
+        # QUOTABLE, which is what the guard has always enforced: a date
+        # expression read out of the file would re-date an entry the
+        # chart already holds. Measured: 13 of the 14 spans in this
+        # prompt were shown and unquotable, with nothing marking them.
+        quotable = Quotable(
+            turn=turn.message,
+            context="\n".join(f.statement for f in matter.facts
+                              if f.id in set(thread.chronology)))
         try:
             res = self._model.structured(
-                chronology.build_prompt(turn.message, turn.today, account,
-                                        existing),
+                chronology.build_prompt(quotable, turn.today, existing),
                 chronology.DATE_SCHEMA, Tier.ROUTINE, max_tokens=700)
             metrics.record_call(res)
             metrics.chronology_reads += 1
             rows = chronology.interpret(
-                turn.message, turn.today, res.data or {},
+                quotable, turn.today, res.data or {},
                 known=frozenset(f.id for f in existing))
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
@@ -1193,13 +1205,19 @@ class TurnEngine:
             f"- {t.label}" + (f" (we act for the {t.posture.role.value})"
                               if t.posture.role is not Role.UNKNOWN else "")
             for t in matter.threads)
+        # OPENING A THREAD CARRIES THE EVIDENCE, so only this turn is
+        # quotable: a span lifted out of the thread list would let an
+        # old dispute open a new thread.
+        quotable = Quotable(turn=turn.message, context=on_file,
+                            context_is="the list of threads already open "
+                                       "on this matter, as we labelled them")
         try:
             res = self._model.structured(
-                dispute_reader.build_prompt(turn.message, on_file),
+                dispute_reader.build_prompt(quotable),
                 dispute_reader.DISPUTE_SCHEMA, Tier.ROUTINE, max_tokens=200)
             metrics.record_call(res)
             metrics.binding_reads += 1
-            read = dispute_reader.interpret(turn.message, res.data or {})
+            read = dispute_reader.interpret(quotable, res.data or {})
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
                          f"the dispute read could not run: {exc}")
@@ -1797,22 +1815,25 @@ class TurnEngine:
         a refusal leaves posture exactly where it was: unresolved, and
         blocking. Failing to read a posture must never look like reading one.
         """
+        # THE SHARPEST CASE (B-108). `as_context()` carries this
+        # product's own outstanding questions, and one of them is
+        # literally "do we act for the party moving, or the party
+        # answering?" -- so it is CONTEXT and never quotable, and the
+        # prompt now says so instead of leaving the guard to refuse it.
+        quotable = Quotable(
+            turn=turn.message,
+            file=memory.advocate_words if memory else "",
+            context=memory.as_context() if memory is not None else "",
+            context_is="this product's own rendering of the file, "
+                       "INCLUDING QUESTIONS WE HAVE ASKED -- one of which "
+                       "names both sides of the dispute")
         try:
             res = self._model.structured(
-                posture_reader.build_prompt(
-                    turn.message,
-                    memory.as_context() if memory is not None else ""),
+                posture_reader.build_prompt(quotable),
                 posture_reader.POSTURE_SCHEMA, Tier.ROUTINE, max_tokens=200)
             metrics.record_call(res)
             metrics.posture_reads += 1
-            # The span is checked against the whole account, because that is
-            # what the model was given to read.
-            # THE GUARD READS ONLY WHAT THE ADVOCATE WROTE, never the
-            # prompt -- the prompt carries this product's own questions,
-            # and one of them names both sides.
-            stated = posture_reader.interpret(
-                turn.message, res.data or {},
-                advocate_words=memory.advocate_words if memory else "")
+            stated = posture_reader.interpret(quotable, res.data or {})
         except ModelError as exc:
             # FAIL THE READ, NOT THE TURN -- and the gate still blocks, because
             # an unread posture is an unresolved one.
@@ -2742,11 +2763,15 @@ class TurnEngine:
             return []
 
         try:
+            quotable = Quotable(
+                turn=turn.message,
+                file=memory.advocate_words if memory else "",
+                context=account)
             res = self._model.structured(
-                inventory.build_inventory_prompt(turn.message, account),
+                inventory.build_inventory_prompt(quotable),
                 inventory.INVENTORY_SCHEMA, Tier.ROUTINE, max_tokens=700)
             metrics.record_call(res)
-            read = inventory.read_inventory(res.data or {}, account)
+            read = inventory.read_inventory(res.data or {}, quotable)
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
                          f"the evidence could not be inventoried: {exc}")
@@ -2846,11 +2871,19 @@ class TurnEngine:
 
         try:
             standing = issue.from_stored(thread.issues)
+            # THIS TURN IS QUOTABLE NOW (B-108). The guard checked the
+            # rendered account alone while the prompt showed the message
+            # under "THIS TURN", so an issue arising from what the
+            # advocate had just written was refused for quoting it.
+            quotable = Quotable(
+                turn=turn.message,
+                file=memory.advocate_words if memory else "",
+                context=account)
             res = self._model.structured(
-                issue_reader.build_prompt(turn.message, account, standing),
+                issue_reader.build_prompt(quotable, standing),
                 issue_reader.ISSUE_SCHEMA, Tier.ROUTINE, max_tokens=700)
             metrics.record_call(res)
-            read = issue_reader.read(res.data or {}, thread.id, account,
+            read = issue_reader.read(res.data or {}, thread.id, quotable,
                                      standing)
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
@@ -2963,15 +2996,20 @@ class TurnEngine:
         # empty account — weakening the quotation guard exactly where it
         # matters. The chart holds the dated statements a quotation has to be
         # found in, and it is already in hand.
-        account = "\n".join(f.statement for f in chart)
+        # THE CHART'S STATEMENTS ARE THE ADVOCATE'S OWN WORDS, so they
+        # are `file` and not `context`. The id/date table the prompt also
+        # shows is ours, and `build_prompt` marks it name-only.
+        quotable = Quotable(turn=turn.message,
+                            file="\n".join(f.statement for f in chart))
 
         try:
             res = self._model.structured(
-                factor_reader.build_prompt(turn.message, account, dated),
+                factor_reader.build_prompt(quotable, dated),
                 factor_reader.FACTOR_SCHEMA, Tier.ROUTINE, max_tokens=400)
             metrics.record_call(res)
             read = factor_reader.read(
-                res.data or {}, dated, account, provisions, unextended_expiry)
+                res.data or {}, dated, quotable, provisions,
+                unextended_expiry)
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
                          f"acknowledgments could not be read: {exc}")

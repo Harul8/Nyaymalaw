@@ -19,6 +19,7 @@ from nm.core.posture import interpret
 from nm.core.turn import TurnEngine, TurnInput, classify_route
 from nm.domain.answer import Element, ElementKind, Route, Signal
 from nm.domain.matter import Basis, Matter, Posture, Role, Side, Thread
+from nm.domain.quotable import Quotable
 from nm.domain.traceability import refuses
 from nm.ports.evidence import (
     Binding,
@@ -156,7 +157,7 @@ def test_posture_is_never_inferred_from_familiar_vocabulary():
 
     # Even if the model claims a posture, the span describes EVENTS and is
     # refused: the guard is on grammar, not on which nouns appear.
-    stated = interpret(message, {
+    stated = interpret(Quotable(turn=message), {
         "states_client": True, "role": "plaintiff",
         "client_described_as": "landlord",
         "quoted": "the landlord has issued a quit notice"})
@@ -164,7 +165,7 @@ def test_posture_is_never_inferred_from_familiar_vocabulary():
     assert "describes events" in stated.refused
 
     # And a span that is not in the message at all cannot settle anything.
-    invented = interpret(message, {
+    invented = interpret(Quotable(turn=message), {
         "states_client": True, "role": "plaintiff",
         "client_described_as": "", "quoted": "we act for the landlord"})
     assert invented.role is Role.UNKNOWN
@@ -184,7 +185,7 @@ def test_an_advocate_who_states_their_client_is_understood_however_they_say_it()
                 "role": role.value if role is not Role.UNKNOWN else "not_stated",
                 "client_described_as": described or "",
                 "quoted": message}
-        stated = interpret(message, data)
+        stated = interpret(Quotable(turn=message), data)
         assert stated.refused is None, f"{message}: {stated.refused}"
         assert stated.role is role
         assert stated.client_described_as == described
@@ -194,7 +195,7 @@ def test_a_role_outside_the_products_vocabulary_is_blanked():
     """PRD D9: an out-of-vocabulary facet value is blanked and re-derived,
     never accepted. A model returning a role this product cannot reason about
     must not set one."""
-    stated = interpret("we act for the amicus", {
+    stated = interpret(Quotable(turn="we act for the amicus"), {
         "states_client": True, "role": "amicus curiae",
         "client_described_as": "", "quoted": "we act for the amicus"})
     assert stated.role is Role.UNKNOWN

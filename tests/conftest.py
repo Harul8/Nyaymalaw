@@ -13,6 +13,26 @@ counterexample is an unexercised claim, and T6 reports it as one.
 """
 from __future__ import annotations
 
+#: THE TREE AS IT WAS WHEN THIS SESSION STARTED.
+#:
+#: `conftest.py` is imported before any test module, so this is the state the
+#: modules under test were imported from -- which is the only thing a
+#: comparison against a module-level fingerprint can honestly be about.
+#:
+#: MEASURED HERE BECAUSE THE ALTERNATIVE FAILED TWICE. The test that uses it
+#: read the fingerprint twice in adjacent statements and skipped if they
+#: differed, which sees a tree moving during those microseconds and nothing
+#: else. An edit made ninety seconds into a two-minute run, finished before
+#: the test is reached, agrees with itself perfectly and reports the editor as
+#: a defect.
+try:
+    from nm.domain.identity import source_fingerprint as _fingerprint
+
+    SESSION_TREE = _fingerprint()
+except Exception as exc:  # noqa: BLE001 -- NOT ASSESSED, said as a value
+    SESSION_TREE = f"unknown: {type(exc).__name__}"
+
+
 import json
 import os
 from pathlib import Path
