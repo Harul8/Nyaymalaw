@@ -16,6 +16,47 @@ against.
 
 ## Open
 
+### BK-23 - the web scrape is a ONE-TIME EXCEPTION, not the new route
+Recorded 7 September 2026, on the advocate's instruction and in their words:
+*this is a one time exception*.
+
+`tools/fetch_judgments.py` deliberately excluded the scrape path:
+
+> ONLY API MODE IS IMPLEMENTED. The scrape path is deliberately absent: the
+> sanctioned route exists, the previous build flagged the other as ToS-bound,
+> and a product that advises advocates should not acquire its corpus in a way
+> it would have to explain.
+
+**That policy still stands.** `tools/scrape_judgments.py` is a bounded
+exception to it, not a replacement for it.
+
+| the exception | |
+|---|---|
+| scope | Telangana, 2018-2026, 15 pages/year, cited by >= 2 |
+| size | ~135 search pages, ~1,350 documents, ~1,485 requests, ~74 minutes |
+| authorised | 7 September 2026, for one run |
+
+**Why the cost is what it is, and why the API would not be cheaper.**
+*Cited by N* is not a search filter on Indian Kanoon by either route - the
+count lives on the DOCUMENT. So every candidate must be opened whichever way
+it is acquired, and the filter cannot be pushed to the server.
+
+**What the tool refuses rather than merely configures:** `robots.txt` is read
+every run and obeyed with no override; an unreadable `robots.txt` is a
+REFUSAL, because the file exists so that silence is not consent. Three
+seconds between requests, one at a time, a User-Agent naming the project so
+it can be asked to stop, and a hard request cap so a bug cannot make a
+bounded job unbounded.
+
+**A page that does not state a citation count is NOT treated as zero.** It is
+counted and reported separately - filtering it out silently would drop
+exactly the judgments a parser change had blinded the tool to.
+
+**Still to decide, and the reason this row stays open:** whether anything
+staged is promoted into `legal_database/`. Nothing enters the corpus by
+running this. If the answer later is *yes, and routinely*, then the policy
+above needs revisiting properly rather than by accumulation.
+
 ### BK-22 - signing in depended on a key that is meant to rotate - **CLOSED**
 Closed 7 September 2026, on the advocate's challenge: *if the email and
 password match, they should be able to log in, nothing else.*
@@ -88,7 +129,7 @@ half-re-keyed store is worse than either end of the operation.
 any other credential in the environment. It is a one-line comparison at the
 composition root and it would have made this impossible to configure.
 
-**BK-21 only.** BK-14 to BK-20 were found by the forensic audit below and
+**BK-21 and BK-23.** BK-14 to BK-20 were found by the forensic audit below and
 **all six were fixed on 7 September** - the audit is kept in full because
 its measurements are the evidence, not the headings.
 
