@@ -77,6 +77,21 @@ PROVEN: dict[str, str] = {
     "G-NOTHELD":
         "test_turn_contract.py::"
         "test_a_not_held_result_names_what_is_missing",
+    "G-EXPOSURE":
+        "test_a_disclosure_is_served_not_recorded.py::"
+        "test_the_cross_file_pass_is_disclosed_once_on_every_file",
+    "G-MODEL":
+        "test_a_disclosure_is_served_not_recorded.py::"
+        "test_a_refused_read_is_named_to_the_advocate_and_not_only_to_the_metrics",
+    "G-NOTASSESSED":
+        "test_a_disclosure_is_served_not_recorded.py::"
+        "test_a_search_that_never_ran_says_so_and_borrows_no_neighbour",
+    "G-SALVAGE":
+        "test_a_disclosure_is_served_not_recorded.py::"
+        "test_a_salvage_pass_that_could_not_run_says_so_on_the_served_turn",
+    "G-ADVERSE":
+        "test_a_disclosure_is_served_not_recorded.py::"
+        "test_a_theory_that_could_not_be_formed_does_not_pass_as_one",
     "G-READ":
         "test_reads_registry.py::"
         "test_the_turn_discloses_which_read_came_back_empty",
@@ -89,31 +104,14 @@ PROVEN: dict[str, str] = {
 #: carrier assertion four lines further down. A wrong NOT_PROVEN row is worse
 #: than none: it invents work and it slanders a test that was doing its job.
 NOT_PROVEN: dict[str, str] = {
-    "G-NOTASSESSED":
-        "test_no_phrase_list_decides.py:166 asserts the phrase \"I did not "
-        "search for authority on this turn\" appears in "
-        "`inspect.getsource(TurnEngine._derive)`. THE SOURCE, NOT THE ANSWER "
-        "-- it holds with the branch unreachable, which is how a phrase can "
-        "be in the product and never in a turn. Found by this check refusing "
-        "it as proof, which is what CARRIERS is for.",
-    "G-SALVAGE":
-        "D8: almost every `you lose` is one coordinate failing, and the ones "
-        "nobody moved must be named. Asserted at the module in "
-        "test_salvage.py; no assertion reads a served answer for them.",
-    "G-EXPOSURE":
-        "E-082 requires it EXACTLY ONCE on every file, empty or not, and the "
-        "two failures are opposite -- twice is noise, omitted reads as "
-        "`nothing found`. Asserted at the module; nothing COUNTS it in a "
-        "served answer, which is the half that would catch either.",
-    "G-ADVERSE":
-        "E-080's counterexample -- a theory that works only if three "
-        "documents are forgotten reads perfectly, because absence is "
-        "invisible. Asserted in test_proof.py at the module; no assertion "
-        "checks the unaccounted facts are NAMED in a served answer.",
-    "G-MODEL":
-        "test_provider_independence.py asserts the NEED fails and that "
-        "nothing is recorded as advice. That the gap is VISIBLE to the "
-        "advocate is not asserted anywhere.",
+    # EMPTY, as of 7 September 2026 -- all thirteen are proven on the
+    # advocate's own bytes. BK-9 closed the last five.
+    #
+    # THE TABLE STAYS. An empty exception list that has been deleted
+    # cannot record the next exception, and the next gate to be added
+    # with `disclose` and no served test needs somewhere honest to go --
+    # the accounting check below fails the build until it has one.
+    # Deleting this would turn that failure into a puzzle.
 }
 
 
@@ -124,17 +122,39 @@ def _built_disclose() -> list[str]:
 
 
 def _body(spec: str) -> str:
-    """The source of the test a declaration names, or a failure saying so."""
+    """The source of the test a declaration names, PLUS the helpers it
+    calls from its own module.
+
+    ONE LEVEL OF INDIRECTION, DELIBERATELY. A suite that drives five
+    served turns puts `out.answer.elements` in a helper, and reading only
+    the test function called those five proof of nothing -- measured, on
+    the five this check was built to accept.
+
+    It is not a widening of CARRIERS. `metrics` still fails, at either
+    level: the distinction this file exists to draw is between what the
+    advocate receives and what the run recorded, and a helper that reads
+    the metrics proves exactly as little as a test that does.
+    """
     filename, _, name = spec.partition("::")
     path = TESTS / filename
     assert path.exists(), f"{spec} names a file that does not exist"
-    tree = ast.parse(path.read_text(encoding="utf-8"))
-    for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef) and node.name == name:
-            return ast.get_source_segment(
-                path.read_text(encoding="utf-8"), node) or ""
-    raise AssertionError(f"{spec} names a test that does not exist")
+    src = path.read_text(encoding="utf-8")
+    tree = ast.parse(src)
 
+    defined = {n.name: n for n in ast.walk(tree)
+               if isinstance(n, ast.FunctionDef)}
+    node = defined.get(name)
+    assert node is not None, f"{spec} names a test that does not exist"
+
+    out = [ast.get_source_segment(src, node) or ""]
+    for call in ast.walk(node):
+        if (isinstance(call, ast.Call)
+                and isinstance(call.func, ast.Name)
+                and call.func.id in defined
+                and call.func.id != name):
+            out.append(ast.get_source_segment(src, defined[call.func.id])
+                       or "")
+    return "\n".join(out)
 
 def test_every_built_disclose_gate_is_accounted_for():
     """Thirteen gates, thirteen declarations. A gate added to the matrix with

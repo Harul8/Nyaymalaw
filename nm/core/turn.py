@@ -2784,9 +2784,31 @@ class TurnEngine:
                       f"explained nor conceded by the theory: {named}. A "
                       f"theory that works only because these went unmentioned "
                       f"reads perfectly and loses.")))
-        elif read.adverse:
+        else:
+            # THE CLEAN STATE, SAID -- E-082's rule, applied to the gate
+            # next door. `_exposure` already says "I looked ... and found
+            # none" on a file with no exposure, and this said nothing at
+            # all: an advocate seeing a theory with no adverse line could
+            # not tell whether the facts were weighed and answered,
+            # whether none were found, or whether nobody looked. Three
+            # declared states, two of them audible.
+            #
+            # AND IT DID NOT FIRE AT ALL when the read found no adverse
+            # facts, because the branch was `elif read.adverse`. A gate
+            # that is silent on its own clean state cannot be told from
+            # one that was never reached.
             metrics.fire("G-ADVERSE", "accounted",
                          f"{len(read.adverse)} adverse fact(s) accounted for")
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"I weighed the theory against {len(read.adverse)} "
+                      f"adverse fact(s) on this thread and each is either "
+                      f"explained or conceded."
+                      if read.adverse else
+                      "I looked for facts on this thread that cut against "
+                      "the theory and found none. That is a finding about "
+                      "what is on the file, not a view that the case is "
+                      "unopposed.")))
 
         if read.state == "none_formed" and read.why_not:
             out.append(Element(

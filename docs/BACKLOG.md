@@ -16,42 +16,95 @@ against.
 
 ## Open
 
-**BK-9** - five `disclose` gates with nothing proving the advocate sees
-them. Measured, enumerated and enforced; the detail is below with the
-other rows so the whole disclosure story reads in one place.
+### BK-10 - the handover contract is 4 of 16, and four of the blockers are stale
+Opened 7 September 2026, measured: `CASE_SUMMARY_SECTIONS` holds **16**
+sections, `CARRIES` holds **4** (`matter`, `threads`, `posture`,
+`chronology`), and `handover_blockers` returns **10**:
 
-### BK-9 - five disclose gates nothing proves the advocate sees
-Opened 7 September 2026 by the sweep that closed **B-128**, and it is
-open rather than deferred: this is work with a number on it, not a
-decision waiting.
+> `engagement`, `screens`, `issues`, `theory`, `proof`, `authorities`,
+> `deadlines`, `decisions`, `reservations`, `gaps`
 
-`tests/test_disclosure_reaches_the_advocate.py` accounts for all thirteen
-built `disclose` gates. **Eight are PROVEN** - a named test asserts the
-disclosure in the advocate's own bytes. **Five are not:**
+**That is the same 4 of 16 the Phase 1 commit measured**, and Phase 1
+landed. `Thread` now persists `issues`, `decisions`, `theory`, `proof`,
+`evidence` and `thresholds_told` across turns - the thread REMEMBERS. What
+did not happen is the summary CARRYING them: `MatterSummary` has no field
+for any of the six.
 
-| gate | what is asserted today |
-|---|---|
-| `G-NOTASSESSED` | the phrase is in `inspect.getsource(TurnEngine._derive)`. The SOURCE, which holds with the branch unreachable |
-| `G-SALVAGE` | D8 at the module, `test_salvage.py`. No served turn |
-| `G-EXPOSURE` | at the module. **E-082 wants it exactly ONCE per file**, and nothing counts it in an answer - the two failures are opposite, twice is noise and omitted reads as `nothing found` |
-| `G-ADVERSE` | at the module, `test_proof.py`. Nothing checks the unaccounted facts are NAMED to the advocate |
-| `G-MODEL` | the need fails and nothing is recorded as advice - both asserted. That the gap is VISIBLE is not |
+**So four blockers are now false statements about the product.** A
+receiving advocate is told the theory section was never built, on a file
+where the theory has been held and revised for four turns. `screens` is a
+fifth that could carry its `NOT_ASSESSED` state honestly rather than
+reading as absent (B-128).
 
-**Why this is not five separate rows.** They are one shape with one fix:
-a served turn that trips the gate, asserting on `out.answer.elements`,
-and the gate id named so a rename cannot separate the matrix row from the
-bytes. Two more were closed that way while the table was being written
-(`G-CASCADE`, `G-NOTHELD`), each one line.
+**Why it is a row and not today's fix.** Lifting a section into the summary
+is not a rename: `handover_complete` is a release-facing claim, and a
+section that carries must carry its THIRD state too, or the lift
+reintroduces §9 at the handover. Five sections at once is the work; the
+count above is what makes it schedulable.
 
-**The reason it is a row and not a fix today.** `G-EXPOSURE` and
-`G-ADVERSE` need a fixture that gets a turn far enough to produce an
-exposure section and an adversarial pass, which is scenario work rather
-than a line. The check FAILS THE BUILD on a new disclose gate declared
-with neither kind of entry, so the list cannot quietly grow while this
-sits here.
+### BK-11 - G-MODEL is proven at one read of fifteen
+Opened 7 September 2026. G-MODEL's clause is *the NEED fails, not the turn.
+The gap is visible and nothing is recorded as advice.* BK-9 proved the
+second sentence and the first at ONE site, the exposure read.
+
+**Measured across all fifteen structured reads** by refusing each in turn
+and serving a turn: **none left the answer with nothing at all** under a
+generous proxy - any of a dozen phrases the product uses for degradation.
+So there is no evidence of a silent failure.
+
+**What that measurement does NOT establish**, and the reason this is open:
+a generous proxy overstates. It cannot tell an answer that names the
+missing read from one that happens to carry an unrelated disclosure on the
+same turn. The claim worth having is per-read and specific - *the answer
+says WHICH read came back empty* - which is G-READ's promise applied to
+G-MODEL, and it needs fifteen assertions rather than one regex.
+
 ---
 
 ## Closed
+
+### BK-9 - five disclose gates nothing proved the advocate sees - **CLOSED**
+Closed 7 September 2026. `tests/test_disclosure_reaches_the_advocate.py`
+now stands at **thirteen of thirteen PROVEN** on the advocate's own bytes,
+and `NOT_PROVEN` is empty and kept - an exception table that has been
+deleted cannot record the next exception.
+
+The five are in `tests/test_a_disclosure_is_served_not_recorded.py`, one
+file because they are one shape rather than five topics. Each drives a
+served turn, reads `out.answer.elements`, and names its gate so a rename
+cannot separate the matrix row from the bytes. **Each was verified RED**
+by removing its disclosure phrase from the product and re-running - BK-5's
+lesson, where a served-turn assertion I was sure of passed with the fix
+reverted.
+
+`_Fails` refuses exactly one read by its `x-nm-read` name. One double, not
+five: the schema already carries the read's name, so nothing had to be
+invented to select on.
+
+**It found a product defect on the way, which is the point of writing the
+test rather than the note.** There was no clean-state sentence to assert
+on for G-ADVERSE, because there was none - **B-129**. Three declared
+states, audible on two.
+
+**Three things corrected themselves during the work, all worth keeping:**
+
+- The first fixture put two disputes in one message and got ONE thread, so
+  the exposure read was never reached and it looked like a product defect.
+  The existing suite's guard - `assert len(out.matter.threads) >= 2` - is
+  now in the helper.
+- The G-MODEL test asserted `"found none"` was absent. B-129's clean-state
+  line ends with those words, correctly, and the assertion broke the day it
+  landed. **An assertion on a fragment is an assertion on a coincidence**;
+  it names the exposure pass's own sentence now.
+- The accounting check could not see through `_served(out)` and called five
+  correct tests proof of nothing. It follows the module's own helpers now -
+  one level, and `metrics` still fails at either.
+
+**B-077 was NOT closed by this**, though its status line reads like it.
+*"Fixed - unverified on a served turn"* needs the DIFFERENTIAL judge E-073:
+the defect was an asymmetry, the recommendation softening the finding
+against our own client, and no assertion on the bytes can see that. Matching
+a row on its status and not its substance turns a real gap into a closed one.
 
 ### BK-1 — E-102 still fails, and the verdict has moved — **CLOSED**
 Fixed as **B-122** and judged: **E-102 PASS** on `mat_bf1b5f744dbc`, with the

@@ -4213,6 +4213,47 @@ d("B-128", "2026-09-07", "turn",
   "named no gate \u2014 and were closed by naming it, so the matrix row "
   "and the bytes cannot be separated by a rename.")
 
+d("B-129", "2026-09-07", "turn",
+  "G-ADVERSE DECLARES THREE STATES AND EMITTED ON TWO. On `accounted` "
+  "it fired and said nothing; where the read found no adverse facts at "
+  "all the branch was `elif read.adverse`, so it did not fire either. An "
+  "advocate reading a theory with no adverse line could not tell which "
+  "of three things had happened: the facts were weighed and each "
+  "answered, none were found, or nobody looked.",
+  "Closing BK-9 \u2014 writing the served-turn test that proves the "
+  "advocate sees G-ADVERSE. There was no clean-state sentence to assert "
+  "on, which is how the gap surfaced.",
+  "S1 \u2014 an absent input reading as success",
+  "A mechanical audit of every `metrics.fire` on a built disclose gate, "
+  "asking whether an `Element` is constructed in the same arm. It named "
+  "thirteen candidates; ten were artefacts of the line-window proxy "
+  "(the emission is a return value, or a question put on the file) and "
+  "each was READ rather than trusted. Two were real and one of those "
+  "\u2014 G-SALVAGE `varied` \u2014 was judged correct: the seven "
+  "coordinate findings ARE the output, and `unvaried` fires whenever any "
+  "is missing, so the states stay distinguishable.",
+  "The clean branch fires and emits, and the `elif` became an `else` so "
+  "it fires when the read found nothing adverse as well. Two wordings, "
+  "one for each case: N facts weighed and each explained or conceded, or "
+  "a statement that nothing on the file cuts against the theory \u2014 "
+  "expressly a finding about the FILE and not a view that the case is "
+  "unopposed.",
+  "Yes, AND THE CORRECT COPY WAS ALREADY NEXT DOOR. `_exposure` says "
+  "'I looked ... and found none' on a file with no exposure, which is "
+  "E-082's rule that an absent pass and an empty one are opposite "
+  "facts. This is that rule applied at the second site rather than a "
+  "second wording invented for it. The general form: A GATE THAT "
+  "DECLARES N STATES MUST BE AUDIBLE ON N STATES \u2014 a state the "
+  "advocate cannot hear is one they cannot tell from the gate never "
+  "being reached.",
+  "tests/test_a_disclosure_is_served_not_recorded.py::test_a_theory_"
+  "with_nothing_against_it_says_that_rather_than_going_quiet, on a "
+  "served turn. And the accounting in "
+  "tests/test_disclosure_reaches_the_advocate.py, which now stands at "
+  "THIRTEEN of thirteen proven on the advocate's own bytes \u2014 "
+  "`NOT_PROVEN` is empty and kept, because an exception table that has "
+  "been deleted cannot record the next exception.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",
