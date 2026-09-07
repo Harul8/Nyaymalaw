@@ -79,6 +79,17 @@ class TurnMetrics:
     grounding: dict = field(default_factory=dict)
     evidence_rounds: int = 0
     evidence_bound_hit: bool = False
+    route_reads: int = 0
+    """B1 -- is this a matter at all?
+
+    THE FIFTH SETTLING READ, and the first that runs before anything is
+    written. It decides whether there is a file to establish, which is
+    as far from a directive step as a read gets: NON_MATTER writes
+    nothing to any file, so getting it wrong discards the turn.
+
+    It replaced two keyword lists and two length rules on 7 September
+    2026 -- "bail" is one word and a case fact, "hi" is one word and a
+    greeting, and a count cannot tell them apart."""
     posture_reads: int = 0
     """Model calls spent READING what the advocate stated, not deriving.
 
@@ -136,8 +147,9 @@ class TurnMetrics:
 
         What belongs here is precisely what is NOT side-dependent. A
         recommendation is; an authority set is; a date is not; a cause is not."""
-        return (self.posture_reads + self.binding_reads
-                + self.chronology_reads + self.cause_reads)
+        return (self.route_reads + self.posture_reads
+                + self.binding_reads + self.chronology_reads
+                + self.cause_reads)
 
     def record_call(self, result) -> None:
         """Every model call counts -- including a streamed one.
@@ -207,6 +219,7 @@ class TurnMetrics:
             "posture_reads": self.posture_reads,
             "binding_reads": self.binding_reads,
             "chronology_reads": self.chronology_reads,
+            "route_reads": self.route_reads,
             "cause_reads": self.cause_reads,
             "evidence_bound_hit": self.evidence_bound_hit,
             "gates_fired": [

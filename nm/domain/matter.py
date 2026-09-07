@@ -339,6 +339,23 @@ class Thread:
     Untyped for the cycle reason above; `nm.domain.decision.from_stored`
     reads it back.
     """
+    thresholds_told: tuple[object, ...] = ()
+    """WHICH THRESHOLD GAPS THE ADVOCATE HAS ALREADY BEEN GIVEN IN FULL.
+
+    Measured on GS-14: the same forty-word line, naming the same nine
+    thresholds, on all four turns. An advocate who reads that four times
+    learns to skip it -- and what they then skip is the list of what
+    nobody has checked.
+
+    THIS IS HISTORY AND NOT A DERIVATION, which is why it is stored. The
+    blocked set is derivable from the thread on any turn; what the
+    advocate was last TOLD is not, and re-deriving it would mean telling
+    them again every turn, which is the defect.
+
+    IT MAY NOT MAKE THE GAP SILENT. The full list is replaced by a short
+    clause, never by nothing: the third state has to be visible in the
+    output and not only in the type.
+    """
     evidence: tuple[object, ...] = ()
     """WHAT THE FILE HAS AND WHO HOLDS IT. C7.
 

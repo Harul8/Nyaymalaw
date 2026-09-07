@@ -817,3 +817,72 @@ def test_the_child_is_told_to_write_utf8():
     assert "\u2014" in out, (
         "the em dash did not survive intact, so the child is not writing "
         "utf-8 and only the replacement is saving the report")
+
+
+# ============ a killed mutation run does not leave the tree mutated ========
+
+def test_a_killed_mutation_run_is_restored_by_the_next_one(tmp_path):
+    """B-127. A run under `timeout 420` was killed between the write and the
+    restore, and `nm/edge/projections.py` kept `"bounded_by": "thread_count"`
+    where the product says `"matter_count"`. Every check after it was about
+    mutated code.
+
+    A SIGKILL CANNOT BE CAUGHT, so the `finally` in the runner is exactly
+    what a hard kill goes around. The marker is what survives it.
+
+    PLANTED AS THE REAL THING: a marker plus a mutated file, which is what
+    the killed process actually left behind.
+    """
+    import json
+
+    from tools import mutate
+
+    target = ROOT / "nm" / "edge" / "projections.py"
+    original = target.read_text(encoding="utf8")
+    was_marker = (mutate.IN_FLIGHT.read_text(encoding="utf8")
+                  if mutate.IN_FLIGHT.exists() else None)
+    try:
+        mutate.IN_FLIGHT.parent.mkdir(parents=True, exist_ok=True)
+        mutate.IN_FLIGHT.write_text(json.dumps({
+            "file": "nm/edge/projections.py", "label": "planted",
+            "original": original}), encoding="utf8")
+        target.write_text(
+            original.replace('"matter_count"', '"thread_count"', 1),
+            encoding="utf8")
+        assert target.read_text(encoding="utf8") != original, (
+            "the plant did not change the file, so this tests nothing")
+
+        note = mutate._restore_any_leftover()
+
+        assert target.read_text(encoding="utf8") == original, (
+            "a killed run's mutation was not restored")
+        assert "RESTORED" in note, (
+            "the restore was silent, so nobody learns their last results were "
+            "about mutated code")
+        assert not mutate.IN_FLIGHT.exists()
+    finally:
+        target.write_text(original, encoding="utf8")
+        if was_marker is None:
+            mutate.IN_FLIGHT.unlink(missing_ok=True)
+        else:
+            mutate.IN_FLIGHT.write_text(was_marker, encoding="utf8")
+
+
+def test_a_clean_start_says_nothing():
+    """THE BOUND, and it is why the FIRST version of this guard was wrong.
+
+    That one asked git whether the mutated files were clean and refused on
+    ANY uncommitted edit -- which on a working tree means every file somebody
+    is mid-change on. A guard that fires on ordinary work is one people
+    delete, and then the mutation suite stops being run at all.
+    """
+    from tools import mutate
+
+    was = (mutate.IN_FLIGHT.read_text(encoding="utf8")
+           if mutate.IN_FLIGHT.exists() else None)
+    try:
+        mutate.IN_FLIGHT.unlink(missing_ok=True)
+        assert mutate._restore_any_leftover() == ""
+    finally:
+        if was is not None:
+            mutate.IN_FLIGHT.write_text(was, encoding="utf8")

@@ -4063,6 +4063,89 @@ d("B-125", "2026-09-07", "core",
   "arises — and a bound that the list still catches what it was written "
   "for, or the disclosure would fire on every turn.")
 
+d("B-126", "2026-09-07", "core",
+  "THE ROUTE WAS DECIDED ON WORD COUNT, under a docstring forbidding exactly "
+  "that. `classify_route` said ‘Route on WHAT THE MESSAGE DISCLOSES, "
+  "never on its length’ and then routed on length three lines below:\n"
+  "    len(text.split()) <= 3  → not a matter\n"
+  "    len(text.split()) > 25  → a full brief\n"
+  "NON_MATTER WRITES NOTHING TO ANY FILE, so ‘bail’, ‘he "
+  "absconded’ and ‘and now?’ on an open matter were DISCARDED "
+  "— no fact recorded, no answer, nothing.",
+  "The advocate, reading B-124 and B-125 and saying the general thing both "
+  "of them were: *even if one word or two words, it need not be a greeting "
+  "— it can be the actual dispute. Let the model decide; the model "
+  "knows the context.*",
+  "S7 — a rule applied outside its case",
+  "Reading the function after B-124, and then being told the rule rather "
+  "than deriving it. B-124 had COMPOSED the two keyword lists, which fixed "
+  "four measured phrasings and left the shape.",
+  "`nm/core/route.py` reads it. Both keyword lists are gone — 27 nouns "
+  "and 5 phrases — and both length rules with them. `classify_route` "
+  "survives as the FALLBACK and no longer guesses: with no model there is "
+  "nothing to read meaning with, so it takes the safe direction.\n\n"
+  "THE ASYMMETRY IS WHAT SURVIVED, and it was always the real rule: a full "
+  "workup on a question wastes time, a matter read as a greeting is "
+  "negligent. `cannot_tell` resolves to MATTER; an unavailable model "
+  "resolves to MATTER.\n\n"
+  "THE READ GETS THE FILE, which the sweep insisted on. It first took a "
+  "BOOLEAN — ‘a matter is open’ — and "
+  "`test_every_model_call_in_a_turn_receives_the_file` caught it "
+  "immediately: ‘And what is the limitation on that?’ is plainly "
+  "about the Kukatpally suit if you can see the file and an unanswerable "
+  "fragment if you cannot. Reading an existing matter writes nothing, so the "
+  "route can have the account without giving up that NON_MATTER creates no "
+  "file.",
+  "Yes, and it is B-031 in a second place: the posture reader was a closed "
+  "list of ten exact phrases and ‘we act for the workman’ was not "
+  "among them. THE GENERAL RULE: WHERE MEANING DECIDES, A MODEL READS IT "
+  "— a list decides on the words somebody thought of, and the next "
+  "phrasing is never among them.",
+  "tests/test_no_phrase_list_decides.py and tests/test_turn_contract.py, "
+  "both DRIVEN THROUGH THE ENGINE rather than through `classify_route` "
+  "— the fallback always says MATTER, so asserting against it would "
+  "assert nothing, silently. A source scan refuses the return of either "
+  "keyword list or either length rule. The mutation is retargeted onto the "
+  "read AND WAS RUN: the first retarget SURVIVED, because the test it named "
+  "uses seven- and fourteen-word messages that a `< 4` rule never touches. "
+  "Running it is what showed that; the anchor matching proved only that the "
+  "anchor matched.")
+
+d("B-127", "2026-09-07", "tooling",
+  "A KILLED MUTATION RUN LEFT A MUTATION APPLIED, and every check after it "
+  "was about mutated code. `tools/mutate.py` was run under `timeout 420`, "
+  "killed between the write and the restore, and `nm/edge/projections.py` "
+  "kept `\"bounded_by\": \"thread_count\"` where the product says "
+  "`\"matter_count\"`.",
+  "Running the mutation suite under a timeout to check one retargeted "
+  "anchor.",
+  "S1 — an absent input reading as success",
+  "The gate, and by luck rather than by design: the anchor scan saw one "
+  "anchor matching TWO places, and a projection test failed on the value. "
+  "Neither was looking for a leftover mutation.",
+  "The runner leaves a MARKER carrying the file and its ORIGINAL text before "
+  "it mutates, and removes it after restoring. A marker that outlives the "
+  "process is a killed run, and the next start restores it EXACTLY rather "
+  "than asking somebody to remember what the line was.\n\n"
+  "A SIGKILL CANNOT BE CAUGHT, so this is not a `finally` — there is "
+  "already one, and it is what a hard kill goes around.\n\n"
+  "THE FIRST VERSION ASKED GIT whether the files were clean and refused on "
+  "ANY uncommitted edit, which on this tree meant four files legitimately "
+  "mid-change. A guard that fires on ordinary work is one people delete, and "
+  "then the mutation suite stops being run at all. Git cannot tell an edit "
+  "from a leftover; THE RUNNER KNOWS WHAT IT WROTE.",
+  "Yes: A TOOL THAT MODIFIES THE TREE MUST BE ABLE TO SAY WHAT IT LEFT "
+  "THERE. Same rule as the gate stamp (B-121) and the served fingerprint "
+  "(B-114) — a result must name the thing it is about, and a tree "
+  "nobody can vouch for certifies nothing.",
+  "tests/test_tooling_bites.py::test_a_killed_mutation_run_is_restored_"
+  "by_the_next_one, which plants exactly what a killed run leaves \u2014 "
+  "a marker plus a mutated file \u2014 and asserts the next start puts it "
+  "back byte for byte, clears the marker, and SAYS SO. With the bound "
+  "that a clean start says nothing at all, which is why the first "
+  "version of the guard was wrong: it asked git whether the files were "
+  "clean and refused on any uncommitted edit.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

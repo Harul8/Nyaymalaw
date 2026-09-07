@@ -43,6 +43,7 @@ from nm.core import factors as factor_reader
 from nm.core import gaps as gap_queue
 from nm.core import issues as issue_reader
 from nm.core import posture as posture_reader
+from nm.core import route as route_reader
 from nm.core import theory as theory_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
 from nm.domain import decision, issue
@@ -198,66 +199,33 @@ class TurnOutput:
 # ============================================================== ADMIT =====
 
 
-_MATTER_SIGNALS = (
-    "client", "police", "arrest", "notice", "cheque", "suit", "court", "case",
-    "landlord", "tenant", "accused", "complaint", "fir", "decree", "appeal",
-    "possession", "land", "divorce", "maintenance", "bail", "agreement",
-    "dispute", "sued", "filed", "summons", "eviction", "recovery",
-)
-
-_ABOUT_NM = ("what can you do", "who are you", "what areas", "how do you work",
-             "what do you cover")
-
-
 @implements("B1")
-def classify_route(message: str) -> tuple[Route, Mode, str]:
-    """Route on WHAT THE MESSAGE DISCLOSES, never on its length.
+def classify_route(message: str,
+                   on_open_matter: bool = False) -> tuple[Route, Mode, str]:
+    """THE FALLBACK, for when the route read could not run.
 
-    Length was a measured live defect in both directions: a five-word emergency
-    read as a greeting, and a full workup run on "what can you help me with?".
+    THIS USED TO BE THE WHOLE MECHANISM: two keyword lists and two length
+    rules, under a docstring that said *"Route on WHAT THE MESSAGE DISCLOSES,
+    never on its length."* It routed on length three lines below that
+    sentence -- `<= 3` words meant not a matter, `> 25` meant a full brief.
+
+    LENGTH CARRIES NO INFORMATION HERE. "bail" is one word and a case fact;
+    "hi" is one word and a greeting. A count cannot tell them apart because
+    the difference is meaning. `nm.core.route` reads it now.
+
+    WHAT SURVIVES IS THE ASYMMETRY, which was always the real rule: a full
+    workup on a question wastes time, while a matter read as a greeting is
+    NEGLIGENT -- and NON_MATTER writes nothing to any file, so the turn is
+    gone. With no model there is nothing to read the meaning with, so this
+    refuses to guess and takes the safe direction.
+
+    AN EMPTY MESSAGE IS STILL REFUSED. That is not a judgement about content;
+    there is no content.
     """
-    text = message.strip().lower()
+    text = message.strip()
     if not text:
         raise TurnRefused("an empty message discloses nothing")
 
-    # A QUESTION ABOUT THIS PRODUCT IS ONE THAT DISCLOSES NO MATTER.
-    #
-    # This was a bare substring test on common English, checked FIRST --
-    # and measured on 7 September 2026, four of five realistic matter
-    # questions were routed away as questions about the product:
-    #
-    #   "what can you do about the limitation period on this suit?"
-    #   "who are you going to say served the notice?"
-    #   "what areas of the decree are still open?"
-    #   "how do you work out the period for a possession suit?"
-    #
-    # Each contains a matter signal -- suit, notice, decree, possession --
-    # and each got "Taking this as a question about what I do". The
-    # advocate's matter was discarded on a phrase that happened to be
-    # embedded in it.
-    #
-    # THE FIX IS NOT A LONGER LIST OF PHRASES. It is that the two lists
-    # COMPOSE: the product-question branch requires the ABSENCE of a
-    # matter, which is the rule the phrase list was standing in for.
-    discloses_a_matter = any(s in text for s in _MATTER_SIGNALS)
-
-    if any(p in text for p in _ABOUT_NM) and not discloses_a_matter:
-        return Route.NON_MATTER, Mode.SHORT_QUESTION, \
-            "Taking this as a question about what I do, not a matter."
-
-    if discloses_a_matter:
-        mode = Mode.FULL_BRIEF if len(text.split()) > 25 else Mode.SHORT_QUESTION
-        return Route.MATTER, mode, \
-            "Taking this as a matter. Say if I have that wrong."
-
-    greetings = {"hi", "hello", "hey", "good morning", "good evening", "thanks",
-                 "how are you", "how are you today"}
-    if text.rstrip("?.! ") in greetings or len(text.split()) <= 3:
-        return Route.NON_MATTER, Mode.SHORT_QUESTION, \
-            "No matter disclosed yet."
-
-    # Ambiguity resolves to MATTER: a full workup on a question wastes time,
-    # while a matter read as a greeting is negligent.
     return Route.MATTER, Mode.SHORT_QUESTION, \
         "Taking this as a matter. Say if I have that wrong."
 
@@ -449,7 +417,11 @@ class TurnEngine:
         t0 = time.perf_counter()
         metrics.failed_phase = Phase.ADMIT
 
-        route, mode, mode_statement = classify_route(turn.message)
+        # READ, NEVER COUNTED. The matter is part of what the turn
+        # discloses: an advocate five turns in who types "and now?" has
+        # not stopped talking about their matter, and NON_MATTER writes
+        # nothing to any file.
+        route, mode, mode_statement = self._read_route(turn, metrics)
 
         if route is Route.NON_MATTER:
             # NOTHING is written to any file on this route.
@@ -683,6 +655,8 @@ class TurnEngine:
                 decisions=concluded.get("decisions", thread.decisions),
                 proof=concluded.get("proof", thread.proof),
                 evidence=concluded.get("evidence", thread.evidence),
+                thresholds_told=concluded.get(
+                    "thresholds_told", thread.thresholds_told),
             )
             matter = matter.with_thread(settled)
             thread = settled
@@ -997,6 +971,53 @@ class TurnEngine:
             return existing
         title = turn.message.strip().split("\n")[0][:60] or "New matter"
         return Matter.create(advocate_id=turn.advocate_id, title=title)
+
+    @implements("B1")
+    def _read_route(self, turn: TurnInput,
+                    metrics: TurnMetrics) -> tuple[Route, Mode, str]:
+        """Is this a matter? READ, and never counted.
+
+        THE FALLBACK IS `classify_route`, which no longer guesses: with no
+        model there is nothing to read the meaning with, so it takes the safe
+        direction rather than a word count. Every failure here lands on
+        MATTER, because NON_MATTER writes nothing to any file and a matter
+        read as a greeting is gone.
+        """
+        if not turn.message.strip():
+            raise TurnRefused("an empty message discloses nothing")
+
+        # THE FILE, WHERE THERE IS ONE. Reading an existing matter writes
+        # nothing, so the route can see what the advocate has already said
+        # without giving up the property that NON_MATTER creates no file.
+        on_file = ""
+        if turn.matter_id:
+            try:
+                existing = self._store.load(turn.matter_id)
+            except Exception:  # noqa: BLE001 -- a route must not fail on this
+                existing = None
+            if existing is not None and existing.advocate_id == turn.advocate_id:
+                on_file = "\n".join(
+                    f.statement.strip() for f in existing.facts[-6:])
+
+        try:
+            res = self._model.structured(
+                route_reader.build_prompt(turn.message, on_file),
+                route_reader.ROUTE_SCHEMA, Tier.ROUTINE, max_tokens=120)
+            metrics.record_call(res)
+            metrics.route_reads += 1
+            read = route_reader.interpret(res.data or {})
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"the route could not be read: {exc}")
+            return classify_route(turn.message, bool(on_file))
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("B1", f"route read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return classify_route(turn.message, bool(on_file))
+
+        if not read.examined:
+            return classify_route(turn.message, bool(on_file))
+        return read.route, read.mode, read.statement
 
     @implements("C1")
     def _admit_facts(self, matter: Matter, turn: TurnInput,
@@ -1529,7 +1550,7 @@ class TurnEngine:
         position: limitation.Limitation | None = None
         if not side_blind:
             rows, register, position = self._thresholds(
-                thread, turn, result, metrics, facts)
+                thread, turn, result, metrics, facts, concluded)
             grounds.extend(rows)
 
             # D9 -- THE ISSUES, AFTER the thresholds and never before them.
@@ -1653,6 +1674,7 @@ class TurnEngine:
     @implements("D1")
     def _thresholds(self, thread: Thread, turn: TurnInput, result,
                     metrics: TurnMetrics, facts: tuple[Fact, ...],
+                    concluded: dict | None = None,
                     ) -> tuple[list[Element], tuple[deadlines.Deadline, ...],
                                limitation.Limitation]:
         """The threshold map, the limitation position, and the register.
@@ -1732,13 +1754,34 @@ class TurnEngine:
         blocked = [a for a in map_
                    if a.state is thresholds.ThresholdState.BLOCKED]
         if blocked:
-            out.append(Element(
-                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
-                text=(f"{len(blocked)} of {len(map_)} thresholds are not "
-                      f"assessed on this thread: "
-                      f"{', '.join(a.threshold.value for a in blocked)}. Those "
-                      f"are gaps in the map, not findings that they do not "
-                      f"arise.")))
+            # IN FULL WHEN IT CHANGES, SHORT WHEN IT HAS NOT (BK-7).
+            #
+            # Measured on GS-14: the same forty-word line naming the same
+            # nine thresholds, on all four turns. An advocate who reads
+            # that four times learns to skip it, and what they skip is
+            # the list of what nobody has checked.
+            #
+            # NEVER SILENT. §9 -- the third state must be visible in the
+            # OUTPUT and not only in the type -- so the full list is
+            # replaced by a clause, not by nothing.
+            names = tuple(sorted(a.threshold.value for a in blocked))
+            told = tuple(str(x) for x in (thread.thresholds_told or ()))
+            concluded["thresholds_told"] = names
+            if names == told:
+                out.append(Element(
+                    kind=ElementKind.GROUND, thread=thread.id,
+                    disclosure=True,
+                    text=(f"The same {len(blocked)} threshold(s) are still "
+                          f"not assessed on this thread.")))
+            else:
+                out.append(Element(
+                    kind=ElementKind.GROUND, thread=thread.id,
+                    disclosure=True,
+                    text=(f"{len(blocked)} of {len(map_)} thresholds are not "
+                          f"assessed on this thread: "
+                          f"{', '.join(names)}. Those "
+                          f"are gaps in the map, not findings that they do not "
+                          f"arise.")))
         return out, deadlines.register(register, turn.today), claimant
 
     @implements("D2")
@@ -3653,8 +3696,12 @@ class TurnEngine:
     def _non_matter_answer(self, turn, mode, mode_statement, metrics) -> Answer:
         text = ("Brief me and I will take it from there — who the client is, "
                 "what happened, and when.")
-        low = turn.message.strip().lower()
-        if any(p in low for p in _ABOUT_NM):
+        # THE READ ALREADY DECIDED THIS. Re-running a keyword list here
+        # was the last `_ABOUT_NM` use in the product, and a second
+        # place answering a question the route had answered -- so the
+        # two could disagree, and on "what can you do about this suit?"
+        # they did.
+        if mode_statement == route_reader.ABOUT_THE_PRODUCT:
             text = ("I advise practising advocates on matters in Telangana and "
                     "the Union of India, working from the statutes and judgments "
                     "in my corpus. Brief me on a matter and I will give you a view.")

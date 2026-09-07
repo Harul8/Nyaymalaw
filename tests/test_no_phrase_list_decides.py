@@ -45,9 +45,11 @@ exact phrases and "we act for the workman" was not among them.
 """
 from __future__ import annotations
 
+import pathlib
+
 import pytest
 
-from nm.core.turn import TurnEngine, classify_route
+from nm.core.turn import TurnEngine, TurnInput
 from nm.domain.answer import Route
 
 pytestmark = pytest.mark.class_a
@@ -61,12 +63,16 @@ pytestmark = pytest.mark.class_a
     "what areas of the decree are still open?",
     "how do you work out the period for a possession suit?",
 ])
-def test_a_matter_is_never_routed_away_by_a_phrase_inside_it(message):
+def test_a_matter_is_never_routed_away_by_a_phrase_inside_it(
+        message, tmp_path):
     """THE DEFECT, AS A RULE. Not "these four strings route correctly" —
     the rule is that a message DISCLOSING A MATTER is a matter, whatever
     else it happens to contain."""
-    route, _, _ = classify_route(message)
-    assert route is Route.MATTER, (
+    from tests.test_turn_contract import build
+
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(advocate_id="adv", message=message))
+    assert out.answer.route is Route.MATTER, (
         f"{message!r} discloses a matter and was routed as a question about "
         f"the product. The advocate's matter is discarded on a phrase that "
         f"happened to be embedded in it.")
@@ -78,29 +84,47 @@ def test_a_matter_is_never_routed_away_by_a_phrase_inside_it(message):
     "what areas do you cover?",
     "how do you work",
 ])
-def test_a_question_about_the_product_is_still_answered_as_one(message):
+def test_a_question_about_the_product_is_still_answered_as_one(message,
+                                                               tmp_path):
     """THE BOUND. A rule that routed everything to MATTER would pass every
-    test above and run a full workup on "who are you"."""
-    route, _, _ = classify_route(message)
-    assert route is Route.NON_MATTER
+    test above and run a full workup on "who are you".
 
-
-def test_the_two_lists_compose_rather_than_racing():
-    """WHY IT IS A RULE AND NOT AN ORDERING TWEAK.
-
-    Swapping the order would fix these four and leave the shape: a message
-    with no matter signal and an embedded product phrase would still be
-    decided by whichever list was consulted first. The product-question
-    branch REQUIRES the absence of a matter, which is the rule the phrase
-    list was standing in for.
+    DRIVEN THROUGH THE READ. `classify_route` is the fallback now and always
+    says MATTER, so asserting against it would assert nothing -- which it
+    would have done silently, since the assertion above it would still pass.
     """
-    import inspect
+    from tests.test_turn_contract import build
 
-    body = inspect.getsource(classify_route)
-    assert "discloses_a_matter" in body
-    assert "and not discloses_a_matter" in body, (
-        "the product-question branch no longer requires the absence of a "
-        "matter, so it can win against a message that discloses one")
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(advocate_id="adv", message=message))
+    assert out.answer.route is Route.NON_MATTER
+
+
+def test_the_route_is_read_and_never_counted():
+    """WHY IT IS A READ AND NOT A BETTER LIST.
+
+    B-124 composed the two keyword lists so the product-question branch
+    required the absence of a matter. That fixed four measured phrasings and
+    LEFT THE SHAPE: whichever list is consulted first still decides, on words
+    somebody thought of.
+
+    The advocate settled it on 7 September 2026 — *even if one word or two
+    words, it need not be a greeting; it can be the actual dispute. Let the
+    model decide.* Both lists and both length rules are gone.
+    """
+    from nm.core import turn as turn_module
+
+    src = (pathlib.Path(turn_module.__file__)).read_text(encoding="utf-8")
+    code = chr(10).join(ln for ln in src.splitlines()
+                        if not ln.lstrip().startswith("#"))
+    assert "_MATTER_SIGNALS" not in code, (
+        "the matter keyword list is back; a list decides on the words "
+        "somebody thought of, and the next phrasing is not among them")
+    assert "_ABOUT_NM" not in code
+    assert "len(text.split()) <= 3" not in code, (
+        "the route counts words again. 'bail' is one word and a case fact")
+    assert "len(text.split()) > 25" not in code, (
+        "the mode counts words again. A long question is a question")
 
 
 # ================= a phrase list's MISS may not be silent ===================

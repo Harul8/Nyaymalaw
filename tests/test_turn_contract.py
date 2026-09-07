@@ -16,7 +16,7 @@ from nm.adapters.model.config import ModelConfig, TierConfig
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.store.file_store import EncryptionNotConfigured, FileMatterStore
 from nm.core.posture import interpret
-from nm.core.turn import TurnEngine, TurnInput, classify_route
+from nm.core.turn import TurnEngine, TurnInput, TurnRefused, classify_route
 from nm.domain.answer import Element, ElementKind, Route, Signal
 from nm.domain.matter import Basis, Matter, Posture, Role, Side, Thread
 from nm.domain.quotable import Quotable
@@ -120,15 +120,59 @@ def build(tmp_path, evidence=None, responses=None, model=None):
 @refuses("B1", 0)
 @pytest.mark.eval_id("E-012")
 @pytest.mark.eval_id("E-100")
-def test_route_is_not_decided_on_message_length():
+def test_route_is_not_decided_on_message_length(tmp_path):
     """COUNTEREXAMPLE: 'police arrested my son tonight' read as a greeting
-    because it is five words -- measured live, in both directions."""
-    route, _, _ = classify_route("police picked up my client last night")
-    assert route is Route.MATTER, "a five-word emergency is a matter"
+    because it is five words -- measured live, in both directions.
 
-    route2, _, _ = classify_route(
-        "what areas of law do you cover and how do you work with an advocate")
-    assert route2 is Route.NON_MATTER, "a long question about NM is not a matter"
+    DRIVEN THROUGH THE READ, not through `classify_route`. The route is a
+    model read as of 7 September 2026: two keyword lists and two length rules
+    decided it before, under a docstring that forbade routing on length.
+    `classify_route` survives as the fallback and always says MATTER, so
+    asserting against it would assert nothing.
+    """
+    engine, _ = build(tmp_path)
+
+    short = engine.run(TurnInput(
+        advocate_id="adv", message="police picked up my client last night"))
+    assert short.answer.route is Route.MATTER, "a five-word emergency is a matter"
+
+    long_question = engine.run(TurnInput(
+        advocate_id="adv",
+        message=("what areas of law do you cover and how do you work with "
+                 "an advocate")))
+    assert long_question.answer.route is Route.NON_MATTER, (
+        "a long question about NM is not a matter")
+
+
+@refuses("B1", 0)
+@pytest.mark.eval_id("E-012")
+def test_a_one_word_case_fact_is_a_matter(tmp_path):
+    """THE ADVOCATE'S OWN COUNTEREXAMPLE, 7 September 2026: *even if one word
+    or two words, it need not be a greeting -- it can be the actual dispute.*
+
+    "bail" is one word and a case fact. "he absconded" is two. The old rule
+    routed anything of three words or fewer to NON_MATTER, which writes
+    NOTHING to any file -- so the turn was discarded.
+    """
+    engine, _ = build(tmp_path)
+    for message in ("bail", "he absconded", "ex parte decree"):
+        out = engine.run(TurnInput(advocate_id="adv", message=message))
+        assert out.answer.route is Route.MATTER, (
+            f"{message!r} is a case fact and was routed away; NON_MATTER "
+            f"writes nothing to any file, so the turn is gone")
+
+
+def test_the_fallback_never_guesses_from_length(tmp_path):
+    """`classify_route` is what runs when the read could not. It takes the
+    SAFE DIRECTION rather than a word count: a full workup on a question
+    wastes time, and a matter read as a greeting is negligent."""
+    for message in ("bail", "hi", "a much longer message about a suit"):
+        route, _, _ = classify_route(message)
+        assert route is Route.MATTER, (
+            f"the fallback routed {message!r} away without a model to read it")
+
+    with pytest.raises(TurnRefused):
+        classify_route("   ")
 
 
 @pytest.mark.eval_id("E-012")

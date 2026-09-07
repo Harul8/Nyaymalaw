@@ -554,13 +554,21 @@ MUTATIONS = [
      "        return replace(self, role=role, basis=basis, version=self.version + 1)",
      "test_a_stated_posture_is_never_silently_flipped", "E-031"),
 
+    # THE ROUTE IS A READ AS OF 7 SEPTEMBER 2026, so this plants the
+    # shortcut where a future one would go: ahead of the model call, on
+    # the length of the message. "bail" is one word and a case fact.
     ("route decided on word count",
      "nm/core/turn.py",
-     "    if discloses_a_matter:",
-     "    if len(text.split()) < 8:\n"
-     '        return Route.NON_MATTER, Mode.SHORT_QUESTION, "short"\n'
-     "    if discloses_a_matter:",
-     "test_route_is_not_decided_on_message_length", "E-012"),
+     "        if not turn.message.strip():",
+     "        if len(turn.message.split()) < 4:\n"
+     '            return Route.NON_MATTER, Mode.SHORT_QUESTION, "short"\n'
+     "        if not turn.message.strip():",
+     # NAMED FOR THE TEST THAT ACTUALLY BITES. The first attempt named
+     # `test_route_is_not_decided_on_message_length`, whose messages are
+     # seven and fourteen words -- a `< 4` rule never touches them, and the
+     # mutation SURVIVED. Running it is what showed that; the anchor matching
+     # proved only that the anchor matched.
+     "test_a_one_word_case_fact_is_a_matter", "E-012"),
 
     ("matter state written in plaintext",
      "nm/adapters/store/file_store.py",
@@ -1559,7 +1567,64 @@ def run_test(test: str) -> bool:
     return r.returncode == 0
 
 
+#: What is mid-mutation right now. Written before the source is touched and
+#: removed after it is restored, so a marker that outlives the process is a
+#: run that was killed.
+#:
+#: `.nm/` is gitignored, which is right: this is a fact about one machine's
+#: interrupted run, not something to share.
+IN_FLIGHT = ROOT / ".nm" / "mutation_in_flight.json"
+
+
+def _restore_any_leftover() -> str:
+    """Put back a mutation a killed run left applied.
+
+    MEASURED, 7 September 2026. A run under `timeout 420` was killed between
+    the write and the restore, and `nm/edge/projections.py` kept
+    `"bounded_by": "thread_count"` where the product says `"matter_count"`.
+    Two unrelated checks caught it -- the anchor scan saw one anchor matching
+    two places, and a projection test failed on the value -- which is the gate
+    working and also luck.
+
+    A SIGKILL CANNOT BE CAUGHT, so this is not a `finally`. The marker holds
+    the original text, so the next run restores it exactly rather than asking
+    somebody to remember what it was.
+
+    THE FIRST VERSION OF THIS ASKED GIT whether the files were clean, and
+    refused on any uncommitted edit -- which on this tree meant four files
+    that were legitimately mid-change. A guard that fires on ordinary work is
+    one people delete, and then the mutation suite stops being run at all.
+    Git cannot tell an edit from a leftover; the runner knows what it wrote.
+    """
+    if not IN_FLIGHT.exists():
+        return ""
+    try:
+        doc = json.loads(IN_FLIGHT.read_text(encoding="utf8"))
+        rel, original = doc["file"], doc["original"]
+    except (OSError, ValueError, KeyError) as exc:
+        return (f"  A mutation marker exists and could not be read "
+                f"({type(exc).__name__}). {IN_FLIGHT} names the file that "
+                f"may still be mutated; check it by hand.")
+    path = ROOT / rel
+    try:
+        current = path.read_text(encoding="utf8")
+    except OSError as exc:
+        return f"  {rel} could not be read to restore it: {exc}"
+    if current == original:
+        IN_FLIGHT.unlink(missing_ok=True)
+        return f"  A previous run was interrupted; {rel} was already intact."
+    path.write_text(original, encoding="utf8")
+    IN_FLIGHT.unlink(missing_ok=True)
+    return (f"  RESTORED {rel} -- a previous run was killed with a mutation "
+            f"still applied, and every result since was about mutated code.")
+
+
 def main() -> int:
+    leftover = _restore_any_leftover()
+    if leftover:
+        print(leftover)
+        print()
+
     survived: list[str] = []
     rejected: list[str] = []
 
@@ -1589,11 +1654,19 @@ def main() -> int:
             print(f"  SKIP      {label}\n            (anchor {what} in {rel})")
             survived.append(label)
             continue
+        # THE MARKER GOES DOWN FIRST, carrying the original text. A
+        # `finally` restores an ordinary failure; a SIGKILL cannot be
+        # caught, and this is what the next run reads.
+        IN_FLIGHT.parent.mkdir(parents=True, exist_ok=True)
+        IN_FLIGHT.write_text(
+            json.dumps({"file": rel, "label": label,
+                        "original": original}), encoding="utf8")
         path.write_text(original.replace(old, new, 1), encoding="utf8")
         try:
             still_passes = run_test(test)
         finally:
             path.write_text(original, encoding="utf8")
+            IN_FLIGHT.unlink(missing_ok=True)
         if still_passes:
             print(f"  SURVIVED  {label}\n            -> {test} did NOT catch it")
             survived.append(label)

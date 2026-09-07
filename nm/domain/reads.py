@@ -80,6 +80,18 @@ READS: tuple[Read, ...] = (
          "An acknowledgment under s.18 restarts the period. Missing it reports "
          "a live claim as dead (B-073); inventing one reports a dead claim as "
          "live."),
+    Read("route", True,
+         "It decides whether there is a MATTER AT ALL, and a turn "
+         "routed to NON_MATTER writes nothing to any file -- so a read "
+         "that answers with nothing does not produce a thin answer, it "
+         "produces no file. That is decisive on the narrowest reading "
+         "of the test: it moves no date and no amount, and it decides "
+         "whether any of them are computed.\n\n"
+         "IT REPLACED TWO KEYWORD LISTS AND TWO LENGTH RULES on 7 "
+         "September 2026. \u2018bail\u2019 is one word and a case fact; "
+         "\u2018hi\u2019 is one word and a greeting; a count cannot tell "
+         "them apart. Every refusal lands on MATTER, which is the "
+         "asymmetry the routing has recorded since it was written."),
     Read("posture", True,
          "Which side we are on. Nothing side-dependent can be computed without "
          "it, and a wrong one advises the opponent's case."),

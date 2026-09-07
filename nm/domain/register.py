@@ -100,6 +100,7 @@ ADDRESSES_THE_ADVOCATE: dict[str, str] = {
 #: and a peer clause in them would spend budget on nothing.
 STRUCTURED_ONLY: frozenset[str] = frozenset({
     "nm/core/cause.py::SYSTEM",
+    "nm/core/route.py::SYSTEM",
     "nm/core/chronology.py::SYSTEM",
     "nm/core/dispute.py::SYSTEM",
     "nm/core/evidence_item.py::INVENTORY_SYSTEM",

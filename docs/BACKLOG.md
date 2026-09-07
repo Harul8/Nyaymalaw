@@ -96,10 +96,19 @@ naming the tool, rather than falling back to a scan with different recall.
 
 ## Observed on GS-14, 6 September 2026 — worth a decision, not yet a defect
 
-### BK-7 — 9 of 9 thresholds report `not_assessed` on every turn
-Honest, and it is one line. But an advocate who reads it four times in four
-turns learns to skip it, which is the same erosion E-093 is about for length.
-**A third state that is always the same value is a candidate for saying once.**
+
+### BK-7 — thresholds repeated every turn — **CLOSED**
+Forty words naming nine thresholds, identical on all four GS-14 turns. The
+full list is given when the set CHANGES and one short clause when it has not —
+the B-120 move, never silence: §9 requires the third state to be visible in the
+output and not only in the type. `Thread.thresholds_told` carries what the
+advocate has already been given, which is history and not a derivation.
+
+### BK-8 — the phrase lists — **CLOSED as B-126**
+Not by trimming the lists. Both are gone, with both length rules, and
+`nm/core/route.py` reads the route. "bail" is one word and a case fact; "hi"
+is one word and a greeting; a count cannot tell them apart.
+
 
 ---
 

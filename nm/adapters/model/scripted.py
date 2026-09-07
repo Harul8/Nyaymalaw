@@ -699,11 +699,64 @@ def scripted_proof(user: str) -> str:
     return json.dumps({"positions": rows})
 
 
+def scripted_route(user: str) -> str:
+    """Matter, courtesy, or a question about the product. B1.
+
+    IT DOES NOT COUNT WORDS, because the product no longer does: "bail" is one
+    word and a case fact, "hi" is one word and a greeting, and the difference
+    is meaning. The double reads meaning the only way a double can -- from a
+    small vocabulary -- and the PRODUCT reads it with a model.
+    """
+    low = (user or "").lower()
+    said = low.split("the advocate typed:", 1)[-1].strip()
+    bare = said.rstrip("?.! ").strip()
+
+    courtesies = {"hi", "hello", "hey", "thanks", "thank you", "ok", "okay",
+                  "good morning", "good evening", "how are you"}
+    about = ("what can you do", "who are you", "what areas", "how do you work",
+             "what do you cover")
+
+    if bare in courtesies:
+        return json.dumps({"discloses": "neither", "depth": "a_question",
+                           "why": "a courtesy with no content"})
+    # A QUESTION ABOUT THE PRODUCT CARRIES NO FACT ABOUT A CASE.
+    #
+    # The first draft of this double gated the branch on `len(bare.split())
+    # <= 6` -- a length rule, in the double, while the product was having
+    # exactly that rule removed. A double that decides by length cannot
+    # exercise a product that decides by meaning: every test would pass for
+    # the wrong reason.
+    #
+    # So it composes, which is what a model concludes and what B-124
+    # established on the product side.
+    case_words = ("suit", "notice", "decree", "possession", "client", "court",
+                  "bail", "fir", "appeal", "tenant", "landlord", "cheque",
+                  "arrest", "absconded", "eviction", "recovery", "summons",
+                  "agreement", "invoice", "limitation")
+    carries_a_fact = any(w in bare for w in case_words)
+
+    if any(p in bare for p in about) and not carries_a_fact:
+        return json.dumps({"discloses": "about_the_product",
+                           "depth": "a_question",
+                           "why": "asks what this product does"})
+
+    # EVERYTHING ELSE IS A MATTER, which is the product's own asymmetry: a
+    # workup on a question wastes time, a matter read as a greeting is gone.
+    #
+    # DEPTH IS NOT LENGTH EITHER, and the double cannot read intent -- so it
+    # reports `a_question` unless the advocate has plainly set out a situation,
+    # which for a double means several sentences rather than several words.
+    depth = "a_full_brief" if said.count(".") >= 2 else "a_question"
+    return json.dumps({"discloses": "matter", "depth": depth,
+                       "why": "carries a fact about a case"})
+
+
 #: A title is an exact key on a closed vocabulary, so a collision is not
 #: possible rather than merely unlikely, and a schema with no title has no
 #: responder at all — which `tests/test_provider_independence.py` fails on
 #: rather than degrading at runtime.
 SCRIPTED_READS: dict[str, object] = {
+    "route": scripted_route,
     "posture": scripted_posture,
     "dispute": scripted_dispute,
     "dates": scripted_dates,
