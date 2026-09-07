@@ -126,10 +126,38 @@ def robots_allows(path: str) -> tuple[bool, str]:
     unreachable one as "go ahead" inverts it, and is the S1 shape applied to
     somebody else's server.
     """
+    # FETCHED WITH OUR OWN User-Agent, and this is not a detail.
+    #
+    # `RobotFileParser.read()` fetches with urllib's default UA, Indian
+    # Kanoon answers that with 403, and the parser turns a 403 into
+    # `disallow_all = True`. The first run of this tool reported
+    # *robots.txt DISALLOWS /search/* and fetched nothing -- on a file it
+    # had never read. The site permits /search/ for `*`.
+    #
+    # A crawler that will not identify itself when ASKING PERMISSION is not
+    # entitled to the answer. So the file is fetched the same way every
+    # other request is made, and parsed from the bytes.
     rp = urllib.robotparser.RobotFileParser()
     rp.set_url(f"{SITE}/robots.txt")
     try:
-        rp.read()
+        req = urllib.request.Request(f"{SITE}/robots.txt",
+                                     headers={"User-Agent": UA})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            if r.status in (401, 403):
+                # THE ONE CASE THAT REALLY IS A REFUSAL. Per the standard, a
+                # robots.txt behind an authorisation failure means the whole
+                # site is disallowed -- and here it is read from the STATUS
+                # rather than inferred from an exception.
+                return False, (f"robots.txt returned HTTP {r.status}, which the "
+                               f"standard makes a refusal for the whole site.")
+            rp.parse(r.read().decode("utf8", errors="replace").splitlines())
+    except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403):
+            return False, (f"robots.txt returned HTTP {exc.code}, which the "
+                           f"standard makes a refusal for the whole site.")
+        return False, (f"robots.txt could not be read (HTTP {exc.code}). "
+                       f"That is a refusal, not a permission: the file "
+                       f"exists so silence is not consent.")
     except Exception as exc:                                  # noqa: BLE001
         return False, (f"robots.txt could not be read ({type(exc).__name__}: "
                        f"{exc}). That is a refusal, not a permission: the "
@@ -160,10 +188,21 @@ def _get(url: str, budget: dict) -> str:
 #: A result link on the search page: /doc/<id>/
 _DOC = re.compile(r'href="/doc/(\d+)/"')
 
-#: "Cited by 7 documents" on a document page. The count is the WHOLE POINT of
-#: this job and it is the one thing the search page does not carry, which is
-#: why every candidate has to be opened.
-_CITEDBY = re.compile(r"Cited by\s+(\d+)\s+doc", re.I)
+#: HOW MANY DOCUMENTS CITE THIS ONE. The count is the whole point of this
+#: job, and the search page does not carry it -- which is why every
+#: candidate has to be opened.
+#:
+#: IT IS NOT PROSE. The first version looked for "Cited by 7 documents" and
+#: matched nothing on any of ten real pages -- correctly reported as ten
+#: documents that DID NOT STATE a count rather than ten with zero, which is
+#: the distinction that made the failure visible in one line instead of
+#: producing a confident empty result.
+#:
+#: The real shape is a link: `citedby:86420904">276`. Note the neighbouring
+#: `cites:<id>">N`, which is the OPPOSITE relation -- how many this one
+#: cites -- and would silently give the wrong number to anything matching on
+#: `cite` loosely.
+_CITEDBY = re.compile(r'citedby:\d+"[^>]*>\s*(\d+)')
 
 _TITLE = re.compile(r"<title>(.*?)</title>", re.S | re.I)
 

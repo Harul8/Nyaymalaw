@@ -6,10 +6,15 @@ Nothing is encoded that does not pass here. Two checks:
   2. Provision: readable back verbatim from some store, with the store named.
 """
 import json
+import pathlib
 import sqlite3
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from nm.ports.evidence import ATTRIBUTABLE_LABELS  # noqa: E402
 
 CHUNKS = "legal_database/vector_store/chunks.db"
-ATTRIBUTABLE = ("ratio", "reasoning", "order")
+ATTRIBUTABLE = ATTRIBUTABLE_LABELS
 
 ANCHORS = [
     "HC_1986_SHEIK_KHASIM_BI_VS_THE_STATE",

@@ -55,7 +55,13 @@ utf8_console()
 CORPUS = ROOT / "legal_database" / "vector_store"
 OUT = ROOT / ".nm" / "authority.db"
 
-ATTRIBUTABLE = ("ratio", "reasoning", "order")
+from nm.ports.evidence import ATTRIBUTABLE_LABELS  # noqa: E402
+
+#: WHAT THE INDEX HOLDS, read from the contract that also decides what
+#: may be quoted. This was a local copy, and RG-04 held another one --
+#: a release criterion measuring an index it was not describing, had
+#: either ever moved.
+ATTRIBUTABLE = ATTRIBUTABLE_LABELS
 
 SCHEMA = """
 create virtual table paras using fts5(

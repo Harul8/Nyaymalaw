@@ -312,6 +312,29 @@ GATES: tuple[Gate, ...] = (
         built=True,
     ),
     Gate(
+        id="G-SPLIT",
+        condition="One message describes more than one dispute, so a thread "
+                  "is opened for each and only one of them is advised on.",
+        states=("split", "single", "not_assessed"),
+        # `not_assessed` IS NOT A COURTESY MEMBER. The count comes from a
+        # model read, and a read that does not run leaves the binder
+        # falling back to one thread -- which is indistinguishable from
+        # `single` unless this says otherwise. The advocate is then
+        # advised on one dispute with no indication that nobody counted.
+        response=Response.DISCLOSE,
+        scope=Scope.TURN,
+        persistence=Persistence.TURN,
+        recovery=Recovery.ADVOCATE,
+        visible="The other disputes are named and marked NOT ASSESSED. Silence "
+                "here reads as an answer about them: a brief opening `first "
+                "... second ... third` produced one thread with one posture "
+                "and one limitation across all three, and the advocate was "
+                "told every deadline on the file had passed while a trespass "
+                "five days old sat in it.",
+        feature="B1",
+        built=True,
+    ),
+    Gate(
         id="G-ATTRIB",
         condition="A proposition is attributed to a judgment from a paragraph that "
                   "is not ratio, reasoning or order.",

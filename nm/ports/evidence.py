@@ -32,19 +32,103 @@ from nm.domain.text import blank, refuses_blank_text
 
 
 class ParaKind(str, Enum):
-    """Only the first three are attributable to a court."""
+    """WHETHER A JUDGMENT MAY BE QUOTED FOR A PROPOSITION. Three states.
 
-    RATIO = "ratio"
-    REASONING = "reasoning"
-    ORDER = "order"
-    ARGUMENTS = "arguments"      # counsel's submission -- 14.8% of the corpus
-    FACTS = "facts"
-    HEADNOTE = "headnote"
-    UNKNOWN = "unknown"          # 26.7% -- cannot be vouched either way
+    IT HELD SEVEN AND THE PRODUCT READ ONE BIT OF THEM. `ratio`, `reasoning`,
+    `order`, `arguments`, `facts`, `headnote`, `unknown` -- and the only
+    question ever asked of a value was `.attributable`. Nothing in `nm/` read
+    the difference between a ratio and a reasoning paragraph, or between a
+    submission and a headnote. Three of the seven members -- `ARGUMENTS`,
+    `FACTS`, `HEADNOTE` -- could not be produced by any production path at
+    all: the evidence adapter folded every non-attributable label to
+    `UNKNOWN` before a Finding was ever built.
+
+    WHAT THE DISTINCTIONS COST, MEASURED. On the 100 most-cited Supreme Court
+    judgments, adjudicated by the advocate: of 40 disputes between the
+    corpus's own label and a model's read, **18 disappear the moment the seven
+    collapse to this**. Every one of those eighteen was a ratio-versus-
+    reasoning argument -- a boundary two careful readers genuinely differ on,
+    which changed nothing downstream because nothing downstream read it.
+
+    The 22 that remain are the real ones: **14 HIDE a holding** (the corpus
+    says `arguments` where the court is speaking) and 8 attribute wrongly.
+    Those are not fixed by this change; they are made visible by it, because
+    they are now the only kind of error this field can carry.
+
+    THE THIRD STATE IS A VALUE -- §9. `NOT_ATTRIBUTABLE` is a paragraph that
+    WAS read and is positively not the court deciding. `UNKNOWN` is one
+    nobody classified. The two have the same retrieval consequence and are
+    not the same fact, and the old adapter folded the first into the second --
+    so the product said "unclassified" about paragraphs the corpus had
+    confidently called counsel's submission.
+
+    WHY THESE NAMES. `G-ATTRIB` declares its states as `attributable` /
+    `not_attributable`. The type now carries the gate's own two words, so the
+    matrix and the contract cannot drift into two vocabularies for one fact.
+    """
+
+    ATTRIBUTABLE = "attributable"
+    NOT_ATTRIBUTABLE = "not_attributable"
+    UNKNOWN = "unknown"
 
     @property
     def attributable(self) -> bool:
-        return self in (ParaKind.RATIO, ParaKind.REASONING, ParaKind.ORDER)
+        return self is ParaKind.ATTRIBUTABLE
+
+
+#: THE CORPUS'S SEVEN LABELS AND WHAT EACH MEANS HERE. THE ONLY COPY.
+#:
+#: `("ratio", "reasoning", "order")` was written out SIX TIMES -- the evidence
+#: adapter, the index builder, the release gate, the golden finder, the set
+#: verifier and the classifier eval. All six agreed on the day this was
+#: measured and nothing whatever refused a seventh that did not. Two of them
+#: are load-bearing against each other: the index builder decides what the
+#: corpus can retrieve, and `RG-04` measures whether enough of it is
+#: retrievable. Those two disagreeing is a blocking release criterion scoring
+#: an index it is not describing -- B-044's shape exactly.
+#:
+#: `facts` IS THE COURT'S OWN WRITING AND IS STILL NOT ATTRIBUTABLE. The
+#: question this field answers is not who wrote the paragraph but whether it
+#: decides anything: a recital of what happened cannot carry a proposition.
+#: A collapse along "the court wrote it" would have made `facts` quotable and
+#: widened attribution silently, which is why the mapping is written out
+#: label by label rather than derived from a speaker.
+_CORPUS_LABEL: dict[str, ParaKind] = {
+    "ratio": ParaKind.ATTRIBUTABLE,
+    "reasoning": ParaKind.ATTRIBUTABLE,
+    "order": ParaKind.ATTRIBUTABLE,
+    "arguments": ParaKind.NOT_ATTRIBUTABLE,
+    "facts": ParaKind.NOT_ATTRIBUTABLE,
+    "headnote": ParaKind.NOT_ATTRIBUTABLE,
+    "unknown": ParaKind.UNKNOWN,
+}
+
+#: EVERY LABEL THE CORPUS USES, in the order the table declares them.
+#: The corpus still carries all seven -- this product collapsed what it
+#: DOES with them, not what the corpus holds -- so a classifier eval
+#: measuring against corpus labels needs the seven, and gets them from
+#: the same table rather than retyping them.
+CORPUS_LABELS: tuple[str, ...] = tuple(_CORPUS_LABEL)
+
+#: The corpus labels a judgment may be quoted for. DERIVED AND NEVER
+#: AUTHORED: it is computed from the table above, so it cannot drift from
+#: `kind_for_corpus_label` the way six hand-written copies could.
+ATTRIBUTABLE_LABELS: tuple[str, ...] = tuple(
+    label for label, kind in _CORPUS_LABEL.items() if kind.attributable)
+
+
+def kind_for_corpus_label(label: str | None) -> ParaKind:
+    """One corpus `paragraph_type` string in, one `ParaKind` out.
+
+    AN ABSENT OR UNRECOGNISED LABEL IS `UNKNOWN`, NEVER `NOT_ATTRIBUTABLE`.
+    Both are non-attributable and the retrieval consequence is identical, so
+    the temptation is to treat them alike -- but only one of them is a
+    reading. A label this table has never seen is a paragraph nobody
+    classified, which is what `UNKNOWN` says. Defect shape S1: an absent
+    input must not read as a finding, and "positively not the court" is a
+    finding.
+    """
+    return _CORPUS_LABEL.get((label or "").strip().lower(), ParaKind.UNKNOWN)
 
 
 class Binding(Spoken, str, Enum):
@@ -237,7 +321,8 @@ class Finding:
         if self.source_kind is SourceKind.AUTHORITY and not self.para_kind.attributable:
             raise ValueError(
                 f"a proposition attributed to a judgment must come from a "
-                f"ratio/reasoning/order paragraph, not {self.para_kind.value!r} "
+                f"paragraph in which the court decides, reasons or orders. "
+                f"This one is {self.para_kind.value!r} "
                 f"(PRD H7, gate G-ATTRIB)")
         if self.source_kind is SourceKind.PROVISION and self.valid_from is None \
                 and self.valid_to is None:

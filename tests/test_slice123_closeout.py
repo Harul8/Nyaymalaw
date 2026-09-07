@@ -311,7 +311,7 @@ def test_a_finding_cannot_be_built_without_what_makes_it_auditable():
     with pytest.raises(ValueError, match="validity window"):
         finding(valid_from=None, valid_to=None)
     finding(source_kind=SourceKind.AUTHORITY, ref="X v Y", span="held that",
-            locator="X::p1::ratio", store="idx", para_kind=ParaKind.RATIO,
+            locator="X::p1::ratio", store="idx", para_kind=ParaKind.ATTRIBUTABLE,
             treatment=Treatment.not_checked("no entry"),
             valid_from=None, valid_to=None)
 

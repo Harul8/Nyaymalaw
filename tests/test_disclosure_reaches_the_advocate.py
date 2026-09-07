@@ -77,6 +77,9 @@ PROVEN: dict[str, str] = {
     "G-NOTHELD":
         "test_turn_contract.py::"
         "test_a_not_held_result_names_what_is_missing",
+    "G-SPLIT":
+        "test_a_disclosure_is_served_not_recorded.py::"
+        "test_the_disputes_not_advised_on_are_named_in_the_answer",
     "G-EXPOSURE":
         "test_a_disclosure_is_served_not_recorded.py::"
         "test_the_cross_file_pass_is_disclosed_once_on_every_file",

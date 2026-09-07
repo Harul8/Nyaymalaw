@@ -463,9 +463,9 @@ main.single {
   font-weight: 600;
 }
 
-/* =========================== THE RECORD =========================== */
+/* ========================== THE HISTORY =========================== */
 
-.record-head {
+.history-head {
   align-items: center;
   display: flex;
   gap: 16px;
@@ -474,9 +474,9 @@ main.single {
   padding-bottom: 12px;
 }
 
-.record-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.history-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
 
-.record-head select {
+.history-head select {
   background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: 3px;

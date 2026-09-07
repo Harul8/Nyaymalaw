@@ -196,6 +196,15 @@ def scripted_dates(user: str) -> str:
     return json.dumps({"events": events})
 
 
+#: How an advocate enumerates a file out loud. TEST DOUBLE ONLY.
+#:
+#: A phrase list is right here and wrong in the product, for the reason
+#: `scripted_posture` gives about its own regex: this stands in for a model
+#: on a deterministic path. The product counts with a model read precisely
+#: because the fourth way of saying `and another thing` is always outside
+#: any list.
+_ENUMERATES = ("first,", "second,", "third,", "fourth,", "fifth,")
+
 def scripted_dispute(user: str) -> str:
     """A deterministic stand-in for the model's dispute read."""
     # ONLY WHAT THE ADVOCATE SAID, not the prompt around it. Taking everything
@@ -205,15 +214,49 @@ def scripted_dispute(user: str) -> str:
     # turned it into `cannot_tell`, which is that guard doing its job on the
     # test double.
     said = user.split("just said:", 1)[-1].rsplit(chr(10) * 2, 1)[0].lower()
+
+    # HOW MANY DISPUTES, counted the same deterministic way. The product
+    # reads this with a model; the double marks off on the same ordinal
+    # words an advocate uses to enumerate a file -- `first ... second ...`
+    # -- which is exactly the shape that produced one thread for three
+    # disputes before `bind` could count.
+    described = _described_spans(said)
+
     for needle in _OPENS_A_DISPUTE:
         if needle in said:
             start = said.index(needle)
             return json.dumps({
                 "verdict": "opens",
                 "quoted": said[start:start + len(needle)],
-                "why": f"the advocate marks it off with {needle!r}"})
+                "why": f"the advocate marks it off with {needle!r}",
+                "disputes": described})
     return json.dumps({"verdict": "continues", "quoted": "",
-                       "why": "it adds detail to what is on the file"})
+                       "why": "it adds detail to what is on the file",
+                       "disputes": described})
+
+
+def _described_spans(said: str) -> list[dict]:
+    """The disputes a message enumerates, for the double.
+
+    SPANS ARE CUT FROM `said` AND NEVER COMPOSED, because
+    `dispute.interpret` checks every one against the advocate's own words
+    and drops what it cannot find. A double that invented a label would
+    have its items silently discarded and would look like a model that
+    found nothing -- which is the failure the guard exists to cause, and
+    a poor way to discover it.
+    """
+    cuts = [(said.index(w), w) for w in _ENUMERATES if w in said]
+    if len(cuts) < 2:
+        return []
+    cuts.sort()
+    out = []
+    for n, (start, _word) in enumerate(cuts):
+        end = cuts[n + 1][0] if n + 1 < len(cuts) else len(said)
+        span = said[start:end].strip().rstrip(".,;")
+        if len(span) < 12:
+            continue
+        out.append({"quoted": span, "label": span[:60]})
+    return out
 
 
 def scripted_role(user: str) -> str:

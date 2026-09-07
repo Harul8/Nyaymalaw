@@ -7,6 +7,7 @@ guard -- and every defect the first external review found lived in that gap.
 """
 from __future__ import annotations
 
+import ast
 import json
 from datetime import date
 
@@ -467,7 +468,7 @@ def test_a_judgment_proposition_cannot_come_from_counsels_submission():
     with pytest.raises(ValueError):
         finding(source_kind=SourceKind.AUTHORITY, ref="X v Y",
                 span="counsel submitted that...", locator="l", store="s",
-                para_kind=ParaKind.ARGUMENTS,
+                para_kind=ParaKind.NOT_ATTRIBUTABLE,
                 treatment=Treatment.not_checked("no citator entry"))
 
 
@@ -631,19 +632,78 @@ def test_every_screen_is_named_to_the_advocate_and_none_reads_as_clear(tmp_path)
         "does not say that is an exception")
 
 
-def test_a_blocked_turn_still_says_the_screens_have_not_run(tmp_path):
-    """A turn that stopped to ask a question has still not screened the
-    matter, and that is exactly when it matters. All three branches that
-    build an Answer carry the rows."""
+def test_every_answer_in_the_run_carries_the_trailing_disclosures(tmp_path):
+    """EVERY Answer built by `_run` carries the screen rows and the split
+    notice, or is one of the declared exemptions.
+
+    THIS COUNTED THE MECHANISM AND NOT THE POPULATION, and that is how it
+    passed over a live defect. It asserted three calls to `_with_screens`;
+    there are FIVE Answer constructions in `_run`, so two of them carried
+    no trailing disclosure at all and the check was satisfied anyway.
+
+    Measured on three served turns before the fix: `G-UNSCREENED` fired on
+    every one and the screens line reached the advocate on none, whenever
+    the second citation attempt ran. The gate fired, the matrix promised
+    the advocate would see it, and the answer carried nothing -- B-128,
+    on the one branch nobody was counting.
+
+    THE EXEMPTION IS DECLARED, NOT SILENT. An incomplete screen BLOCKS,
+    and the blocking question is itself the answer about screens; adding
+    the rows underneath would say the same thing twice. That is a reason,
+    and it lives here where the next person can disagree with it.
+    """
     import inspect
 
     from nm.core.turn import TurnEngine
 
-    body = inspect.getsource(TurnEngine._run)
-    assert body.count("_with_screens(elements, screens)") == 3, (
-        "not every branch carries the screen rows; a blocked turn would "
-        "report nothing about a matter nobody screened")
+    #: Answer constructions that legitimately carry no trailing rows,
+    #: by the text that identifies them, with the reason.
+    exempt = {
+        "screens.blocking_question":
+            "an incomplete screen blocks, and the question IS the screens "
+            "answer -- the rows below it would repeat it",
+    }
 
+    src = inspect.getsource(TurnEngine._run)
+    tree = ast.parse(src.lstrip())
+    answers = [n for n in ast.walk(tree)
+               if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+               and n.func.id == "Answer"]
+    assert len(answers) >= 4, (
+        f"only {len(answers)} Answer construction(s) found -- the walk is "
+        f"broken, and a check that sees nothing passes everything")
+
+    uncovered = []
+    for node in answers:
+        kw = [k for k in node.keywords if k.arg == "elements"]
+        if not kw:
+            continue
+        text = ast.unparse(kw[0].value)
+        if any(marker in text for marker in exempt):
+            continue
+        if "_with_screens" not in text:
+            uncovered.append(text[:90])
+
+    assert not uncovered, (
+        "these Answer constructions do not carry the trailing disclosures, "
+        "so a gate can fire while the advocate is told nothing:\n  "
+        + "\n  ".join(uncovered)
+        + "\n\nRoute the elements through `_with_screens`, or add the site "
+          "to EXEMPT above with the reason it needs none.")
+
+
+def test_the_answer_coverage_check_can_see_an_uncovered_site():
+    """POSITIVE CONTROL. S11 -- a check that cannot fail proves nothing,
+    and this one spent a slice passing over two uncovered sites.
+    """
+    planted = ast.parse(
+        "Answer(route=r, elements=tuple([*head, *derived]))")
+    node = next(n for n in ast.walk(planted)
+                if isinstance(n, ast.Call)
+                and getattr(n.func, "id", "") == "Answer")
+    text = ast.unparse([k for k in node.keywords if k.arg == "elements"][0].value)
+    assert "_with_screens" not in text, (
+        "the check would not notice an Answer built without the assembler")
 
 def test_the_admit_decision_goes_through_the_module(tmp_path):
     """`may_admit_substance` is the one owner of B3's rule. Returning

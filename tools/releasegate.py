@@ -63,6 +63,7 @@ utf8_console()
 from nm.knowledge.citator import normalise_case_name  # noqa: E402
 from nm.knowledge.jurisdiction import BIFURCATION, Court, normalise_court  # noqa: E402
 from nm.knowledge.manifest import Manifest  # noqa: E402
+from nm.ports.evidence import ATTRIBUTABLE_LABELS  # noqa: E402
 from tools._fingerprint import source_fingerprint  # noqa: E402
 
 #: The first year of "the current period" for coverage purposes. Authority
@@ -156,7 +157,10 @@ def measure_paragraphs() -> dict:
     if not db.exists():
         return {"available": False, "store": str(db)}
 
-    attributable = {"ratio", "reasoning", "order"}
+    # THE SAME LIST THE INDEX BUILDER USES, and not a second copy of
+    # it: RG-04 scores whether enough of the corpus is retrievable, so
+    # it must count exactly what retrieval keeps.
+    attributable = set(ATTRIBUTABLE_LABELS)
     con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     total = attr = linked = attr_linked = 0
     try:

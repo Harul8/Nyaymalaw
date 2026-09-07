@@ -22,7 +22,9 @@ utf8_console()
 
 SUMMARIES = "legal_database/vector_store/case_summaries_v3_chunks.json"
 CHUNKS = "legal_database/vector_store/chunks.db"
-ATTRIBUTABLE = ("ratio", "reasoning", "order")
+from nm.ports.evidence import ATTRIBUTABLE_LABELS  # noqa: E402
+
+ATTRIBUTABLE = ATTRIBUTABLE_LABELS
 
 TOPICS = {
     "bail_anticipatory": (r"anticipatory bail|section 438", [r"reason to believe", r"non-bailable", r"pre-arrest", r"custody", r"sessions"]),

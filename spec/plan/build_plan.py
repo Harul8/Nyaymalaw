@@ -4672,6 +4672,43 @@ d("B-140", "2026-09-07", "tooling",
   "Without the first of those the fix would have made T9 unfailable, "
   "which is the defect it was fixing wearing the other face.")
 
+d("B-142", "2026-09-07", "turn",
+  "EVERY TRAILING DISCLOSURE WAS DROPPED ON ANY TURN THAT NEEDED A SECOND "
+  "CITATION ATTEMPT. `G-UNSCREENED` fired on three consecutive served turns "
+  "and the screens line reached the advocate on NONE of them. The "
+  "discriminator is the late-citation round: 14 model calls with no late "
+  "round showed the line; 23 calls with the late round did not. The late "
+  "path rebuilt the Answer from `head` and never called `_with_screens`, so "
+  "the gate fired, the matrix promised the advocate would see it, and the "
+  "answer carried nothing.",
+  "Chasing a NEW disclosure (G-SPLIT) to the served bytes after BK-27. The "
+  "split notice was absent, and the screens notice turned out to be absent "
+  "beside it \u2014 on a path that predates both.",
+  "S1 \u2014 an absent input reads as success (the advocate cannot tell a "
+  "screen nobody ran from a screen that passed), reached through the "
+  "population error below",
+  "WHY NOTHING CAUGHT IT, AND THIS IS THE ROW\u2019S POINT. "
+  "`test_a_blocked_turn_still_says_the_screens_have_not_run` asserted THREE "
+  "calls to `_with_screens` in `_run`. There are FIVE `Answer` "
+  "constructions. It counted the MECHANISM and not the POPULATION, so it "
+  "was satisfied while two sites carried no trailing disclosure at all. "
+  "That is CLAUDE.md \u00a71\u2019s enumerator-scoped-too-narrowly shape "
+  "\u2014 in the check written to defend against exactly this class of "
+  "defect. B-128 was closed on the same reasoning and this branch was never "
+  "in its population.",
+  "The late path is ONE Answer construction routed through `_with_screens` "
+  "\u2014 assembling the element list before constructing, rather than "
+  "constructing twice, which is also what stops the rows being appended "
+  "once at each step. "
+  "`test_every_answer_in_the_run_carries_the_trailing_disclosures` walks "
+  "the `ast`, enumerates every `Answer` construction and requires each to "
+  "route through the assembler or be a DECLARED exemption carrying its "
+  "reason \u2014 the incomplete-screen block, where the blocking question "
+  "IS the screens answer. It has a positive control, because a check that "
+  "spent a slice passing over two uncovered sites has to prove it can "
+  "fail. Verified on the bytes: a served turn at 24 model calls now "
+  "carries both the screens line and the split notice.",
+  "E-082"),
 d("B-141", "2026-09-07", "docs",
   "A BACKLOG ROW SAID A BUILD ARTEFACT DID NOT EXIST AND IT HAD EXISTED "
   "FOR EIGHT DAYS. BK-4 read *`tools/build_authority_index.py` has never "

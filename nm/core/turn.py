@@ -420,8 +420,8 @@ def _reactivated(matter) -> list:
               + " ".join(r.as_current_finding() for r in back)))]
 
 
-def _with_screens(elements: list, screens) -> tuple:
-    """The answer's elements, with the screen states after the action.
+def _with_screens(elements: list, screens, split=None) -> tuple:
+    """The answer's elements, with the trailing background after the action.
 
     BACKGROUND FOLLOWS THE ACTION. `Answer.__post_init__` refuses a leading
     GROUND -- PRD §6.2 S3 -- and appending this at the top of the list put it
@@ -431,15 +431,19 @@ def _with_screens(elements: list, screens) -> tuple:
     Answer needs this, and a note composed independently in three places is
     three notes that drift.
     """
-    if not screens.rows:
-        return tuple(elements)
-    return (*elements, Element(
-        kind=ElementKind.GROUND, disclosure=True,
-        text=("Screens on this matter, none of which has run: "
-              + "; ".join(screens.rows)
-              + ". Substance is admitted with them outstanding, which is "
-                "recorded as an exception and is not a finding that they "
-                "clear.")))
+    # G-SPLIT RIDES HERE FOR THE SAME REASON AND NOT BESIDE IT. A second
+    # place that appends trailing background is a second place to get the
+    # ordering wrong, and this one already has the rule written down.
+    tail = [split] if split is not None else []
+    if screens.rows:
+        tail.append(Element(
+            kind=ElementKind.GROUND, disclosure=True,
+            text=("Screens on this matter, none of which has run: "
+                  + "; ".join(screens.rows)
+                  + ". Substance is admitted with them outstanding, which "
+                    "is recorded as an exception and is not a finding that "
+                    "they clear.")))
+    return (*elements, *tail)
 
 
 
@@ -605,6 +609,50 @@ class TurnEngine:
         # what must be written over the standing theory.
         concluded: dict = {}
 
+        # G-SPLIT. THE FILE WAS SPLIT AND THE ADVOCATE IS TOLD.
+        #
+        # `bound.others` is non-empty only where one message described
+        # several disputes. Each is now a thread on the file, and NONE of
+        # them is advised on by this turn -- a turn derives one posture,
+        # one chronology and one limitation. Saying nothing would leave
+        # them looking answered, which is the harm this whole change
+        # exists to remove rather than merely to relocate.
+        # ONLY WHERE THE BIND ACTUALLY PRODUCED A THREAD. An ambiguous
+        # bind resolved nothing, and reporting `single` there would be a
+        # finding about a message nobody managed to place.
+        if bound.thread is None:
+            pass
+        elif not bound.counted:
+            # NOBODY COUNTED. One thread, and that is a fallback and not a
+            # finding -- said so rather than left to look like `single`.
+            metrics.fire("G-SPLIT", "not_assessed",
+                         "the dispute count could not be read on this turn, "
+                         "so this file holds one thread by fallback and not "
+                         "because one dispute was found")
+        elif not bound.others:
+            metrics.fire("G-SPLIT", "single",
+                         "this message describes one dispute")
+        else:
+            metrics.fire("G-SPLIT", "split",
+                         f"{len(bound.others) + 1} disputes described in one "
+                         f"message; advising on {bound.thread.label!r}")
+        split_note = None
+        if bound.others:
+            # NAMED HERE, not in the gate-fire chain above. It was
+            # assigned in that chain's `else` and read in this
+            # block -- correct only because the two conditions
+            # happen to agree, which is CLAUDE.md §6's shape and
+            # what pylint E0601 is in the gate for.
+            names = '; '.join(t.label for t in bound.others)
+            split_note = (Element(
+                kind=ElementKind.GROUND,
+                text=(f"This message describes {len(bound.others) + 1} separate "
+                      f"disputes, so each is on the file as its own thread "
+                      f"rather than sharing one posture and one limitation. "
+                      f"I have worked on {bound.thread.label!r}. NOT ASSESSED: "
+                      f"{names}. Name one and I will take it next."),
+                gate="G-SPLIT", disclosure=True, signal=Signal.NONE))
+
         if bound.blocks:
             # G-THREAD. The account is KEPT on the matter -- it is the binding
             # that is refused, not the facts. Guessing here attaches one
@@ -620,7 +668,7 @@ class TurnEngine:
                     text=(f"Proposed merge, not performed: {bound.proposal.left} "
                           f"and {bound.proposal.right} on {bound.proposal.on}.")))
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
-                            elements=_with_screens(elements, screens),
+                            elements=_with_screens(elements, screens, split_note),
                             blocked=True,
                             blocked_reason=f"G-THREAD: {bound.reason}")
             thread = None
@@ -689,7 +737,7 @@ class TurnEngine:
                 facts=matter.facts, matter_id=matter.id)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
-                            elements=_with_screens(elements, screens),
+                            elements=_with_screens(elements, screens, split_note),
                             blocked=True,
                             blocked_reason="G-POSTURE: posture unresolved")
         else:
@@ -700,7 +748,7 @@ class TurnEngine:
                 matter_id=matter.id, concluded=concluded)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
-                            elements=_with_screens(elements, screens))
+                            elements=_with_screens(elements, screens, split_note))
 
         # D7 -- THE CROSS-FILE PASS, AFTER the threads and EXACTLY ONCE.
         #
@@ -882,14 +930,25 @@ class TurnEngine:
                 derived, relied_on, retrieved, derived_values = self._derive(
                     thread, turn, metrics, memory, facts=matter.facts,
                     matter_id=matter.id, seed=late, concluded=concluded)
+                # ONE CONSTRUCTION, THROUGH THE ASSEMBLER, like every
+                # other branch. This built an Answer from `head`, then
+                # replaced it with a longer tail, and neither call went
+                # through `_with_screens` -- so the screen rows and the
+                # split notice were dropped on every turn that needed a
+                # second citation attempt, while `G-UNSCREENED` fired
+                # exactly as it does on the turns that do show them.
+                # B-128's shape, on the one path nothing counted.
+                #
+                # Assembling the list before constructing, rather than
+                # constructing twice, is also what stops the rows being
+                # added once at each step.
                 answer = Answer(
                     route=route, mode=mode, mode_statement=mode_statement,
-                    elements=tuple([*head, *derived, *exposure,
-                                    *self._late_note(late)]))
-                answer = replace(answer, elements=tuple(
-                    [*answer.elements, *self._decisive_empties(metrics),
-                     *self._refused_reads(metrics), *_reactivated(matter),
-                     *self._tier_degraded(metrics)]))
+                    elements=_with_screens(
+                        [*head, *derived, *exposure, *self._late_note(late),
+                         *self._decisive_empties(metrics),
+                         *self._refused_reads(metrics), *_reactivated(matter),
+                         *self._tier_degraded(metrics)], screens, split_note))
                 self._assert_invariants(answer, metrics)
                 report = grounding.verify(answer, relied_on, retrieved)
 
@@ -1264,17 +1323,30 @@ class TurnEngine:
         )
         matter = matter.with_fact(fact)
 
-        # IS THIS THE SAME DISPUTE? Read only when it can matter: the
+        # TWO QUESTIONS, AND THE SECOND ONE HAS NO FILE IN IT.
+        #
+        # This used to read only when "it can matter", defined as: the
         # matter already has a thread and the message carries no number of
-        # record. With a number, rule 2 or rule 3 decides and no model call
-        # is needed; with no thread yet, there is nothing to confuse it
-        # with.
-        opens = None
-        if matter.threads and not identifiers_in(turn.message):
-            opens = self._read_dispute(matter, turn, metrics)
+        # record. The justification for the first half was written here --
+        # "with no thread yet, there is nothing to confuse it with" -- and
+        # it is false. There is: the disputes inside the message, with each
+        # other. A brief opening `first ... second ... third ...` got one
+        # thread, one posture and one limitation across all three, and the
+        # advocate was told every deadline on the file had passed while a
+        # trespass five days old sat in it.
+        #
+        # So the read runs whenever EITHER question is live, and is skipped
+        # only when a number of record decides the binding on a matter that
+        # already has threads. That is one extra call on a first turn.
+        read = dispute_reader.UNREAD
+        if not (matter.threads and identifiers_in(turn.message)):
+            read = self._read_dispute(matter, turn, metrics)
+        opens = True if read.opens else (False if read.continues else None)
 
         bound = bind(matter, turn.message, fact, thread_hint=turn.thread_id,
-                     opens_new_dispute=opens)
+                     opens_new_dispute=opens, described=read.described)
+        # WHETHER ANYONE COUNTED, carried out of the only place that knows.
+        bound = replace(bound, counted=read is not dispute_reader.UNREAD)
         if bound.state is not BindState.BOUND or bound.thread is None:
             return matter, bound
 
@@ -1448,7 +1520,14 @@ class TurnEngine:
                               f"({posture.client_described_as!r}): {why[:90]}")
 
         thread = replace(thread, posture=posture)
-        return matter.with_thread(thread), replace(bound, thread=thread)
+        matter = matter.with_thread(thread)
+        # THE OTHER DISPUTES GO ON THE FILE TOO. They carry no posture and
+        # no chronology -- nothing has been read for them and inventing
+        # either would be the merge defect with extra rows -- but they
+        # EXIST, and the advocate can name one and be advised on it.
+        for other in bound.others:
+            matter = matter.with_thread(other)
+        return matter, replace(bound, thread=thread)
 
     @implements("D4")
     def _read_cause(self, turn: TurnInput, memory, metrics: TurnMetrics,
@@ -1555,14 +1634,16 @@ class TurnEngine:
 
     @implements("C4")
     def _read_dispute(self, matter: Matter, turn: TurnInput,
-                      metrics: TurnMetrics) -> bool | None:
-        """Does this message continue the thread on the file, or open one?
+                      metrics: TurnMetrics) -> "dispute_reader.DisputeRead":
+        """Two answers: does this continue the file, and how many disputes
+        does it describe?
 
-        Returns THREE STATES, and `None` is the one that earns its keep: it
-        means the read did not run or could not tell, and `bind` then ASKS
-        rather than assuming a continuation. Defaulting to `False` here
-        would restore the defect -- every failed read becoming a silent
-        merge -- which is why this returns None and not a boolean.
+        RETURNS THE READ, NOT A BOOLEAN. It used to return `bool | None`,
+        which could carry the first answer and had nowhere to put the
+        second. `UNREAD` is the value for every failure path, so the
+        THREE STATES survive: `cannot_tell` still makes `bind` ask rather
+        than assume a continuation, and an empty `described` still falls
+        back to one thread rather than none.
         """
         on_file = "\n".join(
             f"- {t.label}" + (f" (we act for the {t.posture.role.value})"
@@ -1577,32 +1658,44 @@ class TurnEngine:
         try:
             res = self._model.structured(
                 dispute_reader.build_prompt(quotable),
-                dispute_reader.DISPUTE_SCHEMA, Tier.ROUTINE, max_tokens=200)
+                dispute_reader.DISPUTE_SCHEMA, Tier.ROUTINE,
+                # SCALED, BECAUSE THIS READ ECHOES THE ADVOCATE'S OWN WORDS.
+                # At 200 the answer was truncated mid-string at character 827
+                # on a three-dispute brief: the model returned three verbatim
+                # spans, the JSON never closed, and the read was lost. A read
+                # that must QUOTE to be believed has an output roughly the
+                # size of its input, so a constant ceiling is a length limit
+                # on the advocate disguised as a cost control.
+                #
+                # The floor covers a short message; the cap is the point past
+                # which a single turn is not a brief.
+                max_tokens=max(300, min(1600, len(turn.message) // 2)))
             metrics.record_call(res)
             metrics.binding_reads += 1
             read = dispute_reader.interpret(quotable, res.data or {})
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
                          f"the dispute read could not run: {exc}")
-            return None
+            return dispute_reader.UNREAD
         except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
             metrics.violate("C4", f"dispute read failed: "
                                   f"{type(exc).__name__}: {exc}")
-            return None
+            return dispute_reader.UNREAD
 
         if read.refused:
             metrics.violate("C4", f"dispute read refused: {read.refused}")
-            return None
+            return dispute_reader.UNREAD
         if read.opens:
             # DISCLOSED. A split is the recoverable direction, but it is
             # still a decision about the advocate's file and they can see it.
             metrics.violate(
                 "C4", f"read as a NEW dispute on {read.quoted[:50]!r}: "
                       f"{read.why[:90]}")
-            return True
-        if read.continues:
-            return False
-        return None
+        if len(read.described) > 1:
+            metrics.violate(
+                "C4", f"this message describes {len(read.described)} disputes: "
+                      + "; ".join(d.label for d in read.described[:6]))
+        return read
 
     @implements("C3")
     def _read_role(self, described: str, memory, metrics: TurnMetrics):

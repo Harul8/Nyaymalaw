@@ -462,7 +462,7 @@ boot();
  * quickest way to break that is a shared object both panes write to.
  */
 
-const PANES = ['advise', 'search', 'record'];
+const PANES = ['advise', 'search', 'history'];
 
 function showTab(name) {
   PANES.forEach((p) => { $(`pane-${p}`).hidden = (p !== name); });
@@ -470,7 +470,7 @@ function showTab(name) {
     b.classList.toggle('is-on', b.dataset.tab === name);
   });
   if (name === 'search') $('q').focus();
-  if (name === 'record') loadRecordMatters();
+  if (name === 'history') loadHistoryMatters();
 }
 
 document.querySelectorAll('#tabs .tab').forEach((b) => {
@@ -611,8 +611,8 @@ $('search-form').addEventListener('submit', async (ev) => {
  * the one that ran.
  */
 
-async function loadRecordMatters() {
-  const sel = $('record-matter');
+async function loadHistoryMatters() {
+  const sel = $('history-matter');
   try {
     const d = await api('/api/matters');
     const rows = d.matters || [];
@@ -627,7 +627,7 @@ async function loadRecordMatters() {
       : (rows.length ? 'Choose a matter…' : 'No matters yet');
     sel.appendChild(first);
     if (d.state !== 'ok') {
-      $('record-state').appendChild(stateBlock('loud', d.unreadable_reason
+      $('history-state').appendChild(stateBlock('loud', d.unreadable_reason
         || 'The matter list could not be built.'));
     }
     rows.forEach((m) => {
@@ -640,15 +640,15 @@ async function loadRecordMatters() {
       sel.appendChild(o);
     });
   } catch (err) {
-    $('record-state').textContent = '';
-    $('record-state').appendChild(stateBlock('loud',
+    $('history-state').textContent = '';
+    $('history-state').appendChild(stateBlock('loud',
       `The matter list could not be read: ${err.message}`));
   }
 }
 
-async function showRecord(matterId) {
-  const st = $('record-state');
-  const body = $('record-body');
+async function showHistory(matterId) {
+  const st = $('history-state');
+  const body = $('history-body');
   st.textContent = ''; body.textContent = '';
   if (!matterId) return;
 
@@ -656,7 +656,7 @@ async function showRecord(matterId) {
   try {
     d = await api(`/api/matters/${matterId}/transcript`);
   } catch (err) {
-    st.appendChild(stateBlock('loud', `The record could not be read: ${err.message}`));
+    st.appendChild(stateBlock('loud', `The history could not be read: ${err.message}`));
     return;
   }
 
@@ -698,7 +698,7 @@ async function showRecord(matterId) {
   });
 }
 
-$('record-matter').addEventListener('change', (ev) => showRecord(ev.target.value));
+$('history-matter').addEventListener('change', (ev) => showHistory(ev.target.value));
 
 /* ========================= A1 — THE GATE =========================
  *
@@ -828,7 +828,7 @@ $('signout').addEventListener('click', async () => {
     $('thread').textContent = '';
     $('rail-body').textContent = '';
     $('search-results').textContent = '';
-    $('record-body').textContent = '';
+    $('history-body').textContent = '';
     $('login-id').value = '';
     showGate(null);
   }

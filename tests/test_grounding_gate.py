@@ -147,7 +147,7 @@ def test_an_authority_whose_treatment_was_never_checked_cannot_carry_a_propositi
     f = finding(
         source_kind=SourceKind.AUTHORITY, ref="X v Y (Supreme Court, 1998)",
         span="the court held that...", locator="X::p1::ratio", store="idx",
-        para_kind=ParaKind.RATIO,
+        para_kind=ParaKind.ATTRIBUTABLE,
         treatment=Treatment.not_checked("no citator entry for 'X v Y'"))
     assert not f.usable
     assert "not checked" in f.blocking_reason
@@ -161,7 +161,7 @@ def test_an_authority_with_negative_treatment_cannot_carry_a_proposition():
     f = finding(
         source_kind=SourceKind.AUTHORITY, ref="X v Y (Supreme Court, 1998)",
         span="the court held that...", locator="X::p1::ratio", store="idx",
-        para_kind=ParaKind.RATIO,
+        para_kind=ParaKind.ATTRIBUTABLE,
         treatment=Treatment(state=TreatmentState.NEGATIVE,
                             scope="overruled at large", verbs=("OVERRULED",)))
     assert not f.usable

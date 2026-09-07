@@ -42,6 +42,11 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sweep test  ->  the test that proves it can fail.
 #: A sweep with no control is a sweep that has never been shown to work.
 CONTROLS: dict[str, str] = {
+    # the attributable labels have one owner, over every literal
+    # collection in nm/ AND tools/ -- five of the six copies it
+    # replaced were in tools/
+    "test_only_one_module_writes_down_the_attributable_labels":
+        "test_the_checker_can_actually_fail",
     # BK-17 -- no guard in nm/ is an assert, over every module
     "test_no_guard_in_the_product_is_an_assert":
         "test_the_assert_sweep_can_see_a_guard_it_would_delete",

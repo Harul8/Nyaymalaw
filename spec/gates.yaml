@@ -158,6 +158,23 @@ gates:
     with a caveat.
   feature: P1
   built: true
+- id: G-SPLIT
+  condition: One message describes more than one dispute, so a thread is opened for each and only one
+    of them is advised on.
+  states:
+  - split
+  - single
+  - not_assessed
+  response: disclose
+  scope: turn
+  persistence: turn
+  recovery: advocate
+  visible: 'The other disputes are named and marked NOT ASSESSED. Silence here reads as an answer about
+    them: a brief opening `first ... second ... third` produced one thread with one posture and one limitation
+    across all three, and the advocate was told every deadline on the file had passed while a trespass
+    five days old sat in it.'
+  feature: B1
+  built: true
 - id: G-ATTRIB
   condition: A proposition is attributed to a judgment from a paragraph that is not ratio, reasoning or
     order.

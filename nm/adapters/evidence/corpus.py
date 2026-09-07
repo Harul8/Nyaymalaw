@@ -60,9 +60,8 @@ from nm.ports.evidence import (
     ParaKind,
     SourceKind,
     Treatment,
+    kind_for_corpus_label,
 )
-
-_ATTRIBUTABLE = ("ratio", "reasoning", "order")
 
 #: How many ranked paragraphs the authority search EXAMINES in one turn.
 #:
@@ -464,7 +463,7 @@ class CorpusEvidenceAdapter:
         for case_id, case_name, court, year, para_type, chunk_id, text in rows:
             if chunk_id in self._denylist():
                 continue
-            kind = ParaKind(para_type) if para_type in _ATTRIBUTABLE else ParaKind.UNKNOWN
+            kind = kind_for_corpus_label(para_type)
             if not kind.attributable:
                 # G-ATTRIB. Counsel's submission is 14.8% of the corpus and
                 # reads exactly like a holding, so it is dropped here rather

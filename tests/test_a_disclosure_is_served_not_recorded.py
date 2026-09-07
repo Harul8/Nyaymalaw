@@ -294,3 +294,71 @@ def test_a_theory_with_nothing_against_it_says_that_rather_than_going_quiet(
             or "found none" in said), (
         "the adverse pass reached its clean state and the answer is "
         "silent about it:\n" + said[:900])
+
+
+# ============ G-SPLIT — the disputes NOT advised on are named =============
+
+#: THREE DISPUTES IN ONE MESSAGE, which is how a file is actually handed over.
+#: Enumerated with the ordinals the scripted double marks off on, because the
+#: product counts with a model read and the double must reach the same count
+#: deterministically.
+THREE_AT_ONCE = (
+    "We act for the plaintiff. First, goods were supplied against invoices "
+    "on 14 March 2010 and were never paid for. Second, a cheque he took "
+    "towards that debt came back unpaid last month. Third, the buyer's men "
+    "put up a fence across his approach road yesterday."
+)
+
+
+@pytest.mark.eval_id("E-082")
+def test_the_disputes_not_advised_on_are_named_in_the_answer(tmp_path):
+    """BK-27's clause: *the other disputes are named and marked NOT ASSESSED.*
+
+    THE METRICS ASSERTION ALONE WOULD HOLD WITH THE SPLIT INVISIBLE, which is
+    B-128's shape and the reason this file exists. The advocate asked about
+    three disputes; the turn derives one posture, one chronology and one
+    limitation, and therefore answers on ONE. If that is not said, the other
+    two read as answered -- which is how a brief carrying a trespass five days
+    old was told every deadline on the file had passed.
+    """
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(advocate_id="adv_1", message=THREE_AT_ONCE,
+                               today=TODAY))
+
+    assert len(out.matter.threads) >= 3, (
+        f"three disputes were described and {len(out.matter.threads)} "
+        f"thread(s) opened, so there is no split for this to disclose")
+    assert "G-SPLIT" in _fired(out), "G-SPLIT did not fire on a split file"
+
+    said = [e.text for e in out.answer.elements if "NOT ASSESSED" in e.text
+            and "separate" in e.text]
+    assert len(said) == 1, (
+        "the split reached the metrics and not the advocate. The answer's "
+        "own bytes carry:\n"
+        + "\n".join(f"  - {e.text[:110]}" for e in out.answer.elements))
+
+    # AND IT NAMES THEM. "Some disputes were not assessed" is a disclosure the
+    # advocate cannot act on; the point is that they can name one and get it.
+    line = said[0]
+    unadvised = [t.label for t in out.matter.threads
+                 if t.label != out.answer.thread_label] \
+        if hasattr(out.answer, "thread_label") else []
+    for label in unadvised:
+        assert label in line, f"{label!r} was split off and never named"
+
+
+def test_a_single_dispute_file_says_nothing_about_splitting(tmp_path):
+    """POSITIVE CONTROL, and the noise half of E-082's counterexample. A
+    disclosure that appears on every file is one the advocate learns to skip,
+    and this one must appear only where a message actually carried several
+    disputes."""
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(
+        advocate_id="adv_1", today=TODAY,
+        message=("We act for the plaintiff, a supplier at Hyderabad. Goods "
+                 "were supplied against invoices on 14 March 2010 and were "
+                 "never paid for.")))
+
+    said = [e.text for e in out.answer.elements if "NOT ASSESSED" in e.text
+            and "separate" in e.text]
+    assert not said, f"a one-dispute file was told it had been split: {said}"

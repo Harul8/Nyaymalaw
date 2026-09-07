@@ -16,6 +16,354 @@ against.
 
 ## Open
 
+### BK-29 - sixteen hand-picked token ceilings, and five reads that echo verbatim spans
+Opened 7 September 2026, out of the BK-27 fix. **One instance is fixed; the
+population is not swept.**
+
+The dispute read ran at `max_tokens=200`. Once it began returning three
+verbatim spans the JSON was truncated mid-string at character 827, the read
+was lost, and the turn fell back to one thread. Nothing was wrong with the
+model or the prompt.
+
+**The shape, without the read that exposed it:** a read that must QUOTE to be
+believed has an output roughly the size of its input. A constant ceiling on
+such a read is a length limit on the advocate, disguised as a cost control,
+and it fails by TRUNCATION - which is a parse error, not a short answer, so
+the whole read is lost rather than degraded.
+
+Measured from the code, 7 September 2026:
+
+| | |
+|---|---|
+| `max_tokens=` literals in `nm/core/` | **16**, every one hand-picked at its call site |
+| schemas returning a verbatim span | **7** - cause, dispute, evidence_item, factors, issues, posture, threading |
+| of those, returning a LIST of spans | **5** - issues, factors, evidence items, inventory, salvage |
+
+The five list-returning reads are the ones with the same failure available to
+them, and their ceilings (400-900) were chosen against briefs nobody recorded.
+
+**What is NOT known and must be measured before this is called safe:** whether
+each of those reads FAILS SAFE when truncated. The dispute read now does -
+`G-SPLIT` reports `not_assessed` and the advocate is told nobody counted -
+but that third state exists only because the `Gate` constructor refused the
+row without it. **A truncated read that falls back to an empty list and is
+reported as a finding is S1**, and nothing here has checked.
+
+**Why this is a row and not a fix.** The obvious repair - raise every ceiling -
+is the patch, not the fix: it moves the cliff without removing it, and sixteen
+call sites each choosing a number is the same one-owner question CLAUDE.md §4
+asks. The fix is a ceiling DERIVED from the input for reads that echo spans,
+with one owner. Sizing that needs the population measured, which is this row.
+
+### BK-27 - one message describing N disputes opened ONE thread - **FIXED**
+**FIXED 7 September 2026, and the fix was upstream of where it showed.**
+
+The cause read was the symptom. `Thread` is already *"a dispute inside a
+matter"* and already carries `posture` per dispute -- GS-09's rule, *must
+never: a single matter-level posture field*. What was never given the same
+treatment is the COUNT: `threading.bind` answered WHICH thread a message
+belongs to and never HOW MANY it describes. Rule 4, the empty matter, returned
+exactly one thread unconditionally, and the engine did not even make the
+dispute read there. The justification was written into `turn.py` as a comment:
+
+> with no thread yet, there is nothing to confuse it with
+
+There is: the disputes inside the message, with each other. Measured on the
+matter that found it -- **one thread for three disputes**, labelled
+`'My client is Ravi Kumar, a retired bank employee'`, carrying one posture,
+7 chronology entries spanning 2019/2024/2026, and 3 issues.
+
+| | |
+|---|---|
+| `nm/core/dispute.py` | the read returns a COUNT. `verdict` is this message against the FILE; `described` is this message against ITSELF, and the second question has no file in it -- which is why turn 1 was never asked. Each item is checked against the advocate's own words and a failing item is DROPPED, because a thread gets created from these |
+| `nm/core/threading.py` | rules 4 and 5 open one thread per dispute. Labels come from the read, not from `_label`'s first line. Identifiers land on the first thread only -- a case number belongs to one dispute and nothing here knows which |
+| `nm/core/turn.py` | the read runs on turn 1; every thread lands on the matter. One extra model call, skipped only where a number of record decides the binding on a matter that already has threads |
+| `G-SPLIT` | the disputes NOT advised on are named and marked NOT ASSESSED |
+
+`tests/test_one_message_many_disputes.py` states the rule and not the
+scenario: *a message describing N disputes opens N threads*, parametrised over
+N, with nothing about land or cheques in it.
+
+**WHAT THIS FIX DOES NOT DO, said plainly rather than left to be discovered.**
+The other threads carry no posture, no chronology and no cause. They exist,
+they are named, and the advocate can name one to have it worked. **They are
+not advised on.** A turn derives one posture, one chronology and one
+limitation; running three of those from one message is a feature and not a bug
+fix, and it should be a decision rather than a side effect.
+
+**AND THE SECOND DEFECT IN THIS ROW IS STILL OPEN.** The s.19 pass read the
+cheque dishonour of 12 February 2024 as a **part payment**. That is a fact
+given a type it does not have, it is independent of threading, and nothing
+above touches it.
+
+**Four checkers refused this change before any test I wrote did**, which is
+the machinery working:
+
+* `Gate.__post_init__` -- G-SPLIT had two states, and a failed count falls
+  back to one thread, which reads exactly like `single`. **S1 inside the fix
+  for S7.** It now carries `not_assessed` and `BindResult.counted` records
+  whether anyone counted.
+* `test_blank_values` -- `Described` accepted whitespace in required fields.
+* `test_provider_independence` -- the scripted double could not answer the new
+  schema field, so every turn through it fired `G-MODEL unavailable` while the
+  model was fine. **19 of 22 failures had that one cause.**
+* `Answer.__post_init__` -- the disclosure landed at position 0 and the
+  recommendation must lead. `_with_screens` already carried that exact lesson
+  in its docstring, so the notice now rides through it rather than beside it:
+  one owner for trailing background, three call sites.
+
+Then pylint E0601 caught `names` assigned in one branch and read in another --
+correct only because the two conditions happen to agree, CLAUDE.md §6's shape.
+
+**One check had to be repaired rather than satisfied.**
+`test_a_blocked_turn_still_says_the_screens_have_not_run` asserted the literal
+source text `"_with_screens(elements, screens)"` appeared three times, and
+adding an argument broke it while every branch still carried the rows. It now
+walks the `ast` and counts CALLS. Matching prose against code has cost this
+project five checks.
+
+Opened 7 September 2026 from a served browser run, `turn_e92eaa518ed1` on
+`mat_0cc673806ea9`, kept in the History tab. Latency 35.7s, 14 model calls,
+$0.0036, `outcome ok`, three non-gating violations.
+
+The brief carried three distinct causes on one file: specific performance of a
+2019 agreement of sale; two cheques dishonoured on 12 February 2024 with a
+demand notice on 20 February 2024; and men entering the plot and breaking a
+compound wall on **2 September 2026, five days before the turn**.
+
+The metrics say what happened:
+
+| | |
+|---|---|
+| `cause_reads` | **1** |
+| `chronology_reads` | 1 |
+| `route_reads` | 1 |
+| issues produced | **3** |
+
+One cause was resolved -- specific performance, routed to Limitation Act
+Article 54 -- one limitation was computed from it, expiring 2022-03-01, and
+**all three issues came back carrying that verdict**: each reads "it is a
+threshold issue, running against the party who has to move, and it cuts
+against us." A trespass five days old does not cut against us on limitation,
+and neither does a 2024 cheque on its own accrual.
+
+The thread-level line is the same error stated plainly: *"no deadline -- every
+deadline on this thread has passed -- the nearest was 2022-03-01"*.
+
+**WHAT WORKED, and it is the reason this is a backlog row and not an incident.**
+The product caught its own inconsistency and refused to state the figure:
+
+> I am not putting this figure in front of you: limitation: expires
+> 2022-03-01, before events the file already records (2026-09-02). Either the
+> accrual is wrong or the chronology is.
+
+That is violation `D1`, and it is exactly right -- the accrual was wrong.
+An advocate was told the derivation was inconsistent instead of being handed
+a confident wrong date. The gap is that nothing goes on to ASK which of the
+two it is, and nothing splits the file.
+
+**THE SHAPE, stated without the facts that exposed it.** A matter carries N
+causes; the cause reader returns one; every derivation downstream that is
+per-cause -- limitation, accrual, deadlines, elements, the issue verdicts --
+silently uses that one for all N. This is defect shape **S7**: a rule applied
+outside the case it was derived for. It is not a limitation defect. Limitation
+is where it was noticed.
+
+**A second, separate defect in the same turn.** The section 19 reasoning read
+the cheque dishonour of 12 February 2024 as a **part payment**: *"the part
+payment is dated 2024-02-12 ... Section 19 applies only to one made before
+expiry."* A cheque returned unpaid is the opposite of a payment. A fact was
+given a type it does not have, and the acknowledgment/part-payment reader then
+reasoned correctly from a wrong premise.
+
+**Not yet fixed.** Sizing it needs the per-cause population enumerated from the
+code -- every derivation keyed on a single resolved cause -- rather than a
+patch at the limitation call site, which is the one place it happened to show.
+
+### BK-28 - runs and golden sets are not in the History tab, and from now on they are
+Opened 7 September 2026. **Standing instruction, recorded so it binds: from
+here on every run -- served turns, eval runs, golden-set runs -- is saved in
+the History tab.** Served conversations already are; nothing else is.
+
+Measured the day this was written:
+
+| artefact | where it lives now | in History? |
+|---|---|---|
+| served turns | `.nm/matters/transcripts/` (80) | **yes** |
+| turn metrics | `.nm/matters/metrics/` (503) | no |
+| judged eval runs | `.nm/judged/` (7) | no |
+| the eval summary | `.nm/eval_results.json` | no |
+| the label audit | `.nm/label_audit/worksheet.md` | no |
+
+`/api/matters/{id}/transcript` is keyed by MATTER, which is why nothing that
+is not a matter can appear there. A golden run is a run of many matters and an
+eval result is not a matter at all, so this is a shape change and not a
+listing change: History needs a second axis -- runs -- beside conversations.
+
+**What must not be lost in doing it.** `pane-history` renders what was SERVED,
+and the comment above it in `index.html` is load-bearing: a search hit does
+not become a fact on a matter by being looked at. A runs axis that lets an
+eval artefact render as though it were a served turn would break exactly that,
+so the two axes stay separate surfaces inside one tab.
+
+**Naming, done today.** The tab was "The record" and is now "History", renamed
+through `web/index.html`, `web/app.js` and `web/app.css` -- token by token and
+not by a blanket rewrite, because `web/` uses the word "record" in four
+unrelated senses ("Registration records the Bar Council number", "none
+recorded", "source size not recorded", and the design comment about what a
+record IS). `pane-record` is now `pane-history`, `loadRecordMatters` is
+`loadHistoryMatters`, and nothing points at the old ids.
+
+### BK-25 - the authority need finds a case by scanning a million paragraphs
+Opened 7 September 2026, out of the paragraph-labelling work. **Approved: the
+case-finding step becomes a search over case SUMMARIES, and the paragraph
+index is only read for the cases that step selects.**
+
+Today `AuthorityIndexSearch.search` puts the advocate's query straight at an
+FTS5 table over **451,553 attributable paragraphs** and ranks paragraphs. The
+question it is actually being asked is *which judgments bear on this*, and a
+paragraph index answers that badly in both directions: a case whose holding is
+spread over four paragraphs competes against itself, and a case whose relevant
+paragraph is labelled `arguments` is invisible - which is the failure the label
+audit measured, **14 of 22 adjudicated disputes hid a holding**.
+
+`case_summaries_v3_chunks.json` is the surface that fits the question.
+Measured, 7 September 2026:
+
+| | |
+|---|---|
+| entries | **32,527**, one per case, `case_id` unique |
+| `court`, `year` | **100%** populated - the filters `search()` already applies still apply |
+| `cited_by_count` | 87.4% non-zero |
+| `citation` | **17.9%** - the derived layer dropped it again; read a hit's citation from `identity.db`, never from the summary row |
+| cases with NO summary | **1,510 of 34,037 = 4.4%** |
+
+**The shape.** Rank 32,527 summaries, take the top N by relevance and citation
+weight, then read the paragraph index **filtered to those `case_id`s** for the
+attributable paragraphs that are quoted. Every existing guard stays exactly
+where it is: the summary decides only which cases are opened, and a `Finding`
+still resolves to a `ratio`/`reasoning`/`order` paragraph or it does not exist.
+
+**Why the type already forbids the obvious mistake.** `SourceKind` has two
+members, `PROVISION` and `AUTHORITY`. A summary emitted as a Finding would
+have to claim `AUTHORITY`, and `ports/evidence.py` then requires
+`para_kind.attributable`, which a summary has no honest way to satisfy. The
+summary cannot become a quotation by accident - it can only become one by
+someone adding a third `SourceKind`, and that is a change a reviewer sees.
+
+**Three things this must carry, none of them optional:**
+
+1. **The 4.4% is disclosed, not absorbed.** A case held with no summary is
+   unreachable through this path, and B-163's rule applies exactly - a zero
+   names the index it came from. `Coverage.NOT_ASSESSED` for the summary
+   stage, never an empty hit list.
+2. **An absent `cited_by_count` is not zero citations.** 12.6% carry no count,
+   and ranking them last on that basis is S1 wearing a sort key. Rank on
+   relevance where the count is absent and say so.
+3. **The summary stage is a RANKER.** It never decides that the corpus does
+   not hold an authority; only the paragraph read can say that, and only about
+   the cases it was given.
+
+**What it replaces, and what it costs.** A 451,553-row FTS scan becomes a
+32,527-row rank plus a `case_id in (...)` fetch. That is the cheap direction,
+but it is not the argument - the argument is that the question and the index
+finally match.
+
+### BK-26 - the Act summaries are DECLINED, and the gap they would have filled stays open
+Opened and decided 7 September 2026. **Decision: the case summaries are used
+(BK-25); the ACT summaries are not used at all.**
+
+`act_summaries_v3_chunks.json` holds 1,628 entries, one per Act - `act_id`,
+`act_name`, `year`, `total_sections`, and a model-written summary. 1,658 bare
+Acts are held, so it covers 98.2% of them. It was surveyed as a possible
+widening of Act resolution and **refused**.
+
+**Why.** The one field in it that could be checked against something else
+disagreed with everything:
+
+| Act | `legal.db` declares | `legal.db` holds | summary says |
+|---|---|---|---|
+| The Limitation Act, 1963 | 32 | **169** | 32 |
+| The Specific Relief Act, 1963 | 44 | 44 | 44 |
+| The Transfer of Property Act, 1882 | 131 | 145 | **127** |
+| The Delimitation Act, 1972 | 8 | 11 | **7** |
+
+Three of four wrong against what is held, and two of four not even agreeing
+with the other declaration. **To be exact about what that does and does not
+prove:** it condemns `total_sections`, which is a metadata field, and it says
+nothing directly about the summary PROSE, which nothing here checked. The
+decision stands on the harder ground rather than the wider claim - **the only
+part of this artefact anybody could verify failed, and nothing else in it is
+verifiable at all.** An unverifiable input deciding which statute is read is
+CLAUDE.md section 5 exactly: fuzzy may RANK, never IDENTIFY, and never an Act.
+
+**The gap does not close by declining this, and must not be recorded as if it
+had.** `spec/manifest.yaml` carries **22 Acts**. Those are the only Acts
+keyword routing can offer, so an advocate whose matter turns on any of the
+other **1,636 held Acts** gets `ActBasis.NOT_RESOLVED` - not a wrong Act, but
+no candidate at all, and nothing to correct in four words.
+
+That is a real, measured hole with no owner. It stays open here, and the
+answer to it - when there is one - is exact and curated, the way
+`spec/manifest.yaml` already is, not a ranked read of prose nobody has
+checked. `total_sections` is not evidence for any coverage figure either;
+those stay in `docs/BASELINE.md`, measured, with the store named.
+
+**A drift found on the way.** CLAUDE.md says the citation checks hold "for
+today's 17 Acts". The manifest carries 22. The checks are enumerated from the
+manifest and so are not wrong - the sentence is - but it is a document
+disagreeing with the code about the code, which is the S4 shape and the
+cheapest possible instance of it to leave standing.
+
+### BK-24 - the citation filter excludes exactly the years the corpus needs
+Opened 7 September 2026, from the first real run. **The ingestion is stopped
+and is to be resumed once this is fixed.**
+
+| year | candidates | kept, cited by >= 2 |
+|---|---|---|
+| 2018 | 100 | 88 |
+| 2019 | 100 | 52 |
+| 2020 | 120 | 51 |
+| 2021 | 100 | 53 |
+| 2022 | 100 | 50 |
+| 2023 | 110 | **10** |
+| 2024 | 120 | **0** |
+
+**Citation count is a LAGGING INDICATOR, so filtering on it is a filter on
+AGE.** A judgment delivered in 2024 has had no time to be cited; one from
+2018 has had six years. The criterion does not select important judgments,
+it selects old ones - and 2025 and 2026 would have returned zero for the
+same reason.
+
+**Which defeats the purpose the fetch exists for.** RG-01 fails because the
+corpus holds no output of the Telangana High Court, constituted 1 January
+2019, and `RG-01b` wants **a binding High Court judgment dated 2021 or
+later**. The gap is RECENT binding output. A citation filter delivers old,
+well-cited authority - which the corpus already holds 34,037 of.
+
+**So the filter needs replacing, not tuning.** `--min-cited-by 1` would let
+in more of 2024 and still rank 2018 above it. Candidates worth considering:
+
+- **a per-year quota** - take the top N of each year by citations, so recency
+  competes within its own cohort rather than against 2018;
+- **citations per year since delivery**, which is the same correction stated
+  as a rate;
+- **no citation filter at all for years after 2022**, on the ground that the
+  binding court's recent output is wanted whether or not anyone has cited it
+  yet - which is what RG-01b actually asks for.
+
+**What is already staged and is NOT lost:** 304 judgments, 22 MB, 2018-2023,
+in `.nm/staging/judgments/`. Nothing has entered the corpus. Whatever filter
+replaces this one, those files stand.
+
+**And a second finding from the same run:** the search endpoint 429s after
+10-13 pages every time, so `--pages-per-year 15` is never reached. The tool
+stops that year rather than retrying, which is right. But the document
+endpoint's 429 handler does `continue` where the search handler does
+`break` - so if documents ever start limiting, the tool would keep firing at
+a server asking it to stop. That is the one thing its own docstring says it
+must not do, and it is unfixed.
+
 ### BK-23 - the web scrape is a ONE-TIME EXCEPTION, not the new route
 Recorded 7 September 2026, on the advocate's instruction and in their words:
 *this is a one time exception*.
@@ -129,7 +477,7 @@ half-re-keyed store is worse than either end of the operation.
 any other credential in the environment. It is a one-line comparison at the
 composition root and it would have made this impossible to configure.
 
-**BK-21 and BK-23.** BK-14 to BK-20 were found by the forensic audit below and
+**BK-21, BK-23 and BK-24.** BK-14 to BK-20 were found by the forensic audit below and
 **all six were fixed on 7 September** - the audit is kept in full because
 its measurements are the evidence, not the headings.
 
