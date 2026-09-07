@@ -1,9 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap');
 
 :root {
-  --paper:      #eef0f2;
-  --surface:    #fafbfc;
-  --surface-2:  #e4e8eb;
+  /* ONE FLAT SURFACE. These three were the only things any panel filled
+     with, so flattening them here flattens the whole product at once --
+     forty edited declarations would have been forty chances to leave a grey
+     rectangle somewhere nobody looked. What used to be a fill is now a rule:
+     the colour moves to the border and the rectangle goes. */
+  --paper:      #ffffff;
+  --surface:    #ffffff;
+  --surface-2:  #ffffff;
   --ink:        #12171d;
   --ink-2:      #3e4750;
   --ink-3:      #6b757e;
@@ -24,7 +29,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0e1216; --surface: #151b21; --surface-2: #1d252c;
+    /* The same flattening, one ground rather than three. */
+    --paper: #0e1216; --surface: #0e1216; --surface-2: #0e1216;
     --ink: #e6ebef; --ink-2: #b3bec6; --ink-3: #7f8b94; --rule: #2c353d;
     --accent: #6fb3c0; --accent-2: #8fc9d4; --accent-w: #16292f;
     --signal: #d98c82; --signal-w: #2c1d1b;
@@ -75,7 +81,7 @@ body {
   border: 1px solid var(--rule); border-radius: 3px; padding: 0.28rem 0.5rem;
   white-space: nowrap; max-width: 34rem; overflow: hidden; text-overflow: ellipsis;
 }
-.health.bad { color: var(--signal); background: var(--signal-w); border-color: var(--signal); }
+.health.bad { color: var(--signal); border-color: var(--signal); }
 
 /* ---------------------------------------------------------------- layout --- */
 /* `hidden` MUST WIN OVER A LAYOUT RULE.
@@ -127,16 +133,16 @@ main { display: grid; grid-template-columns: 22rem 1fr; flex: 1; min-height: 0; 
 .row .r-fields dd { margin: 0; }
 
 /* A loud row is loud. It is never collapsed and never quietly styled. */
-.row.loud { border-left: 3px solid var(--signal); background: var(--signal-w); }
+.row.loud { border-left: 3px solid var(--signal); }
 .row.loud .r-title { color: var(--signal); }
 .pill {
   display: inline-block; font-family: var(--f-mono); font-size: 0.6rem;
   font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
   padding: 0.12rem 0.35rem; border-radius: 2px;
 }
-.pill.unknown { background: var(--signal-w); color: var(--signal); }
-.pill.ok      { background: var(--good-w);   color: var(--good); }
-.pill.blocked { background: var(--amber-w);  color: var(--amber); }
+.pill.unknown { color: var(--signal); border: 1px solid var(--signal); }
+.pill.ok      { color: var(--good);   border: 1px solid var(--good); }
+.pill.blocked { color: var(--amber);  border: 1px solid var(--amber); }
 
 /* Board states. An unbuildable board is an EXPLICIT failure, never an empty
    one -- rendering empty would tell the advocate they have no matters. */
@@ -145,8 +151,8 @@ main { display: grid; grid-template-columns: 22rem 1fr; flex: 1; min-height: 0; 
   font-size: 0.82rem; border: 1px solid var(--rule); color: var(--ink-2);
 }
 .state.empty      { background: var(--paper); }
-.state.building   { background: var(--accent-w); color: var(--accent); }
-.state.unbuildable{ background: var(--signal-w); color: var(--signal); border-color: var(--signal); }
+.state.building   { color: var(--accent); }
+.state.unbuildable{ color: var(--signal); border-color: var(--signal); }
 
 /* ---------------------------------------------------------- conversation --- */
 .conversation { display: flex; flex-direction: column; min-height: 0; }
@@ -154,17 +160,44 @@ main { display: grid; grid-template-columns: 22rem 1fr; flex: 1; min-height: 0; 
   padding: 0.5rem 1.5rem; font-size: 0.78rem; color: var(--ink-3);
   font-style: italic; border-bottom: 1px solid var(--rule); flex: none;
 }
-.thread { overflow-y: auto; flex: 1; padding: 1.25rem 1.5rem 0.5rem; }
+.thread { overflow-y: auto; flex: 1; padding: 1.5rem 1.5rem 0.75rem; }
 
-.turn { max-width: 46rem; margin: 0 auto 1.6rem; }
+.turn { max-width: 52rem; margin: 0 auto 2rem; }
+
+/* THE ADVOCATE'S OWN WORDS, set apart as theirs and set to the right.
+   Everything else on this screen is something the product wrote, and a reader
+   scanning back through a long matter needs to find what THEY said without
+   having to read it. */
+.said-row { display: flex; justify-content: flex-end; margin-bottom: 1.1rem; }
 .brief {
-  background: var(--accent-w); border-radius: 3px; padding: 0.6rem 0.8rem;
-  margin-bottom: 0.9rem; white-space: pre-wrap; font-size: 0.92rem;
+  /* A HAIRLINE, NOT A FILL. On a white page the right-alignment and this
+     rule are what still say "you said this" -- and that is not decoration:
+     an advocate scanning back through a long matter has to find their own
+     words without reading them. */
+  border: 1px solid var(--rule); border-radius: 12px;
+  padding: 0.65rem 0.95rem; max-width: 80%;
+  white-space: pre-wrap; font-size: 0.94rem; line-height: 1.55;
+  color: var(--ink);
 }
-.brief .who-said {
-  font-family: var(--f-mono); font-size: 0.6rem; text-transform: uppercase;
-  letter-spacing: 0.09em; color: var(--accent); display: block; margin-bottom: 0.25rem;
+
+/* THE SUPPORT, FOLDED. Retrieved statutory text and quoted paragraphs are the
+   support for a claim stated above them, and they are what crowds the screen.
+   A DISCLOSURE NEVER COMES IN HERE -- see `renderTurn`. */
+.support { margin: 0.2rem 0 1rem; }
+.support > summary {
+  cursor: pointer; list-style: none;
+  font-family: var(--f-mono); font-size: 0.68rem; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-3);
+  padding: 0.3rem 0.5rem; border-radius: 5px;
+  display: inline-flex; align-items: center; gap: 0.45rem;
 }
+.support > summary::-webkit-details-marker { display: none; }
+.support > summary::before {
+  content: "\25b8"; font-size: 0.75rem; transition: transform 0.12s ease;
+}
+.support[open] > summary::before { transform: rotate(90deg); }
+.support > summary:hover { color: var(--ink-2); }
+.support > .el { margin-top: 0.7rem; }
 
 /* The four element kinds, and nothing else can be rendered. */
 .el { border-left: 3px solid var(--rule); padding: 0.15rem 0 0.15rem 0.85rem; margin-bottom: 0.85rem; }
@@ -176,7 +209,7 @@ main { display: grid; grid-template-columns: 22rem 1fr; flex: 1; min-height: 0; 
 .el .body { white-space: pre-wrap; }
 .el.action   { border-left-color: var(--accent); }
 .el.action .k { color: var(--accent); }
-.el.question { border-left-color: var(--signal); background: var(--signal-w);
+.el.question { border-left-color: var(--signal);
                padding: 0.5rem 0.8rem; border-radius: 0 3px 3px 0; }
 .el.question .k { color: var(--signal); }
 .el.finding  { border-left-color: var(--amber); }
@@ -210,7 +243,7 @@ main { display: grid; grid-template-columns: 22rem 1fr; flex: 1; min-height: 0; 
 .gate .gdetail { color: var(--ink-2); }
 .gate.disclose { border-left-color: var(--accent); }
 .gate.block    { border-left-color: var(--signal); }
-.gate.withhold { border-left-color: var(--signal); background: var(--signal-w); }
+.gate.withhold { border-left-color: var(--signal); }
 .gate.withhold .gid { color: var(--signal); font-weight: 600; }
 
 /* An element that reports what could NOT be established. Deliberately quieter
@@ -227,14 +260,14 @@ main { display: grid; grid-template-columns: 22rem 1fr; flex: 1; min-height: 0; 
 .metrics .warn { color: var(--signal); }
 
 .failure {
-  border: 1px solid var(--signal); background: var(--signal-w); color: var(--signal);
+  border: 1px solid var(--signal); color: var(--signal);
   padding: 0.7rem 0.9rem; border-radius: 3px; font-size: 0.88rem;
   max-width: 46rem; margin: 0 auto 1.6rem;
 }
 
 /* -------------------------------------------------------------- composer --- */
 .composer {
-  flex: none; border-top: 1px solid var(--rule); background: var(--surface);
+  flex: none; background: var(--paper);
   padding: 0.8rem 1.5rem 1rem;
 }
 .composer textarea {
@@ -242,6 +275,9 @@ main { display: grid; grid-template-columns: 22rem 1fr; flex: 1; min-height: 0; 
   font-family: var(--f-sans); font-size: 0.95rem; line-height: 1.5;
   padding: 0.6rem 0.7rem; border: 1px solid var(--rule); border-radius: 3px;
   background: var(--paper); color: var(--ink); resize: vertical;
+  /* THE GREY LINE. Everything else on this page is flat, so the one
+     surface the advocate types into has to declare itself. */
+  border: 1px solid var(--rule); border-radius: 8px;
 }
 .composer textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .composer-row {
@@ -256,7 +292,15 @@ button {
   border: 1px solid var(--rule); background: var(--paper); color: var(--ink);
 }
 button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* AN OUTLINE, NOT A BLOCK. Every surface on this page is flat, and a
+   solid rectangle was the loudest thing left on it. The accent moves to
+   the rule and the label, which still reads as pressable -- and the
+   hover fills it, so the affordance is not lost, only quiet. */
+button.primary {
+  background: var(--paper); border-color: var(--accent);
+  color: var(--accent); font-weight: 600;
+}
+button.primary:hover { background: var(--accent); color: #fff; }
 button.primary:disabled { opacity: 0.5; cursor: default; }
 button.ghost { border: none; background: none; color: var(--accent); padding: 0.2rem 0; font-size: 0.78rem; }
 button.wide { margin: 0.5rem 0.6rem 0.8rem; }
@@ -413,7 +457,7 @@ main.single {
 }
 
 .pill.resolved {
-  background: var(--accent-w);
+  border: 1px solid var(--accent);
   border: 1px solid var(--accent);
   color: var(--accent);
   font-weight: 600;

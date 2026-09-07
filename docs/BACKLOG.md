@@ -16,32 +16,42 @@ against.
 
 ## Open
 
-### BK-10 - the handover contract is 4 of 16, and four of the blockers are stale
-Opened 7 September 2026, measured: `CASE_SUMMARY_SECTIONS` holds **16**
-sections, `CARRIES` holds **4** (`matter`, `threads`, `posture`,
-`chronology`), and `handover_blockers` returns **10**:
+### BK-12 - the advise pane reads as a conversation, and one rule bounds it
+Landed 7 September 2026 on the advocate's request: the pane now shows
+their own words as a bubble, the answer as prose in a wider reading
+column, and the supporting material folded behind a row that opens in one
+click.
 
-> `engagement`, `screens`, `issues`, `theory`, `proof`, `authorities`,
-> `deadlines`, `decisions`, `reservations`, `gaps`
+**Recorded here because of what must NEVER fold.** A GROUND element
+carrying `disclosure` is what the product could not establish - the
+screens that have not run, the corpus gap, the read that came back empty.
+Folding those is **B-128 at the last inch**: that defect was a disclosure
+the advocate could not see, and it was three days old when this screen
+changed. The bytes would be served and the advocate still would not see
+them. S9 wants the third state visible in the OUTPUT, and behind a
+triangle is *available*, which is a different word.
 
-**That is the same 4 of 16 the Phase 1 commit measured**, and Phase 1
-landed. `Thread` now persists `issues`, `decisions`, `theory`, `proof`,
-`evidence` and `thresholds_told` across turns - the thread REMEMBERS. What
-did not happen is the summary CARRYING them: `MatterSummary` has no field
-for any of the six.
+So the split is by MEANING, not by kind:
 
-**So four blockers are now false statements about the product.** A
-receiving advocate is told the theory section was never built, on a file
-where the theory has been held and revised for four turns. `screens` is a
-fifth that could carry its `NOT_ASSESSED` state honestly rather than
-reading as absent (B-128).
+| element | treatment |
+|---|---|
+| ACTION, QUESTION, FINDING | prose, always open |
+| GROUND + `disclosure` | always open, quieter, dashed |
+| GROUND, plain (spans, quotes) | collapsible, closed, **with a count** |
 
-**Why it is a row and not today's fix.** Lifting a section into the summary
-is not a rename: `handover_complete` is a release-facing claim, and a
-section that carries must carry its THIRD state too, or the lift
-reintroduces §9 at the handover. Five sections at once is the work; the
-count above is what makes it schedulable.
+`tests/test_the_screen_never_folds_a_disclosure.py` holds the rule, and
+was verified RED by deleting `!el.disclosure` from the partition - a
+two-character edit, which is exactly why it is checked rather than
+remembered. It also refuses a `spoken` filter that is a second list
+instead of the negation, because an element kind falling between two
+hand-written filters renders nowhere and nothing counts it.
 
+**Open, deliberately:** the rule is asserted against the JavaScript
+SOURCE from Python. There is no JS test runner here and adding one to
+hold a single rule is R-6 apparatus. The screen was also driven through
+the DOM when it was built - `details.support .el.disclosure` returned 0
+and `.turn > .el.disclosure` returned 2 on a two-disclosure turn - and
+that measurement is what the test encodes rather than replaces.
 ### BK-11 - G-MODEL is proven at one read of fifteen
 Opened 7 September 2026. G-MODEL's clause is *the NEED fails, not the turn.
 The gap is visible and nothing is recorded as advice.* BK-9 proved the
@@ -62,6 +72,28 @@ G-MODEL, and it needs fifteen assertions rather than one regex.
 ---
 
 ## Closed
+
+### BK-10 - the handover contract was 4 of 16 - **CLOSED**
+Closed 7 September 2026 as **B-130**. `CARRIES` is **8** and
+`handover_blockers` returns **6**.
+
+The four lifted - `issues`, `theory`, `proof`, `decisions` - each carry a
+STATE and not just a value: `held`, `none`, or `not_assessed`. That third
+state is why this was not a rename. Every one of those fields persists as
+an empty tuple until written, so empty meant both *computed and found
+nothing* and *never computed* - and lifting them as they were would have
+moved S9 from the turn, where an empty section is a small ambiguity, to
+the handover, where it is the dangerous one.
+
+`Thread.assessed` carries it, drawn from the KEYS of the derive phase's
+`concluded` dict. One field rather than four flags: the fifth section
+would have arrived without its copy.
+
+**The six that remain are genuinely unbuilt** - `screens` is B2-B6 at
+slice 10, `authorities` waits on BK-4, and `engagement`, `deadlines`,
+`reservations` and `gaps` have no writer at all. The set is pinned by NAME
+in the test, so it cannot drift in either direction without a deliberate
+edit.
 
 ### BK-9 - five disclose gates nothing proved the advocate sees - **CLOSED**
 Closed 7 September 2026. `tests/test_disclosure_reaches_the_advocate.py`

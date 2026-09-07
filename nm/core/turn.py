@@ -693,6 +693,19 @@ class TurnEngine:
                 evidence=concluded.get("evidence", thread.evidence),
                 thresholds_told=concluded.get(
                     "thresholds_told", thread.thresholds_told),
+                # WHAT WAS ASSESSED, FROM THE KEYS AND NOT FROM A LIST.
+                #
+                # Every field above persists as empty until written, so
+                # empty means either "built and found nothing" or "never
+                # built". The handover cannot tell those apart without
+                # this, and they are opposite facts (BK-10).
+                #
+                # `concluded` already knows precisely which sections this
+                # turn worked out. Reading its keys means a section added
+                # to the dict is recorded here the same day, rather than
+                # waiting for somebody to remember a second list.
+                assessed=tuple(dict.fromkeys(
+                    (*thread.assessed, *concluded))),
             )
             matter = matter.with_thread(settled)
             thread = settled

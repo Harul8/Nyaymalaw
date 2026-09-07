@@ -4254,6 +4254,53 @@ d("B-129", "2026-09-07", "turn",
   "`NOT_PROVEN` is empty and kept, because an exception table that has "
   "been deleted cannot record the next exception.")
 
+d("B-130", "2026-09-07", "summary",
+  "THE HANDOVER TOLD A RECEIVING ADVOCATE THAT FOUR BUILT SECTIONS WERE "
+  "NEVER BUILT. `CASE_SUMMARY_SECTIONS` holds 16 and `CARRIES` held 4, so "
+  "`handover_blockers` returned 10 \u2014 including `issues`, `theory`, "
+  "`proof` and `decisions`, every one of which Phase 1 had made the "
+  "thread persist across turns. On a file where the theory had been held "
+  "and revised for four turns, the summary said the section did not "
+  "exist.",
+  "Being asked what had happened to the phases after Phase 1. The answer "
+  "was a number \u2014 4 of 16 \u2014 and it was the SAME number the "
+  "Phase 1 commit had measured, which is what made it a defect rather "
+  "than a plan.",
+  "S9 \u2014 two owners for one truth",
+  "Measured, not noticed: computing `handover_blockers` and reading the "
+  "names. Phase 1 moved the DATA onto `Thread` and nothing moved the "
+  "CONTRACT, so the two disagreed for a slice with every test green \u2014 "
+  "the contract test asserts blockers are real sections and that none is "
+  "carried, both of which held.",
+  "`CARRIES` gains the four, and each carries a STATE rather than a "
+  "value: `held`, `none`, or `not_assessed`. THE THIRD STATE IS WHY THIS "
+  "WAS NOT A RENAME \u2014 every one of those fields persists as an empty "
+  "tuple until written, so empty meant both 'computed and found nothing' "
+  "and 'never computed'. Lifting them as-is would have moved \u00a79 from "
+  "the turn, where an empty section is a small ambiguity, to the "
+  "handover, where it is the dangerous one.\n\n"
+  "`Thread.assessed` records which sections have run, and its population "
+  "is the KEYS OF `concluded` \u2014 the dict the derive phase already "
+  "fills with exactly what it worked out. ONE FIELD, NOT FOUR FLAGS: "
+  "`issues_assessed` and its three siblings would be four copies of one "
+  "rule, and the fifth section would arrive without its copy.",
+  "Yes. The general form is that A CONTRACT AND ITS DATA MUST NOT HAVE "
+  "SEPARATE OWNERS \u2014 a section name in `CARRIES` IS a `Thread` field "
+  "name, and `_sections` reads the thread by that name, so a declared "
+  "section with no field raises rather than reporting `not_assessed` "
+  "forever, which would be S11 wearing the shape of a disclosure.\n\n"
+  "Blockers fell from 10 to 6. The six that remain are genuinely "
+  "unbuilt: `screens` is B2\u2013B6 at slice 10, `authorities` waits on "
+  "the index build (BK-4), and `engagement`, `deadlines`, `reservations` "
+  "and `gaps` have no writer at all.",
+  "tests/test_the_handover_says_what_it_did_not_do.py \u2014 seven "
+  "invariants, including BOTH directions of the third state (a fresh "
+  "thread says `not_assessed`; a derived one stops saying it, because a "
+  "state that never changes is a disclosure that cannot be wrong), that "
+  "`assessed` survives the store, that every carried derivation names a "
+  "real Thread field, and that the blocker SET is pinned by name so it "
+  "cannot drift silently in either direction.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

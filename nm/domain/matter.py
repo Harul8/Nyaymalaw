@@ -309,6 +309,30 @@ class Thread:
     # minute -- "a field written faithfully and dropped on read fails
     # nothing until an advocate notices the product forgot what they told
     # it". The element type stays `object` for the cycle reason below.
+    assessed: tuple[str, ...] = ()
+    """WHICH SECTIONS HAVE BEEN COMPUTED ON THIS THREAD, by name.
+
+    Every section below persists as an empty tuple until something writes
+    it, so empty carries two opposite meanings: the section was built and
+    found nothing, or nothing ever built it. On a turn that is a small
+    ambiguity. IN A HANDOVER IT IS THE DANGEROUS ONE -- a receiving
+    advocate reading an empty proof section cannot tell that the work is
+    silently missing, which is the counterexample `handover_blockers`
+    already exists for, arriving one level down.
+
+    ONE FIELD RATHER THAN FOUR FLAGS. `issues_assessed`,
+    `theory_assessed` and the rest would be four copies of one rule, and
+    the fifth section would arrive without its copy. The population comes
+    from the KEYS of the derive phase's `concluded` dict -- the thing that
+    already knows exactly what this turn worked out -- so a section added
+    there is recorded here with nothing to remember.
+
+    A TUPLE, NOT A FROZENSET: the store encodes with `asdict` and decodes
+    from the class's own field list, and both already carry
+    `tuple[str, ...]`. Order is not meaningful; duplicates are removed on
+    write.
+    """
+
     issues: tuple[object, ...] = ()
     """THE ISSUES ON THIS THREAD. Persisted, and MERGED rather than replaced.
 

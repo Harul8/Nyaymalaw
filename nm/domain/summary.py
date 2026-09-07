@@ -85,7 +85,28 @@ _NOTE_RESERVE = 110 + 100
 #: list of gaps has to be maintained as slices land and will silently stop
 #: being true. This one only shrinks the blockers when a section is
 #: genuinely added here.
-CARRIES = frozenset({"matter", "threads", "posture", "chronology"})
+#: SECTIONS THE SUMMARY BUILDS. Every other section of the contract is a
+#: blocker, by construction rather than by a second list.
+#:
+#: The four at the end landed on 7 September 2026 (BK-10). Phase 1 had
+#: made the THREAD remember its issues, theory, proof and decisions and
+#: this set never moved, so `handover_blockers` named four sections that
+#: are built and persisted -- telling a receiving advocate the theory
+#: section was never built on a file where it had been held and revised
+#: for four turns.
+#:
+#: A NAME HERE IS A THREAD FIELD NAME. `_sections` reads the thread by
+#: that name, so adding a section to this set with no field of that name
+#: fails loudly instead of carrying nothing quietly.
+CARRIES = frozenset({
+    "matter", "threads", "posture", "chronology",
+    "issues", "theory", "proof", "decisions",
+})
+
+#: The four of those that are per-thread derivations, in contract order.
+#: Drawn from CARRIES rather than repeated, so the two cannot disagree.
+DERIVED_SECTIONS: tuple[str, ...] = (
+    "issues", "theory", "proof", "decisions")
 
 #: The full contract, from Appendix E. `tests/test_produces_contracts.py`
 #: asserts this equals `spec/schemas.yaml`, so the two cannot drift -- the
@@ -319,6 +340,47 @@ def _established_on(thread: Thread) -> list[str]:
     return out
 
 
+
+def _sections(thread) -> dict:
+    """What each derived section holds on this thread, and WHETHER IT RAN.
+
+    Three states, always:
+
+        held          computed, and it holds N things
+        none          computed, and it holds nothing
+        not_assessed  nothing has computed it on this thread
+
+    The third is the one that matters and the one that costs. An empty
+    proof section reads as "there is nothing to prove" to a receiving
+    advocate, and "nobody worked out what has to be proved" is the
+    opposite fact. `handover_blockers` exists for exactly this confusion
+    at the level of the CONTRACT; this is the same rule one level down, at
+    the level of the file.
+
+    POPULATION FROM `DERIVED_SECTIONS`, and the section name IS the field
+    name -- so a section that is declared and has no field raises here
+    rather than reporting `not_assessed` forever, which would be a check
+    that cannot fail wearing the shape of a disclosure.
+    """
+    out: dict = {}
+    for name in DERIVED_SECTIONS:
+        value = getattr(thread, name)          # AttributeError is correct
+        held = bool(value)
+        if name not in thread.assessed:
+            state = "not_assessed"
+        else:
+            state = "held" if held else "none"
+        out[name] = {
+            "state": state,
+            # A COUNT, NOT A BOOLEAN. `left_out` is the precedent: a
+            # reader told something is present learns less than one told
+            # how much. `theory` is a single value, so it counts 0 or 1.
+            "count": (len(value) if isinstance(value, tuple)
+                      else int(held)),
+        }
+    return out
+
+
 def build(matter: Matter, thread_id: str | None = None,
           about: str = "", load_bearing: frozenset[str] = frozenset(),
           ) -> MatterSummary:
@@ -342,6 +404,8 @@ def build(matter: Matter, thread_id: str | None = None,
             "client_described_as": t.posture.client_described_as,
             "identifiers": dict(t.identifiers),
             "facts": len(t.chronology),
+            # WHAT WAS DERIVED, AND WHETHER IT RAN (BK-10).
+            "sections": _sections(t),
         })
         established.extend(_established_on(t))
 

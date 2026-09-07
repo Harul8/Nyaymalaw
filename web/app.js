@@ -183,12 +183,16 @@ function renderTurn(entry) {
   wrap.className = 'turn';
 
   if (entry.brief) {
+    // THE ADVOCATE'S OWN SENTENCES, set apart as theirs. Everything else on
+    // this screen is something the product wrote; a reader scanning back
+    // through a long matter needs to find what THEY said without reading.
+    const row = document.createElement('div');
+    row.className = 'said-row';
     const b = document.createElement('div');
     b.className = 'brief';
-    const w = document.createElement('span');
-    w.className = 'who-said'; w.textContent = 'You briefed';
-    b.append(w, document.createTextNode(entry.brief));
-    wrap.appendChild(b);
+    b.textContent = entry.brief;
+    row.appendChild(b);
+    wrap.appendChild(row);
   }
 
   if (entry.error) {
@@ -236,7 +240,23 @@ function renderTurn(entry) {
     return wrap;
   }
 
-  for (const el of entry.answer.elements) {
+  // WHAT FOLDS AND WHAT MAY NEVER FOLD.
+  //
+  // A GROUND element carrying `disclosure` is what could not be established --
+  // the screens that have not run, the corpus gap, the read that came back
+  // empty. Folding those is B-128 in reverse: that defect WAS a disclosure the
+  // advocate could not see. §9 wants the third state visible in the OUTPUT,
+  // and behind a triangle is available rather than visible.
+  //
+  // Plain GROUND is the SUPPORT for a claim stated above it -- retrieved
+  // statutory text, quoted paragraphs -- and it is what actually crowds the
+  // screen. Nothing is lost by folding it and it can be opened in one click.
+  const support = entry.answer.elements.filter(
+    (el) => el.kind === 'ground' && !el.disclosure);
+  const spoken = entry.answer.elements.filter(
+    (el) => !(el.kind === 'ground' && !el.disclosure));
+
+  for (const el of spoken) {
     const d = document.createElement('div');
     // A loud signal is never collapsed, whatever the server says about
     // collapsibility -- the client does not get to quiet it.
@@ -267,6 +287,38 @@ function renderTurn(entry) {
       d.appendChild(r);
     }
     wrap.appendChild(d);
+  }
+
+  // THE SUPPORT, FOLDED, WITH A COUNT. `left_out` is the precedent in this
+  // product: a reader told something is hidden learns less than one told how
+  // much. A bare "details" gives no reason to open it.
+  if (support.length) {
+    const fold = document.createElement('details');
+    fold.className = 'support';
+    const sum = document.createElement('summary');
+    sum.textContent = support.length === 1
+      ? '1 supporting passage'
+      : `${support.length} supporting passages`;
+    fold.appendChild(sum);
+    for (const el of support) {
+      const d = document.createElement('div');
+      d.className = 'el ground';
+      const k = document.createElement('span');
+      k.className = 'k';
+      k.textContent = (el.signal && el.signal !== 'none'
+        ? `${KIND_LABEL[el.kind]} \u00b7 ${el.signal.replace(/_/g, ' ')}`
+        : KIND_LABEL[el.kind]);
+      const body = document.createElement('div');
+      body.className = 'body'; body.textContent = el.text;
+      d.append(k, body);
+      if (el.refs && el.refs.length) {
+        const r = document.createElement('span');
+        r.className = 'refs'; r.textContent = el.refs.join(' \u00b7 ');
+        d.appendChild(r);
+      }
+      fold.appendChild(d);
+    }
+    wrap.appendChild(fold);
   }
 
   // THE GATES THAT FIRED. A gate whose response is `disclose` and which the
