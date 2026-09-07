@@ -690,6 +690,8 @@ class TurnEngine:
                 issues=concluded.get("issues", thread.issues),
                 decisions=concluded.get("decisions", thread.decisions),
                 proof=concluded.get("proof", thread.proof),
+                deadlines=concluded.get("deadlines", thread.deadlines),
+                gaps=concluded.get("gaps", thread.gaps),
                 evidence=concluded.get("evidence", thread.evidence),
                 thresholds_told=concluded.get(
                     "thresholds_told", thread.thresholds_told),
@@ -1731,6 +1733,25 @@ class TurnEngine:
         # queue, which is the detection order wearing a sort.
         elements.extend(grounds)
         elements.extend(self._ask(gaps, thread, metrics))
+
+        # PHASE 3 -- THE REGISTER AND THE QUEUE SURVIVE THE TURN.
+        #
+        # Both modules run on every turn and both results were thrown
+        # away, so the handover carried no deadlines and no gaps section
+        # on a file where each had been computed for four turns.
+        #
+        # `register is None` WHEN THE TURN WAS SIDE-BLIND, and the key is
+        # written only when something computed it -- `Thread.assessed`
+        # takes its population from these keys, so the third state falls
+        # out of the flow rather than being asserted separately.
+        #
+        # The queue is written even when EMPTY. Nothing missing is a real
+        # answer; nobody having looked is not, and inferring one from the
+        # other at read time is the confusion this whole phase removes.
+        if register is not None:
+            concluded["deadlines"] = register
+        concluded["gaps"] = tuple(gaps)
+
         return elements, tuple(relied_on), tuple(retrieved), tuple(derived)
 
     def _remember_questions(self, matter: Matter, answer: Answer,

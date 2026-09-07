@@ -343,6 +343,36 @@ class Thread:
     write.
     """
 
+    deadlines: tuple[object, ...] = ()
+    """THE DEADLINE REGISTER, as the last turn that could compute it left
+    it. Phase 3.
+
+    `nm/core/deadlines.py` runs on every turn and nothing kept the result,
+    so a receiving advocate got no deadlines section on a file whose
+    limitation had been computed for four turns.
+
+    RECOMPUTED AND OVERWRITTEN, never merged. This is a derivation and not
+    a reading: a persisted derivation that can disagree with the
+    computation behind it is the three-stores defect, and the only reason
+    it does not arise here is that every deriving turn replaces it whole.
+    A turn that could not compute it writes nothing and leaves the section
+    reading `not_assessed`.
+
+    Untyped for the cycle reason `issues` and `proof` carry --
+    `nm.core.deadlines` imports this module.
+    """
+
+    gaps: tuple[object, ...] = ()
+    """THE GAP QUEUE as it stood at the end of the last deriving turn.
+    Phase 3, and the same shape as `deadlines`.
+
+    An EMPTY queue is a real answer -- nothing is missing -- and is
+    written as one. That is the whole reason it goes through `concluded`
+    rather than being inferred from emptiness at read time: empty and
+    never-computed are opposite facts, and `Thread.assessed` is what tells
+    them apart.
+    """
+
     issues: tuple[object, ...] = ()
     """THE ISSUES ON THIS THREAD. Persisted, and MERGED rather than replaced.
 

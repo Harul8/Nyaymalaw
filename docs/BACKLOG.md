@@ -27,6 +27,32 @@ history of the rows under it with it.
 
 ---
 
+### The phases, and what each one still needs
+Kept here because "what happened to the phases" was asked twice and the
+answer was a number nobody could look up.
+
+| phase | what it is | state |
+|---|---|---|
+| **1** | the thread REMEMBERS what it concluded | **done** - `issues`, `decisions`, `theory`, `proof`, `evidence`, `thresholds_told` persist |
+| **2** | the summary CARRIES those, each with a third state | **done** 7 Sept (B-130) - blockers 10 to 6 |
+| **3** | the two modules that ran every turn and kept nothing | **done** 7 Sept (B-134) - `deadlines`, `gaps`; blockers 6 to 4 |
+
+**`CARRIES` is 10 of 16.** The four that remain are not lifts - each needs
+a feature written:
+
+| section | what it needs |
+|---|---|
+| `screens` | B2-B6, **slice 10**. Its DISCLOSURE is already carried (B-128); the screen states are the slice-10 work, and R-8 says moving that inside the horizon means moving something else out, explicitly |
+| `authorities` | **BK-4** - the adapter exists, the FTS index over 451,553 paragraphs has never been built, and that is the advocate's to run |
+| `reservations` | **tenet 21** - *"Disagree once, clearly, then drop it. Record the reservation and get on with the job."* Nothing in `nm/` builds one; the only matches are the word `preservation` and this file |
+| `engagement` | no writer at all |
+
+So there is no Phase 4 of the same kind. What is left is four features,
+one of which is scheduled, one of which is a long job the advocate runs,
+and two of which are unscheduled.
+
+---
+
 ## Closed
 
 ### BK-13 - the product spoke in its own identifiers - **CLOSED**

@@ -174,17 +174,99 @@ def test_a_carried_section_can_still_be_unassessed_on_a_file():
 
 def test_the_blockers_that_remain_are_the_ones_that_are_really_unbuilt():
     """The count is the evidence that this moved, and the NAMES are the
-    evidence that it moved for the right reason. Six remain and each is a
-    feature nothing builds yet -- `screens` is B2-B6 at slice 10, `authorities`
-    waits on the index build (BK-4), and the rest have no writer at all."""
+    evidence that it moved for the right reason.
+
+    FOUR remain after Phase 3, and each is genuinely unbuilt rather than built
+    and unwired: `screens` is B2-B6 at slice 10 (its DISCLOSURE is carried --
+    B-128 -- but the screen states themselves are slice-10 work),
+    `authorities` waits on the index build (BK-4), and `engagement` and
+    `reservations` have no writer at all.
+
+    That distinction is the whole point of this file: `deadlines` and `gaps`
+    were on this list while running on every single turn.
+    """
     blockers = set(summary_mod.MatterSummary(
         matter_id="m", title="t").handover_blockers)
 
-    assert blockers == {"engagement", "screens", "authorities", "deadlines",
-                        "reservations", "gaps"}, (
+    # PHASE 3 REMOVED `deadlines` AND `gaps` FROM THIS SET, and this
+    # assertion is what made that a deliberate act rather than a number that
+    # moved. Both modules had been running on every turn since slice 6 --
+    # `deadlines` reached ten times from the turn engine, `gaps` four -- and
+    # neither result survived the turn, so the handover carried no section
+    # for either on a file where both had been computed for four turns.
+    assert blockers == {"engagement", "screens", "authorities",
+                        "reservations"}, (
         f"the blocker set changed to {sorted(blockers)} — either a section "
         f"landed, or one regressed, and both need a deliberate edit here "
         f"rather than a silently moving number")
 
     assert not (blockers & set(summary_mod.DERIVED_SECTIONS)), (
         "a section is derived per thread and still reported as unbuilt")
+
+
+# ================= Phase 3 — a derivation, not a reading ==================
+
+def test_a_computed_register_reaches_the_handover(tmp_path):
+    """PHASE 3'S WHOLE CLAIM, on a served turn.
+
+    `nm/core/deadlines.py` is reached ten times from the turn engine and
+    `nm/core/gaps.py` four. Neither result survived the turn, so the handover
+    carried no deadlines and no gaps section on a file where both had been
+    computed every turn since the brief arrived. Not unbuilt -- built, run,
+    and thrown away.
+    """
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(advocate_id="adv_1", message=BRIEF,
+                               today=TODAY))
+
+    row = _thread_row(out)
+    for name in ("deadlines", "gaps"):
+        assert row["sections"][name]["state"] != "not_assessed", (
+            f"{name} ran on this turn and the handover reports it as never "
+            f"computed:\n" + repr(row["sections"]))
+
+
+def test_an_empty_queue_is_a_finding_and_an_absent_one_is_not(tmp_path):
+    """`gaps` is written even when EMPTY, and that is the point of the phase.
+
+    Nothing missing is a real answer. Nobody having looked is not. Inferring
+    one from the other at read time -- treating an empty tuple as "no gaps" --
+    is the confusion the whole handover contract exists against, and it is
+    only avoidable because the key is written whether or not the queue holds
+    anything.
+    """
+    import inspect
+
+    from nm.core.turn import TurnEngine
+
+    src = inspect.getsource(TurnEngine._derive)
+    assert 'concluded["gaps"] = tuple(gaps)' in src, (
+        "the gap queue is no longer recorded unconditionally, so an empty "
+        "queue and an unrun one are about to become indistinguishable")
+
+    # And the register is the OTHER case: written only when computed, because
+    # `register is None` already means the turn could not compute one.
+    assert "if register is not None:" in src, (
+        "the deadline register is recorded unconditionally, so a side-blind "
+        "turn would report an assessed register it never built")
+
+
+def test_the_persisted_derivation_is_replaced_and_never_merged(tmp_path):
+    """A PERSISTED DERIVATION THAT CAN DISAGREE WITH ITS COMPUTATION IS THE
+    THREE-STORES DEFECT.
+
+    `theory` and `issues` are MERGED across turns because they are model
+    readings and a read that forgets something must not lose it. A register is
+    not a reading: it is recomputed from the limitation position every turn,
+    so it is REPLACED whole. Merging it would let a stale entry outlive the
+    facts it was derived from, with nothing able to tell.
+    """
+    import inspect
+
+    from nm.core.turn import TurnEngine
+
+    src = inspect.getsource(TurnEngine._run)
+    for name in ("deadlines", "gaps"):
+        assert f'{name}=concluded.get("{name}", thread.{name}),' in src, (
+            f"{name} is not written by name, or is being combined with the "
+            f"standing value rather than replacing it")

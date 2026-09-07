@@ -101,12 +101,13 @@ _NOTE_RESERVE = 110 + 100
 CARRIES = frozenset({
     "matter", "threads", "posture", "chronology",
     "issues", "theory", "proof", "decisions",
+    "deadlines", "gaps",
 })
 
 #: The four of those that are per-thread derivations, in contract order.
 #: Drawn from CARRIES rather than repeated, so the two cannot disagree.
 DERIVED_SECTIONS: tuple[str, ...] = (
-    "issues", "theory", "proof", "decisions")
+    "issues", "theory", "proof", "decisions", "deadlines", "gaps")
 
 #: The full contract, from Appendix E. `tests/test_produces_contracts.py`
 #: asserts this equals `spec/schemas.yaml`, so the two cannot drift -- the

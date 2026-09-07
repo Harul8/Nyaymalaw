@@ -4423,6 +4423,53 @@ d("B-133", "2026-09-07", "edge",
   "hold one rule is R-6 apparatus. An absent `node` reports NOT "
   "ASSESSED in those words and does not pass.")
 
+d("B-134", "2026-09-07", "turn",
+  "TWO COMPLETE MODULES RAN ON EVERY TURN AND THEIR RESULTS WERE THROWN "
+  "AWAY. `nm/core/deadlines.py` is reached TEN times from the turn "
+  "engine and `nm/core/gaps.py` FOUR; neither appeared in `concluded`, "
+  "so nothing persisted and the handover reported both as sections the "
+  "product does not build \u2014 on a file where each had been computed "
+  "every turn since the brief arrived.",
+  "Being asked what remained after Phase 1, then after Phase 2. The "
+  "answer was `handover_blockers`, and reading the SIX names rather "
+  "than the count is what separated the genuinely unbuilt from the "
+  "built-and-discarded.",
+  "S1 \u2014 an absent input reading as success",
+  "Counted the call sites. `deadlines.` appears ten times in "
+  "`nm/core/turn.py` and `gaps.` four, and neither name is among the "
+  "six keys of `concluded`. A module with that many callers is not "
+  "unbuilt, which is what made the blocker list wrong rather than "
+  "merely incomplete.",
+  "Both results go into `concluded`, both are carried to the thread by "
+  "name, and `CARRIES` gains both \u2014 blockers 6 to 4.\n\n"
+  "PERSISTED, NOT RECOMPUTED AT SUMMARY TIME, and the layer decides it: "
+  "`nm/domain/summary.py` is `domain`, which `tools/layercheck.py` "
+  "allows to import `domain` and nothing else, and both modules are "
+  "`core`. Recomputing there would break the layering or duplicate the "
+  "derivation, which is S9.\n\n"
+  "AND REPLACED, NEVER MERGED. `theory` and `issues` merge across turns "
+  "because they are model READINGS and a read that forgets something "
+  "must not lose it. A register is a DERIVATION, recomputed from the "
+  "limitation position every turn, so it is replaced whole \u2014 merging "
+  "would let a stale entry outlive the facts behind it with nothing able "
+  "to tell. That is the three-stores defect, and the only reason it does "
+  "not arise here is that every deriving turn overwrites.\n\n"
+  "THE TWO KEYS ARE WRITTEN DIFFERENTLY, ON PURPOSE. `gaps` is written "
+  "even when EMPTY \u2014 nothing missing is a real answer. `deadlines` "
+  "is written only when `register is not None`, because that is already "
+  "how a side-blind turn says it could not compute one.",
+  "Yes, and it needed NO new mechanism, which is the return on doing "
+  "B-130 with one field instead of four flags: `Thread.assessed` takes "
+  "its population from the keys of `concluded`, so both sections got "
+  "their third state the moment they were recorded.",
+  "tests/test_the_handover_says_what_it_did_not_do.py \u2014 a served "
+  "turn asserts neither reports `not_assessed`; the empty-queue rule and "
+  "the register's None-guard are each asserted in the source; and the "
+  "replace-not-merge rule is asserted at the write-back. All three "
+  "halves verified RED by mutation. The blocker SET is pinned by name "
+  "and caught this change, which is what made removing two of them a "
+  "deliberate act rather than a number that moved.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",
