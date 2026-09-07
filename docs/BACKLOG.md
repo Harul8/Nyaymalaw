@@ -16,14 +16,127 @@ against.
 
 ## Open
 
-**Nothing.** Every BK row is closed. BK-4 was the last, and it closed by
-measurement rather than by work: the index had been built for eight days
-and the row had not noticed (**B-141**).
+Every BK row from the build was closed on 7 September. **BK-14 to BK-19
+are new**, from the forensic audit below, and none has been fixed.
+### The forensic audit, 7 September 2026
+Run by SWEEP rather than by reading: one mechanical pass per defect shape,
+each drawing its population from the whole product. Six findings, and the
+list of what was checked and found sound is below them - an audit that
+reports only problems misrepresents the tree.
 
-The section stays. A heading that vanishes when it empties takes the
-history of the rows under it with it, and this file's own rule is that a
-row is closed by a defect row or by a decision recorded here - never by
-disappearing.
+Each row says whether it is **measured** or **reasoned from the code**.
+
+---
+
+### BK-14 - the date comes from the server's clock and nothing pins it
+**MEASURED.** `nm/edge/api.py:389` takes `today=req.today or date.today()`,
+and **`web/app.js` never sends `today`** - grep returns nothing. So every
+served turn dates itself by whatever clock the server happens to keep.
+
+**Nothing in `nm/` mentions a timezone.** No `ZoneInfo`, no `Asia/Kolkata`,
+no `tzinfo` outside `utcnow()` for credentials. The product is scoped to
+**Telangana**, which is UTC+5:30.
+
+**What it reaches:** `limitation.days_remaining` (`expires_on - today`),
+`Deadline.status`, `deadlines.passed`, `deadlines.upcoming`, and
+`ours.expired(turn.today)` - the branch that decides whether the salvage
+pass runs at all. A limitation date is the most consequential number this
+product produces.
+
+**The failure:** a server keeping UTC is on the previous day from 18:30
+UTC onward - 00:00 to 05:30 IST. A turn taken in that window computes
+every period one day short, and a claim that expires today reads as
+expiring tomorrow. Silently: there is no third state for "which day is
+it", because the question has never been asked.
+
+**And no test pins the clock.** Every suite passes `today=date(2026, 9, 4)`
+explicitly, so the defect is invisible to all of them by construction.
+
+### BK-15 - six owners for the jurisdiction
+**MEASURED.** `"Telangana"` is a literal default in six modules:
+`adapters/evidence/corpus.py:92`, `bootstrap/composition.py:133`,
+`core/turn.py:188`, `edge/api.py:192`, `knowledge/jurisdiction.py:133`,
+`ports/evidence.py:367`.
+
+S9, and CLAUDE.md supplies the failure mode itself: *an answer about Kerala
+law out of it is confidently wrong and nothing downstream catches that.*
+Change one default and the binding computation uses a different
+jurisdiction from the retrieval, with no disagreement surfaced.
+
+### BK-16 - the matter cipher downgrades silently, where its neighbours refuse
+**MEASURED, and less bad than it first looks.** `_Cipher.__init__` catches
+`ImportError` on `cryptography` and sets
+`scheme = "xor-keystream(NOT-SECURE)"`. The live scheme here is **fernet**
+(`cryptography` 46.0.5), and `/api/health` discloses
+`"encryption": store.scheme` - so the third state IS visible.
+
+**What is still wrong is that nothing refuses it.** A deployment without
+`cryptography` starts, serves, and writes privileged client material under
+a scheme the code itself labels NOT-SECURE. Keystream XOR under a reused
+key is trivially broken: two ciphertexts XORed cancel the keystream.
+
+**Its own neighbours take the opposite line.** A missing `NM_MATTER_KEY`
+is a HARD FAILURE - *never a silent no-op* - and the authority index
+refuses to fall back to a scan with different recall because *a fallback
+swapped in silently is the three-stores defect wearing a helpful face.*
+The same argument applies here and was not applied. The class docstring
+even says *"Raised loudly. Never degraded into writing plaintext"* - true
+of plaintext and not of this.
+
+### BK-17 - three load-bearing guards vanish under `python -O`
+**MEASURED.** Every `assert` in `nm/` is a guard, and `-O` removes all
+three:
+
+| where | what stops being checked |
+|---|---|
+| `core/turn.py:1160` | that `may_admit_substance` still REFUSES an unscreened matter. Without it substance is admitted with every screen outstanding and nothing says so |
+| `domain/spoken.py:81` | that every enum member has a phrase |
+| `domain/spoken.py:88` | that no phrase outlives its member |
+
+**The second and third were written on 7 September and their docstring is
+wrong under `-O`.** It says *a member with no phrase is an ImportError, not
+a surprise in a served turn.* Under `-O` `complete()` is a no-op and `said`
+raises `KeyError` mid-turn - precisely the outcome the sentence promises is
+prevented. S11: a check that cannot fail because it is not there.
+
+### BK-18 - the session cookie has no `secure` flag, and login has no rate limit
+**MEASURED.** `response.set_cookie(name, value, httponly=True,
+samesite="lax", max_age=..., path="/")`. The comment beside it reasons
+carefully about `httponly` and `samesite` and does not mention `secure`,
+which reads as overlooked rather than decided. Without it the session token
+travels in clear over HTTP or a downgrade.
+
+**The rate limit is already admitted, in the wrong place.** `advocate.py`
+refuses a short password with *"this is the only thing standing between one
+advocate's client file and another's, and the product has no rate limit
+yet"* - a known gap declared in a message the ADVOCATE reads rather than in
+a row anyone tracks.
+
+### BK-19 - a missing identity count reads as zero
+**MEASURED.** `adapters/search/authority.py:64`: `int(rows.get(key, 0))`
+over the index identity, so an identity missing `indexed_paragraphs`
+reports **0 indexed** - indistinguishable from an empty index.
+
+The atom-priors trap in miniature, and CLAUDE.md's worked example is the
+same shape: `table.get(kind, 0.0)` made every unlisted atom type score
+worse than every listed one. Low severity today because the builder always
+writes the key; the defect is that nothing would notice if it stopped.
+
+---
+
+### What was checked and found SOUND
+Reported because an audit listing only faults misrepresents the tree.
+
+| swept | result |
+|---|---|
+| **Route authorisation** | every route derives the advocate from the SESSION (`Advocate = Annotated[str, Depends(signed_in)]`), never from a parameter, and every matter route checks `m.advocate_id != advocate_id`. A past defect - *it came from the body, which means the caller asserted it* - is recorded at `api.py:184` |
+| **Encryption at rest** | matters AND transcripts are sealed with the same key; a missing key is a hard failure; the transcript is keyed by matter so attribution never depends on decrypting |
+| **Broad `except`** | all 12 carry `# noqa: BLE001 -- ERROR, never a warning`, and each logs at ERROR with the type. §7 is held |
+| **Mutable default arguments** | none |
+| **Bare `except:` / silent `pass`** | none |
+| **Set iteration reaching output** | none - no ordering nondeterminism in what the advocate reads |
+| **Client text in metrics** | `domain/metrics.py` carries counts and ids only |
+
 ### The phases - **ALL SECTIONS CARRY**
 
 | phase | what it is | state |
