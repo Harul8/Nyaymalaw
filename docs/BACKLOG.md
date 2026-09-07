@@ -16,14 +16,14 @@ against.
 
 ## Open
 
-**BK-20 only.** BK-14 to BK-19 were found by the forensic audit below and
+**Nothing open.** BK-14 to BK-20 were found by the forensic audit below and
 **all six were fixed on 7 September** - the audit is kept in full because
 its measurements are the evidence, not the headings.
 
-BK-20 is the recorded COST of a change the advocate asked for, and it is
-open because half of the pair it needs is not built.
+BK-20 was the recorded COST of a change the advocate asked for, and it
+closed when the half it needed - the login rate limit - was built.
 
-### BK-20 - sign-in names which of three things failed, and there is still no rate limit
+### BK-20 - sign-in names which of three things failed - **CLOSED, with its pair**
 Opened 7 September 2026.
 
 A1 collapsed every sign-in failure into one sentence so a stranger could
@@ -47,14 +47,36 @@ credentials that were correct. No amount of retyping fixes that and nothing
 on the screen pointed anywhere. `start.ps1` now generates a key ONCE and
 reuses it, so an account survives a restart.
 
-**What is open.** Enumeration is cheap in proportion to how fast it can be
-tried, and **the product still has no login rate limit**. The password
-validator has said so in a message the advocate reads since slice 1: *"this
-is the only thing standing between one advocate's client file and
-another's, and the product has no rate limit yet."*
+**And the pair is built.** `nm/domain/attempts.py` holds the policy - times
+in, verdict out, no clock and no I/O of its own - and the door consults it
+BEFORE the password is derived, because the point of a limiter is that the
+expensive part stops happening.
 
-The two belong together. Distinguishing the states without the rate limit
-is the half of the pair that costs rather than the half that pays.
+**TWO COUNTERS, because one does not imply the other.** Five wrong answers
+for one address in fifteen minutes, twenty from one source across all
+addresses. A directory sweep tries each address ONCE and never trips a
+per-account counter - so limiting per account alone would have left
+enumeration exactly as cheap as before, which is the whole reason this row
+existed.
+
+**Not a lockout.** Nothing is disabled and no state is set on the account;
+the window ages out. A real lockout hands an attacker a denial-of-service:
+send five wrong passwords for an advocate's address and they cannot work.
+The refusal says so in terms, and says WHEN - *"Try again in about 15
+minute(s). Nothing is locked and no account has been changed."*
+
+**The pause is measured from the OLDEST attempt in the window**, not the
+newest. Counting from the newest would extend the pause every time the
+attacker knocked, and extend it for the advocate - who is the one reading
+the message.
+
+**It fails OPEN and says so.** If the attempt log cannot be read the door
+opens, because refusing every sign-in over an unwritable file is a
+self-inflicted outage on a product used under time pressure. Allowing them
+SILENTLY would be S1, so `/api/health` reports `rate_limiting` and shows
+**NOT RUNNING** when it cannot.
+
+Verified live: five 401s naming the failure, then 429 with the retry time.
 
 ### The forensic audit, 7 September 2026
 Run by SWEEP rather than by reading: one mechanical pass per defect shape,
@@ -137,7 +159,7 @@ a surprise in a served turn.* Under `-O` `complete()` is a no-op and `said`
 raises `KeyError` mid-turn - precisely the outcome the sentence promises is
 prevented. S11: a check that cannot fail because it is not there.
 
-### BK-18 - the session cookie had no `secure` flag - **HALF FIXED**
+### BK-18 - the session cookie had no `secure` flag - **FIXED**
 **MEASURED.** `response.set_cookie(name, value, httponly=True,
 samesite="lax", max_age=..., path="/")`. The comment beside it reasons
 carefully about `httponly` and `samesite` and does not mention `secure`,
@@ -150,8 +172,7 @@ first attempt defaulted to `secure=True` with an env-var opt-out, and a
 secure cookie on a plain connection is DROPPED: six served-path tests went
 401 and local development would have too.
 
-**THE RATE LIMIT IS NOT FIXED** and is carried by BK-20, which it pairs
-with.
+**THE RATE LIMIT IS FIXED TOO**, with BK-20, which it pairs with.
 
 **The rate limit was already admitted, in the wrong place.** `advocate.py`
 refuses a short password with *"this is the only thing standing between one

@@ -48,6 +48,7 @@ class FileDirectory:
         self._advocates = self._root / "advocates"
         self._sessions = self._root / "sessions"
         self._audit = self._root / "auth.log"
+        self._attempts = self._root / "attempts.log"
         self._advocates.mkdir(parents=True, exist_ok=True)
         self._sessions.mkdir(parents=True, exist_ok=True)
         import os
@@ -125,6 +126,76 @@ class FileDirectory:
     def identity(self, advocate_id: str) -> AdvocateIdentity | None:
         doc = self._read(advocate_id)
         return AdvocateIdentity(**doc["identity"]) if doc else None
+
+    # ------------------------------------------------- rate limiting ---
+    #
+    # BK-20/BK-18. The product had none, and the password validator said
+    # so in a message the ADVOCATE reads -- *this is the only thing
+    # standing between one advocate's client file and another's, and the
+    # product has no rate limit yet*. Naming which of three things failed
+    # at sign-in made that gap worth more, so the two landed together.
+
+    def failures_since(self, advocate_id: str, source: str,
+                       since: datetime) -> tuple[tuple, tuple] | None:
+        """(this address's failures, this source's failures), or None.
+
+        NONE MEANS THE LIMITER COULD NOT RUN -- not that there were no
+        failures. The caller opens the door and reports it, because
+        refusing every sign-in would be a self-inflicted outage; what it
+        must not do is treat unreadable as clean, which is S1.
+        """
+        if not self._attempts.exists():
+            return ((), ())
+        try:
+            raw = self._attempts.read_text(encoding="utf8",
+                                           errors="replace")
+        except OSError:
+            return None
+
+        wanted = canonical_id(advocate_id)
+        mine: list = []
+        here: list = []
+        for line in raw.splitlines():
+            parts = line.split("\t")
+            if len(parts) != 3:
+                continue
+            stamp, who, where = parts
+            try:
+                when = datetime.fromisoformat(stamp)
+            except ValueError:
+                continue
+            if when < since:
+                continue
+            if who == wanted:
+                mine.append(when)
+            if where == source:
+                here.append(when)
+        return (tuple(mine), tuple(here))
+
+    def note_failure(self, advocate_id: str, source: str,
+                     now: datetime) -> None:
+        """One line per failed attempt. Never raises: a limiter that can
+        break a sign-in is worse than one that misses a count.
+
+        NO CLIENT MATERIAL. A timestamp, a folded id and a source -- the
+        same shape the auth log beside it has held since slice 1.
+        """
+        try:
+            with self._attempts.open("a", encoding="utf8") as fh:
+                fh.write(f"{now.isoformat()}\t{canonical_id(advocate_id)}"
+                         f"\t{source}\n")
+        except OSError:
+            pass
+
+    def limiter_available(self) -> bool:
+        """Whether the attempt log can be written. Reported at /api/health
+        so a limiter that is not running is visible BEFORE an incident.
+        """
+        try:
+            self._attempts.touch(exist_ok=True)
+            return True
+        except OSError:
+            return False
 
     def why_last_sign_in_failed(self) -> str | None:
         """`unknown`, `wrong_password`, `unreadable`, or None.

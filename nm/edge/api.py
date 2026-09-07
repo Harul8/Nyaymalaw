@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, Field
 
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
+from nm.domain import attempts
 from nm.domain import summary as matter_memory
 from nm.domain.advocate import utcnow
 from nm.domain.answer import Answer
@@ -619,11 +620,47 @@ def login(body: Credentials, request: Request, response: Response,
     machine that never authenticated, because the device half of the binding
     was never set there.
     """
+    # ---- THE RATE LIMIT, BEFORE ANYTHING EXPENSIVE (BK-20/BK-18) ----
+    #
+    # The product had none, and said so in a message the ADVOCATE reads:
+    # *this is the only thing standing between one advocate's client file
+    # and another's, and the product has no rate limit yet.* Naming which
+    # of three things failed at sign-in made that gap worth more, so the
+    # two land together.
+    #
+    # THE SOURCE IS THE CLIENT ADDRESS, not the device cookie. A cookie is
+    # attacker-controlled -- dropping it makes every attempt a new device
+    # and leaves the per-source counter counting nothing. An address is
+    # shared by a chambers, which is why PER_SOURCE is twenty and not five.
+    now = utcnow()
+    source = (request.client.host if request.client else "unknown-source")
+    counts = application().directory.failures_since(
+        body.advocate_id, source, now - attempts.WINDOW)
+
+    if counts is None:
+        # THE LIMITER COULD NOT RUN. The door opens -- refusing every
+        # sign-in would be a self-inflicted outage on a product used under
+        # time pressure -- and this is NOT silent: `/api/health` reports
+        # rate limiting as NOT RUNNING, which is the third state the
+        # operator sees before an incident rather than during one.
+        pass
+    else:
+        seen = attempts.verdict(counts[0], counts[1], now)
+        if not seen.allowed:
+            # 429, NOT 401. A refused attempt is not a wrong password, and
+            # calling it one would tell an advocate to check credentials
+            # that may be perfectly correct.
+            raise HTTPException(status_code=429, detail=seen.said)
+
     identity = application().directory.authenticate(
         body.advocate_id, body.password)
     if identity is None:
         # 401 AND NOTHING ELSE. Not 404 for an unknown advocate and 401 for a
         # wrong password -- the status code is a message too.
+        # THE FAILURE IS COUNTED (BK-20). Recorded after the attempt so a
+        # successful sign-in never adds to the count, and before the
+        # response so the next attempt sees it.
+        application().directory.note_failure(body.advocate_id, source, now)
         why = application().directory.why_last_sign_in_failed()
         raise HTTPException(
             status_code=401,

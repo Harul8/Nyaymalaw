@@ -116,6 +116,13 @@ class Application:
             "judge_tier": ("configured" if self.config.configured(Tier.JUDGE)
                            else "not configured"),
             "encryption": self.store.scheme,
+            # A LIMITER THAT IS NOT RUNNING IS VISIBLE HERE, before an
+            # incident rather than during one. It fails OPEN by design,
+            # and a control that could not run returning the shape of a
+            # clean result is exactly what this line refuses.
+            "rate_limiting": ("running"
+                              if self.directory.limiter_available()
+                              else "NOT RUNNING -- the attempt log cannot be written"),
             "corpus": "readable" if self.evidence.available else "NOT READABLE",
             # Each retrieval capability reports its OWN readiness. One rolled-up
             # "corpus: readable" would let an unbuilt authority index hide
