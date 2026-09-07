@@ -42,6 +42,12 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sweep test  ->  the test that proves it can fail.
 #: A sweep with no control is a sweep that has never been shown to work.
 CONTROLS: dict[str, str] = {
+    # BK-13 -- no enum value reaches the advocate, over every Element in nm/
+    "test_no_enum_value_reaches_the_advocate":
+        "test_the_value_scan_can_see_an_identifier_reaching_the_advocate",
+    # BK-13 -- every Spoken enum checks itself at import, over every class
+    "test_every_spoken_enum_called_complete":
+        "test_the_complete_scan_can_see_an_enum_that_never_checks_itself",
     # M1 -- length is not content, over every dataclass in nm/
     "test_no_required_string_field_accepts_a_value_made_of_whitespace":
         "test_blank_is_the_one_definition_of_carrying_nothing",

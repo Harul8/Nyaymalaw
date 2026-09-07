@@ -23,9 +23,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from enum import Enum
+from enum import Enum, nonmember
 from typing import Protocol, runtime_checkable
 
+from nm.domain.spoken import Spoken
 from nm.domain.text import blank, refuses_blank_text
 
 
@@ -45,7 +46,7 @@ class ParaKind(str, Enum):
         return self in (ParaKind.RATIO, ParaKind.REASONING, ParaKind.ORDER)
 
 
-class Binding(str, Enum):
+class Binding(Spoken, str, Enum):
     """THREE states. `NOT_ASSESSED` is what an uncomputable status returns.
 
     Two states would force every unknown court, undated judgment and
@@ -57,11 +58,20 @@ class Binding(str, Enum):
     PERSUASIVE = "persuasive"
     NOT_ASSESSED = "not_assessed"
 
+    SAID = nonmember({
+        "binding": "binding",
+        "persuasive": "persuasive",
+        "not_assessed": "of a weight nobody has assessed",
+    })
+
     @property
     def assessed(self) -> bool:
         return self is not Binding.NOT_ASSESSED
 
 
+
+
+Binding.complete()
 class TreatmentState(str, Enum):
     """Subsequent judicial treatment. THREE states, and the third is the point.
 

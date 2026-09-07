@@ -49,9 +49,10 @@ standard it is proved.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, nonmember
 
 from nm.domain.matter import Side
+from nm.domain.spoken import Spoken
 from nm.domain.text import blank, refuses_blank_text
 
 
@@ -82,13 +83,23 @@ class ProofStatus(str, Enum):
     not look"."""
 
 
-class Standard(str, Enum):
+class Standard(Spoken, str, Enum):
     BALANCE_OF_PROBABILITIES = "balance_of_probabilities"
     BEYOND_REASONABLE_DOUBT = "beyond_reasonable_doubt"
     PRIMA_FACIE = "prima_facie"
     NOT_ESTABLISHED = "not_established"
 
+    SAID = nonmember({
+        "balance_of_probabilities": "on the balance of probabilities",
+        "beyond_reasonable_doubt": "beyond reasonable doubt",
+        "prima_facie": "to a prima facie standard",
+        "not_established": "to a standard nobody has established",
+    })
 
+
+
+
+Standard.complete()
 @refuses_blank_text("shifted_by", "shift_provision")
 @dataclass(frozen=True)
 class Burden:

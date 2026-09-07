@@ -39,14 +39,15 @@ rather than invisible.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from enum import Enum
+from enum import Enum, nonmember
 
 from nm.domain.matter import Posture, Side, ThreadId, new_id
+from nm.domain.spoken import Spoken
 from nm.domain.text import blank, fold, refuses_blank_text
 from nm.domain.traceability import implements
 
 
-class IssueKind(str, Enum):
+class IssueKind(Spoken, str, Enum):
     """What sort of issue. NOT a priority, and not a visibility rule.
 
     D9: *disposition, not kind, governs visibility*, and *never give a
@@ -60,8 +61,18 @@ class IssueKind(str, Enum):
     PROCEDURAL = "procedural"
     NOT_ESTABLISHED = "not_established"
 
+    SAID = nonmember({
+        "threshold": "a threshold issue",
+        "substantive": "a substantive issue",
+        "procedural": "a procedural issue",
+        "not_established": "an issue whose kind is not established",
+    })
 
-class Effect(str, Enum):
+
+
+
+IssueKind.complete()
+class Effect(Spoken, str, Enum):
     """Whose case this issue helps. DERIVED, never stored -- see the module docstring."""
 
     SUPPORTS = "supports"
@@ -69,7 +80,17 @@ class Effect(str, Enum):
     NEUTRAL = "neutral"
     NOT_ASSESSED = "not_assessed"
 
+    SAID = nonmember({
+        "supports": "helps our case",
+        "opposes": "cuts against us",
+        "neutral": "is neutral between the sides",
+        "not_assessed": "has not been weighed either way",
+    })
 
+
+
+
+Effect.complete()
 class DispositionState(str, Enum):
     """What is being done about it. THE COMPLETE SET, and there is no fifth
     member meaning "gone"."""

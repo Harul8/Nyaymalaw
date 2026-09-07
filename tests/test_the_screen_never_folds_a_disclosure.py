@@ -13,17 +13,28 @@ are served, and the advocate still cannot see them. §9 says the third state
 must be visible in the OUTPUT, and behind a triangle is *available*, which is a
 different word.
 
-WHY THIS IS A PYTHON TEST OVER JAVASCRIPT SOURCE
---------------------------------------------------
-There is no JS test runner in this repo and adding one to hold a single rule
-would be apparatus that runs when someone has time -- R-6 in the project plan.
-What this asserts is structural and reads perfectly well from the source: the
-partition that decides what folds. If a JS runner ever lands, this moves; until
-then the rule is checked rather than remembered.
+TWO HALVES, AND THE SECOND ONE RUNS THE CODE
+----------------------------------------------
+The checks that read `web/app.js` as TEXT are structural: they hold if the
+partition is right and the rendering then does something else with the result.
+They are cheap, they name the exact predicate, and they are not sufficient.
 
-The screen was ALSO driven and read back through the DOM when it was built --
+So the last test in this file EXECUTES `renderTurn` --
+`tests/js/render_turn_partition.mjs`, under plain `node`, against a forty-line
+stub DOM -- and walks the tree it builds. That answers the question the
+advocate cares about, which no reading of the source can: is a disclosure ever
+inside a collapsed `<details>`?
+
+**No npm install.** jsdom to hold one rule is R-6 apparatus -- a check that
+needs a toolchain nobody maintains is a check that stops running. And when
+`node` is absent the test says NOT ASSESSED in those words rather than
+passing, because a test that quietly returns when its tooling is missing is
+the shape of every silent gap in this register.
+
+The screen was ALSO driven through a real browser when it was built --
 `details.support .el.disclosure` returned 0 and `.turn > .el.disclosure`
-returned 2 on a two-disclosure turn. That measurement is what this encodes.
+returned 2 on a two-disclosure turn. That measurement is what the `.mjs`
+encodes rather than replaces.
 """
 from __future__ import annotations
 
@@ -34,7 +45,8 @@ import pytest
 
 pytestmark = pytest.mark.class_a
 
-WEB = pathlib.Path(__file__).resolve().parents[1] / "web"
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+WEB = ROOT / "web"
 
 
 def _app_js() -> str:
@@ -120,3 +132,44 @@ def test_a_disclosure_still_looks_different_from_an_assertion():
     assert ".el.disclosure" in css
     assert "border-left-style: dashed" in css, (
         "a disclosure is no longer visually distinct from an assertion")
+
+
+# ============ BK-12 — the same rule, asserted BEHAVIOURALLY ================
+
+def test_the_rendered_turn_puts_no_disclosure_inside_a_fold():
+    """THE STRUCTURAL CHECKS ABOVE READ THE SOURCE. This runs it.
+
+    Every assertion before this one reads the partition's predicate out of
+    `web/app.js`. That is real and it is structural: it holds if the filter is
+    correct and the rendering then does something else with the result — puts
+    the disclosures in the fold by a different route, or drops them.
+
+    `tests/js/render_turn_partition.mjs` executes the ACTUAL `renderTurn`
+    against a forty-line stub DOM and walks the tree it builds, asking the
+    question the advocate cares about: is a disclosure ever inside a
+    collapsed `<details>`?
+
+    NO npm INSTALL. jsdom to hold one rule is R-6 apparatus — a check that
+    needs a toolchain nobody maintains is a check that stops running.
+
+    THREE STATES, because node may not be here. A missing runtime is NOT
+    ASSESSED, said in those words and skipped; it is not a pass. §9 is about
+    exactly this, and a test that quietly returns when its tooling is absent
+    is the shape of every silent gap in this register.
+    """
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip(
+            "NOT ASSESSED: node is not on PATH, so the behavioural half of "
+            "this rule did not run. The structural checks above still hold. "
+            "This is a third state, not a pass.")
+
+    script = ROOT / "tests" / "js" / "render_turn_partition.mjs"
+    result = subprocess.run([node, str(script)], capture_output=True,
+                            text=True, cwd=ROOT)
+    assert result.returncode == 0, (
+        "the rendered turn breaks the disclosure rule:\n"
+        + result.stdout + result.stderr)

@@ -17,9 +17,10 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field, replace
 from datetime import date
-from enum import Enum
+from enum import Enum, nonmember
 from typing import Literal
 
+from nm.domain.spoken import Spoken
 from nm.domain.text import fold, refuses_blank_text
 from nm.domain.traceability import implements
 
@@ -190,12 +191,21 @@ class Role(str, Enum):
     UNKNOWN = "unknown"
 
 
-class Side(str, Enum):
+class Side(Spoken, str, Enum):
     MOVING = "moving"
     DEFENDING = "defending"
     UNKNOWN = "unknown"
 
+    SAID = nonmember({
+        "moving": "the party who has to move",
+        "defending": "the party defending",
+        "unknown": "a side that is not yet settled",
+    })
 
+
+
+
+Side.complete()
 # Whoever must FILE to get what they want is the mover. This mapping is the
 # whole of the test, written once so no call site re-derives it differently.
 _SIDE_OF: dict[Role, Side] = {

@@ -386,24 +386,46 @@ def test_the_positions_reach_the_answer_on_a_served_turn(tmp_path):
         advocate_words = ACCOUNT
         notes = ""
 
+    # `concluded` IS WHERE THE POSITIONS GO. Captured rather than
+    # discarded, so the material assertion below can read the value
+    # instead of splitting the sentence that reports it.
+    concluded: dict = {}
     out = engine._proof(
         TurnInput(advocate_id="adv_1", today=TODAY, message="where now?"),
-        thread, _M(), _metrics(), "specific_performance", {})
+        thread, _M(), _metrics(), "specific_performance", concluded)
     text = " ".join(e.text for e in out)
 
     assert "concluded and enforceable agreement" in text, text
-    assert "burden ours" in text, "the burden was not resolved against the posture"
+    # THE RULE IS THAT IT RESOLVES, not that it says a particular phrase.
+    # This asserted "burden ours" and went red when BK-13 replaced the
+    # bracketed record with a sentence — the burden still resolved, and
+    # the test could not tell.
+    assert "The burden is on us" in text, (
+        "the burden was not resolved against the posture:\n" + text[:400])
+    assert "which side we" not in text, (
+        "the burden fell back to naming the party abstractly, which is the\n"
+        "unresolved branch")
     assert "balance of probabilities" in text
-    held = [e.text for e in out if "; held on " in e.text]
-    assert held, "no element came back HELD, so the guard is not exercised"
-    span = held[0].split("; held on ", 1)[1].rstrip("]")
-    assert Quotable(file=ACCOUNT).accepts(span), (
-        f"a HELD position cites {span!r}, which is not in what the advocate "
-        f"wrote. The material behind a status is the one thing that must be "
-        f"theirs.")
-    assert "not assessed" in text, (
-        "every element came back with a status, so the read is not being "
-        "exercised on the case E-070 is about")
+    # FROM THE POSITION, NOT FROM THE SENTENCE. This split the rendered
+    # text on "; held on " to recover the material -- a parser for a
+    # format nobody declared, which broke the moment the sentence
+    # improved. The material is a field.
+    positions = [p for p in concluded.get("proof", ())
+                 if p.status is ProofStatus.HELD]
+    assert positions, "no position came back HELD, so the guard is not exercised"
+    for position in positions:
+        for span in position.material:
+            assert Quotable(file=ACCOUNT).accepts(span), (
+                f"a HELD position cites {span!r}, which is not in what the "
+                f"advocate wrote. The material behind a status is the one "
+                f"thing that must be theirs.")
+    # FROM THE STATUS, NOT FROM THE SENTENCE. Same lesson as the block
+    # above: this searched for the words "not assessed" and broke when
+    # the sentence became "Nobody has established how it is proved."
+    assert any(p.status is ProofStatus.NOT_ASSESSED
+               for p in concluded.get("proof", ())), (
+        "every position came back with a status, so the read is not "
+        "being exercised on the case E-070 is about")
 
 
 def test_a_gap_on_our_side_is_named(tmp_path):

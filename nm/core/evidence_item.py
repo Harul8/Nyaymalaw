@@ -28,15 +28,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from enum import Enum
+from enum import Enum, nonmember
 
 from nm.domain.matter import FactId, new_id
 from nm.domain.quotable import Quotable
+from nm.domain.spoken import Spoken
 from nm.domain.text import blank, refuses_blank_text
 from nm.domain.traceability import implements
 
 
-class Holder(str, Enum):
+class Holder(Spoken, str, Enum):
     """Who has it decides how it is obtained and how long that takes."""
 
     CLIENT = "client"
@@ -45,8 +46,19 @@ class Holder(str, Enum):
     COURT = "court"
     UNKNOWN = "unknown"
 
+    SAID = nonmember({
+        "client": "our client",
+        "opponent": "the other side",
+        "third_party": "a third party",
+        "court": "the court",
+        "unknown": "someone not yet identified",
+    })
 
-class Form(str, Enum):
+
+
+
+Holder.complete()
+class Form(Spoken, str, Enum):
     """A PHOTOCOPY IS NOT THE DOCUMENT."""
 
     ORIGINAL = "original"
@@ -56,7 +68,19 @@ class Form(str, Enum):
     ORAL = "oral"
     NOT_ASSESSED = "not_assessed"
 
+    SAID = nonmember({
+        "original": "the original",
+        "certified_copy": "a certified copy",
+        "photocopy": "a photocopy",
+        "electronic": "in electronic form",
+        "oral": "oral only",
+        "not_assessed": "in a form nobody has established",
+    })
 
+
+
+
+Form.complete()
 class Existence(str, Enum):
     """THE FIRST QUESTION. Is there such a thing, and where is it."""
 

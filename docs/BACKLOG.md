@@ -16,88 +16,70 @@ against.
 
 ## Open
 
-### BK-13 - the product's own sentences read like a form, not an advocate
-Opened 7 September 2026 on the advocate's question: *should the
-conversation not be natural and human, instead of these templated
-responses?*
+**Nothing.** BK-1, BK-2, BK-3, BK-5 through BK-13 are closed below;
+**BK-4 is deferred with its reason** and is the advocate's to run, not the
+product's.
 
-**Measured before answering.** 73 `Element` sites in `nm/core/turn.py`
-carry text this product wrote rather than text a model wrote:
+An empty section rather than a deleted one: this file's own rule is that a
+row is closed by a defect row or by a decision recorded here, never by
+disappearing, and a heading that vanishes when it empties takes the
+history of the rows under it with it.
 
-| kind | count | note |
-|---|---|---|
-| ACTION | **1** | the recommendation is the MODEL's prose, governed by `register.PEER` |
-| GROUND | 60 | **55 carry `disclosure`** |
-| FINDING | 6 | **this is the problem** |
-| QUESTION | 6 | mixed |
-
-**The findings leak the internal vocabulary onto the page:**
-
-```
-{i.statement} [{i.kind.value}; runs against {i.runs_against.value}; ...]
-{pos.element} [burden {whose}; {standard}; {detail}]
-Theory: {t.theme} Relief: {t.relief}.
-```
-
-No advocate writes `[burden ours; balance_of_probabilities]`. That is an
-enum rendered with brackets, and `Theory: X Relief: Y` is a label-colon-
-value line rather than a sentence.
-
-**What must NOT change, and why this is a row rather than a rewrite.**
-The element KINDS are load-bearing. `Answer.__post_init__` refuses an
-answer that leads with background (PRD S6.2 S3); the whole gate matrix
-hangs off `disclosure`; B-128 was three days before this was written and
-was exactly a disclosure the advocate could not see. **The previous build
-produced advice that read beautifully and hid what it could not
-establish** - that is the failure mode of *just make it conversational*.
-
-And the 55 disclosures being fixed wording is deliberate: a disclosure
-phrased differently each time is one an advocate cannot learn to spot.
-**Fixed does not have to mean stiff**, and that is the actual gap.
-
-So the work is: better sentences INSIDE the structure, starting with the
-six bracket-notation findings. The `ACTION`/`FINDING`/`NOT ESTABLISHED`
-labels are a separate, independent question - they are a rendering choice
-in `web/app.js` and can soften or go without touching the contract.
-### BK-12 - the advise pane reads as a conversation, and one rule bounds it
-Landed 7 September 2026 on the advocate's request: the pane now shows
-their own words as a bubble, the answer as prose in a wider reading
-column, and the supporting material folded behind a row that opens in one
-click.
-
-**Recorded here because of what must NEVER fold.** A GROUND element
-carrying `disclosure` is what the product could not establish - the
-screens that have not run, the corpus gap, the read that came back empty.
-Folding those is **B-128 at the last inch**: that defect was a disclosure
-the advocate could not see, and it was three days old when this screen
-changed. The bytes would be served and the advocate still would not see
-them. S9 wants the third state visible in the OUTPUT, and behind a
-triangle is *available*, which is a different word.
-
-So the split is by MEANING, not by kind:
-
-| element | treatment |
-|---|---|
-| ACTION, QUESTION, FINDING | prose, always open |
-| GROUND + `disclosure` | always open, quieter, dashed |
-| GROUND, plain (spans, quotes) | collapsible, closed, **with a count** |
-
-`tests/test_the_screen_never_folds_a_disclosure.py` holds the rule, and
-was verified RED by deleting `!el.disclosure` from the partition - a
-two-character edit, which is exactly why it is checked rather than
-remembered. It also refuses a `spoken` filter that is a second list
-instead of the negation, because an element kind falling between two
-hand-written filters renders nowhere and nothing counts it.
-
-**Open, deliberately:** the rule is asserted against the JavaScript
-SOURCE from Python. There is no JS test runner here and adding one to
-hold a single rule is R-6 apparatus. The screen was also driven through
-the DOM when it was built - `details.support .el.disclosure` returned 0
-and `.turn > .el.disclosure` returned 2 on a two-disclosure turn - and
-that measurement is what the test encodes rather than replaces.
 ---
 
 ## Closed
+
+### BK-13 - the product spoke in its own identifiers - **CLOSED**
+Closed 7 September 2026 as **B-132**. An enum now reaches the advocate
+only through a phrase it owns.
+
+`nm/domain/spoken.py` holds the mechanism: the phrases live ON the enum
+and `complete()` asserts every member has one AT IMPORT. No fallback to
+`.value` - a fallback is what makes a missing phrase invisible. Seven
+enums speak: `Holder`, `Form`, `Standard`, `IssueKind`, `Effect`, `Side`,
+`Binding`.
+
+The three bracket-notation findings are sentences:
+
+| before | after |
+|---|---|
+| `{pos.element} [burden ours; balance_of_probabilities; held on X]` | *The burden is on us, on the balance of probabilities. It is held on X.* |
+| `{i.statement} [substantive; runs against defending; opposes our case on posture v2]` | *It is a substantive issue, running against the party defending, and it cuts against us. Read on the posture as it stood at v2.* |
+| `{item.what} - held by third_party, certified_copy` | *a third party has it, and what exists is a certified copy.* |
+
+**The structure did not change, and that was the point.** The element
+kinds are load-bearing: `Answer.__post_init__` refuses an answer that
+leads with background, the gate matrix hangs off `disclosure`, and B-128
+was five days earlier. The previous build produced advice that read
+beautifully and hid what it could not establish. Better sentences INSIDE
+the structure, never instead of it.
+
+**`Element.feature` came out of it**, and its own docstring had predicted
+it: the issues suite filtered findings by searching for the words *runs
+against*, said so, and named the fix in the same sentence. Rewording the
+findings turned three tests red - all three keyed on prose rather than on
+the rule. They read `feature == "D9"`, `Effect.SUPPORTS.said`, a version
+TOKEN, and `concluded["proof"]` now. **A product whose tests break when
+its English improves does not improve its English.**
+
+### BK-12 - the fold rule is asserted behaviourally - **CLOSED**
+Closed 7 September 2026, and it found **B-133** on the way.
+
+`tests/js/render_turn_partition.mjs` executes the real `renderTurn` under
+plain `node` against a forty-line stub DOM and walks the tree. No npm
+install: jsdom to hold one rule is R-6 apparatus, and a check that needs
+a toolchain nobody maintains is a check that stops running. An absent
+`node` reports **NOT ASSESSED** in those words rather than passing.
+
+**And it was useless until a mutation said so.** Deleting `!el.disclosure`
+from the partition - the exact two-character edit this exists to refuse -
+left it GREEN, because the fold's renderer hard-coded `el ground` and
+stripped the `disclosure` class at precisely the moment it mattered. The
+partition would have been wrong AND every trace of it gone, from the
+screen and from the check looking for it.
+
+The fold now shares the class and label expression with the open half,
+and the same mutation fails loudly.
 
 ### BK-11 - G-MODEL proven at one read of fifteen - **CLOSED**
 Closed 7 September 2026 as **B-131**. All fifteen structured reads are

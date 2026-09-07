@@ -4347,6 +4347,82 @@ d("B-131", "2026-09-07", "turn",
   "RED by mutation: unwiring one of the two assembly sites, and "
   "removing the names from the sentence.")
 
+d("B-132", "2026-09-07", "edge",
+  "THE PRODUCT SPOKE TO THE ADVOCATE IN ITS OWN IDENTIFIERS. Six "
+  "`Element` sites rendered an enum value straight onto the page, so an "
+  "advocate read `balance_of_probabilities`, `certified_copy`, "
+  "`third_party` and `not_assessed`. The proof and issue findings were "
+  "worse than that: `{pos.element} [burden ours; "
+  "balance_of_probabilities; held on X]` is a RECORD, not a sentence.",
+  "The advocate asked whether an expert advocate should converse like "
+  "this \u2014 and the screenshot they reacted to was a synthetic "
+  "fixture I had hand-written for a rendering test, so the first "
+  "correct move was to measure what the product actually authors rather "
+  "than judge its voice from my own prose.",
+  "S9 \u2014 two owners for one truth",
+  "Measured: 73 `Element` sites in the turn engine carry text this "
+  "product wrote. ONE is an ACTION \u2014 the recommendation is the "
+  "model's own prose, governed by `register.PEER`. Six are FINDINGs, "
+  "and those were the whole complaint.",
+  "`nm/domain/spoken.py`. The phrase lives ON the enum and `complete()` "
+  "asserts every member has one AT IMPORT, so a member added without a "
+  "phrase is an ImportError rather than a surprise in a served turn. "
+  "There is NO fallback to `.value`: a fallback is what makes a missing "
+  "phrase invisible.\n\n"
+  "THE FIRST VERSION MADE `SAID` AN ENUM MEMBER. Any plain assignment "
+  "in an Enum body becomes one, so on a `str, Enum` the dict was "
+  "rendered as a string and `complete()` reported twenty-six stale "
+  "members, one per character. `enum.nonmember` is the fix and the "
+  "failure was loud, which is the only reason it cost minutes.\n\n"
+  "AND THE STRUCTURE STAYS. The element KINDS are load-bearing \u2014 "
+  "`Answer.__post_init__` refuses an answer that leads with background, "
+  "the gate matrix hangs off `disclosure`, and B-128 was five days "
+  "earlier. The previous build produced advice that read beautifully "
+  "and hid what it could not establish; dissolving structure into prose "
+  "is that failure, not the cure for it.",
+  "Yes \u2014 and the sweep drew its population from every `Element` in "
+  "`nm/`, not from the six found by eye. One `.value` survives and is "
+  "DECLARED: `cascade.Derived.value` is a `str` holding a derived "
+  "quantity, not an enum member, and 'limitation was 2027-04-15' is "
+  "already English. Rewriting it would be changing a line because a "
+  "scan matched it.",
+  "tests/test_the_product_does_not_speak_in_identifiers.py \u2014 no "
+  "raw `.value` reaches an Element's text, every `Spoken` enum calls "
+  "`complete()`, `said` has no escape hatch, and no phrase is the "
+  "identifier with its underscores removed (one declared exception: "
+  "`beyond reasonable doubt` IS the English). Both sweeps have planted "
+  "positive controls, added because "
+  "`test_every_sweep_has_a_positive_control` caught them the moment "
+  "they landed.")
+
+d("B-133", "2026-09-07", "edge",
+  "THE COLLAPSED HALF OF THE ANSWER STRIPPED THE `disclosure` CLASS. "
+  "The supporting-passage fold rendered every element as a flat "
+  "`el ground`, so a disclosure arriving there would have lost the "
+  "dashed rule AND the 'Not established' label on the way in.",
+  "Closing BK-12 by adding the BEHAVIOURAL half of the "
+  "disclosure-never-folds rule \u2014 running `renderTurn` under node "
+  "against a stub DOM rather than reading `web/app.js` as text.",
+  "S11 \u2014 a check that cannot fail",
+  "BY MUTATION, AND ONLY BY MUTATION. Deleting `!el.disclosure` from "
+  "the partition \u2014 the exact two-character edit the structural "
+  "test refuses \u2014 left the new behavioural check GREEN. The check "
+  "looks for the `disclosure` class, and the renderer was stripping "
+  "that class at precisely the moment it mattered.",
+  "The fold uses the SAME class and label expression as the open half. "
+  "With it, the same mutation fails loudly: *expected 2 disclosure "
+  "elements, rendered 4; A DISCLOSURE IS INSIDE A FOLD*.",
+  "Yes: A RENDERER MUST NOT STRIP THE EVIDENCE OF ITS OWN DEFECT. Two "
+  "paths that render the same element type must share the expression "
+  "that classifies it, not each carry a copy \u2014 and the copy that "
+  "is a CONSTANT is the dangerous one, because it is right until the "
+  "day the partition feeding it is wrong.",
+  "tests/js/render_turn_partition.mjs, executed from "
+  "tests/test_the_screen_never_folds_a_disclosure.py under plain `node` "
+  "with a forty-line stub DOM \u2014 no npm install, because jsdom to "
+  "hold one rule is R-6 apparatus. An absent `node` reports NOT "
+  "ASSESSED in those words and does not pass.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

@@ -76,6 +76,21 @@ class Element:
     be a one-off ("I could not reach the model, resend") rather than a
     standing condition, and the two are closed differently."""
     disclosure: bool = False
+
+    feature: str = ""
+    """WHICH FEATURE EMITTED THIS, by its spec id (`D5`, `C7`, `D9`).
+
+    A consumer that has to read the TEXT to tell an issue finding from an
+    inventory row breaks every time the product's English improves -- and
+    a product whose tests break when its English improves does not improve
+    its English. That is not hypothetical: the issues suite filtered on the
+    words "runs against", said so in its own docstring, and predicted this
+    field in the same sentence.
+
+    EMPTY IS HONEST. Most elements have no feature worth naming and "" says
+    exactly that; it is not a default standing in for one. The three that
+    a consumer needs to tell apart set it.
+    """
     """True when this element REPORTS WHAT COULD NOT BE ESTABLISHED rather than
     asserting anything about the law -- a corpus gap, a retrieval defect, a
     source retrieved and then dropped.

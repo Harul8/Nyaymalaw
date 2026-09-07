@@ -302,12 +302,24 @@ function renderTurn(entry) {
     fold.appendChild(sum);
     for (const el of support) {
       const d = document.createElement('div');
-      d.className = 'el ground';
+      // THE SAME CLASS LOGIC AS THE OPEN HALF, not a hard-coded
+      // 'el ground'. This said that flat, so a disclosure that ever
+      // reached the fold rendered as an ordinary passage -- losing the
+      // dashed rule and the "Not established" label on the way in.
+      //
+      // Worse than folding it: the partition would be wrong AND every
+      // trace of it being wrong would be gone. Found by mutation --
+      // deleting `!el.disclosure` from the partition left the
+      // behavioural check GREEN, because the class it looks for was
+      // being stripped at exactly the moment it mattered.
+      d.className = `el ${el.kind}${el.disclosure ? ' disclosure' : ''}`;
       const k = document.createElement('span');
       k.className = 'k';
-      k.textContent = (el.signal && el.signal !== 'none'
-        ? `${KIND_LABEL[el.kind]} \u00b7 ${el.signal.replace(/_/g, ' ')}`
-        : KIND_LABEL[el.kind]);
+      k.textContent = el.disclosure
+        ? 'Not established'
+        : (el.signal && el.signal !== 'none'
+          ? `${KIND_LABEL[el.kind]} \u00b7 ${el.signal.replace(/_/g, ' ')}`
+          : KIND_LABEL[el.kind]);
       const body = document.createElement('div');
       body.className = 'body'; body.textContent = el.text;
       d.append(k, body);

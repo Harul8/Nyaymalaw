@@ -12,13 +12,14 @@ result where an advocate reads it.
 """
 from __future__ import annotations
 
+import re
 from datetime import date
 
 import pytest
 
 from nm.core.turn import TurnInput
 from nm.domain.answer import ElementKind
-from nm.domain.issue import Disposition, DispositionState, Issue, IssueKind
+from nm.domain.issue import Disposition, DispositionState, Effect, Issue, IssueKind
 from nm.domain.matter import Side
 from nm.domain.quotable import Quotable
 from tests.test_turn_contract import build
@@ -47,14 +48,20 @@ def _findings(out):
     asserted every finding carries a posture version. An inventory row has no
     posture and should not.
 
-    `runs against` is the issue renderer's own vocabulary, asserted in this
-    same file, so the filter and the format cannot drift apart silently. The
-    deeper point is that FINDING elements from different features are
-    indistinguishable to any consumer — worth a marker on `Element` if a third
-    feature needs to tell them apart.
+    IT FILTERED ON THE WORDS "runs against" until 7 September 2026, and
+    the docstring here predicted the fix in the same breath: *worth a
+    marker on `Element` if a third feature needs to tell them apart.*
+    BK-13 rewrote the issue findings as sentences, the words changed, and
+    this went red — a test keyed on prose breaks every time the product's
+    English improves, and a product whose tests break when its English
+    improves does not improve its English.
+
+    `feature` carries the spec id, which `trace` already checks, so the
+    filter and the emitter cannot drift apart at all rather than merely
+    not silently.
     """
     return [e.text for e in out.answer.elements
-            if e.kind is ElementKind.FINDING and "runs against" in e.text]
+            if e.kind is ElementKind.FINDING and e.feature == "D9"]
 
 
 @pytest.mark.eval_id("E-060")
@@ -86,9 +93,13 @@ def test_the_same_issue_runs_the_other_way_on_the_opposite_posture(tmp_path):
     assert plaintiff != defendant, (
         "the same issues read identically for both sides. The effect is "
         "supposed to be derived from the posture, so it cannot be.")
-    assert "supports" in plaintiff or "opposes" in plaintiff
-    assert ("opposes" in defendant) != ("opposes" in plaintiff) or \
-           ("supports" in defendant) != ("supports" in plaintiff), (
+    # THROUGH THE ENUM, not through its English. `Effect` owns its own
+    # phrasing; repeating the words here would be the second copy, and the
+    # test would go red on an improvement rather than on a regression.
+    helps, cuts = Effect.SUPPORTS.said, Effect.OPPOSES.said
+    assert helps in plaintiff or cuts in plaintiff
+    assert (cuts in defendant) != (cuts in plaintiff) or \
+           (helps in defendant) != (helps in plaintiff), (
         f"the effect did not flip between postures.\n"
         f"plaintiff: {plaintiff[:300]}\ndefendant: {defendant[:300]}")
 
@@ -99,8 +110,12 @@ def test_every_rendered_issue_carries_the_posture_version_it_was_computed_on(
     """A reading recorded WITHOUT its basis is one nobody can later tell is
     stale — which is the whole reason `effect` is not a stored field. The
     version has to travel to the advocate, not merely exist in the type."""
+    # A VERSION TOKEN, not a phrase. This looked for the literal
+    # "posture v" and went red when BK-13 turned the bracketed record
+    # into a sentence -- the version still travelled and the test could
+    # not tell. The rule is that it travels.
     for text in _findings(_run(tmp_path, FOR_PLAINTIFF)):
-        assert "posture v" in text, (
+        assert re.search(r"\bv\d+\b", text), (
             f"an issue was rendered with no posture version: {text}")
 
 

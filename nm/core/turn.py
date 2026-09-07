@@ -2332,7 +2332,7 @@ class TurnEngine:
                         text=(f'{f.ref} — "{_excerpt(f.span)}"'
                               f'{" [...]" if _shortened(f.span) else ""} '
                               f"({f.locator}; "
-                              f"{f.binding.value} for {f.binding_for} — "
+                              f"{f.binding.said} for {f.binding_for} — "
                               f"{f.binding_reason}).{checked}"),
                         refs=(f.locator,)))
                 elif f.quotable:
@@ -2359,7 +2359,7 @@ class TurnEngine:
                         text=(f'{f.ref} — "{_excerpt(f.span)}"'
                               f'{" [...]" if _shortened(f.span) else ""} '
                               f"({f.locator}; "
-                              f"{f.binding.value} for {f.binding_for}). {note}"),
+                              f"{f.binding.said} for {f.binding_for}). {note}"),
                         refs=(f.locator,),
                         signal=Signal.ADVERSE_TREATMENT if adverse else Signal.NONE,
                         disclosure=not adverse))
@@ -3187,8 +3187,11 @@ class TurnEngine:
                 continue
             out.append(Element(
                 kind=ElementKind.FINDING, thread=thread.id,
-                text=(f"{item.what} — held by {item.holder.value}, "
-                      f"{item.form.value}")))
+                # A SENTENCE, NOT TWO IDENTIFIERS. This read "the sale
+                # agreement — held by third_party, certified_copy".
+                feature="C7",
+                text=(f"{item.what} — {item.holder.said} has it, and "
+                      f"what exists is {item.form.said}.")))
         if carried:
             # ONE LINE, CONSTANT. Silence would leave the advocate unable to
             # tell a short list from a short answer, which is the third state
@@ -3328,9 +3331,16 @@ class TurnEngine:
             # whole reason `effect` is not a field.
             out.append(Element(
                 kind=ElementKind.FINDING, thread=thread.id,
-                text=(f"{i.statement} [{i.kind.value}; runs against "
-                      f"{i.runs_against.value}; {effect.value} our case "
-                      f"on posture v{basis}]")))
+                # A SENTENCE. This read "[substantive; runs against
+                # defending; opposes our case on posture v2]" — a
+                # bracketed record of three enum values. The posture
+                # version stays because a reading recorded without it is
+                # one nobody can later tell is stale.
+                feature="D9",
+                text=(f"{i.statement} It is {i.kind.said}, running "
+                      f"against {i.runs_against.said}, and it "
+                      f"{effect.said}. Read on the posture as it stood "
+                      f"at v{basis}.")))
 
         for line in issue.considered_not_pursued(classified):
             out.append(Element(
@@ -3459,22 +3469,26 @@ class TurnEngine:
 
         for pos in live:
             falls = pos.burden.falls_on_us(thread.posture)
-            whose = ("ours" if falls is True
-                     else "theirs" if falls is False
-                     else f"on the {pos.burden.on.value} party; which side we "
+            whose = ("on us" if falls is True
+                     else "on them" if falls is False
+                     else f"on {pos.burden.on.said}, and which side we "
                           f"are is not settled")
-            detail = (f"held on {'; '.join(pos.material)}"
+            detail = (f"It is held on {'; '.join(pos.material)}."
                       if pos.status is ProofStatus.HELD
-                      else f"obtainable: {pos.closing_material}"
+                      else f"It is obtainable: {pos.closing_material}."
                       if pos.status is ProofStatus.OBTAINABLE
-                      else f"absent: {pos.dead_end}"
+                      else f"It is absent: {pos.dead_end}."
                       if pos.status is ProofStatus.ABSENT
-                      else "not assessed")
+                      else "Nobody has established how it is proved.")
             out.append(Element(
                 kind=ElementKind.FINDING, thread=thread.id,
-                text=(f"{pos.element} [burden {whose}; "
-                      f"{elements.standard.value.replace('_', ' ')}; "
-                      f"{detail}]")))
+                # A SENTENCE. This read "[burden ours;
+                # balance of probabilities; held on X]" — the burden, the
+                # standard and the status packed into brackets, which is
+                # how a record looks, not how an advocate writes.
+                feature="D5",
+                text=(f"{pos.element} The burden is {whose}, "
+                      f"{elements.standard.said}. {detail}")))
 
         # E-070'S INVARIANT, RUN. The population is the ELEMENTS, so a read
         # that answered on two of five reports three gaps rather than
