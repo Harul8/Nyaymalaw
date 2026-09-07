@@ -4672,6 +4672,48 @@ d("B-140", "2026-09-07", "tooling",
   "Without the first of those the fix would have made T9 unfailable, "
   "which is the defect it was fixing wearing the other face.")
 
+d("B-141", "2026-09-07", "docs",
+  "A BACKLOG ROW SAID A BUILD ARTEFACT DID NOT EXIST AND IT HAD EXISTED "
+  "FOR EIGHT DAYS. BK-4 read *`tools/build_authority_index.py` has never "
+  "been run*. `.nm/authority.db` was built on 30 August 2026 \u2014 1,097 "
+  "MB, `partial: no`, 451,548 of 1,015,780 paragraphs \u2014 "
+  "`readiness()` reports `authorities: readable`, and a live search "
+  "returns ANSWERED with 40 binding findings.",
+  "Reporting on what remained after the handover blockers closed. The "
+  "row was quoted as a live blocker in five separate reports, and a "
+  "phase table written the same morning said `authorities` waits on it "
+  "\u2014 false when it was typed.",
+  "S9 \u2014 two owners for one truth",
+  "By opening the file. Which is the whole of it: the fact was one line "
+  "away for eight days, in a repository whose rules say four different "
+  "ways that a claim is measured. The failure was not carelessness about "
+  "a document \u2014 it was TRUSTING a document about something "
+  "checkable, repeatedly, having been told not to.",
+  "The row is closed and the documents corrected. AND THE COUNT WAS "
+  "WRONG IN THE HARDER WAY: `BASELINE.md`'s `ratio` row said 144,744 "
+  "where the corpus holds 144,739, so the attributable total was 451,553 "
+  "and is 451,548. The table was internally CONSISTENT and wrong at the "
+  "source \u2014 adding the rows up confirms it rather than catching it "
+  "\u2014 and `CLAUDE.md` and the backlog had copied the total. My own "
+  "first diagnosis said the total contradicted the rows, which was "
+  "backwards; two independent sources settle it, a direct count over the "
+  "1,015,780 chunks and the built index's own `indexed_paragraphs`.",
+  "Yes: A DOCUMENT'S CLAIM ABOUT AN ARTEFACT IS A CLAIM ABOUT THE "
+  "FILESYSTEM, AND IS MEASURED THERE. The artefact is the authority and "
+  "the sentence is a copy of it; a copy nothing can refute goes stale in "
+  "silence. The same shape as the three provision stores, one layer out "
+  "\u2014 there it was three stores disagreeing, here a store and a "
+  "sentence about it.",
+  "tests/test_the_docs_do_not_outlive_the_artefact.py \u2014 no live "
+  "document may say a build artefact is absent while it is on disk, run "
+  "against the real tree because the artefact IS the thing under test. "
+  "It does NOT require the index to exist: not building it is a "
+  "legitimate state and `readiness()` says so honestly. What is refused "
+  "is the two being out of step in the direction that misleads. A second "
+  "test pins BASELINE's rows against its own total \u2014 which would "
+  "NOT have caught this one, and says so in its docstring rather than "
+  "implying otherwise.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

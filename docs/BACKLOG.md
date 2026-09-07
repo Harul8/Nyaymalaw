@@ -16,17 +16,14 @@ against.
 
 ## Open
 
-**Nothing.** BK-1, BK-2, BK-3, BK-5 through BK-13 are closed below;
-**BK-4 is deferred with its reason** and is the advocate's to run, not the
-product's.
+**Nothing.** Every BK row is closed. BK-4 was the last, and it closed by
+measurement rather than by work: the index had been built for eight days
+and the row had not noticed (**B-141**).
 
-An empty section rather than a deleted one: this file's own rule is that a
-row is closed by a defect row or by a decision recorded here, never by
-disappearing, and a heading that vanishes when it empties takes the
-history of the rows under it with it.
-
----
-
+The section stays. A heading that vanishes when it empties takes the
+history of the rows under it with it, and this file's own rule is that a
+row is closed by a defect row or by a decision recorded here - never by
+disappearing.
 ### The phases - **ALL SECTIONS CARRY**
 
 | phase | what it is | state |
@@ -296,16 +293,40 @@ and the web rendering is the weaker evidence by exactly that gap.
 
 ---
 
-## Deferred, with the reason
+### BK-4 - the authority index - **CLOSED, and it had been done for eight days**
+Closed 7 September 2026 as **B-141**, by looking at the file instead of at
+this row. Measured:
 
-### BK-4 — `tools/build_authority_index.py` has never been run
-451,553 attributable case paragraphs. Nothing in the repo triggers it and that
-is deliberate; until it exists every authority need returns `HELD_NOT_FOUND`
-naming the tool, rather than falling back to a scan with different recall.
-**A long job the advocate runs, not the product.**
+| | |
+|---|---|
+| `.nm/authority.db` | 1,097 MB, `built_at 2026-08-30T07:51:38` |
+| `partial` | **no** |
+| indexed | **451,548** of 1,015,780 |
+| `readiness("authorities")` | `readable` |
+| a live search | **ANSWERED**, 40 binding findings, ratio and reasoning |
+
+The row said *has never been run*. It had been run on **30 August**, and
+every statement resting on it since was wrong - including a phase table
+written the same morning as this correction, saying `authorities` *waits on
+the index build (BK-4)*.
+
+**The count was wrong too, and in the harder way.** `BASELINE.md`'s `ratio`
+row said 144,744 where the corpus holds 144,739, so the attributable total
+was 451,553 and is **451,548**. The table was internally consistent and
+wrong at the source, which adding the rows up CONFIRMS rather than catches.
+`CLAUDE.md` and this file had both copied the total.
+
+**The rule it earns:** a document's claim about an artefact is a claim about
+the filesystem, and it is measured there.
+`tests/test_the_docs_do_not_outlive_the_artefact.py` fails the build on a
+live document saying the index is unbuilt while it sits on disk.
+
+**What is still true:** nothing in the repo triggers the build, and it stays
+that way. A rebuild needs the file deleted deliberately - the tool refuses
+to overwrite, because a half-written index replacing a good one is worse
+than a build that would not start.
 
 ---
-
 ## Observed on GS-14, 6 September 2026 — worth a decision, not yet a defect
 
 

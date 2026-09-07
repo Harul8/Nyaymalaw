@@ -265,12 +265,23 @@ criterion, and the advocate-facing disclosure at the same time (**B-044**).
 
 ## Long jobs — write them, do not run them
 
-`tools/build_authority_index.py` builds the FTS index over 451,553 attributable
+`tools/build_authority_index.py` builds the FTS index over 451,548 attributable
 case paragraphs. **It is not run automatically and nothing in the repo triggers
 it.** Until it exists, every authority need returns `HELD_NOT_FOUND` naming the
 tool — it does **not** fall back to scanning `chunks.db`, because a fallback
 with different recall swapped in silently is the three-stores defect wearing a
 helpful face.
+
+**IT HAS BEEN RUN.** `.nm/authority.db` was built on **30 August 2026** —
+1,097 MB, `partial: no`, 451,548 of 1,015,780 paragraphs indexed — and a live
+search answers. `readiness()` reports `authorities: readable`.
+
+That went unnoticed for eight days because a backlog row said it had never run
+and nothing compared the row to the file (**B-141**). The rule this earns:
+**a document's claim about an artefact is a claim about the filesystem, and it
+is measured there.** `tests/test_the_docs_do_not_outlive_the_artefact.py` now
+fails the build on a live document saying the index is unbuilt while it is
+sitting on disk.
 
 ---
 

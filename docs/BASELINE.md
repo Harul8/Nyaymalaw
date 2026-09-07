@@ -181,16 +181,27 @@ Each of these was retrieved verbatim on 29 August 2026, with its locator:
 | Type | Count | Share | Attributable to the court? |
 |---|---:|---:|---|
 | `reasoning` | 266,744 | 26.3% | yes |
-| `ratio` | 144,744 | 14.3% | yes |
+| `ratio` | 144,739 | 14.3% | yes |
 | `order` | 40,065 | 3.9% | yes |
 | `arguments` | 149,960 | **14.8%** | **no — counsel's submission** |
 | `facts` | 139,677 | 13.8% | no |
 | `headnote` | 3,551 | 0.3% | no |
 | `unknown` | 271,020 | **26.7%** | **cannot be vouched either way** |
 
-**Attributable total: 451,553 — 44.5%.** Roughly one retrievable case paragraph
+**Attributable total: 451,548 — 44.5%.** Roughly one retrievable case paragraph
 in seven is something a losing advocate said, and one in four cannot be
 classified at all.
+
+> **Re-measured 7 September 2026, against the corpus.** The `ratio` row said
+> **144,744** and the corpus holds **144,739**, so the attributable total was
+> 451,553 and is 451,548. The table was internally consistent and wrong at the
+> source — which is the harder kind to catch, because adding the rows up
+> confirms it.
+>
+> TWO INDEPENDENT SOURCES AGREE ON THE NEW NUMBER: a direct count of
+> `paragraph_type` over the 1,015,780 case-law chunks, and the built index's
+> own `indexed_paragraphs`, which is 451,548. `CLAUDE.md` and
+> `docs/BACKLOG.md` had both copied the old total.
 
 > **CHECK `attr-1`:** a proposition attributed to a judgement resolves to a
 > paragraph of type `ratio`, `reasoning` or `order`. An `unknown` paragraph may
