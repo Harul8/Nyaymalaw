@@ -219,12 +219,23 @@ def lost(before: tuple[Derived, ...],
     that direction the check cannot find forgetting, which is the one thing it
     is for.
 
-    This is why it matters here more than anywhere else. Most of what the
-    product derives is re-derived from scratch every turn by a model read: the
-    issues, the theory, the opponent's case, the evidence inventory. A read
-    that returns nothing on turn 9 having returned three issues on turn 2 does
-    not fail — it succeeds, quietly, with less. The answer is thinner and
-    nothing in the product could tell.
+    This is why it matters here more than anywhere else. A read that returns
+    nothing on turn 9 having returned three issues on turn 2 does not fail —
+    it succeeds, quietly, with less. The answer is thinner and nothing in the
+    product could tell.
+
+    THIS PARAGRAPH USED TO SAY that most of what the product derives is
+    re-derived from scratch every turn, and named the issues, the theory, the
+    opponent's case and the evidence inventory. FOUR OF THOSE FIVE ARE NOW
+    PERSISTED AND MERGED (6 September 2026), and the sentence had stopped
+    being true while the mechanism went on resting on it.
+
+    THE CHECK IS STILL RIGHT. Persistence does not remove the failure it
+    catches: a merge can return an empty list, and `proof.still_supported`
+    can withdraw every position on the file. What changed is where the caller
+    takes its count from — `turn._record` counts what the thread HOLDS, not
+    what the turn RENDERED, and counting the rendering made this announce a
+    loss on an ordinary turn (BK-5).
 
     Returns the PRIOR rows rather than their names, because what the advocate
     needs is what was lost, not a count of it: "the limitation position on

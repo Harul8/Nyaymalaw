@@ -98,9 +98,17 @@ class _Evidence:
         return self.result
 
 
-def build(tmp_path, evidence=None, responses=None):
+def build(tmp_path, evidence=None, responses=None, model=None):
+    """The served engine, with a scripted model.
+
+    `model` is optional and BACKWARD-COMPATIBLE on purpose: a test that needs
+    a double which behaves differently across turns -- one that repeats its
+    answer, or forgets it -- cannot express that through `responses`, and the
+    alternative is every such test building its own engine and drifting from
+    this one.
+    """
     store = FileMatterStore(tmp_path, key=KEY)
-    model = ScriptedModelAdapter(
+    model = model or ScriptedModelAdapter(
         _model_config(),
         responses=responses or {
             "__default__": "File the summary possession suit within six months."})

@@ -3953,6 +3953,49 @@ d("B-122", "2026-09-06", "core",
   "positive control planting both ways the seventh prompt actually arrives. "
   "AND THE JUDGED RUN: E-102 PASS on mat_bf1b5f744dbc, control failing first.")
 
+d("B-123", "2026-09-07", "core",
+  "THE CASCADE ANNOUNCED A LOSS ON AN ORDINARY TURN. GS-14, turns 3 and 4: "
+  "‘This turn derived LESS than the last one. evidence on "
+  "thr_787d62dd3826 was 2 and is not computed now.’ The inventory HELD "
+  "two items — and the SAME ANSWER said so one line down: ‘2 item(s) "
+  "already on the file are unchanged and not repeated here.’",
+  "B-120, a few hours earlier. Persisting the inventory made every turn "
+  "recite one more item than the last, so rendering was narrowed to what "
+  "CHANGED — and `_record` counts FINDING ELEMENTS. It was written when "
+  "rendering and holding were the same thing, and that fix separated them.",
+  "S9 — two owners for one truth: what the turn holds and what it shows",
+  "Reading the GS-14 transcript after the E-102 run. The answer contradicted "
+  "itself two lines apart, which is the kind of thing only a whole transcript "
+  "shows.",
+  "`_record` counts what the THREAD HOLDS — `concluded[...]` — for "
+  "the issues, the proof positions, the evidence and the theory. The "
+  "opponent’s case keeps counting its rendering, because it is genuinely "
+  "re-derived every turn against the current theory and nothing carries it.\n\n"
+  "AND `cascade.lost`’S OWN DOCSTRING WAS FALSE. It said most of what the "
+  "product derives is re-derived from scratch every turn and named the "
+  "issues, the theory, the opponent’s case and the inventory — four "
+  "of those five are persisted now, and the mechanism went on resting on a "
+  "sentence that had stopped being true.\n\n"
+  "THE CHECK IS STILL RIGHT AND STILL NEEDED. Persistence does not remove "
+  "what it catches: a merge can return an empty list and "
+  "`proof.still_supported` can withdraw every position on the file. Only "
+  "where the count comes from changed.",
+  "Yes. The general rule is that WHEN TWO THINGS ARE SEPARATED, EVERYTHING "
+  "READING THE OLD ONE HAS TO BE FOUND — B-120 split holding from "
+  "rendering and this was the third party still reading the rendering. Same "
+  "shape as B-108 (the prompt and the guard reading different text) and "
+  "B-115 (the account and the notes).",
+  "tests/test_gaps_and_cascade_on_a_served_turn.py::test_an_unchanged_"
+  "inventory_is_not_announced_as_a_loss, PROVED to bite: red with the fix "
+  "reverted, green with it in.\n\n"
+  "THE FIRST VERSION OF THAT TEST PASSED BOTH WAYS and I nearly shipped it. "
+  "The stock double finds a NEW item on every turn — measured going 1, "
+  "2, 3, 4 held with one finding rendered each time — so the condition "
+  "never arose and the test asserted nothing. It drives the condition now, "
+  "with a double that repeats its answer so the merge holds two items and "
+  "the renderer emits none. A test that asserts current behaviour is not an "
+  "invariant, arriving in a test written for exactly that rule.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

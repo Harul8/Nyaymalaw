@@ -32,6 +32,17 @@ judge stopped quoting the recommendation and the bare Act — both fixes
 confirmed — and started quoting the theory and the adversarial reads, which is
 how it became visible that the rule had been applied at one site out of six.
 
+### BK-5 — the cascade fires on an ordinary turn — **CLOSED**
+Fixed as **B-123**. `_record` counted FINDING elements while B-120 had
+narrowed rendering to what CHANGED, so the inventory held two items, rendered
+none, and the turn announced them lost — two lines above the answer's own "2
+item(s) already on the file are unchanged".
+
+The count comes from what the thread HOLDS now. `cascade.lost`'s docstring was
+false too: it named four things as re-derived every turn that are all
+persisted. The check itself was right and stays.
+
+
 ---
 
 ## Deferred, with the reason
@@ -69,15 +80,6 @@ naming the tool, rather than falling back to a scan with different recall.
 ---
 
 ## Observed on GS-14, 6 September 2026 — worth a decision, not yet a defect
-
-### BK-5 — the cascade fires on an ordinary turn
-Turns 3 and 4 each carried *"This turn derived LESS than the last one"* about
-`evidence` and then `limitation`. On turn 3 that was TRUE and benign — the
-inventory legitimately did not re-derive — but the line reads as an alarm.
-B-090 already narrowed this once. **The question is whether a value that is
-merged-and-carried should count as "not computed now" at all**, and the answer
-is probably no: the cascade predates persistence and is measuring a world where
-nothing was carried.
 
 ### BK-6 — the evidence bound is reached on a four-turn matter
 Turn 4: *"I stopped after 3 rounds of retrieval on this turn"* and a provision

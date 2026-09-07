@@ -15,15 +15,19 @@ and would always agree with itself.
 """
 from __future__ import annotations
 
+import json
+from dataclasses import replace
 from datetime import date
 
 import pytest
 
+from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.core import cascade
+from nm.core import evidence_item as inventory
 from nm.core import gaps as gap_queue
 from nm.core.turn import TurnInput
 from nm.domain.answer import ElementKind
-from tests.test_turn_contract import build
+from tests.test_turn_contract import _model_config, build
 
 pytestmark = pytest.mark.class_a
 
@@ -345,3 +349,141 @@ def test_an_unclassified_derivation_is_treated_as_a_position():
     moves, rather than silently filed as accumulation."""
     assert cascade.Derived(name="x", value="1", from_facts=()).kind \
         is cascade.Kind.POSITION
+
+
+# ================= BK-5 — held, not rendered ================================
+
+def test_the_cascade_counts_what_the_thread_holds_not_what_the_turn_showed():
+    """BK-5. MEASURED ON GS-14, 6 September 2026, turns 3 and 4:
+
+        "This turn derived LESS than the last one. evidence on
+         thr_787d62dd3826 was 2 and is not computed now."
+
+    The inventory HELD two items. It RENDERED zero findings, because B-120
+    made it render only what changed -- and the same answer said so one line
+    down: "2 item(s) already on the file are unchanged and not repeated here."
+
+    `_record` counted FINDING elements. It was written when rendering and
+    holding were the same thing and B-120 separated them hours earlier, so the
+    cascade was measuring the rendering and reporting it as the derivation.
+    """
+    import inspect
+
+    from nm.core.turn import TurnEngine
+
+    body = inspect.getsource(TurnEngine._derive)
+    for what, held in (("issues", 'concluded.get("issues"'),
+                       ("proof", 'concluded.get("proof"'),
+                       ("evidence", 'concluded.get("evidence"'),
+                       ("theory", 'concluded.get("theory"')):
+        assert held in body, (
+            f"the {what} derivation is not counted from what the thread "
+            f"holds, so a turn that renders nothing new reports it lost")
+    assert "if e.kind is ElementKind.FINDING))" not in body.split(
+        "the opponent")[0], (
+        "a derivation before the adversarial read still counts rendered "
+        "elements")
+
+
+def test_a_derivation_that_really_vanishes_is_still_reported():
+    """THE BOUND, and it is the one that matters. Persistence does not remove
+    the failure the cascade catches: a merge can return an empty list, and
+    `proof.still_supported` can withdraw every position on the file.
+
+    A fix that made the check quiet on a real loss would be worse than the
+    false alarm it replaced -- the alarm was noise, and silence here is the
+    forgetting this whole mechanism exists to find.
+    """
+    from nm.core import cascade
+
+    before = (cascade.Derived(name="evidence on thr_1", shown="evidence",
+                              value="2", from_facts=(),
+                              kind=cascade.Kind.MEASUREMENT),)
+    assert cascade.lost(before, ()) == before
+    assert cascade.lost(before, before) == ()
+
+
+class _Repeats(ScriptedModelAdapter):
+    """Returns the SAME inventory every turn.
+
+    The stock double finds a NEW item on each turn -- measured going 1, 2, 3,
+    4 held with one finding rendered each time -- so it never produces the
+    condition this is about: items HELD and nothing RENDERED. Driven, because
+    a fixture that cannot reach the case is a fixture that tests the fixture.
+    """
+
+    ITEMS = {"items": [
+        {"what": "the invoices", "holder": "client", "form": "original",
+         "quoted": "invoices dated 14 March 2023", "already": ""},
+        {"what": "the admission letter", "holder": "client",
+         "form": "original", "quoted": "nothing was paid", "already": ""},
+    ]}
+
+    def structured(self, prompt, schema, tier, **kw):
+        result = super().structured(prompt, schema, tier, **kw)
+        if schema.get("x-nm-read") != "inventory":
+            return result
+        # THE IDS THE PROMPT SHOWS, so the second turn NAMES what is on the
+        # file rather than describing it again -- which is what a real read
+        # does once it is shown the standing list, and the only way the merge
+        # can hold two items while the renderer emits none.
+        rows = []
+        for line in prompt.user.splitlines():
+            if line.strip().startswith("evi_") and "\t" in line:
+                ident, what = line.strip().split("\t", 1)
+                rows.append({"what": what, "holder": "client",
+                             "form": "original",
+                             "quoted": "invoices dated 14 March 2023",
+                             "already": ident})
+        said = self.ITEMS if not rows else {"items": rows}
+        return replace(result, data=said, text=json.dumps(said))
+
+
+def test_an_unchanged_inventory_is_not_announced_as_a_loss(tmp_path):
+    """BK-5 ON A SERVED TURN, driven.
+
+    MEASURED ON GS-14, 6 September 2026, turns 3 and 4:
+
+        "This turn derived LESS than the last one. evidence on
+         thr_787d62dd3826 was 2 and is not computed now."
+
+    The inventory HELD two items. It RENDERED zero findings, because B-120
+    made it render only what changed -- and the same answer said so one line
+    down: "2 item(s) already on the file are unchanged and not repeated here."
+
+    `_record` counted FINDING elements. It was written when rendering and
+    holding were the same thing, and B-120 separated them hours earlier.
+
+    THE FIRST VERSION OF THIS TEST PASSED WITH THE DEFECT REVERTED, because
+    the stock double finds a new item every turn and the condition never
+    arose. That is the shape this file exists to refuse, arriving in a test
+    written for it.
+    """
+    engine, store = build(tmp_path, model=_Repeats(
+        _model_config(), responses={"__default__": "Issue the notice."}))
+
+    first = engine.run(TurnInput(
+        advocate_id="adv", today=date(2026, 8, 31),
+        message=("we act for the plaintiff in a recovery matter. The goods "
+                 "were supplied against invoices dated 14 March 2023 and "
+                 "nothing was paid.")))
+    second = engine.run(TurnInput(
+        advocate_id="adv", matter_id=first.matter.id, today=date(2026, 8, 31),
+        message="is the claim still in time"))
+
+    held = inventory.from_stored(
+        store.load(first.matter.id).threads[0].evidence)
+    rendered = [e for e in second.answer.elements
+                if e.kind is ElementKind.FINDING and " — held by " in e.text]
+    assert len(held) >= 2, (
+        f"the file holds {len(held)} item(s); this test needs the inventory "
+        f"carried across a turn to be about anything")
+    assert not rendered, (
+        "the second turn re-rendered the inventory, so it is not exercising "
+        "the case B-120 created")
+
+    alarms = [e.text for e in second.answer.elements if "derived LESS" in e.text]
+    assert not any("evidence" in a for a in alarms), (
+        f"the evidence was held and not rendered, and the turn announced it "
+        f"LOST: {alarms}. The count is coming from what the turn RENDERED "
+        f"rather than from what the thread HOLDS.")

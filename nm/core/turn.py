@@ -1498,9 +1498,12 @@ class TurnEngine:
             issues_out = self._issues(turn, thread, memory, metrics,
                                       concluded)
             grounds.extend(issues_out)
+            # WHAT THE THREAD HOLDS, NOT WHAT THIS TURN RENDERED (BK-5).
+            # The list is merged and carried, so a turn that shows nothing new
+            # has still derived everything on it -- and counting the rendering
+            # made the cascade report a loss on an ordinary turn.
             _record(derived, "issues", thread, thread.chronology,
-                    sum(1 for e in issues_out
-                        if e.kind is ElementKind.FINDING))
+                    len(concluded.get("issues", thread.issues)))
 
             # D5 -- WHAT HAS TO BE PROVED, AND WHAT THE FILE CAN DO ABOUT
             # IT. Between the issues and the inventory, and that order is the
@@ -1511,8 +1514,7 @@ class TurnEngine:
                                     cause_read, concluded)
             grounds.extend(proof_out)
             _record(derived, "proof", thread, thread.chronology,
-                    sum(1 for e in proof_out
-                        if e.kind is ElementKind.FINDING))
+                    len(concluded.get("proof", thread.proof)))
 
             # C7 -- WHAT THE EVIDENCE IS AND WHO HAS IT. After the issues,
             # because an inventory is only readable against what has to be
@@ -1520,9 +1522,13 @@ class TurnEngine:
             inventory_out = self._inventory(
                 turn, thread, memory, metrics, gaps, concluded)
             grounds.extend(inventory_out)
+            # MEASURED HERE FIRST. GS-14 turn 3: the inventory held TWO
+            # items, rendered ZERO findings because B-120 renders only what
+            # changed, and the cascade announced "evidence was 2 and is not
+            # computed now" -- one line above the answer's own "2 item(s)
+            # already on the file are unchanged and not repeated here."
             _record(derived, "evidence", thread, thread.chronology,
-                    sum(1 for e in inventory_out
-                        if e.kind is ElementKind.FINDING))
+                    len(concluded.get("evidence", thread.evidence)))
 
             # D6 -- THE SPINE, LAST, because it is what the issues and the
             # evidence hang off. S8's whole point: stop producing a list of
@@ -1530,9 +1536,13 @@ class TurnEngine:
             theory_out = self._theory(turn, thread, memory, metrics, facts,
                                       concluded)
             grounds.extend(theory_out)
+            # THE HELD THEORY, for the same reason. It happens to be
+            # rendered on every turn today, so this changes nothing now --
+            # and a turn whose theory read fails while the standing theory is
+            # carried would otherwise report the spine LOST, which is the
+            # loudest thing the cascade can say.
             _record(derived, "theory", thread, thread.chronology,
-                    sum(1 for e in theory_out
-                        if e.text.startswith("Theory:")))
+                    1 if concluded.get("theory", thread.theory) else 0)
 
             # D7 -- THE OTHER SIDE'S CASE, at its strongest. After the theory,
             # because an attack is read against a spine: "they will say X" is
