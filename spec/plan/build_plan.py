@@ -4301,6 +4301,52 @@ d("B-130", "2026-09-07", "summary",
   "real Thread field, and that the blocker SET is pinned by name so it "
   "cannot drift silently in either direction.")
 
+d("B-131", "2026-09-07", "turn",
+  "A READ THAT COULD NOT RUN WAS DISCLOSED BY NINE OWNERS, MOST OF WHOM "
+  "SAID NOTHING. G-MODEL fired at nine `except ModelError` branches and "
+  "each composed its own sentence or composed none, so the advocate "
+  "learned whatever that branch happened to append \u2014 and for most "
+  "of the nine, nothing about WHICH read was lost.",
+  "Closing BK-11, which had recorded G-MODEL as proven at one read of "
+  "fifteen.",
+  "S9 \u2014 two owners for one truth",
+  "Two sweeps, and BOTH WERE WRONG IN THE SAME WAY. The first refused "
+  "each read and searched the answer for any phrase the product uses "
+  "when it is short of something; all fifteen 'said something', under a "
+  "proxy too generous to tell a named read from an unrelated disclosure "
+  "on the same turn. The second asked `read in said` \u2014 a SUBSTRING "
+  "\u2014 and reported fourteen of fifteen named: `\"cause\" in said` "
+  "matches *cause of action*. Nothing was being disclosed at all. THE "
+  "TESTS CAUGHT IT, by parsing the disclosure line and asserting list "
+  "membership.",
+  "One owner, `TurnEngine._refused_reads`, wired at BOTH sites that "
+  "assemble an answer, drawing its population from the trace \u2014 "
+  "`TracedModel.refused_reads`, the sibling of `empty_decisive`. The "
+  "nine sites keep firing G-MODEL and keep their degraded RETURN: the "
+  "branch knows what value to fall back to and the owner does not, and "
+  "collapsing both decisions into one place would be the wrong half of "
+  "the fix.\n\n"
+  "THE FIXTURE WAS THE THIRD MISTAKE AND THE MOST INSTRUCTIVE. The "
+  "shared `build` helper does not wrap the model in `TracedModel`, which "
+  "the composition root does \u2014 so `refused_reads` did not exist on "
+  "it and the owner returned nothing on every turn. CLAUDE.md \u00a78 "
+  "arriving at the test rather than at the edge: a guard that is right "
+  "in the core and absent from where it is exercised is not a guard.",
+  "Yes, and it is `_decisive_empties` applied to the second member of "
+  "its own population. That method exists because guarding ONE read was "
+  "B-088's patch, and its docstring names the danger exactly: *the "
+  "alternative is six call sites each remembering to ask, which is the "
+  "arrangement that produced one guard for one read*. A read that COULD "
+  "NOT RUN is the neighbouring fact and had that arrangement.",
+  "tests/test_a_refused_read_is_named.py drives ALL FIFTEEN structured "
+  "reads \u2014 each on a brief whose shape reaches it, `salvage` where "
+  "the period has run, `exposure` on a two-thread file \u2014 and "
+  "asserts the read is IN the parsed disclosure line. With the bound "
+  "that a turn whose reads all ran says nothing, an accounting that "
+  "fails on a sixteenth read nothing drives, and both halves verified "
+  "RED by mutation: unwiring one of the two assembly sites, and "
+  "removing the names from the sentence.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

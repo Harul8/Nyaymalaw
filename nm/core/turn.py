@@ -734,6 +734,7 @@ class TurnEngine:
         # the arrangement that produced one guard for one read.
         answer = replace(answer, elements=tuple(
             [*answer.elements, *self._decisive_empties(metrics),
+             *self._refused_reads(metrics),
              *self._tier_degraded(metrics)]))
 
         # Class-B invariants, asserted on the ASSEMBLED object, before emission.
@@ -784,6 +785,7 @@ class TurnEngine:
                                     *self._late_note(late)]))
                 answer = replace(answer, elements=tuple(
                     [*answer.elements, *self._decisive_empties(metrics),
+                     *self._refused_reads(metrics),
                      *self._tier_degraded(metrics)]))
                 self._assert_invariants(answer, metrics)
                 report = grounding.verify(answer, relied_on, retrieved)
@@ -2639,6 +2641,47 @@ class TurnEngine:
                   f"read coming up empty, and everything below was worked "
                   f"out without it. If there is something there, tell me in "
                   f"a sentence and I will re-derive."))]
+
+    def _refused_reads(self, metrics: TurnMetrics) -> list[Element]:
+        """G-MODEL. WHICH read could not run, said once and by name.
+
+        BK-11, and it is `_empty_reads` applied to the second member of
+        its own population. That method exists because guarding ONE read
+        was B-088's patch: the same silence in `cause` sends an exact
+        section lookup into the wrong statute, and in `factors` it reports
+        a live claim as dead.
+
+        A READ THAT COULD NOT RUN IS THE NEIGHBOURING FACT and had nine
+        owners, one per `except ModelError` branch. Each fired G-MODEL
+        with a detail for the metrics; what the ADVOCATE saw was whatever
+        that branch chose to append, which for most of the nine was
+        nothing about which read was lost.
+
+        THE SITES KEEP THEIR DEGRADED RETURN. Only the disclosure moves --
+        the branch knows what value to fall back to and this does not, and
+        collapsing both decisions into one place would be the wrong half
+        of the fix.
+        """
+        refused = getattr(self._model, "refused_reads", None)
+        if not callable(refused):
+            return []
+        try:
+            reads = refused()
+        except Exception as exc:  # noqa: BLE001 -- never fail a turn
+            metrics.violate("I1", f"the refused-read check could not run: "
+                                  f"{type(exc).__name__}: {exc}")
+            return []
+        if not reads:
+            return []
+
+        named = ", ".join(reads)
+        return [Element(
+            kind=ElementKind.GROUND, disclosure=True, signal=Signal.NONE,
+            text=(f"{len(reads)} read(s) on this turn COULD NOT RUN: "
+                  f"{named}. Whatever each of those feeds is missing from "
+                  f"the answer below — not found to be absent, not "
+                  f"looked at. Nothing here has been recorded as advice "
+                  f"on their account."))]
 
     def _exposure(self, matter: Matter, metrics: TurnMetrics) -> list[Element]:
         """E-082. ONE report per file, whatever the answer.

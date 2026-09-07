@@ -317,6 +317,22 @@ class TracedModel:
         return tuple(sorted({c.read for c in self.calls
                              if c.empty and _decisive(c.read)}))
 
+    def refused_reads(self) -> tuple[str, ...]:
+        """The reads that COULD NOT RUN this turn, by name.
+
+        The sibling of `empty_decisive`, and deliberately built the same
+        way: read without draining, because the turn asks while deriving
+        and the trace is drained after the commit.
+
+        EVERY READ, NOT ONLY THE DECISIVE ONES. The two questions differ.
+        An empty answer from a non-decisive read is usually a real answer
+        -- the issues read finding no issue is a finding. A read that
+        never ran answers nothing at all, and the section it feeds is
+        missing from the turn whether or not the read was decisive.
+        """
+        return tuple(sorted({c.read for c in self.calls
+                             if c.failed and c.read}))
+
     def take(self) -> dict:
         """The trace for one turn, and RESET.
 
@@ -340,6 +356,12 @@ class TracedModel:
             # not present" and the arithmetic proceeds from the wrong value.
             "empty_decisive": sorted({c.read for c in calls if c.empty
                                       and _decisive(c.read)}),
+            # WHICH READS COULD NOT RUN. The neighbouring fact, and the
+            # one G-MODEL fires on at nine separate sites -- kept here so
+            # the transcript carries it once rather than nine times or
+            # not at all (BK-11).
+            "refused_reads": sorted({c.read for c in calls
+                                     if c.failed and c.read}),
             # COUNTS THAT ARE ALSO ANSWERS. `empty` is what B-088 needed and
             # no existing record held: how many reads answered with nothing.
             "count": len(calls),

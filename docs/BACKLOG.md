@@ -16,6 +16,49 @@ against.
 
 ## Open
 
+### BK-13 - the product's own sentences read like a form, not an advocate
+Opened 7 September 2026 on the advocate's question: *should the
+conversation not be natural and human, instead of these templated
+responses?*
+
+**Measured before answering.** 73 `Element` sites in `nm/core/turn.py`
+carry text this product wrote rather than text a model wrote:
+
+| kind | count | note |
+|---|---|---|
+| ACTION | **1** | the recommendation is the MODEL's prose, governed by `register.PEER` |
+| GROUND | 60 | **55 carry `disclosure`** |
+| FINDING | 6 | **this is the problem** |
+| QUESTION | 6 | mixed |
+
+**The findings leak the internal vocabulary onto the page:**
+
+```
+{i.statement} [{i.kind.value}; runs against {i.runs_against.value}; ...]
+{pos.element} [burden {whose}; {standard}; {detail}]
+Theory: {t.theme} Relief: {t.relief}.
+```
+
+No advocate writes `[burden ours; balance_of_probabilities]`. That is an
+enum rendered with brackets, and `Theory: X Relief: Y` is a label-colon-
+value line rather than a sentence.
+
+**What must NOT change, and why this is a row rather than a rewrite.**
+The element KINDS are load-bearing. `Answer.__post_init__` refuses an
+answer that leads with background (PRD S6.2 S3); the whole gate matrix
+hangs off `disclosure`; B-128 was three days before this was written and
+was exactly a disclosure the advocate could not see. **The previous build
+produced advice that read beautifully and hid what it could not
+establish** - that is the failure mode of *just make it conversational*.
+
+And the 55 disclosures being fixed wording is deliberate: a disclosure
+phrased differently each time is one an advocate cannot learn to spot.
+**Fixed does not have to mean stiff**, and that is the actual gap.
+
+So the work is: better sentences INSIDE the structure, starting with the
+six bracket-notation findings. The `ACTION`/`FINDING`/`NOT ESTABLISHED`
+labels are a separate, independent question - they are a rendering choice
+in `web/app.js` and can soften or go without touching the contract.
 ### BK-12 - the advise pane reads as a conversation, and one rule bounds it
 Landed 7 September 2026 on the advocate's request: the pane now shows
 their own words as a bubble, the answer as prose in a wider reading
@@ -52,26 +95,33 @@ hold a single rule is R-6 apparatus. The screen was also driven through
 the DOM when it was built - `details.support .el.disclosure` returned 0
 and `.turn > .el.disclosure` returned 2 on a two-disclosure turn - and
 that measurement is what the test encodes rather than replaces.
-### BK-11 - G-MODEL is proven at one read of fifteen
-Opened 7 September 2026. G-MODEL's clause is *the NEED fails, not the turn.
-The gap is visible and nothing is recorded as advice.* BK-9 proved the
-second sentence and the first at ONE site, the exposure read.
-
-**Measured across all fifteen structured reads** by refusing each in turn
-and serving a turn: **none left the answer with nothing at all** under a
-generous proxy - any of a dozen phrases the product uses for degradation.
-So there is no evidence of a silent failure.
-
-**What that measurement does NOT establish**, and the reason this is open:
-a generous proxy overstates. It cannot tell an answer that names the
-missing read from one that happens to carry an unrelated disclosure on the
-same turn. The claim worth having is per-read and specific - *the answer
-says WHICH read came back empty* - which is G-READ's promise applied to
-G-MODEL, and it needs fifteen assertions rather than one regex.
-
 ---
 
 ## Closed
+
+### BK-11 - G-MODEL proven at one read of fifteen - **CLOSED**
+Closed 7 September 2026 as **B-131**. All fifteen structured reads are
+driven and each is asserted to appear IN the disclosure line.
+
+One owner - `TurnEngine._refused_reads`, wired at both assembly sites,
+drawing from `TracedModel.refused_reads`, the sibling of
+`empty_decisive`. The nine `except ModelError` branches keep firing
+G-MODEL and keep their degraded return; only the disclosure moved.
+
+**Three measurement mistakes, and the tests caught the last two.**
+
+1. The sweep that opened this row searched for any phrase the product
+   uses when it is short of something. All fifteen *said something*, under
+   a proxy too generous to tell a named read from an unrelated disclosure
+   on the same turn.
+2. The follow-up asked `read in said` - a SUBSTRING - and reported 14 of
+   15 named. `"cause" in said` matches *cause of action*.
+3. Nothing was being disclosed at all: the shared `build` fixture does not
+   wrap the model in `TracedModel`, so `refused_reads` did not exist on it.
+
+Two of those were fuzzy matching deciding rather than ranking, on the same
+day, in the same file. The third is CLAUDE.md S8 arriving at the TEST
+rather than at the edge - a guard absent from where it is exercised.
 
 ### BK-10 - the handover contract was 4 of 16 - **CLOSED**
 Closed 7 September 2026 as **B-130**. `CARRIES` is **8** and
