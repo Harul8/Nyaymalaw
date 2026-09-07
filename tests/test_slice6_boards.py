@@ -38,15 +38,22 @@ def test_a_screen_that_was_never_run_is_not_reported_as_clear():
     The screens are slice 10. Everything about them is `not_assessed` today,
     and the summary has to SAY that rather than omit the section — an omitted
     section reads as nothing to report.
+
+    ASSERTED ON THE STATE SINCE PHASE 4, not on the blocker list. This
+    reached the rule through `handover_blockers` because that was the only
+    vehicle while the section was unbuilt, and the two say different
+    things: the blocker said THIS PRODUCT does not build a screens
+    section, which is true and useless to a receiving advocate. The state
+    says ON THIS FILE nothing has screened it, which is what they need.
     """
     from nm.domain import summary as matter_memory
 
     s = matter_memory.build(_matter_with(Thread.create(label="a dispute")))
     doc = s.as_dict() if hasattr(s, "as_dict") else None
 
-    assert "screens" in s.handover_blockers, (
-        "the screens section is not listed as a handover blocker, so a matter "
-        "whose screens were never run reads as one that cleared them")
+    assert s.sections["screens"]["state"] == "not_assessed", (
+        "a matter nobody screened does not say so, so it reads as one "
+        "that cleared them: " + repr(s.sections))
     assert not s.handover_complete, (
         "handover reported complete while whole sections are unbuilt")
     if doc is not None:

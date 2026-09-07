@@ -33,7 +33,7 @@ what had been said in the last thirty seconds.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from nm.domain.matter import AskedQuestion, Certainty, FactBasis, Matter, Role, Thread
 from nm.domain.text import refuses_blank_text
@@ -101,13 +101,25 @@ _NOTE_RESERVE = 110 + 100
 CARRIES = frozenset({
     "matter", "threads", "posture", "chronology",
     "issues", "theory", "proof", "decisions",
-    "deadlines", "gaps",
+    "deadlines", "gaps", "authorities",
+
+    # MATTER-SCOPED. `_run_screens` decides for the file, not the
+    # dispute, so this is read off the matter rather than each thread.
+    "screens",
 })
 
 #: The four of those that are per-thread derivations, in contract order.
 #: Drawn from CARRIES rather than repeated, so the two cannot disagree.
 DERIVED_SECTIONS: tuple[str, ...] = (
-    "issues", "theory", "proof", "decisions", "deadlines", "gaps")
+    "issues", "theory", "proof", "decisions", "deadlines", "gaps",
+    "authorities")
+
+#: The same, for sections the MATTER owns rather than a thread.
+#:
+#: Two tuples and one `_states` function. The alternative -- a second
+#: state helper for matter-level sections -- is the copy that drifts, and
+#: it would have drifted on the first section added to either list.
+MATTER_SECTIONS: tuple[str, ...] = ("screens",)
 
 #: The full contract, from Appendix E. `tests/test_produces_contracts.py`
 #: asserts this equals `spec/schemas.yaml`, so the two cannot drift -- the
@@ -160,6 +172,15 @@ class MatterSummary:
     answered: tuple[AskedQuestion, ...] = ()
     facts_recorded: int = 0
     turns: int = 0
+
+    sections: dict = field(default_factory=dict)
+    """MATTER-SCOPED sections and their states -- today, the screens.
+
+    The per-thread equivalent lives on each row of `threads`, because a
+    theory belongs to a dispute and a conflict screen belongs to the file.
+    Conflating them would put a screen state on every thread and invite a
+    reader to think five threads had been screened five times.
+    """
 
     @property
     def handover_blockers(self) -> tuple[str, ...]:
@@ -342,7 +363,7 @@ def _established_on(thread: Thread) -> list[str]:
 
 
 
-def _sections(thread) -> dict:
+def _states(owner, names: tuple[str, ...]) -> dict:
     """What each derived section holds on this thread, and WHETHER IT RAN.
 
     Three states, always:
@@ -364,10 +385,10 @@ def _sections(thread) -> dict:
     that cannot fail wearing the shape of a disclosure.
     """
     out: dict = {}
-    for name in DERIVED_SECTIONS:
-        value = getattr(thread, name)          # AttributeError is correct
+    for name in names:
+        value = getattr(owner, name)          # AttributeError is correct
         held = bool(value)
-        if name not in thread.assessed:
+        if name not in owner.assessed:
             state = "not_assessed"
         else:
             state = "held" if held else "none"
@@ -406,7 +427,7 @@ def build(matter: Matter, thread_id: str | None = None,
             "identifiers": dict(t.identifiers),
             "facts": len(t.chronology),
             # WHAT WAS DERIVED, AND WHETHER IT RAN (BK-10).
-            "sections": _sections(t),
+            "sections": _states(t, DERIVED_SECTIONS),
         })
         established.extend(_established_on(t))
 
@@ -435,6 +456,8 @@ def build(matter: Matter, thread_id: str | None = None,
         answered=tuple(q for q in matter.asked if not q.open),
         facts_recorded=len(matter.facts),
         turns=len(matter.turns_applied),
+        # WHAT THE FILE ITSELF HOLDS, as opposed to any one dispute.
+        sections=_states(matter, MATTER_SECTIONS),
     )
 
 

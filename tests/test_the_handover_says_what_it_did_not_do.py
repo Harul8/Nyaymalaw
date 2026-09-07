@@ -176,14 +176,22 @@ def test_the_blockers_that_remain_are_the_ones_that_are_really_unbuilt():
     """The count is the evidence that this moved, and the NAMES are the
     evidence that it moved for the right reason.
 
-    FOUR remain after Phase 3, and each is genuinely unbuilt rather than built
-    and unwired: `screens` is B2-B6 at slice 10 (its DISCLOSURE is carried --
-    B-128 -- but the screen states themselves are slice-10 work),
-    `authorities` waits on the index build (BK-4), and `engagement` and
-    `reservations` have no writer at all.
+    TWO remain after Phase 4, and each genuinely has no writer:
+    `engagement` is B5/G-SCOPE, declared unbuilt in the gate matrix, and
+    `reservations` is E5 -- *a disagreement the advocate overruled stays
+    visible and reactivates on a changed fact* -- which nothing in `nm/`
+    produces.
 
-    That distinction is the whole point of this file: `deadlines` and `gaps`
-    were on this list while running on every single turn.
+    THE OTHER FOUR WERE NEVER UNBUILT. `deadlines` and `gaps` ran on every
+    turn and threw the result away; `screens` built five states and kept
+    none; `authorities` were retrieved and discarded. Reading the NAMES
+    rather than the count is what told those apart from these two, and it
+    is the whole point of this file.
+
+    `screens` is worth the extra line, because it looks like slice-10 work
+    and is not. RUNNING the conflict, competence and scope checks is
+    B3-B5; carrying five states that say `not_run` is what Appendix E
+    requires so their absence is visible at all. R-8 is untouched.
     """
     blockers = set(summary_mod.MatterSummary(
         matter_id="m", title="t").handover_blockers)
@@ -194,8 +202,7 @@ def test_the_blockers_that_remain_are_the_ones_that_are_really_unbuilt():
     # `deadlines` reached ten times from the turn engine, `gaps` four -- and
     # neither result survived the turn, so the handover carried no section
     # for either on a file where both had been computed for four turns.
-    assert blockers == {"engagement", "screens", "authorities",
-                        "reservations"}, (
+    assert blockers == {"engagement", "reservations"}, (
         f"the blocker set changed to {sorted(blockers)} — either a section "
         f"landed, or one regressed, and both need a deliberate edit here "
         f"rather than a silently moving number")
@@ -220,7 +227,11 @@ def test_a_computed_register_reaches_the_handover(tmp_path):
                                today=TODAY))
 
     row = _thread_row(out)
-    for name in ("deadlines", "gaps"):
+    # ALL THREE, AND NAMED. A loop over `DERIVED_SECTIONS` asserting that
+    # SOME ran is what let `authorities` be added and then taken away
+    # again with nothing going red -- caught by mutation, which was the
+    # only thing that could have caught it.
+    for name in ("deadlines", "gaps", "authorities"):
         assert row["sections"][name]["state"] != "not_assessed", (
             f"{name} ran on this turn and the handover reports it as never "
             f"computed:\n" + repr(row["sections"]))
@@ -228,6 +239,15 @@ def test_a_computed_register_reaches_the_handover(tmp_path):
 
 def test_an_empty_queue_is_a_finding_and_an_absent_one_is_not(tmp_path):
     """`gaps` is written even when EMPTY, and that is the point of the phase.
+
+    # `authorities` must HOLD something on this brief: the fixture
+    # retrieves Limitation Act Article 65 and the answer rests on it, so
+    # `none` here would mean the findings were recorded empty rather
+    # than recorded at all.
+    assert row["sections"]["authorities"]["state"] == "held", (
+        "the answer relied on retrieved provisions and the handover "
+        "carries none of them:
+" + repr(row["sections"]))
 
     Nothing missing is a real answer. Nobody having looked is not. Inferring
     one from the other at read time -- treating an empty tuple as "no gaps" --
@@ -265,8 +285,138 @@ def test_the_persisted_derivation_is_replaced_and_never_merged(tmp_path):
 
     from nm.core.turn import TurnEngine
 
-    src = inspect.getsource(TurnEngine._run)
-    for name in ("deadlines", "gaps"):
-        assert f'{name}=concluded.get("{name}", thread.{name}),' in src, (
+    # WHITESPACE-COLLAPSED. `authorities=` wraps across two lines, and a
+    # line-exact match reported it missing when it was there -- an assertion
+    # that fails on a line break is checking the formatter, not the rule.
+    src = " ".join(inspect.getsource(TurnEngine._run).split())
+    for name in ("deadlines", "gaps", "authorities"):
+        wrapped = f'{name}=concluded.get( "{name}", thread.{name}),'
+        inline = f'{name}=concluded.get("{name}", thread.{name}),'
+        assert wrapped in src or inline in src, (
             f"{name} is not written by name, or is being combined with the "
             f"standing value rather than replacing it")
+
+
+# ================= Phase 4 — a section the FILE owns ======================
+
+def test_the_screens_carry_five_states_on_every_matter(tmp_path):
+    """Appendix E: *each carries its own state, INCLUDING `not_run`. A2 forbids
+    showing a not_assessed screen as clear, and that is only possible if the
+    summary distinguishes them.*
+
+    Five states, from `ScreenKind`. Four rows would let a receiving advocate
+    believe the fifth was checked, which is `unscreened`'s own argument for
+    drawing from the vocabulary, arriving at the handover.
+    """
+    from nm.core.screens import ScreenKind, ScreenState
+
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(advocate_id="adv_1", message=BRIEF,
+                               today=TODAY))
+
+    assert len(out.matter.screens) == len(list(ScreenKind)), (
+        f"{len(out.matter.screens)} screens on the file and "
+        f"{len(list(ScreenKind))} kinds exist")
+    assert {s.kind for s in out.matter.screens} == set(ScreenKind)
+    for screen in out.matter.screens:
+        assert screen.state is ScreenState.NOT_ASSESSED
+        assert screen.not_assessed_because, (
+            "a screen says it was not assessed and does not say why, which is "
+            "a disclaimer rather than a disclosure")
+
+    s = summary_mod.build(out.matter)
+    assert s.sections["screens"]["state"] == "held", (
+        "the screens ran and the summary reports the section as never built")
+    assert s.sections["screens"]["count"] == len(list(ScreenKind))
+
+
+def test_the_screens_are_recorded_even_when_they_refuse_the_matter():
+    """The file a receiving advocate MOST needs the states for is the one the
+    screens refused, so they are recorded before the blocked branch and not
+    after it."""
+    import inspect
+
+    from nm.core.turn import TurnEngine
+
+    src = inspect.getsource(TurnEngine._run)
+    landed = src.index("matter, screens=screens.screens")
+    blocked = src.index("if not screens.clear:")
+    assert landed < blocked, (
+        "the screens are recorded after the `clear` check, so a matter that "
+        "was refused carries no screen states at all")
+
+
+def test_the_matter_level_sections_use_the_same_helper():
+    """§4 again. Two tuples and ONE `_states`; a second state helper for
+    matter-level sections is the copy that drifts, and it would have drifted
+    on the first section added to either list."""
+    import inspect
+
+    src = inspect.getsource(summary_mod)
+    assert src.count("def _states(") == 1, (
+        "there is more than one state helper, so a matter-level section and a "
+        "thread-level one can disagree about what `not_assessed` means")
+    assert "_states(t, DERIVED_SECTIONS)" in src
+    assert "_states(matter, MATTER_SECTIONS)" in src
+
+
+def test_the_store_round_trips_a_set_in_both_directions():
+    """`Screen.covers` is a `frozenset[str]`, and persisting screens sent it
+    through a codec that handled dataclasses, enums, dates, lists, tuples and
+    dicts and fell through on everything else -- so it reached `json.dumps`
+    and raised. Twelve served-path tests, every one a TypeError from inside
+    starlette and none of them naming the cause.
+
+    ASSERTED AT THE CODEC, both ways. Encoding a set as a list is half a fix:
+    a field declared `frozenset[str]` that comes back a list is the shape
+    `_decode` was rewritten to prevent -- faithful on the way out, something
+    else on the way back, and nothing failing until a set operation far away.
+
+    SORTED ON THE WAY OUT so a set writes the same bytes every time. Two
+    identical matters that differ on disk produce a diff nobody can explain,
+    and a diff nobody can explain is one nobody trusts.
+    """
+    from nm.adapters.store.file_store import _decode, _enc
+
+    out = _enc(frozenset({"Rao", "Anand"}))
+    assert out == ["Anand", "Rao"], f"not sorted, so not stable: {out}"
+
+    back = _decode(frozenset[str], out)
+    assert isinstance(back, frozenset), (
+        f"a frozenset came back as {type(back).__name__}")
+    assert back == frozenset({"Rao", "Anand"})
+
+    assert isinstance(_decode(set[str], ["a"]), set)
+    # And the neighbours are untouched: a change to the sequence branch that
+    # turned every tuple into a set would pass everything above.
+    assert _decode(tuple[str, ...], ["a", "b"]) == ("a", "b")
+    assert _decode(list[str], ["a", "b"]) == ["a", "b"]
+
+
+def test_a_screen_reloads_as_data_like_every_other_untyped_field(tmp_path):
+    """`Matter.screens` is `tuple[object, ...]` for the cycle reason, so it
+    reloads as dicts -- exactly as `issues`, `proof` and `evidence` do.
+
+    NO `from_stored` READER IS ADDED, because nothing would call it: the turn
+    rebuilds the screens from `ScreenKind` every time, and the summary needs
+    only whether the section ran and how many rows it holds, which `bool` and
+    `len` answer on a dict. Writing one now would be a complete module with no
+    production caller, which is B-079 and B-116 and the shape this project has
+    paid for twice.
+
+    Recorded rather than left to be discovered: the day something needs a
+    `Screen` back, this is the line that says where the reader goes.
+    """
+    from nm.adapters.store.file_store import FileMatterStore
+    from tests.test_turn_contract import KEY
+
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(advocate_id="adv_1", message=BRIEF,
+                               today=TODAY))
+
+    back = FileMatterStore(tmp_path, key=KEY).load(out.matter.id)
+    assert len(back.screens) == len(out.matter.screens), (
+        "the screens did not survive the store at all")
+    assert summary_mod.build(back).sections["screens"]["state"] == "held", (
+        "the summary cannot read the reloaded screens, so the handover loses "
+        "the section on every file that is opened a second time")

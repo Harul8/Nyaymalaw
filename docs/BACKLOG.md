@@ -27,30 +27,48 @@ history of the rows under it with it.
 
 ---
 
-### The phases, and what each one still needs
+### The phases, and what is left
 Kept here because "what happened to the phases" was asked twice and the
 answer was a number nobody could look up.
 
 | phase | what it is | state |
 |---|---|---|
-| **1** | the thread REMEMBERS what it concluded | **done** - `issues`, `decisions`, `theory`, `proof`, `evidence`, `thresholds_told` persist |
-| **2** | the summary CARRIES those, each with a third state | **done** 7 Sept (B-130) - blockers 10 to 6 |
-| **3** | the two modules that ran every turn and kept nothing | **done** 7 Sept (B-134) - `deadlines`, `gaps`; blockers 6 to 4 |
+| **1** | the thread REMEMBERS what it concluded | **done** - six fields persist |
+| **2** | the summary CARRIES those, each with a third state | **done** (B-130) - blockers 10 to 6 |
+| **3** | the register and the queue survive the turn | **done** (B-134) - blockers 6 to 4 |
+| **4** | the screens and the authorities | **done** (B-135) - blockers 4 to **2** |
 
-**`CARRIES` is 10 of 16.** The four that remain are not lifts - each needs
-a feature written:
+**`CARRIES` is 12 of 16.** Every section that was BUILT AND DISCARDED now
+carries. The two that remain have no writer, and neither can be closed by
+lifting:
 
-| section | what it needs |
-|---|---|
-| `screens` | B2-B6, **slice 10**. Its DISCLOSURE is already carried (B-128); the screen states are the slice-10 work, and R-8 says moving that inside the horizon means moving something else out, explicitly |
-| `authorities` | **BK-4** - the adapter exists, the FTS index over 451,553 paragraphs has never been built, and that is the advocate's to run |
-| `reservations` | **tenet 21** - *"Disagree once, clearly, then drop it. Record the reservation and get on with the job."* Nothing in `nm/` builds one; the only matches are the word `preservation` and this file |
-| `engagement` | no writer at all |
+#### `engagement` - **blocked by R-8, not by effort**
+Appendix E: *who the client is and what is in scope. A handover without it
+hands over work with no authority to do it.* The client is partly known
+(`posture.client_described_as`, `thread.identifiers`); **scope is recorded
+nowhere**, and recording it means asking the advocate - which is B5 /
+`G-SCOPE`, declared unbuilt in the gate matrix and sitting at slice 10.
 
-So there is no Phase 4 of the same kind. What is left is four features,
-one of which is scheduled, one of which is a long job the advocate runs,
-and two of which are unscheduled.
+R-8: moving slice-10 work inside the horizon means moving something else
+out, **explicitly**. That is a scheduling decision, not a coding one.
 
+#### `reservations` - **two features deep**
+E5 specifies it exactly: `Reservation { position, stated_at, overruled_at,
+reactivated_by: FactId|null }`, with the Class A eval that *a reservation
+is reactivated only by a Fact, never by a new turn.*
+
+It needs a position the advocate OVERRULED. `nm/domain/decision.py` has
+the vocabulary - `DecidedBy.ADVOCATE` - and **nothing in `nm/` ever
+constructs one**: measured, the only three occurrences are a comparison, a
+merge rule, and `from_stored`. So the writer needs an advocate-decision
+path that does not exist, and the reservation needs the writer. Building
+the `Reservation` type alone would be a complete module with no production
+caller, which is B-079 and B-116 and has been paid for twice.
+
+**Both are recorded rather than attempted.** Adding either to `CARRIES`
+with no writer produces a section that reads `not_assessed` on every file
+forever - a disclosure that cannot be wrong, which is S11, and which
+`test_a_derived_thread_stops_saying_not_assessed` already refuses.
 ---
 
 ## Closed

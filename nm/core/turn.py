@@ -248,6 +248,12 @@ class ScreenResult:
     blocking_question: str = ""
     urgent: bool = False
     rows: tuple[str, ...] = ()
+
+    screens: tuple[object, ...] = ()
+    """The `Screen` objects behind `rows`. The rows are prose for the
+    advocate; these are the state the handover carries, and reading one
+    back out of the other would be parsing an undeclared format.
+    """
     """Every screen and its state, for the ADVOCATE.
 
     The states were in the type and in the metrics and nowhere
@@ -484,6 +490,21 @@ class TurnEngine:
         # That both retains material on an uncleared file and sends privileged
         # content to a model provider before the matter is cleared to hold it.
         screens = self._run_screens(matter, turn, metrics)
+
+        # THE SCREENS LAND ON THE FILE, before the blocked branch below.
+        #
+        # A matter whose screens REFUSED it is the one a receiving
+        # advocate most needs the states for, so recording them after the
+        # `clear` check would lose them on exactly that file.
+        #
+        # `assessed` gains the name here rather than through `concluded`:
+        # that dict is the DERIVE phase's record and these run in ADMIT-A,
+        # before any substance is read. Same field, same rule, one level
+        # up -- a second mechanism for matter-level sections would be the
+        # copy S9 is about.
+        matter = replace(
+            matter, screens=screens.screens,
+            assessed=tuple(dict.fromkeys((*matter.assessed, "screens"))))
         if not screens.clear:
             # An INCOMPLETE screen is not a passed screen. The block is the
             # answer, and no substance is read on the way to producing it.
@@ -692,6 +713,8 @@ class TurnEngine:
                 proof=concluded.get("proof", thread.proof),
                 deadlines=concluded.get("deadlines", thread.deadlines),
                 gaps=concluded.get("gaps", thread.gaps),
+                authorities=concluded.get(
+                    "authorities", thread.authorities),
                 evidence=concluded.get("evidence", thread.evidence),
                 thresholds_told=concluded.get(
                     "thresholds_told", thread.thresholds_told),
@@ -1044,7 +1067,12 @@ class TurnEngine:
         return ScreenResult(
             clear=True, assessed=False,
             reason=("substance admitted with every screen outstanding: " + why),
-            rows=screens_mod.unscreened(outstanding))
+            rows=screens_mod.unscreened(outstanding),
+            # THE SCREENS THEMSELVES, so the handover can carry them.
+            # `rows` is the advocate-facing rendering and cannot be read
+            # back as state -- a summary parsing those sentences would be
+            # a parser for a format nobody declared.
+            screens=outstanding)
 
     def _load_or_create(self, turn: TurnInput) -> Matter:
         if turn.matter_id:
@@ -1751,6 +1779,16 @@ class TurnEngine:
         if register is not None:
             concluded["deadlines"] = register
         concluded["gaps"] = tuple(gaps)
+
+        # THE AUTHORITIES THE ANSWER RESTED ON. Appendix E wants them
+        # with binding status, validity window, paragraph kind and
+        # treatment -- every one of which a `Finding` already carries and
+        # every one of which was thrown away at the end of the turn.
+        #
+        # BK-4 DOES NOT BLOCK THIS. The FTS index decides what an
+        # authority SEARCH returns; these are the provisions this answer
+        # actually relied on, retrieved on the turn that used them.
+        concluded["authorities"] = tuple(relied_on)
 
         return elements, tuple(relied_on), tuple(retrieved), tuple(derived)
 

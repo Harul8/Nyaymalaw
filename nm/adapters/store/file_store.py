@@ -94,8 +94,18 @@ def _enc(obj):
         return obj.value
     if isinstance(obj, date):
         return obj.isoformat()
-    if isinstance(obj, (list, tuple)):
-        return [_enc(v) for v in obj]
+    if isinstance(obj, (list, tuple, set, frozenset)):
+        # SETS TOO. `Screen.covers` is a `frozenset[str]` and reached
+        # `json.dumps` unencoded the day screens were persisted, which
+        # failed twelve served-path tests with a TypeError from inside
+        # starlette and nothing naming the cause.
+        #
+        # SORTED, so a set writes the same bytes every time. An
+        # unordered dump makes two identical matters differ on disk, and
+        # a diff nobody can explain is one nobody trusts.
+        seq = sorted(obj, key=repr) if isinstance(obj, (set, frozenset)) \
+            else obj
+        return [_enc(v) for v in seq]
     if isinstance(obj, dict):
         return {k: _enc(v) for k, v in obj.items()}
     return obj
@@ -122,10 +132,19 @@ def _decode(cls, value):
     if origin in (Union, UnionType):
         inner = [a for a in get_args(cls) if a is not type(None)]
         return _decode(inner[0], value) if inner else value
-    if origin in (tuple, list):
+    if origin in (tuple, list, set, frozenset):
         args = get_args(cls)
         item = args[0] if args else None
         seq = [_decode(item, v) if item else v for v in value]
+        # BACK TO THE DECLARED TYPE. A field declared `frozenset[str]`
+        # that returns a list is the exact shape this decoder was
+        # rewritten to prevent -- encoded faithfully, restored as
+        # something else, and nothing failing until a set operation
+        # somewhere far away.
+        if origin is frozenset:
+            return frozenset(seq)
+        if origin is set:
+            return set(seq)
         return tuple(seq) if origin is tuple else seq
     if origin is dict:
         return dict(value)

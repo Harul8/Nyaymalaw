@@ -4470,6 +4470,78 @@ d("B-134", "2026-09-07", "turn",
   "and caught this change, which is what made removing two of them a "
   "deliberate act rather than a number that moved.")
 
+d("B-135", "2026-09-07", "turn",
+  "THE SCREENS WERE BUILT FIVE TIMES A TURN AND KEPT NONE, AND THE "
+  "AUTHORITIES WERE RETRIEVED AND DISCARDED. `_run_screens` constructs "
+  "one `Screen` per `ScreenKind` on every turn and returned only the "
+  "advocate-facing ROWS; the findings the answer rested on were returned "
+  "by `_derive` and never recorded. Both sections were listed as things "
+  "the product does not build.",
+  "Closing the four remaining handover blockers after Phase 3.",
+  "S1 \u2014 an absent input reading as success",
+  "READING APPENDIX E RATHER THAN THE MODULE. The schema settles what "
+  "these sections are: *screens {conflict, competence, scope, capacity, "
+  "urgency} \u2014 each carries its own state, INCLUDING `not_run`. A2 "
+  "forbids showing a not_assessed screen as clear, and that is only "
+  "possible if the summary distinguishes them.* A section carrying five "
+  "`not_run` states is not slice-10 work; it is what makes slice 10's "
+  "absence visible at all.",
+  "`Matter.screens` holds the states and `Matter.assessed` sits beside "
+  "it \u2014 the same one field as `Thread.assessed`, one level up, "
+  "because `_run_screens` decides for the FILE. Recorded BEFORE the "
+  "`clear` branch, since the matter a receiving advocate most needs the "
+  "states for is the one the screens refused.\n\n"
+  "`Thread.authorities` takes what the answer relied on. BK-4 does not "
+  "block it: the FTS index decides what an authority SEARCH returns, "
+  "and these are the provisions this answer actually rested on.\n\n"
+  "ONE `_states` HELPER, TWO TUPLES. A second state function for "
+  "matter-level sections is the copy that drifts, and it would have "
+  "drifted on the first section added to either list.",
+  "Yes, and R-8 IS UNTOUCHED \u2014 nothing moved inside the horizon. "
+  "Running the conflict, competence and scope checks is still B3-B5 at "
+  "slice 10. The general form: A SECTION'S THIRD STATE IS NOT THE "
+  "SECTION. Refusing to carry a section until its feature is built is "
+  "how the advocate loses the ability to see that it was never run.",
+  "tests/test_the_handover_says_what_it_did_not_do.py \u2014 five "
+  "screens by kind with a reason on each, the summary state, the "
+  "ordering against the blocked branch, one `_states`, and the "
+  "authorities asserted BY NAME. That last one was added because "
+  "mutation found the gap: removing the authorities write left the "
+  "suite green, since the only assertion looped over `DERIVED_SECTIONS` "
+  "and asked whether SOME section ran.")
+
+d("B-136", "2026-09-07", "store",
+  "THE STORE COULD NOT PERSIST A SET. `_enc` handled dataclasses, "
+  "enums, dates, lists, tuples and dicts and fell through on everything "
+  "else, so `Screen.covers` \u2014 a `frozenset[str]` \u2014 reached "
+  "`json.dumps` and raised.",
+  "Persisting the screens (B-135). The frozenset had never been written "
+  "before because nothing holding one was persisted.",
+  "S1 \u2014 an absent input reading as success",
+  "TWELVE served-path tests at once, every one a `TypeError` raised "
+  "inside starlette's error middleware and not one of them naming a "
+  "set, a screen, or the store. The breadth is what identified it: a "
+  "dozen unrelated tests failing together is a codec, not a feature.",
+  "`_enc` encodes any set as a SORTED list \u2014 sorted so a set writes "
+  "the same bytes every time, because two identical matters that differ "
+  "on disk produce a diff nobody can explain \u2014 and `_decode` "
+  "rebuilds the declared type.",
+  "Yes, and the alternative was the trap. Changing `covers` to a tuple "
+  "fixes today and leaves the next persisted set to find the same crash "
+  "\u2014 and it would make the TYPE worse to satisfy the codec, which "
+  "is backwards. `covers` is a set because `stale_for` compares it "
+  "against the parties now on the file, and comparing tuples would make "
+  "an order change look like a stale screen.\n\n"
+  "DECODING MATTERS AS MUCH AS ENCODING. A field declared "
+  "`frozenset[str]` that comes back a list is the shape `_decode` was "
+  "rewritten to prevent: faithful on the way out, something else on the "
+  "way back, and nothing failing until a set operation far away.",
+  "tests/test_the_handover_says_what_it_did_not_do.py::test_the_store_"
+  "round_trips_a_set_in_both_directions \u2014 asserted at the CODEC "
+  "rather than through a matter, with the sort order pinned and the "
+  "neighbouring tuple and list branches asserted too, because a change "
+  "that turned every sequence into a set would pass the set half.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

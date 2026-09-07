@@ -343,6 +343,19 @@ class Thread:
     write.
     """
 
+    authorities: tuple[object, ...] = ()
+    """THE PROVISIONS AND CASES THIS THREAD'S ANSWER RESTED ON.
+
+    Appendix E wants binding status, validity window, paragraph kind and
+    treatment -- all of which a `Finding` carries and all of which were
+    discarded at the end of every turn.
+
+    Replaced whole on each deriving turn, like `deadlines`: what the
+    LAST answer relied on is the useful fact, and accumulating every
+    finding ever retrieved would hand a receiving advocate a pile rather
+    than a position.
+    """
+
     deadlines: tuple[object, ...] = ()
     """THE DEADLINE REGISTER, as the last turn that could compute it left
     it. Phase 3.
@@ -581,6 +594,34 @@ class Matter:
     title: str
     threads: tuple[Thread, ...] = ()
     facts: tuple[Fact, ...] = ()
+    screens: tuple[object, ...] = ()
+    """THE ADMIT-A SCREENS, one entry per `ScreenKind`, matter-scoped.
+
+    Appendix E: *each carries its own state, INCLUDING `not_run`. A2
+    forbids showing a not_assessed screen as clear, and that is only
+    possible if the summary distinguishes them.*
+
+    MATTER-SCOPED AND NOT THREAD-SCOPED, because `_run_screens` decides
+    for the FILE. A conflict is a conflict whichever dispute raised it.
+
+    Carrying these is not slice-10 work. RUNNING the conflict, competence
+    and scope checks is B3-B5; carrying five states that say `not_run` is
+    what makes their absence visible at all, and until it is carried a
+    receiving advocate cannot tell an unscreened file from a clean one.
+
+    Untyped for the cycle reason every other persisted derivation carries:
+    `nm.core.screens` imports this module.
+    """
+
+    assessed: tuple[str, ...] = ()
+    """WHICH MATTER-LEVEL SECTIONS HAVE BEEN COMPUTED, by name.
+
+    `Thread.assessed` one level up, and deliberately the same field with
+    the same rule rather than a second mechanism: empty means either
+    computed-and-found-nothing or never-computed, and in a handover those
+    are opposite facts.
+    """
+
     turns_applied: tuple[TurnId, ...] = ()
     asked: tuple[AskedQuestion, ...] = ()
     """Every question put to the advocate, and whether it came back.
