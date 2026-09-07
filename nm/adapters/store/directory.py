@@ -90,8 +90,15 @@ class FileDirectory:
             },
             "created_at": enrolment.created_at.isoformat(),
         }
-        path.write_bytes(self._cipher.encrypt(
-            json.dumps(blob, indent=2).encode("utf8")))
+        # IN THE OPEN, DELIBERATELY (BK-22). The credential is an scrypt
+        # hash with its salt and cost -- scrypt exists so that such a hash
+        # can be stored where it can be read. Sealing it AS WELL made
+        # signing in depend on `NM_MATTER_KEY`, a key that is meant to
+        # rotate, and rotating it locked every advocate out.
+        #
+        # Client material is not here and is not affected: matters,
+        # transcripts and metrics keep the matter key.
+        path.write_text(json.dumps(blob, indent=2), encoding="utf8")
 
     #: Why a sign-in failed, in the caller's vocabulary. THREE STATES.
     #:
@@ -109,9 +116,37 @@ class FileDirectory:
         self._last_failure = self.UNKNOWN
         if not path.exists():
             return None
+        raw = path.read_bytes()
         try:
-            doc = json.loads(
-                self._cipher.decrypt(path.read_bytes()).decode("utf8"))
+            # PLAIN FIRST, SEALED SECOND. Records written before BK-22 are
+            # encrypted, and this reads both -- so no account breaks and
+            # there is no window in which sign-in is down. A record is
+            # rewritten in the open the next time it is written.
+            try:
+                doc = json.loads(raw.decode("utf8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                doc = json.loads(self._cipher.decrypt(raw).decode("utf8"))
+                # MIGRATED ON THE WAY PAST, and it has to be here.
+                #
+                # `enrol` is the only other writer and it REFUSES to
+                # overwrite, so a record sealed before BK-22 would stay
+                # sealed forever and sign-in would keep depending on the
+                # matter key -- which is the whole thing being removed.
+                # Measured: unsealing the writer alone changed nothing for
+                # the one account that already existed.
+                #
+                # ONLY REACHED WHEN THE DECRYPT SUCCEEDED, so this runs
+                # exactly once per record, on a turn where the correct key
+                # was present. It never converts something it could not
+                # read.
+                try:
+                    path.write_text(json.dumps(doc, indent=2),
+                                    encoding="utf8")
+                except OSError:
+                    # A record that could not be rewritten still verified.
+                    # Failing the sign-in over a migration would be the
+                    # cure harming more than the disease.
+                    pass
             self._last_failure = None
             return doc
         except Exception as exc:  # noqa: BLE001
@@ -241,21 +276,28 @@ class FileDirectory:
 
     def _write_session(self, session: Session) -> None:
         self._session_path(session.token_fingerprint).write_bytes(
-            self._cipher.encrypt(json.dumps({
+            json.dumps({
                 "token_fingerprint": session.token_fingerprint,
                 "advocate_id": session.advocate_id,
                 "device": session.device,
                 "issued_at": session.issued_at.isoformat(),
                 "expires_at": session.expires_at.isoformat(),
                 "ended_because": session.ended_because,
-            }, indent=2).encode("utf8")))
+            }, indent=2).encode("utf8"))
 
     def _read_session(self, fingerprint: str) -> Session | None:
         path = self._session_path(fingerprint)
         if not path.exists():
             return None
         try:
-            d = json.loads(self._cipher.decrypt(path.read_bytes()).decode("utf8"))
+            # BOTH FORMS, as with the advocate record. A session sealed
+            # before BK-22 keeps working until it expires rather than
+            # logging its advocate out mid-matter.
+            raw = path.read_bytes()
+            try:
+                d = json.loads(raw.decode("utf8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                d = json.loads(self._cipher.decrypt(raw).decode("utf8"))
         except Exception:  # noqa: BLE001 -- an unopenable session is not a session
             return None
         return Session(

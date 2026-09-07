@@ -73,34 +73,44 @@ if ($held) {
 # privileged client material to disk in plaintext. This script therefore
 # supplies a DEVELOPMENT key and says so, rather than letting the server die
 # with a message the advocate has to go and look up.
-# THE KEY IS REMEMBERED, NOT INVENTED.
+# THE KEY IS THE APP'S TO FIND, NOT THIS SCRIPT'S TO SUPPLY.
 #
-# The first version of this set a FIXED literal when the variable was unset,
-# and that cost a real account: p14lrahul@iima.ac.in was enrolled under one
-# key and, after this script supplied a different one, its record decrypted to
-# InvalidToken -- reported to the advocate as "credentials are wrong".
+# `load_dotenv` is documented "Existing environment variables win", so a key
+# set HERE SHADOWS the one in `.env` -- and that is exactly what happened:
+# this script set its own, the app preferred it over the real one, and an
+# advocate's account decrypted to InvalidToken. The record was never damaged.
+# It was being opened with the wrong key, by me.
 #
-# So a generated key is WRITTEN DOWN on first use and reused after. An account
-# enrolled through this script survives every restart of it, which is the only
-# behaviour that makes a dev server usable at all.
+# So `.env` is checked FIRST and left alone if it has one. A key is generated
+# only when nothing anywhere provides one, and it is saved so accounts survive
+# a restart.
+$envFile = Join-Path $root ".env"
 $keyFile = Join-Path $root ".nm\dev-matter-key"
-if (-not $env:NM_MATTER_KEY) {
-    if (Test-Path $keyFile) {
-        $env:NM_MATTER_KEY = (Get-Content $keyFile -Raw).Trim()
-        Write-Host "  NM_MATTER_KEY from .nm\dev-matter-key (development)" -ForegroundColor DarkGray
-    } else {
-        $bytes = New-Object byte[] 32
-        [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
-        $generated = [Convert]::ToBase64String($bytes)
-        New-Item -ItemType Directory -Force -Path (Split-Path $keyFile) | Out-Null
-        Set-Content -Path $keyFile -Value $generated -Encoding utf8 -NoNewline
-        $env:NM_MATTER_KEY = $generated
-        Write-Host "  NM_MATTER_KEY was unset - GENERATED one and saved it to" -ForegroundColor Yellow
-        Write-Host "    .nm\dev-matter-key" -ForegroundColor Yellow
-        Write-Host "    It is reused on every start, so accounts survive." -ForegroundColor DarkGray
-        Write-Host "    It is a DEVELOPMENT key sitting in the repo: set" -ForegroundColor DarkGray
-        Write-Host "    NM_MATTER_KEY yourself before a real matter." -ForegroundColor DarkGray
+$fromEnvFile = $false
+if (Test-Path $envFile) {
+    foreach ($line in (Get-Content $envFile)) {
+        if ($line -match '^\s*NM_MATTER_KEY\s*=\s*\S') { $fromEnvFile = $true; break }
     }
+}
+
+if ($env:NM_MATTER_KEY) {
+    Write-Host "  NM_MATTER_KEY from the environment" -ForegroundColor DarkGray
+} elseif ($fromEnvFile) {
+    # LEFT UNSET ON PURPOSE. The app reads `.env` itself, and anything set
+    # here would win over it -- which is the defect this comment exists for.
+    Write-Host "  NM_MATTER_KEY from .env (the app loads it)" -ForegroundColor DarkGray
+} elseif (Test-Path $keyFile) {
+    $env:NM_MATTER_KEY = (Get-Content $keyFile -Raw).Trim()
+    Write-Host "  NM_MATTER_KEY from .nm\dev-matter-key (development)" -ForegroundColor DarkGray
+} else {
+    $bytes = New-Object byte[] 32
+    [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+    $generated = [Convert]::ToBase64String($bytes)
+    New-Item -ItemType Directory -Force -Path (Split-Path $keyFile) | Out-Null
+    Set-Content -Path $keyFile -Value $generated -Encoding utf8 -NoNewline
+    $env:NM_MATTER_KEY = $generated
+    Write-Host "  no NM_MATTER_KEY anywhere - GENERATED one and saved it to" -ForegroundColor Yellow
+    Write-Host "    .nm\dev-matter-key, reused on every start" -ForegroundColor Yellow
 }
 
 # ---- start it -------------------------------------------------------------

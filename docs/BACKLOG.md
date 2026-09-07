@@ -16,7 +16,79 @@ against.
 
 ## Open
 
-**Nothing open.** BK-14 to BK-20 were found by the forensic audit below and
+### BK-22 - signing in depended on a key that is meant to rotate - **CLOSED**
+Closed 7 September 2026, on the advocate's challenge: *if the email and
+password match, they should be able to log in, nothing else.*
+
+**They could not, and the reason was a layer below where anyone was looking.**
+The password is an scrypt hash with its salt and cost - exactly what a stored
+password should be, and scrypt exists so that such a hash can sit in the
+open. But the record HOLDING it was sealed with `NM_MATTER_KEY`, so verifying
+a password meant first opening a file. Hand the server the wrong key and the
+comparison is never reached at all.
+
+That coupling bought almost nothing and cost exactly the failure it caused.
+
+**The directory is now in the open**; client material is not, and none of it
+lives there. Matters, transcripts and metrics keep the matter key and always
+did. What is readable on disk is an advocate's OWN name, enrolment number and
+firm, beside a hash that is safe in the open.
+
+**Proven with a server started on a completely unrelated key:** *"that
+password is not right for this email address"* - the record was read and the
+password compared.
+
+**The migration had to go in the READ, and unsealing the writer alone did
+nothing.** `enrol` is the only other writer and it refuses to overwrite, so
+every existing record would have stayed sealed forever - measured on the one
+account that existed, which did not change until the read was taught to
+rewrite. It converts only where the decrypt SUCCEEDED, so a record it cannot
+open is left exactly as it is.
+
+**What this does NOT fix: BK-21.** Matters are still sealed with a key that
+is also the OpenAI credential, so rotating that still makes them unreadable.
+It no longer locks anyone OUT of the product, which was the urgent half.
+
+### BK-21 - the matter encryption key IS the OpenAI API key
+Opened 7 September 2026. `NM_MATTER_KEY` and `NM_MODEL_API_KEY` in `.env`
+hold **the same value** - an `sk-proj-...` credential - so one secret is
+doing two unrelated jobs.
+
+**Why that is a trap and not just untidy.** Rotating the API key is a
+routine, expected act: it leaks, a laptop is lost, a provider forces it. Do
+that and **every stored matter becomes permanently unreadable**, because the
+same string was sealing them. The advocate would discover it the way this one
+did on 7 September - *"this account exists and could not be opened"* - except
+with no wrong key to swap back.
+
+**It has already been demonstrated at zero cost.** `start.ps1` supplied a
+different `NM_MATTER_KEY`, `load_dotenv` documents that *existing environment
+variables win*, and the real key was shadowed. The account was never damaged;
+it was being opened with the wrong key. That is exactly the shape of an API
+key rotation, and the only difference is that the old value still existed.
+
+**And the value is now in a session transcript.** It was printed while
+diagnosing the login failure - a `grep` that displayed the line rather than
+counting it. That is the reason rotation is not hypothetical.
+
+**The order matters and it is not the obvious one.** Rotating first destroys
+the matters. The sequence is:
+
+1. generate a NEW, independent `NM_MATTER_KEY`;
+2. re-key every sealed file - matters, transcripts, advocate records,
+   sessions - decrypting with the old and writing with the new;
+3. only then rotate the OpenAI credential.
+
+**Step 2 needs a tool that does not exist.** It must back up before it
+writes, refuse to start if anything fails to decrypt with the old key, and
+verify every file reopens with the new one before removing the backup - a
+half-re-keyed store is worse than either end of the operation.
+
+**A guard is also missing:** nothing refuses `NM_MATTER_KEY` being equal to
+any other credential in the environment. It is a one-line comparison at the
+composition root and it would have made this impossible to configure.
+
+**BK-21 only.** BK-14 to BK-20 were found by the forensic audit below and
 **all six were fixed on 7 September** - the audit is kept in full because
 its measurements are the evidence, not the headings.
 
