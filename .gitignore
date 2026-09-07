@@ -52,3 +52,4 @@ spec/prd/node_modules/
 .DS_Store
 Thumbs.db
 *.swp
+.nm/dev-matter-key

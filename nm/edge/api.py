@@ -16,7 +16,7 @@ from datetime import date
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Response
+from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, Field
@@ -25,6 +25,8 @@ from nm.core.turn import TurnEngine, TurnInput, TurnRefused
 from nm.domain import summary as matter_memory
 from nm.domain.advocate import utcnow
 from nm.domain.answer import Answer
+from nm.domain.clock import FORUM
+from nm.domain.clock import today as forum_today
 from nm.domain.identity import source_fingerprint
 from nm.domain.traceability import implements
 from nm.edge.projections import board_projection, matter_list_projection
@@ -189,7 +191,7 @@ class TurnRequest(BaseModel):
     thread_id: str | None = None
     turn_id: str | None = None
     today: date | None = None
-    jurisdiction: str = "Telangana"
+    jurisdiction: str = FORUM
 
 
 #: THE CODE THIS PROCESS ACTUALLY LOADED, captured ONCE at import.
@@ -386,7 +388,13 @@ def turn(req: TurnRequest, advocate_id: Advocate) -> _Released:
         # The advocate naming a thread OUTRANKS every heuristic. The only
         # source better than a number of record is the person holding the file.
         thread_id=req.thread_id,
-        today=req.today or date.today(),
+        # THE FORUM'S DATE, not the server's (BK-14). `web/app.js` sends
+        # no `today`, so this default IS the production path -- and
+        # `date.today()` meant "the date where this process happens to
+        # run". A server keeping UTC is a day behind India from 18:30
+        # UTC, so every limitation period computed in that window was a
+        # day short.
+        today=req.today or forum_today(),
         jurisdiction=req.jurisdiction,
         **({"turn_id": req.turn_id} if req.turn_id else {}),
     )
@@ -499,12 +507,38 @@ class Registration(BaseModel):
 
 #: THE ONLY THING A FAILED SIGN-IN EVER SAYS.
 #:
-#: A1: the error must be identical whether the advocate has one matter or
-#: forty. It is one constant rather than a string written at three call sites,
-#: because three copies of a message drift and the drift IS the disclosure --
-#: "no such advocate" at one door and "incorrect password" at another tells an
-#: attacker which accounts exist without either message meaning to.
-_REFUSED = "those credentials were not accepted"
+#: WHY A SIGN-IN FAILED, in the advocate's words. Three states.
+#:
+#: THIS OVERRIDES A1's SINGLE MESSAGE, on the advocate's instruction and
+#: with the cost recorded. A1 collapsed every failure into one sentence so
+#: a stranger could not use the form to discover which addresses are
+#: enrolled -- the same reasoning as the timing note in `authenticate`,
+#: which pays for a password derivation on an unknown advocate so the
+#: stopwatch cannot answer either. That trade is now made the other way.
+#:
+#: WHAT IS BOUGHT is that three different problems stop reading as one.
+#: `unreadable` in particular is neither a wrong email nor a wrong
+#: password: it is a record encrypted under a key the server no longer
+#: has, it happened on 7 September 2026, and the advocate was told to
+#: check credentials that were correct.
+#:
+#: WHAT IS SPENT is that the form now confirms whether an address is
+#: enrolled -- and enumeration is cheap in proportion to how fast it can
+#: be tried, which is why this belongs WITH the login rate limit that
+#: BK-18 still carries as open. The two go together.
+#:
+#: STILL ONE OWNER PER MESSAGE. Three constants, not three strings written
+#: at call sites: the original comment's point was that copies drift, and
+#: that is as true of three messages as of one.
+_REFUSED = {
+    "unknown": ("no advocate is enrolled with that email address. Check the "
+                "spelling, or register."),
+    "wrong_password": "that password is not right for this email address.",
+    "unreadable": ("this account exists and could not be opened. It was "
+                   "sealed with a different NM_MATTER_KEY than the server is "
+                   "running with -- retyping the password will not fix it."),
+}
+_REFUSED_DEFAULT = "those credentials were not accepted"
 
 
 @app.post("/api/register")
@@ -575,7 +609,7 @@ def register(body: Registration) -> dict:
 
 @app.post("/api/login")
 @implements("A1")
-def login(body: Credentials, response: Response,
+def login(body: Credentials, request: Request, response: Response,
           nm_device: str | None = Cookie(default=None),
           user_agent: str | None = Header(default=None)) -> dict:
     """Authenticate, and issue a session bound to this device.
@@ -590,17 +624,42 @@ def login(body: Credentials, response: Response,
     if identity is None:
         # 401 AND NOTHING ELSE. Not 404 for an unknown advocate and 401 for a
         # wrong password -- the status code is a message too.
-        raise HTTPException(status_code=401, detail=_REFUSED)
+        why = application().directory.why_last_sign_in_failed()
+        raise HTTPException(
+            status_code=401,
+            detail=_REFUSED.get(why or "", _REFUSED_DEFAULT))
 
     import secrets
     device_id = nm_device or secrets.token_urlsafe(16)
     token = application().directory.open_session(
         identity.id, _device(device_id, user_agent), utcnow())
 
+    # `secure` FROM THE CONNECTION, NOT FROM A FLAG (BK-18).
+    #
+    # The flags below reasoned carefully about `httponly` and `samesite`
+    # and did not mention `secure` at all, which reads as overlooked
+    # rather than decided -- so a session token for a product holding
+    # privileged material travelled in clear over http or a downgrade.
+    #
+    # THE FIRST FIX DEFAULTED TO BROKEN: `secure=True` with an env-var
+    # opt-out. A secure cookie on a plain connection is DROPPED by the
+    # browser and never returned, so six served-path tests went 401 and
+    # local development would have too. A default that needs a flag to
+    # work is one somebody sets permanently, in the deployment where it
+    # matters.
+    #
+    # `X-Forwarded-Proto` IS TRUSTED, AND ONLY UPWARDS. Forging it can
+    # only make this MORE restrictive -- a secure cookie on a plain
+    # connection is a broken login, not a leak -- and nothing here can be
+    # talked OUT of securing a genuinely https request.
+    forwarded = (request.headers.get("x-forwarded-proto") or "").split(",")[0]
+    secure = request.url.scheme == "https" or forwarded.strip() == "https"
     for name, value in (("nm_session", token), ("nm_device", device_id)):
         # httponly: script cannot read it, so an XSS bug is not a stolen
         # session. samesite=lax: a cross-site POST cannot ride the cookie.
+        # secure: it does not travel over an unencrypted hop at all.
         response.set_cookie(name, value, httponly=True, samesite="lax",
+                            secure=secure,
                             max_age=60 * 60 * 12, path="/")
     return {"advocate": identity.as_dict()}
 

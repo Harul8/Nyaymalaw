@@ -47,6 +47,7 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 
+from nm.domain.clock import FORUM
 from nm.domain.text import refuses_blank_text
 from nm.ports.evidence import Binding
 
@@ -130,7 +131,7 @@ def _year_of(raw: object) -> int | None:
 
 
 def binding_status(raw_court: str | None, year: int | str | None,
-                   jurisdiction: str = "Telangana") -> BindingRuling:
+                   jurisdiction: str = FORUM) -> BindingRuling:
     """Binding status for an authority, against the matter's jurisdiction.
 
     Three outcomes, always. `NOT_ASSESSED` is returned wherever the inputs do

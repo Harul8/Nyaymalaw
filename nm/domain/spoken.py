@@ -76,19 +76,32 @@ class Spoken:
 
         Called immediately after the class body because `__init_subclass__`
         runs before the members are attached and cannot see them.
+
+        RAISES RATHER THAN ASSERTS, so the promise holds under `python -O`.
+        It did not for half a day: an assert here is deleted by `-O`, which
+        would have made this a no-op and moved the failure to a `KeyError`
+        from `said` in the middle of a served turn (BK-17).
         """
+        # RAISED, NOT ASSERTED. This method's whole promise is that a
+        # missing phrase is an ImportError rather than a surprise in a
+        # served turn -- and `python -O` deletes an assert, which would
+        # make `complete()` a no-op and `said` raise KeyError mid-turn.
+        # The docstring said the opposite for half a day (BK-17).
         missing = sorted(m.value for m in cls if m.value not in cls.SAID)
-        assert not missing, (
-            f"{cls.__name__} is shown to the advocate and these members have "
-            f"no phrase: {missing}. Add one to SAID -- without it the member "
-            f"renders as its own identifier, which is what `said` exists to "
-            f"prevent.")
+        if missing:
+            raise ValueError(
+                f"{cls.__name__} is shown to the advocate and these members "
+                f"have no phrase: {missing}. Add one to SAID -- without it "
+                f"the member renders as its own identifier, which is what "
+                f"`said` exists to prevent.")
 
         stale = sorted(set(cls.SAID) - {m.value for m in cls})
-        assert not stale, (
-            f"{cls.__name__}.SAID carries phrases for members that no longer "
-            f"exist: {stale}. A phrase that outlives its member is a rule "
-            f"nobody can reach and the next reader has to work out why.")
+        if stale:
+            raise ValueError(
+                f"{cls.__name__}.SAID carries phrases for members that no "
+                f"longer exist: {stale}. A phrase that outlives its member "
+                f"is a rule nobody can reach and the next reader has to "
+                f"work out why.")
 
 
 def phrase(value: Enum | None, absent: str = "not stated") -> str:

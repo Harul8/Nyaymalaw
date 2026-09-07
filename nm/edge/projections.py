@@ -20,6 +20,7 @@ is worse than either alone: the advocate cannot tell which is stale.
 """
 from __future__ import annotations
 
+from nm.domain.clock import today as forum_today
 from nm.domain.matter import Matter, Role
 from nm.domain.traceability import implements
 
@@ -68,12 +69,11 @@ def _thread_row(thread, deadlines, today=None) -> dict:
     is defect shape S1: the absent input produced the shape of a clean result,
     and `()` could not be told from "nobody computed a register".
     """
-    from datetime import date as _date
 
     from nm.core.deadlines import passed as _passed
     from nm.core.deadlines import upcoming as _upcoming
 
-    today = today or _date.today()
+    today = today or forum_today()   # BK-14: the forum's date
     if deadlines is None:
         # NOT ASSESSED, said as a value. Not the same as a file with no
         # deadlines, and the two must not render alike.
@@ -158,12 +158,11 @@ def matter_list_projection(matters, registers=None) -> dict:
     rule for a board that is merely INCOMPLETE, which is the harder case
     because it looks right.
     """
-    from datetime import date as _date
 
     from nm.core.deadlines import upcoming as _upcoming
 
     unreadable = tuple(getattr(matters, "unreadable", ()))
-    today = _date.today()
+    today = forum_today()            # BK-14: the forum's date
     rows = []
     for m in matters:
         unresolved = sum(1 for t in m.threads if not t.posture.resolved)

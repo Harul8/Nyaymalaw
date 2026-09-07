@@ -42,6 +42,15 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sweep test  ->  the test that proves it can fail.
 #: A sweep with no control is a sweep that has never been shown to work.
 CONTROLS: dict[str, str] = {
+    # BK-17 -- no guard in nm/ is an assert, over every module
+    "test_no_guard_in_the_product_is_an_assert":
+        "test_the_assert_sweep_can_see_a_guard_it_would_delete",
+    # BK-14 -- nothing asks the machine what day it is
+    "test_nothing_in_the_product_asks_the_machine_what_day_it_is":
+        "test_the_clock_sweep_can_see_a_call_to_the_machine",
+    # BK-15 -- the forum has one owner
+    "test_the_jurisdiction_has_one_owner":
+        "test_the_forum_sweep_can_see_a_second_owner",
     # BK-13 -- no enum value reaches the advocate, over every Element in nm/
     "test_no_enum_value_reaches_the_advocate":
         "test_the_value_scan_can_see_an_identifier_reaching_the_advocate",

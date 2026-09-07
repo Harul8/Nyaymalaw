@@ -20,6 +20,7 @@ from nm.adapters.search.authority import AuthorityIndexSearch
 from nm.adapters.store.directory import FileDirectory
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine
+from nm.domain.clock import FORUM
 from nm.domain.gates import GATES, withholding
 from nm.knowledge.coverage import CoverageProfile
 from nm.knowledge.manifest import Manifest
@@ -130,7 +131,7 @@ class Application:
             "coverage": {
                 "measured_at": self.coverage.measured_at or "NEVER MEASURED",
                 "corpus_version": self.coverage.corpus_version,
-                "Telangana": self.coverage.position("Telangana").state.value,
+                FORUM: self.coverage.position(FORUM).state.value,
             },
             "manifest_acts": len(self.manifest.entries),
             "manifest_corpus_version": self.manifest.corpus_version,

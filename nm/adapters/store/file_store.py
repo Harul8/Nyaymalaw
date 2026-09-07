@@ -40,7 +40,13 @@ from nm.ports.store import MatterList, StaleWrite
 
 
 class EncryptionNotConfigured(RuntimeError):
-    """Raised loudly. Never degraded into writing plaintext."""
+    """Raised loudly, for a missing key AND for a missing cipher.
+
+    It said *never degraded into writing plaintext*, which was true of
+    plaintext and not of the keystream XOR this fell back to when
+    `cryptography` was absent -- silently, on a deployment that would then
+    serve privileged client material under it (BK-16).
+    """
 
 
 class _Cipher:
@@ -60,6 +66,33 @@ class _Cipher:
             self._fernet = Fernet(base64.urlsafe_b64encode(digest))
             self.scheme = "fernet"
         except ImportError:
+            # REFUSED, NOT CHOSEN (BK-16).
+            #
+            # This downgraded silently to a keystream XOR and served. The
+            # scheme was named NOT-SECURE and `/api/health` disclosed it,
+            # so it was honest -- and nothing REFUSED it, while both
+            # neighbouring degradations are hard failures: a missing key
+            # raises above, and the authority index will not fall back to
+            # a scan with different recall because *a fallback swapped in
+            # silently is the three-stores defect wearing a helpful face*.
+            #
+            # The same argument applies here and applies harder. Keystream
+            # XOR under a REUSED key is trivially broken: two ciphertexts
+            # XORed together cancel the keystream, and every matter on a
+            # deployment shares one key.
+            #
+            # THE OPT-IN IS DELIBERATE AND UGLY. It exists so a developer
+            # without the wheel can still run the suite, and it is named
+            # so nobody sets it by accident or by copying a deploy script
+            # without reading it.
+            if os.environ.get("NM_ALLOW_INSECURE_CIPHER") != "yes-i-know":
+                raise EncryptionNotConfigured(
+                    "`cryptography` is not installed, so the only cipher "
+                    "available is a keystream XOR -- which is not "
+                    "encryption under a key every matter shares. Install "
+                    "it:  pip install cryptography\n\n"
+                    "To run WITHOUT it anyway -- never with a real matter "
+                    "-- set NM_ALLOW_INSECURE_CIPHER=yes-i-know.") from None
             self.scheme = "xor-keystream(NOT-SECURE)"
 
     def encrypt(self, data: bytes) -> bytes:

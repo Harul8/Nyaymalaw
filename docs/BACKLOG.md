@@ -16,8 +16,46 @@ against.
 
 ## Open
 
-Every BK row from the build was closed on 7 September. **BK-14 to BK-19
-are new**, from the forensic audit below, and none has been fixed.
+**BK-20 only.** BK-14 to BK-19 were found by the forensic audit below and
+**all six were fixed on 7 September** - the audit is kept in full because
+its measurements are the evidence, not the headings.
+
+BK-20 is the recorded COST of a change the advocate asked for, and it is
+open because half of the pair it needs is not built.
+
+### BK-20 - sign-in names which of three things failed, and there is still no rate limit
+Opened 7 September 2026.
+
+A1 collapsed every sign-in failure into one sentence so a stranger could
+not use the form to discover which addresses are enrolled - the same
+reasoning as the timing note in `authenticate`, which pays for a password
+derivation on an unknown advocate so the stopwatch cannot answer either.
+
+**That trade is now made the other way, on instruction**, and the reason is
+good: three different problems were reading as one.
+
+| state | what the advocate is told |
+|---|---|
+| `unknown` | no advocate is enrolled with that email address |
+| `wrong_password` | that password is not right for this email address |
+| `unreadable` | the account exists and was sealed with a different `NM_MATTER_KEY` - retyping will not fix it |
+
+**The third is why it was worth doing, and it happened the same day.**
+`p14lrahul@iima.ac.in` was enrolled under one key, `start.ps1` supplied a
+different one, and the advocate was told their credentials were wrong on
+credentials that were correct. No amount of retyping fixes that and nothing
+on the screen pointed anywhere. `start.ps1` now generates a key ONCE and
+reuses it, so an account survives a restart.
+
+**What is open.** Enumeration is cheap in proportion to how fast it can be
+tried, and **the product still has no login rate limit**. The password
+validator has said so in a message the advocate reads since slice 1: *"this
+is the only thing standing between one advocate's client file and
+another's, and the product has no rate limit yet."*
+
+The two belong together. Distinguishing the states without the rate limit
+is the half of the pair that costs rather than the half that pays.
+
 ### The forensic audit, 7 September 2026
 Run by SWEEP rather than by reading: one mechanical pass per defect shape,
 each drawing its population from the whole product. Six findings, and the
@@ -28,7 +66,7 @@ Each row says whether it is **measured** or **reasoned from the code**.
 
 ---
 
-### BK-14 - the date comes from the server's clock and nothing pins it
+### BK-14 - the date came from the server's clock - **FIXED**
 **MEASURED.** `nm/edge/api.py:389` takes `today=req.today or date.today()`,
 and **`web/app.js` never sends `today`** - grep returns nothing. So every
 served turn dates itself by whatever clock the server happens to keep.
@@ -52,7 +90,7 @@ it", because the question has never been asked.
 **And no test pins the clock.** Every suite passes `today=date(2026, 9, 4)`
 explicitly, so the defect is invisible to all of them by construction.
 
-### BK-15 - six owners for the jurisdiction
+### BK-15 - six owners for the jurisdiction - **FIXED**
 **MEASURED.** `"Telangana"` is a literal default in six modules:
 `adapters/evidence/corpus.py:92`, `bootstrap/composition.py:133`,
 `core/turn.py:188`, `edge/api.py:192`, `knowledge/jurisdiction.py:133`,
@@ -63,7 +101,7 @@ law out of it is confidently wrong and nothing downstream catches that.*
 Change one default and the binding computation uses a different
 jurisdiction from the retrieval, with no disagreement surfaced.
 
-### BK-16 - the matter cipher downgrades silently, where its neighbours refuse
+### BK-16 - the matter cipher downgraded silently - **FIXED**
 **MEASURED, and less bad than it first looks.** `_Cipher.__init__` catches
 `ImportError` on `cryptography` and sets
 `scheme = "xor-keystream(NOT-SECURE)"`. The live scheme here is **fernet**
@@ -83,7 +121,7 @@ The same argument applies here and was not applied. The class docstring
 even says *"Raised loudly. Never degraded into writing plaintext"* - true
 of plaintext and not of this.
 
-### BK-17 - three load-bearing guards vanish under `python -O`
+### BK-17 - three load-bearing guards vanished under `-O` - **FIXED**
 **MEASURED.** Every `assert` in `nm/` is a guard, and `-O` removes all
 three:
 
@@ -99,20 +137,29 @@ a surprise in a served turn.* Under `-O` `complete()` is a no-op and `said`
 raises `KeyError` mid-turn - precisely the outcome the sentence promises is
 prevented. S11: a check that cannot fail because it is not there.
 
-### BK-18 - the session cookie has no `secure` flag, and login has no rate limit
+### BK-18 - the session cookie had no `secure` flag - **HALF FIXED**
 **MEASURED.** `response.set_cookie(name, value, httponly=True,
 samesite="lax", max_age=..., path="/")`. The comment beside it reasons
 carefully about `httponly` and `samesite` and does not mention `secure`,
 which reads as overlooked rather than decided. Without it the session token
 travels in clear over HTTP or a downgrade.
 
-**The rate limit is already admitted, in the wrong place.** `advocate.py`
+**THE COOKIE HALF IS FIXED**: `secure` is derived from the connection -
+`request.url.scheme` plus `X-Forwarded-Proto`, trusted only upwards. The
+first attempt defaulted to `secure=True` with an env-var opt-out, and a
+secure cookie on a plain connection is DROPPED: six served-path tests went
+401 and local development would have too.
+
+**THE RATE LIMIT IS NOT FIXED** and is carried by BK-20, which it pairs
+with.
+
+**The rate limit was already admitted, in the wrong place.** `advocate.py`
 refuses a short password with *"this is the only thing standing between one
 advocate's client file and another's, and the product has no rate limit
 yet"* - a known gap declared in a message the ADVOCATE reads rather than in
 a row anyone tracks.
 
-### BK-19 - a missing identity count reads as zero
+### BK-19 - a missing identity count read as zero - **FIXED**
 **MEASURED.** `adapters/search/authority.py:64`: `int(rows.get(key, 0))`
 over the index identity, so an identity missing `indexed_paragraphs`
 reports **0 indexed** - indistinguishable from an empty index.

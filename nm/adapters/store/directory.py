@@ -92,22 +92,49 @@ class FileDirectory:
         path.write_bytes(self._cipher.encrypt(
             json.dumps(blob, indent=2).encode("utf8")))
 
+    #: Why a sign-in failed, in the caller's vocabulary. THREE STATES.
+    #:
+    # `unreadable` is the one that is neither a wrong email nor a wrong
+    # password: a record encrypted under a key the server no longer has.
+    # It happened on 7 September 2026 -- an account enrolled under one
+    # `NM_MATTER_KEY` and read under another -- and the advocate was told
+    # their credentials were wrong. No amount of retyping fixes that.
+    UNKNOWN = "unknown"
+    WRONG_PASSWORD = "wrong_password"
+    UNREADABLE = "unreadable"
+
     def _read(self, advocate_id: str) -> dict | None:
         path = self._advocate_path(advocate_id)
+        self._last_failure = self.UNKNOWN
         if not path.exists():
             return None
         try:
-            return json.loads(self._cipher.decrypt(path.read_bytes()).decode("utf8"))
+            doc = json.loads(
+                self._cipher.decrypt(path.read_bytes()).decode("utf8"))
+            self._last_failure = None
+            return doc
         except Exception as exc:  # noqa: BLE001
-            # A RECORD THAT WILL NOT OPEN IS NOT AN ABSENT ONE, and the
-            # difference is only visible to the operator. The caller still
-            # gets the single failure A1 requires.
+            # A RECORD THAT WILL NOT OPEN IS NOT AN ABSENT ONE. It was
+            # visible only to the operator until the advocate was told
+            # their credentials were wrong on a record that existed and
+            # was correct.
+            self._last_failure = self.UNREADABLE
             self._note(advocate_id, f"record unreadable: {type(exc).__name__}")
             return None
 
     def identity(self, advocate_id: str) -> AdvocateIdentity | None:
         doc = self._read(advocate_id)
         return AdvocateIdentity(**doc["identity"]) if doc else None
+
+    def why_last_sign_in_failed(self) -> str | None:
+        """`unknown`, `wrong_password`, `unreadable`, or None.
+
+        Read immediately after `authenticate` returns None. A field rather
+        than a second return value because every other caller of
+        `authenticate` wants the identity and nothing else, and widening
+        the signature would make them all handle a reason they discard.
+        """
+        return getattr(self, "_last_failure", None)
 
     def authenticate(self, advocate_id: str,
                      password: str) -> AdvocateIdentity | None:
@@ -123,8 +150,10 @@ class FileDirectory:
 
         credential = Credential(**doc["credential"])
         if not credential.verify(password):
+            self._last_failure = self.WRONG_PASSWORD
             self._note(advocate_id, "wrong password")
             return None
+        self._last_failure = None
         self._note(advocate_id, "authenticated")
         return AdvocateIdentity(**doc["identity"])
 

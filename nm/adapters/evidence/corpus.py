@@ -37,6 +37,7 @@ from datetime import date
 from pathlib import Path
 
 from nm.domain.citation import last_wanted_section, wanted_section
+from nm.domain.clock import FORUM
 from nm.domain.matter import CauseOfAction
 from nm.domain.traceability import implements
 from nm.knowledge.citator import Citator
@@ -89,7 +90,7 @@ class CorpusEvidenceAdapter:
     """
 
     def __init__(self, corpus_dir: str | Path, manifest: Manifest,
-                 jurisdiction: str = "Telangana",
+                 jurisdiction: str = FORUM,
                  authority_index: str | Path | None = None,
                  identity_index: str | Path | None = None) -> None:
         self._dir = Path(corpus_dir)

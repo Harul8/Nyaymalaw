@@ -59,11 +59,26 @@ class AuthorityIndexSearch:
         if not rows:
             return None
 
-        def num(key: str) -> int:
+        def num(key: str) -> int | None:
+            """A count from the identity, or None where it is not recorded.
+
+            NOT 0 (BK-19). This returned `int(rows.get(key, 0))`, so an
+            identity missing `indexed_paragraphs` reported ZERO INDEXED --
+            indistinguishable from an index that was built and holds
+            nothing.
+
+            CLAUDE.md's own worked example is this shape: `table.get(kind,
+            0.0)` made every unlisted atom type score worse than every
+            listed one, and the fix was general rather than a row per atom
+            type.
+            """
+            raw = rows.get(key)
+            if raw is None:
+                return None
             try:
-                return int(rows.get(key, 0))
+                return int(raw)
             except (TypeError, ValueError):
-                return 0
+                return None
 
         return IndexIdentity(
             name=self.name,

@@ -136,7 +136,14 @@ def test_every_spoken_enum_called_complete():
 
 
 def test_a_missing_phrase_is_an_import_error_and_not_a_transcript():
-    """THE POSITIVE CONTROL. A check that has never failed is S11."""
+    """THE POSITIVE CONTROL. A check that has never failed is S11.
+
+    `ValueError` AND NOT `AssertionError` since BK-17. `complete()` asserted,
+    and `python -O` deletes an assert -- which would have made it a no-op and
+    moved the failure to a `KeyError` from `said` mid-turn, the exact outcome
+    its docstring promised to prevent. The type in this test is the evidence
+    that the guard is a statement rather than a debug aid.
+    """
     from enum import Enum, nonmember
 
     from nm.domain.spoken import Spoken
@@ -146,14 +153,14 @@ def test_a_missing_phrase_is_an_import_error_and_not_a_transcript():
         FORGOTTEN = "forgotten"
         SAID = nonmember({"fine": "fine"})
 
-    with pytest.raises(AssertionError, match="forgotten"):
+    with pytest.raises(ValueError, match="forgotten"):
         _Gappy.complete()
 
     class _Stale(Spoken, str, Enum):
         ONLY = "only"
         SAID = nonmember({"only": "only", "deleted": "a member that went"})
 
-    with pytest.raises(AssertionError, match="deleted"):
+    with pytest.raises(ValueError, match="deleted"):
         _Stale.complete()
 
 

@@ -26,6 +26,7 @@ from datetime import date
 from enum import Enum, nonmember
 from typing import Protocol, runtime_checkable
 
+from nm.domain.clock import FORUM
 from nm.domain.spoken import Spoken
 from nm.domain.text import blank, refuses_blank_text
 
@@ -364,7 +365,7 @@ class EvidenceNeed:
 
     question: str
     governing_date: date
-    jurisdiction: str = "Telangana"
+    jurisdiction: str = FORUM
     forum: str | None = None
     cause_of_action: str | None = None
     provision_hint: str | None = None

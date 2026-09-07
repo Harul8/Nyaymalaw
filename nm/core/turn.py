@@ -51,6 +51,7 @@ from nm.domain import decision, engagement, issue, reservation
 from nm.domain import proof as domain_proof
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
+from nm.domain.clock import FORUM
 from nm.domain.matter import (
     Basis,
     CauseOfAction,
@@ -185,7 +186,7 @@ class TurnInput:
     matter_id: str | None = None
     thread_id: str | None = None
     today: date = field(default_factory=date.today)
-    jurisdiction: str = "Telangana"
+    jurisdiction: str = FORUM
 
 
 @dataclass
@@ -1157,10 +1158,15 @@ class TurnEngine:
             for kind in screens_mod.ScreenKind)
 
         may, why = screens_mod.may_admit_substance(outstanding)
-        assert not may, (
-            "every screen is NOT_ASSESSED and substance was admitted anyway; "
-            "`may_admit_substance` is the one owner of that decision and it "
-            "has stopped refusing an unscreened matter")
+        if may:
+            # RAISED, NOT ASSERTED. `python -O` deletes an assert, and this
+            # one is the only thing standing between an unscreened matter
+            # and substance being admitted on it (BK-17).
+            raise RuntimeError(
+                "every screen is NOT_ASSESSED and substance was admitted "
+                "anyway; `may_admit_substance` is the one owner of that "
+                "decision and it has stopped refusing an unscreened "
+                "matter")
 
         # `unscreened`, NOT `not_assessed`. The distinction is the gate's own:
         # `not_assessed` would mean we could not tell whether this matter was
