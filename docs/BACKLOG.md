@@ -43,6 +43,21 @@ false too: it named four things as re-derived every turn that are all
 persisted. The check itself was right and stays.
 
 
+### BK-6 — the evidence bound is reached on a four-turn matter — **CLOSED**
+Measured: **every turn spent 2 of its 3 rounds re-fetching Limitation Act
+s.18 and s.19** — the same two sections — leaving one round for the advocate's
+actual question and none on a turn that also wanted authority.
+
+The bound was not the problem. `MAX_EVIDENCE_ROUNDS` limits how far a turn may
+WANDER, and those two sections are named by number before the turn starts —
+the case `exploratory=False` was built for. Wandering fell from 3/3 to 1/3.
+The number was not raised: raising a limit until it stops complaining is how a
+bound becomes a formality.
+
+The section list also had **two owners** — `factors.SECTION_FOR` and a literal
+`("18", "19")` in `turn.py`. `factors.sections_needed()` owns it now.
+
+
 ---
 
 ## Deferred, with the reason
@@ -81,13 +96,43 @@ naming the tool, rather than falling back to a scan with different recall.
 
 ## Observed on GS-14, 6 September 2026 — worth a decision, not yet a defect
 
-### BK-6 — the evidence bound is reached on a four-turn matter
-Turn 4: *"I stopped after 3 rounds of retrieval on this turn"* and a provision
-that was never searched. The bound is doing its job and saying so, which is
-right. **What is unmeasured is whether 3 is the correct number** now that a
-turn makes more reads than it did when the bound was set.
-
 ### BK-7 — 9 of 9 thresholds report `not_assessed` on every turn
 Honest, and it is one line. But an advocate who reads it four times in four
 turns learns to skip it, which is the same erosion E-093 is about for length.
 **A third state that is always the same value is a candidate for saying once.**
+
+---
+
+## The hard-coding audit, 7 September 2026
+
+Population from the code: every module-level literal collection in `nm/`, and
+every string literal appearing in more than one module. Four kinds, and only
+two were defects.
+
+**Fixed** — `_ABOUT_NM` discarding matters (**B-124**), `_WANTS_AUTHORITY`
+missing silently (**B-125**), the duplicated section list (**BK-6**).
+
+**Correct by design, and must not be "fixed":**
+
+| what | why it is hard-coded |
+|---|---|
+| `LIMITATION_ARTICLE`, `ELEMENTS`, `SECTION_FOR` | CLAUDE.md §5 mandates it — exact match decides which Act, fuzzy may never identify. These are curated legal facts with a recorded source. |
+| every `_SCRIPTED_*` in `adapters/model/scripted.py` | the test double. Being scenario-shaped is what a double IS. |
+| feature ids (`D5`, `C7`…), enum values, format fragments | vocabulary owned by the enums and checked by `trace`. |
+
+### BK-8 — the phrase lists that survive, and why
+Three remain in product code. Each ROUTES and none DECIDES, which is the rule
+B-124 established — but they are listed here rather than left to be
+rediscovered:
+
+- **`_MATTER_SIGNALS`** (27 words) — a shortcut with a safe fallthrough:
+  ambiguity resolves to MATTER anyway, and the answer says "Say if I have that
+  wrong." **One hole:** a message of ≤3 words with no signal routes to
+  NON_MATTER. "he absconded" is a matter read as a greeting.
+- **`chronology.CORRECTING`** (15 phrases) — documented and deliberate
+  (B-088): it detects that a correction is being *attempted* and decides
+  nothing, raising a question with both dates in it.
+- **`limitation._WORDS` / `_DAYS`** — parsing "three years" out of retrieved
+  statutory text. Not a heuristic on the advocate's message; it reads the
+  corpus, and a miss leaves the period uncomputed and said so.
+

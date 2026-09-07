@@ -119,6 +119,7 @@ def test_reaching_the_evidence_bound_produces_a_visible_gap(tmp_path, monkeypatc
         "was a field no code ever set, which is how the bound came to exist as "
         "a number in a file.")
 
+
     # AND THE ADVOCATE IS TOLD. A turn that ran out of rounds and said nothing
     # is indistinguishable from one that found everything it needed -- and they
     # would read it as the second.
@@ -126,6 +127,60 @@ def test_reaching_the_evidence_bound_produces_a_visible_gap(tmp_path, monkeypatc
     assert any("stopped after" in t for t in disclosed), (
         "the turn hit the evidence bound and answered as though it had not. "
         f"Disclosures were: {disclosed}")
+
+
+def test_a_named_provision_does_not_spend_the_wandering_budget(tmp_path):
+    """BK-6. MEASURED, 7 September 2026, on all four turns of GS-14:
+
+        turn 1  3 fetches: the question, Limitation Act s.18, s.19
+        turn 2  3 fetches: the question, s.18, s.19
+        turn 3  3 fetches: the question, s.18, s.19
+        turn 4  3 fetches: the question, s.18, s.19
+
+    TWO OF EVERY THREE ROUNDS WENT TO THE SAME TWO SECTIONS. That left ONE for
+    the advocate's actual question, and none at all on a turn that also wanted
+    authority -- which is why turn 4 reported "I stopped after 3 rounds of
+    retrieval on this turn" against a provision it never searched.
+
+    The bound was not the problem. `MAX_EVIDENCE_ROUNDS` limits how far a turn
+    may WANDER, and s.18 and s.19 are named by number before the turn starts.
+    That is the case `exploratory=False` was built for, in B-104's own words:
+    *the answer has already named one specific provision, and the lookup
+    either finds that provision or does not.*
+
+    THE ANSWER WAS NOT TO RAISE THE NUMBER. Raising a limit until it stops
+    complaining is how a bound becomes a formality; this stops spending it on
+    something that was never wandering.
+    """
+    import inspect
+
+    from nm.core.turn import TurnEngine
+
+    body = inspect.getsource(TurnEngine._factors)
+    assert "exploratory=False" in body, (
+        "the named-section fetch spends the wandering budget again, so two of "
+        "every three rounds go to two fixed provisions")
+
+
+def test_a_named_provision_is_still_counted(tmp_path):
+    """THE BOUND THAT MAKES THE ABOVE SAFE. `exploratory=False` is not an
+    exemption from counting -- `_fetch` says so in as many words: a retrieval
+    that happened and is not in the count is exactly the drift that makes a
+    bound stop matching reality."""
+    import inspect
+
+    from nm.core.turn import TurnEngine
+
+    src = inspect.getsource(TurnEngine._fetch)
+    assert "metrics.evidence_rounds += 1" in src
+    # The increment is OUTSIDE the exploratory branch, so a named fetch
+    # reaches it. If it moved inside, named retrievals would vanish from the
+    # count and the number would describe less than the turn did.
+    guard = src.index("if exploratory and metrics.evidence_rounds")
+    increment = src.index("metrics.evidence_rounds += 1")
+    assert increment > src.index("return EvidenceResult", guard), (
+        "the count is incremented inside the bound check, so a named fetch "
+        "is not counted at all")
 
 
 def test_the_bound_is_enforced_by_the_engine_not_by_the_caller(tmp_path):

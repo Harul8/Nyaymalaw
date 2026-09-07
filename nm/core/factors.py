@@ -68,6 +68,22 @@ SECTION_FOR: dict[FactorKind, str] = {
     FactorKind.PART_PAYMENT: "19",
 }
 
+def sections_needed() -> tuple[str, ...]:
+    """The sections that must be retrieved before this read can build anything.
+
+    DERIVED FROM `SECTION_FOR`, not listed again. `nm/core/turn.py` carried
+    the literal `("18", "19")` until 7 September 2026 -- a second copy of
+    these numbers in another module, and the failure it set up is the silent
+    kind: add a third kind here and the turn would go on fetching two, the
+    span lookup would return None, and the new factor would be refused for a
+    missing provision. Built, wired, and dead, with nothing raised.
+
+    Ordered, so the fetch order is stable and a transcript reads the same way
+    twice.
+    """
+    return tuple(SECTION_FOR[kind] for kind in READS)
+
+
 FACTOR_SCHEMA: dict = {
     "x-nm-read": "factors",
     "type": "object",

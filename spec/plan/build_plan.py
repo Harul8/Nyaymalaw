@@ -3996,6 +3996,73 @@ d("B-123", "2026-09-07", "core",
   "the renderer emits none. A test that asserts current behaviour is not an "
   "invariant, arriving in a test written for exactly that rule.")
 
+d("B-124", "2026-09-07", "core",
+  "A PHRASE THAT HAPPENED TO BE EMBEDDED IN A MATTER DISCARDED THE MATTER. "
+  "`_ABOUT_NM` was a bare substring test on common English, checked BEFORE "
+  "the matter signals. Measured on four realistic questions, every one "
+  "routed away as a question about the product:\n"
+  "    ‘what can you do about the limitation period on this suit?’\n"
+  "    ‘who are you going to say served the notice?’\n"
+  "    ‘what areas of the decree are still open?’\n"
+  "    ‘how do you work out the period for a possession suit?’\n"
+  "Each contains a matter signal — suit, notice, decree, possession — "
+  "and each got ‘Taking this as a question about what I do.’",
+  "The advocate asking for a forensic audit of hard-coding, after noticing "
+  "the section list. The population came from the code: every module-level "
+  "literal collection in `nm/`.",
+  "S7 — a rule applied outside its case",
+  "Driving four realistic phrasings through `classify_route`. Not by a test "
+  "— the existing ones used messages the list happens to cover, which is "
+  "the fixture supplying the counterexample.",
+  "THE TWO LISTS COMPOSE. The product-question branch requires the ABSENCE "
+  "of a matter, which is the rule the phrase list was standing in for. "
+  "Re-ordering would have fixed those four and left the shape: whichever "
+  "list is consulted first still decides.",
+  "Yes. A PHRASE LIST MAY ROUTE AND MAY NOT DECIDE. Where it decides, it "
+  "must be composed with what it is standing in for — and a longer list "
+  "is never the fix, because every list leaves out the next phrasing. B-031 "
+  "is the standing proof: the posture reader was ten exact phrases and "
+  "‘we act for the workman’ was not among them.",
+  "tests/test_no_phrase_list_decides.py — the four measured phrasings as "
+  "a rule rather than as strings, the BOUND that a real product question is "
+  "still answered as one, and an assertion that the branches compose rather "
+  "than race.")
+
+d("B-125", "2026-09-07", "core",
+  "A KEYWORD MISS MEANT NO AUTHORITY SEARCH RAN, SILENTLY. "
+  "`_wants_authority` is eleven words and it missed four of six realistic "
+  "ways to ask:\n"
+  "    ‘is there anything from the High Court on this?’   no\n"
+  "    ‘has any court decided this point?’               no\n"
+  "    ‘what have the courts said about section 18?’     no\n"
+  "    ‘any decisions I can rely on?’                    no\n"
+  "The answer then comes back with provisions and no authorities, which an "
+  "advocate reads as ‘there are none’.",
+  "The same audit. The list was written for the phrasings somebody thought "
+  "of, which is what a phrase list is.",
+  "S1 — an absent input reading as success",
+  "Six phrasings through `_wants_authority`, measured before anything was "
+  "touched.",
+  "THE MISS IS DISCLOSED. A longer word list is not the fix and cannot be: "
+  "fuzzy matching may RANK and never IDENTIFY (§5), and this list RANKS "
+  "— it decides whether to spend a retrieval round. What it may not do "
+  "is let its own miss look like a finding. So a matter turn that retrieved "
+  "something and did NOT search says so, and four words from the advocate "
+  "get them the search. Same shape as `ActBasis.INFERRED` and the "
+  "correction question.\n\n"
+  "BOUNDED TO ONE LINE on a turn that retrieved something: a turn that "
+  "retrieved nothing has a bigger problem and already says so, and E-093 is "
+  "about length growing.",
+  "Yes, and it is the general answer to the whole family: WHERE A HEURISTIC "
+  "DECIDES WHETHER TO LOOK, ITS MISS MUST BE VISIBLE. The alternative — "
+  "adding phrases until the next scenario passes — is the whack-a-mole "
+  "CLAUDE.md §1 is about.",
+  "tests/test_no_phrase_list_decides.py, which PINS THE MISS deliberately: "
+  "the four phrasings are asserted NOT to be recognised, so the disclosure "
+  "is known to be doing real work rather than covering a case that never "
+  "arises — and a bound that the list still catches what it was written "
+  "for, or the disclosure would fire on every turn.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

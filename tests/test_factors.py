@@ -245,3 +245,84 @@ def test_the_prompt_carries_the_chronology_ids_the_answer_must_name():
         Quotable(turn="is it in time?", file=ACCOUNT), CHRON)
     assert "f2" in prompt.user
     assert "2024-06-12" in prompt.user
+
+
+# ============ the sections the turn fetches have ONE owner ==================
+
+def test_the_turn_fetches_exactly_the_sections_this_read_needs():
+    """THE SECOND COPY, found by the advocate asking why two of every three
+    evidence rounds went to the same two sections.
+
+    `nm/core/turn.py` carried the literal `("18", "19")` while `SECTION_FOR`
+    here held the same numbers. The failure that sets up is silent: add a
+    third kind to `READS`, and the turn goes on fetching two sections,
+    `provisions.get(SECTION_FOR[kind])` returns None, and the new factor is
+    refused for a missing provision. Built, wired, and dead, with nothing
+    raised.
+    """
+    import inspect
+
+    from nm.core import factors
+    from nm.core.turn import TurnEngine
+
+    body = inspect.getsource(TurnEngine._factors)
+    assert "factor_reader.sections_needed()" in body, (
+        "the turn names the sections itself again, so this read and the "
+        "retrieval that feeds it can disagree")
+    # THE CODE, NOT THE PROSE. The comment explaining what this replaced
+    # quotes the literal, and a substring check found its own explanation --
+    # the same trap the z-index check hit on 6 September, which is why that
+    # one strips comments before reading declarations.
+    code = chr(10).join(ln for ln in body.splitlines()
+                        if not ln.lstrip().startswith("#"))
+    assert 'for section in ("18", "19")' not in code
+
+    assert set(factors.sections_needed()) == {
+        factors.SECTION_FOR[k] for k in factors.READS}
+
+
+def test_a_kind_added_to_the_read_is_fetched_without_touching_the_turn():
+    """THE POINT OF THE OWNERSHIP, driven rather than argued.
+
+    A third kind declared here must change what the turn fetches. If it does
+    not, the two are still separate lists that happen to agree today.
+    """
+    from nm.core import factors
+    from nm.core.limitation import FactorKind
+
+    was_reads, was_map = factors.READS, dict(factors.SECTION_FOR)
+    try:
+        factors.READS = (*was_reads, FactorKind.FRAUD)
+        factors.SECTION_FOR[FactorKind.FRAUD] = "17"
+        assert "17" in factors.sections_needed(), (
+            "a kind added to READS is not fetched, so its provision never "
+            "arrives and the factor is refused for a missing provision")
+    finally:
+        factors.READS = was_reads
+        factors.SECTION_FOR.clear()
+        factors.SECTION_FOR.update(was_map)
+
+    assert "17" not in factors.sections_needed(), (
+        "the fixture leaked -- FRAUD is not a kind this read covers, and "
+        "leaving it would make every later test run against a vocabulary "
+        "nobody curated")
+
+
+def test_the_kinds_not_read_are_still_declared_not_assessed():
+    """THE BOUND. Five of the seven `FactorKind` members are deliberately not
+    read — *each is its own section and its own question, and a producer that
+    guessed at all seven would be a producer nobody could check.* That is a
+    decision, and this asserts it is still a decision rather than a gap that
+    grew: the schema may not offer a kind the read cannot support.
+    """
+    from nm.core import factors
+    from nm.core.limitation import FactorKind
+
+    offered = set(factors.FACTOR_SCHEMA["properties"]["kind"]["enum"]) - {"none"}
+    assert offered == {k.value for k in factors.READS}, (
+        "the schema offers a kind this read has no section for, so the model "
+        "can report something that will be silently refused")
+    assert len(offered) < len([k for k in FactorKind
+                               if k is not FactorKind.NOT_ASSESSED]), (
+        "every kind is now read; if that is deliberate the note in factors.py "
+        "about not guessing at all seven needs rewriting")

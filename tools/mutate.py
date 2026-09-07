@@ -146,8 +146,8 @@ MUTATIONS = [
     # A boundary with a counterexample on one side only is half a boundary.
     ("an authority set assembled behind a closed posture gate",
      "nm/core/turn.py",
-     "        if self._wants_authority(turn.message) and not side_blind:",
-     "        if self._wants_authority(turn.message):",
+     "        if wants_authority and not side_blind:",
+     "        if wants_authority:",
      "test_nothing_side_dependent_is_computed_behind_a_closed_gate", "E-034"),
 
     ("a directive step recommended behind a closed posture gate",
@@ -556,10 +556,10 @@ MUTATIONS = [
 
     ("route decided on word count",
      "nm/core/turn.py",
-     "    if any(s in text for s in _MATTER_SIGNALS):",
+     "    if discloses_a_matter:",
      "    if len(text.split()) < 8:\n"
      '        return Route.NON_MATTER, Mode.SHORT_QUESTION, "short"\n'
-     "    if any(s in text for s in _MATTER_SIGNALS):",
+     "    if discloses_a_matter:",
      "test_route_is_not_decided_on_message_length", "E-012"),
 
     ("matter state written in plaintext",

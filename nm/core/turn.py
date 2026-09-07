@@ -220,11 +220,32 @@ def classify_route(message: str) -> tuple[Route, Mode, str]:
     if not text:
         raise TurnRefused("an empty message discloses nothing")
 
-    if any(p in text for p in _ABOUT_NM):
+    # A QUESTION ABOUT THIS PRODUCT IS ONE THAT DISCLOSES NO MATTER.
+    #
+    # This was a bare substring test on common English, checked FIRST --
+    # and measured on 7 September 2026, four of five realistic matter
+    # questions were routed away as questions about the product:
+    #
+    #   "what can you do about the limitation period on this suit?"
+    #   "who are you going to say served the notice?"
+    #   "what areas of the decree are still open?"
+    #   "how do you work out the period for a possession suit?"
+    #
+    # Each contains a matter signal -- suit, notice, decree, possession --
+    # and each got "Taking this as a question about what I do". The
+    # advocate's matter was discarded on a phrase that happened to be
+    # embedded in it.
+    #
+    # THE FIX IS NOT A LONGER LIST OF PHRASES. It is that the two lists
+    # COMPOSE: the product-question branch requires the ABSENCE of a
+    # matter, which is the rule the phrase list was standing in for.
+    discloses_a_matter = any(s in text for s in _MATTER_SIGNALS)
+
+    if any(p in text for p in _ABOUT_NM) and not discloses_a_matter:
         return Route.NON_MATTER, Mode.SHORT_QUESTION, \
             "Taking this as a question about what I do, not a matter."
 
-    if any(s in text for s in _MATTER_SIGNALS):
+    if discloses_a_matter:
         mode = Mode.FULL_BRIEF if len(text.split()) > 25 else Mode.SHORT_QUESTION
         return Route.MATTER, mode, \
             "Taking this as a matter. Say if I have that wrong."
@@ -1454,7 +1475,27 @@ class TurnEngine:
         self._read_coverage(result, thread, metrics, grounds, relied_on,
                             turn, concluded)
 
-        if self._wants_authority(turn.message) and not side_blind:
+        wants_authority = self._wants_authority(turn.message)
+        if not wants_authority and not side_blind and result.findings:
+            # THE SEARCH THAT DID NOT RUN, SAID OUT LOUD.
+            #
+            # `_wants_authority` is a keyword list and it missed four of
+            # six realistic phrasings when measured -- "has any court
+            # decided this point?", "any decisions I can rely on?". A
+            # miss meant no search, and an answer carrying provisions and
+            # no authorities reads as "there are none".
+            #
+            # A longer list leaves out the next phrasing (B-031: ten exact
+            # posture phrases, and `we act for the workman` was not among
+            # them). The list RANKS -- it decides whether to spend a round
+            # -- and this stops its miss from looking like a finding.
+            grounds.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=("I did not search for authority on this turn: I read "
+                      "the question as asking what the law says rather than "
+                      "what has been decided. Say so and I will look.")))
+
+        if wants_authority and not side_blind:
             # G-COVERAGE, and it fires BEFORE the search rather than after it.
             # Told afterwards, the advocate reads it as a note on a result they
             # have already started trusting; told first, it is a fact about
@@ -3299,11 +3340,38 @@ class TurnEngine:
         # with a summary would satisfy the type while defeating it. What goes
         # in is the span the corpus returned.
         provisions: dict[str, str] = {}
-        for section in ("18", "19"):
+        # THE SECTIONS THE READ CAN USE, FROM THE READ (BK-6, and the
+        # advocate's question about the hard-coding).
+        #
+        # This was the literal `("18", "19")` -- a SECOND COPY of
+        # `factors.SECTION_FOR`, in another module. The failure it sets up is
+        # silent: add a third kind to `READS` and `SECTION_FOR`, and the turn
+        # goes on fetching two sections, `provisions.get(SECTION_FOR[kind])`
+        # returns None, and the new factor is refused for a missing provision.
+        # The feature would be built, wired, and dead, with nothing raised.
+        #
+        # `factors` owns which kinds it reads and which section each needs.
+        # This asks it.
+        for section in factor_reader.sections_needed():
+            # NAMED, NOT WANDERING (BK-6). `MAX_EVIDENCE_ROUNDS` limits how
+            # far a turn may WANDER looking for what it needs, and this is
+            # the opposite: two sections, by number, decided before the turn
+            # started. It is the case `exploratory=False` was built for --
+            # B-104's late lookup, in the same words.
+            #
+            # MEASURED, 7 September 2026: every turn of GS-14 spent 2 of its
+            # 3 rounds here, on the same two sections, leaving ONE for the
+            # advocate's actual question -- and none at all on a turn that
+            # also wanted authority, which is why turn 4 reported "I stopped
+            # after 3 rounds of retrieval".
+            #
+            # STILL COUNTED. A retrieval that happened and is not in the
+            # count is the drift `_fetch` warns about. Its own bound is here:
+            # at most two provisions, once per turn.
             found = self._fetch(EvidenceNeed(
                 question=f"Limitation Act 1963 section {section}",
                 governing_date=turn.today,
-                jurisdiction=turn.jurisdiction), metrics)
+                jurisdiction=turn.jurisdiction), metrics, exploratory=False)
             span = next((f.span for f in found.findings
                          if f.span and f".{section}" in f.ref
                          or f.span and f" {section}" in f.ref), None)
