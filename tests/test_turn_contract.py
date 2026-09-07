@@ -423,6 +423,14 @@ def test_a_not_held_result_names_what_is_missing(tmp_path):
     assert any("not held" in e.text.lower() and "Kerala" in e.text
                for e in out.answer.elements)
 
+    # THE SAME TIE. G-NOTHELD owes the advocate the NAME of what is
+    # missing -- "a vague disclaimer is silence in more words" is the
+    # matrix's own wording -- and the assertion above proves the bytes
+    # while naming no gate, so nothing links the promise to the proof.
+    assert "G-NOTHELD" in {g.gate_id for g in out.metrics.gates_fired}, (
+        "the answer names what is missing and the gate that requires "
+        "that did not fire")
+
 
 @pytest.mark.eval_id("E-020")
 def test_a_finding_whose_span_does_not_support_is_never_a_ground(tmp_path):
@@ -583,3 +591,70 @@ def test_an_unscreened_matter_says_so_rather_than_reading_as_screened(tmp_path):
     assert fired["G-UNSCREENED"].state == "unscreened"
     assert fired["G-UNSCREENED"].response == "disclose"
     assert "B3-B5" in fired["G-UNSCREENED"].detail
+
+
+# ============ BK-2 — the screens reach the advocate =========================
+
+def test_every_screen_is_named_to_the_advocate_and_none_reads_as_clear(tmp_path):
+    """BK-2. `nm/core/screens.py` has been complete since slice 6 -- four
+    states, `unscreened` drawing its population from the KINDS, an express
+    emergency exception -- and nothing produced a `Screen`.
+
+    WHAT WAS ACTUALLY WRONG IS SHARPER THAN "UNBUILT". `_run_screens` fired
+    G-UNSCREENED under a comment saying "the output says so rather than
+    reading as though it had passed", and MEASURED on 7 September 2026 the
+    advocate saw ZERO screen-related lines. The gate was in the metrics and
+    invisible where it matters, which is §9: the third state must be visible
+    in the OUTPUT and not only in the type.
+    """
+    from nm.core.screens import ScreenKind
+
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(
+        advocate_id="adv",
+        message=("we act for the plaintiff in a recovery matter; invoices "
+                 "dated 14 March 2023 unpaid")))
+
+    said = " ".join(e.text for e in out.answer.elements)
+    assert "Screens on this matter" in said, (
+        "the advocate is told nothing about the screens; the gate fires into "
+        "the metrics and the answer carries none of it")
+
+    # EVERY KIND, by name. An advocate reading four rows believes the fifth
+    # was checked -- which is `unscreened`'s own argument for drawing its
+    # population from the vocabulary.
+    for kind in ScreenKind:
+        assert kind.value in said, f"{kind.value} is not named to the advocate"
+
+    assert "not a finding that they clear" in said, (
+        "substance is admitted with the screens outstanding and the answer "
+        "does not say that is an exception")
+
+
+def test_a_blocked_turn_still_says_the_screens_have_not_run(tmp_path):
+    """A turn that stopped to ask a question has still not screened the
+    matter, and that is exactly when it matters. All three branches that
+    build an Answer carry the rows."""
+    import inspect
+
+    from nm.core.turn import TurnEngine
+
+    body = inspect.getsource(TurnEngine._run)
+    assert body.count("_with_screens(elements, screens)") == 3, (
+        "not every branch carries the screen rows; a blocked turn would "
+        "report nothing about a matter nobody screened")
+
+
+def test_the_admit_decision_goes_through_the_module(tmp_path):
+    """`may_admit_substance` is the one owner of B3's rule. Returning
+    `clear=True` from the turn instead would put the decision in two places,
+    and the one that matters would be the hard-coded one."""
+    import inspect
+
+    from nm.core.turn import TurnEngine
+
+    body = inspect.getsource(TurnEngine._run_screens)
+    assert "may_admit_substance" in body
+    assert "screens_mod.unscreened" in body, (
+        "the rows are built here rather than by the module, so the "
+        "population is whatever this function remembers")

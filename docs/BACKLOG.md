@@ -16,8 +16,39 @@ against.
 
 ## Open
 
-*(BK-1 closed 6 September 2026 — see below.)*
+**BK-9** - five `disclose` gates with nothing proving the advocate sees
+them. Measured, enumerated and enforced; the detail is below with the
+other rows so the whole disclosure story reads in one place.
 
+### BK-9 - five disclose gates nothing proves the advocate sees
+Opened 7 September 2026 by the sweep that closed **B-128**, and it is
+open rather than deferred: this is work with a number on it, not a
+decision waiting.
+
+`tests/test_disclosure_reaches_the_advocate.py` accounts for all thirteen
+built `disclose` gates. **Eight are PROVEN** - a named test asserts the
+disclosure in the advocate's own bytes. **Five are not:**
+
+| gate | what is asserted today |
+|---|---|
+| `G-NOTASSESSED` | the phrase is in `inspect.getsource(TurnEngine._derive)`. The SOURCE, which holds with the branch unreachable |
+| `G-SALVAGE` | D8 at the module, `test_salvage.py`. No served turn |
+| `G-EXPOSURE` | at the module. **E-082 wants it exactly ONCE per file**, and nothing counts it in an answer - the two failures are opposite, twice is noise and omitted reads as `nothing found` |
+| `G-ADVERSE` | at the module, `test_proof.py`. Nothing checks the unaccounted facts are NAMED to the advocate |
+| `G-MODEL` | the need fails and nothing is recorded as advice - both asserted. That the gap is VISIBLE is not |
+
+**Why this is not five separate rows.** They are one shape with one fix:
+a served turn that trips the gate, asserting on `out.answer.elements`,
+and the gate id named so a rename cannot separate the matrix row from the
+bytes. Two more were closed that way while the table was being written
+(`G-CASCADE`, `G-NOTHELD`), each one line.
+
+**The reason it is a row and not a fix today.** `G-EXPOSURE` and
+`G-ADVERSE` need a fixture that gets a turn far enough to produce an
+exposure section and an adversarial pass, which is scenario work rather
+than a line. The check FAILS THE BUILD on a new disclose gate declared
+with neither kind of entry, so the list cannot quietly grow while this
+sits here.
 ---
 
 ## Closed
@@ -58,33 +89,61 @@ The section list also had **two owners** — `factors.SECTION_FOR` and a literal
 `("18", "19")` in `turn.py`. `factors.sections_needed()` owns it now.
 
 
+### BK-2 - the screens are stated to the advocate - **CLOSED**
+Closed 7 September 2026 as **B-128**, and the defect was sharper than
+"unbuilt".
+
+`nm/core/screens.py` had been complete since slice 6 - four states, an express
+emergency exception, `unscreened` drawing its population from `ScreenKind` -
+and NOTHING CONSTRUCTED A SCREEN. That is B-079's shape and B-116's shape for
+the third time: a module that is right and has no production caller.
+
+**What made it worse than unbuilt.** `_run_screens` fired `G-UNSCREENED` under
+a comment claiming *"the output says so rather than reading as though it had
+passed"*, and measured on 7 September the advocate saw **zero** screen-related
+lines. The gate was in the metrics; the answer carried none of it. CLAUDE.md
+S9 exactly - the third state must be visible in the OUTPUT, not only in the
+type.
+
+Now `_run_screens` builds five `NOT_ASSESSED` screens from the vocabulary,
+asks `may_admit_substance` (which refuses, and the turn asserts that it does),
+and returns `screens_mod.unscreened(outstanding)` as rows. `_with_screens`
+appends them at **all three** Answer sites, blocked branches included - a turn
+that stopped to ask a question has still not screened the matter, and that is
+exactly when it matters.
+
+**Two things the type caught before a test had to.** `Answer.__post_init__`
+refuses a leading GROUND (PRD S6.2 S3: the answer leads with the action, never
+with background), so the note is appended LAST. And the first attempt appended
+to `head`, which is reassigned `list(elements)` further down - a SNAPSHOT, not
+the list - so the rows were discarded silently. The measurement that found the
+defect is what found the fix not working.
+
+**The deferral reason was wrong, and that is the lesson.** B2-B6 (conflicts,
+competence, engagement) remain slice 10 and R-8 still binds. But *telling the
+advocate the screens have not run* is not slice 10 work - it is the disclosure
+that makes the deferral honest, and it had been deferred along with the thing
+it discloses. **The cost recorded here still stands:** when B3 is built, a
+blank `firm_id` must read `NOT_ASSESSED` and never `CLEAR`.
+
+### BK-3 - a served-path judged run needs a credential - **CLOSED**
+Closed 7 September 2026. The premise was wrong: the password was never the
+advocate's to supply, because the scenario advocate is a FIXTURE.
+
+`tools/run_scenario.py` now mints its own - `_mint_scenario_advocate` enrols
+`adv_scenarios` with a generated password held for the run and never written
+down, and **refuses to re-enrol an advocate that already exists** rather than
+resetting a credential it does not own. `NM_SCENARIO_PASSWORD` still wins when
+it is set, so a real deployment is unaffected.
+
+CLAUDE.md S8 was the argument for closing it rather than living with it: every
+defect the first external review found lived between a correct module and the
+served path, and a judged run that never crosses authentication, serialisation
+and the web rendering is the weaker evidence by exactly that gap.
+
 ---
 
 ## Deferred, with the reason
-
-### BK-2 — `nm.core.screens` (B2–B6) is not built
-Conflicts, competence and engagement. **Slice 10**, and R-8 in the project plan
-says moving work inside the horizon means moving something else out,
-explicitly. `_run_screens` clears every matter and fires `G-UNSCREENED` in the
-`unscreened` state, so the file says it was NOT screened rather than reading as
-though it passed — the honest position while it is unbuilt.
-
-**Cost already recorded:** registration made `firm_id` optional (6 September),
-and B3's conflicts registry is scoped by the firm. When the screen is built, a
-blank firm must read `NOT_ASSESSED` and never `CLEAR`.
-`tests/test_an_advocate_can_register.py` holds that as a comment on the test
-that made it optional.
-
-### BK-3 — the served path for a judged run needs the scenario password
-`tools/run_scenario.py` drives the HTTP API and needs
-`NM_SCENARIO_PASSWORD` for `adv_scenarios`. E-102 was judged on an in-process
-run instead, which produces an identical transcript — the API adds
-authentication, serialisation and the web rendering, and the judge reads none
-of them.
-
-It is still the weaker evidence. CLAUDE.md §8: defects live between a correct
-module and the served path. **A served-path judged run needs the password,
-which is the advocate's to supply.**
 
 ### BK-4 — `tools/build_authority_index.py` has never been run
 451,553 attributable case paragraphs. Nothing in the repo triggers it and that
@@ -129,19 +188,24 @@ missing silently (**B-125**), the duplicated section list (**BK-6**).
 | every `_SCRIPTED_*` in `adapters/model/scripted.py` | the test double. Being scenario-shaped is what a double IS. |
 | feature ids (`D5`, `C7`…), enum values, format fragments | vocabulary owned by the enums and checked by `trace`. |
 
-### BK-8 — the phrase lists that survive, and why
-Three remain in product code. Each ROUTES and none DECIDES, which is the rule
-B-124 established — but they are listed here rather than left to be
-rediscovered:
+### BK-8 - the phrase lists that survive, and why - **RE-MEASURED 7 Sept**
+Two remain in product code, not three. **`_MATTER_SIGNALS` and `_ABOUT_NM` are
+gone** (B-126) along with both length rules, so the hole recorded in the first
+version of this row - a message of three words or fewer with no signal routing
+to NON_MATTER, making "he absconded" a greeting - no longer exists. Measured
+from the code, not from this file: `grep -rn` finds both names only in prose
+explaining their removal.
 
-- **`_MATTER_SIGNALS`** (27 words) — a shortcut with a safe fallthrough:
-  ambiguity resolves to MATTER anyway, and the answer says "Say if I have that
-  wrong." **One hole:** a message of ≤3 words with no signal routes to
-  NON_MATTER. "he absconded" is a matter read as a greeting.
-- **`chronology.CORRECTING`** (15 phrases) — documented and deliberate
+The rule the survivors satisfy is B-124's: each ROUTES and neither DECIDES.
+
+- **`chronology.CORRECTING`** (15 phrases) - documented and deliberate
   (B-088): it detects that a correction is being *attempted* and decides
   nothing, raising a question with both dates in it.
-- **`limitation._WORDS` / `_DAYS`** — parsing "three years" out of retrieved
+- **`limitation._WORDS` / `_DAYS`** - parsing "three years" out of retrieved
   statutory text. Not a heuristic on the advocate's message; it reads the
-  corpus, and a miss leaves the period uncomputed and said so.
+  corpus, and a miss leaves the period uncomputed and says so.
 
+**Why this row was rewritten rather than left standing.** It named a list the
+product no longer holds, which is a document disagreeing with the code about
+what the code does - CLAUDE.md S4's shape, and the cheapest possible instance
+of it to have missed.

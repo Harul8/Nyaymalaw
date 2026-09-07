@@ -171,6 +171,20 @@ def test_a_corrected_date_moves_the_value_and_says_what_it_was(tmp_path):
         "a corrected date did not re-derive anything:\n" + text[:900])
     assert "was " in text, "the change was reported without its prior value"
 
+    # TIED TO THE MATRIX ROW, not only to the wording. G-CASCADE's
+    # `visible` clause is the promise this asserts, and without the id
+    # here nothing connects the two: the gate could be withdrawn, or its
+    # response changed from `disclose`, and this test would stay green.
+    # B-128 is what that gap becomes when it is left alone.
+    assert "G-CASCADE" in {g.gate_id for g in second.metrics.gates_fired}, (
+        "the advocate was told the value moved and the gate that owes "
+        "them that did not fire -- the disclosure and the matrix disagree "
+        "about whether it happened")
+    assert [e for e in second.answer.elements
+            if "has MOVED since the last turn" in e.text], (
+        "G-CASCADE fired into the metrics and the answer's elements "
+        "carry nothing")
+
 
 @pytest.mark.eval_id("E-092")
 def test_a_change_reported_without_its_prior_cannot_be_built():

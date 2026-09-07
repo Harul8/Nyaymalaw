@@ -65,9 +65,6 @@ UNWIRED: dict[str, str] = {
     "nm.core.quarantine":
         "B4. Deliberate — the conflict screen that quarantines is slice 10 "
         "and is declared unbuilt in the gate matrix.",
-    "nm.core.screens":
-        "B2-B6. Deliberate — the screens are declared `decided`, and their "
-        "NEVER clauses are not implemented.",
     "nm.core.intake":
         "C6. Deliberate — document intake is declared `decided`; nothing "
         "accepts an upload.",

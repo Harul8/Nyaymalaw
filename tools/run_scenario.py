@@ -291,6 +291,74 @@ def verify(elements: list[dict]) -> list[dict]:
     return out
 
 
+def _mint_scenario_advocate(advocate: str) -> tuple[str, str]:
+    """Enrol the scenario advocate with a generated password. (password, note).
+
+    RETURNS ("", reason) RATHER THAN RAISING, because every refusal in this
+    tool happens before the first paid call and says why.
+
+    IT WILL NOT RE-ENROL ONE THAT EXISTS. `directory.enrol` refuses that and
+    this does not go around it: overwriting a credential would replace one
+    somebody may still be signing in with. Where the advocate is already
+    enrolled and the password is not known, the honest answer is to use a
+    DIFFERENT id -- `NM_SCENARIO_ADVOCATE` exists for exactly that, and a
+    fresh scenario advocate costs nothing.
+
+    THE PASSWORD IS NEVER PRINTED AND NEVER WRITTEN. It exists for the length
+    of this process, which is all a fixture needs.
+    """
+    from nm.bootstrap.composition import Application
+    from nm.domain.advocate import AdvocateIdentity, Enrolment, enrol
+    from nm.ports.directory import AlreadyEnrolled
+
+    try:
+        app = Application()
+    except Exception as exc:  # noqa: BLE001 -- said, never swallowed
+        return "", (f"the application could not be built to enrol "
+                    f"{advocate}: {type(exc).__name__}: {exc}")
+
+    if app.directory.identity(advocate) is not None:
+        return "", (
+            f"{advocate} is already enrolled and NM_SCENARIO_PASSWORD is not "
+            f"set, so this run cannot sign in as them. Re-enrolling would "
+            f"replace a credential somebody may still be using.\n"
+            f"  Set NM_SCENARIO_PASSWORD, or run against a fresh advocate:\n"
+            f"      NM_SCENARIO_ADVOCATE=adv_scenarios_2 python "
+            f"tools/run_scenario.py ...")
+
+    generated = _generated_password()
+    try:
+        app.directory.enrol(Enrolment(
+            identity=AdvocateIdentity(
+                id=advocate, name="Scenario runner",
+                enrolment="AP/0000/2000", practice="Hyderabad",
+                firm_id="firm_scenarios"),
+            credential=enrol(generated)))
+    except AlreadyEnrolled:
+        return "", f"{advocate} was enrolled by something else mid-run."
+    except ValueError as exc:
+        return "", f"the scenario advocate could not be enrolled: {exc}"
+
+    return generated, (f"enrolled {advocate} for this run; the password is "
+                       f"held in memory and is not printed or stored.")
+
+
+def _generated_password() -> str:
+    """Long, and satisfying `advocate.enrol`'s four character classes.
+
+    Built here rather than imported from `tools/enrol.py`, which PRINTS what
+    it generates -- correct for a person who has to type it later, wrong for
+    a fixture nobody should ever see.
+    """
+    import secrets
+
+    words = ("harbour", "lantern", "meadow", "cinder", "gallery", "thistle",
+             "quarry", "ember", "current", "marble", "ridge", "willow")
+    chosen = [secrets.choice(words) for _ in range(5)]
+    chosen[secrets.randbelow(len(chosen))] = chosen[0].capitalize()
+    return "-".join(chosen) + f"-{secrets.randbelow(90) + 10}"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenario", nargs="+", required=True)
@@ -340,18 +408,33 @@ def main() -> int:
     # which reads exactly like a product that answered nothing.
     advocate = os.environ.get("NM_SCENARIO_ADVOCATE", "adv_scenarios")
     password = os.environ.get("NM_SCENARIO_PASSWORD", "")
+    minted = ""
     if not password:
-        print("REFUSED. Set NM_SCENARIO_PASSWORD to the password of the "
-              "scenario advocate.")
-        print(f"  Enrol one first:  python tools/enrol.py --id {advocate} "
-              f"--name 'Scenario runner' --enrolment 'AP/0000/2000' "
-              f"--practice Hyderabad --firm firm_scenarios")
-        return 2
+        # NOBODY REMEMBERS A GENERATED PASSWORD, and this one was printed once
+        # when `adv_scenarios` was enrolled. It blocked a served-path judged
+        # run on 6 September 2026, so E-102 was judged in-process instead --
+        # weaker evidence, and §8 is explicit that defects live between a
+        # correct module and the served path.
+        #
+        # A scenario advocate is a synthetic fixture holding a session open.
+        # A fixture whose credential has to be remembered is a fixture that
+        # stops working, so the runner mints one for a fresh advocate and
+        # keeps it in memory for the run.
+        password, minted = _mint_scenario_advocate(advocate)
+        if not password:
+            print(f"REFUSED. {minted}")
+            return 2
     ok, why = sign_in(advocate, password)
     if not ok:
         print(f"REFUSED. Could not sign in as {advocate}: {why}")
+        if minted:
+            print(f"  (this run enrolled {advocate} and still could not sign "
+                  f"in, which is a defect in the enrolment path, not a "
+                  f"missing password)")
         print("  This run would cost money and prove nothing.")
         return 2
+    if minted:
+        print(f"  {minted}")
 
     # ---- EVERY NAMED SCENARIO MUST BE RUNNABLE -------------------------
     #

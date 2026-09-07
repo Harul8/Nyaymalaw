@@ -886,3 +886,60 @@ def test_a_clean_start_says_nothing():
     finally:
         if was is not None:
             mutate.IN_FLIGHT.write_text(was, encoding="utf8")
+
+
+# ========= the scenario runner does not depend on a remembered password ====
+
+def test_the_scenario_runner_mints_its_own_advocate(tmp_path, monkeypatch):
+    """BK-3. `adv_scenarios` was enrolled once and its generated password
+    printed once. Nobody has it, it is not in `.env`, and it blocked a
+    SERVED-PATH judged run -- E-102 was judged in-process instead, which is
+    weaker evidence and §8 is explicit about why.
+
+    A scenario advocate is a synthetic fixture holding a session open. A
+    fixture whose credential has to be remembered by a person is a fixture
+    that stops working.
+    """
+    monkeypatch.setenv("NM_MATTER_STORE", str(tmp_path))
+    from nm.bootstrap.composition import Application
+    from tools.run_scenario import _mint_scenario_advocate
+
+    password, note = _mint_scenario_advocate("adv_probe")
+    assert password, note
+    assert "enrolled adv_probe" in note
+
+    who = Application().directory.authenticate("adv_probe", password)
+    assert who is not None, "the minted credential does not sign in"
+
+    # AND A WRONG PASSWORD IS STILL WRONG. A fixture that mints a credential
+    # would be worthless if it also stopped checking one.
+    assert Application().directory.authenticate("adv_probe", "nope") is None
+
+
+def test_it_refuses_to_re_enrol_an_advocate_that_exists(tmp_path, monkeypatch):
+    """THE BOUND, and it is the one that matters. Re-enrolling would replace a
+    credential somebody may still be signing in with -- which is the refusal
+    `directory.enrol` already makes, and this must not go around it."""
+    monkeypatch.setenv("NM_MATTER_STORE", str(tmp_path))
+    from tools.run_scenario import _mint_scenario_advocate
+
+    first, _ = _mint_scenario_advocate("adv_probe")
+    assert first
+
+    second, why = _mint_scenario_advocate("adv_probe")
+    assert not second, "an existing advocate was re-enrolled"
+    assert "already enrolled" in why
+    assert "NM_SCENARIO_ADVOCATE" in why, (
+        "the refusal does not say how to proceed, so it is a wall rather "
+        "than a decision")
+
+
+def test_the_generated_password_satisfies_the_rule_it_will_be_checked_against():
+    """A generator that cannot satisfy the rule it enrols against is the
+    two-owners defect with the owners one function apart -- which
+    `tools/enrol.py` already paid for once."""
+    from nm.domain.advocate import enrol
+    from tools.run_scenario import _generated_password
+
+    for _ in range(20):
+        enrol(_generated_password())  # raises if it does not satisfy the rule

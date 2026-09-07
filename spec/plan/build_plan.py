@@ -4146,6 +4146,73 @@ d("B-127", "2026-09-07", "tooling",
   "version of the guard was wrong: it asked git whether the files were "
   "clean and refused on any uncommitted edit.")
 
+d("B-128", "2026-09-07", "turn",
+  "THE SCREENS WERE IN THE METRICS AND NOWHERE THE ADVOCATE COULD SEE "
+  "THEM. `nm/core/screens.py` had been complete since slice 6 \u2014 four "
+  "states, an express emergency exception, `unscreened` drawing its "
+  "population from `ScreenKind` \u2014 and NOTHING IN THE PRODUCT EVER "
+  "CONSTRUCTED A SCREEN. `_run_screens` fired `G-UNSCREENED` under a "
+  "comment claiming 'the output says so rather than reading as though it "
+  "had passed', and the answer carried ZERO screen-related lines.",
+  "Closing BK-2, which had recorded the module as deliberately deferred "
+  "to slice 10 \u2014 and the deferral swallowed the DISCLOSURE along "
+  "with the thing it discloses.",
+  "S1 \u2014 an absent input reading as success",
+  "Measured, not reasoned: rendering a served turn and counting the "
+  "lines that mention a screen. Zero. The module's own unit tests were "
+  "green throughout \u2014 CLAUDE.md \u00a78, a guard that is right in "
+  "the core and absent from the composition root.",
+  "`_run_screens` builds one NOT_ASSESSED screen per `ScreenKind`, asks "
+  "`may_admit_substance` (and asserts that it refuses), and returns "
+  "`screens_mod.unscreened(outstanding)` as ROWS. `_with_screens` "
+  "appends them at all THREE Answer sites, blocked branches included: a "
+  "turn that stopped to ask a question has still not screened the "
+  "matter, and that is exactly when it matters.\n\n"
+  "THE TYPE CAUGHT TWO MISTAKES BEFORE A TEST HAD TO. "
+  "`Answer.__post_init__` refuses a leading GROUND \u2014 PRD \u00a76.2 "
+  "S3, the answer leads with the action and never with background \u2014 "
+  "so the note is appended LAST. And the first attempt appended to "
+  "`head`, which is reassigned `list(elements)` further down: a SNAPSHOT "
+  "of the list, not the list, so the rows were discarded silently. The "
+  "measurement that found the defect is what found the fix not working.",
+  "Yes, and it is the third instance: B-079 and B-116 were both a "
+  "correct module with no production caller. THE POPULATION IS "
+  "ENUMERATED, not remembered \u2014 `tests/test_reached_from_produc"
+  "tion.py` holds the UNWIRED list and every removal from it is a "
+  "defect closing. What refuses the fourth copy is that list being "
+  "checked rather than curated.",
+  "tests/test_turn_contract.py::test_every_screen_is_named_to_the_advo"
+  "cate_and_none_reads_as_clear asserts EVERY `ScreenKind` value "
+  "appears in the served answer \u2014 four rows would let an advocate "
+  "believe the fifth was checked, which is `unscreened`'s own argument "
+  "for drawing from the vocabulary. Plus "
+  "`test_a_blocked_turn_still_says_the_screens_have_not_run`, which "
+  "counts the three Answer sites in the source, and "
+  "`test_the_admit_decision_goes_through_the_module`, which refuses a "
+  "second owner for B3's rule.\n\n"
+  "AND THE SWEEP MADE IT GENERAL, which is where the row earns its "
+  "keep. `tests/test_disclosure_reaches_the_advocate.py` draws its "
+  "population from the MATRIX \u2014 every gate whose response is "
+  "`disclose` and which is declared built \u2014 and each must name "
+  "either the test that asserts on the ADVOCATE'S BYTES or the reason "
+  "nothing does. `CARRIERS` deliberately excludes `metrics`, because a "
+  "test asserting on `gates_fired` holds with the disclosure never "
+  "rendered, which is the assertion that let this stand for a slice.\n\n"
+  "IT FOUND FIVE MORE, and it corrected me twice while I wrote it. "
+  "G-NOTASSESSED was declared PROVEN by a test asserting the phrase "
+  "appears in `inspect.getsource(TurnEngine._derive)` \u2014 the "
+  "SOURCE, not the answer, which holds with the branch unreachable. "
+  "And I first put G-HELDNOTFOUND and G-COVERAGE in the NOT_PROVEN "
+  "table on the strength of their opening assertions, having stopped "
+  "reading four lines short of the carrier assertion in each. Both were "
+  "restored by enumerating MECHANICALLY instead of by eye. A wrong "
+  "NOT_PROVEN row invents work and slanders a test that was doing its "
+  "job.\n\n"
+  "Standing at 8 PROVEN and 5 NOT_PROVEN. Two of the five were one line "
+  "away \u2014 G-CASCADE and G-NOTHELD each had a served assertion that "
+  "named no gate \u2014 and were closed by naming it, so the matrix row "
+  "and the bytes cannot be separated by a rename.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

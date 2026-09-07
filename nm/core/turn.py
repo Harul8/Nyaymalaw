@@ -44,6 +44,7 @@ from nm.core import gaps as gap_queue
 from nm.core import issues as issue_reader
 from nm.core import posture as posture_reader
 from nm.core import route as route_reader
+from nm.core import screens as screens_mod
 from nm.core import theory as theory_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
 from nm.domain import decision, issue
@@ -246,6 +247,13 @@ class ScreenResult:
     reason: str | None = None
     blocking_question: str = ""
     urgent: bool = False
+    rows: tuple[str, ...] = ()
+    """Every screen and its state, for the ADVOCATE.
+
+    The states were in the type and in the metrics and nowhere
+    an advocate could see them -- measured at zero lines on
+    7 September 2026. §9: the third state must be visible in the
+    OUTPUT, not only in the type."""
 
 
 # `_tier` WAS HERE, AND IT IS WITHDRAWN. See nm/domain/tiers.py: the
@@ -366,6 +374,29 @@ def _positions_note(thread) -> str:
     return ("\n\nWHAT THIS FILE ESTABLISHES, element by element. A step about "
             "any of these is about THE MATERIAL NAMED, not about what such "
             "material should look like:\n" + "\n".join(lines))
+
+
+def _with_screens(elements: list, screens) -> tuple:
+    """The answer's elements, with the screen states after the action.
+
+    BACKGROUND FOLLOWS THE ACTION. `Answer.__post_init__` refuses a leading
+    GROUND -- PRD §6.2 S3 -- and appending this at the top of the list put it
+    first on every turn. The type refused it before any test had to.
+
+    ONE OWNER, THREE CALL SITES. Each of the three branches that builds an
+    Answer needs this, and a note composed independently in three places is
+    three notes that drift.
+    """
+    if not screens.rows:
+        return tuple(elements)
+    return (*elements, Element(
+        kind=ElementKind.GROUND, disclosure=True,
+        text=("Screens on this matter, none of which has run: "
+              + "; ".join(screens.rows)
+              + ". Substance is admitted with them outstanding, which is "
+                "recorded as an exception and is not a finding that they "
+                "clear.")))
+
 
 
 class TurnEngine:
@@ -490,13 +521,16 @@ class TurnEngine:
         t1 = time.perf_counter()
         metrics.failed_phase = Phase.DERIVE
         elements: list[Element] = []
+
         relied_on: tuple[Finding, ...] = ()
         retrieved: tuple[Finding, ...] = ()
-        # THE NON-DERIVED ELEMENTS, bound BEFORE the branch and not inside the
-        # one that happens to need it. B-104's second assembly reads this, and
-        # binding it in a single branch left it unbound on the two that block
-        # -- pylint E0601, which is in the gate for exactly this and has now
-        # caught the same shape twice in one session.
+        # THE NON-DERIVED ELEMENTS, bound BEFORE the branch and not inside
+        # the one that happens to need it. B-104's second assembly reads
+        # this, and binding it in a single branch left it unbound on the
+        # two that block -- pylint E0601, which is in the gate for exactly
+        # this and has now caught the same shape THREE times in one
+        # session. The third was a patch script whose deletion range ran
+        # past its own insert, which is why the check is mechanical.
         head: list[Element] = []
         # WHAT THIS TURN CONCLUDED, bound before the branch for the same
         # reason `head` is: the blocking branches do not derive, and a
@@ -522,7 +556,8 @@ class TurnEngine:
                     text=(f"Proposed merge, not performed: {bound.proposal.left} "
                           f"and {bound.proposal.right} on {bound.proposal.on}.")))
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
-                            elements=tuple(elements), blocked=True,
+                            elements=_with_screens(elements, screens),
+                            blocked=True,
                             blocked_reason=f"G-THREAD: {bound.reason}")
             thread = None
             # DERIVED NOTHING, SAID SO. This branch never reaches `_derive`,
@@ -590,7 +625,8 @@ class TurnEngine:
                 facts=matter.facts, matter_id=matter.id)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
-                            elements=tuple(elements), blocked=True,
+                            elements=_with_screens(elements, screens),
+                            blocked=True,
                             blocked_reason="G-POSTURE: posture unresolved")
         else:
             thread = bound.thread
@@ -600,7 +636,7 @@ class TurnEngine:
                 matter_id=matter.id, concluded=concluded)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
-                            elements=tuple(elements))
+                            elements=_with_screens(elements, screens))
 
         # D7 -- THE CROSS-FILE PASS, AFTER the threads and EXACTLY ONCE.
         #
@@ -941,25 +977,57 @@ class TurnEngine:
                       f"{type(exc).__name__}: {exc}")
 
     # ------------------------------------------------------------ helpers ---
+    @implements("B3")
     def _run_screens(self, matter: Matter, turn: TurnInput,
                      metrics: TurnMetrics) -> ScreenResult:
-        """ADMIT-A. Names and danger only.
+        """ADMIT-A. Every screen, named, and every one NOT_ASSESSED.
 
-        SLICE 1 SCOPE, STATED HONESTLY: the conflict registry, competence and
-        engagement screens are features B3-B5 and are NOT BUILT (slice 10).
-        This method therefore clears every matter, and records that it did so
-        WITHOUT having screened -- because a screen that has not run must never
-        be indistinguishable from one that passed.
+        SLICE 1 SCOPE, STATED HONESTLY AND NOW VISIBLY. The conflict,
+        competence and engagement screens are B3-B5 and are slice 10. What
+        this admits is that none of them has run -- and until 7 September 2026
+        it admitted that to the METRICS ONLY. Measured: zero screen-related
+        lines reached the advocate, under a comment claiming "the output says
+        so rather than reading as though it had passed".
 
-        When B3-B5 land, they land here, above the screen boundary.
+        THE POPULATION IS `ScreenKind`, through `screens.unscreened`, so the
+        five rows come from the vocabulary rather than from what happened to
+        run. An advocate reading four rows believes the fifth was checked;
+        an advocate reading none believes there was nothing to check.
+
+        `may_admit_substance` DECIDES, rather than this returning True. Every
+        screen is outstanding, so it refuses -- and substance is admitted
+        under a DECLARED exception, recorded the way the emergency exception
+        is. When B3 lands, one screen starts answering and nothing here moves.
         """
+        outstanding = tuple(
+            screens_mod.Screen(
+                kind=kind, state=screens_mod.ScreenState.NOT_ASSESSED,
+                not_assessed_because=(
+                    "the conflict, competence and engagement screens are "
+                    "B3-B5 and are not built (slice 10)"))
+            for kind in screens_mod.ScreenKind)
+
+        may, why = screens_mod.may_admit_substance(outstanding)
+        assert not may, (
+            "every screen is NOT_ASSESSED and substance was admitted anyway; "
+            "`may_admit_substance` is the one owner of that decision and it "
+            "has stopped refusing an unscreened matter")
+
+        # `unscreened`, NOT `not_assessed`. The distinction is the gate's own:
+        # `not_assessed` would mean we could not tell whether this matter was
+        # screened, and we can tell -- it was not. An existing test held the
+        # line on that the moment the state was loosened.
         metrics.fire(
             "G-UNSCREENED", "unscreened",
-            "conflict, competence and engagement screens (B3-B5) are not built "
-            "(slice 10). This matter was NOT screened before substance was "
-            "admitted, and the output says so rather than reading as though it "
-            "had passed.")
-        return ScreenResult(clear=True, assessed=False)
+            "no screen has run on this matter: " + why)
+
+        # ADMITTED UNDER A DECLARED EXCEPTION, which is the only honest shape
+        # while the screens are unbuilt. `clear=True` with `assessed=False`
+        # says the same thing in the type; the ROWS say it to the advocate.
+        return ScreenResult(
+            clear=True, assessed=False,
+            reason=("substance admitted with every screen outstanding: " + why),
+            rows=screens_mod.unscreened(outstanding))
 
     def _load_or_create(self, turn: TurnInput) -> Matter:
         if turn.matter_id:
