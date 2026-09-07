@@ -202,7 +202,7 @@ def test_the_blockers_that_remain_are_the_ones_that_are_really_unbuilt():
     # `deadlines` reached ten times from the turn engine, `gaps` four -- and
     # neither result survived the turn, so the handover carried no section
     # for either on a file where both had been computed for four turns.
-    assert blockers == {"engagement", "reservations"}, (
+    assert blockers == set(), (
         f"the blocker set changed to {sorted(blockers)} — either a section "
         f"landed, or one regressed, and both need a deliberate edit here "
         f"rather than a silently moving number")
@@ -420,3 +420,130 @@ def test_a_screen_reloads_as_data_like_every_other_untyped_field(tmp_path):
     assert summary_mod.build(back).sections["screens"]["state"] == "held", (
         "the summary cannot read the reloaded screens, so the handover loses "
         "the section on every file that is opened a second time")
+
+
+# ============ the last two sections, and the claim that replaced them =====
+
+def test_the_engagement_records_who_and_what_and_names_what_it_lacks(tmp_path):
+    """Tenet 4: *a handover without it hands over work with no authority to do
+    it.*
+
+    Built from what the product had already read -- the client description and
+    the disputes -- so no new read and no new gate. `G-SCOPE` refusing a step
+    is B5 at slice 10 and stays there; this is the disclosure that makes its
+    absence visible.
+    """
+    from nm.domain.engagement import NOT_RECORDED, from_stored
+
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(advocate_id="adv_1", message=BRIEF,
+                               today=TODAY))
+
+    engaged = from_stored(out.matter.engagement)
+    assert engaged is not None, "no engagement was recorded on the file"
+    assert engaged.covers, "the engagement covers no dispute on a file with one"
+
+    # THE HALF THAT MAKES IT HONEST. An engagement record presenting
+    # client-and-disputes as a complete engagement reads as authority to act
+    # that nobody granted.
+    assert engaged.not_recorded == NOT_RECORDED, (
+        "the engagement does not name what it lacks, so it reads as complete")
+    assert len(engaged.not_recorded) == 5
+
+    s = summary_mod.build(out.matter)
+    assert s.sections["engagement"]["state"] != "not_assessed"
+
+
+def test_a_reservation_is_reactivated_by_a_fact_and_never_by_a_turn():
+    """E5's Class A eval, and the type is what enforces it.
+
+    Almost everything this product derives is recomputed each turn, so a
+    reservation keyed on re-derivation would come back on EVERY turn -- which
+    is E5's counterexample arriving by construction: *the same objection
+    restated on every turn after the advocate went the other way.*
+
+    `reactivate` takes fact ids. There is no parameter that could carry a turn.
+    """
+    import inspect
+
+    from nm.domain import reservation as res
+
+    r = res.Reservation(position="the provision this rests on: Article 54",
+                        because="the cause read as specific performance",
+                        stated_at="turn_1", overruled_at="turn_3")
+    assert not r.live, "a reservation is live before anything reactivated it"
+
+    # A turn passing is not a fact.
+    assert res.live(res.reactivate((r,), frozenset(), {})) == ()
+
+    back = res.reactivate((r,), frozenset({"f_9"}),
+                          {r.position: "f_9"})
+    assert back[0].live and back[0].reactivated_by == "f_9"
+
+    # THE SIGNATURE IS THE ENFORCEMENT. A `turn_id` parameter here would make
+    # the rule a convention that the next caller can decline.
+    params = set(inspect.signature(res.reactivate).parameters)
+    assert "turn" not in " ".join(params), (
+        f"`reactivate` can be handed a turn: {sorted(params)}")
+
+
+def test_an_overruled_position_is_recorded_once_and_not_restated():
+    """*Disagree once, clearly, then drop it.* The counterexample is the same
+    objection on every turn, so recording it twice is the defect in the
+    summary rather than in the answer."""
+    from nm.domain import reservation as res
+
+    r = res.Reservation(position="p", because="b", stated_at="t1",
+                        overruled_at="t2")
+    again = res.Reservation(position="p", because="b", stated_at="t1",
+                            overruled_at="t5")
+    assert len(res.record(res.record((), r), again)) == 1
+
+
+def test_a_reservation_that_was_never_overruled_cannot_be_built():
+    """A live disagreement filed as a reservation is one the advocate never
+    saw the product drop -- and it would then be silently excluded from the
+    answer, which is the opposite of E5."""
+    from nm.domain import reservation as res
+
+    with pytest.raises(ValueError, match="overruled_at"):
+        res.Reservation(position="p", because="b", stated_at="t1",
+                        overruled_at="")
+
+
+def test_an_unreactivated_reservation_refuses_to_state_itself():
+    """The tone rule has one owner. A reservation that nothing brought back
+    has no current finding, and rendering one anyway IS the restatement."""
+    from nm.domain import reservation as res
+
+    r = res.Reservation(position="p", because="b", stated_at="t1",
+                        overruled_at="t2")
+    with pytest.raises(ValueError, match="restatement"):
+        r.as_current_finding()
+
+
+def test_an_empty_matter_is_not_a_complete_handover():
+    """THE DEFECT THE LAST BLOCKER CLOSING EXPOSED.
+
+    `handover_complete` was `not handover_blockers` -- true the moment the
+    product built every section, and it returned True for a matter with no
+    client, no thread and no fact. That is `handover_blockers`'s own
+    counterexample one level up, and it was invisible for as long as some
+    section was unbuilt: the first half was doing the second half's job by
+    accident.
+    """
+    empty = summary_mod.MatterSummary(matter_id="m", title="t")
+
+    assert empty.handover_blockers == (), (
+        "a section is unbuilt again; this test is about the OTHER half")
+    assert empty.not_assessed_here, (
+        "an empty matter reports nothing unassessed")
+    assert not empty.handover_complete, (
+        "a file with no client, no thread and no fact reads as a complete "
+        "handover")
+
+    # THE POPULATION IS THE CONTRACT, not the dict. The first version read
+    # `self.sections.items()` and returned nothing for an empty matter,
+    # because a section absent from the dict was never asked about.
+    assert set(empty.not_assessed_here) >= set(summary_mod.MATTER_SECTIONS)
+    assert set(empty.not_assessed_here) >= set(summary_mod.DERIVED_SECTIONS)

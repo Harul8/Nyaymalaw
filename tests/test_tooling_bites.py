@@ -943,3 +943,48 @@ def test_the_generated_password_satisfies_the_rule_it_will_be_checked_against():
 
     for _ in range(20):
         enrol(_generated_password())  # raises if it does not satisfy the rule
+
+
+# ============ B-140 — the gate scan reads code, not prose ================
+
+#: (planted source, must the trace fail). Built as tuples of LINES rather
+#: than as escaped literals: a newline inside a string inside a test file
+#: is three levels of escaping, and the heredoc form of this mangled it.
+_PROBES = (
+    (('METRICS_GATE = "G-SCOPE"',), True),
+    (('"""This module is deliberately not G-SCOPE."""', 'X = 1'), False),
+    (('# a comment explaining why this is not G-SCOPE', 'X = 1'), False),
+)
+
+
+@pytest.mark.parametrize("body,caught", _PROBES)
+def test_the_gate_scan_sees_code_and_ignores_prose(body, caught):
+    """T9 failed on a DOCSTRING saying *this is not `G-SCOPE`*.
+
+    `gate_consultations` string-scans every source line, which made it
+    illegal to write ABOUT a gate -- and the sentence it failed on was the
+    single most useful one in `nm/domain/engagement.py`, the one that
+    separates the section from the control.
+
+    ALL THREE FORMS ARE PLANTED AND THE FIRST IS THE IMPORTANT ONE.
+    Stripping prose without proving the scan still sees a real assignment
+    would have turned T9 into a check that cannot fail -- the defect it
+    was fixing, wearing the other face.
+
+    A REAL FILE UNDER `nm/`, because the scan walks that tree. A fixture
+    anywhere else would prove the parser works, not that the scan looks.
+    """
+    planted = ROOT / "nm" / "core" / "_gate_scan_probe.py"
+    planted.write_text(chr(10).join(body) + chr(10), encoding="utf8")
+    try:
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "trace.py")],
+            capture_output=True, text=True, cwd=ROOT)
+        assert (result.returncode != 0) is caught, (
+            f"planting {body!r} behaved the wrong way:" + chr(10)
+            + (result.stdout + result.stderr)[-600:])
+        if caught:
+            assert "G-SCOPE" in result.stdout, (
+                "T9 failed and did not name the gate it failed on")
+    finally:
+        planted.unlink()

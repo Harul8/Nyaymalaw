@@ -47,7 +47,7 @@ from nm.core import route as route_reader
 from nm.core import screens as screens_mod
 from nm.core import theory as theory_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
-from nm.domain import decision, issue
+from nm.domain import decision, engagement, issue, reservation
 from nm.domain import proof as domain_proof
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
@@ -382,6 +382,43 @@ def _positions_note(thread) -> str:
             "material should look like:\n" + "\n".join(lines))
 
 
+def _provision_of(position: str) -> str:
+    """The provision a reservation is about, or "".
+
+    The position is written as `the provision this rests on: <ref>` at the
+    one site that records one, so the ref is everything after the colon.
+    Parsing it here rather than storing it separately keeps ONE owner of
+    the format -- and the alternative, a second field carrying the ref,
+    is a copy that can disagree with the sentence it came from.
+    """
+    _, _, ref = position.partition(":")
+    return ref.strip()
+
+
+def _reactivated(matter) -> list:
+    """E5. A reservation a NEW FACT brought back, as a current finding.
+
+    *...and then as a current finding with its consequence, never as
+    vindication.* The tone is owned by `Reservation.as_current_finding`, not
+    composed here: three call sites would be three tones and one of them would
+    be smug.
+
+    NOT LIVE IS THE ORDINARY CASE and produces nothing. That silence IS the
+    feature -- E5's counterexample is the same objection restated on every
+    turn after the advocate went the other way, so a reservation that appears
+    when nothing reactivated it would be the defect rather than the fix.
+    """
+    from nm.domain import reservation as res
+
+    back = res.live(res.from_stored(matter.reservations))
+    if not back:
+        return []
+    return [Element(
+        kind=ElementKind.FINDING, disclosure=True, signal=Signal.CONTRADICTION,
+        text=("A point you went the other way on is live again. "
+              + " ".join(r.as_current_finding() for r in back)))]
+
+
 def _with_screens(elements: list, screens) -> tuple:
     """The answer's elements, with the screen states after the action.
 
@@ -542,6 +579,11 @@ class TurnEngine:
         t1 = time.perf_counter()
         metrics.failed_phase = Phase.DERIVE
         elements: list[Element] = []
+
+        # THE FACTS THIS TURN DID NOT ADD. Taken BEFORE the derive phase,
+        # because a reservation is reactivated by a NEW fact and every
+        # fact looks new to a comparison made after they are recorded.
+        seen_before = frozenset(f.id for f in matter.facts)
 
         relied_on: tuple[Finding, ...] = ()
         retrieved: tuple[Finding, ...] = ()
@@ -735,6 +777,41 @@ class TurnEngine:
             matter = matter.with_thread(settled)
             thread = settled
 
+            # THE RESERVATIONS ARE MATTER-SCOPED and were being written
+            # into the THREAD's channel, where `_run`'s named write-back
+            # dropped them silently. Found by
+            # `test_every_persisted_field_has_a_writer`, which is exactly
+            # its job: a field that reads as a capability and is
+            # permanently empty is indistinguishable from the thing never
+            # having happened.
+            #
+            # REACTIVATED HERE TOO, against the facts this turn recorded.
+            # A fact whose statement CONTAINS the provision reference the
+            # reservation names is material about the very thing the
+            # advocate overruled us on. Exact matching on a citation --
+            # §5's one reliable key -- and not a similarity score.
+            if "reservations" in concluded:
+                standing_res = reservation.from_stored(
+                    concluded["reservations"])
+            else:
+                standing_res = reservation.from_stored(matter.reservations)
+
+            fresh = {f.id: f.statement for f in matter.facts
+                     if f.id not in seen_before}
+            touches = {
+                r.position: fid
+                for r in standing_res
+                for fid, statement in fresh.items()
+                if _provision_of(r.position)
+                and _provision_of(r.position) in statement}
+            standing_res = reservation.reactivate(
+                standing_res, frozenset(fresh), touches)
+
+            matter = replace(
+                matter, reservations=standing_res,
+                assessed=tuple(dict.fromkeys(
+                    (*matter.assessed, "reservations"))))
+
         exposure: list[Element] = []
         if not answer.blocked:
             exposure = list(self._exposure(matter, metrics))
@@ -759,7 +836,7 @@ class TurnEngine:
         # the arrangement that produced one guard for one read.
         answer = replace(answer, elements=tuple(
             [*answer.elements, *self._decisive_empties(metrics),
-             *self._refused_reads(metrics),
+             *self._refused_reads(metrics), *_reactivated(matter),
              *self._tier_degraded(metrics)]))
 
         # Class-B invariants, asserted on the ASSEMBLED object, before emission.
@@ -810,7 +887,7 @@ class TurnEngine:
                                     *self._late_note(late)]))
                 answer = replace(answer, elements=tuple(
                     [*answer.elements, *self._decisive_empties(metrics),
-                     *self._refused_reads(metrics),
+                     *self._refused_reads(metrics), *_reactivated(matter),
                      *self._tier_degraded(metrics)]))
                 self._assert_invariants(answer, metrics)
                 report = grounding.verify(answer, relied_on, retrieved)
@@ -876,6 +953,38 @@ class TurnEngine:
         t2 = time.perf_counter()
         metrics.failed_phase = Phase.EMIT
         matter = self._remember_questions(matter, answer, metrics, turn)
+
+        # THE ENGAGEMENT, WHERE THE FILE IS SETTLED. Tenet 4.
+        #
+        # Nothing new is read: how the advocate described their client is
+        # C3's `client_described_as` and the disputes are C4's threads.
+        # Those two ARE the engagement as far as this file knows it, and
+        # `not_recorded` names the five things Appendix E wants that
+        # nothing here records.
+        #
+        # NOT IN ADMIT-A, where it was written first and came out empty on
+        # every turn -- no thread has opened that early, so `covers` was
+        # `()` and `client` was `""`: a record present in the type and
+        # absent in fact, which is S1 inside the feature closing S1's last
+        # blocker.
+        #
+        # NOT IN `concluded` EITHER. A blocked turn opens threads too, and
+        # its engagement is as real as any other: a file that asked a
+        # question instead of answering one still has a client and a
+        # dispute on it.
+        #
+        # THIS IS NOT `G-SCOPE`. Refusing a step outside recorded scope is
+        # B5 at slice 10 and stays there. Recording what the file covers
+        # is the disclosure that makes the gate's absence visible.
+        matter = replace(
+            matter,
+            engagement=engagement.of(
+                next((t.posture.client_described_as for t in matter.threads
+                      if t.posture.client_described_as), ""),
+                tuple(t.label for t in matter.threads)),
+            assessed=tuple(dict.fromkeys(
+                (*matter.assessed, "engagement"))))
+
         matter = matter.applied(turn.turn_id)
         try:
             matter = self._store.commit(matter, expected_version=expected_version)
@@ -2358,6 +2467,50 @@ class TurnEngine:
                           f"the last one. Before: {was.what}. Now: {now.what}. "
                           f"If the earlier one was right, say so and I will "
                           f"hold it.")))
+            concluded["decisions"] = decision.merge(standing, (settled,))
+
+        elif turn is not None and concluded is not None and result.findings:
+            # THE ADVOCATE RESOLVED IT, so nothing had to be assumed.
+            #
+            # The branch above discloses an inference and ends by saying
+            # "If the earlier one was right, say so and I will hold it."
+            # That sentence was an invitation nothing could accept:
+            # `DecidedBy.ADVOCATE` has been in the vocabulary since slice
+            # 6 and nothing ever constructed one -- measured, its only
+            # three occurrences were a comparison, a merge rule and
+            # `from_stored`.
+            #
+            # Reaching here means the retrieval resolved WITHOUT an
+            # assumption, which happens when the advocate named the Act.
+            # `merge` then refuses to let a later inference overwrite it,
+            # which is the rule it was written for.
+            named = result.findings[0].ref
+            settled = decision.Decision(
+                what=f"the provision this rests on: {named}",
+                because="the advocate named it",
+                at_turn=turn.turn_id, thread=thread.id,
+                by=decision.DecidedBy.ADVOCATE)
+            standing = decision.from_stored(thread.decisions)
+
+            # E5. WHAT WE INFERRED, OVERRULED, AND DROPPED.
+            #
+            # Recorded once and NOT restated. The counterexample E5 names
+            # is the same objection raised on every turn after they went
+            # the other way, and the only thing that brings this back is
+            # a FACT -- see `nm.domain.reservation`, where the signature
+            # itself refuses a turn id.
+            for was, _now in decision.moved(standing, (settled,)):
+                if was.by is not decision.DecidedBy.PRODUCT:
+                    continue
+                concluded["reservations"] = reservation.record(
+                    reservation.from_stored(concluded.get(
+                        "reservations", ())),
+                    reservation.Reservation(
+                        position=was.what,
+                        because=was.because or "inferred on retrieval",
+                        stated_at=was.at_turn,
+                        overruled_at=turn.turn_id))
+
             concluded["decisions"] = decision.merge(standing, (settled,))
 
         if result.coverage is Coverage.ANSWERED:

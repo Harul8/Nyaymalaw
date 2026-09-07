@@ -190,8 +190,18 @@ def test_a_partially_built_summary_never_reads_as_a_complete_handover():
 
     body = MatterSummary(matter_id="m", title="t").as_dict()
     assert body["handover_complete"] is False
-    assert body["handover_blockers"], (
-        "an unbuilt handover reported no blockers, which reads as complete")
+
+    # THE CLAIM MOVED WHEN THE LAST BLOCKER CLOSED, and the rule did not.
+    # `handover_blockers` names sections THIS PRODUCT does not build, and it
+    # is empty now that all fourteen carry. What an advocate handed this file
+    # needs is `not_assessed_here` -- sections nothing has computed ON IT --
+    # and for an empty matter that is every one of them.
+    #
+    # Asserting the old field would now assert that the product is
+    # incomplete, which is a different sentence and no longer true.
+    assert body["not_assessed_here"], (
+        "an empty matter -- no client, no thread, no fact -- reported nothing "
+        "unassessed, which reads as a complete handover")
     assert "partial" in body["contract"]
 
     # Every blocker is a real section of the contract, and nothing carried is
@@ -201,3 +211,9 @@ def test_a_partially_built_summary_never_reads_as_a_complete_handover():
 
     assert set(body["handover_blockers"]) <= set(CASE_SUMMARY_SECTIONS)
     assert not (set(body["handover_blockers"]) & CARRIES)
+
+    # And the same two rules for the section that replaced it: every name is
+    # a real section, and every one is CARRIED -- a section the product does
+    # not build cannot be "not assessed here", it is simply absent.
+    assert set(body["not_assessed_here"]) <= set(CASE_SUMMARY_SECTIONS)
+    assert set(body["not_assessed_here"]) <= CARRIES

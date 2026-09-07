@@ -93,6 +93,68 @@ def load_gates() -> list[dict]:
     return yaml.safe_load(path.read_text(encoding="utf8"))["gates"]
 
 
+
+def _without_prose(text: str) -> str:
+    """The source with comments and docstrings blanked, lines preserved.
+
+    Blanked rather than deleted so a future line number still means what
+    it says -- a scan that reports the wrong line is one nobody trusts the
+    second time.
+
+    A FILE THAT DOES NOT PARSE IS RETURNED UNCHANGED. Failing open here is
+    right: this is one input to a check that reports, and a syntax error
+    is caught by the build long before it reaches this. Failing closed
+    would turn every mid-edit file into a spurious gate report.
+    """
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return text
+
+    lines = text.splitlines()
+    spans: list[tuple[int, int]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Module, ast.ClassDef,
+                                 ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        body = getattr(node, "body", None)
+        if not body:
+            continue
+        first = body[0]
+        if (isinstance(first, ast.Expr)
+                and isinstance(first.value, ast.Constant)
+                and isinstance(first.value.value, str)):
+            spans.append((first.lineno, first.end_lineno or first.lineno))
+
+    blanked = set()
+    for start, end in spans:
+        blanked.update(range(start, end + 1))
+
+    out = []
+    for n, line in enumerate(lines, 1):
+        if n in blanked:
+            out.append("")
+            continue
+        # A COMMENT, and `#` inside a string literal is not one. Splitting
+        # on a bare `#` would blind the scan to a fire() call that
+        # happened to sit on a line holding a hash in a URL.
+        out.append(_strip_comment(line))
+    return "\n".join(out)
+
+
+def _strip_comment(line: str) -> str:
+    """Everything before an unquoted `#`."""
+    quote = None
+    for i, ch in enumerate(line):
+        if quote:
+            if ch == quote and line[i - 1:i] != "\\":
+                quote = None
+        elif ch in "'\"":
+            quote = ch
+        elif ch == "#":
+            return line[:i]
+    return line
+
 def gate_consultations() -> dict[str, list[str]]:
     """Which gate ids appear in the source, and where.
 
@@ -101,13 +163,24 @@ def gate_consultations() -> dict[str, list[str]]:
     `_GROUNDING_STATE` -- and the ways it cannot see are exactly the ways a
     real call site hides. `nm/domain/gates.py` is excluded because it is the
     registry: it names every gate by definition.
+
+    OVER THE CODE AND NOT THE PROSE. Comments and docstrings are stripped
+    first, because a module that EXPLAINS why it is not a gate was being
+    read as consulting one -- `nm/domain/engagement.py` opens by saying it
+    is not `G-SCOPE`, and T9 failed on the sentence that makes the file
+    comprehensible. A check that makes it illegal to write about a gate is
+    a check people route around.
+
+    EVERY OTHER STRING STAYS. `metrics.fire("G-GROUND", ...)` is a string
+    literal and is precisely what this must keep seeing, so only the two
+    forms that are definitionally prose come out.
     """
     out: dict[str, list[str]] = {}
     registry = SRC / "domain" / "gates.py"
     for path in sorted(SRC.rglob("*.py")):
         if path == registry:
             continue
-        text = path.read_text(encoding="utf8")
+        text = _without_prose(path.read_text(encoding="utf8"))
         for line in text.splitlines():
             for token in re.findall(r"\bG-[A-Z]+\b", line):
                 files = out.setdefault(token, [])

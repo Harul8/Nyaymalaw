@@ -103,9 +103,10 @@ CARRIES = frozenset({
     "issues", "theory", "proof", "decisions",
     "deadlines", "gaps", "authorities",
 
-    # MATTER-SCOPED. `_run_screens` decides for the file, not the
-    # dispute, so this is read off the matter rather than each thread.
-    "screens",
+    # MATTER-SCOPED. `_run_screens` decides for the file, not the dispute,
+    # and an engagement and a reservation are both about how THIS FILE is
+    # run rather than about any one claim on it.
+    "screens", "engagement", "reservations",
 })
 
 #: The four of those that are per-thread derivations, in contract order.
@@ -119,7 +120,7 @@ DERIVED_SECTIONS: tuple[str, ...] = (
 #: Two tuples and one `_states` function. The alternative -- a second
 #: state helper for matter-level sections -- is the copy that drifts, and
 #: it would have drifted on the first section added to either list.
-MATTER_SECTIONS: tuple[str, ...] = ("screens",)
+MATTER_SECTIONS: tuple[str, ...] = ("screens", "engagement", "reservations")
 
 #: The full contract, from Appendix E. `tests/test_produces_contracts.py`
 #: asserts this equals `spec/schemas.yaml`, so the two cannot drift -- the
@@ -197,9 +198,67 @@ class MatterSummary:
                      if s not in CARRIES and s not in derived)
 
     @property
+    def not_assessed_here(self) -> tuple[str, ...]:
+        """Sections the product BUILDS and nothing has computed ON THIS
+        FILE, named.
+
+        The companion to `handover_blockers` and the one that matters more
+        once the blocker list is empty. A receiving advocate handed a file
+        whose proof section was never worked does not care that the
+        software can build one.
+
+        A thread-level section counts as unassessed if it is unassessed on
+        ANY thread. A file with three disputes and a theory on two of them
+        is not a file with a theory -- and reporting it as one hands over
+        the third dispute with the work silently missing, which is the
+        whole failure this contract exists against.
+        """
+        # THE POPULATION IS THE CONTRACT, not what happens to be in the
+        # dict. The first version read `self.sections.items()` and returned
+        # NOTHING for an empty matter -- which reported a file with no client,
+        # no thread and no fact as a complete handover. A section absent from
+        # the dict has not been assessed; it has not even been asked about.
+        out: list[str] = []
+        for name in MATTER_SECTIONS:
+            row = self.sections.get(name) or {}
+            if row.get("state", "not_assessed") == "not_assessed":
+                out.append(name)
+
+        # A THREAD-LEVEL SECTION COUNTS AS UNASSESSED IF IT IS UNASSESSED ON
+        # ANY THREAD. A file with three disputes and a theory on two of them
+        # is not a file with a theory -- reporting it as one hands over the
+        # third dispute with the work silently missing.
+        #
+        # A file with NO THREADS has assessed nothing on any of them, so every
+        # thread-level section is unassessed. That is the empty-matter case
+        # and it is the one that has to be right.
+        for name in DERIVED_SECTIONS:
+            if not self.threads:
+                out.append(name)
+                continue
+            for thread in self.threads:
+                row = (thread.get("sections") or {}).get(name) or {}
+                if row.get("state", "not_assessed") == "not_assessed":
+                    if name not in out:
+                        out.append(name)
+                    break
+        return tuple(out)
+
+    @property
     def handover_complete(self) -> bool:
-        """Derived, never asserted. False while any section is unbuilt."""
-        return not self.handover_blockers
+        """Derived, never asserted. False while any section is unbuilt OR
+        unassessed on this file.
+
+        BOTH HALVES, and the second was missing until the blocker list
+        reached zero and this returned TRUE for an empty matter -- no
+        client, no thread, no fact, nothing computed, handover complete.
+
+        That is `handover_blockers`'s own counterexample arriving one
+        level up, and it was invisible for as long as some section was
+        unbuilt: the first half was doing the second half's job by
+        accident.
+        """
+        return not self.handover_blockers and not self.not_assessed_here
 
     @property
     def advocate_words(self) -> str:
@@ -299,6 +358,8 @@ class MatterSummary:
             "contract": "CaseSummary (Appendix E), partial",
             "handover_complete": self.handover_complete,
             "handover_blockers": list(self.handover_blockers),
+            "not_assessed_here": list(self.not_assessed_here),
+
             # The same discipline the boards carry: a projection states what
             # bounds it, so it cannot quietly start scaling on the wrong axis.
             "bounded_by": "thread_count + fact_count",

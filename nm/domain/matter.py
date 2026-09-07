@@ -594,6 +594,32 @@ class Matter:
     title: str
     threads: tuple[Thread, ...] = ()
     facts: tuple[Fact, ...] = ()
+    engagement: "object | None" = None
+    """WHO THE CLIENT IS AND WHAT THIS FILE COVERS. Tenet 4.
+
+    `None` until the product has read a client description or opened a
+    dispute -- a real state, and the one a handover most needs told apart
+    from an engagement that was recorded and is thin.
+
+    Untyped for the cycle reason: `nm.domain.engagement` is pure, but the
+    field follows the convention its neighbours set so a reader is not
+    invited to wonder which persisted fields are typed and why.
+    """
+
+    reservations: tuple[object, ...] = ()
+    """E5. POSITIONS THIS PRODUCT TOOK THAT THE ADVOCATE WENT AGAINST.
+
+    Matter-scoped rather than thread-scoped because the reservation is
+    about a disagreement with the ADVOCATE, and an advocate who overruled
+    a reading on one dispute has not thereby overruled it on another --
+    but they have made a decision about how this file is run, and a
+    receiving advocate needs to see all of them in one place.
+
+    Never restated to the advocate unless a FACT reactivates it. See
+    `nm.domain.reservation`: the counterexample E5 names is the same
+    objection raised on every turn after they went the other way.
+    """
+
     screens: tuple[object, ...] = ()
     """THE ADMIT-A SCREENS, one entry per `ScreenKind`, matter-scoped.
 

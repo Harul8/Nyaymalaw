@@ -4542,6 +4542,136 @@ d("B-136", "2026-09-07", "store",
   "neighbouring tuple and list branches asserted too, because a change "
   "that turned every sequence into a set would pass the set half.")
 
+d("B-137", "2026-09-07", "spec",
+  "`engagement` WAS FILED AS BLOCKED BY R-8 AND WAS NOT BLOCKED AT ALL. "
+  "The reasoning was that `G-SCOPE` is declared unbuilt at slice 10 \u2014 "
+  "which is true of the GATE that refuses a step, and says nothing about "
+  "the SECTION that records what the file covers.",
+  "Reporting on the last two handover blockers. The same distinction had "
+  "been drawn CORRECTLY for the screens an hour earlier (B-135), where "
+  "carrying five `not_run` states was found not to be slice-10 work.",
+  "S7 \u2014 a rule applied outside the case it was written for",
+  "The advocate pushed back on the report. Re-reading Appendix E settled "
+  "it in one line: the section is a DISCLOSURE and the gate is a CONTROL, "
+  "and refusing to carry the section until the gate exists is how the "
+  "advocate loses the ability to see that the gate never ran.",
+  "`nm/domain/engagement.py` records the client description and the "
+  "disputes \u2014 both already read \u2014 and NAMES the five things "
+  "Appendix E wants that nothing records. No new read, no new gate.\n\n"
+  "AND IT WAS RECORDED IN THE WRONG PHASE FIRST. Assembled beside the "
+  "screens in ADMIT-A, where no thread has opened, so `covers` was `()` "
+  "and `client` was `\"\"` on every turn \u2014 a record present in the "
+  "type and absent in fact, which is S1 inside the feature closing S1's "
+  "last blocker. It moves to the commit, where the file is settled. NOT "
+  "into `concluded`: a blocked turn opens threads too, and its "
+  "engagement is as real as any other.",
+  "Yes: A SECTION'S DISCLOSURE IS NOT ITS GATE. The general form of the "
+  "mistake is refusing to report a state because the control that acts "
+  "on it is unbuilt \u2014 which inverts \u00a79, since the whole point "
+  "of the third state is to be visible while the second is missing.",
+  "tests/test_the_handover_says_what_it_did_not_do.py::test_the_"
+  "engagement_records_who_and_what_and_names_what_it_lacks, which "
+  "asserts `covers` is non-empty on a served turn \u2014 the assertion "
+  "that caught the ADMIT-A ordering on its first run.")
+
+d("B-138", "2026-09-07", "turn",
+  "E5 HAD NO WRITER AND `DecidedBy.ADVOCATE` HAD NO CONSTRUCTOR. The "
+  "vocabulary for an advocate overruling the product existed from slice "
+  "6 \u2014 measured, its only three occurrences were a comparison, a "
+  "merge rule and `from_stored` \u2014 so no reservation could ever be "
+  "recorded and the `reservations` section could never be built.",
+  "Closing the last two handover blockers.",
+  "S1 \u2014 an absent input reading as success",
+  "Grep for a constructor. The merge rule already SAID the thing "
+  "(*an advocate may overrule us, and that is the point of showing them "
+  "the alternatives*) and the retrieval branch already WROTE the "
+  "invitation: *If the earlier one was right, say so and I will hold "
+  "it.* Nothing could accept it.",
+  "The writer is that same site. A retrieval that resolves WITHOUT an "
+  "assumption \u2014 because the advocate named the Act \u2014 is an "
+  "advocate decision, and the inference it displaces becomes a "
+  "`Reservation`.\n\n"
+  "REACTIVATED BY A FACT AND NEVER BY A TURN, which is E5's Class A "
+  "eval expressed as a SIGNATURE: `reactivate` takes fact ids and there "
+  "is no parameter that could carry a turn id. Almost everything here is "
+  "recomputed every turn, so a reservation keyed on re-derivation would "
+  "come back on every turn \u2014 which IS the counterexample E5 names.\n\n"
+  "TWO SWEEPS CAUGHT TWO DEFECTS THE HOUR IT LANDED. "
+  "`test_every_persisted_field_has_a_writer` found `Matter.reservations` "
+  "written into `concluded`, the THREAD's channel, where the named "
+  "write-back dropped it silently. `test_no_declared_owner_is_dead` "
+  "found `reactivate` and `as_current_finding` with no callers \u2014 "
+  "B-079 and B-116's shape, arriving in the very feature whose backlog "
+  "note said building the type alone would be exactly that.",
+  "Yes. The reactivation rule matches a provision REFERENCE contained in "
+  "a fact statement \u2014 exact matching on a citation, which is \u00a75's "
+  "one reliable key (citations 90.9%, names 0.83%). It is not a "
+  "similarity score and it identifies no Act: the Act was identified "
+  "when the decision was made.",
+  "tests/test_the_handover_says_what_it_did_not_do.py \u2014 the fact/turn "
+  "distinction including the signature check, recorded-once, a "
+  "reservation that was never overruled refusing to exist, and an "
+  "unreactivated one refusing to state itself.")
+
+d("B-139", "2026-09-07", "summary",
+  "`handover_complete` WAS TRUE FOR AN EMPTY MATTER. It was `not "
+  "handover_blockers` \u2014 a claim about whether the SOFTWARE builds "
+  "every section \u2014 so the moment the last blocker closed it "
+  "returned True for a file with no client, no thread and no fact.",
+  "Closing the last two blockers, which took the list to zero.",
+  "S1 \u2014 an absent input reading as success",
+  "The count reaching zero. INVISIBLE UNTIL THEN, and that is the "
+  "instructive part: while any section was unbuilt the first half was "
+  "doing the second half's job by accident, and every test passed.",
+  "`not_assessed_here` names sections the product builds and nothing has "
+  "computed ON THIS FILE, and `handover_complete` requires both to be "
+  "empty. The two claims had been kept apart deliberately at every "
+  "level below this one; the top-level flag quietly collapsed them.\n\n"
+  "ITS POPULATION IS THE CONTRACT, NOT THE DICT. The first version read "
+  "`self.sections.items()` and returned NOTHING for an empty matter, "
+  "because a section absent from the dict had never been asked about \u2014 "
+  "the same defect one layer in, found by the same test.",
+  "Yes: A COMPLETENESS FLAG MUST NAME WHAT IT MEASURED. The general "
+  "form is that a derived boolean over an exception list becomes "
+  "meaningless when the list empties, and nothing announces the moment "
+  "it does.",
+  "tests/test_the_handover_says_what_it_did_not_do.py::test_an_empty_"
+  "matter_is_not_a_complete_handover, which asserts the blocker list IS "
+  "empty and the handover is still not complete \u2014 the two halves "
+  "held apart in one assertion. Plus the Appendix E contract test, "
+  "rewritten onto `not_assessed_here` because asserting the old field "
+  "would now assert that the PRODUCT is incomplete, which is a different "
+  "sentence and no longer true.")
+
+d("B-140", "2026-09-07", "tooling",
+  "T9 MADE IT ILLEGAL TO WRITE ABOUT A GATE. `gate_consultations` "
+  "string-scans every source line for a gate id, so a module docstring "
+  "saying *this is NOT `G-SCOPE`* was read as consulting it \u2014 and "
+  "the trace failed on the single most useful sentence in the file.",
+  "Adding `nm/domain/engagement.py`, whose whole first paragraph exists "
+  "to distinguish the section from the gate.",
+  "S11 \u2014 a check that cannot fail (inverted: one that cannot pass)",
+  "The gate itself: TRACE FAILED, naming a file that consults nothing.",
+  "Comments and docstrings are blanked before the scan; every other "
+  "string stays, because `metrics.fire(\"G-GROUND\", ...)` is a string "
+  "literal and is precisely what the scan must keep seeing. Blanked "
+  "rather than deleted so line numbers still mean what they say.\n\n"
+  "THE STRING SCAN SURVIVES, and its docstring's reasoning was not "
+  "weakened: an AST walk would have to model every way a gate id reaches "
+  "`metrics.fire`, and the ways it cannot see are the ways a real call "
+  "site hides. Prose is removed; structure is not.",
+  "Yes, AND IT IS THE THIRD INSTANCE THIS SESSION. A comment quoting a "
+  "z-index literal broke that check; a comment quoting `(\"18\", "
+  "\"19\")` broke the section-list check; now a docstring naming a gate "
+  "broke the gate scan. The rule was already in the register \u2014 strip "
+  "comments before reading declarations \u2014 and this is the first time "
+  "it has been applied to a TOOL rather than to a test.",
+  "tests/test_tooling_bites.py::test_the_gate_scan_sees_code_and_"
+  "ignores_prose plants all three forms: a real assignment in code is "
+  "CAUGHT, a docstring mention is ignored, a comment mention is ignored. "
+  "Without the first of those the fix would have made T9 unfailable, "
+  "which is the defect it was fixing wearing the other face.")
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

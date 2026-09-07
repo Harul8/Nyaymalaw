@@ -27,48 +27,40 @@ history of the rows under it with it.
 
 ---
 
-### The phases, and what is left
-Kept here because "what happened to the phases" was asked twice and the
-answer was a number nobody could look up.
+### The phases - **ALL SECTIONS CARRY**
 
 | phase | what it is | state |
 |---|---|---|
 | **1** | the thread REMEMBERS what it concluded | **done** - six fields persist |
-| **2** | the summary CARRIES those, each with a third state | **done** (B-130) - blockers 10 to 6 |
-| **3** | the register and the queue survive the turn | **done** (B-134) - blockers 6 to 4 |
-| **4** | the screens and the authorities | **done** (B-135) - blockers 4 to **2** |
+| **2** | the summary CARRIES those, with a third state | **done** (B-130) - 10 blockers to 6 |
+| **3** | the register and the queue survive the turn | **done** (B-134) - 6 to 4 |
+| **4** | the screens and the authorities | **done** (B-135) - 4 to 2 |
+| **5** | the engagement and the reservations | **done** (B-137, B-138) - **2 to 0** |
 
-**`CARRIES` is 12 of 16.** Every section that was BUILT AND DISCARDED now
-carries. The two that remain have no writer, and neither can be closed by
-lifting:
+`CARRIES` is **14 of 16** - the other two are `handover_complete` and
+`handover_blockers` themselves, which are derived. **`handover_blockers`
+is empty.**
 
-#### `engagement` - **blocked by R-8, not by effort**
-Appendix E: *who the client is and what is in scope. A handover without it
-hands over work with no authority to do it.* The client is partly known
-(`posture.client_described_as`, `thread.identifiers`); **scope is recorded
-nowhere**, and recording it means asking the advocate - which is B5 /
-`G-SCOPE`, declared unbuilt in the gate matrix and sitting at slice 10.
+**And emptying it exposed the defect the whole contract existed to
+prevent (B-139).** `handover_complete` was `not handover_blockers`, so it
+went TRUE for a matter with no client, no thread and no fact. That is
+`handover_blockers`'s own counterexample one level up, and it was
+invisible for as long as any section was unbuilt: the first half was
+doing the second half's job by accident.
 
-R-8: moving slice-10 work inside the horizon means moving something else
-out, **explicitly**. That is a scheduling decision, not a coding one.
+So the summary now makes both claims, which is the distinction this whole
+sequence of work kept apart at every level below the top one:
 
-#### `reservations` - **two features deep**
-E5 specifies it exactly: `Reservation { position, stated_at, overruled_at,
-reactivated_by: FactId|null }`, with the Class A eval that *a reservation
-is reactivated only by a Fact, never by a new turn.*
+| | |
+|---|---|
+| `handover_blockers` | sections this PRODUCT does not build - **none** |
+| `not_assessed_here` | sections nothing computed **on this file** |
 
-It needs a position the advocate OVERRULED. `nm/domain/decision.py` has
-the vocabulary - `DecidedBy.ADVOCATE` - and **nothing in `nm/` ever
-constructs one**: measured, the only three occurrences are a comparison, a
-merge rule, and `from_stored`. So the writer needs an advocate-decision
-path that does not exist, and the reservation needs the writer. Building
-the `Reservation` type alone would be a complete module with no production
-caller, which is B-079 and B-116 and has been paid for twice.
+An empty matter reports **10 unassessed** and `handover_complete: False`.
 
-**Both are recorded rather than attempted.** Adding either to `CARRIES`
-with no writer produces a section that reads `not_assessed` on every file
-forever - a disclosure that cannot be wrong, which is S11, and which
-`test_a_derived_thread_stops_saying_not_assessed` already refuses.
+**What is genuinely still slice 10 and untouched:** `G-SCOPE`, `G-CONFLICT`,
+`G-COMPETENCE`, `G-CAPACITY`, `G-EMERGENCY`. The screens SECTION carries
+five `not_run` states; RUNNING the checks is B2-B6 and R-8 still binds.
 ---
 
 ## Closed
