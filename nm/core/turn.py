@@ -587,9 +587,28 @@ class TurnEngine:
                     signal=Signal.EMERGENCY if screens.urgent else Signal.NONE),),
                 blocked=True, blocked_reason=screens.reason)
             metrics.outcome = Outcome.BLOCKED
+            # AND THEY ACTUALLY LAND. The comment above says the screen
+            # states are recorded before this branch, and they were --
+            # onto a local immutable matter that this branch then threw
+            # away by returning without committing, and with `None` as
+            # the matter. So the one file a receiving advocate most
+            # needs the states for was the one file that never kept
+            # them.
+            #
+            # Committing is safe here for the reason the branch exists:
+            # NO SUBSTANCE has been read. What is written is the screen
+            # states and the advocate's own words -- the same rule a
+            # withheld turn follows.
+            try:
+                matter = self._store.commit(
+                    matter, expected_version=matter.version)
+            except Exception as exc:  # noqa: BLE001 -- never fatal
+                metrics.violate(
+                    "I1", f"a screened-out turn did not keep its screen "
+                          f"states: {type(exc).__name__}: {exc}")
             metrics.latency_ms = int((time.perf_counter() - started) * 1000)
             self._store.record_metrics(metrics.as_dict())
-            return TurnOutput(turn.turn_id, answer, None, metrics)
+            return TurnOutput(turn.turn_id, answer, matter, metrics)
 
         # ======== SCREEN BOUNDARY: no substance is read, retained, or sent to
         # a provider above this line.
@@ -812,6 +831,21 @@ class TurnEngine:
         # ONLY ON A TURN THAT DERIVED. A blocked turn asked a question and
         # concluded nothing, and writing an empty conclusion over a standing
         # theory would lose it exactly as regeneration did.
+        # THE INPUT, AS IT STOOD BEFORE ANY CONCLUSION WAS WRITTEN.
+        #
+        # Everything above this line is what the ADVOCATE put on the file:
+        # the facts they stated, the screens, the thread binding, the
+        # posture. Everything below is what this turn WORKED OUT.
+        #
+        # A withheld turn commits this and not `matter`. The gated branch
+        # has always said `the input is committed and the answer is not`,
+        # and it was committing `matter` -- which by then carried the
+        # theory, the decisions, the authorities and eight assessed
+        # sections. The answer was refused and the conclusions were kept,
+        # so the next turn read as settled what was never grounded and
+        # never served.
+        admitted = matter
+
         if concluded:
             # WRITTEN BY NAME, NOT BY `**concluded`.
             #
@@ -1004,8 +1038,11 @@ class TurnEngine:
             # deliberately NOT set: the turn is not done, and a retry must
             # re-derive rather than replay a no-op.
             try:
+                # `admitted`, NOT `matter`. See the snapshot above: what
+                # this turn derived is discarded with the answer it was
+                # derived for, and what the advocate said is kept.
                 matter = self._store.commit(
-                    matter, expected_version=expected_version)
+                    admitted, expected_version=expected_version)
             except Exception as exc:  # noqa: BLE001 -- reported, never fatal
                 # Losing the note is worse than the refusal and is not worth
                 # turning the refusal into a crash over.

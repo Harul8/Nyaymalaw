@@ -502,13 +502,18 @@ function renderIndexLine(d) {
 
   if (d.identity) {
     const frac = d.identity.fraction_of_source;
-    const held = d.identity.held.toLocaleString();
+    // GUARDED LIKE `of_source` ON THE NEXT LINE. This called
+    // `.toLocaleString()` unconditionally while its neighbour was
+    // guarded, so an identity carrying no index count crashed the
+    // results renderer -- the guard sat one line from where it was
+    // missing.
+    const held = d.identity.held ? d.identity.held.toLocaleString() : null;
     const of = d.identity.of_source ? d.identity.of_source.toLocaleString() : null;
     const detail = document.createElement('span');
     detail.className = 'index-detail';
     // BOTH NUMBERS, because the RATIO is the disclosure. "451,548 paragraphs"
     // reads as the corpus; "451,548 of 1,015,780" does not.
-    const size = of
+    const size = (held && of)
       ? `${held} of ${of} source paragraphs (${(frac * 100).toFixed(1)}%)`
       : `${held} paragraphs · source size not recorded`;
     // SCOPE FIRST. It is the disclosure that changes whether the whole result
@@ -517,6 +522,18 @@ function renderIndexLine(d) {
     detail.textContent = ` · ${d.identity.scope} · ${size} · built ${d.identity.built_at}`;
     el.appendChild(detail);
   }
+}
+
+// Where a hit sat in THIS search, in words. Never a measurement.
+//
+// Three bands and no number. Two would make the middle of a result
+// set read as either strong or weak; a number invites exactly the
+// reliance the underlying rank cannot support.
+function rankBand(confidence) {
+  if (typeof confidence !== 'number') return 'rank not recorded';
+  if (confidence >= 0.85) return 'top of this search';
+  if (confidence >= 0.5) return 'mid-ranked here';
+  return 'lower-ranked here';
 }
 
 function renderSearch(d) {
@@ -559,7 +576,16 @@ function renderSearch(d) {
     // exact lookup, and the way that happens is a template that omits this.
     const prov = document.createElement('span');
     prov.className = `pill ${h.origin === 'searched' ? 'searched' : 'resolved'}`;
-    prov.textContent = `${h.origin} · ${(h.confidence * 100).toFixed(0)}%`;
+    // A BAND, NOT A PERCENTAGE.
+    //
+    // `confidence` is an FTS rank normalised to 0..1, and the
+    // adapter's own docstring says it is comparable only WITHIN one
+    // query. Rendered as `95%` it reads as calibrated confidence in
+    // relevance -- and on a real search the top two hits BOTH showed
+    // 95%, which is precision the number cannot carry. A band says
+    // only what the rank supports: where this paragraph sat against
+    // the others in THIS search.
+    prov.textContent = `${h.origin} · ${rankBand(h.confidence)}`;
     head.appendChild(prov);
 
     const text = document.createElement('p');

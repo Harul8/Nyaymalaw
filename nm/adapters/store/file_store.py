@@ -23,6 +23,8 @@ import hashlib
 import json
 import os
 import tempfile
+import time
+from contextlib import contextmanager
 from dataclasses import asdict, fields, is_dataclass
 from datetime import date
 from enum import Enum
@@ -220,6 +222,12 @@ def _matter(d: dict) -> Matter:
 #: Two underscores, because a MatterId is `mat_<hex>` and a single one would
 #: split at the wrong place. The name has to be parseable WITHOUT THE KEY --
 #: that is the whole point of putting the matter in it.
+#: How long a commit waits for another turn to finish writing the SAME
+#: matter. Long enough that an ordinary turn never meets it, short
+#: enough that a crashed holder does not stall a practice.
+_LOCK_TIMEOUT = 10.0
+_LOCK_POLL = 0.02
+
 _SEP = "__"
 
 
@@ -249,28 +257,85 @@ class FileMatterStore:
         return _matter(json.loads(self._cipher.decrypt(p.read_bytes()).decode("utf8")))
 
     def commit(self, matter: Matter, *, expected_version: int) -> Matter:
+        """Write the matter, or refuse because the file moved underneath.
+
+        HELD UNDER A PER-MATTER LOCK, across the read AND the replace.
+        `os.replace` below is atomic and makes this crash-safe; it does
+        nothing about two writers. Both could load version N, both find
+        the version check satisfied, both encrypt, and the second replace
+        would silently discard the first turn's work.
+
+        The lock is the smallest thing that closes that. A real
+        transactional store is the right long-run answer and is a
+        migration; this does not pretend to be one.
+        """
         p = self._path(matter.id)
-        if p.exists():
-            current = self.load(matter.id)
-            if current is not None and current.version > expected_version:
-                raise StaleWrite(
-                    f"matter {matter.id} moved from version {expected_version} to "
-                    f"{current.version} while this turn was deriving. Re-derive "
-                    f"against the current state rather than overwriting it."
-                )
-        blob = self._cipher.encrypt(json.dumps(_enc(matter)).encode("utf8"))
-        # Atomic: a crash mid-write leaves the previous file intact.
-        fd, tmp = tempfile.mkstemp(dir=str(self._matters), suffix=".tmp")
+        with self._locked(matter.id):
+            if p.exists():
+                current = self.load(matter.id)
+                # `!=`, NOT `>`. A writer holding a stale HIGHER version --
+                # from a restored file or a bug -- passed a `>` check and
+                # overwrote a newer matter. The only safe question is
+                # whether the file is still what this turn read.
+                if current is not None and current.version != expected_version:
+                    raise StaleWrite(
+                        f"matter {matter.id} moved from version {expected_version} to "
+                        f"{current.version} while this turn was deriving. Re-derive "
+                        f"against the current state rather than overwriting it."
+                    )
+            blob = self._cipher.encrypt(json.dumps(_enc(matter)).encode("utf8"))
+            # Atomic: a crash mid-write leaves the previous file intact.
+            fd, tmp = tempfile.mkstemp(dir=str(self._matters), suffix=".tmp")
+            try:
+                with os.fdopen(fd, "wb") as fh:
+                    fh.write(blob)
+                    fh.flush()
+                    os.fsync(fh.fileno())
+                os.replace(tmp, p)
+            except BaseException:
+                Path(tmp).unlink(missing_ok=True)
+                raise
+            return matter
+
+    @contextmanager
+    def _locked(self, matter_id: MatterId):
+        """Exclusive access to one matter, for the length of a commit.
+
+        `O_CREAT | O_EXCL` is atomic on POSIX and on Windows, needs no
+        third-party library, and behaves the same on the junction-mounted
+        paths this project already uses.
+
+        THE LOCK NAMES ITS HOLDER. A lock file carrying nothing is one
+        nobody can reason about when it is found at 3am: this one holds
+        the pid and the time it was taken, so a stale lock is identifiable
+        rather than guessed at.
+
+        A WAIT THAT NEVER ENDS IS A HANG, so it gives up and says so. The
+        caller sees `StaleWrite`, which is already the answer to `somebody
+        else is writing this matter` -- a new exception type would be a
+        second name for one condition.
+        """
+        lock = self._matters / f"{matter_id}.lock"
+        deadline = time.monotonic() + _LOCK_TIMEOUT
+        fd = None
+        while fd is None:
+            try:
+                fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except FileExistsError:
+                if time.monotonic() >= deadline:
+                    raise StaleWrite(
+                        f"matter {matter_id} is being written by another "
+                        f"turn and did not become free within "
+                        f"{_LOCK_TIMEOUT}s. Re-derive and try again; the "
+                        f"lock file is {lock.name} and names its holder."
+                    ) from None
+                time.sleep(_LOCK_POLL)
         try:
-            with os.fdopen(fd, "wb") as fh:
-                fh.write(blob)
-                fh.flush()
-                os.fsync(fh.fileno())
-            os.replace(tmp, p)
-        except BaseException:
-            Path(tmp).unlink(missing_ok=True)
-            raise
-        return matter
+            with os.fdopen(fd, "w") as fh:
+                fh.write(f"pid={os.getpid()} at={time.time():.3f}")
+            yield
+        finally:
+            lock.unlink(missing_ok=True)
 
     def list_for(self, advocate_id: str) -> MatterList:
         out, unreadable = [], []

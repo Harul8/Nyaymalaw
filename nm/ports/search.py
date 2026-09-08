@@ -91,8 +91,15 @@ class IndexIdentity:
     built_at: str
     source: str
     corpus_version: str
-    held: int
-    of_source: int
+    #: NULLABLE, BECAUSE A MISSING COUNT IS NOT A ZERO.
+    #:
+    #: `AuthorityIndexSearch.num()` has returned None for an unrecorded
+    #: count since BK-19 -- deliberately, because `0 indexed` is
+    #: indistinguishable from an index that was built and holds
+    #: nothing. This type went on declaring `int`, and both the ratio
+    #: below and the browser believed the declaration.
+    held: int | None
+    of_source: int | None
 
     #: WHAT LAW THIS INDEX IS ABOUT. Required, and there is no default.
     #:
@@ -110,7 +117,11 @@ class IndexIdentity:
 
         A ratio of zero and an unknown ratio are different claims, and the
         first one says the index is empty."""
-        if not self.of_source:
+        # BOTH, not just the denominator. `held` is nullable for the
+        # same reason and this divided it -- so an identity carrying a
+        # source size and no index count raised TypeError inside a
+        # property that exists to avoid a misleading number.
+        if not self.of_source or not self.held:
             return None
         return self.held / self.of_source
 

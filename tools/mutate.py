@@ -294,8 +294,12 @@ MUTATIONS = [
     # compute from a state neither of them saw.
     ("a stale commit overwriting instead of refusing",
      "nm/adapters/store/file_store.py",
-     "            if current is not None and current.version > expected_version:",
-     "            if False and current is not None:",
+     # SWEPT WITH THE SOURCE. The comparison moved from `>` to `!=` --
+     # a writer holding a stale HIGHER version passed a `>` check and
+     # overwrote a newer matter -- and the whole block moved one level
+     # deeper under the per-matter lock.
+     "                if current is not None and current.version != expected_version:",
+     "                if False and current is not None:",
      "test_a_stale_commit_is_refused_rather_than_overwriting", "E-021b"),
 
     # E-020b. A turn that ran out of rounds and said nothing is
