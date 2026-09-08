@@ -87,6 +87,22 @@ class Edge:
     wrote "Article 14" would look up nothing and report a corpus gap for a
     provision held in full."""
     curated_from: str
+    accrues_on: str = ""
+    """WHEN THE PERIOD STARTS, from the Act's own third column.
+
+    THE ARITHMETIC WAS TYPED AND THE STARTING POINT WAS A SORT ORDER.
+    `_limitation` took the earliest dated fact on the chronology, whatever
+    the cause -- so Article 54 ran from a 2023 agreement when its trigger
+    was a 2024 refusal, and every citation on the turn stayed correct while
+    the expiry was wrong.
+
+    Curated beside the Article because it is the same kind of fact from the
+    same place: the Schedule's third column. An edge that cannot say when
+    its period starts is half a routing decision.
+
+    EMPTY IS A REAL STATE AND IT BLOCKS. A cause whose trigger nobody has
+    curated must not fall back to the earliest date -- that fallback IS the
+    defect."""
     alternatives: tuple[str, ...] = ()
     """Other provisions that plausibly govern this cause.
 
@@ -114,6 +130,8 @@ LIMITATION_ARTICLE: dict[CauseOfAction, Edge] = {
         curated_from="Limitation Act, 1963, Schedule I, Part II — suits for "
                      "the price of goods sold and delivered where no fixed "
                      "period of credit was agreed",
+        accrues_on="the date of DELIVERY of the goods, or -- where the "
+                   "price was payable on a fixed date -- that date",
         alternatives=("Article_15 where a fixed period of credit was agreed",
                       "Article_113 if the cause is not on the price itself")),
     CauseOfAction.MONEY_LENT: Edge(
@@ -121,6 +139,8 @@ LIMITATION_ARTICLE: dict[CauseOfAction, Edge] = {
         act="Limitation Act, 1963", provision="Article_19",
         curated_from="Limitation Act, 1963, Schedule I — money payable for "
                      "money lent",
+        accrues_on="the date the LOAN WAS MADE, or -- where a time for "
+                   "repayment was fixed -- that date",
         alternatives=("Article_21 where the loan is on a promissory note "
                       "payable on demand",)),
     CauseOfAction.BREACH_OF_CONTRACT: Edge(
@@ -128,18 +148,28 @@ LIMITATION_ARTICLE: dict[CauseOfAction, Edge] = {
         act="Limitation Act, 1963", provision="Article_55",
         curated_from="Limitation Act, 1963, Schedule I — compensation for "
                      "breach of a contract",
+        accrues_on="the date the CONTRACT WAS BROKEN; where there are "
+                   "successive breaches, when the breach sued on "
+                   "occurred",
         alternatives=("Article_113 as the residuary article",)),
     CauseOfAction.SPECIFIC_PERFORMANCE: Edge(
         cause=CauseOfAction.SPECIFIC_PERFORMANCE,
         act="Limitation Act, 1963", provision="Article_54",
         curated_from="Limitation Act, 1963, Schedule I — specific performance "
                      "of a contract",
+        accrues_on="the date FIXED FOR PERFORMANCE, or -- where none is "
+                   "fixed -- when the plaintiff has NOTICE THAT "
+                   "PERFORMANCE IS REFUSED. NOT the date of the "
+                   "agreement",
         alternatives=()),
     CauseOfAction.POSSESSION_ON_TITLE: Edge(
         cause=CauseOfAction.POSSESSION_ON_TITLE,
         act="Limitation Act, 1963", provision="Article_65",
         curated_from="Limitation Act, 1963, Schedule I — possession of "
                      "immovable property based on title",
+        accrues_on="when the defendant's POSSESSION BECOMES ADVERSE to "
+                   "the plaintiff. NOT the date of the plaintiff's "
+                   "title",
         alternatives=("Article_64 where the suit rests on previous possession "
                       "rather than title",)),
     CauseOfAction.POSSESSION_ON_PREVIOUS_POSSESSION: Edge(
@@ -147,6 +177,7 @@ LIMITATION_ARTICLE: dict[CauseOfAction, Edge] = {
         act="Limitation Act, 1963", provision="Article_64",
         curated_from="Limitation Act, 1963, Schedule I — possession based on "
                      "previous possession and not on title",
+        accrues_on="the date of DISPOSSESSION",
         alternatives=("Specific Relief Act, 1963 s.6, which runs six months "
                       "and asks no question of title",)),
     CauseOfAction.DECLARATION: Edge(
@@ -154,6 +185,7 @@ LIMITATION_ARTICLE: dict[CauseOfAction, Edge] = {
         act="Limitation Act, 1963", provision="Article_58",
         curated_from="Limitation Act, 1963, Schedule I — to obtain any other "
                      "declaration",
+        accrues_on="when the RIGHT TO SUE first accrues",
         alternatives=("Article_56 and Article_57 for the specific "
                       "declarations they name",)),
 }
@@ -171,6 +203,29 @@ def article_for(cause: CauseOfAction) -> Edge | None:
     if cause is CauseOfAction.NOT_ESTABLISHED:
         return None
     return LIMITATION_ARTICLE.get(cause)
+
+
+def accrual_trigger_for(cause: str) -> str:
+    """WHEN THE PERIOD STARTS for a cause named as a string, or empty.
+
+    ONE OWNER FOR THE LOOKUP, and it is here rather than in the adapter
+    because the table is here. The evidence adapter carried this as five
+    lines of its own -- a `CauseOfAction(...)` coercion, a `ValueError`
+    catch and a `.get` -- and the test double that had to reach the same
+    answer would have carried a sixth copy. A legal fact with two lookups is
+    S9, and the second copy is exactly the one that stops being updated.
+
+    EMPTY IS A REAL ANSWER and means *nobody curated a trigger for this
+    cause*. The engine reads it as permission to compute from what it has,
+    which is the honest fallback: a cause we hold no trigger for is not one
+    we know enough about to refuse on.
+    """
+    try:
+        key = CauseOfAction(str(cause or "").strip().lower())
+    except ValueError:
+        return ""
+    edge = LIMITATION_ARTICLE.get(key)
+    return edge.accrues_on if edge else ""
 
 
 # ------------------------------------------------- the 2024 code transition ---

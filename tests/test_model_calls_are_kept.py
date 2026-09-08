@@ -33,7 +33,7 @@ from nm.adapters.model.traced import KEEP, Call, TracedModel, read_name
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput
 from nm.ports.model import ModelPort, Prompt, Tier
-from tests.test_turn_contract import KEY, _Evidence, _model_config
+from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
 
@@ -45,7 +45,7 @@ def _engine(tmp_path, inner=None):
     store = FileMatterStore(tmp_path, key=KEY)
     model = TracedModel(inner=inner or ScriptedModelAdapter(
         _model_config(), responses={"__default__": "Issue the notice."}))
-    return TurnEngine(store=store, evidence=_Evidence(), model=model), store
+    return briefed(TurnEngine(store=store, evidence=_Evidence(), model=model)), store
 
 
 def _trace(tmp_path, message=OPENING):
@@ -205,10 +205,10 @@ def test_a_tracer_that_records_nothing_is_a_violation_and_not_a_silence(
                     "dropped": 0}
 
     store = FileMatterStore(tmp_path, key=KEY)
-    engine = TurnEngine(
+    engine = briefed(TurnEngine(
         store=store, evidence=_Evidence(),
         model=Mute(inner=ScriptedModelAdapter(
-            _model_config(), responses={"__default__": "Issue the notice."})))
+            _model_config(), responses={"__default__": "Issue the notice."}))))
     out = engine.run(TurnInput(advocate_id="adv_1", today=date(2026, 9, 5),
                                message=OPENING))
 

@@ -52,8 +52,29 @@ def nearest_first(rows: list[dict]) -> list[dict]:
         r.get("next_deadline") is None,
         r.get("next_deadline") or "",
         not blocked(r),
-        -(r.get("last_touched") or 0),
+        _recency(r),
     ))
+
+
+def _recency(row: dict) -> int:
+    """Most recently worked first. NEGATIVE ORDINAL, not a negated integer.
+
+    This read `-(r.get("last_touched") or 0)` when `last_touched` was the
+    VERSION NUMBER -- so the list sorted by how many times a file had been
+    written, and a matter written nine times outranked one written twice
+    yesterday. BK-33 made it a date, and the old expression then raised
+    `bad operand type for unary -: 'str'` on the first list that loaded.
+
+    NEVER WORKED SORTS LAST among otherwise equal rows, which is the honest
+    order: a file nobody has opened is not the one they were working on.
+    """
+    from datetime import date as _date
+
+    raw = str(row.get("last_touched") or "")
+    try:
+        return -_date.fromisoformat(raw).toordinal()
+    except ValueError:
+        return 0
 
 
 def _thread_row(thread, deadlines, today=None) -> dict:
@@ -147,6 +168,27 @@ def board_projection(matter: Matter, deadlines, today=None) -> dict:
     }
 
 
+def _party(matter, side: str) -> str:
+    """The first party on this side, from intake or from the threads.
+
+    INTAKE FIRST, because it is what the advocate typed and the threads hold
+    what was read. Where a matter predates intake the thread posture is less
+    and is not nothing.
+    """
+    for name, recorded in (getattr(matter, "intake_parties", None) or {}).items():
+        if recorded == side:
+            return str(name)
+    for thread in getattr(matter, "threads", ()):
+        for name, recorded in (getattr(thread, "parties", None) or {}).items():
+            if recorded == side:
+                return str(name)
+        if side == "adverse":
+            opponent = getattr(getattr(thread, "posture", None), "opponent", "")
+            if opponent:
+                return str(opponent)
+    return ""
+
+
 @implements("A2")
 def matter_list_projection(matters, registers=None) -> dict:
     """The matter list, and what could not be read.
@@ -177,7 +219,15 @@ def matter_list_projection(matters, registers=None) -> dict:
         rows.append({
             "matter_id": m.id,
             "matter": m.title,
-            "client": m.advocate_id,
+            # WHO THE FILE IS FOR, and it was the ADVOCATE'S OWN ID. BK-33.
+            #
+            # Every row in an advocate's list said `client: adv_demo`, which
+            # is the one thing every row has in common -- so the column that
+            # exists to tell ten matters apart told them apart by nothing.
+            # The names come from intake (BK-34); a matter opened before it
+            # says so rather than naming the advocate.
+            "client": _party(m, "client") or "not recorded",
+            "opponent": _party(m, "adverse") or "not recorded",
             "threads": len(m.threads),
             "next_deadline": live[0].on.isoformat() if live else None,
             "next_deadline_status": (
@@ -187,7 +237,10 @@ def matter_list_projection(matters, registers=None) -> dict:
             # What is BLOCKED is a status field, not analysis: it is the handle
             # the advocate uses to decide what to open.
             "blocked": (f"{unresolved} thread(s) awaiting posture" if unresolved else None),
-            "last_touched": m.version,
+            # WHEN, NOT HOW MANY TIMES. `last_touched` was `m.version`, an
+            # integer counting writes -- so a matter written nine times
+            # looked more recent than one written twice yesterday.
+            "last_touched": m.last_activity or "never worked",
         })
     rows = nearest_first(rows)
     return {

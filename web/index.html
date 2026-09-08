@@ -23,7 +23,7 @@
      changed three commits ago is what put this here. -->
 <div id="build-warning" class="build-warning" role="status" hidden></div>
 
-<div id="gate" class="gate">
+<div id="gate">
   <form id="login" class="login" autocomplete="on">
     <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
     <p class="login-lede">Sign in to reach your matters.</p>
@@ -48,9 +48,15 @@
     <div id="login-state" class="login-state"></div>
 
     <p class="login-foot">
-      Registration records the Bar Council number and the firm whose conflicts
-      registry governs the session. The firm is not bookkeeping: it is what
-      detects acting for both sides.
+      <!-- BK-31. NO FALSE ASSURANCE ABOUT CONFLICT SCOPE.
+           This said the firm's conflicts registry GOVERNS the session. There
+           is no firm-wide registry: the conflict screen checks the matters
+           THIS advocate holds, and says so in its own words. A promise about
+           the one check whose whole value is being trusted is the worst
+           place in the product to be approximately right. -->
+      Registration records your Bar Council number and your firm. I check new
+      matters against the files YOU hold — not a firm-wide registry, which
+      this product does not have.
     </p>
   </form>
 
@@ -110,9 +116,8 @@
       <span class="req" aria-hidden="true">*</span> required. The password must be at
       least 8 characters and contain an upper-case letter, a lower-case
       letter, a numeral and a special character &mdash; it is the only thing
-      standing between one advocate&rsquo;s client file and another&rsquo;s. The firm is what
-      the conflicts registry is scoped by; without it, a conflict check has
-      only your own matters to look at.
+      standing between one advocate&rsquo;s client file and another&rsquo;s. Your firm is recorded on the
+      file; the conflict check itself runs against the matters you hold.
     </p>
   </form>
 
@@ -144,6 +149,15 @@
        advising is bounded by a matter, search is bounded by nothing, and the
        record is what was already served. A search hit does not become a fact
        on a matter by being looked at. -->
+  <!-- BK-32. THE ONLY WAY TO THE MATTER LIST BELOW 820px.
+       The rail is `display:none` at narrow widths, and `#back` returns to the
+       list only from inside a matter -- so an advocate on a phone could work
+       the matter they were in and reach no other one. This toggles it, and it
+       is in the masthead because that is the one strip present on every
+       surface. -->
+  <button id="matters-toggle" class="ghost matters-toggle" aria-expanded="false"
+          aria-controls="rail">Matters</button>
+
   <nav class="tabs" id="tabs">
     <button class="tab is-on" data-tab="advise">Advise</button>
     <button class="tab" data-tab="search">Search the corpus</button>
@@ -156,6 +170,11 @@
          signed in, and cannot be edited into someone else. -->
     <span class="who-name" id="who-name">—</span>
     <span class="who-detail" id="who-detail"></span>
+    <!-- BK-31. WHERE ELSE AM I SIGNED IN, and end those.
+         The case this exists for is a device the advocate no longer
+         controls, so the control has to be reachable from the one they are
+         holding — and the session they press it from survives. -->
+    <button id="devices" class="ghost">Sessions</button>
     <button id="signout" class="ghost">Sign out</button>
   </div>
   <div class="health" id="health" title="Wired configuration">checking…</div>
@@ -178,6 +197,44 @@
 
   <!-- ========================= THE ANSWER ========================= -->
   <section class="conversation">
+    <!-- ================= B3-B5 — INTAKE, BEFORE SUBSTANCE =================
+         The screens run before any fact is admitted, and the conflict screen
+         cannot run against a party set nobody has given. So the advocate is
+         asked WHO and WHAT SCOPE when they open the file, once, and the
+         answers travel with the first brief.
+
+         It is not a modal. An advocate who has already typed a brief and is
+         then covered by a dialog has to remember what they were saying; this
+         sits above the composer and stays until it is answered. -->
+    <form id="intake" class="intake" hidden>
+      <h2>Before I work this file</h2>
+      <p class="intake-lede">
+        I check a new matter against the other files you hold, so I need the
+        names. This is your own matters, not a firm-wide registry.
+      </p>
+      <label for="in-client">Who we act for</label>
+      <input id="in-client" placeholder="the client's name" required>
+
+      <label for="in-adverse">Who it is against</label>
+      <input id="in-adverse" placeholder="the other side's name" required>
+
+      <label for="in-others">Anyone else named
+        <span class="opt">— guarantor, co-defendant, a company in the group</span>
+      </label>
+      <input id="in-others" placeholder="comma separated, or leave blank">
+
+      <label for="in-scope">What you are instructed to do</label>
+      <input id="in-scope" placeholder="recover the price of goods sold" required>
+
+      <label class="check">
+        <input type="checkbox" id="in-capacity" required>
+        The client can give instructions on this matter.
+      </label>
+
+      <button type="submit" class="primary" id="in-go">Record and continue</button>
+      <div id="intake-state"></div>
+    </form>
+
     <div id="mode-line" class="mode-line" hidden></div>
     <div id="thread" class="thread"></div>
 
@@ -197,11 +254,36 @@
      way a statute is read. -->
 <main id="pane-search" class="single" hidden>
   <section class="searcher">
+    <!-- BK-42. EVERY FIELD HAS A LABEL, NOT ONLY A PLACEHOLDER.
+         A placeholder is not an accessible name: it is announced once, it
+         disappears the moment anything is typed, and a screen reader user
+         who tabs back to a filled field is told nothing about what it holds.
+         The labels are visually hidden rather than removed, because the
+         sighted advocate already has the placeholder and the field is
+         narrow. -->
     <form id="search-form" class="search-bar" autocomplete="off">
+      <label class="sr-only" for="q">What to search for</label>
       <input id="q" type="search" placeholder="Search judgments — a proposition, a phrase, a section as you would cite it">
-      <input id="f-court" type="text" placeholder="Court (optional)">
+
+      <label class="sr-only" for="f-court">Court</label>
+      <input id="f-court" type="text" placeholder="Court (optional)"
+             list="court-values">
+      <!-- CONTROLLED VALUES, from what the index actually holds (BK-38). An
+           advocate typing `Supreme Court` used to get zero from 395,734
+           Supreme Court paragraphs; it resolves now, and offering the
+           spellings means fewer people have to discover that it does. -->
+      <datalist id="court-values">
+        <option value="Supreme Court of India"></option>
+        <option value="High Court of Andhra Pradesh"></option>
+        <option value="Telangana High Court"></option>
+      </datalist>
+
+      <label class="sr-only" for="f-from">Earliest year</label>
       <input id="f-from" type="number" placeholder="From yr" min="1800" max="2100">
+
+      <label class="sr-only" for="f-to">Latest year</label>
       <input id="f-to" type="number" placeholder="To yr" min="1800" max="2100">
+
       <button type="submit" class="primary">Search</button>
     </form>
 

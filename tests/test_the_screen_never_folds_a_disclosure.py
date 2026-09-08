@@ -56,13 +56,19 @@ def _app_js() -> str:
 def test_only_plain_ground_is_ever_folded():
     """THE PARTITION, read off the source.
 
+    `let` SINCE BK-37, and the reason is in the code beside it: an answer
+    that is ONLY plain grounds -- a courtesy reply, a question-of-law answer
+    -- has no claim for the support to sit under, so the two lists are
+    swapped and the answer is shown rather than folded into invisibility.
+    The predicate below is unchanged and is still the thing under test.
+
     `support` is what folds. Its filter must require BOTH that the element is
     ground AND that it carries no disclosure -- dropping the second clause is
     the whole defect, and it is a two-character edit.
     """
     src = _app_js()
 
-    m = re.search(r"const support = entry\.answer\.elements\.filter\(\s*"
+    m = re.search(r"(?:const|let) support = entry\.answer\.elements\.filter\(\s*"
                   r"\(el\) => ([^;]+)\);", src)
     assert m, ("the `support` partition is gone or renamed; whatever decides "
                "what folds is now unchecked")
@@ -86,7 +92,7 @@ def test_the_spoken_half_is_the_complement_and_not_a_second_list():
     rendered nowhere -- silently, because nothing counts them.
     """
     src = _app_js()
-    m = re.search(r"const spoken = entry\.answer\.elements\.filter\(\s*"
+    m = re.search(r"(?:const|let) spoken = entry\.answer\.elements\.filter\(\s*"
                   r"\(el\) => ([^;]+)\);", src)
     assert m, "the `spoken` partition is gone or renamed"
 

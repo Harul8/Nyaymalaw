@@ -41,7 +41,7 @@ from nm.core import chronology
 from nm.core.turn import TurnInput
 from nm.domain.matter import Fact, Provenance
 from nm.domain.quotable import Quotable
-from tests.test_turn_contract import build
+from tests.test_turn_contract import briefed, build
 
 pytestmark = pytest.mark.class_a
 
@@ -268,10 +268,10 @@ def test_a_missed_correction_becomes_a_blocking_question(tmp_path):
             return res
 
     store = FileMatterStore(tmp_path, key=KEY)
-    engine = TurnEngine(
+    engine = briefed(TurnEngine(
         store=store, evidence=_Evidence(),
         model=_NeverCorrects(_model_config(), responses={
-            "__default__": "Issue the notice and diarise the window."}))
+            "__default__": "Issue the notice and diarise the window."})))
 
     first = engine.run(TurnInput(
         advocate_id="adv_1", today=date(2026, 9, 5),

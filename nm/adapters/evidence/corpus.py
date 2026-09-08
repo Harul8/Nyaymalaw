@@ -132,6 +132,22 @@ class CorpusEvidenceAdapter:
             "denylist": f"{len(self._denylist())} chunk(s) excluded",
         }
 
+    def accrual_trigger(self, cause: str) -> str:
+        """When the period for this cause STARTS, from the curated Article.
+
+        THE ADAPTER OWNS THIS BECAUSE `core` MAY NOT IMPORT `knowledge`
+        (layercheck), and the trigger is curated in `resolution.py` beside the
+        Article it belongs to. Copying it into the engine would be a second
+        home for a legal fact.
+
+        EMPTY FOR AN UNKNOWN OR UNCURATED CAUSE, and the engine then behaves
+        as it did before. A cause nobody has curated a trigger for is not one
+        this product knows enough about to refuse on.
+        """
+        from nm.knowledge.resolution import accrual_trigger_for
+
+        return accrual_trigger_for(cause)
+
     def _denylist(self) -> set[str]:
         """Chunks the corpus itself marks as contaminated.
 

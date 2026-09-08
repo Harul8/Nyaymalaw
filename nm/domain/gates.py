@@ -135,7 +135,8 @@ GATES: tuple[Gate, ...] = (
         visible="The protective step, its owner and its time, and nothing else. "
                 "Merits are refused on this turn.",
         feature="B2",
-        built=False,
+        # BK-34: the producer landed 8 September 2026
+        built=True,
     ),
     Gate(
         id="G-CONFLICT",
@@ -149,7 +150,8 @@ GATES: tuple[Gate, ...] = (
         visible="This matter cannot be taken further until the conflict position "
                 "is settled by a person.",
         feature="B3",
-        built=False,
+        # BK-34: the producer landed 8 September 2026
+        built=True,
     ),
     Gate(
         id="G-COMPETENCE",
@@ -163,7 +165,8 @@ GATES: tuple[Gate, ...] = (
         visible="What is outside coverage is named, with what would be needed to "
                 "close it. Work continues on what is inside.",
         feature="B4",
-        built=False,
+        # BK-34: the producer landed 8 September 2026
+        built=True,
     ),
     Gate(
         id="G-SCOPE",
@@ -177,7 +180,8 @@ GATES: tuple[Gate, ...] = (
         visible="This step is outside recorded scope. It is not done silently, "
                 "and advice given without scope is not reliance-ready.",
         feature="B5",
-        built=False,
+        # BK-34: the producer landed 8 September 2026
+        built=True,
     ),
     Gate(
         id="G-CAPACITY",
@@ -190,7 +194,8 @@ GATES: tuple[Gate, ...] = (
         recovery=Recovery.HUMAN,
         visible="The decision is not recorded as authority while capacity is open.",
         feature="B6",
-        built=False,
+        # BK-34: the producer landed 8 September 2026
+        built=True,
     ),
     Gate(
         id="G-UNSCREENED",
@@ -595,6 +600,48 @@ GATES: tuple[Gate, ...] = (
                 "the advocate over our own gap teaches them to work around "
                 "the gate.",
         feature="D5",
+        built=True,
+    ),
+    Gate(
+        id="G-CONSISTENT",
+        condition="The recommended step contradicts a fact this same answer "
+                  "computed — the limitation position, the deadline register, "
+                  "the side we act for, or what has not been weighed.",
+        # THREE STATES PLUS THE REPAIR, and `not_verified` is the one that
+        # matters. A consistency check that could not run must not be
+        # indistinguishable from one that found nothing: those are opposite
+        # facts about the same step, and the second is the whole of S1.
+        #
+        # `repaired` is a fourth because it is a different fact again — the
+        # step served was NOT the step written, and an advocate reading the
+        # trace should be able to see that the sentence was rewritten once
+        # rather than assume it came out right the first time.
+        states=("consistent", "contradicted", "repaired", "not_verified"),
+        response=Response.BLOCK,
+        scope=Scope.STEP,
+        persistence=Persistence.TURN,
+        # SYSTEM: it clears when the step stops contradicting the figures.
+        # There is nothing for the advocate to do about it — the conflict is
+        # between two things this product produced.
+        recovery=Recovery.SYSTEM,
+        visible="B-074, TWICE. The ACTION read `file the recovery suit, "
+                "ensuring it is within the limitation period` while the "
+                "GROUND directly below it read `that period has run` — 174 "
+                "days ago. It was fixed by telling the model what had been "
+                "worked out, at length and correctly, and it recurred on "
+                "`6e29cf0`: `Confirm the date of service and file within the "
+                "window`, beside an annotation saying every deadline had "
+                "passed.\n\n"
+                "A PROMPT IS NOT A GUARD, which is why this row exists and "
+                "why it is not a phrase list. The answer space is built from "
+                "the turn's own typed facts, so the guard is exact "
+                "membership rather than matching on words — the rule "
+                "CLAUDE.md §5 states about Acts, applied to the one place a "
+                "sentence is checked against a number.\n\n"
+                "It BLOCKS the step and not the turn: the advocate gets the "
+                "computed position and a question, which is the half that "
+                "was verified.",
+        feature="D3",
         built=True,
     ),
     Gate(

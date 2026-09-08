@@ -154,13 +154,32 @@ const folds = [];
   for (const kid of node.children) findFolds(kid);
 })(turn);
 
-if (folds.length !== 1) {
-  fails.push(`expected exactly 1 <details>, rendered ${folds.length}`);
-} else {
-  if (folds[0].open) fails.push("the support fold is open by default");
+// TWO FOLDS SINCE BK-37, and counting them was the wrong check the moment a
+// second one was legitimate. The support fold holds plain grounds; the audit
+// fold holds the gate rows and the trace (J-7). The rule that matters is not
+// HOW MANY folds there are -- it is that no disclosure is inside ANY of them,
+// which is what this now asserts.
+//
+// Counting would have failed on a correct change and passed on the defect it
+// was written for, if that defect ever arrived alongside a fold being removed.
+const support = folds.filter((f) => String(f.className).includes("support"));
+const audit = folds.filter((f) => String(f.className).includes("audit"));
+
+if (support.length > 1) {
+  fails.push(`expected at most 1 support fold, rendered ${support.length}`);
+}
+if (audit.length > 1) {
+  fails.push(`expected at most 1 audit fold, rendered ${audit.length}`);
+}
+for (const fold of folds) {
+  if (fold.open) {
+    fails.push(`a ${fold.className} fold is open by default`);
+  }
   const inside = [];
-  walk(folds[0], true, inside);
-  if (inside.length) fails.push(`${inside.length} disclosure(s) inside the fold`);
+  walk(fold, true, inside);
+  if (inside.length) {
+    fails.push(`${inside.length} disclosure(s) inside the ${fold.className} fold`);
+  }
 }
 
 // The advocate's own words are set apart.

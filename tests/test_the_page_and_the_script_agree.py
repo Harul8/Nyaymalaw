@@ -124,16 +124,24 @@ def test_the_build_banner_draws_above_the_gate():
     """MEASURED, 6 September 2026, and it nearly shipped.
 
     The banner was in the DOM, `hidden` was false, and the text was right --
-    and it was drawn UNDERNEATH the sign-in screen, because `.gate` is
-    `position: fixed; inset: 0; z-index: 100` and covers the viewport. It was
-    invisible in the one place the staleness it warns about was refusing
+    and it was drawn UNDERNEATH the sign-in screen, because the sign-in gate
+    is `position: fixed; inset: 0; z-index: 100` and covers the viewport. It
+    was invisible in the one place the staleness it warns about was refusing
     registrations.
 
     `hidden === false` was true and meant nothing. A control that is correct
     and unreachable is the shape this whole build keeps paying for, and the
     only thing that found it was looking at the pixels.
+
+    THE SELECTOR MOVED FROM `.gate` TO `#gate` on 8 September 2026, and the
+    reason is the second half of this same lesson. `.gate` had TWO owners --
+    this overlay and a gate FIRING inside an answer -- so every disclosure in
+    an advocate's answer inherited `position: fixed; inset: 0; z-index: 100`
+    and painted the whole application white. The overlay is one element with
+    an id, so it is addressed by one; `tests/test_no_css_class_has_two_owners
+    .py` refuses the next collision.
     """
-    assert _z_index(".build-warning") > _z_index(".gate"), (
+    assert _z_index(".build-warning") > _z_index("#gate"), (
         "the build banner stacks below the sign-in gate, so it is invisible "
         "on the screen where a stale server does its damage")
 

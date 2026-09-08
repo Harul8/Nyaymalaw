@@ -36,7 +36,7 @@ from nm.adapters.store.file_store import FileMatterStore
 from nm.bootstrap.composition import build_model
 from nm.core.turn import TurnEngine, TurnInput
 from nm.ports.model import Tier
-from tests.test_turn_contract import KEY, _Evidence
+from tests.test_turn_contract import KEY, _Evidence, briefed
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -131,11 +131,11 @@ def test_the_same_turn_runs_under_a_flipped_provider_with_no_source_change(tmp_p
     for name, responses in (
             ("scripted-a", {"__default__": "File the suit within the window."}),
             ("scripted-b", {"__default__": "Confirm the date of dispossession."})):
-        engine = TurnEngine(
+        engine = briefed(TurnEngine(
             store=FileMatterStore(tmp_path / name, key=KEY),
             evidence=_Evidence(),
             model=ScriptedModelAdapter(_config("scripted", "scripted-1"),
-                                       responses=responses))
+                                       responses=responses)))
         out = engine.run(TurnInput(advocate_id="adv", message=BRIEF))
         outputs[name] = out
         assert out.answer.elements, f"{name}: no answer"
@@ -170,13 +170,13 @@ def test_the_live_provider_serves_the_same_turn_and_the_delta_is_recorded(tmp_pa
     load_dotenv(ROOT / ".env")
     config = load()
 
-    scripted = TurnEngine(
+    scripted = briefed(TurnEngine(
         store=FileMatterStore(tmp_path / "s", key=KEY), evidence=_Evidence(),
         model=ScriptedModelAdapter(_config("scripted", "scripted-1"),
-                                   responses={"__default__": "File within time."}))
-    live = TurnEngine(
+                                   responses={"__default__": "File within time."})))
+    live = briefed(TurnEngine(
         store=FileMatterStore(tmp_path / "l", key=KEY), evidence=_Evidence(),
-        model=build_model(config))
+        model=build_model(config)))
 
     s_out = scripted.run(TurnInput(advocate_id="adv", message=BRIEF))
     l_out = live.run(TurnInput(advocate_id="adv", message=BRIEF))

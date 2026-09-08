@@ -28,6 +28,19 @@ dev = [
     "openpyxl>=3.1",
     "httpx>=0.27",
 ]
+# BK-30's browser half, and it is separate from `dev` on purpose.
+#
+# The journey harness runs the PAGE: responsive navigation at three widths,
+# keyboard-only movement, reload and draft recovery, and a logout the server
+# refuses. None of that is reachable from `TestClient` --
+# `tests/test_the_page_and_the_script_agree.py` says in as many words that it
+# does not run the page, and that is where the measured defects lived.
+#
+# IT IS ITS OWN EXTRA BECAUSE IT SHIPS A BROWSER BINARY. `pip install -e
+# .[dev]` must stay a fast, offline-able step; a contributor who wants the
+# journey suite asks for it, and the suite says so by name when the import
+# is missing rather than skipping quietly.
+journey = ["playwright>=1.47", "pytest-playwright>=0.5"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["nm"]
@@ -40,6 +53,11 @@ markers = [
     "class_b: needs an answer to inspect. Asserted at runtime on every served turn.",
     "class_c: needs the corpus. Runs on every ingest or index change.",
     "class_d: needs a rubric and a judge model. APPROVED RUNS ONLY.",
+    # BK-30. Not a fifth class of eval -- it is the SAME product driven
+    # through the surface an advocate actually touches, and it is marked
+    # separately only because it starts a browser and cannot run in the
+    # every-commit cadence.
+    "journey: drives the real page in a browser. Needs `.[journey]`.",
 ]
 
 [tool.ruff]

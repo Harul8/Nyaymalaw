@@ -332,16 +332,87 @@ class FileDirectory:
             return None
         return session
 
-    def close_session(self, token: str, why: str) -> None:
+    def sessions_for(self, advocate_id: str) -> tuple[Session, ...]:
+        """Every session issued to this advocate, live or ended. BK-31.
+
+        BOTH, AND THE CALLER DECIDES. An advocate asking "where am I signed
+        in" is asking a security question, and the answer *"one session, this
+        device"* is worth nothing unless they can also see the one that ended
+        an hour ago on a device they do not recognise. Filtering here would
+        make the interesting half unreachable.
+
+        A SESSION THAT WILL NOT DECODE IS NOT DROPPED SILENTLY -- it is
+        counted by the caller through `unreadable`, because a device list
+        missing a row is the one thing worse than no device list.
+        """
+        out: list[Session] = []
+        if not self._sessions.exists():
+            return ()
+        for path in sorted(self._sessions.glob("*.nm")):
+            session = self._read_session(path.stem)
+            if session is not None and session.advocate_id == advocate_id:
+                out.append(session)
+        return tuple(out)
+
+    def close_all_sessions(self, advocate_id: str, why: str,
+                           except_token: str = "") -> int:
+        """End every session this advocate holds. Returns how many were ended.
+
+        THE COUNT IS THE POINT. "Signed out everywhere" with no number is a
+        claim the advocate cannot check, and the case they use this in --
+        a device they no longer control -- is exactly the case where they
+        need to know it worked.
+
+        `except_token` KEEPS THE SESSION THEY ARE ASKING FROM, because
+        signing an advocate out of the device they are typing on in order to
+        secure the others is a control nobody uses twice.
+        """
+        from dataclasses import replace
+
+        keep = token_fingerprint(except_token or "")
+        ended = 0
+        for session in self.sessions_for(advocate_id):
+            if session.token_fingerprint == keep or session.ended_because:
+                continue
+            self._write_session(replace(session, ended_because=why))
+            ended += 1
+        return ended
+
+    def close_session(self, token: str, why: str) -> str:
+        """End a session. Returns WHICH of three things happened.
+
+        IT RETURNED `None` AND SAID NOTHING, and `/api/logout` answered
+        `{"signed_out": true}` on top of that — whether a live session had
+        been ended, whether it was already closed, or whether the token named
+        nothing at all. Three different facts, one confident answer, which is
+        defect shape S1 on the one route whose whole job is to be believed.
+
+        It matters because the browser believed it. BK-40's measured
+        counterexample is a logout the server never received being shown to
+        the advocate as a sign-in screen — and on a shared machine, that
+        screen IS the protection.
+
+            closed         a live session was ended just now
+            already_ended  it existed and was already closed
+            unknown        no session answers to this token
+
+        `unknown` LEAVES THE CALLER SIGNED OUT and is still not a
+        confirmation: the token cannot authenticate, and nothing was ended,
+        so a session held under another token is untouched. The route reports
+        both facts rather than collapsing them.
+        """
         fingerprint = token_fingerprint(token or "")
         session = self._read_session(fingerprint)
         if session is None:
-            return
+            return "unknown"
+        if getattr(session, "ended_because", None):
+            return "already_ended"
         # ENDED, NOT DELETED. A closed session that vanished would be
         # indistinguishable from one that never existed, and an operator
         # reading the audit could not tell a sign-out from a forged token.
         from dataclasses import replace
         self._write_session(replace(session, ended_because=why))
+        return "closed"
 
     # ---------------------------------------------------------------- audit ---
 

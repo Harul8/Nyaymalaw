@@ -32,7 +32,7 @@ from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.model.traced import TracedModel
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
-from tests.test_turn_contract import KEY, _Evidence, _model_config
+from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
 
@@ -76,10 +76,10 @@ def _material_for(judge, root: pathlib.Path, matter_id: str) -> str:
 def _withheld_matter(tmp_path) -> tuple[str, pathlib.Path]:
     """A matter whose only turn was WITHHELD, and the root holding it."""
     store = _store_at(tmp_path)
-    engine = TurnEngine(
+    engine = briefed(TurnEngine(
         store=store, evidence=_Evidence(),
         model=TracedModel(inner=_CitesWhatWasNotRetrieved(
-            _model_config(), responses={"__default__": "Issue the notice."})))
+            _model_config(), responses={"__default__": "Issue the notice."}))))
     with pytest.raises(TurnRefused) as refused:
         engine.run(TurnInput(
             advocate_id="adv_1", today=TODAY,
@@ -142,11 +142,11 @@ def test_a_served_turn_is_still_scored_in_full(tmp_path, monkeypatch):
     and score nothing — which is B-049's shape, a checker that always returns
     empty."""
     store = _store_at(tmp_path)
-    engine = TurnEngine(
+    engine = briefed(TurnEngine(
         store=store, evidence=_Evidence(),
         model=TracedModel(inner=ScriptedModelAdapter(
             _model_config(),
-            responses={"__default__": "Issue the notice and diarise it."})))
+            responses={"__default__": "Issue the notice and diarise it."}))))
     out = engine.run(TurnInput(
         advocate_id="adv_1", today=TODAY,
         message=("We act for the plaintiff at Hyderabad on an agreement of "

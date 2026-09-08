@@ -30,6 +30,31 @@ of mostly disclosures, and on a textbook goods-sold brief the product worked
 the elements of a DIFFERENT cause of action and called the client's best fact
 adverse to him.
 
+**Current-build reconciliation — 8 September 2026, `6e29cf0`.** The first
+journey drive below led to four commits. The rows remain here because this is
+the record, but their present status is now explicit:
+
+| finding | status | evidence on the current build |
+|---|---|---|
+| J-1 matter list | **PLANNED** | The projection still uses the opening 60 characters as the matter name, puts the advocate id in `client`, and exposes version as `last_touched`. |
+| J-2 cause read | **DONE, preserve** | `fcaacf6` gave each closed cause a distinguishing definition; the eight causes plus refusal measured 9/9. The focused regression pack passed on this tree. |
+| J-3 adverse read | **DONE, preserve** | `fcaacf6` passes the side into the adverse read. The focused regression pack passed on this tree. |
+| J-4 automatic split | **PARTLY DONE** | `6e29cf0` stopped acting on the unstable count and stopped comparing unconfirmed sibling splits. The count is disclosed for advocate confirmation. A browser-level confirmation flow is still absent. |
+| J-5 internal ids | **PARTLY DONE** | `6e29cf0` removed ids from cross-file exposure prose. On the current served path `G-POSTURE` still displayed `thr_4adf2dc95f5e`, and History displayed `TURN_…`, `MAT_…`, `THR_…`, fact ids and the full model trace. |
+| J-6 answer shape | **CLOSED by BK-37** | The answer is filed under the question each line answers, repeated gaps carry a count, and a courtesy reply is no longer folded into invisibility. Journey phase 5c reads the section order back off the page. |
+| J-7 engineering register | **CLOSED by BK-37** | Gate ids, rule ids, token counts and the trace line are out of advocate mode and still reachable behind `How this answer was made`; the masthead reads `Corpus ready`. Journey phases 5b and 5d assert both. The search court filter is BK-38 and remains open. |
+
+The focused pack for the offline fixes — withheld conclusions, concurrent
+writes, cause definitions, side-aware adverse reading, honest cross-file
+comparison and dispute-count handling — is **34/34 passing** on `6e29cf0`.
+
+**Status discipline for all journey work from this point.** `PLANNED` means no
+product-code work has begun. Before the first product edit, the relevant row
+moves to `IN PROGRESS` and records the exact scope. `DONE` requires the commit,
+the focused automated evidence, and the served-browser evidence to be written
+back into that row. `BLOCKED` must name the decision or dependency. No journey
+change is to exist only in a commit message.
+
 ---
 
 ### J-1 — The file list cannot tell one matter from another
@@ -226,6 +251,8 @@ the internal narration removed.
 
 ---
 
+**CLOSED by BK-37, 8 September 2026.** The answer is filed under the question each line answers, the working is behind a closed `How this answer was made`, repeated gaps carry a count, and a courtesy reply is no longer folded into invisibility.
+
 ### J-7 — The header and the search surface speak engineering to the advocate
 
 Header, on every screen:
@@ -255,6 +282,8 @@ current, what was searched. Replace the percentage with a rank band, or drop
 it.
 
 ---
+
+**CLOSED by BK-37, 8 September 2026.** Gate ids, rule ids, token counts and the trace line are out of advocate mode and still reachable; the masthead reads `Corpus ready` rather than a provider, cipher and manifest dump. Journey phases 5b and 5d assert both, and 5b asserts the working is still complete when opened — so the fix cannot become a deletion.
 
 ### J-8 — What works, and must not be broken while fixing the above
 
@@ -288,9 +317,1068 @@ Said plainly, because it is the half worth protecting:
    items so that what is being shaped is correct.
 7. **J-7** the register of the header and the search surface.
 
+That was the order after the first drive. The current-build drive below found
+two P0 seams — cause-specific accrual and contradictory action output — so the
+implementation waves after BK-42 supersede this order without erasing it.
+
 ---
 
-### BK-29 - sixteen hand-picked token ceilings, and five reads that echo verbatim spans
+## Current-build end-to-end journey plan — login to confirmed logout
+
+**Forensic pass.** Driven on 8 September 2026 against the clean committed tree
+at `6e29cf0`, through `nm.bootstrap.main`, with the scripted model, real corpus,
+Fernet store, isolated test account and isolated temporary matter store. The
+browser journey covered registration, sign-in, courtesy message, matter
+opening, posture clarification, completed advice, corpus search, a natural
+court filter, History, page reload, failed-server logout, successful logout and
+post-logout state. Code was then followed through the API, projections, turn
+engine, store and browser renderer. Scripted output is not evidence of real
+model quality; it is evidence of what the product accepts and serves when a
+configured provider returns that output.
+
+**Journey contract.** This programme is complete only when an advocate can:
+
+1. prove who they are, recover access and see which firm/workspace governs the
+   file;
+2. find an existing matter or deliberately open a new one on desktop and
+   narrow screens;
+3. identify client, opponent, subject and urgency before substantive work;
+4. clear the conflict, engagement, competence, capacity and emergency screens,
+   or see a named and recorded emergency exception;
+5. state the account once, have it stored once, and correct or retry it without
+   duplication or loss;
+6. receive a position whose cause, accrual trigger, period, authorities,
+   findings and action agree with each other;
+7. move from search result to citable authority and, deliberately, into the
+   matter record;
+8. close and reopen the file with the same summary, chronology, open questions,
+   served answers and next step;
+9. survive provider failure, stale writes, an expired session and a lost HTTP
+   response without a false success or a lost brief; and
+10. sign out with server confirmation, after which reload cannot restore the
+    matter.
+
+### BK-30 — executable login-to-logout acceptance journey — **DONE**
+
+**Phase:** the whole journey; this is the measurement harness for every row
+below.
+
+**Good now:** domain and served-path tests are extensive, current offline fixes
+have focused regressions, and the stale-build banner catches an old process.
+
+**Gap observed:** `tests/test_the_page_and_the_script_agree.py` explicitly does
+not run the page. The JS partition test runs one function in a DOM stub. That
+left responsive navigation, courtesy-answer folding, matter restoration,
+natural court filtering, raw History, session expiry and failed logout outside
+one executable contract.
+
+**Change:** add a real browser suite that starts the composition root against a
+temporary encrypted store and deterministic provider. Keep fixtures legal and
+fictional. Cover 390px, 768px and 1280px widths; keyboard-only navigation;
+registration/login/recovery; new and existing matters; a blocking question and
+its answer; a completed turn; search; History; reload; 401; lost response;
+concurrent write; failed and successful logout. Run a small, separately marked
+real-model smoke only when credentials are deliberately supplied.
+
+**Acceptance:** one command produces a phase-by-phase result and artifacts for
+any failed phase; it fails on a blank-but-authenticated landing, hidden matter
+navigator, internal identifier, raw trace, inconsistent action/deadline,
+unconfirmed logout, dropped draft or duplicated retry. Every later BK row adds
+its own counterexample to this suite.
+
+**Dependencies:** none.
+
+**Done, 8 September 2026.** One command:
+
+```
+python tools/journey.py
+```
+
+It starts the real composition root on a real port against a temporary
+encrypted store and a scripted provider (`tools/served.py`, which is now the
+single owner of that composition — `tests/conftest.py`'s `client` fixture had
+been the only place that knew how), drives Chromium through sixteen phases,
+and prints a table with **PASS / REPRODUCED / FAILED / NOT RUN** plus a
+screenshot and the page's HTML for everything that did not pass.
+
+`NOT RUN` is a state, not a silence: a missing browser, a server that will not
+start or a collection error can never leave a green line. `playwright` is a
+separate `[journey]` extra so `.[dev]` stays fast and offline-able, and the
+suite names the extra when the import is missing.
+
+**Standing at close: 11 pass, 5 reproduced, 0 unexplained.** The reproduced
+five are `xfail(strict=True)` and each names its row — BK-32 at 390px and
+768px, BK-40 twice, J-7 once. Strict is the point: when BK-32 lands the phase
+passes, and a strict xfail that passes is an ERROR telling you to delete the
+marker. A defect recorded this way can be neither quietly fixed nor quietly
+forgotten.
+
+**WHAT IT FOUND ON ITS FIRST REAL RUN, and this is the argument for the whole
+row.** `web/app.css` declared `.gate` twice — once for a gate FIRING inside an
+answer, once for the full-screen sign-in overlay (`position: fixed; inset: 0;
+z-index: 100`). The second is later in the cascade, so it won. **Every
+disclosure in an answer became a full-screen opaque overlay.** An advocate who
+submitted a brief was shown a blank white page carrying one centred line —
+`G-EXPOSURE · none_found · 0 exposure(s)` — with the advice, the citations, the
+limitation position and the questions all painted over, and the tab bar beneath
+unclickable.
+
+Every test in the repository passed. The served JSON was correct, the engine
+was correct, and `test_the_page_and_the_script_agree.py` checks names rather
+than layout and says so in its own docstring. A right answer nobody could
+read — this repository's founding failure, written in a stylesheet.
+
+Fixed by giving the overlay the id it already had (`#gate`) and leaving
+`.gate` one owner. `tests/test_no_css_class_has_two_owners.py` refuses the
+next collision, and it is class_a — the sweep counts a rule whose ENTIRE
+selector is one bare class, because counting membership in a grouped selector
+reported six collisions in this stylesheet on the first run, all correct code,
+and a check that fires on correct code is one that gets switched off.
+
+**Three harness defects it found in itself, all the same shape.** A phase that
+reads the page too early does not fail — it passes on less than it claims to
+have looked at. `_advise` waited for `.turn`, which appears before the answer
+is drawn; phase 5b asserts gate ids ARE on screen and XPASSED because none had
+rendered yet; `_tab` slept 2000ms instead of waiting for the pane. All three
+now wait for the thing they judge.
+
+**Not covered, named rather than implied.** The journey suite is excluded from
+`tools/check.py` (`-m "not class_d and not journey"`): it needs a browser
+binary `.[dev]` does not install and adds two minutes to a seven-minute gate.
+So a regression under `web/` does not fail the per-commit gate. It failed
+nothing before either — which is how `.gate` acquired two owners — but the
+exclusion is a decision and is written into `check.py` beside the command that
+does find it.
+
+### BK-31 — account access, recovery and workspace identity — **PARTLY DONE · P1**
+
+**Phase:** registration and sign-in.
+
+**Good now:** the app gates matter data until `/api/session` resolves, clears
+password fields after submission, binds a session to a device, rate-limits
+failures and shows the signed-in advocate's name, enrolment, practice and firm.
+A successful registration has a clear outcome screen.
+
+**Gap observed:** there is no forgotten-password or account-recovery journey,
+email verification, MFA, session/device management or way to revoke other
+sessions. Bar enrolment, practice and firm are optional even though the copy
+says the firm governs the conflict registry. The public sign-in path gives
+different messages for an unknown email and a wrong password; that is helpful
+inside a controlled roster and account enumeration on a public endpoint.
+
+**Change:** first record the deployment decision: controlled private roster or
+public self-enrolment. Then implement recovery with single-use, expiring tokens;
+verified email; MFA or an explicit risk acceptance; session/device list and
+revocation; accessible validation; and a truthful workspace/firm selector or a
+required verified firm. Use one generic recovery response on a public surface.
+Do not claim a firm-wide conflict check until a verified firm membership and a
+working registry exist.
+
+**Acceptance:** an advocate with a forgotten password can recover without an
+operator or learning whether another address exists; a compromised session can
+be revoked; the active workspace is unmistakable before any client fact is
+entered; registration cannot create a false assurance about conflict scope.
+
+**Dependencies:** BK-30; BK-34 for the final conflict-scope claim. **Why not
+done:** the directory currently implements enrol/login/session/logout, not the
+rest of the account lifecycle.
+
+**The deployment decision, recorded 8 September 2026: a CONTROLLED
+PRIVATE ROSTER.** Advocates are enrolled; self-registration is closed or
+approval-gated. That is why the sign-in path may keep distinguishing an
+unknown handle from a wrong password — the roster is not public, and the
+message is worth more to the advocate than the enumeration is to a stranger.
+If this becomes public self-enrolment, one generic response and a verified
+address come with it, and this row reopens.
+
+**Done — the false assurance is gone.** The sign-in page said *"the firm whose
+conflicts registry governs the session"*. There is no firm-wide registry:
+BK-34's conflict screen checks the matters THIS advocate holds and says so in
+its own words. A promise about the one check whose whole value is being
+trusted is the worst place in the product to be approximately right, and
+BK-31 says so in as many words.
+
+**Done — sessions can be seen and revoked.** `GET /api/sessions` lists every
+session issued to the advocate, live and ended, with device, issue and expiry,
+and which row is the one they are asking from. `POST /api/sessions/revoke`
+ends the others and RETURNS THE COUNT — "signed out everywhere" is
+unverifiable otherwise, and the case this exists for is a device they no
+longer control. The session they are asking from survives, because a control
+that logs you out to protect you is used once.
+
+No token and no fingerprint reaches the wire: the fingerprint is what the
+server matches a cookie against, and a device list is not worth putting that
+in a browser.
+
+**Counterexample:** `tests/test_an_advocate_can_see_and_revoke_sessions.py`,
+six tests including that revoking twice reports `0` the second time — the
+count is a report, not a reassurance.
+
+**NOT DONE: account recovery.** It needs a delivery channel this deployment
+has not chosen, and inventing one would be worse than the gap: a single-use
+expiring token is only as good as the path it travels, and a token emailed by
+a product with no verified address is a way IN rather than a way back. That is
+the next decision this row needs, not the next commit.
+
+Also not done: MFA or a recorded risk acceptance, and a workspace/firm
+selector.
+
+### BK-32 — responsive advocate home and matter navigation — **DONE**
+
+**Phase:** immediately after sign-in, and movement between Advise, Search and
+History.
+
+**Good now:** the three primary surfaces are few and understandable, the
+composer is visually quiet, and an empty matter list says to brief a new one.
+
+**Gap observed:** at the served browser width the masthead wrapped “Search the
+corpus”, advocate identity and sign-out into narrow vertical strips. At
+`max-width: 820px`, CSS hides `.rail`, which contains both the matter list and
+“Brief a new matter”, with no replacement. The signed-in home becomes a large
+blank sheet plus a textarea. Provider/model/tier/cipher/corpus diagnostics take
+the scarce header space.
+
+**Change:** create a responsive application shell with a compact identity menu,
+stable primary navigation and a drawer/sheet for matters and threads below
+820px. Put a visible “New matter” action, recent matters, urgent/open items and
+an intentional empty state on the landing surface. Move engineering health to
+an operator/status surface; show advocates only actionable service state such
+as “research temporarily unavailable”. Preserve focus, back behaviour and the
+current draft while changing panes.
+
+**Acceptance:** at 390/768/1280 widths an advocate can start, find and switch a
+matter, reach Search and History, identify the active workspace and sign out;
+nothing overlaps, clips, disappears or depends on hover. Keyboard and screen
+reader order match visual order.
+
+**Dependencies:** BK-30. **Why it had not been done:** the only narrow-width rule removes
+the rail rather than transforming it.
+
+**Done, 8 September 2026.** `web/app.css` had `@media (max-width: 820px) { .rail
+{ display: none } }` and nothing else reached the matter list, so an advocate on
+a phone could work the matter they were in and get to no other one. A
+`#matters-toggle` in the masthead now opens the rail over the conversation at
+narrow widths, `aria-expanded` tracks it, and choosing a matter closes it.
+
+The rule asserted is REACHABLE, not visible: a drawer, a tab or a menu all
+satisfy it, and the rail sitting beside the conversation at 1280px is one way of
+many. `tests/test_the_journey_login_to_logout.py` phase 3 drives 390px, 768px
+and 1280px in a real browser.
+
+**A defect in the counterexample itself, worth recording.** The first version of
+phase 3 called `pytest.xfail(...)` before the assertion whenever `width < 820`,
+so the phase could never pass however the product changed — BK-32 was fixed and
+it still reported the defect. That is S11 wearing the costume of a check that
+bites, and it is the third time in this row's work that a check reading the page
+too early or not at all passed on less than it claimed.
+
+### BK-33 — recognisable matter cover, truthful board and real reopen — **PARTLY DONE · P0**
+
+**Phase:** selecting, reopening and orienting inside a matter. This completes
+J-1.
+
+**Good now:** matter ownership is enforced server-side; unreadable matters are
+reported instead of silently omitted; matter and thread row counts are bounded
+on the correct axis; unresolved posture is loud; `/summary` already exposes an
+auditable projection of the file.
+
+**Gap observed:** `_load_or_create` and the projection still use the first 60
+characters of the opening message as title, cut mid-word. `client` is the
+advocate id, `last_touched` is a version number, `our_client_is` is a procedural
+role, forum is always “not established” and stage always “opening”. The API
+deliberately supplies no deadline register, yet JS converts
+`next_deadline_status=not_assessed` into “none recorded”. Selecting a matter
+only loads its thread board; the browser never calls `/summary` and never
+restores the served conversation. Reloading a live authenticated session showed
+a blank Advise pane.
+
+**Change:** add explicit matter-cover fields with provenance: matter name,
+client name, opponent(s), subject, forum/case number and last activity time.
+Make `not assessed`, `none`, `upcoming` and `passed` distinct rendered values.
+Derive the board from persisted thread deadline registers, not a missing
+argument. On selection/reload, load summary, transcript, chosen thread, open
+questions, last served answer and draft; expose rename/correct controls without
+rewriting history.
+
+**Acceptance:** ten similar matters remain distinguishable by who/what/where/
+when; dates sort truthfully; “none” is shown only after assessment; passed
+deadlines remain visible; reload/reopen restores context and the next message
+is bound to the matter/thread the advocate selected.
+
+**Dependencies:** BK-30, BK-32, BK-39. **Why not done:** the data model and UI
+currently treat the initial prose and version counter as file-cover metadata.
+
+**Done, 8 September 2026 — the cover and the deadline column.**
+
+**The list now says who.** `client` was `m.advocate_id` — the advocate's own
+id, which is the one thing every row on their own list has in common, so the
+column that exists to tell ten matters apart told them apart by nothing. It is
+the client's name now, with the opponent beside it, both from BK-34's intake.
+
+**The matter is named for its parties.** `X v Y`, which is how every cause
+list an advocate has read names a file. Where intake has no parties the
+opening sentence is cut ON A WORD BOUNDARY — `message[:60]` produced ten rows
+beginning *"We act for the plaintiff at Hyderabad. Goods were suppl"*.
+
+**`last_touched` is a date.** It was `m.version`, a counter of writes, so a
+matter written nine times sorted above one written twice yesterday. The sort
+key was `-(last_touched or 0)` and raised `bad operand type for unary -: 'str'`
+the moment it became a real date — worth recording, because the expression had
+been wrong about what it was sorting for as long as it had existed.
+
+**The deadline column stopped lying, and this is the one that could hurt
+somebody.** Both projections take a register, both refuse to default, and both
+were called with `None` — so every row on every board reported `not_assessed`
+while `Thread.deadlines` held what the last turn derived. The browser then
+rendered `next_deadline || 'none recorded'`, collapsing *"nobody has worked out
+the deadlines on this file"* into *"this file has no deadlines"*. Those are
+opposite facts, and an advocate acting on the second while the first is true
+has been told the file is clear by a product that never looked — S1, at the
+top of the list they scan first thing in the morning.
+
+The projection's own docstring had already named the risk: a default of `()`
+would be *"a decision taken on behalf of every call site that forgets one"*.
+Every call site forgot.
+
+**A defect the fix uncovered.** `Thread.deadlines` is `tuple[object, ...]` —
+untyped for the import-cycle reason every persisted derivation here carries —
+so the store hands back DICTS and `_thread_row` reads `d.thread`. Passing the
+raw rows raised `AttributeError: 'dict' object has no attribute 'thread'` on
+the first board that had ever been advised on. They are rehydrated at the one
+place that reads them, and a row that cannot be rebuilt is skipped WITHOUT the
+register being dropped: losing the whole register over one bad row would
+report `not_assessed` for a file where somebody did look.
+
+**Counterexamples:** `tests/test_the_matter_cover_tells_ten_files_apart.py`,
+eight tests — the name and its word-boundary fallback, the client column, the
+date, and the four deadline states on both the list and the board, plus the
+renderer's own four branches.
+
+**The conversation comes back with the file.** Opening a matter loaded its
+thread board and nothing else, so a reload of a live authenticated session
+landed on a blank Advise pane — signed in, file present, everything the
+advocate had been told gone from the screen. `restoreConversation` reads the
+transcript, which is the only thing that keeps what was SERVED: the matter
+holds facts and the metrics hold counts with no client words.
+
+A RESTORED TURN SAYS IT WAS RESTORED. The transcript does not keep the run's
+latency, calls or cost, and rendering them as zeros would put a measurement
+nobody made under a turn that really cost something. The working says `read
+back from the record` instead.
+
+**Two defects the restore produced, both caught by the journey.** It ran on
+EVERY `showThreadBoard`, which happens after every send — so the turn just
+served was silently replaced by its read-back copy and lost its gates and
+metrics. And `renderTurn` read `metrics.gates_fired` before the null guard,
+which threw inside `repaint` and rendered NOTHING, looking exactly like a
+matter with no conversation on it.
+
+**NOT DONE.** Rename and correct controls do not exist. Forum and case number
+are not captured at intake, so the cover still shows `forum: not established`
+on every file. `/summary` is still not called on selection, so the open
+questions are not restored with the conversation.
+
+### BK-34 — front-door legal and professional screens before substance — **DONE**
+
+**Phase:** matter intake before substantive analysis.
+
+**Good now:** the five screen kinds and four honest states exist; the screen
+decision runs before fact admission; unmet screens are persisted and disclosed;
+the types distinguish clear, blocked, incomplete and not assessed.
+
+**Gap observed:** every screen producer is still a placeholder. `_run_screens`
+creates five `NOT_ASSESSED` values, `may_admit_substance` refuses them, and the
+engine then deliberately returns `clear=True, assessed=False` and proceeds with
+substance under a general “slice 10” exception. The current browser served this
+on every matter, including conflict, competence, scope, capacity and emergency.
+Registration simultaneously tells the advocate the firm's conflict registry
+governs the session, although no such screen runs.
+
+**Change:** implement intake that identifies client, adverse parties, related
+parties, instruction source/scope, decision owner, forum/subject and urgency.
+Run the conflict registry against the verified workspace and party set; record
+partial registry failures as incomplete. Add competence and engagement review
+with a named human release. Keep a narrow emergency exception for liberty or
+irreversible deadlines, record who invoked it and why, and queue unresolved
+screens for completion. Remove the general unscreened-substance exception.
+
+**Acceptance:** no ordinary matter persists or derives substantive client facts
+until every required screen clears; adding a party makes an earlier conflict
+clearance stale; an incomplete registry never reads clear; an emergency matter
+can proceed only with the exception visibly recorded; the browser never says a
+firm-wide check ran when it did not.
+
+**Dependencies:** BK-31, BK-30. **Why it had not been done:** the domain contract is built,
+but every live producer is explicitly deferred.
+
+**Done, 8 September 2026.** Every screen has a producer, the blanket exception
+is gone, and the gate matrix stopped being a release behind the code.
+
+**Two standing product decisions, recorded here so they are not re-litigated.**
+
+1. **The deployment is a CONTROLLED PRIVATE ROSTER.** Advocates are enrolled;
+   self-registration is closed or approval-gated. The sign-in path may keep
+   distinguishing an unknown handle from a wrong password, because the roster
+   is not public and the message is worth more to the advocate than the
+   enumeration is to a stranger. If this ever becomes public self-enrolment,
+   BK-31's generic-response requirement and email verification come with it.
+2. **The signed-in advocate is the NAMED RELEASER** for engagement scope and
+   capacity, and the answer is recorded on the matter with who and when.
+   Requiring a second person would stop every matter at intake in a solo
+   practice — not a stricter product, an unusable one.
+
+**What each screen now does.**
+
+| screen | answered by | blocks? |
+|---|---|---|
+| CONFLICT | the party set, against **this advocate's own matters** | yes, on an opposite-side match |
+| COMPETENCE | the measured coverage profile | **no** — the matrix says DISCLOSE |
+| EMERGENCY | whether one is declared on the file | yes, if declared |
+| SCOPE | the advocate, once, at intake | until answered |
+| CAPACITY | the advocate, once, at intake | until answered |
+
+**A recorded engagement is a screen that RAN, not a finding that was lifted.**
+Modelling it as a `Release` ran straight into `Screen.__post_init__` — *"a
+release lifts a finding; a screen with nothing to lift did not need one"* —
+and the type was right. `Release` stays what it was, for lifting a real
+finding such as a conflict the advocate accepts. That is **not built**, and it
+is the honest gap in this row: an advocate who hits a conflict block today has
+no way to accept it and proceed.
+
+**The conflict screen claims exactly what it does.** It checks this advocate's
+own files and says so in its own detail — *"THIS IS YOUR OWN FILES, not a
+firm-wide registry"*. BK-31's instruction was explicit: do not claim a
+firm-wide check until a verified firm membership and a working registry exist.
+
+**Intake comes before the brief, and the sequencing is forced.** The screens
+run in ADMIT-A, before any fact is admitted, so the conflict screen cannot be
+run against parties read out of a brief it has not admitted — and admitting
+the brief to read them is what B3 forbids. So the advocate is asked who is
+involved when they open the file, and `nm/core/parties.py` reads any further
+party out of each brief for the NEXT turn's screen, which is what
+`Screen.stale_for` has always needed and never had.
+
+**Blast radius, and it was the work.** 191 class-A tests failed on the first
+cut. Down to zero through: a `blocking_question` the block never carried (191
+`an Element must say something`); a `briefed` fixture so tests that are not
+about intake still test what they were written for; a sweep of that fixture
+across every direct `TurnEngine(...)` in `tests/` — *`build()` was fixed first
+and forty tests still failed, because forty build their own engine, which is a
+fix applied at the site the failure was noticed at*; the coverage port wired
+into the fixture because the composition root wires one; and five tests that
+encoded the pre-BK-34 contract, each moved with a note saying what changed.
+
+**A defect in my own wrapper worth keeping.** `briefed` forwarded attribute
+READS and not writes, so `engine._model = _Ungrounded(...)` set the model on
+the wrapper and three tests that provoke a withheld turn silently stopped
+provoking one — reporting *"the turn was not withheld, so this test is
+measuring an ordinary turn"*, which is exactly what they were written to
+refuse. A wrapper transparent in one direction discards half of what is done
+to it.
+
+**Counterexamples:** `class_a` green; journey phases 1-13 pass with intake
+answered in a real browser (16 pass, 1 reproduced, 0 unexplained).
+
+**Not done, named rather than implied.** The `Release` path for accepting a
+conflict finding; a firm-wide registry (BK-31); and the emergency screen reads
+only whether one was DECLARED — `Matter.emergency_because` has no writer and
+is declared RESERVED, because declaring an emergency is G-EMERGENCY's own
+condition and detecting danger in ADMIT-A cannot ask a model without sending
+it the material the screens exist to hold back.
+
+### BK-35 — cause-specific accrual and answer-consistency gate — **DONE**
+
+**Phase:** computing and serving the legal position.
+
+**Good now:** cause selection is defined and exact-routes to retrieved law; the
+period is read from retrieved text rather than hard-coded; corrections,
+extending factors, coverage, sides and passed windows have explicit types; a
+wrong cause can be corrected visibly.
+
+**Gap observed on `6e29cf0`:** `_limitation` chooses the first dated chronology
+entry as accrual for every cause. A specific-performance brief gave a 2023
+agreement and a 2024 written refusal, with no fixed performance date; the served
+answer ran Article 54 from the agreement and declared expiry on 2026-03-14,
+rather than resolving Article 54's applicable trigger. The action then said
+“Confirm the date of service and file within the window” while its own deadline
+annotation said every deadline had passed. The recommendation prompt expressly
+forbade that output, but no deterministic assembled-answer check rejected it.
+
+**Change:** model accrual as a cause/article-specific decision with candidate
+facts, the applicable statutory limb, exact provenance, confidence state and a
+blocking question where the trigger cannot be established. For Article 54,
+distinguish a date fixed for performance from notice of refusal; add equivalent
+rules/evals for every supported cause. Add an answer-consistency validator over
+the assembled typed result: action versus live/passed/unknown deadline, action
+versus posture, finding versus proof, and internal contradiction between
+elements. Repair once from typed facts or withhold the action—never trust prompt
+compliance as the guard.
+
+**Acceptance:** the reproduced specific-performance matter does not use the
+agreement date merely because it is earliest; every computed expiry names its
+trigger and statutory limb; ambiguous trigger blocks the date; an action cannot
+say file within a window that the same answer marks passed or unknown. The
+counterexamples run at the pure, engine, API and browser boundaries.
+
+**Dependencies:** BK-30.
+
+**Done — the accrual, in two halves.** `Edge.accrues_on` carries the trigger
+from the Schedule's own third column for all seven curated Articles, and
+`accrual_trigger_for` in `nm/knowledge/resolution.py` is its single lookup —
+the evidence adapter delegates to it rather than carrying a copy, and it
+crosses to the engine on the PORT (`EvidencePort.accrual_trigger`) rather than
+through `getattr`, which the dead-code sweep had correctly reported as
+unreachable. `nm/core/accrual.py` then reads WHICH dated entry satisfies the
+trigger, guarded by exact membership on the thread's own fact ids — a closed
+set generated per turn, so nothing is ranked. It answers the limb too, because
+Articles 14, 19 and 54 each have two and they give different dates.
+
+**The half that was already shipped had never once fired,** and that is the
+finding worth keeping. Every offline fixture's evidence double lacked
+`accrual_trigger`, so the engine's lookup returned `""` on every turn and the
+BK-35a refusal path was dead from the day it landed — CLAUDE.md §8, right in
+the core and absent at the fixture. The `except AttributeError` written around
+the port call was what hid it: an adapter that COULD NOT answer produced the
+same empty string as one saying *no curated trigger*, which is S1.
+
+**Done — the consistency gate.** `G-CONSISTENT`, response BLOCK, scope STEP,
+states `consistent | contradicted | repaired | not_verified`. It is NOT a
+phrase list: `nm/core/consistency.py` renders each of the turn's typed facts
+as one sentence with a stable id and asks which of THOSE the step contradicts,
+so the answer space is the turn's own computed facts and the guard is exact
+membership plus a quotation that must be in the step. A contradiction is
+rewritten ONCE from the typed facts and re-verified; a rewrite that still
+contradicts is not served, and the advocate gets the computed position and a
+question instead. It fails toward SERVING — a read that cannot run, names a
+fact it was not shown, or cannot quote what it objects to lands `consistent`
+with the refusal recorded, because refusing here deletes advice that is
+probably sound.
+
+**Counterexamples, with their mutation controls.**
+`tests/test_the_period_never_runs_from_an_unchosen_date.py` drives the accrual
+read both ways — told to name the last entry, then the first — because a
+product that had gone back to sorting passes the second and fails the first.
+Reverting the selection to `dated[0]` fails 3 of 7.
+`tests/test_a_step_cannot_contradict_the_figures.py` drives all six verdict
+branches; removing the block fails 2 of 11, and the served element in that
+failure is B-074 verbatim — *"File the recovery suit within the limitation
+period"* beside an annotation saying every deadline had passed.
+
+**Not done, and named rather than left implicit.** The reviewer's clause
+*"finding versus proof"* is not covered: `claims_for` builds claims from the
+limitation position, the deadline register and the side, and proof positions
+are not among them. They are per-element rather than per-thread, so a claim
+for them is a different shape and is not a line's work. The mechanism takes it
+without change — a new typed fact is a new claim builder, not a new phrase —
+and `test_every_limitation_state_becomes_a_claim` is the pattern the proof
+claim would extend.
+
+### BK-36 — durable, idempotent and recoverable turns — **DONE**
+
+**Phase:** submitting a brief and surviving failure.
+
+**Good now:** `b0cdc17` stops a withheld answer from persisting derived
+conclusions, and the per-matter lock plus exact version check prevents two
+writers silently winning. The API accepts a caller-supplied `turn_id`, and the
+engine does not apply the same id twice. Structured withheld responses retain
+their gaps.
+
+**Gap observed:** the browser clears the textarea before the request and sends
+no `turn_id`. If the server commits but the HTTP response is lost, a retry is a
+new turn and can duplicate the account; if the request fails before commitment,
+the only recoverable copy is the in-memory failed card, lost on reload or
+logout. A stale write is actionable in the store exception but has no browser
+re-derive/retry flow. Generic 500 responses still reduce to “The turn was
+refused: HTTP 500”.
+
+**Change:** generate and persist an idempotency key in the browser before send;
+keep an encrypted-at-rest or explicitly local draft/outbox with clear privacy
+semantics; send expected matter version; return committed/replayed/not-committed
+state and a support trace handle on every failure; automatically reload and
+re-derive after a stale write; make retry reuse the same turn id. Keep admitted
+facts, derived conclusions and served transcript in one transactional boundary
+or an explicit recoverable state machine.
+
+**Acceptance:** kill the connection before request, during model work, after
+commit and before response; in every case the advocate sees whether the brief
+was saved, can retry once, and the matter contains it exactly once. Two tabs
+cannot lose a turn. Reload preserves a pending draft without exposing another
+advocate's content.
+
+**Dependencies:** BK-30, BK-33; preserve the passing concurrency and withheld-
+conclusion tests. **Why it had not been done:** core idempotency exists but the browser does
+not participate in it.
+
+**Done, 8 September 2026.** The store already refused two writers; the browser
+did not participate. It cleared the textarea BEFORE the request and sent no
+`turn_id`, so a lost response meant either a duplicated brief or a lost one.
+
+Now: the page mints `turn_id` before the attempt and every retry reuses it
+(`deliver(entry)` is separate from `send` precisely so a retry cannot mint a new
+id); the composer is cleared only once the server says the brief is on the file;
+`expected_version` says which version this tab believes it is writing on, and a
+mismatch is a 409 carrying BOTH numbers so the tab re-derives instead of
+guessing; and every failure the route can raise carries `turn_id` and
+`committed`, so `The turn was refused: HTTP 500` is replaced by an answer to the
+only question a failed send has — was it saved.
+
+`committed` has three values at the caller and they are three different actions:
+`not_committed` means send it again, `stale` means the file moved and has been
+re-read, `unknown` means retry is safe BECAUSE it carries the same id.
+
+**Counterexamples:** `tests/test_a_brief_lands_exactly_once.py` (class_a, six
+tests, on the served path — the defect was never in the engine) and journey
+phase 13, which aborts `/api/turn` in a real browser and asserts the brief is
+still in the composer with a retry beside it.
+
+**Not done:** the outbox is in memory, so a brief survives a failed send and a
+sign-out but not a browser crash. Persisting it means choosing where — and a
+draft that outlives the tab outlives the next person to use the machine, which
+is a privacy decision rather than a storage one. Stated here rather than
+implied.
+
+### BK-37 — senior-counsel answer shape and plain-language trust surface — **DONE**
+
+**Phase:** reading and acting on advice. This completes J-6 and the remaining
+advocate-facing part of J-5/J-7.
+
+**Good now:** the advocate's own words are visually separated; loud signals
+and disclosures remain visible; supporting law is folded with a count; actions
+carry a deadline or an explicit reason why none is available.
+
+**Gap observed:** a courtesy “Hello” produced only a plain ground, and every
+plain ground is folded, so the entire reply disappeared under “1 supporting
+passage”. A completed matter answer is a flat sequence of actions, findings,
+gaps, proof elements, salvage and disclosures. Gate ids/states/details, thread
+ids in gate details, LLM call/token/cost/violation metrics and retry narration
+are shown to the advocate. “NOT ESTABLISHED” is repeated often enough to drown
+the position it qualifies.
+
+**Change:** define a typed counsel brief with stable sections: position;
+because; decisive risks/adverse case; limitation/deadline; next step with owner
+and by-when; questions/needed material; authorities; and expandable audit
+detail. Render courtesy and question-of-law answers visibly even if they contain
+only grounds. Translate operational states into advocate language and move gate
+ids, traces, tokens, provider/cipher/build details to an authenticated operator
+view. Deduplicate repeated gaps and show their count without hiding a new or
+critical one. Add copy/cite/print affordances and accessible headings.
+
+**Acceptance:** a senior counsel can identify the position, controlling reason,
+main risk and next step in the first screen; no `thr_`, `mat_`, `turn_`, gate id,
+provider, token or cipher name appears in advocate mode; every substantive
+claim still reaches its provenance; a one-element courtesy response is visible.
+
+**Dependencies:** BK-35 before reshaping legal conclusions; BK-30. **Why not
+done:** the current renderer partitions element kinds but has no user-facing
+document contract.
+
+**Done, 8 September 2026. J-6 and J-7 close with it.**
+
+**The answer is filed, not sorted.** `nm/domain/brief.py` assigns every element
+to the question it answers — where this stands, time, what cuts against us,
+next step, what I still need, why, what it rests on — and the browser groups.
+A *sort* would need a rank per element, and a rank is a judgement about
+importance that this product must not make silently: nine adverse paragraphs
+are not less important than the limitation position, they answer a different
+question, and a reader looking for one is not looking for the other.
+
+The assignment is pure, has one owner, and is computed at the byte boundary.
+A renderer deciding sections for itself would be a second opinion about what
+an element IS — S9 in the place it is hardest to see, because the disagreement
+would only ever be visible on a screen nobody diffed.
+
+**J-7: the working is behind a door, not in the bin.** `G-DUTY · clear`,
+`G-UNSCREENED · unscreened`, `G-CONSISTENT · consistent` and `outcome ok ·
+latency 69ms · calls 15 · tokens 6860/606 · cost $0.000000` sat under every
+answer; the masthead carried `openai/gpt-4o-mini · hard: not configured ·
+store: fernet` on every screen. All of it is what makes a claim checkable and
+none of it is a fact about the advocate's matter. It is now a closed
+`How this answer was made`, and the masthead says `Corpus ready` with the rest
+on the title attribute.
+
+Journey phase 5b asserts BOTH halves and the second is what stops the fix
+being a deletion: no gate id on screen, and every one of them still there when
+the working is opened. A product that had stopped recording them would pass
+the first assertion and fail the second, and it would be a worse product.
+
+**J-6: a courtesy reply no longer disappears.** Every plain ground is folded,
+and an answer that is ONLY plain grounds — a courtesy reply, a
+question-of-law answer — vanished entirely under *"1 supporting passage"*. The
+fold's argument is that support sits UNDER a claim and crowds it; with no
+claim above it there is nothing to crowd and folding is just hiding.
+
+**Repeated gaps carry their count.** "I could not assess this" said once and
+said nine times are different facts about the file, and an advocate reading
+the shorter answer must not believe the product looked less hard than it did.
+Nothing loud is ever collapsed.
+
+**A sentence that was true of every case had stopped being checked.** The
+screens row hard-coded *"Screens on this matter, none of which has run"* and a
+closing clause about substance being admitted under an exception, because
+before BK-34 both were unconditionally true. On a served turn afterwards it
+read *"Screens on this matter, none of which has run: Screens on this matter,
+all cleared: emergency — …"*. The prefix now comes from the same place the
+outcome does.
+
+**Counterexamples:** journey phases 5b, 5c and 5d — section order read back
+off the page, no engineering vocabulary in advocate mode, and the working
+still complete when opened. **18 pass, 0 reproduced, 0 unexplained.**
+
+**Not done:** copy/cite/print affordances, and accessible headings beyond the
+`h3` structure — both named in the row and neither attempted.
+
+### BK-38 — search-to-authority-to-matter research workflow — **PARTLY DONE · P1**
+
+**Phase:** legal research and deliberate use of authority.
+
+**Good now:** the corpus search is fast, returns relevant paragraph-level hits,
+always states whether it ran, discloses jurisdiction/source size/build date,
+distinguishes search from exact resolution and now uses relative rank bands
+rather than fake confidence percentages.
+
+**Gap observed:** the court filter is an exact free-text equality: “Supreme
+Court” returned zero while “Supreme Court of India” returns results. The 25
+cards are paragraph rows, often repeat a case, and provide no case grouping,
+pagination/sort, full judgment/canonical citation, citator status, pin/copy or
+“use in this matter”. Every high-scoring hit in the reproduced query read “top
+of this search”, so the bands still gave little discrimination. Internal file
+name `authority.db` and a raw build timestamp remain on the advocate surface.
+
+**Change:** use controlled court values with aliases/autocomplete; validate year
+ranges; group paragraphs under a case; expose neutral citation/court/date/bench,
+paragraph locator, full judgment and treatment where held; support result
+sorting and paging without hiding total scope. Let an advocate pin/copy a
+citation and explicitly attach a proposition plus selected passage to the
+active matter—never share pane state implicitly. Replace internal store details
+with a plain corpus scope/freshness statement. Implement BK-25's summary-first
+case retrieval behind the same result contract.
+
+**Acceptance:** common court spellings resolve to the same controlled value;
+zero results state exactly which normalized filters ran; repeated paragraphs
+do not masquerade as 25 authorities; a selected passage retains case identity,
+locator and origin when added to a matter; no search result becomes matter fact
+without an explicit advocate action.
+
+**Dependencies:** BK-25, BK-30, BK-33. **Why not done:** the current endpoint is
+a paragraph search surface, not a research-to-file workflow.
+
+**Done, 8 September 2026 — the court filter and the surface.**
+
+**Measured first.** `SELECT court, COUNT(*) FROM paras GROUP BY court` on the
+real 1,046 MB index returns exactly two rows: `Supreme Court of India`
+(395,734 paragraphs) and `High Court of Andhra Pradesh` (55,814). There is no
+third.
+
+**The filter was `lower(court) = lower(?)`,** so an advocate typing `Supreme
+Court` got ZERO from a corpus holding nearly four hundred thousand Supreme
+Court paragraphs — and a zero from an exact-match filter reads as an empty
+corpus. That is B-163's shape, and this repository has recorded it three times
+already against the legal corpus.
+
+It resolves through `normalise_court`, which already maps free text onto a
+CLOSED court vocabulary and already returns UNKNOWN rather than guessing.
+Nothing is scored and nothing is nearest-matched — CLAUDE.md §5's rule that
+fuzzy may rank but never identify, and a court filter identifies.
+
+**One alias is a legal decision, not a convenience.** `Telangana High Court`
+resolves to `High Court of Andhra Pradesh`, because those judgements ARE
+Telangana judgements and every one binds — the standing decision in
+`BASELINE.md` §1.1. RG-01 already cost a blocked release by counting a court
+LABEL instead of the binding relationship.
+
+**A court the index does not hold returns nothing AND SAYS SO**, naming what
+is held. Verified against the real index: `Supreme Court` → hits (was 0),
+`Telangana High Court` → hits, `Bombay High Court` → 0 with the reason.
+
+**The surface stopped speaking engineering.** `Searched: the authority index
+(authority.db)` became `Searched the case law`; `built 2026-08-30T07:51:38`
+became `current to 2026-08-30`; and the resolved filter is shown, so a zero
+says which normalised filter ran.
+
+**Counterexample:** `tests/test_the_court_filter_resolves.py`, twelve tests,
+including a control that the stored values are the two the index actually
+holds.
+
+**NOT DONE.** Paragraph rows are still not grouped under a case, so repeated
+paragraphs can still read as separate authorities; there is no
+pagination/sort, no neutral citation or bench, no pin/copy, and no explicit
+"use in this matter" attachment. BK-25's summary-first retrieval is not
+implemented.
+
+### BK-39 — readable History, correction record and handover — **PARTLY DONE · P1**
+
+**Phase:** review, supervision, handover and resumption.
+
+**Good now:** encrypted transcripts preserve what was actually served; missing
+or unreadable turns are counted and disclosed; ownership is checked; the raw
+record is unusually rich for forensic diagnosis. `/summary` already separates
+established material, decisions and gaps.
+
+**Gap observed:** History initially shows only the advocate's message and a
+collapsed “The turn as it was served”. Expanding it prints the complete raw JSON
+trace: internal ids, prompts, model answers, metrics, gates and implementation
+details. The answer is not rendered with the Advise renderer. There is no
+matter overview, chronological record, authorities list, changes/corrections,
+open questions, next action, export, print or handover package. BK-28 separately
+records that runs and golden sets are absent from the History surface.
+
+**Change:** make History an advocate record: matter cover and current summary;
+chronology with superseded facts visibly struck/replaced; served answers using
+the same renderer; decisions/reservations; relied-on authorities; questions and
+next actions; screen/release history; and readable change attribution. Add
+print/export/handover with confidentiality markings and a manifest of omitted
+or unreadable items. Put raw prompts/traces in a separately authorised operator
+audit view with redaction and retention controls. Integrate BK-28 there rather
+than adding another history implementation.
+
+**Acceptance:** another advocate can open an exported or on-screen file and
+state who the client is, the issue, posture, material facts, deadline, current
+position, authorities, unresolved questions and next owner without reading raw
+JSON; the export counts and names unreadable omissions; corrections never erase
+the original record.
+
+**Dependencies:** BK-28, BK-33, BK-37. **Why not done:** transcript capture was
+built as an audit artifact and is currently served directly as the user record.
+
+**Done, 8 September 2026 — History uses the one renderer.**
+
+It showed the advocate's message and a collapsed *"The turn as it was served"*
+which, opened, printed the complete raw JSON: internal ids, prompts, model
+answers, metrics, gates. The answer they were actually given was not rendered
+at all — so the surface that exists for REVIEW showed a different thing from
+the surface that gave the advice, and only one of them was readable.
+
+**Two renderers for one answer is S9**, and the drift was already real: BK-37
+filed the served answer into sections and this one would still have been
+printing JSON. `renderTurn` is now the only thing that renders an answer,
+here and on the Advise pane.
+
+**The raw record is filed, not deleted.** Forensic diagnosis is what this
+store is for; it moves inside the same `How this answer was made` door every
+served turn already has. The turn id comes off the header — it is one of this
+product's own keys and an advocate cannot act on it (J-5) — and stays in the
+raw record below.
+
+**Counterexample:** journey phase 8b asserts both halves — History reads like
+the advice, and the JSON is still there when the working is opened.
+
+**NOT DONE**, and it is most of the row: no matter cover or current summary on
+the History surface, no chronology with superseded facts struck, no
+decisions/reservations, authorities list, screen/release history or change
+attribution; no print, export or handover package with confidentiality
+markings and a manifest of omitted items; BK-28's runs and golden sets are
+still not integrated here.
+
+### BK-40 — session expiry and confirmed logout — **DONE**
+
+**Phase:** loss of authentication during work and end of session.
+
+**Good now:** protected routes share one session dependency; a valid logout
+closes the server session before clearing the cookie; a successful logout in
+the browser returns to the gate and reload stays signed out.
+
+**Gap observed and reproduced:** `api()` has no central 401 transition, so an
+expired session leaves the masthead claiming the advocate is signed in while
+each pane fails locally. Logout clears all on-screen state in `finally` even
+when `/api/logout` fails. With the server stopped, the screen showed sign-in as
+if logout succeeded; after restart, reload reopened the authenticated session
+and its matter because the server token was still live.
+
+**Change:** centralize 401 handling: freeze and preserve the draft securely,
+remove privileged DOM, state that the session ended, and resume only after
+reauthentication with explicit matter/draft confirmation. Make logout a state
+machine: `signing_out`, `confirmed`, or `unconfirmed`; clear privileged content
+immediately, but if the server cannot confirm, say so, retry/revoke when
+connectivity returns, and do not present ordinary sign-in as proof of logout.
+Support “sign out all devices” from BK-31.
+
+**Acceptance:** forced expiry during Advise/Search/History produces one coherent
+reauthentication flow and no stale signed-in identity; draft recovery is scoped
+to the same advocate; a failed logout is visibly unconfirmed and reload cannot
+silently restore access once confirmation/revocation succeeds; successful
+logout always makes `/api/session` return 401.
+
+**Dependencies:** BK-30, BK-31, BK-36. **Why it had not been done:** server invalidation is
+correct, but browser state currently treats an attempted request as confirmed.
+
+**Done, 8 September 2026.** Both halves, and the server half was the one nobody
+had looked at.
+
+**Server.** `close_session` returned `None` whether it had ended a live session,
+found one already closed, or found nothing at all, and `/api/logout` answered
+`{"signed_out": true}` on top of all three. It now returns `closed`,
+`already_ended` or `unknown` and the route reports it — the browser had been
+believing an assertion the server was in no position to make.
+
+**Browser.** `api()` now has one 401 transition: it freezes the draft scoped to
+the advocate who wrote it, strips privileged content from the DOM in one place,
+says the session ended, and restores the draft after re-authentication. It fires
+only when we believe we are signed in, so `boot()`'s ordinary 401 does not greet
+a first-time visitor with a notice that their session expired.
+
+Signing out is a state machine — `signing_out`, then confirmed or
+`unconfirmed`. The screen still clears immediately, which was always right. What
+changed is that clearing the screen is no longer allowed to BE the answer: a
+logout the server did not confirm says so loudly, offers a retry, and retries by
+itself when connectivity returns. A 401 from `/api/logout` is a confirmation,
+not a failure.
+
+**Counterexamples:** journey phases 10, 11 and 12, all previously reproduced and
+now passing. The draft is in memory for the reason recorded under BK-36.
+
+### BK-41 — latency, progress, cancellation and degraded-service behaviour — **PARTLY DONE · P1**
+
+**Phase:** the waiting time inside every substantive turn.
+
+**Good now:** the UI shows an immediate pending card; metrics retain phase and
+model-call evidence; the scripted path completes deterministically; failures in
+decisive reads have explicit third states.
+
+**Gap observed:** the only user progress text is “Settling the frame and
+checking the corpus…”, while a real turn can make many sequential model calls.
+Earlier stored metrics measured p50 about 2.05s, p90 about 18s and maximum about
+44s; turns with eight or more calls had median about 20.2s. There is no cancel,
+safe background continuation, reconnect state or estimate; the composer is
+globally disabled. BK-29 records sixteen hand-picked output ceilings and the
+truncation cliff for span-returning reads.
+
+**Change:** establish a performance budget per phase and user-visible service
+level; parallelize only independent reads; cache only inputs whose provenance
+and invalidation are explicit; derive token ceilings from input/output schema as
+BK-29 requires; stream honest coarse phases rather than invented percentages;
+support cancellation before commit and background/reconnect after submission;
+degrade optional analysis without downgrading decisive legal reads silently.
+
+**Acceptance:** p50/p90/timeout targets are measured in CI and a staged real-
+model run; the user always knows whether work is queued, deriving, checking,
+committed, cancelled or failed; cancel/reconnect cannot duplicate a turn; a
+truncated decisive read is never presented as absent or complete.
+
+**Dependencies:** BK-29, BK-30, BK-36. **Why not done:** latency is measured for
+operators but not managed as a user journey.
+
+**Done — cancellation, and the composer stays usable.**
+
+A turn's measured p90 is about 18 seconds, about 20 for one making eight or
+more model calls, and the composer was globally disabled throughout with no
+way to stop. An advocate who thought of the next thing to say had nowhere to
+put it.
+
+**Cancel abandons the REQUEST, which is all a browser can do,** and it says
+so. The server may have committed before the abort landed, so the turn goes
+to `unknown` — the state BK-36 already built for exactly this — and its retry
+carries the same turn id, so a turn that did land is recognised rather than
+written twice. Saying *"cancelled, nothing was saved"* would be a claim the
+browser is in no position to make.
+
+**Done — token ceilings are derived**, which this row delegates to BK-29.
+That row is closed.
+
+**Counterexample:** journey phase 13b — cancel mid-turn, and the answer must
+not claim the brief was discarded, must offer the same-id retry, and must
+leave the brief in the composer.
+
+**NOT DONE.** There is no phase streaming: the pending card still says one
+static line while a turn makes many sequential calls, and honest coarse
+phases need a server push this product does not have. No performance budget
+is measured in CI, no reconnect-after-submit, and no staged real-model
+latency run. Those are the substance of the row and they are open.
+
+### BK-42 — production trust, privacy, accessibility and recovery gate — **PARTLY DONE · P1**
+
+**Phase:** conditions that make every other phase dependable in practice.
+
+**Good now:** matter and transcript bytes are encrypted; ownership checks are
+consistent; corrupt/unreadable files are disclosed; writes use atomic replace
+and a per-matter concurrency lock; the health endpoint exposes useful operator
+state.
+
+**Gap observed:** the default key arrangement remains colocated with default
+local matter storage (BK-21); there is no user-visible retention/deletion,
+backup/restore or disaster-recovery contract; raw prompts containing client
+facts are exposed through user History; rate-limit audit and local-store
+boundaries are deployment assumptions. Search inputs rely on placeholders
+rather than associated labels, the narrow layout removes navigation, and there
+is no real-browser accessibility gate.
+
+**Change:** finish BK-21 with external secret management and rotation; define
+tenant/workspace isolation, audit access, retention, export and deletion;
+encrypt and test backups with point-in-time restore; redact and separately
+authorise operator traces; make rate limiting atomic for the deployment store;
+add availability alerts and recovery drills. Add WCAG 2.2 AA checks for labels,
+names/roles, focus, contrast, zoom, reflow, reduced motion and screen-reader
+announcements across BK-30's three widths. Publish only user-actionable health;
+keep diagnostics authenticated and least-privileged.
+
+**Acceptance:** a restore drill recovers an encrypted matter and transcript
+without mixing advocates; key rotation is tested; access/export/deletion events
+are attributable; no client prompt is exposed to an unauthorised surface; zero
+critical automated accessibility violations and the keyboard/screen-reader
+journey passes from login through logout.
+
+**Dependencies:** BK-21, BK-30 and the final UI of BK-31 through BK-40. **Why not
+done:** current safeguards are strong local primitives, not yet a declared and
+tested production operating envelope.
+
+**Done — the accessibility half that is code.**
+
+**Every control has an accessible name.** Four search inputs had placeholders
+and no labels. A placeholder is not a name: it is announced once, it
+disappears the moment anything is typed, and a screen-reader user who tabs
+back to a filled field is told nothing about what it holds. The labels are
+visually hidden with the clip-rect idiom rather than `display:none`, which
+would remove them from the accessibility tree too — the opposite of the point.
+
+**The masthead fits a phone.** Measured at 390px: `tabs` ran to 473px, `who`
+to 678px and `health` to 720px on a 390px viewport. The whole strip was one
+non-wrapping flex row, so a third of the masthead sat off the right edge and
+the document scrolled sideways. Every pane below it was already responsive;
+the bar above them was not, and nothing had looked.
+
+**A fix that disabled its own test, caught and removed.** `body { overflow-x:
+hidden }` went in beside the wrap as belt-and-braces and is the opposite:
+clipping makes `scrollWidth` equal `clientWidth`, so the phase checking for
+sideways scroll could no longer fail. The page would still have had content
+off the right edge and nothing would ever have said so again. The wrap is the
+fix; the clip is gone.
+
+**The court field offers the controlled values** it actually holds (BK-38), so
+fewer advocates have to discover that `Supreme Court` resolves.
+
+**Counterexample:** journey phase 14, at 390px, 768px and 1280px — every
+control named, read from the accessibility tree rather than the markup so an
+unassociated label fails, and nothing scrolling sideways.
+
+**NOT DONE, and it is most of the row.** External secret management and
+rotation (BK-21); tenant/workspace isolation; retention, export and deletion;
+encrypted backups with a point-in-time restore drill; atomic rate limiting for
+the deployment store; availability alerts and recovery drills. Those are
+deployment infrastructure and operating decisions rather than code in this
+repository, and building a version of them here would be worse than the gap —
+a restore drill that only runs against a temporary directory proves nothing
+about the deployment it is meant to reassure anybody about.
+
+Also not done: contrast, zoom, reduced-motion and screen-reader announcement
+checks; separately-authorised operator traces with redaction.
+
+### Implementation waves and release gates
+
+| wave | rows | release gate |
+|---|---|---|
+| 0 — make failure reproducible | BK-30 **DONE** | MET. `python tools/journey.py` produces a phase table and artifacts. **The pass count is a MEASUREMENT AT A COMMIT, not a property of the repository** — it needs `pip install -e .[journey]` and a quiet tree, and a run taken while `web/` is being edited reports failures that belong to the edit. Re-measure rather than quote. |
+| 1 — do not give unsafe advice | BK-35 **DONE**, BK-34 **DONE**, BK-36 **DONE**, BK-40 **DONE** | Correct trigger or explicit refusal; screens govern admission; one brief is applied once; session/logout state is truthful. |
+| 2 — make the file usable | BK-31 **PARTLY**, BK-32 **DONE**, BK-33 **PARTLY**, BK-37 **DONE** | Access is recoverable; navigation works at all widths; file reopens intact; answer reads as counsel work, not telemetry. |
+| 3 — research and handover | BK-38 **PARTLY**, BK-39 **PARTLY** | Authority moves deliberately into a matter and another advocate can understand the complete file. |
+| 4 — prove production fitness | BK-41 **PARTLY**, BK-42 **PARTLY** | Latency/error budgets, security/recovery and accessibility gates pass on the served deployment shape. |
+
+Each wave is independently releasable only when its rows are `DONE` by the
+status discipline above. Passing unit tests without the browser evidence, or a
+good browser demonstration without the relevant pure/engine regression, leaves
+the row `IN PROGRESS`.
+
+---
+
+### BK-29 - sixteen hand-picked token ceilings, and five reads that echo verbatim spans - **DONE**
 Opened 7 September 2026, out of the BK-27 fix. **One instance is fixed; the
 population is not swept.**
 
@@ -328,6 +1416,48 @@ is the patch, not the fix: it moves the cliff without removing it, and sixteen
 call sites each choosing a number is the same one-owner question CLAUDE.md §4
 asks. The fix is a ceiling DERIVED from the input for reads that echo spans,
 with one owner. Sizing that needs the population measured, which is this row.
+
+**Done, 8 September 2026.** Sixteen literals became one owner.
+
+`TurnEngine._read(prompt, schema, key)` is now the only route to a structured
+read, and the call site names the READ rather than a number. `nm/core/ceiling.py`
+decides: a read whose answer follows the size of its input gets a ceiling
+derived from what it was shown; one whose answer is a verdict gets a stated
+number, in one table, with the reason beside it.
+
+**Whether a read echoes is the read's own property**, declared in
+`nm/domain/reads.py` beside its entry — eleven do (`dates`, `dispute`,
+`factors`, `inventory`, `issues`, `proof`, `adverse`, `attacks`, `exposure`,
+`salvage`, `parties`), eight do not. Nothing in the ceiling module decides it,
+because a table there would be a second place to record a property of the read.
+
+**Three defects the sweep produced, all worth keeping.**
+
+1. `nm/core/ceiling.py` imported the token estimator from
+   `nm/adapters/model/_budget.py` and `layercheck` refused it within the
+   minute — `core` may not import `adapters`. Copying it would have been a
+   second owner for *how big is this*, so it moved to
+   `nm/ports/model.py`: measuring a prompt is a property of the model
+   INTERFACE, and the adapter now re-exports rather than redefines.
+2. The helper was called `_ask` — **and `TurnEngine` already had one**, for
+   batching questions. The later definition shadowed mine, every structured
+   read raised `TypeError`, and every call site's `except Exception` recorded
+   it as "the read failed" and carried on. §7 exactly: a broad except turning
+   a programming error into a model failure. Renamed `_read`.
+3. The sweep treated a COMMENT as the first argument at one site and dropped
+   the prompt expression, so the adverse read was called with its schema as
+   its prompt. Caught by five theory tests.
+
+**Counterexample:** `tests/test_no_read_picks_its_own_ceiling.py` — the sweep,
+both directions of the derivation, the floor and the cap, and two controls:
+one that plants a literal and one that plants a `complete()` call the sweep
+must ignore.
+
+**Not measured:** `PER_INPUT_TOKEN = 1.6` is a starting point with a stated
+basis, not a measurement. BK-29 asked whether each echoing read FAILS SAFE
+when truncated, and that is still unmeasured — the ceiling now moves with the
+input, so truncation is far less reachable, but "less reachable" is not
+"checked".
 
 ### BK-27 - one message describing N disputes opened ONE thread - **FIXED**
 **FIXED 7 September 2026, and the fix was upstream of where it showed.**

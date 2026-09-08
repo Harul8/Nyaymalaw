@@ -243,6 +243,14 @@ def written_precisely(package: str) -> tuple[set[str], set[str]]:
 # ========================== the declared reservations =======================
 
 RESERVED: dict[str, str] = {
+    "Matter.emergency_because":
+        "B2. The emergency screen READS it -- a matter carrying a reason is "
+        "BLOCKED with the exception on the face of the file -- and nothing "
+        "WRITES it yet, because declaring an emergency is G-EMERGENCY and "
+        "that gate is `built=False` in the matrix with its own recorded "
+        "reason. Reserved rather than deleted: the field is what makes the "
+        "exception visible on the file afterwards, and an exception nobody "
+        "can see later is indistinguishable from a screen that passed.",
     # -- guarded, so the reservation cannot rot into a silent gap ------------
     "Provenance.document":
         "`Provenance.__post_init__` REFUSES a `kind='document'` provenance "

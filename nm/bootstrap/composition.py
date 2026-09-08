@@ -128,8 +128,13 @@ class Application:
             # "corpus: readable" would let an unbuilt authority index hide
             # behind a readable provision store, and the advocate would learn
             # about it as an empty answer.
-            "retrieval": (self.evidence.readiness()
-                          if hasattr(self.evidence, "readiness") else {}),
+            # DECLARED ON THE PORT, so this is a call and not a guess. It read
+            # `self.evidence.readiness() if hasattr(...) else {}` -- and an
+            # adapter without the method then produced an empty retrieval
+            # section, which reads exactly like an adapter that answered and
+            # had nothing to report. Same line, `available` was reached with
+            # no guard at all and 500'd this route for every such adapter.
+            "retrieval": self.evidence.readiness(),
             "gates": {
                 "total": len(GATES),
                 "built": sum(1 for g in GATES if g.built),

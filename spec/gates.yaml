@@ -16,7 +16,7 @@ gates:
   recovery: advocate
   visible: The protective step, its owner and its time, and nothing else. Merits are refused on this turn.
   feature: B2
-  built: false
+  built: true
 - id: G-CONFLICT
   condition: A party, counterparty or related entity matches the registry, or the registry could not be
     read in full.
@@ -31,7 +31,7 @@ gates:
   recovery: human
   visible: This matter cannot be taken further until the conflict position is settled by a person.
   feature: B3
-  built: false
+  built: true
 - id: G-COMPETENCE
   condition: The matter's jurisdiction or practice area is outside declared coverage, or coverage could
     not be established.
@@ -46,7 +46,7 @@ gates:
   visible: What is outside coverage is named, with what would be needed to close it. Work continues on
     what is inside.
   feature: B4
-  built: false
+  built: true
 - id: G-SCOPE
   condition: A step falls outside recorded engagement scope, or scope is unrecorded.
   states:
@@ -61,7 +61,7 @@ gates:
   visible: This step is outside recorded scope. It is not done silently, and advice given without scope
     is not reliance-ready.
   feature: B5
-  built: false
+  built: true
 - id: G-CAPACITY
   condition: Capacity to instruct is doubted on a decision that would become authority.
   states:
@@ -74,7 +74,7 @@ gates:
   recovery: human
   visible: The decision is not recorded as authority while capacity is open.
   feature: B6
-  built: false
+  built: true
 - id: G-UNSCREENED
   condition: Substance was admitted on a matter whose screens are not built or did not run.
   states:
@@ -408,6 +408,35 @@ gates:
     element list is a gap in this product, and stopping the advocate over our own gap teaches them to
     work around the gate.'
   feature: D5
+  built: true
+- id: G-CONSISTENT
+  condition: The recommended step contradicts a fact this same answer computed — the limitation position,
+    the deadline register, the side we act for, or what has not been weighed.
+  states:
+  - consistent
+  - contradicted
+  - repaired
+  - not_verified
+  response: block
+  scope: step
+  persistence: turn
+  recovery: system
+  visible: 'B-074, TWICE. The ACTION read `file the recovery suit, ensuring it is within the limitation
+    period` while the GROUND directly below it read `that period has run` — 174 days ago. It was fixed
+    by telling the model what had been worked out, at length and correctly, and it recurred on `6e29cf0`:
+    `Confirm the date of service and file within the window`, beside an annotation saying every deadline
+    had passed.
+
+
+    A PROMPT IS NOT A GUARD, which is why this row exists and why it is not a phrase list. The answer
+    space is built from the turn''s own typed facts, so the guard is exact membership rather than matching
+    on words — the rule CLAUDE.md §5 states about Acts, applied to the one place a sentence is checked
+    against a number.
+
+
+    It BLOCKS the step and not the turn: the advocate gets the computed position and a question, which
+    is the half that was verified.'
+  feature: D3
   built: true
 - id: G-NOTASSESSED
   condition: The store that would answer this need could not be consulted at all — absent, unopenable,

@@ -69,6 +69,17 @@ ESCAPES = (
 #: Enums that are CLOSED VOCABULARIES, not outcomes. Each with the reason it
 #: cannot be "not assessed" — because something always chose it.
 CLOSED: dict[str, str] = {
+    "Section": "It FILES an element, it does not judge one. BK-37 files every "
+               "line of an answer under the question it answers -- where this "
+               "stands, time, what cuts against us, next step -- and every "
+               "element answers exactly one of them by construction, because "
+               "`section_of` is total over the fields an `Element` already "
+               "carries. There is no element whose section could not be "
+               "determined, so there is nothing for a third state to mean. "
+               "An `unfiled` member would mean a line the advocate never "
+               "sees, which is the opposite of the safe direction; the "
+               "fallback is POSITION, the first section read, so anything "
+               "unexpected surfaces at the top rather than disappearing.",
     "Kind": "A POSITION or a MEASUREMENT, chosen by the code that RECORDS the "
             "derivation, not read from the matter. The limitation knows it is "
             "a date and `_record` knows it is emitting a count — there is no "

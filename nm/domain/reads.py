@@ -56,6 +56,28 @@ class Read:
     second is what stops the list growing until every read is decisive and the
     distinction stops meaning anything."""
 
+    echoes: bool = False
+    """Does this answer CONTAIN the advocate's own words, in a quantity that
+    follows how much they wrote? BK-29.
+
+    NOT "does it quote". Nearly every read here quotes -- the quotation guard
+    is how this product refuses invention. The question is whether the SIZE of
+    the answer follows the size of the input, which is true of a read that
+    returns a LIST of spans and false of one that returns a verdict plus one
+    span.
+
+    IT DECIDES THE TOKEN CEILING and nothing else. An echoing read gets a
+    ceiling derived from what it was shown (`nm/core/ceiling.py`); a fixed one
+    gets a stated number. The dispute read was capped at 200, began returning
+    three verbatim spans, and its JSON truncated mid-string at character 827 --
+    so the read was LOST rather than short, and the turn fell back to one
+    thread on the strength of a parse error.
+
+    DECLARED HERE BECAUSE IT IS A FACT ABOUT WHAT WAS ASKED FOR, beside the
+    schema's own entry rather than in the ceiling module. A table over there
+    would be a second place to record a property of the read.
+    """
+
 
 #: EVERY read the product makes. `tests/test_reads_registry.py` fails the build
 #: on a schema in `nm/` that is not here, so a twelfth read cannot be added
@@ -71,7 +93,27 @@ READS: tuple[Read, ...] = (
          "sentence the date was read out of (B-086). It was listed here as a "
          "separate `correction` read for a day, naming a schema that does not "
          "exist, which is what this module’s own docstring claimed a test "
-         "prevented; the test did not exist either."),
+         "prevented; the test did not exist either.",
+         echoes=True),
+    Read("accrual", True,
+         "It decides WHICH DATED EVENT THE PERIOD RUNS FROM, so its output is "
+         "the accrual date itself and the expiry is arithmetic on top of it. "
+         "There is no narrower way for a read to be decisive.\n\n"
+         "THE DEFECT IT REPLACED IS THE ARGUMENT FOR THE TIER. `_limitation` "
+         "took `next(f for f in chart if f.date is not None)` -- the earliest "
+         "dated fact, whatever the cause -- so Article 54 ran from a 2023 "
+         "agreement when its trigger is the date fixed for performance, or "
+         "notice that performance is refused. The expiry was declared, the "
+         "Article was right, the period was read from retrieved text, the "
+         "arithmetic was right, and the answer was wrong by a year with "
+         "nothing on the turn to show it. Only the starting point was chosen "
+         "by sort order.\n\n"
+         "ITS GUARD IS EXACT MEMBERSHIP AND NOTHING ELSE, which is unusual "
+         "here and worth saying: the answer space is this thread's own fact "
+         "ids, a closed set the turn generated, so CLAUDE.md §5 reaches "
+         "its easiest case -- an exact key exists and nothing is ranked. An "
+         "id not on the chart names nothing, and no reading of the prose "
+         "would make it name something."),
     Read("duty", False,
          "It decides whether an instruction is REFUSED, and it is not "
          "decisive in this table’s narrow sense: it moves no date, no "
@@ -91,7 +133,8 @@ READS: tuple[Read, ...] = (
     Read("factors", True,
          "An acknowledgment under s.18 restarts the period. Missing it reports "
          "a live claim as dead (B-073); inventing one reports a dead claim as "
-         "live."),
+         "live.",
+         echoes=True),
     Read("route", True,
          "It decides whether there is a MATTER AT ALL, and a turn "
          "routed to NON_MATTER writes nothing to any file -- so a read "
@@ -112,13 +155,44 @@ READS: tuple[Read, ...] = (
          "one step earlier."),
 
     # ---- not decisive: being wrong makes the answer thinner, not false ------
+    Read("consistency", False,
+         "It judges a SENTENCE against numbers this turn already computed, "
+         "and it moves neither. The date, the register and the side are all "
+         "settled before it runs; what it decides is whether the step written "
+         "beside them is served, rewritten once, or replaced by a question.\n\n"
+         "AND IT FAILS TOWARD SERVING, which is why it is here rather than "
+         "among the decisive reads. Every other guard in this product refuses "
+         "toward silence because a wrong answer costs more than a gap. This "
+         "one is the exception and the asymmetry is the reason: refusing here "
+         "DELETES ADVICE THAT IS PROBABLY SOUND, and an advocate cannot tell "
+         "a step that was suppressed from a step that was never written. So a "
+         "read that cannot run, names a fact it was not shown, or cannot "
+         "quote the words it objects to lands `consistent` — with the refusal "
+         "recorded, so a read that keeps failing its own guards is visible "
+         "rather than merely tolerated."),
+    Read("parties", False,
+         "WHO IS IN THE MATTER, for the conflict screen. It moves no "
+         "date, no amount and no choice of law, so it is not decisive on "
+         "this table's narrow test -- and it is the closest call in the "
+         "list, because what it feeds is a SCREEN." + chr(10) + chr(10) +
+         "It stays here because its wrongness is bounded in the safe "
+         "direction BY A GUARD rather than by luck. Every name must be "
+         "quoted from the advocate's own words, so the read cannot invent "
+         "a party; a name it garbles is dropped, and dropping them all "
+         "leaves the conflict screen NOT_ASSESSED, naming what it wants. "
+         "A screen that ran against a party nobody mentioned and cleared "
+         "would be the decisive failure, and the quotation guard is what "
+         "makes it unreachable.",
+         echoes=True),
     Read("dispute", False,
          "Whether a message opens a new thread. Wrong, it puts the right "
          "analysis on the wrong thread — visible to the advocate immediately, "
-         "and correctable in a sentence."),
+         "and correctable in a sentence.",
+         echoes=True),
     Read("issues", False,
          "A missed issue makes the answer thinner and the advocate can SEE it "
-         "is thinner. It changes no number."),
+         "is thinner. It changes no number.",
+         echoes=True),
     Read("proof", False,
          "What the file can establish, element by element. NOT DECISIVE on "
          "the narrow test this table applies -- it moves no date, no amount "
@@ -133,24 +207,30 @@ READS: tuple[Read, ...] = (
          "What it CAN cost is a gap the advocate does not go looking for, and "
          "that is D5.1's drift rather than an empty read: the answer arrives "
          "full and soft. The type refuses an OBTAINABLE with nothing named "
-         "that would obtain it, which turns the soft answer into work."),
+         "that would obtain it, which turns the soft answer into work.",
+         echoes=True),
     Read("inventory", False,
          "What evidence is mentioned and who holds it. A missed item costs a "
-         "preservation question; it moves no date."),
+         "preservation question; it moves no date.",
+         echoes=True),
     Read("adverse", False,
          "Which facts hurt us. Feeds the theory's completeness check, which "
-         "reports what is unaccounted rather than computing anything."),
+         "reports what is unaccounted rather than computing anything.",
+         echoes=True),
     Read("theory", False,
          "The spine. Wrong, it is an argument the advocate rejects — which is "
          "the ordinary way an advocate uses a draft."),
     Read("attacks", False,
          "The opponent's case. A weak one is a preparation gap, not a false "
-         "statement about the file."),
+         "statement about the file.",
+         echoes=True),
     Read("exposure", False,
-         "Cross-thread contradiction. Reports a relationship; computes nothing."),
+         "Cross-thread contradiction. Reports a relationship; computes nothing.",
+         echoes=True),
     Read("salvage", False,
          "Coordinate variation. Its routes are already bound to retrieved "
-         "citations by the type, so the read cannot manufacture one."),
+         "citations by the type, so the read cannot manufacture one.",
+         echoes=True),
 )
 
 BY_KEY: dict[str, Read] = {r.key: r for r in READS}
@@ -161,6 +241,24 @@ BY_KEY: dict[str, Read] = {r.key: r for r in READS}
 #: not ahead of it, so what this module offers today is the TABLE: a place
 #: where a twelfth read cannot be added without someone deciding which kind
 #: it is.
+
+
+def echoes(key: str) -> bool:
+    """Does this read's answer follow the size of what it was shown? BK-29.
+
+    THE SAFE DIRECTION IS `False` FOR AN UNKNOWN READ, and it is safe for the
+    unusual reason that it is the LOUD one: a fixed ceiling on a read that
+    should have been derived truncates, and a truncated read is a parse error
+    the call site sees. Defaulting the other way would give every unlisted
+    read a ceiling scaled to the brief, which spends tokens quietly and
+    forever.
+
+    `tests/test_no_read_picks_its_own_ceiling.py` fails the build on a read
+    the product makes that is not in `READS`, so `False` here is never
+    reached by a read nobody declared.
+    """
+    entry = BY_KEY.get(key)
+    return bool(entry and entry.echoes)
 
 
 def is_decisive(key: str) -> bool:

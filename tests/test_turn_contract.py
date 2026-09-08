@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import ast
 import json
+import pathlib
 from datetime import date
 
 import pytest
@@ -22,9 +23,11 @@ from nm.domain.answer import Element, ElementKind, Route, Signal
 from nm.domain.matter import Basis, Matter, Posture, Role, Side, Thread
 from nm.domain.quotable import Quotable
 from nm.domain.traceability import refuses
+from nm.knowledge.resolution import accrual_trigger_for as corpus_trigger
 from nm.ports.evidence import (
     Binding,
     Coverage,
+    EvidencePort,
     EvidenceResult,
     Finding,
     ParaKind,
@@ -33,6 +36,8 @@ from nm.ports.evidence import (
 )
 from nm.ports.model import Tier
 from nm.ports.store import StaleWrite
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 pytestmark = pytest.mark.class_a
 
@@ -88,7 +93,7 @@ def finding(**kw) -> Finding:
     return Finding(**base)
 
 
-class _Evidence:
+class _Evidence(EvidencePort):
     def __init__(self, result: EvidenceResult | None = None):
         self.result = result or EvidenceResult(
             coverage=Coverage.ANSWERED,
@@ -98,8 +103,76 @@ class _Evidence:
     def fetch(self, need):
         return self.result
 
+    def accrual_trigger(self, cause: str) -> str:
+        """THE REAL CURATED TABLE, not a stub returning empty.
 
-def build(tmp_path, evidence=None, responses=None, model=None):
+        A double answering "" here is not neutral -- empty is the engine's
+        documented "no curated trigger", so a stub would take every offline
+        turn down the pre-BK-35 path and the accrual read would never run in
+        the suite. The fix would be green on the defect it was written to
+        remove, which is this file's own lesson about `TracedModel` arriving
+        one layer down.
+        """
+        return corpus_trigger(cause)
+
+
+#: What a matter that has been through intake holds. BK-34.
+#:
+#: THE FIXTURE SUPPLIES IT BECAUSE MOST TESTS ARE NOT ABOUT INTAKE. A matter
+#: whose conflict, scope and capacity screens have not been answered is
+#: blocked before any substance is admitted -- which is the row working -- and
+#: a suite in which every test therefore becomes a test of the intake block is
+#: a suite that has stopped testing limitation, proof, theory and the rest.
+#:
+#: IT IS THE REAL PATH AND NOT A BACK DOOR: these are the same fields the
+#: browser sends from the intake form, written to the matter before the
+#: screens read it. `build(..., intake=False)` opts out, and the tests that
+#: are about the screens use it.
+INTAKE_PARTIES = {"Ramesh Traders": "client", "Kiran Steels": "adverse"}
+INTAKE_ANSWERS = {"scope": "the recovery work described in this brief",
+                  "capacity": "the client instructs directly"}
+
+
+class briefed:  # noqa: N801 -- reads as a verb at every call site
+    """An engine whose matters have been through intake.
+
+    A THIN PASS-THROUGH, so what is under test is the real engine. It fills
+    the intake fields on a turn that carries none -- exactly what the browser
+    does from its intake form -- and touches nothing else.
+    """
+
+    def __init__(self, inner):
+        object.__setattr__(self, "inner", inner)
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+    def __setattr__(self, name, value):
+        # WRITES GO THROUGH TOO, and this was a real defect for about ten
+        # minutes. `__getattr__` alone forwards reads; a test doing
+        # `engine._model = _Ungrounded(...)` then set the attribute on the
+        # WRAPPER, the inner engine kept its old model, and three tests that
+        # provoke a withheld turn stopped provoking one -- reporting "the turn
+        # was not withheld, so this test is measuring an ordinary turn", which
+        # is precisely the failure they were written to refuse.
+        #
+        # A wrapper that is transparent in one direction is a wrapper that
+        # silently discards half of what is done to it.
+        if name == "inner":
+            object.__setattr__(self, name, value)
+        else:
+            setattr(self.inner, name, value)
+
+    def run(self, turn):
+        from dataclasses import replace as _replace
+        if not turn.parties and not turn.release:
+            turn = _replace(turn, parties=dict(INTAKE_PARTIES),
+                            release=dict(INTAKE_ANSWERS))
+        return self.inner.run(turn)
+
+
+def build(tmp_path, evidence=None, responses=None, model=None,
+          intake=True, coverage=True):
     """The served engine, with a scripted model.
 
     `model` is optional and BACKWARD-COMPATIBLE on purpose: a test that needs
@@ -113,7 +186,24 @@ def build(tmp_path, evidence=None, responses=None, model=None):
         _model_config(),
         responses=responses or {
             "__default__": "File the summary possession suit within six months."})
-    return TurnEngine(store=store, evidence=evidence or _Evidence(), model=model), store
+    # THE COVERAGE PORT, BECAUSE THE COMPOSITION ROOT WIRES ONE.
+    #
+    # It did not, so the competence screen answered NOT_ASSESSED on every
+    # fixture turn -- "nothing can say whether this jurisdiction is covered" --
+    # and blocked substance in the suite while production ran fine. A fixture
+    # that composes less than the composition root tests a deployment that
+    # does not ship, which is CLAUDE.md §8 arriving from the other direction.
+    # `coverage=False` IS FOR THE TESTS THAT ARE ABOUT AN UNMEASURED
+    # INSTALLATION. Wiring one unconditionally would make
+    # `test_an_unmeasured_installation_says_so_rather_than_implying_coverage`
+    # measure a measured one, which is the test passing on the opposite of
+    # its own subject.
+    from nm.knowledge.coverage import CoverageProfile
+    profile = (CoverageProfile.load(ROOT / "spec" / "coverage.yaml")
+               if coverage else None)
+    engine = TurnEngine(store=store, evidence=evidence or _Evidence(),
+                        model=model, coverage=profile)
+    return (briefed(engine) if intake else engine), store
 
 
 # ======================================================= routing ==========
@@ -378,7 +468,7 @@ def test_replaying_a_turn_does_not_apply_it_twice(tmp_path):
 def test_metrics_are_written_even_when_the_turn_fails(tmp_path):
     """COUNTEREXAMPLE: the most diagnostically valuable turns -- the ones that
     crashed -- being the only ones with no record."""
-    class _Exploding:
+    class _Exploding(EvidencePort):
         def fetch(self, need):
             raise RuntimeError("retrieval exploded")
 
@@ -579,11 +669,23 @@ def test_the_screens_run_before_any_substance_is_admitted(tmp_path):
 def test_an_unscreened_matter_says_so_rather_than_reading_as_screened(tmp_path):
     """A screen that has not run must never be indistinguishable from a pass.
 
-    The conflict, competence and engagement screens are slice 10. Until they
-    exist, every turn must RECORD that it proceeded unscreened -- silence here
-    is defect shape S1 at its most consequential.
+    THE PRODUCT CHANGED UNDER THIS TEST ON 8 SEPTEMBER 2026 (BK-34) and the
+    claim did not. Until then every screen was a NOT_ASSESSED placeholder and
+    substance was admitted anyway under a general exception, so the only
+    reachable case was `unscreened`. Now the screens have producers, and BOTH
+    states are reachable -- which makes this a stronger test than it could be
+    before, because a gate that can only ever fire one way is not being asked
+    a question.
+
+    SO IT IS DRIVEN BOTH WAYS. A matter that has been through intake records
+    `screened`; one that has not records `unscreened` and says what is
+    outstanding. The failure this refuses is the two being indistinguishable,
+    and it is refused in both directions rather than one.
     """
-    engine, _ = build(tmp_path)
+    # NOT through intake: `intake=False` gives the engine no scope, capacity
+    # or party answers, which is the state of a matter nobody has opened
+    # properly.
+    engine, _ = build(tmp_path, intake=False)
     out = engine.run(TurnInput(advocate_id="adv",
                                message="we act for the accused in a cheque matter"))
     fired = {g.gate_id: g for g in out.metrics.gates_fired}
@@ -591,7 +693,19 @@ def test_an_unscreened_matter_says_so_rather_than_reading_as_screened(tmp_path):
         "a turn that was not screened must record that it was not screened")
     assert fired["G-UNSCREENED"].state == "unscreened"
     assert fired["G-UNSCREENED"].response == "disclose"
-    assert "B3-B5" in fired["G-UNSCREENED"].detail
+    assert "not cleared to hold substance" in fired["G-UNSCREENED"].detail
+
+    # AND THE OTHER DIRECTION, which is what stops `unscreened` being the
+    # only answer the gate knows how to give.
+    briefed_engine, _ = build(tmp_path / "screened")
+    (tmp_path / "screened").mkdir(exist_ok=True)
+    done = briefed_engine.run(TurnInput(
+        advocate_id="adv",
+        message="we act for the accused in a cheque matter"))
+    after = {g.gate_id: g for g in done.metrics.gates_fired}
+    assert after["G-UNSCREENED"].state == "screened", (
+        "a matter that has been through intake still records as unscreened, "
+        "so the gate says the same thing whatever happened")
 
 
 # ============ BK-2 — the screens reach the advocate =========================
@@ -623,13 +737,61 @@ def test_every_screen_is_named_to_the_advocate_and_none_reads_as_clear(tmp_path)
 
     # EVERY KIND, by name. An advocate reading four rows believes the fifth
     # was checked -- which is `unscreened`'s own argument for drawing its
-    # population from the vocabulary.
+    # population from the vocabulary, and it holds whether the screens cleared
+    # or not.
     for kind in ScreenKind:
         assert kind.value in said, f"{kind.value} is not named to the advocate"
 
-    assert "not a finding that they clear" in said, (
-        "substance is admitted with the screens outstanding and the answer "
-        "does not say that is an exception")
+    # AND WHAT THE ROW MEANS CHANGED WITH BK-34. It used to have to say that
+    # substance was admitted with the screens outstanding, because it always
+    # was. Now a matter that has been through intake CLEARS them, and the row
+    # says which -- so the assertion is that the advocate is told the outcome,
+    # not that the outcome is always an exception.
+    assert ("all cleared" in said or "not a finding that they clear" in said), (
+        "the screen row does not say whether the screens cleared")
+
+
+def test_the_coverage_position_reaches_the_advocate_not_only_the_metrics(
+        tmp_path):
+    """G-COMPETENCE discloses, and a disclosure nobody sees is not one.
+
+    BK-34 built this gate. `trace` T9 required that -- a gate declared unbuilt
+    that something consults fails harder than one that is simply missing --
+    and building it immediately raised the harder question the disclose
+    accounting asks: does the thing it discloses actually reach the bytes?
+
+    IT IS THE SAME DEFECT AS G-UNSCREENED'S, one gate over. That fired into
+    the metrics under a comment claiming the output said so, and MEASURED on
+    7 September 2026 the advocate saw zero screen-related lines. A gate whose
+    whole response class is DISCLOSE and whose disclosure is invisible has the
+    response class in name only.
+
+    THE POSITION IS MEASURED AND THE GAP IS NAMED. Telangana's most recent
+    binding High Court judgment is from 2018, so there is a real coverage gap
+    for the years since -- and the advocate is told which years and what is
+    held, rather than being left to infer it from an answer that cites nothing
+    recent.
+    """
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(
+        advocate_id="adv",
+        message=("we act for the plaintiff in a recovery matter; invoices "
+                 "dated 14 March 2023 unpaid")))
+
+    fired = [g for g in out.metrics.gates_fired if g.gate_id == "G-COMPETENCE"]
+    assert fired, "the competence gate did not fire at all"
+    assert fired[0].response == "disclose"
+
+    said = " ".join(e.text for e in out.answer.elements)
+    assert "competence" in said, (
+        "the competence screen is not named to the advocate")
+    # WHAT IT FOUND, not merely that it ran. `covered` and `COVERAGE GAP` are
+    # opposite facts and an advocate who cannot tell them apart has been told
+    # nothing worth the line.
+    assert ("COVERAGE GAP" in said or "NOT MEASURED" in said
+            or "binds" in said or "held" in said), (
+        f"the competence row says the screen ran and not what it found:\n"
+        f"{said[:600]}")
 
 
 def test_every_answer_in_the_run_carries_the_trailing_disclosures(tmp_path):

@@ -28,13 +28,14 @@ from nm.domain.gates import GATES, Response
 from nm.domain.traceability import refuses
 from nm.ports.evidence import (
     Coverage,
+    EvidencePort,
     EvidenceResult,
     ParaKind,
     SourceKind,
     Treatment,
 )
 from nm.ports.store import StaleWrite
-from tests.test_turn_contract import KEY, _Evidence, _model_config, build, finding
+from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed, build, finding
 
 pytestmark = pytest.mark.class_a
 
@@ -53,12 +54,12 @@ def test_a_turn_commits_atomically_and_the_commit_precedes_emission(tmp_path):
         def commit(self, matter, expected_version=None):
             raise StaleWrite("the matter moved underneath this turn")
 
-    engine = TurnEngine(
+    engine = briefed(TurnEngine(
         store=_RefusingStore(tmp_path, key=KEY),
         evidence=_Evidence(),
         model=__import__("nm.adapters.model.scripted", fromlist=["x"])
         .ScriptedModelAdapter(_model_config(),
-                              responses={"__default__": "File within the window."}))
+                              responses={"__default__": "File within the window."})))
 
     with pytest.raises(StaleWrite):
         engine.run(TurnInput(advocate_id="adv", turn_id="turn_nocommit",
@@ -97,7 +98,7 @@ def test_reaching_the_evidence_bound_produces_a_visible_gap(tmp_path, monkeypatc
     """
     from nm.core import turn as turn_module
 
-    class _Exhausting:
+    class _Exhausting(EvidencePort):
         """Every fetch succeeds, so only the BOUND can stop the turn."""
 
         def fetch(self, need):
@@ -186,7 +187,7 @@ def test_a_named_provision_is_still_counted(tmp_path):
 def test_the_bound_is_enforced_by_the_engine_not_by_the_caller(tmp_path):
     """The counter lives in ONE place. Incrementing at each call site is how a
     bound stops matching the rounds actually run."""
-    class _Counting:
+    class _Counting(EvidencePort):
         def __init__(self):
             self.calls = 0
 

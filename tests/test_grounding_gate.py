@@ -32,7 +32,7 @@ from nm.ports.evidence import (
     Treatment,
     TreatmentState,
 )
-from tests.test_turn_contract import _Evidence, build, finding
+from tests.test_turn_contract import _Evidence, briefed, build, finding
 
 pytestmark = pytest.mark.class_a
 
@@ -327,14 +327,14 @@ def test_the_corpus_gap_is_disclosed_before_the_authority_search_not_after(tmp_p
     from nm.core.turn import TurnEngine
     from tests.test_turn_contract import KEY, _model_config
 
-    engine = TurnEngine(
+    engine = briefed(TurnEngine(
         store=FileMatterStore(tmp_path, key=KEY),
         evidence=_Evidence(EvidenceResult(coverage=Coverage.NOT_HELD,
                                           missing="nothing matched.",
                                           searched_stores=("authority_index",))),
         model=ScriptedModelAdapter(_model_config(), responses={
             "__default__": "Move for interim protection this week."}),
-        coverage=_StaleHighCourt())
+        coverage=_StaleHighCourt()))
 
     out = engine.run(TurnInput(
         advocate_id="adv",
@@ -364,7 +364,11 @@ def test_the_corpus_gap_is_disclosed_before_the_authority_search_not_after(tmp_p
 def test_an_unmeasured_installation_says_so_rather_than_implying_coverage(tmp_path):
     """No coverage port wired is NOT silence. `MET` would claim coverage nobody
     measured, and skipping the gate says the same thing more quietly."""
-    engine, _ = build(tmp_path, evidence=_Evidence(EvidenceResult(
+    # `coverage=False` IS THE SUBJECT, not a convenience. The shared fixture
+    # wires the measured profile because the composition root does, and an
+    # UNMEASURED installation is a different deployment -- measuring the
+    # measured one here would pass on the opposite of what this test is for.
+    engine, _ = build(tmp_path, coverage=False, evidence=_Evidence(EvidenceResult(
         coverage=Coverage.NOT_HELD, missing="nothing matched.",
         searched_stores=("authority_index",))))
     out = engine.run(TurnInput(

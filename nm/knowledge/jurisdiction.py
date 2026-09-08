@@ -89,6 +89,58 @@ def normalise_court(raw: str | None) -> Court:
     return Court.UNKNOWN
 
 
+#: HOW THE AUTHORITY INDEX SPELLS EACH COURT. Measured, 8 September 2026:
+#: `SELECT court, COUNT(*) FROM paras GROUP BY court` returns exactly two
+#: rows -- `Supreme Court of India` (395,734 paragraphs) and `High Court of
+#: Andhra Pradesh` (55,814). There is no third.
+#:
+#: THE FILTER WAS `lower(court) = lower(?)`, so an advocate typing `Supreme
+#: Court` got ZERO -- and a zero from an exact-match filter reads exactly like
+#: "the corpus holds nothing", which is the trap this repository has recorded
+#: three times against the legal corpus already (B-163).
+#:
+#: IT RESOLVES THROUGH `normalise_court` AND NOT THROUGH A SECOND ALIAS LIST.
+#: That function already maps free text onto the closed `Court` vocabulary and
+#: already returns UNKNOWN rather than guessing; a table of spellings here
+#: would be a second owner for the same question, and the one that stopped
+#: being updated.
+#:
+#: TELANGANA RESOLVES TO THE ANDHRA PRADESH BENCH, and that is the standing
+#: decision in `docs/BASELINE.md` §1.1 rather than a convenience: Andhra
+#: Pradesh High Court judgements ARE Telangana judgements and every one of
+#: them binds. RG-01 already cost this product a blocked release by counting
+#: a label instead of the relationship.
+STORED_AS: dict[Court, str] = {
+    Court.SUPREME_COURT: "Supreme Court of India",
+    Court.HC_TELANGANA: "High Court of Andhra Pradesh",
+    Court.HC_ANDHRA_PRADESH: "High Court of Andhra Pradesh",
+}
+
+
+def stored_court(raw: str | None) -> tuple[str | None, str]:
+    """The index's own spelling for what the advocate typed, and what ran.
+
+    Returns `(value, said)`. `value` is `None` when nothing in the index
+    answers to it, and `said` is ALWAYS a sentence naming the filter that was
+    applied -- because BK-38's acceptance is that a zero result states
+    exactly which normalised filters ran. A zero with no filter named is
+    indistinguishable from an empty corpus.
+    """
+    if not raw or not raw.strip():
+        return None, "no court filter"
+    court = normalise_court(raw)
+    value = STORED_AS.get(court)
+    if value:
+        return value, f"court: {raw.strip()!r} read as {value!r}"
+    if court is Court.UNKNOWN:
+        return "", (f"court: {raw.strip()!r} matches no court this index "
+                    f"holds. It holds "
+                    f"{', '.join(sorted(set(STORED_AS.values())))}")
+    return "", (f"court: {raw.strip()!r} read as {court.value!r}, which this "
+                f"index holds nothing for. It holds "
+                f"{', '.join(sorted(set(STORED_AS.values())))}")
+
+
 @refuses_blank_text()
 @dataclass(frozen=True)
 class BindingRuling:

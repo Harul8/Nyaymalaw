@@ -29,7 +29,7 @@ import pytest
 
 from nm.core.turn import TurnInput
 from nm.domain.matter import Provenance
-from nm.ports.evidence import Coverage, EvidenceResult
+from nm.ports.evidence import Coverage, EvidencePort, EvidenceResult
 from tests.test_turn_contract import build, finding
 
 pytestmark = pytest.mark.class_a
@@ -46,7 +46,7 @@ ARTICLE_19 = ("For the price of goods sold and delivered where no fixed period "
 PROV = Provenance(kind="advocate_statement", turn="t1")
 
 
-class _Corpus:
+class _Corpus(EvidencePort):
     """Answers the ARTICLE need and the SECTION need differently.
 
     A stub returning one result for both would satisfy this test while the

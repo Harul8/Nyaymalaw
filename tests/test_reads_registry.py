@@ -45,6 +45,7 @@ import pathlib
 import pytest
 
 from nm.domain import reads
+from tests.test_turn_contract import briefed  # noqa: F401
 
 pytestmark = pytest.mark.class_a
 
@@ -268,11 +269,11 @@ def test_the_turn_discloses_which_read_came_back_empty(tmp_path):
             return result
 
     store = FileMatterStore(tmp_path, key=KEY)
-    engine = TurnEngine(
+    engine = briefed(TurnEngine(
         store=store, evidence=_Evidence(),
         model=TracedModel(inner=NoDates(
             _model_config(),
-            responses={"__default__": "Issue the notice."})))
+            responses={"__default__": "Issue the notice."}))))
     out = engine.run(TurnInput(
         advocate_id="adv_1", today=date(2026, 9, 5),
         message=("We act for the plaintiff at Hyderabad. The agreement is "

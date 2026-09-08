@@ -43,7 +43,7 @@ from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.model.traced import TracedModel
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
-from tests.test_turn_contract import KEY, _Evidence, _model_config
+from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
 
@@ -76,8 +76,8 @@ def _engine(tmp_path, evidence=None, cite="53A"):
     model = TracedModel(inner=_CitesSomethingElse(
         _model_config(), cite=cite,
         responses={"__default__": "Issue the notice."}))
-    return TurnEngine(store=store, evidence=evidence or _Evidence(),
-                      model=model), store
+    return briefed(TurnEngine(store=store, evidence=evidence or _Evidence(),
+                      model=model)), store
 
 
 # ============================ the round happens =============================
@@ -180,10 +180,10 @@ def test_an_ordinary_turn_makes_no_extra_round(tmp_path):
             return super().fetch(need)
 
     store = FileMatterStore(tmp_path, key=KEY)
-    engine = TurnEngine(
+    engine = briefed(TurnEngine(
         store=store, evidence=_Counting(),
         model=TracedModel(inner=ScriptedModelAdapter(
-            _model_config(), responses={"__default__": "Issue the notice."})))
+            _model_config(), responses={"__default__": "Issue the notice."}))))
     engine.run(TurnInput(advocate_id="adv_1", today=TODAY, message=OPENING))
 
     assert hints == [], (

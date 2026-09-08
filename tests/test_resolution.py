@@ -36,6 +36,7 @@ from nm.knowledge.resolution import (
 from nm.ports.evidence import (
     Binding,
     EvidenceNeed,
+    EvidencePort,
     Finding,
     Origin,
     ParaKind,
@@ -450,7 +451,7 @@ def test_the_engine_sets_the_cause_so_the_graph_can_be_consulted(tmp_path):
 
     seen: list[str | None] = []
 
-    class _Recording:
+    class _Recording(EvidencePort):
         def __init__(self):
             from tests.test_turn_contract import _Evidence
             self._inner = _Evidence()

@@ -47,7 +47,7 @@ from nm.adapters.model.traced import TracedModel
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core import theory as theory_reader
 from nm.core.turn import TurnEngine, TurnInput
-from tests.test_turn_contract import KEY, _Evidence, _model_config
+from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
 
@@ -63,7 +63,7 @@ def _engine(tmp_path, inner=None):
     store = FileMatterStore(tmp_path, key=KEY)
     model = TracedModel(inner=inner or ScriptedModelAdapter(
         _model_config(), responses={"__default__": "Issue the notice."}))
-    return TurnEngine(store=store, evidence=_Evidence(), model=model), store
+    return briefed(TurnEngine(store=store, evidence=_Evidence(), model=model)), store
 
 
 def _standing(store, matter_id):

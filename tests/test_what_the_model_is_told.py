@@ -120,6 +120,22 @@ def content_fields() -> tuple[str, ...]:
 # ========================= the declared withholdings ========================
 
 WITHHELD: dict[str, str] = {
+    "Matter.last_activity":
+        "WHEN the file was last worked is a fact about the ADVOCATE'S "
+        "diary, not about the dispute. A model told it will reason from "
+        "it -- `the matter has been dormant, so...` -- which is an "
+        "inference about their practice and not about the law. The "
+        "chronology carries every date that bears on the case, dated by "
+        "the forum's calendar and sourced. Reopens if a read is ever "
+        "asked about delay in prosecution, where when the advocate last "
+        "touched the file is genuinely material.",
+    "Matter.emergency_because":
+        "It is a screening decision about the FILE, not material for an "
+        "answer. Telling a model that a matter was admitted under an "
+        "emergency exception invites it to write about the emergency "
+        "instead of the question, and the exception is already on the "
+        "advocate's screen as a blocked screen row. Reopens if a read is "
+        "ever asked to WEIGH urgency rather than report it.",
     # -- structure, not content ---------------------------------------------
     "Matter.id": "an identifier. The model reasons about the matter, not "
                  "about its key, and a key in a prompt is a token spent on "

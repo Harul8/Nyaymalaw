@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, Field
 
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
-from nm.domain import attempts
+from nm.domain import attempts, brief
 from nm.domain import summary as matter_memory
 from nm.domain.advocate import utcnow
 from nm.domain.answer import Answer
@@ -72,6 +72,22 @@ class _Released(BaseModel):
     elements: list[dict]
     metrics: dict
     replayed: bool
+    # BK-36. WHAT HAPPENED TO THE BRIEF, in the caller's own terms.
+    #
+    # `replayed` already said "this turn id has been applied before", and the
+    # browser had no way to ask the question it actually needs answered after
+    # a lost response: WAS MY BRIEF SAVED? Those are the same fact from two
+    # ends, and the browser was left inferring it from an HTTP status it never
+    # received.
+    #
+    #   committed   the brief is on the file, derived from and served
+    #   replayed    it was already on the file; this is that same turn again
+    #
+    # There is no third value HERE, and that is deliberate: a turn that was
+    # not committed does not reach this function at all -- it raises, and the
+    # error carries `turn_id` so the retry can name it.
+    committed: str
+    matter_version: int | None
 
 
 def _release(output) -> _Released:
@@ -114,11 +130,22 @@ def _release(output) -> _Released:
                 "collapsible": e.collapsible,
                 "disclosure": e.disclosure,
                 "refs": list(e.refs),
+                # BK-37. WHICH QUESTION THIS ELEMENT ANSWERS.
+                #
+                # Computed HERE and not in the browser, because a renderer
+                # that decided sections for itself would be a second opinion
+                # about what an element IS -- two correct components and the
+                # disagreement visible only on a screen nobody diffed. The
+                # assignment is pure and has one owner in
+                # `nm/domain/brief.py`; the client groups and does not judge.
+                "section": brief.section_of(e).value,
             }
             for e in answer.elements
         ],
         metrics=output.metrics.as_dict(),
         replayed=output.replayed,
+        committed="replayed" if output.replayed else "committed",
+        matter_version=output.matter.version if output.matter else None,
     )
 
 
@@ -193,6 +220,32 @@ class TurnRequest(BaseModel):
     turn_id: str | None = None
     today: date | None = None
     jurisdiction: str = FORUM
+    # BK-36. THE VERSION THE CALLER BELIEVES IT IS WRITING ON TOP OF.
+    #
+    # The per-matter lock and the exact version check already stop two writers
+    # silently winning INSIDE the store. What was missing is the browser's
+    # half: a second tab that loaded the matter, sat for ten minutes and then
+    # sent a brief was writing on top of a file it had never seen, and the
+    # first it heard of it was a turn derived from facts it did not know
+    # about.
+    #
+    # `None` MEANS THE CALLER DID NOT CHECK, and it is accepted rather than
+    # refused: the API is used by tools and tests that legitimately do not
+    # hold a version. What it must never do is read as "I checked and it
+    # matched", so the two are different values and the mismatch is a 409 with
+    # both numbers in it.
+    expected_version: int | None = None
+
+    parties: dict[str, str] = Field(default_factory=dict)
+    """BK-34. Who is involved, given at intake: name -> side."""
+
+    release: dict[str, str] = Field(default_factory=dict)
+    """BK-34. Screens this advocate releases with this brief: kind -> why.
+
+    The signed-in advocate is the named releaser -- the identity comes from
+    the session, never from the body, so a caller cannot release a screen in
+    somebody else's name.
+    """
 
 
 #: THE CODE THIS PROCESS ACTUALLY LOADED, captured ONCE at import.
@@ -332,13 +385,79 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
     }
 
 
+def _register_of(matter) -> tuple:
+    """Every deadline this matter's threads hold. ONE OWNER.
+
+    `None` REMAINS REACHABLE AND MEANS WHAT IT SAYS. A matter whose threads
+    carry no `deadlines` attribute at all -- decoded from a store that
+    predates the field -- is not a matter with no deadlines, and returning
+    `()` for it would be exactly the collapse the projection refuses.
+    """
+    from datetime import date as _date
+
+    from nm.core.deadlines import Deadline, DeadlineKind
+
+    rows: list = []
+    saw_register = False
+    for thread in getattr(matter, "threads", ()):
+        held = getattr(thread, "deadlines", None)
+        if held is None:
+            continue
+        saw_register = True
+        for row in held:
+            # REHYDRATED, BECAUSE `Thread.deadlines` IS `tuple[object, ...]`.
+            #
+            # The field is untyped for the cycle reason every persisted
+            # derivation here carries -- `nm.core.deadlines` imports the
+            # matter module -- so the store decoder cannot rebuild the type
+            # and hands back dicts. `_thread_row` reads `d.thread` and
+            # `d.status(today)`, so passing the raw rows raised
+            # `AttributeError: 'dict' object has no attribute 'thread'` on
+            # the first board that had ever been advised on.
+            #
+            # A DICT THAT CANNOT BE REBUILT IS SKIPPED AND THE REGISTER
+            # STILL COUNTS AS PRESENT. Dropping the whole register for one
+            # unreadable row would report `not_assessed` -- nobody looked --
+            # for a file where somebody did.
+            if not isinstance(row, dict):
+                rows.append(row)
+                continue
+            try:
+                on = row.get("on")
+                rows.append(Deadline(
+                    thread=str(row["thread"]),
+                    kind=DeadlineKind(row["kind"]),
+                    source=str(row["source"]), action=str(row["action"]),
+                    owner=str(row["owner"]),
+                    consequence=str(row["consequence"]),
+                    on=_date.fromisoformat(on) if isinstance(on, str) else on))
+            except (KeyError, ValueError, TypeError):
+                continue
+    return tuple(rows) if saw_register else None
+
+
+def _registers(held) -> dict:
+    return {m.id: _register_of(m) for m in held}
+
+
 @app.get("/api/matters")
 def matters(advocate_id: Advocate) -> dict:
     """THE MATTER LIST. One row per matter, nearest deadline first.
 
     Bounded by MATTER count -- never by threads, turns or facts.
     """
-    return matter_list_projection(application().store.list_for(advocate_id))
+    held = application().store.list_for(advocate_id)
+    # THE REGISTER IS ON THE THREADS AND WAS NEVER READ. BK-33.
+    #
+    # Both projections take a register and both were called without one, so
+    # every row on every board reported `not_assessed` -- "nobody computed a
+    # register" -- while `Thread.deadlines` held the windows the last turn
+    # derived. The projection was right to refuse a default; the CALLER was
+    # supplying nothing.
+    #
+    # `not assessed`, `none on this matter`, `upcoming` and `passed` are four
+    # different facts and the advocate could only ever see the first.
+    return matter_list_projection(held, registers=_registers(held))
 
 
 @app.get("/api/matters/{matter_id}")
@@ -350,11 +469,15 @@ def matter(matter_id: str, advocate_id: Advocate) -> dict:
         # The same response whether it does not exist or belongs to someone
         # else: a failed lookup must disclose nothing about what exists.
         raise HTTPException(status_code=404, detail="no such matter")
-    # `None`, WRITTEN OUT. This view computes no deadline register -- the
-    # register is derived on a turn, from the retrieval that turn made -- and
-    # `None` is what says so. It was an omitted argument defaulting to `()`,
-    # and every row then reported a file with no deadlines on it.
-    return board_projection(m, None)
+    # THE PERSISTED REGISTER, not `None`. BK-33.
+    #
+    # This passed `None` under a comment saying the view computes no register
+    # -- true, and it does not have to: the register is derived on a turn and
+    # WRITTEN TO THE THREAD, so the board reads what is on the file rather
+    # than recomputing it. Passing `None` said "nobody has assessed the
+    # deadlines on this matter", which was false on every matter that had
+    # ever been advised on.
+    return board_projection(m, _register_of(m))
 
 
 @app.get("/api/matters/{matter_id}/summary")
@@ -397,8 +520,29 @@ def turn(req: TurnRequest, advocate_id: Advocate) -> _Released:
         # day short.
         today=req.today or forum_today(),
         jurisdiction=req.jurisdiction,
+        parties=dict(req.parties or {}),
+        release=dict(req.release or {}),
         **({"turn_id": req.turn_id} if req.turn_id else {}),
     )
+    # THE VERSION IS CHECKED BEFORE THE MODEL RUNS, not after. A stale write
+    # detected at commit has already spent the calls; detected here it costs
+    # one read, and the advocate gets the same answer sooner.
+    if req.expected_version is not None and req.matter_id:
+        try:
+            held = application().store.load(req.matter_id)
+        except Exception:  # noqa: BLE001 -- an unreadable matter is the store's
+            held = None    # own error, raised where it is understood
+        if held is not None and held.version != req.expected_version:
+            raise HTTPException(status_code=409, detail={
+                "why": (f"this matter moved while you were writing: you were "
+                        f"working on version {req.expected_version} and it is "
+                        f"now at {held.version}"),
+                "expected_version": req.expected_version,
+                "matter_version": held.version,
+                "turn_id": req.turn_id,
+                "committed": "not_committed",
+            })
+
     try:
         output = engine.run(payload)
     except TurnRefused as exc:
@@ -410,9 +554,17 @@ def turn(req: TurnRequest, advocate_id: Advocate) -> _Released:
             "withheld_by": list(getattr(exc, "gates", ())),
             "why": getattr(exc, "message", str(exc)),
             "not_established": list(getattr(exc, "disclosures", ())),
+            # A WITHHELD TURN IS STILL A TURN THAT RAN. The id is what makes
+            # a retry the SAME turn rather than a second one.
+            "turn_id": req.turn_id,
+            "committed": "not_committed",
         }) from exc
     except StaleWrite as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise HTTPException(status_code=409, detail={
+            "why": str(exc),
+            "turn_id": req.turn_id,
+            "committed": "not_committed",
+        }) from exc
     return _release(output)
 
 
@@ -704,14 +856,87 @@ def login(body: Credentials, request: Request, response: Response,
 @app.post("/api/logout")
 def logout(response: Response,
            nm_session: str | None = Cookie(default=None)) -> dict:
-    """Ends the session server-side, THEN clears the cookie.
+    """Ends the session server-side, THEN clears the cookie, and SAYS WHICH.
 
     Clearing the cookie alone would leave a live session behind a token the
     browser merely forgot -- which is not a sign-out, it is a tidier screen.
+
+    AND THE ANSWER USED TO BE `{"signed_out": true}` UNCONDITIONALLY, which
+    is the same defect one layer up: `close_session` returned `None` whether
+    it had ended a live session, found one already closed, or found nothing
+    at all. The browser believed it, and BK-40's measured counterexample is
+    an advocate being shown the sign-in screen after a logout the server
+    never received.
+
+    `outcome` carries which of the three it was. `signed_out` stays the
+    caller's question -- can this token still authenticate -- and the answer
+    is no in every branch, because the cookie is cleared and an `unknown`
+    token was never usable. What `unknown` does NOT mean is that a session
+    was ended, and a caller that needs that distinction now has it.
     """
-    application().directory.close_session(nm_session or "", "signed out")
+    outcome = application().directory.close_session(nm_session or "",
+                                                    "signed out")
     response.delete_cookie("nm_session", path="/")
-    return {"signed_out": True}
+    return {"signed_out": True, "outcome": outcome}
+
+
+@app.get("/api/sessions")
+def sessions(advocate_id: Advocate,
+             nm_session: str | None = Cookie(default=None)) -> dict:
+    """WHERE THIS ADVOCATE IS SIGNED IN. BK-31.
+
+    NO TOKENS AND NO FINGERPRINTS ON THE WIRE. The fingerprint is what the
+    server matches a cookie against; handing it to a browser would put the
+    one value that identifies a session into a place this product does not
+    control. What the advocate needs is when it started, when it expires,
+    which device it is, and whether it is this one.
+    """
+    from nm.domain.advocate import token_fingerprint as _fp
+
+    directory = application().directory
+    if not hasattr(directory, "sessions_for"):
+        # NOT AN EMPTY LIST. A directory that cannot answer is not a
+        # directory with no sessions, and the difference is the whole point
+        # of the route.
+        raise HTTPException(
+            status_code=501,
+            detail="this deployment's directory cannot list sessions")
+
+    mine = _fp(nm_session or "")
+    rows = []
+    for session in directory.sessions_for(advocate_id):
+        rows.append({
+            "device": session.device[:12],
+            "issued_at": session.issued_at.isoformat(),
+            "expires_at": session.expires_at.isoformat(),
+            "ended_because": session.ended_because,
+            "live": session.ended_because is None,
+            "this_one": session.token_fingerprint == mine,
+        })
+    return {"sessions": rows, "count": len(rows)}
+
+
+@app.post("/api/sessions/revoke")
+def revoke_sessions(advocate_id: Advocate,
+                    nm_session: str | None = Cookie(default=None)) -> dict:
+    """Sign out everywhere else. BK-31.
+
+    THE ONE THIS REQUEST CAME FROM SURVIVES. An advocate securing a device
+    they no longer control should not have to sign in again on the one they
+    are holding -- and a control that logs you out to protect you is a
+    control nobody uses twice.
+
+    THE COUNT IS RETURNED because "signed out everywhere" is unverifiable
+    otherwise, and the case this exists for is the case where it matters.
+    """
+    directory = application().directory
+    if not hasattr(directory, "close_all_sessions"):
+        raise HTTPException(
+            status_code=501,
+            detail="this deployment's directory cannot revoke sessions")
+    ended = directory.close_all_sessions(
+        advocate_id, "revoked by the advocate", except_token=nm_session or "")
+    return {"ended": ended}
 
 
 @app.get("/api/session")

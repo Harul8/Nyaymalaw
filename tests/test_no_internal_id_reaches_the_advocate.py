@@ -34,7 +34,7 @@ from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.model.traced import TracedModel
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
-from tests.test_turn_contract import KEY, _Evidence, _model_config
+from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
 
@@ -59,11 +59,11 @@ CONVERSATION = (
 def _served(tmp_path) -> list[str]:
     """Every line the advocate was actually shown, across the conversation."""
     store = FileMatterStore(tmp_path, key=KEY)
-    engine = TurnEngine(
+    engine = briefed(TurnEngine(
         store=store, evidence=_Evidence(),
         model=TracedModel(inner=ScriptedModelAdapter(
             _model_config(),
-            responses={"__default__": "Issue the notice and diarise it."})))
+            responses={"__default__": "Issue the notice and diarise it."}))))
 
     shown: list[str] = []
     matter_id = None

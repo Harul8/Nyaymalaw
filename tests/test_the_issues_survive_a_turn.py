@@ -45,7 +45,7 @@ from nm.domain import issue as issue_domain
 from nm.domain.issue import Issue, IssueKind
 from nm.domain.matter import Side
 from nm.domain.quotable import Quotable
-from tests.test_turn_contract import KEY, _Evidence, _model_config
+from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
 
@@ -85,7 +85,7 @@ def _engine(tmp_path, inner=None):
     store = FileMatterStore(tmp_path, key=KEY)
     model = TracedModel(inner=inner or ScriptedModelAdapter(
         _model_config(), responses={"__default__": "Issue the notice."}))
-    return TurnEngine(store=store, evidence=_Evidence(), model=model), store
+    return briefed(TurnEngine(store=store, evidence=_Evidence(), model=model)), store
 
 
 def _live(store, matter_id):

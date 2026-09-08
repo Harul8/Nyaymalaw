@@ -152,6 +152,74 @@ class Screen:
         return not parties <= self.covers
 
 
+#: SCREEN KIND -> ITS GATE, and how a screen state reads in that gate's own
+#: vocabulary. BK-34.
+#:
+#: WRITTEN DOWN RATHER THAN INFERRED, because the vocabularies genuinely
+#: differ: a conflict that found something is `matched`, a scope that found
+#: something is `out_of_scope`, and a capacity that found something is
+#: `doubted`. They are not synonyms and flattening them to one word would
+#: lose exactly what each gate exists to say.
+#:
+#: `metrics.fire` REFUSES AN OUT-OF-VOCABULARY STATE, so a mapping that drifts
+#: from `nm/domain/gates.py` fails at the call rather than quietly recording a
+#: state the matrix does not define.
+GATE_FOR: dict[ScreenKind, tuple[str, dict[ScreenState, str]]] = {
+    ScreenKind.EMERGENCY: ("G-EMERGENCY", {
+        ScreenState.CLEAR: "resolved",
+        ScreenState.BLOCKED: "live",
+        ScreenState.INCOMPLETE: "not_assessed",
+        ScreenState.NOT_ASSESSED: "not_assessed",
+    }),
+    ScreenKind.CONFLICT: ("G-CONFLICT", {
+        ScreenState.CLEAR: "clear",
+        ScreenState.BLOCKED: "matched",
+        ScreenState.INCOMPLETE: "incomplete",
+        ScreenState.NOT_ASSESSED: "not_run",
+    }),
+    ScreenKind.COMPETENCE: ("G-COMPETENCE", {
+        ScreenState.CLEAR: "covered",
+        ScreenState.BLOCKED: "gap",
+        ScreenState.INCOMPLETE: "not_assessed",
+        ScreenState.NOT_ASSESSED: "not_assessed",
+    }),
+    ScreenKind.SCOPE: ("G-SCOPE", {
+        ScreenState.CLEAR: "in_scope",
+        ScreenState.BLOCKED: "unrecorded",
+        ScreenState.INCOMPLETE: "unrecorded",
+        ScreenState.NOT_ASSESSED: "unrecorded",
+    }),
+    ScreenKind.CAPACITY: ("G-CAPACITY", {
+        ScreenState.CLEAR: "held",
+        ScreenState.BLOCKED: "not_assessed",
+        ScreenState.INCOMPLETE: "not_assessed",
+        ScreenState.NOT_ASSESSED: "not_assessed",
+    }),
+}
+
+
+def gate_for(screen: Screen) -> tuple[str, str]:
+    """The gate this screen fires, and the state it fires with.
+
+    A COMPETENCE SCREEN THAT FOUND A COVERAGE GAP IS `CLEAR` AND FIRES `gap`,
+    and the pair is not a contradiction: the screen ran and does not block --
+    `G-COMPETENCE` is `Response.DISCLOSE` -- while the gate is what carries
+    the finding to the advocate. The screen state answers *did this stop the
+    turn*; the gate state answers *what did it find*.
+    """
+    gate_id, table = GATE_FOR.get(screen.kind, ("", {}))
+    if not gate_id:
+        return "", ""
+    if screen.kind is ScreenKind.COMPETENCE:
+        # Its finding lives in the detail, because the state is always CLEAR.
+        if screen.detail.startswith("NOT MEASURED"):
+            return gate_id, "not_assessed"
+        if screen.detail.startswith("COVERAGE GAP"):
+            return gate_id, "gap"
+        return gate_id, "covered"
+    return gate_id, table.get(screen.state, "not_assessed")
+
+
 @implements("B3")
 def unscreened(screens: tuple[Screen, ...]) -> tuple[str, ...]:
     """Every screen that does NOT clear, with why. THE POPULATION IS THE KINDS.

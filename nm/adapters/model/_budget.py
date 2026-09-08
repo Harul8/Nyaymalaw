@@ -16,17 +16,14 @@ from __future__ import annotations
 
 from nm.adapters.model.config import CONTEXT_BUDGET
 from nm.ports.model import ContextOverflow, Prompt, Tier
+from nm.ports.model import estimate_tokens as _estimate_tokens
 
-
-def estimate_tokens(text: str) -> int:
-    """A deliberately crude, deterministic estimate.
-
-    Not a real tokenizer: a guard whose threshold moves with a tokenizer's
-    version is a guard that fails differently across releases. It errs toward
-    over-counting, so the guard trips before the provider's hard limit rather
-    than after it.
-    """
-    return max(1, len(text) // 4)
+# THE ESTIMATOR LIVES ON THE PORT (BK-29). It is re-exported here so
+# every existing caller keeps working, and it is NOT redefined: two answers
+# to "how big is this prompt" would drift the first time either was tuned,
+# and one of them decides whether a guard trips while the other decides how
+# much a read may say.
+estimate_tokens = _estimate_tokens
 
 
 def prompt_tokens(prompt: Prompt) -> int:

@@ -52,7 +52,7 @@ from nm.domain.matter import (
 )
 from nm.domain.quotable import Quotable
 from nm.domain.traceability import refuses
-from tests.test_turn_contract import KEY, _Evidence, _model_config
+from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
 
@@ -103,8 +103,8 @@ class _RecordingEvidence(_Evidence):
 
 def _engine(tmp_path, model=None, evidence=None):
     store = FileMatterStore(tmp_path, key=KEY)
-    return TurnEngine(store=store, evidence=evidence or _Evidence(),
-                      model=model or _Recorder()), store
+    return briefed(TurnEngine(store=store, evidence=evidence or _Evidence(),
+                      model=model or _Recorder())), store
 
 
 # ============================================== E-036: the file reaches all ===
@@ -867,7 +867,7 @@ def test_a_withheld_turn_keeps_the_advocates_words(tmp_path):
     from tests.test_turn_contract import finding
 
     store = FileMatterStore(tmp_path, key=KEY)
-    engine = TurnEngine(
+    engine = briefed(TurnEngine(
         store=store,
         evidence=_Evidence(EvidenceResult(
             coverage=Coverage.ANSWERED, findings=(finding(),),
@@ -875,7 +875,7 @@ def test_a_withheld_turn_keeps_the_advocates_words(tmp_path):
         model=ScriptedModelAdapter(
             _model_config(),
             responses={"__default__":
-                       "File the suit under section 27 of the Limitation Act."}))
+                       "File the suit under section 27 of the Limitation Act."})))
 
     said = ("We act for the plaintiff in O.S. 442/2023 over the Kukatpally "
             "land, and the builder has not delivered possession.")

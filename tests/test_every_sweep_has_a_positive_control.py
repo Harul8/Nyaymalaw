@@ -42,6 +42,12 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sweep test  ->  the test that proves it can fail.
 #: A sweep with no control is a sweep that has never been shown to work.
 CONTROLS: dict[str, str] = {
+    # BK-30 -- one CSS class, one owner. `.gate` meant a gate FIRING in an
+    # answer and also the full-screen sign-in overlay, so every disclosure
+    # became `position:fixed; inset:0; z-index:100` and painted the whole
+    # application white after every turn.
+    "test_no_class_is_declared_twice_at_the_top_level":
+        "test_the_scan_sees_a_planted_collision",
     # the attributable labels have one owner, over every literal
     # collection in nm/ AND tools/ -- five of the six copies it
     # replaced were in tools/

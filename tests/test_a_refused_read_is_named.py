@@ -58,7 +58,7 @@ from nm.adapters.model.traced import TracedModel
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput
 from nm.ports.model import ModelError
-from tests.test_turn_contract import KEY, _Evidence, _model_config
+from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
 
@@ -75,6 +75,35 @@ TWO = ("We act for the defendant at Hyderabad in a cheque matter. The loan "
        "was repaid in cash with no receipt.",
        "Separately, we have a recovery suit for the same client against a "
        "supplier at Secunderabad.")
+#: The accrual read runs only where the trigger DECIDES something: a cause
+#: with a curated `accrues_on`, and more than one dated entry for it to choose
+#: between. `PLAIN` has the dates and not the cause — it names no cause the
+#: routing settles, so the trigger is empty and the read is never attempted.
+#:
+#: MEASURED, NOT ASSUMED, and the measurement is why this brief exists: the
+#: first run of this row used `PLAIN`, the read never fired, and the failure
+#: read as a missing disclosure rather than a path that had never executed.
+#:
+#: ONE SENTENCE PER EVENT, and that is not cosmetic. `scripted_dates` takes
+#: the sentence a date sits in, so three dates in one sentence produce three
+#: chronology entries with IDENTICAL words — and an accrual read choosing
+#: between entries that read the same cannot choose at all. Measured: the
+#: first version of this brief was one sentence and every entry arrived as
+#: "The agreement of sale is dated 15 April 2024, possession was handed ov".
+ACCRUAL = ("We act for the plaintiff at Hyderabad in a suit for specific "
+           "performance. The agreement of sale is dated 15 April 2024. "
+           "Possession was handed over on 20 April 2024. On 12 June 2024 the "
+           "defendant refused in writing to execute the sale deed.")
+
+#: The briefs, by name. A dict rather than a ternary chain so that adding the
+#: fifth is an entry rather than an edit to the dispatch, and so that
+#: `REACHED_BY` naming a brief that does not exist is a KeyError rather than a
+#: silent fall-through to `PLAIN` — which is how the accrual row appeared to
+#: run for a while against a brief that never reached the read.
+BRIEFS: dict[str, tuple[str, ...]] = {
+    "plain": (PLAIN,), "expired": (EXPIRED,), "two": TWO,
+    "accrual": (ACCRUAL,),
+}
 
 #: read -> the brief that REACHES it. Measured on 7 September 2026 by refusing
 #: each of the fifteen against each brief and parsing the disclosure line.
@@ -86,6 +115,14 @@ TWO = ("We act for the defendant at Hyderabad in a cheque matter. The loan "
 #: a brief whose SHAPE calls for it -- `salvage` where the period has run,
 #: `exposure` where the file holds two disputes.
 REACHED_BY: dict[str, str] = {
+    "accrual": "accrual",
+    # The consistency read runs wherever a step is recommended, which is every
+    # turn that is not side-blind — so any brief reaches it, the same way
+    # `duty` does.
+    "consistency": "plain",
+    # The parties read runs on every matter turn -- it is what the
+    # conflict screen learns from, so it cannot be conditional.
+    "parties": "plain",
     "adverse": "plain", "attacks": "plain", "cause": "plain",
     "dates": "plain", "factors": "plain", "inventory": "plain",
     "issues": "plain", "posture": "plain", "route": "plain",
@@ -114,18 +151,17 @@ def _engine(tmp_path, read: str):
                 raise ModelError(f"the {read} read was refused by a test")
             return super().structured(prompt, schema, tier, **kw)
 
-    return TurnEngine(
+    return briefed(TurnEngine(
         store=FileMatterStore(tmp_path, key=KEY),
         evidence=_Evidence(),
         model=TracedModel(inner=_Fails(
             _model_config(), responses={"__default__": "File the suit."})),
-        elements=CuratedElements())
+        elements=CuratedElements()))
 
 
 def _run(engine, brief: str):
     out = None
-    for message in (TWO if brief == "two"
-                    else (EXPIRED,) if brief == "expired" else (PLAIN,)):
+    for message in BRIEFS[brief]:
         out = engine.run(TurnInput(
             advocate_id="adv_1", message=message, today=TODAY,
             matter_id=out.matter.id if out else None))
@@ -167,11 +203,11 @@ def test_a_read_that_could_not_run_is_named_to_the_advocate(read, tmp_path):
 def test_a_turn_whose_reads_all_ran_says_nothing_about_refusals(tmp_path):
     """THE BOUND, and it is the half that makes the rest mean something. A
     disclosure that appears on every turn is one the advocate stops seeing."""
-    engine = TurnEngine(
+    engine = briefed(TurnEngine(
         store=FileMatterStore(tmp_path, key=KEY), evidence=_Evidence(),
         model=TracedModel(inner=ScriptedModelAdapter(
             _model_config(), responses={"__default__": "File the suit."})),
-        elements=CuratedElements())
+        elements=CuratedElements()))
     out = engine.run(TurnInput(advocate_id="adv_1", message=PLAIN,
                                today=TODAY))
     assert _refused_line(out) == [], (

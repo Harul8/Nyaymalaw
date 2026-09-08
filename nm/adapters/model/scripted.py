@@ -918,7 +918,150 @@ def scripted_duty(user: str) -> str:
 #: possible rather than merely unlikely, and a schema with no title has no
 #: responder at all — which `tests/test_provider_independence.py` fails on
 #: rather than degrading at runtime.
+def scripted_accrual(user: str) -> str:
+    """A deterministic stand-in that READS THE TRIGGER rather than sorting.
+
+    A DOUBLE THAT ANSWERED `the first entry` WOULD LEAVE THE FIX UNTESTED
+    OFFLINE, and would do it invisibly: every offline run would agree with the
+    behaviour the read was written to replace, and the suite would go green on
+    the defect. So this works the way the model is asked to — it takes the
+    OPERATIVE WORDS OUT OF THE TRIGGER ITSELF and looks for them among the
+    entries.
+
+    THE WORDS ARE NOT A CURATED LIST. `Edge.accrues_on` writes what matters in
+    capitals — *the date of DELIVERY*, *NOTICE THAT PERFORMANCE IS REFUSED*,
+    *when POSSESSION BECOMES ADVERSE* — so the signal is in the data the
+    double is handed, and a trigger curated tomorrow is read the same way. A
+    keyword table here would be a second place to maintain the Schedule's
+    third column, which is what §4 asks about.
+
+    IT ANSWERS EMPTY WHEN NOTHING MATCHES, and that is a real answer: the
+    chronology does not hold the trigger, the period is not computed, and the
+    advocate is told what was being looked for. A double that always named
+    something would mean the refusal path never ran offline.
+    """
+    text = user or ""
+    i = text.find("THE PERIOD RUNS FROM:")
+    j = text.find("THE DATED ENTRIES")
+    trigger = text[i:j] if i >= 0 and j > i else ""
+
+    # THE CAPITALISED WORDS, stemmed to five characters so `REFUSED` reaches
+    # *refusal*, `DELIVERY` reaches *delivered*, `DISPOSSESSION` reaches
+    # *dispossessed*. Short caps like `NOT` and `OR` carry no signal and are
+    # dropped by the same length rule rather than by naming them.
+    stems = {w.lower()[:5] for w in re.findall(r"\b[A-Z]{5,}\b", trigger)
+             if w not in ("NOTICE", "PERIOD", "WHERE", "PLAINTIFF")}
+
+    rows = []
+    for line in text[j:].splitlines():
+        parts = line.strip().split("\t")
+        if len(parts) >= 3 and parts[0]:
+            rows.append((parts[0], parts[1], parts[2]))
+    if not rows:
+        return json.dumps({"fact_id": "", "limb": "no dated entries",
+                           "why": "the chronology holds no dated entry"})
+
+    best, score = None, 0
+    for fact_id, _on, statement in rows:
+        low = statement.lower()
+        hit = sum(1 for s in stems if s in low)
+        # THE LATEST QUALIFYING ENTRY ON A TIE, not the earliest. Where two
+        # entries answer the trigger equally the later one is the one the
+        # period runs from -- and picking the earlier here would reproduce
+        # the sort-order defect inside the double.
+        if hit and hit >= score:
+            best, score = (fact_id, statement), hit
+
+    if best is None:
+        # THE CAPITALS ARE THE STRONG SIGNAL AND THEY ARE NOT THE ONLY ONE.
+        #
+        # Article 14's trigger is "the date of DELIVERY of the goods", and an
+        # advocate writes "the goods were SUPPLIED against invoices". No
+        # capitalised word matches, so the strong pass finds nothing and the
+        # double reported that no entry answers the trigger -- which is a
+        # legitimate answer the product handles correctly, and a wrong one
+        # here.
+        #
+        # MEASURED, and it is why this fallback exists rather than a synonym
+        # table: adding a second dated fact to a goods file flipped the
+        # limitation from computed to NOT computed, the cascade correctly
+        # reported a derivation lost, and `test_gaps` caught the answer
+        # growing. A synonym table would have fixed the one word and left the
+        # next one, which is the maintained list this product refuses.
+        #
+        # So the fallback is the trigger's OWN CONTENT WORDS, lowercased.
+        # `goods` is in both sentences and is doing the work no capital could.
+        # It runs SECOND because the capitals carry the operative distinction
+        # -- Article 54's trigger says "NOT the date of the agreement", and a
+        # content-word pass alone would score the agreement entry on the very
+        # word that excludes it.
+        words = {w for w in re.findall(r"[a-z]{5,}", trigger.lower())}
+        for fact_id, _on, statement in rows:
+            low = statement.lower()
+            hit = sum(1 for w in words if w in low)
+            if hit and hit >= score:
+                best, score = (fact_id, statement), hit
+
+    if best is None:
+        return json.dumps({
+            "fact_id": "", "limb": "not identified",
+            "why": "no entry on this chronology answers the trigger"})
+    return json.dumps({
+        "fact_id": best[0],
+        "limb": " ".join(trigger.replace("THE PERIOD RUNS FROM:", "").split())[:120],
+        "why": f"this entry answers the trigger: {best[1][:80]}"})
+
+
+def scripted_parties(user: str) -> str:
+    """A stand-in that names NOBODY, and says so.
+
+    A DECLARED LIMITATION. Picking names out of prose is the job this read
+    exists to do, and a double that guessed would either invent parties --
+    which is what the quotation guard refuses -- or carry a name list, which
+    is the maintained list this product refuses everywhere else.
+
+    Empty is the read's own ordinary answer on a brief that names no party,
+    and it is the safe one: the conflict screen lands NOT_ASSESSED and asks,
+    rather than clearing against a party set the double made up. The
+    populated case is driven by supplying intake directly, which is the same
+    path the browser's intake form uses.
+    """
+    return json.dumps({"parties": [],
+                       "why": "the scripted double does not name parties"})
+
+
+def scripted_consistency(user: str) -> str:
+    """A stand-in for the consistency read that ANSWERS CONSISTENT.
+
+    AND THAT IS A DECLARED LIMITATION, not an oversight, so it is written
+    here rather than left to be discovered. Whether a sentence contradicts a
+    computed fact is a semantic judgement, and the only deterministic way to
+    fake it is a list of forbidden phrases — which is the exact thing the
+    product refuses, on the standing decision that such a list can never be
+    complete. A double carrying one would prove the guard untested while
+    looking like it proved the opposite.
+
+    SO THE MECHANISM IS PROVEN WHERE IT CAN BE. `tests/test_a_step_cannot
+    _contradict_the_figures.py` replaces this responder with one that names a
+    chosen claim, and drives every branch — contradicted, repaired,
+    unrepairable, an id that was not offered, and a quote that is not in the
+    step. What this responder is for is the OTHER population: every existing
+    test that serves a step, which must keep serving it.
+
+    ANSWERING CONSISTENT IS ALSO THE PRODUCT'S OWN FAILURE DIRECTION, so the
+    offline default matches what an unavailable model produces rather than
+    contradicting it.
+    """
+    return json.dumps({
+        "claim_id": "", "quoted": "",
+        "why": "the scripted double does not judge contradictions",
+    })
+
+
 SCRIPTED_READS: dict[str, object] = {
+    "accrual": scripted_accrual,
+    "consistency": scripted_consistency,
+    "parties": scripted_parties,
     "route": scripted_route,
     "posture": scripted_posture,
     "dispute": scripted_dispute,

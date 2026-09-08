@@ -185,6 +185,28 @@ class EmbeddingResult:
 #:
 #: They are ours, they are namespaced so they cannot be mistaken for JSON
 #: Schema, and they are STRIPPED at the provider boundary by `on_the_wire`.
+def estimate_tokens(text: str) -> int:
+    """A deliberately crude, deterministic estimate.
+
+    Not a real tokenizer: a guard whose threshold moves with a tokenizer's
+    version is a guard that fails differently across releases. It errs
+    toward over-counting, so a guard trips before the provider's hard limit
+    rather than after it.
+
+    ON THE PORT AND NOT IN AN ADAPTER. It lived in
+    `nm/adapters/model/_budget.py`, and BK-29 needed it in `nm/core` to
+    derive a read's token ceiling from what the read was shown --
+    `layercheck` refused that within the minute, correctly: `core` may not
+    import `adapters`.
+
+    Copying it into core would have been the second owner for "how big is
+    this", and the two would have drifted the first time either was tuned.
+    How a prompt is measured is a property of the MODEL INTERFACE, which is
+    what this module is.
+    """
+    return max(1, len(text) // 4)
+
+
 NM_SCHEMA_KEYS = ("x-nm-read",)
 
 

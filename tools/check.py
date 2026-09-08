@@ -204,7 +204,26 @@ def main() -> int:
     ok, _ = step("pytest -m class_a", [py, "-m", "pytest", "-m", "class_a", "-q"])
     results.append(("class_a", ok))
     prints.append(("class_a", source_fingerprint()))
-    ok, _ = step("pytest (all local)", [py, "-m", "pytest", "-q", "-m", "not class_d"])
+    # `journey` IS EXCLUDED, AND THIS IS AN ADMITTED GAP RATHER THAN A TIDY
+    # ONE. BK-30's browser suite needs a Chromium binary that `.[dev]` does
+    # not install, and it starts a real HTTP server and a real browser for
+    # every phase -- two minutes on top of a gate that already takes seven,
+    # on a machine that may not have the extra installed at all.
+    #
+    # WHAT THAT COSTS: a regression in `web/` -- the stylesheet, the page or
+    # the script -- does not fail this gate. It failed nothing before either,
+    # which is how `.gate` came to have two owners and paint the whole
+    # application white after every turn. The difference is that there is now
+    # a command that finds it:
+    #
+    #     python tools/journey.py
+    #
+    # Run it after any change under `web/`. `tests/test_no_css_class_has_two
+    # _owners.py` and `tests/test_the_page_and_the_script_agree.py` are class_a
+    # and DO run here -- they catch the two failure shapes that have actually
+    # bitten, from the text alone.
+    ok, _ = step("pytest (all local)",
+                 [py, "-m", "pytest", "-q", "-m", "not class_d and not journey"])
     results.append(("pytest", ok))
     prints.append(("pytest", source_fingerprint()))
 

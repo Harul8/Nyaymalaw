@@ -305,9 +305,23 @@ button.primary:disabled { opacity: 0.5; cursor: default; }
 button.ghost { border: none; background: none; color: var(--accent); padding: 0.2rem 0; font-size: 0.78rem; }
 button.wide { margin: 0.5rem 0.6rem 0.8rem; }
 
+/* THE TOGGLE IS FOR NARROW SCREENS ONLY. At 1280px the rail is already
+   beside the conversation and a button that opens what is open is noise. */
+.matters-toggle { display: none; }
+
 @media (max-width: 820px) {
   main { grid-template-columns: 1fr; }
+
+  /* BK-32, AND THE RULE IS `REACHABLE`, NOT `VISIBLE`.
+     The rail was `display: none` here with nothing else reaching the matter
+     list, so an advocate on a phone could work the matter they were in and
+     get to no other one. It stays out of the way by default -- 390px has no
+     room for two columns -- and `#matters-toggle` brings it in over the
+     conversation, which is the whole surface at this width. */
+  .matters-toggle { display: inline-block; }
   .rail { display: none; }
+  #pane-advise.show-rail .rail { display: flex; }
+  #pane-advise.show-rail .conversation { display: none; }
 }
 
 /* THE GRID CHILD MUST BE ALLOWED TO SHRINK.
@@ -532,9 +546,33 @@ main.single {
   .tabs { margin-left: 12px; }
 }
 
-/* ========================= A1 — THE GATE ========================= */
+/* ========================= A1 — THE GATE =========================
+ *
+ * BY ID, AND THAT IS THE WHOLE FIX FOR A SEVERE DEFECT.
+ *
+ * This rule read `.gate`, and so does the rule at the top of this file for a
+ * GATE FIRING inside an answer — `G-COVERAGE · disclose · …`, a small inline
+ * row. Two owners, one class name, and this one is later in the cascade, so
+ * it won.
+ *
+ * The result, found by the BK-30 browser harness on its first real run:
+ * every gate firing in an answer became `position: fixed; inset: 0;
+ * background: var(--paper); z-index: 100` — a full-screen opaque overlay. An
+ * advocate who submitted a brief got a BLANK WHITE PAGE carrying one centred
+ * line, `G-EXPOSURE · none_found · 0 exposure(s)`. The advice, the citations,
+ * the limitation position and the questions were all painted over, and the
+ * tab bar underneath could not be clicked.
+ *
+ * Nothing could see it. Every offline test passed, `test_the_page_and_the
+ * _script_agree` checks names rather than layout and says so, and the served
+ * JSON was perfectly correct — the answer was right and unreadable, which is
+ * this repository's founding failure in a stylesheet.
+ *
+ * THE SIGN-IN GATE IS ONE ELEMENT AND IT HAS AN ID, so it is addressed by
+ * one. `.gate` now has a single owner: a gate firing.
+ */
 
-.gate {
+#gate {
   align-items: center;
   background: var(--paper);
   display: flex;
@@ -714,3 +752,137 @@ main.single {
   font-size: 11px;
   margin-left: 12px;
 }
+
+
+/* ===================== B3-B5 — THE INTAKE FORM ===================== */
+
+.intake {
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1.1rem 1.5rem 1.3rem;
+}
+.intake h2 {
+  font-family: var(--f-serif); font-size: 1.05rem; font-weight: 500;
+  margin: 0;
+}
+.intake-lede { color: var(--ink-3); font-size: 0.82rem; margin: 0 0 0.5rem; }
+.intake label {
+  color: var(--ink-3); font-size: 0.68rem; letter-spacing: 0.07em;
+  margin-top: 0.5rem; text-transform: uppercase;
+}
+.intake label .opt {
+  letter-spacing: 0; text-transform: none; font-size: 0.72rem;
+}
+.intake input[type="text"], .intake input:not([type]) {
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 3px;
+  font: inherit; font-size: 0.9rem; padding: 0.45rem 0.6rem;
+}
+.intake input:focus { border-color: var(--accent); outline: none; }
+.intake label.check {
+  align-items: center; display: flex; gap: 0.5rem;
+  font-size: 0.85rem; letter-spacing: 0; text-transform: none;
+  color: var(--ink-2); margin-top: 0.9rem;
+}
+.intake button.primary { align-self: flex-start; margin-top: 0.9rem; }
+
+
+/* ============ BK-37 — THE BRIEF'S SECTIONS ============ */
+
+h3.section {
+  color: var(--ink-3);
+  font-family: var(--f-sans);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  margin: 1.6rem 0 0.5rem;
+  text-transform: uppercase;
+}
+h3.section:first-of-type { margin-top: 0.4rem; }
+
+/* A repeated gap keeps its count. Quiet, because the LINE is the finding and
+   the number is only how often it was said. */
+.said-times {
+  color: var(--ink-3); display: block; font-family: var(--f-mono);
+  font-size: 0.62rem; letter-spacing: 0.04em; margin-top: 0.2rem;
+}
+
+/* J-7. The working, closed by default. It is a door, not a bin: the summary
+   says what is behind it in the advocate's words, so opening it is a choice
+   they can make rather than a risk they cannot assess. */
+details.audit { margin-top: 1.6rem; }
+details.audit > summary {
+  color: var(--ink-3); cursor: pointer; font-size: 0.72rem;
+  letter-spacing: 0.04em; padding: 0.3rem 0;
+}
+details.audit > summary:hover { color: var(--ink); }
+details.audit[open] > summary { margin-bottom: 0.4rem; }
+
+
+/* BK-41. CANCEL sits beside Send while a turn is in flight. Quiet, because
+   it is an escape and not an action an advocate should be drawn to. */
+button.ghost.cancel { margin-right: 0.6rem; }
+
+
+/* BK-42. A NAME FOR A SCREEN READER AND NOTHING FOR A SCREEN.
+   `display:none` and `visibility:hidden` remove an element from the
+   accessibility tree as well as from the page, which is the opposite of what
+   a visually-hidden label is for. This is the clip-rect idiom: present,
+   announced, and occupying nothing. */
+.sr-only {
+  border: 0;
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+
+/* ============ BK-42 — THE MASTHEAD FITS A PHONE ============
+ *
+ * MEASURED at 390px: `tabs` ran to 473px, `who` to 678px and `health` to
+ * 720px on a 390px viewport -- the whole strip is one non-wrapping flex row,
+ * so a third of the masthead sat off the right edge and the document scrolled
+ * sideways. Every pane below it was already responsive; the bar above them
+ * was not, and nothing looked at it.
+ *
+ * IT WRAPS RATHER THAN HIDING. An advocate on a phone still needs to know
+ * WHO they are signed in as -- that is the whole of A1's argument for putting
+ * it there -- so the identity stays and the strip becomes two lines. What
+ * goes is the enrolment/practice/firm detail line, which is a reference they
+ * can get from the account and not something they read while working.
+ */
+@media (max-width: 820px) {
+  .masthead {
+    flex-wrap: wrap;
+    gap: 0.5rem 0.9rem;
+    padding: 0.6rem 0.9rem;
+  }
+  .who { margin-left: 0; }
+  /* The enrolment number, practice and firm. Reference, not working
+     information, and it is the longest run of unbreakable text up there. */
+  .who-detail { display: none; }
+  .health {
+    flex: 1 1 100%;
+    max-width: 100%;
+    order: 9;          /* below the identity, on its own line */
+  }
+  .tabs { margin-left: 0; }
+}
+
+/* `body { overflow-x: hidden }` WAS HERE FOR TEN MINUTES AND WAS REMOVED.
+ *
+ * It looked like belt-and-braces and it was the opposite: clipping the
+ * overflow makes `documentElement.scrollWidth` equal `clientWidth`, so the
+ * journey phase that checks for sideways scroll can no longer fail. The page
+ * would still have had content off the right edge and nothing would ever say
+ * so again -- a fix that disables its own test, which is S11 arriving through
+ * the front door.
+ *
+ * The masthead wrapping above is the actual fix. If something else overflows
+ * later, the check is still able to notice.
+ */

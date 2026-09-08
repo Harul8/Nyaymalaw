@@ -353,6 +353,23 @@ class Thread:
     label: str
     aliases: tuple[str, ...] = ()
     identifiers: dict[str, str] = field(default_factory=dict)
+    #: BK-34. WHO IS IN THIS THREAD, name -> `client` | `adverse` | `related`.
+    #:
+    #: THE CONFLICT SCREEN'S INPUT, and the reason it is a field rather than a
+    #: derivation: the screen has to check THIS matter against every OTHER
+    #: matter, and the others are files on disk that nobody is going to re-read
+    #: a brief for. What is not persisted cannot be screened against.
+    #:
+    #: EMPTY IS `NOBODY IS NAMED YET`, which is the ordinary state of a first
+    #: turn and produces a NOT_ASSESSED screen naming what it wants. It must
+    #: never produce a screen that cleared against the empty set.
+    #:
+    #: `Posture.opponent` is NOT this. That field is filled by the posture
+    #: read, whose question is which SIDE we act for, and asked for a name as a
+    #: by-product it produced `invoices` -- rendered to an advocate as
+    #: *AGAINST: invoices*. A conflict check built on that has examined
+    #: nothing and says it is clear.
+    parties: dict[str, str] = field(default_factory=dict)
     posture: Posture = field(default_factory=Posture)
     chronology: tuple[FactId, ...] = ()
     deferred_reason: str | None = None
@@ -691,6 +708,55 @@ class Matter:
     are opposite facts.
     """
 
+    intake_parties: dict[str, str] = field(default_factory=dict)
+    """BK-34. WHO THIS MATTER IS, recorded at intake: name -> side.
+
+    MATTER-LEVEL AND NOT THREAD-LEVEL, and the sequencing is the reason. The
+    conflict screen runs in ADMIT-A, before this turn's words have been read
+    by anything -- which is the whole point of where the screens sit. Threads
+    are bound in ADMIT-B, after. A party set that only existed on a thread
+    would arrive one phase too late to screen the brief that named it.
+
+    IT IS WHY INTAKE COMES BEFORE THE BRIEF. Parties cannot be read out of a
+    brief that has not been admitted, and admitting the brief to read them is
+    exactly what B3 forbids. So the advocate is asked who is involved when
+    they open the file, and the screen has something to check before anything
+    substantive is persisted.
+    """
+
+    intake_answers: dict[str, dict] = field(default_factory=dict)
+    """BK-34. What the advocate ANSWERED at intake: screen kind -> {by, answer, at}.
+
+    NOT A RELEASE, AND THE DISTINCTION IS THE DOMAIN'S OWN. `Screen.__post_init__`
+    refuses a CLEAR screen carrying a `Release`, because "a release lifts a
+    finding; a screen with nothing to lift did not need one" -- and modelling
+    a recorded engagement scope as a release ran straight into that guard,
+    correctly.
+
+    A screen whose question the advocate has ANSWERED has RUN AND FOUND
+    NOTHING. The scope screen asks what work they are instructed to do; told
+    that, it clears on its own merits, and the answer is the detail. A
+    `Release` remains what it always was -- the lifting of a real finding,
+    such as a conflict the advocate accepts -- and nothing here creates one.
+
+    PERSISTED PER MATTER, not per turn and not per session. The advocate
+    records the scope once on a file, not every time they open it: an answer
+    that evaporated would train them to click past it, which is how a screen
+    becomes decoration.
+
+    EMPTY IS `NOBODY HAS ANSWERED`, and it produces a BLOCKED screen carrying
+    the question. It must never produce a cleared one.
+    """
+
+    emergency_because: str = ""
+    """Why this matter was admitted with screens outstanding, if it was.
+
+    THE EXCEPTION IS NARROW AND IT IS ON THE FILE. Liberty does not wait for a
+    registry and a product that made it would be wrong in the way that matters
+    most -- but an exception nobody can see afterwards is indistinguishable
+    from a screen that passed, which is the whole of defect shape S1.
+    """
+
     turns_applied: tuple[TurnId, ...] = ()
     asked: tuple[AskedQuestion, ...] = ()
     """Every question put to the advocate, and whether it came back.
@@ -698,6 +764,24 @@ class Matter:
     Persisted, because the alternative is asking again. An advocate who is
     asked something they answered two turns ago has been told their
     instructions were not recorded, and they stop volunteering detail."""
+    last_activity: str = ""
+    """WHEN THIS FILE WAS LAST WORKED, as an ISO date. BK-33.
+
+    THE LIST SORTED ON `version`, WHICH IS NOT A TIME. `last_touched` was
+    the version number -- an integer that counts writes -- so a matter
+    written to nine times looked more recent than one written to twice
+    yesterday, and an advocate scanning for what they touched this morning
+    was reading a counter.
+
+    THE FORUM'S DATE, taken from the turn (BK-14) and never from the
+    machine, for the same reason every other date in this product is: a
+    server keeping UTC is a day behind India from 18:30, and a file worked
+    this evening would be listed as yesterday's.
+
+    EMPTY IS `NEVER WORKED`, which is a real state for a matter opened and
+    abandoned, and it renders as such rather than as an epoch.
+    """
+
     version: int = 0
 
     @staticmethod

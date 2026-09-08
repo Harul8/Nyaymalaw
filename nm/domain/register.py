@@ -99,6 +99,9 @@ ADDRESSES_THE_ADVOCATE: dict[str, str] = {
 #: Prompts whose output THIS PRODUCT renders. Their register is our formatting
 #: and a peer clause in them would spend budget on nothing.
 STRUCTURED_ONLY: frozenset[str] = frozenset({
+    "nm/core/accrual.py::SYSTEM",
+    "nm/core/consistency.py::SYSTEM",
+    "nm/core/parties.py::SYSTEM",
     "nm/core/duty.py::SYSTEM",
     "nm/core/cause.py::SYSTEM",
     "nm/core/route.py::SYSTEM",

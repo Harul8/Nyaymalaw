@@ -533,3 +533,77 @@ class EvidenceResult:
 @runtime_checkable
 class EvidencePort(Protocol):
     def fetch(self, need: EvidenceNeed) -> EvidenceResult: ...
+
+    def accrual_trigger(self, cause: str) -> str:
+        """When the period for this cause STARTS, in words, or empty.
+
+        ON THE PORT, NOT FETCHED BY `getattr`. The engine reached for
+        this by string name at first and the dead-code sweep reported
+        the adapter method as unreachable -- correctly. A call no scan
+        can see is a call nothing can verify, which is the shape that
+        let `decisive_identifier_matches` sit in C4's contract while
+        the binder did the work inline (B-050).
+
+        THE TRIGGER IS CURATED IN `nm/knowledge/resolution.py` beside
+        the Article it belongs to, and `core` may not import
+        `knowledge` -- so it crosses here rather than being copied into
+        the engine, which would be a second home for a legal fact.
+
+        A DEFAULT OF EMPTY, so an adapter curating no triggers is not
+        forced to invent one. The engine reads empty as "no curated
+        trigger" and computes as it did before: a cause nobody has
+        curated is not one this product knows enough about to refuse
+        on.
+        """
+        return ""
+
+    # ------------------------------------------------- what it can answer ---
+    #
+    # THESE ARE HERE BECAUSE THE PRODUCT ALREADY ASKED FOR THEM, and asked
+    # in two different ways, neither of which anything could verify.
+    #
+    # `nm/bootstrap/composition.py` read `self.evidence.available` straight
+    # off the object -- a member no Protocol declared -- and
+    # `self.evidence.readiness()` behind a `hasattr`. One raised
+    # AttributeError and 500'd `/api/health` for every adapter that lacked
+    # it; the other silently reported an empty retrieval readiness, which is
+    # S1: a capability that could not be asked about reads exactly like one
+    # with nothing to report.
+    #
+    # THIS IS THE SWEEP `accrual_trigger` OWED. That member was moved onto
+    # this Protocol earlier the same day for exactly this reason, and the
+    # rest of its population was not enumerated -- which is CLAUDE.md §1's
+    # measured failure verbatim: 47 of 52 register entries had a guard
+    # covering only the site the bug was found at. The population is every
+    # member the composition root and the engine reach on an evidence
+    # adapter, taken from the code: `fetch`, `accrual_trigger`, `available`,
+    # `readiness`.
+
+    @property
+    def available(self) -> bool:
+        """Can this adapter reach its corpus at all?
+
+        DEFAULTS TO FALSE, and that is the safe direction rather than the
+        convenient one. `health()` renders it as `NOT READABLE`, so an
+        adapter that has not been asked reports a corpus nobody has
+        confirmed -- which is true. Defaulting to True would have the
+        product announce a readable corpus on the strength of nobody
+        having implemented the check.
+        """
+        return False
+
+    def readiness(self) -> dict:
+        """What each retrieval capability can answer, capability by capability.
+
+        NOT ROLLED UP INTO `available`, which is why it exists: one
+        `corpus: readable` would let an unbuilt authority index hide behind
+        a readable provision store, and the advocate would meet it as an
+        empty answer rather than as a stated gap.
+
+        AN EMPTY DICT IS `NOTHING WAS ASKED`, and the caller must not render
+        it as `nothing is wrong`. It was previously reached through
+        `hasattr`, so an adapter without the method produced `{}` and the
+        health page showed an empty retrieval section -- indistinguishable
+        from an adapter that had answered and had no capabilities.
+        """
+        return {}

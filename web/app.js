@@ -18,15 +18,84 @@ const state = {
    * editable text box, which was the whole of authentication (B-082). */
   advocate: null,
   matterId: null,
+  // BK-36. THE VERSION THIS TAB LAST SAW, sent with every brief so the server
+  // can refuse a write built on a file this tab has never read.
+  matterVersion: null,
+  // B3-B5. The intake answers, held from the form until the first brief
+  // carries them onto the file.
+  intake: null,
   turns: [],
+  // BK-40. WHAT THE ADVOCATE WAS PART-WAY THROUGH WRITING, kept across a
+  // session that ended under them, and SCOPED TO THE ADVOCATE IT BELONGS TO.
+  // It is held in memory and deliberately not in `localStorage`: a draft that
+  // survives the tab survives the next person to use the machine, and a
+  // brief names a client.
+  draft: null,
+  // `none` | `signing_out` | `unconfirmed`. A logout the server did not
+  // confirm is its own state, because the alternative is showing an ordinary
+  // sign-in screen and letting that stand as proof.
+  signOut: 'none',
+  // Set once the session has been declared over, so a page with six panes
+  // firing six requests reports it once rather than six times.
+  ended: false,
 };
 
 /* --------------------------------------------------------------- fetch --- */
+
+// EVERY 401 IN ONE PLACE (BK-40).
+//
+// This had none, so an expired session left the masthead claiming the
+// advocate was signed in while each pane failed on its own. They were looking
+// at their own name, their firm and their enrolment number above a product
+// that could no longer do anything for them -- and the panes that had already
+// painted still showed a matter list belonging to a session that was over.
+//
+// It fires only when we BELIEVE we are signed in. `boot()` gets a 401 as the
+// ordinary answer for "nobody is signed in yet", and treating that as a
+// session ending would greet every first-time visitor with a notice that
+// their session expired.
+function sessionEnded(message) {
+  if (state.ended) return;
+  state.ended = true;
+  keepDraft();
+  clearPrivileged();
+  showGate(message);
+}
+
+// THE DRAFT IS FROZEN, NOT DISCARDED. An advocate half-way through a brief
+// when the session lapses has typed the most expensive thing on the screen.
+function keepDraft() {
+  const composer = $('message');
+  const text = composer ? composer.value : '';
+  if (text && text.trim()) state.draft = { advocate: state.advocate, text };
+}
+
+// PRIVILEGED CONTENT COMES OFF THE GLASS IMMEDIATELY, in one place, so a
+// surface added later cannot be the one that keeps painting a matter after
+// the session behind it is gone.
+function clearPrivileged() {
+  state.advocate = null;
+  state.matterId = null;
+  state.turns = [];
+  ['thread', 'rail-body', 'rail-meta', 'search-results', 'history-body',
+   'who-detail'].forEach((id) => { const el = $(id); if (el) el.textContent = ''; });
+  const who = $('who-name');
+  if (who) who.textContent = '—';
+  const composer = $('message');
+  if (composer) composer.value = '';
+  const chooser = $('history-matter');
+  if (chooser) chooser.innerHTML = '<option value="">Choose a matter…</option>';
+}
 
 async function api(path, options) {
   const res = await fetch(path, options);
   let body = null;
   try { body = await res.json(); } catch { /* non-JSON error page */ }
+  if (res.status === 401 && state.advocate && !state.ended) {
+    sessionEnded('Your session ended, so I signed you out and stopped work on '
+                 + 'this matter. Sign in again and I will put your draft back '
+                 + 'where it was.');
+  }
   if (!res.ok) {
     const detail = (body && (body.detail || body.message)) || `HTTP ${res.status}`;
     const err = new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
@@ -46,18 +115,36 @@ async function loadHealth() {
   const el = $('health');
   try {
     const h = await api('/api/health');
-    const bits = [
+    // J-7. THE MASTHEAD SPEAKS THE ADVOCATE'S LANGUAGE.
+    //
+    // MEASURED: `openai/gpt-4o-mini-2024-07-18 · hard: not configured ·
+    // judge: configured · store: fernet · corpus: readable · manifest: 22
+    // acts`, on every screen. `hard: not configured` reads as something
+    // broken; `store: fernet` is a cipher name; the model id is ours and not
+    // theirs. None of it is a fact about their matter.
+    //
+    // WHAT AN ADVOCATE NEEDS FROM THIS LINE is whether the corpus can be
+    // read, because that is the one thing that changes what the product can
+    // tell them. The rest moves to the title, where it is one hover away for
+    // whoever needs it and out of the reading line for everyone else.
+    const readable = h.corpus === 'readable';
+    el.textContent = readable
+      ? 'Corpus ready'
+      : 'Corpus not readable — answers will be short of authority';
+    el.title = [
       `${h.provider}/${h.routine_model}`,
       `hard: ${h.hard_tier}`,
       `judge: ${h.judge_tier}`,
       `store: ${h.encryption}`,
       `corpus: ${h.corpus}`,
       `manifest: ${h.manifest_acts} acts`,
-    ];
-    el.textContent = bits.join('  ·  ');
-    el.classList.toggle('bad', h.corpus !== 'readable');
+    ].join('  ·  ');
+    el.classList.toggle('bad', !readable);
   } catch (e) {
-    el.textContent = `configuration refused: ${e.message}`;
+    // A CONFIGURATION THAT WAS REFUSED IS AN ADVOCATE-FACING FACT: the
+    // product cannot answer. The detail stays in the title.
+    el.textContent = 'Not ready — I cannot answer on this matter yet';
+    el.title = `configuration refused: ${e.message}`;
     el.classList.add('bad');
   }
 }
@@ -82,6 +169,37 @@ function field(dl, label, value) {
     dd.textContent = value;
   }
   dl.append(dt, dd);
+}
+
+// BK-33. FOUR DEADLINE STATES, RENDERED AS FOUR THINGS.
+//
+// The API sends `next_deadline_status` as `not_assessed`, `none_on_this_
+// matter`, `upcoming` or `passed`, and this rendered `m.next_deadline ||
+// 'none recorded'` -- which turns the first two into the same sentence.
+//
+// "Nobody has worked out the deadlines on this file" and "this file has no
+// deadlines" are opposite facts, and an advocate acting on the second when
+// the first is true has been told the file is clear by a product that never
+// looked. That is defect shape S1 at the top of the list an advocate scans
+// first thing in the morning.
+function deadlineField(m) {
+  const status = m.next_deadline_status;
+  if (status === 'not_assessed') {
+    return { pill: 'unknown', text: 'not assessed — no register on this file' };
+  }
+  if (status === 'none_on_this_matter') {
+    return { pill: 'ok', text: 'none on this matter' };
+  }
+  if (status === 'passed') {
+    return { pill: 'blocked', text: `${m.next_deadline} — PASSED` };
+  }
+  if (status === 'near') {
+    return { pill: 'blocked', text: `${m.next_deadline} — soon` };
+  }
+  if (status === 'not_computed') {
+    return { pill: 'unknown', text: 'a deadline with no date established' };
+  }
+  return m.next_deadline || 'none recorded';
 }
 
 async function showMatterList() {
@@ -118,8 +236,13 @@ async function showMatterList() {
     const t = document.createElement('div');
     t.className = 'r-title'; t.textContent = m.matter;
     const dl = document.createElement('dl'); dl.className = 'r-fields';
-    field(dl, 'threads', String(m.threads));
-    field(dl, 'deadline', m.next_deadline || 'none recorded');
+    // WHO THE FILE IS FOR AND WHO IT IS AGAINST. BK-33's acceptance is that
+    // ten similar matters stay distinguishable, and `threads: 1` on every row
+    // distinguishes nothing.
+    field(dl, 'client', m.client || 'not recorded');
+    field(dl, 'against', m.opponent || 'not recorded');
+    field(dl, 'deadline', deadlineField(m));
+    field(dl, 'last worked', m.last_touched || 'never worked');
     field(dl, 'blocked', m.blocked
       ? { pill: 'blocked', text: m.blocked }
       : { pill: 'ok', text: 'nothing blocking' });
@@ -129,7 +252,11 @@ async function showMatterList() {
   }));
 }
 
-async function showThreadBoard(matterId) {
+async function showThreadBoard(matterId, { restore = true } = {}) {
+  // OPENING A MATTER CLOSES THE LIST at narrow widths. Leaving it up would
+  // put the advocate on the answer they asked for with the index still over
+  // it, which is the same unreachability wearing the other face.
+  toggleMatters(false);
   state.matterId = matterId;
   $('rail-title').textContent = 'Threads';
   $('back').hidden = false;
@@ -139,6 +266,10 @@ async function showThreadBoard(matterId) {
   let data;
   try {
     data = await api(`/api/matters/${matterId}`);
+    // BK-36. THE VERSION THIS TAB HAS NOW SEEN. Every brief carries it, so a
+    // tab that loaded the file and sat is refused rather than writing onto a
+    // version it never read.
+    if (typeof data.version === 'number') state.matterVersion = data.version;
   } catch (e) {
     body.replaceChildren(stateBlock(
       'unbuildable', `The thread board could not be built: ${e.message}`));
@@ -148,6 +279,27 @@ async function showThreadBoard(matterId) {
 
   $('rail-meta').textContent =
     `${data.row_count} row(s) · bounded by ${data.bounded_by} · v${data.version}`;
+
+  // BK-33. THE CONVERSATION COMES BACK WITH THE FILE.
+  //
+  // Opening a matter loaded its thread board and nothing else, so a reload of
+  // a live authenticated session landed on a blank Advise pane: the advocate
+  // was signed in, the file was there, and everything they had been told was
+  // gone from the screen. The transcript is the only thing that keeps what
+  // was SERVED -- the matter holds facts and the metrics hold counts with no
+  // client words -- so this is the only place it can come from.
+  // ONLY WHEN THERE IS NOTHING LIVE TO REPLACE.
+  //
+  // `showThreadBoard` runs after EVERY send, and restoring unconditionally
+  // overwrote the turn that had just been served with its read-back copy --
+  // which keeps what the advocate read and NOT the run's gates, latency or
+  // cost. So a live answer silently became `read back from the record` the
+  // moment its own board refreshed, and the working under it emptied.
+  //
+  // Caught by two journey phases at once: 5b found the gate states gone from
+  // a turn it had just watched being served, and 9 found the restore working
+  // perfectly in isolation and not in sequence.
+  if (restore) await restoreConversation(matterId);
 
   body.replaceChildren(...data.threads.map((t) => {
     const row = document.createElement('div');
@@ -163,10 +315,73 @@ async function showThreadBoard(matterId) {
     field(dl, 'against', t.against);
     field(dl, 'forum', t.forum);
     field(dl, 'stage', t.stage);
-    field(dl, 'deadline', t.next_deadline || 'none recorded');
+    field(dl, 'deadline', deadlineField(t));
     row.append(title, dl);
     return row;
   }));
+}
+
+// BK-33. THE SERVED CONVERSATION, READ BACK.
+//
+// A RESTORED TURN SAYS IT WAS RESTORED. The transcript keeps what the
+// advocate read; it does not keep the latency, the token counts or the cost,
+// because those are facts about the RUN and not about the answer. Rendering
+// them as zeros would put `latency 0ms · calls 0 · cost $0.000000` under a
+// turn that really did cost something -- a measurement nobody made, shown as
+// a measurement. So the audit line for a read-back turn says where it came
+// from instead.
+async function restoreConversation(matterId) {
+  state.turns = [];
+  let d;
+  try {
+    d = await api(`/api/matters/${matterId}/transcript`);
+  } catch (e) {
+    // NOT SILENT. A conversation that could not be read back is not a
+    // conversation that did not happen, and an empty pane says the second.
+    state.turns = [{
+      brief: '',
+      answer: {
+        elements: [{
+          kind: 'ground', disclosure: true, section: 'needed', refs: [],
+          signal: 'none',
+          text: `I could not read this matter's served conversation back: `
+              + `${e.message}. What you were told is not lost — it could not `
+              + `be decoded here, and the file itself is intact.`,
+        }],
+        metrics: null, restored: true,
+      },
+    }];
+    repaint();
+    return;
+  }
+
+  state.turns = (d.turns || []).map((t) => ({
+    brief: t.message || '',
+    answer: {
+      elements: t.elements || [],
+      blocked: t.blocked,
+      blocked_reason: t.blocked_reason,
+      // `metrics: null` IS THE FLAG. `renderTurn` shows the audit line only
+      // when there is something measured to show.
+      metrics: null,
+      restored: true,
+      at: t.at || '',
+    },
+  }));
+
+  if (d.unreadable_reason) {
+    state.turns.push({
+      brief: '',
+      answer: {
+        elements: [{
+          kind: 'ground', disclosure: true, section: 'needed', refs: [],
+          signal: 'none', text: d.unreadable_reason,
+        }],
+        metrics: null, restored: true,
+      },
+    });
+  }
+  repaint();
 }
 
 /* -------------------------------------------------------------- the answer --- */
@@ -177,6 +392,31 @@ const KIND_LABEL = {
   question: 'Blocking question',
   ground: 'Ground',
 };
+
+// BK-37. THE SECTIONS, IN THE ORDER COUNSEL READS THEM.
+//
+// The order and the headings come from `nm/domain/brief.py`; this is the
+// rendering of a decision made there, not a second one. A flat answer of 31
+// elements was measured on one single-dispute brief (J-6) -- nothing in it
+// wrong, and no order anyone chose, so the two lines an advocate acts on were
+// somewhere in the middle of nine "they will say" paragraphs.
+const SECTIONS = [
+  ['position',  'Where this stands'],
+  ['window',    'Time'],
+  ['risk',      'What cuts against us'],
+  ['next',      'Next step'],
+  ['needed',    'What I still need'],
+  ['because',   'Why'],
+  ['authority', 'What it rests on'],
+];
+
+// WHAT THE ADVOCATE IS NOT SHOWN BY DEFAULT, and it is a door rather than a
+// deletion. J-7: gate ids, rule ids, token counts and the trace line are
+// engineering vocabulary on an advocate's screen. They are what makes every
+// claim checkable and this whole product is an argument for keeping them --
+// they answer HOW THIS WAS MADE, which counsel reading for the position is
+// not asking. Present, checkable, out of the way.
+let SHOW_AUDIT = false;
 
 function renderTurn(entry) {
   const wrap = document.createElement('div');
@@ -221,6 +461,37 @@ function renderTurn(entry) {
     } else {
       f.textContent = `The turn was refused: ${entry.error}`;
     }
+
+    // BK-36. WAS IT SAVED, AND WHAT DO I DO NOW.
+    //
+    // `The turn was refused: HTTP 500` told the advocate nothing they could
+    // act on and, worse, nothing about whether their brief had landed. The
+    // three states are different actions: `not_committed` means send it
+    // again, `stale` means the file moved and has been re-read, and `unknown`
+    // means the server may or may not hold it -- which is precisely when a
+    // retry must reuse the same turn id rather than write a second copy.
+    const SAID = {
+      not_committed: 'Your brief was NOT saved. Nothing was recorded on the '
+                   + 'file, so sending it again adds it once.',
+      stale: 'This matter moved while you were writing. I have re-read it — '
+           + 'check the answer above, then send again if it still applies.',
+      unknown: 'I could not tell whether your brief was saved. Sending again '
+             + 'is safe: it carries the same turn id, so if it did land the '
+             + 'server recognises it rather than recording it twice.',
+    };
+    if (SAID[entry.state]) {
+      const d = document.createElement('div');
+      d.className = 'refusal-gap';
+      d.textContent = SAID[entry.state];
+      f.appendChild(d);
+    }
+    if (entry.turnId && entry.state !== 'committed') {
+      const again = document.createElement('button');
+      again.className = 'ghost';
+      again.textContent = 'Send this brief again';
+      again.addEventListener('click', () => deliver(entry));
+      f.appendChild(again);
+    }
     wrap.appendChild(f);
     return wrap;
   }
@@ -251,12 +522,69 @@ function renderTurn(entry) {
   // Plain GROUND is the SUPPORT for a claim stated above it -- retrieved
   // statutory text, quoted paragraphs -- and it is what actually crowds the
   // screen. Nothing is lost by folding it and it can be opened in one click.
-  const support = entry.answer.elements.filter(
+  let support = entry.answer.elements.filter(
     (el) => el.kind === 'ground' && !el.disclosure);
-  const spoken = entry.answer.elements.filter(
+  let spoken = entry.answer.elements.filter(
     (el) => !(el.kind === 'ground' && !el.disclosure));
 
+  // BK-37. AN ANSWER THAT IS ONLY GROUNDS IS NOT SUPPORT FOR ANYTHING.
+  //
+  // MEASURED (J-6): a courtesy "Hello" produced a single plain ground, every
+  // plain ground is folded, and the ENTIRE REPLY disappeared under
+  // "1 supporting passage". The same happens to a question-of-law answer,
+  // which is grounds by construction -- the advocate asked what the law says
+  // and the product read it back.
+  //
+  // The fold's argument is that support sits UNDER a claim and crowds it.
+  // With no claim above it there is nothing to crowd, and folding is just
+  // hiding the answer.
+  if (!spoken.length) {
+    spoken = support;
+    support = [];
+  }
+
+  // BK-37. FILED UNDER THE QUESTION EACH ANSWERS, in reading order.
+  //
+  // THE SECTION COMES FROM THE SERVER (`nm/domain/brief.py`), so this groups
+  // and does not judge. Anything the server did not label -- an older reply
+  // still in the transcript, a courtesy answer -- lands in `position`, which
+  // is the visible default rather than a silent drop.
+  //
+  // DEDUPLICATED, WITH THE COUNT KEPT. "I could not assess this" said once
+  // and said nine times are different facts about the file, and an advocate
+  // reading the shorter answer must not believe the product looked less hard
+  // than it did. Nothing loud is ever collapsed.
+  const filed = new Map();
   for (const el of spoken) {
+    const key = el.section || 'position';
+    if (!filed.has(key)) filed.set(key, []);
+    const rows = filed.get(key);
+    const same = (el.signal && el.signal !== 'none') ? -1
+      : rows.findIndex((r) => r.el.kind === el.kind
+                           && r.el.thread === el.thread
+                           && r.el.text.trim() === el.text.trim());
+    if (same >= 0) rows[same].said += 1;
+    else rows.push({ el, said: 1 });
+  }
+
+  for (const [key, heading] of SECTIONS) {
+    const rows = filed.get(key);
+    if (!rows || !rows.length) continue;   // an empty heading answers nothing
+    const h = document.createElement('h3');
+    h.className = 'section';
+    h.textContent = heading;
+    wrap.appendChild(h);
+    for (const row of rows) renderElement(wrap, row.el, row.said);
+  }
+  // Anything under a section this client does not know about still shows.
+  // A renderer that dropped what it could not place would hide exactly the
+  // element a newer server added.
+  for (const [key, rows] of filed) {
+    if (SECTIONS.some(([k]) => k === key) || key === 'audit') continue;
+    for (const row of rows) renderElement(wrap, row.el, row.said);
+  }
+
+  function renderElement(into, el, said) {
     const d = document.createElement('div');
     // A loud signal is never collapsed, whatever the server says about
     // collapsibility -- the client does not get to quiet it.
@@ -286,7 +614,13 @@ function renderTurn(entry) {
       r.className = 'refs'; r.textContent = el.refs.join(' · ');
       d.appendChild(r);
     }
-    wrap.appendChild(d);
+    if (said > 1) {
+      const n = document.createElement('span');
+      n.className = 'said-times';
+      n.textContent = `said ${said} times on this turn`;
+      d.appendChild(n);
+    }
+    into.appendChild(d);
   }
 
   // THE SUPPORT, FOLDED, WITH A COUNT. `left_out` is the precedent in this
@@ -337,7 +671,32 @@ function renderTurn(entry) {
   // advocate cannot see has disclosed nothing -- and G-UNSCREENED fires on
   // every turn, because the conflict, competence and engagement screens are
   // slice 10 and are not built.
-  const fired = (entry.answer.metrics.gates_fired || []);
+  // J-7. HOW THIS ANSWER WAS MADE, filed under its own heading and closed.
+  //
+  // MEASURED: `G-DUTY · clear`, `G-UNSCREENED · unscreened`, `G-CONSISTENT ·
+  // consistent`, and `outcome ok · latency 69ms · calls 15 · tokens 6860/606
+  // · cost $0.000000 · violations 1` were on the advocate's screen under
+  // every answer. None of it is wrong and none of it is theirs: an advocate
+  // cannot act on `G-UNSCREENED`, and the sentence beside it already says
+  // what it means.
+  //
+  // A `<details>` AND NOT A DELETION, and not an operator-only route either.
+  // Every one of these is what makes a claim checkable, and this product's
+  // whole argument is for keeping them where the person relying on the answer
+  // can reach them. What changes is that reaching them is a decision.
+  // `metrics` IS NULL ON A RESTORED TURN. The transcript keeps what was
+  // served and not the numbers about the run, so every read of it here
+  // has to tolerate its absence -- this one did not, and threw
+  // `Cannot read properties of null (reading 'gates_fired')` inside
+  // `repaint`, which renders NOTHING and looks exactly like a matter
+  // with no conversation on it.
+  const fired = ((entry.answer.metrics || {}).gates_fired || []);
+  const audit = document.createElement('details');
+  audit.className = 'audit';
+  const auditSum = document.createElement('summary');
+  auditSum.textContent = 'How this answer was made';
+  audit.appendChild(auditSum);
+
   if (fired.length) {
     const g = document.createElement('div');
     g.className = 'gates';
@@ -353,10 +712,32 @@ function renderTurn(entry) {
       row.append(id, detail);
       g.appendChild(row);
     }
-    wrap.appendChild(g);
+    audit.appendChild(g);
   }
 
   const m = entry.answer.metrics;
+  if (!m) {
+    // A RESTORED TURN. It was served, it was recorded, and the numbers about
+    // the run were not kept -- so the working says that rather than showing
+    // zeros that would read as a measurement.
+    const note = document.createElement('div');
+    note.className = 'metrics';
+    note.textContent = entry.answer.at
+      ? `read back from the record · served ${entry.answer.at}`
+      : 'read back from the record';
+    audit.appendChild(note);
+    // THE RAW TURN, for the review that needs it. BK-39 keeps it and moves
+    // it: prompts, model answers, gates and ids are what this store exists
+    // for, and they are not what an advocate opens History to read.
+    if (entry.answer.raw) {
+      const pre = document.createElement('pre');
+      pre.className = 'recorded-raw';
+      pre.textContent = JSON.stringify(entry.answer.raw, null, 2);
+      audit.appendChild(pre);
+    }
+    wrap.appendChild(audit);
+    return wrap;
+  }
   const met = document.createElement('div');
   met.className = 'metrics';
   const add = (label, value, warn) => {
@@ -373,7 +754,8 @@ function renderTurn(entry) {
   if (m.violations.length) add('violations', String(m.violations.length), true);
   if (m.tier_downgrades.length) add('downgrades', String(m.tier_downgrades.length), true);
   if (entry.answer.replayed) add('replayed', 'yes', true);
-  wrap.appendChild(met);
+  audit.appendChild(met);
+  wrap.appendChild(audit);
   return wrap;
 }
 
@@ -385,34 +767,140 @@ function repaint() {
 
 /* ------------------------------------------------------------------ send --- */
 
+// BK-36. THE TURN ID IS MINTED BEFORE THE REQUEST, NOT BY THE SERVER.
+//
+// THE DEFECT: the composer was cleared before the request and no `turn_id`
+// was sent. If the server committed and the HTTP response was lost -- a
+// dropped wifi, a closed laptop, a proxy timeout -- the retry was a NEW turn,
+// and the same brief went onto the file twice. If the request failed BEFORE
+// commitment, the only copy of what the advocate had written was the failed
+// card in memory, gone on reload.
+//
+// Both are the same missing thing: an identity for the attempt that outlives
+// the attempt. Minted here, kept on the entry, and reused by every retry, so
+// the server can recognise the second arrival as the same turn -- which it
+// already knew how to do and was never told.
+function newTurnId() {
+  if (window.crypto && crypto.randomUUID) return `turn_${crypto.randomUUID()}`;
+  return `turn_${Date.now().toString(16)}${Math.random().toString(16).slice(2, 10)}`;
+}
+
 async function send(message) {
-  const entry = { brief: message };
+  const entry = { brief: message, turnId: newTurnId(), state: 'sending' };
   state.turns.push(entry);
   repaint();
+  await deliver(entry);
+}
 
+// THE RETRY IS THE SAME TURN, and that is the whole point of the id. It is a
+// separate function because the retry button calls it too -- a retry that
+// re-entered `send` would mint a new id and duplicate the brief, which is the
+// defect wearing the costume of a fix.
+async function deliver(entry) {
   const btn = $('send');
+  // BK-41. THE COMPOSER STAYS USABLE.
+  //
+  // It was globally disabled for the length of a turn, and a turn's measured
+  // p90 is about 18 seconds -- 20 for one making eight or more model calls.
+  // An advocate who thinks of the next thing to say while the last one is
+  // running had nowhere to put it, so they held it in their head or lost it.
+  // Only SEND is held, because two turns in flight on one thread is a
+  // different problem (BK-36 owns it).
   btn.disabled = true;
   btn.textContent = 'Working…';
+  // CANCEL, and it is honest about what it can promise: it abandons the
+  // REQUEST, which is all a browser can do. Whether the server committed
+  // before the abort is unknown to us -- so the entry lands in `unknown`,
+  // the state BK-36 already built for exactly this, and its retry carries
+  // the same turn id.
+  const cancel = document.createElement('button');
+  cancel.className = 'ghost cancel';
+  cancel.textContent = 'Cancel';
+  const stop = new AbortController();
+  cancel.addEventListener('click', () => {
+    entry.cancelled = true;
+    stop.abort();
+  });
+  btn.parentElement.insertBefore(cancel, btn);
+  entry.state = 'sending';
+  entry.error = null;
+  entry.refusal = null;
+  repaint();
   try {
     const answer = await api('/api/turn', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
+      signal: stop.signal,
       body: JSON.stringify({
-        message,
+        message: entry.brief,
         matter_id: state.matterId,
+        turn_id: entry.turnId,
+        // B3-B5. Sent with the brief they were given for, and only until the
+        // matter has recorded them: re-sending on every turn would re-answer
+        // a screen the advocate answered once.
+        parties: (state.intake && state.intake.parties) || {},
+        release: (state.intake && state.intake.release) || {},
+        // WHAT THIS TAB BELIEVES IT IS WRITING ON TOP OF. A second tab that
+        // loaded the matter and sat for ten minutes was writing onto a file
+        // it had never seen; now the server refuses with both numbers and
+        // this tab re-derives.
+        expected_version: state.matterVersion,
       }),
     });
     entry.answer = answer;
+    // A SCREEN BLOCK RE-OPENS THE FORM. The block is the question, and an
+    // advocate who is told the file cannot be worked until the scope is
+    // recorded needs the place to record it, not just the sentence.
+    if (answer.blocked && /screen|scope|capacity|part(y|ies)/i.test(
+        answer.blocked_reason || '')) {
+      showIntake(true);
+    }
+    entry.state = answer.replayed ? 'replayed' : 'committed';
+    // THE INTAKE HAS LANDED ON THE FILE and does not travel again.
+    state.intake = null;
+    // THE BRIEF IS ON THE FILE, so the composer may let go of it. This is the
+    // only place that clears it.
+    if ($('message').value.trim() === entry.brief.trim()) $('message').value = '';
     if (answer.matter_id && answer.matter_id !== state.matterId) {
       state.matterId = answer.matter_id;
     }
+    if (typeof answer.matter_version === 'number') {
+      state.matterVersion = answer.matter_version;
+    }
     repaint();
-    if (state.matterId) await showThreadBoard(state.matterId);
+    // `restore: false` -- the turn on screen IS the live one, and reading it
+    // back would replace it with a copy that has no metrics.
+    if (state.matterId) await showThreadBoard(state.matterId, { restore: false });
   } catch (e) {
     entry.error = e.message;
     entry.refusal = (e.detail && typeof e.detail === 'object') ? e.detail : null;
+    // WAS IT SAVED? The one question a failed send has to answer, and it used
+    // to be unanswerable. The server now says so on every failure it can, and
+    // where it says nothing at all -- a lost response, which is the case this
+    // is really for -- `unknown` is the honest word and it is not `no`.
+    const said = entry.refusal && entry.refusal.committed;
+    entry.state = said === 'not_committed' ? 'not_committed' : 'unknown';
+    if (entry.cancelled) {
+      // CANCELLING ABANDONS THE REQUEST, NOT THE TURN. The server may have
+      // committed before the abort reached it, and saying "cancelled --
+      // nothing was saved" would be a claim we are in no position to make.
+      // `unknown` is the honest state and its retry is already safe: it
+      // carries the same turn id, so a turn that did land is recognised
+      // rather than written twice.
+      entry.state = 'unknown';
+      entry.error = 'You cancelled this turn.';
+    }
+    if (e.status === 409) {
+      // A STALE WRITE RE-DERIVES RATHER THAN ASKING. The advocate did not do
+      // anything wrong and cannot fix it by reading a message about versions.
+      entry.state = 'stale';
+      if (state.matterId) {
+        await showThreadBoard(state.matterId).catch(() => {});
+      }
+    }
     repaint();
   } finally {
+    cancel.remove();
     btn.disabled = false;
     btn.textContent = 'Send';
   }
@@ -425,7 +913,12 @@ $('composer').addEventListener('submit', (ev) => {
   const box = $('message');
   const text = box.value.trim();
   if (!text) return;
-  box.value = '';
+  // BK-36. THE COMPOSER IS NOT CLEARED HERE ANY MORE.
+  //
+  // It was cleared before the request, so a request that failed before
+  // commitment left the advocate's only copy of a long brief in a failed card
+  // in memory -- gone on reload, gone on sign-out. It is cleared by `deliver`
+  // once the server has said the brief is on the file, and not before.
   send(text);
 });
 
@@ -439,7 +932,69 @@ $('message').addEventListener('keydown', (ev) => {
 
 $('back').addEventListener('click', showMatterList);
 
+// BK-32. THE MATTER LIST, AT EVERY WIDTH.
+//
+// `aria-expanded` is kept in step because the button IS the disclosure at
+// this width -- a screen reader that cannot tell open from closed has the
+// same problem the sighted advocate had: no way to know the list is there.
+function toggleMatters(force) {
+  const pane = $('pane-advise');
+  const open = force === undefined ? !pane.classList.contains('show-rail') : force;
+  pane.classList.toggle('show-rail', open);
+  $('matters-toggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+$('matters-toggle').addEventListener('click', () => toggleMatters());
+
+// B3-B5. INTAKE IS ASKED ONCE PER MATTER, AND ITS ANSWERS TRAVEL WITH THE
+// FIRST BRIEF.
+//
+// The screens run in ADMIT-A, before any fact is admitted -- so the conflict
+// screen cannot be run against parties read out of a brief it has not
+// admitted. Asking who is involved when the file is opened is what makes the
+// first brief screenable at all, which is why this is a form and not a read.
+function showIntake(show) {
+  $('intake').hidden = !show;
+  if (show) $('in-client').focus();
+}
+
+function intakeFields() {
+  const parties = {};
+  const client = $('in-client').value.trim();
+  const adverse = $('in-adverse').value.trim();
+  if (client) parties[client] = 'client';
+  if (adverse) parties[adverse] = 'adverse';
+  for (const other of $('in-others').value.split(',')) {
+    const name = other.trim();
+    if (name) parties[name] = 'related';
+  }
+  return {
+    parties,
+    release: {
+      scope: $('in-scope').value.trim(),
+      capacity: $('in-capacity').checked
+        ? 'the advocate confirms the client can give instructions'
+        : '',
+    },
+  };
+}
+
+$('intake').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  // RECORDED, THEN THE COMPOSER. The answers are held until the first brief
+  // carries them, because a matter does not exist until there is one -- and
+  // opening an empty file to hold an intake answer would put a matter on the
+  // advocate's list that has nothing on it.
+  state.intake = intakeFields();
+  showIntake(false);
+  $('intake-state').textContent = '';
+  $('message').focus();
+});
+
 $('new-matter').addEventListener('click', () => {
+  state.matterVersion = null;
+  state.intake = null;
+  showIntake(true);
   state.matterId = null;
   state.turns = [];
   repaint();
@@ -496,9 +1051,25 @@ function renderIndexLine(d) {
   // read as answering whatever is in the box -- and the box changes before
   // the request returns. Naming it is the same rule as naming the index: a
   // result the advocate cannot attribute is a result they can misread.
+  // J-7 / BK-38. WHAT WAS SEARCHED, IN THE ADVOCATE'S TERMS.
+  //
+  // This read `Searched: the authority index (authority.db) · ...`. A file
+  // name is ours; an advocate cannot act on it and it tells them nothing
+  // about whether the search covered their question. The scope and the
+  // freshness do, and they are below.
   const what = document.createElement('span');
-  what.textContent = `Searched: ${d.index} · for “${d.query}”`;
+  what.textContent = `Searched the case law · for “${d.query}”`;
   el.appendChild(what);
+
+  // WHICH FILTERS ACTUALLY RAN. A zero beside `court: Supreme Court` reads
+  // as "the corpus holds nothing from the Supreme Court"; it meant the
+  // filter never matched a stored value.
+  if (d.filters && d.filters.court_read_as) {
+    const f = document.createElement('span');
+    f.className = 'index-detail';
+    f.textContent = ` · ${d.filters.court_read_as}`;
+    el.appendChild(f);
+  }
 
   if (d.identity) {
     const frac = d.identity.fraction_of_source;
@@ -519,7 +1090,12 @@ function renderIndexLine(d) {
     // SCOPE FIRST. It is the disclosure that changes whether the whole result
     // means anything: an empty answer to a Kerala question is not an answer
     // about Kerala law, and only this line says so.
-    detail.textContent = ` · ${d.identity.scope} · ${size} · built ${d.identity.built_at}`;
+    // FRESHNESS AS A DATE, not a build timestamp. `built
+    // 2026-08-30T07:51:38` is an engineering artefact; what an advocate
+    // needs is how current the law they are being shown is.
+    const day = String(d.identity.built_at || '').slice(0, 10);
+    detail.textContent = ` · ${d.identity.scope} · ${size}`
+      + (day ? ` · current to ${day}` : '');
     el.appendChild(detail);
   }
 }
@@ -697,28 +1273,48 @@ async function showHistory(matterId) {
   head.textContent = `${d.turn_count} turn${d.turn_count === 1 ? '' : 's'} on ${d.title}`;
   body.appendChild(head);
 
+  // BK-39. THE SAME RENDERER, AND THAT IS THE WHOLE FIX.
+  //
+  // History showed the advocate's message and a collapsed "The turn as it was
+  // served" which, opened, printed the complete raw JSON: internal ids,
+  // prompts, model answers, metrics, gates. The answer they were actually
+  // given was not rendered at all -- so the surface that exists for REVIEW
+  // showed a different thing from the surface that gave the advice, and only
+  // one of them was readable.
+  //
+  // TWO RENDERERS FOR ONE ANSWER IS S9, and the drift is not hypothetical:
+  // BK-37 filed the served answer into sections, and this one would still
+  // have been printing JSON. `renderTurn` is now the only thing that renders
+  // an answer, here and on the Advise pane, so a change to how an answer
+  // reads changes both.
+  //
+  // THE RAW RECORD IS NOT DELETED. It moves inside the same `How this answer
+  // was made` door every served turn already has -- forensic diagnosis is
+  // what this store is FOR, and it stays one click away rather than being
+  // the first thing an advocate meets.
   d.turns.forEach((t, i) => {
     const card = document.createElement('article');
     card.className = 'recorded-turn';
 
     const h = document.createElement('header');
-    h.textContent = `Turn ${i + 1} · ${t.turn_id || ''}`;
+    // NO TURN ID. It is one of this product's own keys and an advocate
+    // cannot act on it (J-5); the ordinal is what they use to talk about a
+    // turn, and the id stays in the raw record below.
+    h.textContent = t.at ? `Turn ${i + 1} · ${t.at}` : `Turn ${i + 1}`;
     card.appendChild(h);
 
-    const asked = document.createElement('p');
-    asked.className = 'recorded-asked';
-    asked.textContent = t.message || t.asked
-      || '(what the advocate wrote was not recorded on this turn)';
-    card.appendChild(asked);
-
-    const pre = document.createElement('pre');
-    pre.className = 'recorded-raw';
-    pre.textContent = JSON.stringify(t, null, 2);
-    const wrap = document.createElement('details');
-    const sum = document.createElement('summary');
-    sum.textContent = 'The turn as it was served';
-    wrap.append(sum, pre);
-    card.appendChild(wrap);
+    card.appendChild(renderTurn({
+      brief: t.message || t.asked || '',
+      answer: {
+        elements: t.elements || [],
+        blocked: t.blocked,
+        blocked_reason: t.blocked_reason,
+        metrics: null,
+        restored: true,
+        at: t.at || '',
+        raw: t,
+      },
+    }));
 
     body.appendChild(card);
   });
@@ -756,15 +1352,30 @@ function showGate(message) {
 function showApplication(advocate) {
   state.advocate = advocate.id;
   $('who-name').textContent = advocate.name;
-  // ENROLMENT AND FIRM, ON SCREEN. The firm is what B3's conflicts registry
-  // is scoped by, so an advocate signed in under the wrong one should be able
-  // to see that before they brief a matter, not after.
+  // ENROLMENT AND FIRM, ON SCREEN. The firm is recorded on every file, so
+  // an advocate signed in under the wrong one should see it before they
+  // brief a matter rather than after. It does NOT scope the conflict
+  // check -- that runs against the matters this advocate holds, and
+  // BK-31 is explicit that no firm-wide claim may be made until a
+  // verified membership and a working registry exist.
   $('who-detail').textContent = `${advocate.enrolment} · ${advocate.practice} · ${advocate.firm_id}`;
   $('gate').hidden = true;
   $('masthead').hidden = false;
+  state.ended = false;
   showTab('advise');
   loadHealth();
   showMatterList();
+  showIntake(false);
+
+  // THE DRAFT COMES BACK, AND ONLY TO THE ADVOCATE WHO WROTE IT. BK-40 asks
+  // for exactly that scoping: a brief names a client, and restoring one into
+  // the next person's composer on a shared machine would be a disclosure, not
+  // a convenience.
+  if (state.draft && state.draft.advocate === advocate.id) {
+    $('message').value = state.draft.text;
+    $('message').focus();
+  }
+  state.draft = null;
 }
 
 // IS THE SERVER RUNNING THE CODE THAT IS ON DISK?
@@ -840,25 +1451,130 @@ $('login').addEventListener('submit', async (ev) => {
   }
 });
 
-$('signout').addEventListener('click', async () => {
+// SIGNING OUT IS A STATE MACHINE, NOT A REQUEST (BK-40).
+//
+//     signing_out  -> confirmed     the server ended the session
+//                  -> unconfirmed   it did not answer, and says so
+//
+// THE MEASURED DEFECT. This cleared the screen in `finally` and showed the
+// gate whether or not `/api/logout` succeeded. With the server stopped, the
+// advocate saw the sign-in screen -- and after a restart, reload reopened the
+// authenticated session and its matter, because the server token was still
+// live. They had been shown the strongest possible evidence of being signed
+// out, and they were not.
+//
+// The screen still clears IMMEDIATELY, and that part was always right: a
+// matter list left on the glass after someone pressed Sign out is worse. What
+// changes is that clearing the screen is no longer allowed to be the answer.
+async function revoke() {
+  const r = await api('/api/logout', { method: 'POST' });
+  // `outcome` is `closed`, `already_ended` or `unknown` -- the route stopped
+  // asserting `signed_out: true` over all three on 8 September 2026.
+  return r && r.signed_out === true;
+}
+
+async function signOut() {
+  const btn = $('signout');
+  btn.disabled = true;
+  state.signOut = 'signing_out';
+  keepDraft();
+  clearPrivileged();
+  $('login-id').value = '';
   try {
-    await api('/api/logout', { method: 'POST' });
-  } finally {
-    // THE SCREEN CLEARS EVEN IF THE CALL FAILED. Leaving a matter list up
-    // after someone pressed Sign out is the worst of both: they believe they
-    // are out and the board is still on the glass. The server-side session is
-    // what actually ends it, and that is the call above.
-    state.advocate = null;
-    state.matterId = null;
-    state.turns = [];
-    $('thread').textContent = '';
-    $('rail-body').textContent = '';
-    $('search-results').textContent = '';
-    $('history-body').textContent = '';
-    $('login-id').value = '';
+    await revoke();
+    state.signOut = 'none';
+    state.ended = false;
     showGate(null);
+  } catch (err) {
+    // A 401 IS A CONFIRMATION HERE, not a failure: the token no longer
+    // authenticates, which is the thing being asked for.
+    if (err.status === 401) {
+      state.signOut = 'none';
+      state.ended = false;
+      showGate(null);
+      return;
+    }
+    state.signOut = 'unconfirmed';
+    showGate(null);
+    $('login-state').appendChild(stateBlock('loud',
+      'I could not reach the server to end your session, so YOU MAY STILL BE '
+      + 'SIGNED IN on it. This screen is not proof that you are signed out. '
+      + 'I will keep trying; if you are on a shared machine, do not walk away '
+      + 'until it says the session is closed.'));
+    const again = document.createElement('button');
+    again.className = 'ghost';
+    again.textContent = 'Try to end the session again';
+    again.addEventListener('click', retryRevoke);
+    $('login-state').appendChild(again);
+    // AND WHEN CONNECTIVITY COMES BACK, without being asked. An advocate who
+    // has closed the laptop is the case this is for.
+    window.addEventListener('online', retryRevoke, { once: true });
+  } finally {
+    btn.disabled = false;
   }
-});
+}
+
+async function retryRevoke() {
+  if (state.signOut !== 'unconfirmed') return;
+  try {
+    await revoke();
+  } catch (err) {
+    if (err.status !== 401) return;   // still unreachable; the notice stands
+  }
+  state.signOut = 'none';
+  state.ended = false;
+  showGate(null);
+  $('login-state').appendChild(stateBlock('quiet',
+    'The session is now closed on the server.'));
+}
+
+$('signout').addEventListener('click', signOut);
+
+// BK-31. THE SESSIONS AN ADVOCATE HOLDS, AND THE WAY TO END THEM.
+//
+// The list shows ended sessions too, and that is the interesting half: "one
+// session, this device" is worth nothing to someone who cannot also see the
+// one that ended an hour ago on a machine they do not recognise.
+//
+// THE COUNT COMES BACK FROM THE REVOKE. "Signed out everywhere" is
+// unverifiable otherwise, and the case this is used in is exactly the case
+// where they need to know it worked.
+const NEWLINE = String.fromCharCode(10);
+
+async function showSessions() {
+  let d;
+  try {
+    d = await api('/api/sessions');
+  } catch (e) {
+    window.alert(`I could not read your sessions: ${e.message}`);
+    return;
+  }
+  const lines = d.sessions.map((s) => {
+    const when = String(s.issued_at).slice(0, 16).replace('T', ' ');
+    const state = s.this_one ? 'this device'
+      : (s.live ? 'signed in' : `ended — ${s.ended_because || 'no reason recorded'}`);
+    return `· ${when} · device ${s.device} · ${state}`;
+  });
+  const live = d.sessions.filter((s) => s.live && !s.this_one).length;
+  const body = [`You have ${d.count} session(s) on record:`, '', ...lines, ''];
+  body.push(live
+    ? `Sign out the ${live} other signed-in session(s)? This device stays signed in.`
+    : 'Nothing else is signed in.');
+
+  if (!live) { window.alert(body.join(NEWLINE)); return; }
+  if (!window.confirm(body.join(NEWLINE))) return;
+  try {
+    const r = await api('/api/sessions/revoke', { method: 'POST' });
+    window.alert(r.ended === 1
+      ? 'Ended 1 other session.'
+      : `Ended ${r.ended} other sessions.`);
+  } catch (e) {
+    window.alert(`I could not end them: ${e.message}. They may still be `
+               + `signed in — this is not a confirmation.`);
+  }
+}
+
+$('devices').addEventListener('click', showSessions);
 
 // ------------------------------------------------------------- registration
 //

@@ -951,8 +951,8 @@ def test_the_generated_password_satisfies_the_rule_it_will_be_checked_against():
 #: than as escaped literals: a newline inside a string inside a test file
 #: is three levels of escaping, and the heredoc form of this mangled it.
 _PROBES = (
-    (('METRICS_GATE = "G-SCOPE"',), True),
-    (('"""This module is deliberately not G-SCOPE."""', 'X = 1'), False),
+    (('METRICS_GATE = "G-LIMITATION"',), True),
+    (('"""This module is deliberately not G-LIMITATION."""', 'X = 1'), False),
     (('# a comment explaining why this is not G-SCOPE', 'X = 1'), False),
 )
 
@@ -960,6 +960,13 @@ _PROBES = (
 @pytest.mark.parametrize("body,caught", _PROBES)
 def test_the_gate_scan_sees_code_and_ignores_prose(body, caught):
     """T9 failed on a DOCSTRING saying *this is not `G-SCOPE`*.
+
+    THE PLANTED GATE MOVED TO `G-LIMITATION` ON 8 SEPTEMBER 2026, and the
+    reason is worth keeping: the probe has to name a gate the matrix declares
+    UNBUILT, or planting a consultation changes nothing and the test passes
+    while proving the scan blind. BK-34 built the five screen gates, so
+    `G-SCOPE` stopped being a counterexample the day its producer landed --
+    which is this test's own subject arriving from the other direction.
 
     `gate_consultations` string-scans every source line, which made it
     illegal to write ABOUT a gate -- and the sentence it failed on was the
@@ -984,7 +991,7 @@ def test_the_gate_scan_sees_code_and_ignores_prose(body, caught):
             f"planting {body!r} behaved the wrong way:" + chr(10)
             + (result.stdout + result.stderr)[-600:])
         if caught:
-            assert "G-SCOPE" in result.stdout, (
+            assert "G-LIMITATION" in result.stdout, (
                 "T9 failed and did not name the gate it failed on")
     finally:
         planted.unlink()

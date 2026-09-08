@@ -50,7 +50,7 @@ from nm.domain.matter import Basis, CauseOfAction, Posture, Role, Side, Thread
 from nm.domain.proof import Burden, ProofPosition, ProofStatus, Standard
 from nm.domain.quotable import Quotable
 from nm.knowledge.elements import elements_for
-from tests.test_turn_contract import KEY, _Evidence, _model_config
+from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
 
@@ -243,8 +243,8 @@ def _engine(tmp_path, inner=None):
     store = FileMatterStore(tmp_path, key=KEY)
     model = TracedModel(inner=inner or ScriptedModelAdapter(
         _model_config(), responses={"__default__": "Issue the notice."}))
-    return TurnEngine(store=store, evidence=_Evidence(), model=model,
-                      elements=CuratedElements()), store
+    return briefed(TurnEngine(store=store, evidence=_Evidence(), model=model,
+                      elements=CuratedElements())), store
 
 
 class _Memory:

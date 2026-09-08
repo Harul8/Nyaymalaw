@@ -319,10 +319,23 @@ def test_the_screens_carry_five_states_on_every_matter(tmp_path):
         f"{len(list(ScreenKind))} kinds exist")
     assert {s.kind for s in out.matter.screens} == set(ScreenKind)
     for screen in out.matter.screens:
-        assert screen.state is ScreenState.NOT_ASSESSED
-        assert screen.not_assessed_because, (
-            "a screen says it was not assessed and does not say why, which is "
-            "a disclaimer rather than a disclosure")
+        # ANY STATE, AND ALL FIVE PRESENT. BK-34 gave the screens producers, so
+        # they now answer CLEAR, BLOCKED, INCOMPLETE or NOT_ASSESSED
+        # depending on the file -- and pinning NOT_ASSESSED here would
+        # assert that the screens never run, which is the thing that was
+        # fixed. What the handover needs is that all five are CARRIED and
+        # each says something: a missing kind is invisible, and a state
+        # with no reason cannot be acted on by whoever receives the file.
+        assert screen.state in set(ScreenState)
+        # EVERY SCREEN SAYS SOMETHING, in whichever field its state uses.
+        # `not_assessed_because` is the right question for a screen that did
+        # not run and the wrong one for a screen that did -- the type refuses
+        # a NOT_ASSESSED with no reason, and refuses a CLEAR that carries one
+        # in the release field. What the handover needs is that no screen is
+        # silent, which is what this asks.
+        assert screen.detail or screen.not_assessed_because, (
+            f"the {screen.kind.value} screen says nothing at all, so whoever "
+            f"receives this file cannot tell what it found")
 
     s = summary_mod.build(out.matter)
     assert s.sections["screens"]["state"] == "held", (

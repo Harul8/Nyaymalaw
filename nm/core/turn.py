@@ -25,10 +25,13 @@ import time
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timezone
 
+from nm.core import accrual as accrual_reader
 from nm.core import (
     adversarial,
     cascade,
+    ceiling,
     chronology,
+    consistency,
     deadlines,
     grounding,
     limitation,
@@ -48,7 +51,8 @@ from nm.core import route as route_reader
 from nm.core import screens as screens_mod
 from nm.core import theory as theory_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
-from nm.domain import citation, decision, engagement, issue, reservation
+from nm.domain import brief as brief_mod
+from nm.domain import citation, decision, engagement, issue, reads, reservation
 from nm.domain import proof as domain_proof
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
@@ -188,6 +192,38 @@ class TurnInput:
     thread_id: str | None = None
     today: date = field(default_factory=date.today)
     jurisdiction: str = FORUM
+
+    parties: dict = field(default_factory=dict)
+    """BK-34. WHO IS INVOLVED, given at intake: name -> `client` | `adverse`
+    | `related`.
+
+    Carried on the turn for the same reason the release is: it is an act by a
+    person, recorded on the file with who and when, rather than a setting.
+    The engine writes it to `Matter.intake_parties` BEFORE the screens run, so
+    the conflict screen reads the file and answers on its own -- no call site
+    decides to skip a screen.
+    """
+
+    release: dict = field(default_factory=dict)
+    """BK-34. Screens the advocate is RELEASING with this brief.
+
+    `screen kind -> because`. B4 requires a NAMED HUMAN release, and the
+    advocate sending the turn is that human: the deployment is a controlled
+    roster of practising advocates and, in a solo practice, the advocate IS
+    the firm. Requiring a second person would stop every matter at intake --
+    not a stricter product, an unusable one.
+
+    IT TRAVELS ON THE TURN AND NOT IN A SETTING, and that is what keeps it
+    honest. A release held in configuration is the blanket exception this row
+    removed, wearing a different name; a release carried by the brief it
+    clears is an act by a person, at a time, recorded on the file with both.
+    The engine writes it to `Matter.released_screens` BEFORE the screens run,
+    so the screen sees it and clears -- rather than the engine deciding to
+    skip a screen, which no call site is allowed to do.
+
+    EMPTY IS THE ORDINARY VALUE. Most turns release nothing because the
+    matter was released once, when it was opened.
+    """
 
 
 @dataclass
@@ -452,15 +488,54 @@ def _with_screens(elements: list, screens, split=None) -> tuple:
     # ordering wrong, and this one already has the rule written down.
     tail = [split] if split is not None else []
     if screens.rows:
+        # THE ROW SAYS WHAT HAPPENED, AND SAYS IT ONCE.
+        #
+        # It used to hard-code "none of which has run" and a closing sentence
+        # about substance being admitted under an exception, because before
+        # BK-34 both were unconditionally true. They are not any more, and the
+        # result was visible on a served turn: *"Screens on this matter, none
+        # of which has run: Screens on this matter, all cleared: emergency —
+        # …"* — the fixed prefix wrapped around a row that carried its own.
+        #
+        # A SENTENCE THAT WAS TRUE OF EVERY CASE STOPS BEING CHECKED, and
+        # this one had drifted from the product by a whole feature. The
+        # prefix now comes from the same place the outcome does.
+        cleared = screens.clear and screens.assessed
         tail.append(Element(
-            kind=ElementKind.GROUND, disclosure=True,
-            text=("Screens on this matter, none of which has run: "
-                  + "; ".join(screens.rows)
-                  + ". Substance is admitted with them outstanding, which "
-                    "is recorded as an exception and is not a finding that "
-                    "they clear.")))
+            kind=ElementKind.GROUND, disclosure=not cleared,
+            text=("; ".join(screens.rows)
+                  + ("" if cleared else
+                     ". Substance is admitted with them outstanding, which "
+                     "is recorded as an exception and is not a finding that "
+                     "they clear."))))
     return (*elements, *tail)
 
+
+
+def _matter_name(message: str, parties: dict | None) -> str:
+    """`X v Y` where the parties are known, else a whole-word opening.
+
+    ONE OWNER, and it is a module function rather than a method because the
+    projection needs the same answer for a matter opened before intake
+    existed -- and a second implementation of "what is this file called"
+    would be two names for one file.
+    """
+    given = parties or {}
+    client = next((n for n, side in given.items() if side == "client"), "")
+    adverse = next((n for n, side in given.items() if side == "adverse"), "")
+    if client and adverse:
+        return f"{client} v {adverse}"
+    if client or adverse:
+        return client or f"against {adverse}"
+
+    first = (message or "").strip().split("\n")[0].strip()
+    if not first:
+        return "New matter"
+    if len(first) <= 60:
+        return first
+    # ON A WORD BOUNDARY. `[:60]` produced "...Goods were suppl".
+    cut = first[:60].rsplit(" ", 1)[0]
+    return (cut or first[:60]) + "\u2026"
 
 
 class TurnEngine:
@@ -569,6 +644,32 @@ class TurnEngine:
 
 
         expected_version = matter.version
+
+        # THE RELEASE IS RECORDED BEFORE THE SCREENS READ IT.
+        #
+        # Order matters and it is the whole design: the engine does not decide
+        # to skip a screen. It writes what the advocate released onto the
+        # file, and the screen then reads the file and clears itself. No call
+        # site is permitted to bypass a screen, which is the rule that made
+        # `may_admit_substance` the one owner of that decision in the first
+        # place.
+        # WHEN THIS FILE WAS LAST WORKED. The forum's date, from the
+        # turn -- never the machine's (BK-14).
+        matter = replace(matter, last_activity=turn.today.isoformat())
+        if turn.parties:
+            matter = replace(matter, intake_parties={
+                **(matter.intake_parties or {}),
+                **{str(n).strip(): str(side) for n, side in turn.parties.items()
+                   if str(n).strip()},
+            })
+        if turn.release:
+            matter = replace(matter, intake_answers={
+                **(matter.intake_answers or {}),
+                **{str(kind): {"by": turn.advocate_id,
+                               "answer": str(answer),
+                               "at": turn.today.isoformat()}
+                   for kind, answer in turn.release.items() if answer},
+            })
 
         # ---- ADMIT-A: screens, on names and danger only --------------------
         # An external review found this code doing what the first draft of the
@@ -805,6 +906,28 @@ class TurnEngine:
         else:
             thread = bound.thread
             head = list(elements)
+            # WHO THIS BRIEF NAMES, recorded for the NEXT turn's conflict
+            # screen. BK-34.
+            #
+            # THE SEQUENCING IS THE WHOLE DESIGN. The screens run in ADMIT-A,
+            # before this turn's words have been read by anything -- so a
+            # party named today cannot be screened today without admitting
+            # the brief first, which is exactly what B3 forbids. What it can
+            # do is be RECORDED today and screened from tomorrow, and the
+            # advocate names the principals at intake so the first turn is
+            # not screened against nobody.
+            #
+            # A PARTY ARRIVING ON TURN SIX IS THE CASE THIS EXISTS FOR.
+            # `Screen.stale_for` already refuses a clearance that floats free
+            # of its party set -- "a conflict check that cleared two parties
+            # says nothing about the third who arrives on turn six" -- and
+            # until this read existed there was no way for a third party to
+            # arrive at all.
+            #
+            # HERE AND NOT IN `_derive`, because `_derive` holds a
+            # `matter_id` and not the matter, and what this read produces is
+            # a change to the file.
+            matter = self._read_parties(turn, memory, matter, metrics, elements)
             derived, relied_on, retrieved, derived_values = self._derive(
                 thread, turn, metrics, memory, facts=matter.facts,
                 matter_id=matter.id, concluded=concluded)
@@ -1243,6 +1366,14 @@ class TurnEngine:
                      "gate": e.gate, "collapsible": e.collapsible,
                      "by_when": e.by_when.isoformat() if e.by_when else None,
                      "no_deadline_reason": e.no_deadline_reason,
+                     # BK-37's section, so a turn READ BACK renders the way
+                     # it was served. Without it a restored conversation
+                     # falls into one section and the advocate sees a
+                     # different shape from the one they were given -- which
+                     # is the transcript disagreeing with the answer, and the
+                     # transcript is what they would rely on to say what they
+                     # were told.
+                     "section": brief_mod.section_of(e).value,
                      "refs": list(e.refs)}
                     for e in answer.elements],
                 "gates_fired": [
@@ -1295,45 +1426,292 @@ class TurnEngine:
         under a DECLARED exception, recorded the way the emergency exception
         is. When B3 lands, one screen starts answering and nothing here moves.
         """
-        outstanding = tuple(
-            screens_mod.Screen(
-                kind=kind, state=screens_mod.ScreenState.NOT_ASSESSED,
-                not_assessed_because=(
-                    "the conflict, competence and engagement screens are "
-                    "B3-B5 and are not built (slice 10)"))
-            for kind in screens_mod.ScreenKind)
+        outstanding = tuple(self._screen(kind, matter, turn, metrics)
+                            for kind in screens_mod.ScreenKind)
+
+        # EVERY SCREEN FIRES ITS GATE. BK-34.
+        #
+        # `trace` T9 caught this the moment the producers landed: *a gate
+        # declared unbuilt that something consults fails harder -- the matrix
+        # would be telling the advocate nothing evaluates a condition while
+        # something quietly does.* The screens were built and the gates still
+        # said `built=False`, so the matrix was one release behind the code.
+        #
+        # THE STATE VOCABULARIES ARE THE GATES' OWN, not the screens'. A gate
+        # that accepted `ScreenState` values would be a second vocabulary for
+        # one fact, and `metrics.fire` refuses an out-of-vocabulary state --
+        # which is what forces the mapping to be written down here rather than
+        # assumed at five call sites.
+        for screen in outstanding:
+            gate_id, state = screens_mod.gate_for(screen)
+            if gate_id:
+                metrics.fire(gate_id, state,
+                             screen.detail or screen.not_assessed_because)
 
         may, why = screens_mod.may_admit_substance(outstanding)
-        if may:
-            # RAISED, NOT ASSERTED. `python -O` deletes an assert, and this
-            # one is the only thing standing between an unscreened matter
-            # and substance being admitted on it (BK-17).
-            raise RuntimeError(
-                "every screen is NOT_ASSESSED and substance was admitted "
-                "anyway; `may_admit_substance` is the one owner of that "
-                "decision and it has stopped refusing an unscreened "
-                "matter")
 
-        # `unscreened`, NOT `not_assessed`. The distinction is the gate's own:
-        # `not_assessed` would mean we could not tell whether this matter was
-        # screened, and we can tell -- it was not. An existing test held the
-        # line on that the moment the state was loosened.
+        # THE BLANKET EXCEPTION IS GONE (BK-34).
+        #
+        # This used to build five NOT_ASSESSED screens, watch
+        # `may_admit_substance` refuse them, and then admit substance anyway
+        # under a general "slice 10" exception -- on EVERY matter, including
+        # conflict, competence, scope, capacity and emergency. Registration
+        # simultaneously told the advocate the firm's conflict registry
+        # governed the session. Both statements were false and the second was
+        # a false assurance about the one check whose value is being trusted.
+        #
+        # What replaces it is not a stricter rule but a TRUTHFUL one: every
+        # screen that can be answered is answered, and the ones that need a
+        # person are BLOCKED with the question rather than waved through. A
+        # blocked screen is a finding the advocate can clear in one line; the
+        # blanket exception was a sentence nobody read.
+        if may:
+            metrics.fire("G-UNSCREENED", "screened",
+                         "every screen on this matter clears: " + why)
+            # THE ROWS STILL GO OUT, and this was a regression for about
+            # twenty minutes. `rows=()` on the cleared path meant an advocate
+            # whose matter passed every screen was told NOTHING about the
+            # screens -- which is §9 from the other side: the state has to be
+            # visible in the OUTPUT, and "it cleared" is a state.
+            #
+            # ONE LINE, NOT FIVE. Five cleared rows every turn is the noise
+            # BK-7 closed for the thresholds, and an advocate who scrolls past
+            # them will scroll past the turn they do not clear.
+            return ScreenResult(
+                clear=True, assessed=True,
+                reason="every screen clears: " + why,
+                rows=(("Screens on this matter, all cleared: "
+                       + "; ".join(f"{s.kind.value} — {s.detail}"
+                                   for s in outstanding)),),
+                screens=outstanding)
+
         metrics.fire(
             "G-UNSCREENED", "unscreened",
-            "no screen has run on this matter: " + why)
-
-        # ADMITTED UNDER A DECLARED EXCEPTION, which is the only honest shape
-        # while the screens are unbuilt. `clear=True` with `assessed=False`
-        # says the same thing in the type; the ROWS say it to the advocate.
+            "this matter is not cleared to hold substance: " + why)
+        # THE BLOCK IS THE ANSWER, so it has to BE an answer. `Element`
+        # refuses blank text and this returned a `ScreenResult` with no
+        # `blocking_question` at all -- 191 tests failed with `an Element must
+        # say something`, which is the type catching a screen that refused a
+        # matter and could not say what it wanted.
+        #
+        # THE QUESTION IS THE SCREENS' OWN DETAIL, not a sentence composed
+        # here. Each screen already says what it is waiting for, in words
+        # aimed at the advocate; writing a second version of that in the
+        # engine would be a second owner for the same question.
+        asks = [s.detail or s.not_assessed_because
+                for s in outstanding
+                if s.state is not screens_mod.ScreenState.CLEAR]
         return ScreenResult(
-            clear=True, assessed=False,
-            reason=("substance admitted with every screen outstanding: " + why),
-            rows=screens_mod.unscreened(outstanding),
+            clear=False, assessed=True,
+            reason=why,
+            blocking_question=(
+                "Before I work substance on this file: "
+                + "; ".join(a for a in asks if a)
+                or "this matter is not cleared to hold substance"),
+            rows=(("Screens on this matter, outstanding: "
+                   + "; ".join(screens_mod.unscreened(outstanding))),),
             # THE SCREENS THEMSELVES, so the handover can carry them.
             # `rows` is the advocate-facing rendering and cannot be read
             # back as state -- a summary parsing those sentences would be
             # a parser for a format nobody declared.
             screens=outstanding)
+
+    def _screen(self, kind, matter: Matter, turn: TurnInput,
+                metrics: TurnMetrics):
+        """ONE SCREEN, ANSWERED. BK-34's producers.
+
+        THE POPULATION IS `ScreenKind`, so a sixth screen added to the
+        vocabulary arrives here unanswered and lands NOT_ASSESSED naming
+        itself -- rather than silently not existing, which is what five
+        hard-coded rows would have done.
+
+        EVERY BRANCH RETURNS A REAL STATE. No path returns `clear` because
+        nothing ran: the conflict screen with no parties is NOT_ASSESSED and
+        says what it wants, and a released screen carries the release ON it
+        rather than instead of the finding.
+        """
+        from nm.core import conflict as conflict_mod
+
+        answered = (matter.intake_answers or {}).get(kind.value)
+
+        if kind is screens_mod.ScreenKind.CONFLICT:
+            named = self._parties_of(matter)
+            try:
+                held = self._store.list_for(matter.advocate_id)
+            except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+                metrics.violate("B3", f"the conflict screen could not read "
+                                      f"your files: {type(exc).__name__}")
+                return screens_mod.Screen(
+                    kind=kind, state=screens_mod.ScreenState.NOT_ASSESSED,
+                    not_assessed_because=(
+                        "your other matters could not be listed, so nothing "
+                        "was checked against them"))
+            return conflict_mod.screen(named, held, matter.advocate_id)
+
+        if kind is screens_mod.ScreenKind.COMPETENCE:
+            return self._competence_screen(matter, turn, metrics)
+
+        if kind is screens_mod.ScreenKind.EMERGENCY:
+            # NOT A MODEL READ, AND THAT IS THE POINT OF WHERE IT SITS.
+            # ADMIT-A runs before any substance reaches a provider, so a
+            # screen here cannot ask a model without sending the very
+            # material the screens exist to hold back. What it CAN do is
+            # record whether an emergency has been DECLARED on this matter,
+            # which is true and checkable -- and is not a claim that none
+            # exists.
+            if matter.emergency_because:
+                return screens_mod.Screen(
+                    kind=kind, state=screens_mod.ScreenState.BLOCKED,
+                    detail=(f"an emergency was declared on this matter: "
+                            f"{matter.emergency_because}"))
+            return screens_mod.Screen(
+                kind=kind, state=screens_mod.ScreenState.CLEAR,
+                detail=("no emergency has been declared on this matter. If "
+                        "liberty or an irreversible deadline is in play, say "
+                        "so and I will work that first"))
+
+        # SCOPE and CAPACITY: RELEASED BY THE ADVOCATE, ON THE RECORD.
+        #
+        # The deployment is a controlled roster of practising advocates and
+        # the advocate IS the firm, so requiring a second person would stop
+        # every matter at intake in a solo practice -- not a stricter
+        # product, an unusable one. What makes it honest is that the release
+        # is RECORDED with who and when, sits beside the finding rather than
+        # deleting it, and has to be given once per matter rather than
+        # assumed.
+        if answered:
+            # CLEAR, AND CARRYING NO `Release`. The screen asked a question,
+            # the advocate answered it, and the answer is the detail. There is
+            # no finding here to lift -- `Screen.__post_init__` refuses a
+            # CLEAR screen with a release for exactly that reason, and it
+            # caught this modelled the other way round within the minute.
+            return screens_mod.Screen(
+                kind=kind, state=screens_mod.ScreenState.CLEAR,
+                detail=(f"answered by {answered.get('by', 'the advocate')} on "
+                        f"{answered.get('at', 'an unrecorded date')}: "
+                        f"{answered.get('answer', 'confirmed at intake')}"))
+        return screens_mod.Screen(
+            kind=kind, state=screens_mod.ScreenState.BLOCKED,
+            detail=(
+                "the engagement scope for this matter is yours to confirm, "
+                "once. Tell me the work you are instructed to do and I will "
+                "record it and carry on"
+                if kind is screens_mod.ScreenKind.SCOPE else
+                "confirm that the client can give instructions on this "
+                "matter, and I will record it and carry on"))
+
+    def _competence_screen(self, matter: Matter, turn: TurnInput,
+                           metrics: TurnMetrics = None):
+        """B4 -- is this matter inside what the corpus can answer for?
+
+        IT DISCLOSES AND NEVER BLOCKS, and that is read off the matrix rather
+        than decided here: `G-COMPETENCE` is `Response.DISCLOSE`, scope
+        THREAD. A screen whose gate discloses must not be able to stop a turn,
+        or the table is telling the advocate one thing while the code does
+        another -- which is the exact disagreement `nm/domain/gates.py` was
+        written to end.
+
+        IT ALSO MATTERS ON THE MERITS. A coverage gap is OUR gap. Stopping the
+        advocate over it teaches them to work around the gate, which is
+        G-PROOF's recorded argument about a missing element table and the same
+        answer here.
+
+        SO THE STATE IS ALWAYS `CLEAR` AND THE FINDING IS ALWAYS FIRED. The
+        screen genuinely ran; what it found goes to the advocate as a gate
+        row, which is where §9 requires the third state to be visible -- in
+        the OUTPUT, not only in the type. A `CLEAR` screen carrying
+        `COVERAGE GAP --` in its detail is not a screen pretending to be
+        clean.
+        """
+        if self._coverage is None:
+            detail = ("coverage for this jurisdiction has not been measured "
+                      "in this deployment, so I cannot say whether the corpus "
+                      "covers it. That is a gap in what I can tell you, not a "
+                      "finding that it is covered")
+            return screens_mod.Screen(
+                kind=screens_mod.ScreenKind.COMPETENCE,
+                state=screens_mod.ScreenState.CLEAR,
+                detail="NOT MEASURED -- " + detail)
+
+        position = self._coverage.position(turn.jurisdiction)
+        name = getattr(getattr(position, "state", None), "value", "")
+        # `detail`, NOT `why`. `CoveragePosition` calls it `detail`, and
+        # `getattr(position, "why", "")` returned the empty string for every
+        # jurisdiction -- a screen reporting a coverage position with no
+        # reason in it, which the type would then refuse.
+        why = getattr(position, "detail", "") or "no reason was recorded"
+
+        if name == "met":
+            return screens_mod.Screen(
+                kind=screens_mod.ScreenKind.COMPETENCE,
+                state=screens_mod.ScreenState.CLEAR,
+                detail=f"{turn.jurisdiction}: {why}")
+
+        # THE PREFIX IS WHAT `gate_for` READS BACK. The screen state is
+        # always CLEAR here -- competence discloses and never blocks -- so
+        # the finding has to live in the detail, and the gate mapping parses
+        # it from there. A prefix nobody wrote would silently become
+        # `covered`, which is the one answer this branch must never give.
+        return screens_mod.Screen(
+            kind=screens_mod.ScreenKind.COMPETENCE,
+            state=screens_mod.ScreenState.CLEAR,
+            detail=("NOT MEASURED -- " if name in ("not_measured", "")
+                    else "COVERAGE GAP -- ") + why)
+
+    def _parties_of(self, matter: Matter):
+        """The party set this matter holds, as a `Parties`.
+
+        READ OFF THE FILE, not off this turn. The conflict screen runs in
+        ADMIT-A, before this turn's words have been read by anything -- which
+        is the whole point of where the screens sit. What it screens is what
+        the matter already knows; the intake read adds to that at the end of
+        the turn, so a party named today is screened from tomorrow.
+        """
+        from nm.core import parties as parties_mod
+
+        found = []
+        # INTAKE FIRST, then whatever the threads have learned since. Intake
+        # is what exists on turn one, and turn one is the turn that most needs
+        # screening.
+        for name, side in (matter.intake_parties or {}).items():
+            found.append(parties_mod.Party(
+                name=str(name), side=str(side), why="given at intake"))
+        for thread in matter.threads:
+            for name, side in (thread.parties or {}).items():
+                found.append(parties_mod.Party(
+                    name=str(name), side=str(side),
+                    why="recorded on the file"))
+        if not found:
+            return parties_mod.Parties(
+                why="no party is recorded on this matter")
+        return parties_mod.Parties(
+            parties=tuple(found),
+            why=f"{len(found)} party(ies) recorded on this matter")
+
+    def _read(self, prompt, schema, key: str, tier=Tier.ROUTINE):
+        """Every structured read goes through here. BK-29.
+
+        THE CALL SITE NAMES THE READ AND NOTHING ELSE. It used to name a
+        token ceiling too -- sixteen of them, every one hand-picked against
+        briefs nobody recorded -- and the dispute read's 200 truncated its
+        JSON mid-string at character 827 once it began returning three
+        verbatim spans. The read was LOST rather than short, and the turn
+        reported one thread on the strength of a parse error.
+
+        THE PROMPT IS BUILT ONCE, which the first version of this sweep got
+        wrong: it inlined `ceiling.for_read(key, build_prompt(...))` beside
+        the existing `build_prompt(...)` argument, so every read constructed
+        its prompt twice. Passing the built prompt through is what makes the
+        ceiling derivable without paying for it.
+
+        WHETHER THE CEILING IS DERIVED IS THE READ'S OWN PROPERTY, declared
+        in `nm/domain/reads.py` beside the schema's entry. Nothing here
+        decides it and no call site can override it.
+        """
+        return self._model.structured(
+            prompt, schema, tier,
+            max_tokens=ceiling.for_read(key, prompt,
+                                        echoes=reads.echoes(key)))
 
     def _load_or_create(self, turn: TurnInput) -> Matter:
         if turn.matter_id:
@@ -1343,7 +1721,21 @@ class TurnEngine:
             if existing.advocate_id != turn.advocate_id:
                 raise TurnRefused("this matter belongs to another advocate")
             return existing
-        title = turn.message.strip().split("\n")[0][:60] or "New matter"
+        # A NAME AN ADVOCATE RECOGNISES, not the first 60 characters.
+        #
+        # This took `message[:60]`, which cuts mid-word and gives ten
+        # recovery matters ten titles that begin "We act for the plaintiff
+        # at Hyderabad. Goods were suppl". BK-33's acceptance is that ten
+        # similar matters stay distinguishable by who, what and where -- and
+        # the opening sentence of a brief is the least distinguishing thing
+        # on the file.
+        #
+        # THE PARTIES ARE THE NAME, when intake has them: `X v Y` is how the
+        # matter is listed in every cause list an advocate has ever read.
+        # Where it does not, the first sentence is cut ON A WORD BOUNDARY
+        # and the intake read fills the name in on the turn that names a
+        # party.
+        title = _matter_name(turn.message, turn.parties)
         return Matter.create(advocate_id=turn.advocate_id, title=title)
 
     @implements("B1")
@@ -1374,9 +1766,9 @@ class TurnEngine:
                     f.statement.strip() for f in existing.facts[-6:])
 
         try:
-            res = self._model.structured(
-                route_reader.build_prompt(turn.message, on_file),
-                route_reader.ROUTE_SCHEMA, Tier.ROUTINE, max_tokens=120)
+            res = self._read(
+                      route_reader.build_prompt(turn.message, on_file),
+                      route_reader.ROUTE_SCHEMA, "route", Tier.ROUTINE)
             metrics.record_call(res)
             metrics.route_reads += 1
             read = route_reader.interpret(res.data or {})
@@ -1648,9 +2040,9 @@ class TurnEngine:
             context=memory.notes if memory else "",
             context_is="notes this product wrote about the file")
         try:
-            res = self._model.structured(
-                cause_reader.build_prompt(quotable),
-                cause_reader.CAUSE_SCHEMA, Tier.ROUTINE, max_tokens=300)
+            res = self._read(
+                      cause_reader.build_prompt(quotable),
+                      cause_reader.CAUSE_SCHEMA, "cause", Tier.ROUTINE)
             metrics.record_call(res)
             metrics.cause_reads += 1
             read = cause_reader.interpret(quotable, res.data or {})
@@ -1674,6 +2066,63 @@ class TurnEngine:
         return read.cause.value if read.resolved else None
 
     @implements("C5")
+    def _read_parties(self, turn: TurnInput, memory, matter: Matter,
+                      metrics: TurnMetrics, grounds: list[Element]) -> Matter:
+        """WHO THE BRIEF NAMES, onto the matter. BK-34.
+
+        RETURNS THE MATTER rather than a party set, because what it produces
+        is a change to the file: the conflict screen reads
+        `Matter.intake_parties`, and a read whose answer lived only in this
+        turn would screen nothing on the next one.
+
+        IT ADDS AND NEVER REPLACES. An advocate who names the guarantor on
+        turn six has added a party, not corrected the two from turn one, and
+        a read that overwrote would silently narrow the set the screen covers
+        -- which `Screen.stale_for` would then report as a clearance that no
+        longer applies, one turn too late to be useful.
+        """
+        from nm.core import parties as parties_mod
+
+        # NO NOTES ON THIS READ, and that is a decision rather than an
+        # omission. The notes are this product's own rendering -- date
+        # stamps, internal identifiers, sentences we wrote -- and none of it
+        # is quotable, so a name found there would be dropped by the guard
+        # anyway. Taking them would spend budget to be refused, and would
+        # make this a fourth read in a trade `test_one_quotable` exists to
+        # keep at three.
+        quotable = Quotable(
+            turn=turn.message,
+            file=memory.advocate_words if memory else "")
+        try:
+            res = self._read(
+                      parties_mod.build_prompt(quotable),
+                      parties_mod.PARTIES_SCHEMA, "parties", Tier.ROUTINE)
+            metrics.record_call(res)
+            read = parties_mod.interpret(quotable, res.data or {})
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"the parties could not be read: {exc}")
+            return matter
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("B3", f"parties read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return matter
+
+        if read.refused:
+            # NAMED, NOT SWALLOWED. A dropped name is a party the conflict
+            # screen will not cover, and the advocate is the only one who can
+            # put it back.
+            grounds.append(Element(
+                kind=ElementKind.GROUND, disclosure=True,
+                text=(f"I did not record every name for the conflict check: "
+                      f"{read.refused}. Say them again and I will add them")))
+        if not read.named:
+            return matter
+        return replace(matter, intake_parties={
+            **(matter.intake_parties or {}),
+            **{p.name: p.side for p in read.parties},
+        })
+
     def _read_dates(self, turn: TurnInput, matter: Matter, thread: Thread,
                     metrics: TurnMetrics, existing: tuple = ()):
         """The events in this message, with their dates where dates exist.
@@ -1693,9 +2142,9 @@ class TurnEngine:
             context="\n".join(f.statement for f in matter.facts
                               if f.id in set(thread.chronology)))
         try:
-            res = self._model.structured(
-                chronology.build_prompt(quotable, turn.today, existing),
-                chronology.DATE_SCHEMA, Tier.ROUTINE, max_tokens=700)
+            res = self._read(
+                      chronology.build_prompt(quotable, turn.today, existing),
+                      chronology.DATE_SCHEMA, "dates", Tier.ROUTINE)
             metrics.record_call(res)
             metrics.chronology_reads += 1
             rows = chronology.interpret(
@@ -1743,20 +2192,9 @@ class TurnEngine:
                             context_is="the list of threads already open "
                                        "on this matter, as we labelled them")
         try:
-            res = self._model.structured(
-                dispute_reader.build_prompt(quotable),
-                dispute_reader.DISPUTE_SCHEMA, Tier.ROUTINE,
-                # SCALED, BECAUSE THIS READ ECHOES THE ADVOCATE'S OWN WORDS.
-                # At 200 the answer was truncated mid-string at character 827
-                # on a three-dispute brief: the model returned three verbatim
-                # spans, the JSON never closed, and the read was lost. A read
-                # that must QUOTE to be believed has an output roughly the
-                # size of its input, so a constant ceiling is a length limit
-                # on the advocate disguised as a cost control.
-                #
-                # The floor covers a short message; the cap is the point past
-                # which a single turn is not a brief.
-                max_tokens=max(300, min(1600, len(turn.message) // 2)))
+            res = self._read(
+                      dispute_reader.build_prompt(quotable),
+                      dispute_reader.DISPUTE_SCHEMA, "dispute", Tier.ROUTINE)
             metrics.record_call(res)
             metrics.binding_reads += 1
             read = dispute_reader.interpret(quotable, res.data or {})
@@ -1793,10 +2231,10 @@ class TurnEngine:
         must never look like a role that was.
         """
         try:
-            res = self._model.structured(
-                posture_reader.build_role_prompt(
+            res = self._read(
+                      posture_reader.build_role_prompt(
                     described, memory.advocate_words if memory else ""),
-                posture_reader.ROLE_SCHEMA, Tier.ROUTINE, max_tokens=150)
+                      posture_reader.ROLE_SCHEMA, "role", Tier.ROUTINE)
             metrics.record_call(res)
             metrics.posture_reads += 1
             return posture_reader.interpret_role(res.data or {})
@@ -1958,7 +2396,8 @@ class TurnEngine:
         position: limitation.Limitation | None = None
         if not side_blind:
             rows, register, position = self._thresholds(
-                thread, turn, result, metrics, facts, concluded)
+                thread, turn, result, metrics, facts, concluded,
+                cause_read)
             grounds.extend(rows)
 
             # D9 -- THE ISSUES, AFTER the thresholds and never before them.
@@ -2108,10 +2547,67 @@ class TurnEngine:
         return matter.answered(
             frozenset(g.gate_id for g in metrics.gates_fired), turn.turn_id)
 
+    def _read_accrual(self, trigger: str, dated: list[Fact],
+                      metrics: TurnMetrics) -> accrual_reader.Accrual:
+        """WHICH dated entry satisfies the statutory trigger.
+
+        FAILS TOWARD NOT COMPUTING, and that is the whole safety argument. A
+        wrong accrual produces a confident expiry with real statutory text
+        behind it, correct citations around it, and nothing downstream that
+        catches it -- the defect this read exists for. An absent one produces
+        a gap that names what it was looking for, which the advocate closes in
+        one turn.
+
+        So every failure path here returns UNREAD, which is not identified,
+        which not-computes. There is no path from a failed read to a date.
+        """
+        try:
+            res = self._read(
+                      accrual_reader.build_prompt(trigger, dated),
+                      accrual_reader.ACCRUAL_SCHEMA, "accrual", Tier.ROUTINE)
+            metrics.record_call(res)
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"the accrual read could not run: {exc}")
+            return accrual_reader.UNREAD
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning (§7)
+            metrics.violate(
+                "D2", f"accrual read failed: {type(exc).__name__}: {exc}")
+            return accrual_reader.UNREAD
+
+        read = accrual_reader.interpret(
+            res.data or {}, frozenset(f.id for f in dated))
+        if read.refused:
+            metrics.violate("D2", read.refused)
+        return read
+
+    def _accrual_trigger(self, cause_read) -> str:
+        """The statutory trigger for this cause, or empty.
+
+        THROUGH THE EVIDENCE ADAPTER, because `core` may not import
+        `nm.knowledge` (layercheck) and the trigger is curated beside the
+        Article in `resolution.py`. A copy here would be a second home for
+        a legal fact, which is the defect S9 names.
+
+        EMPTY MEANS NOBODY CURATED ONE, and the caller then behaves as it
+        did before: it computes from what it has. That is the honest
+        fallback -- a cause with no curated trigger is not a cause we know
+        enough about to refuse on.
+        """
+        if not cause_read:
+            return ""
+        try:
+            return self._evidence.accrual_trigger(cause_read) or ""
+        except AttributeError:
+            # An adapter predating the port method. Empty is the
+            # documented "no curated trigger" and not an error.
+            return ""
+
     @implements("D1")
     def _thresholds(self, thread: Thread, turn: TurnInput, result,
                     metrics: TurnMetrics, facts: tuple[Fact, ...],
                     concluded: dict | None = None,
+                    cause_read: str | None = None,
                     ) -> tuple[list[Element], tuple[deadlines.Deadline, ...],
                                limitation.Limitation]:
         """The threshold map, the limitation position, and the register.
@@ -2144,7 +2640,7 @@ class TurnEngine:
         defending = thread.posture.side is Side.DEFENDING
         claimant = self._limitation(
             Side.MOVING if defending else thread.posture.side,
-            thread, result, chart, turn, metrics, out)
+            thread, result, chart, turn, metrics, out, cause_read)
         # NOT APPLICABLE, NOT UNCOMPUTED. No period runs against a party
         # who has brought no claim, so this is a FINDING and not a gap.
         # The distinction is kept at the type because the only thing that
@@ -2229,7 +2725,11 @@ class TurnEngine:
     def _limitation(self, for_side: Side, thread: Thread, result,
                     chart: tuple[Fact, ...], turn: TurnInput,
                     metrics: TurnMetrics,
-                    grounds: list[Element]) -> limitation.Limitation:
+                    grounds: list[Element],
+                    # THE CAUSE. The accrual trigger is cause-specific;
+                    # without it this chose the earliest dated fact.
+                    cause_read: str | None = None,
+                    ) -> limitation.Limitation:
         """Limitation for one side -- or NOT COMPUTED, with the reason said.
 
         Slice 4 computes it where the retrieval produced an Article AND the
@@ -2250,7 +2750,41 @@ class TurnEngine:
 
         found = next((f for f in result.findings
                       if "Article" in f.ref or "Limitation" in f.ref), None)
-        accrual = next((f for f in chart if f.date is not None), None)
+        # THE ACCRUAL IS A STATUTORY TRIGGER, NOT THE EARLIEST DATE.
+        #
+        # This read `next(f for f in chart if f.date is not None)` -- the
+        # first dated fact, whatever the cause. So Article 54 ran from a
+        # 2023 agreement when its trigger is the date fixed for
+        # performance or notice of refusal, and the answer declared an
+        # expiry with every citation on the turn correct.
+        #
+        # `Edge.accrues_on` carries the trigger from the Schedule's third
+        # column, and `_read_accrual` reads WHICH entry satisfies it.
+        #
+        # THREE CASES, and the middle one is the one worth stating. One dated
+        # entry leaves nothing to choose. Several WITHOUT a curated trigger is
+        # the old behaviour and stays: no trigger means this product does not
+        # know enough about the cause to do better than the file's own order,
+        # and refusing there would trade a working answer for a shrug. Several
+        # WITH a trigger is the case that produced the defect, so it is read --
+        # and a read that cannot name an entry refuses rather than falling back
+        # to the earliest, because the fallback IS the defect.
+        dated = [f for f in chart if f.date is not None]
+        trigger = self._accrual_trigger(cause_read)
+        accrual = dated[0] if dated else None
+        accrual_limb = ""
+        if len(dated) > 1 and trigger:
+            read = self._read_accrual(trigger, dated, metrics)
+            if not read.identified:
+                return limitation.not_computed(
+                    for_side,
+                    f"the period runs from {trigger}, and I could not identify "
+                    f"that event among the {len(dated)} dated entries on this "
+                    f"thread. {read.why}. Name it and I will work the period "
+                    f"from it",
+                    live)
+            accrual = next(f for f in dated if f.id == read.fact_id)
+            accrual_limb = read.limb
         if found is None:
             return limitation.not_computed(
                 for_side, "no limitation Article was retrieved for this cause",
@@ -2304,9 +2838,18 @@ class TurnEngine:
         # against it. The first pass is pure arithmetic over dates already on
         # the file and costs nothing. Ordering it the other way would test a
         # factor against a date that factor had already moved.
+        # THE LIMB IS WHAT MAKES THE ACCRUAL CHECKABLE, so it travels with the
+        # reason rather than being dropped once the date is picked.
+        # `2024-06-10` tells an advocate nothing; `the written refusal — no
+        # date having been fixed for performance` is a sentence they can
+        # disagree with in four words, which is the only way a wrong accrual
+        # gets caught. Built once here because two call sites building the
+        # same string is a second owner for it (§4).
+        accrual_reason = (f"{accrual.statement[:70]} — {accrual_limb}"
+                          if accrual_limb else accrual.statement[:70])
         bare = limitation.compute(
             for_side=for_side, article=found.ref, accrual=accrual.id,
-            accrual_on=accrual.date, accrual_reason=accrual.statement[:70],
+            accrual_on=accrual.date, accrual_reason=accrual_reason,
             chronology=live, period=period)
 
         read = self._factors(turn, thread, chart, metrics, grounds,
@@ -2314,7 +2857,7 @@ class TurnEngine:
 
         return limitation.compute(
             for_side=for_side, article=found.ref, accrual=accrual.id,
-            accrual_on=accrual.date, accrual_reason=accrual.statement[:70],
+            accrual_on=accrual.date, accrual_reason=accrual_reason,
             chronology=live, period=period,
             factors=read.factors)
 
@@ -2364,11 +2907,30 @@ class TurnEngine:
             # E-042 IS ABOUT A COMPUTATION THAT HAPPENED AND SKIPPED AN ENTRY.
             # Firing it where none happened spends the signal's credibility on
             # a case it was not written for.
+            # THE DATED ENTRIES ARE NAMED HERE TOO, and that is BK-35's own
+            # correction to itself. The alternatives clause below used to be
+            # the safety net for an accrual chosen by sort order, and it was
+            # written on a path that always computed. Once the accrual became
+            # a read, the commonest way to lose the period became a read that
+            # could not identify the trigger — and the net stopped rendering
+            # on exactly the turns it was for.
+            #
+            # The advocate is one sentence from fixing it: they can see the
+            # dates and say which one the period runs from. Telling them the
+            # count and withholding the list makes them ask for what is
+            # already on the file.
+            dated = ", ".join(
+                f"{f.statement[:44]} ({f.date.isoformat()})"
+                for f in chart if f.date is not None)
             return [Element(
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 text=(f"I have not computed the limitation position for "
                       f"{whose} side on this thread: "
-                      f"{lim.not_computed_because}."))]
+                      f"{lim.not_computed_because}."
+                      + (f" It was not computed from any of the dated entries "
+                         f"on this thread — not from: {dated}. If the period "
+                         f"should run from one of those, say which."
+                         if dated else "")))]
 
         missed = lim.accounts_for_every_entry(thread.chronology)
         if missed:
@@ -2474,9 +3036,9 @@ class TurnEngine:
                        "INCLUDING QUESTIONS WE HAVE ASKED -- one of which "
                        "names both sides of the dispute")
         try:
-            res = self._model.structured(
-                posture_reader.build_prompt(quotable),
-                posture_reader.POSTURE_SCHEMA, Tier.ROUTINE, max_tokens=200)
+            res = self._read(
+                      posture_reader.build_prompt(quotable),
+                      posture_reader.POSTURE_SCHEMA, "posture", Tier.ROUTINE)
             metrics.record_call(res)
             metrics.posture_reads += 1
             stated = posture_reader.interpret(quotable, res.data or {})
@@ -2850,10 +3412,10 @@ class TurnEngine:
                f"{position.expires_on.isoformat()} under {position.article}")
 
         try:
-            res = self._model.structured(
-                adversarial.build_salvage_prompt(
+            res = self._read(
+                      adversarial.build_salvage_prompt(
                     thread.label, why, retrieved),
-                adversarial.SALVAGE_SCHEMA, Tier.ROUTINE, max_tokens=1200)
+                      adversarial.SALVAGE_SCHEMA, "salvage", Tier.ROUTINE)
             metrics.record_call(res)
             read = adversarial.read_salvage(res.data or {}, retrieved)
         except ModelError as exc:
@@ -2925,10 +3487,10 @@ class TurnEngine:
             return []
 
         try:
-            res = self._model.structured(
-                adversarial.build_attack_prompt(
+            res = self._read(
+                      adversarial.build_attack_prompt(
                     account, thread.posture.side.value),
-                adversarial.ATTACK_SCHEMA, Tier.ROUTINE, max_tokens=900)
+                      adversarial.ATTACK_SCHEMA, "attacks", Tier.ROUTINE)
             metrics.record_call(res)
             read = adversarial.read_attacks(res.data or {}, thread.id)
         except ModelError as exc:
@@ -3129,10 +3691,10 @@ class TurnEngine:
             found = ()
         else:
             try:
-                res = self._model.structured(
-                    adversarial.build_exposure_prompt(
+                res = self._read(
+                          adversarial.build_exposure_prompt(
                         tuple((t.id, t.label) for t in considered)),
-                    adversarial.EXPOSURE_SCHEMA, Tier.ROUTINE, max_tokens=700)
+                          adversarial.EXPOSURE_SCHEMA, "exposure", Tier.ROUTINE)
                 metrics.record_call(res)
                 found = adversarial.read_exposures(res.data or {}, threads)
             except ModelError as exc:
@@ -3203,24 +3765,24 @@ class TurnEngine:
         account = memory.account if memory else ""
 
         try:
-            adverse_said = self._model.structured(
+            adverse_said = self._read(
                 # THE POSTURE, because `adverse to the client` is
                 # unanswerable without it. It is already resolved on the
                 # thread by the time this runs.
                 theory_reader.build_adverse_prompt(
                     account, chart, thread.posture.side.value),
-                theory_reader.ADVERSE_SCHEMA, Tier.ROUTINE, max_tokens=500)
+                theory_reader.ADVERSE_SCHEMA, "adverse", Tier.ROUTINE)
             metrics.record_call(adverse_said)
             adverse, why = theory_reader.read_adverse(
                 adverse_said.data or {}, chart)
 
             lines = tuple(f"{fid}: {next(f.statement for f in chart if f.id == fid)}"
                           f" — {why.get(fid, '')}" for fid in adverse)
-            said = self._model.structured(
-                theory_reader.build_theory_prompt(
+            said = self._read(
+                       theory_reader.build_theory_prompt(
                     account, lines, thread.posture.side.value,
                     standing=theory_reader.from_stored(thread.theory)),
-                theory_reader.THEORY_SCHEMA, Tier.ROUTINE, max_tokens=800)
+                       theory_reader.THEORY_SCHEMA, "theory", Tier.ROUTINE)
             metrics.record_call(said)
             read = theory_reader.read_theory(
                 said.data or {}, thread.id, thread.posture.side, adverse)
@@ -3572,9 +4134,9 @@ class TurnEngine:
                 context=memory.notes if memory else "",
                 context_is="notes this product wrote about the file")
             standing = inventory.from_stored(thread.evidence)
-            res = self._model.structured(
-                inventory.build_inventory_prompt(quotable, standing),
-                inventory.INVENTORY_SCHEMA, Tier.ROUTINE, max_tokens=700)
+            res = self._read(
+                      inventory.build_inventory_prompt(quotable, standing),
+                      inventory.INVENTORY_SCHEMA, "inventory", Tier.ROUTINE)
             metrics.record_call(res)
             read = inventory.read_inventory(res.data or {}, quotable,
                                             standing)
@@ -3727,9 +4289,9 @@ class TurnEngine:
                 turn=turn.message,
                 file=memory.advocate_words if memory else "",
                 context=account)
-            res = self._model.structured(
-                issue_reader.build_prompt(quotable, standing),
-                issue_reader.ISSUE_SCHEMA, Tier.ROUTINE, max_tokens=700)
+            res = self._read(
+                      issue_reader.build_prompt(quotable, standing),
+                      issue_reader.ISSUE_SCHEMA, "issues", Tier.ROUTINE)
             metrics.record_call(res)
             read = issue_reader.read(res.data or {}, thread.id, quotable,
                                      standing)
@@ -3863,9 +4425,9 @@ class TurnEngine:
             context=memory.notes if memory else "",
             context_is="notes this product wrote about the file")
         try:
-            res = self._model.structured(
-                proof_read.build_prompt(quotable, elements),
-                proof_read.PROOF_SCHEMA, Tier.ROUTINE, max_tokens=900)
+            res = self._read(
+                      proof_read.build_prompt(quotable, elements),
+                      proof_read.PROOF_SCHEMA, "proof", Tier.ROUTINE)
             metrics.record_call(res)
             read = proof_read.read(res.data or {}, elements, quotable)
         except ModelError as exc:
@@ -4046,9 +4608,9 @@ class TurnEngine:
                             file="\n".join(f.statement for f in chart))
 
         try:
-            res = self._model.structured(
-                factor_reader.build_prompt(quotable, dated),
-                factor_reader.FACTOR_SCHEMA, Tier.ROUTINE, max_tokens=400)
+            res = self._read(
+                      factor_reader.build_prompt(quotable, dated),
+                      factor_reader.FACTOR_SCHEMA, "factors", Tier.ROUTINE)
             metrics.record_call(res)
             read = factor_reader.read(
                 res.data or {}, dated, quotable, provisions,
@@ -4293,10 +4855,142 @@ class TurnEngine:
                 text=("I could not reach the model to form a recommendation on "
                       "this turn. Nothing has been recorded as advice. Resend, "
                       "or tell me what you would like me to work on first."))
+        # G-CONSISTENT — THE STEP AGAINST THE FIGURES PRINTED BESIDE IT.
+        #
+        # Everything above this line TELLS the model what was worked out, at
+        # length and correctly, and that was the fix applied to B-074. It
+        # recurred: on `6e29cf0` the step said "file within the window" while
+        # the annotation on the same element said every deadline had passed.
+        # A prompt is an instruction that is usually followed, and the turns
+        # where it is not are exactly the turns nobody is watching.
+        #
+        # So the sentence is checked AFTER it exists, against the typed facts
+        # rather than against the instruction that was meant to produce it.
+        claims = consistency.claims_for(
+            position, register, side, turn.today, thread.chronology)
+        text, verdict = self._consistent_step(text, claims, metrics, file_note)
+        if verdict.contradicted:
+            named = next(c for c in claims if c.id == verdict.claim_id)
+            # BLOCK, AND THE BLOCK IS THE ANSWER (the matrix, Scope.STEP).
+            # The advocate gets the computed fact and a question rather than a
+            # sentence that disagrees with the figures beside it — the facts
+            # are the part that was verified, the step is the part that was
+            # generated, and when they conflict the generated half goes.
+            return Element(
+                kind=ElementKind.QUESTION, thread=thread.id,
+                gate="G-CONSISTENT",
+                text=(f"I withheld the next step on this thread because it "
+                      f"contradicted what this same answer worked out. "
+                      f"{named.sentence} The step said "
+                      f"{verdict.quoted.strip()!r} — {verdict.why}. Tell me "
+                      f"what you want to do given that position and I will "
+                      f"work it."))
+
         by_when, no_deadline = self._by_when(register, turn.today)
         return Element(
             kind=ElementKind.ACTION, thread=thread.id, text=text,
             by_when=by_when, no_deadline_reason=no_deadline)
+
+    def _consistent_step(self, text: str, claims, metrics: TurnMetrics,
+                         file_note: str = ""):
+        """The step, verified against the turn's own computed facts.
+
+        ONE REPAIR, THEN THE STEP GOES. The rewrite is handed the
+        contradiction that was found and asked for the same step without it —
+        not asked for a better step, which would hand the whole recommendation
+        back to the thing that just got it wrong. A second failure is evidence
+        about the step rather than about its wording, so there is no third
+        attempt.
+
+        THE GATE IS FIRED ON EVERY OUTCOME, including `consistent`. A check
+        that only appears in the trace when it fails cannot be distinguished
+        from one that never ran, which is the whole of defect shape S1 and is
+        why `not_verified` is a state here rather than a null.
+        """
+        verdict = self._verify_step(text, claims, metrics, file_note)
+
+        if verdict.contradicted:
+            named = next(c for c in claims if c.id == verdict.claim_id)
+            repaired = self._repair_step(text, named, verdict, metrics,
+                                         file_note)
+            if repaired:
+                second = self._verify_step(repaired, claims, metrics,
+                                           file_note)
+                if not second.contradicted and second.ran:
+                    metrics.fire(
+                        "G-CONSISTENT", "repaired",
+                        f"the step contradicted {named.id!r} and was rewritten "
+                        f"once: {verdict.why}")
+                    return repaired, second
+                # A REWRITE THAT COULD NOT BE VERIFIED IS NOT A REPAIR.
+                # Serving it would be taking the second read's silence as
+                # agreement, and the first read's finding stands until
+                # something replaces it.
+                verdict = second if second.contradicted else verdict
+
+        metrics.fire("G-CONSISTENT", verdict.state,
+                     verdict.refused or verdict.why)
+        return text, verdict
+
+    def _verify_step(self, text: str, claims, metrics: TurnMetrics,
+                     file_note: str = ""):
+        """Does the step contradict a computed fact? UNVERIFIED if it cannot run.
+
+        FAILS TOWARD SERVING, which is the opposite direction to the accrual
+        read and deliberately so. Refusing there costs a date and buys safety;
+        refusing here DELETES THE ADVICE, so a read that cannot run must not
+        be able to silence a step that is perfectly sound.
+        """
+        if not claims:
+            # NOTHING WAS COMPUTED, so there is nothing to contradict. This is
+            # not a pass -- it is the check having no subject, and calling the
+            # read anyway would spend a call to be told so.
+            #
+            # IT CARRIES ITS OWN REASON. Both this and a read that failed
+            # leave the step unverified, and they are different facts about
+            # the turn: one says nothing was computed, the other says the
+            # check broke. Reporting them with one sentence is the collapse
+            # this gate exists to refuse, one level down.
+            return consistency.NOTHING_TO_CHECK
+
+        try:
+            res = self._read(
+                      consistency.build_prompt(text, claims, file_note),
+                      consistency.CONSISTENCY_SCHEMA, "consistency", Tier.ROUTINE)
+            metrics.record_call(res)
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"the consistency read could not run: {exc}")
+            return consistency.UNVERIFIED
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning (§7)
+            metrics.violate(
+                "D3", f"consistency read failed: {type(exc).__name__}: {exc}")
+            return consistency.UNVERIFIED
+
+        verdict = consistency.interpret(
+            res.data or {}, text, frozenset(c.id for c in claims))
+        if verdict.refused:
+            metrics.violate("D3", verdict.refused)
+        return verdict
+
+    def _repair_step(self, text: str, claim, verdict,
+                     metrics: TurnMetrics, file_note: str = "") -> str:
+        """One rewrite of a contradicting step, or empty if it could not run."""
+        try:
+            res = self._model.complete(
+                consistency.repair_prompt(text, claim, verdict.why,
+                                          file_note),
+                Tier.ROUTINE, max_tokens=120)
+            metrics.record_call(res)
+            return (res.text or "").strip()
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"the step could not be rewritten: {exc}")
+            return ""
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning (§7)
+            metrics.violate(
+                "D3", f"step repair failed: {type(exc).__name__}: {exc}")
+            return ""
 
     def _non_matter_answer(self, turn, mode, mode_statement, metrics) -> Answer:
         # A QUESTION OF LAW IS ANSWERED, NOT DEFLECTED.
@@ -4411,9 +5105,9 @@ class TurnEngine:
         quotable = Quotable(turn=turn.message,
                             file=memory.advocate_words if memory else "")
         try:
-            res = self._model.structured(
-                duty_reader.build_prompt(quotable),
-                duty_reader.DUTY_SCHEMA, Tier.ROUTINE, max_tokens=250)
+            res = self._read(
+                      duty_reader.build_prompt(quotable),
+                      duty_reader.DUTY_SCHEMA, "duty", Tier.ROUTINE)
             metrics.record_call(res)
             metrics.duty_reads += 1
             return duty_reader.interpret(quotable, res.data or {})

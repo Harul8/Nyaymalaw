@@ -56,6 +56,9 @@ CARRIERS: tuple[str, ...] = (
 
 #: gate id -> "file::test". The named test must assert on a CARRIER.
 PROVEN: dict[str, str] = {
+    "G-COMPETENCE":
+        "test_turn_contract.py::"
+        "test_the_coverage_position_reaches_the_advocate_not_only_the_metrics",
     "G-UNSCREENED":
         "test_turn_contract.py::"
         "test_every_screen_is_named_to_the_advocate_and_none_reads_as_clear",

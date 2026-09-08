@@ -31,7 +31,7 @@ from nm.core.turn import TurnEngine, TurnInput
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
 from nm.domain.matter import Matter, Provenance
 from nm.domain.traceability import refuses
-from tests.test_turn_contract import KEY, _Evidence, build
+from tests.test_turn_contract import KEY, _Evidence, briefed, build
 
 pytestmark = pytest.mark.class_a
 
@@ -360,8 +360,8 @@ def test_an_audit_trail_write_failure_is_never_swallowed(tmp_path):
             raise OSError("the audit volume is full")
 
     broken = _Unwritable(tmp_path, key=KEY)
-    engine = TurnEngine(store=broken, evidence=_Evidence(),
-                        model=build(tmp_path / "m")[0]._model)
+    engine = briefed(TurnEngine(store=broken, evidence=_Evidence(),
+                        model=build(tmp_path / "m")[0]._model))
 
     with pytest.raises(OSError):
         engine.run(TurnInput(advocate_id="adv",
@@ -369,8 +369,8 @@ def test_an_audit_trail_write_failure_is_never_swallowed(tmp_path):
 
     # And the ordinary path really does write one, so the test above is not
     # passing because nothing was ever attempted.
-    ok = TurnEngine(store=store, evidence=_Evidence(),
-                    model=build(tmp_path / "m2")[0]._model)
+    ok = briefed(TurnEngine(store=store, evidence=_Evidence(),
+                    model=build(tmp_path / "m2")[0]._model))
     out = ok.run(TurnInput(advocate_id="adv",
                            message="we act for the plaintiff in a suit"))
     written = (tmp_path / "metrics" / f"{out.turn_id}.json")
@@ -534,8 +534,16 @@ def test_neither_board_carries_analysis(client):
     # of the three the null means -- nobody assessed a register, or one was
     # assessed and this matter has no dated deadline. A null alone reads as
     # the second while meaning the first, which is what it did.
-    matter_keys = {"matter_id", "matter", "client", "threads", "next_deadline",
-                   "next_deadline_status", "blocked", "last_touched"}
+    # `opponent` IS STATUS AND NOT ANALYSIS. Who the file is against is the
+    # handle an advocate uses to pick it out of ten, and BK-33's acceptance is
+    # exactly that ten similar matters stay distinguishable by who/what/where.
+    # It is a NAME the advocate typed at intake, not a conclusion drawn about
+    # them -- the test for this list is whether a row states something the
+    # advocate would otherwise have to open the file to learn, and a party
+    # name is on the cover of every brief ever written.
+    matter_keys = {"matter_id", "matter", "client", "opponent", "threads",
+                   "next_deadline", "next_deadline_status", "blocked",
+                   "last_touched"}
     for row in listing["matters"]:
         extra = set(row) - matter_keys
         assert not extra, f"the matter list carries {sorted(extra)}"

@@ -40,7 +40,7 @@ from nm.domain.matter import Basis, CauseOfAction, Posture, Role, Side
 from nm.domain.proof import ProofPosition, ProofStatus, Standard
 from nm.domain.quotable import Quotable
 from nm.knowledge.elements import ELEMENTS, WITHHELD, elements_for, why_not
-from tests.test_turn_contract import KEY, _Evidence, _model_config
+from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
 
@@ -324,8 +324,8 @@ def _engine(tmp_path, inner=None):
     store = FileMatterStore(tmp_path, key=KEY)
     model = TracedModel(inner=inner or ScriptedModelAdapter(
         _model_config(), responses={"__default__": "Issue the notice."}))
-    return TurnEngine(store=store, evidence=_Evidence(), model=model,
-                      elements=CuratedElements()), store
+    return briefed(TurnEngine(store=store, evidence=_Evidence(), model=model,
+                      elements=CuratedElements())), store
 
 
 def test_an_unwired_element_table_says_so_rather_than_saying_nothing(tmp_path):
@@ -334,11 +334,11 @@ def test_an_unwired_element_table_says_so_rather_than_saying_nothing(tmp_path):
     that nothing decomposed the claim, which is what G-PROOF's `not_assessed`
     state exists to carry."""
     store = FileMatterStore(tmp_path, key=KEY)
-    engine = TurnEngine(store=store, evidence=_Evidence(),
+    engine = briefed(TurnEngine(store=store, evidence=_Evidence(),
                         model=TracedModel(inner=ScriptedModelAdapter(
                             _model_config(),
                             responses={"__default__": "Issue the notice."})),
-                        elements=None)
+                        elements=None))
     out = engine.run(TurnInput(advocate_id="adv_1", today=TODAY,
                                message=ACCOUNT))
     text = " ".join(e.text for e in out.answer.elements)

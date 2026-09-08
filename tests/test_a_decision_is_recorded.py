@@ -38,7 +38,7 @@ from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput
 from nm.domain import decision as decision_domain
 from nm.domain.decision import DecidedBy, Decision
-from tests.test_turn_contract import KEY, _Evidence, _model_config
+from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
 
@@ -70,8 +70,8 @@ def _engine(tmp_path, evidence=None):
     store = FileMatterStore(tmp_path, key=KEY)
     model = TracedModel(inner=ScriptedModelAdapter(
         _model_config(), responses={"__default__": "Issue the notice."}))
-    return TurnEngine(store=store, evidence=evidence or _Routes(),
-                      model=model), store
+    return briefed(TurnEngine(store=store, evidence=evidence or _Routes(),
+                      model=model)), store
 
 
 def _settled(store, matter_id):

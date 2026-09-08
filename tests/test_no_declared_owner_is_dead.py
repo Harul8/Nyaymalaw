@@ -53,6 +53,12 @@ REACHED_ELSEWHERE = {
     # occurs elsewhere in the tree, which is worth noticing: this check finds
     # a route with a distinctive name and misses one with a common name.
     "login", "logout", "whoami",
+    # BK-31's two. They are reached the same way every route above is -- by
+    # registration -- and they now have a BROWSER caller too (`showSessions`
+    # on the Sessions control), which is the half this sweep cannot see and
+    # the half that matters: an API nobody calls is not a feature, and the
+    # first version of this row had exactly that.
+    "sessions", "revoke_sessions",
     # `@implements` markers: their whole purpose is to be SCANNED by
     # tools/trace.py rather than called.
     "_implements_c4",

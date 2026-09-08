@@ -54,6 +54,13 @@ def pytest_configure(config):
 def pytest_runtest_makereport(item, call):
     outcome = yield
     report = outcome.get_result()
+    # THE PHASE RESULT, WHERE A FIXTURE CAN SEE IT. BK-30's journey suite
+    # writes a screenshot and the page's HTML for any failed phase, and a
+    # fixture's teardown cannot otherwise tell a pass from a failure. The
+    # hook has to live HERE: `pytest_runtest_makereport` defined in a test
+    # module is silently not a hook, so the attribute was never set and every
+    # phase errored in teardown instead of reporting.
+    setattr(item, f"rep_{report.when}", report)
     if report.when != "call":
         return
     marker = item.get_closest_marker("eval_id")
@@ -158,6 +165,16 @@ def client(tmp_path, monkeypatch):
         directory=directory,
         model=ScriptedModelAdapter(config, responses={
             "__default__": "Issue the statutory notice and diarise the window."}))
+
+    # BK-34. THE FIXTURE'S MATTERS HAVE BEEN THROUGH INTAKE.
+    #
+    # A matter whose conflict, scope and capacity screens are unanswered is
+    # blocked before substance -- the row working -- so without this every API
+    # test becomes a test of the intake block instead of the thing it was
+    # written for. `briefed` fills exactly what the browser's intake form
+    # sends; a test that is ABOUT intake posts its own and this does nothing.
+    from tests.test_turn_contract import briefed
+    application.engine = briefed(application.engine)
 
     c = TestClient(create_app(application))
 

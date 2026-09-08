@@ -25,6 +25,7 @@ import re
 import sqlite3
 from pathlib import Path
 
+from nm.knowledge.jurisdiction import stored_court
 from nm.ports.evidence import Coverage
 from nm.ports.search import CorpusSearch, IndexIdentity, SearchHit
 
@@ -96,9 +97,24 @@ class AuthorityIndexSearch:
     def search(self, query: str, *, court: str | None = None,
                from_year: int | None = None, to_year: int | None = None,
                limit: int = 20) -> CorpusSearch:
+        # BK-38. THE COURT IS RESOLVED ONCE, HERE, and both the WHERE clause
+        # and the disclosure read the same answer. Resolving it at the query
+        # and describing it at the response would be two answers to one
+        # question, and the description is the half nobody would notice
+        # drifting.
+        resolved_court, court_said = stored_court(court)
         filters = {k: v for k, v in
                    (("court", court), ("from_year", from_year),
                     ("to_year", to_year)) if v not in (None, "")}
+        # WHAT THE COURT FILTER ACTUALLY BECAME, in words.
+        #
+        # `filters` reported what the CALLER asked for. A zero result then
+        # said `court: Supreme Court` beside no hits, which reads as "the
+        # corpus holds nothing from the Supreme Court" -- while the truth was
+        # that the filter never matched a stored value. BK-38's acceptance is
+        # that a zero states exactly which normalised filters ran.
+        if court:
+            filters = {**filters, "court_read_as": court_said}
 
         if not (query or "").strip():
             return CorpusSearch(
@@ -148,9 +164,30 @@ class AuthorityIndexSearch:
 
             where = ["paras match ?"]
             args: list[object] = [match]
+            # BK-38. THE COURT IS RESOLVED, NOT COMPARED.
+            #
+            # This was `lower(court) = lower(?)`, so `Supreme Court` returned
+            # ZERO while `Supreme Court of India` returned 395,734 -- and a
+            # zero from an exact-match filter reads exactly like "the corpus
+            # holds nothing". That is B-163's shape, and this repository has
+            # recorded it three times against the legal corpus.
+            #
+            # IT RESOLVES THROUGH THE CLOSED COURT VOCABULARY, which is why
+            # this is not fuzzy matching: the index holds exactly two court
+            # values, so `normalise_court` IDENTIFIES rather than ranks
+            # (CLAUDE.md §5). A spelling that names no court this index holds
+            # returns nothing AND SAYS SO, which is a different answer from
+            # a search that ran and found nothing.
             if court:
-                where.append("lower(court) = lower(?)")
-                args.append(court)
+                if resolved_court:
+                    where.append("court = ?")
+                    args.append(resolved_court)
+                else:
+                    # A FILTER THAT MATCHES NOTHING IS APPLIED HONESTLY. It
+                    # would be easy to drop it and search everything; the
+                    # advocate asked for one court and would be handed
+                    # another's authority under a heading they chose.
+                    where.append("1 = 0")
             if from_year is not None:
                 where.append("cast(year as integer) >= ?")
                 args.append(int(from_year))
