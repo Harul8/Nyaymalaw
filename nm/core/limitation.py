@@ -105,9 +105,26 @@ class Applied(str, Enum):
 
 
 class LimitationState(str, Enum):
-    """Whether a date could be produced at all. `NOT_COMPUTED` is the escape."""
+    """Whether a date could be produced, and WHY NOT when it could not.
+
+    THREE STATES, AND THE THIRD IS WHAT MAKES THE GATE SAFE. This held two,
+    and `NOT_COMPUTED` carried both `there is no period here` and `there is
+    one and we could not produce it`. Those are opposite facts: the first
+    is a finding and the second is a gap, and `G-LIMITATION` must refuse a
+    recommendation on the second and say nothing about the first.
+
+    The only thing separating them was the prose of
+    `not_computed_because`, and a gate reading that would be matching on a
+    sentence -- which is how three earlier controls in this product went
+    wrong.
+    """
 
     COMPUTED = "computed"
+    #: There IS no limitation position to compute for this side on this
+    #: thread -- we are defending and have brought no claim, or the cause
+    #: carries no period. A FINDING, and nothing is blocked on it.
+    NOT_APPLICABLE = "not_applicable"
+    #: There is one and it was not produced. A GAP.
     NOT_COMPUTED = "not_computed"
 
 
@@ -383,6 +400,24 @@ def compute(for_side: Side, article: str, accrual: FactId, accrual_on: date,
         period_years=years, period_months=months, period_days=days,
         expires_on=on, factors=factors, covered=tuple(rows))
 
+
+
+def not_applicable(for_side: Side, because: str,
+                   chronology: tuple[FactId, ...] = ()) -> Limitation:
+    """There is no period to compute for this side, and that is a FINDING.
+
+    Kept apart from `not_computed` at the TYPE, not in the reason string.
+    A defending party who has brought no claim has no limitation position,
+    and blocking the recommendation on that would refuse every defence in
+    the product for the absence of a period that does not exist.
+    """
+    return Limitation(
+        for_side=for_side, state=LimitationState.NOT_APPLICABLE,
+        not_computed_because=because,
+        covered=tuple(Entry(f, Applied.NOT_ASSESSED,
+                            "no period runs against this side on this "
+                            "thread")
+                      for f in chronology))
 
 def not_computed(for_side: Side, because: str,
                  chronology: tuple[FactId, ...] = ()) -> Limitation:

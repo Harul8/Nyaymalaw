@@ -16,6 +16,231 @@ against.
 
 ## Open
 
+## The end-to-end journey, driven as a user — 8 September 2026
+
+**Method.** Signed in as a real advocate on the served path, drove every phase
+in the browser, read the bytes the advocate actually receives, then read the
+code behind each. Nothing here comes from the PRD, the plan or the docs. Where
+a claim is a judgement rather than a measurement, it says so.
+
+**The headline.** Retrieval and the safety gates are the strong half and they
+work. The journey around them is not yet an advocate's file: the list they
+land on cannot distinguish their own matters, the answer runs to 31 elements
+of mostly disclosures, and on a textbook goods-sold brief the product worked
+the elements of a DIFFERENT cause of action and called the client's best fact
+adverse to him.
+
+---
+
+### J-1 — The file list cannot tell one matter from another
+
+The rail an advocate lands on, verbatim:
+
+    Matters
+    10 row(s) · bounded by matter_count
+    My client is Ravi Kumar, a retired bank employee in Hyderaba
+      THREADS 3 · DEADLINE none recorded · BLOCKED 2 THREAD(S) AWAITING POSTURE
+    My client is Ravi Kumar, a retired bank employee in Hyderaba
+      THREADS 3 · DEADLINE none recorded · BLOCKED 2 THREAD(S) AWAITING POSTURE
+    my client has a tenancy dispute in Kochi
+      THREADS 1 · DEADLINE none recorded · BLOCKED 1 THREAD(S) AWAITING POSTURE
+
+| what | measured |
+|---|---|
+| title | the first 60 characters of the opening message, cut mid-word. **Three rows identical** |
+| `client` | holds the ADVOCATE's own login on every row. The client is Ravi Kumar |
+| `DEADLINE` | `none recorded` on **10 of 10** |
+| `BLOCKED` | `2 THREAD(S) AWAITING POSTURE`, shouted, with a developer's parenthetical plural |
+| `last_touched` | `13` — no unit |
+| subtitle | `bounded by matter_count` — an internal identifier |
+
+**Who, what and when are all absent** — the three things an advocate picks a
+file by. What is shown instead is a thread count, an unrecorded deadline and a
+blocker.
+
+**The fix.** A matter needs a NAME, taken from the client and the subject once
+they are read, not from the first line of prose. `client` must hold the
+client. The row wants: client, subject, court or number if known, next date,
+and what is waiting on me. `last_touched` needs a unit or a date.
+
+---
+
+### J-2 — A goods-sold brief was worked as a money-lent claim
+
+The brief: *"Our client Mr Reddy supplied steel to Kakatiya Fabricators
+against invoices dated 14 March 2023. Nothing has been paid. The buyer wrote
+on 2 August 2024 acknowledging the debt in writing."*
+
+The proof elements returned:
+
+- *That the money was actually advanced to the defendant*
+- *That it was advanced as a LOAN and not as a gift or in discharge of another obligation*
+- *The terms of repayment, including any agreed date or demand*
+
+That is `money_lent`. The matter is `goods_sold_price`. **Every element, every
+burden and the whole proof section belong to a different cause of action.**
+
+An advocate spots this in one second, and it is the kind of error that ends
+trust permanently. It is also the most consequential item here, because the
+cause drives the Article, the period and the elements.
+
+**The fix.** The cause read is the highest-consequence read in the product and
+has no eval of its own. It needs one, over the seven causes it can return,
+scored on briefs written for each — and a disclosure when the cause chosen is
+not the one the advocate's own words most support.
+
+---
+
+### J-3 — The client's best fact was filed as adverse to him
+
+> *1 adverse fact(s) on this thread are neither explained nor conceded by the
+> theory: The buyer wrote acknowledging the debt in writing.*
+
+A written acknowledgment before expiry is the most helpful fact a plaintiff
+can have on a limitation-threatened debt. It restarts the period under s.18 —
+which the product retrieved on the same turn. It was classified as running
+against us.
+
+**The fix.** The adverse-fact read has no notion of WHICH SIDE a fact helps.
+It needs the thread's posture, which is already on the thread and was already
+resolved to `plaintiff/moving` on that very turn.
+
+---
+
+### J-4 — One dispute was split into three, and the product then argued with itself
+
+`G-SPLIT` fired on a single-cause brief: *"This message describes 3 separate
+disputes, so each is on the file as its own thread."* There is one dispute:
+goods supplied, unpaid, acknowledged.
+
+The cross-file pass then ran across the false threads and reported a conflict
+between them:
+
+> *Across this file: In the non-payment case, the position taken is that no
+> payment was due to the claimant ... This directly contradicts ...*
+
+**This is BK-27's fix over-correcting.** `threading.py`'s asymmetry says a
+wrong split is the recoverable direction, and it is — but a wrong split that
+then generates invented contradictions is not merely noisy, it misleads.
+
+**The fix.** The count read needs what the duty read got: a stated bias toward
+ONE. A chronology of a single transaction is not three disputes because it has
+three sentences. And the cross-file pass must not run across threads created
+by one message on one turn.
+
+---
+
+### J-5 — Internal identifiers reach the advocate, past a sweep that says they cannot
+
+Served text: *"... on thr_634d8e9685be — This damages the defence ..."* and,
+in History, *"TURN 1 · TURN_958000CAFFF4"*.
+
+`nm/core/turn.py:3081` renders `{e.from_thread}` and `{e.to_thread}` — both
+`ThreadId`s — straight into an advocate-facing element.
+
+**Why the sweep did not catch it.** `test_no_internal_id_reaches_the_advocate`
+drives ONE scripted conversation whose double answers everything with *"Issue
+the notice and diarise it."* The cross-file exposure section is never produced
+in that fixture, so the sweep cannot see the line that leaks. **Its population
+is a fixture, not the product's advocate-facing surface** — the same shape as
+B-142, in the check written to prevent exactly this (B-103).
+
+**The fix.** Render the thread LABEL. Widen the sweep's population to every
+element-producing path rather than one conversation.
+
+---
+
+### J-6 — Thirty-one elements, and the disclosures have swallowed the advice
+
+One single-dispute brief produced **31 elements**. The leading ACTION was
+*"Assess the acknowledgment from 2 August 2024 to determine its sufficiency in
+extending the limitation period"* — the advocate's own question returned to
+them, with no owner and no by-when.
+
+Underneath it: nine "they will say" paragraphs, five not-assessed
+disclosures, the threshold list, the screens list, the evidence-bound notice,
+and this, verbatim:
+
+> *My first draft of this answer named Limitation Act, 1963 s.18 without having
+> retrieved it. I fetched it and worked the answer again with the text in front
+> of me.*
+
+Every one of those exists because a real defect was paid for, and each is
+individually right. Together they have inverted the output: the product leads
+with what it did not do, and the engineering narration of its own retry sits
+in the advocate's chair.
+
+**The fix.** Not a gate defect, and no gate will catch it. The answer needs a
+shape an advocate reads top to bottom — position, why, risk, next step,
+deadline, what I need from you — with disclosures reachable but folded, and
+the internal narration removed.
+
+---
+
+### J-7 — The header and the search surface speak engineering to the advocate
+
+Header, on every screen:
+
+> `openai/gpt-4o-mini-2024-07-18 · hard: not configured · judge: configured ·
+> store: fernet · corpus: readable · manifest: 22 acts`
+
+Search:
+
+> `Searched: the authority index (authority.db) · ... · 451,548 of 1,015,780
+> source paragraphs (44.5%) · built 2026-08-30T07:51:38`
+
+with each hit tagged `SEARCHED · 95%` and a raw `reasoning` label.
+
+- `hard: not configured` reads as something broken.
+- `store: fernet` is a library name.
+- `authority.db` is a filename, and the API also serves the full local path
+  of `chunks.db`, including the operator's home directory.
+- `44.5%` reads as *we searched 44% of the law*. It is the attributable share
+  and is by design, which is exactly why it needs saying in words.
+- **`95%` is a normalised FTS rank, comparable only within one query.** Both
+  top hits showed 95%. An advocate reads it as calibrated confidence in
+  relevance. It is not one.
+
+**The fix.** Say it in an advocate's words or not at all: which corpus, how
+current, what was searched. Replace the percentage with a rank band, or drop
+it.
+
+---
+
+### J-8 — What works, and must not be broken while fixing the above
+
+Said plainly, because it is the half worth protecting:
+
+- **Retrieval.** `acknowledgment in writing limitation` returned 25 ranked
+  paragraphs, `coverage: answered`, led by *Rajendra Narottamdas Sheth* (SC
+  2021) and *Asset Reconstruction Co v Tulip Star* (SC 2022) — both squarely
+  on s.18. The strongest surface in the product.
+- **The gates fire and are disclosed.** G-QUOTE refused an issue whose quoted
+  words the advocate never wrote. B-104's late-citation retry ran, retrieved
+  s.18 and re-derived. The screens say they have not run rather than reading
+  as clear.
+- **History** renders the served turn faithfully, byte for byte.
+- **Sign-in** distinguishes an unknown email from a wrong password, and rate
+  limits per account and per source.
+
+---
+
+### J-9 — The order to fix them in
+
+1. **J-2** the cause read, with an eval. Everything downstream derives from
+   it, so a wrong cause makes the rest of the answer wrong quietly.
+2. **J-3** the adverse-fact read takes the posture. Cheap, and it currently
+   tells an advocate their best fact is against them.
+3. **J-4** the split bias, and no cross-file pass across threads born on one
+   turn. Regression repair on BK-27.
+4. **J-5** thread labels not ids, and the sweep's population widened.
+5. **J-1** the matter list — name, client, next date.
+6. **J-6** the answer's shape. The largest, and worth doing after the accuracy
+   items so that what is being shaped is correct.
+7. **J-7** the register of the header and the search surface.
+
+---
+
 ### BK-29 - sixteen hand-picked token ceilings, and five reads that echo verbatim spans
 Opened 7 September 2026, out of the BK-27 fix. **One instance is fixed; the
 population is not swept.**

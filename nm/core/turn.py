@@ -2087,7 +2087,11 @@ class TurnEngine:
         claimant = self._limitation(
             Side.MOVING if defending else thread.posture.side,
             thread, result, chart, turn, metrics, out)
-        ours = (limitation.not_computed(
+        # NOT APPLICABLE, NOT UNCOMPUTED. No period runs against a party
+        # who has brought no claim, so this is a FINDING and not a gap.
+        # The distinction is kept at the type because the only thing that
+        # separated them was the prose of `not_computed_because`.
+        ours = (limitation.not_applicable(
             thread.posture.side,
             "we are defending and nothing on this thread describes a claim of "
             "ours; a counterclaim would have its own accrual",

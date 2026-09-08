@@ -236,36 +236,25 @@ GATES: tuple[Gate, ...] = (
         id="G-LIMITATION",
         condition="Merits work is done on a thread whose limitation has not "
                   "been computed.",
-        states=("computed", "not_computed", "not_assessed"),
+        states=("computed", "not_applicable", "not_computed"),
         response=Response.BLOCK,
-        # THE SECOND BLOCKING GATE OF PHASE D, and the PRD names it beside
-        # G-POSTURE: "no merits work is done on a thread whose posture is
-        # unresolved, or whose limitation has not been computed."
-        #
-        # DECLARED AND NOT BUILT, DELIBERATELY. What is missing is not the
-        # limitation computation -- D2 computes it, and a thread with no
-        # computed position already renders a BLOCKED row on the threshold
-        # map with the reason. What is missing is the OTHER HALF of the
-        # condition: whether the step being recommended depends on
-        # limitation at all. "Obtain the sale deed from the sub-registrar"
-        # does not; "file the suit" does, and nothing in slice 4 can tell
-        # them apart. That classification arrives with D5, which resolves a
-        # cause into elements and so knows which steps are merits work.
-        #
-        # Firing it without that half would repeat the exact defect
-        # G-POSTURE's own comment records: a gate applied to a case it was
-        # not written for, refusing an advocate the answer to a bare
-        # question of law. Leaving the row out entirely would be worse --
-        # the matrix would say nothing evaluates a condition the PRD calls
-        # blocking, and the advocate would have no way to know.
         scope=Scope.STEP,
-        persistence=Persistence.STICKY,
+        persistence=Persistence.TURN,
         recovery=Recovery.ADVOCATE,
-        visible="Whether limitation has been computed on this thread. Until "
-                "it is, the threshold map carries it as BLOCKED with the "
-                "reason, and no step is presented as though the window were "
-                "known.",
+        visible="Nothing side-dependent is recommended until the period is "
+                "computed, and the reason is named.",
         feature="D1",
+        # UNBUILT, DELIBERATELY, and the reason is in
+        # `test_unbuilt_gates_are_declared_unbuilt`: the STATE is computed and
+        # rendered, but nothing can yet tell whether the step being
+        # recommended is merits work that DEPENDS on limitation. "Obtain the
+        # sale deed" does not; "file the suit" does. Firing on the whole set
+        # applies a gate to cases it was not written for -- G-POSTURE's
+        # recorded defect.
+        #
+        # I built it and had to back it out: it suppressed the action on every
+        # uncomputed thread, which broke slice 4's tested contract that *the
+        # action says which* window could not be established.
         built=False,
     ),
     Gate(

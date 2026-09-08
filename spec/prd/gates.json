@@ -119,14 +119,14 @@
     "condition": "Merits work is done on a thread whose limitation has not been computed.",
     "states": [
       "computed",
-      "not_computed",
-      "not_assessed"
+      "not_applicable",
+      "not_computed"
     ],
     "response": "block",
     "scope": "step",
-    "persistence": "sticky",
+    "persistence": "turn",
     "recovery": "advocate",
-    "visible": "Whether limitation has been computed on this thread. Until it is, the threshold map carries it as BLOCKED with the reason, and no step is presented as though the window were known.",
+    "visible": "Nothing side-dependent is recommended until the period is computed, and the reason is named.",
     "feature": "D1",
     "built": false
   },
