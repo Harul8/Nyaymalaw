@@ -40,12 +40,26 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from nm.domain.matter import CauseOfAction
+from nm.domain.matter import CAUSE_MEANS, CauseOfAction
 from nm.domain.quotable import Quotable
 from nm.domain.traceability import implements
 
 CAUSE_VALUES = tuple(c.value for c in CauseOfAction
                      if c is not CauseOfAction.NOT_ESTABLISHED)
+
+#: The vocabulary as the model sees it. COMPOSED FROM `CAUSE_MEANS`, so a
+#: cause added to the enum without a definition renders as `no definition
+#: recorded` here -- visible, rather than silently becoming a bare
+#: identifier again.
+_VOCABULARY = (
+    "Which cause of action is this? The values mean:" + chr(10)
+    + chr(10).join(
+        f"  {c.value} - {CAUSE_MEANS.get(c, 'no definition recorded')}"
+        for c in CauseOfAction
+        if c is not CauseOfAction.NOT_ESTABLISHED)
+    + chr(10) + chr(10)
+    + "cannot_tell if what they wrote does not plainly support one."
+)
 
 CAUSE_SCHEMA: dict = {
     "x-nm-read": "cause",
@@ -54,7 +68,15 @@ CAUSE_SCHEMA: dict = {
         # `cannot_tell` IS A REQUIRED MEMBER, not a courtesy. A schema whose
         # every value is a decisive answer forces the model to pick one, and
         # whichever it picks the product routes on a cause nobody established.
-        "cause": {"type": "string", "enum": [*CAUSE_VALUES, "cannot_tell"]},
+        # THE VALUES ARE DEFINED, not merely listed. Eight bare
+        # identifiers made `money_lent` a reasonable reading of a brief
+        # about unpaid invoices that used the word `debt`, and the proof
+        # section then worked the elements of a loan.
+        "cause": {
+            "type": "string",
+            "enum": [*CAUSE_VALUES, "cannot_tell"],
+            "description": _VOCABULARY,
+        },
         "quoted": {
             "type": "string",
             "description": "The advocate's OWN words that show this cause, "

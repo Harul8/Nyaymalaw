@@ -109,6 +109,49 @@ class CauseOfAction(str, Enum):
     """
 
 
+#: WHAT EACH CAUSE IS, in the terms that distinguish it from its
+#: neighbours. Read by the cause reader's schema.
+#:
+#: THE VOCABULARY WITHOUT DEFINITIONS WAS THE DEFECT. The schema offered
+#: eight bare identifiers, and a brief about unpaid invoices that used the
+#: word `debt` was read as `money_lent` -- so the proof section worked the
+#: elements of a loan on a suit for the price of goods. Every other closed
+#: vocabulary in this product describes its values; the one that decides
+#: which Article is looked up did not.
+#:
+#: HERE AND NOT IN `nm/core/cause.py`, because `nm/knowledge/resolution.py`
+#: states the same legal ground in `Edge.curated_from` and `core` may not
+#: import `knowledge`. A copy beside the reader would be two homes for one
+#: fact; `domain` imports nothing and both layers may read it.
+CAUSE_MEANS: dict[CauseOfAction, str] = {
+    CauseOfAction.GOODS_SOLD_PRICE:
+        "the PRICE of goods sold and delivered, unpaid. A seller suing a "
+        "buyer on invoices. This is a debt, and it is NOT money lent -- "
+        "nothing was advanced, goods were supplied and the price is owed.",
+    CauseOfAction.MONEY_LENT:
+        "money ADVANCED as a loan and not repaid. Something was handed "
+        "over to be given back. If the sum is the price of goods or "
+        "services already supplied, it is not this.",
+    CauseOfAction.BREACH_OF_CONTRACT:
+        "compensation for a contract broken, where the claim is damages "
+        "rather than a fixed price or the performance itself.",
+    CauseOfAction.SPECIFIC_PERFORMANCE:
+        "the contract PERFORMED -- typically a sale deed executed -- "
+        "rather than damages for its breach.",
+    CauseOfAction.POSSESSION_ON_TITLE:
+        "possession of immovable property claimed ON TITLE: we own it and "
+        "somebody else holds it.",
+    CauseOfAction.POSSESSION_ON_PREVIOUS_POSSESSION:
+        "possession claimed on PREVIOUS POSSESSION and not on title -- we "
+        "were in possession and were put out, whoever owns it.",
+    CauseOfAction.DECLARATION:
+        "a declaration of a right or status, where no consequential "
+        "relief is the substance of the claim.",
+    CauseOfAction.CHEQUE_DISHONOUR:
+        "a cheque returned unpaid, and the statutory route that follows "
+        "it. Not the underlying debt -- the dishonour itself.",
+}
+
 class Weight(str, Enum):
     """C1 requires unfavourable facts to be explored as hard as favourable ones.
 

@@ -359,15 +359,43 @@ def theory_not_assessed(why: str) -> ReadTheory:
 
 
 @implements("D6")
-def build_adverse_prompt(account: str, chronology):
+def build_adverse_prompt(account: str, chronology, acting_for: str = ""):
+    """WHICH SIDE WE ACT FOR IS THE WHOLE QUESTION, and it was not passed.
+
+    This read is asked which entries are ADVERSE TO THE CLIENT and was
+    never told who the client is. `build_theory_prompt` below has taken
+    `acting_for` since it was written; this one did not, and the asymmetry
+    was invisible because both prompts say `the client`.
+
+    MEASURED ON A SERVED TURN. A plaintiff suing on unpaid invoices had
+    the buyer's WRITTEN ACKNOWLEDGMENT of the debt returned as an adverse
+    fact running against him. It is the most helpful fact he has: it
+    restarts limitation under s.18, which the same turn retrieved. Read
+    with no side, an acknowledgment is adverse to whoever gave it -- and
+    the read had no way to know we were not that party.
+
+    AN EMPTY SIDE IS NOT A DEFAULT SIDE. Where the posture is unresolved
+    the read is told that, and asked for what would be adverse to whoever
+    brought the claim, rather than being left to assume ours.
+    """
     from nm.ports.model import Prompt
 
     entries = "\n".join(
         f"  {f.id}\t{f.date.isoformat() if f.date else 'undated'}\t{f.statement}"
         for f in chronology) or "  (no entries)"
-    return Prompt(system=ADVERSE_SYSTEM,
-                  user=f"THE CHRONOLOGY:\n{entries}\n\nTHE FILE:\n{account}")
-
+    side = (
+        f"WE ACT FOR THE PARTY {acting_for.upper()}. An entry that HELPS "
+        f"that party is not adverse, however unwelcome it looks to the "
+        f"other side."
+        if acting_for.strip() else
+        "WHICH SIDE WE ACT FOR IS NOT SETTLED on this thread. Name only "
+        "what would be adverse to whoever brought the claim, and leave "
+        "the rest."
+    )
+    return Prompt(
+        system=ADVERSE_SYSTEM,
+        user=(f"{side}\n\nTHE CHRONOLOGY:\n{entries}"
+              f"\n\nTHE FILE:\n{account}"))
 
 @implements("D6")
 def build_theory_prompt(account: str, adverse_lines: tuple[str, ...],

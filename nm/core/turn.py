@@ -3144,7 +3144,11 @@ class TurnEngine:
 
         try:
             adverse_said = self._model.structured(
-                theory_reader.build_adverse_prompt(account, chart),
+                # THE POSTURE, because `adverse to the client` is
+                # unanswerable without it. It is already resolved on the
+                # thread by the time this runs.
+                theory_reader.build_adverse_prompt(
+                    account, chart, thread.posture.side.value),
                 theory_reader.ADVERSE_SCHEMA, Tier.ROUTINE, max_tokens=500)
             metrics.record_call(adverse_said)
             adverse, why = theory_reader.read_adverse(

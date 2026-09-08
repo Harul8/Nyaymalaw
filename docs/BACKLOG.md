@@ -109,6 +109,55 @@ resolved to `plaintiff/moving` on that very turn.
 
 ### J-4 — One dispute was split into three, and the product then argued with itself
 
+**MEASURED 8 September 2026, and it is worse than the heading says. This is
+not a tuning problem.**
+
+Six briefs, each written for a known number of disputes, run three times --
+twice against the committed prompt and once against a rewrite:
+
+| brief | disputes | committed r1 | committed r2 | rewrite |
+|---|:-:|:-:|:-:|:-:|
+| goods supplied, unpaid, acknowledged | 1 | 4 | 4 | 4 |
+| cheque dishonoured, notice sent | 1 | 0 | 0 | 2 |
+| `first ... second ... third ...` | **3** | **3** | **0** | 3 |
+| plot, one encroaching neighbour | 1 | 2 | 2 | 2 |
+| four enumerated claims | **4** | **0** | **0** | 0 |
+| `The notice went on 15 April.` | 0 | 0 | 0 | 0 |
+| | | **3/6** | **2/6** | **2/6** |
+
+**It is unstable on identical input** -- the three-dispute brief returned 3 on
+one run and 0 on the next -- and it misses the four-dispute enumeration
+entirely, which is the shape BK-27 exists for.
+
+**THIS IS A FINDING ABOUT BK-27'S OWN FIX.** I validated that read on ONE
+brief, reported it working, and shipped thread creation on top of it. Across
+six briefs it scores 2-3 of 6. A rewrite of the prompt made it no better and
+in places worse, so the mechanism and not the wording is the problem.
+
+**Why it matters more than a wrong number.** Thread creation is not
+recoverable in the way `threading.py`'s asymmetry assumes. A wrong split does
+not merely duplicate work: the cross-file pass then runs ACROSS the false
+threads and manufactures contradictions between halves of one transaction --
+which is what J-4 recorded above, and an advocate reading it has no way to
+know the conflict is invented.
+
+**What would have to change, and it is a decision, not a patch:**
+
+1. **Do not create threads from the count.** Read it, DISCLOSE it -- *this
+   looks like three disputes; say if it is one* -- and let the advocate
+   confirm before the file is split. A question is cheap; a fragmented file
+   with invented conflicts is not.
+2. **Or find a mechanism that is stable.** The count is being asked of prose;
+   the thing that actually separates disputes is procedural -- different
+   opponent, different cause, different relief -- and the product already
+   reads cause and posture separately and more reliably. A count DERIVED from
+   those two would rest on reads that measure 9/9 rather than one that
+   measures 2/6.
+3. **Meanwhile, the cross-file pass must not run across threads created by a
+   single message on a single turn.** That is a small, independent guard and
+   it removes the invented contradictions whatever is decided above.
+
+
 `G-SPLIT` fired on a single-cause brief: *"This message describes 3 separate
 disputes, so each is on the file as its own thread."* There is one dispute:
 goods supplied, unpaid, acknowledged.
