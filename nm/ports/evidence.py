@@ -220,7 +220,7 @@ class Treatment:
             source="statute")
 
 
-class Coverage(str, Enum):
+class Coverage(Spoken, str, Enum):
     """FOUR states, and the fourth was the one nobody had.
 
     ANSWERED, NOT_HELD and HELD_NOT_FOUND are all claims about a search that
@@ -239,6 +239,28 @@ class Coverage(str, Enum):
     HELD_NOT_FOUND = "held_not_found"   # a DEFECT that escalates
     NOT_ASSESSED = "not_assessed"       # the search did not happen
 
+    #: WHAT AN ADVOCATE IS TOLD. BK-13 -- `held_not_found` is jargon for
+    #: a retrieval defect, and it reached the bytes the first time this
+    #: enum was rendered rather than described.
+    #:
+    #: THE MIDDLE PAIR CARRIES THE WHOLE POINT. `not_held` says the corpus
+    #: does not have it; `held_not_found` says the corpus HAS it and the
+    #: retrieval failed. An advocate given the wrong one either abandons a
+    #: good point or hunts a defect that is not there.
+    SAID = nonmember({
+        "answered": "the corpus answered this",
+        "not_held": "the corpus does not hold this",
+        "held_not_found": ("the corpus holds this and the search did not "
+                           "find it, which is a defect on our side"),
+        "not_assessed": "nobody looked",
+    })
+
+
+
+# CHECKED AT IMPORT, like every other Spoken enum. A member added
+# without a phrase must fail here and not on a served turn, where the
+# KeyError lands in front of an advocate.
+Coverage.complete()
 
 class SourceKind(str, Enum):
     PROVISION = "provision"

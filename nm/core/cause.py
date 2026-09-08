@@ -71,14 +71,20 @@ CAUSE_SCHEMA: dict = {
 }
 
 SYSTEM = (
-    "You read an Indian advocate's account of a matter and name the CAUSE OF "
+    "You read what an Indian advocate has written and name the CAUSE OF "
     "ACTION from a closed list. You are not advising and you are not deciding "
     "the merits — you are deciding which limitation Article should be looked "
     "up.\n\n"
-    "Answer `cannot_tell` unless the account plainly supports one. A wrong "
-    "cause sends an exact lookup into the wrong Article, which is worse than "
-    "no lookup at all: the advocate gets a confident date computed from a "
-    "period that does not govern their suit.\n\n"
+    "THEY MAY DESCRIBE FACTS, OR THEY MAY NAME THE CAUSE OUTRIGHT, and both "
+    "are answerable. An account of what happened implies a cause. A bare "
+    "question of law states one: 'the limitation for a suit for possession "
+    "of immovable property' names a cause of action and no facts at all. Do "
+    "not answer `cannot_tell` merely because nobody has told you a story — "
+    "answer it because you cannot tell WHICH cause is meant.\n\n"
+    "Answer `cannot_tell` unless what they wrote plainly supports one. A "
+    "wrong cause sends an exact lookup into the wrong Article, which is "
+    "worse than no lookup at all: the advocate gets a confident date "
+    "computed from a period that does not govern their suit.\n\n"
     "`quoted` must be the advocate's own words, copied exactly from what they "
     "wrote. Never quote the questions put to them and never paraphrase."
 )

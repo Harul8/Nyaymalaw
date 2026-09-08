@@ -92,6 +92,11 @@ REACHED_BY: dict[str, str] = {
     "theory": "plain",
     "dispute": "two", "exposure": "two", "role": "two",
     "proof": "expired", "salvage": "expired",
+    # G-DUTY runs on EVERY turn, so any brief reaches it. `plain` keeps the
+    # table honest about that: a read driven on a brief chosen to provoke it
+    # would suggest this one is conditional, and it is not -- an instruction
+    # is judged before the file is worked, whatever the file holds.
+    "duty": "plain",
 }
 
 

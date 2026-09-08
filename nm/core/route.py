@@ -53,21 +53,29 @@ ABOUT_THE_PRODUCT = "Taking this as a question about what I do, not a matter."
 NOTHING_YET = "No matter disclosed yet."
 A_MATTER = "Taking this as a matter. Say if I have that wrong."
 
+#: A QUESTION OF LAW WITH NO MATTER BEHIND IT. Answered from the corpus,
+#: cited, and nothing is written to any file -- which is the whole
+#: difference between this and `matter`.
+A_QUESTION_OF_LAW = "Taking this as a question of law, not a matter."
+
 ROUTE_SCHEMA: dict = {
     "x-nm-read": "route",
     "type": "object",
     "properties": {
         "discloses": {
             "type": "string",
-            "enum": ["matter", "about_the_product", "neither", "cannot_tell"],
+            "enum": ["matter", "question_of_law", "about_the_product",
+                     "neither", "cannot_tell"],
             "description": (
                 "`matter` if the message says ANYTHING about a real dispute, "
                 "client, document, deadline or step -- however few words. "
                 "'bail', 'he absconded' and 'ex parte decree' are all "
-                "matters. `about_the_product` if it asks what YOU can do. "
-                "`neither` ONLY for a greeting or an acknowledgement with no "
-                "content: 'hi', 'thanks', 'ok'. `cannot_tell` if you "
-                "genuinely cannot tell."),
+                "matters. `question_of_law` if it asks what the law IS, "
+                "with no client and no dispute behind it -- 'what is the "
+                "limitation for a suit for possession'. `about_the_product` "
+                "if it asks what YOU can do. `neither` ONLY for a greeting "
+                "or an acknowledgement with no content: 'hi', 'thanks', "
+                "'ok'. `cannot_tell` if you genuinely cannot tell."),
         },
         "depth": {
             "type": "string",
@@ -96,6 +104,18 @@ SYSTEM = (
     "long paragraph about what you can do is not.\n\n"
     "`neither` IS ONLY FOR AN EMPTY COURTESY: 'hi', 'thanks', 'ok'. If the "
     "words carry any fact about a case, it is a matter.\n\n"
+    "A QUESTION OF LAW IS ITS OWN ANSWER, and it is not a matter. 'What is "
+    "the limitation for a suit for possession of immovable property' names "
+    "no client, no opponent and no dates -- it asks what the law says. An "
+    "advocate asking that wants the provision and the citation, not to be "
+    "asked whose side they are on. If the same sentence carries a client or "
+    "a fact, it is a MATTER.\n\n"
+    "BUT AN OPEN FILE WINS. If anything is already on the file, a question "
+    "about the law is a question about THAT MATTER and the answer is "
+    "`matter` -- an advocate four turns into a possession suit who asks 'what "
+    "is the limitation' is asking about their suit, not about the law in "
+    "the abstract. `question_of_law` is for a question that arrives with no "
+    "file behind it.\n\n"
     "IF YOU CANNOT TELL, SAY SO. Do not guess `neither` -- a matter read as a "
     "greeting is discarded, and nothing is written to the file."
 )
@@ -167,6 +187,16 @@ def interpret(said: dict) -> ReadRoute:
             route=Route.NON_MATTER, mode=Mode.SHORT_QUESTION,
             statement=ABOUT_THE_PRODUCT,
             examined=True, why=why)
+
+    if raw == "question_of_law":
+        # NON_MATTER, SO NOTHING IS WRITTEN TO ANY FILE -- and answered from
+        # the corpus rather than with a blurb. GS-02's counterexample is
+        # `impose matter apparatus; ask for parties, posture or documents`,
+        # so this must not route to MATTER; and its requirement is a cited
+        # answer, so it must not stop at NOTHING_YET either.
+        return ReadRoute(
+            route=Route.NON_MATTER, mode=Mode.SHORT_QUESTION,
+            statement=A_QUESTION_OF_LAW, examined=True, why=why)
 
     if raw == "neither":
         # A COURTESY ON AN OPEN MATTER IS STILL A COURTESY, and answering it

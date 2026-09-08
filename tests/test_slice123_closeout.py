@@ -424,21 +424,60 @@ def test_a_provision_is_still_read_back_behind_a_closed_posture_gate(tmp_path):
 
     An advocate asking what a provision SAYS is asking something whose answer
     does not depend on the side. Refusing it is not caution; it is the product
-    declining its cheapest useful act, and GS-02 exists to say so.
+    declining its cheapest useful act.
+
+    THE INPUT CHANGED AND THE GUARANTEE DID NOT. This drove a bare question of
+    law, which now routes to NON_MATTER and is answered outright -- so it
+    never reaches a posture gate and could not exercise this at all. The
+    guarantee is still live for the case it was written about: a real matter,
+    posture unresolved, and a question about what a provision says.
+
+    The message describes a PROCEEDING and no side. Naming a client would have
+    made it a matter too, and would also have resolved the posture -- which
+    opens the gate this exists to test behind.
     """
     engine, _ = build(tmp_path)
     out = engine.run(TurnInput(
         advocate_id="adv",
-        message="what is the limitation for a suit for possession of immovable "
-                "property"))
+        message="there is a suit for possession of immovable property on this "
+                "file; what is the limitation"))
+    assert out.answer.route is Route.MATTER, (
+        "this describes a proceeding on a file and is a matter; if it routed "
+        "away, the posture-gate guarantee below is being tested on nothing")
     assert out.answer.blocked, "the directive step is still refused"
     assert out.answer.elements[0].kind is ElementKind.QUESTION
     assert not any(e.kind is ElementKind.ACTION for e in out.answer.elements)
     assert len(out.answer.elements) > 1, (
         "the turn returned the blocking question and nothing else. The "
         "provision text does not depend on which side we are on, and an "
-        "advocate asking a bare question of law was told to state a posture "
-        "they have no matter for.")
+        "advocate asking what a provision says was told to state a posture "
+        "before they could be told.")
+
+
+def test_a_bare_question_of_law_is_answered_without_a_posture_gate(tmp_path):
+    """GS-02, and the stronger form of the guarantee above.
+
+    Reading the provision back from BEHIND a closed posture gate was the best
+    available answer while every message opened a matter. It is not the right
+    one: GS-02's counterexample is *impose matter apparatus; ask for parties,
+    posture or documents*, and an advocate asking one question was still shown
+    a blocking question they had no matter for.
+
+    NOTHING IS WRITTEN TO ANY FILE. That is the difference between this and a
+    matter, and it is asserted rather than assumed -- NON_MATTER is what makes
+    it true, and a later change routing this to MATTER would satisfy every
+    other assertion here.
+    """
+    engine, _ = build(tmp_path)
+    out = engine.run(TurnInput(
+        advocate_id="adv",
+        message="what is the limitation for a suit for possession of immovable "
+                "property"))
+    assert out.answer.route is Route.NON_MATTER
+    assert out.matter is None, "a question of law opened a file"
+    assert not out.answer.blocked
+    assert not any(e.kind is ElementKind.QUESTION for e in out.answer.elements), (
+        "the advocate asked one question and was asked one back")
 
 
 def test_the_thread_gate_also_computes_nothing(tmp_path):

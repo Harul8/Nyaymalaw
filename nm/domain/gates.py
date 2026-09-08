@@ -312,6 +312,24 @@ GATES: tuple[Gate, ...] = (
         built=True,
     ),
     Gate(
+        id="G-DUTY",
+        condition="The advocate instructs this product to DO something an "
+                  "advocate must refuse -- make a false document, suppress "
+                  "evidence, mislead the court, or shape what a witness says.",
+        states=("clear", "refused", "not_assessed"),
+        response=Response.BLOCK,
+        scope=Scope.STEP,
+        persistence=Persistence.TURN,
+        recovery=Recovery.ADVOCATE,
+        visible="The instruction is refused, the duty is NAMED, and what the "
+                "law actually provides for what they were trying to achieve "
+                "is retrieved and read back. A refusal with no route is a "
+                "wall: an advocate asking this usually has a real problem, "
+                "and there is a lawful answer to it.",
+        feature="B2",
+        built=True,
+    ),
+    Gate(
         id="G-SPLIT",
         condition="One message describes more than one dispute, so a thread "
                   "is opened for each and only one of them is advised on.",

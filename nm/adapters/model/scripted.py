@@ -742,6 +742,29 @@ def scripted_proof(user: str) -> str:
     return json.dumps({"positions": rows})
 
 
+#: HOW A BARE QUESTION OF LAW OPENS. TEST DOUBLE ONLY.
+#:
+#: Anchored and bounded. Written as a `startswith` tuple it matched
+#: "what AREAS of the decree are still open?" on the prefix "what are",
+#: and routed a matter away -- the direction `route.py` calls
+#: negligent, because NON_MATTER writes nothing to any file.
+_ASKS_THE_LAW = re.compile(
+    r"^(what (is|are|does)\b|what period\b|how long\b)")
+
+#: SOMEBODY IS IN THE SENTENCE. TEST DOUBLE ONLY.
+#:
+#: What separates a bare question of law from a matter is not vocabulary
+#: -- `what is the limitation for a suit for possession` carries three
+#: case words -- it is the ABSENCE of a party. Nobody is doing anything.
+#:
+#: WORD BOUNDARIES ARE THE WHOLE OF IT. Written as substrings, `he`
+#: matched inside `the`, so every question carrying the commonest word in
+#: English named a party.
+_NAMES_A_PARTY = re.compile(
+    r"\b(we|our|us|my|i|he|she|they|him|her|his|hers|their|"
+    r"client|accused|petitioner|respondent|plaintiff|defendant|"
+    r"landlord|tenant|opponent)\b")
+
 def scripted_route(user: str) -> str:
     """Matter, courtesy, or a question about the product. B1.
 
@@ -759,7 +782,11 @@ def scripted_route(user: str) -> str:
     about = ("what can you do", "who are you", "what areas", "how do you work",
              "what do you cover")
 
-    if bare in courtesies:
+    # A COURTESY WITH A WORD ON THE END IS STILL A COURTESY. Exact set
+    # membership missed `how are you today` -- the set holds `how are
+    # you` -- so a pleasantry fell through to the matter branch and the
+    # advocate was asked whose side they were on.
+    if bare in courtesies or any(bare.startswith(c) for c in courtesies):
         return json.dumps({"discloses": "neither", "depth": "a_question",
                            "why": "a courtesy with no content"})
     # A QUESTION ABOUT THE PRODUCT CARRIES NO FACT ABOUT A CASE.
@@ -783,6 +810,37 @@ def scripted_route(user: str) -> str:
                            "depth": "a_question",
                            "why": "asks what this product does"})
 
+    # A QUESTION OF LAW NAMES NO ONE.
+    #
+    # `what is the limitation for a suit for possession of immovable property`
+    # carries three case words -- suit, possession, limitation -- so the
+    # branch above reads it as a matter, and the advocate is asked whose side
+    # they are on. What separates it is not vocabulary but the ABSENCE of a
+    # party: no client, no opponent, nobody doing anything.
+    #
+    # The double tests for that absence; the product reads it with a model,
+    # because the fourth way of asking a bare question of law is always
+    # outside any list.
+    # A BOUNDARY AFTER THE INTERROGATIVE. `startswith("what are")`
+    # matched "what AREAS of the decree are still open?" -- a matter,
+    # routed away on a prefix collision.
+    asks_the_law = _ASKS_THE_LAW.match(bare) is not None
+    # WORD BOUNDARIES, NOT SUBSTRINGS. The first version tested `"he " in
+    # bare` and matched inside "t-h-e ", so every question containing the word
+    # "the" named a party. That is the same substring trap that made
+    # `"cause" in said` match "cause of action".
+    names_a_party = _NAMES_A_PARTY.search(bare) is not None
+    # AN OPEN FILE WINS, and the double must honour it too. `build_prompt`
+    # puts the file in front of this read precisely so a short follow-up
+    # is not read as a fresh question, and the double looked only at the
+    # words after 'the advocate typed:'. Turn four of a five-turn
+    # conversation was routed to NON_MATTER and the file was not written.
+    on_file = "already on this file" in low
+    if asks_the_law and not names_a_party and not on_file:
+        return json.dumps({"discloses": "question_of_law",
+                           "depth": "a_question",
+                           "why": "asks what the law is, with nobody in it"})
+
     # EVERYTHING ELSE IS A MATTER, which is the product's own asymmetry: a
     # workup on a question wastes time, a matter read as a greeting is gone.
     #
@@ -794,6 +852,68 @@ def scripted_route(user: str) -> str:
                        "why": "carries a fact about a case"})
 
 
+#: Instructions an advocate must refuse. TEST DOUBLE ONLY.
+#:
+#: A vocabulary is right here and wrong in the product, for the reason
+#: `scripted_posture` gives about its own regex: this stands in for a model on
+#: a deterministic path. The product reads it with a model precisely because
+#: `put last year's date on it` is backdating and is outside any list.
+_MUST_REFUSE = (
+    ("backdat", "false_document"),
+    ("antedat", "false_document"),
+    ("pre-date", "false_document"),
+    ("destroy the", "suppress_evidence"),
+    ("shred", "suppress_evidence"),
+    ("coach the witness", "interfere_witness"),
+)
+
+
+def scripted_duty(user: str) -> str:
+    """Refuse, or CLEAR. G-DUTY.
+
+    ASKING ABOUT IT IS NOT DOING IT, and the double honours that distinction
+    because the product's whole prompt turns on it: `what is the effect of a
+    backdated acknowledgment` is a question of law and must come back CLEAR.
+    A double that refused both would make the product's own test of that
+    distinction pass for the wrong reason.
+    """
+    # THE SPAN MUST COME FROM THE ADVOCATE'S LINE, not from the prompt.
+    #
+    # The first version split on "just said:" -- the DISPUTE prompt's wording,
+    # which does not appear here -- so `said` was the whole prompt, the span
+    # crossed into this product's own instructions, and the product's guard
+    # correctly threw the refusal away as unquotable. G-DUTY reported
+    # `not_assessed` and the advocate got the posture question again.
+    lines = [ln.strip() for ln in user.splitlines() if ln.strip()]
+    said = lines[-1] if lines else user
+    for ln in lines:
+        if any(n in ln.lower() for n, _ in _MUST_REFUSE):
+            said = ln
+            break
+    low = said.lower()
+    asks_about = low.lstrip().startswith(("what", "is it", "can they", "does"))
+    for needle, ground in _MUST_REFUSE:
+        if needle in low and not asks_about:
+            start = low.index(needle)
+            # THE SPAN IS CUT FROM WHAT THEY WROTE, never composed: the
+            # product's guard checks it against the advocate's own words and
+            # discards anything it cannot find, so a composed span would come
+            # back as CLEAR and look like a double that found nothing.
+            span = said[max(0, start - 24):start + len(needle) + 30].strip()
+            # THE LAWFUL COUNTERPART, for the ground the double recognises.
+            # Named as an exact title and section so the product's lookup is
+            # a lookup; the product RETRIEVES it and reads back what the
+            # corpus holds, so this string is never quoted at an advocate.
+            route = ("Limitation Act, 1963 s.18"
+                     if ground == "false_document" and "limitation" in low
+                     else "")
+            return json.dumps({"ground": ground, "quoted": span,
+                               "why": "the instruction asks for this to be done",
+                               "lawful_section": route})
+    return json.dumps({"ground": "clear", "quoted": "", "why": "",
+                       "lawful_section": ""})
+
+
 #: A title is an exact key on a closed vocabulary, so a collision is not
 #: possible rather than merely unlikely, and a schema with no title has no
 #: responder at all — which `tests/test_provider_independence.py` fails on
@@ -802,6 +922,7 @@ SCRIPTED_READS: dict[str, object] = {
     "route": scripted_route,
     "posture": scripted_posture,
     "dispute": scripted_dispute,
+    "duty": scripted_duty,
     "dates": scripted_dates,
     "role": scripted_role,
     "cause": scripted_cause,
@@ -906,6 +1027,18 @@ class ScriptedModelAdapter:
     def _respond(self, prompt: Prompt, tier: Tier) -> str:
         if self._responder is not None:
             return self._responder(prompt, tier)
+        # A COURTESY IS ANSWERED AS A COURTESY.
+        #
+        # Selected on the SYSTEM prompt, which is this product's own text and
+        # not the advocate's -- the user half of a greeting is "hi", which
+        # matches nothing and would fall through. Without this the double
+        # answered `hi` with "File the summary possession suit within six
+        # months": scripted legal advice, on no matter, from no retrieval.
+        #
+        # A double that cannot answer a prompt the product makes is a double
+        # that makes every test using it pass or fail for the wrong reason.
+        if "conversational" in (prompt.system or "").lower():
+            return "Good to hear from you. What is the matter?"
         for needle, reply in self._responses.items():
             if needle.lower() in prompt.user.lower():
                 return reply

@@ -72,6 +72,18 @@ READS: tuple[Read, ...] = (
          "separate `correction` read for a day, naming a schema that does not "
          "exist, which is what this module’s own docstring claimed a test "
          "prevented; the test did not exist either."),
+    Read("duty", False,
+         "It decides whether an instruction is REFUSED, and it is not "
+         "decisive in this table’s narrow sense: it moves no date, no "
+         "amount, and no question of which law is read. What it moves is "
+         "whether the turn runs at all.\n\n"
+         "AND IT FAILS TOWARD ANSWERING, which is the opposite of every "
+         "decisive read here. A refusal wrongly issued accuses an advocate "
+         "of misconduct for asking an ordinary question, and one issued "
+         "because a read timed out cannot be argued with. So a read that "
+         "produced no answer is NOT_ASSESSED, the gate says so, and the "
+         "turn proceeds — the disclosure is the mechanism here, not the "
+         "block."),
     Read("cause", True,
          "It decides WHICH ACT is looked up. CLAUDE.md §5 measures what a wrong "
          "one costs: an exact section lookup sent into the wrong statute, "

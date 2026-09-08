@@ -116,6 +116,12 @@ class TurnMetrics:
     you act for, which is the test E-034 actually applies."""
 
     cause_reads: int = 0
+    duty_reads: int = 0
+    """G-DUTY. Whether the instruction is one that must be refused.
+
+    A SETTLING READ, not a derivation: whether a document may be backdated
+    does not depend on which side we act for, and the read decides whether
+    the turn proceeds at all."""
     """Model calls spent reading the CAUSE OF ACTION (H3).
 
     The fourth settling read, and it is one for the same reason a date is: THE
@@ -149,7 +155,7 @@ class TurnMetrics:
         recommendation is; an authority set is; a date is not; a cause is not."""
         return (self.route_reads + self.posture_reads
                 + self.binding_reads + self.chronology_reads
-                + self.cause_reads)
+                + self.cause_reads + self.duty_reads)
 
     def record_call(self, result) -> None:
         """Every model call counts -- including a streamed one.
@@ -221,6 +227,7 @@ class TurnMetrics:
             "chronology_reads": self.chronology_reads,
             "route_reads": self.route_reads,
             "cause_reads": self.cause_reads,
+            "duty_reads": self.duty_reads,
             "evidence_bound_hit": self.evidence_bound_hit,
             "gates_fired": [
                 {"gate": g.gate_id, "state": g.state, "response": g.response,

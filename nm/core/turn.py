@@ -38,6 +38,7 @@ from nm.core import (
 )
 from nm.core import cause as cause_reader
 from nm.core import dispute as dispute_reader
+from nm.core import duty as duty_reader
 from nm.core import evidence_item as inventory
 from nm.core import factors as factor_reader
 from nm.core import gaps as gap_queue
@@ -47,7 +48,7 @@ from nm.core import route as route_reader
 from nm.core import screens as screens_mod
 from nm.core import theory as theory_reader
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
-from nm.domain import decision, engagement, issue, reservation
+from nm.domain import citation, decision, engagement, issue, reservation
 from nm.domain import proof as domain_proof
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
@@ -523,6 +524,34 @@ class TurnEngine:
             self._store.record_metrics(metrics.as_dict())
             return TurnOutput(turn.turn_id, self._replay_answer(mode, mode_statement),
                               matter, metrics, replayed=True)
+
+        # ---- G-DUTY: is this an instruction that must be REFUSED? ---------
+        #
+        # AFTER THE FILE IS LOADED AND BEFORE POSTURE.
+        # Whether a document may be backdated does not depend on which side
+        # we act for, so the posture gate has no business in front of it --
+        # and it was: `draft me a backdated acknowledgment so the limitation
+        # restarts` opened a matter and asked whose side we were on.
+        #
+        # It sees the file because EVERY read does: on turn four, `And what
+        # is the limitation on that?` is unreadable without it. Placing it
+        # earlier kept a refused instruction off the file and made the one
+        # read that judges an instruction the only one flying blind.
+        refusal = self._read_duty(turn, matter, metrics)
+        metrics.fire("G-DUTY",
+                     "refused" if refusal.must_refuse else
+                     ("not_assessed" if refusal.refused else "clear"),
+                     refusal.refused or refusal.why
+                     or "nothing here requires refusal")
+        if refusal.must_refuse:
+            answer = self._refusal_answer(turn, refusal, mode,
+                                          mode_statement, metrics)
+            metrics.outcome = Outcome.BLOCKED
+            metrics.stages["admit_ms"] = int((time.perf_counter() - t0) * 1000)
+            metrics.latency_ms = int((time.perf_counter() - started) * 1000)
+            self._store.record_metrics(metrics.as_dict())
+            return TurnOutput(turn.turn_id, answer, matter, metrics)
+
 
         expected_version = matter.version
 
@@ -4165,8 +4194,22 @@ class TurnEngine:
             by_when=by_when, no_deadline_reason=no_deadline)
 
     def _non_matter_answer(self, turn, mode, mode_statement, metrics) -> Answer:
+        # A QUESTION OF LAW IS ANSWERED, NOT DEFLECTED.
+        #
+        # The route read has four non-matter outcomes and this is the only
+        # one that requires work: the advocate asked what the law says and
+        # wants the provision and the citation. GS-02's counterexample is
+        # `impose matter apparatus; ask for parties, posture or documents`,
+        # so this path opens no file -- `_run` returns before
+        # `_load_or_create` -- and its requirement is a CITED answer, so a
+        # blurb does not satisfy it either.
+        if mode_statement == route_reader.A_QUESTION_OF_LAW:
+            return self._law_answer(turn, mode, mode_statement, metrics)
+
         text = ("Brief me and I will take it from there — who the client is, "
                 "what happened, and when.")
+        if mode_statement == route_reader.NOTHING_YET:
+            text = self._courtesy(turn, metrics) or text
         # THE READ ALREADY DECIDED THIS. Re-running a keyword list here
         # was the last `_ABOUT_NM` use in the product, and a second
         # place answering a question the route had answered -- so the
@@ -4178,6 +4221,261 @@ class TurnEngine:
                     "in my corpus. Brief me on a matter and I will give you a view.")
         return Answer(route=Route.NON_MATTER, mode=mode, mode_statement=mode_statement,
                       elements=(Element(kind=ElementKind.GROUND, text=text),))
+
+
+
+    def _courtesy(self, turn, metrics) -> str:
+
+        """One line back to a person who said something human.
+
+        RETURNS EMPTY ON ANY FAILURE, and the caller keeps its constant. A
+        greeting is the one place where a stiff answer costs nothing --
+        nobody is advised, nothing is filed, and the advocate simply types
+        their brief. So this is allowed to fail quietly, which is not true
+        of any read that touches the law.
+
+        NO LEGAL CONTENT, and the prompt says so rather than the guard,
+        because there is nothing here to ground: no matter, no retrieval,
+        no findings. A model that answered a legal question in this slot
+        would be ungrounded by construction, so it is told the one thing
+        it may do.
+        """
+        from nm.ports.model import ModelError, Prompt, Tier
+
+        try:
+            res = self._model.complete(
+                Prompt(
+                    system=(
+                        "You are a senior Indian advocate. A JUNIOR COLLEAGUE "
+                        "at the bar has just said something conversational — "
+                        "a greeting, a thanks, a pleasantry.\n\n"
+                        "Reply in ONE short sentence that does TWO things: "
+                        "answer what they actually said, AND ask for the "
+                        "matter. Both halves, every time — a greeting that "
+                        "does not invite the brief leaves them waiting, and "
+                        "an invitation that ignores what they said is a form "
+                        "letter.\n\n"
+                        "THE REGISTER IS COUNSEL TO COUNSEL, not a service "
+                        "desk. Never offer to help, to assist or to be of "
+                        "service, and never call them a user or a customer. "
+                        "Speak as a senior does across a desk.\n\n"
+                        "Say NOTHING about law, procedure or any case. You "
+                        "have not been given a matter and there is nothing "
+                        "to advise on. Do not ask them to fill anything in."),
+                    user=turn.message.strip()[:300]),
+                Tier.ROUTINE, max_tokens=60)
+            metrics.record_call(res)
+        except ModelError:
+            return ""
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("C4", f"the courtesy reply failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return ""
+        reply = " ".join((res.text or "").split())[:300]
+
+        # NO LAW ON THIS PATH, AND IT IS CHECKED RATHER THAN REQUESTED.
+        #
+        # Nothing was retrieved, so `grounding.verify` -- which catches an
+        # ungrounded assertion on every other path in this engine -- has
+        # nothing to verify against and cannot run. A sentence of law here
+        # is ungrounded by construction, so a reply carrying a provision,
+        # an Article, an Order or a case name is DISCARDED and the caller
+        # keeps its constant.
+        if (citation.provisions_cited(reply)
+                or citation.cases_named(reply)
+                or citation.ANY_PROVISION.search(reply)):
+            metrics.violate("C4", f"the courtesy reply named law and was discarded: "
+                                  f"{reply[:90]!r}")
+            return ""
+        return reply
+
+
+    def _read_duty(self, turn, matter, metrics):
+        """Does this instruction ask for something an advocate must refuse?
+
+        EVERY FAILURE LANDS ON CLEAR and the turn proceeds. A refusal is an
+        accusation of misconduct; one issued because a read timed out is
+        worse than the request it was meant to catch, because there is
+        nothing for the advocate to correct.
+        """
+        from nm.ports.model import ModelError, Tier
+
+        # THE FILE, as every other read in this turn receives it.
+        memory = (matter_memory.build(matter, about=turn.message)
+                  if matter is not None else None)
+        quotable = Quotable(turn=turn.message,
+                            file=memory.advocate_words if memory else "")
+        try:
+            res = self._model.structured(
+                duty_reader.build_prompt(quotable),
+                duty_reader.DUTY_SCHEMA, Tier.ROUTINE, max_tokens=250)
+            metrics.record_call(res)
+            metrics.duty_reads += 1
+            return duty_reader.interpret(quotable, res.data or {})
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"the duty read could not run: {exc}")
+            return duty_reader.UNREAD
+        except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
+            metrics.violate("C4", f"duty read failed: "
+                                  f"{type(exc).__name__}: {exc}")
+            return duty_reader.UNREAD
+
+    def _refusal_answer(self, turn, refusal, mode, mode_statement,
+                        metrics) -> Answer:
+        """Refuse, name the duty, and give the lawful route.
+
+        THE ROUTE IS RETRIEVED, NOT COMPOSED. GS-05 wants what actually
+        restarts limitation, which is a provision and not a paraphrase --
+        and a refusal that ended with this product's own account of the law
+        would be ungrounded text on the one turn where the advocate has
+        most reason to check it.
+
+        The need is built from THEIR OWN WORDS. An advocate asking to
+        backdate an acknowledgment has said `limitation` and
+        `acknowledgment`, which is what resolves the Act and the section;
+        composing a different question here would be this product deciding
+        what they meant.
+
+        A MISS IS NOT A FAILURE OF THE REFUSAL. If nothing is retrieved the
+        instruction is still refused -- the duty does not depend on the
+        corpus -- and the advocate is told the route was not found rather
+        than given nothing.
+        """
+        rows = [Element(
+            kind=ElementKind.QUESTION,
+            text=(f"I will not do that. {refusal.duty} You asked: "
+                  f"'{refusal.quoted[:160]}'."),
+            gate="G-DUTY", signal=Signal.CONTRADICTION)]
+
+        # RETRIEVE WHAT THE READ NAMED, not what the advocate asked for.
+        #
+        # Their own words are about the improper route -- `backdated
+        # acknowledgment` names no section, and the manifest resolved the Act
+        # and stopped. The read names the LAWFUL counterpart ('Limitation Act,
+        # 1963 s.18'), which is an exact title and an exact section, so the
+        # lookup is a lookup and not a ranking.
+        #
+        # Nothing from the read is asserted: if the corpus does not hold it,
+        # the else-branch below says so rather than falling back to the
+        # model's recollection of the text.
+        ask = refusal.lawful_section.strip() or turn.message.strip()
+        need = EvidenceNeed(question=ask,
+                            governing_date=turn.today,
+                            jurisdiction=turn.jurisdiction)
+        try:
+            result = self._fetch(need, metrics)
+        except Exception as exc:  # noqa: BLE001
+            metrics.violate("C4", f"the lawful route could not be retrieved: "
+                                  f"{type(exc).__name__}: {exc}")
+            result = None
+
+        cited = [f for f in (result.findings if result else ())
+                 if f.source_kind is SourceKind.PROVISION and f.span.strip()]
+        if cited:
+            rows.append(Element(
+                kind=ElementKind.GROUND, disclosure=True,
+                text=("What does restart or extend a period is on the "
+                      "file already, and it is this:")))
+            for f in cited[:2]:
+                rows.append(Element(
+                    kind=ElementKind.FINDING,
+                    text=(f'{f.ref} — "{_excerpt(f.span)}"'
+                          f'{" [...]" if _shortened(f.span) else ""} '
+                          f"({f.locator})."),
+                    refs=(f.locator,)))
+            rows.append(Element(
+                kind=ElementKind.GROUND, disclosure=True,
+                text=("What that needs is evidence of the thing itself — who "
+                      "signed it, when, and a document that says so on its own "
+                      "date. If one exists, brief me on it and I will work the "
+                      "period from it.")))
+        else:
+            rows.append(Element(
+                kind=ElementKind.GROUND, disclosure=True,
+                text=("I have not retrieved the lawful route for this and am "
+                      "not stating it from memory. Name the Act and I will read "
+                      "back what actually restarts or extends the period.")))
+        return Answer(route=Route.MATTER, mode=mode,
+                      mode_statement=mode_statement,
+                      elements=tuple(rows), blocked=True,
+                      blocked_reason="G-DUTY: the instruction is refused")
+
+    def _law_answer(self, turn, mode, mode_statement, metrics) -> Answer:
+        """Retrieve the provision the question is about, and read it back.
+
+        THE SAME RETRIEVAL AS A MATTER TURN, through `_fetch`, so the
+        evidence bound, the coverage states and the index naming are the
+        ones the rest of the product uses. A second retrieval path for
+        questions would be a second set of answers about the same corpus,
+        which is the three-stores defect wearing a convenient face.
+
+        NOTHING IS WRITTEN. No matter, no thread, no facts -- the caller
+        returns before `_load_or_create`, and this method has no store.
+
+        A MISS NAMES THE INDEX. `EvidenceResult` already carries the
+        coverage state and the reason; the failure to guard here would be
+        an empty answer reading as `the law does not say`, which is B-163
+        exactly.
+        """
+        # THE CAUSE, SO THE ARTICLE CAN BE LOOKED UP RATHER THAN RANKED.
+        #
+        # `a suit for possession of immovable property` names a cause of
+        # action and no matter, and `LIMITATION_ARTICLE` maps the cause to
+        # Article 65 exactly. Without this the need carries only the question,
+        # nothing identifies a provision, and the honest answer is `no
+        # specific provision was identified` -- which is true and useless,
+        # because the question named one in every way except its number.
+        #
+        # THE SAME READ THE MATTER PATH USES. A second way of working out the
+        # cause would be a second answer to one question, at model prices.
+        grounds: list[Element] = []
+        cause_read = self._read_cause(turn, None, metrics, grounds)
+        need = EvidenceNeed(question=turn.message.strip(),
+                            governing_date=turn.today,
+                            jurisdiction=turn.jurisdiction,
+                            cause_of_action=cause_read)
+        result = self._fetch(need, metrics)
+
+        cited = [f for f in result.findings
+                 if f.source_kind is SourceKind.PROVISION and f.span.strip()]
+        if not cited:
+            # NOT AN ANSWER, AND SAID SO. The reason comes from the
+            # adapter, which knows which store was asked.
+            # B-163: A ZERO NAMES THE INDEX IT CAME FROM. `searched_stores`
+            # is the adapter's own record of what was asked, and without it
+            # "nothing found" reads as "the law does not say" -- which is the
+            # three-stores defect reaching an advocate as a legal conclusion.
+            where = (", ".join(result.searched_stores)
+                     if result.searched_stores else "no store was reached")
+            # `missing` IS A STRING, NOT A LIST. Slicing and joining it
+            # produced "S; p; e" -- the first three characters, joined
+            # as though they were reasons. A type read from the field
+            # name rather than the annotation.
+            missing = (result.missing or "").strip()
+            return Answer(
+                route=Route.NON_MATTER, mode=mode,
+                mode_statement=mode_statement,
+                elements=(Element(
+                    kind=ElementKind.GROUND,
+                    text=(f"I have not answered this from memory. Searched: "
+                          f"{where} — {result.coverage.said}."
+                          + (f" Missing: {missing}." if missing else "")
+                          + " Name the Act and section and I will read it "
+                            "back, or brief me on the matter and I will "
+                            "work it."),),))
+
+        # THE PROVISION'S OWN WORDS, with the locator that reads it back.
+        # Same shape as a matter turn's provision line, deliberately: an
+        # advocate should not have to learn two citation formats.
+        rows = [Element(
+            kind=ElementKind.FINDING,
+            text=(f'{f.ref} — "{_excerpt(f.span)}"'
+                  f'{" [...]" if _shortened(f.span) else ""} '
+                  f"({f.locator})."),
+            refs=(f.locator,)) for f in cited[:3]]
+        return Answer(route=Route.NON_MATTER, mode=mode,
+                      mode_statement=mode_statement, elements=tuple(rows))
 
     def _replay_answer(self, mode, mode_statement) -> Answer:
         return Answer(
