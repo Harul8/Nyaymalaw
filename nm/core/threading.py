@@ -97,6 +97,12 @@ class BindResult:
     proposal: MergeProposal | None = None
     question: str = ""
     counted: bool = False
+    looks_like: int = 0
+    """HOW MANY DISPUTES THE MESSAGE APPEARED TO DESCRIBE.
+
+    Reported, never acted on. The read behind it measures 2-3 of 6, so a
+    file is not split on it -- the advocate is told the count and asked,
+    and one sentence from them opens the second thread."""
     """Did anything actually COUNT the disputes in this message?
 
     False means the read did not run, and the single thread below is a
@@ -105,18 +111,17 @@ class BindResult:
     described one dispute."""
 
     others: tuple[Thread, ...] = ()
-    """THE OTHER DISPUTES THIS MESSAGE DESCRIBED, each already a thread.
+    """ALWAYS EMPTY NOW, and kept so the shape does not churn.
 
-    `thread` is the one this turn works on. These are the rest, created
-    and returned so the engine can put them on the file and SAY they are
-    there. They are not advised on: a turn derives one posture, one
-    chronology and one limitation, and running three of those from one
-    message would be the merge defect again with more steps.
+    A message describing several disputes used to open a thread for
+    each and return the rest here. It no longer does: the count read
+    measures 2-3 of 6 and is unstable on identical input, so the file
+    is not split on it -- `looks_like` carries the count and the engine
+    states it to the advocate instead.
 
-    NOT ADVISED ON IS NOT THE SAME AS NOT THERE, and the difference has
-    to reach the advocate -- §9's third state as a VALUE. Silence here is
-    what produced 'every deadline on this thread has passed' about a file
-    holding a trespass five days old."""
+    The field stays because the callers that add these to the matter
+    are the ones a future confirmed split would use, and deleting them
+    would mean writing them again."""
 
     @property
     def blocks(self) -> bool:
@@ -216,10 +221,9 @@ def bind(matter: Matter, message: str, fact: Fact,
         return BindResult(
             BindState.BOUND, made[0], True,
             ("the first thread on this matter" if len(made) == 1 else
-             f"this message describes {len(made)} separate disputes, so it "
-             f"opens a thread for each rather than putting one posture and "
-             f"one limitation across all of them"),
-            others=tuple(made[1:]))
+             f"this message appears to describe {len(described)} disputes; "
+             f"it is on one thread until you say otherwise"),
+            looks_like=len(described))
 
     # 5. ONE OPEN THREAD AND NOTHING DECISIVE. Not automatically a
     #    continuation -- that was the defect. `opens_new_dispute` is read
@@ -239,10 +243,10 @@ def bind(matter: Matter, message: str, fact: Fact,
                 ("this describes a different dispute from the one on the "
                  "file, so it opens its own thread rather than inheriting "
                  "that thread's posture and limitation" if len(made) == 1
-                 else f"this describes {len(made)} disputes, none of them "
-                      f"the one already on the file, so each opens its own "
-                      f"thread"),
-                others=tuple(made[1:]))
+                 else f"this appears to describe {len(described)} disputes, "
+                      f"none of them the one on the file; it opens one "
+                      f"thread until you say otherwise"),
+                looks_like=len(described))
         if opens_new_dispute is False:
             return BindResult(BindState.BOUND, matter.threads[0], False,
                               "the only thread on this matter, continued")
@@ -275,34 +279,27 @@ def bind(matter: Matter, message: str, fact: Fact,
 
 def _per_dispute(message: str, described: tuple,
                  disclosed: dict[str, str]) -> list[Thread]:
-    """One thread per dispute the message described. NEVER ZERO.
+    """ONE thread, whatever the count says. The count is DISCLOSED.
 
-    An empty `described` means the read did not run, could not tell, or
-    found nothing separable -- three different things, none of which is
-    'this message is about no dispute at all'. All three fall back to the
-    single thread this function replaced, because the alternative is a
-    turn with nothing to bind to. S1: an absent read must not change the
-    answer, and here it must not remove the thread either.
+    This used to return one thread per dispute the read described, and the
+    read is not good enough to act on: 3/6, 2/6, 2/6 across six briefs,
+    unstable on identical input, and blind to a four-dispute enumeration.
 
-    THE LABEL COMES FROM THE READ, not from the first line of the message.
-    A three-dispute brief labelled itself 'My client is Ravi Kumar, a
-    retired bank employee' -- the opening words, naming no dispute at all
-    -- because `_label` takes the first line and the first line was a
-    greeting. Each dispute now carries the words it was read from.
+    `threading.py`\'s asymmetry justified splitting on the ground that a
+    wrong merge inverts the advice SILENTLY. It is not silent now -- the
+    engine states the count and invites the advocate to separate the file
+    -- and a wrong split costs more than the docstring assumed: three
+    threads, three posture gates, and a cross-file pass arguing across
+    fragments of one transaction.
 
-    IDENTIFIERS GO ON THE FIRST THREAD ONLY. A case number in a message
-    describing three disputes belongs to one of them and nothing here
-    knows which; copying it onto all three would assert three times over
-    that it does. The advocate can move it in a turn.
+    THE LABEL STILL COMES FROM THE READ where there is one, because a
+    thread called after the first dispute is better than one called after
+    the opening words of the brief -- which is how a three-dispute file
+    came to be filed under `My client is Ravi Kumar, a retired bank
+    employee`.
     """
-    if len(described) < 2:
-        return [_with_identifiers(Thread.create(label=_label(message)),
-                                  disclosed)]
-    made = [_with_identifiers(Thread.create(label=_dispute_label(d)),
-                              disclosed if n == 0 else {})
-            for n, d in enumerate(described)]
-    return made
-
+    label = _dispute_label(described[0]) if described else _label(message)
+    return [_with_identifiers(Thread.create(label=label), disclosed)]
 
 def _dispute_label(d) -> str:
     """A file-cover name for one dispute.

@@ -382,12 +382,24 @@ def build_attack_prompt(account: str, acting_for: str):
 
 @implements("D7")
 def build_exposure_prompt(threads: tuple[tuple[str, str], ...]):
+    """The disputes on this file, BY LABEL.
+
+    It used to send `{tid}\\t{label}` -- this product's own keys -- so the
+    model answered in ids and the served element rendered them straight
+    back at the advocate: *`... on thr_016c52910d37 - This damages the
+    defence ...`*. An advocate cannot act on a question addressed to a key
+    they have never seen (B-103).
+
+    The caller maps the labels back to ids. Sending the label is the fix
+    at source; stripping ids from the rendered text afterwards would leave
+    the model reasoning in identifiers and the next renderer free to leak
+    them again.
+    """
     from nm.ports.model import Prompt
 
-    listed = "\n".join(f"  {tid}\t{label}" for tid, label in threads)
+    listed = "\n".join(f"  {label}" for _tid, label in threads)
     return Prompt(system=EXPOSURE_SYSTEM,
                   user=f"THE DISPUTES ON THIS FILE:\n{listed}")
-
 
 @implements("D7")
 def read_attacks(said: dict, thread: ThreadId) -> ReadAttacks:

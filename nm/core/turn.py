@@ -353,6 +353,21 @@ def _shortened(span: str, cap: int = EXCERPT) -> bool:
 
 
 
+
+def _label_of(value: str, labels: dict) -> str:
+    """A thread the advocate can recognise.
+
+    The exposure prompt sends labels now, so a well-behaved read answers
+    in them and this returns the value unchanged. It exists for the other
+    case: a read that answers with an id anyway must not put one in front
+    of an advocate, and a bare `unknown` would be worse than the id -- it
+    would name no dispute at all.
+    """
+    if value in labels:
+        return repr(labels[value])
+    return repr(value) if not str(value).startswith(("thr_", "mat_")) \
+        else "another dispute on this file"
+
 def _positions_note(thread) -> str:
     """What the file establishes, for the read that recommends the next step.
 
@@ -657,18 +672,19 @@ class TurnEngine:
         # what must be written over the standing theory.
         concluded: dict = {}
 
-        # G-SPLIT. THE FILE WAS SPLIT AND THE ADVOCATE IS TOLD.
+        # G-SPLIT. THE COUNT IS REPORTED, AND THE FILE IS NOT SPLIT ON IT.
         #
-        # `bound.others` is non-empty only where one message described
-        # several disputes. Each is now a thread on the file, and NONE of
-        # them is advised on by this turn -- a turn derives one posture,
-        # one chronology and one limitation. Saying nothing would leave
-        # them looking answered, which is the harm this whole change
-        # exists to remove rather than merely to relocate.
-        # ONLY WHERE THE BIND ACTUALLY PRODUCED A THREAD. An ambiguous
-        # bind resolved nothing, and reporting `single` there would be a
-        # finding about a message nobody managed to place.
+        # This used to open a thread per dispute the read described. The read
+        # measures 2-3 of 6 across six briefs and is unstable on identical
+        # input, so the file is no longer split on it -- the advocate is told
+        # what the message looked like and invites the split themselves.
+        #
+        # `threading.py`'s asymmetry justified splitting because a wrong merge
+        # inverts the advice SILENTLY. This is the disclosure that makes it
+        # not silent.
         if bound.thread is None:
+            # An ambiguous bind placed nothing. Reporting a count here would
+            # be a finding about a message nobody managed to file.
             pass
         elif not bound.counted:
             # NOBODY COUNTED. One thread, and that is a fallback and not a
@@ -677,28 +693,26 @@ class TurnEngine:
                          "the dispute count could not be read on this turn, "
                          "so this file holds one thread by fallback and not "
                          "because one dispute was found")
-        elif not bound.others:
-            metrics.fire("G-SPLIT", "single",
-                         "this message describes one dispute")
-        else:
+        elif bound.looks_like > 1:
             metrics.fire("G-SPLIT", "split",
-                         f"{len(bound.others) + 1} disputes described in one "
-                         f"message; advising on {bound.thread.label!r}")
+                         f"this message reads as {bound.looks_like} disputes; "
+                         f"kept on {bound.thread.label!r} until the advocate "
+                         f"says otherwise")
+        else:
+            metrics.fire("G-SPLIT", "single",
+                         "this message reads as one dispute")
+
         split_note = None
-        if bound.others:
-            # NAMED HERE, not in the gate-fire chain above. It was
-            # assigned in that chain's `else` and read in this
-            # block -- correct only because the two conditions
-            # happen to agree, which is CLAUDE.md §6's shape and
-            # what pylint E0601 is in the gate for.
-            names = '; '.join(t.label for t in bound.others)
+        if bound.thread is not None and bound.counted and bound.looks_like > 1:
             split_note = (Element(
                 kind=ElementKind.GROUND,
-                text=(f"This message describes {len(bound.others) + 1} separate "
-                      f"disputes, so each is on the file as its own thread "
-                      f"rather than sharing one posture and one limitation. "
-                      f"I have worked on {bound.thread.label!r}. NOT ASSESSED: "
-                      f"{names}. Name one and I will take it next."),
+                text=(f"This reads to me as {bound.looks_like} separate "
+                      f"disputes. I have kept it on one thread — "
+                      f"{bound.thread.label!r} — because splitting a file is "
+                      f"not something I will do on my own reading of it. If "
+                      f"they are separate, say so and I will open them: each "
+                      f"would carry its own posture, its own dates and its "
+                      f"own limitation."),
                 gate="G-SPLIT", disclosure=True, signal=Signal.NONE))
 
         if bound.blocks:
@@ -926,7 +940,14 @@ class TurnEngine:
 
         exposure: list[Element] = []
         if not answer.blocked:
-            exposure = list(self._exposure(matter, metrics))
+            # THE THREADS THIS MESSAGE OPENED, so the pass does not argue
+            # across a split nothing has confirmed.
+            born = frozenset(
+                t.id for t in (*bound.others,
+                               *( (bound.thread,) if bound.created
+                                  and bound.thread is not None else ()))
+            )
+            exposure = list(self._exposure(matter, metrics, born))
             answer = replace(answer, elements=tuple(
                 [*answer.elements, *exposure]))
 
@@ -3064,7 +3085,9 @@ class TurnEngine:
                   f"looked at. Nothing here has been recorded as advice "
                   f"on their account."))]
 
-    def _exposure(self, matter: Matter, metrics: TurnMetrics) -> list[Element]:
+    def _exposure(self, matter: Matter, metrics: TurnMetrics,
+                  born_together: frozenset[str] = frozenset(),
+                  ) -> list[Element]:
         """E-082. ONE report per file, whatever the answer.
 
         A SINGLE-THREAD FILE STILL GETS ONE, saying none was found, because
@@ -3072,7 +3095,32 @@ class TurnEngine:
         only sometimes is one the advocate cannot rely on being there — and
         cannot distinguish from one that found nothing.
         """
-        threads = tuple(t.id for t in matter.threads)
+        # THREADS BORN TOGETHER ARE NOT YET TWO DISPUTES.
+        #
+        # `born_together` is the set created by ONE message on THIS turn.
+        # The count read that creates them measures 2-3 of 6 and is
+        # unstable on identical input (J-4), so a brief describing one
+        # claim can arrive here as three threads -- and this pass then
+        # reported a contradiction between two halves of one transaction.
+        #
+        # Only that PAIR is withheld. A thread created this turn is still
+        # compared against everything already on the file, which is the
+        # comparison worth having.
+        considered = tuple(t for t in matter.threads
+                           if t.id not in born_together)
+        if len(born_together) == 1:
+            # One new thread is not a split. Nothing to hold back.
+            considered = tuple(matter.threads)
+        elif born_together:
+            # Keep ONE of them, so a genuine new dispute is still weighed
+            # against the standing file rather than vanishing from the
+            # pass entirely.
+            first = next((t for t in matter.threads
+                          if t.id in born_together), None)
+            if first is not None:
+                considered = (*considered, first)
+
+        threads = tuple(t.id for t in considered)
 
         found: tuple | None
         if len(threads) < 2:
@@ -3083,7 +3131,7 @@ class TurnEngine:
             try:
                 res = self._model.structured(
                     adversarial.build_exposure_prompt(
-                        tuple((t.id, t.label) for t in matter.threads)),
+                        tuple((t.id, t.label) for t in considered)),
                     adversarial.EXPOSURE_SCHEMA, Tier.ROUTINE, max_tokens=700)
                 metrics.record_call(res)
                 found = adversarial.read_exposures(res.data or {}, threads)
@@ -3108,15 +3156,27 @@ class TurnEngine:
                       f"disputes do not damage each other — nobody looked."))]
 
         if report.state is adversarial.ExposureState.NONE_FOUND:
+            held = len(born_together) - 1 if len(born_together) > 1 else 0
             return [Element(
                 kind=ElementKind.GROUND, disclosure=True,
                 text=("Across this file: I looked for a position on one "
-                      "dispute that damages another and found none."))]
+                      "dispute that damages another and found none."
+                      + (f" {held} thread(s) opened by this one message "
+                         f"were not weighed against each other -- nothing "
+                         f"has confirmed yet that they are separate "
+                         f"disputes." if held else "")))]
 
+        # LABELS, NEVER IDS. `{e.from_thread}` is a ThreadId and this
+        # rendered it into advocate-facing text -- `... on
+        # thr_016c52910d37 - This damages the defence ...`. The prompt now
+        # sends labels so the read answers in them; `_label_of` is the
+        # fallback for a value that is still an id.
+        labels = {t.id: t.label for t in matter.threads}
         return [Element(
             kind=ElementKind.GROUND, disclosure=True, signal=Signal.CONTRADICTION,
-            text=(f"Across this file: {e.what} on {e.from_thread} — "
-                  f"{e.consequence} on {e.to_thread}."))
+            text=(f"Across this file: {e.what} on "
+                  f"{_label_of(e.from_thread, labels)} — "
+                  f"{e.consequence} on {_label_of(e.to_thread, labels)}."))
             for e in report.exposures]
 
     @implements("D6")

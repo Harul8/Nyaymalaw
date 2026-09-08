@@ -312,40 +312,40 @@ THREE_AT_ONCE = (
 
 @pytest.mark.eval_id("E-082")
 def test_the_disputes_not_advised_on_are_named_in_the_answer(tmp_path):
-    """BK-27's clause: *the other disputes are named and marked NOT ASSESSED.*
+    """G-SPLIT: the count is REPORTED, and the file is not split on it.
 
-    THE METRICS ASSERTION ALONE WOULD HOLD WITH THE SPLIT INVISIBLE, which is
-    B-128's shape and the reason this file exists. The advocate asked about
-    three disputes; the turn derives one posture, one chronology and one
-    limitation, and therefore answers on ONE. If that is not said, the other
-    two read as answered -- which is how a brief carrying a trespass five days
-    old was told every deadline on the file had passed.
+    THIS ONCE ASSERTED THREE THREADS. BK-27 opened one per dispute the count
+    read described; that read was then measured at 2-3 of 6 across six
+    briefs and unstable on identical input, so the file is no longer split
+    on it. What survives is the disclosure -- and the disclosure is now the
+    whole mechanism, because `threading.py`'s asymmetry justified splitting
+    on the ground that a wrong merge inverts the advice SILENTLY.
+
+    THE METRICS ASSERTION ALONE WOULD HOLD WITH THE LINE INVISIBLE, which is
+    B-128's shape and the reason this file exists. If the advocate is not
+    told, a brief that read as three disputes becomes one thread in silence.
     """
     engine, _ = build(tmp_path)
-    out = engine.run(TurnInput(advocate_id="adv_1", message=THREE_AT_ONCE,
+    out = engine.run(TurnInput(advocate_id='adv_1', message=THREE_AT_ONCE,
                                today=TODAY))
 
-    assert len(out.matter.threads) >= 3, (
-        f"three disputes were described and {len(out.matter.threads)} "
-        f"thread(s) opened, so there is no split for this to disclose")
-    assert "G-SPLIT" in _fired(out), "G-SPLIT did not fire on a split file"
+    assert 'G-SPLIT' in _fired(out), 'G-SPLIT did not fire at all'
+    assert len(out.matter.threads) == 1, (
+        'the file was split on the count read: '
+        + str([t.label for t in out.matter.threads]))
 
-    said = [e.text for e in out.answer.elements if "NOT ASSESSED" in e.text
-            and "separate" in e.text]
+    said = [e.text for e in out.answer.elements
+            if 'separate' in e.text and 'one thread' in e.text]
     assert len(said) == 1, (
-        "the split reached the metrics and not the advocate. The answer's "
-        "own bytes carry:\n"
-        + "\n".join(f"  - {e.text[:110]}" for e in out.answer.elements))
+        'the count reached the metrics and not the advocate, so a message '
+        'that read as several disputes became one thread in silence: '
+        + ' | '.join(e.text[:90] for e in out.answer.elements))
 
-    # AND IT NAMES THEM. "Some disputes were not assessed" is a disclosure the
-    # advocate cannot act on; the point is that they can name one and get it.
-    line = said[0]
-    unadvised = [t.label for t in out.matter.threads
-                 if t.label != out.answer.thread_label] \
-        if hasattr(out.answer, "thread_label") else []
-    for label in unadvised:
-        assert label in line, f"{label!r} was split off and never named"
-
+    # AND IT INVITES THE CORRECTION. A disclosure the advocate cannot act
+    # on is a note, not a question.
+    assert 'say so' in said[0].lower(), (
+        'the advocate is told the count and not how to correct it: '
+        + said[0])
 
 def test_a_single_dispute_file_says_nothing_about_splitting(tmp_path):
     """POSITIVE CONTROL, and the noise half of E-082's counterexample. A
