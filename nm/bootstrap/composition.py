@@ -8,6 +8,7 @@ first external review found lived between a correct module and the served path.
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
@@ -60,6 +61,7 @@ class Application:
             # Generated per-installation rather than defaulted to empty: an
             # unconfigured key must never become "no encryption".
             key = _ensure_local_key(self.root)
+        _refuse_a_shared_seal(key)
 
         self.store = store or FileMatterStore(
             os.environ.get("NM_MATTER_STORE") or (self.root / ".nm"), key=key)
@@ -148,6 +150,63 @@ class Application:
             "manifest_acts": len(self.manifest.entries),
             "manifest_corpus_version": self.manifest.corpus_version,
         }
+
+
+#: What a credential looks like, by name. Deliberately broad: the rule is about
+#: the VALUE being shared, and a narrow list would only refuse the collision
+#: that was found rather than the shape.
+_CREDENTIAL_NAME = re.compile(r"KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL", re.I)
+
+#: The seal is the matter key itself. Nothing else may hold the same value.
+_SEAL = "NM_MATTER_KEY"
+
+
+class SharedSealRefused(RuntimeError):
+    """The seal on client files is also being used for something else."""
+
+
+def _refuse_a_shared_seal(key: str, env: dict[str, str] | None = None) -> None:
+    """BK-21. THE SEAL ON CLIENT FILES MAY NOT BE ANY OTHER CREDENTIAL.
+
+    `NM_MATTER_KEY` and `NM_MODEL_API_KEY` held the same `sk-proj-...` value,
+    so one secret was doing two unrelated jobs. That is not untidiness. The
+    OpenAI credential is rotated as a matter of routine -- it leaks, a laptop
+    goes, a provider forces it -- and rotating it would have made **every
+    stored matter permanently unreadable**, because the same string was sealing
+    them. It has already been demonstrated at zero cost: `start.ps1` supplied a
+    different key, the real one was shadowed, and the account could not be
+    opened. That is the shape of a rotation, and the only difference was that
+    the old value still existed.
+
+    THE GUARD IS AT THE COMPOSITION ROOT, not in the store. A store that
+    refuses this is right in the core and wrong where the application is
+    assembled -- CLAIM section 8's exact failure, where forty offline tests
+    passed while every served turn crashed. This runs once, where the key is
+    chosen.
+
+    THE POPULATION IS EVERY CREDENTIAL IN THE ENVIRONMENT, not
+    `NM_MODEL_API_KEY`. Naming the one variable that collided would refuse
+    today's mistake and none of the others -- the one-site patch this
+    repository has recorded forty-seven times. The rule is that the seal is
+    unique, so the comparison is against everything credential-shaped.
+    """
+    env = os.environ if env is None else env
+    if not key.strip():
+        return                     # an unset key is a different defect
+    shared = sorted(
+        name for name, value in env.items()
+        if name != _SEAL and value and value.strip() == key.strip()
+        and _CREDENTIAL_NAME.search(name))
+    if not shared:
+        return
+    raise SharedSealRefused(
+        f"{_SEAL} holds the same value as {', '.join(shared)}. The matter key "
+        f"seals client files; every other credential here is rotated as a "
+        f"matter of routine, and rotating one that is also the seal makes "
+        f"every stored matter permanently unreadable. Generate a new "
+        f"{_SEAL}, re-key the store with it, and only then rotate the other "
+        f"credential -- in that order, because rotating first destroys the "
+        f"matters.")
 
 
 def _ensure_local_key(root: Path) -> str:

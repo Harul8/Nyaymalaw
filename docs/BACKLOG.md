@@ -27,21 +27,46 @@ found cannot answer it.
 
 | Phase | | Features | Steps | Contracted | Verified | Open P0 | Readiness |
 |---|---|---:|---:|---:|---:|---:|---|
-| A | Arrive | 3/4 | 4 | 0/4 | 6/25 | 5 | not releasable |
-| B | Open a matter | 0/6 | 4 | 2/4 | 3/11 | 1 | not releasable |
-| C | Take the brief | 5/7 | 7 | 0/7 | 5/16 | 3 | not releasable |
-| D | Work the file | 8/9 | 14 | 1/14 | 8/24 | 3 | not releasable |
-| E | Advise | 1/5 | 5 | 0/5 | 4/22 | 3 | not releasable |
-| F | Act | 0/7 | 7 | 0/7 | 0/4 | 0 | not releasable |
-| G | Carry | 0/3 | 3 | 0/3 | 1/6 | 0 | not releasable |
-| H | Close | 0/2 | 2 | 0/2 | 0/3 | 0 | not releasable |
-| I | Leave | 1/1 | 1 | 0/1 | 1/11 | 3 | not releasable |
+| A | Arrive | 3/4 | 4 | 0/4 | 7/29 | 6 | not releasable |
+| B | Open a matter | 0/6 | 4 | 2/4 | 4/14 | 3 | not releasable |
+| C | Take the brief | 5/7 | 7 | 0/7 | 6/24 | 8 | not releasable |
+| D | Work the file | 8/9 | 14 | 1/14 | 9/31 | 8 | not releasable |
+| E | Advise | 1/5 | 5 | 0/5 | 5/31 | 9 | not releasable |
+| F | Act | 0/7 | 7 | 0/7 | 1/10 | 4 | not releasable |
+| G | Carry | 0/3 | 3 | 0/3 | 2/12 | 3 | not releasable |
+| H | Close | 0/2 | 2 | 0/2 | 1/5 | 0 | not releasable |
+| I | Leave | 1/1 | 1 | 0/1 | 2/16 | 5 | not releasable |
 
-**70 rows · 10 open P0 · 1 blocked · 18/44 features implemented**
+**80 rows · 17 open P0 · 1 blocked · 18/44 features implemented**
+
+### Professional plan — registered and derived
+
+**20 advocate standards · 13 expert-workflow states · 5 advice levels · 7 roles · 14 gap closures · 80 wave rows**
+
+Gap status below is computed from the linked BK/J rows. It is never authored in `professional.json` or maintained in the workbook.
+
+| Gap | Foundation | Feature complete | Release gate | Derived state | Registered work |
+|---|---:|---:|---:|---|---|
+| GC-01 | W1 | W1 | W7 | PLANNED | BK-62 |
+| GC-02 | W1 | W1 | W7 | PLANNED | BK-63, BK-67 |
+| GC-03 | W2 | W2 | W7 | PLANNED | BK-54, BK-67 |
+| GC-04 | W0 | W2 | W7 | IN_PROGRESS | BK-69, BK-54, BK-42 |
+| GC-05 | W2 | W3 | W7 | PLANNED | BK-64, BK-67 |
+| GC-06 | W3 | W3 | W7 | PLANNED | BK-65, BK-67 |
+| GC-07 | W3 | W4 | W7 | PLANNED | BK-70, BK-55, BK-67 |
+| GC-08 | W4 | W4 | W7 | IN_PROGRESS | BK-37, BK-55, BK-67 |
+| GC-09 | W4 | W5 | W7 | PLANNED | BK-55, BK-57, BK-67 |
+| GC-10 | W2 | W4 | W7 | IN_PROGRESS | BK-66, BK-37, BK-41, BK-67 |
+| GC-11 | W1 | W5 | W7 | PLANNED | BK-63, BK-56, BK-57, BK-67 |
+| GC-12 | W3 | W7 | W7 | IN_PROGRESS | BK-67, BK-42 |
+| GC-13 | W2 | W6 | W7 | IN_PROGRESS | BK-68, BK-32, BK-37, BK-39, BK-56, BK-59, BK-42 |
+| GC-14 | W0 | W2 | W7 | IN_PROGRESS | BK-69, BK-54, BK-42 |
+
+Derived gap state: IN_PROGRESS 6, PLANNED 8
 
 ### Open P0 — what is unsafe
 
-- **BK-21** [A/C/I] the matter encryption key IS the OpenAI API key — *ready* · refuse NM_MATTER_KEY equal to another credential; then the re-key tool, before any rotation
+- **BK-21** [A/C/I] the matter encryption key IS the OpenAI API key — *verifying* · the provider credential itself is still the old value and only the account holder can rotate it at the provider; see BK-21-AC4 and docs/DECISIONS.md
 - **BK-31** [A] account access, recovery and workspace identity — *blocked* · resolve the roster contradiction before any further work
 - **BK-33** [A] recognisable matter cover, truthful board and real reopen — *in_progress* · render passed_deadlines, which the projection already emits
 - **BK-34** [B] front-door legal and professional screens before substance — *in_progress* · stale the conflict clearance when a party is added; make the emergency route reachable
@@ -51,6 +76,13 @@ found cannot answer it.
 - **BK-43** [A/E] the overflow rule that switches off its own check — *verifying* · run the journey suite to confirm the width phase can now fail
 - **BK-44** [A/C/D/E/I] three closed rows can regress and the command stays green — *verifying* · run the suite; a strict marker may XPASS
 - **BK-49** [D/E] a truncated model answer is never detected — *ready* · raise the typed error on finish_reason == 'length'
+- **BK-62** [B/C/E/F/G] commission and task authority record — *planned* · specify and build the versioned commission, scope, objective, deadline, output and decision-authority record
+- **BK-63** [A/B/C/D/E/F/G/I] professional role and authority control — *planned* · bind instruction, decision, drafting, filing, negotiation, administration and support operations to explicit professional roles and recorded authority
+- **BK-64** [C/D/E] typed proposition and evidence model — *planned* · define immutable sources, locators and proposition types for instructions, allegations, admissions, documents, testimony, inference and assumptions
+- **BK-65** [D/E] legal dependency graph and selective invalidation — *planned* · model predicates, issues, rules, evidence, remedies and conclusions as a versioned dependency graph
+- **BK-67** [C/D/E/F] expert-advocate evaluation gate — *planned* · turn PA-01 to PA-20 into representative matter rubrics with named reviewers, thresholds, reservations and regression policy
+- **BK-69** [C/G/I] multimodal privacy and processing boundary — *planned* · define consent, purpose, quarantine, processor, least-privilege, privilege, retention, deletion and derivative-attribution controls before media intake ships
+- **BK-70** [D/E/F] remedy and enforceability model — *planned* · model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
 
 ### Blocked — waiting on a decision
 
@@ -59,7 +91,7 @@ found cannot answer it.
 ### Admitted gaps in the evidence
 
 - **26 rows rest on prose evidence** (`legacy: true`), closed before this registry existed. Each is retired by attaching an executable proof, not by editing a heading.
-- **43 active rows carry no acceptance criteria yet**, so `done` cannot be derived for them however much work is finished.
+- **35 active rows carry no acceptance criteria yet**, so `done` cannot be derived for them however much work is finished.
 - **44 of 47 journey steps carry no contract**, so what the step must do, refuse and recover from is not yet stated anywhere a check can read.
 - **37 steps are DERIVED, not stated by the PRD.** The PRD gives a sequence for Phase B and Phase D and a question for the other seven; a derived step is a reading of the plan and is not the plan.
 
@@ -2303,17 +2335,167 @@ criterion that passes its unit test and has never been near counsel review
 reads `NOT_RUN` rather than green. `done` is not in the vocabulary; it is
 derived, and the linter refuses it as an authored value.
 
-**Stages 1 to 4 are done** — ids and schema, the registry, the inventory of 69
-rows and 44 features, structural and dependency validation. **Stages 5 to 12
-are not**: acceptance ids on existing tests, structured journey output, the
-traceability matrix, negative controls beyond this row's own, model
-evaluations, counsel-review records, `conformance.py`, and production feedback.
+**The first control-plane layers now exist.** The registry holds 70 work items
+and 44 features; `steps.yaml` holds 47 journey steps; the board is generated;
+and each structural rule has a planted counterexample. Acceptance coverage,
+full step contracts, model evaluation, counsel review, conformance reporting
+and production feedback remain incomplete and continue to keep BK-60 open.
 
-**Journey steps do not exist yet.** `BK-60-AC5` requires them and is recorded
-`NOT_RUN` with the reason, because a check over an empty steps registry would
-be vacuous rather than green — which is the exact failure this row exists to
-refuse, and it would be embarrassing to commit it inside the mechanism built to
-catch it.
+**Build-guide subtask opened 9 September 2026.** Create one indexed cross-phase
+method, split into four small playbooks that can be opened and closed at the
+relevant point: Start a Change, Build a Change, Test a Change and Sign Off a
+Change. Each playbook must state its entry condition, short operating sequence,
+stop rules, required closing record and exit test. The index owns only the
+universal principles and source precedence. The system must point to the
+authoritative journey and wave plan, not restate assignments, counts or current
+status and become a second plan. Make it visible from the repository working
+instructions. Record completion here after the documents, links and ordinary
+Class-A/backlog checks pass; this subtask does not close BK-60's still-unmet
+step-contract and evidence work.
+
+**Build-guide subtask completed 9 September 2026.** `docs/BUILD_GUIDE.md` is a
+short front door holding the ten universal rules, professional test, source
+ownership and four-record lifecycle. `docs/playbooks/` holds four independent
+playbooks: Start a Change, Build a Change, Test a Change and Sign Off a Change.
+Each has an entry condition, stage-only procedure, stop rules, close checklist,
+closing-record template and explicit handoff or return path. `CLAUDE.md` points
+to the system and now identifies the current backlog registries as the owners
+of journey, wave, status and professional-plan truth. No feature, wave or
+delivery state changed. The longer proposal to enumerate every prose rule in a
+machine registry is deliberately not claimed here; that would be separate
+control-plane work. BK-60 remains in progress because its missing journey
+contracts and higher-order evidence are unchanged by a usable guide.
+
+**Professional-plan reconciliation opened 9 September 2026.** The end-to-end
+workbook added 20 professional standards, 13 expert workflow states, five
+advice-maturity levels and 14 gap-closure rows. They were useful content but
+existed only in the workbook, while delivery waves also lived outside the
+registry. That allowed the backlog to report green without seeing the work.
+BK-62 to BK-70 register the deliverable gaps. BK-71 registers the control-plane
+change that makes every professional object, gap mapping and delivery wave
+machine-readable and fail-closed. `Gap Closure` becomes a derived crosswalk;
+it does not carry an authored status.
+
+## BK-62 — commission and task authority record
+Opened 9 September 2026.
+
+Before substantive work, NM must know the decision sought, objective, scope,
+deadline, requested output, who instructs and who decides. The record is
+versioned and a changed commission invalidates only work that depends on it.
+This is W1 work spanning admission, briefing, advice and action.
+
+## BK-63 — professional role and authority control
+Opened 9 September 2026.
+
+Client, authorised representative, instructing advocate, Advocate-on-Record,
+designated Senior Advocate, researcher, operations user and administrator do
+not have interchangeable powers. NM must allow, delegate or refuse each
+material instruction and action by configured role, engagement and recorded
+authority. This is W1 work and precedes role-sensitive advice or action.
+
+## BK-64 — typed proposition and evidence model
+Opened 9 September 2026.
+
+An instruction, allegation, admission, document, testimony, transcript,
+inference and assumption must not collapse into one undifferentiated fact.
+Every material proposition needs a source locator, provenance, dispute state,
+reliability, privilege, admissibility, weight, burden and materiality. This is
+the W2 foundation for briefing and the W3 legal file.
+
+## BK-65 — legal dependency graph and selective invalidation
+Opened 9 September 2026.
+
+Cause, forum, jurisdiction, limitation, procedure, evidence, remedy and theory
+change one another. NM must record those dependencies, recompute downstream
+conclusions when a predicate changes, preserve unaffected work and keep prior
+versions auditable. This is W3 work.
+
+## BK-66 — advocate trust evaluation
+Opened 9 September 2026.
+
+Correctness alone does not show whether NM listened, remembered, explained,
+preserved control or followed through. Representative advocates and users must
+evaluate the observable PA-01 to PA-10 behaviours across the served journey.
+Material trust failures remain visible and block affected conformance. The
+evaluation framework starts in W2 and is reused through W4 and release.
+
+## BK-67 — expert-advocate evaluation gate
+Opened 9 September 2026.
+
+Counsel-facing work must be assessed on issue quality, judgment, source and
+evidence discipline, legal accuracy, adverse analysis, candour, remedy,
+strategy, communication and usability. Named qualified reviewers, matters,
+thresholds, reservations and expiry are required. The gate is established in
+W3 and must be current at release.
+
+## BK-68 — counsel workspace and progressive disclosure
+Opened 9 September 2026.
+
+The 47-step control model must not become the screen. The workspace should let
+an advocate reorient quickly around what NM understood, why it asks, what
+changed, readiness, decisions, authority and next action, while keeping deeper
+evidence inspectable. The foundation belongs in W2 and later phases extend it.
+
+## BK-69 — multimodal privacy and processing boundary
+Opened 9 September 2026.
+
+Voice, audio, video and uploaded files can contain third-party, privileged,
+biometric, malicious or highly sensitive material. Before W2 ingestion, W0
+must define purpose and authority, processor boundaries, quarantine, malware
+handling, least privilege, encryption, retention, redaction and deletion.
+Unsafe or unauthorised media must never enter legal reasoning.
+
+## BK-70 — remedy and enforceability model
+Opened 9 September 2026.
+
+A legally strong claim may still have no useful or timely outcome. W3 must
+model interim and final relief, prerequisites, timing, enforcement route,
+recoverable assets and practical constraints; W4 advice must use that model
+when comparing options.
+
+## BK-71 — professional plan and delivery-wave reconciliation
+Opened 9 September 2026.
+
+This item records the present implementation task. Add authoritative
+professional and wave registries, link every PA/EW/AM/ROLE/GC object to known
+features, steps and work, make every GC state derive from its work items, and
+make lint print and validate the population it evaluated. Plant failures for
+an empty registry, a dangling reference, a missing wave and a later-wave
+dependency. Regenerate the workbook from those sources and preserve the exact
+feature, step and pre-existing item states.
+
+Completed 9 September 2026. BK-71 now derives `done`: `plan.json` registers one
+wave position for all 80 BK/J rows; `professional.json` registers 20 PA, 13 EW,
+5 AM, 7 ROLE and 14 GC objects; every cross-reference resolves; all dependency
+and stage boundaries run forward; GC status is computed from linked work rather
+than authored. The four positive-control families reject an empty population,
+dangling reference, missing or duplicate wave, reverse-wave dependency,
+late-stage link and authored GC status. The targeted Class-A suite passes 21/21,
+the final lint reports zero problems, and the 15-sheet workbook was regenerated
+without changing the 44 feature rows, 47 journey-step rows or the delivery,
+implementation and verification fields of the 70 pre-existing work items.
+
+Reopened 9 September 2026 for control hardening after independent review. Fold
+the reviewer’s complete probe set into the Class-A suite: empty each of the five
+professional populations; dangle every professional reference type; exercise
+missing, duplicate, invalid and null-on-active waves; and retain independent
+checks for authored GC status, stage ordering, empty links, invalid link stages,
+reverse dependencies and late stage links. Each mutation must change a field
+that exists and produce its own expected complaint. The probes remain in the
+existing `class_a`-marked test module, so the repository's every-commit Class-A
+CI run executes them without changing the purpose or runtime of `backlog
+check`. BK-71 returns to derived `done` only after the expanded suite passes.
+
+Completed hardening 9 September 2026. The reviewer's reported probe matrix is
+now 22 atomic parameterized Class-A cases: five population deletions, six
+professional dangling-reference types, four invalid wave shapes, and separate
+controls for authored GC status, both stage-ordering directions, empty links,
+invalid link stages, reverse-wave dependencies and late foundation links. Each
+case first proves the clean baseline, asserts that it changed an existing
+field, and then requires its own lint complaint. `backlog check` remains a
+lint/status/render command; the repository's existing `pytest -m class_a` CI
+path runs the matrix. The expanded suite passes and BK-71 again derives `done`
+from its four acceptance-evidence links rather than an authored status.
 
 ## BK-30 — executable login-to-logout acceptance journey — **PARTLY DONE · P1**
 
@@ -2848,6 +3030,44 @@ its measurements are the evidence, not the headings.
 BK-20 was the recorded COST of a change the advocate asked for, and it
 closed when the half it needed - the login rate limit - was built.
 
+
+
+**BUILT 9 September 2026.** Both halves, because either alone is worse than
+neither: the guard without the re-key stops the product, and the re-key without
+the guard leaves nothing to stop it happening again.
+
+**The guard is at the composition root** (`nm/bootstrap/composition.py`), not
+in the store. A guard that is right in the core and absent where the
+application is assembled is CLAUDE.md §8's exact failure -- forty offline tests
+passing while every served turn crashed.
+
+**And it refuses the SHAPE, not the pair.** `NM_MATTER_KEY` may not equal any
+credential-shaped variable in the environment. Naming `NM_MODEL_API_KEY` would
+have guarded the collision already found and none of the others, which is the
+one-site patch this repository has recorded 47 times. The invariant is
+parameterised over seven variables nobody has added yet.
+
+**The store was re-keyed.** `tools/rekey_matter_store.py`: 784 files, **247
+sealed and rewritten**, 537 deliberately open and untouched (BK-22 put the
+directory in the open), **0 unreadable**. Backed up first, every rewritten file
+verified against the new key before success was claimed, backup left on disk
+for the operator to remove. Verified on the bytes afterwards -- the application
+composes and opens real matters.
+
+**The classifier's middle case is the one that mattered**, and the first draft
+got it wrong twice. Asking "is it JSON?" refused the whole store because the
+audit trails are tab-separated. Asking "is it text?" would have been worse: a
+file sealed under a DIFFERENT key is printable ASCII too, so it would have been
+waved through as deliberately open and left behind -- a matter silently dropped
+from the re-key and readable by nothing afterwards. The rule is the Fernet
+token prefix, and the control plants exactly that case.
+
+**OUTSTANDING, AND ONLY THE ACCOUNT HOLDER CAN DO IT.** The provider credential
+is still the old value and was exposed in a session transcript on 7 September,
+so it must be rotated at OpenAI. It is now SAFE to rotate -- the store no
+longer depends on it -- which is the whole point of the work above. Recorded as
+`BK-21-AC4`, `production_measure`, `NOT_RUN`, and BK-21 will not derive `done`
+until it is done.
 ## BK-16 - the matter cipher downgraded silently - **FIXED**
 **MEASURED, and less bad than it first looks.** `_Cipher.__init__` catches
 `ImportError` on `cryptography` and sets

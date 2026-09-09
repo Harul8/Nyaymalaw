@@ -572,17 +572,66 @@ items:
   title: the matter encryption key IS the OpenAI API key
   kind: substrate
   priority: P0
-  delivery_status: ready
-  implementation: none
-  verification: none
-  affects_phases:
-  - A
-  - C
-  - I
+  delivery_status: verifying
+  implementation: complete
+  verification: passing
+  affects_phases: [A, C, I]
   record: docs/BACKLOG.md#bk-21-the-matter-encryption-key-is-the-openai-api-key
-  next_action: refuse NM_MATTER_KEY equal to another credential; then the re-key tool, before
-    any rotation
-  acceptance: []
+  next_action: the provider credential itself is still the old value and only the
+    account holder can rotate it at the provider; see BK-21-AC4 and docs/DECISIONS.md
+  acceptance:
+  - id: BK-21-AC1
+    requirement: the seal is refused when it equals ANY other credential in the environment,
+      not only the one that collided
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_seal_is_not_another_credential.py::test_the_seal_may_not_be_any_other_credential
+    negative_control:
+      mutation: set a seal that shares its value with no other credential
+      expected_failure: the guard must NOT fire; a guard that refuses a correct
+        configuration stops the product at start-up and gets suppressed
+  - id: BK-21-AC2
+    requirement: the re-key tool separates sealed, deliberately open and unreadable,
+      and refuses the run rather than skipping a file it cannot open
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_seal_is_not_another_credential.py::test_the_rekey_tool_tells_sealed_from_open_from_unreadable
+    negative_control:
+      mutation: hand it a file sealed under a different key
+      expected_failure: classified UNREADABLE and the run stops; classifying it as
+        open would silently drop a matter nothing can read afterwards
+  - id: BK-21-AC3
+    requirement: the seal on this machine shares its value with nothing
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_seal_is_not_another_credential.py::test_the_real_environment_does_not_share_its_seal
+        note: 247 sealed files re-keyed 9 September 2026 and verified with the new
+          key; the application composes and opens real matters
+    negative_control:
+      mutation: restore the previous .env, where NM_MATTER_KEY equalled NM_MODEL_API_KEY
+      expected_failure: composition refuses to start
+  - id: BK-21-AC4
+    requirement: the provider credential that was shared is itself rotated at the provider
+    required_evidence: [production_measure]
+    evidence:
+      production_measure:
+        result: NOT_RUN
+        ref: ''
+        note: ONLY THE ACCOUNT HOLDER CAN DO THIS. The value was exposed in a session
+          transcript on 7 September, so it must be rotated at OpenAI. The store no
+          longer depends on it, so rotating is now safe and no longer destroys the
+          matters -- which was the whole point of AC1 to AC3.
+    negative_control:
+      mutation: rotate the provider credential before re-keying
+      expected_failure: every stored matter becomes permanently unreadable -- the
+        destructive order this row exists to prevent
+
 - id: BK-22
   title: signing in depended on a key that is meant to rotate
   kind: substrate
@@ -788,7 +837,11 @@ items:
   phase: E
   record: docs/BACKLOG.md#bk-37-senior-counsel-answer-shape-and-plain-language-trust-surface
   next_action: assert the promised sections, not a count of two
-  acceptance: []
+  acceptance:
+  - id: BK-37-AC1
+    requirement: every counsel-facing answer declares its advice maturity and exposes the conclusion, support, uncertainty and next action appropriate to that level
+    required_evidence: [model_eval, counsel_review]
+    evidence: {}
 - id: BK-38
   title: search-to-authority-to-matter research workflow
   kind: journey
@@ -839,7 +892,11 @@ items:
   record: docs/BACKLOG.md#bk-41-latency-progress-cancellation-and-degraded-service-behaviour
   next_action: phase streaming and a measured p90; its cancel clause rests on BK-36, which
     does not hold for an opening turn
-  acceptance: []
+  acceptance:
+  - id: BK-41-AC1
+    requirement: during delay, cancellation or degraded service the user can see what is happening, what remains reliable and what they can safely do next
+    required_evidence: [browser_journey, production_measure]
+    evidence: {}
 - id: BK-42
   title: production trust, privacy, accessibility and recovery gate
   kind: substrate
@@ -851,9 +908,16 @@ items:
   - A
   - E
   - I
+  depends_on:
+  - BK-54
+  - BK-69
   record: docs/BACKLOG.md#bk-42-production-trust-privacy-accessibility-and-recovery-gate
   next_action: production controls; overflow evidence restored by BK-43
-  acceptance: []
+  acceptance:
+  - id: BK-42-AC1
+    requirement: production multimodal processing has explicit purpose, processor, privilege, retention, deletion and recovery controls and exposes material boundaries to the user
+    required_evidence: [adversarial_test, counsel_review, production_measure]
+    evidence: {}
 - id: BK-43
   title: the overflow rule that switches off its own check
   kind: control
@@ -1025,12 +1089,23 @@ items:
   implementation: none
   verification: none
   phase: C
+  depends_on:
+  - BK-64
+  - BK-69
   delivers:
   - C2
   - C6
   record: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake
   next_action: specify DOES / NEVER / PRODUCES / EVAL for C2, C6
-  acceptance: []
+  acceptance:
+  - id: BK-54-AC1
+    requirement: intake accepts typed, spoken, uploaded and mixed-media material while preserving the original and source-attributing every extracted proposition
+    required_evidence: [integration_test, browser_journey, adversarial_test]
+    evidence: {}
+  - id: BK-54-AC2
+    requirement: briefing is an interactive loop that retrieves available material, reflects understanding, identifies gaps and asks the smallest question likely to change the task position
+    required_evidence: [model_eval, counsel_review]
+    evidence: {}
 - id: BK-55
   title: 'Phase E: scenarios, proportionality, the decision record and candour'
   kind: journey
@@ -1041,6 +1116,7 @@ items:
   phase: E
   depends_on:
   - BK-37
+  - BK-70
   delivers:
   - E1
   - E3
@@ -1048,7 +1124,11 @@ items:
   - E5
   record: docs/BACKLOG.md#bk-55-phase-e-scenarios-proportionality-the-decision-record-and-candour
   next_action: specify DOES / NEVER / PRODUCES / EVAL for E1, E3, E4, E5
-  acceptance: []
+  acceptance:
+  - id: BK-55-AC1
+    requirement: advice declares its maturity and compares remedy, enforceability, cost, time, proportionality, strategy, settlement and doing nothing against the client's objective
+    required_evidence: [model_eval, counsel_review]
+    evidence: {}
 - id: BK-56
   title: 'Phase F: the drafter brief, drafting and filing control'
   kind: journey
@@ -1059,13 +1139,18 @@ items:
   phase: F
   depends_on:
   - BK-55
+  - BK-63
   delivers:
   - F2
   - F3
   - F4
   record: docs/BACKLOG.md#bk-56-phase-f-the-drafter-brief-drafting-and-filing-control
   next_action: specify DOES / NEVER / PRODUCES / EVAL for F2, F3, F4
-  acceptance: []
+  acceptance:
+  - id: BK-56-AC1
+    requirement: drafting and filing use a recorded authorised role, approved scope and version, owner, deadline and receipt and refuse success when any required authority is absent
+    required_evidence: [integration_test, browser_journey, counsel_review]
+    evidence: {}
 - id: BK-57
   title: 'Phase F: negotiation, witnesses, hearing readiness and court'
   kind: journey
@@ -1076,6 +1161,7 @@ items:
   phase: F
   depends_on:
   - BK-56
+  - BK-63
   delivers:
   - F1
   - F5
@@ -1083,7 +1169,11 @@ items:
   - F7
   record: docs/BACKLOG.md#bk-57-phase-f-negotiation-witnesses-hearing-readiness-and-court
   next_action: specify DOES / NEVER / PRODUCES / EVAL for F1, F5, F6, F7
-  acceptance: []
+  acceptance:
+  - id: BK-57-AC1
+    requirement: negotiation and court work preserve decision authority, settlement limits, the approved case theory and verified handoffs through completion
+    required_evidence: [browser_journey, counsel_review]
+    evidence: {}
 - id: BK-58
   title: 'Phase G: proactive service, the conflict watch and handover'
   kind: journey
@@ -1218,6 +1308,209 @@ items:
     negative_control:
       mutation: give a step half a contract
       expected_failure: lint refuses it; a partial contract is not a contract
+- id: BK-62
+  title: commission and task authority record
+  kind: substrate
+  priority: P0
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases: [B, C, E, F, G]
+  record: docs/BACKLOG.md#bk-62-commission-and-task-authority-record
+  next_action: specify and build the versioned commission, scope, objective, deadline, output and decision-authority record
+  acceptance:
+  - id: BK-62-AC1
+    requirement: every substantive task has a versioned commission naming who instructs, who decides, the objective, scope, forum, deadline and required work product and reopens when a material instruction changes
+    required_evidence: [domain_test, integration_test, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: omit the decision maker or materially change the instruction without reopening readiness
+      expected_failure: the task cannot enter substantive work or retain its prior ready state
+- id: BK-63
+  title: professional role and authority control
+  kind: control
+  priority: P0
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases: [A, B, C, D, E, F, G, I]
+  record: docs/BACKLOG.md#bk-63-professional-role-and-authority-control
+  next_action: bind instruction, decision, drafting, filing, negotiation, administration and support operations to explicit professional roles and recorded authority
+  acceptance:
+  - id: BK-63-AC1
+    requirement: every material instruction, decision and external action is attributable to an allowed role and authority scope, and unauthorised operations are refused and recorded
+    required_evidence: [domain_test, integration_test, adversarial_test, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: ask a research or operations role to approve advice, concede, settle or file outside recorded authority
+      expected_failure: the action is refused and the attempted boundary crossing is auditable
+- id: BK-64
+  title: typed proposition and evidence model
+  kind: substrate
+  priority: P0
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases: [C, D, E]
+  record: docs/BACKLOG.md#bk-64-typed-proposition-and-evidence-model
+  next_action: define immutable sources, locators and proposition types for instructions, allegations, admissions, documents, testimony, inference and assumptions
+  acceptance:
+  - id: BK-64-AC1
+    requirement: every material conclusion traces to a typed proposition and source locator, while contradiction, extraction confidence and confirmation state remain visible
+    required_evidence: [domain_test, integration_test, adversarial_test]
+    evidence: {}
+    negative_control:
+      mutation: pass an unlocated transcript fragment or inferred proposition into a material conclusion
+      expected_failure: the conclusion is withheld or explicitly marked unsupported rather than promoted to fact
+- id: BK-65
+  title: legal dependency graph and selective invalidation
+  kind: substrate
+  priority: P0
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases: [D, E]
+  depends_on:
+  - BK-64
+  record: docs/BACKLOG.md#bk-65-legal-dependency-graph-and-selective-invalidation
+  next_action: model predicates, issues, rules, evidence, remedies and conclusions as a versioned dependency graph
+  acceptance:
+  - id: BK-65-AC1
+    requirement: changing a material predicate invalidates every dependent conclusion and no unrelated conclusion, while preserving the prior state and reason for change
+    required_evidence: [domain_test, integration_test, adversarial_test]
+    evidence: {}
+    negative_control:
+      mutation: reverse one controlling fact after a concluded position exists
+      expected_failure: stale dependent advice cannot remain current and unrelated analysis is not needlessly discarded
+- id: BK-66
+  title: advocate trust evaluation
+  kind: control
+  priority: P1
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases: [A, C, E, G, I]
+  record: docs/BACKLOG.md#bk-66-advocate-trust-evaluation
+  next_action: define representative trust tasks and measure faithful listening, question economy, clarity, agency, continuity and recovery on the served journey
+  acceptance:
+  - id: BK-66-AC1
+    requirement: representative users can identify what NM understood, used, assumed, changed, still needs and will do next without reading engineering state
+    required_evidence: [browser_journey, model_eval, counsel_review]
+    evidence: {}
+- id: BK-67
+  title: expert-advocate evaluation gate
+  kind: control
+  priority: P0
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases: [C, D, E, F]
+  depends_on:
+  - BK-66
+  record: docs/BACKLOG.md#bk-67-expert-advocate-evaluation-gate
+  next_action: turn PA-01 to PA-20 into representative matter rubrics with named reviewers, thresholds, reservations and regression policy
+  acceptance:
+  - id: BK-67-AC1
+    requirement: no counsel-facing feature conforms without current representative-matter review against every applicable advocate standard, with material reservations kept visible
+    required_evidence: [model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: introduce confident but unsupported advice or hide a material adverse case in a golden matter
+      expected_failure: the advocate gate fails even when structural and automated checks remain green
+- id: BK-68
+  title: counsel workspace and progressive disclosure
+  kind: substrate
+  priority: P1
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases: [A, C, D, E, F, G, H, I]
+  record: docs/BACKLOG.md#bk-68-counsel-workspace-and-progressive-disclosure
+  next_action: design the workspace around current understanding, purpose, change, readiness, decision and next action with deeper proof inspectable on demand
+  acceptance:
+  - id: BK-68-AC1
+    requirement: at every target width an advocate can reorient within one minute and reach the evidence, authority, history or control behind any material statement without engineering vocabulary
+    required_evidence: [browser_journey, counsel_review]
+    evidence: {}
+- id: BK-69
+  title: multimodal privacy and processing boundary
+  kind: substrate
+  priority: P0
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases: [C, G, I]
+  record: docs/BACKLOG.md#bk-69-multimodal-privacy-and-processing-boundary
+  next_action: define consent, purpose, quarantine, processor, least-privilege, privilege, retention, deletion and derivative-attribution controls before media intake ships
+  acceptance:
+  - id: BK-69-AC1
+    requirement: unsafe or unauthorised media never reaches legal reasoning, and every original, derivative, processor disclosure, retention decision and deletion remains attributable
+    required_evidence: [domain_test, integration_test, adversarial_test, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: upload malicious, unsupported or out-of-scope media or revoke processing authority during extraction
+      expected_failure: processing is quarantined or stopped without contaminating the matter record, and the disposition is visible
+- id: BK-70
+  title: remedy and enforceability model
+  kind: substrate
+  priority: P0
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases: [D, E, F]
+  depends_on:
+  - BK-64
+  - BK-65
+  record: docs/BACKLOG.md#bk-70-remedy-and-enforceability-model
+  next_action: model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
+  acceptance:
+  - id: BK-70-AC1
+    requirement: advice changes when identical merits have unavailable, hollow, late or disproportionate relief and explains the enforceability basis for the recommendation
+    required_evidence: [domain_test, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: keep merits constant while making the only useful relief unavailable or uneconomic
+      expected_failure: the original recommendation cannot survive unchanged without an explicit justified reservation
+- id: BK-71
+  title: professional plan and delivery-wave reconciliation
+  kind: control
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: passing
+  affects_phases: [A, B, C, D, E, F, G, H, I]
+  record: docs/BACKLOG.md#bk-71-professional-plan-and-delivery-wave-reconciliation
+  next_action: keep the independent positive-control matrix aligned with every new professional registry and control-plane rule
+  acceptance:
+  - id: BK-71-AC1
+    requirement: advocate standards, expert workflow, advice maturity, roles and gap closures are complete, non-vacuous and cross-referenced to registered features, steps and work
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_professional_registries_are_complete_and_cross_referenced
+  - id: BK-71-AC2
+    requirement: every work item has one valid delivery-wave assignment and no hard dependency is scheduled after its consumer
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_delivery_waves_are_complete_and_ordered
+  - id: BK-71-AC3
+    requirement: every gap closure derives current state from registered work and separates foundation, feature-complete and release-gate timing
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_gap_closure_is_derived_from_registered_work
+  - id: BK-71-AC4
+    requirement: the every-commit Class-A suite executes independent positive controls for every professional population and reference type, invalid wave shape, reverse dependency, late or invalid stage link and authored gap status
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls
+        note: the reported probe matrix is represented by 22 independent parameterized Class-A cases, each asserting a real mutation and its specific lint complaint
 - id: J-1
   title: The file list cannot tell one matter from another
   kind: finding
@@ -1326,6 +1619,18 @@ items:
   next_action: a fix ORDER, superseded by the phase sequence
   acceptance: []
 events:
+- item: BK-71
+  at: '2026-09-09'
+  from: in_progress
+  to: verifying
+  reason: the expanded independent positive-control matrix passes in the existing every-commit Class-A pytest module
+  evidence: tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls
+- item: BK-71
+  at: '2026-09-09'
+  from: done
+  to: in_progress
+  reason: independent review confirmed the control but identified a broader positive-control matrix for the every-commit Class-A suite
+  evidence: tests/test_the_backlog_states_one_truth.py
 - item: BK-34
   at: '2026-09-09'
   from: done
