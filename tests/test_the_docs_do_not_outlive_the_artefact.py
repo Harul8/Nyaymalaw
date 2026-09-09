@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import pathlib
 import re
+import sqlite3
 
 import pytest
 
@@ -54,7 +55,35 @@ LIVE_DOCS = (
     "docs/BASELINE.md",
 )
 
-#: (the artefact, phrases that assert it does not exist).
+def _file_exists(path: pathlib.Path) -> bool:
+    """Presence for an artefact that IS its file."""
+    return path.exists()
+
+
+def _holds_embeddings(path: pathlib.Path) -> bool:
+    """Presence for an artefact whose file proves nothing on its own.
+
+    `.code-review-graph/graph.db` existed for weeks with zero vectors in it,
+    so a `path.exists()` test here would assert that semantic search works
+    from the moment the graph is first built. **Presence is a measured
+    property of the contents, not a stat on the path** -- the RG-01 lesson in
+    CLAUDE.md, where a count taken from the wrong index read exactly like
+    absence and blocked a release.
+
+    A missing table is "not built", which is a legitimate live claim.
+    """
+    if not path.exists():
+        return False
+    con = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    try:
+        return bool(con.execute("SELECT COUNT(*) FROM embeddings").fetchone()[0])
+    except sqlite3.Error:
+        return False
+    finally:
+        con.close()
+
+
+#: (the artefact, phrases that assert it does not exist, what PRESENT means).
 #:
 #: The phrases are matched case-insensitively against the whole document, so a
 #: sentence explaining that the claim was WRONG has to avoid them -- which is
@@ -66,7 +95,15 @@ ABSENCE_CLAIMS = (
         "build_authority_index.py` has never been run",
         "the authority index has never been run",
         "the index has never been built",
-    )),
+    ), _file_exists),
+    # 9 September 2026. CLAUDE.md carried "Semantic search (embeddings) | NOT
+    # WORKING" and "embeddings are deliberately deferred" while 2,572 vectors
+    # sat in graph.db -- the same shape as B-141, one artefact over.
+    (".code-review-graph/graph.db", (
+        "semantic search (embeddings) | **not working**",
+        "embeddings are deliberately deferred",
+        "without embeddings there is no conceptual search",
+    ), _holds_embeddings),
 )
 
 
@@ -77,8 +114,8 @@ def test_no_live_document_says_an_artefact_is_absent_while_it_is_on_disk():
     the thing under test. A synthetic file would prove the regex works.
     """
     wrong = []
-    for rel, phrases in ABSENCE_CLAIMS:
-        if not (ROOT / rel).exists():
+    for rel, phrases, is_present in ABSENCE_CLAIMS:
+        if not is_present(ROOT / rel):
             continue                      # not built is a legitimate state
         for doc in LIVE_DOCS:
             path = ROOT / doc
@@ -97,14 +134,23 @@ def test_no_live_document_says_an_artefact_is_absent_while_it_is_on_disk():
           "was built, and five reports repeated it.")
 
 
-def test_the_check_can_see_a_stale_claim():
+@pytest.mark.parametrize("stale", [
+    "tools/build_authority_index.py` has never been run",          # B-141
+    "| Semantic search (embeddings) | **NOT WORKING** — see below",  # 9 Sep 2026
+    "**Embeddings are deliberately deferred, not forgotten.**",      # 9 Sep 2026
+])
+def test_the_check_can_see_a_stale_claim(stale):
     """THE POSITIVE CONTROL. A checker that always returns [] passes a sweep
-    identically -- B-049, on every commit for weeks."""
-    stale = "tools/build_authority_index.py` has never been run"
-    assert any(stale.lower() in phrase.lower() or phrase.lower() in stale.lower()
-               for _, phrases in ABSENCE_CLAIMS for phrase in phrases), (
-        "the phrase that actually went stale is not among the ones this "
-        "checks for, so it would not have caught B-141")
+    identically -- B-049, on every commit for weeks.
+
+    Every row of ABSENCE_CLAIMS needs one: a phrase list that does not contain
+    the sentence which actually went stale is a check that would not have
+    caught the defect it was written for.
+    """
+    assert any(phrase.lower() in stale.lower()
+               for _, phrases, _ in ABSENCE_CLAIMS for phrase in phrases), (
+        f"{stale!r} is a sentence this repository actually shipped while the "
+        "artefact was on disk, and no phrase in ABSENCE_CLAIMS matches it")
 
 
 def test_the_recorded_paragraph_count_matches_the_corpus_arithmetic():

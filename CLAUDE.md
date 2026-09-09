@@ -393,15 +393,15 @@ The corpus is gitignored and must stay that way — twelve files exceed GitHub's
 
 ## The code graph — use it before scanning files
 
-**Status, measured 29 August 2026.** Narrow scope with the graph, then read the
-source. The graph may be stale or may not model a relationship; **when the graph
-and the source disagree, the source wins**, and an empty graph result means
+**Status, re-measured 9 September 2026.** Narrow scope with the graph, then read
+the source. The graph may be stale or may not model a relationship; **when the
+graph and the source disagree, the source wins**, and an empty graph result means
 "not indexed" or "not statically visible", never "does not exist".
 
 | | |
 |---|---|
-| Graph | **WORKING** — 84 nodes, 1,878 edges, 25 files, 7 Leiden communities |
-| Semantic search (embeddings) | **NOT WORKING** — see below. Full-text search works and is used instead |
+| Graph | **WORKING** — 2,818 nodes, 26,213 edges, 246 files, 4 languages |
+| Semantic search (embeddings) | **WORKING** — 2,572 nodes on `text-embedding-3-large`, 3072-dim. See below: it needs credentials in the SERVER process, not just at index time |
 | MCP tools | **WORKING** after restart — `query_graph_tool`, `get_impact_radius_tool`, `detect_changes_tool`, `build_or_update_graph_tool`, `get_architecture_overview_tool` all verified |
 
 ```bash
@@ -420,28 +420,65 @@ code-review-graph architecture                        # communities and cohesion
 re-run with the `qualified_name` it returns.
 
 **`search_mode: "none"` MEANS THE SEARCH COULD NOT ANSWER — NOT THAT THE CODE
-IS ABSENT.** Measured, both on the CLI and through `semantic_search_nodes_tool`:
-
-| Query | mode | result |
-|---|---|---|
-| `implements` — matches a node NAME | `fts` | 2 nodes |
-| `status inflation check ...` — a concept | **`none`** | **0 nodes** |
-
-Without embeddings there is no conceptual search: FTS matches node names only,
-and a natural-language query returns **zero**. **Zero here reads exactly like
-"not in the codebase", which is defect shape S3** — the trap that has already
-produced three false gaps in this project against the legal corpus.
+IS ABSENT.** The rule stands even though embeddings now exist, because the
+condition that produces it has only moved: `none` used to mean *no vectors were
+ever built*, and now means *this server process cannot embed the query*. Both
+render as zero results, and **zero reads exactly like "not in the codebase",
+which is defect shape S3** — the trap that has already produced three false gaps
+in this project against the legal corpus.
 
 *The rule: a `search_mode: "none"` result is "the graph could not answer", and
 the next step is Grep, never a conclusion that the code does not exist.*
+`semantic` in that field is the only value that means the question was actually
+asked of the vectors.
 
-**Embeddings are deliberately deferred, not forgotten.** `--provider local`
-crashes in the tool's venv (`OPENSSL_Uplink: no OPENSSL_Applink`) inside
-`SentenceTransformer` model loading — a torch/OpenSSL DLL conflict, not a
-code-review-graph defect, and it reproduces with the model already cached and
-fully offline. Chasing it is the wrong trade: the declared stack is OpenAI, so
-the fix is `code-review-graph embed --provider openai` once `NM_MODEL_API_KEY`
-is set. Until then, FTS covers lookup by name and keyword.
+**Embeddings are built. `.code-review-graph/graph.db` carries 2,572 vectors**,
+embedded 9 September 2026 with `text-embedding-3-large` at its full 3072
+dimensions (12,288 bytes per vector), provider recorded as
+`openai:text-embedding-3-large@https://api.openai.com/v1`.
+
+**2,572 of 2,818 nodes, and the 246 that carry no vector are the 246 File
+nodes.** That is exclusion by design, not a shortfall: `embed_all_nodes` is
+documented as embedding "all current non-file nodes" and reaches them through
+`get_all_nodes(exclude_files=True)`. Every Function (1,225), Test (1,073) and
+Class (274) is embedded. **Do not read the 246 as a gap to close** — and do not
+read it as full coverage either, because a File node will never match a
+semantic query no matter how the index is rebuilt.
+
+**The old diagnosis in this file was wrong, and worth recording as a shape.**
+It said `--provider local` crashed inside `SentenceTransformer` model loading —
+"a torch/OpenSSL DLL conflict". Neither `torch` nor `sentence_transformers` is
+installed in that venv, and the crash reproduces under `--provider openai`,
+which never loads either. The real cause, isolated by bisecting the `ssl` calls:
+
+| Probe | Result |
+|---|---|
+| `import ssl` | ok, OpenSSL 3.5.4 |
+| `load_verify_locations(certifi.where())` | ok |
+| `load_default_certs()` / `set_default_verify_paths()` | ok |
+| `ssl.create_default_context()` | **abort — `OPENSSL_Uplink(...,08): no OPENSSL_Applink`** |
+| the same, with `SSLKEYLOGFILE` cleared | **`TLS ok TLSv1.3`** |
+
+Norton injects `SSLKEYLOGFILE=\\.\nllMonFltProxy\<hex>` into the process
+environment. CPython's `create_default_context()` assigns it to
+`keylog_filename`, OpenSSL opens that device path as a `FILE*`, and the process
+aborts on the **first TLS call of any kind**. It is set in the inherited
+environment only — not User or Machine scope — so it is present in some shells
+and absent in others, which is exactly why this read as intermittent and
+model-specific for eight days. **Clearing the variable is the whole fix.**
+
+*The shape: a crash inside a library is not evidence about that library. This one
+named `SentenceTransformer` in the traceback and had nothing to do with it, and
+the wrong name then justified deferring the work.*
+
+**Semantic search embeds the QUERY, so the SERVER needs the credentials too** —
+`embed` succeeding proves nothing about search working. `tools/crg_serve.ps1`
+is the only launcher: it reads `NM_MODEL_API_KEY` from `.env` (gitignored),
+sets `CRG_OPENAI_API_KEY` / `CRG_OPENAI_BASE_URL` / `CRG_OPENAI_MODEL`, clears
+`SSLKEYLOGFILE`, and writes nothing to stdout because this is a stdio MCP
+server and a stray line corrupts the protocol. **`.mcp.json` is tracked and
+must never carry the key.** A server started any other way falls back to
+`search_mode: "none"` — silently, and looking exactly like an empty codebase.
 
 **`igraph` and `jedi` are installed** into the tool venv, which removes two
 degraded paths: community detection now runs Leiden rather than a file-based

@@ -1,10 +1,13 @@
 {
   "mcpServers": {
     "code-review-graph": {
-      "command": "uvx",
+      "command": "powershell",
       "args": [
-        "code-review-graph",
-        "serve"
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "tools/crg_serve.ps1"
       ],
       "cwd": "C:\\Users\\rahul\\Nyaymalaw",
       "type": "stdio"
