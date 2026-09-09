@@ -46,7 +46,15 @@ def _tool():
 
 
 def _doc() -> dict:
-    return yaml.safe_load(STATUS.read_text(encoding="utf-8"))
+    """THROUGH THE LOADER, not off the file.
+
+    `status.yaml` holds the rows and `steps.yaml` holds the journey steps --
+    one fact in one file -- and `load()` is what puts them together. Reading
+    the YAML directly here gave a document with no steps in it, so every
+    feature came back unexercised and the suite reported a broken registry
+    that was not broken.
+    """
+    return _tool().load()
 
 
 def test_the_registry_lints_clean():
@@ -167,6 +175,71 @@ def test_the_board_is_not_stale():
     assert current.group(1).strip() == tool.board(_doc()).strip(), (
         "the board in BACKLOG.md has drifted from status.yaml. Run:\n"
         "    python tools/backlog.py render")
+
+
+@pytest.mark.parametrize("label,mutate,expect", [
+    ("a step resting on a later phase's feature",
+     lambda d: d["steps"][0].update(features=["F3"]), "later phase"),
+    ("a step naming a feature nobody registered",
+     lambda d: d["steps"][0].update(features=["Z9"]), "not registered"),
+    ("a step naming a row nobody registered",
+     lambda d: d["steps"][0].update(items=["BK-999"]), "not in the registry"),
+    ("an id that is not STEP-<phase>-<nn>",
+     lambda d: d["steps"][0].update(id="STEP-A-1"), "is not STEP-"),
+    ("a phase that contradicts the id",
+     lambda d: d["steps"][0].update(phase="D"), "does not match its id"),
+    ("a step that will not say where it came from",
+     lambda d: d["steps"][0].pop("basis"), "whether the PRD states it"),
+    ("half a contract",
+     lambda d: d["steps"][0].update(actor="advocate"), "not a contract"),
+    ("a duplicated step id",
+     lambda d: d["steps"].append(dict(d["steps"][0])), "appears twice"),
+    ("AN EMPTY STEPS REGISTRY",
+     lambda d: d.update(steps=[]), "exercised by no journey step"),
+])
+def test_the_step_rules_can_each_fail(label, mutate, expect):
+    """THE POSITIVE CONTROLS FOR THE JOURNEY STEPS.
+
+    The last case is the one that matters. Steps are the object the roll-up
+    needs in the middle -- criteria prove an item, items and features serve a
+    step, steps make a phase -- so a registry with no steps in it would let
+    every phase-level claim pass by having nothing to check. It fails instead,
+    because 44 features would then be exercised by nothing.
+    """
+    import copy
+    tool = _tool()
+    doc = copy.deepcopy(tool.load())
+    before = tool.lint(doc)
+    mutate(doc)
+    new = [p for p in tool.lint(doc) if p not in before]
+    assert any(expect in p for p in new), (
+        f"planting {label} produced no new complaint containing {expect!r}; "
+        f"the rule cannot fail and reports a clean journey either way. "
+        f"new: {new[:3]}")
+
+
+def test_the_cycle_check_can_see_a_cycle():
+    """The dependency graph, and it had no control until this was written.
+
+    `_cycles` is the check that would catch a loop, and nothing had ever shown
+    it capable of finding one -- which is B-049's exact position: passing on
+    every commit, never once having run.
+    """
+    tool = _tool()
+    doc = _doc()
+    a, b = doc["items"][0]["id"], doc["items"][1]["id"]
+    doc["items"] = [dict(doc["items"][0], depends_on=[b]),
+                    dict(doc["items"][1], depends_on=[a])] + \
+        list(doc["items"][2:])
+    assert any("dependency cycle" in p for p in tool.lint(doc)), (
+        f"a planted {a} -> {b} -> {a} cycle was not reported")
+
+    doc2 = _doc()
+    doc2["items"] = [dict(doc2["items"][0],
+                          depends_on=[doc2["items"][0]["id"]])] + \
+        list(doc2["items"][1:])
+    assert any("names itself" in p for p in tool.lint(doc2)), (
+        "a row depending on itself was not reported")
 
 
 def test_every_feature_in_the_prd_is_in_the_registry():

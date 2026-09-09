@@ -47,6 +47,7 @@ from tools._console import utf8_console  # noqa: E402
 utf8_console()
 
 STATUS = ROOT / "docs" / "backlog" / "status.yaml"
+STEPS = ROOT / "docs" / "backlog" / "steps.yaml"
 BACKLOG = ROOT / "docs" / "BACKLOG.md"
 START, END = "<!-- BACKLOG_STATUS:START -->", "<!-- BACKLOG_STATUS:END -->"
 
@@ -84,8 +85,25 @@ RESULT = {"PASS", "FAIL", "NOT_RUN", "STALE", "BLOCKED", "NOT_APPLICABLE"}
 COUNSEL_FACING_KINDS = {"journey", "finding"}
 
 
+#: A step contract is only a contract when it says all of this. A step with a
+#: name and nothing else is a heading.
+CONTRACT_FIELDS = ("actor", "entry_conditions", "user_action",
+                   "expected_visible_result", "expected_domain_effect",
+                   "failure_behaviour", "recovery_behaviour",
+                   "exit_conditions")
+
+#: Where a step came from. The PRD states a sequence for two phases and a
+#: question for the other seven, so a derived step is a reading of the plan and
+#: must never be quoted back as the plan -- the same separation the product
+#: keeps between STATED and INFERRED posture.
+BASIS = {"prd_sequence", "derived_from_features"}
+
+
 def load() -> dict:
-    return yaml.safe_load(STATUS.read_text(encoding="utf-8"))
+    doc = yaml.safe_load(STATUS.read_text(encoding="utf-8"))
+    doc["steps"] = (yaml.safe_load(STEPS.read_text(encoding="utf-8"))
+                    or {}).get("steps", []) if STEPS.exists() else []
+    return doc
 
 
 # ------------------------------------------------------------------ lint ---
@@ -231,6 +249,8 @@ def lint(doc: dict) -> list[str]:
                        f"neither a delivery item nor a deferral -- which is "
                        f"how a phase says 'nothing implemented' with no plan")
 
+    bad += _steps(doc, known, {f.get("id"): f for f in feats})
+
     for ev in doc.get("events") or []:
         if ev.get("item") not in known:
             bad.append(f"event names {ev.get('item')!r}, which is not a row")
@@ -256,6 +276,71 @@ def _missing_pytest(acid: str, ref: str) -> list[str]:
     if node and node.split("[")[0] not in f.read_text(encoding="utf-8"):
         return [f"{acid}: proof names {node!r}, which is not in {path}"]
     return []
+
+
+def _steps(doc: dict, items: set, features: dict) -> list[str]:
+    """The journey steps, and the links that must not be missing.
+
+    A step is the object the roll-up needs in the middle: criteria prove an
+    item, items and features serve a step, steps make a phase. Without them
+    nothing above an item can be computed, which is why an empty registry here
+    would make every phase-level claim vacuous rather than green.
+    """
+    steps = doc.get("steps") or []
+    order = list(PHASES)
+    bad: list[str] = []
+    seen: set[str] = set()
+
+    for st in steps:
+        sid = st.get("id", "")
+        m = re.fullmatch(r"STEP-([A-I])-(\d{2})", sid)
+        if not m:
+            bad.append(f"step {sid!r} is not STEP-<phase>-<nn>")
+            continue
+        if sid in seen:
+            bad.append(f"{sid} appears twice")
+        seen.add(sid)
+        if st.get("phase") != m.group(1):
+            bad.append(f"{sid}: phase {st.get('phase')!r} does not match "
+                       f"its id")
+        if st.get("basis") not in BASIS:
+            bad.append(f"{sid}: basis {st.get('basis')!r} -- a step must say "
+                       f"whether the PRD states it or it was derived")
+        if not st.get("name"):
+            bad.append(f"{sid}: no name")
+
+        for fid in st.get("features") or []:
+            f = features.get(fid)
+            if not f:
+                bad.append(f"{sid}: names feature {fid!r}, which is not "
+                           f"registered")
+            # A step may rest on an EARLIER phase's feature -- the PRD's Phase
+            # D sequence opens on parties and side, which is captured in C.
+            # It may never rest on a LATER one: that is a step that cannot run
+            # when the journey reaches it.
+            elif order.index(f["phase"]) > order.index(st["phase"]):
+                bad.append(f"{sid} (phase {st['phase']}) rests on {fid}, "
+                           f"which belongs to the later phase {f['phase']}")
+        for iid in st.get("items") or []:
+            if iid not in items:
+                bad.append(f"{sid}: names row {iid!r}, which is not in the "
+                           f"registry")
+
+        got = [k for k in CONTRACT_FIELDS if st.get(k)]
+        if got and len(got) != len(CONTRACT_FIELDS):
+            bad.append(f"{sid}: a partial contract is not a contract -- "
+                       f"missing "
+                       f"{[k for k in CONTRACT_FIELDS if k not in got]}")
+
+    # EVERY JOURNEY FEATURE IS EXERCISED SOMEWHERE. A feature no step reaches
+    # is one the journey never asks for, which is how a phase passes without
+    # doing what it was built to do.
+    exercised = {f for st in steps for f in (st.get("features") or [])}
+    for fid, f in sorted(features.items()):
+        if fid not in exercised:
+            bad.append(f"feature {fid} ({f['phase']}) is exercised by no "
+                       f"journey step")
+    return bad
 
 
 def _missing_records(items: list[dict]) -> list[str]:
@@ -389,11 +474,15 @@ def board(doc: dict) -> str:
         "of them was wrong: `Open — 13`, *sixteen phases*, *18 pass* against a "
         "suite that collects 24.",
         "",
-        "| Phase | | Features | Verified | Open P0 | Readiness |",
-        "|---|---|---:|---:|---:|---|",
+        "| Phase | | Features | Steps | Contracted | Verified | Open P0 | "
+        "Readiness |",
+        "|---|---|---:|---:|---:|---:|---:|---|",
     ]
+    steps = doc.get("steps") or []
     for ph, name in PHASES.items():
         fs = [f for f in feats if f["phase"] == ph]
+        sts = [s for s in steps if s.get("phase") == ph]
+        contracted = sum(1 for s in sts if s.get("entry_conditions"))
         impl = sum(1 for f in fs if f["implementation"] == "complete")
         mine = [i for i in items
                 if i.get("phase") == ph or ph in (i.get("affects_phases") or [])]
@@ -407,9 +496,13 @@ def board(doc: dict) -> str:
         # of a whole phase.
         ready = ("not releasable" if (p0 or impl < len(fs)) else
                  "conditional" if done < len(mine) else "releasable")
-        lines.append(f"| {ph} | {name} | {impl}/{len(fs)} | {done}/{len(mine)} "
-                     f"| {p0} | {ready} |")
+        lines.append(f"| {ph} | {name} | {impl}/{len(fs)} | {len(sts)} | "
+                     f"{contracted}/{len(sts)} | {done}/{len(mine)} | {p0} | "
+                     f"{ready} |")
 
+    uncontracted = sum(1 for s in steps if not s.get("entry_conditions"))
+    derived = sum(1 for s in steps
+                  if s.get("basis") == "derived_from_features")
     openp0 = [i for i in items
               if i.get("priority") == "P0" and not derive_done(i, by_id)]
     blocked = [i for i in items if i.get("delivery_status") == "blocked"]
@@ -447,6 +540,13 @@ def board(doc: dict) -> str:
         f"executable proof, not by editing a heading.",
         f"- **{len(noacc)} active rows carry no acceptance criteria yet**, so "
         f"`done` cannot be derived for them however much work is finished.",
+        f"- **{uncontracted} of {len(steps)} journey steps carry no "
+        f"contract**, so what the step must do, refuse and recover from is "
+        f"not yet stated anywhere a check can read.",
+        f"- **{derived} steps are DERIVED, not stated by the PRD.** The PRD "
+        f"gives a sequence for Phase B and Phase D and a question for the "
+        f"other seven; a derived step is a reading of the plan and is not "
+        f"the plan.",
         "",
     ]
     return "\n".join(lines)

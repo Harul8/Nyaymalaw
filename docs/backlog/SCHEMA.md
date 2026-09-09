@@ -179,6 +179,63 @@ whose mandatory dependency is not done.
 
 ---
 
+## Journey steps — `docs/backlog/steps.yaml`
+
+Steps are the object the roll-up needs in the middle:
+
+```
+criteria prove an item → items and features serve a step → steps make a phase
+```
+
+Without them nothing above an item can be computed. `STEP-<phase>-<nn>`, 47 of
+them, one file because one fact lives in one place — `status.yaml` holds rows
+and features, `steps.yaml` holds steps, and `load()` joins them.
+
+### `basis` — and this is the important field
+
+The PRD states a sequence for exactly two phases:
+
+- **Phase B** — *"a fixed internal ordering... EMERGENCY → CONFLICT →
+  SUBSTANCE"*, with tenet 6 prior to tenet 3.
+- **Phase D** — *"parties and side, then cause of action, then limitation,
+  then forum, then territorial and pecuniary jurisdiction, then pre-filing
+  requirements, then valuation and court fees"*.
+
+For the other seven it gives the advocate's question and the features, and
+nothing more. So **10 steps are `prd_sequence` and 37 are
+`derived_from_features`**, and every step says which it is.
+
+A derived step is a reasonable reading of the plan. It is not the plan, and it
+must never be quoted back as a requirement — the same separation the product
+keeps between `STATED` and `INFERRED` posture, and for the same reason: a
+silent guess there advises the wrong side.
+
+### What the rules refuse
+
+- an id that is not `STEP-<phase>-<nn>`, or a `phase` contradicting its id
+- a step resting on a **later** phase's feature — it could not run when the
+  journey reaches it. An **earlier** phase's feature is allowed and real:
+  Phase D's stated order opens on parties and side, which is captured in C
+- a feature or row the registry does not hold
+- a step with no `basis`
+- **half a contract** — a partial one is not a contract
+- **a feature no step exercises**, which is what makes an empty steps registry
+  fail rather than pass by having nothing to check
+
+### Contracts
+
+A full contract states `actor`, `entry_conditions`, `user_action`,
+`expected_visible_result`, `expected_domain_effect`, `failure_behaviour`,
+`recovery_behaviour` and `exit_conditions` — what the step must DO, what it
+must REFUSE, and what it must RECOVER from.
+
+**3 of 47 carry one.** They are written only where they can be grounded in a
+product that exists. A contract invented for a phase with no code is
+specification, and specification belongs in the PRD, not in a registry that
+claims to describe what is true. The board counts the 44 that lack one.
+
+---
+
 ## Features
 
 All 44 PRD journey features are registered whether or not code exists, so

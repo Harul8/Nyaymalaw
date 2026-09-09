@@ -1,0 +1,456 @@
+# GENERATED ONCE, then hand-authored. See docs/backlog/SCHEMA.md.
+# `basis` says whether the PRD STATES this step or whether it was
+# DERIVED from the features in the phase. A derived step is a
+# reading of the plan and is not the plan.
+
+schema: 1
+steps:
+- id: STEP-A-01
+  name: Sign in and be recognised
+  phase: A
+  basis: derived_from_features
+  features:
+  - A1
+  items:
+  - BK-31
+  - BK-22
+  - BK-20
+- id: STEP-A-02
+  name: Land on the file list and tell the matters apart
+  phase: A
+  basis: derived_from_features
+  features:
+  - A2
+  items:
+  - BK-33
+  - BK-32
+  - J-1
+- id: STEP-A-03
+  name: Re-enter a matter and see where it was left
+  phase: A
+  basis: derived_from_features
+  features:
+  - A3
+  items:
+  - BK-33
+- id: STEP-A-04
+  name: Search the corpus and file what is found
+  phase: A
+  basis: derived_from_features
+  features:
+  - A4
+  items:
+  - BK-38
+  - J-7
+- id: STEP-B-01
+  name: Route the opening message
+  phase: B
+  basis: derived_from_features
+  features:
+  - B1
+  items:
+  - BK-8
+- id: STEP-B-02
+  name: Emergency triage, before any screen can delay it
+  phase: B
+  basis: prd_sequence
+  features:
+  - B2
+  items:
+  - BK-34
+  - BK-53
+  actor: advocate
+  entry_conditions:
+  - authenticated
+  - an opening message is routed as a matter
+  user_action:
+  - describes a situation in which liberty or an irreversible deadline is in play
+  expected_visible_result:
+  - the emergency is named back, and the protective or referral step is given before any
+    screen is asked to clear
+  expected_domain_effect:
+  - the emergency is DECLARED on the matter with who invoked it and why; screens remain
+    outstanding and are recorded as outstanding
+  failure_behaviour:
+  - if the emergency cannot be established, the ordinary screen order resumes and nothing
+    substantive is admitted
+  recovery_behaviour:
+  - the declaration survives reload and is visible in the record
+  exit_conditions:
+  - either a recorded emergency exception, or no emergency and the conflict screen is next
+  notes: 'Tenet 6 is prior to tenet 3: an advocate whose client is being arrested tonight
+    is not told to wait for a conflict check. The precedence covers protective and referral
+    steps only and is not a substantive-advice bypass.'
+- id: STEP-B-03
+  name: The conflict screen
+  phase: B
+  basis: prd_sequence
+  features:
+  - B3
+  items:
+  - BK-34
+  actor: advocate
+  entry_conditions:
+  - no emergency exception, or one recorded
+  - at least one party named
+  user_action:
+  - names the client and the party against
+  expected_visible_result:
+  - the conflict state is shown as clear, blocked, incomplete or NOT ASSESSED, and says
+    WHICH files were checked
+  expected_domain_effect:
+  - the screen decision is persisted with the parties it covers
+  failure_behaviour:
+  - an unreadable file makes the screen INCOMPLETE, never clear
+  - no party named makes it NOT ASSESSED, never clear
+  recovery_behaviour:
+  - the decision is re-derived when a party is added, and the earlier clearance goes stale
+  exit_conditions:
+  - conflict resolved or expressly excepted
+  notes: The scope is the advocate's own files and the wording says so; it is not a firm-wide
+    registry check. Adding a party must stale an earlier clearance -- BK-34, and it does
+    not today.
+- id: STEP-B-04
+  name: 'Admit substance: competence, engagement and capacity'
+  phase: B
+  basis: prd_sequence
+  features:
+  - B4
+  - B5
+  - B6
+  items:
+  - BK-34
+  - BK-53
+- id: STEP-C-01
+  name: Open the account and hold it
+  phase: C
+  basis: derived_from_features
+  features:
+  - C1
+  items:
+  - BK-36
+- id: STEP-C-02
+  name: State the objectives and the constraints
+  phase: C
+  basis: derived_from_features
+  features:
+  - C2
+  items:
+  - BK-54
+- id: STEP-C-03
+  name: Settle the parties and the posture
+  phase: C
+  basis: derived_from_features
+  features:
+  - C3
+  items: []
+- id: STEP-C-04
+  name: Give each dispute a thread
+  phase: C
+  basis: derived_from_features
+  features:
+  - C4
+  items:
+  - BK-27
+  - J-4
+- id: STEP-C-05
+  name: Build the chronology
+  phase: C
+  basis: derived_from_features
+  features:
+  - C5
+  items:
+  - BK-14
+- id: STEP-C-06
+  name: Take in the documents
+  phase: C
+  basis: derived_from_features
+  features:
+  - C6
+  items:
+  - BK-54
+- id: STEP-C-07
+  name: Inventory the evidence and preserve it
+  phase: C
+  basis: derived_from_features
+  features:
+  - C7
+  items:
+  - BK-6
+- id: STEP-D-01
+  name: Confirm the parties and the side
+  phase: D
+  basis: prd_sequence
+  features:
+  - C3
+  items: []
+- id: STEP-D-02
+  name: Settle the cause of action
+  phase: D
+  basis: prd_sequence
+  features:
+  - D1
+  items:
+  - J-2
+- id: STEP-D-03
+  name: Compute the limitation period
+  phase: D
+  basis: prd_sequence
+  features:
+  - D2
+  items:
+  - BK-35
+  actor: system
+  entry_conditions:
+  - posture resolved
+  - a cause of action settled
+  - at least one dated event on the thread
+  user_action:
+  - asks for the position, or supplies a date
+  expected_visible_result:
+  - the period, the Article it came from, the date it runs from and the limb -- or a named
+    refusal saying what is missing
+  expected_domain_effect:
+  - the computed expiry is persisted against the thread and feeds the deadline register
+  failure_behaviour:
+  - no Article retrieved, no dated event, or a trigger that cannot be identified among the
+    dated entries, each refuse SEPARATELY and by name; none of them falls back to the earliest
+    date
+  recovery_behaviour:
+  - supplying the missing date re-derives everything resting on it
+  exit_conditions:
+  - limitation computed, or not_computed with the reason visible to the advocate
+  notes: 'A blocking gate: no merits work on a thread whose limitation is not computed.
+    BK-35 -- a single dated fact that does not satisfy the curated trigger is still run
+    from, which is the fallback this step forbids.'
+- id: STEP-D-04
+  name: Determine the forum
+  phase: D
+  basis: prd_sequence
+  features:
+  - D1
+  items: []
+- id: STEP-D-05
+  name: Territorial and pecuniary jurisdiction
+  phase: D
+  basis: prd_sequence
+  features:
+  - D1
+  items:
+  - BK-15
+- id: STEP-D-06
+  name: Pre-filing requirements
+  phase: D
+  basis: prd_sequence
+  features:
+  - D1
+  items: []
+- id: STEP-D-07
+  name: Valuation and court fees
+  phase: D
+  basis: prd_sequence
+  features:
+  - D1
+  items: []
+- id: STEP-D-08
+  name: Register the deadlines
+  phase: D
+  basis: derived_from_features
+  features:
+  - D3
+  items:
+  - BK-33
+- id: STEP-D-09
+  name: Research the authorities
+  phase: D
+  basis: derived_from_features
+  features:
+  - D4
+  items:
+  - BK-25
+  - BK-24
+- id: STEP-D-10
+  name: Elements, burden and proof
+  phase: D
+  basis: derived_from_features
+  features:
+  - D5
+  items: []
+- id: STEP-D-11
+  name: Build the case theory
+  phase: D
+  basis: derived_from_features
+  features:
+  - D6
+  items: []
+- id: STEP-D-12
+  name: The adversarial pass
+  phase: D
+  basis: derived_from_features
+  features:
+  - D7
+  items:
+  - J-3
+- id: STEP-D-13
+  name: Salvage the weak case
+  phase: D
+  basis: derived_from_features
+  features:
+  - D8
+  items: []
+- id: STEP-D-14
+  name: Issue facets and disposition
+  phase: D
+  basis: derived_from_features
+  features:
+  - D9
+  items: []
+- id: STEP-E-01
+  name: Set out the scenarios and contingencies
+  phase: E
+  basis: derived_from_features
+  features:
+  - E1
+  items:
+  - BK-55
+- id: STEP-E-02
+  name: Give the recommendation
+  phase: E
+  basis: derived_from_features
+  features:
+  - E2
+  items:
+  - BK-37
+  - J-6
+  - J-5
+- id: STEP-E-03
+  name: Test it for proportionality
+  phase: E
+  basis: derived_from_features
+  features:
+  - E3
+  items:
+  - BK-55
+- id: STEP-E-04
+  name: Record what the advocate decided
+  phase: E
+  basis: derived_from_features
+  features:
+  - E4
+  items:
+  - BK-55
+- id: STEP-E-05
+  name: Disagree, and say why
+  phase: E
+  basis: derived_from_features
+  features:
+  - E5
+  items:
+  - BK-55
+- id: STEP-F-01
+  name: Negotiate within settlement authority
+  phase: F
+  basis: derived_from_features
+  features:
+  - F1
+  items:
+  - BK-57
+- id: STEP-F-02
+  name: Hand the drafter its brief
+  phase: F
+  basis: derived_from_features
+  features:
+  - F2
+  items:
+  - BK-56
+- id: STEP-F-03
+  name: Draft, and verify the draft
+  phase: F
+  basis: derived_from_features
+  features:
+  - F3
+  items:
+  - BK-56
+- id: STEP-F-04
+  name: Filing control
+  phase: F
+  basis: derived_from_features
+  features:
+  - F4
+  items:
+  - BK-56
+- id: STEP-F-05
+  name: Witnesses and experts
+  phase: F
+  basis: derived_from_features
+  features:
+  - F5
+  items:
+  - BK-57
+- id: STEP-F-06
+  name: Hearing readiness
+  phase: F
+  basis: derived_from_features
+  features:
+  - F6
+  items:
+  - BK-57
+- id: STEP-F-07
+  name: In court
+  phase: F
+  basis: derived_from_features
+  features:
+  - F7
+  items:
+  - BK-57
+- id: STEP-G-01
+  name: Proactive service
+  phase: G
+  basis: derived_from_features
+  features:
+  - G1
+  items:
+  - BK-58
+- id: STEP-G-02
+  name: The continuing conflict watch
+  phase: G
+  basis: derived_from_features
+  features:
+  - G2
+  items:
+  - BK-58
+- id: STEP-G-03
+  name: Handover and continuity
+  phase: G
+  basis: derived_from_features
+  features:
+  - G3
+  items:
+  - BK-39
+  - BK-10
+  - BK-58
+- id: STEP-H-01
+  name: Capture the events
+  phase: H
+  basis: derived_from_features
+  features:
+  - H1
+  items:
+  - BK-59
+- id: STEP-H-02
+  name: Close the matter
+  phase: H
+  basis: derived_from_features
+  features:
+  - H2
+  items:
+  - BK-59
+- id: STEP-I-01
+  name: End the session and leave nothing behind
+  phase: I
+  basis: derived_from_features
+  features:
+  - I1
+  items:
+  - BK-40
+  - BK-46

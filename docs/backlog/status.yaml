@@ -1117,6 +1117,18 @@ items:
   record: docs/BACKLOG.md#bk-59-phase-h-event-capture-and-closure
   next_action: specify DOES / NEVER / PRODUCES / EVAL for H1, H2
   acceptance: []
+- id: BK-61
+  title: the spec restore in the tooling tests fails intermittently
+  kind: control
+  priority: P2
+  delivery_status: ready
+  implementation: none
+  verification: none
+  affects_phases: [A, B, C, D, E, F, G, H, I]
+  record: docs/BACKLOG.md#bk-61-the-spec-restore-in-the-tooling-tests-fails-intermittently
+  next_action: replace shutil.copy2 with copyfile in the finally blocks that restore
+    spec/features.yaml, and re-measure the failure rate before closing
+  acceptance: []
 - id: BK-60
   title: the backlog control plane
   kind: control
@@ -1179,17 +1191,33 @@ items:
       mutation: edit a count inside the generated markers by hand
       expected_failure: check regenerates it and exits non-zero
   - id: BK-60-AC5
-    requirement: journey steps STEP-<phase>-<nn> exist and every journey row names one
+    requirement: journey steps exist and every registered feature is exercised by one
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_the_step_rules_can_each_fail
+        note: 47 steps. 10 are stated by the PRD (Phase B's EMERGENCY/CONFLICT/SUBSTANCE
+          and Phase D's seven-part order); 37 are derived from the features in
+          the phase and say so in `basis`.
+    negative_control:
+      mutation: empty the steps registry
+      expected_failure: 44 features report as exercised by no journey step, so the
+        check cannot pass by having nothing to check
+  - id: BK-60-AC6
+    requirement: every journey step states what it must do, refuse and recover from
     required_evidence: [domain_test]
     evidence:
       domain_test:
         result: NOT_RUN
         ref: ''
-        note: stage 1 of the traceability order; the steps registry is not populated,
-          and an empty population would make this check vacuous rather than green
+        note: 3 of 47 steps carry a full contract. The rest are skeletons, and a
+          contract invented for a phase with no code would be specification --
+          which belongs in the PRD, not in a registry that claims to describe
+          what is true.
     negative_control:
-      mutation: file a journey row against no step
-      expected_failure: lint reports the missing link as NOT PROVEN
+      mutation: give a step half a contract
+      expected_failure: lint refuses it; a partial contract is not a contract
 - id: J-1
   title: The file list cannot tell one matter from another
   kind: finding
