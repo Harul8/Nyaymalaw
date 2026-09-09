@@ -1,0 +1,712 @@
+{
+ "schema": 1,
+ "note": "The build guide as data. docs/BUILD_GUIDE.md explains WHY; the four cards under docs/build/ are the working playbooks; this says where each rule bites and what enforces it. Each card carries a BUILD_RULES manifest naming the ids it covers, so a rule cannot be dropped by rewriting prose.",
+ "expected_population": 77,
+ "cards": {
+  "before": "START_A_CHANGE.md",
+  "build": "BUILD_A_CHANGE.md",
+  "prove": "TEST_A_CHANGE.md",
+  "signoff": "SIGN_OFF_A_CHANGE.md"
+ },
+ "rules": [
+  {
+   "id": "BG-001",
+   "kind": "principle",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "Start from the advocate's outcome, not from a screen, model or component.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-002",
+   "kind": "principle",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Build a vertical, usable path. A correct component behind a broken served journey is not a delivered feature.",
+   "enforcement": "unenforced",
+   "why_not": "nothing distinguishes a vertical path from a component"
+  },
+  {
+   "id": "BG-003",
+   "kind": "principle",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "State the contract before writing code: what it does, never does, produces, refuses, recovers from and how it will be evaluated.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-004",
+   "kind": "principle",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Protect emergency, conflict, competence, engagement, capacity, role, privilege and authority boundaries before substantive work.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-005",
+   "kind": "principle",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Treat Take the Brief as an interactive, multimodal and retrieval-first loop, not a form and not a fixed questionnaire.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-006",
+   "kind": "principle",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Keep fact, allegation, admission, source text, testimony, transcript, inference, assumption, law and professional judgment distinct.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-007",
+   "kind": "principle",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Use deterministic rules for identity, dates, arithmetic, permissions, validity, state transitions and gates. Use models only for work that genuinely requires interpretation or judgment.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-008",
+   "kind": "principle",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Make every material proposition traceable to its source, locator, status and current validity.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-009",
+   "kind": "principle",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Never let absent, failed, stale, low-confidence or unassessed input look complete or successful.",
+   "enforcement": "runner",
+   "check": "tests/test_three_states.py::test_every_outcome_enum_can_say_that_nothing_was_established",
+   "must_contain": "not assessed"
+  },
+  {
+   "id": "BG-010",
+   "kind": "principle",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Commit accepted state before emitting advice. The user must never receive a position the matter record does not hold.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work",
+   "must_contain": "commit"
+  },
+  {
+   "id": "BG-011",
+   "kind": "principle",
+   "stage": "prove",
+   "card": "TEST_A_CHANGE.md",
+   "statement": "Solve the general defect shape, sweep the whole population and prove the control with a counterexample.",
+   "enforcement": "runner",
+   "check": "tests/test_defect_register.py::test_every_recurring_shape_has_a_mechanism_more_than_one_defect_points_at"
+  },
+  {
+   "id": "BG-012",
+   "kind": "principle",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Keep one owner for every fact. Generated views may explain the truth but may not become another place to maintain it.",
+   "enforcement": "runner",
+   "check": "tests/test_one_owner_per_rule.py::test_no_rule_has_a_second_home"
+  },
+  {
+   "id": "BG-013",
+   "kind": "principle",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Treat confidentiality, privilege, matter isolation, least privilege, retention and deletion as product behaviour, not deployment polish.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-014",
+   "kind": "principle",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Make the interface calm, plain, respectful, accessible and truthful about work, delay, uncertainty and failure.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-015",
+   "kind": "principle",
+   "stage": "prove",
+   "card": "TEST_A_CHANGE.md",
+   "statement": "A passing unit test is necessary and insufficient. Prove the served path, legal quality, professional quality and failure/recovery path.",
+   "enforcement": "unenforced",
+   "why_not": "the served path is excluded from the per-task gate by design"
+  },
+  {
+   "id": "BG-016",
+   "kind": "principle",
+   "stage": "prove",
+   "card": "TEST_A_CHANGE.md",
+   "statement": "A new feature must pass with all earlier verified behaviour in the same cumulative run.",
+   "enforcement": "unenforced",
+   "why_not": "nothing runs earlier verified behaviour as one cumulative set"
+  },
+  {
+   "id": "BG-017",
+   "kind": "principle",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "done is derived from current evidence. Nobody types it into a plan.",
+   "enforcement": "runner",
+   "check": "tests/test_the_backlog_states_one_truth.py::test_done_cannot_be_authored",
+   "must_contain": "done"
+  },
+  {
+   "id": "BG-018",
+   "kind": "principle",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "Only a current, cumulative release decision permits shipment. A later green gate never cancels an earlier failure, stale result or missing run.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-019",
+   "kind": "ready",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "A registered item and one delivery wave own it.",
+   "enforcement": "runner",
+   "check": "tools/backlog.py lint -- active item has no delivery wave"
+  },
+  {
+   "id": "BG-020",
+   "kind": "ready",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "Dependencies are known and do not run backward.",
+   "enforcement": "runner",
+   "check": "tools/backlog.py lint -- depends on a later wave"
+  },
+  {
+   "id": "BG-021",
+   "kind": "ready",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "The user, role, commission and professional outcome are clear.",
+   "enforcement": "review",
+   "evidence_level": "counsel_review"
+  },
+  {
+   "id": "BG-022",
+   "kind": "ready",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "The journey step and feature are linked.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-023",
+   "kind": "ready",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "DOES, NEVER, PRODUCES and EVAL are complete.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-024",
+   "kind": "ready",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "Entry, refusal, failure/recovery, exit and return transitions are stated.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-025",
+   "kind": "ready",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "State, provenance, permissions and invalidation rules are defined.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-026",
+   "kind": "ready",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "Security, privacy, accessibility and operational impact are assessed.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-027",
+   "kind": "ready",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "Acceptance criteria are atomic.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-028",
+   "kind": "ready",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "Each required proof and counterexample is named.",
+   "enforcement": "runner",
+   "check": "tools/backlog.py lint -- a P0 criterion with no negative control"
+  },
+  {
+   "id": "BG-029",
+   "kind": "ready",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "Product or counsel decisions needed to implement are resolved.",
+   "enforcement": "review",
+   "evidence_level": "counsel_review"
+  },
+  {
+   "id": "BG-030",
+   "kind": "ready",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "The affected code and data population has been enumerated.",
+   "enforcement": "unenforced",
+   "why_not": "nothing records that a population was enumerated"
+  },
+  {
+   "id": "BG-031",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "The complete vertical path is implemented, not only one layer.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-032",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "Success, refusal/blocking and failure/recovery behaviour pass.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-033",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "Retry, restart, replay, concurrency and cancellation pass where relevant.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-034",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "The invariant catches its named negative control.",
+   "enforcement": "runner",
+   "check": "tests/test_every_sweep_has_a_positive_control.py::test_every_sweep_names_a_control_that_proves_it_can_fail"
+  },
+  {
+   "id": "BG-035",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "Every required test exists, collects and is current.",
+   "enforcement": "runner",
+   "check": "tools/backlog.py lint -- proof names a test that does not exist"
+  },
+  {
+   "id": "BG-036",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "Earlier verified behaviour passes in the same cumulative run.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-037",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "The served journey uses real preceding state and passes.",
+   "enforcement": "unenforced",
+   "why_not": "the journey suite is in no gate and needs a browser"
+  },
+  {
+   "id": "BG-038",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "Legal/model evaluation passes when legal output can change.",
+   "enforcement": "review",
+   "evidence_level": "model_eval"
+  },
+  {
+   "id": "BG-039",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "Named counsel review passes every applicable professional standard.",
+   "enforcement": "review",
+   "evidence_level": "counsel_review"
+  },
+  {
+   "id": "BG-040",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "Security, privacy, accessibility and performance evidence is current.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-041",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "The user-visible result and persisted record agree.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-042",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "Status, evidence, next action and forensic record are reconciled.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-043",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "Generated views are current and no second status truth was created.",
+   "enforcement": "runner",
+   "check": "tests/test_the_backlog_states_one_truth.py::test_the_board_is_not_stale"
+  },
+  {
+   "id": "BG-044",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "Rollback, monitoring and evidence-invalidation paths exist where needed.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-045",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "No unresolved P0 or mandatory release gate affects the claim.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-046",
+   "kind": "stop",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "the governing requirement or role decision is unresolved",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-047",
+   "kind": "stop",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "the journey or feature contract is partial",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-048",
+   "kind": "stop",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "the work has no registered item or wave",
+   "enforcement": "runner",
+   "check": "tools/backlog.py lint -- row not in the registry, or no wave"
+  },
+  {
+   "id": "BG-049",
+   "kind": "stop",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "a hard dependency is later than its consumer",
+   "enforcement": "runner",
+   "check": "tools/backlog.py lint -- depends on a later wave"
+  },
+  {
+   "id": "BG-050",
+   "kind": "stop",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "substantive work can cross an uncleared professional gate",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-051",
+   "kind": "stop",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "provenance or authority would be lost",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-052",
+   "kind": "stop",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "absent or failed assessment can read as success",
+   "enforcement": "runner",
+   "check": "tests/test_three_states.py::test_every_outcome_enum_can_say_that_nothing_was_established"
+  },
+  {
+   "id": "BG-053",
+   "kind": "stop",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "the relevant population was not enumerated",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-054",
+   "kind": "stop",
+   "stage": "prove",
+   "card": "TEST_A_CHANGE.md",
+   "statement": "a critical check has no demonstrated negative control",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-055",
+   "kind": "stop",
+   "stage": "prove",
+   "card": "TEST_A_CHANGE.md",
+   "statement": "the served path or recovery path was not exercised",
+   "enforcement": "unenforced",
+   "why_not": "the served path has no runner in the per-task gate"
+  },
+  {
+   "id": "BG-056",
+   "kind": "stop",
+   "stage": "prove",
+   "card": "TEST_A_CHANGE.md",
+   "statement": "legal output changed without current real-model and counsel evidence",
+   "enforcement": "review",
+   "evidence_level": "counsel_review"
+  },
+  {
+   "id": "BG-057",
+   "kind": "stop",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "a required gate is FAIL, NOT RUN, STALE or BLOCKED",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-058",
+   "kind": "stop",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "a P0 confidentiality, authority, grounding, persistence or legal-correctness risk remains open",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-059",
+   "kind": "stop",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "rollback or truthful degraded behaviour is unavailable for a harmful failure",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-060",
+   "kind": "refuse",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "A horizontal component presented as a shipped user outcome.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-061",
+   "kind": "refuse",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "Code started against an incomplete contract.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-062",
+   "kind": "refuse",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "A model prompt carrying a deterministic safety rule by itself.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-063",
+   "kind": "refuse",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "A fixed intake questionnaire that ignores known or retrievable material.",
+   "enforcement": "review",
+   "evidence_level": "counsel_review",
+   "must_contain": "questionnaire"
+  },
+  {
+   "id": "BG-064",
+   "kind": "refuse",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Transcript, OCR or allegation promoted directly to fact.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-065",
+   "kind": "refuse",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "A generic issue list without threshold ordering or dependencies.",
+   "enforcement": "review",
+   "evidence_level": "counsel_review"
+  },
+  {
+   "id": "BG-066",
+   "kind": "refuse",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Advice whose maturity exceeds the brief and legal work.",
+   "enforcement": "review",
+   "evidence_level": "counsel_review"
+  },
+  {
+   "id": "BG-067",
+   "kind": "refuse",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "A correct legal answer with no useful-remedy or enforceability analysis.",
+   "enforcement": "review",
+   "evidence_level": "counsel_review"
+  },
+  {
+   "id": "BG-068",
+   "kind": "refuse",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "A recommendation treated as authority to act.",
+   "enforcement": "review",
+   "evidence_level": "counsel_review",
+   "must_contain": "authority to act"
+  },
+  {
+   "id": "BG-069",
+   "kind": "refuse",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "A successful return value with an uncommitted or failed matter record.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-070",
+   "kind": "refuse",
+   "stage": "prove",
+   "card": "TEST_A_CHANGE.md",
+   "statement": "A clean screen produced because the screen did not run.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-071",
+   "kind": "refuse",
+   "stage": "prove",
+   "card": "TEST_A_CHANGE.md",
+   "statement": "A one-site patch for a recurring defect shape.",
+   "enforcement": "runner",
+   "check": "tests/test_defect_register.py::test_every_recurring_shape_has_a_mechanism_more_than_one_defect_points_at"
+  },
+  {
+   "id": "BG-072",
+   "kind": "refuse",
+   "stage": "prove",
+   "card": "TEST_A_CHANGE.md",
+   "statement": "A test that never demonstrates it can fail.",
+   "enforcement": "runner",
+   "check": "tests/test_a_documented_defect_uses_a_strict_marker.py::test_no_test_calls_xfail_instead_of_marking_it",
+   "must_contain": "counterexample"
+  },
+  {
+   "id": "BG-073",
+   "kind": "refuse",
+   "stage": "prove",
+   "card": "TEST_A_CHANGE.md",
+   "statement": "A browser-green journey used as evidence of legal quality.",
+   "enforcement": "review",
+   "evidence_level": "counsel_review"
+  },
+  {
+   "id": "BG-074",
+   "kind": "refuse",
+   "stage": "prove",
+   "card": "TEST_A_CHANGE.md",
+   "statement": "A counsel-approved sample used as evidence of recovery or isolation.",
+   "enforcement": "review",
+   "evidence_level": "counsel_review"
+  },
+  {
+   "id": "BG-075",
+   "kind": "refuse",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "A current-status count typed into prose or a workbook.",
+   "enforcement": "runner",
+   "check": "tests/test_the_backlog_states_one_truth.py::test_the_board_is_not_stale"
+  },
+  {
+   "id": "BG-076",
+   "kind": "refuse",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "A missing or stale proof treated as good enough because the code is present.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-077",
+   "kind": "refuse",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "A release exception without owner, compensation and expiry.",
+   "enforcement": "unenforced",
+   "why_not": "no control proposed yet; mechanising it is open work"
+  }
+ ]
+}

@@ -24,6 +24,7 @@ xfail all land -- every one of which has produced a green build here already.
 """
 from __future__ import annotations
 
+import copy
 import importlib.util
 import pathlib
 import re
@@ -256,3 +257,292 @@ def test_every_feature_in_the_prd_is_in_the_registry():
         f"the registry and the PRD feature list disagree:\n"
         f"  in the PRD, not the registry: {sorted(declared - registered)}\n"
         f"  in the registry, not the PRD: {sorted(registered - declared)}")
+
+
+def test_professional_registries_are_complete_and_cross_referenced():
+    """BK-71-AC1. Expert practice is registered, populated and connected."""
+    tool = _tool()
+    doc = _doc()
+    items = doc["items"]
+    seen = {item["id"]: n for n, item in enumerate(items)}
+    wave_problems, waves = tool._waves(doc, items, seen)
+    assert not wave_problems, "\n  ".join(wave_problems)
+    problems = tool._professional(
+        doc,
+        set(seen),
+        {feature["id"] for feature in doc["features"]},
+        {step["id"] for step in doc["steps"]},
+        waves,
+    )
+    assert not problems, "\n  ".join(problems)
+    assert tool.professional_population(doc) == {
+        "advocate_standards": 20,
+        "workflow_states": 13,
+        "advice_maturity": 5,
+        "roles": 7,
+        "gap_closures": 14,
+    }
+
+
+def test_delivery_waves_are_complete_and_ordered():
+    """BK-71-AC2. There is one schedulable plan and hard edges run forward."""
+    tool = _tool()
+    doc = _doc()
+    items = doc["items"]
+    seen = {item["id"]: n for n, item in enumerate(items)}
+    problems, waves = tool._waves(doc, items, seen)
+    assert not problems, "\n  ".join(problems)
+    assert len(items) == 80
+    assert len((doc["plan"] or {})["item_waves"]) == 80
+    assert set(waves) == set(seen)
+
+
+def test_gap_closure_is_derived_from_registered_work():
+    """BK-71-AC3. GC is a crosswalk, never a fifth status system."""
+    tool = _tool()
+    doc = _doc()
+    forbidden = {"status", "planning_status", "delivery_status"}
+    for gap in doc["professional"]["gap_closures"]:
+        assert not forbidden.intersection(gap)
+        assert tool.gap_state(
+            gap, {item["id"]: item for item in doc["items"]}
+        ) in {"PLANNED", "IN_PROGRESS", "BLOCKED", "CLOSED"}
+
+    gap = {"links": [{"item": "X"}, {"item": "Y"}]}
+    planned = {
+        "X": {"id": "X", "delivery_status": "planned",
+              "implementation": "none"},
+        "Y": {"id": "Y", "delivery_status": "planned",
+              "implementation": "none"},
+    }
+    assert tool.gap_state(gap, planned) == "PLANNED"
+    planned["X"].update(delivery_status="in_progress", implementation="partial")
+    assert tool.gap_state(gap, planned) == "IN_PROGRESS"
+    planned["Y"].update(delivery_status="blocked",
+                        blocked_by={"type": "decision", "description": "x"})
+    assert tool.gap_state(gap, planned) == "BLOCKED"
+    complete = {
+        key: {"id": key, "delivery_status": "verifying",
+              "implementation": "complete", "verification": "stale",
+              "legacy": True, "acceptance": []}
+        for key in ("X", "Y")
+    }
+    assert tool.gap_state(gap, complete) == "CLOSED"
+
+
+def _replace_existing(mapping, key, value):
+    """Mutate a field only after proving the probe names a real field."""
+    assert key in mapping, f"positive control tried to mutate absent field {key!r}"
+    before = copy.deepcopy(mapping[key])
+    mapping[key] = value
+    assert mapping[key] != before, f"positive control left {key!r} unchanged"
+
+
+def _wave(doc, item):
+    return next(row for row in doc["plan"]["item_waves"]
+                if row["id"] == item)
+
+
+def _drop_first_wave(doc):
+    rows = doc["plan"]["item_waves"]
+    before = len(rows)
+    rows.pop(0)
+    assert len(rows) == before - 1
+
+
+def _duplicate_first_wave(doc):
+    rows = doc["plan"]["item_waves"]
+    before = len(rows)
+    rows.append(dict(rows[0]))
+    assert len(rows) == before + 1
+
+
+def _author_gap_status(doc):
+    gap = doc["professional"]["gap_closures"][0]
+    assert "planning_status" not in gap
+    gap["planning_status"] = "DONE"
+
+
+_PROFESSIONAL_PROBES = [
+    ("empty advocate standards",
+     lambda d: _replace_existing(d["professional"], "advocate_standards", []),
+     "advocate_standards population is 0"),
+    ("empty workflow states",
+     lambda d: _replace_existing(d["professional"], "workflow_states", []),
+     "workflow_states population is 0"),
+    ("empty advice maturity",
+     lambda d: _replace_existing(d["professional"], "advice_maturity", []),
+     "advice_maturity population is 0"),
+    ("empty roles",
+     lambda d: _replace_existing(d["professional"], "roles", []),
+     "roles population is 0"),
+    ("empty gap closures",
+     lambda d: _replace_existing(d["professional"], "gap_closures", []),
+     "gap_closures population is 0"),
+    ("dangling feature",
+     lambda d: _replace_existing(
+         d["professional"]["advocate_standards"][0], "features", ["Z9"]),
+     "features names 'Z9', which is not registered"),
+    ("dangling step",
+     lambda d: _replace_existing(
+         d["professional"]["advocate_standards"][0], "steps", ["STEP-Z-99"]),
+     "steps names 'STEP-Z-99', which is not registered"),
+    ("dangling standard",
+     lambda d: _replace_existing(
+         d["professional"]["gap_closures"][0], "standards", ["PA-99"]),
+     "standards names 'PA-99', which is not registered"),
+    ("dangling workflow state",
+     lambda d: _replace_existing(
+         d["professional"]["gap_closures"][0], "workflow", ["EW-99"]),
+     "workflow names 'EW-99', which is not registered"),
+    ("dangling advice level",
+     lambda d: _replace_existing(
+         d["professional"]["gap_closures"][0], "advice", ["AM-99"]),
+     "advice names 'AM-99', which is not registered"),
+    ("dangling linked work item",
+     lambda d: _replace_existing(
+         d["professional"]["gap_closures"][0]["links"][0], "item", "BK-999"),
+     "link names 'BK-999', which is not a row"),
+    ("missing delivery wave", _drop_first_wave,
+     "has no delivery-wave assignment"),
+    ("duplicate delivery wave", _duplicate_first_wave,
+     "delivery wave for BK-1 appears twice"),
+    ("out-of-range delivery wave",
+     lambda d: _replace_existing(_wave(d, "BK-1"), "wave", "W9"),
+     "delivery wave 'W9' is not W0-W7"),
+    ("null wave on active work",
+     lambda d: _replace_existing(_wave(d, "BK-1"), "wave", None),
+     "active item has no delivery wave"),
+    ("authored gap status", _author_gap_status,
+     "planning_status is authored"),
+    ("foundation after feature",
+     lambda d: _replace_existing(
+         d["professional"]["gap_closures"][0], "foundation_wave", "W2"),
+     "stage waves are not ordered"),
+    ("release before feature",
+     lambda d: _replace_existing(
+         d["professional"]["gap_closures"][0], "release_gate_wave", "W0"),
+     "stage waves are not ordered"),
+    ("empty gap links",
+     lambda d: _replace_existing(
+         d["professional"]["gap_closures"][0], "links", []),
+     "has no registered work links"),
+    ("invalid link stage",
+     lambda d: _replace_existing(
+         d["professional"]["gap_closures"][0]["links"][0],
+         "stage", "nonsense"),
+     "link stage 'nonsense' is not foundation, feature or release"),
+    ("reverse-wave hard dependency",
+     lambda d: _replace_existing(_wave(d, "BK-65"), "wave", "W1"),
+     "BK-65 (W1) depends on BK-64 (W2)"),
+    ("late foundation link",
+     lambda d: _replace_existing(_wave(d, "BK-69"), "wave", "W1"),
+     "after its W0 boundary"),
+]
+
+
+@pytest.mark.parametrize(
+    "label,mutate,expected",
+    _PROFESSIONAL_PROBES,
+    ids=[probe[0].replace(" ", "-") for probe in _PROFESSIONAL_PROBES],
+)
+def test_professional_lint_positive_controls(label, mutate, expected):
+    """BK-71-AC4. Every reported probe is an independent Class-A case."""
+    tool = _tool()
+    doc = copy.deepcopy(_doc())
+    before = tool.lint(doc)
+    assert not before, "the positive-control baseline is not clean: " + repr(before)
+    mutate(doc)
+    problems = tool.lint(doc)
+    assert any(expected in problem for problem in problems), (
+        f"planting {label} produced no complaint containing {expected!r}; "
+        f"got: {problems[:8]}")
+
+
+# ================= BK-60: the build guide cannot lose a rule ================
+
+@pytest.mark.parametrize("label,mutate,expect", [
+    ("a rule no playbook claims",
+     lambda d: d["build_rules"]["rules"].append(
+         dict(d["build_rules"]["rules"][0], id="BG-999")),
+     "no playbook claims it"),
+    ("a rule claimed by the wrong playbook",
+     lambda d: d["build_rules"]["rules"][0].update(card="TEST_A_CHANGE.md"),
+     "is claimed by"),
+    ("an emptied registry",
+     lambda d: d["build_rules"].update(rules=[]),
+     "would pass by having nothing to check"),
+    ("a population that moved without its count",
+     lambda d: d["build_rules"]["rules"].pop(),
+     "was added or lost without the count"),
+    ("an unenforced rule with no reason",
+     lambda d: next(r for r in d["build_rules"]["rules"]
+                    if r["enforcement"] == "unenforced").pop("why_not"),
+     "an admitted gap"),
+    ("a runner naming no check",
+     lambda d: next(r for r in d["build_rules"]["rules"]
+                    if r["enforcement"] == "runner").pop("check"),
+     "names no check"),
+    ("a review with no evidence level",
+     lambda d: next(r for r in d["build_rules"]["rules"]
+                    if r["enforcement"] == "review").pop("evidence_level"),
+     "what kind of recorded result"),
+    ("a runner pointing at a test nobody wrote",
+     lambda d: next(r for r in d["build_rules"]["rules"]
+                    if r["enforcement"] == "runner").update(
+                        check="tests/test_nothing.py::test_imaginary"),
+     "does not exist"),
+])
+def test_a_build_rule_cannot_be_lost(label, mutate, expect):
+    """BUILD RULES ARE DATA SO THE SPLIT CANNOT DROP ONE AGAIN.
+
+    Dividing the 792-line guide into four stage playbooks was right -- a
+    document that must be re-read in full before every change is one that gets
+    skipped, and the per-stage cost is now about 200 lines instead of 792.
+
+    But the split silently LOST TWO RULES: *a recommendation treated as
+    authority to act*, and *a fixed intake questionnaire that ignores known or
+    retrievable material*. The first is the boundary between advising a client
+    and binding one -- the whole senior-counsel framing rests on it. Nothing
+    failed. It was found only by diffing against a version of the guide that
+    no longer exists on disk, and next time there would be nothing to diff.
+
+    Each playbook now CLAIMS its rules by id. Losing one means deleting an id,
+    which is a deliberate act, and these are the plants that prove the refusal
+    works.
+    """
+    import copy
+    tool = _tool()
+    doc = copy.deepcopy(tool.load())
+    before = tool.lint(doc)
+    mutate(doc)
+    new = [p for p in tool.lint(doc) if p not in before]
+    assert any(expect in p for p in new), (
+        f"planting {label} produced no complaint containing {expect!r}; the "
+        f"rule cannot fail and reports a clean guide either way. new: "
+        f"{new[:3]}")
+
+
+def test_the_two_rules_the_split_dropped_are_back():
+    """THE REGRESSION, NAMED. Not 'the manifest is complete' in the abstract.
+
+    A count can be satisfied by any 77 rules. These two are the ones that were
+    actually lost, so these two are asserted by their words -- and their
+    playbooks must still say them, not merely list their ids.
+    """
+    tool = _tool()
+    doc = tool.load()
+    rules = {r["id"]: r for r in doc["build_rules"]["rules"]}
+
+    for phrase in ("recommendation treated as authority to act",
+                   "fixed intake questionnaire"):
+        assert any(phrase in r["statement"].lower() for r in rules.values()), (
+            f"{phrase!r} is not in the build-rule registry; it was dropped "
+            f"once already when the guide was split")
+
+    for rid, must in (("BG-068", "authority to act"),
+                      ("BG-063", "questionnaire")):
+        card = tool.PLAYBOOKS / rules[rid]["card"]
+        assert must in card.read_text(encoding="utf-8").lower(), (
+            f"{rid} is registered and {card.name} no longer says {must!r} -- "
+            f"the id survived and the rule did not")

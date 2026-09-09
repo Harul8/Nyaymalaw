@@ -1,0 +1,240 @@
+{
+  "schema": 1,
+  "note": "Authoritative professional-plan registry. The workbook is a view; current delivery state comes only from status.yaml and linked evidence.",
+  "expected_populations": {
+    "advocate_standards": 20,
+    "workflow_states": 13,
+    "advice_maturity": 5,
+    "roles": 7,
+    "gap_closures": 14
+  },
+  "advocate_standards": [
+    {
+      "id": "PA-01",
+      "quality": "Integrity and accuracy",
+      "observable": "Separates fact, allegation, inference and law; states what is known and unknown; corrects the record visibly.",
+      "failure": "Invented or embellished fact, authority or confidence, or a silently changed earlier position.",
+      "features": ["C7", "D4", "D5", "D9", "E2"],
+      "steps": ["STEP-C-07", "STEP-D-09", "STEP-D-10", "STEP-D-14", "STEP-E-02"],
+      "work_items": ["BK-49", "BK-64", "BK-67", "BK-37"]
+    },
+    {
+      "id": "PA-02",
+      "quality": "Independent judgment and duty",
+      "observable": "Exercises professional judgment, explains disagreement and refuses an unlawful, misleading or improper course.",
+      "failure": "Acts as a mouthpiece or hides adverse law or evidence to reach the requested conclusion.",
+      "features": ["B4", "E5", "F1"],
+      "steps": ["STEP-B-04", "STEP-E-05", "STEP-F-01"],
+      "work_items": ["BK-34", "BK-55", "BK-63"]
+    },
+    {
+      "id": "PA-03",
+      "quality": "Role and authority discipline",
+      "observable": "Knows who instructs, who decides and which acts require client, junior, AOR, senior counsel, filing or administrative authority.",
+      "failure": "Accepts direct or unauthorised instructions, exceeds scope, files or concedes without recorded authority.",
+      "features": ["B5", "B6", "E4", "F1", "F4", "G3", "I1"],
+      "steps": ["STEP-B-04", "STEP-E-04", "STEP-F-01", "STEP-F-04", "STEP-G-03", "STEP-I-01"],
+      "work_items": ["BK-62", "BK-63", "BK-56", "BK-57"]
+    },
+    {
+      "id": "PA-04",
+      "quality": "Confidentiality and privilege",
+      "observable": "Uses only authorised matter material, preserves privilege boundaries and prevents residual or cross-matter disclosure.",
+      "failure": "Cross-matter retrieval, uncontrolled processing, residual intake or unexplained external disclosure.",
+      "features": ["A1", "C6", "C7", "G3", "I1"],
+      "steps": ["STEP-A-01", "STEP-C-06", "STEP-C-07", "STEP-G-03", "STEP-I-01"],
+      "work_items": ["BK-21", "BK-42", "BK-69"]
+    },
+    {
+      "id": "PA-05",
+      "quality": "Competence and diligence",
+      "observable": "Recognises limits, protects urgent rights, tracks deadlines, prepares thoroughly and follows work through completion.",
+      "failure": "Misses an urgent step, implies competence it lacks or leaves work without an owner or review point.",
+      "features": ["B2", "B4", "D3", "E1", "G1", "H2"],
+      "steps": ["STEP-B-02", "STEP-B-04", "STEP-D-08", "STEP-E-01", "STEP-G-01", "STEP-H-02"],
+      "work_items": ["BK-34", "BK-41", "BK-53", "BK-59"]
+    },
+    {
+      "id": "PA-06",
+      "quality": "Listening and faithful understanding",
+      "observable": "Accepts spoken, typed and uploaded accounts, reflects the instruction accurately and makes correction easy.",
+      "failure": "Forces retyping or converts transcription or OCR uncertainty into fact.",
+      "features": ["C1", "C2", "C6"],
+      "steps": ["STEP-C-01", "STEP-C-02", "STEP-C-06"],
+      "work_items": ["BK-54", "BK-66", "BK-68", "BK-69"]
+    },
+    {
+      "id": "PA-07",
+      "quality": "Respect and empathy",
+      "observable": "Uses calm, neutral and accessible language and preserves the user's agency while remaining objective.",
+      "failure": "Blames, pressures, trivialises, lectures or exploits vulnerability.",
+      "features": ["A2", "C1", "E2"],
+      "steps": ["STEP-A-02", "STEP-C-01", "STEP-E-02"],
+      "work_items": ["BK-32", "BK-37", "BK-66"]
+    },
+    {
+      "id": "PA-08",
+      "quality": "Clear communication",
+      "observable": "Leads with the practical answer and separates conclusion, fact, evidence, authority, risk and next action.",
+      "failure": "Buries the answer in telemetry or leaves the user unsure what to do.",
+      "features": ["A3", "E2", "E5", "G3"],
+      "steps": ["STEP-A-03", "STEP-E-02", "STEP-E-05", "STEP-G-03"],
+      "work_items": ["BK-37", "BK-66", "BK-68", "J-7"]
+    },
+    {
+      "id": "PA-09",
+      "quality": "Question economy and purpose",
+      "observable": "Asks the smallest question most likely to change characterisation, urgency, remedy, proof or action and explains why.",
+      "failure": "Uses a fixed questionnaire, repeats known facts or asks immaterial questions because a field is empty.",
+      "features": ["C1", "C2", "C7", "D1"],
+      "steps": ["STEP-C-01", "STEP-C-02", "STEP-C-07", "STEP-D-02"],
+      "work_items": ["BK-54", "BK-66"]
+    },
+    {
+      "id": "PA-10",
+      "quality": "Memory, continuity and ownership",
+      "observable": "Remembers instructions and corrections, preserves versions and gives every material task an owner and review point.",
+      "failure": "Forgets prior answers, loses work on retry or leaves a decision without follow-through.",
+      "features": ["A3", "C1", "C5", "C7", "G3", "H1", "H2"],
+      "steps": ["STEP-A-03", "STEP-C-01", "STEP-C-05", "STEP-C-07", "STEP-G-03", "STEP-H-01", "STEP-H-02"],
+      "work_items": ["BK-36", "BK-39", "BK-65"]
+    },
+    {
+      "id": "PA-11",
+      "quality": "Issue identification and priority",
+      "observable": "Finds the questions that control outcome and orders them by threshold effect, urgency and dependency.",
+      "failure": "Produces a generic issue list, works immaterial points first or misses a dispositive threshold.",
+      "features": ["D1", "D9"],
+      "steps": ["STEP-D-02", "STEP-D-14"],
+      "work_items": ["BK-35", "BK-65", "BK-67"]
+    },
+    {
+      "id": "PA-12",
+      "quality": "Fact, source and evidence discipline",
+      "observable": "Distinguishes instruction, allegation, admission, document, testimony, transcript, inference and assumption and assesses evidential use.",
+      "failure": "Treats an extracted sentence, transcript or allegation as established truth.",
+      "features": ["C6", "C7", "D5"],
+      "steps": ["STEP-C-06", "STEP-C-07", "STEP-D-10"],
+      "work_items": ["BK-54", "BK-64", "BK-69"]
+    },
+    {
+      "id": "PA-13",
+      "quality": "Legal mastery and authority hierarchy",
+      "observable": "Uses governing law, date, binding hierarchy, treatment and proposition and verifies primary authority.",
+      "failure": "Relies on a stale, non-binding, overruled or propositionally irrelevant authority.",
+      "features": ["A4", "D4", "D9", "E2"],
+      "steps": ["STEP-A-04", "STEP-D-09", "STEP-D-14", "STEP-E-02"],
+      "work_items": ["BK-24", "BK-25", "BK-38", "BK-67"]
+    },
+    {
+      "id": "PA-14",
+      "quality": "Alternative characterisation and adverse case",
+      "observable": "Tests competing causes and defences and the opponent's strongest coherent case; accounts for material adverse facts.",
+      "failure": "Confirms the preferred theory or caricatures the opponent's case.",
+      "features": ["D7", "D8", "D9"],
+      "steps": ["STEP-D-12", "STEP-D-13", "STEP-D-14"],
+      "work_items": ["BK-65", "BK-67", "J-2", "J-3"]
+    },
+    {
+      "id": "PA-15",
+      "quality": "Candour and calibrated confidence",
+      "observable": "Names assumptions, reservations, material uncertainty and what would change the view; withholds unsafe conclusions.",
+      "failure": "Uses confidence theatre, gives false certainty or silently fills an evidential gap.",
+      "features": ["D9", "E2", "E5"],
+      "steps": ["STEP-D-14", "STEP-E-02", "STEP-E-05"],
+      "work_items": ["BK-37", "BK-55", "BK-67"]
+    },
+    {
+      "id": "PA-16",
+      "quality": "Remedy and enforceability",
+      "observable": "Tests whether useful relief exists, can be obtained in time and can realistically be enforced.",
+      "failure": "Recommends a legally arguable claim whose remedy is unavailable, hollow or too late.",
+      "features": ["D1", "E1", "E3"],
+      "steps": ["STEP-D-02", "STEP-E-01", "STEP-E-03"],
+      "work_items": ["BK-55", "BK-70"]
+    },
+    {
+      "id": "PA-17",
+      "quality": "Proportionality, cost and time",
+      "observable": "Balances value, urgency, cost, delay, evidential burden, disruption and likelihood of useful recovery.",
+      "failure": "Recommends maximum legal action without regard to objective or economics.",
+      "features": ["E1", "E3", "E4"],
+      "steps": ["STEP-E-01", "STEP-E-03", "STEP-E-04"],
+      "work_items": ["BK-55", "BK-70"]
+    },
+    {
+      "id": "PA-18",
+      "quality": "Strategy and settlement judgment",
+      "observable": "Connects law and proof to sequencing, leverage, negotiation, settlement authority and likely behaviour without presenting speculation as fact.",
+      "failure": "Provides only doctrinal law or makes unsupported predictions about judges, opponents or settlement.",
+      "features": ["D6", "E1", "E2", "F1"],
+      "steps": ["STEP-D-11", "STEP-E-01", "STEP-E-02", "STEP-F-01"],
+      "work_items": ["BK-55", "BK-57", "BK-70"]
+    },
+    {
+      "id": "PA-19",
+      "quality": "Preparation and persuasion",
+      "observable": "Reduces the file to a coherent theory, precise propositions, record locators, answers to hard questions and the form required for conference or court.",
+      "failure": "Produces a data dump, unsupported rhetoric or an argument that cannot be located in the record.",
+      "features": ["D6", "D9", "E2", "F2", "F6", "F7"],
+      "steps": ["STEP-D-11", "STEP-D-14", "STEP-E-02", "STEP-F-02", "STEP-F-06", "STEP-F-07"],
+      "work_items": ["BK-37", "BK-56", "BK-57", "BK-67"]
+    },
+    {
+      "id": "PA-20",
+      "quality": "Controlled action and follow-through",
+      "observable": "Acts within authority, uses the approved version, verifies transmission or filing and reports failure honestly through closure.",
+      "failure": "Treats a recommendation as authority, uses the wrong version or reports success without confirmation.",
+      "features": ["E4", "F1", "F2", "F3", "F4", "G3", "H1", "H2"],
+      "steps": ["STEP-E-04", "STEP-F-01", "STEP-F-02", "STEP-F-03", "STEP-F-04", "STEP-G-03", "STEP-H-01", "STEP-H-02"],
+      "work_items": ["BK-62", "BK-63", "BK-56", "BK-57", "BK-59"]
+    }
+  ],
+  "workflow_states": [
+    {"id": "EW-01", "state": "Set commission and role", "purpose": "Know the decision or work product, who instructs, who decides, the deadline, forum, scope and objective.", "required_output": "Versioned commission and authority record.", "features": ["B5", "B6", "C2", "E4"], "steps": ["STEP-B-04", "STEP-C-02", "STEP-E-04"], "work_items": ["BK-62", "BK-63"]},
+    {"id": "EW-02", "state": "Protect immediate position", "purpose": "Prevent irreversible harm and professional error before ordinary analysis.", "required_output": "Protective action or recorded refusal with outstanding screens visible.", "features": ["B2", "B3", "B4", "B5", "B6", "D2", "D3"], "steps": ["STEP-B-02", "STEP-B-03", "STEP-B-04", "STEP-D-03", "STEP-D-08"], "work_items": ["BK-34", "BK-53", "BK-62", "BK-63"]},
+    {"id": "EW-03", "state": "Capture and retrieve material", "purpose": "Let the user speak or upload rather than retype and retrieve authorised matter material first.", "required_output": "Source inventory with immutable originals, derived text, provenance and processing state.", "features": ["C1", "C6", "C7", "G3"], "steps": ["STEP-C-01", "STEP-C-06", "STEP-C-07", "STEP-G-03"], "work_items": ["BK-54", "BK-64", "BK-69"]},
+    {"id": "EW-04", "state": "Hear, reflect and classify", "purpose": "Understand the account without treating every statement as established fact.", "required_output": "Versioned factual account, chronology, parties, threads and proposition/source map.", "features": ["C1", "C3", "C4", "C5", "C7"], "steps": ["STEP-C-01", "STEP-C-03", "STEP-C-04", "STEP-C-05", "STEP-C-07"], "work_items": ["BK-54", "BK-64"]},
+    {"id": "EW-05", "state": "Form provisional hypotheses", "purpose": "Use early legal judgment to decide what matters next without presenting premature advice.", "required_output": "Ranked working hypotheses with predicates and explicit uncertainty.", "features": ["C2", "C7", "D1", "D2"], "steps": ["STEP-C-02", "STEP-C-07", "STEP-D-02", "STEP-D-03"], "work_items": ["BK-54", "BK-65"]},
+    {"id": "EW-06", "state": "Select the next question", "purpose": "Ask the smallest useful question or request that can materially change the legal or practical position.", "required_output": "Question or request with purpose, expected effect and response state.", "features": ["C1", "C2", "C6", "C7"], "steps": ["STEP-C-01", "STEP-C-02", "STEP-C-06", "STEP-C-07"], "work_items": ["BK-54", "BK-66"]},
+    {"id": "EW-07", "state": "Declare task readiness", "purpose": "Know when enough is known for the specific task without pretending the matter is complete.", "required_output": "Named readiness state with open gaps, assumptions and expiry or review trigger.", "features": ["C7", "E1", "E2"], "steps": ["STEP-C-07", "STEP-E-01", "STEP-E-02"], "work_items": ["BK-54", "BK-55", "BK-62"]},
+    {"id": "EW-08", "state": "Work the legal file", "purpose": "Resolve the legal, procedural and evidential questions that control outcome.", "required_output": "Versioned legal position with support, dependencies and reservations.", "features": ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9"], "steps": ["STEP-D-02", "STEP-D-03", "STEP-D-08", "STEP-D-09", "STEP-D-10", "STEP-D-11", "STEP-D-12", "STEP-D-13", "STEP-D-14"], "work_items": ["BK-35", "BK-64", "BK-65", "BK-70"]},
+    {"id": "EW-09", "state": "Stress-test and assess practicality", "purpose": "Test the preferred theory against the strongest alternative and the client's real objective.", "required_output": "Options and scenario record with practical consequences and decision points.", "features": ["D7", "D8", "D9", "E1", "E3", "F1"], "steps": ["STEP-D-12", "STEP-D-13", "STEP-D-14", "STEP-E-01", "STEP-E-03", "STEP-F-01"], "work_items": ["BK-55", "BK-57", "BK-67", "BK-70"]},
+    {"id": "EW-10", "state": "Advise at declared maturity", "purpose": "Give the answer in a form whose certainty and completeness match the state of the file.", "required_output": "AM-01 to AM-05 output with support, uncertainty and next step.", "features": ["E1", "E2", "E3", "E4", "E5"], "steps": ["STEP-E-01", "STEP-E-02", "STEP-E-03", "STEP-E-04", "STEP-E-05"], "work_items": ["BK-37", "BK-55", "BK-67"]},
+    {"id": "EW-11", "state": "Record decision and authority", "purpose": "Preserve client or advocate autonomy and prevent a recommendation becoming unauthorised action.", "required_output": "Decision, authority scope, owner, expiry and next review point.", "features": ["E4", "E5", "F1", "F2", "F3", "F4"], "steps": ["STEP-E-04", "STEP-E-05", "STEP-F-01", "STEP-F-02", "STEP-F-03", "STEP-F-04"], "work_items": ["BK-62", "BK-63", "BK-56", "BK-57"]},
+    {"id": "EW-12", "state": "Act and verify", "purpose": "Execute the authorised step accurately and report actual outcome rather than intention.", "required_output": "Verified action event, resulting obligation and updated file state.", "features": ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "H1"], "steps": ["STEP-F-01", "STEP-F-02", "STEP-F-03", "STEP-F-04", "STEP-F-05", "STEP-F-06", "STEP-F-07", "STEP-H-01"], "work_items": ["BK-56", "BK-57", "BK-59"]},
+    {"id": "EW-13", "state": "Carry, update and close", "purpose": "Maintain continuity, respond to new events and close only when obligations are resolved.", "required_output": "Current matter state, handover package, closure record or reopened task.", "features": ["G1", "G2", "G3", "H1", "H2", "I1"], "steps": ["STEP-G-01", "STEP-G-02", "STEP-G-03", "STEP-H-01", "STEP-H-02", "STEP-I-01"], "work_items": ["BK-39", "BK-58", "BK-59"]}
+  ],
+  "advice_maturity": [
+    {"id": "AM-01", "level": "Immediate protective guidance", "when_permitted": "An urgent and potentially irreversible position exists before ordinary screening can finish.", "must_contain": ["narrow protective step", "urgency", "factual basis", "remaining screens", "owner", "next deadline"], "must_not_imply": "A full merits opinion or authority beyond the emergency step.", "features": ["B2", "D3"], "steps": ["STEP-B-02", "STEP-D-08"], "work_items": ["BK-53", "BK-62"]},
+    {"id": "AM-02", "level": "Preliminary orientation", "when_permitted": "The commission is known but the brief is not ready for a concluded legal view.", "must_contain": ["likely issues", "known facts", "major unknowns", "next useful question or material"], "must_not_imply": "That the issues are complete or a recommended course has been reached.", "features": ["C1", "C2", "C7"], "steps": ["STEP-C-01", "STEP-C-02", "STEP-C-07"], "work_items": ["BK-54", "BK-64"]},
+    {"id": "AM-03", "level": "Provisional view", "when_permitted": "Material analysis is possible but named assumptions or gaps could change it.", "must_contain": ["provisional conclusion", "factual predicates", "assumptions", "authorities checked", "confidence", "reservations", "change triggers"], "must_not_imply": "Considered advice or certainty beyond the identified support.", "features": ["D1", "D4", "D9", "E2"], "steps": ["STEP-D-02", "STEP-D-09", "STEP-D-14", "STEP-E-02"], "work_items": ["BK-35", "BK-37", "BK-65"]},
+    {"id": "AM-04", "level": "Considered advice", "when_permitted": "The task-specific brief and legal work pass their readiness gates.", "must_contain": ["recommendation", "controlling reasons", "facts", "proof", "primary authority", "adverse case", "remedies", "options", "proportionality", "next action"], "must_not_imply": "Authority to act or certainty of litigation outcome.", "features": ["D5", "D9", "E1", "E2", "E3", "E5"], "steps": ["STEP-D-10", "STEP-D-14", "STEP-E-01", "STEP-E-02", "STEP-E-03", "STEP-E-05"], "work_items": ["BK-37", "BK-55", "BK-67", "BK-70"]},
+    {"id": "AM-05", "level": "Action or argument brief", "when_permitted": "A considered decision and the required professional authority have been recorded.", "must_contain": ["approved objective", "propositions", "record locators", "authority locators", "limits", "version", "owner", "deadline", "verification method"], "must_not_imply": "Permission to expand scope, concede, settle, file or communicate beyond recorded authority.", "features": ["E4", "F1", "F2", "F3", "F4", "F6", "F7"], "steps": ["STEP-E-04", "STEP-F-01", "STEP-F-02", "STEP-F-03", "STEP-F-04", "STEP-F-06", "STEP-F-07"], "work_items": ["BK-62", "BK-63", "BK-56", "BK-57"]}
+  ],
+  "roles": [
+    {"id": "ROLE-01", "role": "Client or authorised representative", "may": "Provide and correct facts, objectives and constraints and make decisions reserved to the client.", "controlled": "Identity, authority to instruct, consent and matter relationship must be recorded.", "features": ["B5", "C1", "C2", "E4", "F1"], "steps": ["STEP-B-04", "STEP-C-01", "STEP-C-02", "STEP-E-04", "STEP-F-01"], "work_items": ["BK-62", "BK-63"]},
+    {"id": "ROLE-02", "role": "Instructing advocate or junior", "may": "Take instructions, classify material, research, obtain authority, prepare the brief and coordinate action.", "controlled": "Cannot misstate instructions, conceal adverse material or delegate beyond authority.", "features": ["B5", "C6", "D4", "E4", "F2", "G3"], "steps": ["STEP-B-04", "STEP-C-06", "STEP-D-09", "STEP-E-04", "STEP-F-02", "STEP-G-03"], "work_items": ["BK-54", "BK-56", "BK-62", "BK-63"]},
+    {"id": "ROLE-03", "role": "Advocate-on-Record", "may": "File and act in the Supreme Court and coordinate procedural work with arguing counsel.", "controlled": "Client authority, court rules, approved version and filing receipt govern action.", "features": ["F4", "F7", "G3"], "steps": ["STEP-F-04", "STEP-F-07", "STEP-G-03"], "work_items": ["BK-56", "BK-57", "BK-63"]},
+    {"id": "ROLE-04", "role": "Designated Senior or arguing counsel", "may": "Frame issues, test law and evidence, advise the instructing team and argue within the recorded brief.", "controlled": "Instruction route, role restrictions, concessions and settlement authority remain configurable and explicit.", "features": ["D6", "D7", "E2", "E5", "F7"], "steps": ["STEP-D-11", "STEP-D-12", "STEP-E-02", "STEP-E-05", "STEP-F-07"], "work_items": ["BK-63", "BK-67"]},
+    {"id": "ROLE-05", "role": "Researcher or paralegal", "may": "Retrieve, summarise, cite and organise material for a bounded supervised task.", "controlled": "Cannot give unreviewed advice, make client decisions or alter source material.", "features": ["A4", "D4"], "steps": ["STEP-A-04", "STEP-D-09"], "work_items": ["BK-38", "BK-63"]},
+    {"id": "ROLE-06", "role": "Filing or operations user", "may": "Transmit, file, serve, schedule and record operational events within an approved package.", "controlled": "Cannot alter substance, select an unapproved version or report success without a receipt.", "features": ["F3", "F4", "H1"], "steps": ["STEP-F-03", "STEP-F-04", "STEP-H-01"], "work_items": ["BK-56", "BK-63"]},
+    {"id": "ROLE-07", "role": "Workspace administrator", "may": "Manage identity, roles, availability, retention configuration and audited support access.", "controlled": "No routine substantive matter access; support access is segregated, necessary, attributable and expiring.", "features": ["A1", "I1"], "steps": ["STEP-A-01", "STEP-I-01"], "work_items": ["BK-31", "BK-42", "BK-63"]}
+  ],
+  "gap_closures": [
+    {"id": "GC-01", "gap": "Commission and task framing is scattered", "plan_change": "Make EW-01 mandatory before substantive work and on a material new instruction.", "minimum_acceptance": "Role, decision sought, scope, objective, deadline and requested output persist and rerun on change.", "foundation_wave": "W1", "feature_complete_wave": "W1", "release_gate_wave": "W7", "links": [{"item": "BK-62", "stage": "feature"}], "standards": ["PA-03", "PA-05"], "workflow": ["EW-01", "EW-07", "EW-11"], "advice": ["AM-02", "AM-05"]},
+    {"id": "GC-02", "gap": "Professional roles are conflated", "plan_change": "Use the role matrix for permissions, handoffs and refusal states.", "minimum_acceptance": "Every material instruction and action is allowed, delegated or refused by role and recorded authority.", "foundation_wave": "W1", "feature_complete_wave": "W1", "release_gate_wave": "W7", "links": [{"item": "BK-63", "stage": "feature"}, {"item": "BK-67", "stage": "release"}], "standards": ["PA-02", "PA-03", "PA-04", "PA-20"], "workflow": ["EW-01", "EW-11", "EW-12"], "advice": ["AM-05"]},
+    {"id": "GC-03", "gap": "Briefing is not hypothesis-driven", "plan_change": "Use EW-05 and EW-06 to rank the next question by expected decision impact and user burden.", "minimum_acceptance": "The next question changes with the legal hypothesis and never repeats known or retrievable information.", "foundation_wave": "W2", "feature_complete_wave": "W2", "release_gate_wave": "W7", "links": [{"item": "BK-54", "stage": "feature"}, {"item": "BK-67", "stage": "release"}], "standards": ["PA-09", "PA-11"], "workflow": ["EW-05", "EW-06", "EW-07"], "advice": ["AM-02", "AM-03"]},
+    {"id": "GC-04", "gap": "Intake lacks first-class voice and mixed-media input", "plan_change": "Support live voice, audio, video, images and common documents with resumable processing and user correction.", "minimum_acceptance": "The original is preserved and every transcript or OCR proposition has a locator, confidence and confirmation state.", "foundation_wave": "W0", "feature_complete_wave": "W2", "release_gate_wave": "W7", "links": [{"item": "BK-69", "stage": "foundation"}, {"item": "BK-54", "stage": "feature"}, {"item": "BK-42", "stage": "release"}], "standards": ["PA-04", "PA-06", "PA-12"], "workflow": ["EW-03", "EW-04", "EW-06"], "advice": ["AM-02"]},
+    {"id": "GC-05", "gap": "Fact and evidence states are too coarse", "plan_change": "Use a typed proposition and source model across intake and legal analysis.", "minimum_acceptance": "Every material conclusion traces to a typed proposition and source locator; contradictions remain visible.", "foundation_wave": "W2", "feature_complete_wave": "W3", "release_gate_wave": "W7", "links": [{"item": "BK-64", "stage": "foundation"}, {"item": "BK-67", "stage": "release"}], "standards": ["PA-01", "PA-12", "PA-15"], "workflow": ["EW-03", "EW-04", "EW-08"], "advice": ["AM-02", "AM-03", "AM-04"]},
+    {"id": "GC-06", "gap": "Legal analysis appears sequential", "plan_change": "Represent the legal file as a dependency graph with selective invalidation and versioned recomputation.", "minimum_acceptance": "Changing a predicate invalidates all dependent conclusions and no unrelated conclusion; prior states remain auditable.", "foundation_wave": "W3", "feature_complete_wave": "W3", "release_gate_wave": "W7", "links": [{"item": "BK-65", "stage": "feature"}, {"item": "BK-67", "stage": "release"}], "standards": ["PA-10", "PA-11", "PA-14"], "workflow": ["EW-05", "EW-08", "EW-09"], "advice": ["AM-03", "AM-04"]},
+    {"id": "GC-07", "gap": "Remedy and enforceability are underdeveloped", "plan_change": "Add relief, prerequisites, enforcement route, assets, timing and practical recovery to the legal file and advice.", "minimum_acceptance": "Golden matters include strong merits with unavailable, hollow or disproportionate relief and the recommendation changes.", "foundation_wave": "W3", "feature_complete_wave": "W4", "release_gate_wave": "W7", "links": [{"item": "BK-70", "stage": "foundation"}, {"item": "BK-55", "stage": "feature"}, {"item": "BK-67", "stage": "release"}], "standards": ["PA-16", "PA-17", "PA-18"], "workflow": ["EW-08", "EW-09", "EW-10"], "advice": ["AM-04"]},
+    {"id": "GC-08", "gap": "Advice has no formal maturity model", "plan_change": "Require every output to declare AM-01 to AM-05 and satisfy its readiness and content contract.", "minimum_acceptance": "A preliminary or provisional view cannot read as considered advice and changes state when a blocking predicate changes.", "foundation_wave": "W4", "feature_complete_wave": "W4", "release_gate_wave": "W7", "links": [{"item": "BK-37", "stage": "feature"}, {"item": "BK-55", "stage": "feature"}, {"item": "BK-67", "stage": "release"}], "standards": ["PA-08", "PA-15"], "workflow": ["EW-07", "EW-10", "EW-11"], "advice": ["AM-01", "AM-02", "AM-03", "AM-04", "AM-05"]},
+    {"id": "GC-09", "gap": "Practical and settlement judgment is incomplete", "plan_change": "Add comparable options, strategy and settlement decision points, authority and do-nothing consequences.", "minimum_acceptance": "Equivalent legal merits produce different recommendations when practical constraints change, with reasons visible.", "foundation_wave": "W4", "feature_complete_wave": "W5", "release_gate_wave": "W7", "links": [{"item": "BK-55", "stage": "foundation"}, {"item": "BK-57", "stage": "feature"}, {"item": "BK-67", "stage": "release"}], "standards": ["PA-16", "PA-17", "PA-18"], "workflow": ["EW-09", "EW-10", "EW-11"], "advice": ["AM-04", "AM-05"]},
+    {"id": "GC-10", "gap": "Trust-building interaction is not an explicit acceptance surface", "plan_change": "Evaluate PA-01 to PA-10 across the served journey and keep material failures visible.", "minimum_acceptance": "Representative users can identify what NM understood, used, assumed, changed, needs and will do next.", "foundation_wave": "W2", "feature_complete_wave": "W4", "release_gate_wave": "W7", "links": [{"item": "BK-66", "stage": "foundation"}, {"item": "BK-37", "stage": "feature"}, {"item": "BK-41", "stage": "feature"}, {"item": "BK-67", "stage": "release"}], "standards": ["PA-01", "PA-06", "PA-07", "PA-08", "PA-09", "PA-10"], "workflow": ["EW-04", "EW-06", "EW-10", "EW-13"], "advice": ["AM-02", "AM-03", "AM-04"]},
+    {"id": "GC-11", "gap": "Recommendation and authority to act are not separated sharply", "plan_change": "Require EW-11 and the role-specific authority matrix before every external or irreversible action.", "minimum_acceptance": "Every action has an authorised role, scope, approved version, owner, deadline and receipt; missing authority blocks success.", "foundation_wave": "W1", "feature_complete_wave": "W5", "release_gate_wave": "W7", "links": [{"item": "BK-63", "stage": "foundation"}, {"item": "BK-56", "stage": "feature"}, {"item": "BK-57", "stage": "feature"}, {"item": "BK-67", "stage": "release"}], "standards": ["PA-03", "PA-20"], "workflow": ["EW-11", "EW-12", "EW-13"], "advice": ["AM-05"]},
+    {"id": "GC-12", "gap": "Senior-advocate quality is not measured end to end", "plan_change": "Use the Advocate Standard as the counsel gate with named reviewers, representative matters, thresholds and reservations.", "minimum_acceptance": "No counsel-facing feature conforms without current review across all applicable PA standards.", "foundation_wave": "W3", "feature_complete_wave": "W7", "release_gate_wave": "W7", "links": [{"item": "BK-67", "stage": "foundation"}, {"item": "BK-42", "stage": "release"}], "standards": ["PA-01", "PA-02", "PA-11", "PA-13", "PA-14", "PA-15", "PA-16", "PA-18", "PA-19"], "workflow": ["EW-08", "EW-09", "EW-10"], "advice": ["AM-03", "AM-04", "AM-05"]},
+    {"id": "GC-13", "gap": "The underlying 47-step system may become the user experience", "plan_change": "Build the workspace around understanding, purpose, change, readiness, decisions and next action with deeper evidence inspectable.", "minimum_acceptance": "At each target width an advocate can reorient in under one minute without reading engineering state.", "foundation_wave": "W2", "feature_complete_wave": "W6", "release_gate_wave": "W7", "links": [{"item": "BK-68", "stage": "foundation"}, {"item": "BK-32", "stage": "feature"}, {"item": "BK-37", "stage": "feature"}, {"item": "BK-39", "stage": "feature"}, {"item": "BK-56", "stage": "feature"}, {"item": "BK-59", "stage": "feature"}, {"item": "BK-42", "stage": "release"}], "standards": ["PA-07", "PA-08", "PA-10", "PA-19", "PA-20"], "workflow": ["EW-01", "EW-07", "EW-10", "EW-11", "EW-13"], "advice": ["AM-02", "AM-03", "AM-04", "AM-05"]},
+    {"id": "GC-14", "gap": "Multimodal processing adds confidentiality and integrity risk", "plan_change": "Apply purpose, authority, least privilege, quarantine, processor, retention and deletion controls before media reaches legal reasoning.", "minimum_acceptance": "Unsafe media never enters reasoning; processing boundaries are disclosed and controlled; originals, derivatives and deletion remain attributable.", "foundation_wave": "W0", "feature_complete_wave": "W2", "release_gate_wave": "W7", "links": [{"item": "BK-69", "stage": "foundation"}, {"item": "BK-54", "stage": "feature"}, {"item": "BK-42", "stage": "release"}], "standards": ["PA-01", "PA-04", "PA-06", "PA-12"], "workflow": ["EW-03", "EW-04", "EW-13"], "advice": ["AM-02", "AM-03"]}
+  ]
+}

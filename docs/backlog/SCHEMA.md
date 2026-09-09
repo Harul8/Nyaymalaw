@@ -4,6 +4,9 @@ Opened 9 September 2026.
 
 ```
 status.yaml          what is true NOW
+plan.json            WHEN registered work is scheduled
+professional.json    WHAT expert practice requires and how gaps map to work
+steps.yaml           HOW the user journey is traversed
 BACKLOG.md           WHY the work exists
 tests / journey      PROOF that it is true
 the generated board  what people SEE
@@ -137,16 +140,18 @@ needs more than a CSS navigation row.
 
 | # | type | what it proves |
 |---|---|---|
-| 1 | `pytest` | deterministic domain behaviour |
-| 2 | `integration` | API, store, composition root |
-| 3 | `journey` | the served application in a real browser |
-| 4 | `adversarial` | failure, retry, malformed output, unsafe input |
+| 1 | `domain_test` | deterministic domain behaviour |
+| 2 | `integration_test` | API, store, composition root |
+| 3 | `browser_journey` | the served application in a real browser |
+| 4 | `adversarial_test` | failure, retry, malformed output, unsafe input |
 | 5 | `model_eval` | diverse real matters, not scripted output |
 | 6 | `counsel_review` | structured review by a qualified user |
-| 7 | `production` | measured latency, recovery, accessibility, security |
+| 7 | `production_measure` | measured latency, recovery, accessibility, security |
 
-`lint` checks that every `pytest` and `journey` ref actually exists. A proof
-naming a test nobody wrote is worse than no proof.
+`lint` checks that every attached deterministic-test ref actually exists. A
+proof naming a test nobody wrote is worse than no proof; browser, model,
+counsel and production evidence remain NOT_RUN until their own runner records
+a result.
 
 ### Negative controls
 
@@ -176,6 +181,48 @@ Using one field for all three made the graph unreadable.
 `lint` rejects unknown ids, self-dependency, cycles, a dependency in a later
 wave, a `ready` item whose dependencies are incomplete, and a derived-done item
 whose mandatory dependency is not done.
+
+---
+
+## Delivery waves — `docs/backlog/plan.json`
+
+Every BK/J row appears exactly once in the list-based `item_waves` registry.
+The list shape is deliberate: duplicate ids remain visible to lint instead of
+being silently overwritten by an object key. Active work must carry `W0` to
+`W7`; a `null` wave is permitted only for `deferred`, `superseded` or
+`cancelled` work, where a schedule would be misleading.
+
+The linter refuses a missing, duplicate or unknown row, an invalid wave and a
+hard dependency scheduled after its consumer. `sequenced_after` remains a
+preference and therefore does not create a false completion constraint.
+
+---
+
+## The professional model — `docs/backlog/professional.json`
+
+The professional plan is machine-readable without creating four more backlog
+status systems:
+
+| object | purpose | current status? |
+|---|---|---|
+| `PA-01`…`PA-20` | observable advocate qualities and failure modes | no — durable standard |
+| `EW-01`…`EW-13` | expert work states and required outputs | no — durable workflow |
+| `AM-01`…`AM-05` | permitted advice maturity and content boundary | no — durable contract |
+| `ROLE-01`…`ROLE-07` | professional authority and refusal boundary | no — durable control |
+| `GC-01`…`GC-14` | gap-to-delivery crosswalk | **derived from linked BK/J work** |
+
+Every PA/EW/AM/ROLE object must link to at least one registered feature, step
+and work item. Every GC object links the standards it protects to registered
+work at one of three explicit horizons: `foundation`, `feature` and `release`.
+The corresponding `foundation_wave`, `feature_complete_wave` and
+`release_gate_wave` must be ordered, and linked work cannot be scheduled after
+the boundary it claims to meet.
+
+A GC row may not author `status`, `planning_status` or `delivery_status`.
+`tools/backlog.py` derives `PLANNED`, `IN_PROGRESS`, `BLOCKED` or `CLOSED` from
+the linked work and its evidence, and the generated board and workbook display
+that result. The expected populations are themselves checked, so deleting all
+rows cannot produce a vacuous green result.
 
 ---
 
@@ -250,11 +297,12 @@ state, and either names a delivery item or records an explicit deferral.
 ```
 python tools/backlog.py lint      validate schema, vocabulary and invariants
 python tools/backlog.py status    current phase and release readiness
-python tools/backlog.py verify    execute the evidence attached to one item
-python tools/backlog.py graph     cycles and wave ordering
+python tools/backlog.py graph     show the dependency graph and largest blockers
 python tools/backlog.py render    regenerate the board in BACKLOG.md
 python tools/backlog.py check     everything CI needs
 ```
 
-Counts are generated and never hand-maintained: `Open — 13` was written by
-hand and was already wrong when it was typed.
+Lint prints all control populations — items, features, steps, PA, EW, AM,
+roles, GC and delivery-wave rows — on every run. Counts are generated and never
+hand-maintained: `Open — 13` was written by hand and was already wrong when it
+was typed.

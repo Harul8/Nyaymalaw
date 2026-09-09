@@ -34,6 +34,7 @@ by writing the word.
 from __future__ import annotations
 
 import argparse
+import json
 import pathlib
 import re
 import sys
@@ -48,6 +49,10 @@ utf8_console()
 
 STATUS = ROOT / "docs" / "backlog" / "status.yaml"
 STEPS = ROOT / "docs" / "backlog" / "steps.yaml"
+PLAN = ROOT / "docs" / "backlog" / "plan.json"
+PROFESSIONAL = ROOT / "docs" / "backlog" / "professional.json"
+BUILD_RULES = ROOT / "docs" / "backlog" / "build_rules.json"
+PLAYBOOKS = ROOT / "docs" / "playbooks"
 BACKLOG = ROOT / "docs" / "BACKLOG.md"
 START, END = "<!-- BACKLOG_STATUS:START -->", "<!-- BACKLOG_STATUS:END -->"
 
@@ -97,12 +102,18 @@ CONTRACT_FIELDS = ("actor", "entry_conditions", "user_action",
 #: must never be quoted back as the plan -- the same separation the product
 #: keeps between STATED and INFERRED posture.
 BASIS = {"prd_sequence", "derived_from_features"}
+WAVES = tuple(f"W{i}" for i in range(8))
 
 
 def load() -> dict:
     doc = yaml.safe_load(STATUS.read_text(encoding="utf-8"))
     doc["steps"] = (yaml.safe_load(STEPS.read_text(encoding="utf-8"))
                     or {}).get("steps", []) if STEPS.exists() else []
+    doc["plan"] = json.loads(PLAN.read_text(encoding="utf-8"))
+    doc["professional"] = json.loads(
+        PROFESSIONAL.read_text(encoding="utf-8"))
+    doc["build_rules"] = json.loads(
+        BUILD_RULES.read_text(encoding="utf-8")) if BUILD_RULES.exists() else {}
     return doc
 
 
@@ -233,6 +244,7 @@ def lint(doc: dict) -> list[str]:
 
     bad += _cycles(items, seen)
     bad += _missing_records(items)
+    bad += _build_rules(doc)
 
     fids = [f.get("id") for f in feats]
     if len(fids) != len(set(fids)):
@@ -249,7 +261,13 @@ def lint(doc: dict) -> list[str]:
                        f"neither a delivery item nor a deferral -- which is "
                        f"how a phase says 'nothing implemented' with no plan")
 
-    bad += _steps(doc, known, {f.get("id"): f for f in feats})
+    feature_map = {f.get("id"): f for f in feats}
+    bad += _steps(doc, known, feature_map)
+
+    wave_bad, waves = _waves(doc, items, seen)
+    bad += wave_bad
+    bad += _professional(doc, known, set(feature_map),
+                         {s.get("id") for s in doc.get("steps") or []}, waves)
 
     for ev in doc.get("events") or []:
         if ev.get("item") not in known:
@@ -264,6 +282,190 @@ def lint(doc: dict) -> list[str]:
     for it in items:
         if it.get("legacy") and it["id"] in reopened:
             bad.append(f"{it['id']}: reopened and still marked legacy")
+    return bad
+
+
+def _waves(doc: dict, items: list[dict], seen: dict[str, int]
+           ) -> tuple[list[str], dict[str, str | None]]:
+    """Validate the one delivery-wave assignment for every registered row.
+
+    The plan intentionally uses a list. A mapping would silently keep the last
+    duplicate and make the exact drift this control exists to detect invisible.
+    """
+    rows = (doc.get("plan") or {}).get("item_waves") or []
+    bad: list[str] = []
+    waves: dict[str, str | None] = {}
+    duplicates: set[str] = set()
+    for n, row in enumerate(rows):
+        rid = row.get("id")
+        if not rid:
+            bad.append(f"item_waves[{n}] has no id")
+            continue
+        if rid in waves:
+            duplicates.add(rid)
+            bad.append(f"delivery wave for {rid} appears twice")
+        else:
+            waves[rid] = row.get("wave")
+
+    known = set(seen)
+    for rid in sorted(known - set(waves)):
+        bad.append(f"{rid}: has no delivery-wave assignment")
+    for rid in sorted(set(waves) - known):
+        bad.append(f"delivery wave names {rid!r}, which is not a row")
+
+    terminal = {"deferred", "superseded", "cancelled"}
+    for it in items:
+        rid, wave = it.get("id"), waves.get(it.get("id"))
+        if rid in duplicates or rid not in waves:
+            continue
+        if wave is None:
+            if it.get("delivery_status") not in terminal:
+                bad.append(f"{rid}: active item has no delivery wave")
+        elif wave not in WAVES:
+            bad.append(f"{rid}: delivery wave {wave!r} is not W0-W7")
+        elif it.get("delivery_status") in terminal:
+            bad.append(f"{rid}: terminal item has wave {wave}; use null so "
+                       "the plan does not imply scheduled delivery")
+
+    rank = {w: i for i, w in enumerate(WAVES)}
+    for it in items:
+        rid, current = it.get("id"), waves.get(it.get("id"))
+        if current not in rank:
+            continue
+        for dep in it.get("depends_on") or []:
+            earlier = waves.get(dep)
+            if earlier in rank and rank[earlier] > rank[current]:
+                bad.append(f"{rid} ({current}) depends on {dep} ({earlier}), "
+                           "which is scheduled later")
+    return bad, waves
+
+
+def professional_population(doc: dict) -> dict[str, int]:
+    """The population printed by lint and shown on the generated board."""
+    pro = doc.get("professional") or {}
+    return {name: len(pro.get(name) or []) for name in
+            ("advocate_standards", "workflow_states", "advice_maturity",
+             "roles", "gap_closures")}
+
+
+def _professional(doc: dict, items: set[str], features: set[str],
+                  steps: set[str], waves: dict[str, str | None]) -> list[str]:
+    """Validate the professional model and its delivery crosswalk.
+
+    PA/EW/AM/ROLE are durable product standards, not backlog statuses. GC is a
+    crosswalk: its current state is always derived from the linked work items.
+    """
+    pro = doc.get("professional") or {}
+    expected = pro.get("expected_populations") or {}
+    bad: list[str] = []
+    groups = (
+        ("advocate_standards", "PA", ("features", "steps", "work_items")),
+        ("workflow_states", "EW", ("features", "steps", "work_items")),
+        ("advice_maturity", "AM", ("features", "steps", "work_items")),
+        ("roles", "ROLE", ("features", "steps", "work_items")),
+    )
+
+    known_by_kind: dict[str, set[str]] = {}
+    for name, prefix, required_refs in groups:
+        rows = pro.get(name) or []
+        want = expected.get(name)
+        if not isinstance(want, int) or want <= 0:
+            bad.append(f"professional expected population for {name} is not "
+                       "a positive integer")
+        elif len(rows) != want:
+            bad.append(f"professional {name} population is {len(rows)}, "
+                       f"expected {want}")
+        ids = [r.get("id") for r in rows]
+        if len(ids) != len(set(ids)):
+            bad.append(f"duplicate ids in professional {name}")
+        expected_ids = [f"{prefix}-{i:02d}" for i in range(1, len(rows) + 1)]
+        if ids != expected_ids:
+            bad.append(f"professional {name} ids are not the complete ordered "
+                       f"{prefix}-01..{prefix}-{len(rows):02d} sequence")
+        known_by_kind[prefix] = set(ids)
+        for row in rows:
+            rid = row.get("id", "?")
+            for field in required_refs:
+                refs = row.get(field)
+                if not isinstance(refs, list) or not refs:
+                    bad.append(f"{rid}: {field} is empty; professional coverage "
+                               "cannot be proved vacuously")
+                    continue
+                universe = (features if field == "features" else
+                            steps if field == "steps" else items)
+                for ref in refs:
+                    if ref not in universe:
+                        bad.append(f"{rid}: {field} names {ref!r}, which is not "
+                                   "registered")
+
+    gaps = pro.get("gap_closures") or []
+    want = expected.get("gap_closures")
+    if not isinstance(want, int) or want <= 0:
+        bad.append("professional expected population for gap_closures is not "
+                   "a positive integer")
+    elif len(gaps) != want:
+        bad.append(f"professional gap_closures population is {len(gaps)}, "
+                   f"expected {want}")
+    gids = [g.get("id") for g in gaps]
+    if len(gids) != len(set(gids)):
+        bad.append("duplicate ids in professional gap_closures")
+    expected_gids = [f"GC-{i:02d}" for i in range(1, len(gaps) + 1)]
+    if gids != expected_gids:
+        bad.append("professional gap_closures ids are not the complete ordered "
+                   f"GC-01..GC-{len(gaps):02d} sequence")
+
+    rank = {w: i for i, w in enumerate(WAVES)}
+    stage_field = {"foundation": "foundation_wave",
+                   "feature": "feature_complete_wave",
+                   "release": "release_gate_wave"}
+    ref_fields = {"standards": "PA", "workflow": "EW", "advice": "AM"}
+    for gap in gaps:
+        gid = gap.get("id", "?")
+        for forbidden in ("status", "planning_status", "delivery_status"):
+            if forbidden in gap:
+                bad.append(f"{gid}: {forbidden} is authored; gap state must be "
+                           "derived from linked work")
+        boundaries = [gap.get("foundation_wave"),
+                      gap.get("feature_complete_wave"),
+                      gap.get("release_gate_wave")]
+        if any(w not in rank for w in boundaries):
+            bad.append(f"{gid}: foundation, feature-complete and release-gate "
+                       "waves must each be W0-W7")
+        elif not (rank[boundaries[0]] <= rank[boundaries[1]]
+                  <= rank[boundaries[2]]):
+            bad.append(f"{gid}: stage waves are not ordered foundation <= "
+                       "feature-complete <= release-gate")
+
+        links = gap.get("links")
+        if not isinstance(links, list) or not links:
+            bad.append(f"{gid}: has no registered work links")
+        else:
+            stages = {link.get("stage") for link in links}
+            if "feature" not in stages and "foundation" not in stages:
+                bad.append(f"{gid}: has no foundation or feature delivery link")
+            for link in links:
+                item, stage = link.get("item"), link.get("stage")
+                if item not in items:
+                    bad.append(f"{gid}: link names {item!r}, which is not a row")
+                if stage not in stage_field:
+                    bad.append(f"{gid}: link stage {stage!r} is not foundation, "
+                               "feature or release")
+                    continue
+                boundary = gap.get(stage_field[stage])
+                item_wave = waves.get(item)
+                if boundary in rank and item_wave in rank and \
+                        rank[item_wave] > rank[boundary]:
+                    bad.append(f"{gid}: {stage} item {item} is scheduled "
+                               f"{item_wave}, after its {boundary} boundary")
+        for field, prefix in ref_fields.items():
+            refs = gap.get(field)
+            if not isinstance(refs, list) or not refs:
+                bad.append(f"{gid}: {field} is empty")
+                continue
+            for ref in refs:
+                if ref not in known_by_kind.get(prefix, set()):
+                    bad.append(f"{gid}: {field} names {ref!r}, which is not "
+                               "registered")
     return bad
 
 
@@ -340,6 +542,106 @@ def _steps(doc: dict, items: set, features: dict) -> list[str]:
         if fid not in exercised:
             bad.append(f"feature {fid} ({f['phase']}) is exercised by no "
                        f"journey step")
+    return bad
+
+
+def _build_rules(doc: dict) -> list[str]:
+    """THE BUILD GUIDE, MADE UNABLE TO LOSE A RULE.
+
+    Splitting the 792-line guide into four stage playbooks was right: a
+    document that must be re-read in full before every change is one that gets
+    skipped. But the split DROPPED TWO RULES silently --
+
+        "A recommendation treated as authority to act."
+        "A fixed intake questionnaire that ignores known or retrievable
+         material."
+
+    -- and the first is the boundary between advising a client and binding
+    one. Nothing failed. It surfaced only by diffing against a version of the
+    guide that no longer exists on disk, and next time there would be nothing
+    to diff against.
+
+    So each playbook CLAIMS its rules in a `BUILD_RULES` manifest. Losing one
+    now means deleting an id, which this refuses.
+
+    A MANIFEST AND NOT PHRASE MATCHING, deliberately. Deciding whether a card
+    still "contains" a rule by keyword overlap is fuzzy matching used to
+    IDENTIFY, which CLAUDE.md section 5 forbids and which has already misled
+    this session twice. An id is exact. `must_contain` adds an exact phrase for
+    the few rules whose loss would be worst, so a card cannot claim a rule it
+    no longer states.
+    """
+    reg = doc.get("build_rules") or {}
+    rules = reg.get("rules") or []
+    if not rules:
+        return ["docs/backlog/build_rules.json holds no rules, so every check "
+                "below would pass by having nothing to check"]
+
+    bad: list[str] = []
+    expected = reg.get("expected_population")
+    if expected is not None and len(rules) != expected:
+        bad.append(f"build rules: {len(rules)} present, {expected} expected. "
+                   f"A rule was added or lost without the count being moved.")
+
+    seen: set[str] = set()
+    for r in rules:
+        rid = r.get("id", "?")
+        if rid in seen:
+            bad.append(f"build rule {rid} appears twice")
+        seen.add(rid)
+        if r.get("enforcement") not in ("runner", "review", "unenforced"):
+            bad.append(f"{rid}: enforcement {r.get('enforcement')!r} is not "
+                       f"runner, review or unenforced")
+        if r.get("enforcement") == "runner" and not r.get("check"):
+            bad.append(f"{rid}: claims a runner and names no check")
+        if r.get("enforcement") == "unenforced" and not r.get("why_not"):
+            bad.append(f"{rid}: unenforced with no reason -- an admitted gap "
+                       f"is work, a silent one is a surprise")
+        if r.get("enforcement") == "review" and not r.get("evidence_level"):
+            bad.append(f"{rid}: review with no evidence level, so nothing "
+                       f"says what kind of recorded result it needs")
+        # A named test must exist. A rule pointing at a check nobody wrote is
+        # worse than one admitting it has none.
+        chk = r.get("check", "")
+        if "::" in chk:
+            bad += _missing_pytest(rid, chk)
+
+    # ---- every rule is claimed by exactly one playbook, and by the right one
+    claimed: dict[str, str] = {}
+    for card in sorted({r.get("card") for r in rules if r.get("card")}):
+        path = PLAYBOOKS / card
+        if not path.exists():
+            bad.append(f"playbook {card} is missing, so the rules assigned to "
+                       f"it are carried by nothing")
+            continue
+        text = path.read_text(encoding="utf-8")
+        m = re.search(r"<!--\s*BUILD_RULES:([^>]*?)-->", text)
+        if not m:
+            bad.append(f"{card}: no BUILD_RULES manifest, so a rule can be "
+                       f"dropped from it without anything noticing")
+            continue
+        for rid in m.group(1).split():
+            if rid in claimed:
+                bad.append(f"{rid} is claimed by {claimed[rid]} and {card}; "
+                           f"one rule has one home")
+            claimed[rid] = card
+
+    for r in rules:
+        rid, card = r.get("id"), r.get("card")
+        where = claimed.get(rid)
+        if where is None:
+            bad.append(f"{rid} is in the registry and no playbook claims it "
+                       f"-- exactly how the guide lost two rules in the split")
+        elif where != card:
+            bad.append(f"{rid} belongs to {card} and is claimed by {where}")
+        phrase = r.get("must_contain")
+        if phrase and where and (PLAYBOOKS / where).exists():
+            body = (PLAYBOOKS / where).read_text(encoding="utf-8").lower()
+            if phrase.lower() not in body:
+                bad.append(f"{rid}: {where} claims it but no longer says "
+                           f"{phrase!r}")
+    for rid in sorted(set(claimed) - seen):
+        bad.append(f"{claimed[rid]} claims {rid}, which is not a build rule")
     return bad
 
 
@@ -449,6 +751,25 @@ def derive_done(it: dict, by_id: dict) -> bool:
     return True
 
 
+def gap_state(gap: dict, by_id: dict[str, dict]) -> str:
+    """Derive a gap's state; the professional registry may never author it."""
+    linked = [by_id.get(link.get("item"))
+              for link in gap.get("links") or []]
+    linked = [it for it in linked if it]
+    if not linked:
+        return "UNREGISTERED"
+    if all(derive_done(it, by_id) for it in linked):
+        return "CLOSED"
+    if any(it.get("delivery_status") == "blocked" for it in linked):
+        return "BLOCKED"
+    if any(derive_done(it, by_id)
+           or it.get("implementation") in ("partial", "complete")
+           or it.get("delivery_status") in ("ready", "in_progress", "verifying")
+           for it in linked):
+        return "IN_PROGRESS"
+    return "PLANNED"
+
+
 def readiness(it: dict, by_id: dict) -> str:
     if derive_done(it, by_id):
         return "releasable"
@@ -509,12 +830,43 @@ def board(doc: dict) -> str:
     legacy = [i for i in items if i.get("legacy")]
     noacc = [i for i in items
              if not i.get("legacy") and not (i.get("acceptance") or [])]
+    pop = professional_population(doc)
+    wave_rows = (doc.get("plan") or {}).get("item_waves") or []
+    gaps = (doc.get("professional") or {}).get("gap_closures") or []
+    gap_counts: dict[str, int] = {}
+    for gap in gaps:
+        state = gap_state(gap, by_id)
+        gap_counts[state] = gap_counts.get(state, 0) + 1
 
     lines += [
         "",
         f"**{len(items)} rows · {len(openp0)} open P0 · {len(blocked)} "
         f"blocked · {sum(1 for f in feats if f['implementation'] == 'complete')}"
         f"/{len(feats)} features implemented**",
+        "",
+        "### Professional plan — registered and derived",
+        "",
+        f"**{pop['advocate_standards']} advocate standards · "
+        f"{pop['workflow_states']} expert-workflow states · "
+        f"{pop['advice_maturity']} advice levels · {pop['roles']} roles · "
+        f"{pop['gap_closures']} gap closures · {len(wave_rows)} wave rows**",
+        "",
+        "Gap status below is computed from the linked BK/J rows. It is never "
+        "authored in `professional.json` or maintained in the workbook.",
+        "",
+        "| Gap | Foundation | Feature complete | Release gate | Derived state | Registered work |",
+        "|---|---:|---:|---:|---|---|",
+    ]
+    for gap in gaps:
+        work = ", ".join(link["item"] for link in gap.get("links") or [])
+        lines.append(f"| {gap['id']} | {gap['foundation_wave']} | "
+                     f"{gap['feature_complete_wave']} | "
+                     f"{gap['release_gate_wave']} | "
+                     f"{gap_state(gap, by_id)} | {work} |")
+    lines += [
+        "",
+        "Derived gap state: " + ", ".join(
+            f"{state} {count}" for state, count in sorted(gap_counts.items())),
         "",
         "### Open P0 — what is unsafe",
         "",
@@ -565,19 +917,116 @@ def render(doc: dict) -> bool:
     return changed
 
 
+#: delivery_status -> the stage whose playbook governs the next move.
+STAGE_FOR = {
+    "planned": "before", "ready": "before", "blocked": "before",
+    "in_progress": "build", "verifying": "prove",
+}
+
+
+def stage_report(doc: dict, rid: str) -> tuple[str, int]:
+    """WHICH PLAYBOOK, FOR THIS ITEM, RIGHT NOW -- and what already fails.
+
+    A playbook I must remember to open is one I will skip under context
+    pressure; that is the whole reason the guide was split, and splitting alone
+    does not fix it. This makes the tooling hand me the card instead.
+    """
+    by = {i["id"]: i for i in doc["items"]}
+    it = by.get(rid)
+    if it is None:
+        return (f"{rid} is not in the registry. Work with no registered item "
+                f"is the first stop rule (BG-048)."), 1
+
+    ds = it.get("delivery_status")
+    stage = STAGE_FOR.get(ds)
+    reg = doc.get("build_rules") or {}
+    out = [f"{rid}  {it.get('title')}",
+           f"  {ds} / impl {it.get('implementation')} / "
+           f"verification {it.get('verification')} / {it.get('priority')}"]
+
+    if stage is None:
+        out.append(f"\n  {ds} is terminal: no playbook applies. Reopen the row "
+                   f"before doing work against it.")
+        return "\n".join(out), 0
+
+    card = (reg.get("cards") or {}).get(stage, "?")
+    out.append(f"\n  OPEN  docs/playbooks/{card}")
+
+    # What is already true against this item, so the card is not read blind.
+    blocking = []
+    if it.get("blocked_by"):
+        blocking.append(f"BLOCKED: {it['blocked_by'].get('description','')}")
+    if not (it.get("acceptance") or []):
+        blocking.append("no acceptance criteria, so `done` can never derive "
+                        "(BG-027, BG-028)")
+    for ac in it.get("acceptance") or []:
+        st = proof_state(ac)
+        if st != "PASS":
+            blocking.append(f"{ac['id']} is {st}")
+    for dep in it.get("depends_on") or []:
+        d = by.get(dep)
+        if d and not derive_done(d, by):
+            blocking.append(f"depends on {dep}, which is not done")
+    if blocking:
+        out.append("\n  ALREADY FAILING FOR THIS ITEM")
+        out += [f"    - {b}" for b in blocking]
+
+    rules = [r for r in (reg.get("rules") or []) if r.get("stage") == stage]
+    runner = [r for r in rules if r["enforcement"] == "runner"]
+    review = [r for r in rules if r["enforcement"] == "review"]
+    unenf = [r for r in rules if r["enforcement"] == "unenforced"]
+    out.append(f"\n  {len(rules)} rules at this stage: {len(runner)} enforced "
+               f"by a check, {len(review)} need a recorded human review, "
+               f"{len(unenf)} rest on judgement alone")
+    if unenf:
+        out.append("\n  NOTHING CHECKS THESE. They are yours to hold:")
+        for r in unenf:
+            out.append(f"    {r['id']}  {r['statement'][:88]}")
+    return "\n".join(out), 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("command", choices=["lint", "status", "graph", "render",
-                                        "check"])
+                                        "check", "stage", "rules"])
+    ap.add_argument("item", nargs="?", help="BK-/J- id, for `stage`")
     args = ap.parse_args()
     doc = load()
+
+    if args.command == "stage":
+        if not args.item:
+            print("usage: backlog.py stage <BK-id>", file=sys.stderr)
+            return 2
+        text, code = stage_report(doc, args.item)
+        print(text)
+        return code
+
+    if args.command == "rules":
+        rules = (doc.get("build_rules") or {}).get("rules") or []
+        for stage in ("before", "build", "prove", "signoff"):
+            at = [r for r in rules if r["stage"] == stage]
+            en = sum(1 for r in at if r["enforcement"] == "runner")
+            rv = sum(1 for r in at if r["enforcement"] == "review")
+            print(f"  {stage:8} {len(at):3} rules   {en:2} runner  {rv:2} "
+                  f"review  {len(at)-en-rv:2} unenforced")
+        print(f"\n  {len(rules)} build rules; "
+              f"{sum(1 for r in rules if r['enforcement'] == 'unenforced')} "
+              f"rest on judgement alone and are declared, not hidden.")
+        return 0
 
     if args.command in ("lint", "check"):
         bad = lint(doc)
         for b in bad:
             print(f"  {b}")
+        pop = professional_population(doc)
+        wave_count = len((doc.get("plan") or {}).get("item_waves") or [])
         print(f"LINT {'FAILED' if bad else 'OK'}  {len(bad)} problem(s), "
-              f"{len(doc['items'])} rows, {len(doc['features'])} features")
+              f"{len(doc['items'])} rows, {len(doc['features'])} features, "
+              f"{len(doc.get('steps') or [])} steps, "
+              f"{pop['advocate_standards']} PA, "
+              f"{pop['workflow_states']} EW, "
+              f"{pop['advice_maturity']} AM, {pop['roles']} roles, "
+              f"{pop['gap_closures']} GC, {wave_count} wave rows")
         if bad:
             return 1
 

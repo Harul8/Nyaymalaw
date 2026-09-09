@@ -14,7 +14,9 @@ for them. Every one exists because the same mistake recurred and cost real time.
 | | |
 |---|---|
 | `docs/Nyaymalaw_PRD.docx` | **The specification, and the source of truth.** Code is the verified build output. Organised on the JOURNEY axis, not by topic, so a slice of work is a contiguous cut. Every feature carries DOES / NEVER / PRODUCES / EVAL — a feature that cannot fill all four goes to the parking list, not into the build |
-| `docs/Nyaymalaw_Project_Plan.xlsx` | Ten vertical slices over 26 weeks, 53 tasks, 56 evals, the cumulative-regression rule, the weekly error-analysis ritual, and the measured baseline |
+| `docs/backlog/steps.yaml`, `plan.json`, `status.yaml`, `professional.json` | **The current delivery control plane.** Journey mapping, W0–W7 assignment, present implementation/evidence state, and the PA/EW/AM/ROLE/GC professional model. Generated workbook and board views reconcile to these files; they do not override them |
+| `docs/Nyaymalaw_Project_Plan.xlsx` | The original vertical-slice plan, task/eval design, cumulative-regression rule, weekly error-analysis ritual and measured baseline. Use the current control-plane registries above for present wave assignment and status |
+| `docs/BUILD_GUIDE.md` and `docs/playbooks/` | **The cross-phase build method.** A short index plus four closeable playbooks: Start, Build, Test and Sign-off. They apply the professional standard, evidence ladder, stop rules and cumulative release discipline without owning journey steps, wave assignments or current status |
 | `docs/BASELINE.md` | What the corpus actually holds, **measured**. Standing product decisions about coverage. No claim about the corpus is made without checking here first |
 | `docs/DEFECT_SHAPES.md` | The eleven shapes distilled from 164 reproduced defects, each with the check that refuses it. **Read before designing any control** |
 | `docs/GOLDEN_SET.md` | **25 conversations** on verified corpus authority — 31 anchors, 42 provisions, all read back. Tagged by suite, tier, area and **earliest slice**, so a run is a filter (`smoke` every commit, `slice-N` at a slice close, `full` on approval) rather than all 25 every time |
