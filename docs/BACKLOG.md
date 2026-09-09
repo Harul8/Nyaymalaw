@@ -12,52 +12,59 @@ Every entry carries WHY IT IS NOT DONE. "Not done" with no reason is
 indistinguishable from forgotten, which is the whole failure this file exists
 against.
 
----
-
-## Open
-
-## The end-to-end journey, driven as a user — 8 September 2026
-
-**Method.** Signed in as a real advocate on the served path, drove every phase
-in the browser, read the bytes the advocate actually receives, then read the
-code behind each. Nothing here comes from the PRD, the plan or the docs. Where
-a claim is a judgement rather than a measurement, it says so.
-
-**The headline.** Retrieval and the safety gates are the strong half and they
-work. The journey around them is not yet an advocate's file: the list they
-land on cannot distinguish their own matters, the answer runs to 31 elements
-of mostly disclosures, and on a textbook goods-sold brief the product worked
-the elements of a DIFFERENT cause of action and called the client's best fact
-adverse to him.
-
-**Current-build reconciliation — 8 September 2026, `6e29cf0`.** The first
-journey drive below led to four commits. The rows remain here because this is
-the record, but their present status is now explicit:
-
-| finding | status | evidence on the current build |
-|---|---|---|
-| J-1 matter list | **PLANNED** | The projection still uses the opening 60 characters as the matter name, puts the advocate id in `client`, and exposes version as `last_touched`. |
-| J-2 cause read | **DONE, preserve** | `fcaacf6` gave each closed cause a distinguishing definition; the eight causes plus refusal measured 9/9. The focused regression pack passed on this tree. |
-| J-3 adverse read | **DONE, preserve** | `fcaacf6` passes the side into the adverse read. The focused regression pack passed on this tree. |
-| J-4 automatic split | **PARTLY DONE** | `6e29cf0` stopped acting on the unstable count and stopped comparing unconfirmed sibling splits. The count is disclosed for advocate confirmation. A browser-level confirmation flow is still absent. |
-| J-5 internal ids | **PARTLY DONE** | `6e29cf0` removed ids from cross-file exposure prose. On the current served path `G-POSTURE` still displayed `thr_4adf2dc95f5e`, and History displayed `TURN_…`, `MAT_…`, `THR_…`, fact ids and the full model trace. |
-| J-6 answer shape | **CLOSED by BK-37** | The answer is filed under the question each line answers, repeated gaps carry a count, and a courtesy reply is no longer folded into invisibility. Journey phase 5c reads the section order back off the page. |
-| J-7 engineering register | **CLOSED by BK-37** | Gate ids, rule ids, token counts and the trace line are out of advocate mode and still reachable behind `How this answer was made`; the masthead reads `Corpus ready`. Journey phases 5b and 5d assert both. The search court filter is BK-38 and remains open. |
-
-The focused pack for the offline fixes — withheld conclusions, concurrent
-writes, cause definitions, side-aware adverse reading, honest cross-file
-comparison and dispute-count handling — is **34/34 passing** on `6e29cf0`.
-
-**Status discipline for all journey work from this point.** `PLANNED` means no
-product-code work has begun. Before the first product edit, the relevant row
-moves to `IN PROGRESS` and records the exact scope. `DONE` requires the commit,
-the focused automated evidence, and the served-browser evidence to be written
-back into that row. `BLOCKED` must name the decision or dependency. No journey
-change is to exist only in a commit message.
+**Filed by JOURNEY PHASE since 9 September 2026**, not by discovery date. A
+row lives where the advocate meets it, because the question this file has to
+answer is *how far have we travelled*, and a list ordered by when something was
+found cannot answer it.
 
 ---
 
-### J-1 — The file list cannot tell one matter from another
+# Part 1 — The journey, and where it stands
+
+The PRD organises the product on the JOURNEY axis (Part 3), and
+from 9 September 2026 this file does too. A row lives under the
+phase where the ADVOCATE meets it, not under the date it was
+found — because the question this file has to answer is *how far
+have we travelled*, and a list ordered by discovery cannot answer
+it.
+
+**24 of 44 features have implementing code. 20 are specification
+only.**
+
+| Phase | Features | With code | Spec only |
+|---|---|---:|---:|
+| A — Arrive | A1–A4 | 4 | 0 |
+| B — Open a matter | B1–B6 | 4 (unregistered) | 2 |
+| C — Take the brief | C1–C7 | 5 | 2 |
+| D — Work the file | D1–D9 | 9 | 0 |
+| E — Advise | E1–E5 | 1 | 4 |
+| F — Act | F1–F7 | 0 | 7 |
+| G — Carry | G1–G3 | 0 | 3 |
+| H — Close | H1–H2 | 0 | 2 |
+| I — Leave | I1 | 1 | 0 |
+
+**The shape of it.** Arrive, Take the brief and Work the file are
+built and deep. Advise has one feature of five. Act, Carry and
+Close have nothing at all — twelve features, a third of the
+journey by stage count. The product can take a brief and work a
+file; it cannot yet advise in full, act on the advice, carry the
+matter or close it.
+
+**A phase is DONE when** every feature in it is `tested`, every
+row filed under it is closed, and the journey suite proves it on
+the served path with a check that is able to fail.
+
+---
+
+# Part 2 — The phases
+
+## Phase A — Arrive
+
+Authentication and advocate identity, the matter list and thread board, re-entry and re-orientation, and search over the corpus. **A1–A4, all four implemented.**
+
+### Open — 12
+
+#### J-1 — The file list cannot tell one matter from another
 
 The rail an advocate lands on, verbatim:
 
@@ -90,170 +97,7 @@ and what is waiting on me. `last_touched` needs a unit or a date.
 
 ---
 
-### J-2 — A goods-sold brief was worked as a money-lent claim
-
-The brief: *"Our client Mr Reddy supplied steel to Kakatiya Fabricators
-against invoices dated 14 March 2023. Nothing has been paid. The buyer wrote
-on 2 August 2024 acknowledging the debt in writing."*
-
-The proof elements returned:
-
-- *That the money was actually advanced to the defendant*
-- *That it was advanced as a LOAN and not as a gift or in discharge of another obligation*
-- *The terms of repayment, including any agreed date or demand*
-
-That is `money_lent`. The matter is `goods_sold_price`. **Every element, every
-burden and the whole proof section belong to a different cause of action.**
-
-An advocate spots this in one second, and it is the kind of error that ends
-trust permanently. It is also the most consequential item here, because the
-cause drives the Article, the period and the elements.
-
-**The fix.** The cause read is the highest-consequence read in the product and
-has no eval of its own. It needs one, over the seven causes it can return,
-scored on briefs written for each — and a disclosure when the cause chosen is
-not the one the advocate's own words most support.
-
----
-
-### J-3 — The client's best fact was filed as adverse to him
-
-> *1 adverse fact(s) on this thread are neither explained nor conceded by the
-> theory: The buyer wrote acknowledging the debt in writing.*
-
-A written acknowledgment before expiry is the most helpful fact a plaintiff
-can have on a limitation-threatened debt. It restarts the period under s.18 —
-which the product retrieved on the same turn. It was classified as running
-against us.
-
-**The fix.** The adverse-fact read has no notion of WHICH SIDE a fact helps.
-It needs the thread's posture, which is already on the thread and was already
-resolved to `plaintiff/moving` on that very turn.
-
----
-
-### J-4 — One dispute was split into three, and the product then argued with itself
-
-**MEASURED 8 September 2026, and it is worse than the heading says. This is
-not a tuning problem.**
-
-Six briefs, each written for a known number of disputes, run three times --
-twice against the committed prompt and once against a rewrite:
-
-| brief | disputes | committed r1 | committed r2 | rewrite |
-|---|:-:|:-:|:-:|:-:|
-| goods supplied, unpaid, acknowledged | 1 | 4 | 4 | 4 |
-| cheque dishonoured, notice sent | 1 | 0 | 0 | 2 |
-| `first ... second ... third ...` | **3** | **3** | **0** | 3 |
-| plot, one encroaching neighbour | 1 | 2 | 2 | 2 |
-| four enumerated claims | **4** | **0** | **0** | 0 |
-| `The notice went on 15 April.` | 0 | 0 | 0 | 0 |
-| | | **3/6** | **2/6** | **2/6** |
-
-**It is unstable on identical input** -- the three-dispute brief returned 3 on
-one run and 0 on the next -- and it misses the four-dispute enumeration
-entirely, which is the shape BK-27 exists for.
-
-**THIS IS A FINDING ABOUT BK-27'S OWN FIX.** I validated that read on ONE
-brief, reported it working, and shipped thread creation on top of it. Across
-six briefs it scores 2-3 of 6. A rewrite of the prompt made it no better and
-in places worse, so the mechanism and not the wording is the problem.
-
-**Why it matters more than a wrong number.** Thread creation is not
-recoverable in the way `threading.py`'s asymmetry assumes. A wrong split does
-not merely duplicate work: the cross-file pass then runs ACROSS the false
-threads and manufactures contradictions between halves of one transaction --
-which is what J-4 recorded above, and an advocate reading it has no way to
-know the conflict is invented.
-
-**What would have to change, and it is a decision, not a patch:**
-
-1. **Do not create threads from the count.** Read it, DISCLOSE it -- *this
-   looks like three disputes; say if it is one* -- and let the advocate
-   confirm before the file is split. A question is cheap; a fragmented file
-   with invented conflicts is not.
-2. **Or find a mechanism that is stable.** The count is being asked of prose;
-   the thing that actually separates disputes is procedural -- different
-   opponent, different cause, different relief -- and the product already
-   reads cause and posture separately and more reliably. A count DERIVED from
-   those two would rest on reads that measure 9/9 rather than one that
-   measures 2/6.
-3. **Meanwhile, the cross-file pass must not run across threads created by a
-   single message on a single turn.** That is a small, independent guard and
-   it removes the invented contradictions whatever is decided above.
-
-
-`G-SPLIT` fired on a single-cause brief: *"This message describes 3 separate
-disputes, so each is on the file as its own thread."* There is one dispute:
-goods supplied, unpaid, acknowledged.
-
-The cross-file pass then ran across the false threads and reported a conflict
-between them:
-
-> *Across this file: In the non-payment case, the position taken is that no
-> payment was due to the claimant ... This directly contradicts ...*
-
-**This is BK-27's fix over-correcting.** `threading.py`'s asymmetry says a
-wrong split is the recoverable direction, and it is — but a wrong split that
-then generates invented contradictions is not merely noisy, it misleads.
-
-**The fix.** The count read needs what the duty read got: a stated bias toward
-ONE. A chronology of a single transaction is not three disputes because it has
-three sentences. And the cross-file pass must not run across threads created
-by one message on one turn.
-
----
-
-### J-5 — Internal identifiers reach the advocate, past a sweep that says they cannot
-
-Served text: *"... on thr_634d8e9685be — This damages the defence ..."* and,
-in History, *"TURN 1 · TURN_958000CAFFF4"*.
-
-`nm/core/turn.py:3081` renders `{e.from_thread}` and `{e.to_thread}` — both
-`ThreadId`s — straight into an advocate-facing element.
-
-**Why the sweep did not catch it.** `test_no_internal_id_reaches_the_advocate`
-drives ONE scripted conversation whose double answers everything with *"Issue
-the notice and diarise it."* The cross-file exposure section is never produced
-in that fixture, so the sweep cannot see the line that leaks. **Its population
-is a fixture, not the product's advocate-facing surface** — the same shape as
-B-142, in the check written to prevent exactly this (B-103).
-
-**The fix.** Render the thread LABEL. Widen the sweep's population to every
-element-producing path rather than one conversation.
-
----
-
-### J-6 — Thirty-one elements, and the disclosures have swallowed the advice
-
-One single-dispute brief produced **31 elements**. The leading ACTION was
-*"Assess the acknowledgment from 2 August 2024 to determine its sufficiency in
-extending the limitation period"* — the advocate's own question returned to
-them, with no owner and no by-when.
-
-Underneath it: nine "they will say" paragraphs, five not-assessed
-disclosures, the threshold list, the screens list, the evidence-bound notice,
-and this, verbatim:
-
-> *My first draft of this answer named Limitation Act, 1963 s.18 without having
-> retrieved it. I fetched it and worked the answer again with the text in front
-> of me.*
-
-Every one of those exists because a real defect was paid for, and each is
-individually right. Together they have inverted the output: the product leads
-with what it did not do, and the engineering narration of its own retry sits
-in the advocate's chair.
-
-**The fix.** Not a gate defect, and no gate will catch it. The answer needs a
-shape an advocate reads top to bottom — position, why, risk, next step,
-deadline, what I need from you — with disclosures reachable but folded, and
-the internal narration removed.
-
----
-
-**CLOSED by BK-37, 8 September 2026.** The answer is filed under the question each line answers, the working is behind a closed `How this answer was made`, repeated gaps carry a count, and a courtesy reply is no longer folded into invisibility.
-
-### J-7 — The header and the search surface speak engineering to the advocate
+#### J-7 — The header and the search surface speak engineering to the advocate
 
 Header, on every screen:
 
@@ -285,172 +129,7 @@ it.
 
 **CLOSED by BK-37, 8 September 2026.** Gate ids, rule ids, token counts and the trace line are out of advocate mode and still reachable; the masthead reads `Corpus ready` rather than a provider, cipher and manifest dump. Journey phases 5b and 5d assert both, and 5b asserts the working is still complete when opened — so the fix cannot become a deletion.
 
-### J-8 — What works, and must not be broken while fixing the above
-
-Said plainly, because it is the half worth protecting:
-
-- **Retrieval.** `acknowledgment in writing limitation` returned 25 ranked
-  paragraphs, `coverage: answered`, led by *Rajendra Narottamdas Sheth* (SC
-  2021) and *Asset Reconstruction Co v Tulip Star* (SC 2022) — both squarely
-  on s.18. The strongest surface in the product.
-- **The gates fire and are disclosed.** G-QUOTE refused an issue whose quoted
-  words the advocate never wrote. B-104's late-citation retry ran, retrieved
-  s.18 and re-derived. The screens say they have not run rather than reading
-  as clear.
-- **History** renders the served turn faithfully, byte for byte.
-- **Sign-in** distinguishes an unknown email from a wrong password, and rate
-  limits per account and per source.
-
----
-
-### J-9 — The order to fix them in
-
-1. **J-2** the cause read, with an eval. Everything downstream derives from
-   it, so a wrong cause makes the rest of the answer wrong quietly.
-2. **J-3** the adverse-fact read takes the posture. Cheap, and it currently
-   tells an advocate their best fact is against them.
-3. **J-4** the split bias, and no cross-file pass across threads born on one
-   turn. Regression repair on BK-27.
-4. **J-5** thread labels not ids, and the sweep's population widened.
-5. **J-1** the matter list — name, client, next date.
-6. **J-6** the answer's shape. The largest, and worth doing after the accuracy
-   items so that what is being shaped is correct.
-7. **J-7** the register of the header and the search surface.
-
-That was the order after the first drive. The current-build drive below found
-two P0 seams — cause-specific accrual and contradictory action output — so the
-implementation waves after BK-42 supersede this order without erasing it.
-
----
-
-## Current-build end-to-end journey plan — login to confirmed logout
-
-**Forensic pass.** Driven on 8 September 2026 against the clean committed tree
-at `6e29cf0`, through `nm.bootstrap.main`, with the scripted model, real corpus,
-Fernet store, isolated test account and isolated temporary matter store. The
-browser journey covered registration, sign-in, courtesy message, matter
-opening, posture clarification, completed advice, corpus search, a natural
-court filter, History, page reload, failed-server logout, successful logout and
-post-logout state. Code was then followed through the API, projections, turn
-engine, store and browser renderer. Scripted output is not evidence of real
-model quality; it is evidence of what the product accepts and serves when a
-configured provider returns that output.
-
-**Journey contract.** This programme is complete only when an advocate can:
-
-1. prove who they are, recover access and see which firm/workspace governs the
-   file;
-2. find an existing matter or deliberately open a new one on desktop and
-   narrow screens;
-3. identify client, opponent, subject and urgency before substantive work;
-4. clear the conflict, engagement, competence, capacity and emergency screens,
-   or see a named and recorded emergency exception;
-5. state the account once, have it stored once, and correct or retry it without
-   duplication or loss;
-6. receive a position whose cause, accrual trigger, period, authorities,
-   findings and action agree with each other;
-7. move from search result to citable authority and, deliberately, into the
-   matter record;
-8. close and reopen the file with the same summary, chronology, open questions,
-   served answers and next step;
-9. survive provider failure, stale writes, an expired session and a lost HTTP
-   response without a false success or a lost brief; and
-10. sign out with server confirmation, after which reload cannot restore the
-    matter.
-
-### BK-30 — executable login-to-logout acceptance journey — **DONE**
-
-**Phase:** the whole journey; this is the measurement harness for every row
-below.
-
-**Good now:** domain and served-path tests are extensive, current offline fixes
-have focused regressions, and the stale-build banner catches an old process.
-
-**Gap observed:** `tests/test_the_page_and_the_script_agree.py` explicitly does
-not run the page. The JS partition test runs one function in a DOM stub. That
-left responsive navigation, courtesy-answer folding, matter restoration,
-natural court filtering, raw History, session expiry and failed logout outside
-one executable contract.
-
-**Change:** add a real browser suite that starts the composition root against a
-temporary encrypted store and deterministic provider. Keep fixtures legal and
-fictional. Cover 390px, 768px and 1280px widths; keyboard-only navigation;
-registration/login/recovery; new and existing matters; a blocking question and
-its answer; a completed turn; search; History; reload; 401; lost response;
-concurrent write; failed and successful logout. Run a small, separately marked
-real-model smoke only when credentials are deliberately supplied.
-
-**Acceptance:** one command produces a phase-by-phase result and artifacts for
-any failed phase; it fails on a blank-but-authenticated landing, hidden matter
-navigator, internal identifier, raw trace, inconsistent action/deadline,
-unconfirmed logout, dropped draft or duplicated retry. Every later BK row adds
-its own counterexample to this suite.
-
-**Dependencies:** none.
-
-**Done, 8 September 2026.** One command:
-
-```
-python tools/journey.py
-```
-
-It starts the real composition root on a real port against a temporary
-encrypted store and a scripted provider (`tools/served.py`, which is now the
-single owner of that composition — `tests/conftest.py`'s `client` fixture had
-been the only place that knew how), drives Chromium through sixteen phases,
-and prints a table with **PASS / REPRODUCED / FAILED / NOT RUN** plus a
-screenshot and the page's HTML for everything that did not pass.
-
-`NOT RUN` is a state, not a silence: a missing browser, a server that will not
-start or a collection error can never leave a green line. `playwright` is a
-separate `[journey]` extra so `.[dev]` stays fast and offline-able, and the
-suite names the extra when the import is missing.
-
-**Standing at close: 11 pass, 5 reproduced, 0 unexplained.** The reproduced
-five are `xfail(strict=True)` and each names its row — BK-32 at 390px and
-768px, BK-40 twice, J-7 once. Strict is the point: when BK-32 lands the phase
-passes, and a strict xfail that passes is an ERROR telling you to delete the
-marker. A defect recorded this way can be neither quietly fixed nor quietly
-forgotten.
-
-**WHAT IT FOUND ON ITS FIRST REAL RUN, and this is the argument for the whole
-row.** `web/app.css` declared `.gate` twice — once for a gate FIRING inside an
-answer, once for the full-screen sign-in overlay (`position: fixed; inset: 0;
-z-index: 100`). The second is later in the cascade, so it won. **Every
-disclosure in an answer became a full-screen opaque overlay.** An advocate who
-submitted a brief was shown a blank white page carrying one centred line —
-`G-EXPOSURE · none_found · 0 exposure(s)` — with the advice, the citations, the
-limitation position and the questions all painted over, and the tab bar beneath
-unclickable.
-
-Every test in the repository passed. The served JSON was correct, the engine
-was correct, and `test_the_page_and_the_script_agree.py` checks names rather
-than layout and says so in its own docstring. A right answer nobody could
-read — this repository's founding failure, written in a stylesheet.
-
-Fixed by giving the overlay the id it already had (`#gate`) and leaving
-`.gate` one owner. `tests/test_no_css_class_has_two_owners.py` refuses the
-next collision, and it is class_a — the sweep counts a rule whose ENTIRE
-selector is one bare class, because counting membership in a grouped selector
-reported six collisions in this stylesheet on the first run, all correct code,
-and a check that fires on correct code is one that gets switched off.
-
-**Three harness defects it found in itself, all the same shape.** A phase that
-reads the page too early does not fail — it passes on less than it claims to
-have looked at. `_advise` waited for `.turn`, which appears before the answer
-is drawn; phase 5b asserts gate ids ARE on screen and XPASSED because none had
-rendered yet; `_tab` slept 2000ms instead of waiting for the pane. All three
-now wait for the thing they judge.
-
-**Not covered, named rather than implied.** The journey suite is excluded from
-`tools/check.py` (`-m "not class_d and not journey"`): it needs a browser
-binary `.[dev]` does not install and adds two minutes to a seven-minute gate.
-So a regression under `web/` does not fail the per-commit gate. It failed
-nothing before either — which is how `.gate` acquired two owners — but the
-exclusion is a decision and is written into `check.py` beside the command that
-does find it.
-
-### BK-31 — account access, recovery and workspace identity — **PARTLY DONE · P1**
+#### BK-31 — account access, recovery and workspace identity — **PARTLY DONE · P0**
 
 **Phase:** registration and sign-in.
 
@@ -523,7 +202,29 @@ the next decision this row needs, not the next commit.
 Also not done: MFA or a recorded risk acceptance, and a workspace/firm
 selector.
 
-### BK-32 — responsive advocate home and matter navigation — **DONE**
+**RAISED TO P0, 9 September 2026, verified in source.** Two dated decisions
+contradict each other and a safety relaxation rests on the losing one.
+
+This row records, 8 September: *"a CONTROLLED PRIVATE ROSTER. Advocates are
+enrolled; self-registration is closed or approval-gated."* `nm/edge/api.py:642`
+records, 6 September: *"SELF-SERVICE IS PERMITTED AS OF 6 SEPTEMBER 2026."*
+The register link is live at `web/index.html:47`, so the code implements the
+earlier decision.
+
+That would be ordinary drift but for `nm/core/turn.py:1575`, where scope and
+capacity release is relaxed to one person **because** *"the deployment is a
+controlled roster of practising advocates and the advocate IS the firm."* The
+relaxation is sound only if the roster claim is true, and the product
+contradicts it.
+
+*Also stale:* `api.py:638` promises that when the conflict screen is built, a
+blank firm *"must make it read NOT_ASSESSED and never CLEAR"*. The screen is
+now built and is scoped by `advocate_id`. That promise was superseded by a
+better answer — `nm/core/conflict.py` returns CLEAR carrying *"THIS IS YOUR OWN
+FILES, not a firm-wide registry"* — and the comment should say so rather than
+describing a design that was not taken.
+
+#### BK-32 — responsive advocate home and matter navigation — **PARTLY DONE · P1**
 
 **Phase:** immediately after sign-in, and movement between Advise, Search and
 History.
@@ -572,7 +273,12 @@ it still reported the defect. That is S11 wearing the costume of a check that
 bites, and it is the third time in this row's work that a check reading the page
 too early or not at all passed on less than it claimed.
 
-### BK-33 — recognisable matter cover, truthful board and real reopen — **PARTLY DONE · P0**
+**REOPENED 9 September 2026, verified in source.** The three-width phase
+returns immediately at desktop (BK-47) and the no-clipping evidence is
+neutralised by a live CSS rule (BK-43). Neither the rail behaviour nor the
+overflow measurement is currently able to fail.
+
+#### BK-33 — recognisable matter cover, truthful board and real reopen — **PARTLY DONE · P0**
 
 **Phase:** selecting, reopening and orienting inside a matter. This completes
 J-1.
@@ -678,7 +384,371 @@ are not captured at intake, so the cover still shows `forum: not established`
 on every file. `/summary` is still not called on selection, so the open
 questions are not restored with the conversation.
 
-### BK-34 — front-door legal and professional screens before substance — **DONE**
+#### BK-38 — search-to-authority-to-matter research workflow — **PARTLY DONE · P1**
+
+**Phase:** legal research and deliberate use of authority.
+
+**Good now:** the corpus search is fast, returns relevant paragraph-level hits,
+always states whether it ran, discloses jurisdiction/source size/build date,
+distinguishes search from exact resolution and now uses relative rank bands
+rather than fake confidence percentages.
+
+**Gap observed:** the court filter is an exact free-text equality: “Supreme
+Court” returned zero while “Supreme Court of India” returns results. The 25
+cards are paragraph rows, often repeat a case, and provide no case grouping,
+pagination/sort, full judgment/canonical citation, citator status, pin/copy or
+“use in this matter”. Every high-scoring hit in the reproduced query read “top
+of this search”, so the bands still gave little discrimination. Internal file
+name `authority.db` and a raw build timestamp remain on the advocate surface.
+
+**Change:** use controlled court values with aliases/autocomplete; validate year
+ranges; group paragraphs under a case; expose neutral citation/court/date/bench,
+paragraph locator, full judgment and treatment where held; support result
+sorting and paging without hiding total scope. Let an advocate pin/copy a
+citation and explicitly attach a proposition plus selected passage to the
+active matter—never share pane state implicitly. Replace internal store details
+with a plain corpus scope/freshness statement. Implement BK-25's summary-first
+case retrieval behind the same result contract.
+
+**Acceptance:** common court spellings resolve to the same controlled value;
+zero results state exactly which normalized filters ran; repeated paragraphs
+do not masquerade as 25 authorities; a selected passage retains case identity,
+locator and origin when added to a matter; no search result becomes matter fact
+without an explicit advocate action.
+
+**Dependencies:** BK-25, BK-30, BK-33. **Why not done:** the current endpoint is
+a paragraph search surface, not a research-to-file workflow.
+
+**Done, 8 September 2026 — the court filter and the surface.**
+
+**Measured first.** `SELECT court, COUNT(*) FROM paras GROUP BY court` on the
+real 1,046 MB index returns exactly two rows: `Supreme Court of India`
+(395,734 paragraphs) and `High Court of Andhra Pradesh` (55,814). There is no
+third.
+
+**The filter was `lower(court) = lower(?)`,** so an advocate typing `Supreme
+Court` got ZERO from a corpus holding nearly four hundred thousand Supreme
+Court paragraphs — and a zero from an exact-match filter reads as an empty
+corpus. That is B-163's shape, and this repository has recorded it three times
+already against the legal corpus.
+
+It resolves through `normalise_court`, which already maps free text onto a
+CLOSED court vocabulary and already returns UNKNOWN rather than guessing.
+Nothing is scored and nothing is nearest-matched — CLAUDE.md §5's rule that
+fuzzy may rank but never identify, and a court filter identifies.
+
+**One alias is a legal decision, not a convenience.** `Telangana High Court`
+resolves to `High Court of Andhra Pradesh`, because those judgements ARE
+Telangana judgements and every one binds — the standing decision in
+`BASELINE.md` §1.1. RG-01 already cost a blocked release by counting a court
+LABEL instead of the binding relationship.
+
+**A court the index does not hold returns nothing AND SAYS SO**, naming what
+is held. Verified against the real index: `Supreme Court` → hits (was 0),
+`Telangana High Court` → hits, `Bombay High Court` → 0 with the reason.
+
+**The surface stopped speaking engineering.** `Searched: the authority index
+(authority.db)` became `Searched the case law`; `built 2026-08-30T07:51:38`
+became `current to 2026-08-30`; and the resolved filter is shown, so a zero
+says which normalised filter ran.
+
+**Counterexample:** `tests/test_the_court_filter_resolves.py`, twelve tests,
+including a control that the stored values are the two the index actually
+holds.
+
+**NOT DONE.** Paragraph rows are still not grouped under a case, so repeated
+paragraphs can still read as separate authorities; there is no
+pagination/sort, no neutral citation or bench, no pin/copy, and no explicit
+"use in this matter" attachment. BK-25's summary-first retrieval is not
+implemented.
+
+**CONFIRMED OPEN 9 September 2026, verified in source.** Search still ranks
+paragraph rows directly — `select case_id, case_name, court, year, para_type,
+snippet(...), rank from paras ... order by rank`
+(`nm/adapters/search/authority.py:200`) — and the response carries no canonical
+citation, no bench and no attach-to-matter (`nm/edge/api.py:613`).
+
+Worth naming: `CLAUDE.md` records that reporter citations are an exact key
+reaching **90.9%** of held judgments against 0.83% for case names. The corpus
+holds the key this surface does not show.
+
+#### BK-43 — the overflow rule that switches off its own check — **OPEN · P0 · Phase A**
+Opened 9 September 2026, by static audit of `3e9772b`, verified in source.
+
+`web/app.css:359` carries `body, main { overflow-x: hidden; }`. At
+`web/app.css:877`, 518 lines below it, sits a comment explaining that this
+exact rule **was removed**:
+
+> *"It looked like belt-and-braces and it was the opposite: clipping the
+> overflow makes `documentElement.scrollWidth` equal `clientWidth`, so the
+> journey phase that checks for sideways scroll can no longer fail... a fix
+> that disables its own test, which is S11 arriving through the front door."*
+
+The comment is right and the rule is still there. Every width assertion in the
+journey suite — `tests/test_the_journey_login_to_logout.py:745` measures
+document width only — is therefore unable to fail, and has been reporting green
+on that basis.
+
+**Why this is P0 and first.** It is one line. Until it goes, no width or
+layout evidence from the suite means anything, so every other Phase A fix would
+be verified by a check that cannot fail.
+
+**Acceptance:** the rule is gone; a deliberately over-wide element makes the
+journey width phase FAIL; the masthead wrap remains the actual fix.
+
+#### BK-44 — three closed rows can regress and the command stays green — **OPEN · P0 · Phase A**
+Opened 9 September 2026, verified in source.
+
+`tools/journey.py:118` returns `1 if failed else 0`, where `failed` excludes
+`REPRODUCED`. That is deliberate and documented — a wave-0 suite that exits
+non-zero on every documented defect is a command nobody runs. It is not the
+defect.
+
+**The defect is that three rows marked DONE still carry conditional
+`pytest.xfail()` calls**, at `tests/test_the_journey_login_to_logout.py:308`
+(BK-30/BK-32), `:641` (BK-40) and `:779` (BK-40). If the defect returns, the
+branch fires, the row reports REPRODUCED, and the command exits 0. A closed row
+that regresses is silent.
+
+**And the file already knows.** Its own header requires
+`xfail(strict=True)` — *"Strict is the whole point: the day BK-32 lands, the
+phase passes, and a strict xfail that passes is an ERROR"*. An imperative
+`pytest.xfail()` inside an `if` can never XPASS, so strictness is unreachable
+by construction.
+
+**This is a failed sweep, not an oversight.** Lines 268–274 record the same
+mistake being found and fixed at phase 3 — *"a check that cannot fail, wearing
+the costume of one that does"*. It was fixed at that one site. Three others
+were left. CLAUDE.md §1: stating a fix generally is not applying it generally.
+
+**Acceptance:** no conditional `pytest.xfail()` remains in the suite; every
+documented defect uses `@pytest.mark.xfail(strict=True)` naming its row; a
+sweep enumerates the suite and fails on an imperative xfail, so the fourth
+cannot be added.
+
+#### BK-45 — the search phase cannot fail — **OPEN · P1 · Phase A**
+Opened 9 September 2026, verified in source.
+
+`tests/test_the_journey_login_to_logout.py:507` waits for
+`#pane-search` innerText to be non-empty, then asserts it is non-empty. The
+pane contains the search form's `sr-only` labels, styled with
+`clip-path: inset(50%)` — not `display:none`, so the text is in `innerText`
+before Enter is ever handled.
+
+The phase's docstring states the right rule: *"A search that returns nothing
+must say whether it RAN. Zero results and an index that was never built read
+identically otherwise — defect shape S3."* The assertion does not test it.
+
+**Acceptance:** the phase asserts a NAMED state — results, zero results, or
+index-not-built — and fails when submission does nothing.
+
+#### BK-46 — session expiry is simulated by clearing the browser's cookie — **OPEN · P1 · Phase A**
+Opened 9 September 2026, verified in source.
+
+`tests/test_the_journey_login_to_logout.py:628` calls
+`page.context.clear_cookies()`. The comment on the three lines immediately
+above it says:
+
+> *"END THE SESSION SERVER-SIDE, the way an expiry does -- not by clearing the
+> cookie, which is the browser forgetting rather than the session ending."*
+
+The code does the thing its own comment forbids. It tests the browser losing
+its token, which is a different event with a different failure mode, and it
+covers History only — not expiry during Advise or Search, draft recovery, or
+reauthentication.
+
+**Acceptance:** the session is ended server-side; the phase covers expiry
+arriving mid-Advise and mid-Search; the draft survives it.
+
+#### BK-47 — the width phase asserts nothing at desktop — **OPEN · P1 · Phase A**
+Opened 9 September 2026, verified in source.
+
+`tests/test_the_journey_login_to_logout.py:277` — `if page.is_visible("#rail"):
+return`. At 1280px the rail is visible, so the phase returns having asserted
+nothing beyond sign-in. At narrow widths it asserts only that a toggle reveals
+`#rail-body`.
+
+BK-32's acceptance is that the advocate can start, find and switch matters and
+traverse Search, History, identity and logout **at all three widths**. None of
+that is exercised. The rule the docstring defends — reachable, not visible — is
+correct and is not the problem; the problem is that reaching is never done.
+
+**Acceptance:** at each of the three widths the phase starts a matter, finds a
+second, switches to it, and reaches Search, History, identity and sign-out.
+
+#### BK-51 — the journey runner cannot tell a deleted phase from a passing one — **OPEN · P1 · Phase A**
+Opened 9 September 2026, verified in source.
+
+Four separate holes in `tools/journey.py`, all the same shape — the runner
+believes whatever it is handed:
+
+- **No expected manifest.** Only zero parsed rows is rejected (`:79`). Deleting
+  half the phases stays green. The suite currently collects **24** items;
+  `docs/BACKLOG.md` said *"sixteen phases"* and *"18 pass"* in two places, and
+  both were stale.
+- **`proc.returncode` is captured and never read** (`:71`). A pytest that
+  emits passing rows and then dies in teardown can still exit 0.
+- **Stale artifacts.** Only `report.json` is deleted (`:67`); every old PNG is
+  then listed (`:98`) as though it belonged to this run.
+- **The report is not an audit record** (`:110`). Rows only — no commit,
+  fingerprint, arguments, return code, browser version or timestamp.
+
+**Acceptance:** the runner asserts an expected phase manifest by node id and
+fails on any absence; a non-zero pytest return code is a failure; artifacts are
+cleared per run; `report.json` carries the fingerprint and the return code.
+### Closed — 4
+
+#### BK-22 - signing in depended on a key that is meant to rotate - **CLOSED**
+Closed 7 September 2026, on the advocate's challenge: *if the email and
+password match, they should be able to log in, nothing else.*
+
+**They could not, and the reason was a layer below where anyone was looking.**
+The password is an scrypt hash with its salt and cost - exactly what a stored
+password should be, and scrypt exists so that such a hash can sit in the
+open. But the record HOLDING it was sealed with `NM_MATTER_KEY`, so verifying
+a password meant first opening a file. Hand the server the wrong key and the
+comparison is never reached at all.
+
+That coupling bought almost nothing and cost exactly the failure it caused.
+
+**The directory is now in the open**; client material is not, and none of it
+lives there. Matters, transcripts and metrics keep the matter key and always
+did. What is readable on disk is an advocate's OWN name, enrolment number and
+firm, beside a hash that is safe in the open.
+
+**Proven with a server started on a completely unrelated key:** *"that
+password is not right for this email address"* - the record was read and the
+password compared.
+
+**The migration had to go in the READ, and unsealing the writer alone did
+nothing.** `enrol` is the only other writer and it refuses to overwrite, so
+every existing record would have stayed sealed forever - measured on the one
+account that existed, which did not change until the read was taught to
+rewrite. It converts only where the decrypt SUCCEEDED, so a record it cannot
+open is left exactly as it is.
+
+**What this does NOT fix: BK-21.** Matters are still sealed with a key that
+is also the OpenAI credential, so rotating that still makes them unreadable.
+It no longer locks anyone OUT of the product, which was the urgent half.
+
+#### BK-20 - sign-in names which of three things failed - **CLOSED, with its pair**
+Opened 7 September 2026.
+
+A1 collapsed every sign-in failure into one sentence so a stranger could
+not use the form to discover which addresses are enrolled - the same
+reasoning as the timing note in `authenticate`, which pays for a password
+derivation on an unknown advocate so the stopwatch cannot answer either.
+
+**That trade is now made the other way, on instruction**, and the reason is
+good: three different problems were reading as one.
+
+| state | what the advocate is told |
+|---|---|
+| `unknown` | no advocate is enrolled with that email address |
+| `wrong_password` | that password is not right for this email address |
+| `unreadable` | the account exists and was sealed with a different `NM_MATTER_KEY` - retyping will not fix it |
+
+**The third is why it was worth doing, and it happened the same day.**
+`p14lrahul@iima.ac.in` was enrolled under one key, `start.ps1` supplied a
+different one, and the advocate was told their credentials were wrong on
+credentials that were correct. No amount of retyping fixes that and nothing
+on the screen pointed anywhere. `start.ps1` now generates a key ONCE and
+reuses it, so an account survives a restart.
+
+**And the pair is built.** `nm/domain/attempts.py` holds the policy - times
+in, verdict out, no clock and no I/O of its own - and the door consults it
+BEFORE the password is derived, because the point of a limiter is that the
+expensive part stops happening.
+
+**TWO COUNTERS, because one does not imply the other.** Five wrong answers
+for one address in fifteen minutes, twenty from one source across all
+addresses. A directory sweep tries each address ONCE and never trips a
+per-account counter - so limiting per account alone would have left
+enumeration exactly as cheap as before, which is the whole reason this row
+existed.
+
+**Not a lockout.** Nothing is disabled and no state is set on the account;
+the window ages out. A real lockout hands an attacker a denial-of-service:
+send five wrong passwords for an advocate's address and they cannot work.
+The refusal says so in terms, and says WHEN - *"Try again in about 15
+minute(s). Nothing is locked and no account has been changed."*
+
+**The pause is measured from the OLDEST attempt in the window**, not the
+newest. Counting from the newest would extend the pause every time the
+attacker knocked, and extend it for the advocate - who is the one reading
+the message.
+
+**It fails OPEN and says so.** If the attempt log cannot be read the door
+opens, because refusing every sign-in over an unwritable file is a
+self-inflicted outage on a product used under time pressure. Allowing them
+SILENTLY would be S1, so `/api/health` reports `rate_limiting` and shows
+**NOT RUNNING** when it cannot.
+
+Verified live: five 401s naming the failure, then 429 with the retry time.
+
+#### BK-18 - the session cookie had no `secure` flag - **FIXED**
+**MEASURED.** `response.set_cookie(name, value, httponly=True,
+samesite="lax", max_age=..., path="/")`. The comment beside it reasons
+carefully about `httponly` and `samesite` and does not mention `secure`,
+which reads as overlooked rather than decided. Without it the session token
+travels in clear over HTTP or a downgrade.
+
+**THE COOKIE HALF IS FIXED**: `secure` is derived from the connection -
+`request.url.scheme` plus `X-Forwarded-Proto`, trusted only upwards. The
+first attempt defaulted to `secure=True` with an env-var opt-out, and a
+secure cookie on a plain connection is DROPPED: six served-path tests went
+401 and local development would have too.
+
+**THE RATE LIMIT IS FIXED TOO**, with BK-20, which it pairs with.
+
+**The rate limit was already admitted, in the wrong place.** `advocate.py`
+refuses a short password with *"this is the only thing standing between one
+advocate's client file and another's, and the product has no rate limit
+yet"* - a known gap declared in a message the ADVOCATE reads rather than in
+a row anyone tracks.
+
+#### BK-13 - the product spoke in its own identifiers - **CLOSED**
+Closed 7 September 2026 as **B-132**. An enum now reaches the advocate
+only through a phrase it owns.
+
+`nm/domain/spoken.py` holds the mechanism: the phrases live ON the enum
+and `complete()` asserts every member has one AT IMPORT. No fallback to
+`.value` - a fallback is what makes a missing phrase invisible. Seven
+enums speak: `Holder`, `Form`, `Standard`, `IssueKind`, `Effect`, `Side`,
+`Binding`.
+
+The three bracket-notation findings are sentences:
+
+| before | after |
+|---|---|
+| `{pos.element} [burden ours; balance_of_probabilities; held on X]` | *The burden is on us, on the balance of probabilities. It is held on X.* |
+| `{i.statement} [substantive; runs against defending; opposes our case on posture v2]` | *It is a substantive issue, running against the party defending, and it cuts against us. Read on the posture as it stood at v2.* |
+| `{item.what} - held by third_party, certified_copy` | *a third party has it, and what exists is a certified copy.* |
+
+**The structure did not change, and that was the point.** The element
+kinds are load-bearing: `Answer.__post_init__` refuses an answer that
+leads with background, the gate matrix hangs off `disclosure`, and B-128
+was five days earlier. The previous build produced advice that read
+beautifully and hid what it could not establish. Better sentences INSIDE
+the structure, never instead of it.
+
+**`Element.feature` came out of it**, and its own docstring had predicted
+it: the issues suite filtered findings by searching for the words *runs
+against*, said so, and named the fix in the same sentence. Rewording the
+findings turned three tests red - all three keyed on prose rather than on
+the rule. They read `feature == "D9"`, `Effect.SUPPORTS.said`, a version
+TOKEN, and `concluded["proof"]` now. **A product whose tests break when
+its English improves does not improve its English.**
+
+---
+
+## Phase B — Open a matter
+
+Opening-message routing, emergency triage, the conflict screen, the competence screen, engagement and scope, capacity to instruct. **B1, B3, B4 and B5 are implemented at 13 `@implements` sites; all six are still registered `decided`.**
+
+### Open — 2
+
+#### BK-34 — front-door legal and professional screens before substance — **REOPENED · P0**
 
 **Phase:** matter intake before substantive analysis.
 
@@ -786,94 +856,193 @@ is declared RESERVED, because declaring an emergency is G-EMERGENCY's own
 condition and detecting danger in ADMIT-A cannot ask a model without sending
 it the material the screens exist to hold back.
 
-### BK-35 — cause-specific accrual and answer-consistency gate — **DONE**
+**REOPENED 9 September 2026, verified in source.** Two of this row's five
+acceptance clauses are unmet.
 
-**Phase:** computing and serving the legal position.
+*Adding a party does not stale the clearance.* Screens run and substance is
+admitted at `nm/core/turn.py:674`; parties newly named in that brief are
+extracted and persisted only at `:2069`. `_parties_of` documents the
+consequence in terms: *"a party named today is screened from tomorrow"*
+(`:1668`). The acceptance requires the opposite.
 
-**Good now:** cause selection is defined and exact-routes to retrieved law; the
-period is read from retrieved text rather than hard-coded; corrections,
-extending factors, coverage, sides and passed windows have explicit types; a
-wrong cause can be corrected visibly.
+*The emergency route does not exist.* `may_admit_substance` takes an
+`emergency` flag (`nm/core/screens.py:245`), and the single production call
+site never passes it (`nm/core/turn.py:1451`). `matter.emergency_because` has
+read sites only and no production writer, and where it is read the emergency
+screen BLOCKS. The narrow recorded exception the row promises is unreachable.
 
-**Gap observed on `6e29cf0`:** `_limitation` chooses the first dated chronology
-entry as accrual for every cause. A specific-performance brief gave a 2023
-agreement and a 2024 written refusal, with no fixed performance date; the served
-answer ran Article 54 from the agreement and declared expiry on 2026-03-14,
-rather than resolving Article 54's applicable trigger. The action then said
-“Confirm the date of service and file within the window” while its own deadline
-annotation said every deadline had passed. The recommendation prompt expressly
-forbade that output, but no deterministic assembled-answer check rejected it.
+#### BK-48 — Phase B is built and the register says it is not — **OPEN · P1 · Phase B**
+Opened 9 September 2026, verified in source.
 
-**Change:** model accrual as a cause/article-specific decision with candidate
-facts, the applicable statutory limb, exact provenance, confidence state and a
-blocking question where the trigger cannot be established. For Article 54,
-distinguish a date fixed for performance from notice of refusal; add equivalent
-rules/evals for every supported cause. Add an answer-consistency validator over
-the assembled typed result: action versus live/passed/unknown deadline, action
-versus posture, finding versus proof, and internal contradiction between
-elements. Repair once from typed facts or withhold the action—never trust prompt
-compliance as the guard.
+`@implements("B1")`, `("B3")`, `("B4")` and `("B5")` appear at **13 sites**
+across `nm/core/route.py`, `nm/core/screens.py`, `nm/core/quarantine.py` and
+`nm/core/turn.py`. All six Phase B features are registered `status: decided`,
+which the PRD's own vocabulary (§0.5) defines as the pre-build state.
 
-**Acceptance:** the reproduced specific-performance matter does not use the
-agreement date merely because it is earliest; every computed expiry names its
-trigger and statutory limb; ambiguous trigger blocks the date; an action cannot
-say file within a window that the same answer marks passed or unknown. The
-counterexamples run at the pure, engine, API and browser boundaries.
+`tools/trace.py:359` checks one direction only: T3 fails a feature ABOVE
+`decided` with no implementing code. There is no check for the reverse, so code
+sitting under a `decided` feature passes silently.
 
-**Dependencies:** BK-30.
+**Why it matters beyond tidiness.** `tools/slicegate.py` reads the same record,
+so S10 reports NOT DONE partly on features that are implemented, and the
+project's answer to *how far have we travelled* is wrong in the direction that
+hides work. That is the S3 shape pointed inward — an absent declaration read as
+an absent thing.
 
-**Done — the accrual, in two halves.** `Edge.accrues_on` carries the trigger
-from the Schedule's own third column for all seven curated Articles, and
-`accrual_trigger_for` in `nm/knowledge/resolution.py` is its single lookup —
-the evidence adapter delegates to it rather than carrying a copy, and it
-crosses to the engine on the PORT (`EvidencePort.accrual_trigger`) rather than
-through `getattr`, which the dead-code sweep had correctly reported as
-unreachable. `nm/core/accrual.py` then reads WHICH dated entry satisfies the
-trigger, guarded by exact membership on the thread's own fact ids — a closed
-set generated per turn, so nothing is ranked. It answers the limb too, because
-Articles 14, 19 and 54 each have two and they give different dates.
+**Acceptance:** the four implemented B features carry a status their code
+supports; `trace` gains T3b — a feature at `decided` with `@implements` in
+production code FAILS — so the register cannot under-report again.
 
-**The half that was already shipped had never once fired,** and that is the
-finding worth keeping. Every offline fixture's evidence double lacked
-`accrual_trigger`, so the engine's lookup returned `""` on every turn and the
-BK-35a refusal path was dead from the day it landed — CLAUDE.md §8, right in
-the core and absent at the fixture. The `except AttributeError` written around
-the port call was what hid it: an adapter that COULD NOT answer produced the
-same empty string as one saying *no curated trigger*, which is S1.
+### Closed — 3
 
-**Done — the consistency gate.** `G-CONSISTENT`, response BLOCK, scope STEP,
-states `consistent | contradicted | repaired | not_verified`. It is NOT a
-phrase list: `nm/core/consistency.py` renders each of the turn's typed facts
-as one sentence with a stable id and asks which of THOSE the step contradicts,
-so the answer space is the turn's own computed facts and the guard is exact
-membership plus a quotation that must be in the step. A contradiction is
-rewritten ONCE from the typed facts and re-verified; a rewrite that still
-contradicts is not served, and the advocate gets the computed position and a
-question instead. It fails toward SERVING — a read that cannot run, names a
-fact it was not shown, or cannot quote what it objects to lands `consistent`
-with the refusal recorded, because refusing here deletes advice that is
-probably sound.
+#### BK-2 - the screens are stated to the advocate - **CLOSED**
+Closed 7 September 2026 as **B-128**, and the defect was sharper than
+"unbuilt".
 
-**Counterexamples, with their mutation controls.**
-`tests/test_the_period_never_runs_from_an_unchosen_date.py` drives the accrual
-read both ways — told to name the last entry, then the first — because a
-product that had gone back to sorting passes the second and fails the first.
-Reverting the selection to `dated[0]` fails 3 of 7.
-`tests/test_a_step_cannot_contradict_the_figures.py` drives all six verdict
-branches; removing the block fails 2 of 11, and the served element in that
-failure is B-074 verbatim — *"File the recovery suit within the limitation
-period"* beside an annotation saying every deadline had passed.
+`nm/core/screens.py` had been complete since slice 6 - four states, an express
+emergency exception, `unscreened` drawing its population from `ScreenKind` -
+and NOTHING CONSTRUCTED A SCREEN. That is B-079's shape and B-116's shape for
+the third time: a module that is right and has no production caller.
 
-**Not done, and named rather than left implicit.** The reviewer's clause
-*"finding versus proof"* is not covered: `claims_for` builds claims from the
-limitation position, the deadline register and the side, and proof positions
-are not among them. They are per-element rather than per-thread, so a claim
-for them is a different shape and is not a line's work. The mechanism takes it
-without change — a new typed fact is a new claim builder, not a new phrase —
-and `test_every_limitation_state_becomes_a_claim` is the pattern the proof
-claim would extend.
+**What made it worse than unbuilt.** `_run_screens` fired `G-UNSCREENED` under
+a comment claiming *"the output says so rather than reading as though it had
+passed"*, and measured on 7 September the advocate saw **zero** screen-related
+lines. The gate was in the metrics; the answer carried none of it. CLAUDE.md
+S9 exactly - the third state must be visible in the OUTPUT, not only in the
+type.
 
-### BK-36 — durable, idempotent and recoverable turns — **DONE**
+Now `_run_screens` builds five `NOT_ASSESSED` screens from the vocabulary,
+asks `may_admit_substance` (which refuses, and the turn asserts that it does),
+and returns `screens_mod.unscreened(outstanding)` as rows. `_with_screens`
+appends them at **all three** Answer sites, blocked branches included - a turn
+that stopped to ask a question has still not screened the matter, and that is
+exactly when it matters.
+
+**Two things the type caught before a test had to.** `Answer.__post_init__`
+refuses a leading GROUND (PRD S6.2 S3: the answer leads with the action, never
+with background), so the note is appended LAST. And the first attempt appended
+to `head`, which is reassigned `list(elements)` further down - a SNAPSHOT, not
+the list - so the rows were discarded silently. The measurement that found the
+defect is what found the fix not working.
+
+**The deferral reason was wrong, and that is the lesson.** B2-B6 (conflicts,
+competence, engagement) remain slice 10 and R-8 still binds. But *telling the
+advocate the screens have not run* is not slice 10 work - it is the disclosure
+that makes the deferral honest, and it had been deferred along with the thing
+it discloses. **The cost recorded here still stands:** when B3 is built, a
+blank `firm_id` must read `NOT_ASSESSED` and never `CLEAR`.
+
+#### BK-8 — the phrase lists — **CLOSED as B-126**
+Not by trimming the lists. Both are gone, with both length rules, and
+`nm/core/route.py` reads the route. "bail" is one word and a case fact; "hi"
+is one word and a greeting; a count cannot tell them apart.
+
+
+---
+
+#### BK-8 - the phrase lists that survive, and why - **RE-MEASURED 7 Sept**
+Two remain in product code, not three. **`_MATTER_SIGNALS` and `_ABOUT_NM` are
+gone** (B-126) along with both length rules, so the hole recorded in the first
+version of this row - a message of three words or fewer with no signal routing
+to NON_MATTER, making "he absconded" a greeting - no longer exists. Measured
+from the code, not from this file: `grep -rn` finds both names only in prose
+explaining their removal.
+
+The rule the survivors satisfy is B-124's: each ROUTES and neither DECIDES.
+
+- **`chronology.CORRECTING`** (15 phrases) - documented and deliberate
+  (B-088): it detects that a correction is being *attempted* and decides
+  nothing, raising a question with both dates in it.
+- **`limitation._WORDS` / `_DAYS`** - parsing "three years" out of retrieved
+  statutory text. Not a heuristic on the advocate's message; it reads the
+  corpus, and a miss leaves the period uncomputed and says so.
+
+**Why this row was rewritten rather than left standing.** It named a list the
+product no longer holds, which is a document disagreeing with the code about
+what the code does - CLAUDE.md S4's shape, and the cheapest possible instance
+of it to have missed.
+
+---
+
+## Phase C — Take the brief
+
+The account, objectives, parties and posture, thread identity, the chronology, document intake, the evidence inventory. **Five of seven implemented; C2 and C6 are specification only.**
+
+### Open — 2
+
+#### J-4 — One dispute was split into three, and the product then argued with itself
+
+**MEASURED 8 September 2026, and it is worse than the heading says. This is
+not a tuning problem.**
+
+Six briefs, each written for a known number of disputes, run three times --
+twice against the committed prompt and once against a rewrite:
+
+| brief | disputes | committed r1 | committed r2 | rewrite |
+|---|:-:|:-:|:-:|:-:|
+| goods supplied, unpaid, acknowledged | 1 | 4 | 4 | 4 |
+| cheque dishonoured, notice sent | 1 | 0 | 0 | 2 |
+| `first ... second ... third ...` | **3** | **3** | **0** | 3 |
+| plot, one encroaching neighbour | 1 | 2 | 2 | 2 |
+| four enumerated claims | **4** | **0** | **0** | 0 |
+| `The notice went on 15 April.` | 0 | 0 | 0 | 0 |
+| | | **3/6** | **2/6** | **2/6** |
+
+**It is unstable on identical input** -- the three-dispute brief returned 3 on
+one run and 0 on the next -- and it misses the four-dispute enumeration
+entirely, which is the shape BK-27 exists for.
+
+**THIS IS A FINDING ABOUT BK-27'S OWN FIX.** I validated that read on ONE
+brief, reported it working, and shipped thread creation on top of it. Across
+six briefs it scores 2-3 of 6. A rewrite of the prompt made it no better and
+in places worse, so the mechanism and not the wording is the problem.
+
+**Why it matters more than a wrong number.** Thread creation is not
+recoverable in the way `threading.py`'s asymmetry assumes. A wrong split does
+not merely duplicate work: the cross-file pass then runs ACROSS the false
+threads and manufactures contradictions between halves of one transaction --
+which is what J-4 recorded above, and an advocate reading it has no way to
+know the conflict is invented.
+
+**What would have to change, and it is a decision, not a patch:**
+
+1. **Do not create threads from the count.** Read it, DISCLOSE it -- *this
+   looks like three disputes; say if it is one* -- and let the advocate
+   confirm before the file is split. A question is cheap; a fragmented file
+   with invented conflicts is not.
+2. **Or find a mechanism that is stable.** The count is being asked of prose;
+   the thing that actually separates disputes is procedural -- different
+   opponent, different cause, different relief -- and the product already
+   reads cause and posture separately and more reliably. A count DERIVED from
+   those two would rest on reads that measure 9/9 rather than one that
+   measures 2/6.
+3. **Meanwhile, the cross-file pass must not run across threads created by a
+   single message on a single turn.** That is a small, independent guard and
+   it removes the invented contradictions whatever is decided above.
+
+
+`G-SPLIT` fired on a single-cause brief: *"This message describes 3 separate
+disputes, so each is on the file as its own thread."* There is one dispute:
+goods supplied, unpaid, acknowledged.
+
+The cross-file pass then ran across the false threads and reported a conflict
+between them:
+
+> *Across this file: In the non-payment case, the position taken is that no
+> payment was due to the claimant ... This directly contradicts ...*
+
+**This is BK-27's fix over-correcting.** `threading.py`'s asymmetry says a
+wrong split is the recoverable direction, and it is — but a wrong split that
+then generates invented contradictions is not merely noisy, it misleads.
+
+**The fix.** The count read needs what the duty read got: a stated bias toward
+ONE. A chronology of a single transaction is not three disputes because it has
+three sentences. And the cross-file pass must not run across threads created
+by one message on one turn.
+
+---
+
+#### BK-36 — durable, idempotent and recoverable turns — **REOPENED · P0**
 
 **Phase:** submitting a brief and surviving failure.
 
@@ -937,529 +1106,25 @@ draft that outlives the tab outlives the next person to use the machine, which
 is a privacy decision rather than a storage one. Stated here rather than
 implied.
 
-### BK-37 — senior-counsel answer shape and plain-language trust surface — **DONE**
+**REOPENED 9 September 2026, verified in source.** The exact case this row
+exists for can create two matters.
 
-**Phase:** reading and acting on advice. This completes J-6 and the remaining
-advocate-facing part of J-5/J-7.
+Before the first response the browser holds no `matterId`, so a retry sends the
+same `turn_id` with `matter_id: null` (`web/app.js:836`). `_load_or_create`
+creates a fresh matter whenever `matter_id` is absent (`nm/core/turn.py:1716`),
+and the idempotency check runs AFTER it, scoped to the matter just created
+(`:611`) — which has applied nothing. A lost response to the opening turn
+duplicates the brief into a second matter.
 
-**Good now:** the advocate's own words are visually separated; loud signals
-and disclosures remain visible; supporting law is folded with a count; actions
-carry a deadline or an explicit reason why none is available.
+The regression test does not reach it: it receives the first response, reads
+its `matter_id`, and supplies that otherwise unknowable id on retry
+(`tests/test_a_brief_lands_exactly_once.py:73`).
 
-**Gap observed:** a courtesy “Hello” produced only a plain ground, and every
-plain ground is folded, so the entire reply disappeared under “1 supporting
-passage”. A completed matter answer is a flat sequence of actions, findings,
-gaps, proof elements, salvage and disclosures. Gate ids/states/details, thread
-ids in gate details, LLM call/token/cost/violation metrics and retry narration
-are shown to the advocate. “NOT ESTABLISHED” is repeated often enough to drown
-the position it qualifies.
+**This row is load-bearing.** BK-41 is closed on the strength of it.
 
-**Change:** define a typed counsel brief with stable sections: position;
-because; decisive risks/adverse case; limitation/deadline; next step with owner
-and by-when; questions/needed material; authorities; and expandable audit
-detail. Render courtesy and question-of-law answers visibly even if they contain
-only grounds. Translate operational states into advocate language and move gate
-ids, traces, tokens, provider/cipher/build details to an authenticated operator
-view. Deduplicate repeated gaps and show their count without hiding a new or
-critical one. Add copy/cite/print affordances and accessible headings.
+### Closed — 3
 
-**Acceptance:** a senior counsel can identify the position, controlling reason,
-main risk and next step in the first screen; no `thr_`, `mat_`, `turn_`, gate id,
-provider, token or cipher name appears in advocate mode; every substantive
-claim still reaches its provenance; a one-element courtesy response is visible.
-
-**Dependencies:** BK-35 before reshaping legal conclusions; BK-30. **Why not
-done:** the current renderer partitions element kinds but has no user-facing
-document contract.
-
-**Done, 8 September 2026. J-6 and J-7 close with it.**
-
-**The answer is filed, not sorted.** `nm/domain/brief.py` assigns every element
-to the question it answers — where this stands, time, what cuts against us,
-next step, what I still need, why, what it rests on — and the browser groups.
-A *sort* would need a rank per element, and a rank is a judgement about
-importance that this product must not make silently: nine adverse paragraphs
-are not less important than the limitation position, they answer a different
-question, and a reader looking for one is not looking for the other.
-
-The assignment is pure, has one owner, and is computed at the byte boundary.
-A renderer deciding sections for itself would be a second opinion about what
-an element IS — S9 in the place it is hardest to see, because the disagreement
-would only ever be visible on a screen nobody diffed.
-
-**J-7: the working is behind a door, not in the bin.** `G-DUTY · clear`,
-`G-UNSCREENED · unscreened`, `G-CONSISTENT · consistent` and `outcome ok ·
-latency 69ms · calls 15 · tokens 6860/606 · cost $0.000000` sat under every
-answer; the masthead carried `openai/gpt-4o-mini · hard: not configured ·
-store: fernet` on every screen. All of it is what makes a claim checkable and
-none of it is a fact about the advocate's matter. It is now a closed
-`How this answer was made`, and the masthead says `Corpus ready` with the rest
-on the title attribute.
-
-Journey phase 5b asserts BOTH halves and the second is what stops the fix
-being a deletion: no gate id on screen, and every one of them still there when
-the working is opened. A product that had stopped recording them would pass
-the first assertion and fail the second, and it would be a worse product.
-
-**J-6: a courtesy reply no longer disappears.** Every plain ground is folded,
-and an answer that is ONLY plain grounds — a courtesy reply, a
-question-of-law answer — vanished entirely under *"1 supporting passage"*. The
-fold's argument is that support sits UNDER a claim and crowds it; with no
-claim above it there is nothing to crowd and folding is just hiding.
-
-**Repeated gaps carry their count.** "I could not assess this" said once and
-said nine times are different facts about the file, and an advocate reading
-the shorter answer must not believe the product looked less hard than it did.
-Nothing loud is ever collapsed.
-
-**A sentence that was true of every case had stopped being checked.** The
-screens row hard-coded *"Screens on this matter, none of which has run"* and a
-closing clause about substance being admitted under an exception, because
-before BK-34 both were unconditionally true. On a served turn afterwards it
-read *"Screens on this matter, none of which has run: Screens on this matter,
-all cleared: emergency — …"*. The prefix now comes from the same place the
-outcome does.
-
-**Counterexamples:** journey phases 5b, 5c and 5d — section order read back
-off the page, no engineering vocabulary in advocate mode, and the working
-still complete when opened. **18 pass, 0 reproduced, 0 unexplained.**
-
-**Not done:** copy/cite/print affordances, and accessible headings beyond the
-`h3` structure — both named in the row and neither attempted.
-
-### BK-38 — search-to-authority-to-matter research workflow — **PARTLY DONE · P1**
-
-**Phase:** legal research and deliberate use of authority.
-
-**Good now:** the corpus search is fast, returns relevant paragraph-level hits,
-always states whether it ran, discloses jurisdiction/source size/build date,
-distinguishes search from exact resolution and now uses relative rank bands
-rather than fake confidence percentages.
-
-**Gap observed:** the court filter is an exact free-text equality: “Supreme
-Court” returned zero while “Supreme Court of India” returns results. The 25
-cards are paragraph rows, often repeat a case, and provide no case grouping,
-pagination/sort, full judgment/canonical citation, citator status, pin/copy or
-“use in this matter”. Every high-scoring hit in the reproduced query read “top
-of this search”, so the bands still gave little discrimination. Internal file
-name `authority.db` and a raw build timestamp remain on the advocate surface.
-
-**Change:** use controlled court values with aliases/autocomplete; validate year
-ranges; group paragraphs under a case; expose neutral citation/court/date/bench,
-paragraph locator, full judgment and treatment where held; support result
-sorting and paging without hiding total scope. Let an advocate pin/copy a
-citation and explicitly attach a proposition plus selected passage to the
-active matter—never share pane state implicitly. Replace internal store details
-with a plain corpus scope/freshness statement. Implement BK-25's summary-first
-case retrieval behind the same result contract.
-
-**Acceptance:** common court spellings resolve to the same controlled value;
-zero results state exactly which normalized filters ran; repeated paragraphs
-do not masquerade as 25 authorities; a selected passage retains case identity,
-locator and origin when added to a matter; no search result becomes matter fact
-without an explicit advocate action.
-
-**Dependencies:** BK-25, BK-30, BK-33. **Why not done:** the current endpoint is
-a paragraph search surface, not a research-to-file workflow.
-
-**Done, 8 September 2026 — the court filter and the surface.**
-
-**Measured first.** `SELECT court, COUNT(*) FROM paras GROUP BY court` on the
-real 1,046 MB index returns exactly two rows: `Supreme Court of India`
-(395,734 paragraphs) and `High Court of Andhra Pradesh` (55,814). There is no
-third.
-
-**The filter was `lower(court) = lower(?)`,** so an advocate typing `Supreme
-Court` got ZERO from a corpus holding nearly four hundred thousand Supreme
-Court paragraphs — and a zero from an exact-match filter reads as an empty
-corpus. That is B-163's shape, and this repository has recorded it three times
-already against the legal corpus.
-
-It resolves through `normalise_court`, which already maps free text onto a
-CLOSED court vocabulary and already returns UNKNOWN rather than guessing.
-Nothing is scored and nothing is nearest-matched — CLAUDE.md §5's rule that
-fuzzy may rank but never identify, and a court filter identifies.
-
-**One alias is a legal decision, not a convenience.** `Telangana High Court`
-resolves to `High Court of Andhra Pradesh`, because those judgements ARE
-Telangana judgements and every one binds — the standing decision in
-`BASELINE.md` §1.1. RG-01 already cost a blocked release by counting a court
-LABEL instead of the binding relationship.
-
-**A court the index does not hold returns nothing AND SAYS SO**, naming what
-is held. Verified against the real index: `Supreme Court` → hits (was 0),
-`Telangana High Court` → hits, `Bombay High Court` → 0 with the reason.
-
-**The surface stopped speaking engineering.** `Searched: the authority index
-(authority.db)` became `Searched the case law`; `built 2026-08-30T07:51:38`
-became `current to 2026-08-30`; and the resolved filter is shown, so a zero
-says which normalised filter ran.
-
-**Counterexample:** `tests/test_the_court_filter_resolves.py`, twelve tests,
-including a control that the stored values are the two the index actually
-holds.
-
-**NOT DONE.** Paragraph rows are still not grouped under a case, so repeated
-paragraphs can still read as separate authorities; there is no
-pagination/sort, no neutral citation or bench, no pin/copy, and no explicit
-"use in this matter" attachment. BK-25's summary-first retrieval is not
-implemented.
-
-### BK-39 — readable History, correction record and handover — **PARTLY DONE · P1**
-
-**Phase:** review, supervision, handover and resumption.
-
-**Good now:** encrypted transcripts preserve what was actually served; missing
-or unreadable turns are counted and disclosed; ownership is checked; the raw
-record is unusually rich for forensic diagnosis. `/summary` already separates
-established material, decisions and gaps.
-
-**Gap observed:** History initially shows only the advocate's message and a
-collapsed “The turn as it was served”. Expanding it prints the complete raw JSON
-trace: internal ids, prompts, model answers, metrics, gates and implementation
-details. The answer is not rendered with the Advise renderer. There is no
-matter overview, chronological record, authorities list, changes/corrections,
-open questions, next action, export, print or handover package. BK-28 separately
-records that runs and golden sets are absent from the History surface.
-
-**Change:** make History an advocate record: matter cover and current summary;
-chronology with superseded facts visibly struck/replaced; served answers using
-the same renderer; decisions/reservations; relied-on authorities; questions and
-next actions; screen/release history; and readable change attribution. Add
-print/export/handover with confidentiality markings and a manifest of omitted
-or unreadable items. Put raw prompts/traces in a separately authorised operator
-audit view with redaction and retention controls. Integrate BK-28 there rather
-than adding another history implementation.
-
-**Acceptance:** another advocate can open an exported or on-screen file and
-state who the client is, the issue, posture, material facts, deadline, current
-position, authorities, unresolved questions and next owner without reading raw
-JSON; the export counts and names unreadable omissions; corrections never erase
-the original record.
-
-**Dependencies:** BK-28, BK-33, BK-37. **Why not done:** transcript capture was
-built as an audit artifact and is currently served directly as the user record.
-
-**Done, 8 September 2026 — History uses the one renderer.**
-
-It showed the advocate's message and a collapsed *"The turn as it was served"*
-which, opened, printed the complete raw JSON: internal ids, prompts, model
-answers, metrics, gates. The answer they were actually given was not rendered
-at all — so the surface that exists for REVIEW showed a different thing from
-the surface that gave the advice, and only one of them was readable.
-
-**Two renderers for one answer is S9**, and the drift was already real: BK-37
-filed the served answer into sections and this one would still have been
-printing JSON. `renderTurn` is now the only thing that renders an answer,
-here and on the Advise pane.
-
-**The raw record is filed, not deleted.** Forensic diagnosis is what this
-store is for; it moves inside the same `How this answer was made` door every
-served turn already has. The turn id comes off the header — it is one of this
-product's own keys and an advocate cannot act on it (J-5) — and stays in the
-raw record below.
-
-**Counterexample:** journey phase 8b asserts both halves — History reads like
-the advice, and the JSON is still there when the working is opened.
-
-**NOT DONE**, and it is most of the row: no matter cover or current summary on
-the History surface, no chronology with superseded facts struck, no
-decisions/reservations, authorities list, screen/release history or change
-attribution; no print, export or handover package with confidentiality
-markings and a manifest of omitted items; BK-28's runs and golden sets are
-still not integrated here.
-
-### BK-40 — session expiry and confirmed logout — **DONE**
-
-**Phase:** loss of authentication during work and end of session.
-
-**Good now:** protected routes share one session dependency; a valid logout
-closes the server session before clearing the cookie; a successful logout in
-the browser returns to the gate and reload stays signed out.
-
-**Gap observed and reproduced:** `api()` has no central 401 transition, so an
-expired session leaves the masthead claiming the advocate is signed in while
-each pane fails locally. Logout clears all on-screen state in `finally` even
-when `/api/logout` fails. With the server stopped, the screen showed sign-in as
-if logout succeeded; after restart, reload reopened the authenticated session
-and its matter because the server token was still live.
-
-**Change:** centralize 401 handling: freeze and preserve the draft securely,
-remove privileged DOM, state that the session ended, and resume only after
-reauthentication with explicit matter/draft confirmation. Make logout a state
-machine: `signing_out`, `confirmed`, or `unconfirmed`; clear privileged content
-immediately, but if the server cannot confirm, say so, retry/revoke when
-connectivity returns, and do not present ordinary sign-in as proof of logout.
-Support “sign out all devices” from BK-31.
-
-**Acceptance:** forced expiry during Advise/Search/History produces one coherent
-reauthentication flow and no stale signed-in identity; draft recovery is scoped
-to the same advocate; a failed logout is visibly unconfirmed and reload cannot
-silently restore access once confirmation/revocation succeeds; successful
-logout always makes `/api/session` return 401.
-
-**Dependencies:** BK-30, BK-31, BK-36. **Why it had not been done:** server invalidation is
-correct, but browser state currently treats an attempted request as confirmed.
-
-**Done, 8 September 2026.** Both halves, and the server half was the one nobody
-had looked at.
-
-**Server.** `close_session` returned `None` whether it had ended a live session,
-found one already closed, or found nothing at all, and `/api/logout` answered
-`{"signed_out": true}` on top of all three. It now returns `closed`,
-`already_ended` or `unknown` and the route reports it — the browser had been
-believing an assertion the server was in no position to make.
-
-**Browser.** `api()` now has one 401 transition: it freezes the draft scoped to
-the advocate who wrote it, strips privileged content from the DOM in one place,
-says the session ended, and restores the draft after re-authentication. It fires
-only when we believe we are signed in, so `boot()`'s ordinary 401 does not greet
-a first-time visitor with a notice that their session expired.
-
-Signing out is a state machine — `signing_out`, then confirmed or
-`unconfirmed`. The screen still clears immediately, which was always right. What
-changed is that clearing the screen is no longer allowed to BE the answer: a
-logout the server did not confirm says so loudly, offers a retry, and retries by
-itself when connectivity returns. A 401 from `/api/logout` is a confirmation,
-not a failure.
-
-**Counterexamples:** journey phases 10, 11 and 12, all previously reproduced and
-now passing. The draft is in memory for the reason recorded under BK-36.
-
-### BK-41 — latency, progress, cancellation and degraded-service behaviour — **PARTLY DONE · P1**
-
-**Phase:** the waiting time inside every substantive turn.
-
-**Good now:** the UI shows an immediate pending card; metrics retain phase and
-model-call evidence; the scripted path completes deterministically; failures in
-decisive reads have explicit third states.
-
-**Gap observed:** the only user progress text is “Settling the frame and
-checking the corpus…”, while a real turn can make many sequential model calls.
-Earlier stored metrics measured p50 about 2.05s, p90 about 18s and maximum about
-44s; turns with eight or more calls had median about 20.2s. There is no cancel,
-safe background continuation, reconnect state or estimate; the composer is
-globally disabled. BK-29 records sixteen hand-picked output ceilings and the
-truncation cliff for span-returning reads.
-
-**Change:** establish a performance budget per phase and user-visible service
-level; parallelize only independent reads; cache only inputs whose provenance
-and invalidation are explicit; derive token ceilings from input/output schema as
-BK-29 requires; stream honest coarse phases rather than invented percentages;
-support cancellation before commit and background/reconnect after submission;
-degrade optional analysis without downgrading decisive legal reads silently.
-
-**Acceptance:** p50/p90/timeout targets are measured in CI and a staged real-
-model run; the user always knows whether work is queued, deriving, checking,
-committed, cancelled or failed; cancel/reconnect cannot duplicate a turn; a
-truncated decisive read is never presented as absent or complete.
-
-**Dependencies:** BK-29, BK-30, BK-36. **Why not done:** latency is measured for
-operators but not managed as a user journey.
-
-**Done — cancellation, and the composer stays usable.**
-
-A turn's measured p90 is about 18 seconds, about 20 for one making eight or
-more model calls, and the composer was globally disabled throughout with no
-way to stop. An advocate who thought of the next thing to say had nowhere to
-put it.
-
-**Cancel abandons the REQUEST, which is all a browser can do,** and it says
-so. The server may have committed before the abort landed, so the turn goes
-to `unknown` — the state BK-36 already built for exactly this — and its retry
-carries the same turn id, so a turn that did land is recognised rather than
-written twice. Saying *"cancelled, nothing was saved"* would be a claim the
-browser is in no position to make.
-
-**Done — token ceilings are derived**, which this row delegates to BK-29.
-That row is closed.
-
-**Counterexample:** journey phase 13b — cancel mid-turn, and the answer must
-not claim the brief was discarded, must offer the same-id retry, and must
-leave the brief in the composer.
-
-**NOT DONE.** There is no phase streaming: the pending card still says one
-static line while a turn makes many sequential calls, and honest coarse
-phases need a server push this product does not have. No performance budget
-is measured in CI, no reconnect-after-submit, and no staged real-model
-latency run. Those are the substance of the row and they are open.
-
-### BK-42 — production trust, privacy, accessibility and recovery gate — **PARTLY DONE · P1**
-
-**Phase:** conditions that make every other phase dependable in practice.
-
-**Good now:** matter and transcript bytes are encrypted; ownership checks are
-consistent; corrupt/unreadable files are disclosed; writes use atomic replace
-and a per-matter concurrency lock; the health endpoint exposes useful operator
-state.
-
-**Gap observed:** the default key arrangement remains colocated with default
-local matter storage (BK-21); there is no user-visible retention/deletion,
-backup/restore or disaster-recovery contract; raw prompts containing client
-facts are exposed through user History; rate-limit audit and local-store
-boundaries are deployment assumptions. Search inputs rely on placeholders
-rather than associated labels, the narrow layout removes navigation, and there
-is no real-browser accessibility gate.
-
-**Change:** finish BK-21 with external secret management and rotation; define
-tenant/workspace isolation, audit access, retention, export and deletion;
-encrypt and test backups with point-in-time restore; redact and separately
-authorise operator traces; make rate limiting atomic for the deployment store;
-add availability alerts and recovery drills. Add WCAG 2.2 AA checks for labels,
-names/roles, focus, contrast, zoom, reflow, reduced motion and screen-reader
-announcements across BK-30's three widths. Publish only user-actionable health;
-keep diagnostics authenticated and least-privileged.
-
-**Acceptance:** a restore drill recovers an encrypted matter and transcript
-without mixing advocates; key rotation is tested; access/export/deletion events
-are attributable; no client prompt is exposed to an unauthorised surface; zero
-critical automated accessibility violations and the keyboard/screen-reader
-journey passes from login through logout.
-
-**Dependencies:** BK-21, BK-30 and the final UI of BK-31 through BK-40. **Why not
-done:** current safeguards are strong local primitives, not yet a declared and
-tested production operating envelope.
-
-**Done — the accessibility half that is code.**
-
-**Every control has an accessible name.** Four search inputs had placeholders
-and no labels. A placeholder is not a name: it is announced once, it
-disappears the moment anything is typed, and a screen-reader user who tabs
-back to a filled field is told nothing about what it holds. The labels are
-visually hidden with the clip-rect idiom rather than `display:none`, which
-would remove them from the accessibility tree too — the opposite of the point.
-
-**The masthead fits a phone.** Measured at 390px: `tabs` ran to 473px, `who`
-to 678px and `health` to 720px on a 390px viewport. The whole strip was one
-non-wrapping flex row, so a third of the masthead sat off the right edge and
-the document scrolled sideways. Every pane below it was already responsive;
-the bar above them was not, and nothing had looked.
-
-**A fix that disabled its own test, caught and removed.** `body { overflow-x:
-hidden }` went in beside the wrap as belt-and-braces and is the opposite:
-clipping makes `scrollWidth` equal `clientWidth`, so the phase checking for
-sideways scroll could no longer fail. The page would still have had content
-off the right edge and nothing would ever have said so again. The wrap is the
-fix; the clip is gone.
-
-**The court field offers the controlled values** it actually holds (BK-38), so
-fewer advocates have to discover that `Supreme Court` resolves.
-
-**Counterexample:** journey phase 14, at 390px, 768px and 1280px — every
-control named, read from the accessibility tree rather than the markup so an
-unassociated label fails, and nothing scrolling sideways.
-
-**NOT DONE, and it is most of the row.** External secret management and
-rotation (BK-21); tenant/workspace isolation; retention, export and deletion;
-encrypted backups with a point-in-time restore drill; atomic rate limiting for
-the deployment store; availability alerts and recovery drills. Those are
-deployment infrastructure and operating decisions rather than code in this
-repository, and building a version of them here would be worse than the gap —
-a restore drill that only runs against a temporary directory proves nothing
-about the deployment it is meant to reassure anybody about.
-
-Also not done: contrast, zoom, reduced-motion and screen-reader announcement
-checks; separately-authorised operator traces with redaction.
-
-### Implementation waves and release gates
-
-| wave | rows | release gate |
-|---|---|---|
-| 0 — make failure reproducible | BK-30 **DONE** | MET. `python tools/journey.py` produces a phase table and artifacts. **The pass count is a MEASUREMENT AT A COMMIT, not a property of the repository** — it needs `pip install -e .[journey]` and a quiet tree, and a run taken while `web/` is being edited reports failures that belong to the edit. Re-measure rather than quote. |
-| 1 — do not give unsafe advice | BK-35 **DONE**, BK-34 **DONE**, BK-36 **DONE**, BK-40 **DONE** | Correct trigger or explicit refusal; screens govern admission; one brief is applied once; session/logout state is truthful. |
-| 2 — make the file usable | BK-31 **PARTLY**, BK-32 **DONE**, BK-33 **PARTLY**, BK-37 **DONE** | Access is recoverable; navigation works at all widths; file reopens intact; answer reads as counsel work, not telemetry. |
-| 3 — research and handover | BK-38 **PARTLY**, BK-39 **PARTLY** | Authority moves deliberately into a matter and another advocate can understand the complete file. |
-| 4 — prove production fitness | BK-41 **PARTLY**, BK-42 **PARTLY** | Latency/error budgets, security/recovery and accessibility gates pass on the served deployment shape. |
-
-Each wave is independently releasable only when its rows are `DONE` by the
-status discipline above. Passing unit tests without the browser evidence, or a
-good browser demonstration without the relevant pure/engine regression, leaves
-the row `IN PROGRESS`.
-
----
-
-### BK-29 - sixteen hand-picked token ceilings, and five reads that echo verbatim spans - **DONE**
-Opened 7 September 2026, out of the BK-27 fix. **One instance is fixed; the
-population is not swept.**
-
-The dispute read ran at `max_tokens=200`. Once it began returning three
-verbatim spans the JSON was truncated mid-string at character 827, the read
-was lost, and the turn fell back to one thread. Nothing was wrong with the
-model or the prompt.
-
-**The shape, without the read that exposed it:** a read that must QUOTE to be
-believed has an output roughly the size of its input. A constant ceiling on
-such a read is a length limit on the advocate, disguised as a cost control,
-and it fails by TRUNCATION - which is a parse error, not a short answer, so
-the whole read is lost rather than degraded.
-
-Measured from the code, 7 September 2026:
-
-| | |
-|---|---|
-| `max_tokens=` literals in `nm/core/` | **16**, every one hand-picked at its call site |
-| schemas returning a verbatim span | **7** - cause, dispute, evidence_item, factors, issues, posture, threading |
-| of those, returning a LIST of spans | **5** - issues, factors, evidence items, inventory, salvage |
-
-The five list-returning reads are the ones with the same failure available to
-them, and their ceilings (400-900) were chosen against briefs nobody recorded.
-
-**What is NOT known and must be measured before this is called safe:** whether
-each of those reads FAILS SAFE when truncated. The dispute read now does -
-`G-SPLIT` reports `not_assessed` and the advocate is told nobody counted -
-but that third state exists only because the `Gate` constructor refused the
-row without it. **A truncated read that falls back to an empty list and is
-reported as a finding is S1**, and nothing here has checked.
-
-**Why this is a row and not a fix.** The obvious repair - raise every ceiling -
-is the patch, not the fix: it moves the cliff without removing it, and sixteen
-call sites each choosing a number is the same one-owner question CLAUDE.md §4
-asks. The fix is a ceiling DERIVED from the input for reads that echo spans,
-with one owner. Sizing that needs the population measured, which is this row.
-
-**Done, 8 September 2026.** Sixteen literals became one owner.
-
-`TurnEngine._read(prompt, schema, key)` is now the only route to a structured
-read, and the call site names the READ rather than a number. `nm/core/ceiling.py`
-decides: a read whose answer follows the size of its input gets a ceiling
-derived from what it was shown; one whose answer is a verdict gets a stated
-number, in one table, with the reason beside it.
-
-**Whether a read echoes is the read's own property**, declared in
-`nm/domain/reads.py` beside its entry — eleven do (`dates`, `dispute`,
-`factors`, `inventory`, `issues`, `proof`, `adverse`, `attacks`, `exposure`,
-`salvage`, `parties`), eight do not. Nothing in the ceiling module decides it,
-because a table there would be a second place to record a property of the read.
-
-**Three defects the sweep produced, all worth keeping.**
-
-1. `nm/core/ceiling.py` imported the token estimator from
-   `nm/adapters/model/_budget.py` and `layercheck` refused it within the
-   minute — `core` may not import `adapters`. Copying it would have been a
-   second owner for *how big is this*, so it moved to
-   `nm/ports/model.py`: measuring a prompt is a property of the model
-   INTERFACE, and the adapter now re-exports rather than redefines.
-2. The helper was called `_ask` — **and `TurnEngine` already had one**, for
-   batching questions. The later definition shadowed mine, every structured
-   read raised `TypeError`, and every call site's `except Exception` recorded
-   it as "the read failed" and carried on. §7 exactly: a broad except turning
-   a programming error into a model failure. Renamed `_read`.
-3. The sweep treated a COMMENT as the first argument at one site and dropped
-   the prompt expression, so the adverse read was called with its schema as
-   its prompt. Caught by five theory tests.
-
-**Counterexample:** `tests/test_no_read_picks_its_own_ceiling.py` — the sweep,
-both directions of the derivation, the floor and the cap, and two controls:
-one that plants a literal and one that plants a `complete()` call the sweep
-must ignore.
-
-**Not measured:** `PER_INPUT_TOKEN = 1.6` is a starting point with a stated
-basis, not a measurement. BK-29 asked whether each echoing read FAILS SAFE
-when truncated, and that is still unmeasured — the ceiling now moves with the
-input, so truncation is far less reachable, but "less reachable" is not
-"checked".
-
-### BK-27 - one message describing N disputes opened ONE thread - **FIXED**
+#### BK-27 - one message describing N disputes opened ONE thread - **FIXED**
 **FIXED 7 September 2026, and the fix was upstream of where it showed.**
 
 The cause read was the symptom. `Thread` is already *"a dispute inside a
@@ -1584,7 +1249,1076 @@ reasoned correctly from a wrong premise.
 code -- every derivation keyed on a single resolved cause -- rather than a
 patch at the limitation call site, which is the one place it happened to show.
 
-### BK-28 - runs and golden sets are not in the History tab, and from now on they are
+#### BK-14 - the date came from the server's clock - **FIXED**
+**MEASURED.** `nm/edge/api.py:389` takes `today=req.today or date.today()`,
+and **`web/app.js` never sends `today`** - grep returns nothing. So every
+served turn dates itself by whatever clock the server happens to keep.
+
+**Nothing in `nm/` mentions a timezone.** No `ZoneInfo`, no `Asia/Kolkata`,
+no `tzinfo` outside `utcnow()` for credentials. The product is scoped to
+**Telangana**, which is UTC+5:30.
+
+**What it reaches:** `limitation.days_remaining` (`expires_on - today`),
+`Deadline.status`, `deadlines.passed`, `deadlines.upcoming`, and
+`ours.expired(turn.today)` - the branch that decides whether the salvage
+pass runs at all. A limitation date is the most consequential number this
+product produces.
+
+**The failure:** a server keeping UTC is on the previous day from 18:30
+UTC onward - 00:00 to 05:30 IST. A turn taken in that window computes
+every period one day short, and a claim that expires today reads as
+expiring tomorrow. Silently: there is no third state for "which day is
+it", because the question has never been asked.
+
+**And no test pins the clock.** Every suite passes `today=date(2026, 9, 4)`
+explicitly, so the defect is invisible to all of them by construction.
+
+#### BK-6 — the evidence bound is reached on a four-turn matter — **CLOSED**
+Measured: **every turn spent 2 of its 3 rounds re-fetching Limitation Act
+s.18 and s.19** — the same two sections — leaving one round for the advocate's
+actual question and none on a turn that also wanted authority.
+
+The bound was not the problem. `MAX_EVIDENCE_ROUNDS` limits how far a turn may
+WANDER, and those two sections are named by number before the turn starts —
+the case `exploratory=False` was built for. Wandering fell from 3/3 to 1/3.
+The number was not raised: raising a limit until it stops complaining is how a
+bound becomes a formality.
+
+The section list also had **two owners** — `factors.SECTION_FOR` and a literal
+`("18", "19")` in `turn.py`. `factors.sections_needed()` owns it now.
+
+
+---
+
+## Phase D — Work the file
+
+The threshold map, limitation as a computed date, the deadline register, research, elements and burden, case theory, the adversarial pass, salvage, issue facets. **All nine implemented — the deepest stage.**
+
+### Open — 4
+
+#### J-2 — A goods-sold brief was worked as a money-lent claim
+
+The brief: *"Our client Mr Reddy supplied steel to Kakatiya Fabricators
+against invoices dated 14 March 2023. Nothing has been paid. The buyer wrote
+on 2 August 2024 acknowledging the debt in writing."*
+
+The proof elements returned:
+
+- *That the money was actually advanced to the defendant*
+- *That it was advanced as a LOAN and not as a gift or in discharge of another obligation*
+- *The terms of repayment, including any agreed date or demand*
+
+That is `money_lent`. The matter is `goods_sold_price`. **Every element, every
+burden and the whole proof section belong to a different cause of action.**
+
+An advocate spots this in one second, and it is the kind of error that ends
+trust permanently. It is also the most consequential item here, because the
+cause drives the Article, the period and the elements.
+
+**The fix.** The cause read is the highest-consequence read in the product and
+has no eval of its own. It needs one, over the seven causes it can return,
+scored on briefs written for each — and a disclosure when the cause chosen is
+not the one the advocate's own words most support.
+
+---
+
+#### J-3 — The client's best fact was filed as adverse to him
+
+> *1 adverse fact(s) on this thread are neither explained nor conceded by the
+> theory: The buyer wrote acknowledging the debt in writing.*
+
+A written acknowledgment before expiry is the most helpful fact a plaintiff
+can have on a limitation-threatened debt. It restarts the period under s.18 —
+which the product retrieved on the same turn. It was classified as running
+against us.
+
+**The fix.** The adverse-fact read has no notion of WHICH SIDE a fact helps.
+It needs the thread's posture, which is already on the thread and was already
+resolved to `plaintiff/moving` on that very turn.
+
+---
+
+#### BK-35 — cause-specific accrual and answer-consistency gate — **REOPENED · P0**
+
+**Phase:** computing and serving the legal position.
+
+**Good now:** cause selection is defined and exact-routes to retrieved law; the
+period is read from retrieved text rather than hard-coded; corrections,
+extending factors, coverage, sides and passed windows have explicit types; a
+wrong cause can be corrected visibly.
+
+**Gap observed on `6e29cf0`:** `_limitation` chooses the first dated chronology
+entry as accrual for every cause. A specific-performance brief gave a 2023
+agreement and a 2024 written refusal, with no fixed performance date; the served
+answer ran Article 54 from the agreement and declared expiry on 2026-03-14,
+rather than resolving Article 54's applicable trigger. The action then said
+“Confirm the date of service and file within the window” while its own deadline
+annotation said every deadline had passed. The recommendation prompt expressly
+forbade that output, but no deterministic assembled-answer check rejected it.
+
+**Change:** model accrual as a cause/article-specific decision with candidate
+facts, the applicable statutory limb, exact provenance, confidence state and a
+blocking question where the trigger cannot be established. For Article 54,
+distinguish a date fixed for performance from notice of refusal; add equivalent
+rules/evals for every supported cause. Add an answer-consistency validator over
+the assembled typed result: action versus live/passed/unknown deadline, action
+versus posture, finding versus proof, and internal contradiction between
+elements. Repair once from typed facts or withhold the action—never trust prompt
+compliance as the guard.
+
+**Acceptance:** the reproduced specific-performance matter does not use the
+agreement date merely because it is earliest; every computed expiry names its
+trigger and statutory limb; ambiguous trigger blocks the date; an action cannot
+say file within a window that the same answer marks passed or unknown. The
+counterexamples run at the pure, engine, API and browser boundaries.
+
+**Dependencies:** BK-30.
+
+**Done — the accrual, in two halves.** `Edge.accrues_on` carries the trigger
+from the Schedule's own third column for all seven curated Articles, and
+`accrual_trigger_for` in `nm/knowledge/resolution.py` is its single lookup —
+the evidence adapter delegates to it rather than carrying a copy, and it
+crosses to the engine on the PORT (`EvidencePort.accrual_trigger`) rather than
+through `getattr`, which the dead-code sweep had correctly reported as
+unreachable. `nm/core/accrual.py` then reads WHICH dated entry satisfies the
+trigger, guarded by exact membership on the thread's own fact ids — a closed
+set generated per turn, so nothing is ranked. It answers the limb too, because
+Articles 14, 19 and 54 each have two and they give different dates.
+
+**The half that was already shipped had never once fired,** and that is the
+finding worth keeping. Every offline fixture's evidence double lacked
+`accrual_trigger`, so the engine's lookup returned `""` on every turn and the
+BK-35a refusal path was dead from the day it landed — CLAUDE.md §8, right in
+the core and absent at the fixture. The `except AttributeError` written around
+the port call was what hid it: an adapter that COULD NOT answer produced the
+same empty string as one saying *no curated trigger*, which is S1.
+
+**Done — the consistency gate.** `G-CONSISTENT`, response BLOCK, scope STEP,
+states `consistent | contradicted | repaired | not_verified`. It is NOT a
+phrase list: `nm/core/consistency.py` renders each of the turn's typed facts
+as one sentence with a stable id and asks which of THOSE the step contradicts,
+so the answer space is the turn's own computed facts and the guard is exact
+membership plus a quotation that must be in the step. A contradiction is
+rewritten ONCE from the typed facts and re-verified; a rewrite that still
+contradicts is not served, and the advocate gets the computed position and a
+question instead. It fails toward SERVING — a read that cannot run, names a
+fact it was not shown, or cannot quote what it objects to lands `consistent`
+with the refusal recorded, because refusing here deletes advice that is
+probably sound.
+
+**Counterexamples, with their mutation controls.**
+`tests/test_the_period_never_runs_from_an_unchosen_date.py` drives the accrual
+read both ways — told to name the last entry, then the first — because a
+product that had gone back to sorting passes the second and fails the first.
+Reverting the selection to `dated[0]` fails 3 of 7.
+`tests/test_a_step_cannot_contradict_the_figures.py` drives all six verdict
+branches; removing the block fails 2 of 11, and the served element in that
+failure is B-074 verbatim — *"File the recovery suit within the limitation
+period"* beside an annotation saying every deadline had passed.
+
+**Not done, and named rather than left implicit.** The reviewer's clause
+*"finding versus proof"* is not covered: `claims_for` builds claims from the
+limitation position, the deadline register and the side, and proof positions
+are not among them. They are per-element rather than per-thread, so a claim
+for them is a different shape and is not a line's work. The mechanism takes it
+without change — a new typed fact is a new claim builder, not a new phrase —
+and `test_every_limitation_state_becomes_a_claim` is the pattern the proof
+claim would extend.
+
+**REOPENED 9 September 2026, verified in source.** The period still runs from
+an unchosen date. `nm/core/turn.py:2773` sets `accrual = dated[0]` and invokes
+the accrual read only `if len(dated) > 1 and trigger`. A specific-performance
+file carrying the agreement date but neither a fixed performance date nor a
+refusal therefore runs Article 54 from the agreement, confidently, and emits no
+statutory limb — `accrual_limb` is set only on the multi-fact path.
+
+The code's comment — *"One entry leaves nothing to choose"* — is true as a
+choice and false as a legal test. With one dated fact that is not the trigger
+event, the answer is `not_computed` naming what is needed, which is the
+behaviour the multi-fact path already has.
+
+*Separately:* the consistency guard fails toward serving (`:4939`), which is
+deliberate and documented and contradicts this row's *"repair or withhold"*
+acceptance. That is a decision to re-take, not a defect — but the row and the
+code must stop disagreeing.
+
+#### BK-49 — a truncated model answer is never detected — **OPEN · P0 · Phase D**
+Opened 9 September 2026, verified in source.
+
+`nm/ports/model.py:62` states the rule for `ContextOverflow`:
+
+> *"A typed error, NEVER a truncation. Silent truncation produces an answer
+> that looks complete and was reasoned from a fraction of the material."*
+
+`nm/adapters/model/openai_adapter.py:151` reads `finish_reason` and compares it
+to exactly one value, `"content_filter"`. **`"length"` — the value that reports
+the answer was cut off at `max_tokens` — is never checked anywhere in `nm/` or
+`tests/`.** The field is present on the object already being inspected.
+
+With `ceiling.CAP = 4000` as a hard cliff, a schema'd read that truncates
+usually fails by accident, because `json.loads` chokes on cut JSON. A
+**text-mode read** (`schema is None`) returns the truncated string as a
+complete answer with no signal at all.
+
+This is BK-29's unmeasured half, made concrete: the row admits *"whether each
+echoing read FAILS SAFE when truncated... is still unmeasured"*. It is not
+unmeasured, it is unhandled.
+
+**Acceptance:** `finish_reason == "length"` raises the typed error at the
+adapter; a sweep proves every adapter implementing the model port does the
+same; a truncated decisive read is never served as complete.
+
+### Closed — 5
+
+#### BK-15 - six owners for the jurisdiction - **FIXED**
+**MEASURED.** `"Telangana"` is a literal default in six modules:
+`adapters/evidence/corpus.py:92`, `bootstrap/composition.py:133`,
+`core/turn.py:188`, `edge/api.py:192`, `knowledge/jurisdiction.py:133`,
+`ports/evidence.py:367`.
+
+S9, and CLAUDE.md supplies the failure mode itself: *an answer about Kerala
+law out of it is confidently wrong and nothing downstream catches that.*
+Change one default and the binding computation uses a different
+jurisdiction from the retrieval, with no disagreement surfaced.
+
+#### BK-19 - a missing identity count read as zero - **FIXED**
+**MEASURED.** `adapters/search/authority.py:64`: `int(rows.get(key, 0))`
+over the index identity, so an identity missing `indexed_paragraphs`
+reports **0 indexed** - indistinguishable from an empty index.
+
+The atom-priors trap in miniature, and CLAUDE.md's worked example is the
+same shape: `table.get(kind, 0.0)` made every unlisted atom type score
+worse than every listed one. Low severity today because the builder always
+writes the key; the defect is that nothing would notice if it stopped.
+
+---
+
+#### BK-11 - G-MODEL proven at one read of fifteen - **CLOSED**
+Closed 7 September 2026 as **B-131**. All fifteen structured reads are
+driven and each is asserted to appear IN the disclosure line.
+
+One owner - `TurnEngine._refused_reads`, wired at both assembly sites,
+drawing from `TracedModel.refused_reads`, the sibling of
+`empty_decisive`. The nine `except ModelError` branches keep firing
+G-MODEL and keep their degraded return; only the disclosure moved.
+
+**Three measurement mistakes, and the tests caught the last two.**
+
+1. The sweep that opened this row searched for any phrase the product
+   uses when it is short of something. All fifteen *said something*, under
+   a proxy too generous to tell a named read from an unrelated disclosure
+   on the same turn.
+2. The follow-up asked `read in said` - a SUBSTRING - and reported 14 of
+   15 named. `"cause" in said` matches *cause of action*.
+3. Nothing was being disclosed at all: the shared `build` fixture does not
+   wrap the model in `TracedModel`, so `refused_reads` did not exist on it.
+
+Two of those were fuzzy matching deciding rather than ranking, on the same
+day, in the same file. The third is CLAUDE.md S8 arriving at the TEST
+rather than at the edge - a guard absent from where it is exercised.
+
+#### BK-1 — E-102 still fails, and the verdict has moved — **CLOSED**
+Fixed as **B-122** and judged: **E-102 PASS** on `mat_bf1b5f744dbc`, with the
+control failing first. `nm/domain/register.py` now holds one clause and every
+prompt whose words reach the advocate carries it.
+
+The useful part was the verdict MOVING. After B-078's two structural fixes the
+judge stopped quoting the recommendation and the bare Act — both fixes
+confirmed — and started quoting the theory and the adversarial reads, which is
+how it became visible that the rule had been applied at one site out of six.
+
+#### BK-5 — the cascade fires on an ordinary turn — **CLOSED**
+Fixed as **B-123**. `_record` counted FINDING elements while B-120 had
+narrowed rendering to what CHANGED, so the inventory held two items, rendered
+none, and the turn announced them lost — two lines above the answer's own "2
+item(s) already on the file are unchanged".
+
+The count comes from what the thread HOLDS now. `cascade.lost`'s docstring was
+false too: it named four things as re-derived every turn that are all
+persisted. The check itself was right and stays.
+
+
+---
+
+## Phase E — Advise
+
+Scenarios, the recommendation, proportionality, the decision record, disagreement and candour. **One of five implemented (E2). This is the thinnest stage that has any code at all.**
+
+### Open — 5
+
+#### J-5 — Internal identifiers reach the advocate, past a sweep that says they cannot
+
+Served text: *"... on thr_634d8e9685be — This damages the defence ..."* and,
+in History, *"TURN 1 · TURN_958000CAFFF4"*.
+
+`nm/core/turn.py:3081` renders `{e.from_thread}` and `{e.to_thread}` — both
+`ThreadId`s — straight into an advocate-facing element.
+
+**Why the sweep did not catch it.** `test_no_internal_id_reaches_the_advocate`
+drives ONE scripted conversation whose double answers everything with *"Issue
+the notice and diarise it."* The cross-file exposure section is never produced
+in that fixture, so the sweep cannot see the line that leaks. **Its population
+is a fixture, not the product's advocate-facing surface** — the same shape as
+B-142, in the check written to prevent exactly this (B-103).
+
+**The fix.** Render the thread LABEL. Widen the sweep's population to every
+element-producing path rather than one conversation.
+
+---
+
+#### J-6 — Thirty-one elements, and the disclosures have swallowed the advice
+
+One single-dispute brief produced **31 elements**. The leading ACTION was
+*"Assess the acknowledgment from 2 August 2024 to determine its sufficiency in
+extending the limitation period"* — the advocate's own question returned to
+them, with no owner and no by-when.
+
+Underneath it: nine "they will say" paragraphs, five not-assessed
+disclosures, the threshold list, the screens list, the evidence-bound notice,
+and this, verbatim:
+
+> *My first draft of this answer named Limitation Act, 1963 s.18 without having
+> retrieved it. I fetched it and worked the answer again with the text in front
+> of me.*
+
+Every one of those exists because a real defect was paid for, and each is
+individually right. Together they have inverted the output: the product leads
+with what it did not do, and the engineering narration of its own retry sits
+in the advocate's chair.
+
+**The fix.** Not a gate defect, and no gate will catch it. The answer needs a
+shape an advocate reads top to bottom — position, why, risk, next step,
+deadline, what I need from you — with disclosures reachable but folded, and
+the internal narration removed.
+
+---
+
+**CLOSED by BK-37, 8 September 2026.** The answer is filed under the question each line answers, the working is behind a closed `How this answer was made`, repeated gaps carry a count, and a courtesy reply is no longer folded into invisibility.
+
+#### BK-37 — senior-counsel answer shape and plain-language trust surface — **PARTLY DONE · P1**
+
+**Phase:** reading and acting on advice. This completes J-6 and the remaining
+advocate-facing part of J-5/J-7.
+
+**Good now:** the advocate's own words are visually separated; loud signals
+and disclosures remain visible; supporting law is folded with a count; actions
+carry a deadline or an explicit reason why none is available.
+
+**Gap observed:** a courtesy “Hello” produced only a plain ground, and every
+plain ground is folded, so the entire reply disappeared under “1 supporting
+passage”. A completed matter answer is a flat sequence of actions, findings,
+gaps, proof elements, salvage and disclosures. Gate ids/states/details, thread
+ids in gate details, LLM call/token/cost/violation metrics and retry narration
+are shown to the advocate. “NOT ESTABLISHED” is repeated often enough to drown
+the position it qualifies.
+
+**Change:** define a typed counsel brief with stable sections: position;
+because; decisive risks/adverse case; limitation/deadline; next step with owner
+and by-when; questions/needed material; authorities; and expandable audit
+detail. Render courtesy and question-of-law answers visibly even if they contain
+only grounds. Translate operational states into advocate language and move gate
+ids, traces, tokens, provider/cipher/build details to an authenticated operator
+view. Deduplicate repeated gaps and show their count without hiding a new or
+critical one. Add copy/cite/print affordances and accessible headings.
+
+**Acceptance:** a senior counsel can identify the position, controlling reason,
+main risk and next step in the first screen; no `thr_`, `mat_`, `turn_`, gate id,
+provider, token or cipher name appears in advocate mode; every substantive
+claim still reaches its provenance; a one-element courtesy response is visible.
+
+**Dependencies:** BK-35 before reshaping legal conclusions; BK-30. **Why not
+done:** the current renderer partitions element kinds but has no user-facing
+document contract.
+
+**Done, 8 September 2026. J-6 and J-7 close with it.**
+
+**The answer is filed, not sorted.** `nm/domain/brief.py` assigns every element
+to the question it answers — where this stands, time, what cuts against us,
+next step, what I still need, why, what it rests on — and the browser groups.
+A *sort* would need a rank per element, and a rank is a judgement about
+importance that this product must not make silently: nine adverse paragraphs
+are not less important than the limitation position, they answer a different
+question, and a reader looking for one is not looking for the other.
+
+The assignment is pure, has one owner, and is computed at the byte boundary.
+A renderer deciding sections for itself would be a second opinion about what
+an element IS — S9 in the place it is hardest to see, because the disagreement
+would only ever be visible on a screen nobody diffed.
+
+**J-7: the working is behind a door, not in the bin.** `G-DUTY · clear`,
+`G-UNSCREENED · unscreened`, `G-CONSISTENT · consistent` and `outcome ok ·
+latency 69ms · calls 15 · tokens 6860/606 · cost $0.000000` sat under every
+answer; the masthead carried `openai/gpt-4o-mini · hard: not configured ·
+store: fernet` on every screen. All of it is what makes a claim checkable and
+none of it is a fact about the advocate's matter. It is now a closed
+`How this answer was made`, and the masthead says `Corpus ready` with the rest
+on the title attribute.
+
+Journey phase 5b asserts BOTH halves and the second is what stops the fix
+being a deletion: no gate id on screen, and every one of them still there when
+the working is opened. A product that had stopped recording them would pass
+the first assertion and fail the second, and it would be a worse product.
+
+**J-6: a courtesy reply no longer disappears.** Every plain ground is folded,
+and an answer that is ONLY plain grounds — a courtesy reply, a
+question-of-law answer — vanished entirely under *"1 supporting passage"*. The
+fold's argument is that support sits UNDER a claim and crowds it; with no
+claim above it there is nothing to crowd and folding is just hiding.
+
+**Repeated gaps carry their count.** "I could not assess this" said once and
+said nine times are different facts about the file, and an advocate reading
+the shorter answer must not believe the product looked less hard than it did.
+Nothing loud is ever collapsed.
+
+**A sentence that was true of every case had stopped being checked.** The
+screens row hard-coded *"Screens on this matter, none of which has run"* and a
+closing clause about substance being admitted under an exception, because
+before BK-34 both were unconditionally true. On a served turn afterwards it
+read *"Screens on this matter, none of which has run: Screens on this matter,
+all cleared: emergency — …"*. The prefix now comes from the same place the
+outcome does.
+
+**Counterexamples:** journey phases 5b, 5c and 5d — section order read back
+off the page, no engineering vocabulary in advocate mode, and the working
+still complete when opened. **18 pass, 0 reproduced, 0 unexplained.**
+
+**Not done:** copy/cite/print affordances, and accessible headings beyond the
+`h3` structure — both named in the row and neither attempted.
+
+**REOPENED 9 September 2026, verified in source.** The answer shape is
+right and the evidence for it is thin: the browser phase requires two of seven
+sections (BK-50). Separately, gate ids still reach advocate mode — a withheld
+turn prints `Withheld by G-*` at `web/app.js:446` — so J-7's *"no gate name in
+advocate mode"* does not hold on the served path.
+
+#### BK-41 — latency, progress, cancellation and degraded-service behaviour — **PARTLY DONE · P1**
+
+**Phase:** the waiting time inside every substantive turn.
+
+**Good now:** the UI shows an immediate pending card; metrics retain phase and
+model-call evidence; the scripted path completes deterministically; failures in
+decisive reads have explicit third states.
+
+**Gap observed:** the only user progress text is “Settling the frame and
+checking the corpus…”, while a real turn can make many sequential model calls.
+Earlier stored metrics measured p50 about 2.05s, p90 about 18s and maximum about
+44s; turns with eight or more calls had median about 20.2s. There is no cancel,
+safe background continuation, reconnect state or estimate; the composer is
+globally disabled. BK-29 records sixteen hand-picked output ceilings and the
+truncation cliff for span-returning reads.
+
+**Change:** establish a performance budget per phase and user-visible service
+level; parallelize only independent reads; cache only inputs whose provenance
+and invalidation are explicit; derive token ceilings from input/output schema as
+BK-29 requires; stream honest coarse phases rather than invented percentages;
+support cancellation before commit and background/reconnect after submission;
+degrade optional analysis without downgrading decisive legal reads silently.
+
+**Acceptance:** p50/p90/timeout targets are measured in CI and a staged real-
+model run; the user always knows whether work is queued, deriving, checking,
+committed, cancelled or failed; cancel/reconnect cannot duplicate a turn; a
+truncated decisive read is never presented as absent or complete.
+
+**Dependencies:** BK-29, BK-30, BK-36. **Why not done:** latency is measured for
+operators but not managed as a user journey.
+
+**Done — cancellation, and the composer stays usable.**
+
+A turn's measured p90 is about 18 seconds, about 20 for one making eight or
+more model calls, and the composer was globally disabled throughout with no
+way to stop. An advocate who thought of the next thing to say had nowhere to
+put it.
+
+**Cancel abandons the REQUEST, which is all a browser can do,** and it says
+so. The server may have committed before the abort landed, so the turn goes
+to `unknown` — the state BK-36 already built for exactly this — and its retry
+carries the same turn id, so a turn that did land is recognised rather than
+written twice. Saying *"cancelled, nothing was saved"* would be a claim the
+browser is in no position to make.
+
+**Done — token ceilings are derived**, which this row delegates to BK-29.
+That row is closed.
+
+**Counterexample:** journey phase 13b — cancel mid-turn, and the answer must
+not claim the brief was discarded, must offer the same-id retry, and must
+leave the brief in the composer.
+
+**NOT DONE.** There is no phase streaming: the pending card still says one
+static line while a turn makes many sequential calls, and honest coarse
+phases need a server push this product does not have. No performance budget
+is measured in CI, no reconnect-after-submit, and no staged real-model
+latency run. Those are the substance of the row and they are open.
+
+**CONFIRMED OPEN 9 September 2026, verified in source.** One of four
+acceptance clauses is met. There is no `text/event-stream`, no `EventSource`
+and no phase progress, so the advocate does not know whether work is queued,
+deriving, checking or committed; `p90` appears nowhere in `nm/` or `tools/`, so
+no target is measured in CI.
+
+**And clause three does not hold.** *"cancel/reconnect cannot duplicate a
+turn"* is closed on the strength of BK-36's shared `turn_id` — which does not
+cover the opening turn of a matter. See BK-36.
+
+#### BK-50 — the answer-shape phase needs two of seven sections — **OPEN · P1 · Phase E**
+Opened 9 September 2026, verified in source.
+
+`tests/test_the_journey_login_to_logout.py:423` — `assert len(seen) >= 2` over
+seven known headings. Position, principal risk, next step, provenance and the
+courtesy-only response can all disappear and the phase still passes. The order
+assertion beneath it is sound, but it orders whatever survived.
+
+The `>= 2` was itself a fix: the check previously compared `[] == []` and passed
+on any product at all. A vacuous check was replaced with a weak one.
+
+**Acceptance:** the phase asserts the sections BK-37 promises are present, not
+a count; and that advice precedes disclosures in the first screen.
+
+### Closed — 3
+
+#### BK-12 - the fold rule is asserted behaviourally - **CLOSED**
+Closed 7 September 2026, and it found **B-133** on the way.
+
+`tests/js/render_turn_partition.mjs` executes the real `renderTurn` under
+plain `node` against a forty-line stub DOM and walks the tree. No npm
+install: jsdom to hold one rule is R-6 apparatus, and a check that needs
+a toolchain nobody maintains is a check that stops running. An absent
+`node` reports **NOT ASSESSED** in those words rather than passing.
+
+**And it was useless until a mutation said so.** Deleting `!el.disclosure`
+from the partition - the exact two-character edit this exists to refuse -
+left it GREEN, because the fold's renderer hard-coded `el ground` and
+stripped the `disclosure` class at precisely the moment it mattered. The
+partition would have been wrong AND every trace of it gone, from the
+screen and from the check looking for it.
+
+The fold now shares the class and label expression with the open half,
+and the same mutation fails loudly.
+
+#### BK-9 - five disclose gates nothing proved the advocate sees - **CLOSED**
+Closed 7 September 2026. `tests/test_disclosure_reaches_the_advocate.py`
+now stands at **thirteen of thirteen PROVEN** on the advocate's own bytes,
+and `NOT_PROVEN` is empty and kept - an exception table that has been
+deleted cannot record the next exception.
+
+The five are in `tests/test_a_disclosure_is_served_not_recorded.py`, one
+file because they are one shape rather than five topics. Each drives a
+served turn, reads `out.answer.elements`, and names its gate so a rename
+cannot separate the matrix row from the bytes. **Each was verified RED**
+by removing its disclosure phrase from the product and re-running - BK-5's
+lesson, where a served-turn assertion I was sure of passed with the fix
+reverted.
+
+`_Fails` refuses exactly one read by its `x-nm-read` name. One double, not
+five: the schema already carries the read's name, so nothing had to be
+invented to select on.
+
+**It found a product defect on the way, which is the point of writing the
+test rather than the note.** There was no clean-state sentence to assert
+on for G-ADVERSE, because there was none - **B-129**. Three declared
+states, audible on two.
+
+**Three things corrected themselves during the work, all worth keeping:**
+
+- The first fixture put two disputes in one message and got ONE thread, so
+  the exposure read was never reached and it looked like a product defect.
+  The existing suite's guard - `assert len(out.matter.threads) >= 2` - is
+  now in the helper.
+- The G-MODEL test asserted `"found none"` was absent. B-129's clean-state
+  line ends with those words, correctly, and the assertion broke the day it
+  landed. **An assertion on a fragment is an assertion on a coincidence**;
+  it names the exposure pass's own sentence now.
+- The accounting check could not see through `_served(out)` and called five
+  correct tests proof of nothing. It follows the module's own helpers now -
+  one level, and `metrics` still fails at either.
+
+**B-077 was NOT closed by this**, though its status line reads like it.
+*"Fixed - unverified on a served turn"* needs the DIFFERENTIAL judge E-073:
+the defect was an asymmetry, the recommendation softening the finding
+against our own client, and no assertion on the bytes can see that. Matching
+a row on its status and not its substance turns a real gap into a closed one.
+
+#### BK-7 — thresholds repeated every turn — **CLOSED**
+Forty words naming nine thresholds, identical on all four GS-14 turns. The
+full list is given when the set CHANGES and one short clause when it has not —
+the B-120 move, never silence: §9 requires the third state to be visible in the
+output and not only in the type. `Thread.thresholds_told` carries what the
+advocate has already been given, which is history and not a derivation.
+
+---
+
+## Phase F — Act
+
+Negotiation and settlement authority, the drafter brief, drafting and verification, filing control, witnesses and experts, hearing readiness, in court. **Nothing implemented — F1–F7 are specification only.**
+
+*No rows filed here yet. The features in this phase are
+specification only, so what is missing is the whole of
+it — see Part 1.*
+
+---
+
+## Phase G — Carry
+
+Proactive service, the continuing conflict watch, handover and continuity. **Nothing implemented — G1–G3 are specification only.**
+
+### Open — 1
+
+#### BK-39 — readable History, correction record and handover — **PARTLY DONE · P1**
+
+**Phase:** review, supervision, handover and resumption.
+
+**Good now:** encrypted transcripts preserve what was actually served; missing
+or unreadable turns are counted and disclosed; ownership is checked; the raw
+record is unusually rich for forensic diagnosis. `/summary` already separates
+established material, decisions and gaps.
+
+**Gap observed:** History initially shows only the advocate's message and a
+collapsed “The turn as it was served”. Expanding it prints the complete raw JSON
+trace: internal ids, prompts, model answers, metrics, gates and implementation
+details. The answer is not rendered with the Advise renderer. There is no
+matter overview, chronological record, authorities list, changes/corrections,
+open questions, next action, export, print or handover package. BK-28 separately
+records that runs and golden sets are absent from the History surface.
+
+**Change:** make History an advocate record: matter cover and current summary;
+chronology with superseded facts visibly struck/replaced; served answers using
+the same renderer; decisions/reservations; relied-on authorities; questions and
+next actions; screen/release history; and readable change attribution. Add
+print/export/handover with confidentiality markings and a manifest of omitted
+or unreadable items. Put raw prompts/traces in a separately authorised operator
+audit view with redaction and retention controls. Integrate BK-28 there rather
+than adding another history implementation.
+
+**Acceptance:** another advocate can open an exported or on-screen file and
+state who the client is, the issue, posture, material facts, deadline, current
+position, authorities, unresolved questions and next owner without reading raw
+JSON; the export counts and names unreadable omissions; corrections never erase
+the original record.
+
+**Dependencies:** BK-28, BK-33, BK-37. **Why not done:** transcript capture was
+built as an audit artifact and is currently served directly as the user record.
+
+**Done, 8 September 2026 — History uses the one renderer.**
+
+It showed the advocate's message and a collapsed *"The turn as it was served"*
+which, opened, printed the complete raw JSON: internal ids, prompts, model
+answers, metrics, gates. The answer they were actually given was not rendered
+at all — so the surface that exists for REVIEW showed a different thing from
+the surface that gave the advice, and only one of them was readable.
+
+**Two renderers for one answer is S9**, and the drift was already real: BK-37
+filed the served answer into sections and this one would still have been
+printing JSON. `renderTurn` is now the only thing that renders an answer,
+here and on the Advise pane.
+
+**The raw record is filed, not deleted.** Forensic diagnosis is what this
+store is for; it moves inside the same `How this answer was made` door every
+served turn already has. The turn id comes off the header — it is one of this
+product's own keys and an advocate cannot act on it (J-5) — and stays in the
+raw record below.
+
+**Counterexample:** journey phase 8b asserts both halves — History reads like
+the advice, and the JSON is still there when the working is opened.
+
+**NOT DONE**, and it is most of the row: no matter cover or current summary on
+the History surface, no chronology with superseded facts struck, no
+decisions/reservations, authorities list, screen/release history or change
+attribution; no print, export or handover package with confidentiality
+markings and a manifest of omitted items; BK-28's runs and golden sets are
+still not integrated here.
+
+**CONFIRMED OPEN 9 September 2026, verified in source.** The renderer half is
+done. Of the three acceptance clauses, one is met: `correction_record` appears
+nowhere in the codebase, and there is no export, so neither *"the export counts
+and names unreadable omissions"* nor *"corrections never erase the original
+record"* has an implementation.
+
+### Closed — 1
+
+#### BK-10 - the handover contract was 4 of 16 - **CLOSED**
+Closed 7 September 2026 as **B-130**. `CARRIES` is **8** and
+`handover_blockers` returns **6**.
+
+The four lifted - `issues`, `theory`, `proof`, `decisions` - each carry a
+STATE and not just a value: `held`, `none`, or `not_assessed`. That third
+state is why this was not a rename. Every one of those fields persists as
+an empty tuple until written, so empty meant both *computed and found
+nothing* and *never computed* - and lifting them as they were would have
+moved S9 from the turn, where an empty section is a small ambiguity, to
+the handover, where it is the dangerous one.
+
+`Thread.assessed` carries it, drawn from the KEYS of the derive phase's
+`concluded` dict. One field rather than four flags: the fifth section
+would have arrived without its copy.
+
+**The six that remain are genuinely unbuilt** - `screens` is B2-B6 at
+slice 10, `authorities` waits on BK-4, and `engagement`, `deadlines`,
+`reservations` and `gaps` have no writer at all. The set is pinned by NAME
+in the test, so it cannot drift in either direction without a deliberate
+edit.
+
+---
+
+## Phase H — Close
+
+Event capture and closure. **Nothing implemented — H1 and H2 are specification only.**
+
+*No rows filed here yet. The features in this phase are
+specification only, so what is missing is the whole of
+it — see Part 1.*
+
+---
+
+## Phase I — Leave
+
+Session end and confidentiality. **I1 implemented.**
+
+### Open — 1
+
+#### BK-40 — session expiry and confirmed logout — **REOPENED · P0**
+
+**Phase:** loss of authentication during work and end of session.
+
+**Good now:** protected routes share one session dependency; a valid logout
+closes the server session before clearing the cookie; a successful logout in
+the browser returns to the gate and reload stays signed out.
+
+**Gap observed and reproduced:** `api()` has no central 401 transition, so an
+expired session leaves the masthead claiming the advocate is signed in while
+each pane fails locally. Logout clears all on-screen state in `finally` even
+when `/api/logout` fails. With the server stopped, the screen showed sign-in as
+if logout succeeded; after restart, reload reopened the authenticated session
+and its matter because the server token was still live.
+
+**Change:** centralize 401 handling: freeze and preserve the draft securely,
+remove privileged DOM, state that the session ended, and resume only after
+reauthentication with explicit matter/draft confirmation. Make logout a state
+machine: `signing_out`, `confirmed`, or `unconfirmed`; clear privileged content
+immediately, but if the server cannot confirm, say so, retry/revoke when
+connectivity returns, and do not present ordinary sign-in as proof of logout.
+Support “sign out all devices” from BK-31.
+
+**Acceptance:** forced expiry during Advise/Search/History produces one coherent
+reauthentication flow and no stale signed-in identity; draft recovery is scoped
+to the same advocate; a failed logout is visibly unconfirmed and reload cannot
+silently restore access once confirmation/revocation succeeds; successful
+logout always makes `/api/session` return 401.
+
+**Dependencies:** BK-30, BK-31, BK-36. **Why it had not been done:** server invalidation is
+correct, but browser state currently treats an attempted request as confirmed.
+
+**Done, 8 September 2026.** Both halves, and the server half was the one nobody
+had looked at.
+
+**Server.** `close_session` returned `None` whether it had ended a live session,
+found one already closed, or found nothing at all, and `/api/logout` answered
+`{"signed_out": true}` on top of all three. It now returns `closed`,
+`already_ended` or `unknown` and the route reports it — the browser had been
+believing an assertion the server was in no position to make.
+
+**Browser.** `api()` now has one 401 transition: it freezes the draft scoped to
+the advocate who wrote it, strips privileged content from the DOM in one place,
+says the session ended, and restores the draft after re-authentication. It fires
+only when we believe we are signed in, so `boot()`'s ordinary 401 does not greet
+a first-time visitor with a notice that their session expired.
+
+Signing out is a state machine — `signing_out`, then confirmed or
+`unconfirmed`. The screen still clears immediately, which was always right. What
+changed is that clearing the screen is no longer allowed to BE the answer: a
+logout the server did not confirm says so loudly, offers a retry, and retries by
+itself when connectivity returns. A 401 from `/api/logout` is a confirmation,
+not a failure.
+
+**Counterexamples:** journey phases 10, 11 and 12, all previously reproduced and
+now passing. The draft is in memory for the reason recorded under BK-36.
+
+**REOPENED 9 September 2026, verified in source.** Pending intake survives a
+sign-out and reaches the next advocate.
+
+`clearPrivileged()` (`web/app.js:76`) clears the advocate, the matter, the
+turns, six element bodies and the composer. It does not clear `state.intake`,
+which holds client, opponent and scope. `signOut()` calls it and shows the gate
+— there is no page reload — so the object survives in the live page, and the
+next brief sends it: `parties: (state.intake && state.intake.parties)`
+(`web/app.js:840`). A second advocate signing in on that page files their first
+brief carrying the previous advocate's parties.
+
+*And the server-side proof is vacuous.* Phase 12 builds a bare
+`urllib.request.Request` for `/api/session`
+(`tests/test_the_journey_login_to_logout.py:796`) and never sends the browser's
+former cookie, so it proves only that an anonymous request gets 401. The live
+old session — the failure it claims to exclude — would pass it.
+
+---
+
+# Part 3 — The substrate
+
+The corpus, the platform, the secrets and the harness. These sit
+under every phase, and filing them under one would be a worse
+distortion than naming them apart.
+
+## BK-30 — executable login-to-logout acceptance journey — **PARTLY DONE · P1**
+
+**Phase:** the whole journey; this is the measurement harness for every row
+below.
+
+**Good now:** domain and served-path tests are extensive, current offline fixes
+have focused regressions, and the stale-build banner catches an old process.
+
+**Gap observed:** `tests/test_the_page_and_the_script_agree.py` explicitly does
+not run the page. The JS partition test runs one function in a DOM stub. That
+left responsive navigation, courtesy-answer folding, matter restoration,
+natural court filtering, raw History, session expiry and failed logout outside
+one executable contract.
+
+**Change:** add a real browser suite that starts the composition root against a
+temporary encrypted store and deterministic provider. Keep fixtures legal and
+fictional. Cover 390px, 768px and 1280px widths; keyboard-only navigation;
+registration/login/recovery; new and existing matters; a blocking question and
+its answer; a completed turn; search; History; reload; 401; lost response;
+concurrent write; failed and successful logout. Run a small, separately marked
+real-model smoke only when credentials are deliberately supplied.
+
+**Acceptance:** one command produces a phase-by-phase result and artifacts for
+any failed phase; it fails on a blank-but-authenticated landing, hidden matter
+navigator, internal identifier, raw trace, inconsistent action/deadline,
+unconfirmed logout, dropped draft or duplicated retry. Every later BK row adds
+its own counterexample to this suite.
+
+**Dependencies:** none.
+
+**Done, 8 September 2026.** One command:
+
+```
+python tools/journey.py
+```
+
+It starts the real composition root on a real port against a temporary
+encrypted store and a scripted provider (`tools/served.py`, which is now the
+single owner of that composition — `tests/conftest.py`'s `client` fixture had
+been the only place that knew how), drives Chromium through sixteen phases,
+and prints a table with **PASS / REPRODUCED / FAILED / NOT RUN** plus a
+screenshot and the page's HTML for everything that did not pass.
+
+`NOT RUN` is a state, not a silence: a missing browser, a server that will not
+start or a collection error can never leave a green line. `playwright` is a
+separate `[journey]` extra so `.[dev]` stays fast and offline-able, and the
+suite names the extra when the import is missing.
+
+**Standing at close: 11 pass, 5 reproduced, 0 unexplained.** The reproduced
+five are `xfail(strict=True)` and each names its row — BK-32 at 390px and
+768px, BK-40 twice, J-7 once. Strict is the point: when BK-32 lands the phase
+passes, and a strict xfail that passes is an ERROR telling you to delete the
+marker. A defect recorded this way can be neither quietly fixed nor quietly
+forgotten.
+
+**WHAT IT FOUND ON ITS FIRST REAL RUN, and this is the argument for the whole
+row.** `web/app.css` declared `.gate` twice — once for a gate FIRING inside an
+answer, once for the full-screen sign-in overlay (`position: fixed; inset: 0;
+z-index: 100`). The second is later in the cascade, so it won. **Every
+disclosure in an answer became a full-screen opaque overlay.** An advocate who
+submitted a brief was shown a blank white page carrying one centred line —
+`G-EXPOSURE · none_found · 0 exposure(s)` — with the advice, the citations, the
+limitation position and the questions all painted over, and the tab bar beneath
+unclickable.
+
+Every test in the repository passed. The served JSON was correct, the engine
+was correct, and `test_the_page_and_the_script_agree.py` checks names rather
+than layout and says so in its own docstring. A right answer nobody could
+read — this repository's founding failure, written in a stylesheet.
+
+Fixed by giving the overlay the id it already had (`#gate`) and leaving
+`.gate` one owner. `tests/test_no_css_class_has_two_owners.py` refuses the
+next collision, and it is class_a — the sweep counts a rule whose ENTIRE
+selector is one bare class, because counting membership in a grouped selector
+reported six collisions in this stylesheet on the first run, all correct code,
+and a check that fires on correct code is one that gets switched off.
+
+**Three harness defects it found in itself, all the same shape.** A phase that
+reads the page too early does not fail — it passes on less than it claims to
+have looked at. `_advise` waited for `.turn`, which appears before the answer
+is drawn; phase 5b asserts gate ids ARE on screen and XPASSED because none had
+rendered yet; `_tab` slept 2000ms instead of waiting for the pane. All three
+now wait for the thing they judge.
+
+**Not covered, named rather than implied.** The journey suite is excluded from
+`tools/check.py` (`-m "not class_d and not journey"`): it needs a browser
+binary `.[dev]` does not install and adds two minutes to a seven-minute gate.
+So a regression under `web/` does not fail the per-commit gate. It failed
+nothing before either — which is how `.gate` acquired two owners — but the
+exclusion is a decision and is written into `check.py` beside the command that
+does find it.
+
+**REOPENED 9 September 2026, static audit of `3e9772b`, verified in source.**
+The harness runs and is useful. It does not yet prove what this row claims:
+three closed rows can regress green (BK-44), there is no expected phase
+manifest and `proc.returncode` is never read (BK-51), the advocate is enrolled
+programmatically so registration and recovery are never exercised, and the
+suite is 24 collected items rather than the 16 and 18 this file recorded.
+
+## BK-42 — production trust, privacy, accessibility and recovery gate — **PARTLY DONE · P1**
+
+**Phase:** conditions that make every other phase dependable in practice.
+
+**Good now:** matter and transcript bytes are encrypted; ownership checks are
+consistent; corrupt/unreadable files are disclosed; writes use atomic replace
+and a per-matter concurrency lock; the health endpoint exposes useful operator
+state.
+
+**Gap observed:** the default key arrangement remains colocated with default
+local matter storage (BK-21); there is no user-visible retention/deletion,
+backup/restore or disaster-recovery contract; raw prompts containing client
+facts are exposed through user History; rate-limit audit and local-store
+boundaries are deployment assumptions. Search inputs rely on placeholders
+rather than associated labels, the narrow layout removes navigation, and there
+is no real-browser accessibility gate.
+
+**Change:** finish BK-21 with external secret management and rotation; define
+tenant/workspace isolation, audit access, retention, export and deletion;
+encrypt and test backups with point-in-time restore; redact and separately
+authorise operator traces; make rate limiting atomic for the deployment store;
+add availability alerts and recovery drills. Add WCAG 2.2 AA checks for labels,
+names/roles, focus, contrast, zoom, reflow, reduced motion and screen-reader
+announcements across BK-30's three widths. Publish only user-actionable health;
+keep diagnostics authenticated and least-privileged.
+
+**Acceptance:** a restore drill recovers an encrypted matter and transcript
+without mixing advocates; key rotation is tested; access/export/deletion events
+are attributable; no client prompt is exposed to an unauthorised surface; zero
+critical automated accessibility violations and the keyboard/screen-reader
+journey passes from login through logout.
+
+**Dependencies:** BK-21, BK-30 and the final UI of BK-31 through BK-40. **Why not
+done:** current safeguards are strong local primitives, not yet a declared and
+tested production operating envelope.
+
+**Done — the accessibility half that is code.**
+
+**Every control has an accessible name.** Four search inputs had placeholders
+and no labels. A placeholder is not a name: it is announced once, it
+disappears the moment anything is typed, and a screen-reader user who tabs
+back to a filled field is told nothing about what it holds. The labels are
+visually hidden with the clip-rect idiom rather than `display:none`, which
+would remove them from the accessibility tree too — the opposite of the point.
+
+**The masthead fits a phone.** Measured at 390px: `tabs` ran to 473px, `who`
+to 678px and `health` to 720px on a 390px viewport. The whole strip was one
+non-wrapping flex row, so a third of the masthead sat off the right edge and
+the document scrolled sideways. Every pane below it was already responsive;
+the bar above them was not, and nothing had looked.
+
+**A fix that disabled its own test, caught and removed.** `body { overflow-x:
+hidden }` went in beside the wrap as belt-and-braces and is the opposite:
+clipping makes `scrollWidth` equal `clientWidth`, so the phase checking for
+sideways scroll could no longer fail. The page would still have had content
+off the right edge and nothing would ever have said so again. The wrap is the
+fix; the clip is gone.
+
+**The court field offers the controlled values** it actually holds (BK-38), so
+fewer advocates have to discover that `Supreme Court` resolves.
+
+**Counterexample:** journey phase 14, at 390px, 768px and 1280px — every
+control named, read from the accessibility tree rather than the markup so an
+unassociated label fails, and nothing scrolling sideways.
+
+**NOT DONE, and it is most of the row.** External secret management and
+rotation (BK-21); tenant/workspace isolation; retention, export and deletion;
+encrypted backups with a point-in-time restore drill; atomic rate limiting for
+the deployment store; availability alerts and recovery drills. Those are
+deployment infrastructure and operating decisions rather than code in this
+repository, and building a version of them here would be worse than the gap —
+a restore drill that only runs against a temporary directory proves nothing
+about the deployment it is meant to reassure anybody about.
+
+Also not done: contrast, zoom, reduced-motion and screen-reader announcement
+checks; separately-authorised operator traces with redaction.
+
+## BK-29 - sixteen hand-picked token ceilings, and five reads that echo verbatim spans — **PARTLY DONE · P1**
+Opened 7 September 2026, out of the BK-27 fix. **One instance is fixed; the
+population is not swept.**
+
+The dispute read ran at `max_tokens=200`. Once it began returning three
+verbatim spans the JSON was truncated mid-string at character 827, the read
+was lost, and the turn fell back to one thread. Nothing was wrong with the
+model or the prompt.
+
+**The shape, without the read that exposed it:** a read that must QUOTE to be
+believed has an output roughly the size of its input. A constant ceiling on
+such a read is a length limit on the advocate, disguised as a cost control,
+and it fails by TRUNCATION - which is a parse error, not a short answer, so
+the whole read is lost rather than degraded.
+
+Measured from the code, 7 September 2026:
+
+| | |
+|---|---|
+| `max_tokens=` literals in `nm/core/` | **16**, every one hand-picked at its call site |
+| schemas returning a verbatim span | **7** - cause, dispute, evidence_item, factors, issues, posture, threading |
+| of those, returning a LIST of spans | **5** - issues, factors, evidence items, inventory, salvage |
+
+The five list-returning reads are the ones with the same failure available to
+them, and their ceilings (400-900) were chosen against briefs nobody recorded.
+
+**What is NOT known and must be measured before this is called safe:** whether
+each of those reads FAILS SAFE when truncated. The dispute read now does -
+`G-SPLIT` reports `not_assessed` and the advocate is told nobody counted -
+but that third state exists only because the `Gate` constructor refused the
+row without it. **A truncated read that falls back to an empty list and is
+reported as a finding is S1**, and nothing here has checked.
+
+**Why this is a row and not a fix.** The obvious repair - raise every ceiling -
+is the patch, not the fix: it moves the cliff without removing it, and sixteen
+call sites each choosing a number is the same one-owner question CLAUDE.md §4
+asks. The fix is a ceiling DERIVED from the input for reads that echo spans,
+with one owner. Sizing that needs the population measured, which is this row.
+
+**Done, 8 September 2026.** Sixteen literals became one owner.
+
+`TurnEngine._read(prompt, schema, key)` is now the only route to a structured
+read, and the call site names the READ rather than a number. `nm/core/ceiling.py`
+decides: a read whose answer follows the size of its input gets a ceiling
+derived from what it was shown; one whose answer is a verdict gets a stated
+number, in one table, with the reason beside it.
+
+**Whether a read echoes is the read's own property**, declared in
+`nm/domain/reads.py` beside its entry — eleven do (`dates`, `dispute`,
+`factors`, `inventory`, `issues`, `proof`, `adverse`, `attacks`, `exposure`,
+`salvage`, `parties`), eight do not. Nothing in the ceiling module decides it,
+because a table there would be a second place to record a property of the read.
+
+**Three defects the sweep produced, all worth keeping.**
+
+1. `nm/core/ceiling.py` imported the token estimator from
+   `nm/adapters/model/_budget.py` and `layercheck` refused it within the
+   minute — `core` may not import `adapters`. Copying it would have been a
+   second owner for *how big is this*, so it moved to
+   `nm/ports/model.py`: measuring a prompt is a property of the model
+   INTERFACE, and the adapter now re-exports rather than redefines.
+2. The helper was called `_ask` — **and `TurnEngine` already had one**, for
+   batching questions. The later definition shadowed mine, every structured
+   read raised `TypeError`, and every call site's `except Exception` recorded
+   it as "the read failed" and carried on. §7 exactly: a broad except turning
+   a programming error into a model failure. Renamed `_read`.
+3. The sweep treated a COMMENT as the first argument at one site and dropped
+   the prompt expression, so the adverse read was called with its schema as
+   its prompt. Caught by five theory tests.
+
+**Counterexample:** `tests/test_no_read_picks_its_own_ceiling.py` — the sweep,
+both directions of the derivation, the floor and the cap, and two controls:
+one that plants a literal and one that plants a `complete()` call the sweep
+must ignore.
+
+**Not measured:** `PER_INPUT_TOKEN = 1.6` is a starting point with a stated
+basis, not a measurement. BK-29 asked whether each echoing read FAILS SAFE
+when truncated, and that is still unmeasured — the ceiling now moves with the
+input, so truncation is far less reachable, but "less reachable" is not
+"checked".
+
+**REOPENED 9 September 2026, verified in source.** Centralising the ceilings
+was real work and it holds. The safety question this row was opened for is not
+merely unmeasured, it is unhandled: `finish_reason == "length"` is never
+checked anywhere in `nm/`. See BK-49.
+
+## BK-28 - runs and golden sets are not in the History tab, and from now on they are
 Opened 7 September 2026. **Standing instruction, recorded so it binds: from
 here on every run -- served turns, eval runs, golden-set runs -- is saved in
 the History tab.** Served conversations already are; nothing else is.
@@ -1618,7 +2352,7 @@ recorded", "source size not recorded", and the design comment about what a
 record IS). `pane-record` is now `pane-history`, `loadRecordMatters` is
 `loadHistoryMatters`, and nothing points at the old ids.
 
-### BK-25 - the authority need finds a case by scanning a million paragraphs
+## BK-25 - the authority need finds a case by scanning a million paragraphs
 Opened 7 September 2026, out of the paragraph-labelling work. **Approved: the
 case-finding step becomes a search over case SUMMARIES, and the paragraph
 index is only read for the cases that step selects.**
@@ -1673,7 +2407,7 @@ someone adding a third `SourceKind`, and that is a change a reviewer sees.
 but it is not the argument - the argument is that the question and the index
 finally match.
 
-### BK-26 - the Act summaries are DECLINED, and the gap they would have filled stays open
+## BK-26 - the Act summaries are DECLINED, and the gap they would have filled stays open
 Opened and decided 7 September 2026. **Decision: the case summaries are used
 (BK-25); the ACT summaries are not used at all.**
 
@@ -1719,7 +2453,7 @@ manifest and so are not wrong - the sentence is - but it is a document
 disagreeing with the code about the code, which is the S4 shape and the
 cheapest possible instance of it to leave standing.
 
-### BK-24 - the citation filter excludes exactly the years the corpus needs
+## BK-24 - the citation filter excludes exactly the years the corpus needs
 Opened 7 September 2026, from the first real run. **The ingestion is stopped
 and is to be resumed once this is fixed.**
 
@@ -1768,7 +2502,7 @@ endpoint's 429 handler does `continue` where the search handler does
 a server asking it to stop. That is the one thing its own docstring says it
 must not do, and it is unfixed.
 
-### BK-23 - the web scrape is a ONE-TIME EXCEPTION, not the new route
+## BK-23 - the web scrape is a ONE-TIME EXCEPTION, not the new route
 Recorded 7 September 2026, on the advocate's instruction and in their words:
 *this is a one time exception*.
 
@@ -1809,40 +2543,7 @@ staged is promoted into `legal_database/`. Nothing enters the corpus by
 running this. If the answer later is *yes, and routinely*, then the policy
 above needs revisiting properly rather than by accumulation.
 
-### BK-22 - signing in depended on a key that is meant to rotate - **CLOSED**
-Closed 7 September 2026, on the advocate's challenge: *if the email and
-password match, they should be able to log in, nothing else.*
-
-**They could not, and the reason was a layer below where anyone was looking.**
-The password is an scrypt hash with its salt and cost - exactly what a stored
-password should be, and scrypt exists so that such a hash can sit in the
-open. But the record HOLDING it was sealed with `NM_MATTER_KEY`, so verifying
-a password meant first opening a file. Hand the server the wrong key and the
-comparison is never reached at all.
-
-That coupling bought almost nothing and cost exactly the failure it caused.
-
-**The directory is now in the open**; client material is not, and none of it
-lives there. Matters, transcripts and metrics keep the matter key and always
-did. What is readable on disk is an advocate's OWN name, enrolment number and
-firm, beside a hash that is safe in the open.
-
-**Proven with a server started on a completely unrelated key:** *"that
-password is not right for this email address"* - the record was read and the
-password compared.
-
-**The migration had to go in the READ, and unsealing the writer alone did
-nothing.** `enrol` is the only other writer and it refuses to overwrite, so
-every existing record would have stayed sealed forever - measured on the one
-account that existed, which did not change until the read was taught to
-rewrite. It converts only where the decrypt SUCCEEDED, so a record it cannot
-open is left exactly as it is.
-
-**What this does NOT fix: BK-21.** Matters are still sealed with a key that
-is also the OpenAI credential, so rotating that still makes them unreadable.
-It no longer locks anyone OUT of the product, which was the urgent half.
-
-### BK-21 - the matter encryption key IS the OpenAI API key
+## BK-21 - the matter encryption key IS the OpenAI API key
 Opened 7 September 2026. `NM_MATTER_KEY` and `NM_MODEL_API_KEY` in `.env`
 hold **the same value** - an `sk-proj-...` credential - so one secret is
 doing two unrelated jobs.
@@ -1888,107 +2589,7 @@ its measurements are the evidence, not the headings.
 BK-20 was the recorded COST of a change the advocate asked for, and it
 closed when the half it needed - the login rate limit - was built.
 
-### BK-20 - sign-in names which of three things failed - **CLOSED, with its pair**
-Opened 7 September 2026.
-
-A1 collapsed every sign-in failure into one sentence so a stranger could
-not use the form to discover which addresses are enrolled - the same
-reasoning as the timing note in `authenticate`, which pays for a password
-derivation on an unknown advocate so the stopwatch cannot answer either.
-
-**That trade is now made the other way, on instruction**, and the reason is
-good: three different problems were reading as one.
-
-| state | what the advocate is told |
-|---|---|
-| `unknown` | no advocate is enrolled with that email address |
-| `wrong_password` | that password is not right for this email address |
-| `unreadable` | the account exists and was sealed with a different `NM_MATTER_KEY` - retyping will not fix it |
-
-**The third is why it was worth doing, and it happened the same day.**
-`p14lrahul@iima.ac.in` was enrolled under one key, `start.ps1` supplied a
-different one, and the advocate was told their credentials were wrong on
-credentials that were correct. No amount of retyping fixes that and nothing
-on the screen pointed anywhere. `start.ps1` now generates a key ONCE and
-reuses it, so an account survives a restart.
-
-**And the pair is built.** `nm/domain/attempts.py` holds the policy - times
-in, verdict out, no clock and no I/O of its own - and the door consults it
-BEFORE the password is derived, because the point of a limiter is that the
-expensive part stops happening.
-
-**TWO COUNTERS, because one does not imply the other.** Five wrong answers
-for one address in fifteen minutes, twenty from one source across all
-addresses. A directory sweep tries each address ONCE and never trips a
-per-account counter - so limiting per account alone would have left
-enumeration exactly as cheap as before, which is the whole reason this row
-existed.
-
-**Not a lockout.** Nothing is disabled and no state is set on the account;
-the window ages out. A real lockout hands an attacker a denial-of-service:
-send five wrong passwords for an advocate's address and they cannot work.
-The refusal says so in terms, and says WHEN - *"Try again in about 15
-minute(s). Nothing is locked and no account has been changed."*
-
-**The pause is measured from the OLDEST attempt in the window**, not the
-newest. Counting from the newest would extend the pause every time the
-attacker knocked, and extend it for the advocate - who is the one reading
-the message.
-
-**It fails OPEN and says so.** If the attempt log cannot be read the door
-opens, because refusing every sign-in over an unwritable file is a
-self-inflicted outage on a product used under time pressure. Allowing them
-SILENTLY would be S1, so `/api/health` reports `rate_limiting` and shows
-**NOT RUNNING** when it cannot.
-
-Verified live: five 401s naming the failure, then 429 with the retry time.
-
-### The forensic audit, 7 September 2026
-Run by SWEEP rather than by reading: one mechanical pass per defect shape,
-each drawing its population from the whole product. Six findings, and the
-list of what was checked and found sound is below them - an audit that
-reports only problems misrepresents the tree.
-
-Each row says whether it is **measured** or **reasoned from the code**.
-
----
-
-### BK-14 - the date came from the server's clock - **FIXED**
-**MEASURED.** `nm/edge/api.py:389` takes `today=req.today or date.today()`,
-and **`web/app.js` never sends `today`** - grep returns nothing. So every
-served turn dates itself by whatever clock the server happens to keep.
-
-**Nothing in `nm/` mentions a timezone.** No `ZoneInfo`, no `Asia/Kolkata`,
-no `tzinfo` outside `utcnow()` for credentials. The product is scoped to
-**Telangana**, which is UTC+5:30.
-
-**What it reaches:** `limitation.days_remaining` (`expires_on - today`),
-`Deadline.status`, `deadlines.passed`, `deadlines.upcoming`, and
-`ours.expired(turn.today)` - the branch that decides whether the salvage
-pass runs at all. A limitation date is the most consequential number this
-product produces.
-
-**The failure:** a server keeping UTC is on the previous day from 18:30
-UTC onward - 00:00 to 05:30 IST. A turn taken in that window computes
-every period one day short, and a claim that expires today reads as
-expiring tomorrow. Silently: there is no third state for "which day is
-it", because the question has never been asked.
-
-**And no test pins the clock.** Every suite passes `today=date(2026, 9, 4)`
-explicitly, so the defect is invisible to all of them by construction.
-
-### BK-15 - six owners for the jurisdiction - **FIXED**
-**MEASURED.** `"Telangana"` is a literal default in six modules:
-`adapters/evidence/corpus.py:92`, `bootstrap/composition.py:133`,
-`core/turn.py:188`, `edge/api.py:192`, `knowledge/jurisdiction.py:133`,
-`ports/evidence.py:367`.
-
-S9, and CLAUDE.md supplies the failure mode itself: *an answer about Kerala
-law out of it is confidently wrong and nothing downstream catches that.*
-Change one default and the binding computation uses a different
-jurisdiction from the retrieval, with no disagreement surfaced.
-
-### BK-16 - the matter cipher downgraded silently - **FIXED**
+## BK-16 - the matter cipher downgraded silently - **FIXED**
 **MEASURED, and less bad than it first looks.** `_Cipher.__init__` catches
 `ImportError` on `cryptography` and sets
 `scheme = "xor-keystream(NOT-SECURE)"`. The live scheme here is **fernet**
@@ -2008,7 +2609,7 @@ The same argument applies here and was not applied. The class docstring
 even says *"Raised loudly. Never degraded into writing plaintext"* - true
 of plaintext and not of this.
 
-### BK-17 - three load-bearing guards vanished under `-O` - **FIXED**
+## BK-17 - three load-bearing guards vanished under `-O` - **FIXED**
 **MEASURED.** Every `assert` in `nm/` is a guard, and `-O` removes all
 three:
 
@@ -2024,36 +2625,202 @@ a surprise in a served turn.* Under `-O` `complete()` is a no-op and `said`
 raises `KeyError` mid-turn - precisely the outcome the sentence promises is
 prevented. S11: a check that cannot fail because it is not there.
 
-### BK-18 - the session cookie had no `secure` flag - **FIXED**
-**MEASURED.** `response.set_cookie(name, value, httponly=True,
-samesite="lax", max_age=..., path="/")`. The comment beside it reasons
-carefully about `httponly` and `samesite` and does not mention `secure`,
-which reads as overlooked rather than decided. Without it the session token
-travels in clear over HTTP or a downgrade.
+## BK-3 - a served-path judged run needs a credential - **CLOSED**
+Closed 7 September 2026. The premise was wrong: the password was never the
+advocate's to supply, because the scenario advocate is a FIXTURE.
 
-**THE COOKIE HALF IS FIXED**: `secure` is derived from the connection -
-`request.url.scheme` plus `X-Forwarded-Proto`, trusted only upwards. The
-first attempt defaulted to `secure=True` with an env-var opt-out, and a
-secure cookie on a plain connection is DROPPED: six served-path tests went
-401 and local development would have too.
+`tools/run_scenario.py` now mints its own - `_mint_scenario_advocate` enrols
+`adv_scenarios` with a generated password held for the run and never written
+down, and **refuses to re-enrol an advocate that already exists** rather than
+resetting a credential it does not own. `NM_SCENARIO_PASSWORD` still wins when
+it is set, so a real deployment is unaffected.
 
-**THE RATE LIMIT IS FIXED TOO**, with BK-20, which it pairs with.
+CLAUDE.md S8 was the argument for closing it rather than living with it: every
+defect the first external review found lived between a correct module and the
+served path, and a judged run that never crosses authentication, serialisation
+and the web rendering is the weaker evidence by exactly that gap.
 
-**The rate limit was already admitted, in the wrong place.** `advocate.py`
-refuses a short password with *"this is the only thing standing between one
-advocate's client file and another's, and the product has no rate limit
-yet"* - a known gap declared in a message the ADVOCATE reads rather than in
-a row anyone tracks.
+---
 
-### BK-19 - a missing identity count read as zero - **FIXED**
-**MEASURED.** `adapters/search/authority.py:64`: `int(rows.get(key, 0))`
-over the index identity, so an identity missing `indexed_paragraphs`
-reports **0 indexed** - indistinguishable from an empty index.
+## BK-4 - the authority index - **CLOSED, and it had been done for eight days**
+Closed 7 September 2026 as **B-141**, by looking at the file instead of at
+this row. Measured:
 
-The atom-priors trap in miniature, and CLAUDE.md's worked example is the
-same shape: `table.get(kind, 0.0)` made every unlisted atom type score
-worse than every listed one. Low severity today because the builder always
-writes the key; the defect is that nothing would notice if it stopped.
+| | |
+|---|---|
+| `.nm/authority.db` | 1,097 MB, `built_at 2026-08-30T07:51:38` |
+| `partial` | **no** |
+| indexed | **451,548** of 1,015,780 |
+| `readiness("authorities")` | `readable` |
+| a live search | **ANSWERED**, 40 binding findings, ratio and reasoning |
+
+The row said *has never been run*. It had been run on **30 August**, and
+every statement resting on it since was wrong - including a phase table
+written the same morning as this correction, saying `authorities` *waits on
+the index build (BK-4)*.
+
+**The count was wrong too, and in the harder way.** `BASELINE.md`'s `ratio`
+row said 144,744 where the corpus holds 144,739, so the attributable total
+was 451,553 and is **451,548**. The table was internally consistent and
+wrong at the source, which adding the rows up CONFIRMS rather than catches.
+`CLAUDE.md` and this file had both copied the total.
+
+**The rule it earns:** a document's claim about an artefact is a claim about
+the filesystem, and it is measured there.
+`tests/test_the_docs_do_not_outlive_the_artefact.py` fails the build on a
+live document saying the index is unbuilt while it sits on disk.
+
+**What is still true:** nothing in the repo triggers the build, and it stays
+that way. A rebuild needs the file deleted deliberately - the tool refuses
+to overwrite, because a half-written index replacing a good one is worse
+than a build that would not start.
+
+---
+---
+
+# Part 4 — The record
+
+The audits and journey drives these rows came out of, kept whole.
+Their measurements are the evidence, not the headings.
+
+## The end-to-end journey, driven as a user — 8 September 2026
+
+**Method.** Signed in as a real advocate on the served path, drove every phase
+in the browser, read the bytes the advocate actually receives, then read the
+code behind each. Nothing here comes from the PRD, the plan or the docs. Where
+a claim is a judgement rather than a measurement, it says so.
+
+**The headline.** Retrieval and the safety gates are the strong half and they
+work. The journey around them is not yet an advocate's file: the list they
+land on cannot distinguish their own matters, the answer runs to 31 elements
+of mostly disclosures, and on a textbook goods-sold brief the product worked
+the elements of a DIFFERENT cause of action and called the client's best fact
+adverse to him.
+
+**Current-build reconciliation — 8 September 2026, `6e29cf0`.** The first
+journey drive below led to four commits. The rows remain here because this is
+the record, but their present status is now explicit:
+
+| finding | status | evidence on the current build |
+|---|---|---|
+| J-1 matter list | **PLANNED** | The projection still uses the opening 60 characters as the matter name, puts the advocate id in `client`, and exposes version as `last_touched`. |
+| J-2 cause read | **DONE, preserve** | `fcaacf6` gave each closed cause a distinguishing definition; the eight causes plus refusal measured 9/9. The focused regression pack passed on this tree. |
+| J-3 adverse read | **DONE, preserve** | `fcaacf6` passes the side into the adverse read. The focused regression pack passed on this tree. |
+| J-4 automatic split | **PARTLY DONE** | `6e29cf0` stopped acting on the unstable count and stopped comparing unconfirmed sibling splits. The count is disclosed for advocate confirmation. A browser-level confirmation flow is still absent. |
+| J-5 internal ids | **PARTLY DONE** | `6e29cf0` removed ids from cross-file exposure prose. On the current served path `G-POSTURE` still displayed `thr_4adf2dc95f5e`, and History displayed `TURN_…`, `MAT_…`, `THR_…`, fact ids and the full model trace. |
+| J-6 answer shape | **CLOSED by BK-37** | The answer is filed under the question each line answers, repeated gaps carry a count, and a courtesy reply is no longer folded into invisibility. Journey phase 5c reads the section order back off the page. |
+| J-7 engineering register | **CLOSED by BK-37** | Gate ids, rule ids, token counts and the trace line are out of advocate mode and still reachable behind `How this answer was made`; the masthead reads `Corpus ready`. Journey phases 5b and 5d assert both. The search court filter is BK-38 and remains open. |
+
+The focused pack for the offline fixes — withheld conclusions, concurrent
+writes, cause definitions, side-aware adverse reading, honest cross-file
+comparison and dispute-count handling — is **34/34 passing** on `6e29cf0`.
+
+**Status discipline for all journey work from this point.** `PLANNED` means no
+product-code work has begun. Before the first product edit, the relevant row
+moves to `IN PROGRESS` and records the exact scope. `DONE` requires the commit,
+the focused automated evidence, and the served-browser evidence to be written
+back into that row. `BLOCKED` must name the decision or dependency. No journey
+change is to exist only in a commit message.
+
+---
+
+### J-8 — What works, and must not be broken while fixing the above
+
+Said plainly, because it is the half worth protecting:
+
+- **Retrieval.** `acknowledgment in writing limitation` returned 25 ranked
+  paragraphs, `coverage: answered`, led by *Rajendra Narottamdas Sheth* (SC
+  2021) and *Asset Reconstruction Co v Tulip Star* (SC 2022) — both squarely
+  on s.18. The strongest surface in the product.
+- **The gates fire and are disclosed.** G-QUOTE refused an issue whose quoted
+  words the advocate never wrote. B-104's late-citation retry ran, retrieved
+  s.18 and re-derived. The screens say they have not run rather than reading
+  as clear.
+- **History** renders the served turn faithfully, byte for byte.
+- **Sign-in** distinguishes an unknown email from a wrong password, and rate
+  limits per account and per source.
+
+---
+
+### J-9 — The order to fix them in
+
+1. **J-2** the cause read, with an eval. Everything downstream derives from
+   it, so a wrong cause makes the rest of the answer wrong quietly.
+2. **J-3** the adverse-fact read takes the posture. Cheap, and it currently
+   tells an advocate their best fact is against them.
+3. **J-4** the split bias, and no cross-file pass across threads born on one
+   turn. Regression repair on BK-27.
+4. **J-5** thread labels not ids, and the sweep's population widened.
+5. **J-1** the matter list — name, client, next date.
+6. **J-6** the answer's shape. The largest, and worth doing after the accuracy
+   items so that what is being shaped is correct.
+7. **J-7** the register of the header and the search surface.
+
+That was the order after the first drive. The current-build drive below found
+two P0 seams — cause-specific accrual and contradictory action output — so the
+implementation waves after BK-42 supersede this order without erasing it.
+
+---
+
+## Current-build end-to-end journey plan — login to confirmed logout
+
+**Forensic pass.** Driven on 8 September 2026 against the clean committed tree
+at `6e29cf0`, through `nm.bootstrap.main`, with the scripted model, real corpus,
+Fernet store, isolated test account and isolated temporary matter store. The
+browser journey covered registration, sign-in, courtesy message, matter
+opening, posture clarification, completed advice, corpus search, a natural
+court filter, History, page reload, failed-server logout, successful logout and
+post-logout state. Code was then followed through the API, projections, turn
+engine, store and browser renderer. Scripted output is not evidence of real
+model quality; it is evidence of what the product accepts and serves when a
+configured provider returns that output.
+
+**Journey contract.** This programme is complete only when an advocate can:
+
+1. prove who they are, recover access and see which firm/workspace governs the
+   file;
+2. find an existing matter or deliberately open a new one on desktop and
+   narrow screens;
+3. identify client, opponent, subject and urgency before substantive work;
+4. clear the conflict, engagement, competence, capacity and emergency screens,
+   or see a named and recorded emergency exception;
+5. state the account once, have it stored once, and correct or retry it without
+   duplication or loss;
+6. receive a position whose cause, accrual trigger, period, authorities,
+   findings and action agree with each other;
+7. move from search result to citable authority and, deliberately, into the
+   matter record;
+8. close and reopen the file with the same summary, chronology, open questions,
+   served answers and next step;
+9. survive provider failure, stale writes, an expired session and a lost HTTP
+   response without a false success or a lost brief; and
+10. sign out with server confirmation, after which reload cannot restore the
+    matter.
+
+### Implementation waves and release gates
+
+| wave | rows | release gate |
+|---|---|---|
+| 0 — make failure reproducible | BK-30 **DONE** | MET. `python tools/journey.py` produces a phase table and artifacts. **The pass count is a MEASUREMENT AT A COMMIT, not a property of the repository** — it needs `pip install -e .[journey]` and a quiet tree, and a run taken while `web/` is being edited reports failures that belong to the edit. Re-measure rather than quote. |
+| 1 — do not give unsafe advice | BK-35 **DONE**, BK-34 **DONE**, BK-36 **DONE**, BK-40 **DONE** | Correct trigger or explicit refusal; screens govern admission; one brief is applied once; session/logout state is truthful. |
+| 2 — make the file usable | BK-31 **PARTLY**, BK-32 **DONE**, BK-33 **PARTLY**, BK-37 **DONE** | Access is recoverable; navigation works at all widths; file reopens intact; answer reads as counsel work, not telemetry. |
+| 3 — research and handover | BK-38 **PARTLY**, BK-39 **PARTLY** | Authority moves deliberately into a matter and another advocate can understand the complete file. |
+| 4 — prove production fitness | BK-41 **PARTLY**, BK-42 **PARTLY** | Latency/error budgets, security/recovery and accessibility gates pass on the served deployment shape. |
+
+Each wave is independently releasable only when its rows are `DONE` by the
+status discipline above. Passing unit tests without the browser evidence, or a
+good browser demonstration without the relevant pure/engine regression, leaves
+the row `IN PROGRESS`.
+
+---
+
+### The forensic audit, 7 September 2026
+Run by SWEEP rather than by reading: one mechanical pass per defect shape,
+each drawing its population from the whole product. Six findings, and the
+list of what was checked and found sound is below them - an audit that
+reports only problems misrepresents the tree.
+
+Each row says whether it is **measured** or **reasoned from the code**.
 
 ---
 
@@ -2106,290 +2873,8 @@ An empty matter reports **10 unassessed** and `handover_complete: False`.
 five `not_run` states; RUNNING the checks is B2-B6 and R-8 still binds.
 ---
 
-## Closed
-
-### BK-13 - the product spoke in its own identifiers - **CLOSED**
-Closed 7 September 2026 as **B-132**. An enum now reaches the advocate
-only through a phrase it owns.
-
-`nm/domain/spoken.py` holds the mechanism: the phrases live ON the enum
-and `complete()` asserts every member has one AT IMPORT. No fallback to
-`.value` - a fallback is what makes a missing phrase invisible. Seven
-enums speak: `Holder`, `Form`, `Standard`, `IssueKind`, `Effect`, `Side`,
-`Binding`.
-
-The three bracket-notation findings are sentences:
-
-| before | after |
-|---|---|
-| `{pos.element} [burden ours; balance_of_probabilities; held on X]` | *The burden is on us, on the balance of probabilities. It is held on X.* |
-| `{i.statement} [substantive; runs against defending; opposes our case on posture v2]` | *It is a substantive issue, running against the party defending, and it cuts against us. Read on the posture as it stood at v2.* |
-| `{item.what} - held by third_party, certified_copy` | *a third party has it, and what exists is a certified copy.* |
-
-**The structure did not change, and that was the point.** The element
-kinds are load-bearing: `Answer.__post_init__` refuses an answer that
-leads with background, the gate matrix hangs off `disclosure`, and B-128
-was five days earlier. The previous build produced advice that read
-beautifully and hid what it could not establish. Better sentences INSIDE
-the structure, never instead of it.
-
-**`Element.feature` came out of it**, and its own docstring had predicted
-it: the issues suite filtered findings by searching for the words *runs
-against*, said so, and named the fix in the same sentence. Rewording the
-findings turned three tests red - all three keyed on prose rather than on
-the rule. They read `feature == "D9"`, `Effect.SUPPORTS.said`, a version
-TOKEN, and `concluded["proof"]` now. **A product whose tests break when
-its English improves does not improve its English.**
-
-### BK-12 - the fold rule is asserted behaviourally - **CLOSED**
-Closed 7 September 2026, and it found **B-133** on the way.
-
-`tests/js/render_turn_partition.mjs` executes the real `renderTurn` under
-plain `node` against a forty-line stub DOM and walks the tree. No npm
-install: jsdom to hold one rule is R-6 apparatus, and a check that needs
-a toolchain nobody maintains is a check that stops running. An absent
-`node` reports **NOT ASSESSED** in those words rather than passing.
-
-**And it was useless until a mutation said so.** Deleting `!el.disclosure`
-from the partition - the exact two-character edit this exists to refuse -
-left it GREEN, because the fold's renderer hard-coded `el ground` and
-stripped the `disclosure` class at precisely the moment it mattered. The
-partition would have been wrong AND every trace of it gone, from the
-screen and from the check looking for it.
-
-The fold now shares the class and label expression with the open half,
-and the same mutation fails loudly.
-
-### BK-11 - G-MODEL proven at one read of fifteen - **CLOSED**
-Closed 7 September 2026 as **B-131**. All fifteen structured reads are
-driven and each is asserted to appear IN the disclosure line.
-
-One owner - `TurnEngine._refused_reads`, wired at both assembly sites,
-drawing from `TracedModel.refused_reads`, the sibling of
-`empty_decisive`. The nine `except ModelError` branches keep firing
-G-MODEL and keep their degraded return; only the disclosure moved.
-
-**Three measurement mistakes, and the tests caught the last two.**
-
-1. The sweep that opened this row searched for any phrase the product
-   uses when it is short of something. All fifteen *said something*, under
-   a proxy too generous to tell a named read from an unrelated disclosure
-   on the same turn.
-2. The follow-up asked `read in said` - a SUBSTRING - and reported 14 of
-   15 named. `"cause" in said` matches *cause of action*.
-3. Nothing was being disclosed at all: the shared `build` fixture does not
-   wrap the model in `TracedModel`, so `refused_reads` did not exist on it.
-
-Two of those were fuzzy matching deciding rather than ranking, on the same
-day, in the same file. The third is CLAUDE.md S8 arriving at the TEST
-rather than at the edge - a guard absent from where it is exercised.
-
-### BK-10 - the handover contract was 4 of 16 - **CLOSED**
-Closed 7 September 2026 as **B-130**. `CARRIES` is **8** and
-`handover_blockers` returns **6**.
-
-The four lifted - `issues`, `theory`, `proof`, `decisions` - each carry a
-STATE and not just a value: `held`, `none`, or `not_assessed`. That third
-state is why this was not a rename. Every one of those fields persists as
-an empty tuple until written, so empty meant both *computed and found
-nothing* and *never computed* - and lifting them as they were would have
-moved S9 from the turn, where an empty section is a small ambiguity, to
-the handover, where it is the dangerous one.
-
-`Thread.assessed` carries it, drawn from the KEYS of the derive phase's
-`concluded` dict. One field rather than four flags: the fifth section
-would have arrived without its copy.
-
-**The six that remain are genuinely unbuilt** - `screens` is B2-B6 at
-slice 10, `authorities` waits on BK-4, and `engagement`, `deadlines`,
-`reservations` and `gaps` have no writer at all. The set is pinned by NAME
-in the test, so it cannot drift in either direction without a deliberate
-edit.
-
-### BK-9 - five disclose gates nothing proved the advocate sees - **CLOSED**
-Closed 7 September 2026. `tests/test_disclosure_reaches_the_advocate.py`
-now stands at **thirteen of thirteen PROVEN** on the advocate's own bytes,
-and `NOT_PROVEN` is empty and kept - an exception table that has been
-deleted cannot record the next exception.
-
-The five are in `tests/test_a_disclosure_is_served_not_recorded.py`, one
-file because they are one shape rather than five topics. Each drives a
-served turn, reads `out.answer.elements`, and names its gate so a rename
-cannot separate the matrix row from the bytes. **Each was verified RED**
-by removing its disclosure phrase from the product and re-running - BK-5's
-lesson, where a served-turn assertion I was sure of passed with the fix
-reverted.
-
-`_Fails` refuses exactly one read by its `x-nm-read` name. One double, not
-five: the schema already carries the read's name, so nothing had to be
-invented to select on.
-
-**It found a product defect on the way, which is the point of writing the
-test rather than the note.** There was no clean-state sentence to assert
-on for G-ADVERSE, because there was none - **B-129**. Three declared
-states, audible on two.
-
-**Three things corrected themselves during the work, all worth keeping:**
-
-- The first fixture put two disputes in one message and got ONE thread, so
-  the exposure read was never reached and it looked like a product defect.
-  The existing suite's guard - `assert len(out.matter.threads) >= 2` - is
-  now in the helper.
-- The G-MODEL test asserted `"found none"` was absent. B-129's clean-state
-  line ends with those words, correctly, and the assertion broke the day it
-  landed. **An assertion on a fragment is an assertion on a coincidence**;
-  it names the exposure pass's own sentence now.
-- The accounting check could not see through `_served(out)` and called five
-  correct tests proof of nothing. It follows the module's own helpers now -
-  one level, and `metrics` still fails at either.
-
-**B-077 was NOT closed by this**, though its status line reads like it.
-*"Fixed - unverified on a served turn"* needs the DIFFERENTIAL judge E-073:
-the defect was an asymmetry, the recommendation softening the finding
-against our own client, and no assertion on the bytes can see that. Matching
-a row on its status and not its substance turns a real gap into a closed one.
-
-### BK-1 — E-102 still fails, and the verdict has moved — **CLOSED**
-Fixed as **B-122** and judged: **E-102 PASS** on `mat_bf1b5f744dbc`, with the
-control failing first. `nm/domain/register.py` now holds one clause and every
-prompt whose words reach the advocate carries it.
-
-The useful part was the verdict MOVING. After B-078's two structural fixes the
-judge stopped quoting the recommendation and the bare Act — both fixes
-confirmed — and started quoting the theory and the adversarial reads, which is
-how it became visible that the rule had been applied at one site out of six.
-
-### BK-5 — the cascade fires on an ordinary turn — **CLOSED**
-Fixed as **B-123**. `_record` counted FINDING elements while B-120 had
-narrowed rendering to what CHANGED, so the inventory held two items, rendered
-none, and the turn announced them lost — two lines above the answer's own "2
-item(s) already on the file are unchanged".
-
-The count comes from what the thread HOLDS now. `cascade.lost`'s docstring was
-false too: it named four things as re-derived every turn that are all
-persisted. The check itself was right and stays.
-
-
-### BK-6 — the evidence bound is reached on a four-turn matter — **CLOSED**
-Measured: **every turn spent 2 of its 3 rounds re-fetching Limitation Act
-s.18 and s.19** — the same two sections — leaving one round for the advocate's
-actual question and none on a turn that also wanted authority.
-
-The bound was not the problem. `MAX_EVIDENCE_ROUNDS` limits how far a turn may
-WANDER, and those two sections are named by number before the turn starts —
-the case `exploratory=False` was built for. Wandering fell from 3/3 to 1/3.
-The number was not raised: raising a limit until it stops complaining is how a
-bound becomes a formality.
-
-The section list also had **two owners** — `factors.SECTION_FOR` and a literal
-`("18", "19")` in `turn.py`. `factors.sections_needed()` owns it now.
-
-
-### BK-2 - the screens are stated to the advocate - **CLOSED**
-Closed 7 September 2026 as **B-128**, and the defect was sharper than
-"unbuilt".
-
-`nm/core/screens.py` had been complete since slice 6 - four states, an express
-emergency exception, `unscreened` drawing its population from `ScreenKind` -
-and NOTHING CONSTRUCTED A SCREEN. That is B-079's shape and B-116's shape for
-the third time: a module that is right and has no production caller.
-
-**What made it worse than unbuilt.** `_run_screens` fired `G-UNSCREENED` under
-a comment claiming *"the output says so rather than reading as though it had
-passed"*, and measured on 7 September the advocate saw **zero** screen-related
-lines. The gate was in the metrics; the answer carried none of it. CLAUDE.md
-S9 exactly - the third state must be visible in the OUTPUT, not only in the
-type.
-
-Now `_run_screens` builds five `NOT_ASSESSED` screens from the vocabulary,
-asks `may_admit_substance` (which refuses, and the turn asserts that it does),
-and returns `screens_mod.unscreened(outstanding)` as rows. `_with_screens`
-appends them at **all three** Answer sites, blocked branches included - a turn
-that stopped to ask a question has still not screened the matter, and that is
-exactly when it matters.
-
-**Two things the type caught before a test had to.** `Answer.__post_init__`
-refuses a leading GROUND (PRD S6.2 S3: the answer leads with the action, never
-with background), so the note is appended LAST. And the first attempt appended
-to `head`, which is reassigned `list(elements)` further down - a SNAPSHOT, not
-the list - so the rows were discarded silently. The measurement that found the
-defect is what found the fix not working.
-
-**The deferral reason was wrong, and that is the lesson.** B2-B6 (conflicts,
-competence, engagement) remain slice 10 and R-8 still binds. But *telling the
-advocate the screens have not run* is not slice 10 work - it is the disclosure
-that makes the deferral honest, and it had been deferred along with the thing
-it discloses. **The cost recorded here still stands:** when B3 is built, a
-blank `firm_id` must read `NOT_ASSESSED` and never `CLEAR`.
-
-### BK-3 - a served-path judged run needs a credential - **CLOSED**
-Closed 7 September 2026. The premise was wrong: the password was never the
-advocate's to supply, because the scenario advocate is a FIXTURE.
-
-`tools/run_scenario.py` now mints its own - `_mint_scenario_advocate` enrols
-`adv_scenarios` with a generated password held for the run and never written
-down, and **refuses to re-enrol an advocate that already exists** rather than
-resetting a credential it does not own. `NM_SCENARIO_PASSWORD` still wins when
-it is set, so a real deployment is unaffected.
-
-CLAUDE.md S8 was the argument for closing it rather than living with it: every
-defect the first external review found lived between a correct module and the
-served path, and a judged run that never crosses authentication, serialisation
-and the web rendering is the weaker evidence by exactly that gap.
-
----
-
-### BK-4 - the authority index - **CLOSED, and it had been done for eight days**
-Closed 7 September 2026 as **B-141**, by looking at the file instead of at
-this row. Measured:
-
-| | |
-|---|---|
-| `.nm/authority.db` | 1,097 MB, `built_at 2026-08-30T07:51:38` |
-| `partial` | **no** |
-| indexed | **451,548** of 1,015,780 |
-| `readiness("authorities")` | `readable` |
-| a live search | **ANSWERED**, 40 binding findings, ratio and reasoning |
-
-The row said *has never been run*. It had been run on **30 August**, and
-every statement resting on it since was wrong - including a phase table
-written the same morning as this correction, saying `authorities` *waits on
-the index build (BK-4)*.
-
-**The count was wrong too, and in the harder way.** `BASELINE.md`'s `ratio`
-row said 144,744 where the corpus holds 144,739, so the attributable total
-was 451,553 and is **451,548**. The table was internally consistent and
-wrong at the source, which adding the rows up CONFIRMS rather than catches.
-`CLAUDE.md` and this file had both copied the total.
-
-**The rule it earns:** a document's claim about an artefact is a claim about
-the filesystem, and it is measured there.
-`tests/test_the_docs_do_not_outlive_the_artefact.py` fails the build on a
-live document saying the index is unbuilt while it sits on disk.
-
-**What is still true:** nothing in the repo triggers the build, and it stays
-that way. A rebuild needs the file deleted deliberately - the tool refuses
-to overwrite, because a half-written index replacing a good one is worse
-than a build that would not start.
-
----
 ## Observed on GS-14, 6 September 2026 — worth a decision, not yet a defect
 
-
-### BK-7 — thresholds repeated every turn — **CLOSED**
-Forty words naming nine thresholds, identical on all four GS-14 turns. The
-full list is given when the set CHANGES and one short clause when it has not —
-the B-120 move, never silence: §9 requires the third state to be visible in the
-output and not only in the type. `Thread.thresholds_told` carries what the
-advocate has already been given, which is history and not a derivation.
-
-### BK-8 — the phrase lists — **CLOSED as B-126**
-Not by trimming the lists. Both are gone, with both length rules, and
-`nm/core/route.py` reads the route. "bail" is one word and a case fact; "hi"
-is one word and a greeting; a count cannot tell them apart.
-
-
----
 
 ## The hard-coding audit, 7 September 2026
 
@@ -2408,24 +2893,3 @@ missing silently (**B-125**), the duplicated section list (**BK-6**).
 | every `_SCRIPTED_*` in `adapters/model/scripted.py` | the test double. Being scenario-shaped is what a double IS. |
 | feature ids (`D5`, `C7`…), enum values, format fragments | vocabulary owned by the enums and checked by `trace`. |
 
-### BK-8 - the phrase lists that survive, and why - **RE-MEASURED 7 Sept**
-Two remain in product code, not three. **`_MATTER_SIGNALS` and `_ABOUT_NM` are
-gone** (B-126) along with both length rules, so the hole recorded in the first
-version of this row - a message of three words or fewer with no signal routing
-to NON_MATTER, making "he absconded" a greeting - no longer exists. Measured
-from the code, not from this file: `grep -rn` finds both names only in prose
-explaining their removal.
-
-The rule the survivors satisfy is B-124's: each ROUTES and neither DECIDES.
-
-- **`chronology.CORRECTING`** (15 phrases) - documented and deliberate
-  (B-088): it detects that a correction is being *attempted* and decides
-  nothing, raising a question with both dates in it.
-- **`limitation._WORDS` / `_DAYS`** - parsing "three years" out of retrieved
-  statutory text. Not a heuristic on the advocate's message; it reads the
-  corpus, and a miss leaves the period uncomputed and says so.
-
-**Why this row was rewritten rather than left standing.** It named a list the
-product no longer holds, which is a document disagreeing with the code about
-what the code does - CLAUDE.md S4's shape, and the cheapest possible instance
-of it to have missed.
