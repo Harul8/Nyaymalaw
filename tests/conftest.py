@@ -39,6 +39,12 @@ from pathlib import Path
 
 import pytest
 
+#: BK-31. The roster is controlled, so `/api/register` requires the
+#: operator's authorisation. Named here so a test that must send it
+#: deliberately -- or must NOT -- can reach the same value the
+#: fixture configures.
+ENROLMENT_CODE = "fixture-enrolment-authorisation"
+
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / ".nm" / "eval_results.json"
 
@@ -138,6 +144,13 @@ def client(tmp_path, monkeypatch):
     password = "Fixture-password-not-a-secret-1"
 
     monkeypatch.setenv("NM_MATTER_KEY", KEY)
+    # BK-31. THE ROSTER IS CONTROLLED, so `/api/register` requires the
+    # operator's authorisation. The fixture supplies one because the tests
+    # exercise an AUTHORISED enrolment; the unauthorised and unconfigured
+    # cases are their own invariants in
+    # `tests/test_enrolment_is_authorised.py` and must not be reached by
+    # accident from every other file that happens to register.
+    monkeypatch.setenv("NM_ENROLMENT_CODE", ENROLMENT_CODE)
     monkeypatch.setenv("NM_MODEL_PROVIDER", "scripted")
     monkeypatch.setenv("NM_MODEL_ROUTINE", "scripted-1")
     monkeypatch.setenv("NM_EMBED_MODEL", "text-embedding-3-large")
@@ -177,6 +190,12 @@ def client(tmp_path, monkeypatch):
     application.engine = briefed(application.engine)
 
     c = TestClient(create_app(application))
+    # BK-31. THE AUTHORISATION IS A HEADER, SET ONCE, and that is why it is a
+    # header. It is proof the advocate was invited onto the roster, not part
+    # of who they are, so it does not belong in the registration body -- and
+    # putting it there would have meant amending every payload in the suite
+    # that registers, which is the one-site patch shape in test clothing.
+    c.headers["X-Enrolment-Code"] = ENROLMENT_CODE
 
     def sign_in(advocate_id: str = "adv_demo", *, password: str = password,
                 fresh: bool = False):

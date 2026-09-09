@@ -139,3 +139,49 @@ passed and none of the results was about any single tree.
 
 The gate caught it. The rule I am now holding: **no edits while a gate runs.**
 Nothing enforces this; it is on the unenforced list, and it is mine to keep.
+
+---
+
+## D-007 — The controlled roster wins, and enrolment is authorisation-gated
+
+**The question.** Two dated decisions contradicted each other. Self-service
+enrolment was permitted 6 September; a *controlled private roster* was recorded
+8 September. The register link stayed live, so the code implemented the earlier
+one. BK-31 was `blocked` on this and it was blocking BK-34, a P0.
+
+**Decided.** The roster. Enrolment now requires the operator's authorisation.
+
+**What settled it was not the dates.** `nm/core/turn.py:1575` relaxes scope and
+capacity release to ONE PERSON, and says why: *"the deployment is a controlled
+roster of practising advocates and the advocate IS the firm, so requiring a
+second person would stop every matter at intake in a solo practice."* That
+relaxation is sound only while the roster claim is true. With open self-service
+a stranger enrols and then releases their own professional screens, with no
+second person anywhere in the loop. A safety relaxation resting on an
+assumption the front door contradicts is the defect, not the door.
+
+**Three design choices inside it, each of which could have gone the other way:**
+
+*Gated, not removed.* The backlog permits "closed **or** approval-gated". The
+form survives; the authorisation does not. Removing the route entirely would
+have been simpler and would have made every practice enrol by shell command.
+
+*Fail closed.* With no `NM_ENROLMENT_CODE` configured, enrolment is **shut**,
+not open. An unconfigured control that admits everyone is the
+absent-input-reads-as-success shape aimed at the front door, and the failure
+mode is silent — nobody notices an open door.
+
+*A header, not a body field.* The authorisation is proof the advocate was
+invited, not part of the identity being created. It also meant the fixture
+could set it once rather than amending every registration payload in the
+suite, which would have been the one-site patch shape in test clothing.
+
+**What is NOT done.** Recovery, MFA and workspace identity remain — recorded as
+`BK-31-AC3`, `NOT_RUN`, with an honest note that there is no recovery route at
+all today. BK-31 does not derive `done`.
+
+**Costly to reverse.** Reopening self-service means re-taking the
+`turn.py:1575` relaxation with it.
+
+**If you disagree**, the change is one env var and one guard; say so and I will
+reverse it and re-open the screen-release question underneath.

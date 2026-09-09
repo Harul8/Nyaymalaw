@@ -753,18 +753,50 @@ items:
   title: account access, recovery and workspace identity
   kind: journey
   priority: P0
-  delivery_status: blocked
+  delivery_status: in_progress
   implementation: partial
   verification: partial
   phase: A
-  blocked_by:
-    type: product_decision
-    description: a controlled private roster (BACKLOG.md, 8 Sep) against self-service enrolment
-      (api.py:642, 6 Sep). The screen release at turn.py:1575 is relaxed BECAUSE the roster
-      claim is true.
   record: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity
-  next_action: resolve the roster contradiction before any further work
-  acceptance: []
+  next_action: the roster contradiction is resolved and enrolment is authorisation-gated;
+    recovery, MFA and workspace identity remain
+  acceptance:
+  - id: BK-31-AC1
+    requirement: enrolment is refused without the operator's authorisation, and a deployment
+      that configures none is CLOSED rather than open
+    required_evidence: [domain_test, integration_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_enrolment_is_authorised.py::test_an_unconfigured_deployment_is_closed_and_not_open
+      integration_test:
+        result: PASS
+        ref: tests/test_enrolment_is_authorised.py::test_it_is_refused_on_the_wire_and_not_only_in_the_function
+    negative_control:
+      mutation: present the correct authorisation
+      expected_failure: the door must OPEN; a door that never opens is not a door
+        and the practice cannot enrol the advocates it invited
+  - id: BK-31-AC2
+    requirement: a refused enrolment leaves no record behind
+    required_evidence: [integration_test]
+    evidence:
+      integration_test:
+        result: PASS
+        ref: tests/test_enrolment_is_authorised.py::test_an_unauthorised_attempt_enrols_nobody
+    negative_control:
+      mutation: register once unauthorised, then once with the authorisation
+      expected_failure: the second attempt collides with a record that was never
+        allowed to exist
+  - id: BK-31-AC3
+    requirement: account recovery, MFA and workspace identity
+    required_evidence: [integration_test, browser_journey]
+    evidence:
+      integration_test: {result: NOT_RUN, ref: '', note: not built}
+      browser_journey: {result: NOT_RUN, ref: '', note: not built}
+    negative_control:
+      mutation: lock an advocate out and attempt recovery
+      expected_failure: there is no recovery route at all today
+
 - id: BK-32
   title: responsive advocate home and matter navigation
   kind: journey

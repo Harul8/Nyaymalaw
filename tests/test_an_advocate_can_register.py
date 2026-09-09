@@ -25,6 +25,8 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.conftest import ENROLMENT_CODE
+
 pytestmark = pytest.mark.class_a
 
 GOOD = {
@@ -54,14 +56,20 @@ class _App:
 
 
 @pytest.fixture()
-def client(tmp_path):
+def client(tmp_path, monkeypatch):
     import nm.edge.api as api
     from nm.adapters.store.directory import FileDirectory
 
     was = api._application
     api.set_application(_App(FileDirectory(tmp_path, key="k" * 32)))
+    # BK-31. THE ROSTER IS CONTROLLED, so `/api/register` needs the operator's
+    # authorisation. This fixture SHADOWS the one in conftest, which is why it
+    # has to configure it too -- and why that shadowing cost an hour: the
+    # header was set in conftest and this file never saw it.
+    monkeypatch.setenv("NM_ENROLMENT_CODE", ENROLMENT_CODE)
     try:
         with TestClient(api.app) as c:
+            c.headers["X-Enrolment-Code"] = ENROLMENT_CODE
             yield c
     finally:
         api.set_application(was)

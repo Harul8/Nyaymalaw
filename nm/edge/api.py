@@ -639,11 +639,22 @@ class Registration(BaseModel):
     one. The screen is not built yet, so nothing live is weakened today; when
     it is built, a blank firm must make it read NOT_ASSESSED and never CLEAR.
 
-    SELF-SERVICE IS PERMITTED AS OF 6 SEPTEMBER 2026, on the advocate's
-    instruction, and it reverses a decision the sign-in page used to state.
-    What that decision was FOR survives: it recorded the Bar Council number
-    and the firm, and those are still recorded. Reversing who may enrol is not
-    the same as reversing what enrolment captures.
+    ENROLMENT IS APPROVAL-GATED. BK-31, decided 9 September 2026.
+
+    Two dated decisions contradicted each other. Self-service was permitted on
+    6 September; a CONTROLLED PRIVATE ROSTER was recorded on 8 September, and
+    the later one governs. What settled it was not the dates but a dependency:
+    `nm/core/turn.py` relaxes scope and capacity release to ONE PERSON
+    *because* "the deployment is a controlled roster of practising advocates
+    and the advocate IS the firm". With open self-service that relaxation is
+    unsound -- a stranger enrols and then releases their own professional
+    screens. A product that advises on law cannot let the front door decide
+    that.
+
+    So the form survives and the authorisation does not. What the 6 September
+    instruction was FOR also survives: enrolment, practice and firm are still
+    asked for and still optional, because a form that refuses an advocate
+    without their Bar number to hand is one they abandon.
     """
 
     name: NonBlank = Field(min_length=1)
@@ -694,9 +705,39 @@ _REFUSED = {
 _REFUSED_DEFAULT = "those credentials were not accepted"
 
 
+def _refuse_an_unauthorised_enrolment(offered: str) -> None:
+    """BK-31. THE ROSTER IS CONTROLLED, SO THE DOOR IS TOO.
+
+    FAIL CLOSED. With no `NM_ENROLMENT_CODE` configured, self-service is shut
+    rather than open: an unconfigured control that admits everyone is the
+    absent-input-reads-as-success shape (CLAUDE.md §9) pointed at the front
+    door, and this door decides who the professional screens are relaxed for.
+
+    The refusal names the route that still works, because an advocate who
+    cannot enrol and is told nothing simply leaves. Enrolment by the operator
+    -- `tools/enrol.py` -- is the roster, and it always was.
+    """
+    import hmac
+    import os
+
+    expected = os.environ.get("NM_ENROLMENT_CODE") or ""
+    if not expected.strip():
+        raise HTTPException(
+            status_code=403,
+            detail="Self-service enrolment is closed on this deployment. "
+                   "Advocates are enrolled by the practice; ask whoever "
+                   "administers this installation to add you.")
+    if not hmac.compare_digest(offered.strip(), expected.strip()):
+        raise HTTPException(
+            status_code=403,
+            detail="That enrolment authorisation was not recognised. "
+                   "Nothing was saved.")
+
+
 @app.post("/api/register")
 @implements("A1")
-def register(body: Registration) -> dict:
+def register(body: Registration,
+             x_enrolment_code: str | None = Header(default=None)) -> dict:
     """Enrol an advocate, and DO NOT sign them in.
 
     Registration and authentication are separate acts. Issuing a session here
@@ -720,6 +761,8 @@ def register(body: Registration) -> dict:
         enrol,
     )
     from nm.ports.directory import AlreadyEnrolled
+
+    _refuse_an_unauthorised_enrolment(x_enrolment_code or "")
 
     if body.password != body.password_again:
         # BEFORE the credential is derived, so a typo costs nothing and the

@@ -37,7 +37,7 @@ found cannot answer it.
 | H | Close | 0/2 | 2 | 0/2 | 1/5 | 0 | not releasable |
 | I | Leave | 1/1 | 1 | 0/1 | 2/16 | 5 | not releasable |
 
-**80 rows · 17 open P0 · 1 blocked · 18/44 features implemented**
+**80 rows · 17 open P0 · 0 blocked · 18/44 features implemented**
 
 ### Professional plan — registered and derived
 
@@ -67,7 +67,7 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 ### Open P0 — what is unsafe
 
 - **BK-21** [A/C/I] the matter encryption key IS the OpenAI API key — *verifying* · the provider credential itself is still the old value and only the account holder can rotate it at the provider; see BK-21-AC4 and docs/DECISIONS.md
-- **BK-31** [A] account access, recovery and workspace identity — *blocked* · resolve the roster contradiction before any further work
+- **BK-31** [A] account access, recovery and workspace identity — *in_progress* · the roster contradiction is resolved and enrolment is authorisation-gated; recovery, MFA and workspace identity remain
 - **BK-33** [A] recognisable matter cover, truthful board and real reopen — *in_progress* · render passed_deadlines, which the projection already emits
 - **BK-34** [B] front-door legal and professional screens before substance — *in_progress* · stale the conflict clearance when a party is added; make the emergency route reachable
 - **BK-35** [D] cause-specific accrual and answer-consistency gate — *in_progress* · refuse to run the period from a single dated fact that does not satisfy the curated trigger; emit the statutory limb
@@ -84,14 +84,10 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 - **BK-69** [C/G/I] multimodal privacy and processing boundary — *planned* · define consent, purpose, quarantine, processor, least-privilege, privilege, retention, deletion and derivative-attribution controls before media intake ships
 - **BK-70** [D/E/F] remedy and enforceability model — *planned* · model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
 
-### Blocked — waiting on a decision
-
-- **BK-31** account access, recovery and workspace identity — product_decision: a controlled private roster (BACKLOG.md, 8 Sep) against self-service enrolment (api.py:642, 6 Sep). The screen release at turn.py:1575 is relaxed BECAUSE the roster claim is true.
-
 ### Admitted gaps in the evidence
 
 - **26 rows rest on prose evidence** (`legacy: true`), closed before this registry existed. Each is retired by attaching an executable proof, not by editing a heading.
-- **35 active rows carry no acceptance criteria yet**, so `done` cannot be derived for them however much work is finished.
+- **34 active rows carry no acceptance criteria yet**, so `done` cannot be derived for them however much work is finished.
 - **44 of 47 journey steps carry no contract**, so what the step must do, refuse and recover from is not yet stated anywhere a check can read.
 - **37 steps are DERIVED, not stated by the PRD.** The PRD gives a sequence for Phase B and Phase D and a question for the other seven; a derived step is a reading of the plan and is not the plan.
 

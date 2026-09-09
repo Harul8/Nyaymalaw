@@ -1657,7 +1657,13 @@ $('register').addEventListener('submit', async (ev) => {
   try {
     const r = await api('/api/register', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      // BK-31. A HEADER, NOT A BODY FIELD. The authorisation is proof the
+      // advocate was invited onto the roster, not part of who they are, so it
+      // does not belong in the identity the registration creates.
+      headers: {
+        'content-type': 'application/json',
+        'x-enrolment-code': $('reg-code').value.trim(),
+      },
       body: JSON.stringify({
         name: $('reg-name').value.trim(),
         email: $('reg-email').value.trim(),
