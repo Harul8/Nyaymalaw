@@ -429,8 +429,25 @@ in this project against the legal corpus.
 
 *The rule: a `search_mode: "none"` result is "the graph could not answer", and
 the next step is Grep, never a conclusion that the code does not exist.*
-`semantic` in that field is the only value that means the question was actually
-asked of the vectors.
+
+**`search_mode` has four values and `semantic` is not the good one.** Search is
+hybrid — FTS5 BM25 and the vectors are merged by reciprocal rank fusion — and
+the field reports *which lists had anything in them*, in `search.py`:
+
+| value | what it means |
+|---|---|
+| `hybrid` | both answered. The vectors WERE consulted |
+| `fts` | lexical only; the vectors returned nothing |
+| `semantic` | **the vectors only** — BM25 found nothing, which is normal for a full sentence |
+| `keyword` / `none` | fell back to `LIKE`, or nothing answered at all |
+
+So `hybrid` and `semantic` both mean the vectors were asked. Reading `hybrid`
+as "not semantic" is the same zero-shaped mistake one level up.
+
+**Scores carry no similarity signal.** They are RRF — `1.0 / (60 + rank + 1)` —
+so the top five are always 0.016393, 0.016129, 0.015873, 0.015625, 0.015385
+whatever the query. **Never threshold on them and never read them as
+confidence**; they order results and say nothing about how good the match is.
 
 **Embeddings are built. `.code-review-graph/graph.db` carries 2,572 vectors**,
 embedded 9 September 2026 with `text-embedding-3-large` at its full 3072
@@ -444,6 +461,16 @@ documented as embedding "all current non-file nodes" and reaches them through
 Class (274) is embedded. **Do not read the 246 as a gap to close** — and do not
 read it as full coverage either, because a File node will never match a
 semantic query no matter how the index is rebuilt.
+
+**What is embedded is the node's IDENTITY, not its body.** `_node_to_text`
+composes the dotted `Parent.name`, the bare name, the identifier split into
+words, the kind, the module directory, the signature, and **the docstring
+truncated to 400 characters**. No implementation. This codebase gets unusually
+good results because its names and docstrings are unusually descriptive — a
+test called `test_the_turn_is_withheld_by_the_grounding_family_and_nothing_else`
+is nearly a sentence already. **A badly-named function doing exactly what you
+asked for will not be found**, and that miss looks identical to absence. S3
+again, and Grep is still the answer to it.
 
 **The old diagnosis in this file was wrong, and worth recording as a shape.**
 It said `--provider local` crashed inside `SentenceTransformer` model loading —
