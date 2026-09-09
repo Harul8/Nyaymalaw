@@ -31,6 +31,8 @@ claim is prose until something resolves it.
 from __future__ import annotations
 
 import ast
+import functools
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -42,6 +44,25 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sweep test  ->  the test that proves it can fail.
 #: A sweep with no control is a sweep that has never been shown to work.
 CONTROLS: dict[str, str] = {
+    # BK-44 -- a documented defect is marked strict, never called, over every
+    # test file in the suite. Its control plants the `if` and `except` forms
+    # that were actually in the journey file, and the `from pytest import`
+    # spelling that would otherwise slip past.
+    "test_no_test_calls_xfail_instead_of_marking_it":
+        "test_the_xfail_scan_can_see_a_planted_call",
+    "test_every_xfail_marker_is_strict_and_names_its_row":
+        "test_the_xfail_scan_can_see_a_planted_call",
+    # B-141 -- no live document says an artefact is absent while it is on
+    # disk. Verified 9 September 2026 rather than assumed: both ABSENCE_CLAIMS
+    # rows report present=True (so neither is vacuously skipped) and the
+    # control asserts the phrases match the sentences that actually went stale.
+    "test_no_live_document_says_an_artefact_is_absent_while_it_is_on_disk":
+        "test_the_check_can_see_a_stale_claim",
+    # BK-43 -- no stylesheet clips the document scroll width, over every CSS
+    # file the product serves. Its control plants the rule in all four forms
+    # it could return in, including the `clip` replacement.
+    "test_no_stylesheet_clips_the_document_scroll_width":
+        "test_the_overflow_scan_can_see_a_planted_rule",
     # BK-30 -- one CSS class, one owner. `.gate` meant a gate FIRING in an
     # answer and also the full-screen sign-in overlay, so every disclosure
     # became `position:fixed; inset:0; z-index:100` and painted the whole
@@ -144,12 +165,75 @@ CONTROLS: dict[str, str] = {
         "test_the_metric_scan_can_see_an_unserialised_field",
 }
 
-#: How a sweep is recognised: it builds a list of offenders over a population
-#: and asserts the list is empty.
-OFFENDER_NAMES = ("offenders", "failures", "missing", "unguarded", "dead",
-                  "stale", "prose_only", "unreadable")
+#: SWEEPS WITH NO VERIFIED CONTROL, declared 9 September 2026. BK-52.
+#:
+#: The detector below used to match a hard-coded list of variable names
+#: (`offenders`, `failures`, `missing`, ...). A sweep written that day named its
+#: list `offences` -- one letter outside the allowlist -- and was therefore not
+#: recognised as a sweep at all, never required to have a control, and passed
+#: this file silently. Reading the source instead of the allowlist found
+#: twenty-two more that had been invisible the same way.
+#:
+#: MOST OF THESE PROBABLY HAVE A CONTROL. The value names the candidate found
+#: by reading the file. It is NOT registered as the control, because this
+#: file's argument is precisely that a control which is guessed is false
+#: confidence -- "a control can be a second call, a planted fixture, a
+#: `pytest.raises`, or a sibling test. Guessing produces false confidence,
+#: which is the failure this file exists to refuse."
+#:
+#: So each is verified and moved into CONTROLS one at a time. An admitted gap
+#: is work; a silent one is a surprise.
+UNCONTROLLED: dict[str, str] = {
+    "test_a_read_that_builds_a_prompt_and_a_guard_uses_one_value":
+        "candidate: test_the_scan_catches_a_planted_hand_guard",
+    "test_a_structured_prompt_does_not_carry_it":
+        "candidate: test_the_scan_can_see_a_prompt_that_lost_its_clause",
+    "test_a_withheld_turn_commits_none_of_what_it_derived":
+        "NO CANDIDATE FOUND -- nothing in the file plants a withheld turn "
+        "that commits",
+    "test_every_answer_in_the_run_carries_the_trailing_disclosures":
+        "candidate: test_the_answer_coverage_check_can_see_an_uncovered_site",
+    "test_every_evidence_adapter_answers_the_whole_port":
+        "candidate: test_the_sweep_can_see_the_population",
+    "test_every_read_schema_can_be_compiled_by_strict_mode":
+        "candidate: test_the_suite_can_see_the_declared_schemas",
+    "test_every_recurring_shape_has_a_mechanism_more_than_one_defect_points_at":
+        "candidate: test_the_enumerator_scan_can_see_a_defect_that_ignores_"
+        "its_sweep",
+    "test_every_schema_is_identified_by_an_exact_key_and_not_a_substring":
+        "candidate: test_the_schema_scan_can_see_a_schema_with_no_responder",
+    "test_no_binding_reason_reads_as_a_citation":
+        "NO CANDIDATE FOUND",
+    "test_no_feature_is_tested_while_its_eval_runs_every_turn_and_it_has_no_turn":
+        "candidate: test_the_scan_can_see_an_unreached_module",
+    "test_no_gate_disclosure_reads_as_a_citation":
+        "NO CANDIDATE FOUND",
+    "test_no_model_name_or_provider_client_appears_in_the_core":
+        "NO CANDIDATE FOUND -- and this one guards the layering, so it is "
+        "the least comfortable entry in this table",
+    "test_no_module_outside_the_adapters_names_a_provider":
+        "candidate: test_the_wire_scan_can_see_a_leak",
+    "test_no_read_asks_for_the_hard_tier_while_none_is_earned":
+        "candidate: test_the_scan_can_see_the_schemas",
+    "test_the_core_imports_only_core_ports_and_domain":
+        "NO CANDIDATE FOUND -- layercheck covers the same rule from outside "
+        "the suite, which is a different population, not a control",
+    "test_the_golden_suite_path_cannot_reach_a_model":
+        "candidate: test_the_model_scan_can_see_a_runner_that_would_spend",
+    "test_the_implemented_type_adds_nothing_the_contract_does_not_declare":
+        "NO CANDIDATE FOUND",
+    "test_the_phrases_are_not_the_identifiers_with_the_underscores_removed":
+        "candidate: test_the_value_scan_can_see_an_identifier_reaching_the_"
+        "advocate",
+    "test_the_scripted_provider_answers_every_schema_the_core_declares":
+        "candidate: test_the_schema_scan_can_see_a_schema_with_no_responder",
+    "test_every_sweep_names_a_control_that_proves_it_can_fail":
+        "this file's own sweep; its control is the pair of tests below that "
+        "plant an unregistered sweep and a stale entry",
+}
 
 
+@functools.lru_cache(maxsize=1)
 def _tests() -> dict[str, tuple[str, str]]:
     """Every test function in the suite, with its file and source."""
     out: dict[str, tuple[str, str]] = {}
@@ -161,14 +245,56 @@ def _tests() -> dict[str, tuple[str, str]]:
     return out
 
 
+def _asserted_empty(body: str) -> set[str]:
+    """Every local name this test builds up and then asserts is empty.
+
+    READ OFF THE SOURCE, NOT OFF A LIST OF NAMES WE THOUGHT OF. `OFFENDER_NAMES`
+    was that list, and a sweep written against `web/` named its list `offences`
+    -- one letter outside the allowlist -- so it was not recognised as a sweep,
+    was never required to have a positive control, and passed this file
+    silently on the day it was added.
+
+    That is this file's own defect wearing this file's own costume: a checker
+    whose POPULATION is wrong reports a clean result exactly like one that
+    found nothing. The name of the variable was never the rule. The rule is
+    that something is accumulated and then asserted empty, and that is what is
+    matched now.
+    """
+    try:
+        tree = ast.parse(textwrap.dedent(body))
+    except SyntaxError:                     # pragma: no cover -- defensive
+        return set()
+
+    appended: set[str] = set()
+    asserted: set[str] = set()
+    for node in ast.walk(tree):
+        # `x.append(...)` / `x.extend(...)` / `x += [...]`
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) \
+                and node.func.attr in ("append", "extend") \
+                and isinstance(node.func.value, ast.Name):
+            appended.add(node.func.value.id)
+        elif isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Name):
+            appended.add(node.target.id)
+        # `assert not x` / `assert not x, "..."`
+        elif isinstance(node, ast.Assert) and isinstance(node.test, ast.UnaryOp) \
+                and isinstance(node.test.op, ast.Not) \
+                and isinstance(node.test.operand, ast.Name):
+            asserted.add(node.test.operand.id)
+    return appended & asserted
+
+
+@functools.lru_cache(maxsize=1)
 def _sweeps() -> dict[str, str]:
-    """Tests that enumerate a population and assert nobody in it is broken."""
+    """Tests that enumerate a population and assert nobody in it is broken.
+
+    Cached: five tests in this file ask for it, and each call re-parses every
+    file in the suite. `check.py` must stay cheap enough that there is no
+    excuse for skipping it, and a guard that makes the gate slower is a guard
+    that eventually gets turned off.
+    """
     found = {}
     for name, (file, body) in _tests().items():
-        builds = any(f"{n}.append(" in body or f"{n}: list" in body
-                     for n in OFFENDER_NAMES)
-        asserts_empty = any(f"assert not {n}" in body for n in OFFENDER_NAMES)
-        if builds and asserts_empty:
+        if _asserted_empty(body):
             found[name] = file
     return found
 
@@ -185,6 +311,8 @@ def test_every_sweep_names_a_control_that_proves_it_can_fail():
     tests = _tests()
     uncontrolled, unresolved = [], []
     for sweep, file in sorted(_sweeps().items()):
+        if sweep in UNCONTROLLED:
+            continue                      # declared, dated and owned by BK-52
         control = CONTROLS.get(sweep)
         if control is None:
             uncontrolled.append(f"{file}::{sweep}")
@@ -202,6 +330,34 @@ def test_every_sweep_names_a_control_that_proves_it_can_fail():
         "these sweeps name a control that is not in the suite:\n  "
         + "\n  ".join(unresolved)
         + "\n\nA rename moved it and left the claim behind.")
+
+
+def test_no_admitted_gap_outlives_the_sweep_it_was_admitted_for():
+    """UNCONTROLLED may shrink and it may not rot.
+
+    An entry for a sweep that no longer exists -- renamed, deleted, or
+    rewritten so it no longer accumulates -- is a gap the table still claims
+    is open, and it makes the remaining work look larger than it is. The
+    opposite of the CONTROLS staleness check, and needed for the same reason.
+    """
+    sweeps = _sweeps()
+    stale = sorted(s for s in UNCONTROLLED if s not in sweeps)
+    assert not stale, (
+        "these are declared as sweeps awaiting a control and are no longer "
+        "sweeps:\n  " + "\n  ".join(stale)
+        + "\n\nIf one gained a control, move it to CONTROLS. If it was "
+          "renamed or deleted, remove the entry -- BK-52 counts what is left "
+          "by the size of this table.")
+
+
+def test_an_admitted_gap_is_never_also_a_registered_control():
+    """One row, one state. A sweep in both tables would be counted as done by
+    CONTROLS and as outstanding by UNCONTROLLED, and BK-52 would never reach
+    zero however much work was done."""
+    both = sorted(set(CONTROLS) & set(UNCONTROLLED))
+    assert not both, (
+        f"these sweeps are registered as controlled AND declared as awaiting "
+        f"a control: {both}")
 
 
 def test_no_control_is_named_for_a_sweep_that_no_longer_exists():

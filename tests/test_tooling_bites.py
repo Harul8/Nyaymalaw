@@ -12,6 +12,7 @@ reported reason, not merely on a non-zero exit code.
 from __future__ import annotations
 
 import ast
+import re
 import shutil
 import subprocess
 import sys
@@ -995,3 +996,53 @@ def test_the_gate_scan_sees_code_and_ignores_prose(body, caught):
                 "T9 failed and did not name the gate it failed on")
     finally:
         planted.unlink()
+
+
+# =========================== BK-51: the journey manifest stays honest ========
+
+def test_the_journey_manifest_matches_what_the_suite_collects():
+    """A DECLARED MANIFEST THAT DRIFTS IS WORSE THAN NONE.
+
+    `tools/journey.py` declares `EXPECTED` so that a phase which stops
+    reporting is a failure rather than a silence. Declared, not derived -- if
+    the runner read the expected phases out of the test file, deleting a phase
+    would delete its own expectation and the check would be theatre.
+
+    The cost of declaring is drift: a phase added and not registered is never
+    waited for, and one removed leaves a name the runner asks for for ever.
+    Neither is visible from inside the runner, so it is visible from here.
+
+    Collection only -- no browser starts, so this stays class A.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_journey_manifest", ROOT / "tools" / "journey.py")
+    journey = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(journey)
+
+    out = subprocess.run(
+        [sys.executable, "-m", "pytest",
+         "tests/test_the_journey_login_to_logout.py",
+         "-m", "journey", "--collect-only", "-p", "no:randomly"],
+        capture_output=True, text=True, cwd=ROOT)
+
+    # `-q` prints only a count; the tree form prints the node ids, which is
+    # what this needs. The module itself matches the pattern, so drop it.
+    module = "test_the_journey_login_to_logout"
+    collected = {n for n in re.findall(r"test_[a-z0-9_]+(?:\[[^\]]*\])?",
+                                       out.stdout)
+                 if n != module}
+
+    assert collected, (
+        "the journey suite collected nothing, so this check read an empty "
+        "population:\n" + (out.stdout + out.stderr)[-800:])
+
+    declared = set(journey.EXPECTED)
+    assert collected == declared, (
+        "tools/journey.py::EXPECTED has drifted from the suite.\n"
+        f"  collected but not declared: {sorted(collected - declared)}\n"
+        f"  declared but not collected: {sorted(declared - collected)}\n\n"
+        "A phase the runner does not expect can vanish without a word; one it "
+        "expects and never gets is a failure on every run. Update EXPECTED "
+        "deliberately -- that it is a deliberate edit is the whole point.")

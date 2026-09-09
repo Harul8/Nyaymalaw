@@ -288,6 +288,9 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
 
 # ================================================= 4. keyboard-only working ==
 
+@pytest.mark.xfail(strict=True, reason=(
+    "BK-30/BK-32: the composer cannot be submitted from the keyboard; "
+    "Ctrl+Enter does nothing and the mouse is required"))
 def test_phase_4_a_brief_can_be_filed_without_a_mouse(page, journey):
     """Keyboard-only, because an advocate dictating or on a laptop trackpad
     is not an accessibility edge case -- it is the ordinary way a long brief
@@ -299,15 +302,13 @@ def test_phase_4_a_brief_can_be_filed_without_a_mouse(page, journey):
     # The composer is a form: Enter submits from a focused control. If it does
     # not, the advocate must reach for the mouse to send a brief they just
     # typed with both hands.
+    # NO MOUSE FALLBACK. This used to catch the timeout, click `#send`, and
+    # call `pytest.xfail(...)` -- which reports the defect but can never XPASS,
+    # because an imperative xfail only fires on the branch that takes it. The
+    # marker above is strict, so the day Ctrl+Enter works this phase XPASSes
+    # and the runner says to remove it. BK-44.
     page.keyboard.press("Control+Enter")
-    try:
-        page.wait_for_selector(".turn", timeout=60000)
-    except Exception:
-        page.click("#send")
-        page.wait_for_selector(".turn", timeout=60000)
-        pytest.xfail("BK-30/BK-32: the composer cannot be submitted from the "
-                     "keyboard; Ctrl+Enter does nothing and the mouse is "
-                     "required")
+    page.wait_for_selector(".turn", timeout=60000)
     assert not page.errors, f"the page threw: {page.errors}"
 
 
@@ -612,6 +613,9 @@ def test_phase_9_reload_restores_the_matter(page, journey):
         "a restored turn presents itself as a fresh one")
 
 
+@pytest.mark.xfail(strict=True, reason=(
+    "BK-40: the session is gone and the masthead still shows the advocate as "
+    "signed in"))
 def test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead(
         page, journey):
     """THE COUNTEREXAMPLE BK-40 IS OPEN FOR.
@@ -637,9 +641,12 @@ def test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead(
     # describes was fixed is worse than one that never ran.
     page.wait_for_selector("#gate:not([hidden])", timeout=30000)
 
-    if not page.is_hidden("#masthead"):
-        pytest.xfail("BK-40: the session is gone and the masthead still "
-                     "shows the advocate as signed in")
+    # THE ASSERTION, not a conditional xfail. The marker above carries the
+    # row; this states the rule, so the phase XPASSes the day it holds. BK-44.
+    assert page.is_hidden("#masthead"), (
+        "the session is gone and the masthead still shows the advocate as "
+        "signed in, so they are looking at their own name above a product "
+        "that can no longer do anything for them")
 
 
 def test_phase_13_a_send_that_fails_keeps_the_brief_and_offers_one_retry(
@@ -752,6 +759,9 @@ def test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways
 
 # ================================================= 11-12. the way out ========
 
+@pytest.mark.xfail(strict=True, reason=(
+    "BK-40: the sign-in screen is shown after a logout the server never "
+    "confirmed, which reads as proof of signing out"))
 def test_phase_11_a_logout_the_server_refuses_is_not_shown_as_done(
         page, journey):
     """THE MEASURED DEFECT IN BK-40, and the worst one on this page.
@@ -773,12 +783,15 @@ def test_phase_11_a_logout_the_server_refuses_is_not_shown_as_done(
     # (which is the defect) or the page says the logout was not confirmed.
     page.wait_for_selector("#gate:not([hidden]), #login-state", timeout=15000)
 
+    # THE RULE, ASSERTED. The gate may be up, but not SILENTLY: an advocate
+    # shown the sign-in screen believes they are signed out, and on a shared
+    # machine that belief is the whole of the protection. The marker above
+    # carries the row so this XPASSes the day the product says so. BK-44.
     shown = _visible_text(page).lower()
-    if page.is_visible("#gate") and "could not" not in shown \
-            and "not confirmed" not in shown and "unconfirmed" not in shown:
-        pytest.xfail("BK-40: the sign-in screen is shown after a logout the "
-                     "server never confirmed, which reads as proof of "
-                     "signing out")
+    assert not page.is_visible("#gate") or any(
+        p in shown for p in ("could not", "not confirmed", "unconfirmed")), (
+        "the sign-in screen is shown after a logout the server never "
+        "confirmed, and nothing on the page says the logout was unconfirmed")
 
 
 def test_phase_12_a_confirmed_logout_cannot_be_undone_by_reload(page, journey):

@@ -62,7 +62,7 @@ the served path with a check that is able to fail.
 
 Authentication and advocate identity, the matter list and thread board, re-entry and re-orientation, and search over the corpus. **A1–A4, all four implemented.**
 
-### Open — 12
+### Open — 13
 
 #### J-1 — The file list cannot tell one matter from another
 
@@ -596,6 +596,69 @@ believes whatever it is handed:
 **Acceptance:** the runner asserts an expected phase manifest by node id and
 fails on any absence; a non-zero pytest return code is a failure; artifacts are
 cleared per run; `report.json` carries the fingerprint and the return code.
+
+#### BK-52 — twenty-two sweeps have never been shown to be able to fail — **OPEN · P1 · Phase A**
+Opened 9 September 2026, while fixing BK-43. Not from the audit — this one was
+found by the repair.
+
+`tests/test_every_sweep_has_a_positive_control.py` is the file that enforces
+B-049's lesson: *a sweep that only ever finds nothing has not been shown to
+find anything*, so every sweep must PLANT a broken member and prove it is
+reported. It works. It was reading the wrong population.
+
+**How a sweep was recognised, until today:**
+
+```python
+OFFENDER_NAMES = ("offenders", "failures", "missing", "unguarded", "dead",
+                  "stale", "prose_only", "unreadable")
+```
+
+A hard-coded list of variable names. The sweep written for BK-43 named its list
+`offences` — one letter outside the allowlist — so it was **not recognised as a
+sweep at all**, was never required to have a control, and passed this file
+silently on the day it was added. That is this file's own defect wearing this
+file's own costume: a checker whose POPULATION is wrong reports a clean result
+in exactly the way one that found nothing does.
+
+**The name of the variable was never the rule.** The rule is that something is
+accumulated and then asserted empty, and `_sweeps()` now reads that off the AST
+— `x.append(...)` / `x.extend(...)` / `x += ...` intersected with
+`assert not x`. Fixed, and it is the general form: no future name can escape.
+
+**What the fix uncovered.** The detector went from recognising a handful to
+recognising **22 more**, none of which had ever been required to have a
+control. They are declared in `UNCONTROLLED`, dated, each naming the candidate
+found by reading its file — as a HYPOTHESIS, not a registration, because this
+file's whole argument is that a guessed control is false confidence:
+
+> *"a control can be a second call, a planted fixture, a `pytest.raises`, or a
+> sibling test. Guessing produces false confidence, which is the failure this
+> file exists to refuse."*
+
+**Six have no candidate at all**, and the uncomfortable one is
+`test_no_model_name_or_provider_client_appears_in_the_core` — the layering
+guard. `test_the_core_imports_only_core_ports_and_domain` is the same shape;
+`layercheck` covers that rule from outside the suite, which is a different
+population and not a control.
+
+**Why this is P1 and not P0.** Nothing is known to be broken. What is known is
+that 22 checks have never been shown capable of reporting a break, which is the
+state B-049 was in for weeks before it was found — it had been passing on every
+commit and had never once run.
+
+**Two guards so the admitted gap cannot rot.**
+`test_no_admitted_gap_outlives_the_sweep_it_was_admitted_for` refuses an entry
+whose sweep no longer exists, so the table cannot make the remaining work look
+larger than it is; `test_an_admitted_gap_is_never_also_a_registered_control`
+refuses a sweep in both tables, so the count can actually reach zero. A new
+sweep still cannot be added without a control — `UNCONTROLLED` is closed at 22
+and shrinks only.
+
+**Acceptance:** `UNCONTROLLED` is empty. Each entry is worked one at a time:
+read the sweep, confirm the candidate actually plants a member that sweep would
+report, and move it to `CONTROLS` — or write the control it turns out not to
+have. A candidate moved without being read is the defect this row is about.
+
 ### Closed — 4
 
 #### BK-22 - signing in depended on a key that is meant to rotate - **CLOSED**

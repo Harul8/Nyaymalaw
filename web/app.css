@@ -356,7 +356,22 @@ main > * { min-width: 0; }
 }
 .el .refs { display: block; }
 #thread, .turn, .el { max-width: 100%; min-width: 0; }
-body, main { overflow-x: hidden; }
+
+/* NO `overflow-x: hidden` ON `body` OR `main`. BK-43.
+ *
+ * It reads as belt-and-braces and it is the opposite: clipping the overflow
+ * makes `documentElement.scrollWidth` equal `clientWidth`, so the journey
+ * phase that checks for sideways scroll can no longer fail. The page would
+ * still have content off the right edge and nothing would ever say so.
+ *
+ * The rule was written twice -- once in the masthead section and once here --
+ * and only the masthead copy was removed, so the check stayed disabled for a
+ * week under a comment recording its removal. `tests/test_no_rule_hides_the
+ * _overflow.py` now refuses the third copy, because nothing structural
+ * refused the second.
+ *
+ * The real fixes are above and they are enough: `overflow-wrap: anywhere` on
+ * the locator, and `max-width: 100%; min-width: 0` on the containers. */
 
 /* ============================ THE TABS ============================ */
 
@@ -874,7 +889,10 @@ button.ghost.cancel { margin-right: 0.6rem; }
   .tabs { margin-left: 0; }
 }
 
-/* `body { overflow-x: hidden }` WAS HERE FOR TEN MINUTES AND WAS REMOVED.
+/* `body { overflow-x: hidden }` WAS HERE FOR TEN MINUTES AND WAS REMOVED --
+ * and a SECOND copy in the locator section survived this comment for a week,
+ * which is why the rule now has a test and not just a paragraph. See BK-43
+ * and `tests/test_no_rule_hides_the_overflow.py`.
  *
  * It looked like belt-and-braces and it was the opposite: clipping the
  * overflow makes `documentElement.scrollWidth` equal `clientWidth`, so the
