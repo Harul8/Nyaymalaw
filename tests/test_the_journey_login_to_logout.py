@@ -201,6 +201,27 @@ def _advise(page, message: str):
         "!document.body.innerText.includes('Working...')", timeout=90000)
 
 
+def _reach_rail(page, width):
+    """Get the matter navigator on screen, however this width offers it.
+
+    THE RULE IS REACHABLE, NOT VISIBLE (BK-32). Below 820px the rail is a
+    drawer behind `#matters-toggle`; above it, it is simply there. A phase
+    that asserted the rail was visible would fail on a correct drawer, and a
+    phase that returned early when it WAS visible asserted nothing at desktop
+    -- which is what BK-47 was.
+    """
+    if page.is_visible("#rail"):
+        return
+    toggle = page.locator("#matters-toggle")
+    assert toggle.is_visible(), (
+        f"at {width}px the rail is not shown and no control opens it, so an "
+        f"advocate can work the matter they are in and reach no other one")
+    toggle.click()
+    page.wait_for_selector("#rail", state="visible", timeout=10000)
+    assert page.is_visible("#rail-body"), (
+        f"at {width}px the control opened nothing")
+
+
 def _visible_text(page) -> str:
     return page.inner_text("body")
 
@@ -264,26 +285,67 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
     some control, at every width -- rather than asserting the rail is visible,
     because a drawer, a tab or a menu would all satisfy it.
     """
+    # AND IT NO LONGER RETURNS AT DESKTOP. BK-47.
+    #
+    # This read `if page.is_visible("#rail"): return`, so at 1280px the phase
+    # asserted nothing at all past sign-in -- one of the three widths it is
+    # parameterised over was doing no work. BK-32's acceptance is that the
+    # advocate can START, FIND and SWITCH matters and reach Search, History,
+    # identity and sign-out at every width, and reachability of the rail is
+    # the first step of that, not the whole of it.
+    #
+    # (The version before THAT called `pytest.xfail(...)` whenever
+    # `width < 820`, so the phase could never pass however the product
+    # changed -- S11, a check that cannot fail wearing the costume of one
+    # that does. Both are the same defect at different depths: an assertion
+    # that does not run.)
     _sign_in(page, journey, width, height)
 
-    # THE ASSERTION RUNS AT EVERY WIDTH, and the first version of this phase
-    # did not: it called `pytest.xfail(...)` before the assertion whenever
-    # `width < 820`, so the phase could never pass however the product
-    # changed. BK-32 was fixed and this still reported the defect --
-    # S11, a check that cannot fail, wearing the costume of one that does.
-    #
-    # THE RULE IS REACHABLE, NOT VISIBLE. A drawer, a tab or a menu all
-    # satisfy it; the rail being on screen at 1280px is one way of many.
-    if page.is_visible("#rail"):
-        return
-    toggle = page.locator("#matters-toggle")
-    assert toggle.is_visible(), (
-        f"at {width}px the rail is not shown and no control opens it, so an "
-        f"advocate can work the matter they are in and reach no other one")
-    toggle.click()
-    page.wait_for_selector("#rail", state="visible", timeout=10000)
-    assert page.is_visible("#rail-body"), (
-        f"at {width}px the control opened nothing")
+    # ---- 1. the navigator is REACHABLE, not necessarily VISIBLE ----------
+    # A drawer, a tab or a menu all satisfy the rule; the rail being on
+    # screen at 1280px is one way of many.
+    _reach_rail(page, width)
+
+    # ---- 2. START one matter, and a second, so there is something to
+    #         switch BETWEEN. One matter cannot demonstrate navigation. ----
+    first = f"Width {width} First Traders"
+    second = f"Width {width} Second Holdings"
+    for client in (first, second):
+        _reach_rail(page, width)
+        page.click("#new-matter")
+        _intake(page, client=client)
+
+    # ---- 3. FIND the first one again and SWITCH to it --------------------
+    _reach_rail(page, width)
+    if page.is_visible("#back"):
+        page.click("#back")               # threads -> the matter list
+        page.wait_for_function(
+            "() => document.querySelector('#rail-title')"
+            ".textContent.trim() === 'Matters'", timeout=15000)
+
+    row = page.locator(".row", has=page.locator(".r-title", has_text=first))
+    assert row.count() >= 1, (
+        f"at {width}px the matter just opened for {first!r} cannot be found "
+        f"in the navigator, so an advocate has no way back to it")
+    row.first.click()
+    page.wait_for_function(
+        "() => document.querySelector('#rail-title')"
+        ".textContent.trim() === 'Threads'", timeout=15000)
+
+    # ---- 4. TRAVERSE the rest of the application at this width -----------
+    for tab in ("search", "history", "advise"):
+        _tab(page, tab)
+        assert not page.errors, (
+            f"at {width}px the page threw switching to {tab}: {page.errors}")
+
+    # ---- 5. identity and the way out are both REACHABLE ------------------
+    who = page.locator("#who-name")
+    assert who.count() == 1 and who.inner_text().strip() not in ("", "—"), (
+        f"at {width}px the advocate cannot see whose session this is, so a "
+        f"shared machine gives them nothing to check before they type")
+    assert page.locator("#signout").is_visible(), (
+        f"at {width}px there is no way to sign out, and an advocate who "
+        f"cannot leave a session on a borrowed device has no protection")
 
 
 # ================================================= 4. keyboard-only working ==
@@ -500,17 +562,56 @@ def test_phase_7_search_answers_or_says_why(page, journey):
     S3, and this product has three measured instances against the corpus."""
     _sign_in(page, journey)
     _tab(page, "search")
+
+    # NOTHING IS CLAIMED BEFORE THE SEARCH RUNS. BK-45.
+    #
+    # This waited on `#pane-search` innerText being non-empty and then
+    # asserted it was non-empty. The pane holds the search FORM, whose
+    # `sr-only` labels are `clip-path: inset(50%)` and therefore in
+    # `innerText` -- so the condition was already true before Enter was
+    # handled, and the phase passed against a submit button wired to nothing.
+    #
+    # The two elements the renderer actually writes into start empty, so
+    # asserting on THEM is a check that can fail.
+    for empty in ("#search-state", "#search-results"):
+        assert not page.inner_text(empty).strip(), (
+            f"{empty} already has content before the search ran, so this "
+            f"phase cannot tell a completed search from a dead button")
+
     page.fill("#q", "adverse possession")
     page.press("#q", "Enter")
-    # THE PANE SAYS SOMETHING, whatever that something is. Waiting for
-    # RESULTS would hang on the honest answer "the index is not built", which
-    # is the answer this phase most wants to see rendered.
+
+    # WAITING FOR RESULTS WOULD HANG on the honest answer "the index is not
+    # built", which is the answer this phase most wants to see rendered. So
+    # wait for either half of the renderer to speak.
     page.wait_for_function(
-        "document.querySelector('#pane-search').innerText.trim().length > 0",
+        "() => ['#search-state', '#search-results'].some(s => {"
+        "  const el = document.querySelector(s);"
+        "  return el && el.innerText.trim().length > 0; })",
         timeout=30000)
 
-    state = page.inner_text("#pane-search").strip()
-    assert state, "the search pane said nothing at all"
+    said = page.inner_text("#search-state").strip()
+    results = page.inner_text("#search-results").strip()
+
+    # AND IT IS ONE OF THE THREE NAMED STATES. A search that returns nothing
+    # must say WHETHER IT RAN: zero results and an index that was never built
+    # read identically otherwise -- defect shape S3, and this product has
+    # three measured instances of it against the corpus.
+    ran_and_found = bool(page.locator("#search-results .hit").count())
+    not_searched = "NOT SEARCHED" in said.upper()
+    searched_and_empty = bool(said) and not not_searched
+
+    assert ran_and_found or not_searched or searched_and_empty, (
+        "the search pane rendered neither results, nor a NOT SEARCHED state, "
+        "nor a named zero -- so the advocate cannot tell whether the corpus "
+        "was asked:\n"
+        f"  #search-state:   {said[:200]!r}\n"
+        f"  #search-results: {results[:200]!r}")
+
+    if ran_and_found:
+        assert page.locator("#search-results .result-count").count() == 1, (
+            "hits were rendered with no count, so the advocate cannot tell "
+            "whether they are looking at all of them")
     assert not page.errors, f"the page threw: {page.errors}"
 
 
@@ -626,10 +727,29 @@ def test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead(
     longer do anything for them.
     """
     _sign_in(page, journey)
-    # END THE SESSION SERVER-SIDE, the way an expiry does -- not by clearing
-    # the cookie, which is the browser forgetting rather than the session
-    # ending.
-    page.context.clear_cookies()
+
+    # THE BROKEN DRAFT SURVIVES, OR IT DOES NOT -- either way it is part of
+    # what expiry costs the advocate, so it is typed before the session goes.
+    page.fill("#message", BRIEF)
+
+    # END THE SESSION SERVER-SIDE, the way an expiry does. BK-46.
+    #
+    # This called `page.context.clear_cookies()`, three lines under a comment
+    # saying not to -- that is the BROWSER FORGETTING its token, which is a
+    # different event with a different failure mode. An expiry leaves the
+    # cookie in place and the session gone, and the whole defect this phase
+    # is open for lives in what the page does when it presents a token the
+    # server no longer honours.
+    #
+    # `tools/served.py` runs the server in a THREAD and hands the harness the
+    # same `Served`, explicitly so the suite can reach the store the browser
+    # is talking to. `except_token=""` keeps nothing, so this session goes
+    # too -- which the `/api/sessions/revoke` route deliberately cannot do.
+    ended = journey["box"].directory.close_all_sessions(
+        journey["advocate"], "journey phase 10: expiry", except_token="")
+    assert ended >= 1, (
+        "no session was ended, so this phase would go on to assert against a "
+        "product that is still correctly signed in")
 
     page.click("button[data-tab='history']")
     # WAIT FOR THE THING UNDER TEST, which is the masthead.
@@ -647,6 +767,18 @@ def test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead(
         "the session is gone and the masthead still shows the advocate as "
         "signed in, so they are looking at their own name above a product "
         "that can no longer do anything for them")
+
+    # AND THE BRIEF THEY HAD TYPED IS NOT SILENTLY GONE. BK-46.
+    #
+    # Expiry is not the advocate's doing and it arrives without warning. A
+    # product that takes an unsent brief with it has made the session limit
+    # cost them the work, which is the same absence BK-36 refused for a failed
+    # send -- an identity for the attempt that outlives the attempt.
+    shown = _visible_text(page).lower()
+    assert BRIEF[:40].lower() in shown or "draft" in shown or "saved" in shown, (
+        "the session expired and the brief in the composer is neither shown "
+        "nor acknowledged, so the advocate has lost work to an event they "
+        "did not cause and were not warned about")
 
 
 def test_phase_13_a_send_that_fails_keeps_the_brief_and_offers_one_retry(
