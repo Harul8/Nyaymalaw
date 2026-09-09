@@ -1,0 +1,1332 @@
+# GENERATED ONCE, then hand-authored. See docs/backlog/SCHEMA.md.
+# THIS FILE IS THE SOLE SOURCE OF CURRENT STATUS.
+
+schema: 1
+generated_note: Bootstrapped 9 September 2026 from the inventory in BACKLOG.md. Hand-authored
+  from here; see docs/backlog/SCHEMA.md.
+features:
+- id: A1
+  phase: A
+  title: Authentication and advocate identity
+  slice: S1
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: A2
+  phase: A
+  title: The matter list, and the thread board
+  slice: S6
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: A3
+  phase: A
+  title: Re-entry and re-orientation
+  slice: S9
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: A4
+  phase: A
+  title: Search the corpus — acts and judgments
+  slice: S10
+  implementation: partial
+  disposition: building
+  delivery_items: []
+- id: B1
+  phase: B
+  title: Opening-message routing
+  slice: S10
+  implementation: partial
+  disposition: building
+  delivery_items:
+  - BK-48
+- id: B2
+  phase: B
+  title: Emergency triage
+  slice: S10
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-53
+- id: B3
+  phase: B
+  title: Conflict screen
+  slice: S10
+  implementation: partial
+  disposition: building
+  delivery_items:
+  - BK-48
+- id: B4
+  phase: B
+  title: Competence screen
+  slice: S10
+  implementation: partial
+  disposition: building
+  delivery_items:
+  - BK-48
+- id: B5
+  phase: B
+  title: Engagement, authority and scope
+  slice: S10
+  implementation: partial
+  disposition: building
+  delivery_items:
+  - BK-48
+- id: B6
+  phase: B
+  title: Capacity to instruct  ⟨tenet 32⟩
+  slice: S10
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-53
+- id: C1
+  phase: C
+  title: The account
+  slice: S1
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: C2
+  phase: C
+  title: Objectives and constraints
+  slice: S7
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-54
+- id: C3
+  phase: C
+  title: Parties and posture
+  slice: S3
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: C4
+  phase: C
+  title: Thread identity
+  slice: S3
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: C5
+  phase: C
+  title: The chronology
+  slice: S4
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: C6
+  phase: C
+  title: Document intake and extraction
+  slice: S10
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-54
+- id: C7
+  phase: C
+  title: Evidence inventory and preservation
+  slice: S7
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: D1
+  phase: D
+  title: The threshold map
+  slice: S4
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: D2
+  phase: D
+  title: Limitation as a computed date
+  slice: S4
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: D3
+  phase: D
+  title: The deadline register  ⟨tenet 29⟩
+  slice: S4
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: D4
+  phase: D
+  title: Research plan and execution
+  slice: S5
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: D5
+  phase: D
+  title: Elements, burden and proof
+  slice: S7
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: D6
+  phase: D
+  title: Case theory
+  slice: S8
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: D7
+  phase: D
+  title: The adversarial pass
+  slice: S8
+  implementation: partial
+  disposition: building
+  delivery_items: []
+- id: D8
+  phase: D
+  title: Salvage — the weak case
+  slice: S8
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: D9
+  phase: D
+  title: Issue facets and disposition
+  slice: S6
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: E1
+  phase: E
+  title: Scenarios and contingencies
+  slice: S12
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-55
+- id: E2
+  phase: E
+  title: The recommendation
+  slice: S1
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+- id: E3
+  phase: E
+  title: Proportionality  ⟨tenet 33⟩
+  slice: S12
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-55
+- id: E4
+  phase: E
+  title: The decision record
+  slice: S10
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-55
+- id: E5
+  phase: E
+  title: Disagreement and candour
+  slice: S8
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-55
+- id: F1
+  phase: F
+  title: Negotiation and settlement authority
+  slice: S12
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-57
+- id: F2
+  phase: F
+  title: The drafter brief
+  slice: S11
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-56
+- id: F3
+  phase: F
+  title: Drafting and verification
+  slice: S11
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-56
+- id: F4
+  phase: F
+  title: Filing control
+  slice: S11
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-56
+- id: F5
+  phase: F
+  title: Witnesses and experts
+  slice: S12
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-57
+- id: F6
+  phase: F
+  title: Hearing readiness
+  slice: S12
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-57
+- id: F7
+  phase: F
+  title: In court
+  slice: S12
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-57
+- id: G1
+  phase: G
+  title: Proactive service
+  slice: S12
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-58
+- id: G2
+  phase: G
+  title: Continuing conflict watch  ⟨tenet 30⟩
+  slice: S12
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-58
+- id: G3
+  phase: G
+  title: Handover and continuity  ⟨tenet 34⟩
+  slice: S12
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-58
+- id: H1
+  phase: H
+  title: Event capture
+  slice: S12
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-59
+- id: H2
+  phase: H
+  title: Closure
+  slice: S12
+  implementation: none
+  disposition: planned
+  delivery_items:
+  - BK-59
+- id: I1
+  phase: I
+  title: Session end and confidentiality
+  slice: S1
+  implementation: complete
+  disposition: delivered
+  delivery_items: []
+items:
+- id: BK-1
+  title: E-102 still fails, and the verdict has moved
+  kind: journey
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: D
+  legacy: true
+  record: docs/BACKLOG.md#bk-1-e-102-still-fails-and-the-verdict-has-moved
+  acceptance: []
+- id: BK-2
+  title: the screens are stated to the advocate
+  kind: journey
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: B
+  legacy: true
+  record: docs/BACKLOG.md#bk-2-the-screens-are-stated-to-the-advocate
+  acceptance: []
+- id: BK-3
+  title: a served-path judged run needs a credential
+  kind: control
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  affects_phases:
+  - D
+  legacy: true
+  record: docs/BACKLOG.md#bk-3-a-served-path-judged-run-needs-a-credential
+  acceptance: []
+- id: BK-4
+  title: the authority index
+  kind: substrate
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  affects_phases:
+  - D
+  legacy: true
+  record: docs/BACKLOG.md#bk-4-the-authority-index
+  acceptance: []
+- id: BK-5
+  title: the cascade fires on an ordinary turn
+  kind: journey
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: D
+  legacy: true
+  record: docs/BACKLOG.md#bk-5-the-cascade-fires-on-an-ordinary-turn
+  acceptance: []
+- id: BK-6
+  title: the evidence bound is reached on a four-turn matter
+  kind: journey
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: C
+  legacy: true
+  record: docs/BACKLOG.md#bk-6-the-evidence-bound-is-reached-on-a-four-turn-matter
+  acceptance: []
+- id: BK-7
+  title: thresholds repeated every turn
+  kind: journey
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: E
+  legacy: true
+  record: docs/BACKLOG.md#bk-7-thresholds-repeated-every-turn
+  acceptance: []
+- id: BK-8
+  title: the phrase lists
+  kind: journey
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: B
+  legacy: true
+  record: docs/BACKLOG.md#bk-8-the-phrase-lists
+  acceptance: []
+- id: BK-9
+  title: five disclose gates nothing proved the advocate sees
+  kind: journey
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: E
+  legacy: true
+  record: docs/BACKLOG.md#bk-9-five-disclose-gates-nothing-proved-the-advocate-sees
+  acceptance: []
+- id: BK-10
+  title: the handover contract was 4 of 16
+  kind: journey
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: G
+  legacy: true
+  record: docs/BACKLOG.md#bk-10-the-handover-contract-was-4-of-16
+  acceptance: []
+- id: BK-11
+  title: G-MODEL proven at one read of fifteen
+  kind: journey
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: D
+  legacy: true
+  record: docs/BACKLOG.md#bk-11-g-model-proven-at-one-read-of-fifteen
+  acceptance: []
+- id: BK-12
+  title: the fold rule is asserted behaviourally
+  kind: journey
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: E
+  legacy: true
+  record: docs/BACKLOG.md#bk-12-the-fold-rule-is-asserted-behaviourally
+  acceptance: []
+- id: BK-13
+  title: the product spoke in its own identifiers
+  kind: journey
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: A
+  legacy: true
+  record: docs/BACKLOG.md#bk-13-the-product-spoke-in-its-own-identifiers
+  acceptance: []
+- id: BK-14
+  title: the date came from the server's clock
+  kind: journey
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: C
+  legacy: true
+  record: docs/BACKLOG.md#bk-14-the-date-came-from-the-server-s-clock
+  acceptance: []
+- id: BK-15
+  title: six owners for the jurisdiction
+  kind: journey
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: D
+  legacy: true
+  record: docs/BACKLOG.md#bk-15-six-owners-for-the-jurisdiction
+  acceptance: []
+- id: BK-16
+  title: the matter cipher downgraded silently
+  kind: substrate
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  affects_phases:
+  - C
+  legacy: true
+  record: docs/BACKLOG.md#bk-16-the-matter-cipher-downgraded-silently
+  acceptance: []
+- id: BK-17
+  title: three load-bearing guards vanished under `-O`
+  kind: substrate
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  affects_phases:
+  - A
+  - B
+  - C
+  - D
+  - E
+  - I
+  legacy: true
+  record: docs/BACKLOG.md#bk-17-three-load-bearing-guards-vanished-under-o
+  acceptance: []
+- id: BK-18
+  title: the session cookie had no `secure` flag
+  kind: substrate
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  affects_phases:
+  - A
+  legacy: true
+  record: docs/BACKLOG.md#bk-18-the-session-cookie-had-no-secure-flag
+  acceptance: []
+- id: BK-19
+  title: a missing identity count read as zero
+  kind: journey
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: D
+  legacy: true
+  record: docs/BACKLOG.md#bk-19-a-missing-identity-count-read-as-zero
+  acceptance: []
+- id: BK-20
+  title: sign-in names which of three things failed
+  kind: journey
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: A
+  legacy: true
+  record: docs/BACKLOG.md#bk-20-sign-in-names-which-of-three-things-failed
+  acceptance: []
+- id: BK-21
+  title: the matter encryption key IS the OpenAI API key
+  kind: substrate
+  priority: P0
+  delivery_status: ready
+  implementation: none
+  verification: none
+  affects_phases:
+  - A
+  - C
+  - I
+  record: docs/BACKLOG.md#bk-21-the-matter-encryption-key-is-the-openai-api-key
+  next_action: refuse NM_MATTER_KEY equal to another credential; then the re-key tool, before
+    any rotation
+  acceptance: []
+- id: BK-22
+  title: signing in depended on a key that is meant to rotate
+  kind: substrate
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  affects_phases:
+  - A
+  legacy: true
+  record: docs/BACKLOG.md#bk-22-signing-in-depended-on-a-key-that-is-meant-to-rotate
+  acceptance: []
+- id: BK-23
+  title: the web scrape is a ONE-TIME EXCEPTION, not the new route
+  kind: substrate
+  priority: P2
+  delivery_status: deferred
+  implementation: complete
+  verification: stale
+  affects_phases:
+  - D
+  reason: the web scrape was a one-time exception and the route it replaced is not being rebuilt
+    until a corpus refresh is actually scheduled
+  review_on: '2026-12-01'
+  record: docs/BACKLOG.md#bk-23-the-web-scrape-is-a-one-time-exception-not-the-new-route
+  acceptance: []
+- id: BK-24
+  title: the citation filter excludes exactly the years the corpus needs
+  kind: substrate
+  priority: P1
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases:
+  - D
+  record: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs
+  acceptance: []
+- id: BK-25
+  title: the authority need finds a case by scanning a million paragraphs
+  kind: substrate
+  priority: P1
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases:
+  - D
+  record: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs
+  acceptance: []
+- id: BK-26
+  title: the Act summaries are DECLINED, and the gap they would have filled stays open
+  kind: substrate
+  priority: P2
+  delivery_status: deferred
+  implementation: none
+  verification: none
+  affects_phases:
+  - D
+  reason: the Act summaries were DECLINED on measurement; the coverage gap they would have
+    filled is tracked by BK-24 and BK-25 rather than by re-opening this
+  review_on: '2026-12-01'
+  record: docs/BACKLOG.md#bk-26-the-act-summaries-are-declined-and-the-gap-they-would-have-filled-stays-open
+  acceptance: []
+- id: BK-27
+  title: one message describing N disputes opened ONE thread
+  kind: journey
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: C
+  legacy: true
+  record: docs/BACKLOG.md#bk-27-one-message-describing-n-disputes-opened-one-thread
+  acceptance: []
+- id: BK-28
+  title: runs and golden sets are not in the History tab, and from now on they are
+  kind: substrate
+  priority: P2
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases:
+  - E
+  - G
+  record: docs/BACKLOG.md#bk-28-runs-and-golden-sets-are-not-in-the-history-tab-and-from-now-on-they-are
+  acceptance: []
+- id: BK-29
+  title: sixteen hand-picked token ceilings, and five reads that echo verbatim spans
+  kind: substrate
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
+  affects_phases:
+  - D
+  - E
+  depends_on:
+  - BK-49
+  record: docs/BACKLOG.md#bk-29-sixteen-hand-picked-token-ceilings-and-five-reads-that-echo-verbatim-spans
+  next_action: truncation fail-safe is unhandled, not merely unmeasured
+  acceptance: []
+- id: BK-30
+  title: executable login-to-logout acceptance journey
+  kind: control
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
+  affects_phases:
+  - A
+  - B
+  - C
+  - D
+  - E
+  - I
+  record: docs/BACKLOG.md#bk-30-executable-login-to-logout-acceptance-journey
+  next_action: registration and recovery are never exercised; the fixture enrols programmatically
+  acceptance: []
+- id: BK-31
+  title: account access, recovery and workspace identity
+  kind: journey
+  priority: P0
+  delivery_status: blocked
+  implementation: partial
+  verification: partial
+  phase: A
+  blocked_by:
+    type: product_decision
+    description: a controlled private roster (BACKLOG.md, 8 Sep) against self-service enrolment
+      (api.py:642, 6 Sep). The screen release at turn.py:1575 is relaxed BECAUSE the roster
+      claim is true.
+  record: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity
+  next_action: resolve the roster contradiction before any further work
+  acceptance: []
+- id: BK-32
+  title: responsive advocate home and matter navigation
+  kind: journey
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
+  phase: A
+  record: docs/BACKLOG.md#bk-32-responsive-advocate-home-and-matter-navigation
+  next_action: traverse at three widths now asserted; overflow evidence restored by BK-43
+  acceptance: []
+- id: BK-33
+  title: recognisable matter cover, truthful board and real reopen
+  kind: journey
+  priority: P0
+  delivery_status: in_progress
+  implementation: partial
+  verification: failing
+  phase: A
+  sequenced_after:
+  - BK-43
+  record: docs/BACKLOG.md#bk-33-recognisable-matter-cover-truthful-board-and-real-reopen
+  next_action: render passed_deadlines, which the projection already emits
+  acceptance: []
+- id: BK-34
+  title: front-door legal and professional screens before substance
+  kind: journey
+  priority: P0
+  delivery_status: in_progress
+  implementation: partial
+  verification: failing
+  phase: B
+  depends_on:
+  - BK-31
+  record: docs/BACKLOG.md#bk-34-front-door-legal-and-professional-screens-before-substance
+  next_action: stale the conflict clearance when a party is added; make the emergency route
+    reachable
+  acceptance: []
+- id: BK-35
+  title: cause-specific accrual and answer-consistency gate
+  kind: journey
+  priority: P0
+  delivery_status: in_progress
+  implementation: partial
+  verification: failing
+  phase: D
+  record: docs/BACKLOG.md#bk-35-cause-specific-accrual-and-answer-consistency-gate
+  next_action: refuse to run the period from a single dated fact that does not satisfy the
+    curated trigger; emit the statutory limb
+  acceptance: []
+- id: BK-36
+  title: durable, idempotent and recoverable turns
+  kind: journey
+  priority: P0
+  delivery_status: in_progress
+  implementation: partial
+  verification: failing
+  phase: C
+  record: docs/BACKLOG.md#bk-36-durable-idempotent-and-recoverable-turns
+  next_action: idempotency must cover the OPENING turn, where matter_id is null and _load_or_create
+    mints a new matter
+  acceptance: []
+- id: BK-37
+  title: senior-counsel answer shape and plain-language trust surface
+  kind: journey
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
+  phase: E
+  record: docs/BACKLOG.md#bk-37-senior-counsel-answer-shape-and-plain-language-trust-surface
+  next_action: assert the promised sections, not a count of two
+  acceptance: []
+- id: BK-38
+  title: search-to-authority-to-matter research workflow
+  kind: journey
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: failing
+  phase: A
+  sequenced_after:
+  - BK-25
+  record: docs/BACKLOG.md#bk-38-search-to-authority-to-matter-research-workflow
+  next_action: carry canonical citation and bench; attach a hit to a matter
+  acceptance: []
+- id: BK-39
+  title: readable History, correction record and handover
+  kind: journey
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: failing
+  phase: G
+  depends_on:
+  - BK-33
+  record: docs/BACKLOG.md#bk-39-readable-history-correction-record-and-handover
+  next_action: correction record and export; neither exists in the codebase
+  acceptance: []
+- id: BK-40
+  title: session expiry and confirmed logout
+  kind: journey
+  priority: P0
+  delivery_status: in_progress
+  implementation: partial
+  verification: failing
+  phase: I
+  record: docs/BACKLOG.md#bk-40-session-expiry-and-confirmed-logout
+  next_action: clearPrivileged must clear state.intake and the intake form
+  acceptance: []
+- id: BK-41
+  title: latency, progress, cancellation and degraded-service behaviour
+  kind: journey
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: failing
+  phase: E
+  depends_on:
+  - BK-36
+  record: docs/BACKLOG.md#bk-41-latency-progress-cancellation-and-degraded-service-behaviour
+  next_action: phase streaming and a measured p90; its cancel clause rests on BK-36, which
+    does not hold for an opening turn
+  acceptance: []
+- id: BK-42
+  title: production trust, privacy, accessibility and recovery gate
+  kind: substrate
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
+  affects_phases:
+  - A
+  - E
+  - I
+  record: docs/BACKLOG.md#bk-42-production-trust-privacy-accessibility-and-recovery-gate
+  next_action: production controls; overflow evidence restored by BK-43
+  acceptance: []
+- id: BK-43
+  title: the overflow rule that switches off its own check
+  kind: control
+  priority: P0
+  delivery_status: verifying
+  implementation: complete
+  verification: partial
+  affects_phases:
+  - A
+  - E
+  record: docs/BACKLOG.md#bk-43-the-overflow-rule-that-switches-off-its-own-check
+  next_action: run the journey suite to confirm the width phase can now fail
+  acceptance: []
+- id: BK-44
+  title: three closed rows can regress and the command stays green
+  kind: control
+  priority: P0
+  delivery_status: verifying
+  implementation: complete
+  verification: partial
+  affects_phases:
+  - A
+  - C
+  - D
+  - E
+  - I
+  depends_on:
+  - BK-51
+  record: docs/BACKLOG.md#bk-44-three-closed-rows-can-regress-and-the-command-stays-green
+  next_action: run the suite; a strict marker may XPASS
+  acceptance: []
+- id: BK-45
+  title: the search phase cannot fail
+  kind: control
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: none
+  affects_phases:
+  - A
+  depends_on:
+  - BK-51
+  record: docs/BACKLOG.md#bk-45-the-search-phase-cannot-fail
+  next_action: not yet executed in a browser
+  acceptance: []
+- id: BK-46
+  title: session expiry is simulated by clearing the browser's cookie
+  kind: control
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: partial
+  affects_phases:
+  - A
+  - I
+  depends_on:
+  - BK-51
+  record: docs/BACKLOG.md#bk-46-session-expiry-is-simulated-by-clearing-the-browser-s-cookie
+  next_action: mechanism proven without a browser; phase not yet executed
+  acceptance: []
+- id: BK-47
+  title: the width phase asserts nothing at desktop
+  kind: control
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: none
+  affects_phases:
+  - A
+  depends_on:
+  - BK-51
+  record: docs/BACKLOG.md#bk-47-the-width-phase-asserts-nothing-at-desktop
+  next_action: not yet executed in a browser
+  acceptance: []
+- id: BK-48
+  title: Phase B is built and the register says it is not
+  kind: control
+  priority: P1
+  delivery_status: ready
+  implementation: none
+  verification: none
+  affects_phases:
+  - B
+  record: docs/BACKLOG.md#bk-48-phase-b-is-built-and-the-register-says-it-is-not
+  next_action: register the four implemented B features; add trace T3b
+  acceptance: []
+- id: BK-49
+  title: a truncated model answer is never detected
+  kind: substrate
+  priority: P0
+  delivery_status: ready
+  implementation: none
+  verification: none
+  affects_phases:
+  - D
+  - E
+  record: docs/BACKLOG.md#bk-49-a-truncated-model-answer-is-never-detected
+  next_action: raise the typed error on finish_reason == 'length'
+  acceptance: []
+- id: BK-50
+  title: the answer-shape phase needs two of seven sections
+  kind: control
+  priority: P1
+  delivery_status: ready
+  implementation: none
+  verification: none
+  affects_phases:
+  - E
+  record: docs/BACKLOG.md#bk-50-the-answer-shape-phase-needs-two-of-seven-sections
+  next_action: assert the sections BK-37 promises
+  acceptance: []
+- id: BK-51
+  title: the journey runner cannot tell a deleted phase from a passing one
+  kind: control
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: partial
+  affects_phases:
+  - A
+  - B
+  - C
+  - D
+  - E
+  - I
+  record: docs/BACKLOG.md#bk-51-the-journey-runner-cannot-tell-a-deleted-phase-from-a-passing-one
+  next_action: manifest bite proven on a truncated run
+  acceptance: []
+- id: BK-52
+  title: twenty-two sweeps have never been shown to be able to fail
+  kind: control
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
+  affects_phases:
+  - A
+  - B
+  - C
+  - D
+  - E
+  - I
+  depends_on:
+  - BK-44
+  record: docs/BACKLOG.md#bk-52-twenty-two-sweeps-have-never-been-shown-to-be-able-to-fail
+  next_action: 22 sweeps declared in UNCONTROLLED; verify and move one at a time
+  acceptance: []
+- id: BK-53
+  title: 'Phase B: emergency triage and capacity to instruct'
+  kind: journey
+  priority: P1
+  delivery_status: planned
+  implementation: none
+  verification: none
+  phase: B
+  depends_on:
+  - BK-34
+  delivers:
+  - B2
+  - B6
+  record: docs/BACKLOG.md#bk-53-phase-b-emergency-triage-and-capacity-to-instruct
+  next_action: specify DOES / NEVER / PRODUCES / EVAL for B2, B6
+  acceptance: []
+- id: BK-54
+  title: 'Phase C: objectives, constraints and document intake'
+  kind: journey
+  priority: P1
+  delivery_status: planned
+  implementation: none
+  verification: none
+  phase: C
+  delivers:
+  - C2
+  - C6
+  record: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake
+  next_action: specify DOES / NEVER / PRODUCES / EVAL for C2, C6
+  acceptance: []
+- id: BK-55
+  title: 'Phase E: scenarios, proportionality, the decision record and candour'
+  kind: journey
+  priority: P1
+  delivery_status: planned
+  implementation: none
+  verification: none
+  phase: E
+  depends_on:
+  - BK-37
+  delivers:
+  - E1
+  - E3
+  - E4
+  - E5
+  record: docs/BACKLOG.md#bk-55-phase-e-scenarios-proportionality-the-decision-record-and-candour
+  next_action: specify DOES / NEVER / PRODUCES / EVAL for E1, E3, E4, E5
+  acceptance: []
+- id: BK-56
+  title: 'Phase F: the drafter brief, drafting and filing control'
+  kind: journey
+  priority: P2
+  delivery_status: planned
+  implementation: none
+  verification: none
+  phase: F
+  depends_on:
+  - BK-55
+  delivers:
+  - F2
+  - F3
+  - F4
+  record: docs/BACKLOG.md#bk-56-phase-f-the-drafter-brief-drafting-and-filing-control
+  next_action: specify DOES / NEVER / PRODUCES / EVAL for F2, F3, F4
+  acceptance: []
+- id: BK-57
+  title: 'Phase F: negotiation, witnesses, hearing readiness and court'
+  kind: journey
+  priority: P2
+  delivery_status: planned
+  implementation: none
+  verification: none
+  phase: F
+  depends_on:
+  - BK-56
+  delivers:
+  - F1
+  - F5
+  - F6
+  - F7
+  record: docs/BACKLOG.md#bk-57-phase-f-negotiation-witnesses-hearing-readiness-and-court
+  next_action: specify DOES / NEVER / PRODUCES / EVAL for F1, F5, F6, F7
+  acceptance: []
+- id: BK-58
+  title: 'Phase G: proactive service, the conflict watch and handover'
+  kind: journey
+  priority: P2
+  delivery_status: planned
+  implementation: none
+  verification: none
+  phase: G
+  depends_on:
+  - BK-39
+  delivers:
+  - G1
+  - G2
+  - G3
+  record: docs/BACKLOG.md#bk-58-phase-g-proactive-service-the-conflict-watch-and-handover
+  next_action: specify DOES / NEVER / PRODUCES / EVAL for G1, G2, G3
+  acceptance: []
+- id: BK-59
+  title: 'Phase H: event capture and closure'
+  kind: journey
+  priority: P2
+  delivery_status: planned
+  implementation: none
+  verification: none
+  phase: H
+  depends_on:
+  - BK-58
+  delivers:
+  - H1
+  - H2
+  record: docs/BACKLOG.md#bk-59-phase-h-event-capture-and-closure
+  next_action: specify DOES / NEVER / PRODUCES / EVAL for H1, H2
+  acceptance: []
+- id: BK-60
+  title: the backlog control plane
+  kind: control
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
+  affects_phases:
+  - A
+  - B
+  - C
+  - D
+  - E
+  - F
+  - G
+  - H
+  - I
+  record: docs/BACKLOG.md#bk-60-the-backlog-control-plane
+  next_action: registry, schema and linter land first; evidence wiring, counsel review and
+    CI follow
+  acceptance:
+  - id: BK-60-AC1
+    requirement: every backlog id is unique and every journey feature is accounted for
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_the_registry_lints_clean
+    negative_control:
+      mutation: add a second row carrying an id the registry already holds
+      expected_failure: lint reports the duplicate rather than overwriting it
+  - id: BK-60-AC2
+    requirement: no row may declare itself done; done is derived from evidence
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_done_cannot_be_authored
+    negative_control:
+      mutation: set delivery_status to done on any row
+      expected_failure: lint refuses it as outside the vocabulary
+  - id: BK-60-AC3
+    requirement: a criterion with no evidence reads NOT_PROVEN and never as a pass
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_a_missing_link_is_not_proven
+    negative_control:
+      mutation: require an evidence level and record no result for it
+      expected_failure: proof_state returns NOT_RUN and the item is NOT_PROVEN
+  - id: BK-60-AC4
+    requirement: the generated board cannot drift from the registry
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_the_board_is_not_stale
+    negative_control:
+      mutation: edit a count inside the generated markers by hand
+      expected_failure: check regenerates it and exits non-zero
+  - id: BK-60-AC5
+    requirement: journey steps STEP-<phase>-<nn> exist and every journey row names one
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: NOT_RUN
+        ref: ''
+        note: stage 1 of the traceability order; the steps registry is not populated,
+          and an empty population would make this check vacuous rather than green
+    negative_control:
+      mutation: file a journey row against no step
+      expected_failure: lint reports the missing link as NOT PROVEN
+- id: J-1
+  title: The file list cannot tell one matter from another
+  kind: finding
+  priority: P2
+  delivery_status: verifying
+  implementation: complete
+  verification: stale
+  phase: A
+  legacy: true
+  record: docs/BACKLOG.md#j-1-the-file-list-cannot-tell-one-matter-from-another
+  next_action: confirm on the served path that the matter name and client column are fixed;
+    this row's own table still says PLANNED
+  acceptance: []
+- id: J-2
+  title: A goods-sold brief was worked as a money-lent claim
+  kind: finding
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: partial
+  phase: D
+  legacy: true
+  record: docs/BACKLOG.md#j-2-a-goods-sold-brief-was-worked-as-a-money-lent-claim
+  acceptance: []
+- id: J-3
+  title: The client's best fact was filed as adverse to him
+  kind: finding
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: partial
+  phase: D
+  legacy: true
+  record: docs/BACKLOG.md#j-3-the-client-s-best-fact-was-filed-as-adverse-to-him
+  acceptance: []
+- id: J-4
+  title: One dispute was split into three, and the product then argued with itself
+  kind: finding
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
+  phase: C
+  record: docs/BACKLOG.md#j-4-one-dispute-was-split-into-three-and-the-product-then-argued-with-itself
+  next_action: browser-level confirmation flow for a disclosed split
+  acceptance: []
+- id: J-5
+  title: Internal identifiers reach the advocate, past a sweep that says they cannot
+  kind: finding
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: failing
+  phase: E
+  record: docs/BACKLOG.md#j-5-internal-identifiers-reach-the-advocate-past-a-sweep-that-says-they-cannot
+  next_action: ids remain in History and the withheld-turn line
+  acceptance: []
+- id: J-6
+  title: Thirty-one elements, and the disclosures have swallowed the advice
+  kind: finding
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: partial
+  phase: E
+  legacy: true
+  record: docs/BACKLOG.md#j-6-thirty-one-elements-and-the-disclosures-have-swallowed-the-advice
+  acceptance: []
+- id: J-7
+  title: The header and the search surface speak engineering to the advocate
+  kind: finding
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: failing
+  phase: A
+  record: docs/BACKLOG.md#j-7-the-header-and-the-search-surface-speak-engineering-to-the-advocate
+  next_action: gate ids still reach advocate mode at web/app.js:446
+  acceptance: []
+- id: J-8
+  title: What works, and must not be broken while fixing the above
+  kind: control
+  priority: P2
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
+  affects_phases:
+  - A
+  - C
+  - D
+  - E
+  record: docs/BACKLOG.md#j-8-what-works-and-must-not-be-broken-while-fixing-the-above
+  next_action: the standing regression list
+  acceptance: []
+- id: J-9
+  title: The order to fix them in
+  kind: decision
+  priority: P3
+  delivery_status: superseded
+  implementation: none
+  verification: none
+  affects_phases:
+  - A
+  superseded_by: BK-52
+  record: docs/BACKLOG.md#j-9-the-order-to-fix-them-in
+  next_action: a fix ORDER, superseded by the phase sequence
+  acceptance: []
+events:
+- item: BK-34
+  at: '2026-09-09'
+  from: done
+  to: in_progress
+  reason: a party named in a brief is screened only from the next turn, and the emergency
+    route has no caller
+  evidence: nm/core/turn.py:1668, nm/core/turn.py:1451
+- item: BK-35
+  at: '2026-09-09'
+  from: done
+  to: in_progress
+  reason: the period runs from the first dated fact when only one exists, whatever the curated
+    trigger requires
+  evidence: nm/core/turn.py:2773
+- item: BK-36
+  at: '2026-09-09'
+  from: done
+  to: in_progress
+  reason: a lost response to an opening turn duplicates the brief into a second matter
+  evidence: nm/core/turn.py:1716, web/app.js:836
+- item: BK-40
+  at: '2026-09-09'
+  from: done
+  to: in_progress
+  reason: pending intake survives sign-out and reaches the next advocate
+  evidence: web/app.js:76
+- item: BK-8
+  at: '2026-09-07'
+  from: verifying
+  to: verifying
+  reason: re-measured; the row named a list the product no longer holds
+  evidence: docs/BACKLOG.md, the hard-coding audit
