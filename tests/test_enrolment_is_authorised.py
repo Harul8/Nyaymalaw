@@ -1,143 +1,229 @@
-"""THE ROSTER IS CONTROLLED, SO THE DOOR IS TOO. BK-31.
+"""BK-31 — the controlled roster is enforced by one-use invitations.
 
-TWO DATED DECISIONS CONTRADICTED EACH OTHER
--------------------------------------------
-Self-service enrolment was permitted on 6 September 2026. A CONTROLLED PRIVATE
-ROSTER was recorded on 8 September. The register link stayed live, so the code
-implemented the earlier one.
-
-WHAT SETTLED IT WAS NOT THE DATES. `nm/core/turn.py` relaxes scope and capacity
-release to ONE PERSON, and says why in terms:
-
-    "The deployment is a controlled roster of practising advocates and the
-     advocate IS the firm, so requiring a second person would stop every
-     matter at intake in a solo practice."
-
-That relaxation is sound only while the roster claim is true. With open
-self-service a stranger enrols and then releases their own professional
-screens -- competence, engagement, capacity -- and the product has no second
-person anywhere in the loop. A safety relaxation resting on an assumption the
-front door contradicts is the defect, not the door.
-
-WHAT IS TESTED HERE IS THE DOOR. That the relaxation downstream is justified by
-it is BK-34's business; this file only proves the premise it depends on.
+The invitation fixes who may enrol and which workspace they enter. Absence,
+expiry, replay and identity mismatch all fail closed and all look the same to
+the caller.
 """
 from __future__ import annotations
 
+import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
+
 import pytest
 
-from nm.edge.api import _refuse_an_unauthorised_enrolment
-from tests.conftest import ENROLMENT_CODE
+from nm.adapters.store.directory import FileDirectory
+from nm.domain import attempts
+from nm.domain.advocate import (
+    AdvocateIdentity,
+    canonical_id,
+    enrol,
+    new_invitation,
+    token_fingerprint,
+    utcnow,
+)
+from nm.ports.directory import InvitationRefused
 
 pytestmark = pytest.mark.class_a
 
 GOOD = {
     "name": "R Kumar",
     "email": "R.Kumar@Example.com",
+    "enrolment": "AP/1234/2010",
+    "practice": "Hyderabad",
+    "firm_id": "firm_rk",
     "password": "Cinder-lantern-42",
     "password_again": "Cinder-lantern-42",
 }
 
 
-def test_an_unconfigured_deployment_is_closed_and_not_open(monkeypatch):
-    """FAIL CLOSED, and this is the whole design decision.
-
-    An unconfigured control that admits everyone is the absent-input-reads-as-
-    success shape (CLAUDE.md section 9) aimed at the front door -- and this
-    door decides who the professional screens get relaxed for. The failure
-    mode of getting it the other way round is silent: nobody notices an open
-    door, and the first evidence would be a stranger's matter on the roster.
-    """
-    monkeypatch.delenv("NM_ENROLMENT_CODE", raising=False)
-    with pytest.raises(Exception) as caught:
-        _refuse_an_unauthorised_enrolment("anything-at-all")
-    assert getattr(caught.value, "status_code", None) == 403
-    assert "closed" in str(caught.value.detail).lower()
+def _identity(body: dict = GOOD) -> AdvocateIdentity:
+    email = canonical_id(body["email"])
+    return AdvocateIdentity(
+        id=email, email=email, name=body["name"].strip(),
+        enrolment=body.get("enrolment", "").strip(),
+        practice=body.get("practice", "").strip(),
+        firm_id=body.get("firm_id", "").strip())
 
 
-def test_a_blank_configured_code_does_not_open_the_door(monkeypatch):
-    """An empty string is not a configuration; it is an unset value wearing
-    one. Without this, `NM_ENROLMENT_CODE=` in a deploy script would open
-    enrolment to everyone while looking deliberate in the file."""
+def _invite(client, body: dict = GOOD, *, at=None) -> str:
+    return client.invite(
+        body["email"], name=body["name"],
+        enrolment=body.get("enrolment", ""),
+        practice=body.get("practice", ""),
+        firm_id=body.get("firm_id", ""), at=at)
+
+
+def _register(client, token: str | None, body: dict = GOOD):
+    headers = ({"X-Enrolment-Invitation": token} if token is not None else {})
+    return client.post("/api/register", json=body, headers=headers)
+
+
+def test_an_unconfigured_deployment_is_closed_and_not_open(client):
+    """No environment setting can accidentally turn missing authority into yes."""
+    response = _register(client, None)
+    assert response.status_code == 403, response.text
+    assert "ask whoever administers" in response.json()["detail"].lower()
+
+
+def test_an_invitation_needs_a_real_lifetime_and_one_line_issuer():
+    now = utcnow()
+    for lifetime in (timedelta(0), timedelta(seconds=-1)):
+        with pytest.raises(ValueError, match="lifetime"):
+            new_invitation(_identity(), "operator", now, lifetime)
+    with pytest.raises(ValueError, match="audit line"):
+        new_invitation(_identity(), "operator\nforged-event", now)
+
+
+def test_a_blank_invitation_does_not_open_the_door(client):
     for blank in ("", "   ", "\t"):
-        monkeypatch.setenv("NM_ENROLMENT_CODE", blank)
-        with pytest.raises(Exception) as caught:
-            _refuse_an_unauthorised_enrolment(blank)
-        assert getattr(caught.value, "status_code", None) == 403
+        assert _register(client, blank).status_code == 403
 
 
-def test_the_wrong_authorisation_is_refused(monkeypatch):
-    """THE POSITIVE CONTROL. A guard that only ever passes is not a guard."""
-    monkeypatch.setenv("NM_ENROLMENT_CODE", "the-real-authorisation")
-    for offered in ("", "guess", "the-real-authorisatio", "THE-REAL-AUTHORISATION"):
-        with pytest.raises(Exception) as caught:
-            _refuse_an_unauthorised_enrolment(offered)
-        assert getattr(caught.value, "status_code", None) == 403, offered
+def test_the_wrong_invitation_is_refused(client):
+    for offered in ("guess", "not-nearly-an-invitation", "A" * 64):
+        assert _register(client, offered).status_code == 403
 
 
-def test_the_right_authorisation_is_admitted(monkeypatch):
-    """THE NEGATIVE CONTROL. A door that never opens is not a door, and this
-    one has to admit the advocates the practice actually invited."""
-    monkeypatch.setenv("NM_ENROLMENT_CODE", "the-real-authorisation")
-    _refuse_an_unauthorised_enrolment("the-real-authorisation")
-    _refuse_an_unauthorised_enrolment("  the-real-authorisation  ")
+def test_the_right_invitation_is_admitted(client):
+    response = _register(client, _invite(client))
+    assert response.status_code == 200, response.text
+    assert response.json()["advocate_id"] == "r.kumar@example.com"
 
 
-def test_the_refusal_tells_the_advocate_what_to_do_instead(monkeypatch):
-    """An advocate who cannot enrol and is told nothing simply leaves.
-
-    The route that still works -- enrolment by the practice -- has to be in
-    the message, or a controlled roster is indistinguishable from a broken
-    product.
-    """
-    monkeypatch.delenv("NM_ENROLMENT_CODE", raising=False)
-    with pytest.raises(Exception) as caught:
-        _refuse_an_unauthorised_enrolment("x")
-    said = str(caught.value.detail).lower()
-    assert "enrolled by the practice" in said or "administers" in said, (
-        "the refusal does not say how to get in, so it reads as an outage")
+def test_the_refusal_tells_the_advocate_what_to_do_instead(client):
+    said = _register(client, "wrong").json()["detail"].lower()
+    assert "nothing was saved" in said
+    assert "administers" in said
 
 
-def test_it_is_refused_on_the_wire_and_not_only_in_the_function(client,
-                                                               monkeypatch):
-    """VERIFY ON THE BYTES. CLAUDE.md section 8.
-
-    A guard that is right in the function and unreached by the route is the
-    failure this repository has recorded most: forty offline tests passing
-    while every served turn crashed. So this drives the real ASGI app.
-    """
-    # The fixture authorises by default; strip it to become a stranger.
-    del client.headers["X-Enrolment-Code"]
-    r = client.post("/api/register", json=GOOD)
-    assert r.status_code == 403, r.text
-    assert "not recognised" in r.text or "closed" in r.text
-
-    client.headers["X-Enrolment-Code"] = ENROLMENT_CODE
-    assert client.post("/api/register", json=GOOD).status_code == 200
+def test_it_is_refused_on_the_wire_and_not_only_in_the_function(client):
+    """Drive the ASGI boundary: missing fails and an issued invitation opens."""
+    assert _register(client, None).status_code == 403
+    assert _register(client, _invite(client)).status_code == 200
 
 
 def test_an_unauthorised_attempt_enrols_nobody(client):
-    """A REFUSAL THAT HALF-ENROLS IS WORSE THAN ONE THAT FAILS, because the
-    advocate's second attempt then collides with a record they never made."""
-    del client.headers["X-Enrolment-Code"]
-    assert client.post("/api/register", json=GOOD).status_code == 403
-
-    client.headers["X-Enrolment-Code"] = ENROLMENT_CODE
-    assert client.post("/api/register", json=GOOD).status_code == 200, (
-        "the refused attempt left a record behind, so the authorised advocate "
-        "now collides with an enrolment that was never allowed to happen")
+    assert _register(client, "wrong").status_code == 403
+    assert client.directory.identity(GOOD["email"]) is None
+    assert _register(client, _invite(client)).status_code == 200, (
+        "the refused attempt left a record behind")
 
 
-def test_the_authorisation_is_compared_without_leaking_its_length(monkeypatch):
-    """`hmac.compare_digest`, not `==`.
+def test_an_invitation_is_single_use_and_cannot_be_replayed(client):
+    token = _invite(client)
+    assert _register(client, token).status_code == 200
+    replay = _register(client, token)
+    assert replay.status_code == 403, replay.text
 
-    A timing-variable comparison on a shared secret is the kind of defect that
-    is invisible in every test and real in production. Asserted on the source
-    because the behaviour it prevents cannot be observed from here.
-    """
-    import inspect
 
-    from nm.edge import api
-    body = inspect.getsource(api._refuse_an_unauthorised_enrolment)
-    assert "compare_digest" in body, (
-        "the authorisation is compared with a timing-variable operator")
+def test_an_expired_invitation_is_refused(client):
+    token = _invite(client, at=utcnow() - timedelta(hours=49))
+    response = _register(client, token)
+    assert response.status_code == 403, response.text
+    assert client.directory.identity(GOOD["email"]) is None
+
+
+def test_an_invitation_is_bound_to_the_server_owned_identity_and_workspace(client):
+    token = _invite(client)
+    for changed in (
+            {**GOOD, "email": "stranger@example.com"},
+            {**GOOD, "firm_id": "another_firm"},
+            {**GOOD, "name": "Someone Else"}):
+        response = _register(client, token, changed)
+        assert response.status_code == 403, response.text
+        assert client.directory.identity(changed["email"]) is None
+
+    # A mismatch does not burn a valid invitation; the intended identity can
+    # still claim it, and the FILE'S identity is the one persisted.
+    assert _register(client, token).status_code == 200
+    assert client.directory.identity(GOOD["email"]) == _identity()
+
+
+def test_only_a_fingerprint_of_the_invitation_is_stored(client):
+    token = _invite(client)
+    paths = list(client.directory._invitations.glob("*.nm"))
+    assert len(paths) == 1
+    raw = paths[0].read_bytes()
+    assert token.encode("utf8") not in raw
+    assert GOOD["email"].lower().encode("utf8") not in raw, (
+        "the invitation roster identity was written without the directory seal")
+
+    record = json.loads(client.directory._cipher.decrypt(raw).decode("utf8"))
+    assert record["token_fingerprint"] == token_fingerprint(token)
+    assert token not in json.dumps(record)
+
+
+def test_the_operator_tool_issues_the_bound_identity_and_prints_the_token_once(
+        monkeypatch, capsys):
+    from nm.bootstrap import composition
+    from tools import invite as command
+
+    issued = []
+
+    class Directory:
+        def issue_invitation(self, identity, issued_by, now):
+            issued.append((identity, issued_by, now))
+            return "one-time-token"
+
+    monkeypatch.setattr(
+        composition, "Application",
+        lambda: type("App", (), {"directory": Directory()})())
+    result = command.main([
+        "--email", "R.Kumar@Example.com", "--name", "R Kumar",
+        "--enrolment", "AP/1234/2010", "--practice", "Hyderabad",
+        "--firm", "firm_rk", "--issued-by", "chambers-admin"])
+
+    assert result == 0
+    assert issued[0][0] == _identity()
+    assert issued[0][1] == "chambers-admin"
+    assert capsys.readouterr().out.count("one-time-token") == 1
+
+
+def test_repeated_wrong_invitations_are_rate_limited_and_audited_without_the_token(
+        client):
+    token = "wrong-invitation-that-must-never-be-logged"
+    for _ in range(attempts.PER_ADVOCATE):
+        assert _register(client, token).status_code == 403
+    limited = _register(client, token)
+    assert limited.status_code == 429, limited.text
+    assert "failed enrolment attempts" in limited.json()["detail"].lower()
+
+    audit = client.directory._audit.read_text(encoding="utf8")
+    attempt_log = client.directory._attempts.read_text(encoding="utf8")
+    assert "invitation refused" in audit
+    assert token not in audit
+    assert token not in attempt_log
+
+
+def test_unknown_expired_and_mismatched_invitations_do_not_form_an_oracle(client):
+    expired = _invite(client, at=utcnow() - timedelta(hours=49))
+    mismatch = _invite(client)
+    answers = [
+        _register(client, "unknown").json()["detail"],
+        _register(client, expired).json()["detail"],
+        _register(client, mismatch, {**GOOD, "firm_id": "wrong"}).json()["detail"],
+    ]
+    assert len(set(answers)) == 1
+
+
+def test_two_directory_instances_cannot_both_spend_one_invitation(tmp_path):
+    identity = _identity()
+    issuer = FileDirectory(tmp_path, key="k" * 32)
+    token = issuer.issue_invitation(identity, "operator", utcnow())
+    credential = enrol(GOOD["password"])
+    barrier = threading.Barrier(2)
+
+    def spend() -> str:
+        directory = FileDirectory(tmp_path, key="k" * 32)
+        barrier.wait()
+        try:
+            directory.accept_invitation(token, identity, credential, utcnow())
+            return "enrolled"
+        except InvitationRefused:
+            return "refused"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(pool.map(lambda _: spend(), range(2)))
+    assert sorted(outcomes) == ["enrolled", "refused"]

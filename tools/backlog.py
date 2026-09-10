@@ -871,7 +871,7 @@ def _cycles(items: list[dict], seen: dict[str, int]) -> list[str]:
 
 # ---------------------------------------------------------------- derive ---
 
-def proof_state(ac: dict) -> str:
+def proof_state(ac: dict, *, bind_execution: bool = True) -> str:
     """The single state of one acceptance criterion, across its levels.
 
     THE WORST LEVEL WINS, and a level with no entry at all is `NOT_RUN`. That
@@ -883,18 +883,19 @@ def proof_state(ac: dict) -> str:
     got = ac.get("evidence") or {}
     for lvl in ac.get("required_evidence") or []:
         evidence = got.get(lvl) or {}
-        r = evidence.get("_effective_result", evidence.get("result", "NOT_RUN"))
+        r = (evidence.get("_effective_result", evidence.get("result", "NOT_RUN"))
+             if bind_execution else evidence.get("result", "NOT_RUN"))
         if order.index(r) < order.index(worst):
             worst = r
     return worst
 
 
-def item_result(it: dict) -> str:
+def item_result(it: dict, *, bind_execution: bool = True) -> str:
     """NOT_PROVEN unless every criterion passes. No criteria is not a pass."""
     acc = it.get("acceptance") or []
     if not acc:
         return "NOT_PROVEN"
-    states = {proof_state(a) for a in acc}
+    states = {proof_state(a, bind_execution=bind_execution) for a in acc}
     if states <= {"PASS", "NOT_APPLICABLE"}:
         return "PASS"
     if "FAIL" in states:
@@ -902,7 +903,7 @@ def item_result(it: dict) -> str:
     return "NOT_PROVEN"
 
 
-def derive_done(it: dict, by_id: dict) -> bool:
+def derive_done(it: dict, by_id: dict, *, bind_execution: bool = True) -> bool:
     """DONE IS COMPUTED. Nobody types it and thereby makes it true.
 
     A legacy row -- closed before this registry existed -- rests on prose in
@@ -916,11 +917,12 @@ def derive_done(it: dict, by_id: dict) -> bool:
         return False
     for dep in it.get("depends_on") or []:
         d = by_id.get(dep)
-        if not d or not derive_done(d, by_id):
+        if not d or not derive_done(d, by_id,
+                                    bind_execution=bind_execution):
             return False
     if it.get("legacy"):
         return it.get("verification") in ("stale", "passing")
-    if item_result(it) != "PASS":
+    if item_result(it, bind_execution=bind_execution) != "PASS":
         return False
     levels = {lvl for a in it.get("acceptance") or []
               for lvl in (a.get("required_evidence") or [])}
@@ -953,18 +955,20 @@ def derive_done(it: dict, by_id: dict) -> bool:
     return True
 
 
-def gap_state(gap: dict, by_id: dict[str, dict]) -> str:
+def gap_state(gap: dict, by_id: dict[str, dict], *,
+              bind_execution: bool = True) -> str:
     """Derive a gap's state; the professional registry may never author it."""
     linked = [by_id.get(link.get("item"))
               for link in gap.get("links") or []]
     linked = [it for it in linked if it]
     if not linked:
         return "UNREGISTERED"
-    if all(derive_done(it, by_id) for it in linked):
+    if all(derive_done(it, by_id, bind_execution=bind_execution)
+           for it in linked):
         return "CLOSED"
     if any(it.get("delivery_status") == "blocked" for it in linked):
         return "BLOCKED"
-    if any(derive_done(it, by_id)
+    if any(derive_done(it, by_id, bind_execution=bind_execution)
            or it.get("implementation") in ("partial", "complete")
            or it.get("delivery_status") in ("ready", "in_progress", "verifying")
            for it in linked):
@@ -972,10 +976,12 @@ def gap_state(gap: dict, by_id: dict[str, dict]) -> str:
     return "PLANNED"
 
 
-def readiness(it: dict, by_id: dict) -> str:
-    if derive_done(it, by_id):
+def readiness(it: dict, by_id: dict, *, bind_execution: bool = True) -> str:
+    if derive_done(it, by_id, bind_execution=bind_execution):
         return "releasable"
-    if it.get("priority") in ("P0",) and not derive_done(it, by_id):
+    if (it.get("priority") in ("P0",)
+            and not derive_done(it, by_id,
+                                bind_execution=bind_execution)):
         return "not_ready"
     if it.get("implementation") == "complete":
         return "conditional"
@@ -984,11 +990,18 @@ def readiness(it: dict, by_id: dict) -> str:
 
 # ---------------------------------------------------------------- report ---
 
-def board(doc: dict) -> str:
+def board(doc: dict, *, bind_execution: bool = True) -> str:
     items = doc["items"]
     by_id = {i["id"]: i for i in items}
     feats = doc["features"]
 
+    evidence_scope = (
+        "This live view binds every automated PASS to the current execution "
+        "artifact."
+        if bind_execution else
+        "This persisted view projects the authored registry contract. "
+        "`backlog check` separately refuses stale or absent execution evidence "
+        "before it can report success.")
     lines = [
         "## Part 0 — The current control board",
         "",
@@ -996,6 +1009,8 @@ def board(doc: dict) -> str:
         "hand.** Every count below was maintained manually once and every one "
         "of them was wrong: `Open — 13`, *sixteen phases*, *18 pass* against a "
         "suite that collects 24.",
+        "",
+        evidence_scope,
         "",
         "| Phase | | Features | Steps | Contracted | Verified | Open P0 | "
         "Readiness |",
@@ -1009,9 +1024,13 @@ def board(doc: dict) -> str:
         impl = sum(1 for f in fs if f["implementation"] == "complete")
         mine = [i for i in items
                 if i.get("phase") == ph or ph in (i.get("affects_phases") or [])]
-        done = sum(1 for i in mine if derive_done(i, by_id))
+        done = sum(1 for i in mine
+                   if derive_done(i, by_id,
+                                  bind_execution=bind_execution))
         p0 = sum(1 for i in mine
-                 if i.get("priority") == "P0" and not derive_done(i, by_id))
+                 if i.get("priority") == "P0"
+                 and not derive_done(i, by_id,
+                                     bind_execution=bind_execution))
         # A PHASE WITH UNBUILT FEATURES IS NOT RELEASABLE, whatever its rows
         # say. F, G and H have no open P0 for the same reason they have no
         # code: nothing has been built there to go wrong yet, and reading that
@@ -1027,7 +1046,9 @@ def board(doc: dict) -> str:
     derived = sum(1 for s in steps
                   if s.get("basis") == "derived_from_features")
     openp0 = [i for i in items
-              if i.get("priority") == "P0" and not derive_done(i, by_id)]
+              if i.get("priority") == "P0"
+              and not derive_done(i, by_id,
+                                  bind_execution=bind_execution)]
     blocked = [i for i in items if i.get("delivery_status") == "blocked"]
     legacy = [i for i in items if i.get("legacy")]
     noacc = [i for i in items
@@ -1037,7 +1058,7 @@ def board(doc: dict) -> str:
     gaps = (doc.get("professional") or {}).get("gap_closures") or []
     gap_counts: dict[str, int] = {}
     for gap in gaps:
-        state = gap_state(gap, by_id)
+        state = gap_state(gap, by_id, bind_execution=bind_execution)
         gap_counts[state] = gap_counts.get(state, 0) + 1
 
     lines += [
@@ -1064,7 +1085,8 @@ def board(doc: dict) -> str:
         lines.append(f"| {gap['id']} | {gap['foundation_wave']} | "
                      f"{gap['feature_complete_wave']} | "
                      f"{gap['release_gate_wave']} | "
-                     f"{gap_state(gap, by_id)} | {work} |")
+                     f"{gap_state(gap, by_id, bind_execution=bind_execution)} | "
+                     f"{work} |")
     lines += [
         "",
         "Derived gap state: " + ", ".join(
@@ -1112,7 +1134,8 @@ def render(doc: dict) -> bool:
         print(f"{BACKLOG.name} has no {START} / {END} markers", file=sys.stderr)
         return False
     new = re.sub(f"{re.escape(START)}.*?{re.escape(END)}",
-                 f"{START}\n\n{board(doc)}\n{END}", text, flags=re.S)
+                 f"{START}\n\n{board(doc, bind_execution=False)}\n{END}",
+                 text, flags=re.S)
     changed = new != text
     if changed:
         BACKLOG.write_text(new, encoding="utf-8")

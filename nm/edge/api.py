@@ -627,7 +627,7 @@ class Credentials(BaseModel):
 
 
 class Registration(BaseModel):
-    """A self-service enrolment. A1.
+    """An invited advocate choosing the credential for their account. A1.
 
     NAME, EMAIL AND PASSWORD ARE REQUIRED. Enrolment, practice and firm are
     OPTIONAL, on the advocate's instruction of 6 September 2026 -- asked for
@@ -639,7 +639,7 @@ class Registration(BaseModel):
     one. The screen is not built yet, so nothing live is weakened today; when
     it is built, a blank firm must make it read NOT_ASSESSED and never CLEAR.
 
-    ENROLMENT IS APPROVAL-GATED. BK-31, decided 9 September 2026.
+    ENROLMENT IS INVITATION-GATED. BK-31, decided 9 September 2026.
 
     Two dated decisions contradicted each other. Self-service was permitted on
     6 September; a CONTROLLED PRIVATE ROSTER was recorded on 8 September, and
@@ -651,10 +651,11 @@ class Registration(BaseModel):
     screens. A product that advises on law cannot let the front door decide
     that.
 
-    So the form survives and the authorisation does not. What the 6 September
-    instruction was FOR also survives: enrolment, practice and firm are still
-    asked for and still optional, because a form that refuses an advocate
-    without their Bar number to hand is one they abandon.
+    So the form survives behind a single-use, expiring invitation. The
+    invitation fixes the server-owned email and workspace identity; the body
+    cannot redirect it to another advocate or firm. What the 6 September
+    instruction was FOR also survives: the invited advocate chooses their own
+    password rather than receiving one from an operator.
     """
 
     name: NonBlank = Field(min_length=1)
@@ -705,39 +706,10 @@ _REFUSED = {
 _REFUSED_DEFAULT = "those credentials were not accepted"
 
 
-def _refuse_an_unauthorised_enrolment(offered: str) -> None:
-    """BK-31. THE ROSTER IS CONTROLLED, SO THE DOOR IS TOO.
-
-    FAIL CLOSED. With no `NM_ENROLMENT_CODE` configured, self-service is shut
-    rather than open: an unconfigured control that admits everyone is the
-    absent-input-reads-as-success shape (CLAUDE.md §9) pointed at the front
-    door, and this door decides who the professional screens are relaxed for.
-
-    The refusal names the route that still works, because an advocate who
-    cannot enrol and is told nothing simply leaves. Enrolment by the operator
-    -- `tools/enrol.py` -- is the roster, and it always was.
-    """
-    import hmac
-    import os
-
-    expected = os.environ.get("NM_ENROLMENT_CODE") or ""
-    if not expected.strip():
-        raise HTTPException(
-            status_code=403,
-            detail="Self-service enrolment is closed on this deployment. "
-                   "Advocates are enrolled by the practice; ask whoever "
-                   "administers this installation to add you.")
-    if not hmac.compare_digest(offered.strip(), expected.strip()):
-        raise HTTPException(
-            status_code=403,
-            detail="That enrolment authorisation was not recognised. "
-                   "Nothing was saved.")
-
-
 @app.post("/api/register")
 @implements("A1")
-def register(body: Registration,
-             x_enrolment_code: str | None = Header(default=None)) -> dict:
+def register(body: Registration, request: Request,
+             x_enrolment_invitation: str | None = Header(default=None)) -> dict:
     """Enrol an advocate, and DO NOT sign them in.
 
     Registration and authentication are separate acts. Issuing a session here
@@ -756,13 +728,21 @@ def register(body: Registration,
     """
     from nm.domain.advocate import (
         AdvocateIdentity,
-        Enrolment,
         canonical_id,
         enrol,
     )
-    from nm.ports.directory import AlreadyEnrolled
+    from nm.ports.directory import AlreadyEnrolled, InvitationRefused
 
-    _refuse_an_unauthorised_enrolment(x_enrolment_code or "")
+    now = utcnow()
+    source = request.client.host if request.client else "unknown-source"
+    rate_key = f"invitation:{canonical_id(body.email)}"
+    counts = application().directory.failures_since(
+        rate_key, source, now - attempts.WINDOW)
+    if counts is not None:
+        seen = attempts.verdict(counts[0], counts[1], now)
+        if not seen.allowed:
+            raise HTTPException(status_code=429,
+                                detail=seen.said_for("enrolment"))
 
     if body.password != body.password_again:
         # BEFORE the credential is derived, so a typo costs nothing and the
@@ -791,9 +771,11 @@ def register(body: Registration,
         enrolment=body.enrolment.strip(), practice=body.practice.strip(),
         firm_id=body.firm_id.strip(), email=email)
     try:
-        application().directory.enrol(
-            Enrolment(identity=identity, credential=credential,
-                      created_at=utcnow()))
+        identity = application().directory.accept_invitation(
+            x_enrolment_invitation or "", identity, credential, now)
+    except InvitationRefused as exc:
+        application().directory.note_failure(rate_key, source, now)
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except AlreadyEnrolled as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 

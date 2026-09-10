@@ -149,7 +149,8 @@ enrolment was permitted 6 September; a *controlled private roster* was recorded
 8 September. The register link stayed live, so the code implemented the earlier
 one. BK-31 was `blocked` on this and it was blocking BK-34, a P0.
 
-**Decided.** The roster. Enrolment now requires the operator's authorisation.
+**Decided.** The roster. Enrolment now requires an operator-issued invitation
+for one named advocate and workspace.
 
 **What settled it was not the dates.** `nm/core/turn.py:1575` relaxes scope and
 capacity release to ONE PERSON, and says why: *"the deployment is a controlled
@@ -163,18 +164,22 @@ assumption the front door contradicts is the defect, not the door.
 **Three design choices inside it, each of which could have gone the other way:**
 
 *Gated, not removed.* The backlog permits "closed **or** approval-gated". The
-form survives; the authorisation does not. Removing the route entirely would
-have been simpler and would have made every practice enrol by shell command.
+form survives, but a reusable installation-wide authorisation does not. An
+operator issues a 48-hour invitation for one canonical email and workspace;
+the server stores only its fingerprint inside the sealed invitation record and
+atomically spends it on enrolment. Removing the route entirely would have been
+simpler and would have made every practice enrol by shell command.
 
-*Fail closed.* With no `NM_ENROLMENT_CODE` configured, enrolment is **shut**,
-not open. An unconfigured control that admits everyone is the
-absent-input-reads-as-success shape aimed at the front door, and the failure
-mode is silent — nobody notices an open door.
+*Fail closed.* Missing, blank, unknown, expired, replayed and identity-mismatched
+invitations are refused with the same response. There is no deployment switch
+whose absence can open the door and no response oracle that reveals which
+identity or workspace was invited.
 
-*A header, not a body field.* The authorisation is proof the advocate was
-invited, not part of the identity being created. It also meant the fixture
-could set it once rather than amending every registration payload in the
-suite, which would have been the one-site patch shape in test clothing.
+*A header, not a body field.* The invitation is proof the advocate was invited,
+not part of the identity being created. The browser conceals it and removes it
+from the DOM before waiting on the network. Tests mint their own invitations;
+there is deliberately no fixture-wide value, because that would recreate the
+replayable deployment secret in test clothing.
 
 **What is NOT done.** Recovery, MFA and workspace identity remain — recorded as
 `BK-31-AC3`, `NOT_RUN`, with an honest note that there is no recovery route at
@@ -183,8 +188,9 @@ all today. BK-31 does not derive `done`.
 **Costly to reverse.** Reopening self-service means re-taking the
 `turn.py:1575` relaxation with it.
 
-**If you disagree**, the change is one env var and one guard; say so and I will
-reverse it and re-open the screen-release question underneath.
+**If you disagree**, reverse the invitation decision and re-open the
+screen-release question underneath; there is deliberately no environment flag
+that silently turns the roster public.
 
 ---
 

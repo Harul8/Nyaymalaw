@@ -41,11 +41,16 @@ from pathlib import Path
 
 import pytest
 
-#: BK-31. The roster is controlled, so `/api/register` requires the
-#: operator's authorisation. Named here so a test that must send it
-#: deliberately -- or must NOT -- can reach the same value the
-#: fixture configures.
-ENROLMENT_CODE = "fixture-enrolment-authorisation"
+#: BK-31. The roster is controlled, so `/api/register` requires an invitation
+#: the operator issued for that one advocate.
+#:
+#: THERE IS NO FIXTURE-WIDE VALUE ANY MORE, and its absence is the point. A
+#: single `ENROLMENT_CODE` shared by the whole suite was the test-shaped
+#: version of the defect BK-31 closed: one string that enrolled anybody, any
+#: number of times. An invitation is minted for one identity, expires, and is
+#: spent on first use, so a test that registers asks `client.invite(...)` for
+#: its own -- and a test about a stranger simply does not.
+INVITED_BY = "fixture-operator"
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / ".nm" / "eval_results.json"
@@ -213,13 +218,10 @@ def client(tmp_path, monkeypatch):
     password = "Fixture-password-not-a-secret-1"
 
     monkeypatch.setenv("NM_MATTER_KEY", KEY)
-    # BK-31. THE ROSTER IS CONTROLLED, so `/api/register` requires the
-    # operator's authorisation. The fixture supplies one because the tests
-    # exercise an AUTHORISED enrolment; the unauthorised and unconfigured
-    # cases are their own invariants in
-    # `tests/test_enrolment_is_authorised.py` and must not be reached by
-    # accident from every other file that happens to register.
-    monkeypatch.setenv("NM_ENROLMENT_CODE", ENROLMENT_CODE)
+    # BK-31 needs no environment variable now. The roster is controlled by
+    # invitations the operator issues into the directory itself, so there is
+    # no installation-wide secret to configure -- and therefore none to leak,
+    # replay, or leave set in a deploy script.
     monkeypatch.setenv("NM_MODEL_PROVIDER", "scripted")
     monkeypatch.setenv("NM_MODEL_ROUTINE", "scripted-1")
     monkeypatch.setenv("NM_EMBED_MODEL", "text-embedding-3-large")
@@ -259,12 +261,30 @@ def client(tmp_path, monkeypatch):
     application.engine = briefed(application.engine)
 
     c = TestClient(create_app(application))
-    # BK-31. THE AUTHORISATION IS A HEADER, SET ONCE, and that is why it is a
-    # header. It is proof the advocate was invited onto the roster, not part
-    # of who they are, so it does not belong in the registration body -- and
-    # putting it there would have meant amending every payload in the suite
-    # that registers, which is the one-site patch shape in test clothing.
-    c.headers["X-Enrolment-Code"] = ENROLMENT_CODE
+
+    def invite(email: str, *, name: str = "", enrolment: str = "",
+               practice: str = "", firm_id: str = "",
+               issued_by: str = INVITED_BY, at=None) -> str:
+        """Issue one invitation and return the token, ONCE. BK-31.
+
+        THE SAME CALL THE OPERATOR MAKES. `tools/invite.py` builds an
+        `AdvocateIdentity` and hands it to `directory.issue_invitation`, and so
+        does this -- so a test drives the real issuing path rather than a
+        fixture's idea of it. The identity here must match what the
+        registration will offer, because the adapter binds the invitation to
+        the whole identity and not merely to the address.
+        """
+        from nm.domain.advocate import AdvocateIdentity, canonical_id, utcnow
+        canonical = canonical_id(email)
+        return directory.issue_invitation(
+            AdvocateIdentity(
+                id=canonical, email=canonical, name=name.strip(),
+                enrolment=enrolment.strip(), practice=practice.strip(),
+                firm_id=firm_id.strip()),
+            issued_by, at or utcnow())
+
+    c.invite = invite
+    c.directory = directory
 
     def sign_in(advocate_id: str = "adv_demo", *, password: str = password,
                 fresh: bool = False):

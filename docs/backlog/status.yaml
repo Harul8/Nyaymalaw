@@ -787,9 +787,9 @@ items:
   verification: partial
   phase: A
   record: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity
-  next_action: replace the reusable deployment-wide enrolment code with an expiring,
-    single-use invitation bound to server-owned identity and workspace; then build recovery,
-    MFA and workspace identity
+  next_action: the invitation slice is built and integration-tested; add registration
+    to the approved browser journey, then build recovery, MFA and unmistakable active
+    workspace identity
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
     build: {result: OPEN, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
@@ -797,18 +797,15 @@ items:
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
   acceptance:
   - id: BK-31-AC1
-    requirement: enrolment is refused without the operator's authorisation, and a deployment
-      that configures none is CLOSED rather than open
-    required_evidence: [domain_test, integration_test]
+    requirement: enrolment is refused without an operator-issued invitation, with no
+      deployment setting whose absence can open the door
+    required_evidence: [integration_test]
     evidence:
-      domain_test:
-        result: PASS
-        ref: tests/test_enrolment_is_authorised.py::test_an_unconfigured_deployment_is_closed_and_not_open
       integration_test:
         result: PASS
         ref: tests/test_enrolment_is_authorised.py::test_it_is_refused_on_the_wire_and_not_only_in_the_function
     negative_control:
-      mutation: present the correct authorisation
+      mutation: present a current invitation issued for the exact identity and workspace
       expected_failure: the door must OPEN; a door that never opens is not a door
         and the practice cannot enrol the advocates it invited
   - id: BK-31-AC2
@@ -832,25 +829,84 @@ items:
       mutation: lock an advocate out and attempt recovery
       expected_failure: there is no recovery route at all today
   - id: BK-31-AC4
-    requirement: enrolment authority is single-use, expires, is stored only as a digest,
-      binds the intended email and server-owned workspace identity, and cannot be replayed
-    required_evidence: [domain_test, integration_test]
+    requirement: an invitation is consumed exactly once and cannot be replayed
+    required_evidence: [integration_test]
     evidence:
-      domain_test: {result: NOT_RUN, ref: '', note: implementation not started}
-      integration_test: {result: NOT_RUN, ref: '', note: implementation not started}
+      integration_test:
+        result: PASS
+        ref: tests/test_enrolment_is_authorised.py::test_an_invitation_is_single_use_and_cannot_be_replayed
     negative_control:
-      mutation: reuse a consumed invitation or change its intended email or workspace
-      expected_failure: enrolment is refused and no advocate record is written
+      mutation: present the same token after its first successful enrolment
+      expected_failure: the replay is refused rather than reaching the existing advocate record
   - id: BK-31-AC5
-    requirement: enrolment attempts are rate-limited and auditable without recording the
-      invitation, and the browser conceals and clears the invitation value
+    requirement: failed enrolment attempts are rate-limited and audited without recording
+      the invitation value
+    required_evidence: [integration_test]
+    evidence:
+      integration_test:
+        result: PASS
+        ref: tests/test_enrolment_is_authorised.py::test_repeated_wrong_invitations_are_rate_limited_and_audited_without_the_token
+    negative_control:
+      mutation: submit more wrong invitations than the per-address limit and inspect both logs
+      expected_failure: no 429 is returned, or the bearer token appears in an audit record
+  - id: BK-31-AC6
+    requirement: an invitation expires and cannot enrol after its fixed lifetime
+    required_evidence: [integration_test]
+    evidence:
+      integration_test:
+        result: PASS
+        ref: tests/test_enrolment_is_authorised.py::test_an_expired_invitation_is_refused
+    negative_control:
+      mutation: issue an invitation more than 48 hours before it is presented
+      expected_failure: enrolment succeeds after the authority has expired
+  - id: BK-31-AC7
+    requirement: the raw invitation and roster identity are not readable at rest; only
+      the token fingerprint is retained inside the sealed record
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_enrolment_is_authorised.py::test_only_a_fingerprint_of_the_invitation_is_stored
+    negative_control:
+      mutation: inspect the invitation file before it is spent
+      expected_failure: the bearer token or invited email is visible in the stored bytes
+  - id: BK-31-AC8
+    requirement: the invitation binds the canonical email, named advocate and server-owned
+      workspace identity rather than accepting replacements from the request
+    required_evidence: [integration_test]
+    evidence:
+      integration_test:
+        result: PASS
+        ref: tests/test_enrolment_is_authorised.py::test_an_invitation_is_bound_to_the_server_owned_identity_and_workspace
+    negative_control:
+      mutation: change the invited email, name or firm while retaining the valid token
+      expected_failure: the changed identity is enrolled or the valid invitation is consumed
+  - id: BK-31-AC9
+    requirement: two concurrent claimants cannot both spend the same invitation
+    required_evidence: [adversarial_test]
+    evidence:
+      adversarial_test:
+        result: PASS
+        ref: tests/test_enrolment_is_authorised.py::test_two_directory_instances_cannot_both_spend_one_invitation
+    negative_control:
+      mutation: have two independently constructed directory adapters cross the claim point together
+      expected_failure: both calls report enrolment or two advocate writes are attempted
+  - id: BK-31-AC10
+    requirement: the browser sends the route's invitation header, conceals its value and
+      clears it from the DOM before waiting on the network
     required_evidence: [integration_test, browser_journey]
     evidence:
-      integration_test: {result: NOT_RUN, ref: '', note: implementation not started}
-      browser_journey: {result: NOT_RUN, ref: '', note: implementation not started}
+      integration_test:
+        result: PASS
+        ref: tests/test_the_page_and_the_script_agree.py::test_the_browser_conceals_and_clears_the_invitation_before_the_wire_wait
+      browser_journey:
+        result: NOT_RUN
+        ref: ''
+        note: registration is not yet a phase in the approved login-to-logout journey
     negative_control:
-      mutation: submit repeated wrong invitations and inspect the served form and audit
-      expected_failure: attempts are eventually refused without the secret remaining in the DOM or log
+      mutation: restore a visible input, retain its value during fetch, or send the retired header name
+      expected_failure: the static integration controls report the exposure or header drift;
+        the eventual browser phase must observe the field clear on both refusal and success
 
 - id: BK-32
   title: responsive advocate home and matter navigation
@@ -1942,6 +1998,54 @@ items:
     negative_control:
       mutation: give an implemented row passing evidence but no sign-off record
       expected_failure: the row remains not done and routes to Sign-off
+- id: BK-75
+  title: Class-A evidence can refresh without depending on its own stale board
+  kind: control
+  priority: P0
+  delivery_status: verifying
+  implementation: complete
+  verification: passing
+  affects_phases: [A, B, C, D, E, F, G, H, I]
+  record: docs/BACKLOG.md#bk-75-class-a-evidence-can-refresh-without-depending-on-its-own-stale-board
+  next_action: closed on the cycle-breaking controls and signed off 10 September 2026;
+    keep execution freshness in lint and never reintroduce it into the persisted projection
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-75-class-a-evidence-can-refresh-without-depending-on-its-own-stale-board}
+    build: {result: BUILT, ref: docs/BACKLOG.md#bk-75-class-a-evidence-can-refresh-without-depending-on-its-own-stale-board}
+    test: {result: VERIFIED, ref: tests/test_the_backlog_states_one_truth.py}
+    signoff: {result: SIGNED_OFF, ref: docs/BACKLOG.md#bk-75-class-a-evidence-can-refresh-without-depending-on-its-own-stale-board}
+  acceptance:
+  - id: BK-75-AC1
+    requirement: a stale published Class-A artifact cannot make the Class-A run needed
+      to replace it fail through the generated board
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_stale_execution_cannot_change_the_persisted_board_projection
+    negative_control:
+      mutation: mark one recorded PASS stale while leaving the registry contract unchanged
+      expected_failure: the persisted board projection changes and makes its own evidence run fail
+  - id: BK-75-AC2
+    requirement: the stored registry projection still refuses a hand-edited count
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_the_board_check_catches_a_hand_edited_count
+    negative_control:
+      mutation: change the rendered row count without changing the registry
+      expected_failure: the board comparison reports the planted drift
+  - id: BK-75-AC3
+    requirement: backlog lint remains responsible for rejecting stale or absent execution evidence
+    required_evidence: [integration_test]
+    evidence:
+      integration_test:
+        result: PASS
+        ref: tests/test_evidence_is_bound_to_execution.py::test_a_source_change_makes_the_machine_result_stale
+    negative_control:
+      mutation: change a source fingerprint after an automated PASS was recorded
+      expected_failure: backlog lint refuses the stale execution even though the stored board is stable
 - id: J-1
   title: The file list cannot tell one matter from another
   kind: finding

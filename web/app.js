@@ -1623,6 +1623,13 @@ $('devices').addEventListener('click', showSessions);
 // TWO FORMS, NOT ONE IN TWO MODES. A single form that changes meaning by a
 // flag is one where a mis-set flag posts a password to the wrong route.
 function showForm(which) {
+  // An invitation is a credential, not form state. It must not survive a
+  // move to sign-in or the outcome card where another person could return to
+  // a pre-authorised form.
+  if (which !== 'register') {
+    const invitation = $('reg-invitation');
+    if (invitation) invitation.value = '';
+  }
   $('login').hidden = which !== 'login';
   $('register').hidden = which !== 'register';
   $('outcome').hidden = which !== 'outcome';
@@ -1680,6 +1687,10 @@ $('register').addEventListener('submit', async (ev) => {
   const go = $('register-go');
   const password = $('reg-password').value;
   const again = $('reg-password2').value;
+  const invitation = $('reg-invitation').value.trim();
+  // Read once and remove it from the DOM before any network wait. A rejected
+  // request must not leave a live enrolment credential on the glass.
+  $('reg-invitation').value = '';
 
   // CHECKED HERE AND ON THE SERVER. Not because the browser is trusted -- it
   // is not, and the route checks it again -- but because a typo that costs a
@@ -1696,12 +1707,19 @@ $('register').addEventListener('submit', async (ev) => {
   try {
     const r = await api('/api/register', {
       method: 'POST',
-      // BK-31. A HEADER, NOT A BODY FIELD. The authorisation is proof the
+      // BK-31. A HEADER, NOT A BODY FIELD. The invitation is proof the
       // advocate was invited onto the roster, not part of who they are, so it
       // does not belong in the identity the registration creates.
+      //
+      // THE NAME MUST MATCH `nm/edge/api.py::register`, and for a while it
+      // did not: the route moved to `x-enrolment-invitation` and this kept
+      // sending `x-enrolment-code`, so the browser form could enrol nobody
+      // while every server-side test passed. Two files holding one name with
+      // nothing refusing the drift -- CLAUDE.md §4. It is now asserted by
+      // `test_the_page_and_the_script_agree.py`.
       headers: {
         'content-type': 'application/json',
-        'x-enrolment-code': $('reg-code').value.trim(),
+        'x-enrolment-invitation': invitation,
       },
       body: JSON.stringify({
         name: $('reg-name').value.trim(),
@@ -1736,6 +1754,7 @@ $('register').addEventListener('submit', async (ev) => {
     $('reg-password2').value = '';
     showOutcome('bad', 'Registration failed', err.message);
   } finally {
+    $('reg-invitation').value = '';
     go.disabled = false;
   }
 });

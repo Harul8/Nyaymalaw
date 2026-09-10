@@ -47,6 +47,7 @@ DK_LEN = 32
 #: applies. Twelve hours: long enough for a working day, short enough that a
 #: borrowed laptop is not a standing grant.
 SESSION_HOURS = 12
+INVITATION_HOURS = 48
 
 
 def canonical_id(value: str | None) -> str:
@@ -258,6 +259,47 @@ def token_fingerprint(token: str) -> str:
     every request would put a cost on reading a matter list.
     """
     return hashlib.sha256(token.encode("utf8")).hexdigest()
+
+
+@dataclass(frozen=True)
+class Invitation:
+    """One invitation to one server-owned advocate identity.
+
+    Only the fingerprint is retained.  The email and firm travel inside the
+    invited identity, so a bearer cannot use a valid token to choose which
+    workspace they enter.
+    """
+
+    token_fingerprint: str
+    identity: AdvocateIdentity
+    issued_at: datetime
+    expires_at: datetime
+    issued_by: str
+
+    def active_at(self, now: datetime) -> bool:
+        return bool(self.issued_by.strip()) and self.issued_at <= now < self.expires_at
+
+
+def new_invitation(identity: AdvocateIdentity, issued_by: str, now: datetime,
+                   lifetime: timedelta | None = None) -> tuple[str, Invitation]:
+    """Mint a high-entropy invitation and retain only its fingerprint."""
+    operator = (issued_by or "").strip()
+    if not operator:
+        raise ValueError("an invitation must name the operator who issued it")
+    if any(mark in operator for mark in ("\r", "\n", "\t")):
+        raise ValueError("an invitation issuer must fit on one audit line")
+    if (not identity.email or canonical_id(identity.email) != identity.id
+            or identity.email.count("@") != 1
+            or any(ch.isspace() for ch in identity.email)):
+        raise ValueError("an invitation must bind one canonical email identity")
+    if lifetime is None:
+        lifetime = timedelta(hours=INVITATION_HOURS)
+    if lifetime <= timedelta(0):
+        raise ValueError("an invitation lifetime must be positive")
+    token = new_token()
+    return token, Invitation(
+        token_fingerprint=token_fingerprint(token), identity=identity,
+        issued_at=now, expires_at=now + lifetime, issued_by=operator)
 
 
 @dataclass(frozen=True)

@@ -171,3 +171,93 @@ def test_late_rail_work_cannot_overwrite_newer_navigation():
     assert "closeNavigator: false" in SCRIPT
     assert "row.dataset.matterId = m.matter_id" in SCRIPT
     assert "$('pane-advise').dataset.matterId = matterId" in SCRIPT
+
+
+def test_the_page_sends_the_header_the_route_reads():
+    """BK-31. ONE HEADER NAME, HELD IN TWO FILES, WITH NOTHING REFUSING DRIFT.
+
+    The enrolment route moved from a shared installation code to per-advocate
+    invitations and became `x_enrolment_invitation`. `web/app.js` kept sending
+    `x-enrolment-code`, so the browser registration form could enrol nobody
+    while every server-side test passed -- the failure lived in the gap
+    between two correct components, which is CLAUDE.md §8's shape and §4's
+    question: what refuses the second copy?
+
+    Nothing did. The element-id scan above compares the page against the
+    script and has no view of the Python at all, so this reads the route's
+    OWN signature rather than a literal repeated here -- a constant in this
+    file would be a third copy of the name and would drift with the other two.
+    """
+    assert not headers_the_script_never_sends(SCRIPT)
+
+
+def headers_the_script_never_sends(script: str) -> list[str]:
+    """Every x- header the register route reads that `script` does not send.
+
+    A FUNCTION SO THE CONTROL CAN CALL IT ON A MUTATED SCRIPT. Asserted
+    inline, the check could only ever be run against the one file that is
+    already correct, and a check that cannot be shown to fail is the shape
+    this repository refuses everywhere else.
+    """
+    import inspect
+
+    from nm.edge import api
+
+    parameters = inspect.signature(api.register).parameters
+    wire = [name.replace("_", "-") for name in parameters
+            if name.startswith("x_")]
+    assert wire, (
+        "the register route takes no x- header, so either the invitation was "
+        "dropped from the door or it moved somewhere this check cannot see")
+    return [name for name in wire if name not in script]
+
+
+def test_the_header_check_catches_the_exact_drift_it_was_written_for():
+    """THE POSITIVE CONTROL, on the real bug rather than on a literal.
+
+    The script as it stood on 10 September -- sending `x-enrolment-code` at a
+    route reading `x-enrolment-invitation` -- must be reported. Without this
+    the assertion above would pass on a script that had simply stopped
+    mentioning headers at all.
+    """
+    stale = SCRIPT.replace("x-enrolment-invitation", "x-enrolment-code")
+    assert stale != SCRIPT, (
+        "the script no longer sends the invitation header literally, so this "
+        "control is mutating nothing")
+    assert headers_the_script_never_sends(stale) == ["x-enrolment-invitation"], (
+        "the drift that shipped a registration form which could enrol nobody "
+        "was not reported")
+
+
+def invitation_exposure(page: str, script: str) -> list[str]:
+    """Report a visible invitation or one retained through the network wait."""
+    problems = []
+    found = re.search(r'<input\b[^>]*\bid="reg-invitation"[^>]*>', page)
+    if not found or 'type="password"' not in found.group(0):
+        problems.append("the invitation input is not concealed")
+    capture = script.find("const invitation = $('reg-invitation').value.trim()")
+    cleared = script.find("$('reg-invitation').value = '';", capture)
+    sent = script.find("await api('/api/register'", capture)
+    if min(capture, cleared, sent) < 0 or not capture < cleared < sent:
+        problems.append("the invitation remains in the DOM during submission")
+    return problems
+
+
+def test_the_browser_conceals_and_clears_the_invitation_before_the_wire_wait():
+    """BK-31-AC5. A bearer credential must not remain readable on the glass."""
+    assert not invitation_exposure(HTML, SCRIPT)
+
+
+def test_the_invitation_exposure_check_catches_both_failures():
+    visible = HTML.replace('id="reg-invitation" name="enrolment_invitation" '
+                           'type="password"',
+                           'id="reg-invitation" name="enrolment_invitation" '
+                           'type="text"')
+    capture = SCRIPT.index("const invitation = $('reg-invitation').value.trim()")
+    clear = SCRIPT.index("$('reg-invitation').value = '';", capture)
+    statement = "$('reg-invitation').value = '';"
+    retained = SCRIPT[:clear] + SCRIPT[clear + len(statement):]
+    assert invitation_exposure(visible, SCRIPT) == [
+        "the invitation input is not concealed"]
+    assert invitation_exposure(HTML, retained) == [
+        "the invitation remains in the DOM during submission"]

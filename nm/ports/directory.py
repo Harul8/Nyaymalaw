@@ -17,7 +17,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Protocol
 
-from nm.domain.advocate import AdvocateIdentity, Enrolment, Session
+from nm.domain.advocate import AdvocateIdentity, Credential, Enrolment, Session
 
 
 class AlreadyEnrolled(RuntimeError):
@@ -32,7 +32,27 @@ class AlreadyEnrolled(RuntimeError):
     """
 
 
+class InvitationRefused(RuntimeError):
+    """Unknown, expired, replayed or identity-mismatched invitation.
+
+    One exception deliberately covers every cause. The adapter records the
+    precise reason; the caller must not turn an invitation token into an
+    oracle for roster or workspace data.
+    """
+
+
 class DirectoryPort(Protocol):
+    def issue_invitation(self, identity: AdvocateIdentity, issued_by: str,
+                         now: datetime) -> str:
+        """Return the invitation once; retain only its fingerprint."""
+        ...
+
+    def accept_invitation(self, token: str, offered: AdvocateIdentity,
+                          credential: Credential,
+                          now: datetime) -> AdvocateIdentity:
+        """Atomically consume one active, identity-bound invitation."""
+        ...
+
     def enrol(self, enrolment: Enrolment) -> None:
         """Record an advocate. Refuses an id that already exists."""
         ...

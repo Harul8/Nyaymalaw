@@ -22,7 +22,10 @@ the caller must not learn and exactly what an operator needs.
 """
 from __future__ import annotations
 
+import hmac
 import json
+import os
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -31,14 +34,33 @@ from nm.domain.advocate import (
     AdvocateIdentity,
     Credential,
     Enrolment,
+    Invitation,
     Session,
     canonical_id,
     dummy,
+    new_invitation,
     open_session,
     token_fingerprint,
 )
 from nm.domain.traceability import implements
-from nm.ports.directory import AlreadyEnrolled  # noqa: F401
+from nm.ports.directory import AlreadyEnrolled, InvitationRefused  # noqa: F401
+
+#: ONE REFUSAL, ONE SENTENCE, AND DELIBERATELY NO ORACLE. BK-31.
+#:
+#: Unknown, expired, replayed and identity-mismatched all say exactly this.
+#: Distinguishing them would turn an invitation token into a probe for who is
+#: on the roster and which workspace they belong to -- the caller learns
+#: nothing; `_note` records the precise cause where the operator can read it.
+#:
+#: IT ALSO SAYS WHAT TO DO NEXT, which is a rule this row already had: an
+#: advocate who cannot enrol and is told nothing simply leaves, and a
+#: controlled roster then reads as a broken product.
+#:
+#: HELD ONCE because it was written three times, and a message repeated at
+#: three raise sites drifts at two of them -- CLAUDE.md §4.
+_INVITATION_REFUSED = (
+    "That invitation was not recognised or is no longer active. Nothing was "
+    "saved. Ask whoever administers this installation to send you a new one.")
 
 
 @implements("A1")
@@ -49,11 +71,95 @@ class FileDirectory:
         self._sessions = self._root / "sessions"
         self._audit = self._root / "auth.log"
         self._attempts = self._root / "attempts.log"
+        self._invitations = self._root / "invitations"
+        self._used_invitations = self._invitations / "used"
+        self._invitation_lock = threading.Lock()
         self._advocates.mkdir(parents=True, exist_ok=True)
         self._sessions.mkdir(parents=True, exist_ok=True)
-        import os
+        self._invitations.mkdir(parents=True, exist_ok=True)
+        self._used_invitations.mkdir(parents=True, exist_ok=True)
         self._cipher = _Cipher(
             key if key is not None else os.environ.get("NM_MATTER_KEY", ""))
+
+    # ---------------------------------------------------------- invitations ---
+
+    def _invitation_path(self, fingerprint: str) -> Path:
+        return self._invitations / f"{fingerprint}.nm"
+
+    def issue_invitation(self, identity: AdvocateIdentity, issued_by: str,
+                         now: datetime) -> str:
+        token, invitation = new_invitation(identity, issued_by, now)
+        record = {
+            "token_fingerprint": invitation.token_fingerprint,
+            "identity": invitation.identity.as_dict(),
+            "issued_at": invitation.issued_at.isoformat(),
+            "expires_at": invitation.expires_at.isoformat(),
+            "issued_by": invitation.issued_by,
+        }
+        # Exclusive creation: a fantastically unlikely token collision is a
+        # refusal, never an overwrite of somebody else's invitation.
+        payload = json.dumps(record, indent=2).encode("utf8")
+        with self._invitation_path(invitation.token_fingerprint).open(
+                "xb") as handle:
+            # Invitation identity is roster data. It receives the same seal as
+            # advocate records; only the random token's fingerprint is visible
+            # in the filename.
+            handle.write(self._cipher.encrypt(payload))
+        self._note(identity.id, f"invitation issued by {invitation.issued_by}")
+        return token
+
+    def accept_invitation(self, token: str, offered: AdvocateIdentity,
+                          credential: Credential,
+                          now: datetime) -> AdvocateIdentity:
+        """Claim and enrol under one lock; a second presentation loses."""
+        fingerprint = token_fingerprint((token or "").strip())
+        active = self._invitation_path(fingerprint)
+        used = self._used_invitations / f"{fingerprint}.json"
+        with self._invitation_lock:
+            try:
+                data = json.loads(
+                    self._cipher.decrypt(active.read_bytes()).decode("utf8"))
+                invitation = Invitation(
+                    token_fingerprint=data["token_fingerprint"],
+                    identity=AdvocateIdentity(**data["identity"]),
+                    issued_at=datetime.fromisoformat(data["issued_at"]),
+                    expires_at=datetime.fromisoformat(data["expires_at"]),
+                    issued_by=data["issued_by"],
+                )
+            except Exception:  # noqa: BLE001 -- corrupt/foreign is still refused
+                self._note(offered.id, "invitation refused: unknown or already used")
+                raise InvitationRefused(_INVITATION_REFUSED) from None
+
+            invited = json.dumps(invitation.identity.as_dict(), sort_keys=True)
+            presented = json.dumps(offered.as_dict(), sort_keys=True)
+            active_now = invitation.active_at(now)
+            if not active_now or not hmac.compare_digest(invited, presented):
+                why = "expired" if not active_now else "identity mismatch"
+                self._note(offered.id, f"invitation refused: {why}")
+                raise InvitationRefused(_INVITATION_REFUSED)
+
+            try:
+                os.replace(active, used)
+            except OSError:
+                self._note(offered.id, "invitation refused: concurrent replay")
+                raise InvitationRefused(_INVITATION_REFUSED) from None
+
+            try:
+                # The FILE, not the request, owns the identity that is saved.
+                self.enrol(Enrolment(identity=invitation.identity,
+                                     credential=credential, created_at=now))
+            except AlreadyEnrolled:
+                self._note(invitation.identity.id,
+                           "invitation consumed: advocate already enrolled")
+                raise
+            except Exception:
+                # An I/O failure is not consumption. Restore the claim so the
+                # operator does not have to reissue after a transient disk error.
+                if used.exists() and not active.exists():
+                    os.replace(used, active)
+                raise
+            self._note(invitation.identity.id, "invitation consumed and enrolled")
+            return invitation.identity
 
     # ------------------------------------------------------------ advocates ---
 
@@ -217,8 +323,9 @@ class FileDirectory:
         """
         try:
             with self._attempts.open("a", encoding="utf8") as fh:
-                fh.write(f"{now.isoformat()}\t{canonical_id(advocate_id)}"
-                         f"\t{source}\n")
+                who = _one_log_field(canonical_id(advocate_id))
+                where = _one_log_field(source)
+                fh.write(f"{now.isoformat()}\t{who}\t{where}\n")
         except OSError:
             pass
 
@@ -425,8 +532,15 @@ class FileDirectory:
         """
         try:
             with self._audit.open("a", encoding="utf8") as fh:
-                fh.write(f"{datetime.now().isoformat()}\t{advocate_id}\t{what}\n")
+                who = _one_log_field(advocate_id)
+                event = _one_log_field(what)
+                fh.write(f"{datetime.now().isoformat()}\t{who}\t{event}\n")
         except OSError:
             # Never fail a login because the log is unwritable. The record is
             # worth having and it is not worth locking an advocate out for.
             pass
+
+
+def _one_log_field(value: object) -> str:
+    """Keep untrusted identity/source text inside one tab-separated field."""
+    return " ".join(str(value).replace("\t", " ").splitlines())

@@ -32,8 +32,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from nm.adapters.store.directory import FileDirectory
-from nm.domain.advocate import AdvocateIdentity, Enrolment, canonical_id, enrol
-from tests.conftest import ENROLMENT_CODE
+from nm.domain.advocate import (
+    AdvocateIdentity,
+    Enrolment,
+    canonical_id,
+    enrol,
+    utcnow,
+)
 
 pytestmark = pytest.mark.class_a
 
@@ -127,19 +132,25 @@ class _App:
 
 
 @pytest.fixture()
-def client(tmp_path, monkeypatch):
+def client(tmp_path):
     import nm.edge.api as api
 
     was = api._application
-    api.set_application(_App(FileDirectory(tmp_path, key="k" * 32)))
-    # BK-31. THE ROSTER IS CONTROLLED, so `/api/register` needs the operator's
-    # authorisation. This fixture SHADOWS the one in conftest, which is why it
-    # has to configure it too -- and why that shadowing cost an hour: the
-    # header was set in conftest and this file never saw it.
-    monkeypatch.setenv("NM_ENROLMENT_CODE", ENROLMENT_CODE)
+    directory = FileDirectory(tmp_path, key="k" * 32)
+    api.set_application(_App(directory))
     try:
         with TestClient(api.app) as c:
-            c.headers["X-Enrolment-Code"] = ENROLMENT_CODE
+            def invite(body: dict) -> str:
+                email = canonical_id(body["email"])
+                return directory.issue_invitation(
+                    AdvocateIdentity(
+                        id=email, email=email, name=body["name"].strip(),
+                        enrolment=body.get("enrolment", "").strip(),
+                        practice=body.get("practice", "").strip(),
+                        firm_id=body.get("firm_id", "").strip()),
+                    "fixture-operator", utcnow())
+
+            c.invite = invite
             yield c
     finally:
         api.set_application(was)
@@ -149,9 +160,12 @@ def test_register_with_capitals_then_sign_in_with_them(client):
     """WHAT THE ADVOCATE ACTUALLY DOES. They type their email the way they
     write it, in both boxes, and both have to work."""
     typed = "R.Kumar@Example.com"
-    r = client.post("/api/register", json={
+    body = {
         "name": "R Kumar", "email": typed,
-        "password": PASSWORD, "password_again": PASSWORD})
+        "password": PASSWORD, "password_again": PASSWORD}
+    r = client.post(
+        "/api/register", json=body,
+        headers={"X-Enrolment-Invitation": client.invite(body)})
     assert r.status_code == 200, r.text
     assert r.json()["advocate_id"] == "r.kumar@example.com", (
         "the route returned a handle that is not the stored id, so the form "

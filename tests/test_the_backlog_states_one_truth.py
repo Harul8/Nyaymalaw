@@ -330,6 +330,13 @@ def test_the_legacy_population_keeps_its_declared_exemption():
         "rests on prose and is counted, not silently dropped")
 
 
+def _persisted_board_matches(tool, doc: dict, text: str) -> bool:
+    current = re.search(
+        f"{re.escape(tool.START)}(.*?){re.escape(tool.END)}", text, re.S)
+    return bool(current and current.group(1).strip()
+                == tool.board(doc, bind_execution=False).strip())
+
+
 def test_the_board_is_not_stale():
     """BK-60-AC4. The generated section matches the registry.
 
@@ -341,12 +348,49 @@ def test_the_board_is_not_stale():
     text = (ROOT / "docs" / "BACKLOG.md").read_text(encoding="utf-8")
     assert tool.START in text and tool.END in text, (
         "BACKLOG.md has lost its generated-board markers")
-    current = re.search(
-        f"{re.escape(tool.START)}(.*?){re.escape(tool.END)}", text, re.S)
-    assert current, "the board markers are present but do not enclose anything"
-    assert current.group(1).strip() == tool.board(_doc()).strip(), (
+    assert _persisted_board_matches(tool, _doc(), text), (
         "the board in BACKLOG.md has drifted from status.yaml. Run:\n"
         "    python tools/backlog.py render")
+
+
+def test_the_board_check_catches_a_hand_edited_count():
+    """BK-75-AC2. Decoupling freshness must not make the board decorative."""
+    tool = _tool()
+    text = (ROOT / "docs" / "BACKLOG.md").read_text(encoding="utf-8")
+    rows = len(_doc()["items"])
+    planted = text.replace(f"**{rows} rows ·", f"**{rows + 1} rows ·", 1)
+    assert planted != text, "the mutation changed nothing"
+    assert not _persisted_board_matches(tool, _doc(), planted)
+
+
+def test_stale_execution_cannot_change_the_persisted_board_projection():
+    """BK-75-AC1. Evidence must be able to replace its stale predecessor.
+
+    The live view still changes, proving the mutation is real. Only the
+    persisted contract projection is stable, so the Class-A run no longer
+    depends on the artifact it is trying to produce.
+    """
+    tool = _tool()
+    doc = _doc()
+    for item in doc["items"]:
+        for criterion in item.get("acceptance") or []:
+            for evidence in (criterion.get("evidence") or {}).values():
+                evidence["_effective_result"] = evidence.get("result", "NOT_RUN")
+
+    recorded_before = tool.board(doc, bind_execution=False)
+    live_before = tool.board(doc, bind_execution=True)
+    target = next(i for i in doc["items"] if i["id"] == "BK-73")
+    automated = next(
+        evidence
+        for criterion in target["acceptance"]
+        for level, evidence in (criterion.get("evidence") or {}).items()
+        if level in tool.AUTOMATED_EVIDENCE and evidence.get("result") == "PASS")
+    automated["_effective_result"] = "STALE"
+
+    assert tool.board(doc, bind_execution=False) == recorded_before
+    assert tool.board(doc, bind_execution=True) != live_before, (
+        "the planted stale result changed no live roll-up, so the stability "
+        "assertion above proved nothing")
 
 
 @pytest.mark.parametrize("label,mutate,expect", [

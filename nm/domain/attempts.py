@@ -73,12 +73,16 @@ class Verdict:
     @property
     def said(self) -> str:
         """What the advocate is told. Empty when they are let through."""
+        return self.said_for("sign-in")
+
+    def said_for(self, action: str) -> str:
+        """Name the door that paused without duplicating the rate policy."""
         if self.allowed:
             return ""
         seconds = int((self.retry_after or timedelta()).total_seconds())
         when = (f"{seconds // 60 + 1} minute(s)" if seconds >= 60
                 else f"{max(seconds, 1)} second(s)")
-        return (f"Too many failed sign-in attempts {self.because}. "
+        return (f"Too many failed {action} attempts {self.because}. "
                 f"Try again in about {when}. Nothing is locked and no account "
                 f"has been changed -- the count simply ages out.")
 

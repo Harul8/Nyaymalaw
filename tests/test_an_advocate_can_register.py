@@ -1,11 +1,11 @@
-"""A1 — self-service enrolment, and what it must still record.
+"""A1 — invited enrolment, and what it must still record.
 
 THE DECISION THIS REVERSES
 ----------------------------
 The sign-in page used to say, in as many words, that enrolment was not
 self-service and pointed at `tools/enrol.py` — a tool an advocate cannot run.
-Self-service is permitted as of 6 September 2026, on the advocate's
-instruction.
+The form is available to the advocate, but an operator-issued invitation now
+controls who may use it and fixes the identity and workspace it will create.
 
 REVERSING WHO MAY ENROL IS NOT REVERSING WHAT ENROLMENT CAPTURES. The old page
 recorded the Bar Council number and the FIRM, and both are still required. The
@@ -24,8 +24,6 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-
-from tests.conftest import ENROLMENT_CODE
 
 pytestmark = pytest.mark.class_a
 
@@ -56,29 +54,43 @@ class _App:
 
 
 @pytest.fixture()
-def client(tmp_path, monkeypatch):
+def client(tmp_path):
     import nm.edge.api as api
     from nm.adapters.store.directory import FileDirectory
+    from nm.domain.advocate import AdvocateIdentity, canonical_id, utcnow
 
     was = api._application
-    api.set_application(_App(FileDirectory(tmp_path, key="k" * 32)))
-    # BK-31. THE ROSTER IS CONTROLLED, so `/api/register` needs the operator's
-    # authorisation. This fixture SHADOWS the one in conftest, which is why it
-    # has to configure it too -- and why that shadowing cost an hour: the
-    # header was set in conftest and this file never saw it.
-    monkeypatch.setenv("NM_ENROLMENT_CODE", ENROLMENT_CODE)
+    directory = FileDirectory(tmp_path, key="k" * 32)
+    api.set_application(_App(directory))
     try:
         with TestClient(api.app) as c:
-            c.headers["X-Enrolment-Code"] = ENROLMENT_CODE
+            def invite(body: dict = GOOD) -> str:
+                email = canonical_id(body["email"])
+                return directory.issue_invitation(
+                    AdvocateIdentity(
+                        id=email, email=email, name=body["name"].strip(),
+                        enrolment=body.get("enrolment", "").strip(),
+                        practice=body.get("practice", "").strip(),
+                        firm_id=body.get("firm_id", "").strip()),
+                    "fixture-operator", utcnow())
+
+            c.invite = invite
             yield c
     finally:
         api.set_application(was)
 
 
+def register(client, body: dict = GOOD, *, token: str | None = None):
+    invitation = token or client.invite(body)
+    return client.post(
+        "/api/register", json=body,
+        headers={"X-Enrolment-Invitation": invitation})
+
+
 def test_an_advocate_can_enrol_and_then_sign_in(client):
     """THE WHOLE POINT, END TO END. A registration that succeeds and cannot be
     signed in with has enrolled someone who cannot get in."""
-    r = client.post("/api/register", json=GOOD)
+    r = register(client)
     assert r.status_code == 200, r.text
     advocate_id = r.json()["advocate_id"]
 
@@ -93,7 +105,7 @@ def test_the_email_is_the_login_handle_and_is_normalised(client):
     """An advocate cannot sign in with an identifier nobody showed them, so
     the email is the id. Normalised, or the same person typing a capital on
     Tuesday is a different advocate with a different file."""
-    assert client.post("/api/register", json=GOOD).json()["advocate_id"] \
+    assert register(client).json()["advocate_id"] \
         == "r.kumar@example.com"
 
 
@@ -101,21 +113,23 @@ def test_registering_does_not_sign_anyone_in(client):
     """A1's first NEVER. A session presented from a machine that never
     authenticated is the thing the device binding exists to refuse, and a
     registration that issued one would mint it on whatever posted the form."""
-    client.post("/api/register", json=GOOD)
+    register(client)
     assert client.get("/api/session").status_code == 401
 
 
 def test_two_passwords_that_differ_save_nothing(client):
     """Checked BEFORE the credential is derived, so a typo costs nothing and
     the two strings never both reach the hash."""
-    r = client.post("/api/register",
-                    json={**GOOD, "password_again": "something else entirely"})
+    token = client.invite(GOOD)
+    r = register(client,
+                 {**GOOD, "password_again": "something else entirely"},
+                 token=token)
     assert r.status_code == 400
     assert "do not match" in r.json()["detail"]
 
     # AND NOTHING WAS WRITTEN. A refusal that half-enrols is worse than one
     # that fails, because the second attempt then collides with the first.
-    assert client.post("/api/register", json=GOOD).status_code == 200
+    assert register(client, token=token).status_code == 200
 
 
 @pytest.mark.parametrize(("password", "says"), [
@@ -139,8 +153,7 @@ def test_the_password_rule_is_reached_rather_than_restated(client, password,
     requirements" makes the advocate guess which of four rules they broke; the
     named class is the difference between a rule and an obstacle.
     """
-    r = client.post("/api/register",
-                    json={**GOOD, "password": password,
+    r = register(client, {**GOOD, "password": password,
                           "password_again": password})
     assert r.status_code == 400, r.text
     assert says in r.json()["detail"], r.json()["detail"]
@@ -152,7 +165,9 @@ def test_name_email_and_password_are_required(client):
     input carries `required`, so a screen reader hears it from the attribute
     rather than from a character it cannot see."""
     for field in ("name", "email"):
-        r = client.post("/api/register", json={**GOOD, field: "   "})
+        r = client.post(
+            "/api/register", json={**GOOD, field: "   "},
+            headers={"X-Enrolment-Invitation": client.invite(GOOD)})
         assert r.status_code == 422, (
             f"{field} was accepted blank: {r.status_code} {r.text[:100]}")
 
@@ -169,7 +184,7 @@ def test_the_bar_number_practice_and_firm_are_optional(client):
     """
     lean = {k: v for k, v in GOOD.items()
             if k not in ("enrolment", "practice", "firm_id")}
-    r = client.post("/api/register", json=lean)
+    r = register(client, lean)
     assert r.status_code == 200, r.text
 
     signed = client.post("/api/login",
@@ -188,8 +203,8 @@ def test_enrolling_the_same_email_twice_is_refused(client):
     """Overwriting would replace a credential without anyone deciding to —
     the same refusal `tools/enrol.py` already makes, reached through a
     different door."""
-    assert client.post("/api/register", json=GOOD).status_code == 200
-    again = client.post("/api/register", json=GOOD)
+    assert register(client).status_code == 200
+    again = register(client)
     assert again.status_code == 409
     assert "already enrolled" in again.json()["detail"].lower()
 
@@ -197,5 +212,5 @@ def test_enrolling_the_same_email_twice_is_refused(client):
 def test_the_password_is_never_returned(client):
     """It should not need saying, and the check costs nothing next to what it
     would cost to find out later."""
-    body = client.post("/api/register", json=GOOD).text
+    body = register(client).text
     assert GOOD["password"] not in body

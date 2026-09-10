@@ -109,16 +109,23 @@
       </button>
     </div>
 
-    <!-- BK-31. THE ROSTER IS CONTROLLED, so enrolment is by authorisation.
+    <!-- BK-31. THE ROSTER IS CONTROLLED, so enrolment is by invitation.
          Asked for LAST and named plainly: an advocate who does not have one
          should reach this field already knowing they need to ask, rather than
-         filling in five boxes first and being refused at the end. -->
-    <label for="reg-code">Enrolment authorisation <span class="req" aria-hidden="true">*</span></label>
-    <input id="reg-code" name="enrolment_code" type="text" required
-           autocomplete="off"
-           aria-describedby="reg-code-help">
-    <p id="reg-code-help" class="field-help">Issued by whoever administers this
-      installation. Advocates are enrolled by the practice, not by signing up.</p>
+         filling in five boxes first and being refused at the end.
+
+         IT IS AN INVITATION AND NO LONGER A SHARED CODE. One installation-wide
+         secret is replayable: anyone who ever saw it could enrol, forever, as
+         anybody. An invitation is minted for ONE advocate, expires, and is
+         spent on first use -- so the field takes a value the advocate was
+         personally sent, which is why the help text says who sent it. -->
+    <label for="reg-invitation">Enrolment invitation <span class="req" aria-hidden="true">*</span></label>
+    <input id="reg-invitation" name="enrolment_invitation" type="password" required
+           autocomplete="one-time-code" autocapitalize="none" spellcheck="false"
+           aria-describedby="reg-invitation-help">
+    <p id="reg-invitation-help" class="field-help">Sent to you by whoever
+      administers this installation. It is for you alone, expires, and works
+      once. Advocates are enrolled by the practice, not by signing up.</p>
 
     <button type="submit" class="primary wide" id="register-go">Register</button>
     <div class="login-alt"><a href="#" id="show-login">Back to sign in</a></div>
