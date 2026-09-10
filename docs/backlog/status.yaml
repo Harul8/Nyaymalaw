@@ -761,8 +761,9 @@ items:
   verification: partial
   phase: A
   record: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity
-  next_action: the roster contradiction is resolved and enrolment is authorisation-gated;
-    recovery, MFA and workspace identity remain
+  next_action: replace the reusable deployment-wide enrolment code with an expiring,
+    single-use invitation bound to server-owned identity and workspace; then build recovery,
+    MFA and workspace identity
   acceptance:
   - id: BK-31-AC1
     requirement: enrolment is refused without the operator's authorisation, and a deployment
@@ -799,6 +800,26 @@ items:
     negative_control:
       mutation: lock an advocate out and attempt recovery
       expected_failure: there is no recovery route at all today
+  - id: BK-31-AC4
+    requirement: enrolment authority is single-use, expires, is stored only as a digest,
+      binds the intended email and server-owned workspace identity, and cannot be replayed
+    required_evidence: [domain_test, integration_test]
+    evidence:
+      domain_test: {result: NOT_RUN, ref: '', note: implementation not started}
+      integration_test: {result: NOT_RUN, ref: '', note: implementation not started}
+    negative_control:
+      mutation: reuse a consumed invitation or change its intended email or workspace
+      expected_failure: enrolment is refused and no advocate record is written
+  - id: BK-31-AC5
+    requirement: enrolment attempts are rate-limited and auditable without recording the
+      invitation, and the browser conceals and clears the invitation value
+    required_evidence: [integration_test, browser_journey]
+    evidence:
+      integration_test: {result: NOT_RUN, ref: '', note: implementation not started}
+      browser_journey: {result: NOT_RUN, ref: '', note: implementation not started}
+    negative_control:
+      mutation: submit repeated wrong invitations and inspect the served form and audit
+      expected_failure: attempts are eventually refused without the secret remaining in the DOM or log
 
 - id: BK-32
   title: responsive advocate home and matter navigation
@@ -1603,11 +1624,12 @@ items:
   priority: P1
   delivery_status: in_progress
   implementation: partial
-  verification: failing
+  verification: stale
   phase: A
   record: docs/BACKLOG.md#bk-72-the-matter-navigator-cannot-be-driven-at-390px
-  next_action: determine whether the drawer refuses `#back` at 390px in the product
-    or only under automation; the 768px and 1280px paths pass unchanged
+  next_action: replace the text-based completion wait, prevent a late thread-board refresh
+    from overwriting newer navigation, and prove switching between two distinct matters in
+    an isolated run at all three widths
   acceptance:
   - id: BK-72-AC1
     requirement: at 390px an advocate can open the navigator, return to the file list
@@ -1615,14 +1637,14 @@ items:
     required_evidence: [browser_journey]
     evidence:
       browser_journey:
-        result: FAIL
+        result: STALE
         ref: tests/test_the_journey_login_to_logout.py::test_phase_3_the_matter_navigator_is_reachable_at_every_width
-        note: fails at 390px only; 768px and 1280px pass. The drawer opens (aria-expanded
-          goes true) and the view stays on Threads, so `#back` does not reach the
-          list.
+        note: the saved report is for 53b16b0+dirty and records all three widths failing;
+          the test and product changed afterwards, so no current width result is established
     negative_control:
-      mutation: run the same phase at 768px and 1280px
-      expected_failure: both pass, so the assertion is not simply wrong
+      mutation: make the phase open the matter it was already on, or let a late refresh
+        close a navigator opened afterwards
+      expected_failure: the phase fails because the matter id did not change or newer navigation lost
 - id: BK-71
   title: professional plan and delivery-wave reconciliation
   kind: control
@@ -1663,6 +1685,86 @@ items:
         result: PASS
         ref: tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls
         note: the reported probe matrix is represented by 22 independent parameterized Class-A cases, each asserting a real mutation and its specific lint complaint
+- id: BK-73
+  title: evidence results are bound to the build and execution that earned them
+  kind: control
+  priority: P0
+  delivery_status: ready
+  implementation: none
+  verification: none
+  affects_phases: [A, B, C, D, E, F, G, H, I]
+  record: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them
+  next_action: make automated PASS derive from a current machine result and require structured
+    provenance for browser, model, counsel and production evidence
+  acceptance:
+  - id: BK-73-AC1
+    requirement: an automated PASS names a machine result containing the exact test node,
+      outcome, source fingerprint, time and runner identity
+    required_evidence: [domain_test]
+    evidence: {}
+    negative_control:
+      mutation: author PASS for a test that exists but did not pass in the bound result
+      expected_failure: backlog lint refuses the evidence and done cannot derive
+  - id: BK-73-AC2
+    requirement: browser evidence is stale when its report predates any NM, web, journey-test
+      or journey-runner source that can affect it
+    required_evidence: [domain_test]
+    evidence: {}
+    negative_control:
+      mutation: point current browser evidence at the saved 53b16b0+dirty report
+      expected_failure: the source identity mismatch is reported
+  - id: BK-73-AC3
+    requirement: model, counsel and production PASS evidence carries a structured dated
+      record naming subject, method, result and accountable actor rather than prose in ref
+    required_evidence: [domain_test]
+    evidence: {}
+    negative_control:
+      mutation: record production PASS as an unstructured phrase with no evidence record
+      expected_failure: backlog lint refuses the claim
+  - id: BK-73-AC4
+    requirement: every pushed commit is independently checked by a repository-defined
+      Class-A CI job whose result is tied to that commit
+    required_evidence: [integration_test]
+    evidence: {}
+    negative_control:
+      mutation: remove the CI workflow or its Class-A command
+      expected_failure: the repository control test reports that pushes have no independent gate
+- id: BK-74
+  title: Start Build Test and Sign-off are enforced delivery states with records
+  kind: control
+  priority: P1
+  delivery_status: ready
+  implementation: none
+  verification: none
+  affects_phases: [A, B, C, D, E, F, G, H, I]
+  record: docs/BACKLOG.md#bk-74-start-build-test-and-sign-off-are-enforced-delivery-states-with-records
+  next_action: store the four stage records, derive routing and prevent completion before
+    conformance sign-off
+  acceptance:
+  - id: BK-74-AC1
+    requirement: READY routes to Build, verified evidence routes to Sign-off, and a derived-done
+      row is terminal rather than routed back to Test
+    required_evidence: [domain_test]
+    evidence: {}
+    negative_control:
+      mutation: route ready to Start or a completed row to Test
+      expected_failure: the state-machine invariant fails
+  - id: BK-74-AC2
+    requirement: each completed stage names its Start Record, Build Record, Evidence Pack or
+      Conformance Record and the next stage cannot begin without the preceding record
+    required_evidence: [domain_test]
+    evidence: {}
+    negative_control:
+      mutation: mark an item verifying without a Build Record and Evidence Pack
+      expected_failure: backlog lint refuses the transition
+  - id: BK-74-AC3
+    requirement: non-legacy done cannot derive without an approved Conformance Record matching
+      the current evidence and exact claim
+    required_evidence: [domain_test]
+    evidence: {}
+    negative_control:
+      mutation: give an implemented row passing evidence but no sign-off record
+      expected_failure: the row remains not done and routes to Sign-off
 - id: J-1
   title: The file list cannot tell one matter from another
   kind: finding

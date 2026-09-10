@@ -27,21 +27,21 @@ found cannot answer it.
 
 | Phase | | Features | Steps | Contracted | Verified | Open P0 | Readiness |
 |---|---|---:|---:|---:|---:|---:|---|
-| A | Arrive | 3/4 | 4 | 0/4 | 8/30 | 5 | not releasable |
-| B | Open a matter | 0/6 | 4 | 2/4 | 4/14 | 3 | not releasable |
-| C | Take the brief | 5/7 | 7 | 0/7 | 7/24 | 7 | not releasable |
-| D | Work the file | 8/9 | 14 | 1/14 | 9/31 | 8 | not releasable |
-| E | Advise | 1/5 | 5 | 0/5 | 5/31 | 9 | not releasable |
-| F | Act | 0/7 | 7 | 0/7 | 1/10 | 4 | not releasable |
-| G | Carry | 0/3 | 3 | 0/3 | 2/12 | 3 | not releasable |
-| H | Close | 0/2 | 2 | 0/2 | 1/5 | 0 | not releasable |
-| I | Leave | 1/1 | 1 | 0/1 | 3/16 | 4 | not releasable |
+| A | Arrive | 3/4 | 4 | 0/4 | 8/32 | 6 | not releasable |
+| B | Open a matter | 0/6 | 4 | 2/4 | 4/16 | 4 | not releasable |
+| C | Take the brief | 5/7 | 7 | 0/7 | 7/26 | 8 | not releasable |
+| D | Work the file | 8/9 | 14 | 1/14 | 9/33 | 9 | not releasable |
+| E | Advise | 1/5 | 5 | 0/5 | 5/33 | 10 | not releasable |
+| F | Act | 0/7 | 7 | 0/7 | 1/12 | 5 | not releasable |
+| G | Carry | 0/3 | 3 | 0/3 | 2/14 | 4 | not releasable |
+| H | Close | 0/2 | 2 | 0/2 | 1/7 | 1 | not releasable |
+| I | Leave | 1/1 | 1 | 0/1 | 3/18 | 5 | not releasable |
 
-**81 rows · 16 open P0 · 0 blocked · 18/44 features implemented**
+**83 rows · 17 open P0 · 0 blocked · 18/44 features implemented**
 
 ### Professional plan — registered and derived
 
-**20 advocate standards · 13 expert-workflow states · 5 advice levels · 7 roles · 14 gap closures · 81 wave rows**
+**20 advocate standards · 13 expert-workflow states · 5 advice levels · 7 roles · 14 gap closures · 83 wave rows**
 
 Gap status below is computed from the linked BK/J rows. It is never authored in `professional.json` or maintained in the workbook.
 
@@ -66,7 +66,7 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 
 ### Open P0 — what is unsafe
 
-- **BK-31** [A] account access, recovery and workspace identity — *in_progress* · the roster contradiction is resolved and enrolment is authorisation-gated; recovery, MFA and workspace identity remain
+- **BK-31** [A] account access, recovery and workspace identity — *in_progress* · replace the reusable deployment-wide enrolment code with an expiring, single-use invitation bound to server-owned identity and workspace; then build recovery, MFA and workspace identity
 - **BK-33** [A] recognisable matter cover, truthful board and real reopen — *in_progress* · render passed_deadlines, which the projection already emits
 - **BK-34** [B] front-door legal and professional screens before substance — *in_progress* · the emergency exception needs B2 emergency triage, which BK-53 delivers; an incomplete registry reading NOT_ASSESSED needs the firm-scoped registry
 - **BK-35** [D] cause-specific accrual and answer-consistency gate — *in_progress* · refuse to run the period from a single dated fact that does not satisfy the curated trigger; emit the statutory limb
@@ -82,6 +82,7 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 - **BK-67** [C/D/E/F] expert-advocate evaluation gate — *planned* · turn PA-01 to PA-20 into representative matter rubrics with named reviewers, thresholds, reservations and regression policy
 - **BK-69** [C/G/I] multimodal privacy and processing boundary — *in_progress* · the W0 foundation is built; end-to-end attribution of originals, derivatives, processors, retention and deletion needs BK-54's intake at W2
 - **BK-70** [D/E/F] remedy and enforceability model — *planned* · model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
+- **BK-73** [A/B/C/D/E/F/G/H/I] evidence results are bound to the build and execution that earned them — *ready* · make automated PASS derive from a current machine result and require structured provenance for browser, model, counsel and production evidence
 
 ### Admitted gaps in the evidence
 
@@ -2551,6 +2552,18 @@ guards had never once run. **That makes BK-47 worse than it was recorded:** not
 *the width phase asserts nothing at desktop* but asserts nothing at any width.
 It now reads `aria-expanded`, which is the product's own published state.
 
+**Re-scoped after review, 10 September 2026.** The durable journey report is
+for `53b16b0+dirty`, not the current build, and records all three widths red.
+The later claim that 768px and 1280px pass is therefore not current evidence.
+More importantly, `_advise` waits for ASCII `Working...`, while the page emits
+`Working` and `Working…`; the condition can succeed while the post-send thread
+refresh is still running. That late refresh closes the drawer after newer
+navigation opens it. The phase also opens `rows.first` without proving that it
+is a different matter and depends on files left by other phases. The repair is
+now W0 control work: wait on explicit completion state, make newer navigation
+win, create two distinct matters in an isolated phase and assert the matter id
+changes at 390px, 768px and 1280px.
+
 ## BK-71 — professional plan and delivery-wave reconciliation
 Opened 9 September 2026.
 
@@ -2594,6 +2607,43 @@ field, and then requires its own lint complaint. `backlog check` remains a
 lint/status/render command; the repository's existing `pytest -m class_a` CI
 path runs the matrix. The expanded suite passes and BK-71 again derives `done`
 from its four acceptance-evidence links rather than an authored status.
+
+## BK-73 — evidence results are bound to the build and execution that earned them
+
+Opened 10 September 2026 after reviewing `53b16b0..d0f8a75`.
+
+**Observed.** `status.yaml` can say `result: PASS` and `backlog lint` checks
+only that a named deterministic test exists. `derive_done` then trusts the
+authored word. The saved journey report proves the consequence: it names
+`53b16b0+dirty` and three failing widths, while the current row says only 390px
+fails after later source changes. A test path is a promise to run something;
+it is not evidence that it ran.
+
+**Plan.** Automated evidence must resolve through a machine result containing
+the exact node id, outcome, source fingerprint, time and runner. Browser
+evidence must bind the NM, web, journey-test and runner source it exercised.
+Model, counsel and production results must use structured evidence records
+naming the subject, method, result and accountable actor. Repository-defined
+Class-A CI must independently check every push. An absent, stale or mismatched
+record makes the evidence NOT RUN or STALE and prevents derived completion.
+
+## BK-74 — Start Build Test and Sign-off are enforced delivery states with records
+
+Opened 10 September 2026 after reviewing the split build playbooks.
+
+**Observed.** The four playbooks are excellent prose and the router does not
+implement their lifecycle. `ready` routes back to Start, no authored state
+routes to Sign-off, BK-71 derives done while `backlog stage BK-71` routes it to
+Test, and `derive_done` never asks for a Conformance Record. The method and the
+delivery machine therefore disagree at the exact point where completion is
+claimed.
+
+**Plan.** Store references to the Start Record, Build Record, Evidence Pack
+and Conformance Record on the work item. Derive the next playbook from both
+delivery state and those records: READY opens Build; built work opens Test;
+passing evidence opens Sign-off; approved conformance permits done. Lint must
+refuse a stage whose preceding record is absent and a non-legacy completion
+with no current conformance decision.
 
 ## BK-30 — executable login-to-logout acceptance journey — **PARTLY DONE · P1**
 
