@@ -612,16 +612,25 @@ def measure_trace() -> dict:
         if results.exists():
             ran = set(json.loads(results.read_text(encoding="utf8"))
                       .get("evals_run", []))
+    # A ZERO POPULATION IS REPORTED, NOT PASSED OVER. BK-80-AC5 moved feature
+    # status to the current registry, where `tested` requires a complete
+    # delivering row with currently passing evidence -- and no feature reaches
+    # it today. This check therefore examines nothing and finds nothing
+    # inflated, which is correct and reads exactly like a clean result. The
+    # count travels with the verdict so a reader can tell the two apart.
     inflated = []
+    claiming = 0
     for f in features:
         if (f.get("status") or "decided") != "tested":
             continue
-        declared = set(f.get("eval_ids") or [])
+        claiming += 1
+        declared = set(f.get("historical_eval_ids") or [])
         if declared and not (declared & ran):
             inflated.append(f["id"])
 
     return {"available": True, "unwired": unwired, "undeclared": undeclared,
             "orphan_gates": orphan, "inflated": sorted(inflated),
+            "tested_population": claiming,
             "gates": len(gates), "evals_run": len(ran)}
 
 

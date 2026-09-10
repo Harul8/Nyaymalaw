@@ -99,6 +99,46 @@ known_failures:
     The second parameter case of the same control, owned by the review
     obligation rather than the attribution one.
 
+- id: TRACE-T3B
+  step: trace
+  match: line
+  signature: "[T3b] 25 of 44 features are implemented in code and not recorded as delivered by any row in docs/backlog/status.yaml"
+  owner: [BK-48-AC2]
+  because: >-
+    BK-48's title is this finding: *Phase B is built and the register says it
+    is not*. Until BK-80-AC5 the register was a spreadsheet column and nothing
+    could see the mismatch; T3b now reports it in the direction T3 cannot look.
+
+    Twenty-five features carry @implements in nm/ and no row in status.yaml
+    declares `delivers:` for them. `delivers:` exists on seven planning rows
+    covering nineteen unbuilt features, so the relation is real and simply has
+    not been recorded for the work already done. Closing this is registry
+    authoring -- deciding which row delivered which feature -- and that is a
+    delivery decision, not a code change.
+
+    THE SIGNATURE IS THE EXACT COUNT, on the same rule as RUFF-PLANNING-DEBT: a
+    new module claiming a feature, or a row gaining `delivers:`, moves the
+    number and blocks until somebody re-registers it. A prefix match would let
+    the count drift in either direction unnoticed, which is the whole failure
+    mode of a waiver.
+
+- id: PYTEST-PRODUCES-B
+  step: [class_a, pytest]
+  match: node
+  signature: "tests/test_reached_from_production.py::test_every_produces_contract_has_a_type_or_is_declared_untyped"
+  owner: [BK-48-AC3]
+  because: >-
+    B1, B3 and B4 moved from `decided` to `built` when status became
+    registry-derived, which brought their PRODUCES clauses into this check's
+    population for the first time. `TurnRoute`, `ConflictScreen` and
+    `CompetenceAssessment` are declared outputs with no type in nm/.
+
+    This is the projection working: a contract nobody implemented was invisible
+    while the feature carried a stale `decided` label. It is NOT declared in
+    that test's UNTYPED list, deliberately -- adding three entries there would
+    silence a finding an hour after surfacing it, and the point of the exercise
+    was to stop a status field from deciding what gets examined.
+
 - id: RUFF-PLANNING-DEBT
   step: ruff
   match: line

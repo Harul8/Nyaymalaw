@@ -237,7 +237,7 @@ def _tested_unwired_runtime_evals(
         feature = features.get(fid)
         if not feature or feature.get("status") not in ("tested", "verified live"):
             continue
-        for eid in feature.get("eval_ids", []):
+        for eid in feature.get("historical_eval_ids", []):
             evaluation = evals.get(eid, {})
             if (evaluation.get("class") == "B"
                     and "turn" in str(evaluation.get("cadence", "")).lower()):
@@ -280,8 +280,17 @@ def test_no_feature_is_tested_while_its_eval_runs_every_turn_and_it_has_no_turn(
 
 
 def test_the_runtime_evidence_sweep_can_see_a_planted_unwired_feature():
-    """BK-52. Plant a tested feature whose every-turn eval has no caller."""
-    features = {"ZZ": {"id": "ZZ", "status": "tested", "eval_ids": ["E-ZZ"]}}
+    """BK-52. Plant a tested feature whose every-turn eval has no caller.
+
+    THE PLANT CARRIES `historical_eval_ids` because that is where the plan's
+    eval assignment lives after BK-80-AC5. It said `eval_ids` for an hour after
+    the rename and the sweep found nothing -- the control reporting clean while
+    the thing it plants was invisible to it. The rule was right; the fixture
+    was stale, which is the failure mode a positive control exists to prevent
+    and is just as capable of having itself.
+    """
+    features = {"ZZ": {"id": "ZZ", "status": "tested",
+                       "historical_eval_ids": ["E-ZZ"]}}
     evals = {"E-ZZ": {"id": "E-ZZ", "class": "B", "cadence": "Every turn"}}
     bad = _tested_unwired_runtime_evals(features, evals, {"ZZ"})
     assert len(bad) == 1 and "ZZ is `tested`" in bad[0]

@@ -1612,7 +1612,7 @@ items:
   affects_phases:
   - B
   record: docs/BACKLOG.md#bk-48-phase-b-is-built-and-the-register-says-it-is-not
-  next_action: register the four implemented B features; add trace T3b
+  next_action: add `delivers:` to the rows that built the 25 features T3b reports
   acceptance:
   - id: BK-48-AC1
     requirement: "The current feature registry and implementation trace reconcile in both directions without promoting tested status merely from a decorator or importing stale historical status"
@@ -1621,6 +1621,23 @@ items:
     negative_control:
       mutation: "leave a currently implemented route under a contradictory pre-build state or export a legacy tested label"
       expected_failure: "the mismatch is reported and current proof remains separate from code presence"
+  - id: BK-48-AC2
+    requirement: "every feature whose production code declares @implements is recorded in the current registry as delivered by a named row, or the count of unrecorded features is reported as a build failure that can only fall; the decorator never promotes the registry and the registry never silences the decorator"
+    required_evidence: [domain_test, adversarial_test]
+    evidence:
+      domain_test: {result: NOT_RUN, ref: ""}
+      adversarial_test: {result: NOT_RUN, ref: ""}
+    negative_control:
+      mutation: "add an @implements for a feature no row delivers, or remove a delivers entry from a row that has one"
+      expected_failure: "the reported count moves and the build blocks until somebody re-registers the reconciliation, rather than the projection quietly absorbing the change"
+  - id: BK-48-AC3
+    requirement: "every PRODUCES contract belonging to a feature the current registry reports as built resolves to a type defined in nm/, or the gap is declared with what settles it; a feature moving to built brings its contracts into the checked population rather than leaving them unexamined"
+    required_evidence: [domain_test]
+    evidence:
+      domain_test: {result: NOT_RUN, ref: ""}
+    negative_control:
+      mutation: "move a feature to built whose PRODUCES clause names a type nm/ does not define"
+      expected_failure: "the undefined contract is named and the build blocks; it is not skipped because the feature was previously decided"
 - id: BK-49
   title: a truncated model answer is never detected
   kind: substrate

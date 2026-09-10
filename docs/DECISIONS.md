@@ -541,3 +541,104 @@ it and blocks. It is debt with an owner and a number that can only fall.
 The lesson worth more than the fix: **a baseline measured on part of a
 population is a baseline about that part.** Three tools were run; eight steps
 exist.
+
+## D-018 — The feature projection reads `delivers:`, never the step's item list
+
+**10 September 2026.** `tools/export_spec.py` took each feature's status from
+`docs/Nyaymalaw_Project_Plan.xlsx`. Replacing that with a registry roll-up
+needs a relation from feature to backlog row, and `docs/backlog/steps.yaml`
+offers an obvious one: each step names `features:` and `items:`.
+
+**It is the wrong relation, and it was measured before it was used.** A step's
+`items:` records which rows TOUCH it. BK-63 reaches eleven features. Rolling
+implementation up through it reported B2, B6 and G3 as `built` with no
+implementing code anywhere in `nm/`, and reported D5, D6, D8 and D9 — four
+features with live production modules — as `decided`. Wrong in both directions
+at once, which is what a shared relation does when read as an exclusive one.
+
+`delivers:` on a status row IS the delivery relation. Seven rows, nineteen
+features, all currently unbuilt. Where it is silent, a production `@implements`
+says code exists and says nothing about coverage, so it yields `partial` and a
+basis of `trace`. **BK-48-AC1 forbids promoting `tested` from a decorator, and
+this cannot: `tested` requires a delivering row at `implementation: complete`
+with currently PASSING evidence.** Today nothing reaches it, and that is the
+honest answer — eighteen features claimed it from a spreadsheet cell.
+
+`implementation_basis` carries four values because `contradicted` — a row that
+delivers the feature and says `none` while code declares it — is a sharper fact
+than `trace`, where no row speaks at all. Collapsing silence and denial into
+one word is the three-stores defect in a fourth place.
+
+## D-019 — Three checks stopped being able to fail, and that was the risk
+
+Moving status to the current registry emptied every population gated on
+`tested`. Four checks were affected: trace T4, trace's AWAITING expiry, the
+release gate's inflation check, and `test_reached_from_production`'s runtime
+sweep. Each would have reported clean forever.
+
+**That is S11 arriving by accident rather than by design, and it is exactly
+what this change was supposed to prevent.** One mechanism, not four patches:
+`Report.population()` records how many rows each status-gated check examined,
+and trace prints a `NOT ASSESSED` section for any that examined none. A check
+with an empty population is not a check that passed.
+
+Two triggers were re-based rather than reported, because reporting them would
+have left a real control inert:
+
+- **The slice frontier reads `historical_slice`/`historical_status`.** It asks
+  how far the plan got; the plan of record answers it. Deriving it from the
+  current registry collapses it to −1 and drops the whole of T7 from failure to
+  warning — measured, and it takes C1 and D2, the two substantive failures this
+  build is carrying, with it. **A control that stops firing because a registry
+  started telling the truth is not a control.**
+- **The AWAITING exemption expires on `implementation: complete`,** not on
+  `tested`. An exemption that can never expire is a permanent waiver.
+
+And `_within_frontier` now returns three states. An unparseable slice used to
+fall through to −1, which compares below every frontier and so read as INSIDE
+it. That bit within the hour: renaming `slice` to `historical_slice` left one
+call site reading the old key, and four features beyond the frontier turned
+from warnings into failures. The rename was the mistake; a function answering
+−1 for *I do not know* is what let the mistake look like a result.
+
+## D-020 — The evidence fingerprint covers the promise and not the verdict
+
+**BK-80-AC3.** `verification_fingerprint` covered `nm`, `tests`, `tools`, `web`
+and the plan contracts — not the PRD source, the generated specification, the
+release thresholds or the playbooks. A promise could change with no product
+code changing and every recorded PASS still read as current. It now covers
+`spec/prd/*.js`, `docs/playbooks/*.md`, `docs/BUILD_GUIDE.md`,
+`spec/release.yaml` and the four generated spec files, each probed.
+
+**`spec/coverage.yaml` and the derived feature fields are deliberately
+excluded, and that is not a relaxation.** Fold a verdict into the identity of
+the thing it judges and recording a PASS moves the fingerprint, which restales
+the PASS that moved it. Nothing could ever be proven, and a check nothing can
+satisfy is a check somebody switches off — which is how this repository lost
+`pytest.xfail` strictness and its `derive_done` sign-off. Both directions are
+tested: six promise mutations must move it, two verdict mutations must not.
+
+The immediate consequence is honest and unwelcome: **the published Class-A
+evidence is now STALE**, and it cannot be refreshed while a Class-A test is
+red. That is the mechanism working, not a regression to route around.
+
+## D-021 — Two new criteria, registered rather than absorbed
+
+The projection surfaced two findings that had no owner.
+
+**BK-48-AC2** — twenty-five features carry `@implements` in `nm/` and no row
+declares `delivers:` for them. That is BK-48's title as a measurement: *Phase B
+is built and the register says it is not.* Trace T3b reports it as one line
+carrying the exact count, on RUFF-PLANNING-DEBT's rule: a new module claiming a
+feature, or a row gaining `delivers:`, moves the number and blocks until
+somebody re-registers it. Closing it is registry authoring — deciding which row
+delivered which feature — which is a delivery decision, not a code change.
+
+**BK-48-AC3** — B1, B3 and B4 moved from `decided` to `built`, which brought
+their PRODUCES clauses into `test_reached_from_production`'s population for the
+first time. `TurnRoute`, `ConflictScreen` and `CompetenceAssessment` are
+declared outputs with no type in `nm/`. They are **not** added to that test's
+`UNTYPED` list: declaring three exceptions an hour after surfacing them would
+silence the finding, and the point of the exercise was to stop a status field
+from deciding what gets examined. Registered as a known failure owned by AC3,
+whose final packet owner is **P14**, which builds those screens.

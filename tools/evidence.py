@@ -44,7 +44,58 @@ CONTRACT_FILES = (
     "docs/backlog/build_rules.json",
     "docs/backlog/SCHEMA.md",
     "pyproject.toml",
+    # THE PROMISES THEMSELVES. BK-80-AC3.
+    #
+    # Until 10 September 2026 this fingerprint covered nm, tests, tools, web and
+    # the plan contracts -- and NOT the PRD, the generated specification, or the
+    # rules the build says it follows. So changing a PRD requirement, a release
+    # threshold or a playbook obligation left every existing PASS reading as
+    # current, when the claim those records were about had just changed
+    # underneath them. Evidence names its subject or it is not evidence.
+    #
+    # `spec/release.yaml` is the authored thresholds with owners and cadence.
+    # `spec/coverage.yaml` is deliberately ABSENT: it is what releasegate
+    # MEASURED, and folding a verdict into the identity of the thing it judges
+    # makes every measurement invalidate itself.
+    #
+    # WHAT IS NOT COVERED, STATED RATHER THAN LEFT TO BE NOTICED. BK-80-AC3
+    # names three populations -- authoritative PRD, generated specification,
+    # applicable guide rules -- and this is exactly those three. It does NOT
+    # cover `spec/manifest.yaml` (which Acts the corpus reconciles) or
+    # `docs/BASELINE.md` (what the corpus measurably holds). Both are claims
+    # about KNOWLEDGE rather than about behaviour, a change to either is a
+    # corpus event with its own controls, and widening this digest to them
+    # would make every corpus refresh restale every behavioural proof. That is
+    # an admitted gap with a reason, not an oversight; if a promise is ever
+    # written into the manifest, it belongs here and this comment is wrong.
+    "docs/BUILD_GUIDE.md",
+    "spec/release.yaml",
+    "spec/evals.yaml",
+    "spec/anchors.yaml",
+    "spec/schemas.yaml",
+    "spec/gates.yaml",
 )
+
+#: The PRD's editable source, and the playbooks that bind the build method.
+#: Enumerated as trees so a new chapter or a fifth playbook is covered the day
+#: it is written rather than the day somebody remembers to list it.
+PROMISE_TREES = {
+    "spec/prd": {".js"},
+    "docs/playbooks": {".md"},
+}
+
+#: The generated specification carries both halves: the PROMISE (what the
+#: product must do, never do, produce and evaluate) and the VERDICT (what the
+#: registry currently says about it). Only the promise belongs in an identity.
+#:
+#: Fold in the verdict and the fingerprint moves every time evidence is
+#: recorded -- which restales the evidence that just moved it. That is not a
+#: strict check, it is a check that can never be satisfied.
+FEATURE_SPEC = "spec/features.yaml"
+DERIVED_FEATURE_FIELDS = frozenset({
+    "status", "implementation", "implementation_basis", "proof",
+    "delivered_by",
+})
 
 
 def _bytes(path: pathlib.Path) -> bytes:
@@ -75,8 +126,39 @@ def _status_contract(root: pathlib.Path) -> bytes:
     return json.dumps(rows, sort_keys=True, separators=(",", ":")).encode()
 
 
+def _feature_promises(root: pathlib.Path) -> bytes:
+    """The generated spec's promises, without the registry's verdict on them.
+
+    THE DENY LIST IS THE SAFE DIRECTION. A promise field added to the exporter
+    tomorrow is covered automatically; only the five fields named as derived
+    are dropped. An allow-list would silently exclude the new promise, and a
+    fingerprint that quietly stops covering something is worse than one that
+    churns -- churn is visible, a gap is not.
+    """
+    path = root / FEATURE_SPEC
+    if not path.exists():
+        return f"<absent:{FEATURE_SPEC}>".encode()
+    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    rows = [{k: v for k, v in (row or {}).items()
+             if k not in DERIVED_FEATURE_FIELDS}
+            for row in doc.get("features") or []]
+    return json.dumps(rows, sort_keys=True, separators=(",", ":"),
+                      default=str).encode()
+
+
 def verification_fingerprint(root: pathlib.Path | None = None) -> str:
-    """Identity of product, tests, runners, browser assets and plan contract."""
+    """Identity of the product, its tests, its runners AND ITS PROMISES.
+
+    Covers, in one digest: `nm`, `tests`, `tools` and `web`; the plan
+    contracts; the authoritative PRD source and the playbooks; the generated
+    specification's promise half; and the backlog's claim without its verdict.
+
+    A change to any of those makes prior conformance evidence STALE, which is
+    the point -- proof is about a claim, and a claim that moved is a different
+    claim. What is deliberately excluded is every generated verdict:
+    `spec/coverage.yaml`, the derived feature status fields, and the recorded
+    evidence files themselves.
+    """
     root = root or ROOT
     digest = hashlib.sha256()
     for top in SOURCE_TREES:
@@ -104,6 +186,19 @@ def verification_fingerprint(root: pathlib.Path | None = None) -> str:
                                if p.is_file() and p.suffix in CONTRACT_SUFFIXES):
                 digest.update(path.relative_to(root).as_posix().encode())
                 digest.update(_bytes(path))
+    for relative, suffixes in sorted(PROMISE_TREES.items()):
+        base = root / relative
+        digest.update(relative.encode())
+        if not base.exists():
+            digest.update(b"<absent>")
+            continue
+        for path in sorted(p for p in base.rglob("*")
+                           if p.is_file() and p.suffix in suffixes
+                           and "node_modules" not in p.parts):
+            digest.update(path.relative_to(root).as_posix().encode())
+            digest.update(_bytes(path))
+    digest.update(b"spec/features.promises")
+    digest.update(_feature_promises(root))
     digest.update(b"docs/backlog/status.contract")
     digest.update(_status_contract(root))
     return digest.hexdigest()[:20]

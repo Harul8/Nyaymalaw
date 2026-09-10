@@ -49,17 +49,22 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 ROWS = load()
 
 _SCAN = "tests/test_tooling_bites.py::test_the_gate_scan_sees_code_and_ignores_prose"
+_PRODUCES = ("tests/test_reached_from_production.py::"
+             "test_every_produces_contract_has_a_type_or_is_declared_untyped")
 _SUMMARY = (
     "=========================== short test summary info ===========================\n"
     "FAILED tests/test_tooling_bites.py::test_trace_passes_on_the_real_spec - Asse...\n"
     f"FAILED {_SCAN}[body1-False]\n"
     f"FAILED {_SCAN}[body2-False]\n"
+    f"FAILED {_PRODUCES} - AssertionError: these features...\n"
 )
 _TRACE = (
     "FAILURES\n"
+    "  [T3b] 25 of 44 features are implemented in code and not recorded as "
+    "delivered by any row in docs/backlog/status.yaml\n"
     "  [T7] C1: 1 of 5 NEVER clauses have no test declaring @refuses\n"
     "  [T7] D2: 1 of 5 NEVER clauses have no test declaring @refuses\n"
-    "TRACE FAILED  -- 2 failure(s), 27 warning(s)\n"
+    "TRACE FAILED  -- 3 failure(s), 27 warning(s)\n"
 )
 
 

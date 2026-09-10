@@ -187,13 +187,29 @@ def test_trace_rejects_a_tested_claim_whose_evals_never_ran(tmp_path):
         #
         # A planted eval id nothing has ever run is the condition under test,
         # stated rather than found.
+        #
+        # THE PLANT CARRIES `historical_eval_ids` AND `historical_slice`. After
+        # BK-80-AC5 the plan's eval assignment and slice live under those keys
+        # and `status` is derived from the current registry. This plant still
+        # writes `status` directly, which is right -- T4's subject is a feature
+        # CLAIMING tested, and the plant is what makes that claim exist at all
+        # now that no real feature reaches it.
+        #
+        # It said `eval_ids` for one gate run after the rename, and T4 then
+        # reported "declares no eval ids" instead of "none of its evals has
+        # ever run" -- a green-adjacent wrong answer from a stale fixture, the
+        # third of these in this task.
         del json
         target_id = "ZZ-T4"
         doc["features"].append({
             "id": target_id, "title": "a planted tested claim",
-            "phase": "Z", "slice": "S1", "status": "tested",
+            "phase": "Z", "historical_slice": "S1", "status": "tested",
+            "implementation": "complete", "implementation_basis": "registry",
+            "proof": "PASS", "delivered_by": ["BK-ZZZ"],
             "does": [], "never": [], "produces": [], "eval_prose": [],
-            "eval_ids": ["E-ZZZ-never-run"], "counterexample": "", "tasks": [],
+            "historical_status": "tested",
+            "historical_eval_ids": ["E-ZZZ-never-run"],
+            "counterexample": "", "tasks": [],
         })
         spec.write_text(
             "# temporary probe\n" + yaml.safe_dump(doc, sort_keys=False, allow_unicode=True),

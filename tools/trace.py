@@ -59,12 +59,33 @@ class Report:
         self.failures: list[tuple[str, str]] = []
         self.warnings: list[tuple[str, str]] = []
         self.notes: list[str] = []
+        self.populations: list[tuple[str, int, str]] = []
 
     def fail(self, check: str, msg: str) -> None:
         self.failures.append((check, msg))
 
     def warn(self, check: str, msg: str) -> None:
         self.warnings.append((check, msg))
+
+    def note(self, msg: str) -> None:
+        self.notes.append(msg)
+
+    def population(self, check: str, size: int, what: str) -> None:
+        """How many rows a check actually examined. §9, applied to trace.
+
+        A CHECK THAT EXAMINED NOTHING PASSED NOTHING, and until BK-80-AC5 moved
+        status to the current registry, nothing here said so. T4 fires only on
+        a feature claiming `tested`; the registry now derives that from
+        delivering rows and passing evidence, and no feature reaches it today.
+        T4 therefore examines an empty population and reports no failure --
+        which is correct, and reads exactly like a check that passed.
+
+        Four call sites had the same shape: T3, T4, the AWAITING expiry and the
+        release gate's inflation check. So this is one mechanism rather than
+        four notes: every status-gated check states its population, and a zero
+        prints as NOT ASSESSED rather than as silence.
+        """
+        self.populations.append((check, size, what))
 
 
 def load_spec() -> tuple[list[dict], list[dict]]:
@@ -292,22 +313,45 @@ AWAITING: dict[tuple[str, int], str] = {
 
 
 def _within_frontier(slice_id: str | None, features: list[dict]) -> bool:
-    """Is this feature in a slice at or below the one being built?
+    """Is this feature in a slice at or below the one the build reached?
 
-    THE FRONTIER is the highest slice any feature has reached `tested`. Inside
-    it, an untested NEVER clause is a hole in something that ships. Outside it,
-    it is work not started, and demanding refusal tests for unbuilt features
-    fills the suite with tests nobody can run.
+    THE FRONTIER is the highest slice the PLAN OF RECORD reached. Inside it, an
+    untested NEVER clause is a hole in something that ships. Outside it, it is
+    work not started, and demanding refusal tests for unbuilt features fills
+    the suite with tests nobody can run.
 
-    Derived from the spec rather than configured, so it moves on its own the
-    day a slice starts and nobody has to remember to move it.
+    IT READS THE HISTORICAL FIELDS, AND THAT IS DELIBERATE. BK-80-AC5 moved
+    `status` to the current registry, where no feature is `tested` today
+    because no delivering row is complete with passing evidence. Deriving the
+    frontier from that field would collapse it to -1 -- and the whole of T7
+    would drop from FAILURE to WARNING. Measured on 10 September 2026: the two
+    substantive failures this build is carrying, C1 and D2, both vanish.
+
+    A control that stops firing because a registry started telling the truth
+    is not a control. The frontier is a question about how far the plan got,
+    the plan of record answers it, and the current registry answers a different
+    question -- which feature is built -- in the eligibility test above.
+
+    THREE STATES, AND `None` IS THE ONE THAT MATTERS. An unparseable slice used
+    to fall through `num()` to -1, which compares less than every frontier and
+    so read as INSIDE it. That is an absent input reading as a decision, and it
+    bit within the hour: renaming `slice` to `historical_slice` left this call
+    site reading the old key, every feature returned -1, and four features in
+    slices beyond the frontier turned from warnings into failures. The rename
+    was the mistake; a field that answers `-1` for "I do not know" is what let
+    the mistake look like a result.
     """
-    def num(sid: str | None) -> int:
-        return int(sid[1:]) if sid and sid[0] == "S" and sid[1:].isdigit() else -1
+    def num(sid: str | None) -> int | None:
+        if isinstance(sid, str) and sid[:1] == "S" and sid[1:].isdigit():
+            return int(sid[1:])
+        return None
 
-    frontier = max((num(f.get("slice")) for f in features
-                    if (f.get("status") or "decided") == "tested"), default=-1)
-    return num(slice_id) <= frontier
+    frontier = max((n for f in features
+                    if (f.get("historical_status") or "decided") == "tested"
+                    and (n := num(f.get("historical_slice"))) is not None),
+                   default=-1)
+    mine = num(slice_id)
+    return None if mine is None else mine <= frontier
 
 
 def main() -> int:
@@ -359,16 +403,50 @@ def main() -> int:
         if status in BUILT_OR_BEYOND and fid not in impl_by_feature:
             rep.fail("T3", f"{fid} is marked {status!r} with no @implements anywhere")
         if status in NEEDS_EVAL_RUN:
-            declared = set(f.get("eval_ids") or [])
+            declared = set(f.get("historical_eval_ids") or [])
             if not declared:
                 rep.fail("T4", f"{fid} is marked {status!r} but declares no eval ids")
             elif not (declared & ran):
                 rep.fail("T4", f"{fid} is marked {status!r} but none of its evals "
                                f"({', '.join(sorted(declared))}) has ever run")
+    rep.population("T3", sum(1 for f in features
+                             if (f.get("status") or "decided") in BUILT_OR_BEYOND),
+                   "feature(s) the current registry reports as built or beyond")
+    rep.population("T4", sum(1 for f in features
+                             if (f.get("status") or "decided") in NEEDS_EVAL_RUN),
+                   "feature(s) claiming tested or verified live")
+
+    # T3b -- THE OTHER DIRECTION, and the one nothing checked. BK-48-AC2.
+    #
+    # T3 asks whether a feature the registry calls built has code. It cannot
+    # see the opposite mismatch: code that declares @implements for a feature
+    # the current registry does not record as delivered by anything. That is
+    # BK-48's title -- *Phase B is built and the register says it is not* --
+    # and until now the only thing that "knew" it was a spreadsheet column.
+    #
+    # It is ONE line carrying an EXACT count, not one line per feature. The
+    # count is the fact worth blocking on: it must fall as delivery rows gain
+    # `delivers:`, and it moves the moment a new module claims a feature the
+    # register has not caught up with. A per-feature list would be 25 rows
+    # nobody reads, which is how T7 was ignored for weeks.
+    #
+    # THE DECORATOR DOES NOT PROMOTE THE REGISTRY AND THE REGISTRY DOES NOT
+    # SILENCE THE DECORATOR. BK-48-AC1 requires the mismatch be reported, and
+    # reporting it is all this does.
+    unrecorded = sorted(f["id"] for f in features
+                        if f["id"] in impl_by_feature
+                        and f.get("implementation_basis") != "registry")
+    if unrecorded:
+        rep.fail("T3b", f"{len(unrecorded)} of {len(features)} features are "
+                        f"implemented in code and not recorded as delivered by "
+                        f"any row in docs/backlog/status.yaml")
+        for fid in unrecorded:
+            rep.note(f"[T3b] {fid} declares @implements in "
+                     f"{', '.join(impl_by_feature[fid][:2])}")
 
     # T5 -- declared eval ids resolve
     for f in features:
-        for eid in f.get("eval_ids") or []:
+        for eid in f.get("historical_eval_ids") or []:
             if eid not in eval_ids:
                 rep.fail("T5", f"{f['id']} references eval {eid!r}, which is not defined")
 
@@ -403,19 +481,36 @@ def main() -> int:
             continue
         note = (f"{f['id']}: {len(missing)} of {len(nevers)} NEVER clauses "
                 f"have no test declaring @refuses")
-        if _within_frontier(f.get("slice"), features):
+        inside = _within_frontier(f.get("historical_slice"), features)
+        if inside is None:
+            rep.fail("T7", f"{note} -- and its slice is unreadable, so whether "
+                           f"that is a hole in shipped work cannot be decided")
+        elif inside:
             rep.fail("T7", note)
         else:
             rep.warn("T7", note)
 
     # An AWAITING entry whose blocking feature has landed is an exemption
     # nobody re-examined. It expires here rather than in someone's memory.
+    #
+    # THE TRIGGER IS `implementation: complete`, NOT `tested`. It asked for
+    # `tested` while status came from the August spreadsheet, where eighteen
+    # features carried that label. The current registry derives `tested` from a
+    # complete delivering row with currently passing evidence, and no feature
+    # reaches it -- so the old trigger could no longer fire at all, and an
+    # exemption that can never expire is a permanent waiver.
     by_id = {f["id"]: f for f in features}
+    expiring = 0
     for (fid, idx), blocker in AWAITING.items():
         dep = blocker.split(",")[0].strip()
-        if (by_id.get(dep, {}).get("status") or "decided") == "tested":
+        landed = by_id.get(dep, {}).get("implementation") == "complete"
+        expiring += 1 if dep in by_id else 0
+        if landed:
             rep.fail("T7", f"{fid}.{idx} is exempted pending {dep}, and {dep} "
-                           f"is now tested. Write the clause's test.")
+                           f"is now implemented. Write the clause's test.")
+    rep.population("T7-exempt", expiring,
+                   "AWAITING exemption(s) naming a resolvable feature id "
+                   f"(of {len(AWAITING)} declared)")
 
     # T11 -- a feature with EVAL prose but no numbered eval in the plan can
     # never reach `tested`, because T4 has nothing to check it against. It is a
@@ -423,7 +518,7 @@ def main() -> int:
     # counterexample it must reject, and inventing 22 of those to clear a
     # dashboard is how a suite stops biting.
     for f in features:
-        if not (f.get("eval_ids") or []):
+        if not (f.get("historical_eval_ids") or []):
             rep.warn("T11", f"{f['id']} carries EVAL prose but no numbered eval "
                             f"in the plan -- it cannot advance past `decided`")
 
@@ -464,6 +559,12 @@ def main() -> int:
         n = sum(1 for f in features if (f.get('status') or 'decided') == st)
         if n:
             print(f"    {st:<16}{n:>4}")
+    # WHERE THAT ANSWER CAME FROM. `trace` used to read one status field and
+    # could not say whether it rested on a delivery row or on a decorator.
+    for basis in ("registry", "trace", "absent"):
+        n = sum(1 for f in features if f.get("implementation_basis") == basis)
+        if n:
+            print(f"    via {basis:<12}{n:>4}")
     print(f"  implemented       {len(impl_by_feature):>4}  (features with @implements)")
     print(f"  evals defined     {len(evals):>4}")
     print(f"  evals ever run    {len(ran):>4}")
@@ -482,6 +583,18 @@ def main() -> int:
             print("\nWARNINGS")
             for check, msg in rep.warnings:
                 print(f"  [{check}] {msg}")
+        # NOT ASSESSED is the third state, and it prints whether or not
+        # anything failed. A check with an empty population is not a check
+        # that passed -- it is a check nobody could run.
+        empty = [row for row in rep.populations if row[1] == 0]
+        if empty:
+            print("\nNOT ASSESSED  -- these checks examined nothing")
+            for check, _size, what in empty:
+                print(f"  [{check}] 0 {what}")
+        if rep.notes:
+            print("\nNOTES")
+            for msg in rep.notes:
+                print(f"  {msg}")
 
     print()
     if rep.failures:

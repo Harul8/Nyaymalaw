@@ -228,7 +228,7 @@ def check_eval_references(rep: Report, features: list, evals: list) -> None:
     """SC8 -- every eval id a feature names must exist."""
     known = {e["id"] for e in evals}
     for f in features:
-        for eid in f.get("eval_ids") or []:
+        for eid in f.get("historical_eval_ids") or []:
             if eid not in known:
                 rep.fail("SC8", f"{f['id']} references eval {eid!r}, which is not defined")
 

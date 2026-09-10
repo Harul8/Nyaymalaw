@@ -22,7 +22,8 @@
         "BK-80-AC3",
         "BK-80-AC5",
         "BK-80-AC7",
-        "BK-48-AC1"
+        "BK-48-AC1",
+        "BK-48-AC2"
       ],
       "prerequisites": [],
       "decisions": [
@@ -111,7 +112,8 @@
         "BK-80-AC3",
         "BK-80-AC5",
         "BK-80-AC7",
-        "BK-48-AC1"
+        "BK-48-AC1",
+        "BK-48-AC2"
       ],
       "requires_completed_items": []
     },
@@ -1061,7 +1063,8 @@
         "BK-78-AC1",
         "BK-78-AC2",
         "BK-53-AC1",
-        "BK-53-AC2"
+        "BK-53-AC2",
+        "BK-48-AC3"
       ],
       "prerequisites": [
         "P13"
@@ -1133,7 +1136,8 @@
         "BK-78-AC1",
         "BK-78-AC2",
         "BK-53-AC1",
-        "BK-53-AC2"
+        "BK-53-AC2",
+        "BK-48-AC3"
       ],
       "requires_completed_items": []
     },
