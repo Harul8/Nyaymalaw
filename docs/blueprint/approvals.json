@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "purpose": "Index of scoped manual adoption attestations and revocations, separate from proposed decisions and measured evidence. Empty means no adoption record recorded here, not proof that no human approval exists elsewhere. Schema checks do not verify authority or unlock work. BK-80/P03 owns actual resolution.",
+  "records": [],
+  "revocations": []
+}

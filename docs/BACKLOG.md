@@ -29,21 +29,21 @@ This persisted view projects the authored registry contract. `backlog check` sep
 
 | Phase | | Features | Steps | Contracted | Verified | Open P0 | Readiness |
 |---|---|---:|---:|---:|---:|---:|---|
-| A | Arrive | 3/4 | 4 | 4/4 | 12/34 | 5 | not releasable |
-| B | Open a matter | 0/6 | 4 | 2/4 | 8/18 | 3 | not releasable |
-| C | Take the brief | 5/7 | 7 | 0/7 | 11/28 | 7 | not releasable |
-| D | Work the file | 8/9 | 14 | 1/14 | 13/35 | 8 | not releasable |
-| E | Advise | 1/5 | 5 | 0/5 | 9/35 | 9 | not releasable |
-| F | Act | 0/7 | 7 | 0/7 | 5/14 | 4 | not releasable |
-| G | Carry | 0/3 | 3 | 0/3 | 6/16 | 3 | not releasable |
-| H | Close | 0/2 | 2 | 0/2 | 5/9 | 0 | not releasable |
-| I | Leave | 1/1 | 1 | 0/1 | 7/20 | 4 | not releasable |
+| A | Arrive | 2/4 | 4 | 4/4 | 12/46 | 14 | not releasable |
+| B | Open a matter | 0/6 | 4 | 4/4 | 8/32 | 12 | not releasable |
+| C | Take the brief | 5/7 | 7 | 7/7 | 11/44 | 18 | not releasable |
+| D | Work the file | 8/9 | 14 | 14/14 | 13/49 | 17 | not releasable |
+| E | Advise | 1/5 | 5 | 5/5 | 9/49 | 18 | not releasable |
+| F | Act | 0/7 | 7 | 7/7 | 5/28 | 13 | not releasable |
+| G | Carry | 0/3 | 3 | 3/3 | 6/31 | 13 | not releasable |
+| H | Close | 0/2 | 2 | 2/2 | 5/22 | 8 | not releasable |
+| I | Leave | 1/1 | 1 | 1/1 | 7/33 | 13 | not releasable |
 
-**85 rows · 16 open P0 · 0 blocked · 18/44 features implemented**
+**101 rows · 27 open P0 · 0 blocked · 17/44 features implemented**
 
 ### Professional plan — registered and derived
 
-**20 advocate standards · 13 expert-workflow states · 5 advice levels · 7 roles · 14 gap closures · 85 wave rows**
+**20 advocate standards · 13 expert-workflow states · 5 advice levels · 7 roles · 14 gap closures · 101 wave rows**
 
 Gap status below is computed from the linked BK/J rows. It is never authored in `professional.json` or maintained in the workbook.
 
@@ -52,7 +52,7 @@ Gap status below is computed from the linked BK/J rows. It is never authored in 
 | GC-01 | W1 | W1 | W7 | PLANNED | BK-62 |
 | GC-02 | W1 | W1 | W7 | PLANNED | BK-63, BK-67 |
 | GC-03 | W2 | W2 | W7 | PLANNED | BK-54, BK-67 |
-| GC-04 | W0 | W2 | W7 | IN_PROGRESS | BK-69, BK-54, BK-42 |
+| GC-04 | W0 | W2 | W7 | IN_PROGRESS | BK-69, BK-54, BK-79, BK-42 |
 | GC-05 | W2 | W3 | W7 | PLANNED | BK-64, BK-67 |
 | GC-06 | W3 | W3 | W7 | PLANNED | BK-65, BK-67 |
 | GC-07 | W3 | W4 | W7 | PLANNED | BK-70, BK-55, BK-67 |
@@ -62,15 +62,15 @@ Gap status below is computed from the linked BK/J rows. It is never authored in 
 | GC-11 | W1 | W5 | W7 | PLANNED | BK-63, BK-56, BK-57, BK-67 |
 | GC-12 | W3 | W7 | W7 | IN_PROGRESS | BK-67, BK-42 |
 | GC-13 | W2 | W6 | W7 | IN_PROGRESS | BK-68, BK-32, BK-37, BK-39, BK-56, BK-59, BK-42 |
-| GC-14 | W0 | W2 | W7 | IN_PROGRESS | BK-69, BK-54, BK-42 |
+| GC-14 | W0 | W2 | W7 | IN_PROGRESS | BK-69, BK-54, BK-79, BK-42 |
 
 Derived gap state: IN_PROGRESS 6, PLANNED 8
 
 ### Open P0 — what is unsafe
 
-- **BK-31** [A] account access, recovery and workspace identity — *verifying* · add registration, recovery and workspace proof to the approval-only browser journey; MFA remains the production release gate recorded by D-013 and BK-42
+- **BK-31** [A] account access, recovery and workspace identity — *in_progress* · implement D-013's authenticated recovery-code rotation and add registration, recovery and workspace proof to the approval-only browser journey; confidential-pilot authentication is BK-86 and deployed assurance remains BK-42
 - **BK-33** [A] recognisable matter cover, truthful board and real reopen — *in_progress* · render passed_deadlines, which the projection already emits
-- **BK-34** [B] front-door legal and professional screens before substance — *in_progress* · the emergency exception needs B2 emergency triage, which BK-53 delivers; an incomplete registry reading NOT_ASSESSED needs the firm-scoped registry
+- **BK-34** [B] front-door legal and professional screens before substance — *in_progress* · prove ordinary-screen admission and quarantine as a closeable foundation; the integrated emergency path is BK-78 after BK-53, and checked-registry scope remains explicit
 - **BK-35** [D] cause-specific accrual and answer-consistency gate — *in_progress* · refuse to run the period from a single dated fact that does not satisfy the curated trigger; emit the statutory limb
 - **BK-36** [C] durable, idempotent and recoverable turns — *in_progress* · idempotency must cover the OPENING turn, where matter_id is null and _load_or_create mints a new matter
 - **BK-40** [I] session expiry and confirmed logout — *in_progress* · clearPrivileged must clear state.intake and the intake form
@@ -82,14 +82,34 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 - **BK-64** [C/D/E] typed proposition and evidence model — *planned* · define immutable sources, locators and proposition types for instructions, allegations, admissions, documents, testimony, inference and assumptions
 - **BK-65** [D/E] legal dependency graph and selective invalidation — *planned* · model predicates, issues, rules, evidence, remedies and conclusions as a versioned dependency graph
 - **BK-67** [C/D/E/F] expert-advocate evaluation gate — *planned* · turn PA-01 to PA-20 into representative matter rubrics with named reviewers, thresholds, reservations and regression policy
-- **BK-69** [C/G/I] multimodal privacy and processing boundary — *in_progress* · the W0 foundation is built; end-to-end attribution of originals, derivatives, processors, retention and deletion needs BK-54's intake at W2
+- **BK-69** [C/G/I] multimodal privacy and processing boundary — *in_progress* · verify and sign off only the W0 admission foundation; BK-79 owns W2 end-to-end attribution and deletion after BK-54 intake
 - **BK-70** [D/E/F] remedy and enforceability model — *planned* · model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
+- **BK-78** [B/C] emergency admission integration — *planned* · design and prove the scoped integration without relaxing the foundation or claiming unrun evidence
+- **BK-79** [C/G/I] multimodal attribution and deletion integration — *planned* · design and prove the scoped integration without relaxing the foundation or claiming unrun evidence
+- **BK-80** [A/B/C/D/E/F/G/H/I] evidence integrity and release claim enforcement — *planned* · design and prove the scoped integration without relaxing the foundation or claiming unrun evidence
+- **BK-81** [A/B/C/D/E/F/G/H/I] India-only modular product and execution blueprint — *verifying* · obtain qualified design review and fresh full evidence after resolving the existing trace failures; no application or release claim is promoted
+- **BK-82** [A/B/C/D/E/F/G/H/I] module proof console and cumulative demonstration control — *in_progress* · build the isolated operator console and run-population controls; the mapping checker exists but does not prove the served console or production readiness
+- **BK-83** [A/B/C/D/E/F/G/H/I] transactional matter store and reversible migration — *planned* · complete the Start record and implement the bounded foundation with current negative and served-path proof
+- **BK-84** [A/C/D/E/F/G] versioned Indian legal corpus publication and coverage governance — *planned* · complete the Start record and implement the bounded foundation with current negative and served-path proof
+- **BK-85** [A/B/C/D/E/F/G/H/I] India-scoped key processor and security operations foundation — *planned* · complete the Start record and implement the bounded foundation with current negative and served-path proof
+- **BK-86** [A/B/C/D/E/F/G/H/I] strong authentication before confidential pilot — *planned* · agree the strong authentication and recovery assurance design before confidential pilot implementation
+- **BK-87** [A/B/C/D/E/F/G/H/I] execution readiness contracts and cross-plan reconciliation — *verifying* · retain the completed planning artifacts; resolve the existing product trace failures before publishing complete current Class-A evidence and final sign-off
+- **BK-88** [A/B/C/D/E/F/G/H/I] confidential path security and lifecycle integration — *planned* · prove the actual confidential path after the independent security, storage and media foundations
+
+### Deferred — review is not permission to build
+
+2 deferred row(s). Dates below are recorded obligations, not cached current verdicts. Run `python tools/backlog.py status` for DUE TODAY / OVERDUE against the current India calendar date.
+
+Missing or invalid dates/reasons fail lint. A due or overdue review requires recorded reassessment before reactivation; it does not authorise work or block unrelated work. Delivery stays deferred.
+
+- **BK-23** — REVIEW ON; review_on 2026-12-01; delivery deferred.
+- **BK-26** — REVIEW ON; review_on 2026-12-01; delivery deferred.
 
 ### Admitted gaps in the evidence
 
 - **26 rows rest on prose evidence** (`legacy: true`), closed before this registry existed. Each is retired by attaching an executable proof, not by editing a heading.
-- **31 active rows carry no acceptance criteria yet**, so `done` cannot be derived for them however much work is finished.
-- **40 of 47 journey steps carry no contract**, so what the step must do, refuse and recover from is not yet stated anywhere a check can read.
+- **3 active rows carry no acceptance criteria yet**, so `done` cannot be derived for them however much work is finished.
+- **0 of 47 journey steps carry no contract**, so what the step must do, refuse and recover from is not yet stated anywhere a check can read.
 - **37 steps are DERIVED, not stated by the PRD.** The PRD gives a sequence for Phase B and Phase D and a question for the other seven; a derived step is a reading of the plan and is not the plan.
 
 <!-- BACKLOG_STATUS:END -->
@@ -126,9 +146,595 @@ the served path with a check that is able to fail.
 
 # Part 2 — The phases
 
+## Blueprint work opened 10 September 2026
+
+The user requested a first-principles, modular execution blueprint and then
+confirmed that NM operates in India alone. These are new planning and
+foundation obligations, not evidence that the application implements them.
+Existing rows, historical findings and offline changes remain intact.
+`docs/blueprint/README.md` is the entry point. Module labels are navigation
+and dependency groupings, never a second source of completion status.
+
+## BK-81 — India-only modular product and execution blueprint
+
+**Reason.** The existing journey plan needs an executable, inspectable architecture and security design, not a competing status document.
+
+**Plan and acceptance.** The three atomic criteria, required proof and planted
+counterexamples are in `backlog/status.yaml`. Assigned W0 as foundations;
+no existing wave was moved. Module integration may occur in later waves,
+and foundation closure does not claim an end-to-end module is complete.
+
+**Stage record.** Start READY: the deliverable, current sources, criteria and counterexamples are named; authoring is in progress. Verification and sign-off have not been earned.
+
+## BK-82 — module proof console and cumulative demonstration control
+
+**Reason.** The user must be able to exercise each growing module and inspect current proof without mistaking a scripted demonstration for professional or deployment conformance.
+
+**Plan and acceptance.** The three atomic criteria, required proof and planted
+counterexamples are in `backlog/status.yaml`. Assigned W0 as foundations;
+no existing wave was moved. Module integration may occur in later waves,
+and foundation closure does not claim an end-to-end module is complete.
+
+**Stage record.** Start BLOCKED until the bounded design, ownership and exact proof population are reviewed; Build NOT_STARTED, Test NOT_RUN, Sign-off NOT_RUN. This does not prohibit synthetic design or isolated experimentation.
+
+## BK-83 — transactional matter store and reversible migration
+
+**Reason.** A production transactional substrate and reversible migration need their own delivery owner; a late production gate must not conceal foundational storage and concurrency work.
+
+**Plan and acceptance.** The three atomic criteria, required proof and planted
+counterexamples are in `backlog/status.yaml`. Assigned W0 as foundations;
+no existing wave was moved. Module integration may occur in later waves,
+and foundation closure does not claim an end-to-end module is complete.
+
+**Stage record.** Start BLOCKED until the bounded design, ownership and exact proof population are reviewed; Build NOT_STARTED, Test NOT_RUN, Sign-off NOT_RUN. This does not prohibit synthetic design or isolated experimentation.
+
+## BK-84 — versioned Indian legal corpus publication and coverage governance
+
+**Reason.** India-only operation does not imply nationwide verified legal coverage. Source publication, temporal applicability and coverage need a maintained foundation distinct from a search screen.
+
+**Plan and acceptance.** The three atomic criteria, required proof and planted
+counterexamples are in `backlog/status.yaml`. Assigned W0 as foundations;
+no existing wave was moved. Module integration may occur in later waves,
+and foundation closure does not claim an end-to-end module is complete.
+
+**Stage record.** Start BLOCKED until the bounded design, ownership and exact proof population are reviewed; Build NOT_STARTED, Test NOT_RUN, Sign-off NOT_RUN. This does not prohibit synthetic design or isolated experimentation.
+
+## BK-85 — India-scoped key processor and security operations foundation
+
+**Reason.** Privacy, processor boundaries, key custody and incident readiness must exist before privileged intake; the W7 production sign-off is not the owner of their W0 implementation.
+
+**Plan and acceptance.** The three atomic criteria, required proof and planted
+counterexamples are in `backlog/status.yaml`. Assigned W0 as foundations;
+no existing wave was moved. Module integration may occur in later waves,
+and foundation closure does not claim an end-to-end module is complete.
+
+**Stage record.** Start BLOCKED until the bounded design, ownership and exact proof population are reviewed; Build NOT_STARTED, Test NOT_RUN, Sign-off NOT_RUN. This does not prohibit synthetic design or isolated experimentation.
+
+## BK-86 — strong authentication before confidential pilot
+
+**Reason.** Independent blueprint review found that the confidential pilot
+required strong authentication but explicit MFA delivery still sat at W7.
+This W0 foundation owns strong authentication and recovery assurance;
+BK-42 retains deployed integration proof. Pilot and production profiles now
+name BK-85 and BK-86. This does not claim MFA is built or rewrite D-013's
+historical local completion decision.
+
+**Stage record.** Start BLOCKED pending the scoped identity/recovery design;
+Build NOT_STARTED, Test NOT_RUN, Sign-off NOT_RUN. Three atomic criteria and
+negative controls are registered. No identity provider was purchased or enabled.
+
+### Blueprint authoring and verification record — 10 September 2026
+
+BK-81 authoring is complete and is in verification, not derived done. The eight
+modular chapters cover product scope, ordered execution, UX, data architecture,
+the actual legal database, legal reasoning/retrieval, security/privacy and
+quality/latency/economics. `modules.json` maps all 95 current work items, 44
+features and 47 steps to 13 primary modules. BK-81–BK-86 are the six new rows;
+none of the existing 89 rows or their wave assignments was deleted or moved.
+
+The new `tools/blueprint.py` read-only checker and Class-A tests validate
+complete unique ownership, module dependencies, guide paths and work/step
+references. Fifteen deliberately planted failures are checked against the
+intended reason and must demonstrably mutate the baseline. The existing CI
+workflow selects all Class-A tests, so these tests join it without a separate
+workflow. This is BK-82-AC3's partial implementation, not the operator console
+or a replacement for BK-80's evidence-integrity work. BK-82's Start record is
+now READY for its bounded packets, Build OPEN and Test OPEN; other console
+criteria remain unimplemented. The earlier planning-only stage note is historical.
+
+**Observed local checks:** blueprint map 0 problems; 16 focused tests passed
+(one valid-population test plus 15 mutations); the subsequent combined
+blueprint/backlog regression selection passed all 75 cases; registry structural
+lint reported 0 problems; new-tool style checks passed. The final `backlog check`
+still fails solely on stale published Class-A evidence. These focused results are not promoted
+as complete Class-A evidence. Acceptance evidence remains unclaimed until
+current full execution and the required review exist. Qualified Indian counsel
+design review, browser, real-model and production validation were not run.
+
+**Cross-review changes:** strong authentication has an early W0 owner BK-86;
+BK-85 separates legal review, retention/restore, incident response and delivery
+pipeline controls; pilot/production profiles explicitly require these
+foundations; full M05 depends on M02 while read-only library design can start
+earlier; M09 advice approval does not depend on M10 action implementation.
+Existing public-law SQLite indexes can remain behind verified adapters while
+private matter storage migrates; no blanket database replacement was ordered.
+
+**Database inspection:** the actual `legal_database` is a junction to
+`C:/Users/rahul/Agentified NM/legal_database`. Only bounded directory metadata,
+public-law samples, schemas and recorded index identities were inspected.
+Private history was not opened. No source was modified, no corpus scan or
+re-index/model run occurred, and no original/index/backup was deleted.
+
+**Remaining boundary:** previous PRD trace failures and stale published
+Class-A proof remain open; no gate was relaxed, no application code changed,
+and no commit was made through a failed gate. The workbook is explicitly a
+prior snapshot pending regeneration. Continue from `blueprint/README.md`.
+
+## BK-90 — bounded autonomy and generalised change discipline
+
+Opened 10 September 2026 after the user approved adaptive, grounded reasoning
+and bounded specialist delegation, with explicit generalised-fix and regression
+guardrails for the build. This is a plan/control amendment; no autonomous
+application runtime, live-model run or external authority is being activated.
+
+**Start — READY (W0).** Preserve the opening 98 work items, original waves,
+professional/journey identities, offline changes and historical evidence.
+Applicable defect shapes: S1/S6 absent or incomplete evidence; S4/S11 lost or
+stale work; S5 unsafe publication; S7/S8 incident-specific proof and patches;
+S9 duplicated policy/state. The existing plan already supports iterative
+briefing and typed evidence, but does not yet define dynamic delegated tasks.
+Existing general-mechanism and cumulative-regression rules will be extended,
+not replaced with another competing build guide.
+
+**Plan.**
+1. Refine the PRD and existing blueprint for an adaptive lead, optional research
+   and draft/document specialists, source-grounded hypotheses and controlled
+   task selection inside immutable permission/validation boundaries.
+2. Register new runtime obligations with exact criterion, packet, dependency,
+   command/result and evaluation ownership. Preserve old evidence; new runtime
+   obligations start unbuilt and untested.
+3. Strengthen the four existing playbooks and build-rule registry: measured
+   causal class, one shared mechanism, source-verified whole-population impact,
+   transfer and boundary tests, cumulative regression and independent review.
+   Deterministic safeguards and reviewed jurisdiction/time-specific legal data
+   remain valid; scenario-specific answer patches and unsafe generalisation do not.
+4. Add honest static contract checks and planted controls, regenerate the
+   existing PRD/workbook, inspect them, and record the exact proof and remaining
+   full-suite blockers. No authored specification becomes runtime proof.
+
+**Scope.** Existing plan/PRD sources and generated reader views, relevant
+planning tools/tests, blueprint contracts, backlog and build playbooks. No
+`nm/` or `web/` implementation, corpus operations, processor purchases, private
+data processing, golden/e2e/model runs, application deployment or invented
+professional approval. Revert only this bounded patch if necessary, preserving
+the user's other changes. Ordinary Class-A planning checks are in scope.
+
+**Build — BUILT. Test — OPEN. Sign-off — NOT RUN.** The amendment now has
+101 registered items, 198 criteria, 47 packets, 34 synthetic specifications and
+81 build rules. All 13 modules, 44 features, 47 steps and 28 workbook sheets
+remain. The 187 future criteria have exact packet owners; 11 current planning
+criteria belong only to BK-87/BK-89/BK-90. Future BK-91/BK-92 cannot be hidden
+inside those exclusions. Their eight obligations also reconcile item ownership,
+final packet ownership, feature links, conditional release scope and P41 closure.
+
+**How built.** Extended the existing PRD introduction/lifecycle explanation and
+five blueprint chapters; added the typed design-only `autonomy.json` contract;
+registered P46/P47 and later integration/evaluation ownership. The common
+blueprint checker rejects removed/weakened boundaries and wrong ownership.
+Four synthetic specifications cover adaptation, shared-budget/failure controls,
+source-linked Word/PDF parity and three-mode value accounting. The saved
+workbook projects the full autonomy contract in Evaluation Details, without a
+new status namespace or extra tab. BG-078–081 extend Start/Build/Test/Sign-off
+with causal, transfer, boundary, impact and regression obligations.
+
+**Preservation and independent review.** All 98 earlier wave rows, all 30 old
+synthetic case objects and all 77 original build-rule objects are unchanged.
+An independent graph traversal found no dependency cycle or unresolved edge.
+Every one of the 44 PRD feature-contract tables is preserved; source capture and
+YAML match across 264 complete field comparisons. Existing feature implementation
+claims are retained as baseline claims, not certification of the new autonomous
+scope. No application `nm/` or `web/` changes, corpus operation or real-model run
+was made. Review artifacts are under the task's `autonomy-amendment` output folder.
+
+**Remaining verification.** Exact final test counts and source fingerprints are
+recorded below after the quiet run. Do not promote a failed full suite. PRD
+content/OOXML checks pass, but page-layout review is BLOCKED because the bundled
+renderer lacks LibreOffice on Windows; no rendered pages were inspected. This
+limitation and the existing full-suite failures keep Test/sign-off open. Static
+declaration checks do not prove semantic generality, legal competence, universal
+regression freedom or actual runtime boundary enforcement.
+
+**Settled Test record — 10 September 2026, 12:46:52–12:53:05 UTC.** Full
+Class-A: **1,733 passed, 3 failed, 1 skipped**, 1,737 actual nodes, excluding
+parameter-function aggregate aliases. All **524 planning/workbook nodes passed**;
+184 tests were added in this amendment. Start/finish/post-run identities match
+`613e7d67a90ba0fcc3a2`. The three failures are unchanged:
+`test_tooling_bites.py::test_trace_passes_on_the_real_spec` and
+`test_the_gate_scan_sees_code_and_ignores_prose[body1-False]` / `[body2-False]`.
+The trace reports unproved C1 unavailable-material and D2 legal-premise NEVER
+obligations; their dependent gate probes remain non-green. The skipped node is
+`test_reads_registry.py::test_the_judge_is_not_the_model_under_test`.
+
+The result remains exit 1 / `complete: false`, saved as
+`outputs/01a07b76-6b21-71f3-bb09-261f64617594/autonomy-amendment/class_a_results.unpromoted.json`.
+No evidence promotion or commit bypass occurred. AC1/AC2 record named passing
+static controls; effective proof still follows the execution binder. AC3 and
+Test/sign-off remain open for the disclosed reader-artifact/full-suite limits.
+The saved workbook passes independent cell/formula/source reconciliation, and
+the actual new roles, obligations, packets and build-rule ranges were rendered
+and inspected. PRD page inspection remains unperformed, not inferred from XML.
+
+Earlier exploratory runs exposed five approval-fixture failures from an omitted
+new contract and one stale 30-case assertion. The fixture now copies the real
+JSON contract population; the media test preserves the original 30 IDs while
+checking the current 34. The settled full run verifies both repairs. A budget
+race control also refuses a concurrency cap that could mask budget enforcement.
+The four new control files pass full Ruff lint; the broader surrounding planning
+scan still has 153 style findings (143 line length, seven imports, three zip
+mode declarations). Undefined-name checks pass. No repository-wide clean-lint
+claim is made and unrelated formatting was not swept into this amendment.
+
+## BK-91 — adaptive grounded lead reasoning
+
+Opened 10 September 2026. **Planned, not implemented or tested.** W3 is
+the foundation assignment, not permission to declare the whole item complete.
+M07 owns the capability. The existing briefing and reasoning behavior remains
+the baseline; it is not evidence that the new adaptive contract already works.
+
+The lead may choose and revise investigative steps, ask purposeful questions,
+retrieve authorised material, challenge hypotheses, request bounded specialist
+work and stop. The application retains authority over admission, access,
+budgets, lifecycle, versions, validation and publication. Facts must remain
+attributed; authentic citations alone do not establish legal applicability.
+Model knowledge may suggest a hypothesis, never supply invented case evidence.
+
+**Execution and closure.** P46 owns AC1 adaptive planning and AC2 grounding /
+invalidation, after P47/P18/P21/P22/P23. P24 owns AC3 in the served briefing
+journey, after P46. P35 owns AC4: matched existing-orchestration versus adaptive
+lead evaluation, independent counsel review, explicit failures and all costs.
+EVAL-031 and EVAL-034 are future synthetic specifications, not observed results.
+The obligations and exact owners are checked through `blueprint/autonomy.json`.
+
+**Why open.** No lead-runtime implementation, served-path proof or comparative
+professional evaluation is delivered by this planning amendment. Each criterion
+requires its registered evidence; no foundation packet closes later integration.
+Rollback disables the new adaptive route while preserving source, audit and
+accepted work versions. Start is blocked on named prerequisites; remaining
+stages are NOT RUN. Any enabled release scope must explicitly account for BK-91.
+
+## BK-92 — scoped specialist execution and verified artifacts
+
+Opened 10 September 2026. **Planned, not implemented or tested.** W3 foundation;
+M02 owns task execution. Initially permit only optional research and
+draft/document specialists, at most two concurrent specialists and one level
+of delegation. These are proposed, unmeasured safety defaults, not performance
+guarantees. A specialist cannot grant capabilities or create further agents.
+
+**Execution and closure.** P47 owns AC1 scoped task contracts and shared atomic
+budgets, and AC2 provenance, acceptance, retry, cancellation, stale-result and
+prompt-injection controls, after P06/P11/P13/P17. Agents return candidate deltas;
+only the controlled acceptance service may change canonical state. P29 owns
+AC3: DOCX/PDF share one accepted semantic version, preserve source lineage and
+unknowns, and confer no filing or sending authority. P37 owns AC4: delegation
+earns enablement by task family through independently reviewed quality, safety,
+latency and whole-task cost, including failures, retries and review effort.
+EVAL-032/033/034 prescribe future controls, not execution evidence.
+
+**Why open.** No task runner, delegated artifact path or measured specialist
+benefit has been built in this amendment. Keep delegation disabled until its
+applicable contracts pass; narrower demonstrations need a declared scope and
+recorded authority. Disabling a route must retain accepted artifacts and audit
+history. Start is blocked on named prerequisites; other stages are NOT RUN.
+No child failure, omitted population or model agreement can count as clean proof.
+
+## BK-89 — final pre-build review corrections
+
+Opened 10 September 2026. The user approved the bounded final corrections after
+two independent review exchanges. This is planning/control delivery, not an
+application build, processor approval or permission to use confidential data.
+
+**Start — READY (W0).** Preserve all existing item IDs, wave assignments and
+historical evidence. Governing sources: the current blueprint, registry and
+Start/Build/Test/Sign-off playbooks. Defect shapes: absent observations mistaken
+for success (S1), unenforced guards (S2), duplicate authority (S9), and stale
+approval/evidence identity (S11). The current read-only review reproduced missing,
+malformed and overdue deferral dates escaping lint, while missing reasons fail.
+
+**Plan and acceptance.**
+1. Register media-processing prohibitions on existing foundation, integration
+   and confidential-path criteria; link packet instructions, provider selection
+   under CHOICE-05 and specific positive/negative evaluation specifications.
+   Preserve original evidence and permitted local speaker separation.
+2. Define the scoped CHOICE adoption-record location, schema, authority and
+   validity lifecycle. Keep authorisation separate from test evidence and
+   proposal flags; clarify manual approval resolution until BK-80/P03 is built.
+3. Enforce deferral date presence/type/calendar validity and surface due reviews
+   through the actual backlog reader without auto-authorising deferred work.
+4. Test the controls with actual changed-input probes, reconcile all references,
+   regenerate the existing workbook and report the exact remaining build gates.
+
+**Scope and exclusions.** Files: `docs/blueprint/`, current backlog sources,
+relevant playbooks, planning tools/tests and the generated current workbook.
+No `nm/` or `web/` implementation, corpus migration, real media/model run,
+procurement, deployment or fabricated approval. Future product behaviour remains
+unbuilt/unproven on its owning criteria. P01/P02 synthetic work remains permitted;
+required approvals continue to gate their actual protected operations.
+
+**Proof planned.** Class-A planning/deferral tests, planted negative controls,
+source/view reconciliation and saved-workbook inspection. Retain the existing
+full-suite failures; do not publish a passing full-product gate from this work.
+Rollback is a reviewed reversal of this bounded patch plus view regeneration,
+never a reset of the user's offline changes or deletion of historical records.
+
+**Build — BUILT.** Explicit media criteria now belong to BK-69-AC3/P15,
+BK-79-AC3/P25 and BK-88-AC4/P39. CHOICE-05 requires selected-operation
+procurement approval. EVAL-007/008/027 and the shared typed policy preserve
+positive transcription and add preflight/output, missing observation and
+nonempty inspected-sink controls. All remain unexecuted product specifications.
+
+`APPROVALS.md`, its schema and empty index now define manual adoption records.
+The offline reader checks structure, references and chronology; missing or
+unreadable records report unavailable, not absent approval. A record never
+becomes verified authority merely by passing schema validation. Actual scoped
+verification remains BK-80-AC6/P03. Cross-review also closed schema-reference
+redirection, invalid offset/digest and procurement-scope mismatches.
+
+Backlog now validates every deferral's reason/date and shows India-calendar due
+reviews on live status. The persisted board records review dates without stale
+daily verdicts. Deferred work cannot derive permission from old stage records.
+The existing BK-23/BK-26 dates and every original wave assignment are preserved.
+
+**Test — OPEN.** Focused media/evaluation tests: 98 passed; approval controls:
+54 passed; deferral controls: 53 passed. These are scoped results, not a passing
+full-product gate. Exact named links are in the registry. The final full Class-A
+run recorded **1,549 passed, 3 failed, 1 skipped**, including **340/340 passing
+planning/workbook cases**. Counts exclude parameter-function aggregate aliases.
+The run started 12:05:02 UTC and finished 12:09:16 UTC on 10 September 2026;
+start, finish and post-run source identities all match `90de39b33a34b7336c92`.
+It remains exit 1 / `complete: false` and was not promoted. The three failures
+are `test_trace_passes_on_the_real_spec` and the two existing gate-scan cases
+`body1-False` / `body2-False`; they retain the C1/D2 product obligations owned by
+BK-54 and BK-65/BK-67. The model-as-judge registry test remains skipped, not passed.
+The unpromoted raw result is preserved at
+`outputs/01a07b76-6b21-71f3-bb09-261f64617594/final-prebuild/class_a_results.json`.
+
+Structural backlog and blueprint checks report zero problems. Public backlog
+lint correctly still rejects stale published Class-A evidence. Independent
+saved-workbook reconciliation reports **28 sheets, 98 items, 187 criteria,
+zero problems**; all 22 saved-view tests passed. All 95 opening item IDs and
+their original waves remain unchanged. The final view was inspected, and its
+delivery copy matches the canonical workbook byte-for-byte.
+
+**Sign-off — NOT RUN.** BK-89 remains built / verifying pending required current
+evidence; no application build, corpus change, real media, external approval or
+release occurred. The next permitted work is isolated synthetic P01/P02 under
+the applicable stage playbook, not a passing full-product or production gate.
+
+## BK-87 — execution readiness contracts and cross-plan reconciliation
+
+Opened 10 September 2026 after independent review found that the blueprint's
+module graph did not reconcile actual backlog dependencies. The user approved
+one thorough execution-readiness pass over the existing documents.
+
+**Plan.** Preserve existing work and waves; split foundation from later
+integration at acceptance level; specify commands, packets, proof cases and
+approval decisions; validate the combined references and execution order;
+refresh and independently reconcile the current workbook. Do not implement
+product features, process privileged material, buy providers or suppress the
+existing product trace failures as part of this planning task.
+
+**Stage record.** Start READY: affected populations, four acceptance criteria,
+negative controls and scope are registered. Build OPEN, Test NOT_RUN,
+Sign-off NOT_RUN. Existing files and source data are preserved.
+
+**Execution-readiness findings and changes, 10 September 2026.** The opening
+snapshot contained 95 work items with their existing wave assignments. This
+pass adds BK-87 and BK-88, preserves all 95 assignments, and adds 40 explicit
+criteria to 28 active non-legacy items that previously had none: BK-24/25/28/29,
+BK-30/32/33/35/36/38/39/40, BK-43/44/45/46/47/48/49/50/51, BK-53/58/59,
+J-4/5/7/8. Fourteen existing criteria also receive their missing named negative
+controls. No authored implementation, evidence or historical closure is promoted
+by adding those contracts. Later verification results supersede this opening
+stage record; the live registry remains the only current status authority.
+
+The revised plan assigns every non-excluded criterion one final packet and
+checks earlier contributors, explicit completed-item requirements and registered
+item dependencies together. Module labels no longer imply impossible whole-
+foundation completion barriers. The byte upload/download, identity recovery,
+worker and external-action receipt contracts are explicit. Choices include
+local fallbacks and separate confidential/paid-run/procurement approval gates.
+The evaluation catalogue separates concrete synthetic specifications, actual
+legal/security/usability populations and independent review records.
+
+**Final verification, 10 September 2026.** Blueprint reconciliation: 13 modules,
+97 items, 44 features, 47 steps, 45 packets, 50 commands, 10 choices and 30
+synthetic specifications; zero specification problems. Saved workbook: 28 sheets,
+179 criteria, zero independent content/hash/formula discrepancies. All 95 opening
+items and wave assignments are preserved. Its eight new sheets are generated
+views, not new authorities. Full details: `docs/EXECUTION_READINESS.md`.
+
+The final complete Class-A selection ran 11:26:16–11:29:34 UTC: **1,370 passed,
+3 failed, 1 skipped**, excluding aggregate aliases. **161/161 planning and
+workbook cases passed** across `test_blueprint_commands` (38),
+`test_blueprint_evaluations` (33), `test_blueprint_execution` (51),
+`test_blueprint_mapping` (18) and `test_current_plan_view` (21). The source
+fingerprint is unchanged across start, finish and independent recheck:
+`72bcf8e5cdc10c45b00a`.
+
+The three remaining failures are the existing C1/D2 trace obligations and their
+dependent gate-scan probes, not waived or patched with decorative refusal
+markers. The skipped judge/model-distinction test is not a pass. During this
+pass the new checks exposed and corrected stale board rendering, unreadable
+spreadsheet date serials and the missing shared Windows reporting guard.
+
+**Closing status.** Build BUILT; delivery VERIFYING; Test OPEN and Sign-off
+NOT_RUN because full current Class-A evidence cannot be published as passing.
+No application features, corpus migration, model/browser evaluation, paid
+provider activation or deployment was performed. No commit was made over the
+failing full gate. BK-87 remains explicit in the current status registry; its
+scope-specific successful checks do not close the unrelated product obligations.
+
+## BK-88 — confidential path security and lifecycle integration
+
+The original BK-85 foundation included proof over real originals, derivatives,
+restored data and actual served paths. Those obligations cannot honestly close
+before their consumers exist. BK-85 retains the independent policy, key,
+retention-decision, incident and delivery-pipeline foundations. BK-88 at W2
+owns the integrated confidential data path and retains the original required
+integration/adversarial/production proof, adding served browser evidence.
+BK-42 retains the final deployed release assurance. No obligation is waived.
+
+**Stage record.** Start BLOCKED on named foundations and deployment decisions;
+Build NOT_STARTED, Test NOT_RUN, Sign-off NOT_RUN. Three precise criteria and
+counterexamples are registered. A module label is not a completion barrier.
+
 ## Phase A — Arrive
 
-Authentication and advocate identity, the matter list and thread board, re-entry and re-orientation, and search over the corpus. **A1–A4, all four implemented.**
+Authentication and advocate identity, the matter list and thread board, re-entry and re-orientation, and search over the corpus. **Historical inventory: “A1–A4, all four implemented.”** This is not the current conformance claim: the registry records A1 and BK-31 as partial while authenticated recovery-code rotation and the remaining proof are outstanding.
+
+## BK-77 — expert journey plan and build method refinement
+
+Opened 10 September 2026 on the product owner's request to revisit the PRD,
+project plan and build guides before continuing the Phase A build. Scope is
+the specification and its generated views: all 47 intended journey contracts,
+expert working loops, truthful scope and proof, wave definitions and release
+profiles. Existing implementation and historical evidence are preserved.
+
+At opening, Start was READY, Build was OPEN, and Test and Sign-off were
+NOT_RUN. Those are the opening states; the current lifecycle is recorded only
+in status.yaml, where verification has since begun. Proof consists of schema/reference reconciliation, a complete
+47-step contract census, preserved wave assignments except newly registered
+work, generated artifact inspection and cross-document review. No counsel or
+production outcome is certified by this documentation exercise.
+
+The review identified two implicit completion cycles. BK-34's ordinary-screen
+foundation was waiting on BK-53 emergency behavior while BK-53 depended on
+BK-34; BK-69's media foundation was waiting on BK-54 intake while BK-54 depended
+on BK-69. BK-78 and BK-79 now own the integrated outcomes. This changes work
+ownership, not the product promises. Old criteria and their NOT_RUN history
+remain described under the original rows and below.
+
+### BK-77 authoring and verification record — 10 September 2026
+
+Authoring is complete; Sign-off is not. PRD version 1.1 and its generated
+feature contracts distinguish software assistance, legal judgement, mechanical
+calculation and human authority. Sections 1.7–1.8 describe the recurring
+briefing/working/advising loop and observable professional quality. C1/C6 now
+explicitly include supported files, audio/video and optional voice, source
+locators, partial processing, correction, deferral and unavailable material.
+The source generators preserve the existing feature IDs and include revision
+comments in Word. The cover/contents page break and heading continuity were
+corrected without a wholesale restyle.
+
+The current plan defines all 47 intended step contracts, eight wave outcomes
+and three scoped release profiles. It preserves all pre-existing wave
+assignments and separates two foundation/integration completion cycles.
+BK-42, BK-55/56/57 and BK-66/67 now carry more specific acceptance obligations;
+BK-80 owns the unenforced evidence/profile and historical-export limitations.
+The four playbooks have short operating cards, proportionate applicability,
+iterative testing and separate technical, professional and deployment approval.
+README and the authority chain now point to the live sources rather than the
+archived specification.
+
+The current workbook is `docs/Nyaymalaw_End_to_End_Project_Plan.xlsx`, generated
+by `spec/plan/build_current_plan.mjs`; regeneration is described in
+`spec/plan/README.md`. It preserves the original workbook unchanged and moves
+its retained scenario/risk context into a tracked design catalogue. Current
+status is derived from the registry, never from historical spreadsheet status.
+
+Verification results are deliberately separate:
+
+- JavaScript syntax, PRD generation and `speccheck`: PASS, with 44 features,
+  105 numbered evals, 34 gates and 10 schemas. This establishes structural
+  consistency, not legal adequacy or implementation of every new requirement.
+- Focused `test_produces_contracts.py` and
+  `test_the_backlog_states_one_truth.py`: PASS after rendering the board and
+  preserving original wave order. Earlier failures from the stale board and
+  prepended wave row were corrected, not waived.
+- Full local Class-A attempt: 1,209 passed, 3 failed, 1 skipped actual cases
+  (aggregate aliases are not additional tests). All three failures arise from
+  the two T7 gaps below: the baseline trace test and two gate-scan tests that
+  also require a clean trace baseline. The final schema clarification occurred
+  during that attempt, so its evidence is additionally not a current complete
+  run. It was not promoted; the previous published evidence remains STALE.
+- Trace: FAIL on C1 NEVER index 4 and D2 NEVER index 4, with 27 warnings.
+  BK-54-AC3 owns the intake completion/unavailable-material rule;
+  BK-65-AC2 and BK-67-AC3 own legal-premise and calculation discipline.
+  No false refusal tag, trace exemption or gate bypass was added.
+- Word visual verification: NOT_RUN. The packaged renderer failed because
+  `soffice.exe` is unavailable. XML/source consistency is not page-layout proof.
+- The workbook has 20 sheets and exact ID/status/basis/wave reconciliation;
+  its sheet previews were reviewed. Sources and Reconciliation retain the
+  measured population and snapshot identity; this is not product release proof.
+
+The documentation refinement is not committed through a bypass: the current
+trace gate remains red. Close BK-77 only after the outstanding verification is
+resolved under its registered scope. No application functionality was changed
+by this refinement; the preceding, separately tested access work was committed
+as `6a05ed6` before this review began editing documents.
+
+## BK-78 — emergency admission integration
+
+The integrated emergency promise formerly in BK-34-AC3 is: an emergency matter
+can proceed only with the exception visibly recorded. Its evidence was
+NOT_RUN because B2 had no production declaration route. This work now depends
+on both ordinary admission (BK-34) and triage/capacity (BK-53), at W1. Only
+protective and referral guidance can precede ordinary clearance; recording an
+exception is never permission for merits advice. Success, replay, expiry,
+resumption and served browser proof are required. Start remains BLOCKED pending
+the precise integration/test design; no implementation or evidence is claimed.
+
+## BK-79 — multimodal attribution and deletion integration
+
+BK-69-AC3's original promise was: every original, derivative, processor
+disclosure, retention decision and deletion remains attributable end to end.
+Its integration and browser evidence were NOT_RUN because there was no media
+path to drive. That promise now lives in BK-79-AC1 at W2, after BK-54 intake
+and BK-69 admission foundation. Cancellation, failed processing, logout,
+retention holds and deletion must reconcile the whole source inventory.
+Start remains BLOCKED pending the integrated proof design. W0 may certify the
+foundation; it cannot certify W2's end-to-end processing or production privacy.
+
+## BK-80 — evidence integrity and release claim enforcement
+
+Review found limits in the current control plane. Structured non-Class-A
+records check named fields and criterion identity but not the full evaluated
+source/configuration or reviewer qualification and sample. Browser records
+check fingerprint and a matching PASS row without requiring report completion,
+unique rows or the expected population. The fingerprint does not currently
+include all PRD/generated-specification/playbook sources. Build-rule manifests
+and test-name checks do not establish every rule's semantic enforcement or
+that the named test was collected. New wave and release-profile contracts also
+need explicit validation before their manual review becomes an automated gate.
+
+These are registered W0 control work, not repaired by writing this paragraph.
+The interim sign-off must inspect subject identity, full population, reviewers,
+source changes and reservations explicitly. Start is BLOCKED pending exact
+positive controls and proof design; all acceptance evidence is NOT_RUN.
+
+The BK-77 Class-A attempt also demonstrated why a probe must identify the
+specific control that rejected its mutation. Two gate-scan tests asserted the
+whole trace command's exit status; unrelated missing C1/D2 refusal proof made
+their harmless prose cases fail. Their mutation result is not independent
+evidence about the gate scanner while the baseline is red. Preserve the
+Test playbook's rule that a control must reject for the intended reason when
+designing the BK-80 proof boundary; do not waive the underlying T7 failures.
+
+`export_spec.py` also still obtains historical feature status and S-slice
+metadata from the original workbook. BK-80-AC5 requires current status to come
+from the registry while preserving historical metadata as history. A newly
+specified refusal with no production guard must continue to fail trace T7;
+changing a legacy `tested` label or adding a false guard tag is not a fix.
+
+**Current validation boundary for BK-77.** The refined PRD exposes two genuine
+unimplemented refusal obligations: C1's incomplete/repetitive/unavailable
+briefing-loop behavior and D2's distinction between reviewed legal premises
+and correct arithmetic. They map to BK-54-AC3 and BK-65-AC2/BK-67-AC3.
+Trace remains failing on those clauses until the corresponding product proof
+exists. The Word visual review is NOT_RUN because the document-rendering
+dependency is unavailable. Authored refinements and successful structural
+checks do not justify signing off either gap; full evidence and visual review
+remain the next step of BK-77.
 
 ### Phase A closure programme — opened 10 September 2026
 

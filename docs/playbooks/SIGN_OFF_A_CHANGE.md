@@ -8,6 +8,17 @@ conformant, done, releasable or released.
 **Exit:** a Conformance Record states the exact derived claim, reconciles the
 control plane and, where applicable, records the release or return decision.
 
+## Quick card
+
+1. Name the exact item, feature or deployment claim being requested.
+2. Inspect current evidence and unresolved failures against that claim.
+3. Check substantive professional behaviour with the required qualified reviewer.
+4. Reconcile the owning registry, forensic record and generated views.
+5. For deployment only, verify release authority, operational gates, recovery and
+   controlled exceptions for the named environment.
+6. Record the earned decision and its decision-maker; never promote a weaker
+   result into a stronger claim.
+
 ## 1. Check that the evidence pack is current
 
 Confirm that source, configuration, provider, model, prompt, corpus,
@@ -17,6 +28,11 @@ that no later edit can affect a required result.
 Return to Test if evidence is missing, failed, not run or stale. Return to Build
 if the implementation must change. Return to Start if scope, authority,
 contract or acceptance was wrong.
+
+Use the identity relevant to each evidence type, and inspect what the runner
+actually validates. Current structured review records and browser binding do
+not yet enforce every validity check in this playbook; BK-80 owns those gaps.
+Until those controls exist, record the manual comparison and its limits.
 
 ## 2. Use the exact claim the evidence supports
 
@@ -33,6 +49,35 @@ Keep these statements separate:
 
 Do not promote one claim into another. Never author `done`; it is derived from
 the acceptance evidence in `docs/backlog/status.yaml`.
+
+Technical sign-off records an implementation/evidence judgment within the
+reviewer's authority. Counsel acceptance records a qualified professional's
+review of substantive behaviour. Deployment authorisation and risk acceptance
+name the accountable decision-maker, environment and permitted release scope.
+These are separate decisions: an agent cannot supply a counsel identity or
+deployment approval, and approval cannot change FAIL or NOT RUN into PASS.
+
+### 2.1 For a fix: accept the demonstrated family and its limits
+
+**Accept the demonstrated scope, never universal future-proofing.** A technical
+reviewer other than the implementer examines the measured cause, shared owner,
+whole-product inventory, original and transfer witnesses, distinguishing
+boundaries, unrelated-behaviour checks and cumulative results. A second agent's
+review may assist but cannot invent human, counsel or deployment authority.
+Substantive legal changes still need qualified counsel acceptance.
+
+Name the supported defect family and tested population, exclusions, unrun
+evidence, remaining risks and before/after identities. Confirm permissions and
+required proof were not weakened, and legitimate legal differences survive.
+Do not sign off a general fix from a one-incident pass, a populated review form
+or keyword lint. No finite suite proves all future inputs safe; the earned
+claim is bounded by the demonstrated mechanism, scope and evidence.
+
+Link recurrence signals to the same defect family and owner so the next
+occurrence reopens the mechanism, not another point patch. A safe, approved
+capability-wide disable/rollback may contain harm while investigation proceeds;
+record its scope and review date. Containment does not close the underlying
+defect or earn a permanent-fix claim.
 
 ## 3. Reconcile the control plane
 
@@ -73,6 +118,11 @@ The exact gate definitions live in the current project plan and release
 sources. Gates are cumulative. A later PASS cannot override an earlier FAIL,
 NOT RUN, STALE or BLOCKED result.
 
+An earlier failure can be resolved by a relevant corrected rerun on the release
+candidate; retain the original evidence and explanation. Separate suites can
+support one candidate when their source and applicable input identities agree.
+An unrelated green suite cannot resolve a failed gate.
+
 ## 5. Review professional conformance
 
 For every applicable PA standard, confirm that the evidence supports the
@@ -108,8 +158,10 @@ Do not release with an unnamed exception. Every accepted exception must state:
 - trigger that stops rollout;
 - linked work item for permanent resolution.
 
-No exception may quietly downgrade a mandatory gate or P0 confidentiality,
-authority, grounding, persistence or legal-correctness risk.
+No exception may downgrade a mandatory gate or P0 confidentiality, authority,
+grounding, persistence or legal-correctness risk. Risk acceptance records a
+permitted residual risk; it is not test evidence and does not complete the work
+item that still owns the gap.
 
 ## 7. Confirm rollback, recovery and monitoring
 
@@ -125,6 +177,11 @@ Before release, identify:
 - how users receive truthful status and recovery.
 
 A feature whose harmful failure cannot be controlled is not releasable.
+
+These are release checks. A document, control or prerequisite item can earn its
+own non-release sign-off without pretending that production deployment occurred.
+Record why any release-only fields do not apply and retain the downstream
+release obligation.
 
 ## 8. Make the decision
 
@@ -159,13 +216,15 @@ planned wave or the next release.
 
 - the Evidence Pack does not match the current source;
 - a required result is FAIL, NOT RUN, STALE or BLOCKED;
-- an applicable professional standard lacks named review;
+- a professional standard requiring qualified review lacks that review;
 - the served and persisted outcomes disagree;
 - a P0 or mandatory gate remains open;
 - a status or workbook value conflicts with its authoritative registry;
 - an exception lacks owner, compensation or expiry;
 - rollback, recovery or monitoring is not credible;
 - the requested claim is stronger than the evidence.
+- a fix has no independent scoped review, unresolved collateral regression or
+  a generality claim that exceeds the measured population.
 
 Return to the earliest stage that owns the problem.
 
@@ -192,6 +251,8 @@ Item / build / environment identity:
 Start Record / Build Record / Evidence Pack:
 Claim requested:
 Claim earned:
+Fix only — accepted causal family / population / exclusions / limits:
+Fix only — independent technical review / unchanged safeguards / recurrence owner:
 Applicable PA standards and counsel decision:
 Gates G0–G8 (or applicable subset) and evidence:
 Open FAIL / NOT RUN / STALE / BLOCKED results:
@@ -215,4 +276,4 @@ signal may reopen it by invalidating the evidence on which that level depended.
      because two rules were lost when the guide was split and nothing
      noticed. Do not edit by hand except to add a genuinely new rule
      to the registry first. -->
-<!-- BUILD_RULES: BG-017 BG-018 BG-031 BG-032 BG-033 BG-034 BG-035 BG-036 BG-037 BG-038 BG-039 BG-040 BG-041 BG-042 BG-043 BG-044 BG-045 BG-057 BG-058 BG-059 BG-075 BG-076 BG-077 -->
+<!-- BUILD_RULES: BG-017 BG-018 BG-031 BG-032 BG-033 BG-034 BG-035 BG-036 BG-037 BG-038 BG-039 BG-040 BG-041 BG-042 BG-043 BG-044 BG-045 BG-057 BG-058 BG-059 BG-075 BG-076 BG-077 BG-081 -->

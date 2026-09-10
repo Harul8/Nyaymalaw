@@ -1,0 +1,3818 @@
+{
+  "schema": 1,
+  "purpose": "Finite implementation and verification navigation. Criteria in docs/backlog/status.yaml are the only delivery authority. Repeated criterion references represent staged contributions, never independent completion. Packet prerequisites require the named scoped output, not completion of every criterion or whole module. Future commands and scenario specs are not executable proof.",
+  "readiness_rule": "P01 and P02 may start in the existing local synthetic profile under CHOICE-02. Other packets require listed predecessor outputs and the listed decision's approval for that packet scope. A local/default decision never authorises real client data, procurement, deployment, corpus writes, external actions or model runs.",
+  "execution_policy": {
+    "order": "Topological order of prerequisites; numeric IDs are stable navigation labels, not a total schedule.",
+    "module_semantics": "Modules group capabilities; they are not full-completion barriers.",
+    "criterion_semantics": "A packet can contribute foundation evidence to a broad criterion without closing its operated or professional proof.",
+    "evidence_semantics": "Scenario IDs resolve specifications. Actual proof requires execution identity, expected population, observations and accountable review.",
+    "path_semantics": "Boundaries name verified existing source directories/files. New implementation file names are frozen in that packet's Start record inside the stated boundary; contracts own request/state meanings.",
+    "final_criteria": "Each in-scope acceptance criterion names exactly one final packet. Earlier occurrences contribute scoped outputs only; final packet still needs every required evidence type and sign-off before registry completion derives. Criteria excluded as current planning-delivery work retain their normal backlog lifecycle.",
+    "proof_semantics": "For EACH criterion listed on the packet, execute its exact registered requirement and negative_control using EVERY required_evidence method. The EVAL references are reusable baseline/integration anchors, not complete proof of all packet criteria. Freeze criterion-specific test node/manual protocol, concrete input, expected success, planted mutation, intended refusal, population and boundary in the Test record. Existing bound test refs may be reused after checking current execution identity. No generic EVAL success may close an unrelated criterion.",
+    "completion_edges": "requires_completed_items explicitly demands full item sign-off before the packet starts. Other prerequisites consume scoped packet outputs. Item depends_on remains a final sign-off dependency and is combined with final_criteria owners and packet prerequisites for cycle checking; it is not erased or interpreted as every consumer waiting for every foundation's eventual deployment proof."
+  },
+  "packets": [
+    {
+      "id": "P01",
+      "module": "M00",
+      "title": "Make current specification and evidence identity truthful",
+      "kind": "implementation",
+      "criteria": [
+        "BK-80-AC3",
+        "BK-80-AC5",
+        "BK-48-AC1"
+      ],
+      "prerequisites": [],
+      "decisions": [
+        "CHOICE-02"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "tools/export_spec.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/_fingerprint.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/backlog.py",
+          "kind": "existing"
+        },
+        {
+          "path": "spec/prd",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_tooling_bites.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_evidence_is_bound_to_execution.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Current PRD capture output, status.yaml and unchanged historical workbook",
+        "Baseline trace output and source fingerprint"
+      ],
+      "outputs": [
+        "Registry-backed current feature export; explicitly historical slice/eval fields",
+        "Fingerprint including applicable promises without including generated verdicts"
+      ],
+      "steps": [
+        "Read main() in export_spec.py: replace workbook Status authority with one registry-derived projection; preserve historical eval IDs and slice metadata explicitly.",
+        "Reject missing, duplicate and unknown feature IDs before any generated output is published; compare all 44 current features, not a selected sample.",
+        "Add a temporary-tree test changing one current feature while historical Status remains tested, and a fingerprint test changing one applicable promise; regenerate and compare only after the tests pass."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-001"
+        ],
+        "negative": [
+          "EVAL-001"
+        ],
+        "live": [
+          "EVAL-001"
+        ]
+      },
+      "expected": [
+        "Historical tested cannot overwrite current partial/unproven.",
+        "Promise mutation invalidates applicable proof; existing substantive trace failures remain visible until their implementation owners resolve them."
+      ],
+      "rollback": "Restore the reviewed exporter/fingerprint change and regenerate from the retained source snapshot; do not restore historical status as current evidence.",
+      "final_criteria": [
+        "BK-80-AC3",
+        "BK-80-AC5",
+        "BK-48-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P02",
+      "module": "M01",
+      "title": "Replace signed-in recovery codes safely",
+      "kind": "implementation",
+      "criteria": [
+        "BK-31-AC20"
+      ],
+      "prerequisites": [],
+      "decisions": [
+        "CHOICE-02"
+      ],
+      "commands": [
+        "reauthenticate-session",
+        "rotate-recovery-codes",
+        "get-session",
+        "logout"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/ports/directory.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/store/directory.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/advocate.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        },
+        {
+          "path": "web/index.html",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_account_recovery.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Authenticated synthetic account with current password, session, current recovery generation and existing recovery-code hashes",
+        "Two sessions and a captured old code"
+      ],
+      "outputs": [
+        "One newly generated recovery-code set returned only in the successful response",
+        "Old hashes invalidated atomically and a content-free credential-change record"
+      ],
+      "steps": [
+        "Extend DirectoryPort using the existing account mutation claim. Implement controlled-local reauthenticate-session: current password plus valid session yields a five-minute, session-bound, single-use proof carrying credential/recovery generations; the confidential profile requires the approved strong-factor proof instead.",
+        "At rotate-recovery-codes, derive actor from session; under the account mutation claim consume the unexpired proof, compare the expected recovery generation (not the session version), atomically replace hashes and apply session policy. Refuse CSRF/untrusted origin, stale generation, replay and rate-limited sensitive failures.",
+        "Reuse one-time code display with a save acknowledgement; clear secrets on exit/logout, never persist them in browser storage. Test wrong password, stale/revoked session, two simultaneous rotations, interrupted response and old-code replay."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-004"
+        ],
+        "negative": [
+          "EVAL-004"
+        ],
+        "live": [
+          "EVAL-004"
+        ]
+      },
+      "expected": [
+        "One concurrent rotation wins; no replay redisplays secrets.",
+        "Lost response instructs fresh reauthentication and replacement rather than recovering plaintext from storage; local rotation does not claim production MFA readiness."
+      ],
+      "rollback": "Disable only the new rotation entry point; preserve the accepted new hashes and generation. Never reactivate old recovery codes to roll back UI.",
+      "final_criteria": [
+        "BK-31-AC20"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P03",
+      "module": "M00",
+      "title": "Bind evidence runs to complete populations",
+      "kind": "implementation",
+      "criteria": [
+        "BK-80-AC1",
+        "BK-80-AC2",
+        "BK-80-AC4",
+        "BK-80-AC6",
+        "BK-51-AC1"
+      ],
+      "prerequisites": [
+        "P01"
+      ],
+      "decisions": [
+        "CHOICE-02"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "tools/evidence.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/_fingerprint.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/backlog.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/journey.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_evidence_is_bound_to_execution.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Declared browser/model/counsel/production method, scenario IDs and source/configuration identities",
+        "APPROVALS.md and approvals.schema.json; scoped adoption attestations in approvals.json, distinct from measurement evidence"
+      ],
+      "outputs": [
+        "Versioned evidence envelope and fail-closed population/identity validation",
+        "Verified scoped adoption reader; explicit not-recorded, unverified, valid, stale, expired, revoked and out-of-scope results"
+      ],
+      "steps": [
+        "Extend adapters with matching start/end identity, unique expected rows and explicit outcomes; keep source identity separate from generated results.",
+        "Validate reviewer authority, rubric, reservations and validity for professional proof; test-name existence cannot satisfy execution.",
+        "Plant missing/duplicate/unexpected rows, zero population, changed promise, wrong reviewer and cancelled-run mutations against fields that actually exist.",
+        "Implement BK-80-AC6 from APPROVALS.md: verify the real signer's authority and evidence, exact choice/proposal/configuration/scope, conditions and validity before satisfying that single packet prerequisite. Proposal flags and offline schema validity confer no authority.",
+        "Revoke, expire, change relevant configuration, widen scope, swap actor and make the verifier unavailable in separate restored tests. Preserve stale versus absent history; unrelated local synthetic work remains allowed and approval cannot bypass other evidence or deployment gates."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-001"
+        ],
+        "negative": [
+          "EVAL-001"
+        ],
+        "live": [
+          "EVAL-001"
+        ]
+      },
+      "expected": [
+        "Incomplete, stale, cancelled or incompatible evidence is rejected for its named reason.",
+        "No model or browser execution is implied by validating an evidence envelope."
+      ],
+      "rollback": "Retain old artifacts as historical incompatible evidence; revert parser only with compatible readers or leave affected proof unavailable.",
+      "final_criteria": [
+        "BK-80-AC1",
+        "BK-80-AC2",
+        "BK-80-AC4",
+        "BK-80-AC6",
+        "BK-51-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P04",
+      "module": "M00",
+      "title": "Expose isolated module proof with honest modes",
+      "kind": "implementation",
+      "criteria": [
+        "BK-82-AC1",
+        "BK-82-AC2",
+        "BK-82-AC3",
+        "BK-28-AC1",
+        "BK-30-AC1"
+      ],
+      "prerequisites": [
+        "P03"
+      ],
+      "decisions": [
+        "CHOICE-02"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "tools/blueprint.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/backlog.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        },
+        {
+          "path": "web/index.html",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.css",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Synthetic environment allowlist, registry projection and EVAL catalog"
+      ],
+      "outputs": [
+        "Operator-only proof view with fixture identity, mode and current evidence links"
+      ],
+      "steps": [
+        "Add an isolated proof consumer at the edge, using registry-derived state and required scenario populations; no new authored completion field.",
+        "Gate fixture setup and fault injection to the synthetic environment with an operator role; ordinary advocate routes cannot invoke them.",
+        "Render missing/stale proof, scripted mode and blocked dependencies visibly; test wrong actor and forged production-mode reuse through the served path.",
+        "Extend the browser harness through the real composition root and History's separate restricted run ledger; golden/evaluation records remain distinct from matter conversation and retain exact scope, identity and outcome."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-002"
+        ],
+        "negative": [
+          "EVAL-002"
+        ],
+        "live": [
+          "EVAL-002"
+        ]
+      },
+      "expected": [
+        "A failed scenario is visibly red and an unrun scenario is NOT_RUN.",
+        "Production has no fixture-control surface; the console never confers legal or deployment approval."
+      ],
+      "rollback": "Disable the proof surface and preserve restricted run records; reset only named synthetic fixture scope after explicit confirmation.",
+      "final_criteria": [
+        "BK-82-AC1",
+        "BK-82-AC2",
+        "BK-82-AC3",
+        "BK-28-AC1",
+        "BK-30-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P05",
+      "module": "M00",
+      "title": "Record India applicability and processing responsibilities",
+      "kind": "review",
+      "criteria": [
+        "BK-85-AC3"
+      ],
+      "prerequisites": [],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-07",
+        "CHOICE-08",
+        "CHOICE-10"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "docs/blueprint/SECURITY_PRIVACY.md",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/decisions.json",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Processing inventory and dated primary instruments",
+        "Named accountable product/security and qualified legal reviewers"
+      ],
+      "outputs": [
+        "Qualified applicability record: duties, operative dates, roles, incidents, retention and reservations"
+      ],
+      "steps": [
+        "Review the actual India-only service, users and data flows against operative provisions; distinguish statutory duties from stricter product policy.",
+        "Name legal/operational owners, review date and triggering changes; leave unanswered applicability questions explicit.",
+        "Check a deliberately incorrect all-DPDP-effective-now claim and blanket-localisation claim; reject each using the reviewed instrument rather than a framework badge."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-026"
+        ],
+        "negative": [
+          "EVAL-026"
+        ],
+        "live": [
+          "EVAL-026"
+        ]
+      },
+      "expected": [
+        "No real-data release until applicable responsibilities are approved.",
+        "The record is a qualified review artifact, not automatically generated legal advice or compliance certification."
+      ],
+      "rollback": "Withdraw the affected processing permission and retain the superseded dated record; do not delete evidence of the earlier decision.",
+      "final_criteria": [
+        "BK-85-AC3"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P06",
+      "module": "M00",
+      "title": "Enforce processor and egress policy before live data",
+      "kind": "implementation",
+      "criteria": [
+        "BK-85-AC1"
+      ],
+      "prerequisites": [
+        "P05"
+      ],
+      "decisions": [
+        "CHOICE-03",
+        "CHOICE-05"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "nm/bootstrap/composition.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/model/config.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/model/traced.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/obs",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Approved processor identities, purposes, regions, retention and data classes"
+      ],
+      "outputs": [
+        "Central pre-dispatch policy covering model/media/storage/support/telemetry destinations"
+      ],
+      "steps": [
+        "Bind configured adapters to approved processor profiles; require purpose and data-class authorisation before every egress.",
+        "Default-deny unknown destinations and redact operational diagnostics; include private indexes, temp files and retries in the inventory.",
+        "Run synthetic denied-egress and diagnostic sentinel cases at every enumerated output sink; inspect actual destination logs without client content."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-027"
+        ],
+        "negative": [
+          "EVAL-027"
+        ],
+        "live": [
+          "EVAL-027"
+        ]
+      },
+      "expected": [
+        "An unapproved processor never receives the sentinel.",
+        "Local adapter success is foundation proof only; deployed enforcement remains P39/P41."
+      ],
+      "rollback": "Disable the processing route, drain or quarantine affected jobs and revoke destination credentials; accepted user input remains recoverable.",
+      "final_criteria": [],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P07",
+      "module": "M00",
+      "title": "Use scoped envelope encryption with fail-closed keys",
+      "kind": "implementation",
+      "criteria": [
+        "BK-85-AC2",
+        "BK-21-AC1",
+        "BK-21-AC2"
+      ],
+      "prerequisites": [
+        "P05"
+      ],
+      "decisions": [
+        "CHOICE-03",
+        "CHOICE-08"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "nm/adapters/store/file_store.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/bootstrap/composition.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/rekey_matter_store.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Reviewed key hierarchy and permitted decrypt identities",
+        "Synthetic encrypted originals and metadata"
+      ],
+      "outputs": [
+        "Provider-independent key boundary, wrapped data-key references and audited rotation"
+      ],
+      "steps": [
+        "Add a key-service port and envelope adapter as new files declared in the Start record; do not reuse authentication or provider credentials as data keys.",
+        "Implement key-versioned encrypt/decrypt with scoped policy and atomic rotation; no plaintext fallback or content in audit.",
+        "Exercise denied decrypt, wrong matter, rotation during a write and missing-key restart; retain old wrapping versions only under the approved policy.",
+        "Keep the existing credential-collision refusal across every credential and the re-key sealed/open/unreadable distinction; do not skip an unreadable file or print secret values."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-027"
+        ],
+        "negative": [
+          "EVAL-027"
+        ],
+        "live": [
+          "EVAL-027"
+        ]
+      },
+      "expected": [
+        "Unauthorised decrypt and missing keys yield explicit safe unavailability.",
+        "Restore with target credentials remains a separate P38 proof, not inferred from encrypt/decrypt round trips."
+      ],
+      "rollback": "Stop new writes and retain encrypted versions; restore access through approved key recovery, never write a plaintext bypass.",
+      "final_criteria": [
+        "BK-21-AC1",
+        "BK-21-AC2"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P08",
+      "module": "M01",
+      "title": "Preserve access regressions and implement required assurance",
+      "kind": "implementation",
+      "criteria": [
+        "BK-31-AC1",
+        "BK-31-AC2",
+        "BK-31-AC3",
+        "BK-31-AC4",
+        "BK-31-AC5",
+        "BK-31-AC6",
+        "BK-31-AC7",
+        "BK-31-AC8",
+        "BK-31-AC9",
+        "BK-31-AC10",
+        "BK-31-AC11",
+        "BK-31-AC12",
+        "BK-31-AC13",
+        "BK-31-AC14",
+        "BK-31-AC15",
+        "BK-31-AC16",
+        "BK-31-AC17",
+        "BK-31-AC18",
+        "BK-31-AC19",
+        "BK-86-AC1",
+        "BK-86-AC2",
+        "BK-40-AC1",
+        "BK-40-AC2"
+      ],
+      "prerequisites": [
+        "P02",
+        "P06"
+      ],
+      "decisions": [
+        "CHOICE-04"
+      ],
+      "commands": [
+        "register",
+        "login",
+        "recover-account",
+        "get-session",
+        "logout",
+        "revoke-session",
+        "begin-factor",
+        "complete-factor"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/ports/directory.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/store/directory.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_account_recovery.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_authentication.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Approved authentication/recovery assurance model",
+        "Existing invitation/session/recovery test population"
+      ],
+      "outputs": [
+        "Protected-entry assurance enforcement and compatible session/recovery lifecycle"
+      ],
+      "steps": [
+        "Retain invitation binding, replay/race controls, neutral public failures and server-owned workspace identity; first measure existing behaviour rather than rebuild it.",
+        "Enforce the approved factor/passkey assurance at every protected server entry and sensitive change; local password mode cannot activate the confidential profile.",
+        "Implement enrolment, replacement, loss, rate limits and recovery notifications with global revocation where required; sweep direct API, remembered session and concurrent credential changes."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-004"
+        ],
+        "negative": [
+          "EVAL-004"
+        ],
+        "live": [
+          "EVAL-004"
+        ]
+      },
+      "expected": [
+        "A stolen password alone cannot enter the confidential profile.",
+        "Old recovery, invitation, account-generation and workspace tests remain in the cumulative population."
+      ],
+      "rollback": "Pause confidential access on assurance regression; revoke affected sessions and restore the previous compatible provider configuration without weakening factor requirements.",
+      "final_criteria": [
+        "BK-31-AC1",
+        "BK-31-AC2",
+        "BK-31-AC3",
+        "BK-31-AC4",
+        "BK-31-AC5",
+        "BK-31-AC6",
+        "BK-31-AC7",
+        "BK-31-AC8",
+        "BK-31-AC9",
+        "BK-31-AC10",
+        "BK-31-AC11",
+        "BK-31-AC12",
+        "BK-31-AC13",
+        "BK-31-AC14",
+        "BK-31-AC15",
+        "BK-31-AC16",
+        "BK-31-AC17",
+        "BK-31-AC18",
+        "BK-31-AC19",
+        "BK-86-AC1",
+        "BK-86-AC2"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P09",
+      "module": "M01",
+      "title": "Prove access on the real configured device and provider",
+      "kind": "verification",
+      "criteria": [
+        "BK-86-AC3",
+        "BK-40-AC1",
+        "BK-40-AC2",
+        "BK-46-AC1"
+      ],
+      "prerequisites": [
+        "P08"
+      ],
+      "decisions": [
+        "CHOICE-03",
+        "CHOICE-04",
+        "CHOICE-10"
+      ],
+      "commands": [
+        "login",
+        "recover-account",
+        "revoke-session",
+        "logout",
+        "list-sessions"
+      ],
+      "boundaries": [
+        {
+          "path": "tools/journey.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/EXPERIENCE.md",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Approved actual-device/provider bounded rehearsal and synthetic users"
+      ],
+      "outputs": [
+        "Fresh access evidence covering enrolment, factor loss, recovery, revocation and logout"
+      ],
+      "steps": [
+        "Record device, browser, provider/configuration and expected population before the run.",
+        "Use two real browser sessions; complete enrolment and recovery, revoke one, then test stale tab, browser back and reload.",
+        "Check API denial and cache clearing as well as screen text; reject scripted-factor artifacts supplied as actual-provider proof.",
+        "Expire/revoke the actual server session while advice and research are open; a cleared cookie alone is not expiry proof. Recover a draft only for the same reauthenticated identity with explicit confirmation; an offline logout remains unconfirmed."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-003"
+        ],
+        "negative": [
+          "EVAL-004"
+        ],
+        "live": [
+          "EVAL-004"
+        ]
+      },
+      "expected": [
+        "Every required access transition has the actual configuration identity.",
+        "No protected matter appears before context resolution or after revoked-session reuse."
+      ],
+      "rollback": "Withdraw confidential-profile approval and keep synthetic/local work available only at its permitted assurance.",
+      "final_criteria": [
+        "BK-86-AC3",
+        "BK-40-AC1",
+        "BK-40-AC2",
+        "BK-46-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P10",
+      "module": "M02",
+      "title": "Persist one matter transactionally with policy and versions",
+      "kind": "implementation",
+      "criteria": [
+        "BK-83-AC1",
+        "BK-36-AC1",
+        "BK-36-AC2"
+      ],
+      "prerequisites": [
+        "P03",
+        "P06",
+        "P07"
+      ],
+      "decisions": [
+        "CHOICE-02",
+        "CHOICE-03"
+      ],
+      "commands": [
+        "create-matter",
+        "get-matter",
+        "list-matters",
+        "get-operation"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/ports/store.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/store/file_store.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/matter.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/bootstrap/composition.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Existing StorePort round-trip/CAS tests",
+        "Synthetic workspace A/B and a fully populated matter"
+      ],
+      "outputs": [
+        "PostgreSQL adapter behind the same store contract with operation/outbox transaction"
+      ],
+      "steps": [
+        "Implement versioned schema and least-privilege tenant/matter policy using the exact contracts; the new adapter path belongs in its Start record.",
+        "Write matter version, accepted command and outbox atomically; use runtime-role isolation and clear pooled connection context.",
+        "Race two writes, lose the response, replay its key and query with tenant B; compare every persisted field and unreadable/list states to the existing adapter."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-005"
+        ],
+        "negative": [
+          "EVAL-006"
+        ],
+        "live": [
+          "EVAL-005"
+        ]
+      },
+      "expected": [
+        "One accepted command produces one version; stale update conflicts.",
+        "Cross-tenant fetch/list/search and connection reuse reveal no foreign material; no production migration yet."
+      ],
+      "rollback": "Keep file-store as the sole live writer while the new adapter is synthetic/shadow; discard only its named disposable test schema.",
+      "final_criteria": [
+        "BK-83-AC1",
+        "BK-36-AC1",
+        "BK-36-AC2"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P11",
+      "module": "M02",
+      "title": "Execute durable cancellable jobs without duplicate effects",
+      "kind": "implementation",
+      "criteria": [
+        "BK-83-AC2"
+      ],
+      "prerequisites": [
+        "P10"
+      ],
+      "decisions": [
+        "CHOICE-02"
+      ],
+      "commands": [
+        "get-job",
+        "get-operation",
+        "cancel-operation"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/ports/store.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/bootstrap/composition.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/turn.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Committed outbox jobs with operation identity, expected matter version and permission policy"
+      ],
+      "outputs": [
+        "Leased worker lifecycle, retry budget and publication-time permission/version recheck"
+      ],
+      "steps": [
+        "Add a durable worker adapter using transactional claim/lease renewal and idempotent effect records; no model call inside the commit transaction.",
+        "Persist accepted/running/cancel-requested/completed/failed/unknown outcome distinctly; recheck access before reading and before publishing.",
+        "Crash before effect, after effect and before acknowledgement; revoke membership during lease and replay the job."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-006"
+        ],
+        "negative": [
+          "EVAL-006"
+        ],
+        "live": [
+          "EVAL-006"
+        ]
+      },
+      "expected": [
+        "Unknown external effect goes to reconciliation rather than blind retry.",
+        "Revocation prevents publication and cancellation never erases already accepted work or falsely refunds cost."
+      ],
+      "rollback": "Pause workers, retain outbox/lease/effect history and reconcile in-flight effects before resumption; never reset all jobs to pending.",
+      "final_criteria": [
+        "BK-83-AC2"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P12",
+      "module": "M02",
+      "title": "Rehearse reversible store cutover before migrating",
+      "kind": "verification",
+      "criteria": [
+        "BK-83-AC3"
+      ],
+      "prerequisites": [
+        "P10",
+        "P11"
+      ],
+      "decisions": [
+        "CHOICE-03",
+        "CHOICE-08",
+        "CHOICE-10"
+      ],
+      "commands": [
+        "list-matters",
+        "get-matter",
+        "get-operation"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/adapters/store/file_store.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/ports/store.py",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/DATA_ARCHITECTURE.md",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Read-only source inventory and backed-up synthetic complete store",
+        "Approved per-aggregate migration/cutover window"
+      ],
+      "outputs": [
+        "Reconciliation manifest, sole-writer switch and tested reverse/delta recovery procedure"
+      ],
+      "steps": [
+        "Build the importer in a separately registered path; preserve IDs, versions and unknown historical fields without fabricating consent.",
+        "Compare source/target counts, hashes, source links and every persisted field; quiesce the selected writer and apply the final delta.",
+        "Rehearse abort before switch and rollback after target-only writes; prove restore and access revocation under target permissions."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-006"
+        ],
+        "negative": [
+          "EVAL-025"
+        ],
+        "live": [
+          "EVAL-025"
+        ]
+      },
+      "expected": [
+        "Zero silently lost accepted writes and one authority at every checkpoint.",
+        "Real migration requires specific approval even when the rehearsal passes."
+      ],
+      "rollback": "Before new writes switch back to the verified source; after new writes execute tested reverse/delta reconciliation or stop for recovery, never overwrite target-only work.",
+      "final_criteria": [],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P13",
+      "module": "M02",
+      "title": "Capture commission and role-scoped decisions",
+      "kind": "implementation",
+      "criteria": [
+        "BK-62-AC1",
+        "BK-63-AC1",
+        "BK-33-AC1"
+      ],
+      "prerequisites": [
+        "P10"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-07"
+      ],
+      "commands": [
+        "set-commission",
+        "get-matter",
+        "review-admission"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/domain/engagement.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/decision.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/screens.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Synthetic client/instructor/decision-maker roles and a scoped objective"
+      ],
+      "outputs": [
+        "Versioned commission plus central instruction/action authority checks"
+      ],
+      "steps": [
+        "Persist who instructs, who decides, objective, forum, deadline, work product and unknowns; distinguish storage from professional acceptance.",
+        "Evaluate material instructions through one role/scope policy used by API, jobs, decisions and eventual actions.",
+        "Change a material instruction and attempt an unauthorised concession; show re-opened scope and durable attributed refusal.",
+        "Render persisted client/title/posture/stage/touched time and deadline-assessment state on the cover; do not turn unknowns into invented facts or implementation IDs."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-005"
+        ],
+        "negative": [
+          "EVAL-021"
+        ],
+        "live": [
+          "EVAL-005"
+        ]
+      },
+      "expected": [
+        "Matter cover states the current commission after reload.",
+        "A recommendation or colleague role does not silently grant action authority."
+      ],
+      "rollback": "Disable unsupported role operations and retain prior commissions/decisions; never reinterpret old actions under new permissions.",
+      "final_criteria": [
+        "BK-62-AC1",
+        "BK-33-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P14",
+      "module": "M02",
+      "title": "Close ordinary admission and bounded emergency re-entry",
+      "kind": "implementation",
+      "criteria": [
+        "BK-34-AC1",
+        "BK-34-AC2",
+        "BK-34-AC3",
+        "BK-34-AC4",
+        "BK-78-AC1",
+        "BK-78-AC2",
+        "BK-53-AC1",
+        "BK-53-AC2"
+      ],
+      "prerequisites": [
+        "P13"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-07"
+      ],
+      "commands": [
+        "review-admission",
+        "declare-emergency",
+        "submit-turn"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/core/conflict.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/screens.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/turn.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/engagement.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_a_new_party_stales_the_clearance.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Versioned parties, screen results and urgent synthetic instruction"
+      ],
+      "outputs": [
+        "Ordinary screen decision plus expiring protective-only emergency declaration"
+      ],
+      "steps": [
+        "Use the screen owner, not duplicate edge logic; adding a party stales clearance before substance from the same turn can release.",
+        "Persist emergency actor, basis, permitted protective/referral scope, outstanding screens and expiry; connect BK-53 triage without admitting merits.",
+        "Re-enter/retry after expiry, inject unavailable screening and request merits via the emergency route; inspect blocked result and preserved urgency.",
+        "Record capacity/authority to instruct as assessed, unresolved or insufficient with its source and needed next step; account access alone is not capacity."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-005"
+        ],
+        "negative": [
+          "EVAL-028"
+        ],
+        "live": [
+          "EVAL-028"
+        ]
+      },
+      "expected": [
+        "Unavailable screen never reads clear.",
+        "Emergency path provides only permitted protection until ordinary gates reopen."
+      ],
+      "rollback": "Disable emergency integration while retaining declarations and ordinary screening; do not backdate a clearance.",
+      "final_criteria": [
+        "BK-34-AC1",
+        "BK-34-AC2",
+        "BK-34-AC3",
+        "BK-34-AC4",
+        "BK-78-AC1",
+        "BK-78-AC2",
+        "BK-53-AC1",
+        "BK-53-AC2"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P15",
+      "module": "M03",
+      "title": "Make media admission the only reasoning input",
+      "kind": "implementation",
+      "criteria": [
+        "BK-69-AC1",
+        "BK-69-AC2",
+        "BK-69-AC3"
+      ],
+      "prerequisites": [
+        "P06",
+        "P07",
+        "P10"
+      ],
+      "decisions": [
+        "CHOICE-05",
+        "CHOICE-08"
+      ],
+      "commands": [
+        "begin-upload",
+        "complete-upload"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/domain/media.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/quarantine.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/turn.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_media_never_reaches_reasoning_unadmitted.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Purpose/authority/processor/retention decisions and unsupported/corrupt synthetic assets"
+      ],
+      "outputs": [
+        "Typed admission records and enforced rejection before reasoning"
+      ],
+      "steps": [
+        "Use the existing media admission owner; reasoners accept approved derivative references, never arbitrary upload paths or raw media.",
+        "Bind each admission to source hash, actor/matter, purpose, processor decision and retention; unknown policy is a refusal.",
+        "Enumerate every reasoning entry and inject an unadmitted derivative at each; verify no content crosses model or fact-state boundaries.",
+        "Implement BK-69-AC3 and the evaluations.json media_contract as shared policy: CHOICE-05 approves only the selected operation/configuration with prohibited processing absent, including unavoidable background analysis. Reject prohibited requests before any bytes leave and reject nested non-allowlisted provider output without logging its value.",
+        "Preserve original evidence, ordinary evidence-based legal assessment and recording-local speaker separation. Run allowed-transcription positive controls and independent forbidden-request/response negatives; do not equate an optional vendor product with use of that product."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-007"
+        ],
+        "negative": [
+          "EVAL-027"
+        ],
+        "live": [
+          "EVAL-007"
+        ]
+      },
+      "expected": [
+        "Foundation can close without waiting for M08's briefing integration.",
+        "Receipt, admission and successful reading remain separate states."
+      ],
+      "rollback": "Disable asset admission/processing; retain authorised originals in restricted quarantine with truthful retention state.",
+      "final_criteria": [
+        "BK-69-AC1",
+        "BK-69-AC2",
+        "BK-69-AC3"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P16",
+      "module": "M03",
+      "title": "Upload and record with durable locators and review",
+      "kind": "implementation",
+      "criteria": [
+        "BK-54-AC1"
+      ],
+      "prerequisites": [
+        "P15",
+        "P11"
+      ],
+      "decisions": [
+        "CHOICE-05"
+      ],
+      "commands": [
+        "begin-upload",
+        "complete-upload",
+        "get-asset",
+        "get-operation",
+        "cancel-operation",
+        "upload-chunk",
+        "get-upload",
+        "get-asset-content"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/domain/media.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        },
+        {
+          "path": "web/index.html",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.css",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Supported capability manifest and synthetic scan/audio/video fixtures"
+      ],
+      "outputs": [
+        "Resumable receipt, sandboxed extraction coverage and original page/time inspector"
+      ],
+      "steps": [
+        "Implement bounded upload sessions with observed type/hash/size/duration validation and object-version receipt; add record/pause/stop/playback/permission controls.",
+        "Sandbox parsing/transcription with no default egress; retain per-page/time coverage, uncertainty and derivative versions.",
+        "Interrupt upload, refuse microphone permission, corrupt a page, exceed limit and correct an uncertain date against its exact locator."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-007"
+        ],
+        "negative": [
+          "EVAL-008"
+        ],
+        "live": [
+          "EVAL-008"
+        ]
+      },
+      "expected": [
+        "Uploaded never means read; partial material is visible.",
+        "No automatic legal fact is established by a transcript; foundation does not yet certify BK-54 full mixed brief."
+      ],
+      "rollback": "Stop new processing and expose retained receipts; cancel named jobs and quarantine unverifiable derivatives without changing originals.",
+      "final_criteria": [],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P17",
+      "module": "M04",
+      "title": "Build the attributed living file",
+      "kind": "implementation",
+      "criteria": [
+        "BK-64-AC1",
+        "J-4-AC1"
+      ],
+      "prerequisites": [
+        "P10"
+      ],
+      "decisions": [
+        "CHOICE-01"
+      ],
+      "commands": [
+        "correct-proposition",
+        "get-source",
+        "get-matter",
+        "get-casefile"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/domain/matter.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/proof.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/chronology.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/evidence_item.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/projections.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Two conflicting statements, source locators, confirmed and provisional dates"
+      ],
+      "outputs": [
+        "Typed versioned propositions, contradiction links and chronology views"
+      ],
+      "steps": [
+        "Persist asserted/documented/disputed/inferred status, source location, extraction confidence and confirmation separately.",
+        "Apply corrections as new versions with attribution; preserve original evidence and competing accounts.",
+        "Repeat an unsupported assertion and then correct a date; inspect persisted provenance, source drawer and contradictions after restart.",
+        "Keep factual dispute identity distinct from alternative remedies/procedural questions; proposed thread splits require attributable reasons and cannot duplicate the same dispute into inconsistent files."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-009"
+        ],
+        "negative": [
+          "EVAL-010"
+        ],
+        "live": [
+          "EVAL-009"
+        ]
+      },
+      "expected": [
+        "Repetition never upgrades a claim to documented truth.",
+        "Every material conclusion has inspectable typed premises; unsupported state remains explicit."
+      ],
+      "rollback": "Disable new correction commands if needed; retain versions and render the last authorised state with freshness limits.",
+      "final_criteria": [
+        "BK-64-AC1",
+        "J-4-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P18",
+      "module": "M07",
+      "title": "Invalidate exactly the affected dependency closure",
+      "kind": "implementation",
+      "criteria": [
+        "BK-65-AC1"
+      ],
+      "prerequisites": [
+        "P17"
+      ],
+      "decisions": [
+        "CHOICE-02"
+      ],
+      "commands": [
+        "correct-proposition",
+        "get-advice"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/core/cascade.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/turn.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/matter.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_correction_supersedes.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Dependency-linked propositions, findings, computations and two independent issues"
+      ],
+      "outputs": [
+        "Selective stale-state propagation with preserved prior record and change reason"
+      ],
+      "steps": [
+        "Introduce/extend typed dependency edges for every material derived artifact; enumerate producers so untracked downstream consumers fail validation.",
+        "Calculate transitive affected closure on correction/withdrawal; schedule bounded rework and prevent stale release.",
+        "Change one controlling predicate and show dependent deadline/advice stale while the independent issue remains current; test cycles and missing dependencies."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-010"
+        ],
+        "negative": [
+          "EVAL-016"
+        ],
+        "live": [
+          "EVAL-016"
+        ]
+      },
+      "expected": [
+        "No affected artifact silently remains current and no unrelated conclusion is gratuitously invalidated."
+      ],
+      "rollback": "Pause affected release paths and preserve dependency history; do not mark unknown dependencies current during rollback.",
+      "final_criteria": [
+        "BK-65-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P19",
+      "module": "M05",
+      "title": "Inventory canonical sources without mutating the shared database",
+      "kind": "implementation",
+      "criteria": [
+        "BK-84-AC1"
+      ],
+      "prerequisites": [],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-07"
+      ],
+      "commands": [
+        "get-corpus",
+        "get-source"
+      ],
+      "boundaries": [
+        {
+          "path": "docs/blueprint/LEGAL_DATABASE.md",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/knowledge/identity.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/knowledge/manifest.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/build_identity_index.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Resolved legal_database junction and read-only consumer/file inventory"
+      ],
+      "outputs": [
+        "Canonical source/alias register with provenance and explicit unresolved metadata"
+      ],
+      "steps": [
+        "Resolve actual target/consumers; inventory originals and derived stores separately without opening private chat history.",
+        "Reconcile exact source identities, aliases, jurisdiction/language/effective/observed dates, rights and hashes; do not infer missing law from one thin index.",
+        "Inspect synthetic duplicate identities, uncertain dates and a wrong High Court mapping; withhold unsupported coverage pending qualified review."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-011"
+        ],
+        "negative": [
+          "EVAL-011"
+        ],
+        "live": [
+          "EVAL-011"
+        ]
+      },
+      "expected": [
+        "Inventory is bounded read-only work; no indexing, embedding, scraping or source deletion is authorised.",
+        "India-only operations never imply all-India verified coverage."
+      ],
+      "rollback": "Retain inventory as a dated non-serving artifact; withdraw any unverified publication candidate without touching the shared originals.",
+      "final_criteria": [
+        "BK-84-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P20",
+      "module": "M05",
+      "title": "Publish immutable corpus snapshots with reversible cutover",
+      "kind": "implementation",
+      "criteria": [
+        "BK-84-AC2"
+      ],
+      "prerequisites": [
+        "P19",
+        "P07"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-07",
+        "CHOICE-08"
+      ],
+      "commands": [
+        "publish-corpus",
+        "get-corpus",
+        "get-source"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/knowledge/artefact.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/knowledge/manifest.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/evidence/corpus.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/search/authority.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Approved bounded source selection, extraction repairs and benchmark manifest"
+      ],
+      "outputs": [
+        "Atomic candidate/published/withdrawn corpus manifests and rollback pointer"
+      ],
+      "steps": [
+        "Build only the approved derived artifacts with source/model/dimension/tokenizer lineage; separate private evidence from public legal corpus.",
+        "Reconcile expected source/chunk populations and legal review before atomic activation; an interrupted publisher cannot expose partial state.",
+        "Alter a source hash, withdraw one authority and interrupt publication; show old readers remain valid and dependent work requires reassessment."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-012"
+        ],
+        "negative": [
+          "EVAL-012"
+        ],
+        "live": [
+          "EVAL-012"
+        ]
+      },
+      "expected": [
+        "Rebuild only measured incompatible or inadequate indexes.",
+        "No index job or model enrichment runs without its bounded approval."
+      ],
+      "rollback": "Switch readers to the retained compatible snapshot; preserve withdrawn/candidate lineage and flag work derived from the replaced snapshot.",
+      "final_criteria": [
+        "BK-84-AC2"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P21",
+      "module": "M06",
+      "title": "Separate discovery, identity and legal verification",
+      "kind": "implementation",
+      "criteria": [
+        "BK-84-AC3",
+        "BK-25-AC1",
+        "BK-38-AC1",
+        "BK-38-AC2",
+        "BK-45-AC1"
+      ],
+      "prerequisites": [
+        "P17",
+        "P20"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-05",
+        "CHOICE-07"
+      ],
+      "commands": [
+        "start-research",
+        "get-research",
+        "get-source"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/ports/search.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/ports/evidence.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/search/authority.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/evidence/corpus.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/knowledge/resolution.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/knowledge/citator.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Exact citation, subject query, contrary authority and unavailable index scenarios"
+      ],
+      "outputs": [
+        "Bounded search ledger and independent identity/quote/entailment/treatment/applicability checks"
+      ],
+      "steps": [
+        "Keep exact identity resolution distinct from hybrid candidate ranking; apply authorised scope before retrieval and return coverage/index identity.",
+        "Persist consulted sources, adverse searches and stopping limits; attach selected authority to an issue with precise locators.",
+        "Test correct quote with wrong applicability, broken index, unresolved citation and cross-tenant sentinel; qualified review scores legal conclusions, not retrieval rank.",
+        "Implement case-level discovery then paragraph expansion, controlled court/date filters and grouped inspection; the browser proof must assert post-submission results/no-results/unavailable state, not static labels."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-013"
+        ],
+        "negative": [
+          "EVAL-014"
+        ],
+        "live": [
+          "EVAL-014"
+        ]
+      },
+      "expected": [
+        "No hit is not absence of law; no negative-treatment search is not a clean bill.",
+        "Canonical identity cannot be established by similarity or RRF score."
+      ],
+      "rollback": "Disable incompatible index/processor and expose held-not-assessed state; never silently replace it with a different-recall scan.",
+      "final_criteria": [
+        "BK-84-AC3",
+        "BK-25-AC1",
+        "BK-38-AC1",
+        "BK-38-AC2",
+        "BK-45-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P22",
+      "module": "M07",
+      "title": "Assess legal premises before conditional arithmetic",
+      "kind": "implementation",
+      "criteria": [
+        "BK-65-AC2",
+        "BK-35-AC1",
+        "BK-35-AC2"
+      ],
+      "prerequisites": [
+        "P18",
+        "P21"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-07"
+      ],
+      "commands": [
+        "submit-turn",
+        "get-source",
+        "get-advice"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/core/accrual.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/limitation.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/deadlines.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/thresholds.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/proof.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/turn.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Governing-law/accrual/forum hypotheses with identified primary sources",
+        "Same dates under alternative legally reviewed premises"
+      ],
+      "outputs": [
+        "Reviewable premise records and explicitly conditional computations"
+      ],
+      "steps": [
+        "Represent source, applicability, disputed premise and reviewer state separately from dates/period arithmetic.",
+        "Require a selected or openly conditional legal premise before computing; preserve competing premises and controlling unknowns.",
+        "Test identical arithmetic under wrong accrual, wrong forum and superseded law; changing a premise invalidates its dependent computation before release.",
+        "Serve the cover, answer and deadline register from the same premise/calculation version; an inconsistency is explicit and cannot produce conflicting deadlines."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-015"
+        ],
+        "negative": [
+          "EVAL-016"
+        ],
+        "live": [
+          "EVAL-015"
+        ]
+      },
+      "expected": [
+        "Correct arithmetic cannot certify applicable law.",
+        "The first dated fact is not an automatic accrual trigger."
+      ],
+      "rollback": "Withhold affected computations and show identified premise gaps; retain earlier computations as historical, not current advice.",
+      "final_criteria": [
+        "BK-65-AC2",
+        "BK-35-AC1",
+        "BK-35-AC2"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P23",
+      "module": "M07",
+      "title": "Reason through relief and enforceability",
+      "kind": "implementation",
+      "criteria": [
+        "BK-70-AC1"
+      ],
+      "prerequisites": [
+        "P22"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-07"
+      ],
+      "commands": [
+        "submit-turn",
+        "get-advice"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/core/proof.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/theory.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/thresholds.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/answer.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Same merits with unavailable, hollow, late or disproportionate relief"
+      ],
+      "outputs": [
+        "Remedy constraints and enforceability basis linked to the objective"
+      ],
+      "steps": [
+        "Add remedy availability, executable outcome, interim protection and proportionality to issue assessment without confusing merits with useful relief.",
+        "Connect asset/limitation/procedure uncertainty as attributed premises, not model guesses.",
+        "Compare the controlled same-merits variants; counsel verifies recommendation changes for the remedy reason and not unrelated narrative drift."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-019"
+        ],
+        "negative": [
+          "EVAL-020"
+        ],
+        "live": [
+          "EVAL-019"
+        ]
+      },
+      "expected": [
+        "A legally arguable case with useless relief is not automatically recommended.",
+        "Unknown enforceability is disclosed and assigned a useful next inquiry."
+      ],
+      "rollback": "Fall back to qualified limited merits analysis with relief unassessed; do not preserve a full recommendation from incomplete remedy work.",
+      "final_criteria": [
+        "BK-70-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P24",
+      "module": "M08",
+      "title": "Ask the smallest useful question and stop repeated gaps",
+      "kind": "implementation",
+      "criteria": [
+        "BK-54-AC2",
+        "BK-54-AC3",
+        "BK-91-AC3"
+      ],
+      "prerequisites": [
+        "P14",
+        "P17",
+        "P21",
+        "P22",
+        "P46"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-05"
+      ],
+      "commands": [
+        "submit-turn",
+        "get-operation",
+        "cancel-operation"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/core/intake.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/gaps.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/turn.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/brief.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Brief with answered question, contradictory material, unavailable document and changed objective"
+      ],
+      "outputs": [
+        "Versioned briefing state with question purpose, answer status, pause/resume and readiness"
+      ],
+      "steps": [
+        "Retrieve accessible authorised existing material before asking; store the decision the question may change and which gap it addresses.",
+        "Allow answer, correction, not known, unavailable, pause and narrowed scope; bind resumption to new evidence or an explicit review trigger.",
+        "Plant a known-answer repeat and an unavailable-gap loop; neither may claim complete intake or repeat indefinitely; demonstrate a useful limited next step.",
+        "Integrate the adaptive lead's next-step proposals with the existing briefing boundary. Use already authorised held answers, react to a changed objective and preserve unavailable gaps. P46 is scoped runtime evidence, not full BK-91 completion."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-017",
+          "EVAL-031"
+        ],
+        "negative": [
+          "EVAL-018",
+          "EVAL-031"
+        ],
+        "live": [
+          "EVAL-018",
+          "EVAL-031"
+        ]
+      },
+      "expected": [
+        "Controlling unresolved gap prevents completion, not all useful assistance.",
+        "Accepted input survives interrupt/retry and questions do not rely on inaccessible material."
+      ],
+      "rollback": "Disable automatic questioning and retain collected facts/gap statuses; offer explicit pause/manual scoped review without a false complete badge.",
+      "final_criteria": [
+        "BK-54-AC2",
+        "BK-54-AC3",
+        "BK-91-AC3"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P25",
+      "module": "M08",
+      "title": "Join mixed-media briefing to attribution and deletion",
+      "kind": "implementation",
+      "criteria": [
+        "BK-54-AC1",
+        "BK-79-AC1",
+        "BK-79-AC2",
+        "BK-79-AC3",
+        "BK-88-AC1",
+        "BK-88-AC2",
+        "BK-88-AC4"
+      ],
+      "prerequisites": [
+        "P16",
+        "P17",
+        "P24",
+        "P33"
+      ],
+      "decisions": [
+        "CHOICE-05",
+        "CHOICE-08"
+      ],
+      "commands": [
+        "submit-turn",
+        "get-asset",
+        "cancel-operation",
+        "logout",
+        "create-retention-request"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/core/intake.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/turn.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/media.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "One mixed brief with original scan, voice correction, rejected derivative and cancellation"
+      ],
+      "outputs": [
+        "End-to-end original/derivative/processor/retention lineage through the served briefing"
+      ],
+      "steps": [
+        "Link admitted source versions to proposition versions and actual briefing context; acknowledge unread items without using them.",
+        "Carry cancel/retry/logout/deletion through pending uploads, jobs, temp objects, derivatives, browser state and processor acknowledgements.",
+        "Inspect a page and timestamp behind a correction, then cancel and log out; re-enter and enumerate every retained/erased component with its reason.",
+        "For BK-79-AC3, exercise each served upload, capture, retry and worker path against the shared media policy. A permitted transcript must prove provider call/result, source locators, preserved original, correction and restart; absent/null/malformed observations must fail rather than default to false.",
+        "Plant forbidden requests and nested response derivatives and inspect logs, cache, storage, reasoning and UI for leakage. Keep the real confidential route disabled until BK-88-AC4's configuration-specific proof; synthetic integration does not activate it."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-008"
+        ],
+        "negative": [
+          "EVAL-024"
+        ],
+        "live": [
+          "EVAL-018"
+        ]
+      },
+      "expected": [
+        "BK-79 is integrated M08 work, never a prerequisite of M03 foundation.",
+        "No orphaned privileged material or next-user pending intake leak; any retained exception is explicit."
+      ],
+      "rollback": "Stop new mixed-media briefs and processing; reconcile retained assets/jobs under policy, keeping accepted authoritative records and original custody.",
+      "final_criteria": [
+        "BK-54-AC1",
+        "BK-79-AC1",
+        "BK-79-AC2",
+        "BK-79-AC3"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P26",
+      "module": "M09",
+      "title": "Release advice at truthful maturity",
+      "kind": "implementation",
+      "criteria": [
+        "BK-37-AC1",
+        "BK-50-AC1"
+      ],
+      "prerequisites": [
+        "P23",
+        "P24"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-05",
+        "CHOICE-07"
+      ],
+      "commands": [
+        "get-advice",
+        "get-source"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/domain/answer.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/brief.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/grounding.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Same task at each applicable AM maturity plus truncated/withheld output"
+      ],
+      "outputs": [
+        "Versioned answer with conclusion, support, limits and next action appropriate to maturity"
+      ],
+      "steps": [
+        "Derive maturity from task prerequisites; present concise conclusion and optional basis without changing substance between views.",
+        "Keep withheld/incomplete results out of the normal recommendation renderer and enforce checks before served bytes.",
+        "Ask for certainty despite missing evidence; inspect source links and truncation recovery rather than allowing cosmetic prose to imply completion.",
+        "Check every section and order applicable to the served answer contract, including courtesy-only responses; never substitute an arbitrary two-heading minimum."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-019"
+        ],
+        "negative": [
+          "EVAL-028"
+        ],
+        "live": [
+          "EVAL-019"
+        ]
+      },
+      "expected": [
+        "Every counsel-facing answer declares what level it earns.",
+        "A short answer remains useful without hiding a material reservation."
+      ],
+      "rollback": "Disable affected advice surface and show safe incomplete state with accepted work preserved; do not relabel old advice as fresh.",
+      "final_criteria": [
+        "BK-37-AC1",
+        "BK-50-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P27",
+      "module": "M09",
+      "title": "Compare practical options and record authorised decisions",
+      "kind": "implementation",
+      "criteria": [
+        "BK-55-AC1",
+        "BK-55-AC2",
+        "BK-55-AC3",
+        "BK-55-AC4"
+      ],
+      "prerequisites": [
+        "P13",
+        "P23",
+        "P26"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-07"
+      ],
+      "commands": [
+        "record-decision",
+        "get-advice"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/domain/decision.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/answer.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/theory.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Client objective and cost/time/disruption constraints; lawful alternatives and adverse material"
+      ],
+      "outputs": [
+        "Version-bound options comparison, respectful disagreement and attributed decision record"
+      ],
+      "steps": [
+        "Compare remedy, enforceability, cost, time, proportionality, settlement and doing nothing; separate known figures from estimates and missing inputs.",
+        "Record accept/reject/narrow/defer with actor, scope, advice version, owner and review trigger; this does not authorise external action.",
+        "Change resource constraints, insist on overconfidence and attempt another role's decision; show reasoned change/refusal without coercion."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-019"
+        ],
+        "negative": [
+          "EVAL-021"
+        ],
+        "live": [
+          "EVAL-020"
+        ]
+      },
+      "expected": [
+        "Recommendations respond to objective and practical constraints.",
+        "Material adverse facts/law remain visible and decisions survive reload with exact version."
+      ],
+      "rollback": "Disable new decision writes while preserving accepted records; supersede incorrect decisions explicitly, never edit history in place.",
+      "final_criteria": [
+        "BK-55-AC1",
+        "BK-55-AC2",
+        "BK-55-AC3",
+        "BK-55-AC4"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P28",
+      "module": "M09",
+      "title": "Reopen advice only where changed instructions require it",
+      "kind": "implementation",
+      "criteria": [
+        "BK-55-AC5"
+      ],
+      "prerequisites": [
+        "P18",
+        "P27"
+      ],
+      "decisions": [
+        "CHOICE-02"
+      ],
+      "commands": [
+        "correct-proposition",
+        "set-commission",
+        "get-advice",
+        "record-decision"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/core/cascade.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/decision.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/projections.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Approved decision and two independent advice branches"
+      ],
+      "outputs": [
+        "Visible stale advice/decision state and targeted review task"
+      ],
+      "steps": [
+        "Connect commission withdrawal and corrected predicates to advice/decision dependencies.",
+        "Invalidate dependent approval/current labels immediately, preserving prior recommendation and the reason.",
+        "Change one premise while a second tab is open; check both current projection and direct API, then perform only required reassessment."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-020"
+        ],
+        "negative": [
+          "EVAL-028"
+        ],
+        "live": [
+          "EVAL-020"
+        ]
+      },
+      "expected": [
+        "Affected stale advice cannot be approved or acted on.",
+        "Independent advice stays available and its freshness basis is inspectable."
+      ],
+      "rollback": "Block affected approval/actions until dependency reconciliation; keep version history and do not make all work current to recover UI.",
+      "final_criteria": [
+        "BK-55-AC5"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P29",
+      "module": "M10",
+      "title": "Prepare and verify the exact drafting package",
+      "kind": "implementation",
+      "criteria": [
+        "BK-56-AC1",
+        "BK-56-AC2",
+        "BK-56-AC3",
+        "BK-92-AC3"
+      ],
+      "prerequisites": [
+        "P27",
+        "P28",
+        "P47"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-07",
+        "CHOICE-09"
+      ],
+      "commands": [
+        "create-action-proposal",
+        "approve-action",
+        "get-source"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/drafting",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/decision.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Approved task objective, posture, theory, relief, audience, form, facts and source locators"
+      ],
+      "outputs": [
+        "Versioned draft brief, verified draft, marked blanks and exact export preview"
+      ],
+      "steps": [
+        "Build draft/review/export first; create an immutable task package with owner/deadline/gaps before generation.",
+        "Check each material assertion, citation and annexure against the brief and source; retain blanks where information is absent.",
+        "Edit substantive wording or annexures after approval and compare exported bytes; require new approval and show the diff.",
+        "Invoke the optional draft_document specialist only with a versioned supported package; keep missing fields unresolved and original locators intact. Render Word/PDF from one accepted draft version, verify material parity and reservations, and retain no independent dispatch capability."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-021",
+          "EVAL-033"
+        ],
+        "negative": [
+          "EVAL-021",
+          "EVAL-033"
+        ],
+        "live": [
+          "EVAL-021",
+          "EVAL-033"
+        ]
+      },
+      "expected": [
+        "Reviewed package identity matches export identity.",
+        "Draft status is not sent/filed; scope and material blanks remain visible."
+      ],
+      "rollback": "Disable export/action for affected draft versions and preserve prior packages; produce a corrected superseding version, not silent replacement.",
+      "final_criteria": [
+        "BK-56-AC1",
+        "BK-56-AC2",
+        "BK-56-AC3",
+        "BK-92-AC3"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P30",
+      "module": "M10",
+      "title": "Enforce action authority and reconcile uncertain delivery",
+      "kind": "implementation",
+      "criteria": [
+        "BK-56-AC4"
+      ],
+      "prerequisites": [
+        "P11",
+        "P29"
+      ],
+      "decisions": [
+        "CHOICE-09",
+        "CHOICE-10"
+      ],
+      "commands": [
+        "execute-action",
+        "reconcile-action",
+        "approve-action"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/drafting",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/decision.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/ports",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Approved exact package, authorised actor/destination/deadline and connector scope"
+      ],
+      "outputs": [
+        "Durable action attempt/receipt ledger with unknown outcome"
+      ],
+      "steps": [
+        "Keep external sending/filing disabled unless separately approved; manual receipt capture remains explicit when no connector exists.",
+        "Bind execution to current approval hash, actor, recipient and limits; check revocation immediately before effect.",
+        "Simulate timeout after acceptance, duplicate click, wrong recipient and changed approval; reconcile receipt before any retry."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-022"
+        ],
+        "negative": [
+          "EVAL-022"
+        ],
+        "live": [
+          "EVAL-022"
+        ]
+      },
+      "expected": [
+        "No unknown delivery becomes success or triggers duplicate action.",
+        "No approval can be replayed against changed bytes or a new destination."
+      ],
+      "rollback": "Stop dispatch and revoke connector credentials if needed; preserve attempt/receipt ledger and reconcile already initiated effects before rollback.",
+      "final_criteria": [
+        "BK-56-AC4"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P31",
+      "module": "M10",
+      "title": "Prepare hearing, negotiation and witness work responsibly",
+      "kind": "implementation",
+      "criteria": [
+        "BK-57-AC1",
+        "BK-57-AC2",
+        "BK-57-AC3",
+        "BK-57-AC4",
+        "BK-57-AC5"
+      ],
+      "prerequisites": [
+        "P21",
+        "P27",
+        "P29"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-07",
+        "CHOICE-09"
+      ],
+      "commands": [
+        "create-action-proposal",
+        "get-source",
+        "set-commission"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/drafting",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/theory.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/proof.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/engagement.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Current theory, relief, hard questions, witness knowledge and settlement/concession limits"
+      ],
+      "outputs": [
+        "Source-linked hearing brief and authority-preserving preparation record"
+      ],
+      "steps": [
+        "Build proof-issue witness/expert packs distinguishing knowledge, expertise, contradictions and availability; never manufacture testimony or initiate unapproved contact.",
+        "Compose concise current theory/relief/propositions with record and authority locators plus strongest countercase and hard-question responses.",
+        "Change an instruction/authority during preparation and simulate failed communication; reopen only affected work and retain owner/next obligation."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-021"
+        ],
+        "negative": [
+          "EVAL-028"
+        ],
+        "live": [
+          "EVAL-021"
+        ]
+      },
+      "expected": [
+        "In-court lookup distinguishes verified material, uncertain analysis and proposed action.",
+        "Negotiation and hearing pressure do not bypass concession or settlement limits."
+      ],
+      "rollback": "Mark affected packs stale and pause consequential support; preserve prior approved limits and direct to the accountable advocate.",
+      "final_criteria": [
+        "BK-57-AC1",
+        "BK-57-AC2",
+        "BK-57-AC3",
+        "BK-57-AC4",
+        "BK-57-AC5"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P32",
+      "module": "M11",
+      "title": "Make event re-entry and handover preserve responsibility",
+      "kind": "implementation",
+      "criteria": [
+        "BK-63-AC1",
+        "BK-33-AC2",
+        "BK-39-AC1",
+        "BK-39-AC2",
+        "BK-58-AC3",
+        "BK-59-AC1",
+        "BK-59-AC2",
+        "BK-59-AC3"
+      ],
+      "prerequisites": [
+        "P18",
+        "P27"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-08"
+      ],
+      "commands": [
+        "create-handover",
+        "accept-handover",
+        "close-matter",
+        "reopen-matter",
+        "record-event",
+        "get-history"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/domain/matter.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/summary.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/deadlines.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/projections.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "New order, obligation owner, changed deadline basis and proposed handover recipient"
+      ],
+      "outputs": [
+        "Versioned change summary, accepted handover and obligation-aware closure"
+      ],
+      "steps": [
+        "Implement events and re-entry from authoritative versions; record deadline premise and responsible owner rather than inventing a chat summary.",
+        "Create permission-scoped handover snapshot and explicit recipient acceptance; until acceptance original responsibility remains visible.",
+        "Attempt closure with a live obligation; require disposition/authorised transfer, preserve record, and require current permission/instruction review on reopen.",
+        "History renders actual issued advice and chronological corrections with source/version linkage, not transport/model diagnostics. Re-entry never imports another matter's state; current handover lists authorities, reservations and explicitly unassessed areas."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-023"
+        ],
+        "negative": [
+          "EVAL-024"
+        ],
+        "live": [
+          "EVAL-023"
+        ]
+      },
+      "expected": [
+        "Closing does not erase obligations or certify advice freshly reviewed.",
+        "Handover exposes no material beyond authorised recipient scope."
+      ],
+      "rollback": "Disable closure/transfer commands while retaining original obligations and owners; reversal requires an attributed corrective handover, not silent reassignment.",
+      "final_criteria": [
+        "BK-63-AC1",
+        "BK-33-AC2",
+        "BK-39-AC1",
+        "BK-39-AC2",
+        "BK-58-AC3",
+        "BK-59-AC1",
+        "BK-59-AC2",
+        "BK-59-AC3"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P33",
+      "module": "M11",
+      "title": "Implement held and erased lifecycle, then wire its real consumers",
+      "kind": "implementation",
+      "criteria": [
+        "BK-85-AC4",
+        "BK-88-AC1"
+      ],
+      "prerequisites": [
+        "P07",
+        "P11",
+        "P17"
+      ],
+      "decisions": [
+        "CHOICE-08"
+      ],
+      "commands": [
+        "create-retention-request",
+        "get-retention-request"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/domain/media.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/ports/store.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/store/file_store.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Approved per-purpose schedule, scoped legal hold and lineage inventory"
+      ],
+      "outputs": [
+        "Authorised retention workflow, deletion tombstones and truthful backup-pending state"
+      ],
+      "steps": [
+        "First prove the BK-85 retention-policy engine with synthetic copy inventories, holds and tombstones. This output is usable before media integration; BK-88-AC1 closes only after actual-path and deployed-restore proof.",
+        "Enumerate originals, derivatives, indexes, caches, temp objects, provider copies and backups through lineage; distinguish archive from erasure.",
+        "Enforce hold/release authority and receipt-based deletion; retain minimal content-free tombstones and unresolved processor exceptions.",
+        "Attempt held deletion and restore a pre-erasure snapshot; prove material cannot silently reappear or be marked completely erased while backups remain pending."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-024"
+        ],
+        "negative": [
+          "EVAL-024"
+        ],
+        "live": [
+          "EVAL-024"
+        ]
+      },
+      "expected": [
+        "Deletion status names its actual scope and retained exceptions.",
+        "No auto-delete based on unreviewed retention numbers."
+      ],
+      "rollback": "Pause erasure queue and preserve holds/tombstones; do not undo completed erasure by restoring older material.",
+      "final_criteria": [
+        "BK-85-AC4"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P34",
+      "module": "M09",
+      "title": "Validate comprehension and briefing economy",
+      "kind": "verification",
+      "criteria": [
+        "BK-66-AC1",
+        "BK-66-AC2",
+        "BK-66-AC3"
+      ],
+      "prerequisites": [
+        "P25",
+        "P26",
+        "P28",
+        "P36"
+      ],
+      "decisions": [
+        "CHOICE-07",
+        "CHOICE-10"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "docs/blueprint/EXPERIENCE.md",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/evaluations.json",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/journey.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Predeclared representative advocates, tasks, accessibility conditions and rubric"
+      ],
+      "outputs": [
+        "Observed task/comprehension record including disagreement and assistance"
+      ],
+      "steps": [
+        "Freeze tasks, participant strata and thresholds before scoring; use unfamiliar variants, not only demo fixtures.",
+        "Observe users explain what NM understood/used/assumed/changed/needs/does next and complete correction/pause/return without repeated typing.",
+        "Record task denominators, mistakes, source navigation and material disagreements; failed comprehension is not repaired by changing the rubric after the run."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-017"
+        ],
+        "negative": [
+          "EVAL-018"
+        ],
+        "live": [
+          "EVAL-019"
+        ]
+      },
+      "expected": [
+        "Representative people, not only a model judge, validate usefulness.",
+        "Automated fixtures do not substitute for observed advocate work."
+      ],
+      "rollback": "Withdraw the affected experience claim, register findings and retain scored artifacts; rerun the affected frozen population after correction.",
+      "final_criteria": [
+        "BK-66-AC1",
+        "BK-66-AC2",
+        "BK-66-AC3"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P35",
+      "module": "M09",
+      "title": "Earn qualified professional approval and maintain it",
+      "kind": "review",
+      "criteria": [
+        "BK-67-AC1",
+        "BK-67-AC2",
+        "BK-67-AC3",
+        "BK-67-AC4",
+        "BK-91-AC4"
+      ],
+      "prerequisites": [
+        "P22",
+        "P23",
+        "P28",
+        "P31",
+        "P46"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-05",
+        "CHOICE-07",
+        "CHOICE-10"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "docs/blueprint/LEGAL_BRAIN.md",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/QUALITY_PERFORMANCE.md",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/evaluations.json",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/evidence.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Predeclared matter strata, PA standards, qualified reviewers and identified primary sources"
+      ],
+      "outputs": [
+        "Current professional approval for named scope with reservations and change triggers"
+      ],
+      "steps": [
+        "Freeze representative/held-out tasks, legal ground truth, critical failures, scoring and disagreement process; obtain bounded model-run approval.",
+        "Review applicable law, accrual, forum, binding/treatment and role restrictions independently from conditional arithmetic; inspect exact served advice.",
+        "Invalidate affected approval on new facts/law/corpus/model/prompt changes and reassess held-out scenarios; no inherited automatic model-version approval.",
+        "Run the approved comparison of existing planned orchestration and adaptive lead on matched independently reviewed matter families, source/tool boundaries and budgets with repeated runs. Review outcome support, adverse case, question usefulness and editing burden, not adherence to one fixed reasoning trace."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-015",
+          "EVAL-034"
+        ],
+        "negative": [
+          "EVAL-028",
+          "EVAL-034"
+        ],
+        "live": [
+          "EVAL-020",
+          "EVAL-034"
+        ]
+      },
+      "expected": [
+        "Critical legal failure blocks the affected release even if average score is high.",
+        "Every applicable PA standard and reservation is accounted for with a qualified actor."
+      ],
+      "rollback": "Withdraw affected legal coverage/task approval and retain historical review; offer only the supportable lower scope.",
+      "final_criteria": [
+        "BK-67-AC1",
+        "BK-67-AC2",
+        "BK-67-AC3",
+        "BK-67-AC4",
+        "BK-91-AC4"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P36",
+      "module": "M09",
+      "title": "Make every supported width navigable and accessible",
+      "kind": "implementation",
+      "criteria": [
+        "BK-68-AC1",
+        "BK-32-AC1",
+        "BK-43-AC1",
+        "BK-47-AC1",
+        "BK-72-AC1",
+        "J-5-AC1",
+        "J-7-AC1"
+      ],
+      "prerequisites": [
+        "P17",
+        "P26"
+      ],
+      "decisions": [
+        "CHOICE-01"
+      ],
+      "commands": [
+        "get-matter",
+        "get-source",
+        "get-advice"
+      ],
+      "boundaries": [
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.css",
+          "kind": "existing"
+        },
+        {
+          "path": "web/index.html",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/journey.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Supported widths, browser/OS/assistive-tech matrix and realistic long matter content",
+        "Required viewport widths 390, 768 and 1280 pixels, plus zoom and assistive variants"
+      ],
+      "outputs": [
+        "Accessible shared shell/source/history/control navigation with measured reorientation"
+      ],
+      "steps": [
+        "Apply semantic forms, focus/keyboard flow, reflow and perceivable error/status states to shared components rather than per-screen patches.",
+        "At each target width open evidence, authority, history and material controls; verify no internal IDs or engineering terms substitute for user meaning.",
+        "Measure reorientation within one minute; include keyboard, screen reader, zoom, long names, mixed script and asynchronous failed loads.",
+        "At every declared width actually drive start/find/switch matter, research, History, identity and sign-out. Detect inaccessible clipped primary controls even if overflow is hidden; no desktop early return or static visibility-only pass."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-019"
+        ],
+        "negative": [
+          "EVAL-020"
+        ],
+        "live": [
+          "EVAL-019"
+        ]
+      },
+      "expected": [
+        "An advocate can reach the basis/control behind material statements without guessing.",
+        "Screenshot/automated scan alone cannot establish screen-reader conformance."
+      ],
+      "rollback": "Restore the previous compatible shared layout and retain semantic/security fixes; disable inaccessible new controls pending correction.",
+      "final_criteria": [
+        "BK-68-AC1",
+        "BK-32-AC1",
+        "BK-43-AC1",
+        "BK-47-AC1",
+        "BK-72-AC1",
+        "J-5-AC1",
+        "J-7-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P37",
+      "module": "M09",
+      "title": "Bound latency, cost and degraded-service behaviour",
+      "kind": "implementation",
+      "criteria": [
+        "BK-41-AC1",
+        "BK-29-AC1",
+        "BK-29-AC2",
+        "BK-49-AC1",
+        "BK-92-AC4"
+      ],
+      "prerequisites": [
+        "P11",
+        "P25",
+        "P26",
+        "P46",
+        "P47",
+        "P29"
+      ],
+      "decisions": [
+        "CHOICE-05",
+        "CHOICE-06"
+      ],
+      "commands": [
+        "submit-turn",
+        "get-operation",
+        "cancel-operation"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/adapters/model/_budget.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/model/traced.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/turn.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Approved workload/budget/reference network and slow/throttled/provider-failure cases"
+      ],
+      "outputs": [
+        "Measured stage percentiles, bounded retries/cancellation and truthful progress"
+      ],
+      "steps": [
+        "Use deterministic and retrieval work first; route model effort by evaluated task need and cache only scoped version-compatible safe results.",
+        "Apply per-operation time/token/cost/retry budgets and progress from actual saved/job state, not invented percentages.",
+        "Measure cold/warm, concurrent and long-input cases; cancel after acceptance, exhaust budgets and return only safe complete results or explicit recoverable limits.",
+        "Enumerate all model reads and completion modes, including structured output and quotation-heavy reads; one schema-aware budget mechanism normalises length stops to typed incomplete results before downstream acceptance.",
+        "Compare selective delegation against the same adaptive lead alone using whole-task accounting including failed children, retries and cancellations. Require approved task-family quality/cost/latency criteria and separate configured-environment measurements before enabling delegation for that scope; critical failures cannot be averaged away."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-020",
+          "EVAL-034"
+        ],
+        "negative": [
+          "EVAL-027",
+          "EVAL-034"
+        ],
+        "live": [
+          "EVAL-020",
+          "EVAL-034"
+        ]
+      },
+      "expected": [
+        "User sees what is saved, what remains reliable and the next safe action.",
+        "Performance cannot be improved by releasing unchecked advice or unbounded duplicate model work."
+      ],
+      "rollback": "Reduce concurrency or disable expensive routes while preserving accepted jobs; state degraded limits rather than changing truthfulness thresholds.",
+      "final_criteria": [
+        "BK-41-AC1",
+        "BK-29-AC1",
+        "BK-29-AC2",
+        "BK-49-AC1",
+        "BK-92-AC4"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P38",
+      "module": "M12",
+      "title": "Prove restore, isolation and rollback on deployment",
+      "kind": "verification",
+      "criteria": [
+        "BK-42-AC3",
+        "BK-42-AC4",
+        "BK-42-AC6",
+        "BK-83-AC3",
+        "BK-85-AC2",
+        "BK-88-AC1"
+      ],
+      "prerequisites": [
+        "P12",
+        "P33",
+        "P09",
+        "P25"
+      ],
+      "decisions": [
+        "CHOICE-03",
+        "CHOICE-08",
+        "CHOICE-10"
+      ],
+      "commands": [
+        "get-matter",
+        "get-asset",
+        "get-operation"
+      ],
+      "boundaries": [
+        {
+          "path": "docs/blueprint/SECURITY_PRIVACY.md",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/DATA_ARCHITECTURE.md",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/bootstrap/composition.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Versioned release candidate, target credentials and encrypted backup/object/key manifests"
+      ],
+      "outputs": [
+        "Measured isolated restore and reversible release rehearsal"
+      ],
+      "steps": [
+        "Restore with egress/dispatch disabled; reconcile records, hashes, object versions and key access using actual runtime roles.",
+        "Apply current revocation policy and erasure tombstones, invalidate restored sessions and reconcile jobs/receipts before reopening.",
+        "Measure actual RTO/RPO; inject missing key/object, stale schema and rollback after target-only writes, refusing unsafe recovery."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-025"
+        ],
+        "negative": [
+          "EVAL-025"
+        ],
+        "live": [
+          "EVAL-025"
+        ]
+      },
+      "expected": [
+        "A successful backup command is not restore proof.",
+        "No revoked account or erased object regains availability; accepted writes survive the rehearsed rollback."
+      ],
+      "rollback": "Keep the candidate isolated and serving closed; resume only from a reconciled compatible checkpoint with approved key recovery.",
+      "final_criteria": [
+        "BK-42-AC3",
+        "BK-42-AC4",
+        "BK-42-AC6",
+        "BK-83-AC3",
+        "BK-85-AC2",
+        "BK-88-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P39",
+      "module": "M12",
+      "title": "Verify deployed privacy, support and supply-chain boundaries",
+      "kind": "verification",
+      "criteria": [
+        "BK-42-AC1",
+        "BK-42-AC2",
+        "BK-42-AC8",
+        "BK-85-AC1",
+        "BK-85-AC6",
+        "BK-21-AC3",
+        "BK-21-AC4",
+        "BK-88-AC2",
+        "BK-88-AC4"
+      ],
+      "prerequisites": [
+        "P06",
+        "P07",
+        "P09",
+        "P25",
+        "P33"
+      ],
+      "decisions": [
+        "CHOICE-03",
+        "CHOICE-04",
+        "CHOICE-05",
+        "CHOICE-08",
+        "CHOICE-10"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "docs/blueprint/SECURITY_PRIVACY.md",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/bootstrap/composition.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/evidence.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Target pipeline/service identities, dependency artifacts, support roles and processor map",
+        "CHOICE-05 operation-specific approval and BK-69-AC3/BK-79-AC3 media policy/integration evidence"
+      ],
+      "outputs": [
+        "Independent security evidence for deployed data paths and build provenance"
+      ],
+      "steps": [
+        "Inventory every deploy artifact/dependency/secret source and privileged support path; bind scans/signatures/policies to the candidate.",
+        "Exercise wrong-tenant worker/search/export, unapproved egress, diagnostic sentinel, secret-bearing artifact and unrelated-matter support access.",
+        "Run qualified adversarial review on the enabled configuration; include logged emergency access expiry and processor deletion/retention evidence.",
+        "Before any real recording, prove BK-88-AC4 on the selected deployed operation with safe synthetic media: no prohibited processing in provider terms/configuration, preflight refuses before egress, nested forbidden responses cannot leak through actual workers/retries/logs/storage/reasoning/UI. Prohibit activation when approval or processing behaviour is unverified.",
+        "Under explicit operator authority, verify the active data key is distinct from every other credential without printing any value and rotate the formerly shared provider credential at its provider; an environment-file edit alone is not provider rotation proof."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-026"
+        ],
+        "negative": [
+          "EVAL-027"
+        ],
+        "live": [
+          "EVAL-026"
+        ]
+      },
+      "expected": [
+        "A scanner result is not a penetration-test or compliance certificate.",
+        "Synthetic local permissions do not prove target IAM/KMS/network isolation."
+      ],
+      "rollback": "Quarantine the candidate or affected processor; revoke access, rotate exposed credentials and preserve incident evidence under the reviewed process.",
+      "final_criteria": [
+        "BK-42-AC1",
+        "BK-42-AC2",
+        "BK-42-AC8",
+        "BK-85-AC1",
+        "BK-85-AC6",
+        "BK-21-AC3",
+        "BK-21-AC4",
+        "BK-88-AC2",
+        "BK-88-AC4"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P40",
+      "module": "M12",
+      "title": "Rehearse incident response with actual accountable people",
+      "kind": "verification",
+      "criteria": [
+        "BK-85-AC5",
+        "BK-88-AC3"
+      ],
+      "prerequisites": [
+        "P05",
+        "P39"
+      ],
+      "decisions": [
+        "CHOICE-08",
+        "CHOICE-10"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "docs/blueprint/SECURITY_PRIVACY.md",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/decisions.json",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Dated incident duties, contacts, escalation rota and simulated incomplete-information event"
+      ],
+      "outputs": [
+        "Timestamped tabletop record, notification decisions and recovery responsibilities"
+      ],
+      "steps": [
+        "Trigger detection and primary-contact failure; record time without logging client content.",
+        "Use reviewed applicable clocks and available-information reporting; test secondary escalation, containment and evidence custody.",
+        "Reconcile containment/recovery with client privilege, continuing duties and support authority; register every missed step with owner."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-026"
+        ],
+        "negative": [
+          "EVAL-026"
+        ],
+        "live": [
+          "EVAL-026"
+        ]
+      },
+      "expected": [
+        "Missing information or absent primary contact does not silently stop the required response.",
+        "Evidence includes people/contact results, not just an incident-policy document."
+      ],
+      "rollback": "Keep release closed where accountable response failed; correct contact/authority gaps and repeat the bounded tabletop.",
+      "final_criteria": [
+        "BK-85-AC5",
+        "BK-88-AC3"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P41",
+      "module": "M12",
+      "title": "Sign off a scoped operated release",
+      "kind": "release",
+      "criteria": [
+        "BK-42-AC5",
+        "BK-42-AC7",
+        "BK-42-AC9",
+        "J-8-AC1"
+      ],
+      "prerequisites": [
+        "P30",
+        "P32",
+        "P34",
+        "P35",
+        "P37",
+        "P38",
+        "P39",
+        "P40",
+        "P45",
+        "P44"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-03",
+        "CHOICE-05",
+        "CHOICE-06",
+        "CHOICE-07",
+        "CHOICE-08",
+        "CHOICE-09",
+        "CHOICE-10"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "tools/evidence.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/backlog.py",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/evaluations.json",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/backlog/plan.json",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Enabled-scope manifest, cumulative current evidence and accountable release reviewer"
+      ],
+      "outputs": [
+        "Explicit release decision with exclusions, reservations, rollback triggers and review cadence"
+      ],
+      "steps": [
+        "Freeze exact build/schema/policy/corpus/model/prompt/provider/scope identities and expected end-to-end population.",
+        "Run the approved supported journey, accessibility, load/degradation and legal-quality portfolio without hand-authored inter-stage state.",
+        "Refuse critical failures, incomplete runs or unapproved enabled scope; roll out to the named population only, monitor triggers and retain prior evidence.",
+        "Preserve the frozen known-good portfolio for exact retrieval, visible refusals, served History and the selected authentication profile while extending the journey."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-028"
+        ],
+        "negative": [
+          "EVAL-025"
+        ],
+        "live": [
+          "EVAL-028"
+        ]
+      },
+      "expected": [
+        "No aggregate green score overrides a critical security or legal failure.",
+        "Optional external actions remain disabled if CHOICE-09 does not approve them; their excluded connector does not block the approved draft/manual-receipt scope."
+      ],
+      "rollback": "Pause unsafe enabled paths and execute the rehearsed compatible rollback while preserving accepted state and informing affected users.",
+      "final_criteria": [
+        "BK-42-AC5",
+        "BK-42-AC7",
+        "BK-42-AC9",
+        "J-8-AC1"
+      ],
+      "requires_completed_items": [
+        "BK-31",
+        "BK-34",
+        "BK-36",
+        "BK-37",
+        "BK-38",
+        "BK-39",
+        "BK-40",
+        "BK-54",
+        "BK-55",
+        "BK-56",
+        "BK-57",
+        "BK-58",
+        "BK-59",
+        "BK-62",
+        "BK-63",
+        "BK-64",
+        "BK-65",
+        "BK-66",
+        "BK-67",
+        "BK-68",
+        "BK-69",
+        "BK-70",
+        "BK-78",
+        "BK-79",
+        "BK-80",
+        "BK-83",
+        "BK-84",
+        "BK-85",
+        "BK-86",
+        "BK-88",
+        "BK-91",
+        "BK-92"
+      ]
+    },
+    {
+      "id": "P42",
+      "module": "M00",
+      "title": "Keep the existing control plane and byte restoration intact",
+      "kind": "verification",
+      "criteria": [
+        "BK-60-AC1",
+        "BK-60-AC2",
+        "BK-60-AC3",
+        "BK-60-AC4",
+        "BK-60-AC5",
+        "BK-60-AC6",
+        "BK-61-AC1",
+        "BK-61-AC2",
+        "BK-44-AC1",
+        "BK-52-AC1",
+        "BK-52-AC2",
+        "BK-71-AC1",
+        "BK-71-AC2",
+        "BK-71-AC3",
+        "BK-71-AC4",
+        "BK-73-AC1",
+        "BK-73-AC2",
+        "BK-73-AC3",
+        "BK-73-AC4",
+        "BK-74-AC1",
+        "BK-74-AC2",
+        "BK-74-AC3",
+        "BK-75-AC1",
+        "BK-75-AC2",
+        "BK-75-AC3",
+        "BK-76-AC1",
+        "BK-76-AC2"
+      ],
+      "prerequisites": [],
+      "decisions": [
+        "CHOICE-02"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "tools/backlog.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_the_backlog_states_one_truth.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_tooling_bites.py",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/backlog/status.yaml",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Current registry, generated board and isolated temporary specification bytes"
+      ],
+      "outputs": [
+        "Cumulative existing-control regression evidence with explicit baseline failures"
+      ],
+      "steps": [
+        "Re-use existing population/derived-state/lifecycle controls; do not create alternate packet completion state.",
+        "Test all-item/feature/step reconciliation, missing evidence, authored done and generated drift using isolated copies.",
+        "Exercise mutation cleanup after planted failure and assert exact original bytes are restored; distinguish source-preservation failures from unrelated trace baseline.",
+        "Retain existing professional/wave mutation probes, Start/Build/Test/Sign-off enforcement, evidence bootstrap-cycle refusal and executable graph-hook checks; a known-good journey regression must fail, not be reclassified as an expected defect."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-001"
+        ],
+        "negative": [
+          "EVAL-001"
+        ],
+        "live": [
+          "EVAL-002"
+        ]
+      },
+      "expected": [
+        "This is maintenance of existing work, not a claim it must be rebuilt.",
+        "Current evidence freshness and any existing failures remain visible."
+      ],
+      "rollback": "Restore only the task's isolated mutation fixtures; preserve user edits and the registered failed evidence.",
+      "final_criteria": [
+        "BK-60-AC1",
+        "BK-60-AC2",
+        "BK-60-AC3",
+        "BK-60-AC4",
+        "BK-60-AC5",
+        "BK-60-AC6",
+        "BK-61-AC1",
+        "BK-61-AC2",
+        "BK-44-AC1",
+        "BK-52-AC1",
+        "BK-52-AC2",
+        "BK-71-AC1",
+        "BK-71-AC2",
+        "BK-71-AC3",
+        "BK-71-AC4",
+        "BK-73-AC1",
+        "BK-73-AC2",
+        "BK-73-AC3",
+        "BK-73-AC4",
+        "BK-74-AC1",
+        "BK-74-AC2",
+        "BK-74-AC3",
+        "BK-75-AC1",
+        "BK-75-AC2",
+        "BK-75-AC3",
+        "BK-76-AC1",
+        "BK-76-AC2"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P43",
+      "module": "M00",
+      "title": "Adopt and maintain the execution-ready plan",
+      "kind": "review",
+      "criteria": [
+        "BK-81-AC1",
+        "BK-81-AC2",
+        "BK-81-AC3",
+        "BK-77-AC1",
+        "BK-77-AC2",
+        "BK-77-AC3"
+      ],
+      "prerequisites": [
+        "P42"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-02",
+        "CHOICE-10"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "docs/blueprint/modules.json",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/packets.json",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/EXECUTION.md",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/blueprint.py",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/backlog/status.yaml",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Current plan, all current criteria and decision/scenario/command catalogs"
+      ],
+      "outputs": [
+        "Reconciled module/packet/criterion navigation with explicit unapproved release choices"
+      ],
+      "steps": [
+        "Check exact populations, packet DAG, criterion/command/scenario/decision references and module cross-links; preserve registry waves and historical prose.",
+        "Use qualified design review for substantive India legal/privacy/role boundaries; machine checks do not self-certify these.",
+        "Refresh generated reader views from authoritative records; record what is ready to implement versus blocked by a named decision, never all-plan done from structural checks."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-001"
+        ],
+        "negative": [
+          "EVAL-002"
+        ],
+        "live": [
+          "EVAL-002"
+        ]
+      },
+      "expected": [
+        "All new execution obligations have a delivery criterion or explicit adoption owner.",
+        "Packet labels have no independent delivery status and unresolved approvals block only their dependent paths."
+      ],
+      "rollback": "Withdraw the affected plan revision, preserve historical evidence and reopen the registered design criterion; do not erase the review finding.",
+      "final_criteria": [
+        "BK-81-AC1",
+        "BK-81-AC2",
+        "BK-81-AC3",
+        "BK-77-AC1",
+        "BK-77-AC2",
+        "BK-77-AC3"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P44",
+      "module": "M05",
+      "title": "Acquire recent eligible law without citation-count bias",
+      "kind": "implementation",
+      "criteria": [
+        "BK-24-AC1"
+      ],
+      "prerequisites": [
+        "P19"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-07"
+      ],
+      "commands": [
+        "publish-corpus"
+      ],
+      "boundaries": [
+        {
+          "path": "tools/fetch_judgments.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/scrape_judgments.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/knowledge/manifest.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Approved source/right and bounded acquisition population including a recent low-citation eligible decision"
+      ],
+      "outputs": [
+        "Explainable versioned selection rule and acquisition manifest"
+      ],
+      "steps": [
+        "Replace citation-count-only exclusion with reviewed recency/eligibility rules; preserve selection reasons and identifiers for accepted/rejected records.",
+        "Test a recent eligible uncited decision and an ineligible highly cited decision so popularity cannot establish legal relevance or currency.",
+        "Prepare the bounded acquisition command and receipt reconciliation; obtain specific approval before scraping/downloading, then submit candidates to P20 publication rather than altering the active shared store."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-029"
+        ],
+        "negative": [
+          "EVAL-029"
+        ],
+        "live": [
+          "EVAL-029"
+        ]
+      },
+      "expected": [
+        "Recent otherwise eligible decisions are not excluded merely for low citation count.",
+        "Successful acquisition does not establish verified applicability or completeness."
+      ],
+      "rollback": "Suspend acquisition, retain rights/source/selection receipts and quarantine candidates; the active published snapshot remains untouched.",
+      "final_criteria": [
+        "BK-24-AC1"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P45",
+      "module": "M11",
+      "title": "Operate authorised proactive work and continuing conflict watch",
+      "kind": "implementation",
+      "criteria": [
+        "BK-58-AC1",
+        "BK-58-AC2"
+      ],
+      "prerequisites": [
+        "P11",
+        "P14",
+        "P32"
+      ],
+      "decisions": [
+        "CHOICE-07",
+        "CHOICE-08",
+        "CHOICE-10"
+      ],
+      "commands": [
+        "set-service-authority",
+        "cancel-service-authority",
+        "record-event"
+      ],
+      "boundaries": [
+        {
+          "path": "nm/core/conflict.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/deadlines.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/engagement.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/ports",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Recorded service authority, responsible actor, trigger/cadence and notification preference",
+        "New party shared across restricted synthetic matters"
+      ],
+      "outputs": [
+        "Cancellable deduplicated service jobs and scoped continuing-conflict reassessment"
+      ],
+      "steps": [
+        "Persist proactive service authority separately from permission to read the matter; create jobs only while owner, authority and trigger are current.",
+        "On new parties/material changes reopen relevant conflict assessments through a minimal restricted index, never returning another client's matter details to the advocate.",
+        "Cancel/revoke during job execution and simulate a lost notification acknowledgement; reconcile duplicates and show outstanding owner/next action without claiming silent ongoing monitoring."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-030"
+        ],
+        "negative": [
+          "EVAL-030"
+        ],
+        "live": [
+          "EVAL-030"
+        ]
+      },
+      "expected": [
+        "No unsolicited background work or duplicated consequential notification.",
+        "Continuing-conflict assessment protects other matters while making the current file's limit visible."
+      ],
+      "rollback": "Disable service dispatch and retain cancelled/unknown delivery records; restore only explicitly approved subscriptions without duplicating prior notifications.",
+      "final_criteria": [
+        "BK-58-AC1",
+        "BK-58-AC2"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P46",
+      "module": "M07",
+      "title": "Adapt investigation to evidence within a fixed mandate",
+      "kind": "implementation",
+      "criteria": [
+        "BK-91-AC1",
+        "BK-91-AC2"
+      ],
+      "prerequisites": [
+        "P47",
+        "P18",
+        "P21",
+        "P22",
+        "P23"
+      ],
+      "decisions": [
+        "CHOICE-02",
+        "CHOICE-05",
+        "CHOICE-06"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "nm/core",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/ports",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge",
+          "kind": "existing"
+        },
+        {
+          "path": "tests",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Current source and governed contracts in docs/blueprint/autonomy.json; no currently implemented agent API is implied.",
+        "Versioned commission, permitted tool catalogue, evidence packet and durable job outputs from the named prerequisites.",
+        "Isolated scripted synthetic providers; separately approved model, counsel and deployed runs for stronger evidence."
+      ],
+      "outputs": [
+        "Versioned adaptive-plan state and inspected next-step proposals bound to the commission.",
+        "One lead runtime through approved tools and the existing acceptance path, with positive/refusal/restart witnesses."
+      ],
+      "steps": [
+        "Freeze a typed adaptive step proposal using the autonomy contract: task objective, current snapshot, permitted read/retrieve/assess/ask/delegate/draft/stop choice, concise rationale, evidence references and open predicates. No fixed legal issue vocabulary or required cognitive order.",
+        "Implement a bounded feedback loop through the existing ports: observe actual results and replan on material discoveries; use no specialist when direct permitted work suffices. Application policy, not the planner, admits each operation.",
+        "Keep factual assertion, extracted text, disputed proposition, inference and unknown distinct. Deterministic identity/locator/quote checks do not establish semantic support or legal applicability; enforce the required reviewed assessment outcomes.",
+        "Reject stale or revoked input/results and invalidate dependencies before publishing. A missing premise, unavailable source, failed check or exhausted budget must retain its actual state and stop reason.",
+        "Prove positive evidence-triggered replanning and refusal using EVAL-031, plus criterion-specific transfer/boundary tests. Obtain separately approved real-model evidence for reasoning behaviour; P24 and P35 own later interaction and professional comparison."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-031"
+        ],
+        "negative": [
+          "EVAL-031"
+        ],
+        "live": [
+          "EVAL-031"
+        ]
+      },
+      "expected": [
+        "Adaptive investigation remains within unchanged policy, source and authority boundaries.",
+        "Every selected task has an observed terminal result or explicit open state; no fabricated factual completion, clean failed child or stale accepted output.",
+        "Each registered criterion requires its own exact test and evidence methods; static contracts and synthetic demos are not legal or deployed proof."
+      ],
+      "rollback": "Disable the new planner/delegation route and preserve accepted source versions, task history, cancelled/unknown results and existing non-agent paths. Do not replay consequential effects or remove evidence to obtain a green result.",
+      "final_criteria": [
+        "BK-91-AC1",
+        "BK-91-AC2"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P47",
+      "module": "M02",
+      "title": "Run bounded specialist tasks with shared authority and budgets",
+      "kind": "implementation",
+      "criteria": [
+        "BK-92-AC1",
+        "BK-92-AC2"
+      ],
+      "prerequisites": [
+        "P06",
+        "P11",
+        "P13",
+        "P17"
+      ],
+      "decisions": [
+        "CHOICE-02",
+        "CHOICE-05",
+        "CHOICE-06"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "nm/core",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/ports",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge",
+          "kind": "existing"
+        },
+        {
+          "path": "tests",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "Current source and governed contracts in docs/blueprint/autonomy.json; no currently implemented agent API is implied.",
+        "Versioned commission, permitted tool catalogue, evidence packet and durable job outputs from the named prerequisites.",
+        "Isolated scripted synthetic providers; separately approved model, counsel and deployed runs for stronger evidence."
+      ],
+      "outputs": [
+        "Durable bounded parent/child execution and canonical result acceptance, usable with scripted specialists.",
+        "Observed aggregate budget, permission, stale-result and recovery refusal evidence."
+      ],
+      "steps": [
+        "Extend the durable job contract with typed parent/child identity, role, objective, snapshot, purpose, permitted tools/data/processors, shared budget allocation, deadline and expected result schema from autonomy.json.",
+        "Implement one delegated-operation admission boundary; child permissions intersect current parent and server policy and cannot expand. Initial profile permits at most two concurrent specialists and depth one; limits are declared starting settings, not performance claims.",
+        "Reserve and reconcile aggregate task cost/time across all children, retries and unfinished provider work. Do not reset budgets per child; refuse dispatch over the remaining cap and report cancellation honestly.",
+        "Specialists return source-linked proposed findings, claim statuses, open gaps, artifacts and explicit outcomes. Authenticate result/task provenance and merge through the sole canonical version-checked writer; preserve conflicts rather than voting or last-writer-wins.",
+        "Propagate cancellation/revocation and lease fencing; recheck policy before provider calls and before accepting results. Prompt-injected source text, forged children and unknown tools cannot alter authority or create a direct network/shell route.",
+        "Demonstrate ordinary delegated work, an unavailable child, concurrent budget admission, changed source, retry/restart, cancellation and malicious input with EVAL-032. P46 uses this runtime; P29 and P37 own later artifacts and economic enablement."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-032"
+        ],
+        "negative": [
+          "EVAL-032"
+        ],
+        "live": [
+          "EVAL-032"
+        ]
+      },
+      "expected": [
+        "Adaptive investigation remains within unchanged policy, source and authority boundaries.",
+        "Every selected task has an observed terminal result or explicit open state; no fabricated factual completion, clean failed child or stale accepted output.",
+        "Each registered criterion requires its own exact test and evidence methods; static contracts and synthetic demos are not legal or deployed proof."
+      ],
+      "rollback": "Disable the new planner/delegation route and preserve accepted source versions, task history, cancelled/unknown results and existing non-agent paths. Do not replay consequential effects or remove evidence to obtain a green result.",
+      "final_criteria": [
+        "BK-92-AC1",
+        "BK-92-AC2"
+      ],
+      "requires_completed_items": []
+    }
+  ],
+  "planning_delivery_exclusions": [
+    {
+      "item": "BK-89",
+      "reason": "This bounded final pre-build planning/control correction is delivered under its current backlog lifecycle, not as a future application packet. Its acceptance and evidence remain mandatory."
+    },
+    {
+      "item": "BK-87",
+      "reason": "This execution-readiness authoring/reconciliation change is delivered by the current backlog lifecycle, not a future application packet that would depend on validating itself. Its ACs remain mandatory in the current review/evidence record."
+    },
+    {
+      "item": "BK-90",
+      "reason": "Current bounded-autonomy and generalised-change plan/control authoring. Its acceptance is verified in the current backlog lifecycle, not a future product packet. BK-91 and BK-92 remain explicitly in the runtime queue."
+    }
+  ]
+}

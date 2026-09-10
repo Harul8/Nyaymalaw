@@ -33,6 +33,10 @@ PUBLISHED_CLASS_A = ROOT / "docs" / "backlog" / "evidence" / "class_a.json"
 
 SOURCE_TREES = ("nm", "tests", "tools", "web")
 SOURCE_SUFFIXES = {".py", ".js", ".css", ".html"}
+# Planning contracts are inputs, never generated execution verdicts. Enumerate
+# this tree rather than maintaining a second, inevitably incomplete file list.
+CONTRACT_TREES = ("docs/blueprint",)
+CONTRACT_SUFFIXES = {".json", ".md"}
 CONTRACT_FILES = (
     "docs/backlog/steps.yaml",
     "docs/backlog/plan.json",
@@ -90,6 +94,16 @@ def verification_fingerprint(root: pathlib.Path | None = None) -> str:
         digest.update(relative.encode())
         digest.update(_bytes(path) if path.exists()
                       else f"<absent:{relative}>".encode())
+    for relative in CONTRACT_TREES:
+        base = root / relative
+        digest.update(relative.encode())
+        if not base.exists():
+            digest.update(b"<absent>")
+        else:
+            for path in sorted(p for p in base.rglob("*")
+                               if p.is_file() and p.suffix in CONTRACT_SUFFIXES):
+                digest.update(path.relative_to(root).as_posix().encode())
+                digest.update(_bytes(path))
     digest.update(b"docs/backlog/status.contract")
     digest.update(_status_contract(root))
     return digest.hexdigest()[:20]

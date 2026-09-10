@@ -310,6 +310,154 @@ Recorded as `BK-34-AC3`, `NOT_RUN`, with the reason. BK-34 does not derive
 
 ---
 
+## D-014 — India-only blueprint and confidential pilot foundation
+
+**Confirmed scope, 10 September 2026.** The user states that NM operates in
+India alone. Indian legal applicability is the compliance baseline; selected
+international frameworks remain engineering benchmarks. Verified legal
+coverage must still be declared by court/state/task/language/date rather than
+inferred from India-only operation.
+
+**Proposed implementation defaults.** `docs/blueprint/README.md` records the
+modular monolith, private transactional store, preserved/versioned public-law
+library, India-region processing policy and explicit architecture/hosting
+decisions. These are a design proposal, not procurement or production approval.
+
+**Planned safety correction.** A confidential-data pilot must not depend on a
+late production-only authentication row. BK-86 now owns strong authentication
+and recovery assurance before confidential access; BK-85 owns key/processor
+and operating controls. Pilot/production profiles require both, while BK-42
+retains deployed integration evidence. This tightens the future profile;
+D-013's historical local-completion decision is preserved below and grants no
+confidential-pilot or production waiver.
+
+**Preservation.** The existing corpus is shared through a junction. Rebuild
+only a validated derived publication beside it, with authorised consistent
+backup, source identity reconciliation, consumer inventory and reversible
+cutover. No live database changes or foreign processing were authorised here.
+
+**Review still required.** Qualified legal/privacy review, actual provider and
+identity configuration, hosting budget, service/recovery objectives and release
+authority must be recorded before implementation or deployment depends on them.
+
+## D-015 — Execute scoped packets without weakening integration gates
+
+**Context.** The user approved a thorough execution-readiness pass, not a new
+application rewrite. Full-module barriers hid a media/briefing completion cycle
+and made later operated proof a prerequisite for early foundation work.
+
+**Planning decision.** Use `blueprint/packets.json` for bounded contributions;
+retain every registered item dependency at completion. Exactly one final packet
+owns each active acceptance criterion, and every earlier contribution must be
+upstream of it. `requires_completed_items` explicitly names the cases where a
+packet cannot start before full sign-off. Module links describe capability
+context, never implicit all-items-done barriers. BK-79 belongs with its briefing
+integration, while BK-88 owns the actual confidential-path security/lifecycle
+proof at W2. Its obligation is not deferred to the final W7 production gate.
+
+**Authority.** CHOICE-01 through CHOICE-10 in `blueprint/decisions.json` are
+recommended defaults and scope-specific approval boundaries, not purchases,
+processor approvals, legal conclusions or deployment permission. Signed
+adoption remains a separate dated record bound to the selected configuration.
+The existing local authentication-error policy is preserved; neutral errors
+for confidential-profile routes remain an explicit proposed adoption.
+
+**Proof boundary.** Closed API examples and synthetic scenario specifications
+test design precision. Actual application, legal, browser, processor, recovery
+and independent-review evidence must still be executed and recorded. Expanding
+acceptance does not convert existing authored PASS into current bound proof.
+
+## D-016 — final pre-build controls and scoped adoption
+
+**Decided 10 September 2026, on the user's instruction to finalise the reviewed
+plan.** BK-89 owns this bounded planning/control change. The existing product,
+wave schedule and P01/P02 synthetic entry points remain unchanged.
+
+The media prohibition is explicit on BK-69-AC3, BK-79-AC3 and BK-88-AC4. It
+applies before transmission and throughout actual processing, not only when a
+returned field is displayed. CHOICE-05 concerns the selected operation and
+configuration, including hidden unavoidable processing, not unrelated optional
+products a vendor sells. Original evidence and normal evidence-based legal
+assessment remain available; local speaker separation is not biometric identity.
+
+CHOICE proposals and measurement evidence are separate from a person's adoption
+of an exact scope. `blueprint/APPROVALS.md` and its closed schema name the store
+and required verification. Existing manual attestations can be recorded, but
+the planning reader cannot authenticate a human signature, infer authority or
+activate a protected operation. BK-80-AC6/P03 owns that verified resolution.
+Recorded-but-unverified, stale, expired, revoked and out-of-scope remain distinct
+from no record; required manual approval is not waived while automation is built.
+
+Deferred rows retain their reasons and dates. Missing/malformed dates are lint
+errors and due review is visible; review expiry never resumes or authorises work.
+The change does not appoint reviewers, approve processors, widen coverage, alter
+retention terms, process client material or grant release authority.
+
+## D-017 — Adaptive grounded reasoning with bounded delegation
+
+**Confirmed direction, 10 September 2026.** The user approved NM choosing and
+revising its investigation within existing safeguards, with optional research
+and draft/document specialists. The decision grants autonomy over eligible
+reasoning and preparation, never unrestricted authority. BK-90 records the
+plan/control amendment; BK-91 and BK-92 own the unbuilt runtime obligations.
+
+**Design decision.** Keep one lead and one canonical acceptance service.
+`blueprint/autonomy.json` defines task, result and claim contracts, inherited
+scope, shared budgets, cancellation, provenance and comparison requirements.
+Admission, identity, permissions, processor egress, lifecycle, version checks,
+validation, persistence and publication remain application-controlled. Human
+decisions, required professional review and consequential actions retain their
+existing authority. Deterministic safeguards are compatible with adaptive
+reasoning; a fixed cognitive script is not required.
+
+**Grounding.** Case assertions retain their source and evidential status;
+retrieved text alone does not prove truth or legal applicability. Hypotheses
+are labelled and linked to premises. No invented fact, quotation, citation or
+missing draft detail may become accepted work. Specialist agreement cannot
+substitute for evidence, and Word/PDF output uses one accepted content version.
+
+**Bounded adoption.** Two concurrent specialists and one delegation level are
+proposed initial limits, not measured optima. Specialists cannot delegate,
+expand tools or access, reset their budget, or act externally. Compare ordinary
+orchestration, an adaptive lead and selective delegation on matched reviewed
+tasks and complete cost/failure populations before enabling a specialist for
+that task family. Keep a safe non-delegated path where it meets the same gates.
+
+**Implementation and reversal.** P47 supplies scoped delegation foundations;
+P46 adds the adaptive lead; P24, P29, P35 and P37 own the named interaction,
+artifact, professional and economic integration criteria. P01/P02 remain the
+first independent synthetic entry points. Packet order is a build dependency,
+not a mandatory user interview. Disabling the new route must preserve accepted
+versions and task history without replaying external effects. No live run,
+vendor, confidential processing, background service or release is authorised
+by this design decision.
+
+## D-018 — Generalised fixes with bounded evidence claims
+
+**Confirmed build discipline, 10 September 2026.** Extend the existing four
+playbooks through BG-078–BG-081 rather than creating another guide or weakening
+earlier obligations. A fix starts with a reproduced failure, a supported causal
+explanation, the affected population and an invariant. Reuse one mechanism
+across its actual consumers and check unrelated behaviour as well as the
+original incident.
+
+**Boundary.** Generalise the mechanism, not distinct legal rules. Deterministic
+permission checks, exact identities and reviewed jurisdiction/time-specific
+rule data remain valid. Scenario names, remembered answers and phrase-specific
+branches cannot stand in for a general correction; nor may a broad abstraction
+erase legally material distinctions. Code, prompts, configuration, data and
+model changes follow the same evidence discipline.
+
+**Proof and limits.** Retain the original failure, test transfer to distinct
+contexts, test conditions that must change the answer or remain refused, and
+run the applicable cumulative regression against coherent identities. An
+independent technical reviewer, and qualified counsel where legal meaning is
+affected, assess the demonstrated scope. Manifest or keyword checks preserve
+the written obligation; they cannot establish cause, completeness, semantic
+approval or universal future-proofing. Unexecuted runtime and specialist proof
+remains NOT_RUN. Reverse or narrow a proposed mechanism when its evidence shows
+it does not transfer safely; do not rewrite the expected result to obtain green.
+
 ## D-013 — Phase A recovery, workspace identity and the production MFA boundary
 
 **The question.** Closing Arrive requires an advocate to recover access without

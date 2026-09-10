@@ -17,6 +17,7 @@ const CONTENT_W = 9360; // 6.5in in DXA
 function h1(text) {
   return new Paragraph({
     heading: HeadingLevel.HEADING_1,
+    keepNext: true,
     spacing: { before: 480, after: 200 },
     children: [new TextRun({ text, bold: true, size: 34, color: ACCENT, font: 'Georgia' })],
   });
@@ -25,6 +26,7 @@ function h1(text) {
 function h2(text) {
   return new Paragraph({
     heading: HeadingLevel.HEADING_2,
+    keepNext: true,
     spacing: { before: 340, after: 140 },
     children: [new TextRun({ text, bold: true, size: 26, color: INK, font: 'Georgia' })],
   });
@@ -33,6 +35,7 @@ function h2(text) {
 function h3(text) {
   return new Paragraph({
     heading: HeadingLevel.HEADING_3,
+    keepNext: true,
     spacing: { before: 260, after: 100 },
     children: [new TextRun({ text, bold: true, size: 22, color: ACCENT })],
   });
@@ -41,6 +44,7 @@ function h3(text) {
 function h4(text) {
   return new Paragraph({
     heading: HeadingLevel.HEADING_4,
+    keepNext: true,
     spacing: { before: 200, after: 80 },
     children: [new TextRun({ text, bold: true, size: 20, color: INK })],
   });
@@ -69,7 +73,10 @@ function p(text, opts = {}) {
     spacing: { after: opts.after === undefined ? 140 : opts.after, line: 276 },
     alignment: opts.align,
     indent: opts.indent,
-    children: runs(text, opts),
+    children: opts.comment === undefined ? runs(text, opts) : [
+      new d.CommentRangeStart(opts.comment), ...runs(text, opts),
+      new d.CommentRangeEnd(opts.comment), new d.CommentReference(opts.comment),
+    ],
   });
 }
 

@@ -1,0 +1,218 @@
+{
+  "schema": 1,
+  "note": "Implementation choices and approval gates, not delivery status. Local recommendations may guide synthetic work; approvals are absent until an accountable person signs the exact scope. No vendor is purchased or enabled here.",
+  "choices": [
+    {
+      "id": "CHOICE-01",
+      "title": "Operating scope and legal coverage",
+      "owner_criteria": [
+        "BK-84-AC1",
+        "BK-87-AC3"
+      ],
+      "recommendation": "India-only service. Synthetic local development uses declared fictional tasks. First live legal pack is the reviewed Telangana/Union task list, not all Indian law.",
+      "rationale": "User-confirmed India-only scope; source holdings are not verified capability.",
+      "fallback": "Do not enable another jurisdiction, language or practice task without a separate reviewed pack.",
+      "approver": "product owner and qualified Indian counsel",
+      "local_synthetic": "permitted_with_stated_fallback",
+      "approval_required_for": [
+        "confidential_pilot",
+        "production",
+        "new_coverage_pack"
+      ],
+      "approval": null,
+      "sources": []
+    },
+    {
+      "id": "CHOICE-02",
+      "title": "Local architecture and data authority",
+      "owner_criteria": [
+        "BK-83-AC1",
+        "BK-83-AC3"
+      ],
+      "recommendation": "Keep Python/FastAPI/current browser UI. PostgreSQL 18, current supported minor, owns new private transactional state; encrypted object storage owns media; existing public-law SQLite/FTS adapters remain until measured replacement.",
+      "rationale": "Minimises rewrite risk and gives one authoritative write path. No new graph service or Redis authority.",
+      "fallback": "Use isolated encrypted filesystem/object fixtures for synthetic contracts only; this does not satisfy cloud KMS or production store proof.",
+      "approver": "engineering owner",
+      "local_synthetic": "permitted_with_stated_fallback",
+      "approval_required_for": [
+        "confidential_pilot",
+        "production"
+      ],
+      "approval": null,
+      "sources": [
+        "https://www.postgresql.org/support/versioning/"
+      ]
+    },
+    {
+      "id": "CHOICE-03",
+      "title": "Hosting residency and service boundary",
+      "owner_criteria": [
+        "BK-85-AC1",
+        "BK-88-AC2"
+      ],
+      "recommendation": "Preferred procurement shortlist: AWS Mumbai primary and Hyderabad recovery for regional application/database/object/key services. Verify each exact service, support and telemetry path and quote before selection. No public CDN caching of protected material.",
+      "rationale": "Official regional availability makes this a concrete starting shortlist, not proof that every processor or service confines all data to India.",
+      "fallback": "Until service-specific region/contract approval, use local synthetic services with external egress disabled.",
+      "approver": "product owner and security/privacy owner",
+      "local_synthetic": "permitted_with_stated_fallback",
+      "approval_required_for": [
+        "confidential_pilot",
+        "production",
+        "procurement"
+      ],
+      "approval": null,
+      "sources": [
+        "https://docs.aws.amazon.com/global-infrastructure/latest/regions/aws-regions.html"
+      ]
+    },
+    {
+      "id": "CHOICE-04",
+      "title": "Authentication and recovery assurance",
+      "owner_criteria": [
+        "BK-31-AC20",
+        "BK-86-AC1",
+        "BK-86-AC2"
+      ],
+      "recommendation": "Retain current invitation and identity store contracts for local work. Confidential profile uses a maintained identity component/provider bridge with user-verifying WebAuthn/passkey or approved MFA and controlled factor recovery. Never implement cryptographic verification ad hoc.",
+      "rationale": "Avoids replacing proven identity attribution while making strong authentication an early prerequisite.",
+      "fallback": "Local scripted factor fixtures test orchestration only. Existing explicit login-error policy remains on controlled local endpoints; neutral confidential-profile errors require recorded adoption.",
+      "approver": "product owner and identity/security owner",
+      "local_synthetic": "permitted_with_stated_fallback",
+      "approval_required_for": [
+        "confidential_pilot",
+        "production"
+      ],
+      "approval": null,
+      "sources": [
+        "https://www.w3.org/TR/webauthn-3/"
+      ]
+    },
+    {
+      "id": "CHOICE-05",
+      "title": "Models transcription and document processors",
+      "owner_criteria": [
+        "BK-69-AC1",
+        "BK-69-AC3",
+        "BK-85-AC1",
+        "BK-67-AC1"
+      ],
+      "recommendation": "Keep provider adapters. Use deterministic/scripted responses for local tests; choose live processors only after India processing/retention/no-training terms and required capability benchmarks are demonstrated. For the selected operation/configuration, prohibit automated biometric identification or voiceprints, affect/emotion scoring and voice/appearance credibility inference, including unavoidable background processing. Verify absence before procurement/adoption and before transmission, with runtime drift checks. Optional unrelated vendor services do not themselves disqualify a permitted transcription operation. No automatic foreign fallback.",
+      "rationale": "A provider brand or region label alone is not a confidentiality or quality approval.",
+      "fallback": "Keep affected voice/OCR/model capability disabled or manual-source-assisted until a compliant processor is approved.",
+      "approver": "security/privacy owner and legal-quality owner",
+      "local_synthetic": "permitted_with_stated_fallback",
+      "approval_required_for": [
+        "procurement",
+        "confidential_pilot",
+        "production",
+        "approved_real_model"
+      ],
+      "approval": null,
+      "sources": []
+    },
+    {
+      "id": "CHOICE-06",
+      "title": "Capacity latency and cost budgets",
+      "owner_criteria": [
+        "BK-41-AC1",
+        "BK-67-AC1"
+      ],
+      "recommendation": "Reference engineering load:25 named synthetic accounts,20 sessions,5 reasoning tasks,2 ingestion jobs. Use the documented proposed SLOs; require priced per-task and monthly INR budgets before costly runs or pilot provisioning.",
+      "rationale": "Makes workload reproducible without inventing vendor prices or claiming measurements.",
+      "fallback": "No paid model batch or load test without a bounded run approval; cheap local tests remain permitted.",
+      "approver": "product owner and engineering owner",
+      "local_synthetic": "permitted_with_stated_fallback",
+      "approval_required_for": [
+        "confidential_pilot",
+        "production",
+        "approved_real_model",
+        "paid_or_long_load",
+        "procurement"
+      ],
+      "approval": null,
+      "sources": []
+    },
+    {
+      "id": "CHOICE-07",
+      "title": "Legal sources review and evaluation rights",
+      "owner_criteria": [
+        "BK-84-AC1",
+        "BK-84-AC3",
+        "BK-67-AC1"
+      ],
+      "recommendation": "Preserve the shared legal corpus; classify source rights and identity before publication. Qualified reviewers approve legal premises, treatment labels and hidden-test answers. Synthetic protocols are not legal gold labels.",
+      "rationale": "The corpus audit was bounded, and public availability alone does not establish redistribution rights.",
+      "fallback": "Discovery-only or unsupported states until source and legal-use review is complete.",
+      "approver": "qualified Indian counsel and data owner",
+      "local_synthetic": "permitted_with_stated_fallback",
+      "approval_required_for": [
+        "confidential_pilot",
+        "production"
+      ],
+      "approval": null,
+      "sources": []
+    },
+    {
+      "id": "CHOICE-08",
+      "title": "Retention restoration and incident operation",
+      "owner_criteria": [
+        "BK-85-AC3",
+        "BK-85-AC4",
+        "BK-85-AC5",
+        "BK-88-AC1"
+      ],
+      "recommendation": "Use purpose-specific reviewed retention and hold rules with tombstones. Proposed pilot disaster design target: RPO <=15 minutes and RTO <=4 hours, subject to priced rehearsal and client-facing approval. Durable acknowledged writes have no permitted loss during ordinary process restart.",
+      "rationale": "Separates ordinary durability from disaster recovery and funds operational commitments before promises.",
+      "fallback": "Synthetic restore/tabletop only until the named operator, legal applicability, budget, contacts and achieved recovery results are approved.",
+      "approver": "operations owner and security/privacy/legal owners",
+      "local_synthetic": "permitted_with_stated_fallback",
+      "approval_required_for": [
+        "confidential_pilot",
+        "production"
+      ],
+      "approval": null,
+      "sources": []
+    },
+    {
+      "id": "CHOICE-09",
+      "title": "External action scope",
+      "owner_criteria": [
+        "BK-56-AC4",
+        "BK-57-AC1",
+        "BK-63-AC1"
+      ],
+      "recommendation": "First release prepares, verifies and exports approved drafts; the advocate files/sends and records receipts. Automated send/file/settle connectors are disabled until separate scoped approval and unknown-outcome reconciliation proof.",
+      "rationale": "Delivers useful action support without inventing authority or reliable external delivery.",
+      "fallback": "Manual verified receipt capture; never simulate a filed or sent status.",
+      "approver": "instructing advocate and product owner",
+      "local_synthetic": "permitted_with_stated_fallback",
+      "approval_required_for": [
+        "confidential_pilot",
+        "production",
+        "external_action_activation"
+      ],
+      "approval": null,
+      "sources": []
+    },
+    {
+      "id": "CHOICE-10",
+      "title": "Release accountability and adoption",
+      "owner_criteria": [
+        "BK-42-AC1",
+        "BK-80-AC4",
+        "BK-87-AC3"
+      ],
+      "recommendation": "Only a named release manifest and accountable sign-off can admit a confidential pilot or production. Adoption records name the exact design, implementation, source/model/provider versions and unresolved limits.",
+      "rationale": "Planning integrity and executed legal/security evidence are distinct claims.",
+      "fallback": "Keep scope synthetic-only and the release claim closed until approvals and actual proof are present.",
+      "approver": "product owner, engineering, security/privacy and qualified counsel reviewers",
+      "local_synthetic": "permitted_with_stated_fallback",
+      "approval_required_for": [
+        "confidential_pilot",
+        "production"
+      ],
+      "approval": null,
+      "sources": []
+    }
+  ]
+}

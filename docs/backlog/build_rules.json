@@ -1,7 +1,7 @@
 {
  "schema": 1,
- "note": "The build guide as data. docs/BUILD_GUIDE.md explains WHY; the four cards under docs/build/ are the working playbooks; this says where each rule bites and what enforces it. Each card carries a BUILD_RULES manifest naming the ids it covers, so a rule cannot be dropped by rewriting prose.",
- "expected_population": 77,
+ "note": "The build guide as data. docs/BUILD_GUIDE.md explains the method; the four cards under docs/playbooks/ are the working playbooks. BUILD_RULES manifests preserve ids and ownership; selected exact phrases and named-check existence are also checked. This does not prove complete semantic preservation or full enforcement of every statement. enforcement names the available mechanism; coverage_scope and remaining_gap qualify partial controls. BK-80 owns the evidence-integrity follow-up. Apply requirements proportionately to the registered claim without waiving existing acceptance or mandatory release gates.",
+ "expected_population": 81,
  "cards": {
   "before": "START_A_CHANGE.md",
   "build": "BUILD_A_CHANGE.md",
@@ -23,7 +23,7 @@
    "kind": "principle",
    "stage": "build",
    "card": "BUILD_A_CHANGE.md",
-   "statement": "Build a vertical, usable path. A correct component behind a broken served journey is not a delivered feature.",
+   "statement": "Build a complete registered outcome. A user feature needs its vertical served path; a prerequisite may complete its own contract without claiming the downstream feature is delivered.",
    "enforcement": "unenforced",
    "why_not": "nothing distinguishes a vertical path from a component"
   },
@@ -68,7 +68,7 @@
    "kind": "principle",
    "stage": "build",
    "card": "BUILD_A_CHANGE.md",
-   "statement": "Use deterministic rules for identity, dates, arithmetic, permissions, validity, state transitions and gates. Use models only for work that genuinely requires interpretation or judgment.",
+   "statement": "Use code for identity, permissions, calculation, governed validity rules, state transitions and gates. Keep legal trigger, governing law and authority-treatment premises attributed, reviewable and distinct from the calculation; interpretation is not established by arithmetic.",
    "enforcement": "unenforced",
    "why_not": "no control proposed yet; mechanising it is open work"
   },
@@ -89,6 +89,8 @@
    "statement": "Never let absent, failed, stale, low-confidence or unassessed input look complete or successful.",
    "enforcement": "runner",
    "check": "tests/test_three_states.py::test_every_outcome_enum_can_say_that_nothing_was_established",
+   "coverage_scope": "The named enum sweep checks representation of an unassessed state.",
+   "remaining_gap": "Representation alone does not prove that every served path sets and displays the truthful state; require applicable integration and browser evidence.",
    "must_contain": "not assessed"
   },
   {
@@ -151,7 +153,7 @@
    "kind": "principle",
    "stage": "prove",
    "card": "TEST_A_CHANGE.md",
-   "statement": "A new feature must pass with all earlier verified behaviour in the same cumulative run.",
+   "statement": "A new feature must pass with the required earlier verified behaviour against one coherent identified candidate; separate suites may form that cumulative gate when their relevant identities agree.",
    "enforcement": "unenforced",
    "why_not": "nothing runs earlier verified behaviour as one cumulative set"
   },
@@ -170,7 +172,7 @@
    "kind": "principle",
    "stage": "signoff",
    "card": "SIGN_OFF_A_CHANGE.md",
-   "statement": "Only a current, cumulative release decision permits shipment. A later green gate never cancels an earlier failure, stale result or missing run.",
+   "statement": "Only a current, cumulative release decision permits shipment. Unresolved failed, stale or missing required results block release; relevant corrected reruns may resolve them, but unrelated green gates cannot.",
    "enforcement": "unenforced",
    "why_not": "no control proposed yet; mechanising it is open work"
   },
@@ -287,7 +289,7 @@
    "kind": "done",
    "stage": "signoff",
    "card": "SIGN_OFF_A_CHANGE.md",
-   "statement": "The complete vertical path is implemented, not only one layer.",
+   "statement": "The complete registered outcome is implemented: all required layers for a user feature, or the explicit prerequisite/control contract without a downstream delivery claim.",
    "enforcement": "unenforced",
    "why_not": "no control proposed yet; mechanising it is open work"
   },
@@ -325,14 +327,16 @@
    "card": "SIGN_OFF_A_CHANGE.md",
    "statement": "Every required test exists, collects and is current.",
    "enforcement": "runner",
-   "check": "tools/backlog.py lint -- proof names a test that does not exist"
+   "check": "tools/backlog.py lint -- proof names a test that does not exist",
+   "coverage_scope": "The named lint check validates referenced test existence. Execution binding separately validates recorded outcomes and the current supported fingerprint.",
+   "remaining_gap": "This single check does not establish collection, execution or currency for every evidence class. BK-80 owns the missing evidence-integrity controls."
   },
   {
    "id": "BG-036",
    "kind": "done",
    "stage": "signoff",
    "card": "SIGN_OFF_A_CHANGE.md",
-   "statement": "Earlier verified behaviour passes in the same cumulative run.",
+   "statement": "Required earlier verified behaviour passes in the cumulative suite for the same identified candidate and relevant inputs.",
    "enforcement": "unenforced",
    "why_not": "no control proposed yet; mechanising it is open work"
   },
@@ -350,7 +354,7 @@
    "kind": "done",
    "stage": "signoff",
    "card": "SIGN_OFF_A_CHANGE.md",
-   "statement": "Legal/model evaluation passes when legal output can change.",
+   "statement": "Legal/model evaluation passes when substantive legal meaning, question selection, reasoning, advice maturity, strategy, reservations or professional authority can change; an ordinary presentation change needs a recorded applicability decision.",
    "enforcement": "review",
    "evidence_level": "model_eval"
   },
@@ -661,6 +665,8 @@
    "statement": "A test that never demonstrates it can fail.",
    "enforcement": "runner",
    "check": "tests/test_a_documented_defect_uses_a_strict_marker.py::test_no_test_calls_xfail_instead_of_marking_it",
+   "coverage_scope": "This runner checks strict expected-failure declaration, not whether every test can detect its claimed failure.",
+   "remaining_gap": "Critical controls additionally need their own executed counterexamples; preserve that acceptance evidence and do not infer it from this runner. BK-80 owns the coverage audit.",
    "must_contain": "counterexample"
   },
   {
@@ -707,6 +713,54 @@
    "statement": "A release exception without owner, compensation and expiry.",
    "enforcement": "unenforced",
    "why_not": "no control proposed yet; mechanising it is open work"
+  },
+  {
+   "id": "BG-078",
+   "kind": "ready",
+   "stage": "before",
+   "card": "START_A_CHANGE.md",
+   "statement": "A fix starts with measured reproduction, a causal defect family and invariant, a graph-first source-verified impact inventory, and predeclared transfer, boundary and unrelated-behaviour witnesses. Hypotheses and unenumerated sites are not established scope.",
+   "enforcement": "review",
+   "evidence_level": "technical_review",
+   "must_contain": "A causal fix contract precedes implementation.",
+   "coverage_scope": "Manifest and exact anchor checks preserve this declared stage obligation; a named technical reviewer examines the actual reproduction, causal evidence, population and proof design.",
+   "remaining_gap": "No lint establishes root cause or completeness of the impact inventory. Future product fixes require their own recorded evidence; those unexecuted obligations remain NOT_RUN. Substantive legal meaning also requires qualified counsel review."
+  },
+  {
+   "id": "BG-079",
+   "kind": "principle",
+   "stage": "build",
+   "card": "BUILD_A_CHANGE.md",
+   "statement": "Generalise the mechanism, not distinct legal rules. Refuse incident-name, phrase, scenario-id or remembered-answer branches; preserve deterministic safeguards and source-backed jurisdiction/time-specific rule data through explicit applicability, identity, provenance and invalidation. Code, prompts, configuration, data and models follow the same fix discipline.",
+   "enforcement": "review",
+   "evidence_level": "technical_review",
+   "must_contain": "Generalise the mechanism, not distinct legal rules.",
+   "coverage_scope": "Manifest and exact anchor checks preserve the obligation; technical review must inspect the changed mechanism, legitimate discrimination and removal of subsumed point guards.",
+   "remaining_gap": "A textual check cannot distinguish a sound abstraction from a disguised incident patch or over-broad legal rule. Future implementation and legal applicability evidence remain NOT_RUN until executed."
+  },
+  {
+   "id": "BG-080",
+   "kind": "principle",
+   "stage": "prove",
+   "card": "TEST_A_CHANGE.md",
+   "statement": "A fixed incident is not transfer proof. Retain the original witness, exercise distinct or held-out contexts and meaning-preserving transformations, test conditions that must change or remain refused, and measure unrelated behaviours plus cumulative regressions against coherent before/after source and input identities without weakening the contract to obtain green.",
+   "enforcement": "review",
+   "evidence_level": "technical_review",
+   "must_contain": "A fixed incident is not transfer proof.",
+   "coverage_scope": "Manifest and exact anchor checks preserve the evidence requirement. Review examines executed populations, denominators, intended negative-control failures, unaffected-behaviour witnesses and applicable specialist evidence.",
+   "remaining_gap": "No general linter proves that every future fix transfers or has no collateral effect. Each fix needs executed semantic and integration evidence; approved model, browser or counsel work cannot be replaced by Class-A structure checks. Unrun evidence remains NOT_RUN."
+  },
+  {
+   "id": "BG-081",
+   "kind": "done",
+   "stage": "signoff",
+   "card": "SIGN_OFF_A_CHANGE.md",
+   "statement": "Accept only the demonstrated defect family and tested population, with independent technical review, qualified legal review where applicable, coherent identities, explicit exclusions, remaining risks and recurrence ownership. Never claim universal future-proofing or infer semantic approval from keyword lint.",
+   "enforcement": "review",
+   "evidence_level": "technical_review",
+   "must_contain": "Accept the demonstrated scope, never universal future-proofing.",
+   "coverage_scope": "Manifest and exact anchor checks preserve the sign-off requirement; a reviewer other than the implementer evaluates the linked evidence and the limits of the exact claim.",
+   "remaining_gap": "Review-field presence is not reviewer identity, authority or actual semantic acceptance. Future fix-specific evidence and approvals remain NOT_RUN until obtained; BK-80 owns broader evidence-integrity controls."
   }
  ]
 }

@@ -1,17 +1,20 @@
 # Nyaymalaw
 
-An expert advocate, for practising advocates in India. The relationship is
-instructing advocate to senior counsel: the advocate briefs NM, NM returns a
-considered and committed view, and the advocate decides what to do with it.
+Software for practising advocates in India, designed to support the quality of
+expert counsel's work. The advocate briefs NM, NM tests the file and offers a
+considered view, and the responsible advocate reviews it. NM does not replace
+professional responsibility or acquire authority to act by recommending a step.
 
-**This repository starts with documents and no code, deliberately.** A previous
+**The original baseline started with documents and no code.** The repository
+now contains an implementation; current coverage and proof are recorded in
+the backlog, not inferred from this introduction. A previous
 build reached 217 stories and 28 behavioural tenets and produced conversations
 that were mechanically correct and professionally poor — asking a client who had
 said *"yesterday"* for the date twice, dropping an assault into a possession
 cause, and analysing a twelve-year limitation on a trespass a day old. Every
 structural gate passed on that transcript. The specifications survive; the code
-is being written again against a definition of done that the transcript would
-have failed.
+is being developed against a definition of done that the transcript would
+have failed. Start with the [current delivery plan](docs/PLAN.md).
 
 ---
 
@@ -21,15 +24,16 @@ Read in this order. Each is bound by the one above it.
 
 | | |
 |---|---|
-| [`docs/Archives/PRD.md`](docs/Archives/PRD.md) | What the product is and what "good" means. **D16 holds the 28 advocate-behaviour tenets.** |
-| [`docs/Archives/JOURNEY.md`](docs/Archives/JOURNEY.md) | The advocate's journey end to end, nine phases, and the three-layer rubric that closes each stage |
-| [`docs/Archives/GOLDEN_SCENARIOS.md`](docs/Archives/GOLDEN_SCENARIOS.md) | Six conversations, each built on a real judgement, together forcing ~21 principles. The gold eval |
-| [`docs/Archives/ARCHITECTURE.md`](docs/Archives/ARCHITECTURE.md) | Design intent, carried forward for reference rather than as a commitment |
-| [`docs/Archives/DEFECT_REGISTER.md`](docs/Archives/DEFECT_REGISTER.md) | **164 defects that were actually reproduced.** The part of the previous build worth keeping |
-| [`docs/Archives/NM_Build_Plan.xlsx`](docs/Archives/NM_Build_Plan.xlsx) | Stories, tenets and registers |
+| [PRD](docs/Nyaymalaw_PRD.docx), authored in `spec/prd/` | Intended features and professional behaviour; regenerate the document and machine-readable feature contracts together |
+| [Current plan](docs/PLAN.md) and [`docs/backlog/`](docs/backlog/) | Journey contracts, professional standards, waves, release profiles, current implementation and evidence |
+| [End-to-end workbook](docs/Nyaymalaw_End_to_End_Project_Plan.xlsx) | Generated reader view; never an independent status editor |
+| [Build guide](docs/BUILD_GUIDE.md) | Four proportionate playbooks: Start, Build, Test and Sign-off |
+| [Baseline](docs/BASELINE.md), [defect shapes](docs/DEFECT_SHAPES.md), [golden set](docs/GOLDEN_SET.md) | Measured coverage, known failure mechanisms and evaluation design; check the stated date and scope |
 
-`docs/Archives/reference/` describes the build being replaced. It is a measured record of
-what that system did, not a design to follow.
+`docs/Archives/` preserves the previous specification, journey, architecture,
+defect register and plan as historical evidence, not current authority.
+`docs/Nyaymalaw_Project_Plan.xlsx` similarly preserves the original slice
+baseline; the current W0–W7 plan is maintained in the registries.
 
 ---
 
@@ -43,13 +47,15 @@ is done when a real conversation passes its rubric:
 2. the **journey portfolio** passes — canonical, outage, conflict, emergency,
    restart and non-matter journeys, with **no hand-authored inter-stage state**:
    every stage receives what the preceding served interaction actually produced;
-3. only then does the next stage begin.
+3. close only the evidenced scope. Independent foundation work may proceed;
+   a dependent feature still needs its integrated journey proof. Deployment
+   requires its own environment-specific release conditions and approval.
 
 Structural checks — layering, exception discipline, dead-guard detection — are a
 **linter**. They are necessary and they are not the bar. Every one of them passed
 on the transcript that caused this rewrite.
 
-See [`docs/Archives/JOURNEY.md`](docs/Archives/JOURNEY.md) §5.
+See the [current plan](docs/PLAN.md) and [sign-off playbook](docs/playbooks/SIGN_OFF_A_CHANGE.md).
 
 ---
 
@@ -66,9 +72,8 @@ Attach it as a directory junction rather than copying it:
 New-Item -ItemType Junction -Path legal_database -Target "<path to the corpus>"
 ```
 
-**Known, and it matters (`B-164` in the register): Acts are partially ingested
-and nothing reports the partiality.** The Specific Relief Act 1963 holds 13 of
-44 sections; the Muslim Women (Protection of Rights on Divorce) Act 1986 holds
-one section of seven; BNSS 2023 holds 162 of 531. An advocate asking about a
-missing section gets nothing, and nothing-found is indistinguishable from
-no-such-remedy. Coverage must be stated before it is relied on.
+The old B-164 report inferred incomplete Acts from one lookup path. Later
+analysis found that coverage must reconcile every store and identifier; one
+thin copy is not proof that the corpus lacks the provision. Read the current
+[measured baseline](docs/BASELINE.md) and distinguish not held, held but not
+found, and not assessed. Coverage must be stated before it is relied on.

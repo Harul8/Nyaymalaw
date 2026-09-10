@@ -1,7 +1,8 @@
 # GENERATED ONCE, then hand-authored. See docs/backlog/SCHEMA.md.
-# `basis` says whether the PRD STATES this step or whether it was
-# DERIVED from the features in the phase. A derived step is a
-# reading of the plan and is not the plan.
+# `basis` preserves whether the ORIGINAL mapping used a PRD sequence or
+# decomposed a feature. It is provenance, not a current mandatory screen order;
+# current Phase D reasoning may iterate while respecting dependent gates. Every contract below
+# is the intended behavior; implementation and executed proof live in status.yaml.
 
 schema: 1
 steps:
@@ -17,7 +18,7 @@ steps:
   - BK-20
   actor: advocate
   entry_conditions:
-  - the advocate has a current invitation to one controlled workspace
+  - the advocate has an enrolled identity or a valid invitation to one controlled workspace
   - the sign-in or recovery surface is available without exposing matter content
   user_action:
   - signs in with the invited identity, or uses one advocate-held recovery code
@@ -126,11 +127,11 @@ steps:
   - J-7
   actor: advocate
   entry_conditions:
-  - authenticated identity and one active matter established
+  - authenticated identity established; corpus search does not require an active matter
   - the installed corpus identifies its scope and index version
   user_action:
   - searches judgments or an exact Act provision, narrows by court or year, opens a hit
-    and deliberately places a selected passage into the matter
+    and deliberately chooses a target matter before placing a selected passage
   expected_visible_result:
   - judgment results are grouped by authority and show canonical citation, court, date,
     bench where held and paragraph locator; an exact Act lookup returns only that Act and
@@ -138,11 +139,12 @@ steps:
   - zero results state the searched corpus and filters rather than implying no law exists
   expected_domain_effect:
   - search itself changes nothing; explicit placement persists source identity, locator,
-    excerpt and retrieval context as searched-and-placed material on the active matter
+    excerpt and retrieval context as searched-and-placed material on the confirmed target matter
   failure_behaviour:
-  - an ambiguous Act name, missing source identity, stale index or failed placement is
+  - an ambiguous Act name, missing source identity, missing target-matter authority, stale index or failed placement is
     refused and cannot become authority or an established matter fact
-  - SEARCHED and PLACED never read as RESOLVED, VERIFIED or BINDING
+  - placement alone cannot establish resolution, verification or binding status;
+    SEARCHED provenance remains distinct from any later separately reviewed legal status
   recovery_behaviour:
   - filters can be cleared without losing the query, and a failed placement can be retried
     idempotently after the source is reopened
@@ -159,6 +161,22 @@ steps:
   - B1
   items:
   - BK-8
+  - BK-48
+  actor: advocate
+  entry_conditions:
+  - a signed-in advocate presents a message or material; ordinary access and intake boundaries apply
+  user_action:
+  - supplies a greeting, question, brief, emergency or mixed material and can correct NM's reading
+  expected_visible_result:
+  - one concise reading of the request and an appropriate next step; urgent harm is surfaced before routine clarification
+  expected_domain_effect:
+  - a provisional route and its basis are recorded without promoting quarantined material into the legal file
+  failure_behaviour:
+  - message length, unsupported language or uncertain extraction never becomes a substantive classification by default; hostile instructions remain untrusted data
+  recovery_behaviour:
+  - the advocate corrects the route without retyping already captured material; an uncertain route asks one useful question
+  exit_conditions:
+  - the request is routed, narrowly protected, or held with the reason and next action visible
 - id: STEP-B-02
   name: Emergency triage, before any screen can delay it
   phase: B
@@ -168,6 +186,7 @@ steps:
   items:
   - BK-34
   - BK-53
+  - BK-78
   actor: advocate
   entry_conditions:
   - authenticated
@@ -181,12 +200,15 @@ steps:
   - the emergency is DECLARED on the matter with who invoked it and why; screens remain
     outstanding and are recorded as outstanding
   failure_behaviour:
-  - if the emergency cannot be established, the ordinary screen order resumes and nothing
-    substantive is admitted
+  - an uncertain or failed emergency assessment remains not assessed or possible urgency,
+    never a finding of no emergency; narrow protective guidance or escalation remains available
+  - an affirmative no-emergency assessment resumes ordinary screening; neither uncertainty
+    nor an emergency declaration admits substantive work
   recovery_behaviour:
   - the declaration survives reload and is visible in the record
   exit_conditions:
-  - either a recorded emergency exception, or no emergency and the conflict screen is next
+  - either a recorded narrow protective exception, an explicit unresolved assessment with
+    a protective next step, or assessed no emergency with the conflict screen next
   notes: 'Tenet 6 is prior to tenet 3: an advocate whose client is being arrested tonight
     is not told to wait for a conflict check. The precedence covers protective and referral
     steps only and is not a substantive-advice bypass.'
@@ -215,10 +237,11 @@ steps:
   recovery_behaviour:
   - the decision is re-derived when a party is added, and the earlier clearance goes stale
   exit_conditions:
-  - conflict resolved or expressly excepted
-  notes: The scope is the advocate's own files and the wording says so; it is not a firm-wide
-    registry check. Adding a party must stale an earlier clearance -- BK-34, and it does
-    not today.
+  - conflict is resolved for substantive work, or a recorded exception permits only
+    narrow protective or referral guidance while substantive work remains restricted
+  notes: The scope of the checked registry must be named. An own-files check is not a
+    firm-wide clearance. Current scope and proof are recorded under BK-34, not inferred
+    from this intended contract.
 - id: STEP-B-04
   name: 'Admit substance: competence, engagement and capacity'
   phase: B
@@ -230,6 +253,24 @@ steps:
   items:
   - BK-34
   - BK-53
+  - BK-62
+  - BK-63
+  - BK-78
+  actor: advocate
+  entry_conditions:
+  - ordinary substantive admission is permitted, or material is separately quarantined while admission remains unresolved
+  user_action:
+  - states or corrects commission, engagement scope, who instructs, who decides and relevant capacity
+  expected_visible_result:
+  - each admission condition is clear, blocked, incomplete or not assessed with the reason and responsible next step
+  expected_domain_effect:
+  - a versioned scope and authority record governs admissible work; emergency protection stays separate
+  failure_behaviour:
+  - unknown competence, authority or capacity cannot be silently cleared; a client decision cannot be manufactured by the system
+  recovery_behaviour:
+  - supply missing authority, narrow the task, obtain an appropriate representative or refer; changed instructions reopen affected clearance
+  exit_conditions:
+  - substance is admitted only within recorded scope, or remains held with an inspectable refusal
 - id: STEP-C-01
   name: Open the account and hold it
   phase: C
@@ -238,6 +279,27 @@ steps:
   - C1
   items:
   - BK-36
+  - BK-54
+  - BK-66
+  actor: advocate
+  entry_conditions:
+  - an admitted task or clearly marked quarantine exists and previously authorised matter material is available
+  user_action:
+  - tells the account by typing, speaking or uploading and corrects NM's reflected understanding
+  expected_visible_result:
+  - after admission, a faithful concise reflection distinguishes known information,
+    uncertainties, changed facts and the next useful question; before clearance only
+    receipt, inventory and processing or quarantine status are shown
+  expected_domain_effect:
+  - the source and version of the account persist; quarantined material is not extracted,
+    substantively reflected or used for analysis before clearance; after admission,
+    extraction, allegation and inference remain distinct
+  failure_behaviour:
+  - missing transcription, failed save or unavailable retrieval is visible; a fluent paraphrase cannot stand in for successfully captured material
+  recovery_behaviour:
+  - retry resumes the same intake without duplication; the advocate may pause, skip a nonessential question or correct a statement
+  exit_conditions:
+  - the account is captured faithfully enough for the next task-specific step, with unresolved gaps preserved
 - id: STEP-C-02
   name: State the objectives and the constraints
   phase: C
@@ -246,13 +308,47 @@ steps:
   - C2
   items:
   - BK-54
+  - BK-62
+  actor: advocate
+  entry_conditions:
+  - the commission and current account are available; objectives have not been assumed from the legal cause
+  user_action:
+  - states the practical outcome, urgency, budget, risk tolerance and constraints, including what must not happen
+  expected_visible_result:
+  - NM reflects the objective and conflicting constraints and explains which missing choice changes the work
+  expected_domain_effect:
+  - a versioned objective and constraint set informs question selection, remedy comparison and later decisions
+  failure_behaviour:
+  - winning a claim is not assumed to be the objective; absent cost or risk information is unknown rather than unlimited
+  recovery_behaviour:
+  - the advocate revises priorities and sees dependent readiness or recommendations reopen
+  exit_conditions:
+  - the task has a confirmed or explicitly provisional objective and the next relevant question is clear
 - id: STEP-C-03
   name: Settle the parties and the posture
   phase: C
   basis: derived_from_features
   features:
   - C3
-  items: []
+  items:
+  - BK-62
+  - BK-63
+  - BK-64
+  actor: advocate
+  entry_conditions:
+  - the account names or implies parties and legal relationships
+  user_action:
+  - confirms client, other parties, represented side and each person's role without having to accept an inference
+  expected_visible_result:
+  - stated and inferred posture are distinguishable; ambiguity or contradiction is asked back before a dependent directive
+  expected_domain_effect:
+  - stable party identities and versioned posture attach to the relevant thread; expanded parties trigger conflict reassessment
+  failure_behaviour:
+  - similar names do not prove identity; silence cannot select claimant, defendant or authority to instruct
+  recovery_behaviour:
+  - correct a role or party; affected conclusions and conflict clearance reopen with an explanation
+  exit_conditions:
+  - the represented side is settled for the intended work or its dependent action remains blocked
 - id: STEP-C-04
   name: Give each dispute a thread
   phase: C
@@ -262,6 +358,22 @@ steps:
   items:
   - BK-27
   - J-4
+  - BK-64
+  actor: advocate
+  entry_conditions:
+  - one account may contain several disputes or change subject during the conference
+  user_action:
+  - identifies disputes and changes focus, confirms a proposed merge or separates wrongly grouped material
+  expected_visible_result:
+  - each dispute has a recognisable stable thread; the selected thread and any urgent consequence of switching are clear
+  expected_domain_effect:
+  - thread identity survives renaming; facts, sources and decisions retain their own thread links
+  failure_behaviour:
+  - same parties or similar words do not merge disputes; one thread's missing posture does not fabricate another's
+  recovery_behaviour:
+  - undo a mistaken grouping through recorded correction and restore links without deleting historical advice
+  exit_conditions:
+  - the active task is attached to the right thread and other live obligations remain visible
 - id: STEP-C-05
   name: Build the chronology
   phase: C
@@ -270,14 +382,48 @@ steps:
   - C5
   items:
   - BK-14
+  - BK-64
+  - BK-65
+  actor: advocate
+  entry_conditions:
+  - the matter holds events with source information and a known conference reference date
+  user_action:
+  - supplies dates, sequence or corrections, including relative dates and unresolved ranges
+  expected_visible_result:
+  - a sourced chronology separates documented, asserted, approximate and unknown dates and shows what changed
+  expected_domain_effect:
+  - date normalization preserves the original expression, reference basis and uncertainty; dependent calculations are invalidated
+  failure_behaviour:
+  - an unknown date is not guessed; conflicting documents are not silently reconciled and a past date is not reused as today's reference
+  recovery_behaviour:
+  - confirm an ambiguous date or choose a source; recompute affected limitation and deadlines with visible deltas
+  exit_conditions:
+  - every material dated event is represented or explicitly unresolved, ready for the next dependent assessment
 - id: STEP-C-06
-  name: Take in the documents
+  name: Take in documents, voice and mixed media
   phase: C
   basis: derived_from_features
   features:
   - C6
   items:
   - BK-54
+  - BK-69
+  - BK-79
+  actor: advocate
+  entry_conditions:
+  - processing authority, purpose, workspace boundary and quarantine status are established for the incoming material
+  user_action:
+  - uploads documents, images, audio or video, records voice, or supplies mixed material without compulsory retyping
+  expected_visible_result:
+  - an inventory shows each original, processing progress, usable extracts, source locators and any failure or uncertain segment
+  expected_domain_effect:
+  - immutable source identity links every derivative and extracted proposition to purpose, processor and retention state
+  failure_behaviour:
+  - unsupported, malicious, corrupt or unavailable media is held or refused by name; incomplete extraction cannot read as complete review
+  recovery_behaviour:
+  - retry or replace one failed source without duplicating successful material; correct extraction while preserving the original
+  exit_conditions:
+  - material is either attributable and admitted for its purpose or visibly held, failed or excluded with the next action
 - id: STEP-C-07
   name: Inventory the evidence and preserve it
   phase: C
@@ -286,13 +432,47 @@ steps:
   - C7
   items:
   - BK-6
+  - BK-64
+  - BK-79
+  actor: advocate
+  entry_conditions:
+  - admitted sources and the current instruction are available
+  user_action:
+  - reviews the evidence inventory, identifies originals and preservation needs, and corrects proposition classifications
+  expected_visible_result:
+  - instruction, allegation, admission, document, testimony, transcript, inference and assumption are distinguishable; missing originals and preservation risks are visible
+  expected_domain_effect:
+  - typed propositions retain source locators, custody, confirmation, contradictions and links to legal elements
+  failure_behaviour:
+  - possession of a file does not establish authenticity, admissibility or truth; an uncertain transcript cannot become a confirmed fact
+  recovery_behaviour:
+  - obtain or confirm material, preserve a threatened source, or record a justified dead end; changes propagate to dependent conclusions
+  exit_conditions:
+  - each material proposition has a stated evidential status and a source or an explicit unsupported gap
 - id: STEP-D-01
   name: Confirm the parties and the side
   phase: D
   basis: prd_sequence
   features:
   - C3
-  items: []
+  items:
+  - BK-63
+  - BK-65
+  actor: advocate
+  entry_conditions:
+  - the selected thread has parties and posture captured during briefing
+  user_action:
+  - confirms that the proposed legal work concerns the correct parties, side, time and commission
+  expected_visible_result:
+  - any new party, changed role or inconsistent instruction is called out before dependent advice
+  expected_domain_effect:
+  - the analysis consumes the current posture version and stale conflict or authority clearance reopens
+  failure_behaviour:
+  - prior posture is not reused after a material instruction change; the system cannot quietly argue for the other side
+  recovery_behaviour:
+  - resolve or narrow the disputed frame and rerun only dependent legal work
+  exit_conditions:
+  - the analysis frame is current or affected conclusions remain unavailable with a named reason
 - id: STEP-D-02
   name: Settle the cause of action
   phase: D
@@ -301,6 +481,23 @@ steps:
   - D1
   items:
   - J-2
+  - BK-65
+  - BK-67
+  actor: advocate
+  entry_conditions:
+  - the task has a current posture, objective and enough sourced predicates for provisional characterization
+  user_action:
+  - asks how the facts may be characterised and supplies the fact most likely to distinguish competing causes or defences
+  expected_visible_result:
+  - ranked candidate characterisations state controlling elements, missing predicates and why one presently leads
+  expected_domain_effect:
+  - provisional causes and alternatives retain their factual and legal dependencies; task readiness reflects unresolved thresholds
+  failure_behaviour:
+  - a keyword, desired remedy or isolated fact cannot conclusively choose the cause; alternatives are not erased to force certainty
+  recovery_behaviour:
+  - test the smallest material distinction, reopen a rejected hypothesis when its predicate changes, or state that characterization remains open
+  exit_conditions:
+  - the governing cause is sufficiently settled for the next dependent assessment or a precise gap remains
 - id: STEP-D-03
   name: Compute the limitation period
   phase: D
@@ -309,6 +506,8 @@ steps:
   - D2
   items:
   - BK-35
+  - BK-65
+  - BK-67
   actor: system
   entry_conditions:
   - posture resolved
@@ -329,16 +528,33 @@ steps:
   - supplying the missing date re-derives everything resting on it
   exit_conditions:
   - limitation computed, or not_computed with the reason visible to the advocate
-  notes: 'A blocking gate: no merits work on a thread whose limitation is not computed.
-    BK-35 -- a single dated fact that does not satisfy the curated trigger is still run
-    from, which is the fallback this step forbids.'
+  notes: The threshold controls dependent merits conclusions, not the ability to ask a
+    factual question or give narrowly permitted protective guidance. A single dated fact
+    that does not satisfy the governing trigger cannot substitute for that trigger.
 - id: STEP-D-04
   name: Determine the forum
   phase: D
   basis: prd_sequence
   features:
   - D1
-  items: []
+  items:
+  - BK-65
+  - BK-70
+  actor: advocate
+  entry_conditions:
+  - the nature of the dispute, relief, posture and relevant threshold position are available
+  user_action:
+  - asks which court, tribunal or procedural route can grant the required relief
+  expected_visible_result:
+  - candidate forums and the governing basis are stated with known limits and missing facts
+  expected_domain_effect:
+  - the forum position records subject jurisdiction, dependencies and alternatives rather than an unsupported label
+  failure_behaviour:
+  - a place name or familiar route cannot establish jurisdiction; unavailable rules produce an explicit unresolved position
+  recovery_behaviour:
+  - supply the jurisdictional fact or source, narrow the requested relief, or compare a permissible alternative
+  exit_conditions:
+  - a supported forum or a named unresolved threshold is available to subsequent work
 - id: STEP-D-05
   name: Territorial and pecuniary jurisdiction
   phase: D
@@ -347,20 +563,71 @@ steps:
   - D1
   items:
   - BK-15
+  - BK-65
+  - BK-70
+  actor: advocate
+  entry_conditions:
+  - a candidate forum and relevant parties, events, property and value are identified
+  user_action:
+  - confirms the territorial connecting facts and pecuniary basis
+  expected_visible_result:
+  - the jurisdiction analysis names the relied-on connecting facts, value basis, governing rules and uncertainty
+  expected_domain_effect:
+  - territorial and pecuniary positions retain their own predicates and versions
+  failure_behaviour:
+  - the client's address alone is not assumed sufficient; an unknown value is not treated as zero or jurisdictionally harmless
+  recovery_behaviour:
+  - correct venue facts or value and recompute affected forum, cost and action recommendations
+  exit_conditions:
+  - jurisdiction is supported for the contemplated action or the missing prerequisite is visible
 - id: STEP-D-06
   name: Pre-filing requirements
   phase: D
   basis: prd_sequence
   features:
   - D1
-  items: []
+  items:
+  - BK-65
+  - BK-70
+  actor: advocate
+  entry_conditions:
+  - a candidate cause, forum and intended action exist
+  user_action:
+  - asks what notice, leave, consent, exhaustion, deposit or other precondition must precede that action
+  expected_visible_result:
+  - required preconditions show source, applicability, status, owner and deadline; none is invented as universal
+  expected_domain_effect:
+  - each prerequisite is linked to the action it permits or blocks
+  failure_behaviour:
+  - absence of a check is not compliance; an optional preference cannot be presented as a compulsory legal prerequisite
+  recovery_behaviour:
+  - supply proof of compliance, complete the prerequisite or change the proposed route and reassess
+  exit_conditions:
+  - the proposed action is procedurally ready or each remaining condition is named
 - id: STEP-D-07
   name: Valuation and court fees
   phase: D
   basis: prd_sequence
   features:
   - D1
-  items: []
+  items:
+  - BK-65
+  - BK-70
+  actor: advocate
+  entry_conditions:
+  - the contemplated relief, forum and relevant valuation facts are known or marked missing
+  user_action:
+  - supplies value and relief details and requests the applicable valuation and fee basis
+  expected_visible_result:
+  - the calculation or refusal names the governing rule, inputs, date and uncertainty; estimates are visibly estimates
+  expected_domain_effect:
+  - valuation and fee calculations retain source, input version and any effect on pecuniary jurisdiction
+  failure_behaviour:
+  - a missing fee schedule or valuation input cannot silently yield zero or an authoritative total
+  recovery_behaviour:
+  - obtain the missing schedule or input and recompute dependent jurisdiction and proportionality
+  exit_conditions:
+  - the fee and valuation position is supported or a precise unresolved prerequisite remains
 - id: STEP-D-08
   name: Register the deadlines
   phase: D
@@ -369,6 +636,22 @@ steps:
   - D3
   items:
   - BK-33
+  - BK-65
+  actor: advocate
+  entry_conditions:
+  - events and legal or practical deadlines exist with known sources and uncertainty
+  user_action:
+  - reviews urgency, confirms responsible owners and supplies any new event affecting time
+  expected_visible_result:
+  - nearest material deadlines lead, passed deadlines remain visible, and uncertain dates are not shown as reassuring countdowns
+  expected_domain_effect:
+  - deadline status is recomputed against the current clock and versioned basis; ownership and dependencies persist
+  failure_behaviour:
+  - absence of a calculated deadline is not absence of urgency; reload cannot freeze yesterday's status
+  recovery_behaviour:
+  - correct the basis, record completion or seek an available protective step; missed dates trigger consequence review
+  exit_conditions:
+  - each live deadline has an inspectable basis and next action or a visible unresolved assessment
 - id: STEP-D-09
   name: Research the authorities
   phase: D
@@ -378,20 +661,72 @@ steps:
   items:
   - BK-25
   - BK-24
+  - BK-38
+  - BK-67
+  actor: advocate
+  entry_conditions:
+  - the task identifies legal propositions, jurisdiction and governing time
+  user_action:
+  - inspects primary authorities and challenges the relevance, currency or treatment of a relied-on source
+  expected_visible_result:
+  - the proposition, supporting passage, court hierarchy, temporal applicability, treatment and search limits are distinguishable
+  expected_domain_effect:
+  - research resolves explicit needs and records source identity, locators, governing date and unresolved coverage
+  failure_behaviour:
+  - a search hit, headnote or unsupported citation cannot become a verified binding proposition; not found does not mean no law exists
+  recovery_behaviour:
+  - refine the need, obtain primary text, check treatment or leave the conclusion reserved with a precise gap
+  exit_conditions:
+  - each relied-on proposition has sufficient current support for its declared use or is withheld or qualified
 - id: STEP-D-10
   name: Elements, burden and proof
   phase: D
   basis: derived_from_features
   features:
   - D5
-  items: []
+  items:
+  - BK-64
+  - BK-65
+  - BK-67
+  actor: advocate
+  entry_conditions:
+  - a provisional legal characterization and typed evidence inventory are available
+  user_action:
+  - examines what each side must establish and what material proves or undermines it
+  expected_visible_result:
+  - elements, burden, standard, presumptions and held, obtainable or absent material are separately visible
+  expected_domain_effect:
+  - proof positions bind elements to specific sources and preserve admissibility, weight and contradictions
+  failure_behaviour:
+  - an allegation does not satisfy an element simply because it was extracted; client character judgments do not substitute for proof analysis
+  recovery_behaviour:
+  - obtain identified material, challenge admissibility, revisit a presumption or record an express evidential dead end
+  exit_conditions:
+  - every controlling element has a supported position or an actionable, qualified proof gap
 - id: STEP-D-11
   name: Build the case theory
   phase: D
   basis: derived_from_features
   features:
   - D6
-  items: []
+  items:
+  - BK-65
+  - BK-67
+  actor: advocate
+  entry_conditions:
+  - issues, proof, adverse material and the client's objective are sufficiently understood
+  user_action:
+  - tests the proposed explanation of the case and preferred relief
+  expected_visible_result:
+  - one coherent provisional theory connects controlling facts, law, proof and practical relief; adverse facts are accounted for
+  expected_domain_effect:
+  - theory and ranked reliefs retain their predicates, alternatives and reasons for rejection or concession
+  failure_behaviour:
+  - rhetoric cannot conceal an adverse fact or require mutually inconsistent factual accounts without qualification
+  recovery_behaviour:
+  - revise the theory after a changed predicate and make the reason and dependent advice changes visible
+  exit_conditions:
+  - the working theory is coherent for its declared maturity or the controlling weakness is openly reserved
 - id: STEP-D-12
   name: The adversarial pass
   phase: D
@@ -400,20 +735,73 @@ steps:
   - D7
   items:
   - J-3
+  - BK-67
+  actor: advocate
+  entry_conditions:
+  - a preferred theory and the current available authorised record are available, with
+    missing, unreadable and unassessed material explicitly identified
+  user_action:
+  - asks for the strongest opposing position and pressure-tests the proposed course
+  expected_visible_result:
+  - the strongest coherent adverse case, material adverse law and cross-thread exposure are stated fairly with consequences
+  expected_domain_effect:
+  - attacks and exposures link to the propositions they challenge and produce a revised or justified retained position
+  failure_behaviour:
+  - a generic devil's advocate list, caricatured opponent or silent omission of adverse material cannot satisfy the pass
+  recovery_behaviour:
+  - obtain the fact or authority that resolves the attack, change the course or preserve the material reservation
+  exit_conditions:
+  - material opposing arguments are answered, conceded or explicitly unresolved before considered advice
 - id: STEP-D-13
   name: Salvage the weak case
   phase: D
   basis: derived_from_features
   features:
   - D8
-  items: []
+  items:
+  - BK-65
+  - BK-67
+  - BK-70
+  actor: advocate
+  entry_conditions:
+  - the current framing exposes a weakness, threshold block or ineffective remedy
+  user_action:
+  - asks whether another lawful framing, relief, procedure, timing or forum could improve the practical position
+  expected_visible_result:
+  - each viable alternative states what must change, its legal support, costs and limitations; no route is also an honest result
+  expected_domain_effect:
+  - salvage alternatives retain their required predicates and do not rewrite the known facts
+  failure_behaviour:
+  - the system cannot manufacture facts, authority or a route merely to avoid an unfavourable conclusion
+  recovery_behaviour:
+  - seek a missing predicate, compare a narrower alternative or retain the refusal and referral
+  exit_conditions:
+  - a supported alternative or a reasoned statement that none is available informs the decision
 - id: STEP-D-14
   name: Issue facets and disposition
   phase: D
   basis: derived_from_features
   features:
   - D9
-  items: []
+  items:
+  - BK-64
+  - BK-65
+  - BK-67
+  actor: advocate
+  entry_conditions:
+  - issues and legal-file work exist at a stated maturity
+  user_action:
+  - reviews which issues will be run, parked, blocked or closed and challenges omissions
+  expected_visible_result:
+  - every material issue has a disposition, reason and consequence; no issue disappears in summarisation
+  expected_domain_effect:
+  - a versioned issue disposition accounts for the full considered population and feeds the summary and board
+  failure_behaviour:
+  - an unclassified issue cannot vanish; an unsupported closed state cannot remove a live obligation
+  recovery_behaviour:
+  - reopen an issue when facts, law or instructions change and report the dependent consequences
+  exit_conditions:
+  - the current file accounts for every material issue and exposes what still controls readiness
 - id: STEP-E-01
   name: Set out the scenarios and contingencies
   phase: E
@@ -422,6 +810,22 @@ steps:
   - E1
   items:
   - BK-55
+  - BK-70
+  actor: advocate
+  entry_conditions:
+  - the objective, current legal position, alternatives and material uncertainties are available
+  user_action:
+  - compares realistic options, including settlement, narrower relief, waiting or doing nothing where relevant
+  expected_visible_result:
+  - scenarios state controlling assumptions, useful outcomes, costs, time, risks and what would change the choice
+  expected_domain_effect:
+  - a versioned option comparison links consequences to evidence and identifies decision points
+  failure_behaviour:
+  - unsupported outcome probabilities or a single preferred path cannot masquerade as a complete comparison
+  recovery_behaviour:
+  - revise an assumption or constraint and recompute the affected comparison, retaining prior advice as historical
+  exit_conditions:
+  - the user can compare actionable choices at the task's declared maturity
 - id: STEP-E-02
   name: Give the recommendation
   phase: E
@@ -432,6 +836,22 @@ steps:
   - BK-37
   - J-6
   - J-5
+  - BK-67
+  actor: advocate
+  entry_conditions:
+  - task readiness has been assessed against the current commission, facts, law, proof and unresolved gaps
+  user_action:
+  - requests advice and asks to inspect its reasons or change its assumptions
+  expected_visible_result:
+  - the practical recommendation leads with its maturity, controlling reasons, material adverse case, reservations and next action
+  expected_domain_effect:
+  - the committed advice references the worked file version and persists before it is served
+  failure_behaviour:
+  - preliminary or provisional work cannot read as considered advice; unsupported material conclusions are withheld or limited
+  recovery_behaviour:
+  - supply a missing predicate or correct the file; affected advice becomes stale and is visibly superseded after reassessment
+  exit_conditions:
+  - the advocate receives advice whose content and certainty match its support, or a useful named refusal
 - id: STEP-E-03
   name: Test it for proportionality
   phase: E
@@ -440,6 +860,22 @@ steps:
   - E3
   items:
   - BK-55
+  - BK-70
+  actor: advocate
+  entry_conditions:
+  - the option comparison and the client's practical objective are available
+  user_action:
+  - examines whether the proposed course is worth its cost, delay, disruption and enforceability risk
+  expected_visible_result:
+  - the proportionality assessment names assumptions and practical tradeoffs rather than equating arguable merits with useful relief
+  expected_domain_effect:
+  - cost, time, value and enforceability constraints inform the recommendation and decision record
+  failure_behaviour:
+  - unknown assets, fees or delay cannot become assured recovery or precise ungrounded estimates
+  recovery_behaviour:
+  - change the objective or economic assumptions, obtain the missing information or prefer a narrower course
+  exit_conditions:
+  - the recommendation is justified against the client's constraints or the remaining uncertainty is explicit
 - id: STEP-E-04
   name: Record what the advocate decided
   phase: E
@@ -448,6 +884,23 @@ steps:
   - E4
   items:
   - BK-55
+  - BK-62
+  - BK-63
+  actor: advocate
+  entry_conditions:
+  - advice and options have been presented to a person with recorded decision authority
+  user_action:
+  - accepts, rejects, narrows or defers the proposed course and states any authority to act
+  expected_visible_result:
+  - the decision, scope, actor, version, reservation, owner and review trigger are confirmed in plain language
+  expected_domain_effect:
+  - a versioned decision record distinguishes recommendation, instruction, approval and subsequent execution
+  failure_behaviour:
+  - silence, a recommendation or a researcher's action cannot supply client authority; expired or revoked consent cannot authorise new action
+  recovery_behaviour:
+  - correct or withdraw a decision and stop or reopen dependent unexecuted actions; preserved history states what changed
+  exit_conditions:
+  - the next action is explicitly authorised within scope or remains pending with its owner
 - id: STEP-E-05
   name: Disagree, and say why
   phase: E
@@ -456,6 +909,23 @@ steps:
   - E5
   items:
   - BK-55
+  - BK-63
+  - BK-67
+  actor: advocate
+  entry_conditions:
+  - the requested course conflicts with evidence, law, professional duty or the client's recorded objective
+  user_action:
+  - asks for the reasoning and chooses a lawful alternative or supplies a material correction
+  expected_visible_result:
+  - NM states the disagreement respectfully, identifies the controlling basis and explains permitted alternatives
+  expected_domain_effect:
+  - the disagreement, material reservation and any revised instruction remain attributable in the file
+  failure_behaviour:
+  - agreeable tone cannot hide adverse law, fabricate support or facilitate an improper act
+  recovery_behaviour:
+  - correct the premise, narrow the request, seek human review or retain the justified refusal
+  exit_conditions:
+  - the advocate understands the reason and next permissible course without being coerced or misled
 - id: STEP-F-01
   name: Negotiate within settlement authority
   phase: F
@@ -464,6 +934,22 @@ steps:
   - F1
   items:
   - BK-57
+  - BK-63
+  actor: advocate
+  entry_conditions:
+  - a negotiation objective, authorised representative, current file and settlement limits are recorded
+  user_action:
+  - explores offers and concessions and explicitly approves any external communication or binding commitment
+  expected_visible_result:
+  - options and proposed communications distinguish analysis, draft, authority and actual transmission; limits remain visible
+  expected_domain_effect:
+  - offer versions, authority scope, expiry and communication outcomes are recorded against the file
+  failure_behaviour:
+  - analysis or a draft is not a sent offer; unknown or exceeded settlement authority blocks commitment
+  recovery_behaviour:
+  - obtain authority, revise or withdraw a draft before transmission, and handle uncertain delivery without duplicate commitment
+  exit_conditions:
+  - negotiation state and any authorised commitment or open response obligation are accurately recorded
 - id: STEP-F-02
   name: Hand the drafter its brief
   phase: F
@@ -472,6 +958,25 @@ steps:
   - F2
   items:
   - BK-56
+  - BK-62
+  - BK-63
+  actor: advocate
+  entry_conditions:
+  - the task has an approved objective and a current worked position appropriate to drafting
+  user_action:
+  - approves a drafter brief and inspects the facts, sources, relief, instructions and deliberate gaps it carries
+  expected_visible_result:
+  - a concise self-contained brief names the requested document, intended recipient or forum, approved theory and unsupported points
+  expected_domain_effect:
+  - the brief snapshots authorised source and decision versions, locators, scope and handoff ownership
+  failure_behaviour:
+  - a transcript dump, obsolete file version or undisclosed assumption cannot serve as an approved drafter brief
+  recovery_behaviour:
+  - correct a gap or instruction and issue a new version; affected drafts, including
+    previously approved drafts, become stale and require fresh verification and approval
+    before use while the historical approval remains recorded
+  exit_conditions:
+  - the drafter receives a provenance-complete, scope-bounded brief with unresolved gaps marked
 - id: STEP-F-03
   name: Draft, and verify the draft
   phase: F
@@ -480,6 +985,22 @@ steps:
   - F3
   items:
   - BK-56
+  - BK-63
+  actor: advocate
+  entry_conditions:
+  - an authorised drafter brief and applicable form requirements exist
+  user_action:
+  - reviews the generated draft, its source links, marked blanks and changes before approval
+  expected_visible_result:
+  - every material factual or legal assertion is traceable and unsupported content remains marked; differences from the prior version are visible
+  expected_domain_effect:
+  - draft versions and verification results persist with their brief and source versions
+  failure_behaviour:
+  - fluency cannot conceal a fabricated averment, missing annexure, unverified authority or unresolved blank
+  recovery_behaviour:
+  - correct the source or brief, regenerate affected passages and reverify; rejected text remains out of the approved version
+  exit_conditions:
+  - an explicitly approved current draft or a precise verification failure is handed to the next step
 - id: STEP-F-04
   name: Filing control
   phase: F
@@ -488,6 +1009,22 @@ steps:
   - F4
   items:
   - BK-56
+  - BK-63
+  actor: advocate
+  entry_conditions:
+  - an approved document version, authorised filing role, prerequisites and deadline are established
+  user_action:
+  - authorises a bounded filing or service action and reviews its completion evidence
+  expected_visible_result:
+  - the exact package and authority are clear; submitted, accepted, rejected and uncertain outcomes remain distinct
+  expected_domain_effect:
+  - action identity, approved version, actor, recipient, time, receipt and resulting obligations are recorded
+  failure_behaviour:
+  - a click, queued task or network success is not proof of filing or service; absent authority or receipt cannot read as completion
+  recovery_behaviour:
+  - reconcile uncertain submission before retry, correct a rejection and preserve receipt history without duplicate filing
+  exit_conditions:
+  - actual filing or service is verified, or an unresolved outcome has an owner and urgent next step
 - id: STEP-F-05
   name: Witnesses and experts
   phase: F
@@ -496,6 +1033,21 @@ steps:
   - F5
   items:
   - BK-57
+  actor: advocate
+  entry_conditions:
+  - the current theory and proof gaps identify a legitimate need for witnesses or experts
+  user_action:
+  - reviews what each person can establish, required expertise, preparation needs and approved contact scope
+  expected_visible_result:
+  - personal knowledge, expertise, contradictory material, admissibility and availability are distinguished
+  expected_domain_effect:
+  - witness or expert tasks link to issues, source versions, required materials, owner and deadline
+  failure_behaviour:
+  - preparation cannot invent testimony, suppress material contradictions or imply authority to contact a person without approval
+  recovery_behaviour:
+  - obtain missing material, replace an unavailable expert or revise the proof strategy and dependent readiness
+  exit_conditions:
+  - each required person or evidential gap has an appropriate preparation plan or an explicit unresolved limitation
 - id: STEP-F-06
   name: Hearing readiness
   phase: F
@@ -504,6 +1056,21 @@ steps:
   - F6
   items:
   - BK-57
+  actor: advocate
+  entry_conditions:
+  - a hearing, conference or argument task has a known purpose, forum, date and current file
+  user_action:
+  - reviews the hearing bundle, short theory, propositions, record locators, opponent's strongest case and likely hard questions
+  expected_visible_result:
+  - the preparation pack is concise, navigable, versioned and clear about the order or relief sought and live reservations
+  expected_domain_effect:
+  - readiness binds approved materials, authority, deadlines, dependencies and responsibilities
+  failure_behaviour:
+  - a polished outline with missing controlling authority, obsolete facts or unresolved filing obligations cannot read as ready
+  recovery_behaviour:
+  - resolve the missing material, narrow the submission or record a qualified readiness decision with a review trigger
+  exit_conditions:
+  - the advocate can present and defend the authorised position or identify the exact obstacle to readiness
 - id: STEP-F-07
   name: In court
   phase: F
@@ -512,6 +1079,21 @@ steps:
   - F7
   items:
   - BK-57
+  actor: advocate
+  entry_conditions:
+  - the advocate is acting within a current authorised hearing or conference brief
+  user_action:
+  - retrieves the right passage, tests a new point or records an instruction and event during proceedings
+  expected_visible_result:
+  - answers are concise, source-located and candid about uncertainty; existing authority limits remain visible
+  expected_domain_effect:
+  - new events or instructions are captured with attribution and trigger only appropriate dependent review
+  failure_behaviour:
+  - speed cannot justify invented authority, undisclosed changed facts or an unauthorised concession; assistance is not autonomous representation
+  recovery_behaviour:
+  - fall back to the verified record, defer an unsupported point or seek authority; reconcile notes after the event
+  exit_conditions:
+  - the proceeding's material change and next obligation are recorded without a false claim of action or success
 - id: STEP-G-01
   name: Proactive service
   phase: G
@@ -520,6 +1102,21 @@ steps:
   - G1
   items:
   - BK-58
+  actor: advocate
+  entry_conditions:
+  - the matter has authorised ongoing service, live obligations and review triggers
+  user_action:
+  - reviews a reminder or proposed protective step and decides whether to act
+  expected_visible_result:
+  - the reminder explains its source, urgency, owner, changed condition and safe next action
+  expected_domain_effect:
+  - the service records trigger evaluation and prevents duplicate or obsolete reminders
+  failure_behaviour:
+  - an unevaluated trigger cannot read as no action needed; notification is not completion or permission to act
+  recovery_behaviour:
+  - acknowledge, snooze with an explicit consequence, reassign or correct the trigger; a failed notification has a visible owner
+  exit_conditions:
+  - each actionable trigger is addressed or remains openly owned and scheduled
 - id: STEP-G-02
   name: The continuing conflict watch
   phase: G
@@ -528,6 +1125,21 @@ steps:
   - G2
   items:
   - BK-58
+  actor: advocate
+  entry_conditions:
+  - the matter remains open and parties, roles or engagements may change
+  user_action:
+  - adds a new party or instruction or reviews a conflict-watch alert
+  expected_visible_result:
+  - the watch states which registry and parties were checked, what changed and whether clearance remains valid
+  expected_domain_effect:
+  - material party or role change invalidates the applicable clearance and records reassessment
+  failure_behaviour:
+  - silence or unreadable registry data cannot preserve a clear state; own-file coverage cannot be described as firm-wide
+  recovery_behaviour:
+  - resolve the match, narrow access, obtain authorised review or withdraw within the required boundaries
+  exit_conditions:
+  - continuing work is appropriately cleared or affected work remains restricted with a named reason
 - id: STEP-G-03
   name: Handover and continuity
   phase: G
@@ -538,6 +1150,23 @@ steps:
   - BK-39
   - BK-10
   - BK-58
+  - BK-62
+  - BK-63
+  actor: advocate
+  entry_conditions:
+  - a recipient has appropriate matter access and an authorised continuity or handover purpose
+  user_action:
+  - prepares or accepts a handover and inspects the present position, decisions, sources, deadlines and open obligations
+  expected_visible_result:
+  - the receiving advocate can tell what is known, assumed, decided, outstanding and changed without replaying the whole conversation
+  expected_domain_effect:
+  - a versioned handover preserves source links, authority, limitations, acceptance and responsibility transfer
+  failure_behaviour:
+  - export success is not recipient acceptance; missing originals, stale advice or absent authority cannot be concealed by a summary
+  recovery_behaviour:
+  - correct the package or recipient access and retry without duplicate disclosure; unaccepted work keeps its existing owner
+  exit_conditions:
+  - the authorised recipient acknowledges a sufficient current handover or responsibility remains explicitly untransferred
 - id: STEP-H-01
   name: Capture the events
   phase: H
@@ -546,6 +1175,21 @@ steps:
   - H1
   items:
   - BK-59
+  actor: advocate
+  entry_conditions:
+  - a material case event, communication, order or completion claim is available
+  user_action:
+  - records or confirms the event with its source, time and outcome
+  expected_visible_result:
+  - recorded fact, asserted event and verified completion are distinct; changed deadlines or obligations are highlighted
+  expected_domain_effect:
+  - event identity, source, actor and time update dependent state while preserving historical versions
+  failure_behaviour:
+  - a draft order, intended action or unverified receipt cannot become a completed event; duplicate reports do not duplicate obligations
+  recovery_behaviour:
+  - correct an event through an attributable new version and reassess only affected advice, authority and deadlines
+  exit_conditions:
+  - the material event is recorded at its supported certainty and resulting obligations have owners
 - id: STEP-H-02
   name: Close the matter
   phase: H
@@ -554,6 +1198,21 @@ steps:
   - H2
   items:
   - BK-59
+  actor: advocate
+  entry_conditions:
+  - closure is proposed and the current matter inventory and obligations can be inspected
+  user_action:
+  - reviews outstanding deadlines, orders, funds, property, originals, authority and retention obligations before closing
+  expected_visible_result:
+  - closure shows unresolved obligations and consequences; completed work, archived file and ended representation are distinguished
+  expected_domain_effect:
+  - a versioned closure record names reasons, approvals, disposition of material, remaining duties and reopening triggers
+  failure_behaviour:
+  - the matter cannot close merely because conversation stopped or a task was marked done; unresolved required obligations block closure
+  recovery_behaviour:
+  - resolve or explicitly transfer an obligation under proper authority, or reopen the matter when a new trigger occurs
+  exit_conditions:
+  - the file is closed with accountable dispositions and retained records, or remains open with the blocker visible
 - id: STEP-I-01
   name: End the session and leave nothing behind
   phase: I
@@ -563,3 +1222,19 @@ steps:
   items:
   - BK-40
   - BK-46
+  - BK-31
+  actor: advocate
+  entry_conditions:
+  - a session or cached privileged surface exists and the advocate ends access or the server revokes it
+  user_action:
+  - signs out, ends another session, or encounters expiry while work or media processing is pending
+  expected_visible_result:
+  - privileged content clears promptly and the surface distinguishes confirmed server sign-out from an unconfirmed request
+  expected_domain_effect:
+  - revocation ends the session; outstanding operations cannot render or attach private results after access ends
+  failure_behaviour:
+  - network failure cannot be described as confirmed revocation; browser back, reload or a later user cannot recover prior privileged pixels or intake
+  recovery_behaviour:
+  - retry revocation or sign in afresh; only server-authorised persisted work is restored and any discarded unsaved work is stated
+  exit_conditions:
+  - the browser exposes no privileged matter state and server access is ended or its unconfirmed status is explicitly actionable

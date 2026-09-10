@@ -1,14 +1,25 @@
 # Build a change
 
-Use this playbook only after Start is closed. It governs implementation, not
-scope discovery. If implementation reveals a missing contract, policy,
-authority or acceptance decision, reopen Start.
+Use this playbook after Start is closed. Implementation will reveal details:
+resolve routine choices within the contract and record them. Reopen Start when
+a discovery materially changes the outcome, contract, policy, authority or
+required acceptance evidence.
 
 **Entry:** a closed Start Record with a `READY` decision.
 
 **Exit:** a Build Record supports `BUILT`: the smallest complete vertical
 outcome is implemented, reviewed and ready for independent verification.
 `BUILT` does not mean verified, conformant, done or releasable.
+
+## Quick card
+
+1. Recheck the contract and current source; preserve unrelated user changes.
+2. Implement the smallest complete registered outcome through its needed layers.
+3. Preserve source, legal status, permission and version boundaries.
+4. Use one mechanism for the enumerated defect shape and exercise its failure.
+5. Check visible output against persisted state and recovery where applicable.
+6. Record the implementation, evidence so far and remaining limits; close Build
+   only when its own contract is complete.
 
 ## 1. Reconfirm the boundary
 
@@ -37,8 +48,10 @@ Make the user path complete across every layer it needs:
 8. render truthful state and recovery to the user;
 9. retain audit and evidence needed to explain the result.
 
-Horizontal infrastructure may be built as a prerequisite, but it does not close
-Build until the named vertical outcome uses it.
+A registered infrastructure or control item may close Build when its own
+contract and relevant consumer boundary are complete. Record the dependent
+feature that still needs integration and served proof. A completed prerequisite
+does not close that feature or the journey that uses it.
 
 ## 3. Keep deterministic mechanics outside the model
 
@@ -46,8 +59,8 @@ Enforce these in code and typed state, not only in prompts:
 
 - authentication, role and permission;
 - matter, party, thread, source and authority identity;
-- dates, arithmetic, limitation and deadline status;
-- validity windows, binding relationships and coverage states;
+- calculation from explicit dates, periods and governed deadline rules;
+- recorded validity windows, binding classifications and coverage states;
 - gates, readiness, advice maturity and transition rules;
 - idempotency, concurrency, persistence and audit;
 - source existence, locators and required fields.
@@ -55,6 +68,12 @@ Enforce these in code and typed state, not only in prompts:
 Models may interpret narrative, generate candidates, compare plausible legal
 positions and assist judgment. Treat their output as proposed input to
 validation. Never let a model's fluency become permission, fact or proof.
+
+Choosing an accrual event, exception, governing law or authority treatment is
+not established by arithmetic. Retain the attributed premise, its uncertainty
+and any advocate confirmation separately from the calculation it drives.
+Unresolved alternatives remain visible and correctable; changing a material
+premise invalidates the dependent analysis.
 
 ## 4. Preserve legal and evidential distinctions
 
@@ -116,6 +135,37 @@ For a feature or defect mechanism:
 
 A general explanation with a one-site implementation is still a patch.
 
+**Generalise the mechanism, not distinct legal rules.** Do not add branches
+keyed to an incident's name, phrase, scenario ID or desired answer. Nor may a
+new abstraction erase genuine differences in governing law, forum, effective
+date, party role, evidence status or authority. Deterministic permission,
+identity, calculation and persistence safeguards remain mandatory. Governed
+rule data may legitimately name a provision or jurisdiction: give it a primary
+source, version, applicability and tests of inclusion **and** exclusion. A
+prompt exception or lookup row that recognises the failing story is not such
+data. Do not delete valid rule data merely to perform an anti-patch test.
+
+Keep the smallest sufficient shared owner; callers use its contract rather
+than duplicate guards. Avoid speculative generic frameworks and unrelated
+refactors. Record any compatibility change, migration, cache/index rebuild,
+job invalidation, UI projection and Word/PDF impact; do not silently reuse
+derived state built under the old rule. Re-enumerate the population after the
+change and explain every site excluded from the mechanism.
+
+For example, fix source attribution across claim consumers, not by suppressing
+one hallucinated citation; fix unavailable-versus-empty retrieval states, not
+by answering one missing query from memory; fix stale-result acceptance across
+all writers, not by sleeping before one request. These are defect families,
+not substitute legal answers. Preserve legitimate success and refusal paths
+in each case.
+
+The same discipline applies to code, prompt, configuration, rule-data and
+model/provider changes. A model swap or longer prompt is a proposed mechanism,
+not evidence of resolution. Do not weaken tests, specifications, thresholds,
+permissions or source checks to obtain green. A genuinely incorrect test or
+rule needs a separately justified contract correction at Start, with the old
+result retained and replacement proof; no silent expectation rewrite.
+
 ## 8. Keep one owner for every truth
 
 Put policy in its authoritative domain object or registry. Keep adapters behind
@@ -147,12 +197,13 @@ Test with realistic long and adverse content while implementing; do not defer
 all usability work to Sign-off.
 
 **A recommendation is never authority to act.** The advocate decides and the
-advocate acts. NM may prepare, draft, rank and advise; it may not concede,
-settle, file, serve, transmit or bind, and no output may read as though it
-has. Every external or irreversible step passes through an explicit,
-recorded authorisation naming who gave it and for what — the boundary the
-whole senior-counsel relationship rests on, and the one this playbook set
-lost when the guide was split.
+advocate acts. Within the present advisory scope NM prepares, drafts, ranks
+and advises; it must not imply that it has conceded, settled, filed, served,
+transmitted or bound anyone. Authorisation alone cannot enable an unbuilt or
+out-of-scope capability. Any future permitted external or irreversible action
+needs an implemented, verified workflow and recorded authority for the exact
+action, version and recipient. Attempted, confirmed and unknown outcomes must
+remain distinct.
 
 ## 10. Check continuously while building
 
@@ -169,17 +220,22 @@ These checks guide implementation. Test owns the independent evidence verdict.
 
 ## Stop here when
 
-- implementation requires new scope, policy or professional judgment;
+- implementation requires a material unresolved scope, policy or authority
+  decision beyond the agreed contract;
 - a gate would need weakening or bypassing;
 - provenance, authority or a typed distinction would be lost;
 - safe failure or recovery cannot be represented;
 - the mechanism applies at unenumerated sites;
+- the implementation recognises only the incident, overgeneralises distinct
+  legal rules, or requires unexplained changes to previously correct behaviour;
 - a second source of truth is being introduced;
 - a P0 security, confidentiality, grounding, persistence or legal-correctness
   risk appears;
 - the vertical outcome cannot be completed within the authorised scope.
 
-Return to Start or record a blocker. Do not hide it behind partial code.
+Return the affected decision to Start or record a blocker. Preserve useful
+partial implementation and its evidence honestly; continue independent work
+that remains within scope.
 
 ## Close Build
 
@@ -209,6 +265,8 @@ Authoritative state and mechanism:
 Model/external boundary and validation:
 Persistence/concurrency/recovery behaviour:
 Population enumerated and swept:
+Fix only — shared owner / removed point guards / applicability boundaries:
+Fix only — before/after identities / compatibility and derived-state handling:
 Security/privacy/accessibility behaviour:
 Local invariants and negative controls run:
 Known limitations / exclusions / follow-up items:
@@ -228,4 +286,4 @@ proved.
      because two rules were lost when the guide was split and nothing
      noticed. Do not edit by hand except to add a genuinely new rule
      to the registry first. -->
-<!-- BUILD_RULES: BG-002 BG-004 BG-005 BG-006 BG-007 BG-008 BG-009 BG-010 BG-012 BG-013 BG-014 BG-050 BG-051 BG-052 BG-060 BG-062 BG-063 BG-064 BG-065 BG-066 BG-067 BG-068 BG-069 -->
+<!-- BUILD_RULES: BG-002 BG-004 BG-005 BG-006 BG-007 BG-008 BG-009 BG-010 BG-012 BG-013 BG-014 BG-050 BG-051 BG-052 BG-060 BG-062 BG-063 BG-064 BG-065 BG-066 BG-067 BG-068 BG-069 BG-079 -->

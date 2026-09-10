@@ -1,0 +1,989 @@
+{
+  "schema": 1,
+  "provenance": "Narrative design content preserved from the 9 September 2026 end-to-end workbook. These scenario and risk labels are catalogue keys, not work-item IDs, evidence verdicts or additional delivery states. Delivery lives in docs/backlog. This file owns only reader-facing supplementary context.",
+  "working_modes": [
+    [
+      "Take the Brief",
+      "Interact with the user, retrieve permitted matter and legal materials, assess what is known, disputed, missing, contradictory or stale, ask the next useful question or request, persist the answer, and reassess.",
+      "Repeat until the brief is sufficient for the next legal task. Classify remaining gaps as blocking, non-blocking or deferred. New facts, documents or corrections reopen the loop."
+    ],
+    [
+      "Work the File",
+      "Apply the current brief to cause, posture, forum, limitation, deadlines, proof, authorities, theory, adverse case and issue disposition.",
+      "A material factual or evidential gap returns to Take the Brief with a specific question or document request. Resume from the affected point and preserve the audit trail."
+    ],
+    [
+      "Advise",
+      "Give a bounded recommendation with controlling reasons, authority, proof position, risks, alternatives, reservations, proportionality and next steps.",
+      "Changed objectives or facts return to Take the Brief. A legal-analysis gap returns to Work the File. Revise advice only after the affected readiness gate passes again."
+    ]
+  ],
+  "scenarios": [
+    {
+      "id": "JS-01",
+      "user": "First-time advocate",
+      "phases": "A–C, I",
+      "journey": "Register/sign in, recoverable identity, create first matter, submit brief, log out",
+      "outcome": "Correct workspace; matter created once; confidential state cleared",
+      "failure_injection": "Wrong password, recovery, lost opening response",
+      "cadence": "Every release",
+      "work_items": [
+        "BK-31",
+        "BK-32",
+        "BK-33",
+        "BK-40"
+      ]
+    },
+    {
+      "id": "JS-02",
+      "user": "Returning advocate",
+      "phases": "A, C, E",
+      "journey": "Find one of ten similar matters and reopen the worked position",
+      "outcome": "Correct matter, history, chronology, gaps and next action restored",
+      "failure_injection": "Reload, restart, second tab",
+      "cadence": "Every release",
+      "work_items": [
+        "BK-33",
+        "BK-39"
+      ]
+    },
+    {
+      "id": "JS-03",
+      "user": "Emergency intake",
+      "phases": "B",
+      "journey": "Liberty or irreversible deadline before ordinary screens",
+      "outcome": "Recorded narrow protective step; screens remain outstanding",
+      "failure_injection": "Uncertain emergency and service failure",
+      "cadence": "Every release",
+      "work_items": [
+        "BK-78"
+      ]
+    },
+    {
+      "id": "JS-04",
+      "user": "Conflict refusal",
+      "phases": "B",
+      "journey": "Name adverse party matching an existing file",
+      "outcome": "Substance blocked; searched scope and reason visible",
+      "failure_injection": "Unreadable store, alias, party added after clearance",
+      "cadence": "Every release",
+      "work_items": [
+        "BK-34",
+        "BK-48"
+      ]
+    },
+    {
+      "id": "JS-05",
+      "user": "Ambiguous brief",
+      "phases": "C–E",
+      "journey": "Start with incomplete or contradictory facts; retrieve existing material, assess gaps, ask the next useful question and resume after every answer",
+      "outcome": "Every turn advances the brief or explains the block; readiness is task-specific and visible; no premature directive advice",
+      "failure_injection": "Irrelevant retrieval, repeated question, correction, unavailable material, pause and resume",
+      "cadence": "Every legal release",
+      "work_items": [
+        "BK-54",
+        "BK-64",
+        "BK-65"
+      ]
+    },
+    {
+      "id": "JS-06",
+      "user": "Multi-dispute matter",
+      "phases": "C–E",
+      "journey": "One account containing several genuine disputes",
+      "outcome": "Stable threads; no false cross-file contradictions; bounded answer",
+      "failure_injection": "False split, merge, rename",
+      "cadence": "Every legal release",
+      "work_items": [
+        "BK-54",
+        "BK-64"
+      ]
+    },
+    {
+      "id": "JS-07",
+      "user": "Correct legal position",
+      "phases": "D–E",
+      "journey": "Cause, limitation, forum, proof, theory and action",
+      "outcome": "Every component agrees and traces to facts and primary authority",
+      "failure_injection": "Wrong cause, wrong trigger, truncated output",
+      "cadence": "Every legal release",
+      "work_items": [
+        "BK-35",
+        "BK-49",
+        "BK-65"
+      ]
+    },
+    {
+      "id": "JS-08",
+      "user": "Research to file",
+      "phases": "A, D, E",
+      "journey": "Search by court/year/topic and attach verified authority",
+      "outcome": "Canonical citation, binding status and proposition persist in matter",
+      "failure_injection": "Alias, zero result, held-not-found",
+      "cadence": "Every release",
+      "work_items": [
+        "BK-38",
+        "BK-25"
+      ]
+    },
+    {
+      "id": "JS-09",
+      "user": "Lost response and retry",
+      "phases": "C, E",
+      "journey": "Connection dies before, during and after a committed brief-loop turn",
+      "outcome": "No duplicate or lost answer; the recovered loop resumes from the last durable brief state",
+      "failure_injection": "Timeout and concurrent send",
+      "cadence": "Every release",
+      "work_items": [
+        "BK-32",
+        "BK-36"
+      ]
+    },
+    {
+      "id": "JS-10",
+      "user": "Draft and file",
+      "phases": "E–F",
+      "journey": "Approve advice, produce verified draft and control filing",
+      "outcome": "Every averment traces; open gaps remain marked; approval/version recorded",
+      "failure_injection": "Invented fact, wrong version, filing failure",
+      "cadence": "From W5",
+      "work_items": [
+        "BK-56",
+        "BK-57"
+      ]
+    },
+    {
+      "id": "JS-11",
+      "user": "Handover and closure",
+      "phases": "G–H",
+      "journey": "Transfer matter, capture final events and close",
+      "outcome": "Another advocate understands the file; closure blockers enforced; reopen is complete",
+      "failure_injection": "Permission, missing original, open deadline",
+      "cadence": "From W6",
+      "work_items": [
+        "BK-39",
+        "BK-58",
+        "BK-59"
+      ]
+    },
+    {
+      "id": "JS-12",
+      "user": "Session failure and logout",
+      "phases": "A, I",
+      "journey": "Expire session mid-work; fail then confirm logout",
+      "outcome": "Draft handled honestly; server session ends; second user sees nothing",
+      "failure_injection": "401, network failure, refused logout",
+      "cadence": "Every release",
+      "work_items": [
+        "BK-31",
+        "BK-40"
+      ]
+    },
+    {
+      "id": "JS-13",
+      "user": "Progressive brief completion",
+      "phases": "C–E",
+      "journey": "State the purpose, retrieve existing context, assess gaps and contradictions, ask the next useful question or request material, persist the answer, reassess, declare readiness or pause, work the file and advise",
+      "outcome": "No repeated questions; every turn advances or explains why it cannot; blocking and non-blocking gaps remain visible; D and E return to C when facts change",
+      "failure_injection": "Irrelevant retrieval, contradictory document, correction, missing source, timeout, user pause and resume",
+      "cadence": "Every legal release",
+      "work_items": [
+        "BK-54",
+        "BK-64"
+      ]
+    },
+    {
+      "id": "JS-14",
+      "user": "Role-correct senior-counsel instruction",
+      "phases": "A–F",
+      "journey": "Junior or AOR briefs designated Senior Counsel; client later attempts direct instruction and an unauthorised concession",
+      "outcome": "Correct professional channel remains authoritative; direct or excess instruction is refused; advice and act permissions differ by role",
+      "failure_injection": "Role switch, direct client request, missing junior/AOR, expired authority",
+      "cadence": "Every professional-role release",
+      "work_items": [
+        "BK-62",
+        "BK-63"
+      ]
+    },
+    {
+      "id": "JS-15",
+      "user": "Voice-first intake",
+      "phases": "C–E",
+      "journey": "User speaks the initial account, pauses, corrects a name and date, answers follow-ups by voice and requests a provisional view",
+      "outcome": "No forced retyping; confirmed transcript and corrections persist; uncertainty remains visible; next question changes; output is labelled provisional",
+      "failure_injection": "Noise, accent, language switch, overlap, microphone denial, disconnect and retry",
+      "cadence": "Every multimodal release",
+      "work_items": [
+        "BK-54",
+        "BK-69",
+        "BK-79"
+      ]
+    },
+    {
+      "id": "JS-16",
+      "user": "Mixed-media evidence intake",
+      "phases": "C–E",
+      "journey": "Upload PDF, image, office document, audio and video into one matter; extract chronology and evidence links",
+      "outcome": "Originals remain immutable; every extracted proposition links to page or timecode; duplicates are detected; unsafe/unsupported material is quarantined",
+      "failure_injection": "Corrupt, encrypted, oversized, malicious and duplicate files; poor OCR; missing codec; cancellation and resume",
+      "cadence": "Every multimodal release",
+      "work_items": [
+        "BK-54",
+        "BK-64",
+        "BK-69",
+        "BK-79"
+      ]
+    },
+    {
+      "id": "JS-17",
+      "user": "Conflicting sources and credibility",
+      "phases": "C–E",
+      "journey": "Client account, document and recorded statement conflict on an outcome-determinative fact",
+      "outcome": "NM keeps each source distinct, exposes the contradiction, asks the highest-value question and revises only dependent conclusions",
+      "failure_injection": "Low-confidence transcript, edited media metadata and later correction",
+      "cadence": "Every legal release",
+      "work_items": [
+        "BK-64",
+        "BK-65"
+      ]
+    },
+    {
+      "id": "JS-18",
+      "user": "Provisional to considered advice",
+      "phases": "C–E",
+      "journey": "Initial gaps permit orientation only; later evidence closes the blocking gaps and changes the recommendation",
+      "outcome": "Advice maturity changes explicitly; former view remains auditable; assumptions and changed reasons are visible",
+      "failure_injection": "Late adverse authority, corrected date and missing document supplied",
+      "cadence": "Every advice release",
+      "work_items": [
+        "BK-37",
+        "BK-55",
+        "BK-67"
+      ]
+    },
+    {
+      "id": "JS-19",
+      "user": "Remedy and strategy choice",
+      "phases": "D–F",
+      "journey": "Two matters have similar legal merits but different urgency, assets, cost, delay, enforceability and settlement leverage",
+      "outcome": "NM recommends different proportionate courses and explains the practical drivers without presenting prediction as fact",
+      "failure_injection": "Relief unavailable, defendant asset-poor, settlement authority absent and urgent interim need",
+      "cadence": "Every legal release",
+      "work_items": [
+        "BK-55",
+        "BK-66",
+        "BK-70"
+      ]
+    },
+    {
+      "id": "JS-20",
+      "user": "Authority-controlled action",
+      "phases": "E–H",
+      "journey": "Counsel recommends action; client modifies authority; drafter prepares two versions; filing fails once",
+      "outcome": "Only approved role/version proceeds; concession and settlement limits hold; failed filing remains open; receipt and later event update the matter",
+      "failure_injection": "Unauthorised instruction, wrong version, expired authority, network failure and duplicate retry",
+      "cadence": "From W5",
+      "work_items": [
+        "BK-56",
+        "BK-57",
+        "BK-62",
+        "BK-63"
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "id": "R-01",
+      "risk": "A written journey contract is mistaken for implemented or browser-proven behaviour",
+      "likelihood": "High",
+      "impact": "High",
+      "trigger": "A full-contract count is used as a completion or release verdict",
+      "mitigation": "Keep intended contracts separate from implementation and current served-path evidence",
+      "owner": "Product + counsel",
+      "work_items": [
+        "BK-77",
+        "BK-80"
+      ]
+    },
+    {
+      "id": "R-02",
+      "risk": "P0 legal and persistence defects remain in active work",
+      "likelihood": "High",
+      "impact": "Very high",
+      "trigger": "Advice can be inconsistent, duplicated, lost or admitted unsafely",
+      "mitigation": "W0–W3 precede feature expansion; P0 blocks release",
+      "owner": "Engineering + product",
+      "work_items": [
+        "BK-35",
+        "BK-36",
+        "BK-42"
+      ]
+    },
+    {
+      "id": "R-03",
+      "risk": "Advisory delivery is mistaken for a complete Act, Carry and Close lifecycle",
+      "likelihood": "Certain",
+      "impact": "High",
+      "trigger": "Advisory capability is mistaken for a complete matter lifecycle",
+      "mitigation": "Keep W5–W6 explicit and do not market full lifecycle before their gates",
+      "owner": "Product",
+      "work_items": [
+        "BK-56",
+        "BK-57",
+        "BK-58",
+        "BK-59"
+      ]
+    },
+    {
+      "id": "R-04",
+      "risk": "Real-model legal quality is not established by scripted journeys",
+      "likelihood": "High",
+      "impact": "Very high",
+      "trigger": "Browser suite passes while cause, authority or advice quality fails",
+      "mitigation": "G4 real-model evaluation plus G5 counsel review",
+      "owner": "Legal/product",
+      "work_items": [
+        "BK-50",
+        "BK-67"
+      ]
+    },
+    {
+      "id": "R-05",
+      "risk": "Historical verification is stale",
+      "likelihood": "High",
+      "impact": "High",
+      "trigger": "A previously closed row is trusted without live proof",
+      "mitigation": "Retire stale evidence criterion by criterion; stale never reads as passing",
+      "owner": "Engineering",
+      "work_items": [
+        "BK-80"
+      ]
+    },
+    {
+      "id": "R-06",
+      "risk": "Corpus coverage or binding-law gaps distort advice",
+      "likelihood": "High",
+      "impact": "Very high",
+      "trigger": "Held/not-held state or controlling authority is wrong",
+      "mitigation": "Manifest, ingest gates, coverage disclosure and launch-area limits",
+      "owner": "Knowledge owner",
+      "work_items": [
+        "BK-24",
+        "BK-25",
+        "BK-29"
+      ]
+    },
+    {
+      "id": "R-07",
+      "risk": "Dependency or wave order becomes circular",
+      "likelihood": "Medium",
+      "impact": "High",
+      "trigger": "A work package cannot actually reach its exit gate",
+      "mitigation": "Graph lint and explicit hard versus sequencing dependencies",
+      "owner": "Engineering",
+      "work_items": [
+        "BK-71",
+        "BK-80"
+      ]
+    },
+    {
+      "id": "R-08",
+      "risk": "The journey suite produces false green results",
+      "likelihood": "Medium",
+      "impact": "Very high",
+      "trigger": "Missing phase, conditional xfail or vacuous assertion is reported as pass",
+      "mitigation": "Expected manifest, no conditional xfail, and named negative controls",
+      "owner": "Engineering",
+      "work_items": [
+        "BK-51",
+        "BK-52",
+        "BK-80"
+      ]
+    },
+    {
+      "id": "R-09",
+      "risk": "Capacity is committed before current gaps are estimated",
+      "likelihood": "High",
+      "impact": "Medium",
+      "trigger": "Dates become fiction and safety work is squeezed",
+      "mitigation": "Use relative size now; estimate W1–W7 only after W0 inventory",
+      "owner": "Product owner",
+      "work_items": [
+        "BK-77"
+      ]
+    },
+    {
+      "id": "R-10",
+      "risk": "Production behaviour invalidates pre-release evidence",
+      "likelihood": "Medium",
+      "impact": "High",
+      "trigger": "Latency, model or real user corrections diverge from tests",
+      "mitigation": "AS-20 telemetry, evidence invalidation and controlled rollout",
+      "owner": "Product + engineering",
+      "work_items": [
+        "BK-41",
+        "BK-42"
+      ]
+    },
+    {
+      "id": "R-11",
+      "risk": "Interactive briefing is implemented as disconnected features rather than one recoverable user loop",
+      "likelihood": "High",
+      "impact": "Very high",
+      "trigger": "Phase C is implemented as isolated capture fields or document intake, without retrieval discipline, next-question logic, readiness, pause/resume and D/E return transitions",
+      "mitigation": "Before W2 build, add or expand the authoritative Phase C item and contract; map C1–C7 plus D/E return transitions to atomic criteria and multi-turn evidence",
+      "owner": "Product + counsel + engineering",
+      "work_items": [
+        "BK-54",
+        "BK-79"
+      ]
+    },
+    {
+      "id": "R-12",
+      "risk": "A plan or assurance check can report green after parsing no real items",
+      "likelihood": "Medium",
+      "impact": "Very high",
+      "trigger": "A clean verdict omits its denominator, reports zero checked rows, or silently drops values such as W3 because the parser expected 3",
+      "mitigation": "Every control reports expected, parsed and evaluated counts; zero or mismatch fails; maintain a negative fixture that produces a reverse-wave violation",
+      "owner": "Engineering",
+      "work_items": [
+        "BK-71",
+        "BK-72"
+      ]
+    },
+    {
+      "id": "R-13",
+      "risk": "Professional role or authority is misidentified",
+      "likelihood": "High",
+      "impact": "Very high",
+      "trigger": "NM accepts direct, delegated, settlement, concession, drafting or filing instructions from a role that cannot give them",
+      "mitigation": "Role matrix, instruction chain, separate authority records and role-specific refusal scenarios",
+      "owner": "Product + counsel + engineering",
+      "work_items": [
+        "BK-62",
+        "BK-63"
+      ]
+    },
+    {
+      "id": "R-14",
+      "risk": "Transcript or OCR uncertainty becomes a legal fact",
+      "likelihood": "High",
+      "impact": "Very high",
+      "trigger": "Low-confidence speech, speaker attribution, handwriting or image extraction enters chronology or advice without confirmation",
+      "mitigation": "Immutable original, confidence and locator, confirmation workflow, typed proposition state and contradiction handling",
+      "owner": "Product + engineering + counsel",
+      "work_items": [
+        "BK-64",
+        "BK-79"
+      ]
+    },
+    {
+      "id": "R-15",
+      "risk": "Multimodal intake expands confidentiality and security exposure",
+      "likelihood": "High",
+      "impact": "Very high",
+      "trigger": "Malicious, privileged, third-party or highly sensitive media reaches an unauthorised processor, log, user or matter",
+      "mitigation": "Purpose/authority notice, quarantine, malware scanning, least privilege, processor control, encryption, retention, deletion and audit",
+      "owner": "Security + privacy owner",
+      "work_items": [
+        "BK-69",
+        "BK-79"
+      ]
+    },
+    {
+      "id": "R-16",
+      "risk": "A preliminary view is relied on as considered advice",
+      "likelihood": "High",
+      "impact": "Very high",
+      "trigger": "An incomplete brief produces polished directive language without a visible maturity label and assumptions",
+      "mitigation": "AM-01–AM-05 contracts, readiness gate, invalidation and counsel calibration",
+      "owner": "Product + legal",
+      "work_items": [
+        "BK-37",
+        "BK-55",
+        "BK-67"
+      ]
+    },
+    {
+      "id": "R-17",
+      "risk": "The legal answer is correct but the remedy is useless",
+      "likelihood": "Medium",
+      "impact": "Very high",
+      "trigger": "Advice ignores availability, timing, enforcement, assets, cost, delay or practical recovery",
+      "mitigation": "Remedy/enforcement map and scenario pairs with equal merits but different practical constraints",
+      "owner": "Legal/product",
+      "work_items": [
+        "BK-66",
+        "BK-70"
+      ]
+    },
+    {
+      "id": "R-18",
+      "risk": "The briefing loop feels like an interrogation",
+      "likelihood": "High",
+      "impact": "High",
+      "trigger": "NM asks fixed, repeated or low-value questions, fails to explain purpose or requires retyping uploaded/spoken information",
+      "mitigation": "Question-ranking policy, retrieval-first rule, voice/file intake, user pause and counsel/user interaction review",
+      "owner": "Product",
+      "work_items": [
+        "BK-54",
+        "BK-68"
+      ]
+    },
+    {
+      "id": "R-19",
+      "risk": "A correction causes either stale advice or unnecessary rework",
+      "likelihood": "High",
+      "impact": "High",
+      "trigger": "Dependent conclusions stay current after a changed predicate, or the whole matter is discarded and rebuilt",
+      "mitigation": "Dependency graph, selective invalidation, versioned recomputation and correction journey",
+      "owner": "Engineering + legal/product",
+      "work_items": [
+        "BK-64",
+        "BK-65"
+      ]
+    }
+  ],
+  "review_gates": [
+    {
+      "id": "G0",
+      "decision": "Plan integrity",
+      "when": "Every change",
+      "inputs": "Status, step, feature, plan, professional and dependency schemas",
+      "rule": "Zero duplicate, orphan, invalid-state, cycle, reverse-wave or late-stage-link errors; exact populations for items, features, steps, PA, EW, AM, roles, GC and waves",
+      "evidence": "Machine-readable lint, population and wave/dependency report",
+      "owner": "Engineering",
+      "failure": "Affected claims cannot pass sign-off until the plan defect is resolved. Unrelated diagnostic work may continue within its authority.",
+      "work_items": [
+        "BK-71",
+        "BK-80"
+      ]
+    },
+    {
+      "id": "G1",
+      "decision": "Fast correctness",
+      "when": "Every applicable change",
+      "inputs": "Domain tests, static checks and negative controls",
+      "rule": "All required Class-A proofs pass; missing and skipped required claims remain unproved. The approved evidence scope names any inapplicable checks.",
+      "evidence": "Test and mutation report",
+      "owner": "Engineering",
+      "failure": "Affected integration claims cannot pass sign-off while required Class-A evidence is missing or failing.",
+      "work_items": [
+        "BK-80"
+      ]
+    },
+    {
+      "id": "G2",
+      "decision": "Integration and persistence",
+      "when": "Every change affecting API/store",
+      "inputs": "API, composition root, encryption, idempotency and concurrency",
+      "rule": "Commit-before-emit and recovery invariants pass",
+      "evidence": "Integration evidence",
+      "owner": "Engineering",
+      "failure": "Affected served-path conformance remains unproved. Browser diagnostics may continue; they cannot erase a failed integration claim.",
+      "work_items": [
+        "BK-35",
+        "BK-36"
+      ]
+    },
+    {
+      "id": "G3",
+      "decision": "Journey phase",
+      "when": "Slice close",
+      "inputs": "Role-specific success, refusal, recovery, return-loop and multimodal scenarios in the served browser",
+      "rule": "Every required scenario passes with artifacts; Phase C proves voice and mixed-media intake, source-linked derivatives, multi-question loops, correction, cancellation, pause and resume; unauthorised role paths refuse safely.",
+      "evidence": "Journey JSON and artifacts",
+      "owner": "Engineering + product",
+      "failure": "FAIL / NOT RUN / missing phase blocks closure",
+      "work_items": [
+        "BK-51",
+        "BK-52",
+        "BK-80"
+      ]
+    },
+    {
+      "id": "G4",
+      "decision": "Legal quality",
+      "when": "Legal, model, prompt or corpus change",
+      "inputs": "Golden matters, proposition/source model, legal dependency graph, grounding, authority, remedy and real-model evaluation",
+      "rule": "Threshold issues, evidence status, legal hierarchy, adverse case, remedy, enforceability and practical options pass approved thresholds; versioned readiness blocks immature analysis or advice.",
+      "evidence": "Evaluation report",
+      "owner": "Legal/product",
+      "failure": "Threshold miss or stale evaluation blocks release",
+      "work_items": [
+        "BK-50",
+        "BK-67"
+      ]
+    },
+    {
+      "id": "G5",
+      "decision": "Counsel acceptance",
+      "when": "Counsel-facing feature close",
+      "inputs": "Advocate Standard, Roles & Authority matrix, advice maturity, brief-loop record and representative matters",
+      "rule": "Named senior advocates sign every applicable PA criterion for question quality, judgment, source discipline, accuracy, candour, remedy, strategy, communication and usability; material reservations are filed and block conformance.",
+      "evidence": "Review record",
+      "owner": "Counsel reviewer",
+      "failure": "Absent or failed review blocks feature conformance",
+      "work_items": [
+        "BK-67"
+      ]
+    },
+    {
+      "id": "G6",
+      "decision": "Production fitness",
+      "when": "Release candidate",
+      "inputs": "Security, privacy, role isolation, multimodal processing, accessibility, performance and recovery drills",
+      "rule": "Every mandatory threshold passes, including media quarantine, processor boundaries, consent/authority, retention and deletion, source integrity, shared-device clearance and role-scoped access.",
+      "evidence": "Assurance pack",
+      "owner": "Release owner",
+      "failure": "Any P0 risk or missing drill blocks release",
+      "work_items": [
+        "BK-42",
+        "BK-69"
+      ]
+    },
+    {
+      "id": "G7",
+      "decision": "Release decision",
+      "when": "Every deployment",
+      "inputs": "G0–G6, open risks, exceptions and rollback",
+      "rule": "All evidence current; exception has owner, reason, compensation and expiry",
+      "evidence": "Signed conformance summary",
+      "owner": "Release owner",
+      "failure": "Only PASS releases",
+      "work_items": [
+        "BK-42",
+        "BK-80"
+      ]
+    },
+    {
+      "id": "G8",
+      "decision": "Production watch",
+      "when": "After deployment",
+      "inputs": "Journey telemetry, incidents and user corrections",
+      "rule": "No unowned material signal; affected evidence is marked stale and work is reopened",
+      "evidence": "Operational review",
+      "owner": "Product + engineering",
+      "failure": "Material untriaged signal stops further rollout",
+      "work_items": [
+        "BK-41",
+        "BK-42"
+      ]
+    }
+  ],
+  "external_references": [
+    {
+      "source": "Advocates Act, 1961",
+      "scope": "Senior Advocate classification and prescribed practice restrictions under section 16",
+      "authority": "India Code",
+      "url": "https://upload.indiacode.nic.in/showfile?actid=AC_CEN_3_46_00001_196125_1517807320172&filename=a1961-25.pdf&type=actfile"
+    },
+    {
+      "source": "Bar of Indian Lawyers v. National Institute of Communicable Diseases, 2024 INSC 410",
+      "scope": "Duty to court, peers and client; advocate exercises independent judgment and is not merely a mouthpiece",
+      "authority": "Supreme Court of India",
+      "url": "https://api.sci.gov.in/supremecourt/2007/27751/27751_2007_14_1501_53242_Judgement_14-May-2024.pdf"
+    },
+    {
+      "source": "Supreme Court judgment dated 13 May 2025",
+      "scope": "Designated Senior Advocate restrictions, including instruction and appearance structure",
+      "authority": "Supreme Court of India",
+      "url": "https://api.sci.gov.in/supremecourt/2024/12735/12735_2024_4_1501_61744_Judgement_13-May-2025.pdf"
+    },
+    {
+      "source": "Supreme Court judgment dated 5 March 2025",
+      "scope": "Client autonomy, express instructions and limits on advocate concessions and authority",
+      "authority": "Supreme Court of India",
+      "url": "https://api.sci.gov.in/supremecourt/2021/14322/14322_2021_16_1501_60009_Judgement_05-Mar-2025.pdf"
+    },
+    {
+      "source": "Supreme Court advocate classifications",
+      "scope": "Senior Advocate, Advocate-on-Record and other advocate roles",
+      "authority": "Supreme Court of India",
+      "url": "https://www.sci.gov.in/constitution/"
+    },
+    {
+      "source": "Digital Personal Data Protection Act, 2023",
+      "scope": "Lawful digital-personal-data processing and data-principal rights",
+      "authority": "India Code",
+      "url": "https://www.indiacode.nic.in/indiacode/handle/123456789/22037?view_type=browse"
+    },
+    {
+      "source": "Digital Personal Data Protection Rules, 2025",
+      "scope": "Clear notice, processing purposes and phased operational requirements",
+      "authority": "Ministry of Electronics and Information Technology",
+      "url": "https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf"
+    }
+  ],
+  "standards_context": {
+    "PA-01": {
+      "applies_to": "All modes",
+      "product_behaviour": "Tag every material proposition to its source and status. Use typed uncertainty, correction history and fail-safe handling of incomplete model output.",
+      "suggested_proof": "Adversarial fixtures for invented facts and authorities; correction and truncation tests; senior-advocate review."
+    },
+    "PA-02": {
+      "applies_to": "Open, Work, Advise, Act",
+      "product_behaviour": "Maintain professional-admission gates, an express disagreement path and a refusal that explains the safe next step.",
+      "suggested_proof": "Representative matters with pressure to omit adverse law, overstate evidence or make an unauthorised concession."
+    },
+    "PA-03": {
+      "applies_to": "All modes",
+      "product_behaviour": "Role-aware permissions, instruction chain, scope, decision rights, approval matrix and jurisdiction-specific restrictions.",
+      "suggested_proof": "Role-matrix tests and browser journeys for permitted, refused and delegated acts."
+    },
+    "PA-04": {
+      "applies_to": "All modes",
+      "product_behaviour": "Matter isolation, purpose-limited retrieval, encryption, redaction, retention, access audit and clear handling notice for every media path.",
+      "suggested_proof": "Isolation, privilege, export, logout, deletion and processor-boundary tests."
+    },
+    "PA-05": {
+      "applies_to": "Open through Close",
+      "product_behaviour": "Competence screen, deadline register, readiness gates, ownership, progress, escalation and explicit completion criteria.",
+      "suggested_proof": "Urgency, unsupported-domain, degraded-service and handover scenarios."
+    },
+    "PA-06": {
+      "applies_to": "Take the Brief",
+      "product_behaviour": "Voice input, audio/video and file intake; transcript or OCR preview; speaker, language, timecode and confidence; confirmation before material reliance.",
+      "suggested_proof": "Voice-first and mixed-media journeys with noise, accents, overlap, language switching, corrections and interrupted upload."
+    },
+    "PA-07": {
+      "applies_to": "Take the Brief, Advise",
+      "product_behaviour": "Plain-language interaction, accessible controls, neutral framing, user pause and escalation to a human where appropriate.",
+      "suggested_proof": "Counsel and user review across distressed, urgent and accessibility scenarios."
+    },
+    "PA-08": {
+      "applies_to": "Advise, Act",
+      "product_behaviour": "Layered outputs, concise first view, inspectable support, defined legal terms and explicit next action.",
+      "suggested_proof": "Counsel readability rubric, comprehension checks and responsive-browser review."
+    },
+    "PA-09": {
+      "applies_to": "Take the Brief",
+      "product_behaviour": "Rank gaps by expected decision impact, urgency, answerability, availability and redundancy. Ask one or a small coherent group.",
+      "suggested_proof": "Next-question ranking set; counterexamples for repeated, low-value and premature questions."
+    },
+    "PA-10": {
+      "applies_to": "All modes",
+      "product_behaviour": "Versioned matter state, selective invalidation, idempotency, handover, ownership and recovery.",
+      "suggested_proof": "Restart, concurrent-use, correction, handover and reopen journeys."
+    },
+    "PA-11": {
+      "applies_to": "Work the File",
+      "product_behaviour": "Dependency-aware issue map with threshold, contingent and downstream questions.",
+      "suggested_proof": "Golden matters with omitted, false and misordered issues."
+    },
+    "PA-12": {
+      "applies_to": "Take the Brief, Work the File",
+      "product_behaviour": "Typed proposition model with source locator, provenance, reliability, dispute status, privilege, admissibility, weight, burden and materiality.",
+      "suggested_proof": "Cross-source contradiction set, media-locator checks and evidence-to-element review."
+    },
+    "PA-13": {
+      "applies_to": "Work the File, Advise",
+      "product_behaviour": "Deterministic law first, targeted retrieval, full-text verification, canonical citation and coverage disclosure.",
+      "suggested_proof": "Authority recall/precision set, governing-date tests and counsel review."
+    },
+    "PA-14": {
+      "applies_to": "Work the File",
+      "product_behaviour": "Alternative legal hypotheses, side-aware adverse pass, cross-thread exposure and explicit none-found result.",
+      "suggested_proof": "Balanced golden matters and mutation of side, cause and adverse facts."
+    },
+    "PA-15": {
+      "applies_to": "Work the File, Advise",
+      "product_behaviour": "Claim-level support state, advice maturity label, explicit reservations and refusal or provisional view where readiness is absent.",
+      "suggested_proof": "Counsel calibration set comparing stated confidence with support and outcome."
+    },
+    "PA-16": {
+      "applies_to": "Work the File, Advise",
+      "product_behaviour": "Remedy map covering interim and final relief, prerequisites, enforcement route, recovery assets and practical constraints.",
+      "suggested_proof": "Matters where merits are strong but relief or enforcement fails."
+    },
+    "PA-17": {
+      "applies_to": "Advise",
+      "product_behaviour": "Comparable options with time, cost, benefit, risk and do-nothing consequences; assumptions remain visible.",
+      "suggested_proof": "Low/high-value and urgent/non-urgent variants reviewed by counsel."
+    },
+    "PA-18": {
+      "applies_to": "Work, Advise, Act",
+      "product_behaviour": "Strategy alternatives, leverage and dependency map, settlement range/authority, decision points and stated basis for predictions.",
+      "suggested_proof": "Scenario portfolio with equivalent merits but different practical constraints."
+    },
+    "PA-19": {
+      "applies_to": "Work, Advise, Act",
+      "product_behaviour": "Theory, issue disposition, authority bundle, proof map, argument structure and hearing-ready locators.",
+      "suggested_proof": "Moot-style counsel review and record-location drills."
+    },
+    "PA-20": {
+      "applies_to": "Act, Carry, Close",
+      "product_behaviour": "Recorded authority, approvals, version control, receipts, deadline state, rollback/recovery, event capture and closure blockers.",
+      "suggested_proof": "Unauthorised-action, wrong-version, filing-failure and closure scenarios."
+    }
+  },
+  "workflow_context": {
+    "EW-01": {
+      "inputs": "Identity, engagement, role, instruction chain, objective, authority, deadline and requested output.",
+      "behaviour": "Confirm the commission in plain language. Record scope, authority and role restrictions before substance.",
+      "return_rule": "Change of user, role, scope, objective or authority returns here before affected work continues."
+    },
+    "EW-02": {
+      "inputs": "Urgency, liberty, limitation, preservation, conflict, competence, privilege and capacity signals.",
+      "behaviour": "Run the narrow emergency route and professional screens. State what may be done now and what remains blocked.",
+      "return_rule": "Any new party, scope, urgency or privilege fact reruns the affected gate."
+    },
+    "EW-03": {
+      "inputs": "Typed text, live voice or dictation, audio, video, images, PDF, office documents, email exports, permitted links and existing matter sources.",
+      "behaviour": "Scan and quarantine; preserve immutable original and hash; transcribe or OCR with speaker, language, timecode/page and confidence; deduplicate; preview; let the user correct; link derivatives to source.",
+      "return_rule": "Unsupported, encrypted, corrupt, oversized, unconsented or unsafe material is quarantined or refused. Upload and processing can pause, cancel and resume."
+    },
+    "EW-04": {
+      "inputs": "Narrative, transcript, documents, prior history and stated objectives.",
+      "behaviour": "Reflect the account; classify instruction, allegation, admission, document, testimony, inference and assumption; mark dispute, source, privilege and uncertainty.",
+      "return_rule": "Contradiction or correction returns to the affected proposition and invalidates only dependent work."
+    },
+    "EW-05": {
+      "inputs": "Commission, current facts, posture, urgent risks and available evidence.",
+      "behaviour": "Generate plausible causes, defences, forums, limitation triggers, remedies and proof problems; identify the facts that discriminate among them.",
+      "return_rule": "Do not advance a hypothesis as advice. New facts can add, remove or reprioritise hypotheses."
+    },
+    "EW-06": {
+      "inputs": "Ranked gaps, hypotheses, available sources, urgency and user burden.",
+      "behaviour": "Rank gaps by decision impact, urgency, answerability, source availability and redundancy. Ask one question or a small coherent group and explain why it matters.",
+      "return_rule": "Do not ask what is already known or retrievable. Pause where the answer cannot presently be supplied."
+    },
+    "EW-07": {
+      "inputs": "Current gaps, their materiality, user objective, task type and time constraint.",
+      "behaviour": "Classify gaps as blocking, non-blocking or deferred. State what NM can safely do now and which advice maturity is permitted.",
+      "return_rule": "A blocking gap keeps the affected task in the brief loop; a user may pause with a truthful open-state record."
+    },
+    "EW-08": {
+      "inputs": "Versioned ready brief, primary law, procedural data and evidence model.",
+      "behaviour": "Work cause, forum, jurisdiction, limitation, preconditions, fees, elements, burden, proof, research, theory and issue disposition as a dependency graph.",
+      "return_rule": "A material factual gap returns to EW-03–EW-06. A legal dependency change invalidates only downstream conclusions."
+    },
+    "EW-09": {
+      "inputs": "Legal position, adverse facts, opponent case, remedies, enforcement, cost, time, leverage and settlement authority.",
+      "behaviour": "Run alternative characterisations and the adverse case; assess interim/final relief, enforcement, delay, cost, disruption, recovery and settlement leverage.",
+      "return_rule": "Unsupported prediction is labelled judgment or excluded. Dispositive new information returns to the affected earlier state."
+    },
+    "EW-10": {
+      "inputs": "Commission, readiness, legal position, proof, authority, options and practical assessment.",
+      "behaviour": "Lead with the position. Separate law, fact, evidence, judgment, uncertainty, alternatives and next step. Apply the correct maturity label.",
+      "return_rule": "Changed objective or fact returns to the brief. A legal gap returns to Work the File before advice is revised."
+    },
+    "EW-11": {
+      "inputs": "Advice, alternatives, reservations, decision-maker and applicable role matrix.",
+      "behaviour": "Record accept, modify, reject or defer; capture settlement, concession, drafting, filing and communication authority separately.",
+      "return_rule": "No action crosses its authority boundary. A changed instruction supersedes without erasing the former record."
+    },
+    "EW-12": {
+      "inputs": "Approved decision, version, owner, deadline, recipients and prerequisites.",
+      "behaviour": "Negotiate, prepare or settle drafts, verify, file or serve through the authorised role; capture receipts, failures and recovery.",
+      "return_rule": "Wrong version, missing approval, transmission failure or changed prerequisite blocks success and reopens the affected task."
+    },
+    "EW-13": {
+      "inputs": "Events, deadlines, new parties, legal updates, instructions, action receipts and retention rules.",
+      "behaviour": "Refresh conflicts and affected analysis, notify proportionately, hand over, record events, enforce closure blockers and support controlled reopening.",
+      "return_rule": "Any material event invalidates affected proof and returns to the appropriate working state."
+    }
+  },
+  "roles_context": {
+    "ROLE-01": {
+      "interaction": "Provides facts, objectives, constraints and decisions through an authorised channel.",
+      "approval": "Identity, authority to instruct and matter relationship must be recorded.",
+      "controls": "Identity, authority, consent, decision log and matter-scoped access.",
+      "reference": "Client autonomy and authority: Supreme Court judgment dated 5 March 2025."
+    },
+    "ROLE-02": {
+      "interaction": "Receives client instructions subject to engagement and local professional rules; prepares the brief for arguing or senior counsel.",
+      "approval": "Conflict, competence, engagement and capacity gates; client approval for decisions reserved to the client.",
+      "controls": "Instruction chain, brief version, source map, approval and handover record.",
+      "reference": "Configured by jurisdiction and engagement."
+    },
+    "ROLE-03": {
+      "interaction": "Receives the matter and authority required to act in the Supreme Court; coordinates with arguing or Senior Counsel.",
+      "approval": "Client authority, court rules, approved version and counsel handoff.",
+      "controls": "AOR role, filing approval, version, receipt and event log.",
+      "reference": "Supreme Court advocate classifications and e-filing rules."
+    },
+    "ROLE-04": {
+      "interaction": "For a designated Senior Advocate in India, receives the brief through the appropriate AOR or junior rather than directly accepting court instructions from the client.",
+      "approval": "Instruction chain, junior or AOR association, scope, authorities, concessions and settlement authority.",
+      "controls": "Role-restricted workspace, counsel brief, conference record, settlement/concession gate and handback to instructing counsel.",
+      "reference": "Advocates Act section 16(3); Supreme Court judgment dated 13 May 2025; Supreme Court advocate classifications."
+    },
+    "ROLE-05": {
+      "interaction": "Receives bounded research or file-preparation tasks from an authorised advocate.",
+      "approval": "Named task, permitted sources, matter access and advocate review.",
+      "controls": "Task scope, provenance, reviewer and promotion-to-file approval.",
+      "reference": "Internal role; configure to engagement and professional supervision."
+    },
+    "ROLE-06": {
+      "interaction": "Receives an approved action package from the authorised professional.",
+      "approval": "Approved version, recipient, deadline, fee and filing/serving authority.",
+      "controls": "Least-privilege access, immutable package, confirmation and failure/retry state.",
+      "reference": "Operational role; court and tribunal rules control."
+    },
+    "ROLE-07": {
+      "interaction": "Receives administrative authority for accounts, workspaces, retention and support.",
+      "approval": "Separate administrative authorisation and necessity.",
+      "controls": "Segregated privileges, just-in-time access, redaction, audit, expiry and review.",
+      "reference": "Privacy and security design; DPDP requirements apply where personal data is processed."
+    }
+  },
+  "gaps_context": {
+    "GC-01": {
+      "why": "Without a precise decision, scope, deadline and objective, even correct analysis may answer the wrong question.",
+      "scope": "Open; Take Brief"
+    },
+    "GC-02": {
+      "why": "Direct intake, drafting, filing and acting rules differ across client, junior, AOR, senior counsel and operations roles.",
+      "scope": "All phases"
+    },
+    "GC-03": {
+      "why": "Fixed intake questions waste time and can miss the fact that decides cause, limitation, forum, remedy or strategy.",
+      "scope": "Take Brief; Work"
+    },
+    "GC-04": {
+      "why": "Users should not have to type long narratives or manually transcribe evidence.",
+      "scope": "Take Brief"
+    },
+    "GC-05": {
+      "why": "An allegation, transcript, document, inference and admission cannot carry the same legal weight.",
+      "scope": "Take Brief; Work"
+    },
+    "GC-06": {
+      "why": "Cause, forum, limitation, evidence, remedy and theory change one another.",
+      "scope": "Work the File"
+    },
+    "GC-07": {
+      "why": "A strong legal claim may still produce no useful or timely recovery.",
+      "scope": "Work; Advise"
+    },
+    "GC-08": {
+      "why": "A preliminary view can be mistaken for a concluded opinion or authority to act.",
+      "scope": "Advise"
+    },
+    "GC-09": {
+      "why": "Expert advice must account for cost, delay, recovery, disruption, leverage and client appetite.",
+      "scope": "Work; Advise; Act"
+    },
+    "GC-10": {
+      "why": "Users judge reliability through listening, memory, clarity, candour, control and follow-through.",
+      "scope": "All user-facing modes"
+    },
+    "GC-11": {
+      "why": "An advocate must not concede, settle, file or communicate beyond authority.",
+      "scope": "Advise; Act"
+    },
+    "GC-12": {
+      "why": "Technical correctness cannot prove judgment, usefulness, candour or professional trust.",
+      "scope": "Work through Act"
+    },
+    "GC-13": {
+      "why": "An expert needs rapid orientation and control, not a visible internal checklist.",
+      "scope": "All user-facing phases"
+    },
+    "GC-14": {
+      "why": "Audio/video may contain third parties, privileged material, biometrics, malware, hidden content and highly sensitive personal data.",
+      "scope": "Take Brief; Carry; Leave"
+    }
+  }
+}

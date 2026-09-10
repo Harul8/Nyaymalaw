@@ -1,6 +1,376 @@
 {
  "schema": 1,
  "note": "Authoritative delivery-wave assignment. Every status item appears exactly once; tools/backlog.py refuses missing, duplicate, unknown and reverse-wave dependency entries.",
+ "contract_note": "Wave and release-profile objects define intended outcomes. Existing lint enforces item_waves and declared dependency order, not every semantic field or profile rule below. Until BK-80 is complete, apply a recorded manual release review; these objects confer no deployment approval.",
+ "wave_contracts": [
+  {
+   "id": "W0",
+   "name": "Trusted foundations",
+   "goal": "Make identity, storage, test controls and evidence claims dependable before they support privileged work.",
+   "entry_conditions": [
+    "Existing product and corpus scope are inventoried; control populations and known limitations are explicit."
+   ],
+   "exit_conditions": [
+    "Assigned foundation contracts pass their required controls; unresolved end-to-end integration is owned by later registered work.",
+    "BK-80 is complete before any automatically derived production claim relies on the new profile or evidence-validity rules."
+   ],
+   "scope": "Infrastructure and evidence foundations; synthetic or specifically authorised local use only.",
+   "release_claim": "Foundation conformance; no permission for a client pilot or production deployment.",
+   "control": "manual_until_BK-80"
+  },
+  {
+   "id": "W1",
+   "name": "Admission and commission",
+   "goal": "Establish who instructs, what is being asked and whether the work may proceed.",
+   "entry_conditions": [
+    "Relevant W0 foundations are proven; identity and workspace boundaries are established."
+   ],
+   "exit_conditions": [
+    "Ordinary screening and narrow emergency integration pass separately; substantive work cannot bypass clearance.",
+    "Commission, professional role and authority remain visible and can be revised without silently widening scope."
+   ],
+   "scope": "Access, admission, task framing and authority.",
+   "release_claim": "Bounded admission conformance; substantive-quality claims await the relevant later waves.",
+   "control": "manual_until_BK-80"
+  },
+  {
+   "id": "W2",
+   "name": "Usable file and interactive briefing",
+   "goal": "Make files recognisable and let advocates provide and refine the brief through typed, spoken and uploaded material.",
+   "entry_conditions": [
+    "Admission foundation is available; media processing cannot precede BK-69 permission and quarantine boundaries."
+   ],
+   "exit_conditions": [
+    "Intake retrieves authorised existing material, reflects understanding and asks purposeful questions with pause and return behavior.",
+    "BK-79 proves originals, derivatives, processing and deletion through the served path; current Phase A contracts pass at target widths."
+   ],
+   "scope": "Matter navigation/re-entry, research placement, evidence inventory and the briefing loop.",
+   "release_claim": "Usable-file and briefing conformance; intake completeness is task-specific, never a full merits assurance.",
+   "control": "manual_until_BK-80"
+  },
+  {
+   "id": "W3",
+   "name": "Worked legal file",
+   "goal": "Connect the legal position to attributed facts, primary authority, alternatives, proof and useful relief.",
+   "entry_conditions": [
+    "Current propositions and sources are available; governing legal and jurisdictional premises can be inspected."
+   ],
+   "exit_conditions": [
+    "Changed material predicates invalidate affected conclusions while preserving unrelated work and prior versions.",
+    "Thresholds, adverse case, remedies and evidence gaps are assessed on representative matters with named legal-premise review."
+   ],
+   "scope": "Reasoning dependencies, thresholds, research, proof, case theory and expert evaluation foundation.",
+   "release_claim": "Worked-file conformance at a stated advice maturity; not authority to act.",
+   "control": "manual_until_BK-80"
+  },
+  {
+   "id": "W4",
+   "name": "Considered advice",
+   "goal": "Produce practical, candid advice and a reliable decision experience.",
+   "entry_conditions": [
+    "The task-specific file is ready for the claimed maturity; unsupported premises and production limitations remain visible."
+   ],
+   "exit_conditions": [
+    "Options, proportionality, enforceability, adverse case and doing nothing are compared where relevant; decisions are recorded.",
+    "Latency, failure, cancellation and recovery are measured; expert review assesses actual served answers and user understanding."
+   ],
+   "scope": "Advice, decision support, progress and degraded-service behavior.",
+   "release_claim": "Advice conformance for the evaluated population and scope; no autonomous client or court action.",
+   "control": "manual_until_BK-80"
+  },
+  {
+   "id": "W5",
+   "name": "Authorised action support",
+   "goal": "Prepare and verify drafts, negotiation, witness work and hearing assistance within recorded authority.",
+   "entry_conditions": [
+    "Current advice, approved versions and professional-role authority are available."
+   ],
+   "exit_conditions": [
+    "Every material draft assertion is traceable and every proposed external action requires the appropriate authority.",
+    "Filing, service and communications distinguish intention, transmission and verified outcome; uncertain delivery is reconciled before retry."
+   ],
+   "scope": "Drafting, filing control, negotiation and court preparation.",
+   "release_claim": "Conformance of the approved action workflow; activation of external integrations requires a separate deployment decision.",
+   "control": "manual_until_BK-80"
+  },
+  {
+   "id": "W6",
+   "name": "Continuity and closure",
+   "goal": "Carry responsibility, decisions and obligations through change, handover and closure.",
+   "entry_conditions": [
+    "Worked-file and action histories are current; recipient and continuing-service authority are known."
+   ],
+   "exit_conditions": [
+    "Handover is current and acknowledged; remaining responsibilities do not disappear during transfer.",
+    "Events update obligations; closure is blocked until required deadlines, originals, funds, retention and authority issues are resolved or validly transferred."
+   ],
+   "scope": "Ongoing service, conflict watch, handover, event capture and closure.",
+   "release_claim": "Continuity and closure conformance for the tested workflow.",
+   "control": "manual_until_BK-80"
+  },
+  {
+   "id": "W7",
+   "name": "Production release",
+   "goal": "Prove the deployed system can safely sustain the specifically approved service.",
+   "entry_conditions": [
+    "The chosen release scope names required features, items, populations and reviewers; unresolved exclusions are approved and cannot silently remove critical safeguards."
+   ],
+   "exit_conditions": [
+    "All production-profile conditions and applicable cumulative journeys pass on the deployed configuration; counsel review remains current.",
+    "MFA, tenant/access boundaries, capacity, monitoring, restore, rollback, accessibility and privacy outcomes are independently evidenced."
+   ],
+   "scope": "A named deployment, configured providers/corpus, authorised user population and operational support model.",
+   "release_claim": "Production approval only after a recorded accountable decision; a wave label or aggregate green count is not approval.",
+   "control": "manual_until_BK-80"
+  }
+ ],
+ "release_profiles": [
+  {
+   "id": "prototype",
+   "name": "Controlled prototype",
+   "scope": "Ordinary local development with synthetic data is not a release and does not wait for whole-product completion. A controlled demonstration activates only the named safe paths using synthetic or specifically authorised material.",
+   "entry_conditions": [
+    "For an activated demonstration, name its environment, operator, material authority and exercised paths.",
+    "Local coding and synthetic unit tests may proceed against isolated components; do not present an incomplete exercised user route as conformant.",
+    "Confidential client material requires the pilot identity, security and processing gates, including BK-85 and BK-86, even if the session is called a demonstration."
+   ],
+   "required_items": [],
+   "required_evidence": [
+    "Current local controls for every exercised path",
+    "Human inspection of known limitations and data authority"
+   ],
+   "excluded_claims": [
+    "Phase A completion before all Phase A contracts and served proof pass",
+    "Considered legal advice merely because a demonstration returns an answer",
+    "Permission to process real client material without explicit authority",
+    "Production MFA or deployment recovery"
+   ],
+   "approval": "This is a scope definition, not approval to run a demonstration or use client data. Record the accountable authorisation for the intended use.",
+   "control": "manual_until_BK-80",
+   "conditional_items": [
+    {
+     "when": "the demonstration exercises registration, recovery or privileged matter access",
+     "items": [
+      "BK-21",
+      "BK-31"
+     ]
+    },
+    {
+     "when": "the demonstration exercises media processing",
+     "items": [
+      "BK-69"
+     ]
+    },
+    {
+     "when": "any confidential client material is admitted, including a demonstration",
+     "items": [
+      "BK-83",
+      "BK-85",
+      "BK-86",
+      "BK-88"
+     ]
+    },
+    {
+     "when": "adaptive lead investigation or advice is enabled in the declared scope",
+     "items": [
+      "BK-91"
+     ]
+    },
+    {
+     "when": "specialist delegation or delegated document generation is enabled in the declared scope",
+     "items": [
+      "BK-92"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "pilot",
+   "name": "Bounded advocate pilot",
+   "scope": "A named invited advocate population, authorised materials, declared corpus/jurisdiction and enabled feature set; supervised decisions and no undeclared external action.",
+   "entry_conditions": [
+    "Publish the exact enabled user journeys, supported media/languages and remaining limitations.",
+    "Name qualified reviewers, stop conditions, incident owner and the expiry/review date of pilot approval."
+   ],
+   "required_items": [
+    "BK-21",
+    "BK-31",
+    "BK-32",
+    "BK-33",
+    "BK-34",
+    "BK-38",
+    "BK-40",
+    "BK-53",
+    "BK-62",
+    "BK-63",
+    "BK-66",
+    "BK-67",
+    "BK-78",
+    "BK-80",
+    "BK-85",
+    "BK-86",
+    "BK-88"
+   ],
+   "conditional_items": [
+    {
+     "when": "any spoken, uploaded or mixed-media material is enabled",
+     "items": [
+      "BK-54",
+      "BK-64",
+      "BK-69",
+      "BK-79"
+     ]
+    },
+    {
+     "when": "considered advice is enabled",
+     "items": [
+      "BK-35",
+      "BK-37",
+      "BK-41",
+      "BK-55",
+      "BK-65",
+      "BK-70"
+     ]
+    },
+    {
+     "when": "drafting, filing or negotiation is enabled",
+     "items": [
+      "BK-56",
+      "BK-57"
+     ]
+    },
+    {
+     "when": "adaptive lead investigation or advice is enabled in the declared scope",
+     "items": [
+      "BK-91"
+     ]
+    },
+    {
+     "when": "specialist delegation or delegated document generation is enabled in the declared scope",
+     "items": [
+      "BK-92"
+     ]
+    }
+   ],
+   "required_evidence": [
+    "Current served journey for enabled scope with expected populations",
+    "Current representative-matter model evaluation and qualified counsel review",
+    "Environment-specific security, privacy and recovery review"
+   ],
+   "excluded_claims": [
+    "Public or general production readiness",
+    "Support for untested courts, languages, media or external actions",
+    "Automatic waiver of MFA or other material security requirements"
+   ],
+   "approval": "Pilot activation requires an explicit accountable, bounded approval naming material risks and compensating controls. No prototype decision or this plan grants it.",
+   "control": "manual_until_BK-80"
+  },
+  {
+   "id": "production",
+   "name": "Named production release",
+   "scope": "A specific deployment and release manifest defining users, tenancy, legal coverage, enabled features, processing, service levels and operating responsibilities.",
+   "entry_conditions": [
+    "Publish the exact release manifest and all applicable pilot and production obligations.",
+    "Obtain a current qualified legal review of relied-on governing premises and professional-role restrictions."
+   ],
+   "required_items": [
+    "BK-21",
+    "BK-31",
+    "BK-34",
+    "BK-40",
+    "BK-41",
+    "BK-42",
+    "BK-62",
+    "BK-63",
+    "BK-66",
+    "BK-67",
+    "BK-80",
+    "BK-85",
+    "BK-86",
+    "BK-88"
+   ],
+   "conditional_items": [
+    {
+     "when": "any multimodal processing is enabled",
+     "items": [
+      "BK-54",
+      "BK-64",
+      "BK-69",
+      "BK-79"
+     ]
+    },
+    {
+     "when": "Phase A completion is claimed",
+     "items": [
+      "BK-30",
+      "BK-31",
+      "BK-32",
+      "BK-33",
+      "BK-38",
+      "BK-43",
+      "BK-44",
+      "BK-45",
+      "BK-46",
+      "BK-47",
+      "BK-51",
+      "BK-52",
+      "BK-61",
+      "BK-72",
+      "J-1",
+      "J-7",
+      "J-8"
+     ]
+    },
+    {
+     "when": "adaptive lead investigation or advice is enabled in the declared scope",
+     "items": [
+      "BK-91"
+     ]
+    },
+    {
+     "when": "specialist delegation or delegated document generation is enabled in the declared scope",
+     "items": [
+      "BK-92"
+     ]
+    }
+   ],
+   "required_evidence": [
+    "Current complete automated and served proof for the release manifest",
+    "Current representative professional-quality review",
+    "Measured security, restore, rollback, accessibility, capacity and service outcomes on the deployment shape"
+   ],
+   "excluded_claims": [
+    "Completion of disabled future features",
+    "Approval inferred from row counts, a test-only PASS or a generated workbook"
+   ],
+   "approval": "No release is authorised by this plan. Accountable production sign-off is required; any material exception must be separately approved, owned, expiring and visible with compensating controls. D-013 does not grant a production MFA exception.",
+   "control": "manual_until_BK-80"
+  }
+ ],
+ "journey_model": {
+  "principle": "The 47 steps are observable obligations, not 47 mandatory screens. Take the Brief, Work the File and Advise share one current file and can loop.",
+  "normal_loop": [
+   "Confirm commission and authority",
+   "Retrieve authorised existing material",
+   "Hear and reflect the account",
+   "Form provisional hypotheses",
+   "Identify the controlling gap",
+   "Ask the smallest useful question or material request",
+   "Reassess task-specific readiness",
+   "Work the file and advise at permitted maturity"
+  ],
+  "return_triggers": [
+   "new material fact or conflicting source",
+   "changed objective, authority or role",
+   "new party, event, deadline or legal premise",
+   "unavailable evidence or failed processing",
+   "advocate correction, disagreement or new task"
+  ],
+  "return_behavior": "Invalidate affected conclusions, clearance and readiness; preserve unchanged work and history; explain the change and return to the earliest necessary assessment, not the start of a fixed questionnaire.",
+  "stop_and_resume": "Stop or pause when the task is answered at permitted maturity, material is unavailable, the advocate elects to pause, authority is missing or a justified refusal applies. Record the gap, consequence, owner and resume trigger; do not keep asking solely to fill empty fields.",
+  "maturity": "AM-01 to AM-05 are permissions for a particular output, not a confidence score or a one-way progress bar. New facts may downgrade readiness; action authority remains separate from advice quality.",
+  "control": "manual_until_BK-80"
+ },
  "item_waves": [
   {
    "id": "BK-1",
@@ -341,6 +711,70 @@
   {
    "id": "BK-72",
    "wave": "W0"
+  },
+  {
+   "id": "BK-77",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-78",
+   "wave": "W1"
+  },
+  {
+   "id": "BK-79",
+   "wave": "W2"
+  },
+  {
+   "id": "BK-80",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-81",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-82",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-83",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-84",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-85",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-86",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-87",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-88",
+   "wave": "W2"
+  },
+  {
+   "id": "BK-89",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-90",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-91",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-92",
+   "wave": "W3"
   }
  ]
 }

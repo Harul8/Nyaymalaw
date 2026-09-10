@@ -4,7 +4,7 @@ Opened 9 September 2026.
 
 ```
 status.yaml          what is true NOW
-plan.json            WHEN registered work is scheduled
+plan.json            WHEN work is scheduled and WHICH scoped release is intended
 professional.json    WHAT expert practice requires and how gaps map to work
 steps.yaml           HOW the user journey is traversed
 BACKLOG.md           WHY the work exists
@@ -63,6 +63,33 @@ Terminal states outside that line, each with a required field:
 | `superseded` | `superseded_by`, naming a row that exists |
 | `cancelled` | `decision`, recording who decided and why |
 | `blocked` | `blocked_by`, with a `type` and a `description` |
+
+### Deferred review obligations
+
+Every `deferred` row requires a nonblank text `reason` and a valid calendar
+`review_on` in exact `YYYY-MM-DD` form. A YAML date-only scalar is also accepted;
+timestamps, booleans, numbers, missing/null/blank values and impossible dates
+are not. Missing or malformed obligations are **lint errors** for every
+deferred item, not exceptions limited to the original BK-23/BK-26 population.
+
+Review becomes **DUE TODAY** on that date from midnight in India
+(`Asia/Kolkata`, UTC+05:30), **OVERDUE** on later dates, and **SCHEDULED** before
+it. `backlog status` computes these states from the current India calendar
+date. `backlog status --as-of YYYY-MM-DD` and `backlog stage <id> --as-of
+YYYY-MM-DD` support explicit, labelled read-only inspection with an injected
+date; this override is refused for writing or gate commands. The persisted
+board records each date and directs readers to live status rather than caching
+a date-relative verdict that would become false overnight.
+
+A due/overdue review is a visible **reassessment warning**, not a schema error
+or a whole-build block on unrelated authorised work. Neither date expiry nor
+previous implementation/evidence/stage records change `delivery_status`, earn
+`done`, make the item releasable, or open Build. `backlog stage` refuses to route
+a deferred item to Build and returns nonzero with the review obligation.
+Before reactivation, record the reassessment and its decision/reason, renew the
+date if still deferred, or explicitly reactivate the item through Start with
+its dependency, scope and approval checks. The review clock never authorises
+implementation and cannot supply the human reassessment itself.
 
 ### The four playbook records
 
@@ -243,6 +270,14 @@ Using one field for all three made the graph unreadable.
 wave, a `ready` item whose dependencies are incomplete, and a derived-done item
 whose mandatory dependency is not done.
 
+The declared graph is not sufficient if an acceptance promise points back to
+its consumer. A foundation must be independently closeable. BK-78 owns the
+emergency integration after BK-34 and BK-53; BK-79 owns media attribution and
+deletion integration after BK-69 and BK-54. Their former acceptance promises
+and NOT_RUN evidence remain in BACKLOG.md. Do not add a full-row dependency
+on a foundation that itself requires the consumer's completed feature. Until
+BK-80 validates the wider contract graph, this is an explicit Start review.
+
 ---
 
 ## Delivery waves — `docs/backlog/plan.json`
@@ -256,6 +291,27 @@ being silently overwritten by an object key. Active work must carry `W0` to
 The linter refuses a missing, duplicate or unknown row, an invalid wave and a
 hard dependency scheduled after its consumer. `sequenced_after` remains a
 preference and therefore does not create a false completion constraint.
+
+`wave_contracts` gives each W0–W7 wave its goal, entry conditions, exit
+conditions, scope and permitted completion claim. `release_profiles` defines
+prototype, pilot and production scope with unconditional and conditional work,
+required evidence, exclusions and a separate accountable approval. These are
+intended contracts, not a second status registry. Passing a wave does not
+authorise a deployment or waive an admission, privacy or professional control.
+
+The existing linter enforces `item_waves` and declared dependencies. It does
+**not** yet validate every field or semantic obligation in the new wave,
+profile and `journey_model` objects. Their `control: manual_until_BK-80` is an
+admitted enforcement gap: record the scoped release review until BK-80's
+positive controls demonstrate automation. Do not describe a profile as
+machine-checked merely because its JSON parses or backlog lint passes.
+
+Feature conformance, served-journey conformance and production approval are
+separate claims. The existing phase board is a broad roll-up of features and
+all affecting rows; it is not a profile-specific release verdict. Read it with
+the named release manifest and profile rather than deriving an exemption from
+an aggregate count. No profile in the plan currently grants pilot or
+production approval.
 
 ---
 
@@ -301,29 +357,34 @@ and features, `steps.yaml` holds steps, and `load()` joins them.
 
 ### `basis` — and this is the important field
 
-The PRD states a sequence for exactly two phases:
+`basis` preserves the provenance of the original journey mapping. Ten steps
+were mapped from the original PRD's Phase B and D ordering and carry
+`prd_sequence`; the other 37 were decomposed from features and carry
+`derived_from_features`. Those values do not claim the current PRD requires a
+linear workflow through every mapped step.
 
-- **Phase B** — *"a fixed internal ordering... EMERGENCY → CONFLICT →
-  SUBSTANCE"*, with tenet 6 prior to tenet 3.
-- **Phase D** — *"parties and side, then cause of action, then limitation,
-  then forum, then territorial and pecuniary jurisdiction, then pre-filing
-  requirements, then valuation and court fees"*.
+Phase B still gives immediate protection priority while keeping substantive
+admission behind the applicable ordinary screens. An uncertain emergency
+assessment is not a finding of no emergency. Phase D now prioritises
+consequential thresholds and permits iteration among characterization, time,
+forum, proof and remedy. A missing premise restricts the dependent directive;
+it does not prohibit useful research, factual clarification or a permitted
+protective step. The original Phase D sequence remains mapping history, not
+a mandatory order of screens or all legal analysis.
 
-For the other seven it gives the advocate's question and the features, and
-nothing more. So **10 steps are `prd_sequence` and 37 are
-`derived_from_features`**, and every step says which it is.
-
-A derived step is a reasonable reading of the plan. It is not the plan, and it
-must never be quoted back as a requirement — the same separation the product
-keeps between `STATED` and `INFERRED` posture, and for the same reason: a
-silent guess there advises the wrong side.
+`basis` records provenance. A derived step is a decomposition of the PRD
+feature, not evidence that the PRD mandates that navigation order. Its intended
+contract can guide implementation once reconciled with the PRD. A conflicting
+product choice must be resolved in the PRD or an explicit decision; the step
+cannot silently override the specification.
 
 ### What the rules refuse
 
 - an id that is not `STEP-<phase>-<nn>`, or a `phase` contradicting its id
-- a step resting on a **later** phase's feature — it could not run when the
-  journey reaches it. An **earlier** phase's feature is allowed and real:
-  Phase D's stated order opens on parties and side, which is captured in C
+- a primary step mapping resting on a **later** phase's feature. An
+  **earlier** phase's feature is allowed: Phase D's frame check consumes the
+  parties and posture captured in C. This static mapping rule does not forbid
+  returning to earlier work or revisiting a previously completed later state
 - a feature or row the registry does not hold
 - a step with no `basis`
 - **half a contract** — a partial one is not a contract
@@ -337,10 +398,25 @@ A full contract states `actor`, `entry_conditions`, `user_action`,
 `recovery_behaviour` and `exit_conditions` — what the step must DO, what it
 must REFUSE, and what it must RECOVER from.
 
-**3 of 47 carry one.** They are written only where they can be grounded in a
-product that exists. A contract invented for a phase with no code is
-specification, and specification belongs in the PRD, not in a registry that
-claims to describe what is true. The board counts the 44 that lack one.
+All 47 now carry an **intended** contract. This does not say all 47 are built
+or proven. Contracts state what must be delivered; `status.yaml` states what
+exists and the evidence states what ran. Waiting for code before writing the
+contract would reverse that relationship and let the implementation define
+its own target. The contract population is measured from the registry, not
+maintained as an independent completion count.
+
+The steps are obligations, not 47 compulsory screens. `plan.json` records the
+briefing loop and return triggers: retrieve, listen, reflect, hypothesise,
+identify the controlling gap, ask and reassess readiness. New instructions,
+evidence or legal premises can return Work the File or Advise to briefing.
+Only affected dependent conclusions and permissions are invalidated. Advice
+maturity is specific to the task and output; it may decrease after new
+material and never supplies authority to act.
+
+Links from PA/EW/AM/ROLE to a known step or work item establish traceability,
+not evidence that a criterion proves the professional promise. Until BK-80
+enforces criterion-level coverage, the release review must inspect the exact
+criteria and source/configuration-bound proof behind every applicable standard.
 
 ---
 
@@ -367,3 +443,29 @@ Lint prints all control populations — items, features, steps, PA, EW, AM,
 roles, GC and delivery-wave rows — on every run. Counts are generated and never
 hand-maintained: `Open — 13` was written by hand and was already wrong when it
 was typed.
+
+## Execution-readiness contracts (BK-87)
+
+`../blueprint/modules.json` is exact primary ownership, not a parallel status
+table. Its `requires` links provide capability context only. `packets.json`
+owns the finite build queue: scoped packet prerequisites, explicitly required
+completed items, and one final packet owner per active criterion. The combined
+graph includes item `depends_on`; a scoped contribution cannot close its broad
+criterion or bypass later deployment evidence. BK-87 is explicitly excluded
+from future application packets because it is the current planning delivery.
+
+The contract checker rejects missing active acceptance, absent criterion-level
+negative controls, dangling references, cycles, reversed staged contributions,
+unowned commands and malformed/escaping source boundaries. `contracts/commands.json`
+owns closed local-reference JSON schemas and positive/negative examples;
+`decisions.json` owns recommendations and absent approval declarations;
+`evaluations.json` owns concrete baseline scenario specifications, portfolio
+requirements and manual review protocols. No authored status in these files
+may supply execution or deployment proof.
+
+Run `python tools/blueprint.py check` for specification integrity and
+`python tools/blueprint.py readiness` for outstanding deployment inputs. The
+latter intentionally cannot issue release approval from a planning catalogue.
+Their deterministic controls are selected by the existing Class-A CI suite.
+Every Markdown/JSON file under `docs/blueprint` enters the verification
+fingerprint; generated execution reports remain outside that contract tree.

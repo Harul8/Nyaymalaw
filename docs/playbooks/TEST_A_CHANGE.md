@@ -1,14 +1,25 @@
 # Test a change
 
-Use this playbook after Build is closed. It may also be opened during Start and
-Build to design or run narrow proof, but it closes only against the reviewable
-implementation.
+Use this playbook during Start and Build to design proof and record results.
+Its Evidence Pack closes only against the complete reviewable implementation.
 
-**Entry:** closed Start and Build records, atomic acceptance criteria and an
-implementation whose source boundary will remain stable during the gate.
+**Entry:** named acceptance criteria and a known source boundary. Build may be
+`OPEN` while evidence accumulates. `VERIFIED` requires a closed Build Record and
+all evidence required for the complete claim.
 
 **Exit:** an Evidence Pack states PASS, FAIL, NOT RUN, STALE or BLOCKED for
 every required evidence link. Test does not decide release.
+
+## Quick card
+
+1. Identify the tested build, changed promises and applicable evidence types.
+2. Run the narrowest useful test, including the actual failure boundary.
+3. Show that each critical control rejects its real planted counterexample.
+4. Exercise the affected served journey and specialist evaluations when required
+   and approved; record any missing evidence explicitly.
+5. Complete the cumulative suite required for the claim against a coherent build.
+6. Link exact results and unresolved limits; claim `VERIFIED` only when every
+   required result is current and passing.
 
 ## 1. Freeze the claim and test population
 
@@ -25,6 +36,14 @@ Before running anything, record:
 
 Do not edit the tested tree during a cumulative gate. A gate that observes
 different source states at different stages measures no coherent build.
+
+For model or counsel evidence also record the relevant model/provider,
+configuration, prompt, corpus, governing date and jurisdiction; the rubric and
+sample population; and the reviewer, role and reservations. An independent
+judge is a separately identified evaluator, not the tested model grading its
+own output. A name or PASS typed into a JSON record is not itself evidence of
+qualified review. BK-80 owns the remaining mechanical validation of these
+records; until then the reviewer must inspect the underlying evidence.
 
 ## 2. Map each promise to the right evidence
 
@@ -55,6 +74,44 @@ Run the smallest relevant tests first so failure is diagnosable.
 
 When a defect was fixed, phrase the invariant as the general rule rather than
 the example that exposed it.
+
+### 3.1 For a fix: prove transfer and preservation
+
+**A fixed incident is not transfer proof.** Keep the original failing witness
+as a regression, then test the declared causal family in distinct contexts
+not used to select or tune the fix. Use held-out cases where practical; once
+inspected and used for tuning, they are regressions, not unseen evidence.
+
+Test the Start contract's meaning-preserving transformations, such as permitted
+paraphrases, irrelevant document reordering or equivalent supported formats.
+Assert the invariant, not identical wording. Test distinguishing boundaries
+too: a material role, jurisdiction, governing date, consent, source-version or
+evidence change may require a different result or continued refusal. Do not
+declare two cases equivalent merely because their wording resembles each other.
+Use property-based/generated inputs where suitable; reviewed expected outcomes
+and legal applicability cannot be inferred from the generator itself.
+
+Include both directions: the forbidden behaviour is refused **and** legitimate
+behaviour still works. Test empty, partial, unsupported and unavailable states,
+and controls that must remain refusing after the fix. Plant an actual violation
+at the shared boundary and require the intended failure, not any exception.
+For suspected incident branches, remove or vary the incidental trigger in an
+isolated test and retain the general result; do not remove genuine rule data.
+
+Reconcile discovered, applicable and exercised populations. Check affected
+consumers and predeclared unrelated-behaviour witnesses: tenant isolation,
+source fidelity, persistence/recovery, latency/cost or UI/export agreement as
+the impact inventory requires. Run the applicable cumulative suites; one new
+regression test is not a no-collateral-impact claim. Record before/after source,
+prompt/configuration/model and data identities, including manual identity
+comparison for inputs outside the runner's fingerprint. Preserve baseline
+failures and explain each changed result. No unexplained regression, reduced
+population, weakened assertion or threshold may be hidden by a green total.
+
+These are semantic and behavioural obligations. Registry/keyword checks can
+prove the obligation remains written; they cannot prove a product fix
+generalises. Unexecuted integration, approved real-model, browser and counsel
+evidence remain NOT_RUN, with owner and next action.
 
 ## 4. Make every critical control bite
 
@@ -111,8 +168,9 @@ from Work the File or Advise.
 
 ## 7. Prove legal and professional quality
 
-When law, retrieval, evidence, prompt, model, reasoning or counsel-facing
-output can change:
+When a change can affect substantive legal propositions, retrieval, evidence
+interpretation, question selection, reasoning, advice maturity, strategy,
+reservations or professional authority:
 
 - run representative golden matters covering favourable, adverse and ambiguous
   positions;
@@ -126,6 +184,12 @@ output can change:
 
 Record material counsel reservations as owned work. A judge score does not
 replace counsel acceptance.
+
+An ordinary interface-label or layout change does not automatically require
+new legal judgment evidence. Establish at Start whether it can alter meaning
+or professional behaviour. If it cannot, record why counsel evaluation does
+not apply and still test the changed interaction. Existing mandatory criteria
+continue to bind.
 
 ## 8. Run cumulative regression
 
@@ -141,6 +205,15 @@ After narrow proof passes, run the required cumulative gate:
 No new green result may hide an earlier regression or a required test that did
 not run.
 
+The cumulative set may comprise separate suites against the same identified
+candidate and relevant inputs; it need not be one process. Resolve a failure
+with a relevant corrected rerun, preserving the earlier result and cause.
+Do not carry evidence across changed inputs by assertion. Where the current
+mechanism invalidates the whole source fingerprint, rerun its required gate;
+selective carry-forward requires a supported scope/identity rule, not a manual
+override. Narrow checks during Build need not repeat unaffected suites after
+every edit.
+
 ## 9. Apply change-specific minimums
 
 | Change type | Minimum additional proof |
@@ -154,6 +227,10 @@ not run.
 | Plan/control | Lint; non-zero populations; bidirectional links; waves/dependencies; generated views current; negative fixture |
 
 These are floors. Add evidence for the actual risk.
+
+For document-only changes, verify authoritative sources, generated views and
+changed obligations. A spelling or layout correction does not require new
+product tests; a changed promise requires the proof that promise implies.
 
 ## 10. Interpret results honestly
 
@@ -169,6 +246,12 @@ Use only these meanings:
 Missing, failed, not-run, stale and blocked evidence all prevent the claim that
 requires them. Report the denominator and explain unexplained results; do not
 turn them into a blended pass percentage.
+
+`NOT_APPLICABLE` is permitted only with a recorded, justified applicability
+decision. It is not a way to avoid a failing or unavailable required check.
+For a served report, inspect expected and actual scenario populations,
+duplicates, completion and source identity as well as the individual PASS rows.
+BK-80 tracks the automated report-validity checks still to be implemented.
 
 ## Approval boundaries
 
@@ -190,13 +273,16 @@ look complete.
 
 ## Stop here when
 
-- the source changes while a cumulative gate is running;
+- an input capable of affecting the running gate changes, or the runner reports
+  a changed source fingerprint;
 - the expected population is zero, incomplete or unexplained;
 - a required test does not exist, collect or exercise the intended path;
 - a critical control cannot reject its counterexample;
 - served-path state is hand-authored;
 - legal output changed without required real-model or counsel evidence;
 - a failure is dismissed as flaky without measured cause;
+- only the incident passes, a transfer/boundary or unrelated witness regresses,
+  or a claimed held-out case was used to tune the fix without disclosure;
 - the implementation must change to continue the run.
 
 Return to Build for implementation defects and Start for contract, scope,
@@ -227,6 +313,9 @@ Item / source identity:
 Acceptance criterion → required evidence → result → reference:
 Expected / parsed / evaluated population:
 Negative control → actual mutation → expected and observed failure:
+Fix only — original / distinct or held-out / transfer / boundary witnesses and results:
+Fix only — discovered / applicable / exercised sites; unrelated behaviours and results:
+Fix only — before/after identities / changed results / unexplained regressions:
 Success / refusal / failure-recovery scenarios:
 Persistence and served-path results:
 Legal/model evaluation:
@@ -248,4 +337,4 @@ Pack. Sign-off decides the strongest claim the complete current evidence earns.
      because two rules were lost when the guide was split and nothing
      noticed. Do not edit by hand except to add a genuinely new rule
      to the registry first. -->
-<!-- BUILD_RULES: BG-011 BG-015 BG-016 BG-054 BG-055 BG-056 BG-070 BG-071 BG-072 BG-073 BG-074 -->
+<!-- BUILD_RULES: BG-011 BG-015 BG-016 BG-054 BG-055 BG-056 BG-070 BG-071 BG-072 BG-073 BG-074 BG-080 -->

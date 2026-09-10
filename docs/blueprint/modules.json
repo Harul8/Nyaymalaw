@@ -1,0 +1,373 @@
+{
+  "schema": 1,
+  "purpose": "Capability navigation, not a full-module completion barrier or delivery status. requires names upstream capability context only. packets.json owns scoped build prerequisites and explicit completed-item requirements; status.yaml owns criterion proof and item-completion dependencies. The checker reconciles their combined graph. Registry waves are unchanged; primary ownership is exact.",
+  "modules": [
+    {
+      "id": "M00",
+      "title": "Proof and security foundation",
+      "requires": [],
+      "guide": "EXECUTION.md",
+      "features": [],
+      "steps": [],
+      "items": [
+        "BK-3",
+        "BK-17",
+        "BK-19",
+        "BK-28",
+        "BK-30",
+        "BK-43",
+        "BK-44",
+        "BK-45",
+        "BK-46",
+        "BK-47",
+        "BK-50",
+        "BK-51",
+        "BK-52",
+        "BK-60",
+        "BK-61",
+        "BK-71",
+        "BK-73",
+        "BK-74",
+        "BK-75",
+        "BK-76",
+        "BK-77",
+        "BK-80",
+        "BK-81",
+        "BK-82",
+        "BK-85",
+        "BK-87",
+        "BK-89",
+        "BK-90"
+      ]
+    },
+    {
+      "id": "M01",
+      "title": "Access and session boundary",
+      "requires": [
+        "M00"
+      ],
+      "guide": "EXPERIENCE.md",
+      "features": [
+        "A1",
+        "I1"
+      ],
+      "steps": [
+        "STEP-A-01",
+        "STEP-I-01"
+      ],
+      "items": [
+        "BK-18",
+        "BK-20",
+        "BK-22",
+        "BK-31",
+        "BK-86",
+        "BK-40"
+      ]
+    },
+    {
+      "id": "M02",
+      "title": "Matter and professional admission",
+      "requires": [
+        "M01"
+      ],
+      "guide": "EXPERIENCE.md",
+      "features": [
+        "A2",
+        "A3",
+        "B1",
+        "B2",
+        "B3",
+        "B4",
+        "B5",
+        "B6"
+      ],
+      "steps": [
+        "STEP-A-02",
+        "STEP-A-03",
+        "STEP-B-01",
+        "STEP-B-02",
+        "STEP-B-03",
+        "STEP-B-04"
+      ],
+      "items": [
+        "BK-2",
+        "BK-16",
+        "BK-21",
+        "BK-32",
+        "BK-33",
+        "BK-34",
+        "BK-36",
+        "BK-48",
+        "BK-53",
+        "BK-62",
+        "BK-63",
+        "BK-72",
+        "BK-78",
+        "BK-83",
+        "J-1",
+        "BK-92"
+      ]
+    },
+    {
+      "id": "M03",
+      "title": "Secure multimodal intake",
+      "requires": [
+        "M02"
+      ],
+      "guide": "DATA_ARCHITECTURE.md",
+      "features": [
+        "C6"
+      ],
+      "steps": [
+        "STEP-C-06"
+      ],
+      "items": [
+        "BK-69"
+      ]
+    },
+    {
+      "id": "M04",
+      "title": "Attributed living casefile",
+      "requires": [
+        "M03"
+      ],
+      "guide": "DATA_ARCHITECTURE.md",
+      "features": [
+        "C3",
+        "C4",
+        "C5",
+        "C7"
+      ],
+      "steps": [
+        "STEP-C-03",
+        "STEP-C-04",
+        "STEP-C-05",
+        "STEP-C-07",
+        "STEP-D-01"
+      ],
+      "items": [
+        "BK-6",
+        "BK-15",
+        "BK-27",
+        "BK-64",
+        "J-3",
+        "J-4"
+      ]
+    },
+    {
+      "id": "M05",
+      "title": "Verified Indian legal library",
+      "requires": [
+        "M02"
+      ],
+      "guide": "LEGAL_DATABASE.md",
+      "features": [],
+      "steps": [],
+      "items": [
+        "BK-4",
+        "BK-23",
+        "BK-24",
+        "BK-26",
+        "BK-84"
+      ]
+    },
+    {
+      "id": "M06",
+      "title": "Purposeful retrieval and research",
+      "requires": [
+        "M04",
+        "M05"
+      ],
+      "guide": "LEGAL_BRAIN.md",
+      "features": [
+        "A4",
+        "D4"
+      ],
+      "steps": [
+        "STEP-A-04",
+        "STEP-D-09"
+      ],
+      "items": [
+        "BK-25",
+        "BK-38"
+      ]
+    },
+    {
+      "id": "M07",
+      "title": "Structured legal assessment",
+      "requires": [
+        "M06"
+      ],
+      "guide": "LEGAL_BRAIN.md",
+      "features": [
+        "D1",
+        "D2",
+        "D3",
+        "D5",
+        "D6",
+        "D7",
+        "D8",
+        "D9"
+      ],
+      "steps": [
+        "STEP-D-02",
+        "STEP-D-03",
+        "STEP-D-04",
+        "STEP-D-05",
+        "STEP-D-06",
+        "STEP-D-07",
+        "STEP-D-08",
+        "STEP-D-10",
+        "STEP-D-11",
+        "STEP-D-12",
+        "STEP-D-13",
+        "STEP-D-14"
+      ],
+      "items": [
+        "BK-1",
+        "BK-5",
+        "BK-7",
+        "BK-8",
+        "BK-12",
+        "BK-14",
+        "BK-35",
+        "BK-65",
+        "BK-70",
+        "J-2",
+        "BK-91"
+      ]
+    },
+    {
+      "id": "M08",
+      "title": "Interactive briefing and readiness",
+      "requires": [
+        "M07"
+      ],
+      "guide": "LEGAL_BRAIN.md",
+      "features": [
+        "C1",
+        "C2"
+      ],
+      "steps": [
+        "STEP-C-01",
+        "STEP-C-02"
+      ],
+      "items": [
+        "BK-54",
+        "BK-79",
+        "BK-88"
+      ]
+    },
+    {
+      "id": "M09",
+      "title": "Considered advice and decision",
+      "requires": [
+        "M08"
+      ],
+      "guide": "LEGAL_BRAIN.md",
+      "features": [
+        "E1",
+        "E2",
+        "E3",
+        "E4",
+        "E5"
+      ],
+      "steps": [
+        "STEP-E-01",
+        "STEP-E-02",
+        "STEP-E-03",
+        "STEP-E-04",
+        "STEP-E-05"
+      ],
+      "items": [
+        "BK-9",
+        "BK-11",
+        "BK-13",
+        "BK-29",
+        "BK-37",
+        "BK-41",
+        "BK-49",
+        "BK-55",
+        "BK-66",
+        "BK-67",
+        "BK-68",
+        "J-5",
+        "J-6",
+        "J-7"
+      ]
+    },
+    {
+      "id": "M10",
+      "title": "Authorised action support",
+      "requires": [
+        "M09"
+      ],
+      "guide": "EXPERIENCE.md",
+      "features": [
+        "F1",
+        "F2",
+        "F3",
+        "F4",
+        "F5",
+        "F6",
+        "F7"
+      ],
+      "steps": [
+        "STEP-F-01",
+        "STEP-F-02",
+        "STEP-F-03",
+        "STEP-F-04",
+        "STEP-F-05",
+        "STEP-F-06",
+        "STEP-F-07"
+      ],
+      "items": [
+        "BK-56",
+        "BK-57"
+      ]
+    },
+    {
+      "id": "M11",
+      "title": "Continuity handover and closure",
+      "requires": [
+        "M10"
+      ],
+      "guide": "EXPERIENCE.md",
+      "features": [
+        "G1",
+        "G2",
+        "G3",
+        "H1",
+        "H2"
+      ],
+      "steps": [
+        "STEP-G-01",
+        "STEP-G-02",
+        "STEP-G-03",
+        "STEP-H-01",
+        "STEP-H-02"
+      ],
+      "items": [
+        "BK-10",
+        "BK-39",
+        "BK-58",
+        "BK-59"
+      ]
+    },
+    {
+      "id": "M12",
+      "title": "Operated release and recovery",
+      "requires": [
+        "M11"
+      ],
+      "guide": "EXECUTION.md",
+      "features": [],
+      "steps": [],
+      "items": [
+        "BK-42",
+        "J-8",
+        "J-9"
+      ]
+    }
+  ]
+}

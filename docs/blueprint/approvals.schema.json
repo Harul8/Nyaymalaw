@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nm:blueprint:adoption-records:1",
+  "title": "Scoped manual adoption records; structure is not verified authority",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "purpose", "records", "revocations"],
+  "properties": {
+    "schema": {"const": 1},
+    "purpose": {"$ref": "#/$defs/text"},
+    "records": {"type": "array", "items": {"$ref": "#/$defs/adoption"}},
+    "revocations": {"type": "array", "items": {"$ref": "#/$defs/revocation"}}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "exactName": {"type": "string", "minLength": 1, "pattern": "^(?!.*[?*]).*\\S.*$"},
+    "digest": {"type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[a-f0-9]{64}$"},
+    "instant": {"type": "string", "format": "date-time"},
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["ref", "sha256"],
+      "properties": {"ref": {"$ref": "#/$defs/text"}, "sha256": {"$ref": "#/$defs/digest"}}
+    },
+    "person": {
+      "type": "object", "additionalProperties": false,
+      "required": ["person_id", "name", "role", "authority_basis", "authority_evidence"],
+      "properties": {
+        "person_id": {"$ref": "#/$defs/text"}, "name": {"$ref": "#/$defs/text"},
+        "role": {"$ref": "#/$defs/text"}, "authority_basis": {"$ref": "#/$defs/text"},
+        "authority_evidence": {"$ref": "#/$defs/artifact"}
+      }
+    },
+    "names": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/exactName"}},
+    "scope": {
+      "type": "object", "additionalProperties": false,
+      "required": ["gate", "environment", "release_profile", "release_manifest", "configuration", "coverage_manifest", "packets", "capabilities", "data_classes", "run_id"],
+      "properties": {
+        "gate": {"enum": ["confidential_pilot", "production", "approved_real_model", "paid_or_long_load", "procurement", "new_coverage_pack", "external_action_activation"]},
+        "environment": {"$ref": "#/$defs/exactName"},
+        "release_profile": {"$ref": "#/$defs/exactName"},
+        "release_manifest": {"$ref": "#/$defs/artifact"},
+        "configuration": {"$ref": "#/$defs/artifact"},
+        "coverage_manifest": {"$ref": "#/$defs/artifact"},
+        "packets": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^P[0-9]{2,}$"}},
+        "capabilities": {"$ref": "#/$defs/names"}, "data_classes": {"$ref": "#/$defs/names"},
+        "run_id": {"anyOf": [{"$ref": "#/$defs/exactName"}, {"type": "null"}]}
+      },
+      "allOf": [{
+        "if": {"properties": {"gate": {"enum": ["approved_real_model", "paid_or_long_load"]}}, "required": ["gate"]},
+        "then": {"properties": {"run_id": {"$ref": "#/$defs/exactName"}}}
+      }]
+    },
+    "condition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "requirement", "evidence"],
+      "properties": {"id": {"$ref": "#/$defs/text"}, "requirement": {"$ref": "#/$defs/text"}, "evidence": {"$ref": "#/$defs/artifact"}}
+    },
+    "adoption": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "choice", "proposal_sha256", "scope", "approvers", "signed_record", "approved_at", "effective_from", "valid_until", "conditions", "supersedes"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^ADOPT-[A-Za-z0-9][A-Za-z0-9._-]*$"},
+        "choice": {"type": "string", "pattern": "^CHOICE-[0-9]{2}$"},
+        "proposal_sha256": {"$ref": "#/$defs/digest"}, "scope": {"$ref": "#/$defs/scope"},
+        "approvers": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/person"}},
+        "signed_record": {"$ref": "#/$defs/artifact"},
+        "approved_at": {"$ref": "#/$defs/instant"}, "effective_from": {"$ref": "#/$defs/instant"}, "valid_until": {"$ref": "#/$defs/instant"},
+        "conditions": {"type": "array", "items": {"$ref": "#/$defs/condition"}},
+        "supersedes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^ADOPT-[A-Za-z0-9][A-Za-z0-9._-]*$"}}
+      }
+    },
+    "revocation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "approval_id", "effective_at", "revoked_by", "reason", "signed_record"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^REVOKE-[A-Za-z0-9][A-Za-z0-9._-]*$"},
+        "approval_id": {"type": "string", "pattern": "^ADOPT-[A-Za-z0-9][A-Za-z0-9._-]*$"},
+        "effective_at": {"$ref": "#/$defs/instant"}, "revoked_by": {"$ref": "#/$defs/person"},
+        "reason": {"$ref": "#/$defs/text"}, "signed_record": {"$ref": "#/$defs/artifact"}
+      }
+    }
+  }
+}

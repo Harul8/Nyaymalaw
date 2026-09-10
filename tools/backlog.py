@@ -38,6 +38,7 @@ import json
 import pathlib
 import re
 import sys
+from datetime import date, datetime, timedelta, timezone
 
 import yaml
 
@@ -121,6 +122,103 @@ CONTRACT_FIELDS = ("actor", "entry_conditions", "user_action",
 #: keeps between STATED and INFERRED posture.
 BASIS = {"prd_sequence", "derived_from_features"}
 WAVES = tuple(f"W{i}" for i in range(8))
+
+# Backlog review dates are India calendar dates, not the host's local date.
+INDIA_TIMEZONE = timezone(timedelta(hours=5, minutes=30), name="Asia/Kolkata")
+
+
+def calendar_date(value: object) -> date:
+    """Accept a strict calendar date, including PyYAML's date-only scalar.
+
+    datetime is deliberately excluded although it subclasses date: a review
+    day must not acquire an implicit time zone or silently drop a time.
+    """
+    if type(value) is date:
+        return value
+    if isinstance(value, str) and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            pass
+    raise ValueError("expected a valid calendar date in YYYY-MM-DD format")
+
+
+def india_today(*, now: datetime | None = None) -> date:
+    """One clock boundary; callers/tests can inject an aware instant."""
+    instant = datetime.now(INDIA_TIMEZONE) if now is None else now
+    if instant.tzinfo is None or instant.utcoffset() is None:
+        raise ValueError("the review clock requires a timezone-aware instant")
+    return instant.astimezone(INDIA_TIMEZONE).date()
+
+
+def _deferral_problems(it: dict) -> list[str]:
+    """One validation mechanism for every deferred row and every reader."""
+    if it.get("delivery_status") != "deferred":
+        return []
+    rid = it.get("id", "?")
+    bad = []
+    reason = it.get("reason")
+    if not isinstance(reason, str) or not reason.strip():
+        bad.append(f"{rid}: deferred with no nonblank text `reason` -- "
+                   "'not done' with no reason is indistinguishable from forgotten")
+    try:
+        calendar_date(it.get("review_on"))
+    except ValueError:
+        bad.append(f"{rid}: deferred `review_on` must be a valid calendar date "
+                   "in YYYY-MM-DD format")
+    return bad
+
+
+def deferral_reviews(doc: dict, *, as_of: date | None = None) -> list[dict]:
+    """Derive review attention without changing delivery state or authority.
+
+    Missing/malformed obligations are INVALID (lint errors). Valid dates are
+    SCHEDULED, DUE TODAY or OVERDUE: the latter two request reassessment, not
+    work authorisation and not an unrelated whole-build failure.
+    """
+    day = india_today() if as_of is None else calendar_date(as_of)
+    rows = []
+    for it in doc.get("items") or []:
+        if it.get("delivery_status") != "deferred":
+            continue
+        problems = _deferral_problems(it)
+        try:
+            review = calendar_date(it.get("review_on"))
+        except ValueError:
+            review = None
+        days = (day - review).days if review is not None else None
+        state = ("INVALID" if problems else "OVERDUE" if days > 0 else
+                 "DUE TODAY" if days == 0 else "SCHEDULED")
+        rows.append({"id": it.get("id", "?"), "review_on": review,
+                     "state": state, "overdue_days": max(0, days or 0),
+                     "problems": problems})
+    return rows
+
+
+def _deferral_report(doc: dict, *, as_of: date | None = None,
+                     live: bool = True) -> list[str]:
+    # Persist dates, not a cached 'today' verdict that becomes false overnight.
+    day = (india_today() if as_of is None else calendar_date(as_of)) if live else date.min
+    rows = deferral_reviews(doc, as_of=day)
+    lines = ["", "### Deferred — review is not permission to build", ""]
+    if live:
+        lines.append(f"As of {day.isoformat()} (Asia/Kolkata): {len(rows)} deferred row(s).")
+    else:
+        lines.append(f"{len(rows)} deferred row(s). Dates below are recorded obligations, "
+                     "not cached current verdicts. Run `python tools/backlog.py status` "
+                     "for DUE TODAY / OVERDUE against the current India calendar date.")
+    lines += ["", "Missing or invalid dates/reasons fail lint. A due or overdue review "
+              "requires recorded reassessment before reactivation; it does not "
+              "authorise work or block unrelated work. Delivery stays deferred.", ""]
+    for row in rows:
+        when = row["review_on"].isoformat() if row["review_on"] else "INVALID DATE"
+        state = row["state"] if live or row["state"] == "INVALID" else "REVIEW ON"
+        overdue = (f" ({row['overdue_days']} day(s))"
+                   if live and state == "OVERDUE" else "")
+        lines.append(f"- **{row['id']}** — {state}{overdue}; review_on {when}; "
+                     "delivery deferred.")
+        lines.extend(f"  - {problem}" for problem in row["problems"])
+    return lines
 
 
 def load() -> dict:
@@ -288,9 +386,7 @@ def lint(doc: dict, *, verify_execution: bool = False) -> list[str]:
         if it.get("superseded_by") and it["superseded_by"] not in known:
             bad.append(f"{rid}: superseded_by {it['superseded_by']!r} is not "
                        f"a row")
-        if ds == "deferred" and not it.get("reason"):
-            bad.append(f"{rid}: deferred with no `reason` -- 'not done' with "
-                       f"no reason is indistinguishable from forgotten")
+        bad.extend(_deferral_problems(it))
         if ds == "cancelled" and not it.get("decision"):
             bad.append(f"{rid}: cancelled with no `decision`")
 
@@ -911,6 +1007,8 @@ def derive_done(it: dict, by_id: dict, *, bind_execution: bool = True) -> bool:
     here ONLY because it is declared as `legacy: true` and counted by `status`.
     An admitted gap is work; a silent one is a surprise.
     """
+    if it.get("delivery_status") == "deferred":
+        return False
     if it.get("implementation") != "complete":
         return False
     if it.get("blocked_by"):
@@ -977,6 +1075,8 @@ def gap_state(gap: dict, by_id: dict[str, dict], *,
 
 
 def readiness(it: dict, by_id: dict, *, bind_execution: bool = True) -> str:
+    if it.get("delivery_status") == "deferred":
+        return "not_ready"
     if derive_done(it, by_id, bind_execution=bind_execution):
         return "releasable"
     if (it.get("priority") in ("P0",)
@@ -990,7 +1090,8 @@ def readiness(it: dict, by_id: dict, *, bind_execution: bool = True) -> str:
 
 # ---------------------------------------------------------------- report ---
 
-def board(doc: dict, *, bind_execution: bool = True) -> str:
+def board(doc: dict, *, bind_execution: bool = True,
+          as_of: date | None = None) -> str:
     items = doc["items"]
     by_id = {i["id"]: i for i in items}
     feats = doc["features"]
@@ -1107,6 +1208,8 @@ def board(doc: dict, *, bind_execution: bool = True) -> str:
                          f"{i['blocked_by']['type']}: "
                          f"{i['blocked_by']['description']}")
 
+    lines += _deferral_report(doc, as_of=as_of, live=bind_execution)
+
     lines += [
         "",
         "### Admitted gaps in the evidence",
@@ -1152,6 +1255,8 @@ STAGE_FOR = {
 
 def next_stage(it: dict, by_id: dict[str, dict]) -> str | None:
     """Return the playbook stage the item must open next; None is terminal."""
+    if it.get("delivery_status") == "deferred":
+        return None
     if derive_done(it, by_id):
         return None
     records = it.get("stage_records")
@@ -1171,7 +1276,7 @@ def next_stage(it: dict, by_id: dict[str, dict]) -> str | None:
     return STAGE_FOR.get(it.get("delivery_status"))
 
 
-def stage_report(doc: dict, rid: str) -> tuple[str, int]:
+def stage_report(doc: dict, rid: str, *, as_of: date | None = None) -> tuple[str, int]:
     """WHICH PLAYBOOK, FOR THIS ITEM, RIGHT NOW -- and what already fails.
 
     A playbook I must remember to open is one I will skip under context
@@ -1190,6 +1295,13 @@ def stage_report(doc: dict, rid: str) -> tuple[str, int]:
     out = [f"{rid}  {it.get('title')}",
            f"  {ds} / impl {it.get('implementation')} / "
            f"verification {it.get('verification')} / {it.get('priority')}"]
+
+    if ds == "deferred":
+        out += _deferral_report({"items": [it]}, as_of=as_of)
+        out.append("Record the reassessment, reason and any new review date; "
+                   "reactivate explicitly through Start before Build. This "
+                   "row is not DONE and no build playbook is opened automatically.")
+        return "\n".join(out), 1
 
     if stage is None:
         out.append("\n  DONE is derived and the lifecycle is closed: no "
@@ -1237,14 +1349,18 @@ def main() -> int:
     ap.add_argument("command", choices=["lint", "status", "graph", "render",
                                         "check", "stage", "rules"])
     ap.add_argument("item", nargs="?", help="BK-/J- id, for `stage`")
+    ap.add_argument("--as-of", type=calendar_date,
+                    help="India calendar date for read-only status/stage review")
     args = ap.parse_args()
+    if args.as_of is not None and args.command not in {"status", "stage"}:
+        ap.error("--as-of is only allowed for read-only status or stage")
     doc = load()
 
     if args.command == "stage":
         if not args.item:
             print("usage: backlog.py stage <BK-id>", file=sys.stderr)
             return 2
-        text, code = stage_report(doc, args.item)
+        text, code = stage_report(doc, args.item, as_of=args.as_of)
         print(text)
         return code
 
@@ -1274,12 +1390,13 @@ def main() -> int:
               f"{pop['workflow_states']} EW, "
               f"{pop['advice_maturity']} AM, {pop['roles']} roles, "
               f"{pop['gap_closures']} GC, {wave_count} wave rows")
+        print("\n".join(_deferral_report(doc)))
         if bad:
             return 1
 
     if args.command in ("status", "check"):
         print()
-        print(board(doc))
+        print(board(doc, as_of=args.as_of))
 
     if args.command == "graph":
         by_id = {i["id"]: i for i in doc["items"]}

@@ -9,7 +9,7 @@ const A = (...x) => x.forEach((e) => Array.isArray(e) ? e.forEach((y) => out.pus
 /* ============ PART 4 — RETRIEVAL AND GROUNDING ============ */
 A(h1('Part 4 — Retrieval, grounding and the anti-hallucination stack'));
 
-A(callout('**The reframe this whole part rests on: NM does not have a search problem, it has a RESOLUTION problem.** Search returns passages similar to a query, ranked. That is the web paradigm and it is the wrong one here. An advocate does not want ten ranked passages; they want the answer to a structured question — *which provision governs this cause of action, in this forum, on this date* — and that question usually has **one right answer, fixed by legal structure rather than by textual similarity.**'));
+A(p('**Resolve exact legal identities and governed rules before relying on ranked similarity.** The advocate needs an applicable, supported answer, not merely similar passages. Distinguish exact identity from legal applicability: characterising a cause, selecting a governing rule or interpreting an exception may require contested legal judgement. A resolved identifier is not a conclusive answer to that judgement.'));
 
 A(p('So: **resolve first, and search only for what resolution cannot determine.** Everything below follows from that inversion. The measured cost of getting it backwards is on record — the Limitation Act Article that governed a live matter came back at **rank 53 of 60**, and had NM said "I cannot find the governing Article" that would have read as honest disclosure and been a retrieval failure.'));
 
@@ -37,13 +37,13 @@ A(callout('**G1 — every provision carries a validity window, and the date is a
 
 A(h3('The era rule, stated once'));
 
-A(p('**BNS, BNSS and BSA commenced on 1 July 2024. Matters arising before that date are governed by the IPC, CrPC and the Evidence Act. The governing date is the date of the conduct or the cause of action — not the date of the advice, and not the date of filing.** This is the part that gets silently wrong: a matter advised on today may be governed throughout by the old codes, and an answer reaching for the current numbering because it is current is wrong on the whole file rather than in one citation.'));
+A(p('**Do not apply one transition date mechanically to an entire matter.** For each proposition, retrieve the applicable commencement, repeal, savings and transitional provisions. Identify whether the relevant trigger is conduct, accrual, commencement or stage of proceedings, or another legally specified event. Old/new numbering correspondence makes sources discoverable; it does not itself prove substantive equivalence or which procedure applies. Missing or contested temporal premises remain explicit and restrict dependent reliance.'));
 
 A(p('Substantive and procedural provisions may not follow the same rule, and the savings provisions govern which does what. **NM resolves that from retrieved savings and repeal provisions — it is not asserted from this document and this paragraph is not authority for it.**'));
 
 A(h2('4.2  Layer 1 — resolution: the query is the MATTER, not a sentence'));
 
-A(p('**Retrieval\'s input is the matter\'s structured state, not a text string:** posture, cause of action, forum, dates, relief, jurisdiction. Given those, a large share of what NM needs is a **deterministic lookup returning an exact citation** — the limitation Article, the era-correct provision, the forum, the elements to be proved.'));
+A(p('**Matter research uses structured state alongside the question:** posture, candidate causes, forum, dates, relief and jurisdiction, with provenance and unresolved premises. Governed lookups return exact citations and rule identities where their prerequisites are established. Competing legal characterisations remain candidates to investigate; they must not disappear behind a single deterministic result. General corpus browsing need not have a matter.'));
 
 A(p('None of that is a similarity contest, and treating it as one is what puts a governing Article at rank 53.'));
 
@@ -527,7 +527,7 @@ A(table(
   ['Principle', 'What it means', 'Why — and it is never taste'],
   [
     ['**P1 · Hexagonal: a pure core, adapters at the edges**', 'Analysis is a pure function of matter state and verified Findings. Retrieval, the model, storage, documents and presentation are adapters behind ports.', 'Class-A tests need no corpus and no model and run every commit in seconds. **That cadence is only available if the analysis core has no I/O.** The most load-bearing invariants — posture derivation, the limitation coverage check, disposition accounting, theory/adverse-fact set comparison — are all pure logic. Hexagonal structure is what converts them from aspirations into commit-time tests.'],
-    ['**P2 · Deterministic shell, stochastic core**', 'Resolution (deterministic) → Search (stochastic) → Verification (deterministic gate).', 'A stochastic stage cannot be trusted to police itself, and **every measured failure in this system\'s history was a stochastic stage\'s output taken at face value** — a summary embedding gating an Act out, a scoring table displacing a governing Article, a model returning a vocabulary nobody validated. Determinism at the ends means the middle may be wrong without the system being wrong.'],
+    ['**P2 · Governed boundaries around model judgement**', 'Explicit premises and exact resolution → scoped search and judgement → mechanical checks plus applicable professional review.', 'Deterministic checks enforce declared properties; they do not prove legal correctness or compensate for a wrong premise. Independent evidence is required at every boundary, and the scope of any remaining uncertainty is preserved.'],
     ['**P3 · Dependencies run one way**', 'Analysis never calls retrieval; it consumes Findings. Drafting never retrieves. Presentation never computes.', 'Grounding holds only if there is exactly **one** audit chain. Two retrieval paths mean two grounding standards and no way to say which produced a citation.'],
     ['**P4 · Matter state is a derivation graph**', 'Every computed value records what it depends on; a corrected fact invalidates its dependents.', 'A pipeline recomputes everything or nothing. A graph recomputes exactly what changed and can say what changed and why.'],
     ['**P5 · Every gate declares its own response**', 'A condition that refuses something declares WHAT it refuses (turn, thread, step or evidence need) and HOW (withhold, block, or disclose). Those declarations live in one table — §7.1A, generated from `nm/domain/gates.py` — and no call site decides for itself.', 'The first draft of this document said the product *fails closed only on grounding* while nine conditions elsewhere in it blocked something. Both statements were written in good faith and they cannot both be true. **A prose rule about what happens when things go wrong will always drift from the code that handles it**, so the rule is now a table the code reads and the document renders.'],
@@ -639,9 +639,11 @@ A(spacer(140));
 
 A(callout('**The byte boundary is asserted on the bytes, at the composition root — never in the module that composes the answer.** A guard that is right in the core and wrong at the edge is not a guard, and that is precisely where every defect the first external review found was living.'));
 
-A(h3('7.3.2  The sequence, and what each step does when it fails'));
+A(h3('7.3.2  Lifecycle dependencies and adaptive work'));
 
 A(p('**A step\'s failure behaviour is part of its specification.** A sequence that says only what happens when everything works is the half of the contract that never mattered.'));
+
+A(p('The order below fixes admission, dependency, validation and commit boundaries. Within DERIVE it is a baseline, not a mandatory cognitive script: the lead may select, revisit or delegate eligible work as evidence changes, while recording why and preserving every required check. A useful independent task may run in parallel over the same authorised snapshot; a dependent task waits for its accepted inputs. New material never bypasses admission or silently changes a running snapshot.', { comment: 4 }));
 
 A(table(
   ['#', 'Phase', 'Step', 'On failure'],
@@ -658,7 +660,7 @@ A(table(
     ['9', 'DERIVE', 'Invalidate the dependents of every changed material fact.', 'A dependency that cannot be resolved marks its dependents stale rather than leaving them confidently current.'],
     ['10', 'DERIVE', 'Recompute dirty derivations in dependency order. **Blocking gates short-circuit** — an unresolved posture means the thread\'s downstream derivations are not computed at all.', 'A short-circuit is a **question**, not a silent omission. Nothing wrong is generated and nothing is paid for.'],
     ['11', 'DERIVE', 'Emit `EvidenceNeed`s; receive verified `Finding`s. **Bounded rounds** (§7.3.5).', 'Adapter failure **fails the need, not the turn.** The gap is visible in the answer.'],
-    ['12', 'DERIVE', 'Cross-file, serially: adversarial pass, cross-thread exposure, salvage, selection.', 'Cross-thread exposure is reported **or expressly returned as none**. Silence is not a pass.'],
+    ['12', 'DERIVE', 'Assess adversarial arguments, cross-thread exposure and salvage before dependent selection; order or parallelise eligible work by its actual dependencies.', 'Cross-thread exposure is reported **or expressly returned as none**. Silence is not a pass.'],
     ['13', 'DERIVE', 'Gap queue → the single highest-value next action.', 'An empty queue is a valid outcome and produces a turn that says so in a line.'],
     ['14', 'DERIVE', 'Assemble the Answer, board projection and case summary — all three derived from the same state.', 'An element that is none of the four permitted kinds cannot be constructed.'],
     ['15', 'DERIVE', '**Assert invariants.** Class-B checks run here, on the assembled object.', 'A **grounding** violation gates the output. Every other violation is recorded in `TurnMetrics.violations` and the answer still ships.'],
@@ -671,7 +673,7 @@ A(table(
 
 A(spacer(140));
 
-A(p('**Per-thread recomputation in step 10 runs in parallel; everything cross-file in step 12 runs after it, serially**, because each cross-file pass needs every thread settled to be correct.'));
+A(p('**Concurrency follows declared dependencies and accepted snapshot versions.** Independent per-thread work may run in parallel. A cross-file assessment waits for every thread it depends on; selection waits for its material assessments. Conflicting specialist results remain contested until resolved through the single acceptance path, and stale results are refused. Parallel completion is not permission to skip a required adverse assessment or to publish before validation and commit.'));
 
 A(h3('7.3.3  Streaming, and why it does not move the byte boundary'));
 
@@ -863,7 +865,7 @@ A(table(
   [
     ['**Python backend**', 'Fixed. It matches the existing corpus tooling and indices, and the knowledge plane is already Python.'],
     ['**Model choice is decided by measurement, not up front**', 'The cheap tier is the default. A step uses a stronger model only where a **measured** quality difference justifies it, recorded in the baseline. Model choice is a property of the step, declared where the step is defined, so the model mix is derivable without instrumentation scattered through the code.'],
-    ['**No latency or cost ceiling — but nothing is free**', 'The objective is the best achievable speed and cost **while holding the quality of a first-rate advocate**. Quality is the constraint; speed and cost are what we minimise subject to it.'],
+    ['**Bounded operation and measured quality**', 'Set release-specific latency, capacity and cost budgets with cancellation and degraded-service behaviour. Quality gates still govern; exceeding a budget must not silently lower grounding or professional standards. A background continuation or a clear partial result is preferable to an indefinite wait.'],
     ['**Every turn is instrumented**', 'Wall-clock latency, model call count, token cost, model mix, and per-stage latency. Streamed calls are recorded as calls — a streamed turn once logged `llm_calls: 0`.'],
     ['**A change that costs more must show what it bought**', 'In the same measurement. Cost without a demonstrated gain is a regression, not a trade-off.'],
     ['**One recorded baseline, updated deliberately**', '"Did this get worse" is not answerable when the answer is spread across a git log. One record holds the current figure for every measured quantity. It is updated with a stated reason — an improvement moves it, and a justified trade-off moves it with the justification recorded.'],
@@ -884,6 +886,7 @@ A(
   bullet('**Audit-trail write failures are surfaced**, never swallowed.'),
   bullet('**A permission is bounded at both ends** — matter and step, start and expiry. An authority for one matter never authorises a step on another, and a future-dated authority does not authorise immediately.'),
   bullet('**Document content is data, never instruction.** An uploaded file containing text addressed to the system is treated as content and quoted to the advocate, never acted on.'),
+  bullet('**A release is scoped to an environment.** Controlled-roster conformance does not certify production access security, MFA, processor handling, restoration or operational readiness. The release profiles in `plan.json` and atomic BK-42 criteria name the required evidence. Exceptions require their own authorised owner, compensating control and expiry; no agent may infer acceptance from a green test.'),
 );
 
 A(h2('7.6  The data lifecycle'));
@@ -907,6 +910,7 @@ A(table(
 A(spacer(140));
 
 A(p('*Evals:* **Class A** — quarantined substance is unreachable from analysis and releases exactly once; closure is blocked while any of the five categories is open; a retention date is per-matter and never a global constant. **Class B** — a deletion reports the stores it examined, and a partial deletion is a failure rather than a success; a lessons record contains no client identifier.'));
+A(p('**Multimodal lifecycle.** The declared store inventory includes originals, transcripts, translations, thumbnails, extracted frames, OCR, embeddings, caches, temporary uploads and authorised processor copies. Confirm deletion/retention per target, including legal holds and backup expiry. Pending or unverifiable processor deletion remains pending or unverifiable, never a global success. A matter may close with explicitly transferred continuing obligations; closure does not silently resolve them.'));
 
 A(new Paragraph({ children: [new PageBreak()] }));
 
@@ -917,19 +921,19 @@ A(h2('8.1  What "done" means'));
 
 A(callout('**A feature is not done because the code looks right, and not because a structural property holds.** The previous build had twelve mechanically-checked properties — persisted, survives restart, cannot be bypassed, has a production caller — and **every one of them passed** on a transcript where the product asked a client who had said *"yesterday"* for the date twice, dropped an assault into a possession cause, and analysed a twelve-year limitation on a trespass a day old. **The twelve measured the plumbing. The client drinks the water.**', SIGNAL));
 
-A(p('So the definition of done has three steps, in order:'));
+A(p('The earned claim must identify what is complete and what remains unproved:'));
 
 A(
   num('**The stage passes standalone** — the floor on every turn, plus that stage\'s own DOES, NEVER and PRODUCES checks, plus everything it must have inherited from earlier stages and still hold intact.'),
   num('**The journey portfolio passes end to end**, with **no hand-authored inter-stage state**: every stage receives what the preceding served interaction actually produced.'),
-  num('**Only then does the next slice begin.**'),
+  num('**Close only the demonstrated scope.** Independent work and prerequisite contracts may proceed and finish on their own evidence. Do not mark the dependent feature or a whole journey complete until the integrated portfolio passes. Stage records close in order while implementation and testing may iterate together.'),
 );
 
 A(p('Structural checks — layering, exception discipline, dead-guard detection — remain in CI as a **linter**. They are necessary, they are not the bar, and every one of them passed on the transcript that caused the rewrite.'));
 
 A(h3('State discipline, stated precisely'));
 
-A(p('**"No hand-authored inter-stage state" is not "no fixtures."** Controlled registries, clocks, corpora, scripted model responses and a real store are all legitimate and necessary. The rule is narrower and sharper: **no test may construct the file that a later stage begins from.** A hand-written provision span that read perfectly and parsed to nothing once hid an entire untestable advice path behind a green suite.'));
+A(p('**"No hand-authored inter-stage state" applies to journey and handoff evidence, not to every unit test.** Controlled clocks, corpora, model responses and stores are legitimate; isolated tests may construct minimal state to exercise a rule. A journey proof must obtain each handoff through the preceding real consumer path. It cannot replace the missing predecessor with a prepared file and claim end-to-end completion.'));
 
 A(h2('8.2  The rubric — three layers'));
 
@@ -1016,7 +1020,7 @@ A(table(
   ['Journey', 'What it exists to reach'],
   [
     ['**JP-1 canonical**', 'The ordinary path, end to end, nothing exceptional'],
-    ['**JP-2 outage**', 'Registry, model or store unavailable — every screen fails closed and says so'],
+    ['**JP-2 outage**', 'Registry, model or store unavailable — each gate applies its declared block, withhold or disclose response; no failed assessment appears cleared and permitted recovery remains available'],
     ['**JP-3 conflict**', 'A registry hit, quarantine, human clearance, a single release'],
     ['**JP-4 emergency**', 'Urgency raised, carried across turns, resolved by a named person, not re-raised'],
     ['**JP-5 restart**', 'The process dies mid-matter and every gate holds'],
@@ -1031,7 +1035,7 @@ A(spacer(140));
 
 A(h2('8.4  The golden set'));
 
-A(p('**Twenty-five conversations, each anchored on a real corpus judgement verified to exist, to be attributable, and to be readable back**, with every provision retrieved verbatim. **31 anchors verified, 42 provisions held.** All anchors are Andhra Pradesh High Court judgements, binding for a Telangana matter. The set lives in `docs/GOLDEN_SET.md`.'));
+A(p('**Twenty-five conversations** form the recorded golden-set baseline in `docs/GOLDEN_SET.md`. Its historical measurements name 31 verified anchors and 42 held provisions. Those figures do not establish current corpus freshness or professional acceptance. The AP anchor classification remains subject to §1.5.1, and a quality run must report its actual population, source versions and limitations.'));
 
 A(h3('The set is a filter, not a run'));
 
@@ -1116,8 +1120,8 @@ A(h2('8.7  Cumulative regression — the discipline that was missing'));
 A(callout('**The previous build had no cumulative suite. Each fix was verified in isolation, so fix 14 silently broke fix 6 and nobody found out until a live session. This is the direct cause of the reported symptom that every piece of work introduced a new defect somewhere else.**', SIGNAL));
 
 A(
-  bullet('**Every slice\'s evals become permanent on the day the slice closes**, and run on every change thereafter.'),
-  bullet('**Slice N is not done until slices 1..N all pass together.** Not "the new tests pass" — all of them, in one run.'),
+  bullet('**Closed-slice evals remain in the cumulative suite**, with execution governed by their test class, affected scope and approved cadence.'),
+  bullet('**The affected cumulative suite matrix must pass for one coherent candidate.** Independent suites may run separately against the same identified build and relevant inputs. The current conservative fingerprint invalidation still applies; carry-forward requires an explicit unaffected-scope basis and cannot bypass it.'),
   bullet('**Every defect found anywhere becomes a permanent case** in the stage it belongs to, and runs forever after.'),
   bullet('**A red suite blocks the merge.** Class A on every commit, class B at runtime on every turn, class C on every ingest, class D on approved batches.'),
   bullet('**A class-B half whose class-D partner has not run on its stated cadence is reported as unverified, not as passing.**'),
@@ -1186,7 +1190,7 @@ A(table(
   ['Quantity', 'Measured'],
   [
     ['Judgements', '33,791 — Supreme Court of India 29,510 (1950–2026); High Court of Andhra Pradesh 4,280 (**1954–2018**); one unnormalised duplicate court label'],
-    ['Telangana High Court', '**0** judgements. The binding court for every matter, entirely absent'],
+    ['Telangana High Court', 'Historical baseline: **0** rows under this court label. Check source identity, jurisdiction and current coverage before inferring absence or advising.'],
     ['AP judgements post-2018', '**0** — which is what makes the binding decision in §1.5.1 sound today, and `bind-1` necessary'],
     ['Case paragraphs', '1,015,780. Attributable to a court (`ratio` + `reasoning` + `order`): **451,553 = 44.5%**. Counsel\'s submission (`arguments`): **149,960 = 14.8%**. Unclassified: **271,020 = 26.7%**'],
     ['Bare-act chunks', '414,710 across **3,207** distinct act identifiers; `legal.db` holds 1,592 acts and 69,681 sections'],
@@ -1212,10 +1216,10 @@ A(table(
     ['**Posture**', 'Who the parties are and which side the client is on, per thread. `role` is stored and forum-correct; `side` (moving or defending) is **derived from it**. `unknown` is a value that blocks.'],
     ['**Finding**', 'What retrieval returns — never a chunk. Carries proposition, verbatim span, locator, validity window, binding status relative to a named forum, paragraph kind, treatment with scope, and the entailment result.'],
     ['**Proposition vs inference**', 'A **proposition** is a statement of law and must be cited to retrieved primary text. An **inference** is NM\'s reasoning, cannot carry a citation, and must be visibly marked. An inference dressed as a citation is the most dangerous output the system can make.'],
-    ['**Disposition**', 'What happens to a spotted issue: `run`, `parked(reason)`, `blocked(needs)`, `closed(reason)`. **There is no delete path** — deleting is silent, a disposition is visible.'],
+    ['**Disposition**', 'What happens to a spotted issue: `run`, `parked(reason)`, `blocked(needs)`, `closed(reason)`. No silent loss from ongoing reasoning; lifecycle-governed erasure remains possible and is not a disposition.'],
     ['**Facet**', 'An attribute of an issue — kind, effect, proof, disposition, urgency — as opposed to a single exclusive `track`, which forces mutually-exclusive labels onto things that are not.'],
     ['**Case theory**', 'One sentence per thread: what happened and why we win. Not a menu. **A defending party\'s theory is not "we deny."**'],
-    ['**Coverage state**', 'The three-state answer: `ANSWERED`, `NOT HELD`, or `HELD BUT NOT FOUND` — the third being a retrieval **defect** that escalates, never a corpus gap that is disclosed.'],
+    ['**Coverage state**', 'Distinguish an answered need, a measured corpus gap, held-but-not-found retrieval failure, and not-assessed/failed measurement. Each interface uses its declared enum; no conversion may turn an unperformed check into evidence of absence.'],
     ['**Manifest**', 'The **curated** statement of intended coverage. Asserted, not derived from the index — an index can only tell you what is there, never what is missing.'],
     ['**Attributable**', 'A judgment paragraph classified `ratio`, `reasoning` or `order` — the only kinds that may carry a proposition. `arguments` is counsel\'s submission; `unknown` cannot be vouched either way.'],
     ['**Tier**', 'What a step declares instead of a model: `routine`, `hard`, `judge` or `embed`. The tier-to-model mapping lives in configuration.'],
@@ -1248,7 +1252,7 @@ A(table(
 ));
 
 A(spacer(200));
-A(p('*End of document. Version 1.0 · 29 August 2026 · Status: every feature `decided`, nothing built.*', { align: d.AlignmentType.CENTER }));
+A(p('*Core requirements end. Version 1.1 · 10 September 2026. Intended behaviour; current implementation and proof are recorded in the backlog registry. Appendix E follows.*', { align: d.AlignmentType.CENTER }));
 
 require('./schemas').render(A);
 

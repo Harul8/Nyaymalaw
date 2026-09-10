@@ -22,6 +22,16 @@ const doc = new Document({
   creator: 'Nyaymalaw',
   title: 'Nyaymalaw — Product Requirements',
   description: 'End-to-end PRD: journey, features, retrieval, grounding, evaluation.',
+  comments: { children: [
+    { id: 1, author: 'Nyaymalaw planning review', initials: 'NM',
+      children: [new Paragraph('Revision 1.1 / BK-77: separates intended requirements from current implementation, verification and release. Author the PRD source and regenerate both views; the backlog remains the status owner.')] },
+    { id: 2, author: 'Nyaymalaw planning review', initials: 'NM',
+      children: [new Paragraph('Revision 1.1 / BK-77: makes the user-requested Take Brief / Work File / Advise loop explicit, including multimodal input, meaningful questions, unavailable evidence and selective reopening. These are delivery obligations, not newly implemented capabilities.')] },
+    { id: 3, author: 'Nyaymalaw planning review', initials: 'NM',
+      children: [new Paragraph('Revision 1.1 / BK-77: distinguishes legal premise selection from deterministic execution. Correct calculations and exact sources do not by themselves prove legally sound advice. Existing runtime gate changes require separately verified implementation.')] },
+    { id: 4, author: 'Nyaymalaw planning review', initials: 'NM',
+      children: [new Paragraph('Revision 1.2 / BK-90: adds adaptive grounded reasoning and bounded research/draft-document delegation. Required admission, permission, validation and publication gates remain mandatory. Existing feature IDs and refusal requirements are preserved; BK-91/BK-92 own new runtime proof, not this document revision.')] },
+  ] },
   numbering: H.numbering,
   styles: {
     default: {
@@ -62,7 +72,7 @@ const doc = new Document({
         })],
       }),
     },
-    children: [...partA.slice(0, 6), ...toc, ...partA.slice(6), ...partB, ...partC],
+    children: [...partA.slice(0, 7), ...toc, ...partA.slice(7), ...partB, ...partC],
   }],
 });
 

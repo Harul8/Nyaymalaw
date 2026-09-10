@@ -18,14 +18,14 @@ A(
   new Paragraph({ spacing: { before: 90, after: 0 }, alignment: AlignmentType.CENTER,
     children: [new TextRun({ text: 'Every feature carries the eval that proves it', size: 19, color: '5C6670' })] }),
   new Paragraph({ spacing: { before: 900, after: 0 }, alignment: AlignmentType.CENTER,
-    children: [new TextRun({ text: 'Version 1.0  ·  29 August 2026', size: 18, color: '8A939B' })] }),
+    children: [new TextRun({ text: 'Version 1.2  ·  10 September 2026', size: 18, color: '8A939B' })] }),
   new Paragraph({ children: [new PageBreak()] }),
 );
 
 /* ===================== PART 0 ===================== */
 A(h1('Part 0 — How to read this document'));
 
-A(p('This document is the **specification, and the specification is the source of truth.** Code is the build output, verified against what is written here. Where the code and this document disagree, one of them is wrong and which one is decided before either is changed.'));
+A(p('This document defines the **intended product**, not a claim that it is implemented or safe to deploy. Its editable source is `spec/prd/`; regenerate this Word document and `spec/features.yaml` together. Current implementation, evidence and delivery status belong to `docs/backlog/status.yaml`, not to copied status in a document. Where requirement and implementation disagree, record the gap and resolve it explicitly; neither a passing test nor a prose edit silently changes the agreed product.', { comment: 1 }));
 
 A(h2('0.1  Why this document is organised differently from its predecessor'));
 
@@ -62,8 +62,8 @@ A(p('Every eval in this document declares a class. The class decides how often i
 A(table(
   ['Class', 'Needs', 'Cadence', 'Example from this document'],
   [
-    ['A — logic', 'Nothing. No corpus, no model.', 'Every commit, seconds', '`unknown` posture is not treated as a claimant; a thread rename preserves its id; issues in equals issues accounted for by disposition.'],
-    ['B — structure', 'An answer to inspect. Mechanically checkable.', 'Every served turn, at runtime', 'Every citation carries a binding/persuasive label; every limitation position yields a date; the first element is an action or a blocking question.'],
+    ['A — logic', 'Controlled local dependencies. No live corpus or model.', 'Per-change gate; runtime measured', '`unknown` posture is not treated as a claimant; a thread rename preserves its id; issues in equals issues accounted for by disposition.'],
+    ['B — structure', 'An answer to inspect. Mechanically checkable.', 'Every served turn, at runtime', 'Every citation labels its authority status; limitation has a grounded date or explicit unresolved premise; advice leads with an action or blocking question.'],
     ['C — corpus', 'The corpus. No answer needed.', 'Every ingest or index change', 'Coverage per court and date range; is the governing Article retrievable; treatment precision against a sampled set.'],
     ['D — judgement', 'A rubric and a judge model.', 'Deliberate, approved runs only', 'Is the opposing case put at its strongest; is a salvage route specific rather than category-level; does the theory fit the adverse facts.'],
   ],
@@ -85,7 +85,7 @@ A(table(
     ['**Eval-driven** — evaluations are the working specification for quality; you name the failure modes, write a check per mode, and ship only what passes.', 'Every feature\'s EVAL field, the class system in §0.3, and Part 8, which defines the rubric, the golden set and the judge policy.'],
     ['**Walking skeleton, then vertical slices** — the thinnest end-to-end path first, every layer touched and almost nothing implemented, then thickened one slice at a time.', 'The PRODUCES field, which makes each slice consumable by the next, and the project plan\'s slice sequence. Slice 1 is a complete fresh-brief conference on one thread.'],
     ['**Error analysis before optimisation** — read production traces by hand, open-code the failures, group them into a taxonomy, count them, and fix the largest bucket first.', 'Part 8.6 makes this a scheduled ritual with an owner rather than an activity that happens when someone has time.'],
-    ['**Golden sets are sampled, never authored** — an author unconsciously chooses examples the system already handles.', 'Part 8.4. The six encoded scenarios are anchored on real corpus judgements and are explicitly labelled as a template, not yet a sampled set.'],
+    ['**Quality populations are sampled; controls may be authored.** Do not confuse representative performance with success on examples chosen by the builder.', 'Part 8.4. Scenario templates and planted mutations are useful controls; population-quality claims require the declared sampling and review method.'],
     ['**The judge is a measuring instrument and must be calibrated** — measure its agreement with human labels before trusting a number it produces.', 'Part 8.5, including the rule that the judge is never the model that produced the answer.'],
   ],
   [3900, 5460],
@@ -95,7 +95,7 @@ A(spacer(140));
 
 A(h3('The diagnostic frame: three gulfs'));
 
-A(p('When output is poor there are only three causes, and each has a different remedy. This frame is used throughout the document and in every error-analysis session, because reaching for the wrong remedy is how weeks are lost.'));
+A(p('Use these three diagnostic questions to organise error analysis, not as an exhaustive list of causes. Also inspect retrieval, permissions, persistence, orchestration, configuration and the measuring instrument itself. A plausible explanation is a hypothesis until a reproducible observation supports it.'));
 
 A(table(
   ['Gulf', 'The situation', 'The remedy', 'The mistake'],
@@ -108,25 +108,25 @@ A(table(
 ));
 
 A(spacer(140));
-A(callout('**The single most consequential design move in this document follows from the third gulf.** The previous build tried to make the product decisive by instructing it to be decisive. That never holds, because a model over-applies a behavioural instruction. The answer is structural: an answer element is one of exactly four kinds — action, finding that changes an action, blocking question, or ground for one of those — and **no element kind can hold a survey or a recital of the brief.** You do not instruct a stance. You make the alternative unrepresentable.'));
+A(p('**Structure makes the intended answer checkable.** An answer element is an action, a finding that changes an action, a blocking question, or a ground for one of those. Types can require these fields; they cannot prevent a recital from being placed inside one, or prove that a recommendation is sound. Runtime checks, adversarial examples and calibrated professional review must test the content as well as its shape.'));
 
 A(h2('0.5  Status vocabulary'));
 
-A(p('Every feature and every decision in this document carries a status, and **no feature is reported as done before its eval has run.**'));
+A(p('Use distinct claims for intended behaviour, implementation, verification and release. The registry owns the vocabulary and derivation rules. The feature contracts below state targets; they do not carry an independently editable completion status.'));
 
 A(table(
   ['Status', 'Means'],
   [
-    ['`decided`', 'Written here, agreed, not yet built. A rule whose eval has never executed stays at `decided` however obviously correct it looks.'],
-    ['`built`', 'Code exists on the served path.'],
-    ['`tested`', 'Its eval runs and passes, and has rejected its counterexample at least once.'],
-    ['`verified live`', 'Run in the real product, on real input, and the answer read by a human. Not that the offline suite is green — forty offline tests passed once while every served turn was crashing.'],
+    ['Intended contract', 'What the feature must do, refuse, preserve and recover. It can be specified before code exists.'],
+    ['Implementation', 'How much of that contract exists on its actual consumer path; recorded independently of test results.'],
+    ['Verification', 'Which named criteria have current proof, in which environment, with what population and remaining gaps. A local pass is not browser, legal-quality or production proof.'],
+    ['Delivery / release', 'Item completion derives under the registry rules. Deployment additionally requires the named release profile, specialist acceptance and authorised environment. Legacy completion is explicitly labelled, not retroactively evidence-derived.'],
   ],
   [1500, 7860],
 ));
 
 A(spacer(140));
-A(p('At the time of writing **every feature in this document is `decided`.** Nothing is built.'));
+A(p('The original 29 August baseline said nothing was built; that statement is historical, not current. Read `docs/PLAN.md` and the generated end-to-end workbook alongside the registry. The original `Nyaymalaw_Project_Plan.xlsx` is a historical slice baseline. Never edit either workbook to make delivery status true.'));
 
 A(h2('0.6  What is out of scope'));
 
@@ -149,7 +149,7 @@ A(h1('Part 1 — The product'));
 
 A(h2('1.1  What NM is'));
 
-A(p('**NM is an expert advocate giving an opinion. It is not an assistant executing instructions.** The relationship is instructing advocate to senior counsel: the advocate briefs NM, NM returns a considered and committed view, and the advocate decides what to do with it. That is a professional division of responsibility, not deference in the reasoning.'));
+A(p('**NM is software designed to support the standard of work expected from expert counsel.** It is not a licensed advocate, does not create a professional engagement in its own name, and cannot claim that a human act or review occurred. The working relationship is instructing advocate to a senior-counsel-style reasoning aid: NM tests the brief and offers a considered view; the responsible advocate reviews it and the authorised person decides. Confidence of expression never enlarges that authority.'));
 
 A(p('The distinction is load-bearing and it changes the output. A junior does what is asked and stops. A senior thinks critically, solves the problem, and returns what the best advocate in the room would have seen — including the thing that was not asked about, and including the news the client does not want.'));
 
@@ -174,6 +174,16 @@ A(h3('The guardrail that does not move'));
 
 A(p('A confident expert who is wrong is more dangerous than a hedging junior. **The expertise sits in reasoning, issue-spotting, framing and judgement — never in recalling provisions from memory.** NM is decisive *about retrieved law* and states plainly when something is genuinely not in the corpus. Seniority licenses stronger judgement, never looser sourcing.'));
 
+A(h3('Adaptive reasoning within recorded authority'));
+
+A(p('NM must choose the next useful investigation, question or preparation task from the current commission and evidence, then revise that choice when an answer, correction or new source changes the problem. The advocate need not direct each permitted search or move through a fixed interview. Mandatory admission, permission, validation and publication gates remain fixed; the cognitive work between them adapts to the matter. This is a requirement to build and evaluate, not a claim that autonomous operation is already implemented.', { comment: 4 }));
+
+A(p('One lead may use bounded **research** and **draft/document** specialists when their distinct task adds value. Delegation inherits the commission, permitted data and tools, snapshot, budget and stopping conditions; it grants no new authority. Specialists propose source-linked results for the same controlled acceptance path, not independent matter updates. They cannot create further agents, change policy, extend their budget or send, file, concede or settle. Ordinary Word and PDF rendering uses tools over the same accepted content version.'));
+
+A(p('**No invented matter detail or legal authority may enter accepted work.** User-supplied facts remain attributed assertions unless their evidence status supports more. An inference or hypothesis is visibly labelled and linked to its premises; it cannot be presented as a source quotation or proof of an unstated fact. Each material claim must preserve its source, locator, uncertainty and version through retrieval, delegation, synthesis and export. Missing, contradictory, stale or unavailable material remains explicit; absent draft details remain marked blanks. Agent agreement never supplies missing evidence.'));
+
+A(p('The advocate can interrupt, correct or cancel work and see what is saved, what remains unresolved, why the approach changed and which decision needs their authority. A failed specialist, exhausted budget or revoked permission is not successful completion. Acceptance compares ordinary orchestration, an adaptive lead and selective delegation on the same reviewed task populations, including changed evidence, unsafe requests, stale results and failure recovery. Additional agents are retained only where their measured benefit justifies their cost without weakening a safeguard.'));
+
 A(h2('1.2  The three kinds of act, and why the distinction drives the architecture'));
 
 A(p('A great advocate\'s work is usually decomposed by activity — take instructions, research, advise, draft. That decomposition is useless for building software, because the activities share no engineering properties. **The decomposition that matters is by what kind of act is being performed**, and there are three.'));
@@ -181,14 +191,14 @@ A(p('A great advocate\'s work is usually decomposed by activity — take instruc
 A(table(
   ['Kind of act', 'What it is', 'How it must be built', 'The failure when built wrong'],
   [
-    ['**Determination**', 'One right answer, fixed by legal structure. Which Article governs this cause in this forum on this date. Which code applies to conduct on 3 March 2024. Whether the thirty-day notice window was met. Whose burden an element is.',
-     '**Computed, never generated.** A lookup against a resolved graph, or arithmetic on dates. A model may state it after it is computed; a model may never be the thing that decides it.',
-     'A governing Article returned at rank 53 of 60, and a twelve-year limitation clock applied to a trespass that happened yesterday. Both are determinate questions handed to a ranking system.'],
+    ['**Determination**', 'Reproducible execution of an explicit governed rule: exact source lookup, calendar arithmetic, permission or state transition. Applicable law, accrual, exceptions, burdens and factual characterisation may first require legal judgement.',
+     '**Compute from attributed premises.** Record the selected rule, its source/version, inputs, uncertainty and review basis. A model may propose a legal premise but cannot silently promote it into a settled fact or rule. Recompute affected results when it changes.',
+     'A known governing Article lost at rank 53 of 60, or correct arithmetic applied to the wrong legal premise. Exact identity and legal applicability need distinct checks.'],
     ['**Judgement**', 'No single right answer, and expertise shows. Which of six sound arguments to run. Whether this theory survives the adverse facts. What opposing counsel will actually do. What a judge will find persuasive.',
      '**Generated, then checked.** This is where the model earns its place. It is bounded by a verified evidence set going in and a structural check coming out.',
      'A model asked to do judgement without a settled frame produces reasoning that is internally consistent and on the wrong side.'],
     ['**Commitment**', 'The acts that bind. Refusing an improper instruction. Telling the advocate their client is exposed. Committing to one recommendation instead of presenting a table of options.',
-     '**Structural.** Not knowledge but stance. Made real by making the alternative unrepresentable in the output type, never by instructing it in a prompt.',
+     '**Structured and reviewed.** Require a position or a specific reason it cannot yet be taken, then assess substance and professional duty. A recommendation is not client consent, drafting approval or authority to act.',
      'A balanced pros-and-cons table with no view, produced by a system that had been told to be decisive.'],
   ],
   [1500, 3100, 2600, 2160],
@@ -196,7 +206,7 @@ A(table(
 
 A(spacer(140));
 
-A(callout('**This is the through-line of the whole document.** Determinations are computed and verified. Judgements are generated inside a frame that has already been settled. Commitments are enforced by the shape of the output type. Where you see a rule that looks like exhortation, look for the structure underneath it — if there is none, the rule is not finished.'));
+A(p('**Keep premises, calculations, judgement and authority distinct.** Correct arithmetic does not establish the correct accrual event. An exact citation does not prove relevance or binding force. A populated recommendation field does not establish good advice. Each layer needs its own evidence; unresolved material premises restrict the maturity of the dependent advice, not unrelated safe work.', { comment: 3 }));
 
 A(h2('1.3  What "good" means, in priority order'));
 
@@ -205,9 +215,9 @@ A(p('The order is **lexicographic**. A lower priority never buys a higher one, a
 A(table(
   ['#', 'Priority', 'What it forces'],
   [
-    ['1', '**Not wrong.** A confident answer on the wrong side is worse than no answer.', 'Posture and limitation are blocking gates rather than steps. `unknown` is a first-class value. A grounding failure blocks the output rather than softening it.'],
-    ['2', '**Not missing anything.** A missed limitation point does not weaken a case, it ends it.', 'Nothing has a delete path. Spotting is exhaustive; selection is a visible disposition with a reason.'],
-    ['3', '**Grounded.** Every proposition traceable to retrieved primary text.', 'Verification is a gate in the data path, not a review step at the end.'],
+    ['1', '**Avoid unsupported certainty.** A confident answer on the wrong side is worse than withholding that conclusion.', 'Unknown posture and material limitation gaps restrict the dependent directive under the gate contract. Failed grounding withholds affected output and explains the gap; permitted independent work can continue.'],
+    ['2', '**Account for material coverage.** A missed threshold can defeat an otherwise sound case.', 'Account for the supplied record and applicable issue classes; record search scope, unread material and open gaps. Preserve issue dispositions within the lawful retention period. Never promise exhaustive legal coverage or prohibit authorised erasure.'],
+    ['3', '**Grounded.** Legal propositions trace to primary authority, facts to attributed material, and judgement to its stated basis.', 'Source identity, support and applicability are distinct checks. Verification is in the data path, not only a review at the end.'],
     ['4', 'Fast and cheap.', 'No fixed ceiling, but every turn instrumented. A change that increases latency or cost must show the quality it bought in the same measurement.'],
   ],
   [500, 3400, 5460],
@@ -218,7 +228,7 @@ A(p('**Decisiveness is a requirement, not a fifth priority.** Being right is not
 
 A(h3('The cornerstone: analyse toward the win, not toward a verdict'));
 
-A(p('The purpose of a case is to win it. Analysis is a means to that end and has no independent value. The measured failure mode is reasoning *toward a verdict* — working out the correct legal position, stating it accurately, and stopping. That produces answers that are technically right and operationally useless.'));
+A(p('The purpose of the work is to advance the client\'s lawful, informed objective, subject to professional duties. That may mean relief at trial, a negotiated outcome, preserving a relationship, avoiding disproportionate cost or deciding not to proceed. Analysis must support a practical decision; pursuing litigation or apparent victory is not an objective the system may assume.'));
 
 A(p('The reframe applies at every stage. Not *what is the legal position* but **what do we do about it.** Not *is the claim time-barred* but **what gets us past limitation, or what do we run instead.** Not *the presumption is against us* but **how do we rebut it, and with what.** A weak case is not a conclusion — it is the starting point of the work, because most real briefs are weak somewhere and the senior\'s value is in the salvage.'));
 
@@ -275,11 +285,11 @@ A(table(
 
 A(spacer(140));
 
-A(h4('1.5.1  Decision — every Andhra Pradesh judgement held is binding on Telangana'));
+A(h4('1.5.1  Historical corpus rule — binding-force review remains necessary'));
 
-A(p('All 4,280 AP High Court judgements in the corpus are treated as **binding** authority for a Telangana matter, not persuasive. This is what the measurement supports rather than a concession: the Telangana High Court was constituted on the bifurcation of 1 January 2019, the predecessor court\'s decisions bind the successor court\'s territory, and **the latest AP judgement held is from 2018 — the post-2018 count is exactly zero.**'));
+A(p('The original corpus baseline classified the held pre-2019 Andhra Pradesh decisions as binding candidates for Telangana matters. The date distribution is a corpus measurement, **not proof of the legal classification or of proposition-level applicability**. Counsel must validate the jurisdictional rule and its exceptions; each relied-on proposition still needs forum, bench, date, ratio and treatment review. Until that is established, show the classification as an unverified policy assumption, not a settled conclusion.'));
 
-A(callout('**CHECK `bind-1` (class C).** On every ingest, count AP High Court judgements with year ≥ 2019. If the count is non-zero this decision is void and binding status must be computed from the judgement date against 1 January 2019 before the corpus is served. **The check fails the build; it does not warn.** The two rules select the same rows today and stop agreeing the instant one post-2018 AP judgement lands, and on that day silence becomes a wrong answer.', SIGNAL));
+A(p('**CHECK `bind-1` (class C).** On every ingest, detect any post-2018 AP decision that invalidates the historical cohort assumption; preserve the existing failing ingest gate until a separately recorded rule replaces it. This population check cannot certify binding law. BK-66/BK-67 require a legally reviewed rule and adversarial examples before claiming professional acceptance. This revision records a requirement/implementation gap; it does not change current classifier behaviour.'));
 
 A(h4('1.5.2  The corpus trap that must be designed against'));
 
@@ -293,7 +303,7 @@ A(h2('1.6  Non-negotiables'));
 
 A(
   bullet('**Nothing enters this document without a testable rule.** If the test cannot be stated, the behaviour is not understood well enough to require it.'),
-  bullet('**Evaluation material is sampled, never authored.** A measurement quoted from a composed set is not a measurement.'),
+  bullet('**Representative quality claims require sampled evaluation material.** Authored examples and planted mutations are valid unit and adversarial controls, but do not establish real-world quality or recall.'),
   bullet('**A candidate set is a measured quantity, never an assumed one.** A structured field is not automatically a sound recall net — measure its recall first.'),
   bullet('**Generalised fixes only.** No scenario-specific patches. The test: can the fix be stated without naming the Act, section, case, atom type or phrase that exposed it? Prove it by deleting the specific entry and re-measuring.'),
   bullet('**Every fix ships with an invariant test that states the rule**, not the incident.'),
@@ -302,6 +312,40 @@ A(
   bullet('**Corpus gaps are disclosed, never filled from memory** — and a gap that is not really a gap is a defect to fix, not a disclosure to make.'),
   bullet('**Ask before destructive or irreversible actions.** Deleting corpus rows counts.'),
 );
+
+A(h2('1.7  The working relationship: take the brief, work the file, advise'));
+
+A(p('These are three recurring modes of professional work, not three screens to complete once. The advocate may move between them. Urgency, conflicts, authority and material uncertainty constrain what can safely be done; the system must explain the affected restriction while keeping permitted work available. The detailed intended step contracts live in `docs/backlog/steps.yaml`; the expert standards, work states and advice levels live in `professional.json`.', { comment: 2 }));
+
+A(table(
+  ['Mode', 'What NM does', 'When it moves or returns'],
+  [
+    ['**Take the brief**', 'Listen to the account through text, files or optional voice; read the supplied material; retrieve relevant permitted sources; reflect back the understanding; identify contradictions and prioritise what is missing.', 'Ask the smallest useful batch of questions, explaining what each answer changes. Accept correction, upload, voice reply, deferral or unavailable material. Repeat until the next decision has a sufficient basis or a named limitation.'],
+    ['**Work the file**', 'Separate allegations, evidence and inference; test thresholds; map elements and proof; research supporting and adverse law; form and challenge a theory; compare proportionate routes.', 'Return to briefing for a consequential missing premise. Continue independent work where safe. Stop research on a recorded coverage and decision-value basis, not when enough favourable cases have been found.'],
+    ['**Advise**', 'Give a recommendation at its earned maturity, reasons, strongest counter, fallback and next action with owner/time. Make practical cost and consequences understandable.', 'Seek the authorised decision separately. New facts, documents, instructions, treatment or dates reopen affected work and supersede stale advice; do not silently preserve a ready-for-reliance label.'],
+  ],
+  [1500, 3930, 3930],
+));
+
+A(h3('The transition and recovery contract'));
+A(
+  bullet('**No obligatory typing.** Text, upload and optional voice are equal entry paths within the declared capability matrix. State supported formats, languages, duration/size limits and processing status before a user relies on them. Acknowledged upload is not successful extraction.'),
+  bullet('**No forced completeness.** For each material gap record its consequence, owner, source sought, timing and whether it blocks the present decision. Material that cannot be obtained remains unavailable with a constrained route; it does not cause an endless question loop.'),
+  bullet('**No silent loss on return.** Preserve confirmed facts, unresolved contradictions, protective steps, deferrals and decisions across refresh, retry, interruption and session re-entry. Unsaved input and uncertain operation outcomes must be named.'),
+  bullet('**Selective invalidation.** A material correction identifies the changed source/version, marks dependent conclusions and artefacts stale, lowers their advice maturity where necessary, and requires fresh authority for any changed action. Unaffected work remains usable with its basis.'),
+  bullet('**Scope before authority.** An authorised person cannot enable an unimplemented or out-of-scope action. Current filing and communication controls prepare, record and verify human acts; they do not imply autonomous transmission.'),
+);
+
+A(h2('1.8  What earns professional trust'));
+A(p('The twenty `PA-` standards are acceptance obligations, not personality adjectives. Evaluate the quality of the work against a declared task population and legal/professional rubric. The five `AM-` levels describe what the present evidence permits, not a confidence percentage or a user-controlled promotion. `EW-` states describe work and return points, not a mandatory conversational rail.'));
+A(
+  bullet('**Understanding and economy.** Does NM preserve the client\'s account and objective, notice what changes the outcome, and avoid asking for already supplied information? Ask critical confirmations with a source locator and explain why they matter.'),
+  bullet('**Independent judgement.** Does it state the strongest adverse case, discriminate decisive from peripheral issues, pursue lawful alternatives and disagree respectfully when instructions conflict with evidence or duty? It must not mirror the user merely to appear helpful.'),
+  bullet('**Calibrated advice.** Does it distinguish a working hypothesis, provisional advice, counsel-reviewed reliance and action readiness using the registered maturity rules? Missing evidence, legal currency, professional review or authority cannot be hidden by confident tone.'),
+  bullet('**Practical usefulness.** Does the proposed next step serve the actual objective within cost, timing, vulnerability and enforceability constraints? Settlement, referral, preservation and no further action are legitimate outcomes.'),
+  bullet('**Accountability.** Can the advocate inspect the relevant source, understand a correction, identify who must decide, and resume without reconstructing the file? Explain material reasoning and uncertainty concisely; never present private model deliberation as evidence.'),
+);
+A(p('Use critical-failure gates separately from graded quality. Wrong-party advice, invented or unread authority, unauthorised disclosure/action, silent material loss and unsupported promotion to reliance cannot be averaged away. Representative counsel assessment must state reviewer role, task selection, rubric/version, disagreement and limitations. Exact thresholds and run scope are agreed before measuring. A local structural pass is not this professional acceptance.'));
 
 A(new Paragraph({ children: [new PageBreak()] }));
 
@@ -316,7 +360,7 @@ A(callout('**Some behaviours can only be performed by a human advocate.** In tho
 
 A(h2('2.1  The tenets, and where each one fires'));
 
-A(p('Each tenet is stated with its test and mapped to the journey stage in Part 3 where it is specified in feature form. **The stage column is what makes the set buildable** — it is how twenty-eight cross-cutting rules become a sequence of contiguous slices.'));
+A(p('Each tenet is stated with its test and mapped to the journey stage in Part 3 where it is specified in feature form. The stage column locates the obligation; the current plan specifies its deliverable, dependencies and proof. A mapping is traceability, not evidence that the tenet is implemented.'));
 
 const tenets = [
   ['1', 'Professional stance', 'Act independently, loyally and fearlessly within lawful instructions; preserve confidentiality and privilege; put duties to the court above tactical advantage; never mislead, suppress a binding adverse authority, abuse process, discriminate, make a personal attack, or assist conduct known to be unlawful.', 'Every recommendation is screened for legality, court duty, candour, confidentiality and conflicts. A failed screen **blocks** the recommendation and states the permitted alternative.', 'B / I'],
