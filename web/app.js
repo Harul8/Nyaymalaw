@@ -38,6 +38,10 @@ const state = {
   // Set once the session has been declared over, so a page with six panes
   // firing six requests reports it once rather than six times.
   ended: false,
+  // BK-72. Every asynchronous rail render owns one generation. If the
+  // advocate navigates again while its request is in flight, the old render
+  // loses the right to paint or close anything.
+  railGeneration: 0,
 };
 
 /* --------------------------------------------------------------- fetch --- */
@@ -74,6 +78,7 @@ function keepDraft() {
 // surface added later cannot be the one that keeps painting a matter after
 // the session behind it is gone.
 function clearPrivileged() {
+  state.railGeneration += 1;
   state.advocate = null;
   state.matterId = null;
   state.turns = [];
@@ -203,7 +208,9 @@ function deadlineField(m) {
 }
 
 async function showMatterList() {
+  const generation = ++state.railGeneration;
   state.matterId = null;
+  $('pane-advise').dataset.matterId = '';
   $('rail-title').textContent = 'Matters';
   $('back').hidden = true;
   const body = $('rail-body');
@@ -213,6 +220,7 @@ async function showMatterList() {
   try {
     data = await api('/api/matters');
   } catch (e) {
+    if (generation !== state.railGeneration) return;
     // NEVER render an unreadable board as an empty one.
     body.replaceChildren(stateBlock(
       'unbuildable',
@@ -221,6 +229,7 @@ async function showMatterList() {
     $('rail-meta').textContent = 'state: unbuildable';
     return;
   }
+  if (generation !== state.railGeneration) return;
 
   $('rail-meta').textContent =
     `${data.row_count} row(s) · bounded by ${data.bounded_by}`;
@@ -233,6 +242,7 @@ async function showMatterList() {
   body.replaceChildren(...data.matters.map((m) => {
     const row = document.createElement('div');
     row.className = 'row' + (m.blocked ? ' loud' : '');
+    row.dataset.matterId = m.matter_id;
     const t = document.createElement('div');
     t.className = 'r-title'; t.textContent = m.matter;
     const dl = document.createElement('dl'); dl.className = 'r-fields';
@@ -252,12 +262,15 @@ async function showMatterList() {
   }));
 }
 
-async function showThreadBoard(matterId, { restore = true } = {}) {
+async function showThreadBoard(
+  matterId, { restore = true, closeNavigator = true } = {}) {
+  const generation = ++state.railGeneration;
   // OPENING A MATTER CLOSES THE LIST at narrow widths. Leaving it up would
   // put the advocate on the answer they asked for with the index still over
   // it, which is the same unreachability wearing the other face.
-  toggleMatters(false);
+  if (closeNavigator) toggleMatters(false);
   state.matterId = matterId;
+  $('pane-advise').dataset.matterId = matterId;
   $('rail-title').textContent = 'Threads';
   $('back').hidden = false;
   const body = $('rail-body');
@@ -266,11 +279,13 @@ async function showThreadBoard(matterId, { restore = true } = {}) {
   let data;
   try {
     data = await api(`/api/matters/${matterId}`);
+    if (generation !== state.railGeneration) return;
     // BK-36. THE VERSION THIS TAB HAS NOW SEEN. Every brief carries it, so a
     // tab that loaded the file and sat is refused rather than writing onto a
     // version it never read.
     if (typeof data.version === 'number') state.matterVersion = data.version;
   } catch (e) {
+    if (generation !== state.railGeneration) return;
     body.replaceChildren(stateBlock(
       'unbuildable', `The thread board could not be built: ${e.message}`));
     $('rail-meta').textContent = 'state: unbuildable';
@@ -299,7 +314,8 @@ async function showThreadBoard(matterId, { restore = true } = {}) {
   // Caught by two journey phases at once: 5b found the gate states gone from
   // a turn it had just watched being served, and 9 found the restore working
   // perfectly in isolation and not in sequence.
-  if (restore) await restoreConversation(matterId);
+  if (restore && !(await restoreConversation(matterId, generation))) return;
+  if (generation !== state.railGeneration) return;
 
   body.replaceChildren(...data.threads.map((t) => {
     const row = document.createElement('div');
@@ -330,12 +346,13 @@ async function showThreadBoard(matterId, { restore = true } = {}) {
 // turn that really did cost something -- a measurement nobody made, shown as
 // a measurement. So the audit line for a read-back turn says where it came
 // from instead.
-async function restoreConversation(matterId) {
+async function restoreConversation(matterId, generation = state.railGeneration) {
   state.turns = [];
   let d;
   try {
     d = await api(`/api/matters/${matterId}/transcript`);
   } catch (e) {
+    if (generation !== state.railGeneration) return false;
     // NOT SILENT. A conversation that could not be read back is not a
     // conversation that did not happen, and an empty pane says the second.
     state.turns = [{
@@ -352,8 +369,10 @@ async function restoreConversation(matterId) {
       },
     }];
     repaint();
-    return;
+    return true;
   }
+
+  if (generation !== state.railGeneration) return false;
 
   state.turns = (d.turns || []).map((t) => ({
     brief: t.message || '',
@@ -382,6 +401,7 @@ async function restoreConversation(matterId) {
     });
   }
   repaint();
+  return true;
 }
 
 /* -------------------------------------------------------------- the answer --- */
@@ -870,7 +890,12 @@ async function deliver(entry) {
     repaint();
     // `restore: false` -- the turn on screen IS the live one, and reading it
     // back would replace it with a copy that has no metrics.
-    if (state.matterId) await showThreadBoard(state.matterId, { restore: false });
+    if (state.matterId) {
+      await showThreadBoard(state.matterId, {
+        restore: false,
+        closeNavigator: false,
+      });
+    }
   } catch (e) {
     entry.error = e.message;
     entry.refusal = (e.detail && typeof e.detail === 'object') ? e.detail : null;
@@ -1009,6 +1034,7 @@ $('new-matter').addEventListener('click', () => {
   toggleMatters(false);
   showIntake(true);
   state.matterId = null;
+  $('pane-advise').dataset.matterId = '';
   state.turns = [];
   repaint();
   $('mode-line').hidden = true;

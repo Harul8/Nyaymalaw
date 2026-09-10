@@ -2563,6 +2563,22 @@ now W0 control work: wait on explicit completion state, make newer navigation
 win, create two distinct matters in an isolated phase and assert the matter id
 changes at 390px, 768px and 1280px.
 
+**Implemented 10 September 2026; browser verification remains STALE.** The
+completion wait now observes the actual send control returning to its enabled
+`Send` state, not English text that never matched the page. Every asynchronous
+matter-list or thread-board render owns a monotonic generation and checks it
+after the wire; a later advocate navigation invalidates the older render. The
+automatic post-send refresh is expressly denied authority to close the matter
+navigator. Rendered rows and the Advise pane expose their matter identity, so
+phase 3 now creates two matters of its own at each width, records both ids,
+selects the first while the second is open, and fails unless the id changes.
+
+This closes the implementation gap, not the evidence gap. The repository's
+journey policy requires an explicit approved run, and no such run has been
+made for this tree. BK-72 therefore remains verifying with a STALE Evidence
+Pack and no Conformance Record; it must not derive done until the full browser
+journey produces a current source-bound report.
+
 ## BK-71 — professional plan and delivery-wave reconciliation
 Opened 9 September 2026.
 

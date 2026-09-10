@@ -197,15 +197,16 @@ def _advise(page, message: str):
     them yet.
 
     A check that reads the page too early does not fail. It passes, quietly,
-    on less than it claims to have looked at -- which is why this waits for
-    the composer to come back from `Working...`, the state the page itself
-    uses to say the turn is done.
+    on less than it claims to have looked at. The completion signal is the
+    actual send control becoming enabled again; matching English text was
+    never a state transition and did not even match the Unicode ellipsis the
+    page renders.
     """
     page.fill("#message", message)
     page.click("#send")
     page.wait_for_selector(".turn", timeout=60000)
-    page.wait_for_function(
-        "!document.body.innerText.includes('Working...')", timeout=90000)
+    page.wait_for_selector("#send:not([disabled])", timeout=90000)
+    assert page.inner_text("#send") == "Send"
 
 
 def _reach_rail(page, width):
@@ -322,17 +323,27 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
     # navigator, FIND a file in it and OPEN it, and still reach Search,
     # History, their identity and the way out -- at every width. BK-32.
     #
-    # IT NO LONGER CREATES TWO MATTERS THROUGH THE UI. That version cost more
-    # than it proved: `#new-matter` lives on the matter list and not the
-    # thread board, `showThreadBoard` closes the drawer at narrow widths, and
-    # `_sign_in` waits for a gate a live session never shows. Three widths of
-    # timeouts, all of them the harness rather than the product. The server is
-    # module-scoped, so the list this phase reads holds the files every other
-    # phase has opened -- which is a more honest population than two fixtures
-    # this phase minted for itself.
-    _open_matter(page, journey, client=f"Width {width} Traders",
+    # TWO FILES ARE CREATED IN THIS PHASE. A module-scoped store populated by
+    # earlier phases proves only that some row opens, not that THIS phase can
+    # switch away from the matter it just worked. The ids on the rendered
+    # rows are the observable identity: similar client names cannot make a
+    # same-file click look like a switch.
+    _open_matter(page, journey, client=f"Width {width} First Traders",
                  width=width, height=height)
     _advise(page, BRIEF)
+    first = page.get_attribute("#pane-advise", "data-matter-id")
+    assert first, f"at {width}px the first matter has no rendered identity"
+
+    _reach_rail(page, width)
+    if page.is_visible("#back"):
+        page.click("#back")
+    page.wait_for_selector("#new-matter", state="visible", timeout=15000)
+    page.click("#new-matter")
+    _intake(page, client=f"Width {width} Second Traders")
+    _advise(page, BRIEF)
+    second = page.get_attribute("#pane-advise", "data-matter-id")
+    assert second and second != first, (
+        f"at {width}px two briefs resolved to the same matter: {second!r}")
 
     # ---- 1. the navigator is REACHABLE, not necessarily VISIBLE ----------
     # A drawer, a tab or a menu all satisfy the rule; the rail being on
@@ -358,12 +369,19 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
             f"at {width}px the navigator lists no files at all, so an "
             f"advocate has no way to any matter but the one they are in: "
             f"{page.inner_text('#rail-body')[:200]!r}") from exc
-    rows = page.locator("#rail-body .row")
-    rows.first.scroll_into_view_if_needed()
-    rows.first.click()
+    target = page.locator(f'#rail-body .row[data-matter-id="{first}"]')
+    assert target.count() == 1, (
+        f"at {width}px the first of two newly-created matters cannot be found")
+    target.scroll_into_view_if_needed()
+    target.click()
     page.wait_for_function(
         "() => document.querySelector('#rail-title')"
         ".textContent.trim() === 'Threads'", timeout=15000)
+    page.wait_for_function(
+        "expected => document.querySelector('#pane-advise').dataset.matterId "
+        "=== expected", first, timeout=15000)
+    assert page.get_attribute("#pane-advise", "data-matter-id") != second, (
+        f"at {width}px clicking another row left the same matter open")
     assert not page.errors, f"at {width}px opening a file threw: {page.errors}"
 
     # ---- 4. TRAVERSE the rest of the application at this width -----------

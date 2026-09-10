@@ -4,7 +4,7 @@
 schema: 1
 generated_note: Bootstrapped 9 September 2026 from the inventory in BACKLOG.md. Hand-authored
   from here; see docs/backlog/SCHEMA.md.
-legacy_lifecycle_population: 81
+legacy_lifecycle_population: 80
 features:
 - id: A1
   phase: A
@@ -1623,14 +1623,18 @@ items:
   title: the matter navigator cannot be driven at 390px
   kind: journey
   priority: P1
-  delivery_status: in_progress
-  implementation: partial
+  delivery_status: verifying
+  implementation: complete
   verification: stale
   phase: A
   record: docs/BACKLOG.md#bk-72-the-matter-navigator-cannot-be-driven-at-390px
-  next_action: replace the text-based completion wait, prevent a late thread-board refresh
-    from overwriting newer navigation, and prove switching between two distinct matters in
-    an isolated run at all three widths
+  next_action: run the explicitly approved complete browser journey and promote its
+    source-bound report only if the isolated two-matter switch passes at all three widths
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-72-the-matter-navigator-cannot-be-driven-at-390px}
+    build: {result: BUILT, ref: docs/BACKLOG.md#bk-72-the-matter-navigator-cannot-be-driven-at-390px}
+    test: {result: STALE, ref: tests/test_the_journey_login_to_logout.py::test_phase_3_the_matter_navigator_is_reachable_at_every_width}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-72-the-matter-navigator-cannot-be-driven-at-390px}
   acceptance:
   - id: BK-72-AC1
     requirement: at 390px an advocate can open the navigator, return to the file list
@@ -1641,7 +1645,8 @@ items:
         result: STALE
         ref: tests/test_the_journey_login_to_logout.py::test_phase_3_the_matter_navigator_is_reachable_at_every_width
         note: the saved report is for 53b16b0+dirty and records all three widths failing;
-          the test and product changed afterwards, so no current width result is established
+          the completion wait, navigation ownership and phase isolation are now implemented,
+          but no current browser run has been authorised or established
     negative_control:
       mutation: make the phase open the matter it was already on, or let a late refresh
         close a navigator opened afterwards

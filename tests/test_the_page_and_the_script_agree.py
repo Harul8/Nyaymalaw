@@ -155,3 +155,19 @@ def test_the_scan_would_catch_a_missing_element():
     assert LOOKUP.findall("$('planted-id')") == ["planted-id"]
     assert ELEMENT_ID.findall('<div id="planted-id">') == ["planted-id"]
     assert "planted-id" not in ids_on_the_page()
+
+
+def test_late_rail_work_cannot_overwrite_newer_navigation():
+    """BK-72's cheap guard; the real counterexample remains browser evidence.
+
+    Every rail request takes a generation, checks it after awaiting the wire,
+    and the automatic post-send refresh is expressly denied authority to close
+    a navigator the advocate opened. Matter ids on rows and the pane make a
+    distinct-file switch observable to the journey rather than inferred from
+    a title both files share.
+    """
+    assert "const generation = ++state.railGeneration" in SCRIPT
+    assert SCRIPT.count("generation !== state.railGeneration") >= 6
+    assert "closeNavigator: false" in SCRIPT
+    assert "row.dataset.matterId = m.matter_id" in SCRIPT
+    assert "$('pane-advise').dataset.matterId = matterId" in SCRIPT
