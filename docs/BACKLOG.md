@@ -27,17 +27,17 @@ found cannot answer it.
 
 | Phase | | Features | Steps | Contracted | Verified | Open P0 | Readiness |
 |---|---|---:|---:|---:|---:|---:|---|
-| A | Arrive | 3/4 | 4 | 0/4 | 7/30 | 6 | not releasable |
+| A | Arrive | 3/4 | 4 | 0/4 | 8/30 | 5 | not releasable |
 | B | Open a matter | 0/6 | 4 | 2/4 | 4/14 | 3 | not releasable |
-| C | Take the brief | 5/7 | 7 | 0/7 | 6/24 | 8 | not releasable |
+| C | Take the brief | 5/7 | 7 | 0/7 | 7/24 | 7 | not releasable |
 | D | Work the file | 8/9 | 14 | 1/14 | 9/31 | 8 | not releasable |
 | E | Advise | 1/5 | 5 | 0/5 | 5/31 | 9 | not releasable |
 | F | Act | 0/7 | 7 | 0/7 | 1/10 | 4 | not releasable |
 | G | Carry | 0/3 | 3 | 0/3 | 2/12 | 3 | not releasable |
 | H | Close | 0/2 | 2 | 0/2 | 1/5 | 0 | not releasable |
-| I | Leave | 1/1 | 1 | 0/1 | 2/16 | 5 | not releasable |
+| I | Leave | 1/1 | 1 | 0/1 | 3/16 | 4 | not releasable |
 
-**81 rows · 17 open P0 · 0 blocked · 18/44 features implemented**
+**81 rows · 16 open P0 · 0 blocked · 18/44 features implemented**
 
 ### Professional plan — registered and derived
 
@@ -66,10 +66,9 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 
 ### Open P0 — what is unsafe
 
-- **BK-21** [A/C/I] the matter encryption key IS the OpenAI API key — *verifying* · the provider credential itself is still the old value and only the account holder can rotate it at the provider; see BK-21-AC4 and docs/DECISIONS.md
 - **BK-31** [A] account access, recovery and workspace identity — *in_progress* · the roster contradiction is resolved and enrolment is authorisation-gated; recovery, MFA and workspace identity remain
 - **BK-33** [A] recognisable matter cover, truthful board and real reopen — *in_progress* · render passed_deadlines, which the projection already emits
-- **BK-34** [B] front-door legal and professional screens before substance — *in_progress* · stale the conflict clearance when a party is added; make the emergency route reachable
+- **BK-34** [B] front-door legal and professional screens before substance — *in_progress* · the emergency exception needs B2 emergency triage, which BK-53 delivers; an incomplete registry reading NOT_ASSESSED needs the firm-scoped registry
 - **BK-35** [D] cause-specific accrual and answer-consistency gate — *in_progress* · refuse to run the period from a single dated fact that does not satisfy the curated trigger; emit the statutory limb
 - **BK-36** [C] durable, idempotent and recoverable turns — *in_progress* · idempotency must cover the OPENING turn, where matter_id is null and _load_or_create mints a new matter
 - **BK-40** [I] session expiry and confirmed logout — *in_progress* · clearPrivileged must clear state.intake and the intake form
@@ -81,13 +80,13 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 - **BK-64** [C/D/E] typed proposition and evidence model — *planned* · define immutable sources, locators and proposition types for instructions, allegations, admissions, documents, testimony, inference and assumptions
 - **BK-65** [D/E] legal dependency graph and selective invalidation — *planned* · model predicates, issues, rules, evidence, remedies and conclusions as a versioned dependency graph
 - **BK-67** [C/D/E/F] expert-advocate evaluation gate — *planned* · turn PA-01 to PA-20 into representative matter rubrics with named reviewers, thresholds, reservations and regression policy
-- **BK-69** [C/G/I] multimodal privacy and processing boundary — *planned* · define consent, purpose, quarantine, processor, least-privilege, privilege, retention, deletion and derivative-attribution controls before media intake ships
+- **BK-69** [C/G/I] multimodal privacy and processing boundary — *in_progress* · the W0 foundation is built; end-to-end attribution of originals, derivatives, processors, retention and deletion needs BK-54's intake at W2
 - **BK-70** [D/E/F] remedy and enforceability model — *planned* · model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
 
 ### Admitted gaps in the evidence
 
 - **26 rows rest on prose evidence** (`legacy: true`), closed before this registry existed. Each is retired by attaching an executable proof, not by editing a heading.
-- **34 active rows carry no acceptance criteria yet**, so `done` cannot be derived for them however much work is finished.
+- **33 active rows carry no acceptance criteria yet**, so `done` cannot be derived for them however much work is finished.
 - **44 of 47 journey steps carry no contract**, so what the step must do, refuse and recover from is not yet stated anywhere a check can read.
 - **37 steps are DERIVED, not stated by the PRD.** The PRD gives a sequence for Phase B and Phase D and a question for the other seven; a derived step is a reading of the plan and is not the plan.
 
@@ -1021,6 +1020,34 @@ site never passes it (`nm/core/turn.py:1451`). `matter.emergency_because` has
 read sites only and no production writer, and where it is read the emergency
 screen BLOCKS. The narrow recorded exception the row promises is unreachable.
 
+
+
+**THE CLEARANCE IS NOW BOUND TO WHAT IT SCREENED. 10 September 2026.**
+
+`Screen.stale_for` has answered this since B3 landed. Asked which functions
+call it, the code graph returned **exactly one — a unit test.** No production
+caller anywhere. So an advocate who named a guarantor on turn six was shown the
+conflict clearance from turn one, which had never seen that name, and nothing
+said so. The rule was written, tested in isolation, and unwired.
+
+**The sequencing was never the defect.** The screen sits in ADMIT-A, before this
+turn's words are read, so a name given today is screened from tomorrow —
+deliberately, because screening it today means admitting the brief first, which
+is what B3 forbids. What was missing is that the advocate was never told the
+clearance in front of them did not cover the name they had just given.
+
+`Screen.uncovered` was added beside `stale_for`: the first says THAT a
+clearance no longer applies, the second says WHICH parties it never saw. Both
+live with the rule rather than at the call site, because `parties - covers`
+computed in the turn engine is a second copy — and `_parties_of` normalises, so
+the two would drift and the check would silently stop matching. A test asserts
+the engine asks rather than computes.
+
+**AC3 is blocked and named, not quietly dropped.** The emergency exception needs
+`may_admit_substance(..., emergency=True)` and a writer for
+`matter.emergency_because`, and neither exists because **B2 emergency triage is
+unbuilt** — BK-53 delivers it. Building half an emergency route here would put
+the declaration somewhere B2 then has to move it from.
 #### BK-48 — Phase B is built and the register says it is not — **OPEN · P1 · Phase B**
 Opened 9 September 2026, verified in source.
 
@@ -2441,6 +2468,49 @@ must define purpose and authority, processor boundaries, quarantine, malware
 handling, least privilege, encryption, retention, redaction and deletion.
 Unsafe or unauthorised media must never enter legal reasoning.
 
+
+
+**THE W0 FOUNDATION IS BUILT, 10 September 2026.** `plan.json` places this row
+at W0 and BK-54's media intake at W2, and that order is the whole design: a
+control written after its subject is a control written around whatever the
+subject already does.
+
+**Legal reasoning never receives media.** It receives a `MediaAdmission`
+(`nm/domain/media.py`) — what was taken in, for what purpose, on whose
+authority, in what quarantine state, processed by whom and whether the bytes
+left the deployment, derived from which original, retained how long. The bytes
+stay behind the boundary.
+
+**Why media is not just another input.** An advocate's brief is words they
+chose. A recording is not: a voice note taken in chambers carries the clerk,
+the client's spouse and the room; a photographed page carries whatever else was
+on the desk. The material arrives with people in it who never briefed anyone,
+and it arrives as bytes no downstream reader can interrogate for provenance.
+
+**Every field is three-stated**, because §9 is this project's most repeated
+defect. Each of these would otherwise be a sentence somebody could put in front
+of a judge: `NOT_ASSESSED` quarantine reading as released (unscanned bytes
+reasoned on), an absent purpose reading as *the matter* (material used for what
+it was never given for), an absent authority reading as *the advocate* (a
+recording nobody authorised, in the file), an absent processor reading as
+in-house (privileged audio sent to a third party, undisclosed).
+
+**The sweep bit on its first run against the real population**, flagging the
+boundary module itself — `admitted(media_id, kind)` is the constructor, not a
+leak. That is also the answer to whether an empty media population makes this
+vacuous: it does not, because the boundary is in the population. The exemption
+is one file, named, and the test asserts its length so a second cannot join it
+quietly.
+
+**No port was built.** `nm/ports/media.py` would have no implementer until
+BK-54, and the build guide refuses speculative abstraction. The typed
+admission is what BK-54 has to satisfy; the port is BK-54's to add when
+something implements it.
+
+**AC3 is NOT_RUN and stays that way.** End-to-end attribution of originals,
+derivatives, processors, retention and deletion cannot be exercised without an
+intake path. The types carry the fields; recording that as PASS on the strength
+of the types existing is precisely the claim this registry refuses.
 ## BK-70 — remedy and enforceability model
 Opened 9 September 2026.
 
@@ -3096,6 +3166,25 @@ so it must be rotated at OpenAI. It is now SAFE to rotate -- the store no
 longer depends on it -- which is the whole point of the work above. Recorded as
 `BK-21-AC4`, `production_measure`, `NOT_RUN`, and BK-21 will not derive `done`
 until it is done.
+
+
+**CLOSED 10 September 2026. The credential was rotated, and it was measured
+rather than taken on trust.**
+
+The first check said the key in `.env` was byte-identical to the pre-rotation
+value — same SHA-256 — while the provider returned **HTTP 401
+`token_invalidated`**. So the rotation had happened at OpenAI and `.env` still
+carried the dead value: the exposure was closed and the deployment was broken,
+which are two different states and would have read as one.
+
+With the new value in place: **HTTP 200**, 129 models, `test_openai_live.py`
+green through the adapter, and no collision with the matter seal. BK-21 now
+derives `done` from four passing criteria — the first product P0 to earn it
+through the full evidence path.
+
+**And the guard held across the rotation, which is the whole point.** The same
+act, performed yesterday, would have made all 247 sealed matters permanently
+unreadable.
 ## BK-16 - the matter cipher downgraded silently - **FIXED**
 **MEASURED, and less bad than it first looks.** `_Cipher.__init__` catches
 `ImportError` on `cryptography` and sets

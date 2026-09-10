@@ -2118,10 +2118,51 @@ class TurnEngine:
                       f"{read.refused}. Say them again and I will add them")))
         if not read.named:
             return matter
-        return replace(matter, intake_parties={
+        widened = replace(matter, intake_parties={
             **(matter.intake_parties or {}),
             **{p.name: p.side for p in read.parties},
         })
+
+        # BK-34. A CLEARANCE IS BOUND TO THE SET IT SCREENED, and this turn
+        # has just widened the set.
+        #
+        # `Screen.stale_for` has answered exactly this question since B3
+        # landed, and NOTHING CALLED IT. One caller in the whole product and
+        # it was a unit test. So an advocate who named a guarantor on turn six
+        # was shown the conflict clearance from turn one -- which had never
+        # seen that name -- and nothing anywhere said so.
+        #
+        # THE SCREEN CANNOT RUN ON THIS TURN, AND THAT IS NOT THE DEFECT. It
+        # sits in ADMIT-A, before this turn's words are read by anything, so a
+        # party named today is screened from tomorrow. That is deliberate:
+        # screening it today would mean admitting the brief first, which is
+        # what B3 forbids. What was missing is that the advocate was never
+        # told the clearance in front of them did not cover the name they had
+        # just given.
+        #
+        # `.clears` RATHER THAN `state is CLEAR`, because that comparison
+        # written at a call site is the second copy `Screen.clears` exists to
+        # refuse. And a NOT_ASSESSED screen is not a stale clearance -- it is
+        # a screen that has not run, which its own row already says.
+        conflict = next(
+            (s for s in (matter.screens or ())
+             if getattr(s, "kind", None) is screens_mod.ScreenKind.CONFLICT),
+            None)
+        if conflict is not None and conflict.clears:
+            widened_names = self._parties_of(widened).names
+            if conflict.stale_for(widened_names):
+                # ASKED, NOT COMPUTED. `parties - covers` written here would
+                # be a second copy of a rule that already has an owner, and
+                # `_parties_of` normalises, so the two would drift and the
+                # staleness check would silently stop matching.
+                fresh = conflict.uncovered(widened_names)
+                grounds.append(Element(
+                    kind=ElementKind.GROUND, disclosure=True,
+                    text=(f"The conflict check on this turn covered the "
+                          f"parties already on the file. It did not cover "
+                          f"{', '.join(fresh)}, named just now -- that runs "
+                          f"on your next turn")))
+        return widened
 
     def _read_dates(self, turn: TurnInput, matter: Matter, thread: Thread,
                     metrics: TurnMetrics, existing: tuple = ()):

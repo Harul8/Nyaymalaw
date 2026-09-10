@@ -151,6 +151,22 @@ class Screen:
         """
         return not parties <= self.covers
 
+    @implements("B3")
+    def uncovered(self, parties: frozenset[str]) -> tuple[str, ...]:
+        """WHICH names this answer never saw.
+
+        `stale_for` says THAT a clearance no longer applies; this says WHICH
+        parties it never covered. Both live here rather than at the call site,
+        because a caller computing `parties - covers` for itself is a second
+        copy of the rule -- and the copy is where a normalisation drifts and
+        the staleness check silently stops matching.
+
+        A disclosure that cannot name the party is one the advocate cannot
+        act on: "the check may not cover everyone" is a worry, and "it did not
+        cover the guarantor you just named" is a next step.
+        """
+        return tuple(sorted(parties - self.covers))
+
 
 #: SCREEN KIND -> ITS GATE, and how a screen state reads in that gate's own
 #: vocabulary. BK-34.

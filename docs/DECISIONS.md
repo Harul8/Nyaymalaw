@@ -222,3 +222,74 @@ one wave, and the plan schedules nothing that is not a row. The number is
 whatever the registry holds.
 
 Swept the other control-plane tests for the same shape while I was there.
+
+---
+
+## D-010 — I built BK-69's boundary and deliberately did not build its port
+
+**The question.** BK-69 is the W0 foundation for media privacy, and media
+intake (BK-54) is W2. How much of the boundary is worth building before the
+pipeline exists?
+
+**Decided.** The typed admission and the sweep that enforces it. **Not** the
+port.
+
+**Why the boundary now.** GC-14 assigns it `foundation_wave: W0` for a reason:
+a control written after its subject is written around whatever the subject
+already does. Building it first means BK-54 has to satisfy it rather than
+negotiate with it — and the sweep fails the day an intake parameter arrives
+unadmitted.
+
+**Why not the port.** `nm/ports/media.py` would have no implementer until W2,
+and the build guide refuses speculative abstraction in as many words. The typed
+admission is the contract BK-54 must meet; the port is BK-54's to add when
+something implements it.
+
+**What I recorded honestly rather than optimistically.** `BK-69-AC3` —
+end-to-end attribution of originals, derivatives, processors, retention and
+deletion — is `NOT_RUN`. The types carry every field. Marking it PASS on the
+strength of the types existing is exactly the claim the registry exists to
+refuse, and it would have made a P0 look finished.
+
+**Reversible.**
+
+---
+
+## D-011 — The rotation was half-done, and the two halves looked identical
+
+You said the API key was rotated. The first measurement said the value in
+`.env` was **byte-identical** to the pre-rotation backup — and the provider
+returned **HTTP 401 `token_invalidated`** for it.
+
+Both facts were true and they mean different things: **rotated at the provider,
+not updated in `.env`.** The exposure was closed; the deployment was broken.
+Reporting either one alone would have been wrong — "it's rotated" hides an
+outage, "it isn't rotated" hides that the leak is dead.
+
+The new value measures HTTP 200, and `test_openai_live.py` passes through the
+adapter. BK-21 now derives `done` from four criteria.
+
+**The lesson I am keeping:** "did you do X" and "is X in effect" are separate
+questions, and the backup I kept in the scratchpad is the only reason the first
+could be answered at all.
+
+---
+
+## D-012 — BK-34's emergency clause belongs to BK-53, not to BK-34
+
+**The question.** BK-34's acceptance includes *an emergency matter can proceed
+only with the exception visibly recorded*. `may_admit_substance` takes an
+`emergency` flag no caller passes, and `matter.emergency_because` has read
+sites and no writer.
+
+**Decided.** Record it as blocked on B2 rather than build it inside BK-34.
+
+**Why.** The flag has no caller *because emergency triage (B2) is unbuilt* —
+`implementation: none`, delivered by BK-53 at W1. Building a declaration route
+inside BK-34 would put it somewhere B2 then has to move it from, and the two
+would disagree in the meantime about who may declare an emergency.
+
+Recorded as `BK-34-AC3`, `NOT_RUN`, with the reason. BK-34 does not derive
+`done`, which is correct: two of its four criteria pass and two do not.
+
+**Reversible.**

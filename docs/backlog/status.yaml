@@ -621,12 +621,15 @@ items:
     required_evidence: [production_measure]
     evidence:
       production_measure:
-        result: NOT_RUN
-        ref: ''
-        note: ONLY THE ACCOUNT HOLDER CAN DO THIS. The value was exposed in a session
-          transcript on 7 September, so it must be rotated at OpenAI. The store no
-          longer depends on it, so rotating is now safe and no longer destroys the
-          matters -- which was the whole point of AC1 to AC3.
+        result: PASS
+        ref: measured 10 September 2026
+        note: 'ROTATED AND VERIFIED. Measured rather than taken on trust: the previous
+          value now returns HTTP 401 token_invalidated from the provider, so the
+          credential exposed on 7 September is dead; the value now in .env returns
+          HTTP 200 and tests/test_openai_live.py passes end to end through the
+          adapter. It does not collide with the matter seal, so BK-21''s guard holds
+          across the rotation -- which is the point: the same rotation would have
+          destroyed all 247 sealed matters the day before.'
     negative_control:
       mutation: rotate the provider credential before re-keying
       expected_failure: every stored matter becomes permanently unreadable -- the
@@ -827,14 +830,69 @@ items:
   priority: P0
   delivery_status: in_progress
   implementation: partial
-  verification: failing
+  verification: partial
   phase: B
-  depends_on:
-  - BK-31
+  depends_on: [BK-31]
   record: docs/BACKLOG.md#bk-34-front-door-legal-and-professional-screens-before-substance
-  next_action: stale the conflict clearance when a party is added; make the emergency route
-    reachable
-  acceptance: []
+  next_action: the emergency exception needs B2 emergency triage, which BK-53 delivers;
+    an incomplete registry reading NOT_ASSESSED needs the firm-scoped registry
+  acceptance:
+  - id: BK-34-AC1
+    requirement: adding a party makes an earlier conflict clearance stale, and the
+      advocate is told which parties it never covered
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_a_new_party_stales_the_clearance.py::test_a_clearance_names_the_parties_it_never_saw
+        note: the mechanism existed since B3 and had no production caller -- the code
+          graph returned exactly one caller and it was a unit test. Now wired at the
+          point the party set widens.
+    negative_control:
+      mutation: a screen that never ran, rather than a clearance that stopped applying
+      expected_failure: no disclosure fires; saying 'the check did not cover X' about
+        a check that has not run is two messages about one fact
+  - id: BK-34-AC2
+    requirement: the engine asks the screen rather than recomputing the rule
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_a_new_party_stales_the_clearance.py::test_the_turn_engine_asks_rather_than_computing_it
+    negative_control:
+      mutation: compute `parties - covers` at the call site
+      expected_failure: reported; that copy is where a normalisation drifts and the
+        staleness check silently stops matching
+  - id: BK-34-AC3
+    requirement: an emergency matter can proceed only with the exception visibly recorded
+    required_evidence: [domain_test, browser_journey]
+    evidence:
+      domain_test:
+        result: NOT_RUN
+        ref: ''
+        note: 'blocked on B2. `may_admit_substance` takes an `emergency` flag no production
+          caller passes, and `matter.emergency_because` has read sites and no writer
+          -- because emergency triage (B2) is unbuilt and BK-53 delivers it. Building
+          half an emergency route inside this row would put the declaration somewhere
+          B2 then has to move it from.'
+      browser_journey: {result: NOT_RUN, ref: '', note: no emergency route to drive}
+    negative_control:
+      mutation: declare an emergency and admit substance with screens outstanding
+      expected_failure: the exception is recorded on the file, never silent
+  - id: BK-34-AC4
+    requirement: an incomplete registry never reads clear
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_screens.py::test_a_partial_read_produces_an_incomplete_screen_and_never_clears
+        note: INCOMPLETE is a distinct state from CLEAR and NOT_ASSESSED, and `Screen.clears`
+          is the single owner of the question so a call site cannot treat incomplete
+          as good enough.
+    negative_control:
+      mutation: ask `state is CLEAR` at a call site instead of `.clears`
+      expected_failure: the copy treats INCOMPLETE as cleared
+
 - id: BK-35
   title: cause-specific accrual and answer-consistency gate
   kind: journey
@@ -1468,20 +1526,56 @@ items:
   title: multimodal privacy and processing boundary
   kind: substrate
   priority: P0
-  delivery_status: planned
-  implementation: none
-  verification: none
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
   affects_phases: [C, G, I]
   record: docs/BACKLOG.md#bk-69-multimodal-privacy-and-processing-boundary
-  next_action: define consent, purpose, quarantine, processor, least-privilege, privilege, retention, deletion and derivative-attribution controls before media intake ships
+  next_action: the W0 foundation is built; end-to-end attribution of originals, derivatives,
+    processors, retention and deletion needs BK-54's intake at W2
   acceptance:
   - id: BK-69-AC1
-    requirement: unsafe or unauthorised media never reaches legal reasoning, and every original, derivative, processor disclosure, retention decision and deletion remains attributable
-    required_evidence: [domain_test, integration_test, adversarial_test, counsel_review]
-    evidence: {}
+    requirement: nothing that draws legal conclusions accepts media; it accepts an admission
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_media_never_reaches_reasoning_unadmitted.py::test_no_reasoning_function_accepts_media
+        note: swept over nm/core, nm/domain and nm/knowledge. It bit on its first run
+          against the real population, flagging the boundary module itself -- so the
+          empty media population does not make it vacuous.
     negative_control:
-      mutation: upload malicious, unsupported or out-of-scope media or revoke processing authority during extraction
-      expected_failure: processing is quarantined or stopped without contaminating the matter record, and the disposition is visible
+      mutation: "plant a reasoning function taking `audio_bytes`, or one annotated as a video frame"
+      expected_failure: reported, with the module and parameter named
+  - id: BK-69-AC2
+    requirement: an admission cannot exist without purpose, authority and a decided
+      quarantine state, and unchecked media never reads as admissible
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_media_never_reaches_reasoning_unadmitted.py::test_the_boundary_refuses_what_it_says_it_refuses
+    negative_control:
+      mutation: build an admission with a blank authority
+      expected_failure: refused rather than defaulted; 'the advocate' as a default
+        makes an unauthorised recording indistinguishable from an authorised one
+  - id: BK-69-AC3
+    requirement: every original, derivative, processor disclosure, retention decision
+      and deletion remains attributable end to end
+    required_evidence: [integration_test, browser_journey]
+    evidence:
+      integration_test:
+        result: NOT_RUN
+        ref: ''
+        note: the types carry derived_from, processors and retention; nothing exercises
+          them end to end because media intake is BK-54 at W2. Recorded NOT_RUN rather
+          than PASS on the strength of the types existing.
+      browser_journey: {result: NOT_RUN, ref: '', note: no media path to drive}
+    negative_control:
+      mutation: derive a transcript that cannot name its original
+      expected_failure: the derivative cannot be produced, checked or deleted with
+        the original
+
 - id: BK-70
   title: remedy and enforceability model
   kind: substrate

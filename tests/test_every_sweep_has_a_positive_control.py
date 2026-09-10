@@ -44,6 +44,12 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sweep test  ->  the test that proves it can fail.
 #: A sweep with no control is a sweep that has never been shown to work.
 CONTROLS: dict[str, str] = {
+    # BK-69 -- media never reaches reasoning unadmitted, over nm/core,
+    # nm/domain and nm/knowledge. Its control plants five media-shaped
+    # parameters and asserts each is seen; the population is not empty even
+    # today, because the boundary module itself is in it.
+    "test_no_reasoning_function_accepts_media":
+        "test_the_scanner_sees_media_reaching_a_reasoning_function",
     # BK-44 -- a documented defect is marked strict, never called, over every
     # test file in the suite. Its control plants the `if` and `except` forms
     # that were actually in the journey file, and the `from pytest import`

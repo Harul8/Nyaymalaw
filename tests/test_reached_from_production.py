@@ -55,6 +55,15 @@ ENTRY_POINTS: dict[str, str] = {
 #: behaviour does not, and the difference is invisible to every other check in
 #: this build.
 UNWIRED: dict[str, str] = {
+    "nm.domain.media":
+        "BK-69, and deliberately ahead of its caller. `plan.json` places this "
+        "boundary at W0 and media intake at W2 (BK-54), because a control "
+        "written after its subject is a control written around whatever the "
+        "subject already does. BK-54 wires it: the intake adapter builds a "
+        "`MediaAdmission` and nothing in `nm/core` ever sees the bytes. Until "
+        "then `tests/test_media_never_reaches_reasoning_unadmitted.py` sweeps "
+        "the reasoning layers and fails the day an unadmitted parameter "
+        "appears, so the boundary is enforced before it is called.",
     # `nm.domain.reads` WAS HERE. It is wired as of 5 September 2026 -- not by
     # the tier escalation it was built for, which still needs a hard-tier
     # model, but by the general form of B-088: a DECISIVE read that answers
@@ -203,6 +212,11 @@ def test_the_scan_can_see_an_unreached_module():
 #: was actually wrong, was the one it could not see. A join that silently
 #: drops members is the same defect as a scan whose population went to zero.
 OWNER: dict[str, tuple[str, ...]] = {
+    # BK-69's boundary belongs to the feature that will cross it. C6 is
+    # document intake and extraction -- the media path -- so when C6 moves off
+    # `implementation: none`, the status check above starts asking whether
+    # this module is still unwired instead of skipping it.
+    "nm.domain.media": ("C6",),
     "nm.core.quarantine": ("B4",),
     "nm.core.screens": ("B2", "B3", "B5", "B6"),
     "nm.core.intake": ("C6",),
