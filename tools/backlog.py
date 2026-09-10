@@ -85,6 +85,18 @@ EVIDENCE = {"domain_test", "integration_test", "browser_journey",
 #: this repository already.
 RESULT = {"PASS", "FAIL", "NOT_RUN", "STALE", "BLOCKED", "NOT_APPLICABLE"}
 
+#: The four playbooks are a lifecycle, not four documents somebody remembers.
+#: A row managed after BK-74 carries all four records. Older rows are counted
+#: as a declared migration population at the document root; adding another
+#: record-less row changes that population and fails lint rather than quietly
+#: extending the exception.
+STAGE_RESULT = {
+    "start": {"READY", "BLOCKED"},
+    "build": {"NOT_STARTED", "OPEN", "BUILT", "BLOCKED"},
+    "test": {"NOT_RUN", "OPEN", "VERIFIED", "FAILED", "STALE", "BLOCKED"},
+    "signoff": {"NOT_RUN", "OPEN", "SIGNED_OFF", "RETURNED", "BLOCKED"},
+}
+
 #: A row whose subject is legal advice cannot be closed on automated tests
 #: alone. Point 5, and it is the difference between the plumbing and the water.
 COUNSEL_FACING_KINDS = {"journey", "finding"}
@@ -245,6 +257,7 @@ def lint(doc: dict) -> list[str]:
     bad += _cycles(items, seen)
     bad += _missing_records(items)
     bad += _build_rules(doc)
+    bad += _delivery_lifecycle(doc, items)
 
     fids = [f.get("id") for f in feats]
     if len(fids) != len(set(fids)):
@@ -282,6 +295,54 @@ def lint(doc: dict) -> list[str]:
     for it in items:
         if it.get("legacy") and it["id"] in reopened:
             bad.append(f"{it['id']}: reopened and still marked legacy")
+    return bad
+
+
+def _delivery_lifecycle(doc: dict, items: list[dict]) -> list[str]:
+    """The playbook hand-offs, including the declared pre-cutover population."""
+    bad: list[str] = []
+    unmanaged = [it.get("id", "?") for it in items if not it.get("stage_records")]
+    expected = doc.get("legacy_lifecycle_population")
+    if expected != len(unmanaged):
+        bad.append(
+            "lifecycle migration population is "
+            f"{len(unmanaged)}, expected {expected!r}; a work item gained or lost "
+            "stage records without reconciling the declared pre-cutover population")
+
+    for it in items:
+        records = it.get("stage_records")
+        if not records:
+            continue
+        rid = it.get("id", "?")
+        for stage, vocabulary in STAGE_RESULT.items():
+            record = records.get(stage)
+            if not isinstance(record, dict):
+                bad.append(f"{rid}: stage_records has no {stage} record")
+                continue
+            result = record.get("result")
+            if result not in vocabulary:
+                bad.append(f"{rid}: {stage} result {result!r} is not valid")
+            if not record.get("ref"):
+                bad.append(f"{rid}: {stage} record has no reference")
+
+        start = (records.get("start") or {}).get("result")
+        build = (records.get("build") or {}).get("result")
+        test = (records.get("test") or {}).get("result")
+        signoff = (records.get("signoff") or {}).get("result")
+        if build not in (None, "NOT_STARTED") and start != "READY":
+            bad.append(f"{rid}: Build began before the Start Record was READY")
+        if test not in (None, "NOT_RUN") and build != "BUILT":
+            bad.append(f"{rid}: Test began before the Build Record was BUILT")
+        if signoff not in (None, "NOT_RUN") and test != "VERIFIED":
+            bad.append(f"{rid}: Sign-off began before the Evidence Pack was VERIFIED")
+
+        status = it.get("delivery_status")
+        if status == "ready" and start != "READY":
+            bad.append(f"{rid}: ready without a READY Start Record")
+        if status == "in_progress" and build not in ("OPEN", "BUILT"):
+            bad.append(f"{rid}: in_progress without an open Build Record")
+        if status == "verifying" and build != "BUILT":
+            bad.append(f"{rid}: verifying before the Build Record is BUILT")
     return bad
 
 
@@ -748,6 +809,9 @@ def derive_done(it: dict, by_id: dict) -> bool:
     if it.get("kind") in COUNSEL_FACING_KINDS and it.get("priority") == "P0" \
             and "counsel_review" not in levels:
         return False
+    records = it.get("stage_records")
+    if records and (records.get("signoff") or {}).get("result") != "SIGNED_OFF":
+        return False
     return True
 
 
@@ -917,11 +981,33 @@ def render(doc: dict) -> bool:
     return changed
 
 
-#: delivery_status -> the stage whose playbook governs the next move.
+#: Fallback for the declared pre-BK-74 migration population. Managed rows use
+#: their four records below. READY means Start is closed, so Build is next.
 STAGE_FOR = {
-    "planned": "before", "ready": "before", "blocked": "before",
+    "planned": "before", "ready": "build", "blocked": "before",
     "in_progress": "build", "verifying": "prove",
 }
+
+
+def next_stage(it: dict, by_id: dict[str, dict]) -> str | None:
+    """Return the playbook stage the item must open next; None is terminal."""
+    if derive_done(it, by_id):
+        return None
+    records = it.get("stage_records")
+    if records:
+        if (records.get("start") or {}).get("result") != "READY":
+            return "before"
+        if (records.get("build") or {}).get("result") != "BUILT":
+            return "build"
+        if (records.get("test") or {}).get("result") != "VERIFIED":
+            return "prove"
+        if (records.get("signoff") or {}).get("result") != "SIGNED_OFF":
+            return "signoff"
+        return None
+    if (it.get("implementation") == "complete"
+            and item_result(it) == "PASS"):
+        return "signoff"
+    return STAGE_FOR.get(it.get("delivery_status"))
 
 
 def stage_report(doc: dict, rid: str) -> tuple[str, int]:
@@ -938,15 +1024,15 @@ def stage_report(doc: dict, rid: str) -> tuple[str, int]:
                 f"is the first stop rule (BG-048)."), 1
 
     ds = it.get("delivery_status")
-    stage = STAGE_FOR.get(ds)
+    stage = next_stage(it, by)
     reg = doc.get("build_rules") or {}
     out = [f"{rid}  {it.get('title')}",
            f"  {ds} / impl {it.get('implementation')} / "
            f"verification {it.get('verification')} / {it.get('priority')}"]
 
     if stage is None:
-        out.append(f"\n  {ds} is terminal: no playbook applies. Reopen the row "
-                   f"before doing work against it.")
+        out.append("\n  DONE is derived and the lifecycle is closed: no "
+                   "playbook applies. Reopen the row before doing work against it.")
         return "\n".join(out), 0
 
     card = (reg.get("cards") or {}).get(stage, "?")

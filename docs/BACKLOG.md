@@ -27,15 +27,15 @@ found cannot answer it.
 
 | Phase | | Features | Steps | Contracted | Verified | Open P0 | Readiness |
 |---|---|---:|---:|---:|---:|---:|---|
-| A | Arrive | 3/4 | 4 | 0/4 | 8/32 | 6 | not releasable |
-| B | Open a matter | 0/6 | 4 | 2/4 | 4/16 | 4 | not releasable |
-| C | Take the brief | 5/7 | 7 | 0/7 | 7/26 | 8 | not releasable |
-| D | Work the file | 8/9 | 14 | 1/14 | 9/33 | 9 | not releasable |
-| E | Advise | 1/5 | 5 | 0/5 | 5/33 | 10 | not releasable |
-| F | Act | 0/7 | 7 | 0/7 | 1/12 | 5 | not releasable |
-| G | Carry | 0/3 | 3 | 0/3 | 2/14 | 4 | not releasable |
-| H | Close | 0/2 | 2 | 0/2 | 1/7 | 1 | not releasable |
-| I | Leave | 1/1 | 1 | 0/1 | 3/18 | 5 | not releasable |
+| A | Arrive | 3/4 | 4 | 0/4 | 9/32 | 6 | not releasable |
+| B | Open a matter | 0/6 | 4 | 2/4 | 5/16 | 4 | not releasable |
+| C | Take the brief | 5/7 | 7 | 0/7 | 8/26 | 8 | not releasable |
+| D | Work the file | 8/9 | 14 | 1/14 | 10/33 | 9 | not releasable |
+| E | Advise | 1/5 | 5 | 0/5 | 6/33 | 10 | not releasable |
+| F | Act | 0/7 | 7 | 0/7 | 2/12 | 5 | not releasable |
+| G | Carry | 0/3 | 3 | 0/3 | 3/14 | 4 | not releasable |
+| H | Close | 0/2 | 2 | 0/2 | 2/7 | 1 | not releasable |
+| I | Leave | 1/1 | 1 | 0/1 | 4/18 | 5 | not releasable |
 
 **83 rows · 17 open P0 · 0 blocked · 18/44 features implemented**
 
@@ -2644,6 +2644,18 @@ delivery state and those records: READY opens Build; built work opens Test;
 passing evidence opens Sign-off; approved conformance permits done. Lint must
 refuse a stage whose preceding record is absent and a non-legacy completion
 with no current conformance decision.
+
+**Built, tested and signed off 10 September 2026.** Managed rows now carry all
+four records. The router reads those records instead of guessing from the
+delivery label: a READY Start Record opens Build, a BUILT Build Record opens
+Test, a VERIFIED Evidence Pack opens Sign-off, and SIGNED_OFF makes the row
+terminal once its acceptance evidence also passes. Lint refuses missing
+records, an out-of-order transition, or an undeclared change in the exact
+pre-cutover population. Three Class-A controls prove routing, sequencing and
+the distinction between passing tests and approved conformance. The current
+Conformance Record approves this exact lifecycle claim; BK-73 remains the
+separate control that will bind the referenced PASS results to their machine
+execution rather than the authored registry word.
 
 ## BK-30 — executable login-to-logout acceptance journey — **PARTLY DONE · P1**
 

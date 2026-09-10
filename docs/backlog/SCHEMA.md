@@ -64,6 +64,25 @@ Terminal states outside that line, each with a required field:
 | `cancelled` | `decision`, recording who decided and why |
 | `blocked` | `blocked_by`, with a `type` and a `description` |
 
+### The four playbook records
+
+Rows opened or actively migrated after BK-74 carry `stage_records` for
+`start`, `build`, `test` and `signoff`. Each record has a controlled result and
+a reference to the work item's actual record. The sequence is enforced:
+
+```text
+Start READY -> Build BUILT -> Test VERIFIED -> Sign-off SIGNED_OFF
+```
+
+`ready` therefore opens Build, not Start. Passing evidence opens Sign-off, not
+done. A lifecycle-managed item cannot derive done until its Conformance Record
+is `SIGNED_OFF`.
+
+The pre-cutover rows are not silently exempt. Their exact population is
+declared by `legacy_lifecycle_population`; adding a record-less row or migrating
+one without reconciling that count fails lint. The count is retired as those
+rows acquire real stage records.
+
 The linter rejects `planned → done` with no evidence, `blocked` with no
 blocker, `superseded` with no replacement, and `done → in_progress` with no
 recorded reopening event.

@@ -159,6 +159,69 @@ def test_a_missing_link_is_not_proven():
         "an implemented row with no criteria derived as done")
 
 
+def _managed_item() -> dict:
+    return {
+        "id": "X", "title": "managed", "kind": "control", "priority": "P1",
+        "delivery_status": "verifying", "implementation": "complete",
+        "verification": "passing", "affects_phases": ["A"],
+        "record": "docs/BACKLOG.md#x", "acceptance": [{
+            "id": "X-AC1", "requirement": "the rule",
+            "required_evidence": ["domain_test"],
+            "evidence": {"domain_test": {"result": "PASS"}},
+        }],
+        "stage_records": {
+            "start": {"result": "READY", "ref": "record#start"},
+            "build": {"result": "BUILT", "ref": "record#build"},
+            "test": {"result": "VERIFIED", "ref": "record#test"},
+            "signoff": {"result": "OPEN", "ref": "record#signoff"},
+        },
+    }
+
+
+def test_ready_routes_to_build_and_verified_routes_to_signoff():
+    """BK-74-AC1. The router follows the playbook hand-offs."""
+    tool = _tool()
+    ready = _managed_item()
+    ready.update(delivery_status="ready", implementation="none",
+                 verification="none")
+    ready["stage_records"]["build"]["result"] = "NOT_STARTED"
+    ready["stage_records"]["test"]["result"] = "NOT_RUN"
+    ready["stage_records"]["signoff"]["result"] = "NOT_RUN"
+    assert tool.next_stage(ready, {"X": ready}) == "build"
+
+    verified = _managed_item()
+    assert tool.next_stage(verified, {"X": verified}) == "signoff"
+
+
+def test_stage_records_are_sequential_and_the_legacy_population_is_fixed():
+    """BK-74-AC2. A later playbook cannot float free of its predecessor."""
+    tool = _tool()
+    doc = copy.deepcopy(_doc())
+    before = tool.lint(doc)
+    assert not before
+    next(i for i in doc["items"] if i["id"] == "BK-74").pop(
+        "stage_records")
+    assert any("lifecycle migration population" in problem
+               for problem in tool.lint(doc))
+
+    doc = copy.deepcopy(_doc())
+    managed = next(i for i in doc["items"] if i["id"] == "BK-74")
+    managed["stage_records"]["build"]["result"] = "BUILT"
+    managed["stage_records"]["start"]["result"] = "BLOCKED"
+    assert any("Build began before" in problem for problem in tool.lint(doc))
+
+
+def test_signoff_is_required_for_managed_done_and_then_closes_the_router():
+    """BK-74-AC3. Passing tests are an input to sign-off, not sign-off."""
+    tool = _tool()
+    item = _managed_item()
+    assert not tool.derive_done(item, {"X": item})
+    assert tool.next_stage(item, {"X": item}) == "signoff"
+    item["stage_records"]["signoff"]["result"] = "SIGNED_OFF"
+    assert tool.derive_done(item, {"X": item})
+    assert tool.next_stage(item, {"X": item}) is None
+
+
 def test_the_board_is_not_stale():
     """BK-60-AC4. The generated section matches the registry.
 

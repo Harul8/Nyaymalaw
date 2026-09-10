@@ -4,6 +4,7 @@
 schema: 1
 generated_note: Bootstrapped 9 September 2026 from the inventory in BACKLOG.md. Hand-authored
   from here; see docs/backlog/SCHEMA.md.
+legacy_lifecycle_population: 81
 features:
 - id: A1
   phase: A
@@ -1696,6 +1697,11 @@ items:
   record: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them
   next_action: make automated PASS derive from a current machine result and require structured
     provenance for browser, model, counsel and production evidence
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them}
   acceptance:
   - id: BK-73-AC1
     requirement: an automated PASS names a machine result containing the exact test node,
@@ -1733,19 +1739,27 @@ items:
   title: Start Build Test and Sign-off are enforced delivery states with records
   kind: control
   priority: P1
-  delivery_status: ready
-  implementation: none
-  verification: none
+  delivery_status: verifying
+  implementation: complete
+  verification: passing
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-74-start-build-test-and-sign-off-are-enforced-delivery-states-with-records
-  next_action: store the four stage records, derive routing and prevent completion before
-    conformance sign-off
+  next_action: migrate each newly opened or actively worked row into the recorded lifecycle;
+    keep the declared pre-cutover population exact until it reaches zero
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-74-start-build-test-and-sign-off-are-enforced-delivery-states-with-records}
+    build: {result: BUILT, ref: docs/BACKLOG.md#bk-74-start-build-test-and-sign-off-are-enforced-delivery-states-with-records}
+    test: {result: VERIFIED, ref: tests/test_the_backlog_states_one_truth.py}
+    signoff: {result: SIGNED_OFF, ref: docs/BACKLOG.md#bk-74-start-build-test-and-sign-off-are-enforced-delivery-states-with-records}
   acceptance:
   - id: BK-74-AC1
     requirement: READY routes to Build, verified evidence routes to Sign-off, and a derived-done
       row is terminal rather than routed back to Test
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_ready_routes_to_build_and_verified_routes_to_signoff
     negative_control:
       mutation: route ready to Start or a completed row to Test
       expected_failure: the state-machine invariant fails
@@ -1753,7 +1767,10 @@ items:
     requirement: each completed stage names its Start Record, Build Record, Evidence Pack or
       Conformance Record and the next stage cannot begin without the preceding record
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_stage_records_are_sequential_and_the_legacy_population_is_fixed
     negative_control:
       mutation: mark an item verifying without a Build Record and Evidence Pack
       expected_failure: backlog lint refuses the transition
@@ -1761,7 +1778,10 @@ items:
     requirement: non-legacy done cannot derive without an approved Conformance Record matching
       the current evidence and exact claim
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_backlog_states_one_truth.py::test_signoff_is_required_for_managed_done_and_then_closes_the_router
     negative_control:
       mutation: give an implemented row passing evidence but no sign-off record
       expected_failure: the row remains not done and routes to Sign-off
