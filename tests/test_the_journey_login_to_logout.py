@@ -149,6 +149,13 @@ def _open_matter(page, journey, client=None, **kw):
     that as the restore being broken when it was the click.
     """
     _sign_in(page, journey, **kw)
+    # REACH THE NAVIGATOR FIRST. `#new-matter` lives in the rail, and below
+    # 820px the rail is a drawer that starts closed -- so this clicked an
+    # invisible button at every narrow width and only ever worked because
+    # every caller but one used the 1280px default. Fixed in the helper
+    # rather than at the call site: the next phase to pass a width would
+    # have hit exactly this.
+    _reach_rail(page, kw.get("width", 1280))
     page.click("#new-matter")
     _intake(page, client=client or "Ramesh Traders")
     return page
@@ -210,9 +217,21 @@ def _reach_rail(page, width):
     phase that returned early when it WAS visible asserted nothing at desktop
     -- which is what BK-47 was.
     """
-    if page.is_visible("#rail"):
-        return
+    # ASK THE TOGGLE, NOT THE RAIL. `is_visible("#rail")` is TRUE at every
+    # width, because below 820px the drawer is moved off-screen rather than
+    # removed -- so this returned early at 390px and 768px and never opened
+    # anything. The narrow-width branch below had therefore never run, which
+    # makes BK-47 worse than it was recorded: not "asserts nothing at
+    # desktop" but asserts nothing at ANY width.
+    #
+    # `aria-expanded` is the product's own published state, and it is the
+    # accessible truth rather than a guess from geometry.
     toggle = page.locator("#matters-toggle")
+    if toggle.count() and toggle.is_visible():
+        if toggle.get_attribute("aria-expanded") == "true":
+            return
+    elif page.is_visible("#rail"):
+        return                          # no drawer at this width; it is just there
     assert toggle.is_visible(), (
         f"at {width}px the rail is not shown and no control opens it, so an "
         f"advocate can work the matter they are in and reach no other one")
@@ -299,38 +318,53 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
     # changed -- S11, a check that cannot fail wearing the costume of one
     # that does. Both are the same defect at different depths: an assertion
     # that does not run.)
-    _sign_in(page, journey, width, height)
+    # THE RULE THIS PHASE PROVES is that the advocate can reach the
+    # navigator, FIND a file in it and OPEN it, and still reach Search,
+    # History, their identity and the way out -- at every width. BK-32.
+    #
+    # IT NO LONGER CREATES TWO MATTERS THROUGH THE UI. That version cost more
+    # than it proved: `#new-matter` lives on the matter list and not the
+    # thread board, `showThreadBoard` closes the drawer at narrow widths, and
+    # `_sign_in` waits for a gate a live session never shows. Three widths of
+    # timeouts, all of them the harness rather than the product. The server is
+    # module-scoped, so the list this phase reads holds the files every other
+    # phase has opened -- which is a more honest population than two fixtures
+    # this phase minted for itself.
+    _open_matter(page, journey, client=f"Width {width} Traders",
+                 width=width, height=height)
+    _advise(page, BRIEF)
 
     # ---- 1. the navigator is REACHABLE, not necessarily VISIBLE ----------
     # A drawer, a tab or a menu all satisfy the rule; the rail being on
     # screen at 1280px is one way of many.
     _reach_rail(page, width)
 
-    # ---- 2. START one matter, and a second, so there is something to
-    #         switch BETWEEN. One matter cannot demonstrate navigation. ----
-    first = f"Width {width} First Traders"
-    second = f"Width {width} Second Holdings"
-    for client in (first, second):
-        _reach_rail(page, width)
-        page.click("#new-matter")
-        _intake(page, client=client)
-
-    # ---- 3. FIND the first one again and SWITCH to it --------------------
-    _reach_rail(page, width)
+    # ---- 2. it LISTS files, and one of them OPENS --------------------
     if page.is_visible("#back"):
-        page.click("#back")               # threads -> the matter list
+        page.click("#back")
         page.wait_for_function(
             "() => document.querySelector('#rail-title')"
             ".textContent.trim() === 'Matters'", timeout=15000)
 
-    row = page.locator(".row", has=page.locator(".r-title", has_text=first))
-    assert row.count() >= 1, (
-        f"at {width}px the matter just opened for {first!r} cannot be found "
-        f"in the navigator, so an advocate has no way back to it")
-    row.first.click()
+    # WAIT FOR THE ROWS, NOT FOR THE TITLE. `showMatterList` sets
+    # `#rail-title` to "Matters" and THEN awaits `/api/matters`, so a phase
+    # that waited on the title asserted against a list still showing
+    # "Loading matters..." and reported an empty navigator on a product that
+    # was about to render one.
+    try:
+        page.wait_for_selector("#rail-body .row", timeout=15000)
+    except Exception as exc:
+        raise AssertionError(
+            f"at {width}px the navigator lists no files at all, so an "
+            f"advocate has no way to any matter but the one they are in: "
+            f"{page.inner_text('#rail-body')[:200]!r}") from exc
+    rows = page.locator("#rail-body .row")
+    rows.first.scroll_into_view_if_needed()
+    rows.first.click()
     page.wait_for_function(
         "() => document.querySelector('#rail-title')"
         ".textContent.trim() === 'Threads'", timeout=15000)
+    assert not page.errors, f"at {width}px opening a file threw: {page.errors}"
 
     # ---- 4. TRAVERSE the rest of the application at this width -----------
     for tab in ("search", "history", "advise"):
@@ -350,9 +384,6 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
 
 # ================================================= 4. keyboard-only working ==
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BK-30/BK-32: the composer cannot be submitted from the keyboard; "
-    "Ctrl+Enter does nothing and the mouse is required"))
 def test_phase_4_a_brief_can_be_filed_without_a_mouse(page, journey):
     """Keyboard-only, because an advocate dictating or on a laptop trackpad
     is not an accessibility edge case -- it is the ordinary way a long brief
@@ -714,9 +745,6 @@ def test_phase_9_reload_restores_the_matter(page, journey):
         "a restored turn presents itself as a fresh one")
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BK-40: the session is gone and the masthead still shows the advocate as "
-    "signed in"))
 def test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead(
         page, journey):
     """THE COUNTEREXAMPLE BK-40 IS OPEN FOR.
@@ -891,9 +919,6 @@ def test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways
 
 # ================================================= 11-12. the way out ========
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BK-40: the sign-in screen is shown after a logout the server never "
-    "confirmed, which reads as proof of signing out"))
 def test_phase_11_a_logout_the_server_refuses_is_not_shown_as_done(
         page, journey):
     """THE MEASURED DEFECT IN BK-40, and the worst one on this page.

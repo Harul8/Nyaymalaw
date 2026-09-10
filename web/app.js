@@ -994,6 +994,19 @@ $('intake').addEventListener('submit', (ev) => {
 $('new-matter').addEventListener('click', () => {
   state.matterVersion = null;
   state.intake = null;
+  // STARTING A MATTER CLOSES THE LIST, for the same reason opening one does.
+  //
+  // `showThreadBoard` already says it: leaving the drawer up "would put the
+  // advocate on the answer they asked for with the index still over it, which
+  // is the same unreachability wearing the other face." That reasoning was
+  // applied at one site and not the other, so below 820px an advocate tapped
+  // "Brief a new matter", got the intake form BEHIND the drawer they had just
+  // used, and had `focus()` called on a field they could not see.
+  //
+  // Found by the journey suite at 390px and 768px once phase 3 started
+  // driving narrow widths for real -- which is the whole reason that phase
+  // was repaired.
+  toggleMatters(false);
   showIntake(true);
   state.matterId = null;
   state.turns = [];

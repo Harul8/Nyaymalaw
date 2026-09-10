@@ -292,8 +292,16 @@ def test_delivery_waves_are_complete_and_ordered():
     seen = {item["id"]: n for n, item in enumerate(items)}
     problems, waves = tool._waves(doc, items, seen)
     assert not problems, "\n  ".join(problems)
-    assert len(items) == 80
-    assert len((doc["plan"] or {})["item_waves"]) == 80
+
+    # DERIVED, NOT COUNTED. This read `== 80` twice and broke on the first
+    # population change -- a hand-maintained count inside the very file that
+    # exists because `Open - 13` was hand-maintained and wrong. The rule is
+    # that every registered row has exactly one wave and the plan schedules
+    # nothing that is not a row. The number is whatever the registry holds.
+    assert len((doc["plan"] or {})["item_waves"]) == len(items), (
+        "one row, one wave: the plan holds "
+        f"{len((doc['plan'] or {})['item_waves'])} assignments for "
+        f"{len(items)} rows, so one is duplicated or missing")
     assert set(waves) == set(seen)
 
 

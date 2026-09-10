@@ -1503,6 +1503,32 @@ items:
     negative_control:
       mutation: keep merits constant while making the only useful relief unavailable or uneconomic
       expected_failure: the original recommendation cannot survive unchanged without an explicit justified reservation
+- id: BK-72
+  title: the matter navigator cannot be driven at 390px
+  kind: journey
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: failing
+  phase: A
+  record: docs/BACKLOG.md#bk-72-the-matter-navigator-cannot-be-driven-at-390px
+  next_action: determine whether the drawer refuses `#back` at 390px in the product
+    or only under automation; the 768px and 1280px paths pass unchanged
+  acceptance:
+  - id: BK-72-AC1
+    requirement: at 390px an advocate can open the navigator, return to the file list
+      and open a different matter
+    required_evidence: [browser_journey]
+    evidence:
+      browser_journey:
+        result: FAIL
+        ref: tests/test_the_journey_login_to_logout.py::test_phase_3_the_matter_navigator_is_reachable_at_every_width
+        note: fails at 390px only; 768px and 1280px pass. The drawer opens (aria-expanded
+          goes true) and the view stays on Threads, so `#back` does not reach the
+          list.
+    negative_control:
+      mutation: run the same phase at 768px and 1280px
+      expected_failure: both pass, so the assertion is not simply wrong
 - id: BK-71
   title: professional plan and delivery-wave reconciliation
   kind: control

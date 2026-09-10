@@ -27,7 +27,7 @@ found cannot answer it.
 
 | Phase | | Features | Steps | Contracted | Verified | Open P0 | Readiness |
 |---|---|---:|---:|---:|---:|---:|---|
-| A | Arrive | 3/4 | 4 | 0/4 | 7/29 | 6 | not releasable |
+| A | Arrive | 3/4 | 4 | 0/4 | 7/30 | 6 | not releasable |
 | B | Open a matter | 0/6 | 4 | 2/4 | 4/14 | 3 | not releasable |
 | C | Take the brief | 5/7 | 7 | 0/7 | 6/24 | 8 | not releasable |
 | D | Work the file | 8/9 | 14 | 1/14 | 9/31 | 8 | not releasable |
@@ -37,11 +37,11 @@ found cannot answer it.
 | H | Close | 0/2 | 2 | 0/2 | 1/5 | 0 | not releasable |
 | I | Leave | 1/1 | 1 | 0/1 | 2/16 | 5 | not releasable |
 
-**80 rows · 17 open P0 · 0 blocked · 18/44 features implemented**
+**81 rows · 17 open P0 · 0 blocked · 18/44 features implemented**
 
 ### Professional plan — registered and derived
 
-**20 advocate standards · 13 expert-workflow states · 5 advice levels · 7 roles · 14 gap closures · 80 wave rows**
+**20 advocate standards · 13 expert-workflow states · 5 advice levels · 7 roles · 14 gap closures · 81 wave rows**
 
 Gap status below is computed from the linked BK/J rows. It is never authored in `professional.json` or maintained in the workbook.
 
@@ -2448,6 +2448,38 @@ A legally strong claim may still have no useful or timely outcome. W3 must
 model interim and final relief, prerequisites, timing, enforcement route,
 recoverable assets and practical constraints; W4 advice must use that model
 when comparing options.
+
+#### BK-72 — the matter navigator cannot be driven at 390px — **OPEN · P1 · Phase A**
+Opened 9 September 2026, by the first real run of the repaired journey suite.
+
+**Measured.** Phase 3 passes at 768px and 1280px and fails at 390px. After the
+drawer is opened (`#matters-toggle` reports `aria-expanded="true"`), clicking
+`#back` leaves the view on `Threads` — the rail body still holds thread rows,
+not the file list — so `#rail-body .row` never appears and the phase reports
+that an advocate has no way to another matter.
+
+**Not yet established:** whether the product refuses this at 390px or whether
+only the automation cannot drive it. Both are worth knowing and they are
+different rows. The evidence is `FAIL` rather than `NOT_RUN` because the phase
+did execute and did assert.
+
+**Two real defects were found on the way to this one**, and both are fixed:
+
+*The drawer stayed open over the intake form.* `showThreadBoard` closes it when
+a matter is opened, with a comment explaining that leaving it up *"would put
+the advocate on the answer they asked for with the index still over it"*. That
+reasoning was never applied to `#new-matter`, so below 820px an advocate tapped
+*Brief a new matter*, got the intake form BEHIND the drawer, and had `focus()`
+called on a field they could not see. One shape, guarded at one of its two
+sites — CLAUDE.md §1.
+
+*The harness could not tell an open drawer from a closed one.*
+`page.is_visible("#rail")` is true at every width, because below 820px the
+drawer is moved off-screen rather than removed. So `_reach_rail` returned early
+at 390px and 768px and never opened anything, and the narrow-width branch it
+guards had never once run. **That makes BK-47 worse than it was recorded:** not
+*the width phase asserts nothing at desktop* but asserts nothing at any width.
+It now reads `aria-expanded`, which is the product's own published state.
 
 ## BK-71 — professional plan and delivery-wave reconciliation
 Opened 9 September 2026.

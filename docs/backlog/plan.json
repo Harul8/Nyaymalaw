@@ -1,86 +1,330 @@
 {
-  "schema": 1,
-  "note": "Authoritative delivery-wave assignment. Every status item appears exactly once; tools/backlog.py refuses missing, duplicate, unknown and reverse-wave dependency entries.",
-  "item_waves": [
-    {"id": "BK-1", "wave": "W3"},
-    {"id": "BK-2", "wave": "W1"},
-    {"id": "BK-3", "wave": "W7"},
-    {"id": "BK-4", "wave": "W3"},
-    {"id": "BK-5", "wave": "W3"},
-    {"id": "BK-6", "wave": "W2"},
-    {"id": "BK-7", "wave": "W4"},
-    {"id": "BK-8", "wave": "W1"},
-    {"id": "BK-9", "wave": "W4"},
-    {"id": "BK-10", "wave": "W6"},
-    {"id": "BK-11", "wave": "W3"},
-    {"id": "BK-12", "wave": "W4"},
-    {"id": "BK-13", "wave": "W1"},
-    {"id": "BK-14", "wave": "W2"},
-    {"id": "BK-15", "wave": "W3"},
-    {"id": "BK-16", "wave": "W7"},
-    {"id": "BK-17", "wave": "W7"},
-    {"id": "BK-18", "wave": "W7"},
-    {"id": "BK-19", "wave": "W3"},
-    {"id": "BK-20", "wave": "W1"},
-    {"id": "BK-21", "wave": "W0"},
-    {"id": "BK-22", "wave": "W7"},
-    {"id": "BK-23", "wave": null},
-    {"id": "BK-24", "wave": "W3"},
-    {"id": "BK-25", "wave": "W3"},
-    {"id": "BK-26", "wave": null},
-    {"id": "BK-27", "wave": "W2"},
-    {"id": "BK-28", "wave": "W7"},
-    {"id": "BK-29", "wave": "W3"},
-    {"id": "BK-30", "wave": "W0"},
-    {"id": "BK-31", "wave": "W1"},
-    {"id": "BK-32", "wave": "W2"},
-    {"id": "BK-33", "wave": "W2"},
-    {"id": "BK-34", "wave": "W1"},
-    {"id": "BK-35", "wave": "W3"},
-    {"id": "BK-36", "wave": "W2"},
-    {"id": "BK-37", "wave": "W4"},
-    {"id": "BK-38", "wave": "W4"},
-    {"id": "BK-39", "wave": "W6"},
-    {"id": "BK-40", "wave": "W2"},
-    {"id": "BK-41", "wave": "W4"},
-    {"id": "BK-42", "wave": "W7"},
-    {"id": "BK-43", "wave": "W0"},
-    {"id": "BK-44", "wave": "W0"},
-    {"id": "BK-45", "wave": "W0"},
-    {"id": "BK-46", "wave": "W0"},
-    {"id": "BK-47", "wave": "W0"},
-    {"id": "BK-48", "wave": "W1"},
-    {"id": "BK-49", "wave": "W3"},
-    {"id": "BK-50", "wave": "W4"},
-    {"id": "BK-51", "wave": "W0"},
-    {"id": "BK-52", "wave": "W0"},
-    {"id": "BK-53", "wave": "W1"},
-    {"id": "BK-54", "wave": "W2"},
-    {"id": "BK-55", "wave": "W4"},
-    {"id": "BK-56", "wave": "W5"},
-    {"id": "BK-57", "wave": "W5"},
-    {"id": "BK-58", "wave": "W6"},
-    {"id": "BK-59", "wave": "W6"},
-    {"id": "BK-61", "wave": "W0"},
-    {"id": "BK-60", "wave": "W0"},
-    {"id": "BK-62", "wave": "W1"},
-    {"id": "BK-63", "wave": "W1"},
-    {"id": "BK-64", "wave": "W2"},
-    {"id": "BK-65", "wave": "W3"},
-    {"id": "BK-66", "wave": "W2"},
-    {"id": "BK-67", "wave": "W3"},
-    {"id": "BK-68", "wave": "W2"},
-    {"id": "BK-69", "wave": "W0"},
-    {"id": "BK-70", "wave": "W3"},
-    {"id": "BK-71", "wave": "W0"},
-    {"id": "J-1", "wave": "W2"},
-    {"id": "J-2", "wave": "W3"},
-    {"id": "J-3", "wave": "W3"},
-    {"id": "J-4", "wave": "W2"},
-    {"id": "J-5", "wave": "W4"},
-    {"id": "J-6", "wave": "W4"},
-    {"id": "J-7", "wave": "W4"},
-    {"id": "J-8", "wave": "W7"},
-    {"id": "J-9", "wave": null}
-  ]
+ "schema": 1,
+ "note": "Authoritative delivery-wave assignment. Every status item appears exactly once; tools/backlog.py refuses missing, duplicate, unknown and reverse-wave dependency entries.",
+ "item_waves": [
+  {
+   "id": "BK-1",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-2",
+   "wave": "W1"
+  },
+  {
+   "id": "BK-3",
+   "wave": "W7"
+  },
+  {
+   "id": "BK-4",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-5",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-6",
+   "wave": "W2"
+  },
+  {
+   "id": "BK-7",
+   "wave": "W4"
+  },
+  {
+   "id": "BK-8",
+   "wave": "W1"
+  },
+  {
+   "id": "BK-9",
+   "wave": "W4"
+  },
+  {
+   "id": "BK-10",
+   "wave": "W6"
+  },
+  {
+   "id": "BK-11",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-12",
+   "wave": "W4"
+  },
+  {
+   "id": "BK-13",
+   "wave": "W1"
+  },
+  {
+   "id": "BK-14",
+   "wave": "W2"
+  },
+  {
+   "id": "BK-15",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-16",
+   "wave": "W7"
+  },
+  {
+   "id": "BK-17",
+   "wave": "W7"
+  },
+  {
+   "id": "BK-18",
+   "wave": "W7"
+  },
+  {
+   "id": "BK-19",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-20",
+   "wave": "W1"
+  },
+  {
+   "id": "BK-21",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-22",
+   "wave": "W7"
+  },
+  {
+   "id": "BK-23",
+   "wave": null
+  },
+  {
+   "id": "BK-24",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-25",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-26",
+   "wave": null
+  },
+  {
+   "id": "BK-27",
+   "wave": "W2"
+  },
+  {
+   "id": "BK-28",
+   "wave": "W7"
+  },
+  {
+   "id": "BK-29",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-30",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-31",
+   "wave": "W1"
+  },
+  {
+   "id": "BK-32",
+   "wave": "W2"
+  },
+  {
+   "id": "BK-33",
+   "wave": "W2"
+  },
+  {
+   "id": "BK-34",
+   "wave": "W1"
+  },
+  {
+   "id": "BK-35",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-36",
+   "wave": "W2"
+  },
+  {
+   "id": "BK-37",
+   "wave": "W4"
+  },
+  {
+   "id": "BK-38",
+   "wave": "W4"
+  },
+  {
+   "id": "BK-39",
+   "wave": "W6"
+  },
+  {
+   "id": "BK-40",
+   "wave": "W2"
+  },
+  {
+   "id": "BK-41",
+   "wave": "W4"
+  },
+  {
+   "id": "BK-42",
+   "wave": "W7"
+  },
+  {
+   "id": "BK-43",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-44",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-45",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-46",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-47",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-48",
+   "wave": "W1"
+  },
+  {
+   "id": "BK-49",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-50",
+   "wave": "W4"
+  },
+  {
+   "id": "BK-51",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-52",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-53",
+   "wave": "W1"
+  },
+  {
+   "id": "BK-54",
+   "wave": "W2"
+  },
+  {
+   "id": "BK-55",
+   "wave": "W4"
+  },
+  {
+   "id": "BK-56",
+   "wave": "W5"
+  },
+  {
+   "id": "BK-57",
+   "wave": "W5"
+  },
+  {
+   "id": "BK-58",
+   "wave": "W6"
+  },
+  {
+   "id": "BK-59",
+   "wave": "W6"
+  },
+  {
+   "id": "BK-61",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-60",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-62",
+   "wave": "W1"
+  },
+  {
+   "id": "BK-63",
+   "wave": "W1"
+  },
+  {
+   "id": "BK-64",
+   "wave": "W2"
+  },
+  {
+   "id": "BK-65",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-66",
+   "wave": "W2"
+  },
+  {
+   "id": "BK-67",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-68",
+   "wave": "W2"
+  },
+  {
+   "id": "BK-69",
+   "wave": "W0"
+  },
+  {
+   "id": "BK-70",
+   "wave": "W3"
+  },
+  {
+   "id": "BK-71",
+   "wave": "W0"
+  },
+  {
+   "id": "J-1",
+   "wave": "W2"
+  },
+  {
+   "id": "J-2",
+   "wave": "W3"
+  },
+  {
+   "id": "J-3",
+   "wave": "W3"
+  },
+  {
+   "id": "J-4",
+   "wave": "W2"
+  },
+  {
+   "id": "J-5",
+   "wave": "W4"
+  },
+  {
+   "id": "J-6",
+   "wave": "W4"
+  },
+  {
+   "id": "J-7",
+   "wave": "W4"
+  },
+  {
+   "id": "J-8",
+   "wave": "W7"
+  },
+  {
+   "id": "J-9",
+   "wave": null
+  },
+  {
+   "id": "BK-72",
+   "wave": "W2"
+  }
+ ]
 }

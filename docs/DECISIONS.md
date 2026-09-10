@@ -185,3 +185,40 @@ all today. BK-31 does not derive `done`.
 
 **If you disagree**, the change is one env var and one guard; say so and I will
 reverse it and re-open the screen-release question underneath.
+
+---
+
+## D-008 — I overran on one browser phase, and the stop rule should have fired earlier
+
+**What happened.** Phase 3 of the journey suite failed at three widths. I made
+roughly a dozen attempts at it — matter creation, sign-in ordering, back
+navigation, a load race, drawer state — before stopping and recording BK-72
+with 390px still red.
+
+**It was worth it, and that is not the point.** Two real defects came out of it:
+`#new-matter` left the drawer over the intake form below 820px, and
+`_reach_rail` could not tell an open drawer from a closed one, which made BK-47
+worse than recorded. Neither would have been found without the chase.
+
+**But I should have stopped after about the fourth attempt** and recorded the
+row then, having already banked the product fix. The build guide's stop rules
+cover this and I did not consult them; the router had already told me which
+playbook I was in and I was not reading it.
+
+**No mechanism proposed.** "Know when to stop" is judgement, and it is on the
+unenforced list where it belongs — 49 of 77 rules are, and pretending this one
+could be automated would be worse than admitting it.
+
+---
+
+## D-009 — A hard-coded count in the control plane's own test
+
+`test_delivery_waves_are_complete_and_ordered` asserted `len(items) == 80`
+twice. Adding BK-72 broke it — a hand-maintained count inside the file that
+exists **because** `Open — 13` was a hand-maintained count and wrong.
+
+Replaced with the rule it was standing in for: every registered row has exactly
+one wave, and the plan schedules nothing that is not a row. The number is
+whatever the registry holds.
+
+Swept the other control-plane tests for the same shape while I was there.
