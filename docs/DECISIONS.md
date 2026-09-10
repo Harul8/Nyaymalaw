@@ -307,3 +307,42 @@ Recorded as `BK-34-AC3`, `NOT_RUN`, with the reason. BK-34 does not derive
 `done`, which is correct: two of its four criteria pass and two do not.
 
 **Reversible.**
+
+---
+
+## D-013 — Phase A recovery, workspace identity and the production MFA boundary
+
+**The question.** Closing Arrive requires an advocate to recover access without
+an operator, to know which workspace is active before entering privileged
+material, and to avoid turning a local feature-completion claim into an
+unearned production-security claim. This deployment has no verified email or
+SMS delivery channel, and inventing one inside a password-reset route would
+make the recovery channel the least trustworthy credential in the product.
+
+**Decided.** Use advocate-held, one-time recovery codes. Generate them at
+enrolment, show them once, store only independently salted hashes, and permit a
+signed-in advocate to rotate the whole set. A successful recovery changes the
+password atomically, consumes exactly one code and ends every existing session.
+Missing, malformed, wrong, used and unknown claims return one response and are
+rate-limited and audited without the code.
+
+The active workspace is the server-owned firm/workspace carried by D-007's
+sealed invitation. It is shown as an explicit `Workspace` label before the
+matter list or composer. There is no selector while an identity belongs to one
+workspace; a selector with one possible answer would imply multi-workspace
+authority that does not exist.
+
+**MFA is not waved through.** Phase A may become feature-conformant for the
+controlled local roster without claiming production fitness. BK-42 remains a
+failing W7 release gate until production has MFA or a separately authorised,
+owned and expiring exception with compensating controls. This decision accepts
+no production risk; it keeps the two claims separate.
+
+**Why this design.** It satisfies recovery without depending on an unchosen
+third-party channel, makes theft of the directory insufficient to recover an
+account, and treats recovery as a security event rather than another login.
+The codes are a last-resort credential, so they never enter logs, metrics,
+filenames, URLs, page storage or a later API response.
+
+**Reversible.** A verified delivery channel or WebAuthn/TOTP can replace or
+supplement recovery codes without changing the identity or matter contracts.
