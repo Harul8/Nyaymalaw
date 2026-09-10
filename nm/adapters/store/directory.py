@@ -22,9 +22,13 @@ the caller must not learn and exactly what an operator needs.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import secrets
+import threading
 from datetime import datetime
+from io import BufferedRandom
 from pathlib import Path
 
 from nm.adapters.store.file_store import _Cipher
@@ -33,15 +37,24 @@ from nm.domain.advocate import (
     Credential,
     Enrolment,
     Invitation,
+    RecoveryCodeRecord,
+    RecoveryResult,
     Session,
+    advocate_id_is_storage_safe,
     canonical_id,
     dummy,
     new_invitation,
+    new_recovery_codes,
     open_session,
+    recovery_code_matches,
     token_fingerprint,
 )
 from nm.domain.traceability import implements
-from nm.ports.directory import AlreadyEnrolled, InvitationRefused  # noqa: F401
+from nm.ports.directory import (  # noqa: F401
+    AccountBusy,
+    AlreadyEnrolled,
+    InvitationRefused,
+)
 
 #: ONE REFUSAL, ONE SENTENCE, AND DELIBERATELY NO ORACLE. BK-31.
 #:
@@ -61,6 +74,27 @@ _INVITATION_REFUSED = (
     "saved. Ask whoever administers this installation to send you a new one.")
 
 
+class _AccountClaim:
+    """A non-blocking OS lock; closing it also releases it after a crash."""
+
+    def __init__(self, handle: BufferedRandom) -> None:
+        self._handle = handle
+
+    def release(self) -> None:
+        if self._handle.closed:
+            return
+        self._handle.seek(0)
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(self._handle.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(self._handle.fileno(), fcntl.LOCK_UN)
+        self._handle.close()
+
+
 @implements("A1")
 class FileDirectory:
     def __init__(self, root: str | Path, key: str | None = None) -> None:
@@ -71,10 +105,13 @@ class FileDirectory:
         self._attempts = self._root / "attempts.log"
         self._invitations = self._root / "invitations"
         self._used_invitations = self._invitations / "used"
+        self._recovery_locks = self._root / "recovery-locks"
         self._advocates.mkdir(parents=True, exist_ok=True)
         self._sessions.mkdir(parents=True, exist_ok=True)
         self._invitations.mkdir(parents=True, exist_ok=True)
         self._used_invitations.mkdir(parents=True, exist_ok=True)
+        self._recovery_locks.mkdir(parents=True, exist_ok=True)
+        self._auth_state = threading.local()
         self._cipher = _Cipher(
             key if key is not None else os.environ.get("NM_MATTER_KEY", ""))
 
@@ -106,7 +143,7 @@ class FileDirectory:
         return token
 
     def accept_invitation(self, token: str, credential: Credential,
-                          now: datetime) -> AdvocateIdentity:
+                          now: datetime) -> tuple[AdvocateIdentity, tuple[str, ...]]:
         """Claim on disk and enrol; every other instance sees the claim."""
         fingerprint = token_fingerprint((token or "").strip())
         active = self._invitation_path(fingerprint)
@@ -156,8 +193,8 @@ class FileDirectory:
 
         try:
             # The FILE, not the request, owns the identity that is saved.
-            self.enrol(Enrolment(identity=invitation.identity,
-                                 credential=credential, created_at=now))
+            codes = self.enrol(Enrolment(identity=invitation.identity,
+                                         credential=credential, created_at=now))
         except AlreadyEnrolled:
             self._note(invitation.identity.id,
                        "invitation consumed: advocate already enrolled")
@@ -169,7 +206,7 @@ class FileDirectory:
                 os.replace(used, active)
             raise
         self._note(invitation.identity.id, "invitation consumed and enrolled")
-        return invitation.identity
+        return invitation.identity, codes
 
     # ------------------------------------------------------------ advocates ---
 
@@ -186,20 +223,44 @@ class FileDirectory:
         the type refuses bad data going in, this folds queries coming from
         outside, and neither is sufficient alone.
         """
-        return self._advocates / f"{canonical_id(advocate_id)}.nm"
+        canonical = canonical_id(advocate_id)
+        if not advocate_id_is_storage_safe(canonical):
+            # Public lookup input must fail closed, not turn into a 500, while
+            # no untrusted value is ever allowed to become a path component.
+            digest = hashlib.sha256(canonical.encode("utf8")).hexdigest()
+            return self._advocates / f"invalid-{digest}.nm"
+        return self._advocates / f"{canonical}.nm"
 
-    def enrol(self, enrolment: Enrolment) -> None:
+    @staticmethod
+    def _credential_record(credential: Credential) -> dict:
+        return {
+            "algorithm": credential.algorithm,
+            "salt": credential.salt,
+            "hash": credential.hash,
+            "n": credential.n,
+            "r": credential.r,
+            "p": credential.p,
+        }
+
+    def _replace_advocate(self, path: Path, blob: dict) -> None:
+        """Replace one account record without exposing a partial JSON write."""
+        temporary = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
+        try:
+            with temporary.open("x", encoding="utf8") as handle:
+                handle.write(json.dumps(blob, indent=2))
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    def enrol(self, enrolment: Enrolment) -> tuple[str, ...]:
         path = self._advocate_path(enrolment.identity.id)
+        codes, recovery = new_recovery_codes()
         blob = {
             "identity": enrolment.identity.as_dict(),
-            "credential": {
-                "algorithm": enrolment.credential.algorithm,
-                "salt": enrolment.credential.salt,
-                "hash": enrolment.credential.hash,
-                "n": enrolment.credential.n,
-                "r": enrolment.credential.r,
-                "p": enrolment.credential.p,
-            },
+            "credential": self._credential_record(enrolment.credential),
+            "recovery_codes": [record.as_dict() for record in recovery],
             "created_at": enrolment.created_at.isoformat(),
         }
         # IN THE OPEN, DELIBERATELY (BK-22). The credential is an scrypt
@@ -229,6 +290,161 @@ class FileDirectory:
             if created:
                 path.unlink(missing_ok=True)
             raise
+        return codes
+
+    # ------------------------------------------------------------- recovery ---
+
+    def _recovery_lock_path(self, advocate_id: str) -> Path:
+        digest = hashlib.sha256(canonical_id(advocate_id).encode("utf8")).hexdigest()
+        return self._recovery_locks / f"{digest}.lock"
+
+    def _claim_recovery(self, advocate_id: str) -> _AccountClaim | None:
+        """Own account access across workers; the OS retires crashed claims."""
+        path = self._recovery_lock_path(advocate_id)
+        handle = path.open("a+b")
+        try:
+            if path.stat().st_size == 0:
+                handle.write(b"0")
+                handle.flush()
+            handle.seek(0)
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return _AccountClaim(handle)
+        except (OSError, BlockingIOError):
+            handle.close()
+            return None
+
+    @staticmethod
+    def _recovery_records(doc: dict | None) -> tuple[RecoveryCodeRecord, ...]:
+        if not doc:
+            return ()
+        try:
+            return tuple(RecoveryCodeRecord(**item)
+                         for item in doc.get("recovery_codes", ()))
+        except (TypeError, ValueError):
+            return ()
+
+    @staticmethod
+    def _matching_recovery(
+            records: tuple[RecoveryCodeRecord, ...], code: str,
+            ) -> RecoveryCodeRecord | None:
+        """Check every digest so the matching record's position leaks nothing."""
+        matched = None
+        for record in records:
+            if recovery_code_matches(record, code):
+                matched = record
+        return matched
+
+    def ensure_recovery_codes(self, advocate_id: str,
+                              now: datetime) -> tuple[str, ...]:
+        """Give a pre-recovery-build advocate one set on their next valid login."""
+        path = self._advocate_path(advocate_id)
+        doc = self._read(advocate_id)
+        if doc is None or "recovery_codes" in doc:
+            return ()
+        claim = self._claim_recovery(advocate_id)
+        if claim is None:
+            return ()
+        try:
+            doc = self._read(advocate_id)
+            if doc is None or "recovery_codes" in doc:
+                return ()
+            codes, records = new_recovery_codes()
+            doc["recovery_codes"] = [record.as_dict() for record in records]
+            doc["recovery_codes_issued_at"] = now.isoformat()
+            self._replace_advocate(path, doc)
+            self._note(advocate_id, "recovery codes issued after authentication")
+            return codes
+        finally:
+            claim.release()
+
+    def authenticate_and_open_session(
+            self, advocate_id: str, password: str, device: str, now: datetime,
+            ) -> tuple[AdvocateIdentity, str, tuple[str, ...]] | None:
+        """Keep successful authentication and session issue on one generation."""
+        if not self._advocate_path(advocate_id).exists():
+            # Unknown public input still pays the normal dummy derivation and
+            # audit path, but must not create an unbounded population of
+            # persistent lock artifacts.
+            self.authenticate(advocate_id, password)
+            return None
+        claim = self._claim_recovery(advocate_id)
+        if claim is None:
+            raise AccountBusy("account access is already changing")
+        try:
+            identity = self.authenticate(advocate_id, password)
+            if identity is None:
+                return None
+            doc = self._read(identity.id)
+            if doc is None:
+                return None
+            recovery_codes: tuple[str, ...] = ()
+            if "recovery_codes" not in doc:
+                recovery_codes, records = new_recovery_codes()
+                doc["recovery_codes"] = [record.as_dict() for record in records]
+                doc["recovery_codes_issued_at"] = now.isoformat()
+                self._replace_advocate(self._advocate_path(identity.id), doc)
+                self._note(identity.id, "recovery codes issued after authentication")
+            token = self.open_session(identity.id, device, now)
+            return identity, token, recovery_codes
+        finally:
+            claim.release()
+
+    def recover(self, advocate_id: str, code: str, credential: Credential,
+                now: datetime) -> RecoveryResult:
+        """Consume one code, replace the credential and end every session."""
+        canonical = canonical_id(advocate_id)
+        doc = self._read(canonical)
+        records = self._recovery_records(doc)
+        # Unknown and legacy-without-codes still pay the whole digest loop.
+        if not records:
+            _, dummy_records = new_recovery_codes()
+            self._matching_recovery(dummy_records, code)
+            self._note(canonical, "recovery refused: unknown or no code set")
+            return RecoveryResult(False)
+        if self._matching_recovery(records, code) is None:
+            self._note(canonical, "recovery refused: wrong or used code")
+            return RecoveryResult(False)
+
+        claim = self._claim_recovery(canonical)
+        if claim is None:
+            self._note(canonical, "recovery refused: another attempt in progress")
+            return RecoveryResult(False)
+        try:
+            # Re-read under the shared claim. Another directory may have used
+            # this code between the optimistic check and exclusive creation.
+            doc = self._read(canonical)
+            records = self._recovery_records(doc)
+            matched = self._matching_recovery(records, code)
+            if doc is None or matched is None:
+                self._note(canonical, "recovery refused: wrong or used code")
+                return RecoveryResult(False)
+
+            # End old grants before changing the door. A failed session write
+            # aborts recovery and no success is reported; a false success here
+            # would leave precisely the compromised device recovery exists for.
+            ended = self.close_all_sessions(canonical, "password recovered")
+            updated = [
+                RecoveryCodeRecord(
+                    id=item.id, salt=item.salt, hash=item.hash,
+                    used_at=now.isoformat() if item.id == matched.id else item.used_at,
+                ).as_dict()
+                for item in records
+            ]
+            doc["credential"] = self._credential_record(credential)
+            doc["recovery_codes"] = updated
+            doc["credential_changed_at"] = now.isoformat()
+            self._replace_advocate(self._advocate_path(canonical), doc)
+            self._note(canonical, f"recovery succeeded; {ended} sessions ended")
+            return RecoveryResult(True, ended)
+        finally:
+            claim.release()
 
     #: Why a sign-in failed, in the caller's vocabulary. THREE STATES.
     #:
@@ -243,7 +459,7 @@ class FileDirectory:
 
     def _read(self, advocate_id: str) -> dict | None:
         path = self._advocate_path(advocate_id)
-        self._last_failure = self.UNKNOWN
+        self._auth_state.last_failure = self.UNKNOWN
         if not path.exists():
             return None
         raw = path.read_bytes()
@@ -277,14 +493,14 @@ class FileDirectory:
                     # Failing the sign-in over a migration would be the
                     # cure harming more than the disease.
                     pass
-            self._last_failure = None
+            self._auth_state.last_failure = None
             return doc
         except Exception as exc:  # noqa: BLE001
             # A RECORD THAT WILL NOT OPEN IS NOT AN ABSENT ONE. It was
             # visible only to the operator until the advocate was told
             # their credentials were wrong on a record that existed and
             # was correct.
-            self._last_failure = self.UNREADABLE
+            self._auth_state.last_failure = self.UNREADABLE
             self._note(advocate_id, f"record unreadable: {type(exc).__name__}")
             return None
 
@@ -371,7 +587,7 @@ class FileDirectory:
         `authenticate` wants the identity and nothing else, and widening
         the signature would make them all handle a reason they discard.
         """
-        return getattr(self, "_last_failure", None)
+        return getattr(self._auth_state, "last_failure", None)
 
     def authenticate(self, advocate_id: str,
                      password: str) -> AdvocateIdentity | None:
@@ -387,10 +603,10 @@ class FileDirectory:
 
         credential = Credential(**doc["credential"])
         if not credential.verify(password):
-            self._last_failure = self.WRONG_PASSWORD
+            self._auth_state.last_failure = self.WRONG_PASSWORD
             self._note(advocate_id, "wrong password")
             return None
-        self._last_failure = None
+        self._auth_state.last_failure = None
         self._note(advocate_id, "authenticated")
         return AdvocateIdentity(**doc["identity"])
 

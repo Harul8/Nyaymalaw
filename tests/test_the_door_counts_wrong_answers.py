@@ -170,7 +170,7 @@ def test_a_successful_sign_in_adds_nothing_to_the_count():
 
     src = inspect.getsource(api.login)
     note = src.index("note_failure")
-    refused = src.index("if identity is None:")
+    refused = src.index("if opened is None:")
     assert note > refused, (
         "the failure is recorded outside the failure branch, so every "
         "successful sign-in counts against the advocate")

@@ -23,7 +23,9 @@ The three clauses, each with a mechanism:
 from __future__ import annotations
 
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
+from threading import Barrier
 
 import pytest
 
@@ -128,6 +130,21 @@ def test_an_unknown_advocate_and_a_wrong_password_are_indistinguishable(tmp_path
     assert d.authenticate("adv_1", "wrong-password-entirely") is None
     assert d.authenticate("nobody-at-all", "wrong-password-entirely") is None
     assert d.authenticate("adv_1", PASSWORD) is not None
+
+
+def test_concurrent_sign_in_failures_keep_their_own_reason(tmp_path):
+    """One request must not receive a different request's diagnosis."""
+    d = _directory(tmp_path)
+    both_authenticated = Barrier(2)
+
+    def refuse(advocate_id: str) -> str | None:
+        d.authenticate(advocate_id, "wrong-password-entirely")
+        both_authenticated.wait()
+        return d.why_last_sign_in_failed()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        reasons = list(pool.map(refuse, ("adv_1", "nobody-at-all")))
+    assert reasons == [d.WRONG_PASSWORD, d.UNKNOWN]
 
 
 @refuses("A1", 1)

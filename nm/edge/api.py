@@ -31,6 +31,7 @@ from nm.domain.clock import today as forum_today
 from nm.domain.identity import source_fingerprint
 from nm.domain.traceability import implements
 from nm.edge.projections import board_projection, matter_list_projection
+from nm.ports.directory import AccountBusy
 from nm.ports.store import StaleWrite
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -658,6 +659,32 @@ class Registration(BaseModel):
     password_again: str = Field(min_length=1)
 
 
+class Recovery(BaseModel):
+    """A public recovery request. Identity and code failures stay identical."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    advocate_id: NonBlank = Field(min_length=1)
+    recovery_code: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+    password_again: str = Field(min_length=1)
+
+
+_RECOVERY_REFUSED = (
+    "That recovery attempt was not accepted. Check the email and unused "
+    "recovery code, then try again. Nothing was changed.")
+
+
+def _workspace(identity) -> dict:
+    """The one server-owned context in which this advocate's files are held."""
+    workspace_id = (identity.firm_id or "").strip()
+    return {
+        "id": workspace_id or f"advocate:{identity.id}",
+        "label": workspace_id or f"{identity.name}'s private workspace",
+        "scope": "the matters held for this advocate",
+    }
+
+
 #: THE ONLY THING A FAILED SIGN-IN EVER SAYS.
 #:
 #: WHY A SIGN-IN FAILED, in the advocate's words. Three states.
@@ -742,7 +769,7 @@ def register(body: Registration, request: Request,
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     try:
-        identity = application().directory.accept_invitation(
+        identity, recovery_codes = application().directory.accept_invitation(
             invitation, credential, now)
     except InvitationRefused as exc:
         application().directory.note_failure(rate_key, source, now)
@@ -753,7 +780,45 @@ def register(body: Registration, request: Request,
     # RETURNED BECAUSE IT IS WHAT THEY SIGN IN WITH. A registration that
     # succeeds and does not say what to type next has enrolled someone who
     # cannot get in.
-    return {"advocate_id": identity.id, "name": identity.name}
+    return {
+        "advocate_id": identity.id,
+        "name": identity.name,
+        "recovery_codes": list(recovery_codes),
+    }
+
+
+@app.post("/api/recover")
+@implements("A1")
+def recover(body: Recovery, request: Request) -> dict:
+    """Use one advocate-held code; reveal nothing about account existence."""
+    from nm.domain.advocate import canonical_id, enrol
+
+    now = utcnow()
+    source = request.client.host if request.client else "unknown-source"
+    rate_key = f"recovery:{canonical_id(body.advocate_id)}"
+    counts = application().directory.failures_since(
+        rate_key, source, now - attempts.WINDOW)
+    if counts is not None:
+        seen = attempts.verdict(counts[0], counts[1], now)
+        if not seen.allowed:
+            raise HTTPException(status_code=429,
+                                detail=seen.said_for("recovery"))
+
+    if body.password != body.password_again:
+        raise HTTPException(
+            status_code=400,
+            detail="The two passwords do not match. Nothing was changed.")
+    try:
+        credential = enrol(body.password)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    result = application().directory.recover(
+        body.advocate_id, body.recovery_code, credential, now)
+    if not result.success:
+        application().directory.note_failure(rate_key, source, now)
+        raise HTTPException(status_code=403, detail=_RECOVERY_REFUSED)
+    return {"recovered": True, "sessions_ended": result.sessions_ended}
 
 
 @app.post("/api/login")
@@ -800,9 +865,18 @@ def login(body: Credentials, request: Request, response: Response,
             # that may be perfectly correct.
             raise HTTPException(status_code=429, detail=seen.said)
 
-    identity = application().directory.authenticate(
-        body.advocate_id, body.password)
-    if identity is None:
+    import secrets
+
+    device_id = nm_device or secrets.token_urlsafe(16)
+    device = _device(device_id, user_agent)
+    try:
+        opened = application().directory.authenticate_and_open_session(
+            body.advocate_id, body.password, device, now)
+    except AccountBusy as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Account access is changing. Try sign-in again in a moment.") from exc
+    if opened is None:
         # 401 AND NOTHING ELSE. Not 404 for an unknown advocate and 401 for a
         # wrong password -- the status code is a message too.
         # THE FAILURE IS COUNTED (BK-20). Recorded after the attempt so a
@@ -813,11 +887,7 @@ def login(body: Credentials, request: Request, response: Response,
         raise HTTPException(
             status_code=401,
             detail=_REFUSED.get(why or "", _REFUSED_DEFAULT))
-
-    import secrets
-    device_id = nm_device or secrets.token_urlsafe(16)
-    token = application().directory.open_session(
-        identity.id, _device(device_id, user_agent), utcnow())
+    identity, token, recovery_codes = opened
 
     # `secure` FROM THE CONNECTION, NOT FROM A FLAG (BK-18).
     #
@@ -846,7 +916,10 @@ def login(body: Credentials, request: Request, response: Response,
         response.set_cookie(name, value, httponly=True, samesite="lax",
                             secure=secure,
                             max_age=60 * 60 * 12, path="/")
-    return {"advocate": identity.as_dict()}
+    result = {"advocate": identity.as_dict(), "workspace": _workspace(identity)}
+    if recovery_codes:
+        result["recovery_codes"] = list(recovery_codes)
+    return result
 
 
 @app.post("/api/logout")
@@ -944,7 +1017,7 @@ def whoami(advocate_id: Advocate) -> dict:
         # deleted or will not open; either way this session must stop working
         # now rather than at expiry.
         raise HTTPException(status_code=401, detail="not signed in")
-    return {"advocate": identity.as_dict()}
+    return {"advocate": identity.as_dict(), "workspace": _workspace(identity)}
 
 
 # ------------------------------------------------------------------- static ---

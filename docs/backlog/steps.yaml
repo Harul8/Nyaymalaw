@@ -30,8 +30,8 @@ steps:
     its workspace
   - successful recovery revokes every earlier session and consumes exactly one code
   failure_behaviour:
-  - unknown identity, wrong password, wrong or used recovery code and absent invitation
-    disclose neither account existence nor matter count
+  - wrong or used recovery code and absent invitation disclose neither account existence
+    nor matter count; sign-in messaging follows the controlled private-roster decision D-007
   - expiry, revocation or a new unrecognised device returns to authentication without
     rendering cached matter content
   recovery_behaviour:

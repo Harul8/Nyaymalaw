@@ -73,6 +73,15 @@ def test_the_canonical_id_is_accepted():
         == "r.kumar@example.com"
 
 
+@pytest.mark.parametrize("unsafe", [
+    "../outside", r"..\outside", "folder/name", "name:stream", "con",
+    "trailing.", "line\nbreak",
+])
+def test_an_advocate_id_cannot_name_a_path_or_reserved_device(unsafe):
+    with pytest.raises(ValueError, match="cannot contain a path"):
+        AdvocateIdentity(id=unsafe, name="Unsafe")
+
+
 def test_the_ids_already_on_disk_are_canonical():
     """MEASURED, not assumed. `adv_demo`, `adv_gs15` and `adv_scenarios` are
     enrolled in the working store, and a rule that made existing records
@@ -122,6 +131,23 @@ def test_a_wrong_password_is_still_wrong(tmp_path):
         identity=AdvocateIdentity(id="r.kumar@example.com", name="R Kumar"),
         credential=enrol(PASSWORD)))
     assert d.authenticate("R.Kumar@Example.com", "not-the-password") is None
+
+
+def test_an_untrusted_login_id_cannot_escape_the_advocate_directory(tmp_path):
+    d = FileDirectory(tmp_path, key="k" * 32)
+    d.enrol(Enrolment(
+        identity=AdvocateIdentity(id="victim@example.com", name="Victim"),
+        credential=enrol(PASSWORD)))
+    enrolled = d._advocates / "victim@example.com.nm"
+    outside = tmp_path / "outside.nm"
+    enrolled.replace(outside)
+
+    assert d.identity("../outside") is None
+    assert d.authenticate("../outside", PASSWORD) is None
+    assert d.authenticate_and_open_session(
+        "../outside", PASSWORD, "device", utcnow()) is None
+    assert outside.exists()
+    assert not tuple(d._recovery_locks.iterdir())
 
 
 # ============================== end to end ==================================

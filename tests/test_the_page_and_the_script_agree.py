@@ -277,3 +277,65 @@ def test_the_register_form_does_not_retype_the_invited_roster_identity():
     retired = ("reg-name", "reg-email", "reg-enrolment", "reg-practice",
                "reg-firm")
     assert not [field for field in retired if field in HTML or field in SCRIPT]
+
+
+def recovery_surface_problems(page: str, script: str) -> list[str]:
+    """Return recovery-code exposure or disconnected-workspace defects."""
+    problems: list[str] = []
+    code = re.search(r'<input\b[^>]*\bid="recovery-code"[^>]*>', page)
+    if not code or 'type="password"' not in code.group(0):
+        problems.append("the recovery code is not concealed")
+    capture = script.find("const code = $('recovery-code').value.trim()")
+    cleared = script.find("$('recovery-code').value = '';", capture)
+    sent = script.find("await api('/api/recover'", capture)
+    if min(capture, cleared, sent) < 0 or not capture < cleared < sent:
+        problems.append("the recovery code remains in the DOM during submission")
+    if 'id="workspace-context" aria-label="Active workspace"' not in page:
+        problems.append("the masthead does not name active workspace context")
+    if "showApplication(me.advocate, me.workspace)" not in script:
+        problems.append("session workspace does not reach the served masthead")
+    show = script.find("function showApplication(advocate, workspace)")
+    guard = script.find("if (!workspace || !workspace.id || !workspace.label)", show)
+    matter = script.find("showMatterList();", show)
+    if min(show, guard, matter) < 0 or not show < guard < matter:
+        problems.append("matter rendering does not fail closed without a workspace")
+    leave = script.find("$('outcome-signin').addEventListener")
+    clear = script.find("clearRecoveryCodeDisplay();", leave)
+    next_form = script.find("showForm('login');", leave)
+    if min(leave, clear, next_form) < 0 or not leave < clear < next_form:
+        problems.append("one-time recovery codes remain in the document after leaving")
+    if re.search(r'<select\b[^>]*(?:workspace|firm)', page, re.I):
+        problems.append("a single server-owned workspace is rendered as a selector")
+    return problems
+
+
+def test_recovery_is_concealed_and_workspace_is_visible_before_matter_work():
+    """BK-31-AC13/14. Bind server response, gate and visible context."""
+    assert not recovery_surface_problems(HTML, SCRIPT)
+    show = SCRIPT.index("function showApplication(advocate, workspace)")
+    workspace = SCRIPT.index("$('workspace-name').textContent", show)
+    matters = SCRIPT.index("showMatterList();", show)
+    assert show < workspace < matters
+    assert "r.recovery_codes || []" in SCRIPT
+
+
+def test_the_recovery_and_workspace_scan_can_see_each_planted_failure():
+    """Positive control for the combined front-door source contract."""
+    visible = HTML.replace('id="recovery-code" name="recovery_code" type="password"',
+                           'id="recovery-code" name="recovery_code" type="text"')
+    no_context = HTML.replace('id="workspace-context" aria-label="Active workspace"',
+                              'id="workspace-context"')
+    no_wire = SCRIPT.replace("showApplication(me.advocate, me.workspace)",
+                             "showApplication(me.advocate)")
+    no_guard = SCRIPT.replace(
+        "if (!workspace || !workspace.id || !workspace.label)", "if (false)")
+    no_clear = SCRIPT.replace("clearRecoveryCodeDisplay();", "")
+    assert "the recovery code is not concealed" in recovery_surface_problems(visible, SCRIPT)
+    assert "the masthead does not name active workspace context" in (
+        recovery_surface_problems(no_context, SCRIPT))
+    assert "session workspace does not reach the served masthead" in (
+        recovery_surface_problems(HTML, no_wire))
+    assert "matter rendering does not fail closed without a workspace" in (
+        recovery_surface_problems(HTML, no_guard))
+    assert "one-time recovery codes remain in the document after leaving" in (
+        recovery_surface_problems(HTML, no_clear))

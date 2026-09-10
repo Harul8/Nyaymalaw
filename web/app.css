@@ -69,6 +69,20 @@ body {
   padding: 0.25rem 0.4rem; border-radius: 2px;
 }
 .name { font-family: var(--f-serif); font-size: 1.2rem; letter-spacing: -0.01em; }
+.workspace-context {
+  border-left: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  padding-left: 0.8rem;
+}
+.workspace-label {
+  color: var(--ink-3);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+#workspace-name { font-size: 0.78rem; font-weight: 600; }
 .who { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
 .who label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); }
 .who input {
@@ -595,6 +609,7 @@ main.single {
   justify-content: center;
   padding: 24px;
   position: fixed;
+  overflow-y: auto;
   /* ABOVE EVERYTHING. If the board can ever paint over this, the gate is
    * decoration. */
   z-index: 100;
@@ -735,6 +750,22 @@ main.single {
   font-size: 13.5px;
   line-height: 1.6;
   margin: 0 0 20px;
+}
+
+.recovery-codes {
+  border: 1px solid var(--rule);
+  margin: 0 0 18px;
+  padding: 12px 14px;
+}
+.recovery-codes h3 { font-size: 14px; margin: 0 0 4px; }
+.recovery-codes p { color: var(--ink-2); font-size: 12px; margin: 0 0 10px; }
+.recovery-codes ol {
+  columns: 2;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  margin: 0;
+  padding-left: 24px;
+  user-select: all;
 }
 
 .login-foot {
@@ -878,6 +909,7 @@ button.ghost.cancel { margin-right: 0.6rem; }
     padding: 0.6rem 0.9rem;
   }
   .who { margin-left: 0; }
+  .workspace-context { order: 1; }
   /* The enrolment number, practice and firm. Reference, not working
      information, and it is the longest run of unbreakable text up there. */
   .who-detail { display: none; }

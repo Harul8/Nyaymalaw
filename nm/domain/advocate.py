@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import re
 import secrets
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -48,6 +49,13 @@ DK_LEN = 32
 #: borrowed laptop is not a standing grant.
 SESSION_HOURS = 12
 INVITATION_HOURS = 48
+RECOVERY_CODE_COUNT = 10
+
+_UNSAFE_FILE_ID = re.compile(r'[<>:"/\\|?*]|[\x00-\x1f]')
+_WINDOWS_DEVICE_IDS = frozenset(
+    {"CON", "PRN", "AUX", "NUL"}
+    | {f"COM{number}" for number in range(1, 10)}
+    | {f"LPT{number}" for number in range(1, 10)})
 
 
 def canonical_id(value: str | None) -> str:
@@ -72,6 +80,16 @@ def canonical_id(value: str | None) -> str:
     advocate types is not a different advocate.
     """
     return clean(value).lower()
+
+
+def advocate_id_is_storage_safe(value: str | None) -> bool:
+    """Whether an id can name one record without escaping or aliasing it."""
+    candidate = canonical_id(value)
+    if blank(candidate) or _UNSAFE_FILE_ID.search(candidate):
+        return False
+    if candidate.endswith((".", " ")):
+        return False
+    return candidate.split(".", 1)[0].upper() not in _WINDOWS_DEVICE_IDS
 
 
 @refuses_blank_text("enrolment", "practice", "firm_id")
@@ -133,6 +151,10 @@ class AdvocateIdentity:
                 f"advocates with two files on a case-sensitive filesystem and "
                 f"one advocate on a case-insensitive one, which is a defect "
                 f"that only appears in production. Use `canonical_id`.")
+        if not advocate_id_is_storage_safe(self.id):
+            raise ValueError(
+                "advocate id cannot contain a path, control character or "
+                "reserved device name. It must name one directory record.")
 
     def as_dict(self) -> dict:
         return {"id": self.id, "name": self.name, "enrolment": self.enrolment,
@@ -234,6 +256,70 @@ def dummy() -> Credential:
     return Credential(algorithm="scrypt", salt="0" * 32,
                       hash=_derive(secrets.token_hex(32), "0" * 32,
                                    SCRYPT_N, SCRYPT_R, SCRYPT_P))
+
+
+# -------------------------------------------------------- recovery codes ---
+
+@dataclass(frozen=True)
+class RecoveryCodeRecord:
+    """One salted code digest. The usable code is never reconstructable."""
+
+    id: str
+    salt: str
+    hash: str
+    used_at: str | None = None
+
+    def __post_init__(self) -> None:
+        for name in ("id", "salt", "hash"):
+            if blank(getattr(self, name)):
+                raise ValueError(f"a recovery-code record with no {name} is unusable")
+
+    def as_dict(self) -> dict:
+        return {"id": self.id, "salt": self.salt, "hash": self.hash,
+                "used_at": self.used_at}
+
+
+@dataclass(frozen=True)
+class RecoveryResult:
+    success: bool
+    sessions_ended: int = 0
+
+
+def _normalise_recovery_code(code: str | None) -> str:
+    """Ignore grouping and case; preserve no user-entered representation."""
+    return "".join(ch for ch in (code or "") if ch.isalnum()).upper()
+
+
+def recovery_code_hash(code: str | None, salt: str) -> str:
+    """A salted verifier for a high-entropy one-time code."""
+    material = f"{salt}:{_normalise_recovery_code(code)}".encode("utf8")
+    return hashlib.sha256(material).hexdigest()
+
+
+def new_recovery_codes(
+        count: int = RECOVERY_CODE_COUNT,
+        ) -> tuple[tuple[str, ...], tuple[RecoveryCodeRecord, ...]]:
+    """Return each advocate-held code once and only salted records thereafter."""
+    if count < 8:
+        raise ValueError("a recovery set must contain at least eight one-time codes")
+    codes: list[str] = []
+    records: list[RecoveryCodeRecord] = []
+    for _ in range(count):
+        raw = secrets.token_hex(10).upper()  # 80 random bits, made typeable
+        code = "-".join(raw[index:index + 4] for index in range(0, len(raw), 4))
+        salt = secrets.token_hex(16)
+        codes.append(code)
+        records.append(RecoveryCodeRecord(
+            id=secrets.token_hex(8), salt=salt,
+            hash=recovery_code_hash(code, salt)))
+    return tuple(codes), tuple(records)
+
+
+def recovery_code_matches(record: RecoveryCodeRecord, code: str | None) -> bool:
+    """Constant-time comparison; a used code never matches again."""
+    candidate = recovery_code_hash(code, record.salt)
+    matches = hmac.compare_digest(record.hash, candidate)
+    return matches and record.used_at is None
 
 
 def _derive(password: str, salt: str, n: int, r: int, p: int) -> str:

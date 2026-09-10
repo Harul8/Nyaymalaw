@@ -17,6 +17,7 @@ const state = {
    * filled from /api/session and cleared on sign-out. It used to be an
    * editable text box, which was the whole of authentication (B-082). */
   advocate: null,
+  workspace: null,
   matterId: null,
   // BK-36. THE VERSION THIS TAB LAST SAW, sent with every brief so the server
   // can refuse a write built on a file this tab has never read.
@@ -43,6 +44,9 @@ const state = {
   // loses the right to paint or close anything.
   railGeneration: 0,
 };
+
+let pendingApplication = null;
+let outcomeReturn = 'register';
 
 /* --------------------------------------------------------------- fetch --- */
 
@@ -80,12 +84,15 @@ function keepDraft() {
 function clearPrivileged() {
   state.railGeneration += 1;
   state.advocate = null;
+  state.workspace = null;
   state.matterId = null;
   state.turns = [];
   ['thread', 'rail-body', 'rail-meta', 'search-results', 'history-body',
    'who-detail'].forEach((id) => { const el = $(id); if (el) el.textContent = ''; });
   const who = $('who-name');
   if (who) who.textContent = '—';
+  const workspace = $('workspace-name');
+  if (workspace) workspace.textContent = '—';
   const composer = $('message');
   if (composer) composer.value = '';
   const chooser = $('history-matter');
@@ -1388,8 +1395,15 @@ function showGate(message) {
   $('login-id').focus();
 }
 
-function showApplication(advocate) {
+function showApplication(advocate, workspace) {
+  if (!workspace || !workspace.id || !workspace.label) {
+    clearPrivileged();
+    showGate('I could not establish the active workspace. Matter content '
+      + 'remains closed; ask the installation administrator to check this account.');
+    return;
+  }
   state.advocate = advocate.id;
+  state.workspace = workspace && workspace.id;
   $('who-name').textContent = advocate.name;
   // ENROLMENT AND FIRM, ON SCREEN. The firm is recorded on every file, so
   // an advocate signed in under the wrong one should see it before they
@@ -1397,7 +1411,8 @@ function showApplication(advocate) {
   // check -- that runs against the matters this advocate holds, and
   // BK-31 is explicit that no firm-wide claim may be made until a
   // verified membership and a working registry exist.
-  $('who-detail').textContent = `${advocate.enrolment} · ${advocate.practice} · ${advocate.firm_id}`;
+  $('who-detail').textContent = `${advocate.enrolment} · ${advocate.practice}`;
+  $('workspace-name').textContent = workspace.label;
   $('gate').hidden = true;
   $('masthead').hidden = false;
   state.ended = false;
@@ -1454,7 +1469,7 @@ async function boot() {
   checkBuild();
   try {
     const me = await api('/api/session');
-    showApplication(me.advocate);
+    showApplication(me.advocate, me.workspace);
   } catch (err) {
     // 401 IS THE ORDINARY CASE, not an error to report. Anything else is a
     // server that could not answer, and saying so beats a bare sign-in box
@@ -1481,7 +1496,14 @@ $('login').addEventListener('submit', async (ev) => {
     // THE PASSWORD LEAVES THE PAGE. It stays in the DOM otherwise, readable
     // by anything running later on this document.
     $('login-password').value = '';
-    showApplication(r.advocate);
+    if (r.recovery_codes && r.recovery_codes.length) {
+      pendingApplication = r;
+      showOutcome('good', 'Save your recovery codes',
+        'This account predates self-service recovery. Save these codes before '
+        + 'you continue; they will not be shown again.', r.recovery_codes, 'login');
+    } else {
+      showApplication(r.advocate, r.workspace);
+    }
   } catch (err) {
     $('login-password').value = '';
     showGate(err.message);
@@ -1632,6 +1654,7 @@ function showForm(which) {
   }
   $('login').hidden = which !== 'login';
   $('register').hidden = which !== 'register';
+  $('recovery').hidden = which !== 'recovery';
   $('outcome').hidden = which !== 'outcome';
   $('login-state').textContent = '';
 }
@@ -1649,17 +1672,44 @@ function showForm(which) {
 // hidden, not reset -- so Back returns them to a filled form. The passwords
 // are the exception and they are cleared, which is the rule the sign-in
 // handler already follows.
-function showOutcome(kind, title, body) {
+function showOutcome(kind, title, body, recoveryCodes = [], returnTo = 'register') {
   $('outcome-title').textContent = title;
   $('outcome-body').textContent = body;
   $('outcome-title').className = `outcome-title ${kind}`;
   $('outcome-signin').hidden = kind !== 'good';
   $('outcome-back').hidden = kind === 'good';
+  outcomeReturn = returnTo;
+  const codes = $('recovery-codes');
+  const list = $('recovery-code-list');
+  list.replaceChildren(...recoveryCodes.map((code) => {
+    const item = document.createElement('li');
+    item.textContent = code;
+    return item;
+  }));
+  codes.hidden = recoveryCodes.length === 0;
+  $('outcome-signin').textContent = pendingApplication
+    ? 'I saved them — continue to matters'
+    : (recoveryCodes.length ? 'I saved them — sign in' : 'Sign in');
   showForm('outcome');
   (kind === 'good' ? $('outcome-signin') : $('outcome-back')).focus();
 }
 
+function clearRecoveryCodeDisplay() {
+  $('recovery-code-list').replaceChildren();
+  $('recovery-codes').hidden = true;
+}
+
 $('outcome-signin').addEventListener('click', () => {
+  // Once the advocate leaves the one-time screen, the usable codes leave the
+  // document too. Hiding the outcome would still leave them readable to any
+  // script running later on this page.
+  const current = pendingApplication;
+  pendingApplication = null;
+  clearRecoveryCodeDisplay();
+  if (current) {
+    showApplication(current.advocate, current.workspace);
+    return;
+  }
   showForm('login');
   // THE PASSWORD FIELD, NOT THE EMAIL. The email is already filled from the
   // registration, and landing on a filled field means the first thing typed
@@ -1668,8 +1718,8 @@ $('outcome-signin').addEventListener('click', () => {
 });
 
 $('outcome-back').addEventListener('click', () => {
-  showForm('register');
-  $('reg-password').focus();
+  showForm(outcomeReturn);
+  $(outcomeReturn === 'recovery' ? 'recovery-password' : 'reg-password').focus();
 });
 
 $('show-register').addEventListener('click', (ev) => {
@@ -1680,6 +1730,65 @@ $('show-register').addEventListener('click', (ev) => {
 $('show-login').addEventListener('click', (ev) => {
   ev.preventDefault();
   showForm('login');
+});
+
+$('show-recovery').addEventListener('click', (ev) => {
+  ev.preventDefault();
+  $('recovery-id').value = $('login-id').value.trim();
+  showForm('recovery');
+  ($('recovery-id').value ? $('recovery-code') : $('recovery-id')).focus();
+});
+
+$('recovery-login').addEventListener('click', (ev) => {
+  ev.preventDefault();
+  showForm('login');
+  $('login-id').focus();
+});
+
+$('recovery').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const go = $('recovery-go');
+  const advocate = $('recovery-id').value.trim();
+  const code = $('recovery-code').value.trim();
+  const password = $('recovery-password').value;
+  const again = $('recovery-password2').value;
+
+  // The bearer code leaves the DOM before the network wait, exactly like an
+  // enrolment invitation. A refusal must not leave a usable code on a shared
+  // screen or make it part of a later error report.
+  $('recovery-code').value = '';
+  if (password !== again) {
+    $('recovery-password').value = '';
+    $('recovery-password2').value = '';
+    showOutcome('bad', 'Recovery failed',
+      'The two passwords do not match. Nothing was changed.', [], 'recovery');
+    return;
+  }
+
+  go.disabled = true;
+  try {
+    const result = await api('/api/recover', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        advocate_id: advocate,
+        recovery_code: code,
+        password: password,
+        password_again: again,
+      }),
+    });
+    $('login-id').value = advocate;
+    showOutcome('good', 'Password changed',
+      `Your password was changed and ${result.sessions_ended} existing `
+      + 'session(s) were ended. Sign in with the new password.', [], 'login');
+  } catch (err) {
+    showOutcome('bad', 'Recovery failed', err.message, [], 'recovery');
+  } finally {
+    $('recovery-code').value = '';
+    $('recovery-password').value = '';
+    $('recovery-password2').value = '';
+    go.disabled = false;
+  }
 });
 
 $('register').addEventListener('submit', async (ev) => {
@@ -1742,11 +1851,11 @@ $('register').addEventListener('submit', async (ev) => {
     $('login-id').value = r.advocate_id;
     showOutcome('good', 'Registration successful',
       `Enrolled as ${r.name}. Sign in with ${r.advocate_id} and the password `
-      + 'you just chose.');
+      + 'you just chose.', r.recovery_codes || [], 'register');
   } catch (err) {
     $('reg-password').value = '';
     $('reg-password2').value = '';
-    showOutcome('bad', 'Registration failed', err.message);
+    showOutcome('bad', 'Registration failed', err.message, [], 'register');
   } finally {
     $('reg-invitation').value = '';
     go.disabled = false;

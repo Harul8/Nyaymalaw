@@ -47,9 +47,7 @@ def main() -> int:
                     help="Bar Council enrolment number")
     ap.add_argument("--practice", required=True, help="where they practise")
     ap.add_argument("--firm", required=True,
-                    help="the firm whose conflicts registry governs this "
-                         "session. B3 screens against it and a blank firm is a "
-                         "conflict check run against nothing.")
+                    help="the server-owned workspace shown before matter work")
     args = ap.parse_args()
 
     from nm.adapters.store.directory import AlreadyEnrolled, FileDirectory
@@ -66,7 +64,8 @@ def main() -> int:
         identity = AdvocateIdentity(
             id=args.id, name=args.name, enrolment=args.enrolment,
             practice=args.practice, firm_id=args.firm)
-        directory.enrol(Enrolment(identity=identity, credential=enrol(password)))
+        recovery_codes = directory.enrol(
+            Enrolment(identity=identity, credential=enrol(password)))
     except AlreadyEnrolled as exc:
         print(f"REFUSED: {exc}")
         return 1
@@ -85,6 +84,12 @@ def main() -> int:
         print()
         print("  Only a derived scrypt hash is on disk. Nothing can print this")
         print("  again, including this tool.")
+    print()
+    print("  recovery codes (shown ONCE; each works once):")
+    for code in recovery_codes:
+        print(f"      {code}")
+    print()
+    print("  Store these separately from this machine. Only salted hashes are on disk.")
     return 0
 
 

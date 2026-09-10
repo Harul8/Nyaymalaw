@@ -36,7 +36,7 @@
          like `adv_demo`, and a browser-side email check would lock them out
          of a door that works today. The server decides what a valid handle
          is; this field only has to carry it. -->
-    <label for="login-id">Email</label>
+    <label for="login-id">Email or advocate ID</label>
     <input id="login-id" name="username" autocomplete="username"
            spellcheck="false" placeholder="you@chambers.in" required>
 
@@ -44,7 +44,11 @@
     <input id="login-password" name="password" type="password" autocomplete="current-password" required>
 
     <button type="submit" class="primary wide" id="login-go">Sign in</button>
-    <div class="login-alt"><a href="#" id="show-register">Register</a></div>
+    <div class="login-alt">
+      <a href="#" id="show-register">Register</a>
+      <span aria-hidden="true"> · </span>
+      <a href="#" id="show-recovery">Use a recovery code</a>
+    </div>
     <div id="login-state" class="login-state"></div>
 
     <p class="login-foot">
@@ -58,6 +62,42 @@
       check new matters against the files YOU hold — not a firm-wide registry,
       which this product does not have.
     </p>
+  </form>
+
+  <form id="recovery" class="login" hidden autocomplete="off">
+    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
+    <p class="login-lede">Use one of the recovery codes you saved when this
+      account was enrolled.</p>
+
+    <label for="recovery-id">Email or advocate ID</label>
+    <input id="recovery-id" name="username" autocomplete="username"
+           spellcheck="false" required>
+
+    <label for="recovery-code">Unused recovery code</label>
+    <input id="recovery-code" name="recovery_code" type="password"
+           autocomplete="one-time-code" autocapitalize="characters"
+           spellcheck="false" required>
+
+    <label for="recovery-password">New password</label>
+    <div class="pw-wrap">
+      <input id="recovery-password" name="new-password" type="password"
+             minlength="8" autocomplete="new-password" required>
+      <button type="button" class="pw-eye" data-for="recovery-password"
+              aria-label="Show new password" aria-pressed="false">&#128065;</button>
+    </div>
+
+    <label for="recovery-password2">Retype new password</label>
+    <div class="pw-wrap">
+      <input id="recovery-password2" name="new-password-again" type="password"
+             minlength="8" autocomplete="new-password" required>
+      <button type="button" class="pw-eye" data-for="recovery-password2"
+              aria-label="Show retyped new password" aria-pressed="false">&#128065;</button>
+    </div>
+
+    <button type="submit" class="primary wide" id="recovery-go">Change password</button>
+    <div class="login-alt"><a href="#" id="recovery-login">Back to sign in</a></div>
+    <p class="login-foot">A successful recovery ends every existing session.
+      This code will not work again.</p>
   </form>
 
   <!-- SEPARATE FORM, NOT A MODE OF THE FIRST. A single form that changes
@@ -127,6 +167,12 @@
     <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
     <h2 id="outcome-title" class="outcome-title"></h2>
     <p id="outcome-body" class="outcome-body"></p>
+    <section id="recovery-codes" class="recovery-codes" hidden>
+      <h3>Save these one-time recovery codes now</h3>
+      <p>They will not be shown again. Keep them somewhere separate from this
+        device. Each code works once.</p>
+      <ol id="recovery-code-list"></ol>
+    </section>
     <button type="button" class="primary wide" id="outcome-signin" hidden>Sign in</button>
     <button type="button" class="primary wide" id="outcome-back" hidden>Back to the form</button>
   </section>
@@ -137,6 +183,11 @@
   <div class="brand">
     <span class="mark">NM</span>
     <span class="name">Nyaymalaw</span>
+  </div>
+
+  <div class="workspace-context" id="workspace-context" aria-label="Active workspace">
+    <span class="workspace-label">Active workspace</span>
+    <strong id="workspace-name">—</strong>
   </div>
 
   <!-- THE TABS. Three surfaces, and they do not share state on purpose:

@@ -782,17 +782,16 @@ items:
   title: account access, recovery and workspace identity
   kind: journey
   priority: P0
-  delivery_status: in_progress
-  implementation: partial
+  delivery_status: verifying
+  implementation: complete
   verification: partial
   phase: A
   record: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity
-  next_action: the invitation slice is built and integration-tested; add registration
-    to the approved browser journey, then build recovery, MFA and unmistakable active
-    workspace identity
+  next_action: add registration, recovery and workspace proof to the approval-only browser
+    journey; MFA remains the production release gate recorded by D-013 and BK-42
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
-    build: {result: OPEN, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
+    build: {result: BUILT, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
     test: {result: OPEN, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
   acceptance:
@@ -820,14 +819,17 @@ items:
       expected_failure: the second attempt collides with a record that was never
         allowed to exist
   - id: BK-31-AC3
-    requirement: account recovery, MFA and workspace identity
+    requirement: an advocate can recover without an operator using a one-time code that
+      changes the password, consumes exactly that code and revokes every existing session
     required_evidence: [integration_test, browser_journey]
     evidence:
-      integration_test: {result: NOT_RUN, ref: '', note: not built}
-      browser_journey: {result: NOT_RUN, ref: '', note: not built}
+      integration_test:
+        result: PASS
+        ref: tests/test_account_recovery.py::test_successful_recovery_changes_password_consumes_code_and_revokes_sessions
+      browser_journey: {result: NOT_RUN, ref: '', note: approval-only journey not yet run}
     negative_control:
-      mutation: lock an advocate out and attempt recovery
-      expected_failure: there is no recovery route at all today
+      mutation: reuse one recovery code or present an existing session after successful recovery
+      expected_failure: the code works twice or a pre-recovery session still reaches matter content
   - id: BK-31-AC4
     requirement: an invitation is consumed exactly once and cannot be replayed
     required_evidence: [integration_test]
@@ -940,6 +942,91 @@ items:
     negative_control:
       mutation: restore any name, email, enrolment, practice or firm input to the registration form or script
       expected_failure: the source-level form contract identifies the second owner of roster identity
+  - id: BK-31-AC13
+    requirement: before matter content appears, the served application names the active server-owned
+      workspace distinctly from the advocate's professional profile and offers no false selector when
+      only one workspace is available
+    required_evidence: [integration_test, browser_journey]
+    evidence:
+      integration_test:
+        result: PASS
+        ref: tests/test_account_recovery.py::test_active_workspace_reaches_the_masthead_before_matter_rendering
+      browser_journey: {result: NOT_RUN, ref: '', note: approval-only journey not yet run}
+    negative_control:
+      mutation: omit workspace from the session response, render only the raw identity detail or add
+        a one-option editable workspace control
+      expected_failure: the workspace contract reports that matter work can begin without unmistakable context
+  - id: BK-31-AC14
+    requirement: every advocate receives at least eight high-entropy typeable one-time recovery
+      codes while the server stores only distinct salted hashes and returns complete codes only once
+    required_evidence: [domain_test, integration_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_account_recovery.py::test_domain_recovery_codes_are_typeable_unique_and_single_use
+      integration_test:
+        result: PASS
+        ref: tests/test_account_recovery.py::test_registration_returns_recovery_codes_once_and_stores_only_salted_hashes
+    negative_control:
+      mutation: inspect the advocate record and the next authenticated session after registration
+      expected_failure: a recoverable code is present at rest or the complete set is returned again
+  - id: BK-31-AC15
+    requirement: unknown, wrong and used recovery codes receive one neutral response while failed
+      attempts are rate-limited and audited without recording any presented code
+    required_evidence: [integration_test, adversarial_test]
+    evidence:
+      integration_test:
+        result: PASS
+        ref: tests/test_account_recovery.py::test_unknown_wrong_and_used_recovery_codes_have_one_response_and_no_secret_in_audit
+      adversarial_test:
+        result: PASS
+        ref: tests/test_account_recovery.py::test_failed_recovery_attempts_reach_the_shared_rate_limit
+    negative_control:
+      mutation: compare unknown, wrong and replay responses, exceed the attempt bound and inspect both logs
+      expected_failure: responses differ, no 429 occurs or a presented code appears in a log
+  - id: BK-31-AC16
+    requirement: two workers cannot consume the same recovery code successfully
+    required_evidence: [adversarial_test]
+    evidence:
+      adversarial_test:
+        result: PASS
+        ref: tests/test_account_recovery.py::test_two_directory_instances_cannot_consume_the_same_recovery_code
+    negative_control:
+      mutation: race two directory instances against one unused code
+      expected_failure: both attempts succeed or more than one code is marked used
+  - id: BK-31-AC17
+    requirement: sign-in authentication and session issue cannot cross a concurrent recovery generation,
+      and an abandoned worker claim cannot leave the account permanently locked
+    required_evidence: [adversarial_test]
+    evidence:
+      adversarial_test:
+        result: PASS
+        ref: tests/test_account_recovery.py::test_sign_in_cannot_cross_a_recovery_account_claim
+    negative_control:
+      mutation: hold the recovery account claim while a valid old-password sign-in tries to mint a session
+      expected_failure: the old generation opens a session, or access remains unavailable after the claim closes
+  - id: BK-31-AC18
+    requirement: an untrusted sign-in or recovery identifier cannot escape the advocate-record directory,
+      alias a platform-reserved filename or create an enrolled identity that cannot be addressed portably
+    required_evidence: [adversarial_test]
+    evidence:
+      adversarial_test:
+        result: PASS
+        ref: tests/test_one_advocate_one_id.py::test_an_untrusted_login_id_cannot_escape_the_advocate_directory
+    negative_control:
+      mutation: present ../outside and a valid password for a record placed just outside the advocate directory
+      expected_failure: the outside record authenticates or is returned as the requested identity
+  - id: BK-31-AC19
+    requirement: concurrent sign-in failures cannot exchange their diagnostic state and tell one
+      advocate that another request's account is unknown, wrong or unreadable
+    required_evidence: [adversarial_test]
+    evidence:
+      adversarial_test:
+        result: PASS
+        ref: tests/test_authentication.py::test_concurrent_sign_in_failures_keep_their_own_reason
+    negative_control:
+      mutation: pause unknown-account and wrong-password requests after authentication, then read both reasons
+      expected_failure: both requests observe whichever shared failure reason was written last
 
 - id: BK-32
   title: responsive advocate home and matter navigation

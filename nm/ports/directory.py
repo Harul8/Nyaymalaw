@@ -17,7 +17,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Protocol
 
-from nm.domain.advocate import AdvocateIdentity, Credential, Enrolment, Session
+from nm.domain.advocate import (
+    AdvocateIdentity,
+    Credential,
+    Enrolment,
+    RecoveryResult,
+    Session,
+)
 
 
 class AlreadyEnrolled(RuntimeError):
@@ -41,6 +47,10 @@ class InvitationRefused(RuntimeError):
     """
 
 
+class AccountBusy(RuntimeError):
+    """A credential or recovery mutation currently owns this account."""
+
+
 class DirectoryPort(Protocol):
     def issue_invitation(self, identity: AdvocateIdentity, issued_by: str,
                          now: datetime) -> str:
@@ -48,12 +58,12 @@ class DirectoryPort(Protocol):
         ...
 
     def accept_invitation(self, token: str, credential: Credential,
-                          now: datetime) -> AdvocateIdentity:
-        """Consume one active invitation and enrol the identity it owns."""
+                          now: datetime) -> tuple[AdvocateIdentity, tuple[str, ...]]:
+        """Consume one invitation; return identity and recovery codes once."""
         ...
 
-    def enrol(self, enrolment: Enrolment) -> None:
-        """Record an advocate. Refuses an id that already exists."""
+    def enrol(self, enrolment: Enrolment) -> tuple[str, ...]:
+        """Record an advocate and return their initial recovery codes once."""
         ...
 
     def authenticate(self, advocate_id: str, password: str,
@@ -64,6 +74,22 @@ class DirectoryPort(Protocol):
         unknown: an identical message returned in 0.2ms for a stranger and
         80ms for a wrong password discloses which accounts exist.
         """
+        ...
+
+    def authenticate_and_open_session(
+            self, advocate_id: str, password: str, device: str, now: datetime,
+            ) -> tuple[AdvocateIdentity, str, tuple[str, ...]] | None:
+        """Authenticate and mint a session under the account mutation lock."""
+        ...
+
+    def ensure_recovery_codes(self, advocate_id: str,
+                              now: datetime) -> tuple[str, ...]:
+        """Provision a legacy advocate once, after valid authentication."""
+        ...
+
+    def recover(self, advocate_id: str, code: str, credential: Credential,
+                now: datetime) -> RecoveryResult:
+        """Consume one recovery code, change credential and end sessions."""
         ...
 
     def open_session(self, advocate_id: str, device: str,

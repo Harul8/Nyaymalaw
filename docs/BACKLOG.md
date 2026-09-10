@@ -68,7 +68,7 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 
 ### Open P0 — what is unsafe
 
-- **BK-31** [A] account access, recovery and workspace identity — *in_progress* · the invitation slice is built and integration-tested; add registration to the approved browser journey, then build recovery, MFA and unmistakable active workspace identity
+- **BK-31** [A] account access, recovery and workspace identity — *verifying* · add registration, recovery and workspace proof to the approval-only browser journey; MFA remains the production release gate recorded by D-013 and BK-42
 - **BK-33** [A] recognisable matter cover, truthful board and real reopen — *in_progress* · render passed_deadlines, which the projection already emits
 - **BK-34** [B] front-door legal and professional screens before substance — *in_progress* · the emergency exception needs B2 emergency triage, which BK-53 delivers; an incomplete registry reading NOT_ASSESSED needs the firm-scoped registry
 - **BK-35** [D] cause-specific accrual and answer-consistency gate — *in_progress* · refuse to run the period from a single dated fact that does not satisfy the curated trigger; emit the statutory limb
@@ -412,11 +412,45 @@ header value; its positive controls independently break concealment, clearing
 and header wiring. AC12 separately refuses the return of any roster-identity
 input. Fifty-five focused tests pass. The real browser leg remains `NOT_RUN`.
 
-**Still not done:** account recovery, MFA or an explicit risk acceptance, and
-an unmistakable active workspace remain open under this row. The integration
-evidence for the invitation slice is green; its browser journey remains stale
-until the approved login-to-logout journey is run. BK-31 therefore remains
-`in_progress`, not closed.
+**Recovery and active-workspace slice built, 10 September 2026.** Registration
+now returns ten high-entropy, typeable recovery codes once and stores only a
+distinct salt and hash for each. A legacy advocate receives one set after the
+next valid sign-in. The public recovery route consumes exactly one unused
+code, changes the password, ends every existing session and requires a fresh
+sign-in. Unknown identity, wrong code and replay produce one neutral response;
+failed attempts use the shared rate limiter, and neither the auth audit nor the
+attempt log records the presented code.
+
+Authentication, session issue and recovery now share one per-account
+operating-system claim across directory instances and worker processes. The OS
+releases an abandoned claim when a worker exits, so a crash cannot leave the
+advocate permanently locked out. The adversarial controls race two adapters
+against one recovery code, prevent an old-password session from crossing a
+recovery generation, and terminate a subprocess without releasing its claim
+before proving access can be claimed again. Sign-in failure state is
+thread-local, preventing simultaneous unknown-account and wrong-password
+requests from exchanging the explanation returned to their callers.
+
+The same pass closed a path-boundary defect found during graph review. An
+untrusted advocate id could previously contain `../` and make the directory
+read a `.nm` record outside `advocates/`; enrolled ids now refuse path, control
+and platform-reserved names, while public lookups fold invalid input to an
+unreachable hashed sentinel inside the directory and create no lock artifact.
+
+The server now returns one non-editable active workspace with both login and
+session identity. Firm-backed accounts show that firm; a legacy account with
+no firm receives a truthful private-advocate workspace rather than the false
+claim that a firm registry exists. The browser writes this context into a
+distinct masthead region before requesting the matter list, offers no one-item
+selector, and keeps matter content closed if workspace identity is absent.
+Recovery codes are concealed during entry, removed from the DOM before the
+request waits, and removed from the document after the one-time display.
+
+BK-31's implementation is complete and has current focused deterministic
+evidence. It remains `verifying`, not done: registration, recovery and visible
+workspace still require the approval-only real-browser journey. MFA is not
+silently waived; D-013 keeps it as BK-42's production release gate for any
+public or multi-user deployment.
 
 #### BK-32 — responsive advocate home and matter navigation — **PARTLY DONE · P1**
 
