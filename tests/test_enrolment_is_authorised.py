@@ -23,7 +23,7 @@ from nm.domain.advocate import (
     token_fingerprint,
     utcnow,
 )
-from nm.ports.directory import InvitationRefused
+from nm.ports.directory import AlreadyEnrolled, InvitationRefused
 
 pytestmark = pytest.mark.class_a
 
@@ -210,20 +210,76 @@ def test_unknown_expired_and_mismatched_invitations_do_not_form_an_oracle(client
 
 def test_two_directory_instances_cannot_both_spend_one_invitation(tmp_path):
     identity = _identity()
-    issuer = FileDirectory(tmp_path, key="k" * 32)
-    token = issuer.issue_invitation(identity, "operator", utcnow())
     credential = enrol(GOOD["password"])
-    barrier = threading.Barrier(2)
 
-    def spend() -> str:
-        directory = FileDirectory(tmp_path, key="k" * 32)
-        barrier.wait()
-        try:
-            directory.accept_invitation(token, identity, credential, utcnow())
-            return "enrolled"
-        except InvitationRefused:
-            return "refused"
+    # Repeat inside one evidence node. The old per-instance locks usually
+    # appeared to work and failed only when both adapters crossed the claim
+    # point closely enough; one lucky pass is not evidence of exclusion.
+    for attempt in range(20):
+        root = tmp_path / str(attempt)
+        issuer = FileDirectory(root, key="k" * 32)
+        token = issuer.issue_invitation(identity, "operator", utcnow())
+        barrier = threading.Barrier(2)
 
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        outcomes = list(pool.map(lambda _: spend(), range(2)))
-    assert sorted(outcomes) == ["enrolled", "refused"]
+        def spend(root=root, barrier=barrier, token=token) -> str:
+            directory = FileDirectory(root, key="k" * 32)
+            barrier.wait()
+            try:
+                directory.accept_invitation(
+                    token, identity, credential, utcnow())
+                return "enrolled"
+            except InvitationRefused:
+                return "refused"
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(lambda _: spend(), range(2)))
+        assert sorted(outcomes) == ["enrolled", "refused"], (
+            f"attempt {attempt} did not enforce one filesystem claim: "
+            f"{outcomes}")
+
+
+def test_two_invitations_cannot_race_to_replace_one_advocate(tmp_path):
+    """BK-31-AC11. The identity path is also an exclusive claim.
+
+    Invitation fingerprints serialize presentations of one token. They do not
+    serialize two different tokens issued for the same identity, so the
+    advocate record itself must refuse last-writer-wins.
+    """
+    identity = _identity()
+    credentials = (
+        enrol(GOOD["password"]),
+        enrol("River-stone-77"),
+    )
+
+    for attempt in range(10):
+        root = tmp_path / f"identity-{attempt}"
+        issuer = FileDirectory(root, key="k" * 32)
+        claims = tuple(
+            (issuer.issue_invitation(identity, "operator", utcnow()), credential)
+            for credential in credentials
+        )
+        barrier = threading.Barrier(2)
+
+        def spend(claim, root=root, barrier=barrier) -> str:
+            token, credential = claim
+            directory = FileDirectory(root, key="k" * 32)
+            barrier.wait()
+            try:
+                directory.accept_invitation(
+                    token, identity, credential, utcnow())
+                return "enrolled"
+            except AlreadyEnrolled:
+                return "already enrolled"
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(spend, claims))
+        assert sorted(outcomes) == ["already enrolled", "enrolled"], (
+            f"attempt {attempt} allowed last-writer-wins: {outcomes}")
+
+        saved = FileDirectory(root, key="k" * 32)
+        working = sum(
+            saved.authenticate(identity.id, password) is not None
+            for password in (GOOD["password"], "River-stone-77")
+        )
+        assert working == 1, (
+            "the race did not leave exactly one deliberate credential")

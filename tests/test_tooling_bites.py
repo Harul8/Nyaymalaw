@@ -512,6 +512,25 @@ def test_utf8_console_survives_a_stream_it_cannot_reconfigure():
     utf8_console()  # idempotent
 
 
+def test_the_graph_vector_report_starts_through_its_documented_path(tmp_path):
+    """BK-76-AC1. Presence of the console call did not make it importable.
+
+    The real pre-commit hook found that distinction: the source contained
+    ``utf8_console()`` and passed the scan above, then
+    ``python tools/graph_vectors.py --embed`` died before reaching it because
+    the repository root was absent from ``sys.path``. Start outside the root
+    so the test cannot inherit the missing precondition from pytest's cwd.
+    """
+    result = run("graph_vectors.py", "--check", cwd=tmp_path)
+    report = result.stdout + result.stderr
+
+    assert result.returncode == 0, report
+    assert "semantic index" in report.lower(), (
+        "the executable returned without producing its freshness verdict")
+    assert "traceback" not in report.lower(), (
+        "the reporter still failed before it could measure the graph")
+
+
 #: What a module has to reach to make a model call. Names rather than a
 #: behaviour, because the point is to notice the WIRING on the day it lands --
 #: and by the time a call is observable, the gate has already made it.
@@ -607,6 +626,22 @@ def test_the_hook_keeps_the_hook_that_was_there_first():
     assert "--no-verify" in hook, (
         "a blocking hook that does not say how to override it is one people "
         "uninstall rather than bypass")
+
+
+def test_the_hook_refreshes_vectors_and_keeps_the_gate_blocking():
+    """BK-76-AC2. Search freshness may warn; build identity must decide."""
+    hook = (ROOT / "tools" / "hooks" / "pre-commit").read_text(encoding="utf8")
+    vector = "python tools/graph_vectors.py --embed || true"
+    gate = "python tools/gatestamp.py --quiet || exit 1"
+
+    assert vector in hook, (
+        "the hook updates the structural graph without refreshing its vectors")
+    assert gate in hook, (
+        "the hook made the exact-build gate best effort, so an unverified tree "
+        "can be committed")
+    assert hook.index(vector) < hook.index(gate), (
+        "the semantic report no longer accompanies the graph update before the "
+        "blocking build-identity decision")
 
 
 def test_the_golden_suite_path_cannot_reach_a_model():

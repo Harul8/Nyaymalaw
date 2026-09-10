@@ -888,6 +888,8 @@ items:
       adversarial_test:
         result: PASS
         ref: tests/test_enrolment_is_authorised.py::test_two_directory_instances_cannot_both_spend_one_invitation
+        note: the 10 September Class-A refresh reproduced the per-instance-lock
+          race; the strengthened control now runs 20 filesystem claim contests
     negative_control:
       mutation: have two independently constructed directory adapters cross the claim point together
       expected_failure: both calls report enrolment or two advocate writes are attempted
@@ -907,6 +909,18 @@ items:
       mutation: restore a visible input, retain its value during fetch, or send the retired header name
       expected_failure: the static integration controls report the exposure or header drift;
         the eventual browser phase must observe the field clear on both refusal and success
+  - id: BK-31-AC11
+    requirement: two different valid invitations for one advocate cannot race to
+      replace that advocate's credential or both report enrolment
+    required_evidence: [adversarial_test]
+    evidence:
+      adversarial_test:
+        result: PASS
+        ref: tests/test_enrolment_is_authorised.py::test_two_invitations_cannot_race_to_replace_one_advocate
+        note: ten two-token contests each leave exactly one enrolled credential
+    negative_control:
+      mutation: claim two valid tokens for the same canonical identity through independent directory instances
+      expected_failure: both callers report enrolment or the eventual credential is silently selected by last writer wins
 
 - id: BK-32
   title: responsive advocate home and matter navigation
@@ -2046,6 +2060,41 @@ items:
     negative_control:
       mutation: change a source fingerprint after an automated PASS was recorded
       expected_failure: backlog lint refuses the stale execution even though the stored board is stable
+- id: BK-76
+  title: graph-vector hook can execute the reporter it invokes
+  kind: control
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: passing
+  affects_phases: [A, B, C, D, E, F, G, H, I]
+  record: docs/BACKLOG.md#bk-76-graph-vector-hook-can-execute-the-reporter-it-invokes
+  next_action: closed on the executable-path and hook-contract controls and signed off
+    10 September 2026; retain the measured lag report as advisory operational evidence
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-76-graph-vector-hook-can-execute-the-reporter-it-invokes}
+    build: {result: BUILT, ref: docs/BACKLOG.md#bk-76-graph-vector-hook-can-execute-the-reporter-it-invokes}
+    test: {result: VERIFIED, ref: tests/test_tooling_bites.py}
+    signoff: {result: SIGNED_OFF, ref: docs/BACKLOG.md#bk-76-graph-vector-hook-can-execute-the-reporter-it-invokes}
+  acceptance:
+  - id: BK-76-AC1
+    requirement: graph_vectors starts through its documented python tools/graph_vectors.py
+      path from outside the repository without an import traceback
+    required_evidence: [domain_test]
+    evidence:
+      domain_test: {result: PASS, ref: tests/test_tooling_bites.py::test_the_graph_vector_report_starts_through_its_documented_path}
+    negative_control:
+      mutation: remove the repository root from the script import path
+      expected_failure: the subprocess fails while importing tools._console before it can report vector freshness
+  - id: BK-76-AC2
+    requirement: the canonical pre-commit hook invokes that executable reporter as
+      a best-effort semantic-index refresh while retaining the blocking gate-stamp decision
+    required_evidence: [domain_test]
+    evidence:
+      domain_test: {result: PASS, ref: tests/test_tooling_bites.py::test_the_hook_refreshes_vectors_and_keeps_the_gate_blocking}
+    negative_control:
+      mutation: remove the vector reporter or make the gate stamp best effort
+      expected_failure: the hook contract test identifies the missing refresh or weakened release decision
 - id: J-1
   title: The file list cannot tell one matter from another
   kind: finding

@@ -25,7 +25,6 @@ from __future__ import annotations
 import hmac
 import json
 import os
-import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -73,7 +72,6 @@ class FileDirectory:
         self._attempts = self._root / "attempts.log"
         self._invitations = self._root / "invitations"
         self._used_invitations = self._invitations / "used"
-        self._invitation_lock = threading.Lock()
         self._advocates.mkdir(parents=True, exist_ok=True)
         self._sessions.mkdir(parents=True, exist_ok=True)
         self._invitations.mkdir(parents=True, exist_ok=True)
@@ -111,55 +109,71 @@ class FileDirectory:
     def accept_invitation(self, token: str, offered: AdvocateIdentity,
                           credential: Credential,
                           now: datetime) -> AdvocateIdentity:
-        """Claim and enrol under one lock; a second presentation loses."""
+        """Claim on disk and enrol; every other instance sees the claim."""
         fingerprint = token_fingerprint((token or "").strip())
         active = self._invitation_path(fingerprint)
         used = self._used_invitations / f"{fingerprint}.json"
-        with self._invitation_lock:
-            try:
-                data = json.loads(
-                    self._cipher.decrypt(active.read_bytes()).decode("utf8"))
-                invitation = Invitation(
-                    token_fingerprint=data["token_fingerprint"],
-                    identity=AdvocateIdentity(**data["identity"]),
-                    issued_at=datetime.fromisoformat(data["issued_at"]),
-                    expires_at=datetime.fromisoformat(data["expires_at"]),
-                    issued_by=data["issued_by"],
-                )
-            except Exception:  # noqa: BLE001 -- corrupt/foreign is still refused
-                self._note(offered.id, "invitation refused: unknown or already used")
-                raise InvitationRefused(_INVITATION_REFUSED) from None
+        try:
+            sealed = active.read_bytes()
+            data = json.loads(self._cipher.decrypt(sealed).decode("utf8"))
+            invitation = Invitation(
+                token_fingerprint=data["token_fingerprint"],
+                identity=AdvocateIdentity(**data["identity"]),
+                issued_at=datetime.fromisoformat(data["issued_at"]),
+                expires_at=datetime.fromisoformat(data["expires_at"]),
+                issued_by=data["issued_by"],
+            )
+        except Exception:  # noqa: BLE001 -- corrupt/foreign is still refused
+            self._note(offered.id, "invitation refused: unknown or already used")
+            raise InvitationRefused(_INVITATION_REFUSED) from None
 
-            invited = json.dumps(invitation.identity.as_dict(), sort_keys=True)
-            presented = json.dumps(offered.as_dict(), sort_keys=True)
-            active_now = invitation.active_at(now)
-            if not active_now or not hmac.compare_digest(invited, presented):
-                why = "expired" if not active_now else "identity mismatch"
-                self._note(offered.id, f"invitation refused: {why}")
-                raise InvitationRefused(_INVITATION_REFUSED)
+        invited = json.dumps(invitation.identity.as_dict(), sort_keys=True)
+        presented = json.dumps(offered.as_dict(), sort_keys=True)
+        active_now = invitation.active_at(now)
+        if not active_now or not hmac.compare_digest(invited, presented):
+            why = "expired" if not active_now else "identity mismatch"
+            self._note(offered.id, f"invitation refused: {why}")
+            raise InvitationRefused(_INVITATION_REFUSED)
 
-            try:
-                os.replace(active, used)
-            except OSError:
-                self._note(offered.id, "invitation refused: concurrent replay")
-                raise InvitationRefused(_INVITATION_REFUSED) from None
+        # `threading.Lock` protects one Python object. Registration can be
+        # served by many directory objects and, in production, many worker
+        # processes. Exclusive creation of the used record is the shared
+        # compare-and-set: exactly one claimant can create this path. Copy the
+        # sealed record before removing the active name so an unexpected I/O
+        # failure can restore the invitation without exposing roster data.
+        try:
+            with used.open("xb") as claim:
+                claim.write(sealed)
+        except FileExistsError:
+            self._note(offered.id, "invitation refused: concurrent replay")
+            raise InvitationRefused(_INVITATION_REFUSED) from None
+        except OSError:
+            self._note(offered.id, "invitation refused: claim unavailable")
+            raise InvitationRefused(_INVITATION_REFUSED) from None
 
-            try:
-                # The FILE, not the request, owns the identity that is saved.
-                self.enrol(Enrolment(identity=invitation.identity,
-                                     credential=credential, created_at=now))
-            except AlreadyEnrolled:
-                self._note(invitation.identity.id,
-                           "invitation consumed: advocate already enrolled")
-                raise
-            except Exception:
-                # An I/O failure is not consumption. Restore the claim so the
-                # operator does not have to reissue after a transient disk error.
-                if used.exists() and not active.exists():
-                    os.replace(used, active)
-                raise
-            self._note(invitation.identity.id, "invitation consumed and enrolled")
-            return invitation.identity
+        try:
+            active.unlink()
+        except OSError:
+            used.unlink(missing_ok=True)
+            self._note(offered.id, "invitation refused: claim unavailable")
+            raise InvitationRefused(_INVITATION_REFUSED) from None
+
+        try:
+            # The FILE, not the request, owns the identity that is saved.
+            self.enrol(Enrolment(identity=invitation.identity,
+                                 credential=credential, created_at=now))
+        except AlreadyEnrolled:
+            self._note(invitation.identity.id,
+                       "invitation consumed: advocate already enrolled")
+            raise
+        except Exception:
+            # An I/O failure is not consumption. Restore the claim so the
+            # operator does not have to reissue after a transient disk error.
+            if used.exists() and not active.exists():
+                os.replace(used, active)
+            raise
+        self._note(invitation.identity.id, "invitation consumed and enrolled")
+        return invitation.identity
 
     # ------------------------------------------------------------ advocates ---
 
@@ -180,10 +194,6 @@ class FileDirectory:
 
     def enrol(self, enrolment: Enrolment) -> None:
         path = self._advocate_path(enrolment.identity.id)
-        if path.exists():
-            raise AlreadyEnrolled(
-                f"{enrolment.identity.id} is already enrolled. Overwriting "
-                f"would replace a credential without anyone deciding to.")
         blob = {
             "identity": enrolment.identity.as_dict(),
             "credential": {
@@ -204,7 +214,25 @@ class FileDirectory:
         #
         # Client material is not here and is not affected: matters,
         # transcripts and metrics keep the matter key.
-        path.write_text(json.dumps(blob, indent=2), encoding="utf8")
+        created = False
+        try:
+            # Exclusive creation owns the one-identity decision on disk. A
+            # prior `exists()` check left a last-writer-wins interval between
+            # the check and this write when two valid invitations arrived at
+            # different worker processes.
+            with path.open("x", encoding="utf8") as handle:
+                created = True
+                handle.write(json.dumps(blob, indent=2))
+        except FileExistsError as exc:
+            raise AlreadyEnrolled(
+                f"{enrolment.identity.id} is already enrolled. Overwriting "
+                f"would replace a credential without anyone deciding to.") from exc
+        except Exception:
+            # A failed first write must not leave a corrupt record that reads
+            # as an enrolled advocate and locks out a corrected retry.
+            if created:
+                path.unlink(missing_ok=True)
+            raise
 
     #: Why a sign-in failed, in the caller's vocabulary. THREE STATES.
     #:

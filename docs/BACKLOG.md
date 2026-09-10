@@ -29,21 +29,21 @@ This persisted view projects the authored registry contract. `backlog check` sep
 
 | Phase | | Features | Steps | Contracted | Verified | Open P0 | Readiness |
 |---|---|---:|---:|---:|---:|---:|---|
-| A | Arrive | 3/4 | 4 | 0/4 | 10/33 | 5 | not releasable |
-| B | Open a matter | 0/6 | 4 | 2/4 | 6/17 | 3 | not releasable |
-| C | Take the brief | 5/7 | 7 | 0/7 | 9/27 | 7 | not releasable |
-| D | Work the file | 8/9 | 14 | 1/14 | 11/34 | 8 | not releasable |
-| E | Advise | 1/5 | 5 | 0/5 | 7/34 | 9 | not releasable |
-| F | Act | 0/7 | 7 | 0/7 | 3/13 | 4 | not releasable |
-| G | Carry | 0/3 | 3 | 0/3 | 4/15 | 3 | not releasable |
-| H | Close | 0/2 | 2 | 0/2 | 3/8 | 0 | not releasable |
-| I | Leave | 1/1 | 1 | 0/1 | 5/19 | 4 | not releasable |
+| A | Arrive | 3/4 | 4 | 0/4 | 11/34 | 5 | not releasable |
+| B | Open a matter | 0/6 | 4 | 2/4 | 7/18 | 3 | not releasable |
+| C | Take the brief | 5/7 | 7 | 0/7 | 10/28 | 7 | not releasable |
+| D | Work the file | 8/9 | 14 | 1/14 | 12/35 | 8 | not releasable |
+| E | Advise | 1/5 | 5 | 0/5 | 8/35 | 9 | not releasable |
+| F | Act | 0/7 | 7 | 0/7 | 4/14 | 4 | not releasable |
+| G | Carry | 0/3 | 3 | 0/3 | 5/16 | 3 | not releasable |
+| H | Close | 0/2 | 2 | 0/2 | 4/9 | 0 | not releasable |
+| I | Leave | 1/1 | 1 | 0/1 | 6/20 | 4 | not releasable |
 
-**84 rows · 16 open P0 · 0 blocked · 18/44 features implemented**
+**85 rows · 16 open P0 · 0 blocked · 18/44 features implemented**
 
 ### Professional plan — registered and derived
 
-**20 advocate standards · 13 expert-workflow states · 5 advice levels · 7 roles · 14 gap closures · 84 wave rows**
+**20 advocate standards · 13 expert-workflow states · 5 advice levels · 7 roles · 14 gap closures · 85 wave rows**
 
 Gap status below is computed from the linked BK/J rows. It is never authored in `professional.json` or maintained in the workbook.
 
@@ -281,8 +281,8 @@ one-person release depends on the roster being controlled.
 shared code and its environment switch are gone. `tools/invite.py` issues a
 48-hour, high-entropy invitation for one canonical email and server-owned
 workspace identity. Only the token fingerprint is retained, the invitation
-record is sealed with the directory cipher, and acceptance atomically moves it
-to the used set before enrolling. Missing, blank, unknown, expired, replayed
+record is sealed with the directory cipher, and acceptance exclusively creates
+its used record before enrolling. Missing, blank, unknown, expired, replayed
 and identity-mismatched values all return the same actionable refusal; the
 operator audit keeps the precise reason without the token. Repeated failures
 reach the existing per-address and per-source limiter.
@@ -292,6 +292,24 @@ field and removes the value from the DOM before waiting on the request. The
 Class-A counterexamples include expiry, replay, changed email/name/workspace,
 encrypted digest-only storage, two directory instances racing to spend one
 token, rate limiting/audit, header drift and visible/retained browser values.
+
+**Concurrent-claim counterexample reproduced and closed during the 10 September
+evidence refresh.** The first complete Class-A run after BK-76 reached the
+existing two-directory race and failed: both adapters owned different in-memory
+locks, both crossed the claim point, and the loser reached the advocate write
+and raised `AlreadyEnrolled`. The claim now uses exclusive creation of the
+sealed used record, which every adapter instance and worker process shares. The
+strengthened BK-31-AC9 control runs 20 contests inside its single evidence node;
+each produces exactly one enrolment and one generic replay refusal.
+
+The trace also made a second race concrete before changing it: two different
+valid invitations for the same canonical identity do not share an invitation
+claim. The advocate writer checked `path.exists()` and then wrote the path, so
+two workers could both observe absence and choose the eventual credential by
+last writer wins. The writer now creates the identity path exclusively and
+removes its own partial file if the first write fails. BK-31-AC11 runs ten
+two-token contests and proves exactly one enrolment and one working credential
+after every contest.
 
 **Still not done:** account recovery, MFA or an explicit risk acceptance, and
 an unmistakable active workspace remain open under this row. The integration
@@ -2736,6 +2754,36 @@ existing source-fingerprint mutation proves lint still rejects stale execution.
 The canonical Class-A run can now start from a stale predecessor and produce
 the fresh artifact that replaces it, removing the self-dependency without
 making either evidence or the board advisory.
+
+## BK-76 — graph-vector hook can execute the reporter it invokes
+
+Opened 10 September 2026 from the real pre-commit output after `f0a869a`.
+
+**Observed on the real hook.** The hook updated the structural graph and then
+ran `python tools/graph_vectors.py --embed`. The reporter raised
+`ModuleNotFoundError: No module named 'tools'` while importing its shared
+console guard. The hook is deliberately best effort for an offline semantic
+index, so the commit correctly continued, but the promised freshness report
+never ran and the terminal contained a traceback instead of a measured lag.
+
+**Plan.** Establish the repository root on `sys.path` before the reporter
+imports `tools._console`, following every other executable tool in this
+repository. Exercise the exact documented script path from a working directory
+outside the repository, so a package import cannot pass merely because pytest
+started at the root. Also bind the canonical hook to both halves of its
+contract: vector refresh stays best effort, while the gate stamp remains the
+blocking decision.
+
+**Built, tested and signed off 10 September 2026.** `graph_vectors.py` now
+establishes `REPO` and inserts it into `sys.path` before importing the shared
+console guard. The exact command used by the hook starts successfully from a
+working directory outside the repository and returns a measured freshness
+report. The live counterexample changed from an import traceback to
+`SEMANTIC INDEX STALE BY 45 NODE(S)`, naming five unreachable nodes and the
+command that can refresh them. A second Class-A control reads the canonical
+hook and proves the reporter remains best effort while `gatestamp.py` remains
+blocking. The two different operational decisions are preserved rather than
+being weakened to make the test pass.
 
 ## BK-30 — executable login-to-logout acceptance journey — **PARTLY DONE · P1**
 
