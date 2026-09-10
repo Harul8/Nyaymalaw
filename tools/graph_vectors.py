@@ -52,6 +52,10 @@ import sqlite3
 import subprocess
 import sys
 
+from tools._console import utf8_console
+
+utf8_console()
+
 REPO = pathlib.Path(__file__).resolve().parent.parent
 DB = REPO / ".code-review-graph" / "graph.db"
 ENV = REPO / ".env"
