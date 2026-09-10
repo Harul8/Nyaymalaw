@@ -424,8 +424,32 @@ def _delivery_lifecycle(doc: dict, items: list[dict]) -> list[str]:
         signoff = (records.get("signoff") or {}).get("result")
         if build not in (None, "NOT_STARTED") and start != "READY":
             bad.append(f"{rid}: Build began before the Start Record was READY")
-        if test not in (None, "NOT_RUN") and build != "BUILT":
-            bad.append(f"{rid}: Test began before the Build Record was BUILT")
+        # EVIDENCE MAY ACCUMULATE WHILE THE BUILD IS OPEN; IT MAY NOT BE
+        # DECLARED COMPLETE. BK-74.
+        #
+        # This read `test not in (None, "NOT_RUN") and build != "BUILT"`, a
+        # waterfall: no criterion could carry a result until every criterion
+        # was built. Measured 10 September 2026 against the 53 unmanaged rows,
+        # it refused seven that have a full contract and are being built
+        # exactly as this repository builds -- one criterion at a time, with
+        # evidence recorded as each lands. BK-34 is the plain case: two of four
+        # criteria PASS and AC3 is blocked on BK-53, which is a correct state
+        # the model could not write down.
+        #
+        # The three rows BK-74 was tested against were all complete-build rows,
+        # so the assumption was never put to a partial one -- the same reason
+        # the sign-off gate went unexamined for the population that had no
+        # records.
+        #
+        # WHAT THE RULE WAS PROTECTING IS KEPT, and it is the only part worth
+        # protecting: a VERIFIED Evidence Pack asserts the whole row's evidence
+        # stands, and over a half-built row that is false. OPEN and FAILED
+        # assert nothing of the kind. `done` is unaffected either way -- it
+        # still requires SIGNED_OFF, which still requires VERIFIED, which still
+        # requires BUILT.
+        if test == "VERIFIED" and build != "BUILT":
+            bad.append(f"{rid}: the Evidence Pack is VERIFIED before the Build "
+                       f"Record was BUILT")
         if signoff not in (None, "NOT_RUN") and test != "VERIFIED":
             bad.append(f"{rid}: Sign-off began before the Evidence Pack was VERIFIED")
 
@@ -903,8 +927,28 @@ def derive_done(it: dict, by_id: dict) -> bool:
     if it.get("kind") in COUNSEL_FACING_KINDS and it.get("priority") == "P0" \
             and "counsel_review" not in levels:
         return False
-    records = it.get("stage_records")
-    if records and (records.get("signoff") or {}).get("result") != "SIGNED_OFF":
+    # THE SIGN-OFF IS REQUIRED, NOT OFFERED. BK-74.
+    #
+    # This read `if records and ...`, so a row carrying NO stage records
+    # skipped the sign-off requirement altogether. Measured on 10 September
+    # 2026: 80 of 83 rows had no records, 54 of those were NOT legacy, and
+    # BK-21 -- a P0 product row with four PASSing criteria -- derived
+    # `done: True` with `signoff: None`, having never been asked.
+    #
+    # The gate was therefore inverted in effect: rows that RECORDED their
+    # lifecycle were held at NOT_RUN, and rows that recorded nothing were
+    # waved through. Absence read as exemption, which is §9 in the one
+    # function that decides whether work is finished -- and the direct
+    # negation of this registry's governing rule, that A MISSING LINK MUST
+    # MEAN NOT PROVEN AND NEVER IMPLICITLY PASSING.
+    #
+    # THE LEGACY POPULATION IS UNAFFECTED and that is why this can be
+    # unconditional: a `legacy` row returns above, on prose evidence that is
+    # declared and counted. Every row reaching this line is one this registry
+    # governs, and a governed row with no record has not proven its lifecycle
+    # -- it has merely not been asked about it.
+    records = it.get("stage_records") or {}
+    if (records.get("signoff") or {}).get("result") != "SIGNED_OFF":
         return False
     return True
 

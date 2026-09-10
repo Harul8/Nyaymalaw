@@ -27,17 +27,17 @@ found cannot answer it.
 
 | Phase | | Features | Steps | Contracted | Verified | Open P0 | Readiness |
 |---|---|---:|---:|---:|---:|---:|---|
-| A | Arrive | 3/4 | 4 | 0/4 | 10/32 | 5 | not releasable |
-| B | Open a matter | 0/6 | 4 | 2/4 | 6/16 | 3 | not releasable |
-| C | Take the brief | 5/7 | 7 | 0/7 | 9/26 | 7 | not releasable |
-| D | Work the file | 8/9 | 14 | 1/14 | 11/33 | 8 | not releasable |
-| E | Advise | 1/5 | 5 | 0/5 | 7/33 | 9 | not releasable |
-| F | Act | 0/7 | 7 | 0/7 | 3/12 | 4 | not releasable |
-| G | Carry | 0/3 | 3 | 0/3 | 4/14 | 3 | not releasable |
-| H | Close | 0/2 | 2 | 0/2 | 3/7 | 0 | not releasable |
-| I | Leave | 1/1 | 1 | 0/1 | 5/18 | 4 | not releasable |
+| A | Arrive | 3/4 | 4 | 0/4 | 6/32 | 7 | not releasable |
+| B | Open a matter | 0/6 | 4 | 2/4 | 3/16 | 4 | not releasable |
+| C | Take the brief | 5/7 | 7 | 0/7 | 5/26 | 9 | not releasable |
+| D | Work the file | 8/9 | 14 | 1/14 | 8/33 | 9 | not releasable |
+| E | Advise | 1/5 | 5 | 0/5 | 4/33 | 10 | not releasable |
+| F | Act | 0/7 | 7 | 0/7 | 0/12 | 5 | not releasable |
+| G | Carry | 0/3 | 3 | 0/3 | 1/14 | 4 | not releasable |
+| H | Close | 0/2 | 2 | 0/2 | 0/7 | 1 | not releasable |
+| I | Leave | 1/1 | 1 | 0/1 | 1/18 | 6 | not releasable |
 
-**83 rows · 16 open P0 · 0 blocked · 18/44 features implemented**
+**83 rows · 18 open P0 · 0 blocked · 18/44 features implemented**
 
 ### Professional plan — registered and derived
 
@@ -66,6 +66,7 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 
 ### Open P0 — what is unsafe
 
+- **BK-21** [A/C/I] the matter encryption key IS the OpenAI API key — *verifying* · closed on a measured rotation and signed off 10 September 2026; the lifecycle was recorded retrospectively because the row was built before BK-74
 - **BK-31** [A] account access, recovery and workspace identity — *in_progress* · replace the reusable deployment-wide enrolment code with an expiring, single-use invitation bound to server-owned identity and workspace; then build recovery, MFA and workspace identity
 - **BK-33** [A] recognisable matter cover, truthful board and real reopen — *in_progress* · render passed_deadlines, which the projection already emits
 - **BK-34** [B] front-door legal and professional screens before substance — *in_progress* · the emergency exception needs B2 emergency triage, which BK-53 delivers; an incomplete registry reading NOT_ASSESSED needs the firm-scoped registry
@@ -82,6 +83,7 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 - **BK-67** [C/D/E/F] expert-advocate evaluation gate — *planned* · turn PA-01 to PA-20 into representative matter rubrics with named reviewers, thresholds, reservations and regression policy
 - **BK-69** [C/G/I] multimodal privacy and processing boundary — *in_progress* · the W0 foundation is built; end-to-end attribution of originals, derivatives, processors, retention and deletion needs BK-54's intake at W2
 - **BK-70** [D/E/F] remedy and enforceability model — *planned* · model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
+- **BK-73** [A/B/C/D/E/F/G/H/I] evidence results are bound to the build and execution that earned them — *verifying* · keep the published Class-A result current on every change and require each future browser, model, counsel and production PASS to carry its own record
 
 ### Admitted gaps in the evidence
 
@@ -3277,13 +3279,37 @@ carried the dead value: the exposure was closed and the deployment was broken,
 which are two different states and would have read as one.
 
 With the new value in place: **HTTP 200**, 129 models, `test_openai_live.py`
-green through the adapter, and no collision with the matter seal. BK-21 now
-derives `done` from four passing criteria — the first product P0 to earn it
-through the full evidence path.
+green through the adapter, and no collision with the matter seal. Four criteria
+pass — the first product P0 to reach that through the full evidence path,
+including a `production_measure` only the account holder could supply.
 
 **And the guard held across the rotation, which is the whole point.** The same
 act, performed yesterday, would have made all 247 sealed matters permanently
 unreadable.
+
+**Lifecycle recorded retrospectively, and signed off 10 September 2026.** This
+row was built before BK-74 existed, so it carried no stage records — and until
+10 September that absence was read as exemption rather than as an unanswered
+question. `derive_done` asked for a Conformance Record only from rows that
+happened to have one, so BK-21 derived `done` with `signoff: None`, never
+having been asked. The gate was inverted in effect: rows that recorded their
+lifecycle were held, rows that recorded nothing went through.
+
+The four records state what actually happened rather than backfilling a
+process. **Start** is the sequence written before any code — new seal, re-key,
+*then* rotate — which was the whole of the analysis and is why the store
+survived. **Build** is the composition-root guard and
+`tools/rekey_matter_store.py`, 9 September. **Evidence Pack** is the published
+Class-A result for the three automated criteria, plus the structured
+`production_measure` record for AC4. **Conformance** is the account holder's,
+on the measured rotation above: they are the only person who could perform AC4,
+and the measurement — 401 on the old value, 200 on the new — is what is being
+approved, not the word PASS beside it.
+
+**Nothing about the retrospective recording is treated as a precedent.** The
+pre-cutover population is declared and reconciled at the registry root, and it
+went from 80 to 79 when this row acquired records. A row opened after BK-74
+carries them from the Start Record forward, and lint refuses one that does not.
 ## BK-16 - the matter cipher downgraded silently - **FIXED**
 **MEASURED, and less bad than it first looks.** `_Cipher.__init__` catches
 `ImportError` on `cryptography` and sets

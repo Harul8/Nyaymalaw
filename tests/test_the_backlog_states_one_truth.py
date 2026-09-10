@@ -222,6 +222,114 @@ def test_signoff_is_required_for_managed_done_and_then_closes_the_router():
     assert tool.next_stage(item, {"X": item}) is None
 
 
+def test_evidence_may_accumulate_on_an_open_build_but_not_be_declared_complete():
+    """BK-74-AC2, and the waterfall it originally encoded.
+
+    The rule was `test not in (None, "NOT_RUN") and build != "BUILT"`, so no
+    criterion could carry a result until every criterion was built. Measured
+    10 September 2026 across the 53 unmanaged rows, it refused seven with a
+    full contract that are being built the way this repository builds -- one
+    criterion at a time, evidence recorded as each lands. BK-34 is the plain
+    case: two of four criteria PASS with AC3 blocked on BK-53, which is a
+    correct state the model could not write down.
+
+    The three rows BK-74 was tested against were all complete-build rows, so
+    the assumption was never put to a partial one.
+
+    WHAT IS KEPT IS THE PART WORTH KEEPING: a VERIFIED Evidence Pack asserts
+    the whole row's evidence stands, and over a half-built row that is false.
+    """
+    tool = _tool()
+    doc = tool.load()
+
+    def complaints(build: str, test: str) -> list[str]:
+        item = _managed_item()
+        item.update(id="Y", delivery_status="in_progress",
+                    implementation="partial", verification="partial")
+        item["stage_records"]["build"]["result"] = build
+        item["stage_records"]["test"]["result"] = test
+        item["stage_records"]["signoff"]["result"] = "NOT_RUN"
+        probe = dict(doc, items=[item])
+        return [p for p in tool._delivery_lifecycle(probe, [item])
+                if p.startswith("Y:")]
+
+    for test_state in ("OPEN", "FAILED", "STALE"):
+        assert not complaints("OPEN", test_state), (
+            f"an OPEN build with a {test_state} Evidence Pack was refused; "
+            f"that is a row being built one criterion at a time")
+
+    # THE NEGATIVE CONTROL, which is the whole reason the rule survives at
+    # all: VERIFIED still means the row's evidence stands, and it cannot.
+    assert any("VERIFIED before the Build Record was BUILT" in p
+               for p in complaints("OPEN", "VERIFIED")), (
+        "a VERIFIED Evidence Pack over an OPEN build was accepted, so the "
+        "relaxation removed the rule rather than narrowing it")
+
+    # AND `done` IS UNMOVED BY ANY OF IT.
+    open_row = _managed_item()
+    open_row["stage_records"]["build"]["result"] = "OPEN"
+    open_row["stage_records"]["test"]["result"] = "OPEN"
+    open_row["stage_records"]["signoff"]["result"] = "NOT_RUN"
+    assert not tool.derive_done(open_row, {"X": open_row})
+
+
+def test_a_row_with_no_stage_records_is_not_exempt_from_sign_off():
+    """BK-74-AC3, THE HALF THE MANAGED CASE COULD NOT SEE.
+
+    `test_signoff_is_required_for_managed_done` asks a row that HAS stage
+    records, and it passed throughout. The gate read `if records and ...`, so
+    the question was never put to a row that had none -- and 80 of 83 rows had
+    none, 54 of them live and not legacy.
+
+    Measured 10 September 2026: BK-21, a P0 product row with four PASSing
+    criteria, derived `done: True` with `signoff: None`. The rows that
+    recorded their lifecycle were held at NOT_RUN and the rows that recorded
+    nothing went through, which is absence reading as exemption in the one
+    function that decides whether work is finished.
+
+    A CONTROL SCOPED TO THE OPTED-IN POPULATION CANNOT SEE THE OPT-OUT. That
+    is CLAUDE.md §1 step 4 -- the check draws its population from the whole
+    product -- arriving at the delivery registry.
+    """
+    tool = _tool()
+    unmanaged = _managed_item()
+    unmanaged.pop("stage_records")
+    assert not tool.derive_done(unmanaged, {"X": unmanaged}), (
+        "a governed row with NO stage records derived done. Absence of a "
+        "record is not a sign-off; it is the absence of one")
+
+    # AND THE ROUTER AGREES, so the board cannot say `done` while the router
+    # still has somewhere to send it -- two answers to one question.
+    assert tool.next_stage(unmanaged, {"X": unmanaged}) is not None, (
+        "the row is not done and the router has nowhere to send it")
+
+    # THE NEGATIVE CONTROL. Without this the assertion above would pass on a
+    # `derive_done` that returned False for everything.
+    signed = _managed_item()
+    signed["stage_records"]["signoff"]["result"] = "SIGNED_OFF"
+    assert tool.derive_done(signed, {"X": signed}), (
+        "a fully recorded and signed row did not derive done, so the check "
+        "above proves nothing")
+
+
+def test_the_legacy_population_keeps_its_declared_exemption():
+    """The fix above must not close the door on the ADMITTED gap.
+
+    A `legacy` row rests on prose in BACKLOG.md, which is real evidence and
+    not executable. It is declared, counted, and returns before the sign-off
+    check -- so making that check unconditional had to leave it untouched.
+    Asserted rather than assumed, because "my fix broke the exemption" and
+    "my fix worked" look identical on a board that only counts `done`.
+    """
+    tool = _tool()
+    legacy = _managed_item()
+    legacy.pop("stage_records")
+    legacy.update(legacy=True, verification="stale")
+    assert tool.derive_done(legacy, {"X": legacy}), (
+        "a declared legacy row lost its exemption; the pre-cutover population "
+        "rests on prose and is counted, not silently dropped")
+
+
 def test_the_board_is_not_stale():
     """BK-60-AC4. The generated section matches the registry.
 

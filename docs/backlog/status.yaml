@@ -4,7 +4,7 @@
 schema: 1
 generated_note: Bootstrapped 9 September 2026 from the inventory in BACKLOG.md. Hand-authored
   from here; see docs/backlog/SCHEMA.md.
-legacy_lifecycle_population: 80
+legacy_lifecycle_population: 51
 features:
 - id: A1
   phase: A
@@ -578,8 +578,13 @@ items:
   verification: passing
   affects_phases: [A, C, I]
   record: docs/BACKLOG.md#bk-21-the-matter-encryption-key-is-the-openai-api-key
-  next_action: the provider credential itself is still the old value and only the
-    account holder can rotate it at the provider; see BK-21-AC4 and docs/DECISIONS.md
+  next_action: closed on a measured rotation and signed off 10 September 2026; the
+    lifecycle was recorded retrospectively because the row was built before BK-74
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-21-the-matter-encryption-key-is-the-openai-api-key}
+    build: {result: BUILT, ref: docs/BACKLOG.md#bk-21-the-matter-encryption-key-is-the-openai-api-key}
+    test: {result: VERIFIED, ref: docs/backlog/evidence/class_a.json}
+    signoff: {result: SIGNED_OFF, ref: docs/BACKLOG.md#bk-21-the-matter-encryption-key-is-the-openai-api-key}
   acceptance:
   - id: BK-21-AC1
     requirement: the seal is refused when it equals ANY other credential in the environment,
@@ -672,6 +677,11 @@ items:
   affects_phases:
   - D
   record: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs
+  stage_records:
+    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs}
   acceptance: []
 - id: BK-25
   title: the authority need finds a case by scanning a million paragraphs
@@ -683,6 +693,11 @@ items:
   affects_phases:
   - D
   record: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs
+  stage_records:
+    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs}
   acceptance: []
 - id: BK-26
   title: the Act summaries are DECLINED, and the gap they would have filled stays open
@@ -697,6 +712,11 @@ items:
     filled is tracked by BK-24 and BK-25 rather than by re-opening this
   review_on: '2026-12-01'
   record: docs/BACKLOG.md#bk-26-the-act-summaries-are-declined-and-the-gap-they-would-have-filled-stays-open
+  stage_records:
+    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-26-the-act-summaries-are-declined-and-the-gap-they-would-have-filled-stays-open}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-26-the-act-summaries-are-declined-and-the-gap-they-would-have-filled-stays-open}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-26-the-act-summaries-are-declined-and-the-gap-they-would-have-filled-stays-open}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-26-the-act-summaries-are-declined-and-the-gap-they-would-have-filled-stays-open}
   acceptance: []
 - id: BK-27
   title: one message describing N disputes opened ONE thread
@@ -720,6 +740,11 @@ items:
   - E
   - G
   record: docs/BACKLOG.md#bk-28-runs-and-golden-sets-are-not-in-the-history-tab-and-from-now-on-they-are
+  stage_records:
+    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-28-runs-and-golden-sets-are-not-in-the-history-tab-and-from-now-on-they-are}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-28-runs-and-golden-sets-are-not-in-the-history-tab-and-from-now-on-they-are}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-28-runs-and-golden-sets-are-not-in-the-history-tab-and-from-now-on-they-are}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-28-runs-and-golden-sets-are-not-in-the-history-tab-and-from-now-on-they-are}
   acceptance: []
 - id: BK-29
   title: sixteen hand-picked token ceilings, and five reads that echo verbatim spans
@@ -765,6 +790,11 @@ items:
   next_action: replace the reusable deployment-wide enrolment code with an expiring,
     single-use invitation bound to server-owned identity and workspace; then build recovery,
     MFA and workspace identity
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
+    build: {result: OPEN, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
+    test: {result: OPEN, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
   acceptance:
   - id: BK-31-AC1
     requirement: enrolment is refused without the operator's authorisation, and a deployment
@@ -858,6 +888,11 @@ items:
   record: docs/BACKLOG.md#bk-34-front-door-legal-and-professional-screens-before-substance
   next_action: the emergency exception needs B2 emergency triage, which BK-53 delivers;
     an incomplete registry reading NOT_ASSESSED needs the firm-scoped registry
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-34-front-door-legal-and-professional-screens-before-substance}
+    build: {result: OPEN, ref: docs/BACKLOG.md#bk-34-front-door-legal-and-professional-screens-before-substance}
+    test: {result: OPEN, ref: docs/BACKLOG.md#bk-34-front-door-legal-and-professional-screens-before-substance}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-34-front-door-legal-and-professional-screens-before-substance}
   acceptance:
   - id: BK-34-AC1
     requirement: adding a party makes an earlier conflict clearance stale, and the
@@ -949,6 +984,11 @@ items:
   phase: E
   record: docs/BACKLOG.md#bk-37-senior-counsel-answer-shape-and-plain-language-trust-surface
   next_action: assert the promised sections, not a count of two
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-37-senior-counsel-answer-shape-and-plain-language-trust-surface}
+    build: {result: OPEN, ref: docs/BACKLOG.md#bk-37-senior-counsel-answer-shape-and-plain-language-trust-surface}
+    test: {result: OPEN, ref: docs/BACKLOG.md#bk-37-senior-counsel-answer-shape-and-plain-language-trust-surface}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-37-senior-counsel-answer-shape-and-plain-language-trust-surface}
   acceptance:
   - id: BK-37-AC1
     requirement: every counsel-facing answer declares its advice maturity and exposes the conclusion, support, uncertainty and next action appropriate to that level
@@ -1004,6 +1044,11 @@ items:
   record: docs/BACKLOG.md#bk-41-latency-progress-cancellation-and-degraded-service-behaviour
   next_action: phase streaming and a measured p90; its cancel clause rests on BK-36, which
     does not hold for an opening turn
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-41-latency-progress-cancellation-and-degraded-service-behaviour}
+    build: {result: OPEN, ref: docs/BACKLOG.md#bk-41-latency-progress-cancellation-and-degraded-service-behaviour}
+    test: {result: FAILED, ref: docs/BACKLOG.md#bk-41-latency-progress-cancellation-and-degraded-service-behaviour}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-41-latency-progress-cancellation-and-degraded-service-behaviour}
   acceptance:
   - id: BK-41-AC1
     requirement: during delay, cancellation or degraded service the user can see what is happening, what remains reliable and what they can safely do next
@@ -1025,6 +1070,11 @@ items:
   - BK-69
   record: docs/BACKLOG.md#bk-42-production-trust-privacy-accessibility-and-recovery-gate
   next_action: production controls; overflow evidence restored by BK-43
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-42-production-trust-privacy-accessibility-and-recovery-gate}
+    build: {result: OPEN, ref: docs/BACKLOG.md#bk-42-production-trust-privacy-accessibility-and-recovery-gate}
+    test: {result: OPEN, ref: docs/BACKLOG.md#bk-42-production-trust-privacy-accessibility-and-recovery-gate}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-42-production-trust-privacy-accessibility-and-recovery-gate}
   acceptance:
   - id: BK-42-AC1
     requirement: production multimodal processing has explicit purpose, processor, privilege, retention, deletion and recovery controls and exposes material boundaries to the user
@@ -1192,6 +1242,11 @@ items:
   - B6
   record: docs/BACKLOG.md#bk-53-phase-b-emergency-triage-and-capacity-to-instruct
   next_action: specify DOES / NEVER / PRODUCES / EVAL for B2, B6
+  stage_records:
+    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-53-phase-b-emergency-triage-and-capacity-to-instruct}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-53-phase-b-emergency-triage-and-capacity-to-instruct}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-53-phase-b-emergency-triage-and-capacity-to-instruct}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-53-phase-b-emergency-triage-and-capacity-to-instruct}
   acceptance: []
 - id: BK-54
   title: 'Phase C: objectives, constraints and document intake'
@@ -1209,6 +1264,11 @@ items:
   - C6
   record: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake
   next_action: specify DOES / NEVER / PRODUCES / EVAL for C2, C6
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake}
   acceptance:
   - id: BK-54-AC1
     requirement: intake accepts typed, spoken, uploaded and mixed-media material while preserving the original and source-attributing every extracted proposition
@@ -1236,6 +1296,11 @@ items:
   - E5
   record: docs/BACKLOG.md#bk-55-phase-e-scenarios-proportionality-the-decision-record-and-candour
   next_action: specify DOES / NEVER / PRODUCES / EVAL for E1, E3, E4, E5
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-55-phase-e-scenarios-proportionality-the-decision-record-and-candour}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-55-phase-e-scenarios-proportionality-the-decision-record-and-candour}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-55-phase-e-scenarios-proportionality-the-decision-record-and-candour}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-55-phase-e-scenarios-proportionality-the-decision-record-and-candour}
   acceptance:
   - id: BK-55-AC1
     requirement: advice declares its maturity and compares remedy, enforceability, cost, time, proportionality, strategy, settlement and doing nothing against the client's objective
@@ -1258,6 +1323,11 @@ items:
   - F4
   record: docs/BACKLOG.md#bk-56-phase-f-the-drafter-brief-drafting-and-filing-control
   next_action: specify DOES / NEVER / PRODUCES / EVAL for F2, F3, F4
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-56-phase-f-the-drafter-brief-drafting-and-filing-control}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-56-phase-f-the-drafter-brief-drafting-and-filing-control}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-56-phase-f-the-drafter-brief-drafting-and-filing-control}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-56-phase-f-the-drafter-brief-drafting-and-filing-control}
   acceptance:
   - id: BK-56-AC1
     requirement: drafting and filing use a recorded authorised role, approved scope and version, owner, deadline and receipt and refuse success when any required authority is absent
@@ -1281,6 +1351,11 @@ items:
   - F7
   record: docs/BACKLOG.md#bk-57-phase-f-negotiation-witnesses-hearing-readiness-and-court
   next_action: specify DOES / NEVER / PRODUCES / EVAL for F1, F5, F6, F7
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-57-phase-f-negotiation-witnesses-hearing-readiness-and-court}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-57-phase-f-negotiation-witnesses-hearing-readiness-and-court}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-57-phase-f-negotiation-witnesses-hearing-readiness-and-court}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-57-phase-f-negotiation-witnesses-hearing-readiness-and-court}
   acceptance:
   - id: BK-57-AC1
     requirement: negotiation and court work preserve decision authority, settlement limits, the approved case theory and verified handoffs through completion
@@ -1302,6 +1377,11 @@ items:
   - G3
   record: docs/BACKLOG.md#bk-58-phase-g-proactive-service-the-conflict-watch-and-handover
   next_action: specify DOES / NEVER / PRODUCES / EVAL for G1, G2, G3
+  stage_records:
+    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-58-phase-g-proactive-service-the-conflict-watch-and-handover}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-58-phase-g-proactive-service-the-conflict-watch-and-handover}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-58-phase-g-proactive-service-the-conflict-watch-and-handover}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-58-phase-g-proactive-service-the-conflict-watch-and-handover}
   acceptance: []
 - id: BK-59
   title: 'Phase H: event capture and closure'
@@ -1318,6 +1398,11 @@ items:
   - H2
   record: docs/BACKLOG.md#bk-59-phase-h-event-capture-and-closure
   next_action: specify DOES / NEVER / PRODUCES / EVAL for H1, H2
+  stage_records:
+    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-59-phase-h-event-capture-and-closure}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-59-phase-h-event-capture-and-closure}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-59-phase-h-event-capture-and-closure}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-59-phase-h-event-capture-and-closure}
   acceptance: []
 - id: BK-61
   title: the spec restore in the tooling tests fails intermittently
@@ -1351,6 +1436,11 @@ items:
   record: docs/BACKLOG.md#bk-60-the-backlog-control-plane
   next_action: registry, schema and linter land first; evidence wiring, counsel review and
     CI follow
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-60-the-backlog-control-plane}
+    build: {result: OPEN, ref: docs/BACKLOG.md#bk-60-the-backlog-control-plane}
+    test: {result: OPEN, ref: docs/BACKLOG.md#bk-60-the-backlog-control-plane}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-60-the-backlog-control-plane}
   acceptance:
   - id: BK-60-AC1
     requirement: every backlog id is unique and every journey feature is accounted for
@@ -1430,6 +1520,11 @@ items:
   affects_phases: [B, C, E, F, G]
   record: docs/BACKLOG.md#bk-62-commission-and-task-authority-record
   next_action: specify and build the versioned commission, scope, objective, deadline, output and decision-authority record
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-62-commission-and-task-authority-record}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-62-commission-and-task-authority-record}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-62-commission-and-task-authority-record}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-62-commission-and-task-authority-record}
   acceptance:
   - id: BK-62-AC1
     requirement: every substantive task has a versioned commission naming who instructs, who decides, the objective, scope, forum, deadline and required work product and reopens when a material instruction changes
@@ -1448,6 +1543,11 @@ items:
   affects_phases: [A, B, C, D, E, F, G, I]
   record: docs/BACKLOG.md#bk-63-professional-role-and-authority-control
   next_action: bind instruction, decision, drafting, filing, negotiation, administration and support operations to explicit professional roles and recorded authority
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-63-professional-role-and-authority-control}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-63-professional-role-and-authority-control}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-63-professional-role-and-authority-control}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-63-professional-role-and-authority-control}
   acceptance:
   - id: BK-63-AC1
     requirement: every material instruction, decision and external action is attributable to an allowed role and authority scope, and unauthorised operations are refused and recorded
@@ -1466,6 +1566,11 @@ items:
   affects_phases: [C, D, E]
   record: docs/BACKLOG.md#bk-64-typed-proposition-and-evidence-model
   next_action: define immutable sources, locators and proposition types for instructions, allegations, admissions, documents, testimony, inference and assumptions
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-64-typed-proposition-and-evidence-model}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-64-typed-proposition-and-evidence-model}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-64-typed-proposition-and-evidence-model}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-64-typed-proposition-and-evidence-model}
   acceptance:
   - id: BK-64-AC1
     requirement: every material conclusion traces to a typed proposition and source locator, while contradiction, extraction confidence and confirmation state remain visible
@@ -1486,6 +1591,11 @@ items:
   - BK-64
   record: docs/BACKLOG.md#bk-65-legal-dependency-graph-and-selective-invalidation
   next_action: model predicates, issues, rules, evidence, remedies and conclusions as a versioned dependency graph
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-65-legal-dependency-graph-and-selective-invalidation}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-65-legal-dependency-graph-and-selective-invalidation}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-65-legal-dependency-graph-and-selective-invalidation}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-65-legal-dependency-graph-and-selective-invalidation}
   acceptance:
   - id: BK-65-AC1
     requirement: changing a material predicate invalidates every dependent conclusion and no unrelated conclusion, while preserving the prior state and reason for change
@@ -1504,6 +1614,11 @@ items:
   affects_phases: [A, C, E, G, I]
   record: docs/BACKLOG.md#bk-66-advocate-trust-evaluation
   next_action: define representative trust tasks and measure faithful listening, question economy, clarity, agency, continuity and recovery on the served journey
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-66-advocate-trust-evaluation}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-66-advocate-trust-evaluation}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-66-advocate-trust-evaluation}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-66-advocate-trust-evaluation}
   acceptance:
   - id: BK-66-AC1
     requirement: representative users can identify what NM understood, used, assumed, changed, still needs and will do next without reading engineering state
@@ -1521,6 +1636,11 @@ items:
   - BK-66
   record: docs/BACKLOG.md#bk-67-expert-advocate-evaluation-gate
   next_action: turn PA-01 to PA-20 into representative matter rubrics with named reviewers, thresholds, reservations and regression policy
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-67-expert-advocate-evaluation-gate}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-67-expert-advocate-evaluation-gate}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-67-expert-advocate-evaluation-gate}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-67-expert-advocate-evaluation-gate}
   acceptance:
   - id: BK-67-AC1
     requirement: no counsel-facing feature conforms without current representative-matter review against every applicable advocate standard, with material reservations kept visible
@@ -1539,6 +1659,11 @@ items:
   affects_phases: [A, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-68-counsel-workspace-and-progressive-disclosure
   next_action: design the workspace around current understanding, purpose, change, readiness, decision and next action with deeper proof inspectable on demand
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-68-counsel-workspace-and-progressive-disclosure}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-68-counsel-workspace-and-progressive-disclosure}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-68-counsel-workspace-and-progressive-disclosure}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-68-counsel-workspace-and-progressive-disclosure}
   acceptance:
   - id: BK-68-AC1
     requirement: at every target width an advocate can reorient within one minute and reach the evidence, authority, history or control behind any material statement without engineering vocabulary
@@ -1555,6 +1680,11 @@ items:
   record: docs/BACKLOG.md#bk-69-multimodal-privacy-and-processing-boundary
   next_action: the W0 foundation is built; end-to-end attribution of originals, derivatives,
     processors, retention and deletion needs BK-54's intake at W2
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-69-multimodal-privacy-and-processing-boundary}
+    build: {result: OPEN, ref: docs/BACKLOG.md#bk-69-multimodal-privacy-and-processing-boundary}
+    test: {result: OPEN, ref: docs/BACKLOG.md#bk-69-multimodal-privacy-and-processing-boundary}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-69-multimodal-privacy-and-processing-boundary}
   acceptance:
   - id: BK-69-AC1
     requirement: nothing that draws legal conclusions accepts media; it accepts an admission
@@ -1611,6 +1741,11 @@ items:
   - BK-65
   record: docs/BACKLOG.md#bk-70-remedy-and-enforceability-model
   next_action: model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-70-remedy-and-enforceability-model}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-70-remedy-and-enforceability-model}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-70-remedy-and-enforceability-model}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-70-remedy-and-enforceability-model}
   acceptance:
   - id: BK-70-AC1
     requirement: advice changes when identical merits have unavailable, hollow, late or disproportionate relief and explains the enforceability basis for the recommendation
@@ -1661,6 +1796,11 @@ items:
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-71-professional-plan-and-delivery-wave-reconciliation
   next_action: keep the independent positive-control matrix aligned with every new professional registry and control-plane rule
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-71-professional-plan-and-delivery-wave-reconciliation}
+    build: {result: BUILT, ref: docs/BACKLOG.md#bk-71-professional-plan-and-delivery-wave-reconciliation}
+    test: {result: VERIFIED, ref: docs/BACKLOG.md#bk-71-professional-plan-and-delivery-wave-reconciliation}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-71-professional-plan-and-delivery-wave-reconciliation}
   acceptance:
   - id: BK-71-AC1
     requirement: advocate standards, expert workflow, advice maturity, roles and gap closures are complete, non-vacuous and cross-referenced to registered features, steps and work
@@ -1908,6 +2048,11 @@ items:
   superseded_by: BK-52
   record: docs/BACKLOG.md#j-9-the-order-to-fix-them-in
   next_action: a fix ORDER, superseded by the phase sequence
+  stage_records:
+    start: {result: BLOCKED, ref: docs/BACKLOG.md#j-9-the-order-to-fix-them-in}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#j-9-the-order-to-fix-them-in}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#j-9-the-order-to-fix-them-in}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#j-9-the-order-to-fix-them-in}
   acceptance: []
 events:
 - item: BK-71

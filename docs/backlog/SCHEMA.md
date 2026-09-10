@@ -75,13 +75,33 @@ Start READY -> Build BUILT -> Test VERIFIED -> Sign-off SIGNED_OFF
 ```
 
 `ready` therefore opens Build, not Start. Passing evidence opens Sign-off, not
-done. A lifecycle-managed item cannot derive done until its Conformance Record
-is `SIGNED_OFF`.
+done. **No row derives done until its Conformance Record is `SIGNED_OFF`** —
+not only the ones that happen to carry records. Until 10 September the gate
+read `if records and ...`, so a row with no records skipped it entirely, and
+BK-21 derived done with `signoff: None` having never been asked. Absence of a
+record is not a sign-off; it is the absence of one.
+
+**Evidence may accumulate while the Build Record is `OPEN`.** The sequence
+above is the order the stages CLOSE in, not a bar on recording a result before
+the last criterion is built. A row being built one criterion at a time carries
+`build: OPEN` with `test: OPEN`, `FAILED` or `STALE`, which is the ordinary
+state here — BK-34 sat at two of four criteria PASS with AC3 blocked on BK-53.
+Only `test: VERIFIED` requires `build: BUILT`, because a VERIFIED Evidence Pack
+asserts the whole row's evidence stands and over a half-built row that is
+false.
 
 The pre-cutover rows are not silently exempt. Their exact population is
 declared by `legacy_lifecycle_population`; adding a record-less row or migrating
 one without reconciling that count fails lint. The count is retired as those
-rows acquire real stage records.
+rows acquire real stage records — 80 on 10 September, then 51 once BK-21 and
+the 28 representable rows were migrated.
+
+**What the remaining 25 non-legacy rows are waiting on is one thing.** They
+have no acceptance criteria, so their Start Record cannot honestly be `READY`
+— the Start playbook derives `READY` from a checklist that includes *atomic
+criteria, evidence and counterexamples are named*. Recording `READY` anyway
+would put the registry's own word behind a contract nobody wrote. They are
+migrated by writing the contract, not by choosing a kinder state.
 
 The linter rejects `planned → done` with no evidence, `blocked` with no
 blocker, `superseded` with no replacement, and `done → in_progress` with no
@@ -101,8 +121,14 @@ An item is `done` only when **all** of these hold:
 6. every `depends_on` is itself done
 7. no blocker remains
 8. evidence is not stale
+9. the Conformance Record is `SIGNED_OFF` — **required of every non-legacy
+   row, including one carrying no `stage_records` at all**
 
 For counsel-facing rows, automated tests are never sufficient on their own.
+
+Point 9 was absent from this list while the code enforced a version of it, and
+the drift is how the hole survived: the prose said *a lifecycle-managed item*,
+the code said `if records`, and 54 live rows were neither.
 
 ### The legacy exception, declared rather than hidden
 
