@@ -1,9 +1,9 @@
 """The saved workbook is a derived reader view, not a status authority."""
 from __future__ import annotations
 
+import hashlib
 from copy import deepcopy
 from datetime import datetime
-import hashlib
 
 import pytest
 

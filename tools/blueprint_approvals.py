@@ -5,9 +5,9 @@ no Boolean bypass or 'valid' state: BK-80 owns the future verified resolver.
 """
 from __future__ import annotations
 
+import re
 from collections import Counter
 from datetime import datetime
-import re
 
 from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import SchemaError

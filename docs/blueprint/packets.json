@@ -21,6 +21,7 @@
       "criteria": [
         "BK-80-AC3",
         "BK-80-AC5",
+        "BK-80-AC7",
         "BK-48-AC1"
       ],
       "prerequisites": [],
@@ -31,10 +32,6 @@
       "boundaries": [
         {
           "path": "tools/export_spec.py",
-          "kind": "existing"
-        },
-        {
-          "path": "tools/_fingerprint.py",
           "kind": "existing"
         },
         {
@@ -52,6 +49,30 @@
         {
           "path": "tests/test_evidence_is_bound_to_execution.py",
           "kind": "existing"
+        },
+        {
+          "path": "tools/evidence.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/trace.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/check.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/gatestamp.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/known_failures.py",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/backlog/known_failures.yaml",
+          "kind": "existing"
         }
       ],
       "inputs": [
@@ -65,7 +86,9 @@
       "steps": [
         "Read main() in export_spec.py: replace workbook Status authority with one registry-derived projection; preserve historical eval IDs and slice metadata explicitly.",
         "Reject missing, duplicate and unknown feature IDs before any generated output is published; compare all 44 current features, not a selected sample.",
-        "Add a temporary-tree test changing one current feature while historical Status remains tested, and a fingerprint test changing one applicable promise; regenerate and compare only after the tests pass."
+        "Add a temporary-tree test changing one current feature while historical Status remains tested, and a fingerprint test changing one applicable promise; regenerate and compare only after the tests pass.",
+        "Declare every already-known gate failure with an owning acceptance criterion in docs/backlog/known_failures.yaml, and compare the observed red against it: the declared set exactly is a scoped build pass, a new failure blocks, and a declared failure that has started passing also blocks so the registry can only shrink.",
+        "Mark the gate stamp scoped, carrying the waived ids and the registry digest, so a caller asking whether the FULL gate is green is refused and no acceptance criterion derives done from a scoped run."
       ],
       "proof": {
         "positive": [
@@ -80,12 +103,14 @@
       },
       "expected": [
         "Historical tested cannot overwrite current partial/unproven.",
-        "Promise mutation invalidates applicable proof; existing substantive trace failures remain visible until their implementation owners resolve them."
+        "Promise mutation invalidates applicable proof; existing substantive trace failures remain visible until their implementation owners resolve them.",
+        "A scoped build pass never prints a green, never satisfies --require-full, and blocks on any failure the registry does not name."
       ],
       "rollback": "Restore the reviewed exporter/fingerprint change and regenerate from the retained source snapshot; do not restore historical status as current evidence.",
       "final_criteria": [
         "BK-80-AC3",
         "BK-80-AC5",
+        "BK-80-AC7",
         "BK-48-AC1"
       ],
       "requires_completed_items": []

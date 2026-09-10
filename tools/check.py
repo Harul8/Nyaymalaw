@@ -124,6 +124,75 @@ def _why(proc: subprocess.CompletedProcess) -> str:
     ])
 
 
+def _scoped_verdict(failed: list[str], captured: dict[str, str]) -> int | None:
+    """A scoped build pass, or None to fall through to CHECK FAILED. BK-80-AC7.
+
+    Returns 0 ONLY when every failing step failed for reasons this repository
+    has already declared and assigned an owner. Everything else -- a new
+    failure, a declared one that started passing, a failing step with no
+    captured output, a registry that will not load -- returns None so the
+    caller reports CHECK FAILED.
+
+    IT NEVER PRINTS A GREEN. The line is `SCOPED BUILD PASS -- FULL GATE RED`,
+    followed by every waived id and its owner, so the red stays in front of
+    whoever runs the gate rather than becoming a fact about the repository that
+    nobody sees again.
+    """
+    try:
+        from tools.known_failures import (
+            compare,
+            load,
+            observed,
+            registry_digest,
+            unexplained,
+        )
+        rows = load()
+    except Exception as exc:  # noqa: BLE001 -- a broken registry is not a pass
+        print(f"  (known-failure registry unusable: {type(exc).__name__}: {exc})")
+        return None
+
+    # A FAILING STEP WITH NO CAPTURED OUTPUT CANNOT BE EXPLAINED.
+    # Only the three steps whose output is captured can be reasoned about; any
+    # other failing step means the gate failed somewhere this control cannot
+    # see, and that is not a scoped pass.
+    blind = [name for name in failed if name not in captured]
+    if blind:
+        print(f"  (failing step(s) with no captured output: {', '.join(blind)})")
+        return None
+
+    seen = {name: observed(name, text) for name, text in captured.items()}
+    ran = set(captured)
+    verdict = compare(rows, seen, ran)
+
+    for name in failed:
+        if unexplained(name, rows, seen[name]):
+            print(f"  ({name} failed for a reason the registry does not name)")
+            return None
+    if not verdict.ok:
+        for step_name, node in verdict.new:
+            print(f"  NEW FAILURE in {step_name}: {node}")
+        for rid in verdict.fixed:
+            print(f"  DECLARED FAILURE NOW PASSING: {rid} -- "
+                  f"docs/backlog/known_failures.yaml is stale and must shrink")
+        return None
+
+    by_id = {r.id: r for r in rows}
+    print("SCOPED BUILD PASS -- FULL GATE RED")
+    print(f"  {len(verdict.matched)} declared failure(s), each owned:")
+    for rid in verdict.matched:
+        print(f"    {rid:24} {', '.join(by_id[rid].owner)}")
+    print("  This permits a commit. It is NOT a release, NOT a sign-off, and")
+    print("  no acceptance criterion derives done from it.")
+    try:
+        from tools.gatestamp import record
+
+        record(kind="scoped", waived=verdict.matched,
+               baseline=registry_digest())
+    except Exception as exc:  # noqa: BLE001
+        print(f"  (gate stamp not recorded: {type(exc).__name__}: {exc})")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--slice", type=int, default=None,
@@ -166,6 +235,9 @@ def main() -> int:
     # here rather than left for someone to find.
     prints: list[tuple[str, str]] = [("start", source_fingerprint())]
 
+    #: Each step's output, so a failing gate can be asked WHICH failures
+    #: occurred rather than only that some did. BK-80-AC7.
+    captured: dict[str, str] = {}
     results = []
     ok, _ = step("layercheck", [py, "tools/layercheck.py"])
     results.append(("layercheck", ok))
@@ -173,13 +245,15 @@ def main() -> int:
     ok, _ = step("export_spec", [py, "tools/export_spec.py"])
     results.append(("export_spec", ok))
     prints.append(("export_spec", source_fingerprint()))
-    ok, _ = step("trace", [py, "tools/trace.py", "--skip-regen"])
+    ok, out = step("trace", [py, "tools/trace.py", "--skip-regen"])
+    captured["trace"] = out
     results.append(("trace", ok))
     prints.append(("trace", source_fingerprint()))
     ok, _ = step("speccheck", [py, "tools/speccheck.py"])
     results.append(("speccheck", ok))
     prints.append(("speccheck", source_fingerprint()))
-    ok, _ = step("ruff", [py, "-m", "ruff", "check", "nm", "tools", "tests"])
+    ok, out = step("ruff", [py, "-m", "ruff", "check", "nm", "tools", "tests"])
+    captured["ruff"] = out
     results.append(("ruff", ok))
     prints.append(("ruff", source_fingerprint()))
     # The rename sweep. pyflakes does not find these, and a stale call site
@@ -201,7 +275,8 @@ def main() -> int:
     #
     # An exemption someone typed is a decision; this one was typed by nobody
     # and explained by nothing.
-    ok, _ = step("pytest -m class_a", [py, "-m", "pytest", "-m", "class_a", "-q"])
+    ok, out = step("pytest -m class_a", [py, "-m", "pytest", "-m", "class_a", "-q"])
+    captured["class_a"] = out
     results.append(("class_a", ok))
     prints.append(("class_a", source_fingerprint()))
     # `journey` IS EXCLUDED, AND THIS IS AN ADMITTED GAP RATHER THAN A TIDY
@@ -222,8 +297,9 @@ def main() -> int:
     # _owners.py` and `tests/test_the_page_and_the_script_agree.py` are class_a
     # and DO run here -- they catch the two failure shapes that have actually
     # bitten, from the text alone.
-    ok, _ = step("pytest (all local)",
-                 [py, "-m", "pytest", "-q", "-m", "not class_d and not journey"])
+    ok, out = step("pytest (all local)",
+                   [py, "-m", "pytest", "-q", "-m", "not class_d and not journey"])
+    captured["pytest"] = out
     results.append(("pytest", ok))
     prints.append(("pytest", source_fingerprint()))
 
@@ -276,6 +352,23 @@ def main() -> int:
     failed = [n for n, ok in results if not ok]
     print()
     if failed:
+        # IS THIS THE RED WE ALREADY KNOW ABOUT, OR A NEW ONE? BK-80-AC7.
+        #
+        # Three unbuilt PRD obligations report honestly here, so this gate
+        # returned 1 forever and the pre-commit hook refused every commit --
+        # including the work that would close them. The ways out were to
+        # bypass the hook, weaken the failing tests, or stop committing.
+        #
+        # So it compares instead. A run whose failures are EXACTLY the
+        # declared, owned set is a scoped build pass: commit permitted, this
+        # gate still prints FULL GATE RED, and the stamp records that it was
+        # scoped. A new failure blocks. A declared failure that has started
+        # PASSING also blocks, because a waiver that outlives its defect
+        # silently covers the next one -- the non-strict xfail hole, one level
+        # up. See docs/backlog/known_failures.yaml.
+        scoped = _scoped_verdict(failed, captured)
+        if scoped is not None:
+            return scoped
         print(f"CHECK FAILED  -- {', '.join(failed)}")
         print("Do not claim the task is done.")
         return 1

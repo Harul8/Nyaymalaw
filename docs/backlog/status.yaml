@@ -3118,6 +3118,19 @@ items:
     negative_control:
       mutation: "reuse approval after relevant configuration changes, revoke or expire it, substitute an unauthorised signer, widen scope or replace signed authority with a PASS measurement or proposal flag"
       expected_failure: "only current verified matching authority satisfies the affected decision prerequisite; all other states remain visible and cannot authorise protected operations"
+  - id: BK-80-AC7
+    requirement: "a build gate may pass a scoped population only while every failing step fails for a declared failure that names an owning acceptance criterion; a new failure, a declared failure that has started passing, a failing step whose output was not captured, or an unreadable registry all block, and the resulting stamp is marked scoped so it can never answer a full-gate or release question"
+    required_evidence: [domain_test, adversarial_test]
+    evidence:
+      domain_test:
+        result: NOT_RUN
+        ref: ""
+      adversarial_test:
+        result: NOT_RUN
+        ref: ""
+    negative_control:
+      mutation: "plant a failure absent from docs/backlog/known_failures.yaml, or make a declared failure pass, or present the scoped stamp to a caller requiring a full gate"
+      expected_failure: "the build is blocked in the first two cases and the stamp is refused in the third; a scoped pass never reads as a full green and never lets an acceptance criterion derive done"
 - id: BK-81
   title: India-only modular product and execution blueprint
   kind: control

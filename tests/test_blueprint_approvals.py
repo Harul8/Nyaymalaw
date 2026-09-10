@@ -1,9 +1,9 @@
 """Offline adoption contracts reject claims of authority they cannot establish."""
 from __future__ import annotations
 
+import shutil
 from copy import deepcopy
 from pathlib import Path
-import shutil
 
 import pytest
 

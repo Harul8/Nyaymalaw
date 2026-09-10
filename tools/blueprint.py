@@ -206,11 +206,11 @@ def load_contracts(root: Path = ROOT) -> dict:
 
 def check_all(manifest: dict, registry: dict, contracts: dict,
               root: Path = ROOT) -> list[str]:
-    from tools.blueprint_commands import check_commands
     from tools.blueprint_approvals import check_approvals
+    from tools.blueprint_autonomy import check_contract
+    from tools.blueprint_commands import check_commands
     from tools.blueprint_evaluations import check_evaluations
     from tools.blueprint_execution import check_decisions, check_packets
-    from tools.blueprint_autonomy import check_contract
 
     errors = check(manifest, registry, root)
     if errors:
@@ -248,8 +248,8 @@ def check_all(manifest: dict, registry: dict, contracts: dict,
 
 
 def readiness_blockers(contracts: dict) -> list[str]:
-    from tools.blueprint_evaluations import deployment_blockers
     from tools.blueprint_approvals import adoption_blockers
+    from tools.blueprint_evaluations import deployment_blockers
 
     blockers = adoption_blockers(contracts.get("approvals"), contracts["decisions"])
     blockers.extend(deployment_blockers(contracts["evaluations"]))

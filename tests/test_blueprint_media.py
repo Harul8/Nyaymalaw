@@ -1,8 +1,8 @@
 """Class-A checks of media design obligations, never runtime compliance proof."""
 from __future__ import annotations
 
-from copy import deepcopy
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import pytest

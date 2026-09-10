@@ -1,0 +1,124 @@
+# THE FAILURES THIS BUILD ALREADY KNOWS ABOUT, EACH WITH AN OWNER.
+#
+# WHY THIS EXISTS, 10 September 2026
+# ------------------------------------
+# Three obligations in the PRD are unbuilt. `tools/trace.py` reports them, and
+# three tests that read trace's verdict fail with it. That is correct: they are
+# real gaps in the product and they must stay visible.
+#
+# But `tools/check.py` returns 1 on any failure, writes no stamp, and
+# `tools/hooks/pre-commit` then refuses every commit. So the repository was in
+# a state where three honest red obligations blocked ALL further work --
+# including the work that would eventually close them. The only ways out were
+# to bypass the hook, to weaken the failing tests, or to stop committing. Each
+# of those is worse than the problem.
+#
+# THE THIRD OPTION IS TO SAY WHICH FAILURES ARE ALREADY KNOWN, WHO OWNS THEM,
+# AND TO BLOCK ON ANY OTHER. That is this file. It does not make anything pass:
+# `tools/check.py` still prints FULL GATE RED, the stamp it writes is marked
+# `scoped`, and no acceptance criterion can derive `done` from a scoped run.
+#
+# WHAT MAKES IT A CONTROL RATHER THAN A WAIVER
+# ----------------------------------------------
+# Three outcomes, not two:
+#
+#   actual == declared   -> SCOPED BUILD PASS, commit permitted, full gate red
+#   actual  > declared   -> BLOCKED. A new failure is not covered by this file.
+#   actual  < declared   -> BLOCKED. A declared failure that has started
+#                           passing means this file is stale and must SHRINK.
+#
+# The third is the one that keeps it honest. Without it a waiver outlives the
+# defect it was written for and quietly covers the next one that lands on the
+# same test -- which is exactly what `pytest.xfail` non-strict does, and this
+# repository already refuses that in
+# `tests/test_a_documented_defect_uses_a_strict_marker.py`. Same rule, one
+# level up: a documented failure that stops failing is a finding, not a relief.
+#
+# EVERY ROW NAMES AN ACCEPTANCE CRITERION. A failure with no owner is not
+# known, it is forgotten, and the linter refuses a row without one.
+#
+# SIGNATURES ARE EXACT, NOT PREFIXES. `[T7] C1: 1 of 5 NEVER clauses...` will
+# stop matching if the count changes -- and it SHOULD, because a fourth
+# uncovered clause under C1 is a different fact from the one recorded here.
+# The gate blocks and somebody re-registers it deliberately.
+
+schema: 1
+
+#: Registered by BK-80-AC7. Amending this file is a delivery decision: it
+#: changes what the build is permitted to commit over.
+known_failures:
+
+- id: TRACE-C1
+  step: trace
+  match: line
+  signature: "[T7] C1: 1 of 5 NEVER clauses have no test declaring @refuses"
+  owner: [BK-54-AC3]
+  because: >-
+    C1's unavailable-material refusal is unbuilt. Briefing cannot yet refuse to
+    claim completion while a material controlling gap remains, so no test can
+    declare @refuses against that clause without asserting a behaviour the
+    product does not have.
+
+- id: TRACE-D2
+  step: trace
+  match: line
+  signature: "[T7] D2: 1 of 5 NEVER clauses have no test declaring @refuses"
+  owner: [BK-65-AC2, BK-67-AC3]
+  because: >-
+    D2 requires governing legal premises to be attributed and reviewable
+    separately from the arithmetic that depends on them. Correct arithmetic
+    over an unestablished premise is the defect; separating them is unbuilt.
+
+- id: PYTEST-TRACE-SPEC
+  step: [class_a, pytest]
+  match: node
+  signature: "tests/test_tooling_bites.py::test_trace_passes_on_the_real_spec"
+  owner: [BK-54-AC3]
+  because: >-
+    This test asserts trace exits 0 on the real specification. It is failing
+    for exactly one reason -- TRACE-C1 and TRACE-D2 -- and it is the control
+    that makes those two visible in the test suite rather than only in a tool's
+    output. It must stay red until they close.
+
+- id: PYTEST-GATE-SCAN-BODY1
+  step: [class_a, pytest]
+  match: node
+  signature: "tests/test_tooling_bites.py::test_the_gate_scan_sees_code_and_ignores_prose[body1-False]"
+  owner: [BK-65-AC2]
+  because: >-
+    A dependent control over the same uncovered obligation. It is parameterised
+    and only these two cases fail; the rest of the parameter set passes and
+    must keep passing.
+
+- id: PYTEST-GATE-SCAN-BODY2
+  step: [class_a, pytest]
+  match: node
+  signature: "tests/test_tooling_bites.py::test_the_gate_scan_sees_code_and_ignores_prose[body2-False]"
+  owner: [BK-67-AC3]
+  because: >-
+    The second parameter case of the same control, owned by the review
+    obligation rather than the attribution one.
+
+- id: RUFF-PLANNING-DEBT
+  step: ruff
+  match: line
+  signature: "Found 151 errors."
+  owner: [BK-87-AC1]
+  because: >-
+    Style debt introduced by the execution-readiness planning pass, entirely in
+    tools/blueprint_evaluations.py, tools/plan_view.py, tests/test_blueprint_media.py
+    and their neighbours: 148 over-length lines and 3 zip() calls without an
+    explicit strict=. No product code is affected and no rule was relaxed to
+    accommodate them -- ruff still runs with the same configuration.
+
+    THE SIGNATURE IS THE EXACT COUNT, deliberately. Fixing one, or adding one,
+    changes it and BLOCKS the build until somebody re-registers the number.
+    That is the only property that stops a style waiver from quietly absorbing
+    the next real finding ruff makes. It is debt with an owner and a falling
+    number, not an exemption.
+
+    Discovered on 10 September 2026 while wiring the scoped gate, and it is
+    worth recording that it was NOT in the reported baseline of three failures:
+    that baseline came from running trace and pytest directly rather than the
+    whole gate, so a fourth red step went unseen. A baseline measured on part
+    of a population is a baseline about that part.

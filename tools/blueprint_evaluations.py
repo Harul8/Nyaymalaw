@@ -6,9 +6,9 @@ existing evidence registry, never to this planning catalog.
 """
 from __future__ import annotations
 
+import re
 from collections import Counter
 from collections.abc import Iterable, Mapping
-import re
 
 from tools.blueprint_autonomy import COMPARISON_SETS
 

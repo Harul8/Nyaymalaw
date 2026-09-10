@@ -80,10 +80,31 @@ def tree_digest(root: Path | None = None) -> str:
     return h.hexdigest()[:16]
 
 
-def record(digest: str | None = None) -> str:
+def record(digest: str | None = None, *, kind: str = "full",
+           waived: list[str] | None = None, baseline: str = "") -> str:
+    """Record a pass, SAYING WHICH KIND OF PASS IT WAS. BK-80-AC7.
+
+    A stamp used to be one field -- the tree -- so every green looked alike. A
+    scoped build pass over a declared, owned red is a different fact from a
+    full green, and a caller asking "may I release" must not receive the same
+    answer as one asking "may I commit". The kind travels with the stamp, and
+    the waived ids travel with it too so the stamp says what it excluded rather
+    than merely that it excluded something.
+
+    `baseline` is the known-failure registry's digest. A stamp naming a
+    baseline that no longer matches is not current: the declared red changed
+    under it, which is precisely when a scoped pass stops meaning anything.
+    """
+    if kind not in ("full", "scoped"):
+        raise ValueError(f"a gate stamp is full or scoped, not {kind!r}")
     STAMP.parent.mkdir(parents=True, exist_ok=True)
     digest = digest or tree_digest()
-    STAMP.write_text(json.dumps({"tree": digest}), encoding="utf8")
+    STAMP.write_text(json.dumps({
+        "tree": digest,
+        "kind": kind,
+        "waived": sorted(waived or []),
+        "baseline": baseline,
+    }), encoding="utf8")
     return digest
 
 
@@ -107,6 +128,29 @@ def state() -> tuple[str, str]:
                 f"the recorded gate stamp could not be read ({type(exc).__name__}), "
                 f"so nothing can be said about this tree.")
     if was == now:
+        # WHICH KIND OF PASS. A stamp written before this field existed has no
+        # `kind`, and it is read as `full` -- which is what it was: those
+        # stamps were only ever written when every step passed. Defaulting the
+        # other way would report every historical green as scoped.
+        try:
+            stamp = json.loads(STAMP.read_text(encoding="utf8"))
+        except (OSError, json.JSONDecodeError):
+            stamp = {}
+        kind = stamp.get("kind", "full")
+        if kind == "scoped":
+            from tools.known_failures import registry_digest
+
+            waived = stamp.get("waived") or []
+            if stamp.get("baseline") and stamp["baseline"] != registry_digest():
+                return ("stale",
+                        "the scoped gate passed against a different declared "
+                        "failure set than the one now in "
+                        "docs/backlog/known_failures.yaml, so what it waived "
+                        "is not what this tree declares.")
+            return ("current_scoped",
+                    f"a SCOPED build gate passed on this tree ({now}); the "
+                    f"FULL gate is RED over {len(waived)} declared, owned "
+                    f"failure(s): {', '.join(waived)}.")
         return ("current", f"the gate passed on this tree ({now}).")
     return ("stale",
             f"the gate last passed on {was} and this tree is {now}. Something "
@@ -119,6 +163,10 @@ def main() -> int:
     ap.add_argument("--write", action="store_true",
                     help="record that the gate passed on this tree")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--require-full", action="store_true",
+                    help="refuse a scoped build pass. For anything asking "
+                         "whether the FULL gate is green -- release checks, "
+                         "sign-off -- never for a commit.")
     args = ap.parse_args()
 
     if args.write:
@@ -129,6 +177,19 @@ def main() -> int:
     if verdict == "current":
         if not args.quiet:
             print(f"GATESTAMP OK  -- {sentence}")
+        return 0
+
+    # A SCOPED PASS IS A PASS FOR COMMITTING AND FOR NOTHING ELSE.
+    #
+    # It prints on every commit rather than staying quiet, because the whole
+    # risk of this mechanism is that a red people stop seeing becomes a red
+    # nobody owns. `--require-full` is how a caller says it needs the other
+    # question answered, and it gets NO.
+    if verdict == "current_scoped" and not args.require_full:
+        print("SCOPED BUILD PASS -- FULL GATE RED")
+        print(f"  {sentence}")
+        print("  This permits a commit. It is not a release, not a sign-off, "
+              "and no acceptance criterion derives done from it.")
         return 0
 
     print(f"GATESTAMP {verdict.upper()}  -- {sentence}")
