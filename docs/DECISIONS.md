@@ -165,7 +165,8 @@ assumption the front door contradicts is the defect, not the door.
 
 *Gated, not removed.* The backlog permits "closed **or** approval-gated". The
 form survives, but a reusable installation-wide authorisation does not. An
-operator issues a 48-hour invitation for one canonical email and workspace;
+operator issues a 48-hour invitation for one canonical email, named advocate,
+professional profile and workspace;
 the server stores only its fingerprint inside the sealed invitation record and
 atomically spends it on enrolment. Removing the route entirely would have been
 simpler and would have made every practice enrol by shell command.
@@ -180,6 +181,13 @@ not part of the identity being created. The browser conceals it and removes it
 from the DOM before waiting on the network. Tests mint their own invitations;
 there is deliberately no fixture-wide value, because that would recreate the
 replayable deployment secret in test clothing.
+
+*The invitation owns the roster identity.* The registration form asks only for
+the invitation and a new password. Asking the advocate to retype name, email,
+Bar enrolment, practice and firm created two owners for the same identity and
+turned an innocent difference into an undiagnosable 403. The operator records
+the roster identity once; the server returns the canonical email after
+registration so the advocate knows exactly what to use at sign-in.
 
 **What is NOT done.** Recovery, MFA and workspace identity remain — recorded as
 `BK-31-AC3`, `NOT_RUN`, with an honest note that there is no recovery route at

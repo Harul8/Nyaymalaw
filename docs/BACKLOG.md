@@ -311,6 +311,36 @@ removes its own partial file if the first write fails. BK-31-AC11 runs ten
 two-token contests and proves exactly one enrolment and one working credential
 after every contest.
 
+**Registration-identity contradiction found in review, 10 September 2026.**
+The invitation was described as fixing the email and workspace, but acceptance
+compared the whole `AdvocateIdentity`: name, email, Bar enrolment, practice and
+firm. The form asked the advocate to retype all five and the operator tool
+defaulted three to blank. Adding a Bar number to an invitation issued without
+one therefore produced the same 403 as a forged token, and the no-oracle policy
+made the mismatch impossible for the advocate to diagnose. The used record
+also retained a `.json` suffix after its contents became sealed bytes.
+
+**Plan.** Make the invitation the only owner of the canonical email, name,
+professional profile and workspace. Registration will carry only the concealed
+invitation header and two matching password fields; the server will enrol the
+identity from the sealed invitation and return its login handle. Store both
+active and used invitation records as `.nm`. Extend AC10's source-level control
+to prove the page field is concealed, its value is captured and cleared, and
+that exact captured value is sent under the route's header. The real browser
+leg remains `NOT_RUN` until the approved journey is run.
+
+**Built and integration-tested 10 September 2026.** The strict registration
+model now accepts only `password` and `password_again`; extra identity fields
+are refused before the token is spent. `accept_invitation` enrols the complete
+identity held in the sealed invitation and returns its canonical login handle.
+The registration page contains only the concealed invitation and the two
+password inputs, so there is no second identity copy to mistype. Used records
+now keep the `.nm` suffix their encrypted bytes promise. The AC10 control binds
+the page field id and name, concealed type, capture-before-clear order and exact
+header value; its positive controls independently break concealment, clearing
+and header wiring. AC12 separately refuses the return of any roster-identity
+input. Fifty-five focused tests pass. The real browser leg remains `NOT_RUN`.
+
 **Still not done:** account recovery, MFA or an explicit risk acceptance, and
 an unmistakable active workspace remain open under this row. The integration
 evidence for the invitation slice is green; its browser journey remains stale

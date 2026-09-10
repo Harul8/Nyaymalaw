@@ -1,8 +1,8 @@
 """BK-31 — the controlled roster is enforced by one-use invitations.
 
-The invitation fixes who may enrol and which workspace they enter. Absence,
-expiry, replay and identity mismatch all fail closed and all look the same to
-the caller.
+The invitation fixes who may enrol, their roster profile and which workspace
+they enter. Absence, expiry and replay all fail closed and all look the same to
+the caller; the registration body has no identity fields to disagree with it.
 """
 from __future__ import annotations
 
@@ -37,6 +37,11 @@ GOOD = {
     "password_again": "Cinder-lantern-42",
 }
 
+REGISTRATION = {
+    "password": GOOD["password"],
+    "password_again": GOOD["password_again"],
+}
+
 
 def _identity(body: dict = GOOD) -> AdvocateIdentity:
     email = canonical_id(body["email"])
@@ -55,7 +60,7 @@ def _invite(client, body: dict = GOOD, *, at=None) -> str:
         firm_id=body.get("firm_id", ""), at=at)
 
 
-def _register(client, token: str | None, body: dict = GOOD):
+def _register(client, token: str | None, body: dict = REGISTRATION):
     headers = ({"X-Enrolment-Invitation": token} if token is not None else {})
     return client.post("/api/register", json=body, headers=headers)
 
@@ -125,18 +130,23 @@ def test_an_expired_invitation_is_refused(client):
     assert client.directory.identity(GOOD["email"]) is None
 
 
-def test_an_invitation_is_bound_to_the_server_owned_identity_and_workspace(client):
+def test_the_invitation_owns_identity_profile_and_workspace(client):
     token = _invite(client)
-    for changed in (
-            {**GOOD, "email": "stranger@example.com"},
-            {**GOOD, "firm_id": "another_firm"},
-            {**GOOD, "name": "Someone Else"}):
-        response = _register(client, token, changed)
-        assert response.status_code == 403, response.text
-        assert client.directory.identity(changed["email"]) is None
+    replacement = {
+        **REGISTRATION,
+        "email": "stranger@example.com",
+        "name": "Someone Else",
+        "enrolment": "OTHER/999",
+        "practice": "Somewhere Else",
+        "firm_id": "another_firm",
+    }
+    refused = _register(client, token, replacement)
+    assert refused.status_code == 422, refused.text
+    assert client.directory.identity("stranger@example.com") is None
 
-    # A mismatch does not burn a valid invitation; the intended identity can
-    # still claim it, and the FILE'S identity is the one persisted.
+    # Invalid duplicate identity fields do not burn the invitation. The
+    # password-only request succeeds and the sealed invitation's complete
+    # roster identity is the one persisted.
     assert _register(client, token).status_code == 200
     assert client.directory.identity(GOOD["email"]) == _identity()
 
@@ -153,6 +163,16 @@ def test_only_a_fingerprint_of_the_invitation_is_stored(client):
     record = json.loads(client.directory._cipher.decrypt(raw).decode("utf8"))
     assert record["token_fingerprint"] == token_fingerprint(token)
     assert token not in json.dumps(record)
+
+    assert _register(client, token).status_code == 200
+    used = list(client.directory._used_invitations.glob("*.nm"))
+    assert len(used) == 1
+    assert not list(client.directory._used_invitations.glob("*.json")), (
+        "sealed bytes are labelled JSON in the used-invitation store")
+    used_raw = used[0].read_bytes()
+    assert used_raw == raw, "spending changed the sealed invitation record"
+    assert token.encode("utf8") not in used_raw
+    assert GOOD["email"].lower().encode("utf8") not in used_raw
 
 
 def test_the_operator_tool_issues_the_bound_identity_and_prints_the_token_once(
@@ -197,13 +217,14 @@ def test_repeated_wrong_invitations_are_rate_limited_and_audited_without_the_tok
     assert token not in attempt_log
 
 
-def test_unknown_expired_and_mismatched_invitations_do_not_form_an_oracle(client):
+def test_unknown_expired_and_replayed_invitations_do_not_form_an_oracle(client):
     expired = _invite(client, at=utcnow() - timedelta(hours=49))
-    mismatch = _invite(client)
+    replay = _invite(client)
+    assert _register(client, replay).status_code == 200
     answers = [
         _register(client, "unknown").json()["detail"],
         _register(client, expired).json()["detail"],
-        _register(client, mismatch, {**GOOD, "firm_id": "wrong"}).json()["detail"],
+        _register(client, replay).json()["detail"],
     ]
     assert len(set(answers)) == 1
 
@@ -226,7 +247,7 @@ def test_two_directory_instances_cannot_both_spend_one_invitation(tmp_path):
             barrier.wait()
             try:
                 directory.accept_invitation(
-                    token, identity, credential, utcnow())
+                    token, credential, utcnow())
                 return "enrolled"
             except InvitationRefused:
                 return "refused"
@@ -266,7 +287,7 @@ def test_two_invitations_cannot_race_to_replace_one_advocate(tmp_path):
             barrier.wait()
             try:
                 directory.accept_invitation(
-                    token, identity, credential, utcnow())
+                    token, credential, utcnow())
                 return "enrolled"
             except AlreadyEnrolled:
                 return "already enrolled"

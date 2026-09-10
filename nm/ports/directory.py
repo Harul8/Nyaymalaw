@@ -33,7 +33,7 @@ class AlreadyEnrolled(RuntimeError):
 
 
 class InvitationRefused(RuntimeError):
-    """Unknown, expired, replayed or identity-mismatched invitation.
+    """Unknown, expired, replayed or unreadable invitation.
 
     One exception deliberately covers every cause. The adapter records the
     precise reason; the caller must not turn an invitation token into an
@@ -47,10 +47,9 @@ class DirectoryPort(Protocol):
         """Return the invitation once; retain only its fingerprint."""
         ...
 
-    def accept_invitation(self, token: str, offered: AdvocateIdentity,
-                          credential: Credential,
+    def accept_invitation(self, token: str, credential: Credential,
                           now: datetime) -> AdvocateIdentity:
-        """Atomically consume one active, identity-bound invitation."""
+        """Consume one active invitation and enrol the identity it owns."""
         ...
 
     def enrol(self, enrolment: Enrolment) -> None:

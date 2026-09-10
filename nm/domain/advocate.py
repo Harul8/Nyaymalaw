@@ -265,9 +265,9 @@ def token_fingerprint(token: str) -> str:
 class Invitation:
     """One invitation to one server-owned advocate identity.
 
-    Only the fingerprint is retained.  The email and firm travel inside the
-    invited identity, so a bearer cannot use a valid token to choose which
-    workspace they enter.
+    Only the fingerprint is retained. The complete roster identity travels
+    inside the sealed invitation, so registration has no second copy a bearer
+    can use to choose another advocate, profile or workspace.
     """
 
     token_fingerprint: str

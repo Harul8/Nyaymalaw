@@ -860,27 +860,33 @@ items:
       mutation: issue an invitation more than 48 hours before it is presented
       expected_failure: enrolment succeeds after the authority has expired
   - id: BK-31-AC7
-    requirement: the raw invitation and roster identity are not readable at rest; only
-      the token fingerprint is retained inside the sealed record
+    requirement: active and used invitation records use the sealed .nm format;
+      the raw invitation and roster identity are not readable at rest and only the
+      token fingerprint appears in their filenames
     required_evidence: [domain_test]
     evidence:
       domain_test:
         result: PASS
         ref: tests/test_enrolment_is_authorised.py::test_only_a_fingerprint_of_the_invitation_is_stored
+        note: the control inspects active and used records, refuses a .json used
+          suffix and proves both artifacts remain sealed
     negative_control:
       mutation: inspect the invitation file before it is spent
       expected_failure: the bearer token or invited email is visible in the stored bytes
   - id: BK-31-AC8
-    requirement: the invitation binds the canonical email, named advocate and server-owned
-      workspace identity rather than accepting replacements from the request
+    requirement: the invitation exclusively owns the canonical email, named advocate,
+      professional profile and server-owned workspace; registration accepts only the
+      invitation and the advocate's chosen password
     required_evidence: [integration_test]
     evidence:
       integration_test:
         result: PASS
-        ref: tests/test_enrolment_is_authorised.py::test_an_invitation_is_bound_to_the_server_owned_identity_and_workspace
+        ref: tests/test_enrolment_is_authorised.py::test_the_invitation_owns_identity_profile_and_workspace
+        note: extra identity fields are refused without spending the token; the
+          password-only retry persists the invitation's exact roster identity
     negative_control:
-      mutation: change the invited email, name or firm while retaining the valid token
-      expected_failure: the changed identity is enrolled or the valid invitation is consumed
+      mutation: submit identity and workspace fields alongside a valid token
+      expected_failure: any request value replaces the roster identity stored in the invitation
   - id: BK-31-AC9
     requirement: two concurrent claimants cannot both spend the same invitation
     required_evidence: [adversarial_test]
@@ -901,6 +907,8 @@ items:
       integration_test:
         result: PASS
         ref: tests/test_the_page_and_the_script_agree.py::test_the_browser_conceals_and_clears_the_invitation_before_the_wire_wait
+        note: the control binds the field id and name, password type, captured and
+          cleared value, and exact request-header value, with three planted failures
       browser_journey:
         result: NOT_RUN
         ref: ''
@@ -921,6 +929,17 @@ items:
     negative_control:
       mutation: claim two valid tokens for the same canonical identity through independent directory instances
       expected_failure: both callers report enrolment or the eventual credential is silently selected by last writer wins
+  - id: BK-31-AC12
+    requirement: the browser registration form does not ask the advocate to retype
+      identity or workspace facts already fixed by the invitation
+    required_evidence: [integration_test]
+    evidence:
+      integration_test:
+        result: PASS
+        ref: tests/test_the_page_and_the_script_agree.py::test_the_register_form_does_not_retype_the_invited_roster_identity
+    negative_control:
+      mutation: restore any name, email, enrolment, practice or firm input to the registration form or script
+      expected_failure: the source-level form contract identifies the second owner of roster identity
 
 - id: BK-32
   title: responsive advocate home and matter navigation

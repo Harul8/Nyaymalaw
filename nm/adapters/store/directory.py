@@ -22,7 +22,6 @@ the caller must not learn and exactly what an operator needs.
 """
 from __future__ import annotations
 
-import hmac
 import json
 import os
 from datetime import datetime
@@ -106,13 +105,13 @@ class FileDirectory:
         self._note(identity.id, f"invitation issued by {invitation.issued_by}")
         return token
 
-    def accept_invitation(self, token: str, offered: AdvocateIdentity,
-                          credential: Credential,
+    def accept_invitation(self, token: str, credential: Credential,
                           now: datetime) -> AdvocateIdentity:
         """Claim on disk and enrol; every other instance sees the claim."""
         fingerprint = token_fingerprint((token or "").strip())
         active = self._invitation_path(fingerprint)
-        used = self._used_invitations / f"{fingerprint}.json"
+        used = self._used_invitations / f"{fingerprint}.nm"
+        audit_key = f"invitation:{fingerprint}"
         try:
             sealed = active.read_bytes()
             data = json.loads(self._cipher.decrypt(sealed).decode("utf8"))
@@ -124,15 +123,12 @@ class FileDirectory:
                 issued_by=data["issued_by"],
             )
         except Exception:  # noqa: BLE001 -- corrupt/foreign is still refused
-            self._note(offered.id, "invitation refused: unknown or already used")
+            self._note(audit_key, "invitation refused: unknown or already used")
             raise InvitationRefused(_INVITATION_REFUSED) from None
 
-        invited = json.dumps(invitation.identity.as_dict(), sort_keys=True)
-        presented = json.dumps(offered.as_dict(), sort_keys=True)
         active_now = invitation.active_at(now)
-        if not active_now or not hmac.compare_digest(invited, presented):
-            why = "expired" if not active_now else "identity mismatch"
-            self._note(offered.id, f"invitation refused: {why}")
+        if not active_now:
+            self._note(invitation.identity.id, "invitation refused: expired")
             raise InvitationRefused(_INVITATION_REFUSED)
 
         # `threading.Lock` protects one Python object. Registration can be
@@ -145,17 +141,17 @@ class FileDirectory:
             with used.open("xb") as claim:
                 claim.write(sealed)
         except FileExistsError:
-            self._note(offered.id, "invitation refused: concurrent replay")
+            self._note(audit_key, "invitation refused: concurrent replay")
             raise InvitationRefused(_INVITATION_REFUSED) from None
         except OSError:
-            self._note(offered.id, "invitation refused: claim unavailable")
+            self._note(audit_key, "invitation refused: claim unavailable")
             raise InvitationRefused(_INVITATION_REFUSED) from None
 
         try:
             active.unlink()
         except OSError:
             used.unlink(missing_ok=True)
-            self._note(offered.id, "invitation refused: claim unavailable")
+            self._note(audit_key, "invitation refused: claim unavailable")
             raise InvitationRefused(_INVITATION_REFUSED) from None
 
         try:

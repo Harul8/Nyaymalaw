@@ -230,16 +230,20 @@ def test_the_header_check_catches_the_exact_drift_it_was_written_for():
 
 
 def invitation_exposure(page: str, script: str) -> list[str]:
-    """Report a visible invitation or one retained through the network wait."""
+    """Report a visible, retained or disconnected invitation value."""
     problems = []
     found = re.search(r'<input\b[^>]*\bid="reg-invitation"[^>]*>', page)
-    if not found or 'type="password"' not in found.group(0):
+    if (not found or 'type="password"' not in found.group(0)
+            or 'name="enrolment_invitation"' not in found.group(0)):
         problems.append("the invitation input is not concealed")
     capture = script.find("const invitation = $('reg-invitation').value.trim()")
     cleared = script.find("$('reg-invitation').value = '';", capture)
     sent = script.find("await api('/api/register'", capture)
     if min(capture, cleared, sent) < 0 or not capture < cleared < sent:
         problems.append("the invitation remains in the DOM during submission")
+    header = script.find("'x-enrolment-invitation': invitation", sent)
+    if sent < 0 or header < sent:
+        problems.append("the captured invitation is not the request header value")
     return problems
 
 
@@ -248,7 +252,7 @@ def test_the_browser_conceals_and_clears_the_invitation_before_the_wire_wait():
     assert not invitation_exposure(HTML, SCRIPT)
 
 
-def test_the_invitation_exposure_check_catches_both_failures():
+def test_the_invitation_exposure_check_catches_each_failure():
     visible = HTML.replace('id="reg-invitation" name="enrolment_invitation" '
                            'type="password"',
                            'id="reg-invitation" name="enrolment_invitation" '
@@ -257,7 +261,19 @@ def test_the_invitation_exposure_check_catches_both_failures():
     clear = SCRIPT.index("$('reg-invitation').value = '';", capture)
     statement = "$('reg-invitation').value = '';"
     retained = SCRIPT[:clear] + SCRIPT[clear + len(statement):]
+    disconnected = SCRIPT.replace(
+        "'x-enrolment-invitation': invitation",
+        "'x-enrolment-invitation': password")
     assert invitation_exposure(visible, SCRIPT) == [
         "the invitation input is not concealed"]
     assert invitation_exposure(HTML, retained) == [
         "the invitation remains in the DOM during submission"]
+    assert invitation_exposure(HTML, disconnected) == [
+        "the captured invitation is not the request header value"]
+
+
+def test_the_register_form_does_not_retype_the_invited_roster_identity():
+    """BK-31-AC8. One owner for identity means one place to correct it."""
+    retired = ("reg-name", "reg-email", "reg-enrolment", "reg-practice",
+               "reg-firm")
+    assert not [field for field in retired if field in HTML or field in SCRIPT]

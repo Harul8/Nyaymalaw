@@ -54,9 +54,9 @@
            THIS advocate holds, and says so in its own words. A promise about
            the one check whose whole value is being trusted is the worst
            place in the product to be approximately right. -->
-      Registration records your Bar Council number and your firm. I check new
-      matters against the files YOU hold — not a firm-wide registry, which
-      this product does not have.
+      Your invitation carries the roster profile recorded by your practice. I
+      check new matters against the files YOU hold — not a firm-wide registry,
+      which this product does not have.
     </p>
   </form>
 
@@ -65,25 +65,19 @@
        wrong route. -->
   <form id="register" class="login" hidden autocomplete="on">
     <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
-    <p class="login-lede">Enrol to reach your matters.</p>
+    <p class="login-lede">Accept your invitation and choose a password.</p>
 
-    <label for="reg-name">Name <span class="req" aria-hidden="true">*</span></label>
-    <input id="reg-name" name="name" autocomplete="name" required>
-
-    <label for="reg-email">Email <span class="req" aria-hidden="true">*</span></label>
-    <input id="reg-email" name="username" type="email"
-           autocomplete="username" spellcheck="false" required>
-
-    <label for="reg-enrolment">Bar Council enrolment number <span class="opt">optional</span></label>
-    <input id="reg-enrolment" name="enrolment" spellcheck="false"
-           placeholder="AP/1234/2010">
-
-    <label for="reg-practice">Where you practise <span class="opt">optional</span></label>
-    <input id="reg-practice" name="practice" placeholder="Hyderabad">
-
-    <label for="reg-firm">Firm <span class="opt">optional</span></label>
-    <input id="reg-firm" name="organization" autocomplete="organization"
-          >
+    <!-- BK-31. THE INVITATION OWNS THE ROSTER IDENTITY. The operator has
+         already recorded the advocate's canonical email, name, professional
+         profile and workspace. Asking for those five facts again created two
+         owners and turned an innocent mismatch into an unexplained refusal. -->
+    <label for="reg-invitation">Enrolment invitation <span class="req" aria-hidden="true">*</span></label>
+    <input id="reg-invitation" name="enrolment_invitation" type="password" required
+           autocomplete="one-time-code" autocapitalize="none" spellcheck="false"
+           aria-describedby="reg-invitation-help">
+    <p id="reg-invitation-help" class="field-help">Sent to you by whoever
+      administers this installation. It identifies your roster profile,
+      expires, and works once.</p>
 
     <label for="reg-password">Password <span class="req" aria-hidden="true">*</span></label>
     <div class="pw-wrap">
@@ -109,24 +103,6 @@
       </button>
     </div>
 
-    <!-- BK-31. THE ROSTER IS CONTROLLED, so enrolment is by invitation.
-         Asked for LAST and named plainly: an advocate who does not have one
-         should reach this field already knowing they need to ask, rather than
-         filling in five boxes first and being refused at the end.
-
-         IT IS AN INVITATION AND NO LONGER A SHARED CODE. One installation-wide
-         secret is replayable: anyone who ever saw it could enrol, forever, as
-         anybody. An invitation is minted for ONE advocate, expires, and is
-         spent on first use -- so the field takes a value the advocate was
-         personally sent, which is why the help text says who sent it. -->
-    <label for="reg-invitation">Enrolment invitation <span class="req" aria-hidden="true">*</span></label>
-    <input id="reg-invitation" name="enrolment_invitation" type="password" required
-           autocomplete="one-time-code" autocapitalize="none" spellcheck="false"
-           aria-describedby="reg-invitation-help">
-    <p id="reg-invitation-help" class="field-help">Sent to you by whoever
-      administers this installation. It is for you alone, expires, and works
-      once. Advocates are enrolled by the practice, not by signing up.</p>
-
     <button type="submit" class="primary wide" id="register-go">Register</button>
     <div class="login-alt"><a href="#" id="show-login">Back to sign in</a></div>
 
@@ -134,8 +110,8 @@
       <span class="req" aria-hidden="true">*</span> required. The password must be at
       least 8 characters and contain an upper-case letter, a lower-case
       letter, a numeral and a special character &mdash; it is the only thing
-      standing between one advocate&rsquo;s client file and another&rsquo;s. Your firm is recorded on the
-      file; the conflict check itself runs against the matters you hold.
+      standing between one advocate&rsquo;s client file and another&rsquo;s. Your
+      invitation supplies the identity and workspace your practice recorded.
     </p>
   </form>
 

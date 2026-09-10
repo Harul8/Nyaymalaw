@@ -1722,11 +1722,6 @@ $('register').addEventListener('submit', async (ev) => {
         'x-enrolment-invitation': invitation,
       },
       body: JSON.stringify({
-        name: $('reg-name').value.trim(),
-        email: $('reg-email').value.trim(),
-        enrolment: $('reg-enrolment').value.trim(),
-        practice: $('reg-practice').value.trim(),
-        firm_id: $('reg-firm').value.trim(),
         password: password,
         password_again: again,
       }),
@@ -1741,10 +1736,9 @@ $('register').addEventListener('submit', async (ev) => {
     // creating an account also logs in whatever machine sent it, and the
     // device binding is minted at sign-in for exactly that reason.
     //
-    // THE EMAIL IS FILLED FROM WHAT THE SERVER RETURNED, not from what was
-    // typed. The route lower-cases it to make the handle, so echoing the
-    // typed capitals back would offer the advocate a string that is not their
-    // id -- and on a case-sensitive filesystem it is not their advocate.
+    // THE EMAIL IS FILLED FROM WHAT THE SERVER RETURNED. The advocate never
+    // retypes it here: the sealed invitation owns the roster identity and the
+    // canonical handle returned by the route is exactly what sign-in accepts.
     $('login-id').value = r.advocate_id;
     showOutcome('good', 'Registration successful',
       `Enrolled as ${r.name}. Sign in with ${r.advocate_id} and the password `

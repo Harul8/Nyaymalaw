@@ -156,15 +156,17 @@ def client(tmp_path):
         api.set_application(was)
 
 
-def test_register_with_capitals_then_sign_in_with_them(client):
-    """WHAT THE ADVOCATE ACTUALLY DOES. They type their email the way they
-    write it, in both boxes, and both have to work."""
+def test_invited_capitals_return_a_canonical_handle_and_both_sign_in(client):
+    """The operator may preserve capitals; the returned handle is canonical."""
     typed = "R.Kumar@Example.com"
     body = {
         "name": "R Kumar", "email": typed,
         "password": PASSWORD, "password_again": PASSWORD}
     r = client.post(
-        "/api/register", json=body,
+        "/api/register", json={
+            "password": PASSWORD,
+            "password_again": PASSWORD,
+        },
         headers={"X-Enrolment-Invitation": client.invite(body)})
     assert r.status_code == 200, r.text
     assert r.json()["advocate_id"] == "r.kumar@example.com", (

@@ -83,7 +83,10 @@ def client(tmp_path):
 def register(client, body: dict = GOOD, *, token: str | None = None):
     invitation = token or client.invite(body)
     return client.post(
-        "/api/register", json=body,
+        "/api/register", json={
+            "password": body["password"],
+            "password_again": body["password_again"],
+        },
         headers={"X-Enrolment-Invitation": invitation})
 
 
@@ -159,44 +162,35 @@ def test_the_password_rule_is_reached_rather_than_restated(client, password,
     assert says in r.json()["detail"], r.json()["detail"]
 
 
-def test_name_email_and_password_are_required(client):
-    """What an advocate IS to this product. No name, no email, no password is
-    not an advocate — and the form marks each with a red asterisk while the
-    input carries `required`, so a screen reader hears it from the attribute
-    rather than from a character it cannot see."""
-    for field in ("name", "email"):
+def test_registration_requires_only_the_two_password_entries(client):
+    """The operator-owned invitation supplies every roster identity field."""
+    for field in ("password", "password_again"):
+        body = {
+            "password": GOOD["password"],
+            "password_again": GOOD["password_again"],
+        }
+        del body[field]
         r = client.post(
-            "/api/register", json={**GOOD, field: "   "},
+            "/api/register", json=body,
             headers={"X-Enrolment-Invitation": client.invite(GOOD)})
         assert r.status_code == 422, (
-            f"{field} was accepted blank: {r.status_code} {r.text[:100]}")
+            f"missing {field} was accepted: {r.status_code} {r.text[:100]}")
 
 
-def test_the_bar_number_practice_and_firm_are_optional(client):
-    """OPTIONAL as of 6 September 2026, on the advocate's instruction: a form
-    that refuses someone who does not have their Bar number to hand is one
-    they abandon.
-
-    THE COST IS DEFERRED, NOT GONE. B3's conflicts registry is scoped by the
-    firm, so a blank one is a registry of ONE. `nm.core.screens` is declared
-    UNWIRED, so nothing live is weakened today — and when the screen is built
-    a blank firm must read NOT_ASSESSED and never CLEAR.
-    """
-    lean = {k: v for k, v in GOOD.items()
-            if k not in ("enrolment", "practice", "firm_id")}
-    r = register(client, lean)
+def test_the_roster_profile_comes_from_the_invitation(client):
+    """The advocate chooses a password; the practice owns roster facts."""
+    r = register(client)
     assert r.status_code == 200, r.text
 
     signed = client.post("/api/login",
                          json={"advocate_id": r.json()["advocate_id"],
                                "password": GOOD["password"]})
-    assert signed.status_code == 200, (
-        "an advocate who registered without a firm cannot sign in, which "
-        "makes the field required in fact whatever the form says")
-    assert signed.json()["advocate"]["firm_id"] == "", (
-        "a blank firm was defaulted to something. A placeholder would put "
-        "every unaffiliated advocate in ONE registry together, which is worse "
-        "than none")
+    assert signed.status_code == 200, signed.text
+    advocate = signed.json()["advocate"]
+    assert advocate["name"] == GOOD["name"]
+    assert advocate["enrolment"] == GOOD["enrolment"]
+    assert advocate["practice"] == GOOD["practice"]
+    assert advocate["firm_id"] == GOOD["firm_id"]
 
 
 def test_enrolling_the_same_email_twice_is_refused(client):

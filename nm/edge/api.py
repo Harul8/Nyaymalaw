@@ -19,7 +19,7 @@ from typing import Annotated
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import AfterValidator, BaseModel, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
 from nm.domain import attempts, brief
@@ -629,15 +629,10 @@ class Credentials(BaseModel):
 class Registration(BaseModel):
     """An invited advocate choosing the credential for their account. A1.
 
-    NAME, EMAIL AND PASSWORD ARE REQUIRED. Enrolment, practice and firm are
-    OPTIONAL, on the advocate's instruction of 6 September 2026 -- asked for
-    but not insisted on, because a registration form that refuses an advocate
-    who does not have their Bar number to hand is one they abandon.
-
-    WHAT THE FIRM WAS FOR IS RECORDED ON `AdvocateIdentity` RATHER THAN LOST.
-    B3's conflicts registry is scoped by it, and a blank firm is a registry of
-    one. The screen is not built yet, so nothing live is weakened today; when
-    it is built, a blank firm must make it read NOT_ASSESSED and never CLEAR.
+    THE INVITATION OWNS THE IDENTITY. Name, canonical email, enrolment,
+    practice and workspace are recorded once by the operator. Asking the
+    advocate to retype them made an innocent difference indistinguishable from
+    a forged token and then discarded the retyped values anyway.
 
     ENROLMENT IS INVITATION-GATED. BK-31, decided 9 September 2026.
 
@@ -652,22 +647,15 @@ class Registration(BaseModel):
     that.
 
     So the form survives behind a single-use, expiring invitation. The
-    invitation fixes the server-owned email and workspace identity; the body
-    cannot redirect it to another advocate or firm. What the 6 September
-    instruction was FOR also survives: the invited advocate chooses their own
-    password rather than receiving one from an operator.
+    invitation fixes the complete server-owned roster identity; the body
+    cannot redirect it to another advocate or firm. The invited advocate
+    chooses their own password rather than receiving one from an operator.
     """
 
-    name: NonBlank = Field(min_length=1)
-    email: NonBlank = Field(min_length=3)
+    model_config = ConfigDict(extra="forbid")
+
     password: str = Field(min_length=1)
     password_again: str = Field(min_length=1)
-    #: OPTIONAL as of 6 September 2026, on the advocate's instruction. See
-    #: `AdvocateIdentity` for what a blank firm costs when B3's conflicts
-    #: screen is built: it must then read NOT_ASSESSED, never CLEAR.
-    enrolment: str = ""
-    practice: str = ""
-    firm_id: str = ""
 
 
 #: THE ONLY THING A FAILED SIGN-IN EVER SAYS.
@@ -726,16 +714,13 @@ def register(body: Registration, request: Request,
     that refusal and passes the reason through rather than inventing a second
     threshold that will drift from the first.
     """
-    from nm.domain.advocate import (
-        AdvocateIdentity,
-        canonical_id,
-        enrol,
-    )
+    from nm.domain.advocate import enrol, token_fingerprint
     from nm.ports.directory import AlreadyEnrolled, InvitationRefused
 
     now = utcnow()
     source = request.client.host if request.client else "unknown-source"
-    rate_key = f"invitation:{canonical_id(body.email)}"
+    invitation = (x_enrolment_invitation or "").strip()
+    rate_key = f"invitation:{token_fingerprint(invitation)}"
     counts = application().directory.failures_since(
         rate_key, source, now - attempts.WINDOW)
     if counts is not None:
@@ -756,23 +741,9 @@ def register(body: Registration, request: Request,
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    # THE EMAIL IS THE ID, normalised. An advocate cannot sign in with an
-    # identifier nobody showed them, and this product's ids are already
-    # human-chosen strings. See `AdvocateIdentity.email` for the trade.
-    #
-    # `canonical_id` RATHER THAN `.strip().lower()` HERE. That expression was
-    # this route's own copy of a rule the directory and the sign-in door also
-    # needed, and only this one had it -- so an advocate registered lower-case
-    # and then signed in with the capital they typed, which worked on Windows
-    # and would not have on the server.
-    email = canonical_id(body.email)
-    identity = AdvocateIdentity(
-        id=email, name=body.name.strip(),
-        enrolment=body.enrolment.strip(), practice=body.practice.strip(),
-        firm_id=body.firm_id.strip(), email=email)
     try:
         identity = application().directory.accept_invitation(
-            x_enrolment_invitation or "", identity, credential, now)
+            invitation, credential, now)
     except InvitationRefused as exc:
         application().directory.note_failure(rate_key, source, now)
         raise HTTPException(status_code=403, detail=str(exc)) from exc
