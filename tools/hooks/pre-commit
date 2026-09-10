@@ -27,6 +27,28 @@ if command -v code-review-graph >/dev/null 2>&1; then
     code-review-graph detect-changes --brief || true
 fi
 
+# AND THE VECTORS, WHICH `update` DOES NOT TOUCH.
+#
+# Measured 10 September 2026: `update` refreshes nodes, edges and FTS and
+# leaves the embeddings where they were, so the graph went structurally
+# current and semantically stale on every commit -- 132 non-File nodes with
+# no vector, being every function, class and test written that week. A query
+# naming one of them returned five plausible neighbours and none of the three
+# right answers, while FTS found them in a single hit.
+#
+# ZERO RESULTS READS EXACTLY LIKE "NOT IN THE CODEBASE" (S3), and the nodes
+# it hides are the newest ones -- the ones most likely to be the subject of
+# the next question.
+#
+# THEY ARE REFRESHED TOGETHER so they cannot disagree, which is §4's answer
+# rather than a reminder to run a second command. It never blocks: offline is
+# a normal state and a search index is not a release criterion. What it does
+# instead is PRINT the remaining lag as a number, so a drift that could not be
+# closed is visible rather than assumed.
+if command -v python >/dev/null 2>&1; then
+    python tools/graph_vectors.py --embed || true
+fi
+
 # Is the tree the one the gate passed on?
 if command -v python >/dev/null 2>&1; then
     python tools/gatestamp.py --quiet || exit 1
