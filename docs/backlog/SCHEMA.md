@@ -167,10 +167,26 @@ needs more than a CSS navigation row.
 | 6 | `counsel_review` | structured review by a qualified user |
 | 7 | `production_measure` | measured latency, recovery, accessibility, security |
 
-`lint` checks that every attached deterministic-test ref actually exists. A
-proof naming a test nobody wrote is worse than no proof; browser, model,
-counsel and production evidence remain NOT_RUN until their own runner records
-a result.
+`lint` checks more than existence. A deterministic PASS must be an exact node
+in `docs/backlog/evidence/class_a.json`, the machine result must record a
+successful complete Class-A selection, and its source fingerprint must still
+match the product, tests, tools, browser assets and plan contract. A test path
+is a promise to run something; it is not evidence that it ran. `python
+tools/evidence.py ci` performs the canonical run and then checks the current
+artifact and backlog; the repository workflow runs it on every push and pull
+request.
+
+The fingerprint deliberately excludes authored delivery status, evidence
+verdicts and generated prose, so publishing a result does not invalidate
+itself. It includes each acceptance claim, required evidence level and negative
+control, so weakening the promise does invalidate the result.
+
+Model, counsel and production PASS claims point to a JSON record under
+`docs/backlog/evidence/` naming the criterion, evidence level, subject, method,
+result, accountable actor and observation time. Browser PASS additionally
+names an exact passing journey row in a report whose fingerprint matches the
+same source boundary. Missing or stale records resolve to NOT_RUN or STALE and
+cannot derive completion.
 
 ### Negative controls
 

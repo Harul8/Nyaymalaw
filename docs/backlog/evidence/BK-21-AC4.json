@@ -1,0 +1,9 @@
+{
+  "actor": "Nyaymalaw account holder",
+  "criterion": "BK-21-AC4",
+  "level": "production_measure",
+  "method": "The pre-rotation credential was presented to the provider and returned HTTP 401 token_invalidated; the replacement credential returned HTTP 200 and completed tests/test_openai_live.py through the adapter. Credential values were not retained in this record.",
+  "observed_at": "2026-09-10T00:00:00+05:30",
+  "result": "PASS",
+  "subject": "Revocation of the provider credential previously shared with the matter-encryption seal"
+}

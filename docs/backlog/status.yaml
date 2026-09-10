@@ -623,7 +623,7 @@ items:
     evidence:
       production_measure:
         result: PASS
-        ref: measured 10 September 2026
+        ref: docs/backlog/evidence/BK-21-AC4.json
         note: 'ROTATED AND VERIFIED. Measured rather than taken on trust: the previous
           value now returns HTTP 401 token_invalidated from the provider, so the
           credential exposed on 7 September is dead; the value now in .env returns
@@ -1690,24 +1690,27 @@ items:
   title: evidence results are bound to the build and execution that earned them
   kind: control
   priority: P0
-  delivery_status: ready
-  implementation: none
-  verification: none
+  delivery_status: verifying
+  implementation: complete
+  verification: passing
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them
-  next_action: make automated PASS derive from a current machine result and require structured
-    provenance for browser, model, counsel and production evidence
+  next_action: keep the published Class-A result current on every change and require
+    each future browser, model, counsel and production PASS to carry its own record
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them}
-    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them}
+    build: {result: BUILT, ref: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them}
+    test: {result: VERIFIED, ref: docs/backlog/evidence/class_a.json}
+    signoff: {result: SIGNED_OFF, ref: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them}
   acceptance:
   - id: BK-73-AC1
     requirement: an automated PASS names a machine result containing the exact test node,
       outcome, source fingerprint, time and runner identity
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_evidence_is_bound_to_execution.py::test_an_authored_pass_requires_the_exact_machine_result
     negative_control:
       mutation: author PASS for a test that exists but did not pass in the bound result
       expected_failure: backlog lint refuses the evidence and done cannot derive
@@ -1715,7 +1718,10 @@ items:
     requirement: browser evidence is stale when its report predates any NM, web, journey-test
       or journey-runner source that can affect it
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_evidence_is_bound_to_execution.py::test_a_source_change_makes_the_machine_result_stale
     negative_control:
       mutation: point current browser evidence at the saved 53b16b0+dirty report
       expected_failure: the source identity mismatch is reported
@@ -1723,7 +1729,10 @@ items:
     requirement: model, counsel and production PASS evidence carries a structured dated
       record naming subject, method, result and accountable actor rather than prose in ref
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_evidence_is_bound_to_execution.py::test_non_automated_pass_needs_a_structured_dated_record
     negative_control:
       mutation: record production PASS as an unstructured phrase with no evidence record
       expected_failure: backlog lint refuses the claim
@@ -1731,7 +1740,10 @@ items:
     requirement: every pushed commit is independently checked by a repository-defined
       Class-A CI job whose result is tied to that commit
     required_evidence: [integration_test]
-    evidence: {}
+    evidence:
+      integration_test:
+        result: PASS
+        ref: tests/test_evidence_is_bound_to_execution.py::test_pushes_and_pull_requests_run_the_repository_class_a_gate
     negative_control:
       mutation: remove the CI workflow or its Class-A command
       expected_failure: the repository control test reports that pushes have no independent gate

@@ -27,17 +27,17 @@ found cannot answer it.
 
 | Phase | | Features | Steps | Contracted | Verified | Open P0 | Readiness |
 |---|---|---:|---:|---:|---:|---:|---|
-| A | Arrive | 3/4 | 4 | 0/4 | 9/32 | 6 | not releasable |
-| B | Open a matter | 0/6 | 4 | 2/4 | 5/16 | 4 | not releasable |
-| C | Take the brief | 5/7 | 7 | 0/7 | 8/26 | 8 | not releasable |
-| D | Work the file | 8/9 | 14 | 1/14 | 10/33 | 9 | not releasable |
-| E | Advise | 1/5 | 5 | 0/5 | 6/33 | 10 | not releasable |
-| F | Act | 0/7 | 7 | 0/7 | 2/12 | 5 | not releasable |
-| G | Carry | 0/3 | 3 | 0/3 | 3/14 | 4 | not releasable |
-| H | Close | 0/2 | 2 | 0/2 | 2/7 | 1 | not releasable |
-| I | Leave | 1/1 | 1 | 0/1 | 4/18 | 5 | not releasable |
+| A | Arrive | 3/4 | 4 | 0/4 | 10/32 | 5 | not releasable |
+| B | Open a matter | 0/6 | 4 | 2/4 | 6/16 | 3 | not releasable |
+| C | Take the brief | 5/7 | 7 | 0/7 | 9/26 | 7 | not releasable |
+| D | Work the file | 8/9 | 14 | 1/14 | 11/33 | 8 | not releasable |
+| E | Advise | 1/5 | 5 | 0/5 | 7/33 | 9 | not releasable |
+| F | Act | 0/7 | 7 | 0/7 | 3/12 | 4 | not releasable |
+| G | Carry | 0/3 | 3 | 0/3 | 4/14 | 3 | not releasable |
+| H | Close | 0/2 | 2 | 0/2 | 3/7 | 0 | not releasable |
+| I | Leave | 1/1 | 1 | 0/1 | 5/18 | 4 | not releasable |
 
-**83 rows · 17 open P0 · 0 blocked · 18/44 features implemented**
+**83 rows · 16 open P0 · 0 blocked · 18/44 features implemented**
 
 ### Professional plan — registered and derived
 
@@ -82,7 +82,6 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 - **BK-67** [C/D/E/F] expert-advocate evaluation gate — *planned* · turn PA-01 to PA-20 into representative matter rubrics with named reviewers, thresholds, reservations and regression policy
 - **BK-69** [C/G/I] multimodal privacy and processing boundary — *in_progress* · the W0 foundation is built; end-to-end attribution of originals, derivatives, processors, retention and deletion needs BK-54's intake at W2
 - **BK-70** [D/E/F] remedy and enforceability model — *planned* · model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
-- **BK-73** [A/B/C/D/E/F/G/H/I] evidence results are bound to the build and execution that earned them — *ready* · make automated PASS derive from a current machine result and require structured provenance for browser, model, counsel and production evidence
 
 ### Admitted gaps in the evidence
 
@@ -2626,6 +2625,28 @@ Model, counsel and production results must use structured evidence records
 naming the subject, method, result and accountable actor. Repository-defined
 Class-A CI must independently check every push. An absent, stale or mismatched
 record makes the evidence NOT RUN or STALE and prevents derived completion.
+
+**Built, tested and signed off 10 September 2026.** The Class-A runner now
+writes an immutable execution-shaped result: exact node outcomes, start and
+finish source fingerprints, timestamps, command, runner, exit code and git
+identity. A narrowed selection cannot call itself complete. The published
+result records 1,186 exact and parameter-aggregate nodes; every deterministic
+PASS in the registry resolves by exact lookup through that current result.
+Changing product, tests, tools, browser assets or the plan contract makes the
+result STALE and prevents derived completion. Non-automated PASS now requires
+a dated JSON record naming subject, method, result and accountable actor; the
+BK-21 production rotation measurement is the first migrated record and retains
+no credential value. The journey runner now fingerprints browser assets and
+its own runner as well as Python source. A repository-owned push and pull
+request workflow runs the canonical Class-A evidence command independently.
+
+**Conformance decision.** The four planted controls pass: remove an exact
+node result, change the source identity, replace a structured production record
+with prose, or remove the CI contract, and the relevant claim fails. The full
+Class-A selection completed successfully. One environment-dependent P4 model
+separation check was explicitly skipped because both optional model tiers were
+not configured; it certifies no backlog acceptance criterion and is recorded
+as skipped rather than silently counted as PASS.
 
 ## BK-74 — Start Build Test and Sign-off are enforced delivery states with records
 

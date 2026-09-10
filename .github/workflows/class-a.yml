@@ -1,0 +1,22 @@
+name: Class A
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  class-a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e .[dev]
+      - name: Verify current Class-A evidence and backlog
+        run: python tools/evidence.py ci

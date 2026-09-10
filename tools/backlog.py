@@ -44,6 +44,12 @@ import yaml
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools._console import utf8_console  # noqa: E402
+from tools.evidence import (  # noqa: E402
+    exact_outcome,
+    load_result,
+    validate_class_a,
+    verification_fingerprint,
+)
 
 utf8_console()
 
@@ -126,12 +132,97 @@ def load() -> dict:
         PROFESSIONAL.read_text(encoding="utf-8"))
     doc["build_rules"] = json.loads(
         BUILD_RULES.read_text(encoding="utf-8")) if BUILD_RULES.exists() else {}
+    bind_execution_evidence(doc)
     return doc
+
+
+AUTOMATED_EVIDENCE = {"domain_test", "integration_test", "adversarial_test"}
+STRUCTURED_EVIDENCE = {"model_eval", "counsel_review", "production_measure"}
+EVIDENCE_RECORDS = ROOT / "docs" / "backlog" / "evidence"
+
+
+def _structured_record(acid: str, level: str, ref: str) -> list[str]:
+    """Validate a dated non-automated decision without exposing its subject."""
+    if not ref or "#" in ref:
+        return [f"{acid}/{level}: PASS has no structured evidence record"]
+    try:
+        path = (ROOT / ref).resolve()
+        path.relative_to(EVIDENCE_RECORDS.resolve())
+    except (OSError, ValueError):
+        return [f"{acid}/{level}: structured evidence record is outside "
+                "docs/backlog/evidence"]
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return [f"{acid}/{level}: evidence record {ref!r} cannot be read"]
+    bad = []
+    for field in ("subject", "method", "result", "actor", "observed_at"):
+        if not record.get(field):
+            bad.append(f"{acid}/{level}: evidence record has no {field}")
+    if record.get("criterion") != acid or record.get("level") != level:
+        bad.append(f"{acid}/{level}: evidence record names a different claim")
+    if record.get("result") != "PASS":
+        bad.append(f"{acid}/{level}: evidence record does not record PASS")
+    return bad
+
+
+def bind_execution_evidence(doc: dict, class_a: dict | None = None) -> list[str]:
+    """Resolve authored claims through current machine or review records.
+
+    ``result`` remains the reported status for audit history.  Roll-ups consume
+    ``_effective_result``: a stale/missing run can therefore never derive done.
+    """
+    class_a = load_result() if class_a is None else class_a
+    run_bad = validate_class_a(class_a)
+    bad = list(run_bad)
+    for item in doc.get("items") or []:
+        for ac in item.get("acceptance") or []:
+            acid = ac.get("id", "?")
+            for level, evidence in (ac.get("evidence") or {}).items():
+                result = evidence.get("result", "NOT_RUN")
+                evidence["_effective_result"] = result
+                if result != "PASS":
+                    continue
+                if level in AUTOMATED_EVIDENCE:
+                    if run_bad:
+                        evidence["_effective_result"] = "STALE"
+                        continue
+                    outcome = exact_outcome(class_a, evidence.get("ref", ""))
+                    if outcome != "passed":
+                        evidence["_effective_result"] = (
+                            "FAIL" if outcome == "failed" else "NOT_RUN")
+                        bad.append(
+                            f"{acid}/{level}: {evidence.get('ref')!r} did not "
+                            "PASS in the bound Class-A execution")
+                elif level in STRUCTURED_EVIDENCE:
+                    record_bad = _structured_record(
+                        acid, level, evidence.get("ref", ""))
+                    if record_bad:
+                        evidence["_effective_result"] = "NOT_RUN"
+                        bad += record_bad
+                elif level == "browser_journey":
+                    # Browser reports carry the same source identity, plus an
+                    # exact row.  No current browser PASS exists today; this
+                    # branch is what prevents a future stale one being typed.
+                    ref, _, nodeid = evidence.get("ref", "").partition("#")
+                    try:
+                        report = json.loads((ROOT / ref).read_text(encoding="utf-8"))
+                    except (OSError, json.JSONDecodeError):
+                        report = {}
+                    rows = {r.get("nodeid"): r.get("state")
+                            for r in report.get("rows") or []}
+                    if (report.get("fingerprint") != verification_fingerprint()
+                            or rows.get(nodeid) != "PASS"):
+                        evidence["_effective_result"] = "STALE"
+                        bad.append(f"{acid}/{level}: browser PASS is absent or STALE")
+    doc["_class_a_result"] = class_a
+    doc["_execution_problems"] = bad
+    return bad
 
 
 # ------------------------------------------------------------------ lint ---
 
-def lint(doc: dict) -> list[str]:
+def lint(doc: dict, *, verify_execution: bool = False) -> list[str]:
     bad: list[str] = []
     items = doc.get("items") or []
     feats = doc.get("features") or []
@@ -258,6 +349,8 @@ def lint(doc: dict) -> list[str]:
     bad += _missing_records(items)
     bad += _build_rules(doc)
     bad += _delivery_lifecycle(doc, items)
+    if verify_execution:
+        bad += doc.get("_execution_problems") or bind_execution_evidence(doc)
 
     fids = [f.get("id") for f in feats]
     if len(fids) != len(set(fids)):
@@ -765,7 +858,8 @@ def proof_state(ac: dict) -> str:
     order = ["FAIL", "BLOCKED", "STALE", "NOT_RUN", "PASS", "NOT_APPLICABLE"]
     got = ac.get("evidence") or {}
     for lvl in ac.get("required_evidence") or []:
-        r = (got.get(lvl) or {}).get("result", "NOT_RUN")
+        evidence = got.get(lvl) or {}
+        r = evidence.get("_effective_result", evidence.get("result", "NOT_RUN"))
         if order.index(r) < order.index(worst):
             worst = r
     return worst
@@ -1101,7 +1195,7 @@ def main() -> int:
         return 0
 
     if args.command in ("lint", "check"):
-        bad = lint(doc)
+        bad = lint(doc, verify_execution=True)
         for b in bad:
             print(f"  {b}")
         pop = professional_population(doc)

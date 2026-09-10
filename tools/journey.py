@@ -40,8 +40,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 # `ModuleNotFoundError` -- which is how this tool crashed on its first run
 # after the console fix. `trace.py` does the same thing for the same reason.
 sys.path.insert(0, str(ROOT))
-from nm.domain.identity import source_fingerprint  # noqa: E402
 from tools._console import utf8_console  # noqa: E402
+from tools.evidence import verification_fingerprint  # noqa: E402
 
 # THE CONSOLE BEFORE THE PROSE. This table prints em-dashes and `·`, and a
 # Windows console defaulting to cp1252 raises `UnicodeEncodeError` half way
@@ -111,9 +111,9 @@ def _commit() -> str:
 
 
 def _fingerprint() -> str:
-    """The SOURCE identity, which is the one that survives a dirty tree."""
+    """The product, browser, test, runner and plan identity this exercised."""
     try:
-        return source_fingerprint()
+        return verification_fingerprint()
     except Exception:                       # noqa: BLE001
         return "unknown"
 

@@ -1,0 +1,4790 @@
+{
+  "command": "python -m pytest -m class_a -q",
+  "complete": true,
+  "exit_code": 0,
+  "finished_at": "2026-09-10T01:51:47+00:00",
+  "finished_fingerprint": "638c3de1d1ea90e89510",
+  "git": "997260b2993e19683ea4219ead49e704c7969d88+dirty",
+  "kind": "class_a",
+  "runner": "pytest 9.0.3; Python 3.11.9",
+  "schema": 1,
+  "selection": "full_class_a",
+  "source_fingerprint": "638c3de1d1ea90e89510",
+  "started_at": "2026-09-10T01:49:49+00:00",
+  "tests": {
+    "tests/test_a_brief_lands_exactly_once.py::test_a_brief_written_on_a_version_this_caller_never_read_is_refused": {
+      "duration_ms": 170.596,
+      "outcome": "passed"
+    },
+    "tests/test_a_brief_lands_exactly_once.py::test_a_caller_that_does_not_check_is_not_refused": {
+      "duration_ms": 201.604,
+      "outcome": "passed"
+    },
+    "tests/test_a_brief_lands_exactly_once.py::test_a_refusal_names_the_turn_so_a_retry_can_be_the_same_turn": {
+      "duration_ms": 168.019,
+      "outcome": "passed"
+    },
+    "tests/test_a_brief_lands_exactly_once.py::test_a_retry_after_a_lost_response_does_not_write_the_brief_twice": {
+      "duration_ms": 369.18,
+      "outcome": "passed"
+    },
+    "tests/test_a_brief_lands_exactly_once.py::test_the_page_mints_the_turn_id_and_the_retry_reuses_it": {
+      "duration_ms": 0.893,
+      "outcome": "passed"
+    },
+    "tests/test_a_brief_lands_exactly_once.py::test_two_different_briefs_are_two_turns": {
+      "duration_ms": 182.653,
+      "outcome": "passed"
+    },
+    "tests/test_a_decision_is_recorded.py::test_a_different_question_is_a_different_decision": {
+      "duration_ms": 0.466,
+      "outcome": "passed"
+    },
+    "tests/test_a_decision_is_recorded.py::test_a_record_that_does_not_say_who_decided_is_not_guessed_at": {
+      "duration_ms": 0.487,
+      "outcome": "passed"
+    },
+    "tests/test_a_decision_is_recorded.py::test_a_resolved_provision_is_recorded_as_a_decision": {
+      "duration_ms": 17.562,
+      "outcome": "passed"
+    },
+    "tests/test_a_decision_is_recorded.py::test_a_routing_that_moves_is_announced_with_its_prior": {
+      "duration_ms": 41.114,
+      "outcome": "passed"
+    },
+    "tests/test_a_decision_is_recorded.py::test_a_row_that_cannot_be_rebuilt_is_dropped_and_the_rest_kept": {
+      "duration_ms": 0.474,
+      "outcome": "passed"
+    },
+    "tests/test_a_decision_is_recorded.py::test_an_unchanged_routing_says_nothing": {
+      "duration_ms": 37.087,
+      "outcome": "passed"
+    },
+    "tests/test_a_decision_is_recorded.py::test_the_advocate_may_overrule_the_product": {
+      "duration_ms": 0.478,
+      "outcome": "passed"
+    },
+    "tests/test_a_decision_is_recorded.py::test_the_alternatives_are_read_out_of_the_sentence_the_adapter_writes": {
+      "duration_ms": 0.344,
+      "outcome": "passed"
+    },
+    "tests/test_a_decision_is_recorded.py::test_the_product_does_not_overrule_the_advocate": {
+      "duration_ms": 0.463,
+      "outcome": "passed"
+    },
+    "tests/test_a_decision_is_recorded.py::test_they_come_back_from_the_store_typed": {
+      "duration_ms": 16.753,
+      "outcome": "passed"
+    },
+    "tests/test_a_decision_is_recorded.py::test_two_answers_to_one_question_are_one_decision": {
+      "duration_ms": 0.545,
+      "outcome": "passed"
+    },
+    "tests/test_a_disclosure_is_served_not_recorded.py::test_a_refused_read_is_named_to_the_advocate_and_not_only_to_the_metrics": {
+      "duration_ms": 36.844,
+      "outcome": "passed"
+    },
+    "tests/test_a_disclosure_is_served_not_recorded.py::test_a_salvage_pass_that_could_not_run_says_so_on_the_served_turn": {
+      "duration_ms": 19.815,
+      "outcome": "passed"
+    },
+    "tests/test_a_disclosure_is_served_not_recorded.py::test_a_search_that_never_ran_says_so_and_borrows_no_neighbour": {
+      "duration_ms": 17.131,
+      "outcome": "passed"
+    },
+    "tests/test_a_disclosure_is_served_not_recorded.py::test_a_single_dispute_file_says_nothing_about_splitting": {
+      "duration_ms": 19.901,
+      "outcome": "passed"
+    },
+    "tests/test_a_disclosure_is_served_not_recorded.py::test_a_theory_that_could_not_be_formed_does_not_pass_as_one": {
+      "duration_ms": 18.102,
+      "outcome": "passed"
+    },
+    "tests/test_a_disclosure_is_served_not_recorded.py::test_a_theory_with_nothing_against_it_says_that_rather_than_going_quiet": {
+      "duration_ms": 18.559,
+      "outcome": "passed"
+    },
+    "tests/test_a_disclosure_is_served_not_recorded.py::test_the_cross_file_pass_is_disclosed_once_on_every_file": {
+      "duration_ms": 37.738,
+      "outcome": "passed"
+    },
+    "tests/test_a_disclosure_is_served_not_recorded.py::test_the_disputes_not_advised_on_are_named_in_the_answer": {
+      "duration_ms": 20.377,
+      "outcome": "passed"
+    },
+    "tests/test_a_documented_defect_uses_a_strict_marker.py::test_every_xfail_marker_is_strict_and_names_its_row": {
+      "duration_ms": 180.612,
+      "outcome": "passed"
+    },
+    "tests/test_a_documented_defect_uses_a_strict_marker.py::test_no_test_calls_xfail_instead_of_marking_it": {
+      "duration_ms": 177.068,
+      "outcome": "passed"
+    },
+    "tests/test_a_documented_defect_uses_a_strict_marker.py::test_the_xfail_scan_can_see_a_planted_call": {
+      "duration_ms": 0.519,
+      "outcome": "passed"
+    },
+    "tests/test_a_documented_defect_uses_a_strict_marker.py::test_the_xfail_scan_leaves_the_strict_marker_alone": {
+      "duration_ms": 0.42,
+      "outcome": "passed"
+    },
+    "tests/test_a_late_citation_is_fetched_once.py::test_a_provision_the_answer_named_is_fetched_and_the_answer_rewritten": {
+      "duration_ms": 36.597,
+      "outcome": "passed"
+    },
+    "tests/test_a_late_citation_is_fetched_once.py::test_a_second_failure_still_withholds": {
+      "duration_ms": 20.654,
+      "outcome": "passed"
+    },
+    "tests/test_a_late_citation_is_fetched_once.py::test_an_ordinary_turn_makes_no_extra_round": {
+      "duration_ms": 16.77,
+      "outcome": "passed"
+    },
+    "tests/test_a_late_citation_is_fetched_once.py::test_the_fetch_names_the_act_the_answer_named": {
+      "duration_ms": 21.072,
+      "outcome": "passed"
+    },
+    "tests/test_a_late_citation_is_fetched_once.py::test_the_round_runs_at_most_once": {
+      "duration_ms": 21.916,
+      "outcome": "passed"
+    },
+    "tests/test_a_late_citation_is_fetched_once.py::test_the_second_pass_is_declared_to_the_advocate": {
+      "duration_ms": 21.411,
+      "outcome": "passed"
+    },
+    "tests/test_a_new_party_stales_the_clearance.py::test_a_clearance_names_the_parties_it_never_saw": {
+      "duration_ms": 0.523,
+      "outcome": "passed"
+    },
+    "tests/test_a_new_party_stales_the_clearance.py::test_an_unassessed_screen_is_not_a_stale_clearance": {
+      "duration_ms": 1.235,
+      "outcome": "passed"
+    },
+    "tests/test_a_new_party_stales_the_clearance.py::test_the_turn_engine_asks_rather_than_computing_it": {
+      "duration_ms": 2.067,
+      "outcome": "passed"
+    },
+    "tests/test_a_new_party_stales_the_clearance.py::test_which_and_whether_agree": {
+      "duration_ms": 0.435,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate": {
+      "aggregate_of": 19,
+      "duration_ms": 391.2,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[accrual]": {
+      "duration_ms": 20.328,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[adverse]": {
+      "duration_ms": 17.255,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[attacks]": {
+      "duration_ms": 19.068,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[cause]": {
+      "duration_ms": 17.596,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[consistency]": {
+      "duration_ms": 17.831,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[dates]": {
+      "duration_ms": 15.153,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[dispute]": {
+      "duration_ms": 32.666,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[duty]": {
+      "duration_ms": 17.078,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[exposure]": {
+      "duration_ms": 41.018,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[factors]": {
+      "duration_ms": 18.262,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[inventory]": {
+      "duration_ms": 18.57,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[issues]": {
+      "duration_ms": 17.416,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[parties]": {
+      "duration_ms": 17.117,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[posture]": {
+      "duration_ms": 16.992,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[proof]": {
+      "duration_ms": 18.444,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[role]": {
+      "duration_ms": 33.763,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[route]": {
+      "duration_ms": 16.973,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[salvage]": {
+      "duration_ms": 18.681,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_read_that_could_not_run_is_named_to_the_advocate[theory]": {
+      "duration_ms": 16.989,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_a_turn_whose_reads_all_ran_says_nothing_about_refusals": {
+      "duration_ms": 17.376,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_every_declared_read_is_driven_here": {
+      "duration_ms": 10.756,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_the_disclosure_has_one_owner_wired_at_every_assembly_site": {
+      "duration_ms": 84.443,
+      "outcome": "passed"
+    },
+    "tests/test_a_refused_read_is_named.py::test_the_population_comes_from_the_trace_and_not_from_a_list": {
+      "duration_ms": 0.974,
+      "outcome": "passed"
+    },
+    "tests/test_a_stale_server_says_so.py::test_a_current_server_says_current": {
+      "duration_ms": 18.57,
+      "outcome": "passed"
+    },
+    "tests/test_a_stale_server_says_so.py::test_a_stale_server_says_stale_and_names_both_numbers": {
+      "duration_ms": 18.496,
+      "outcome": "passed"
+    },
+    "tests/test_a_stale_server_says_so.py::test_a_tree_that_cannot_be_read_is_not_an_all_clear": {
+      "duration_ms": 0.387,
+      "outcome": "passed"
+    },
+    "tests/test_a_stale_server_says_so.py::test_an_unknown_fingerprint_is_not_an_all_clear": {
+      "duration_ms": 0.454,
+      "outcome": "passed"
+    },
+    "tests/test_a_stale_server_says_so.py::test_health_carries_the_state": {
+      "duration_ms": 27.678,
+      "outcome": "passed"
+    },
+    "tests/test_a_stale_server_says_so.py::test_health_needs_no_session": {
+      "duration_ms": 26.518,
+      "outcome": "passed"
+    },
+    "tests/test_a_stale_server_says_so.py::test_the_page_checks_before_the_session_resolves": {
+      "duration_ms": 0.81,
+      "outcome": "passed"
+    },
+    "tests/test_a_step_cannot_contradict_the_figures.py::test_a_contradiction_is_rewritten_once_and_then_served": {
+      "duration_ms": 16.984,
+      "outcome": "passed"
+    },
+    "tests/test_a_step_cannot_contradict_the_figures.py::test_a_read_that_cannot_quote_the_step_serves_it": {
+      "duration_ms": 16.513,
+      "outcome": "passed"
+    },
+    "tests/test_a_step_cannot_contradict_the_figures.py::test_a_read_that_could_not_run_serves_the_step_and_says_so": {
+      "duration_ms": 16.108,
+      "outcome": "passed"
+    },
+    "tests/test_a_step_cannot_contradict_the_figures.py::test_a_read_that_finds_nothing_serves_the_step": {
+      "duration_ms": 16.654,
+      "outcome": "passed"
+    },
+    "tests/test_a_step_cannot_contradict_the_figures.py::test_a_read_that_names_a_fact_it_was_not_shown_serves_the_step": {
+      "duration_ms": 16.14,
+      "outcome": "passed"
+    },
+    "tests/test_a_step_cannot_contradict_the_figures.py::test_a_rewrite_that_still_contradicts_is_not_served": {
+      "duration_ms": 16.456,
+      "outcome": "passed"
+    },
+    "tests/test_a_step_cannot_contradict_the_figures.py::test_a_step_that_contradicts_the_figures_is_not_served": {
+      "duration_ms": 17.184,
+      "outcome": "passed"
+    },
+    "tests/test_a_step_cannot_contradict_the_figures.py::test_an_absent_register_is_a_claim_and_not_a_silence": {
+      "duration_ms": 0.73,
+      "outcome": "passed"
+    },
+    "tests/test_a_step_cannot_contradict_the_figures.py::test_every_limitation_state_becomes_a_claim": {
+      "aggregate_of": 3,
+      "duration_ms": 3.003,
+      "outcome": "passed"
+    },
+    "tests/test_a_step_cannot_contradict_the_figures.py::test_every_limitation_state_becomes_a_claim[computed]": {
+      "duration_ms": 0.964,
+      "outcome": "passed"
+    },
+    "tests/test_a_step_cannot_contradict_the_figures.py::test_every_limitation_state_becomes_a_claim[not_applicable]": {
+      "duration_ms": 1.135,
+      "outcome": "passed"
+    },
+    "tests/test_a_step_cannot_contradict_the_figures.py::test_every_limitation_state_becomes_a_claim[not_computed]": {
+      "duration_ms": 0.904,
+      "outcome": "passed"
+    },
+    "tests/test_a_withheld_turn_commits_no_conclusion.py::test_a_withheld_turn_commits_none_of_what_it_derived": {
+      "duration_ms": 24.953,
+      "outcome": "passed"
+    },
+    "tests/test_a_withheld_turn_commits_no_conclusion.py::test_a_withheld_turn_is_not_marked_applied": {
+      "duration_ms": 25.053,
+      "outcome": "passed"
+    },
+    "tests/test_a_withheld_turn_commits_no_conclusion.py::test_a_withheld_turn_keeps_the_facts_the_advocate_stated": {
+      "duration_ms": 25.718,
+      "outcome": "passed"
+    },
+    "tests/test_a_withheld_turn_commits_no_conclusion.py::test_the_derived_population_is_drawn_from_the_write_back": {
+      "duration_ms": 8.932,
+      "outcome": "passed"
+    },
+    "tests/test_adversarial_on_a_served_turn.py::test_a_blocked_turn_does_not_pay_for_the_cross_file_pass": {
+      "duration_ms": 54.045,
+      "outcome": "passed"
+    },
+    "tests/test_adversarial_on_a_served_turn.py::test_a_pass_that_did_not_run_says_so_rather_than_reading_as_empty": {
+      "duration_ms": 0.438,
+      "outcome": "passed"
+    },
+    "tests/test_adversarial_on_a_served_turn.py::test_a_report_claiming_findings_and_carrying_none_is_refused": {
+      "duration_ms": 0.409,
+      "outcome": "passed"
+    },
+    "tests/test_adversarial_on_a_served_turn.py::test_a_single_thread_file_still_gets_the_cross_file_line": {
+      "duration_ms": 19.006,
+      "outcome": "passed"
+    },
+    "tests/test_adversarial_on_a_served_turn.py::test_an_attack_with_no_answer_that_does_not_say_so_is_refused": {
+      "duration_ms": 0.522,
+      "outcome": "passed"
+    },
+    "tests/test_adversarial_on_a_served_turn.py::test_an_exposure_between_a_thread_and_itself_is_refused": {
+      "duration_ms": 0.4,
+      "outcome": "passed"
+    },
+    "tests/test_adversarial_on_a_served_turn.py::test_an_exposure_naming_a_thread_the_file_does_not_hold_is_dropped": {
+      "duration_ms": 0.385,
+      "outcome": "passed"
+    },
+    "tests/test_adversarial_on_a_served_turn.py::test_an_unanswerable_attack_that_stops_there_is_refused": {
+      "duration_ms": 0.439,
+      "outcome": "passed"
+    },
+    "tests/test_adversarial_on_a_served_turn.py::test_an_unanswerable_attack_with_a_plan_is_accepted_and_rendered": {
+      "duration_ms": 18.198,
+      "outcome": "passed"
+    },
+    "tests/test_adversarial_on_a_served_turn.py::test_the_cross_file_line_appears_exactly_once_on_a_multi_thread_file": {
+      "duration_ms": 37.529,
+      "outcome": "passed"
+    },
+    "tests/test_adversarial_on_a_served_turn.py::test_the_other_sides_case_reaches_the_advocate": {
+      "duration_ms": 18.338,
+      "outcome": "passed"
+    },
+    "tests/test_adversarial_on_a_served_turn.py::test_the_thread_comes_from_the_caller_and_not_from_the_model": {
+      "duration_ms": 0.46,
+      "outcome": "passed"
+    },
+    "tests/test_adversarial_on_a_served_turn.py::test_three_states_on_the_attack_read": {
+      "duration_ms": 0.34,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_an_advocate_can_enrol_and_then_sign_in": {
+      "duration_ms": 89.09,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_enrolling_the_same_email_twice_is_refused": {
+      "duration_ms": 85.409,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_name_email_and_password_are_required": {
+      "duration_ms": 9.001,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_registering_does_not_sign_anyone_in": {
+      "duration_ms": 55.3,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_the_bar_number_practice_and_firm_are_optional": {
+      "duration_ms": 88.393,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_the_email_is_the_login_handle_and_is_normalised": {
+      "duration_ms": 51.13,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_the_password_is_never_returned": {
+      "duration_ms": 46.776,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_the_password_rule_is_reached_rather_than_restated": {
+      "aggregate_of": 5,
+      "duration_ms": 56.705,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_the_password_rule_is_reached_rather_than_restated[ALLUPPER1!-lower-case]": {
+      "duration_ms": 10.148,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_the_password_rule_is_reached_rather_than_restated[Ab1!-8 characters]": {
+      "duration_ms": 12.698,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_the_password_rule_is_reached_rather_than_restated[NoDigits!!-numeral]": {
+      "duration_ms": 10.711,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_the_password_rule_is_reached_rather_than_restated[NoSpecial1A-special character]": {
+      "duration_ms": 11.751,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_the_password_rule_is_reached_rather_than_restated[alllower1!-upper-case]": {
+      "duration_ms": 11.397,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_register.py::test_two_passwords_that_differ_save_nothing": {
+      "duration_ms": 54.16,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_see_and_revoke_sessions.py::test_an_advocate_can_see_where_they_are_signed_in": {
+      "duration_ms": 121.914,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_see_and_revoke_sessions.py::test_an_ended_session_stays_on_the_list": {
+      "duration_ms": 163.476,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_see_and_revoke_sessions.py::test_registration_does_not_promise_a_firm_wide_conflict_registry": {
+      "duration_ms": 0.781,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_see_and_revoke_sessions.py::test_revoking_ends_the_others_and_keeps_this_one": {
+      "duration_ms": 178.224,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_see_and_revoke_sessions.py::test_revoking_twice_ends_nothing_the_second_time": {
+      "duration_ms": 150.722,
+      "outcome": "passed"
+    },
+    "tests/test_an_advocate_can_see_and_revoke_sessions.py::test_the_list_carries_no_token_and_no_fingerprint": {
+      "duration_ms": 102.897,
+      "outcome": "passed"
+    },
+    "tests/test_artefact_identity.py::test_a_matching_artefact_is_accepted": {
+      "duration_ms": 1.917,
+      "outcome": "passed"
+    },
+    "tests/test_artefact_identity.py::test_a_real_mismatched_index_is_refused": {
+      "duration_ms": 0.646,
+      "outcome": "passed"
+    },
+    "tests/test_artefact_identity.py::test_an_artefact_with_no_identity_is_refused_outright": {
+      "duration_ms": 1.644,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_a_credential_records_the_cost_it_was_made_with": {
+      "duration_ms": 78.617,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_a_credential_with_no_hash_is_refused": {
+      "duration_ms": 0.602,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_a_session_does_not_work_from_another_device": {
+      "duration_ms": 41.447,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_a_session_expires": {
+      "duration_ms": 42.002,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_a_short_password_is_refused_in_the_domain_not_at_the_door": {
+      "duration_ms": 0.36,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_an_advocate_with_no_firm_is_a_conflicts_registry_of_one": {
+      "duration_ms": 0.349,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_an_unknown_advocate_and_a_wrong_password_are_indistinguishable": {
+      "duration_ms": 189.502,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_an_unverifiable_algorithm_is_refused_at_construction": {
+      "duration_ms": 0.46,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_every_matter_route_requires_a_session": {
+      "duration_ms": 111.983,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_signing_out_ends_the_session_on_the_server": {
+      "duration_ms": 40.916,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_the_clock_does_not_disclose_which_advocates_exist": {
+      "duration_ms": 388.313,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_the_dummy_credential_matches_nothing": {
+      "duration_ms": 185.008,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_the_identifying_fields_may_not_be_blank": {
+      "duration_ms": 0.574,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_the_identity_carries_every_field_the_contract_names": {
+      "duration_ms": 0.379,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_the_password_is_never_written_to_disk": {
+      "duration_ms": 77.232,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_the_route_sweep_can_see_an_unguarded_route": {
+      "duration_ms": 5.646,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_the_token_is_never_written_to_disk": {
+      "duration_ms": 40.754,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_the_turn_request_has_no_field_to_assert_an_identity_with": {
+      "duration_ms": 115.926,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_two_sessions_never_share_a_token": {
+      "duration_ms": 0.546,
+      "outcome": "passed"
+    },
+    "tests/test_authentication.py::test_what_is_stored_is_a_fingerprint_and_not_the_token": {
+      "duration_ms": 0.37,
+      "outcome": "passed"
+    },
+    "tests/test_authority_hierarchy.py::test_a_larger_bench_supersedes_a_smaller_one_in_the_same_court": {
+      "duration_ms": 0.639,
+      "outcome": "passed"
+    },
+    "tests/test_authority_hierarchy.py::test_an_absent_index_answers_not_known_rather_than_defaulting": {
+      "duration_ms": 0.644,
+      "outcome": "passed"
+    },
+    "tests/test_authority_hierarchy.py::test_an_unknown_court_never_out_ranks_a_known_one": {
+      "duration_ms": 0.511,
+      "outcome": "passed"
+    },
+    "tests/test_authority_hierarchy.py::test_an_unrecorded_bench_blocks_the_comparison_rather_than_defaulting": {
+      "duration_ms": 0.533,
+      "outcome": "passed"
+    },
+    "tests/test_authority_hierarchy.py::test_bench_strength_is_described_in_the_advocates_vocabulary": {
+      "duration_ms": 0.907,
+      "outcome": "passed"
+    },
+    "tests/test_authority_hierarchy.py::test_co_ordinate_benches_do_not_supersede_each_other": {
+      "duration_ms": 0.54,
+      "outcome": "passed"
+    },
+    "tests/test_authority_hierarchy.py::test_the_predecessor_high_court_ranks_as_our_own": {
+      "duration_ms": 0.698,
+      "outcome": "passed"
+    },
+    "tests/test_authority_hierarchy.py::test_the_supreme_court_is_senior_to_every_high_court": {
+      "duration_ms": 0.581,
+      "outcome": "passed"
+    },
+    "tests/test_blank_values.py::test_blank_is_the_one_definition_of_carrying_nothing": {
+      "duration_ms": 0.348,
+      "outcome": "passed"
+    },
+    "tests/test_blank_values.py::test_no_required_string_field_accepts_a_value_made_of_whitespace": {
+      "duration_ms": 707.649,
+      "outcome": "passed"
+    },
+    "tests/test_blank_values.py::test_the_product_defines_dataclasses_this_test_can_see": {
+      "duration_ms": 12.563,
+      "outcome": "passed"
+    },
+    "tests/test_chronology.py::test_a_date_read_from_words_the_advocate_never_wrote_is_refused": {
+      "duration_ms": 0.684,
+      "outcome": "passed"
+    },
+    "tests/test_chronology.py::test_a_date_the_words_do_not_fix_is_recorded_as_undated": {
+      "duration_ms": 0.511,
+      "outcome": "passed"
+    },
+    "tests/test_chronology.py::test_a_documented_date_and_an_asserted_one_are_not_the_same_thing": {
+      "duration_ms": 0.505,
+      "outcome": "passed"
+    },
+    "tests/test_chronology.py::test_a_malformed_date_is_undated_and_never_partially_parsed": {
+      "duration_ms": 0.571,
+      "outcome": "passed"
+    },
+    "tests/test_chronology.py::test_a_resolved_date_names_what_it_was_counted_from": {
+      "duration_ms": 0.414,
+      "outcome": "passed"
+    },
+    "tests/test_chronology.py::test_an_empty_thread_has_an_empty_chart_and_not_an_error": {
+      "duration_ms": 0.518,
+      "outcome": "passed"
+    },
+    "tests/test_chronology.py::test_different_events_on_different_dates_are_not_a_conflict": {
+      "duration_ms": 0.694,
+      "outcome": "passed"
+    },
+    "tests/test_chronology.py::test_the_chart_is_ordered_and_keeps_what_it_could_not_date": {
+      "duration_ms": 1.147,
+      "outcome": "passed"
+    },
+    "tests/test_chronology.py::test_the_same_event_on_the_same_date_is_not_a_conflict": {
+      "duration_ms": 1.004,
+      "outcome": "passed"
+    },
+    "tests/test_chronology.py::test_two_dates_for_one_event_are_surfaced_and_both_kept": {
+      "duration_ms": 0.767,
+      "outcome": "passed"
+    },
+    "tests/test_citation_patterns.py::test_a_case_number_is_not_a_section_number": {
+      "duration_ms": 0.362,
+      "outcome": "passed"
+    },
+    "tests/test_citation_patterns.py::test_a_named_act_beats_every_keyword_score": {
+      "duration_ms": 9.121,
+      "outcome": "passed"
+    },
+    "tests/test_citation_patterns.py::test_a_schedule_article_resolves_to_the_key_the_corpus_uses": {
+      "duration_ms": 0.417,
+      "outcome": "passed"
+    },
+    "tests/test_citation_patterns.py::test_a_superseded_act_is_declared_rather_than_dropped": {
+      "duration_ms": 9.245,
+      "outcome": "passed"
+    },
+    "tests/test_citation_patterns.py::test_an_act_is_named_or_it_is_inferred_and_never_silently_matched": {
+      "duration_ms": 8.656,
+      "outcome": "passed"
+    },
+    "tests/test_citation_patterns.py::test_an_inferred_act_names_what_else_it_could_have_been": {
+      "duration_ms": 8.868,
+      "outcome": "passed"
+    },
+    "tests/test_citation_patterns.py::test_case_names_are_found_and_prose_is_not": {
+      "duration_ms": 0.329,
+      "outcome": "passed"
+    },
+    "tests/test_citation_patterns.py::test_no_act_title_is_a_substring_of_another": {
+      "duration_ms": 8.433,
+      "outcome": "passed"
+    },
+    "tests/test_citation_patterns.py::test_no_keyword_is_claimed_by_two_acts": {
+      "duration_ms": 9.374,
+      "outcome": "passed"
+    },
+    "tests/test_citation_patterns.py::test_no_module_defines_its_own_provision_pattern": {
+      "duration_ms": 16.8,
+      "outcome": "passed"
+    },
+    "tests/test_citation_patterns.py::test_ordinary_provision_references_still_match": {
+      "duration_ms": 0.433,
+      "outcome": "passed"
+    },
+    "tests/test_citation_patterns.py::test_two_acts_may_share_a_title_only_if_their_windows_do_not_overlap": {
+      "duration_ms": 8.947,
+      "outcome": "passed"
+    },
+    "tests/test_composed_text_is_not_a_citation.py::test_a_rule_id_is_not_a_citation_form": {
+      "duration_ms": 0.371,
+      "outcome": "passed"
+    },
+    "tests/test_composed_text_is_not_a_citation.py::test_every_court_still_gets_a_reason": {
+      "duration_ms": 0.54,
+      "outcome": "passed"
+    },
+    "tests/test_composed_text_is_not_a_citation.py::test_no_binding_reason_reads_as_a_citation": {
+      "duration_ms": 7.742,
+      "outcome": "passed"
+    },
+    "tests/test_composed_text_is_not_a_citation.py::test_no_gate_disclosure_reads_as_a_citation": {
+      "duration_ms": 1.187,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_a_filtered_zero_names_the_filter_that_narrowed_it": {
+      "duration_ms": 2.819,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_a_query_of_pure_operators_is_not_assessed_rather_than_crashing": {
+      "duration_ms": 2.546,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_a_result_with_no_index_named_cannot_be_constructed": {
+      "duration_ms": 0.855,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_a_search_hit_carries_no_act_field_to_be_mistaken_for_one": {
+      "duration_ms": 0.418,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_a_search_that_ran_must_carry_what_it_searched": {
+      "duration_ms": 0.746,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_an_index_that_cannot_be_opened_is_not_assessed_never_empty": {
+      "duration_ms": 1.902,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_an_index_with_no_identity_is_not_searched_at_all": {
+      "duration_ms": 27.782,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_an_unknown_source_size_is_none_and_never_a_ratio_of_zero": {
+      "duration_ms": 0.597,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_every_hit_carries_a_confidence_that_is_a_probability": {
+      "duration_ms": 0.564,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_every_result_says_which_law_it_searched": {
+      "duration_ms": 7.55,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_no_hit_may_claim_resolved_provenance": {
+      "duration_ms": 0.611,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_no_route_turns_a_search_hit_into_a_fact_on_a_matter": {
+      "duration_ms": 1.999,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_not_assessed_without_a_reason_is_refused": {
+      "duration_ms": 0.758,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_the_query_builder_never_scores_a_title_against_a_title": {
+      "duration_ms": 0.765,
+      "outcome": "passed"
+    },
+    "tests/test_corpus_search.py::test_the_search_surface_cannot_identify_an_act": {
+      "duration_ms": 0.485,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_a_corrected_date_replaces_the_old_one_on_a_served_turn": {
+      "duration_ms": 44.561,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_a_correction_that_was_taken_raises_no_question": {
+      "duration_ms": 43.237,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_a_missed_correction_becomes_a_blocking_question": {
+      "duration_ms": 40.583,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_a_superseded_fact_leaves_the_chart": {
+      "duration_ms": 0.538,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_adding_a_fact_that_is_already_on_the_file_is_refused": {
+      "duration_ms": 0.777,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_amending_a_fact_the_matter_does_not_hold_is_refused": {
+      "duration_ms": 0.652,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_amending_replaces_in_place": {
+      "duration_ms": 1.086,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_an_id_the_file_does_not_hold_is_dropped": {
+      "duration_ms": 0.419,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_an_ordinary_event_corrects_nothing": {
+      "duration_ms": 0.479,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_it_returns_the_phrase_so_the_question_can_quote_them": {
+      "duration_ms": 0.306,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_the_chart_is_unchanged_where_nothing_was_superseded": {
+      "duration_ms": 0.351,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_the_date_row_says_what_it_replaces": {
+      "duration_ms": 0.472,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_the_limitation_names_the_entries_it_did_not_run_from": {
+      "duration_ms": 20.008,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_the_phrase_list_detects_an_attempt_and_decides_nothing": {
+      "duration_ms": 0.384,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_the_prompt_carries_the_ids_there_are_to_name": {
+      "duration_ms": 0.338,
+      "outcome": "passed"
+    },
+    "tests/test_correction_supersedes.py::test_the_superseded_fact_is_still_on_the_file": {
+      "duration_ms": 0.45,
+      "outcome": "passed"
+    },
+    "tests/test_deadlines.py::test_a_deadline_can_reach_every_status_including_near": {
+      "duration_ms": 1.062,
+      "outcome": "passed"
+    },
+    "tests/test_deadlines.py::test_a_deadline_cannot_be_built_without_what_makes_it_actionable": {
+      "duration_ms": 0.642,
+      "outcome": "passed"
+    },
+    "tests/test_deadlines.py::test_a_deadline_with_no_computable_date_stays_on_the_register": {
+      "duration_ms": 0.48,
+      "outcome": "passed"
+    },
+    "tests/test_deadlines.py::test_a_passed_action_is_never_listed_among_what_will_not_wait": {
+      "duration_ms": 0.555,
+      "outcome": "passed"
+    },
+    "tests/test_deadlines.py::test_a_passed_deadline_is_reported_as_passed_and_never_dropped": {
+      "duration_ms": 0.758,
+      "outcome": "passed"
+    },
+    "tests/test_deadlines.py::test_status_is_recomputed_and_never_stored": {
+      "duration_ms": 0.425,
+      "outcome": "passed"
+    },
+    "tests/test_deadlines.py::test_the_thread_carrying_the_nearest_deadline_is_addressed_first": {
+      "duration_ms": 0.658,
+      "outcome": "passed"
+    },
+    "tests/test_defect_register.py::test_every_check_the_register_names_actually_exists": {
+      "duration_ms": 21.189,
+      "outcome": "passed"
+    },
+    "tests/test_defect_register.py::test_every_declared_enumerator_exists_and_draws_from_the_product": {
+      "duration_ms": 4.886,
+      "outcome": "passed"
+    },
+    "tests/test_defect_register.py::test_every_defect_an_enumerator_subsumes_names_that_enumerator": {
+      "duration_ms": 16.117,
+      "outcome": "passed"
+    },
+    "tests/test_defect_register.py::test_every_fixed_defect_names_something_that_can_be_run": {
+      "duration_ms": 16.912,
+      "outcome": "passed"
+    },
+    "tests/test_defect_register.py::test_every_named_test_function_is_really_in_that_file": {
+      "duration_ms": 133.806,
+      "outcome": "passed"
+    },
+    "tests/test_defect_register.py::test_every_open_defect_can_be_reproduced_or_says_why_not": {
+      "duration_ms": 16.298,
+      "outcome": "passed"
+    },
+    "tests/test_defect_register.py::test_every_recurring_shape_has_a_mechanism_more_than_one_defect_points_at": {
+      "duration_ms": 55.352,
+      "outcome": "passed"
+    },
+    "tests/test_defect_register.py::test_no_reproduction_declaration_outlives_its_row": {
+      "duration_ms": 15.783,
+      "outcome": "passed"
+    },
+    "tests/test_defect_register.py::test_the_enumerator_scan_can_see_a_defect_that_ignores_its_sweep": {
+      "duration_ms": 0.339,
+      "outcome": "passed"
+    },
+    "tests/test_defect_register.py::test_the_open_row_scan_can_see_an_undeclared_one": {
+      "duration_ms": 0.424,
+      "outcome": "passed"
+    },
+    "tests/test_defect_register.py::test_the_register_can_be_read_at_all": {
+      "duration_ms": 16.736,
+      "outcome": "passed"
+    },
+    "tests/test_defect_register.py::test_the_register_is_getting_more_runnable_not_less": {
+      "duration_ms": 17.11,
+      "outcome": "passed"
+    },
+    "tests/test_defect_register.py::test_the_stale_declaration_scan_can_see_a_closed_row": {
+      "duration_ms": 0.367,
+      "outcome": "passed"
+    },
+    "tests/test_enrolment_is_authorised.py::test_a_blank_configured_code_does_not_open_the_door": {
+      "duration_ms": 0.459,
+      "outcome": "passed"
+    },
+    "tests/test_enrolment_is_authorised.py::test_an_unauthorised_attempt_enrols_nobody": {
+      "duration_ms": 154.955,
+      "outcome": "passed"
+    },
+    "tests/test_enrolment_is_authorised.py::test_an_unconfigured_deployment_is_closed_and_not_open": {
+      "duration_ms": 0.419,
+      "outcome": "passed"
+    },
+    "tests/test_enrolment_is_authorised.py::test_it_is_refused_on_the_wire_and_not_only_in_the_function": {
+      "duration_ms": 171.285,
+      "outcome": "passed"
+    },
+    "tests/test_enrolment_is_authorised.py::test_the_authorisation_is_compared_without_leaking_its_length": {
+      "duration_ms": 0.76,
+      "outcome": "passed"
+    },
+    "tests/test_enrolment_is_authorised.py::test_the_refusal_tells_the_advocate_what_to_do_instead": {
+      "duration_ms": 0.367,
+      "outcome": "passed"
+    },
+    "tests/test_enrolment_is_authorised.py::test_the_right_authorisation_is_admitted": {
+      "duration_ms": 0.379,
+      "outcome": "passed"
+    },
+    "tests/test_enrolment_is_authorised.py::test_the_wrong_authorisation_is_refused": {
+      "duration_ms": 0.409,
+      "outcome": "passed"
+    },
+    "tests/test_every_cause_is_defined_not_just_listed.py::test_a_cause_with_no_definition_renders_visibly": {
+      "duration_ms": 0.304,
+      "outcome": "passed"
+    },
+    "tests/test_every_cause_is_defined_not_just_listed.py::test_cannot_tell_survives_the_vocabulary": {
+      "duration_ms": 0.308,
+      "outcome": "passed"
+    },
+    "tests/test_every_cause_is_defined_not_just_listed.py::test_every_cause_the_product_routes_on_carries_a_definition": {
+      "duration_ms": 0.429,
+      "outcome": "passed"
+    },
+    "tests/test_every_cause_is_defined_not_just_listed.py::test_the_definitions_reach_the_schema": {
+      "duration_ms": 0.323,
+      "outcome": "passed"
+    },
+    "tests/test_every_cause_is_defined_not_just_listed.py::test_the_two_debt_causes_are_told_apart_in_words": {
+      "duration_ms": 0.284,
+      "outcome": "passed"
+    },
+    "tests/test_every_evidence_adapter_answers_the_whole_port.py::test_a_real_adapter_overrides_them": {
+      "duration_ms": 0.34,
+      "outcome": "passed"
+    },
+    "tests/test_every_evidence_adapter_answers_the_whole_port.py::test_every_evidence_adapter_answers_the_whole_port": {
+      "duration_ms": 476.348,
+      "outcome": "passed"
+    },
+    "tests/test_every_evidence_adapter_answers_the_whole_port.py::test_the_port_declares_every_member_the_product_reaches": {
+      "duration_ms": 205.638,
+      "outcome": "passed"
+    },
+    "tests/test_every_evidence_adapter_answers_the_whole_port.py::test_the_protocols_defaults_are_the_honest_direction": {
+      "duration_ms": 0.427,
+      "outcome": "passed"
+    },
+    "tests/test_every_evidence_adapter_answers_the_whole_port.py::test_the_sweep_can_see_the_population": {
+      "duration_ms": 477.652,
+      "outcome": "passed"
+    },
+    "tests/test_every_persisted_field_has_a_writer.py::test_every_persisted_field_has_a_writer_or_is_declared_reserved": {
+      "duration_ms": 172.431,
+      "outcome": "passed"
+    },
+    "tests/test_every_persisted_field_has_a_writer.py::test_every_reservation_names_a_field_that_exists": {
+      "duration_ms": 1.083,
+      "outcome": "passed"
+    },
+    "tests/test_every_persisted_field_has_a_writer.py::test_no_reservation_outlives_its_writer": {
+      "duration_ms": 168.191,
+      "outcome": "passed"
+    },
+    "tests/test_every_persisted_field_has_a_writer.py::test_the_open_reservations_say_they_are_open": {
+      "duration_ms": 0.363,
+      "outcome": "passed"
+    },
+    "tests/test_every_persisted_field_has_a_writer.py::test_the_scan_can_see_a_field_nothing_writes": {
+      "duration_ms": 174.563,
+      "outcome": "passed"
+    },
+    "tests/test_every_persisted_field_has_a_writer.py::test_the_scan_can_see_the_record": {
+      "duration_ms": 1.819,
+      "outcome": "passed"
+    },
+    "tests/test_every_persisted_field_has_a_writer.py::test_the_sweep_does_not_attribute_a_call_twice": {
+      "duration_ms": 0.383,
+      "outcome": "passed"
+    },
+    "tests/test_every_persisted_field_has_a_writer.py::test_the_sweep_tells_two_classes_with_one_field_name_apart": {
+      "duration_ms": 0.495,
+      "outcome": "passed"
+    },
+    "tests/test_every_sweep_has_a_positive_control.py::test_an_admitted_gap_is_never_also_a_registered_control": {
+      "duration_ms": 0.352,
+      "outcome": "passed"
+    },
+    "tests/test_every_sweep_has_a_positive_control.py::test_every_sweep_names_a_control_that_proves_it_can_fail": {
+      "duration_ms": 0.421,
+      "outcome": "passed"
+    },
+    "tests/test_every_sweep_has_a_positive_control.py::test_no_admitted_gap_outlives_the_sweep_it_was_admitted_for": {
+      "duration_ms": 0.372,
+      "outcome": "passed"
+    },
+    "tests/test_every_sweep_has_a_positive_control.py::test_no_control_is_named_for_a_sweep_that_no_longer_exists": {
+      "duration_ms": 0.385,
+      "outcome": "passed"
+    },
+    "tests/test_every_sweep_has_a_positive_control.py::test_the_suite_contains_sweeps_to_check": {
+      "duration_ms": 1614.522,
+      "outcome": "passed"
+    },
+    "tests/test_evidence_is_bound_to_execution.py::test_a_source_change_makes_the_machine_result_stale": {
+      "duration_ms": 492.792,
+      "outcome": "passed"
+    },
+    "tests/test_evidence_is_bound_to_execution.py::test_an_authored_pass_requires_the_exact_machine_result": {
+      "duration_ms": 443.421,
+      "outcome": "passed"
+    },
+    "tests/test_evidence_is_bound_to_execution.py::test_non_automated_pass_needs_a_structured_dated_record": {
+      "duration_ms": 435.386,
+      "outcome": "passed"
+    },
+    "tests/test_evidence_is_bound_to_execution.py::test_pushes_and_pull_requests_run_the_repository_class_a_gate": {
+      "duration_ms": 0.568,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_a_chronology_with_no_dated_entry_at_all_is_not_assessed": {
+      "duration_ms": 0.374,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_a_factor_cannot_attach_to_a_fact_the_file_does_not_hold": {
+      "duration_ms": 0.377,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_a_kind_added_to_the_read_is_fetched_without_touching_the_turn": {
+      "duration_ms": 0.47,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_a_kind_outside_the_schema_is_refused_rather_than_coerced": {
+      "duration_ms": 0.313,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_a_kind_this_producer_does_not_read_is_refused": {
+      "duration_ms": 0.373,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_a_paraphrase_presented_as_a_quotation_is_refused": {
+      "duration_ms": 0.372,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_a_part_payment_needs_section_19_and_not_section_18": {
+      "duration_ms": 0.429,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_a_refusal_is_not_the_same_state_as_finding_none": {
+      "duration_ms": 0.312,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_a_spoken_admission_does_not_restart_the_period": {
+      "duration_ms": 0.315,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_an_acknowledgment_after_the_bar_revives_nothing": {
+      "duration_ms": 0.35,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_an_acknowledgment_on_the_file_reaches_the_arithmetic": {
+      "duration_ms": 0.475,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_an_undated_entry_cannot_carry_a_factor": {
+      "duration_ms": 0.482,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_an_unretrieved_section_is_not_assessed_and_never_none_found": {
+      "duration_ms": 0.408,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_every_kind_the_schema_offers_names_the_section_it_needs": {
+      "duration_ms": 0.417,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_nothing_having_read_the_account_is_a_different_state_from_finding_none": {
+      "duration_ms": 0.367,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_the_finding_is_the_retrieved_span_and_not_a_summary_of_it": {
+      "duration_ms": 0.449,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_the_kinds_not_read_are_still_declared_not_assessed": {
+      "duration_ms": 0.339,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_the_prompt_carries_the_chronology_ids_the_answer_must_name": {
+      "duration_ms": 0.357,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_the_schema_offers_a_way_to_say_nothing_applies": {
+      "duration_ms": 0.368,
+      "outcome": "passed"
+    },
+    "tests/test_factors.py::test_the_turn_fetches_exactly_the_sections_this_read_needs": {
+      "duration_ms": 1.291,
+      "outcome": "passed"
+    },
+    "tests/test_factors_on_a_served_turn.py::test_an_acknowledgment_moves_the_date_the_advocate_is_shown": {
+      "duration_ms": 21.004,
+      "outcome": "passed"
+    },
+    "tests/test_factors_on_a_served_turn.py::test_the_turn_asks_for_the_section_and_not_only_the_article": {
+      "duration_ms": 38.275,
+      "outcome": "passed"
+    },
+    "tests/test_factors_on_a_served_turn.py::test_the_unretrieved_section_is_disclosed_and_never_silently_none": {
+      "duration_ms": 21.793,
+      "outcome": "passed"
+    },
+    "tests/test_gaps.py::test_a_clearance_names_who_what_and_against_what": {
+      "duration_ms": 0.402,
+      "outcome": "passed"
+    },
+    "tests/test_gaps.py::test_a_corrected_fact_re_derives_dependents_and_reports_the_prior_value": {
+      "duration_ms": 0.44,
+      "outcome": "passed"
+    },
+    "tests/test_gaps.py::test_a_quarantine_releases_exactly_once_and_the_second_call_raises": {
+      "duration_ms": 0.401,
+      "outcome": "passed"
+    },
+    "tests/test_gaps.py::test_a_question_cannot_exist_without_the_gap_it_fills": {
+      "duration_ms": 0.556,
+      "outcome": "passed"
+    },
+    "tests/test_gaps.py::test_a_value_computed_for_the_first_time_is_a_change_with_no_prior": {
+      "duration_ms": 0.363,
+      "outcome": "passed"
+    },
+    "tests/test_gaps.py::test_advice_already_given_is_reported_as_superseded": {
+      "duration_ms": 0.505,
+      "outcome": "passed"
+    },
+    "tests/test_gaps.py::test_answer_length_is_a_function_of_live_threads_not_turn_number": {
+      "duration_ms": 123.538,
+      "outcome": "passed"
+    },
+    "tests/test_gaps.py::test_nothing_blocked_means_nothing_is_owed": {
+      "duration_ms": 0.351,
+      "outcome": "passed"
+    },
+    "tests/test_gaps.py::test_quarantined_substance_is_unreachable_until_a_human_clears_it": {
+      "duration_ms": 0.35,
+      "outcome": "passed"
+    },
+    "tests/test_gaps.py::test_questions_are_batched_one_thread_at_a_time": {
+      "duration_ms": 0.421,
+      "outcome": "passed"
+    },
+    "tests/test_gaps.py::test_the_advocate_changes_subject_and_nm_follows_in_the_same_turn": {
+      "duration_ms": 0.414,
+      "outcome": "passed"
+    },
+    "tests/test_gaps.py::test_the_queue_ranks_a_blocking_gate_above_everything_interesting": {
+      "duration_ms": 0.49,
+      "outcome": "passed"
+    },
+    "tests/test_gaps.py::test_where_re_derivation_changes_nothing_the_answer_is_one_line": {
+      "duration_ms": 0.297,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_a_change_reported_without_its_prior_cannot_be_built": {
+      "duration_ms": 0.392,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_a_corrected_date_moves_the_value_and_says_what_it_was": {
+      "duration_ms": 83.492,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_a_count_that_grew_is_not_announced_as_a_correction": {
+      "duration_ms": 0.314,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_a_derivation_that_produced_nothing_records_no_row": {
+      "duration_ms": 0.575,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_a_derivation_that_really_vanishes_is_still_reported": {
+      "duration_ms": 0.314,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_a_derivation_that_stopped_being_computed_is_reported": {
+      "duration_ms": 0.348,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_a_first_turn_reports_no_cascade": {
+      "duration_ms": 20.628,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_a_gap_has_no_default_kind": {
+      "duration_ms": 0.447,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_a_gap_that_blocks_nothing_cannot_be_built": {
+      "duration_ms": 0.681,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_a_measurement_that_vanishes_is_still_reported_lost": {
+      "duration_ms": 0.299,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_a_position_that_moved_is_still_announced": {
+      "duration_ms": 0.383,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_a_question_cannot_exist_without_the_gap_it_fills": {
+      "duration_ms": 0.444,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_a_value_that_appears_is_a_change_with_no_prior": {
+      "duration_ms": 0.409,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_advice_that_rested_on_a_moved_value_is_named": {
+      "duration_ms": 0.51,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_an_unanswered_undo_becomes_a_blocking_gap": {
+      "duration_ms": 45.446,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_an_unchanged_inventory_is_not_announced_as_a_loss": {
+      "duration_ms": 44.023,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_an_unclassified_derivation_is_treated_as_a_position": {
+      "duration_ms": 0.29,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_nothing_is_owed_when_nothing_is_blocked": {
+      "duration_ms": 0.336,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_nothing_lost_reports_nothing": {
+      "duration_ms": 0.285,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_nothing_moving_is_one_line_and_not_a_section": {
+      "duration_ms": 0.315,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_the_answer_closes_with_what_is_still_missing": {
+      "duration_ms": 21.411,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_the_cascade_counts_what_the_thread_holds_not_what_the_turn_showed": {
+      "duration_ms": 2.082,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_the_questions_come_out_of_the_queue_as_one_batched_ask": {
+      "duration_ms": 22.588,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_the_queues_preference_is_carried_and_not_obeyed": {
+      "duration_ms": 0.386,
+      "outcome": "passed"
+    },
+    "tests/test_gaps_and_cascade_on_a_served_turn.py::test_the_ranking_is_the_prds_order": {
+      "duration_ms": 0.589,
+      "outcome": "passed"
+    },
+    "tests/test_gate_matrix.py::test_a_gate_cleared_by_a_person_carries_a_could_not_evaluate_state": {
+      "duration_ms": 0.358,
+      "outcome": "passed"
+    },
+    "tests/test_gate_matrix.py::test_a_two_state_human_cleared_gate_cannot_be_constructed": {
+      "duration_ms": 0.385,
+      "outcome": "passed"
+    },
+    "tests/test_gate_matrix.py::test_an_out_of_vocabulary_state_is_refused": {
+      "duration_ms": 0.558,
+      "outcome": "passed"
+    },
+    "tests/test_gate_matrix.py::test_an_unknown_gate_id_raises_rather_than_becoming_a_label": {
+      "duration_ms": 0.345,
+      "outcome": "passed"
+    },
+    "tests/test_gate_matrix.py::test_every_gate_names_a_feature_and_a_visible_response": {
+      "duration_ms": 0.338,
+      "outcome": "passed"
+    },
+    "tests/test_gate_matrix.py::test_gate_ids_are_unique": {
+      "duration_ms": 0.294,
+      "outcome": "passed"
+    },
+    "tests/test_gate_matrix.py::test_the_response_is_read_from_the_matrix_not_passed_in": {
+      "duration_ms": 0.669,
+      "outcome": "passed"
+    },
+    "tests/test_gate_matrix.py::test_the_turn_is_withheld_by_the_grounding_family_and_nothing_else": {
+      "duration_ms": 0.405,
+      "outcome": "passed"
+    },
+    "tests/test_gate_matrix.py::test_unbuilt_gates_are_declared_unbuilt": {
+      "duration_ms": 0.282,
+      "outcome": "passed"
+    },
+    "tests/test_goldens.py::test_every_named_suite_resolves_and_is_non_empty": {
+      "duration_ms": 0.388,
+      "outcome": "passed"
+    },
+    "tests/test_goldens.py::test_every_scenario_is_reachable_from_a_suite": {
+      "duration_ms": 1.234,
+      "outcome": "passed"
+    },
+    "tests/test_goldens.py::test_slice_n_selects_exactly_the_scenarios_runnable_by_then": {
+      "duration_ms": 0.423,
+      "outcome": "passed"
+    },
+    "tests/test_goldens.py::test_the_authority_table_covers_every_act_the_scenarios_name": {
+      "duration_ms": 0.712,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_a_binding_status_without_its_rule_cannot_be_constructed": {
+      "duration_ms": 0.368,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_a_case_name_that_was_never_retrieved_withholds_the_turn": {
+      "duration_ms": 0.59,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_a_jurisdiction_outside_the_corpus_scope_is_refused": {
+      "duration_ms": 0.353,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_a_provision_that_was_retrieved_passes": {
+      "duration_ms": 0.603,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_a_provision_the_answer_cites_but_never_retrieved_withholds_the_turn": {
+      "duration_ms": 0.706,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_a_quotation_not_verbatim_in_a_retrieved_span_withholds_the_turn": {
+      "duration_ms": 0.632,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_a_verbatim_quotation_survives_whitespace_and_case": {
+      "duration_ms": 0.557,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_a_withheld_turn_still_says_what_could_not_be_established": {
+      "duration_ms": 17.997,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_a_withheld_turn_still_writes_its_metrics": {
+      "duration_ms": 23.392,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_a_year_that_arrives_as_text_does_not_crash_the_binding_rule": {
+      "duration_ms": 0.718,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_an_authority_whose_treatment_was_never_checked_cannot_carry_a_proposition": {
+      "duration_ms": 0.329,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_an_authority_with_negative_treatment_cannot_carry_a_proposition": {
+      "duration_ms": 0.303,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_an_unknown_court_is_not_assessed_rather_than_persuasive": {
+      "duration_ms": 0.351,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_an_unmeasured_installation_says_so_rather_than_implying_coverage": {
+      "duration_ms": 14.774,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_andhra_pradesh_after_the_bifurcation_is_not_assessed_rather_than_assumed": {
+      "duration_ms": 0.358,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_andhra_pradesh_before_the_bifurcation_binds_telangana": {
+      "duration_ms": 0.382,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_naming_what_could_not_be_retrieved_is_not_citing_it": {
+      "duration_ms": 0.712,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_text_not_in_force_on_the_governing_date_cannot_carry_a_proposition": {
+      "duration_ms": 0.304,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_the_corpus_gap_is_disclosed_before_the_authority_search_not_after": {
+      "duration_ms": 14.531,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_the_engine_withholds_a_turn_whose_answer_invents_a_citation": {
+      "duration_ms": 21.393,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_the_supreme_court_binds_regardless_of_date": {
+      "duration_ms": 0.4,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_the_unnormalised_court_label_is_not_silently_dropped": {
+      "duration_ms": 0.302,
+      "outcome": "passed"
+    },
+    "tests/test_grounding_gate.py::test_treatment_cannot_claim_clean_without_saying_on_what": {
+      "duration_ms": 0.354,
+      "outcome": "passed"
+    },
+    "tests/test_inventory_on_a_served_turn.py::test_a_read_leaves_admissibility_and_weight_unasked": {
+      "duration_ms": 0.582,
+      "outcome": "passed"
+    },
+    "tests/test_inventory_on_a_served_turn.py::test_a_written_but_unissued_instruction_is_its_own_failure": {
+      "duration_ms": 0.718,
+      "outcome": "passed"
+    },
+    "tests/test_inventory_on_a_served_turn.py::test_an_item_at_risk_with_no_preservation_step_becomes_a_question": {
+      "duration_ms": 19.849,
+      "outcome": "passed"
+    },
+    "tests/test_inventory_on_a_served_turn.py::test_an_item_the_client_holds_raises_no_preservation_question": {
+      "duration_ms": 0.732,
+      "outcome": "passed"
+    },
+    "tests/test_inventory_on_a_served_turn.py::test_an_out_of_vocabulary_holder_becomes_unknown_not_an_invented_member": {
+      "duration_ms": 0.532,
+      "outcome": "passed"
+    },
+    "tests/test_inventory_on_a_served_turn.py::test_an_ungrounded_item_is_refused_and_the_rest_survive": {
+      "duration_ms": 0.521,
+      "outcome": "passed"
+    },
+    "tests/test_inventory_on_a_served_turn.py::test_listing_an_item_answers_none_of_the_three_questions": {
+      "duration_ms": 0.496,
+      "outcome": "passed"
+    },
+    "tests/test_inventory_on_a_served_turn.py::test_nothing_mentioned_is_a_different_state_from_nothing_read": {
+      "duration_ms": 0.359,
+      "outcome": "passed"
+    },
+    "tests/test_inventory_on_a_served_turn.py::test_the_inventory_reaches_the_advocate_at_all": {
+      "duration_ms": 19.081,
+      "outcome": "passed"
+    },
+    "tests/test_issues.py::test_a_parked_issue_appears_on_the_considered_not_pursued_line": {
+      "duration_ms": 0.786,
+      "outcome": "passed"
+    },
+    "tests/test_issues.py::test_a_threshold_issue_is_not_given_a_thinner_pipeline": {
+      "duration_ms": 0.694,
+      "outcome": "passed"
+    },
+    "tests/test_issues.py::test_an_effect_is_never_stored_and_so_cannot_survive_its_own_reversal": {
+      "duration_ms": 0.523,
+      "outcome": "passed"
+    },
+    "tests/test_issues.py::test_an_issue_stopped_without_a_reason_cannot_be_constructed": {
+      "duration_ms": 0.367,
+      "outcome": "passed"
+    },
+    "tests/test_issues.py::test_an_out_of_vocabulary_facet_value_is_blanked_whichever_path_supplied_it": {
+      "duration_ms": 0.344,
+      "outcome": "passed"
+    },
+    "tests/test_issues.py::test_every_issue_that_enters_classification_comes_out_of_it": {
+      "duration_ms": 1.049,
+      "outcome": "passed"
+    },
+    "tests/test_issues.py::test_the_conservation_check_names_what_was_lost": {
+      "duration_ms": 0.675,
+      "outcome": "passed"
+    },
+    "tests/test_issues.py::test_the_same_issue_on_opposite_postures_yields_opposite_effect": {
+      "duration_ms": 0.449,
+      "outcome": "passed"
+    },
+    "tests/test_issues_on_a_served_turn.py::test_a_parked_issue_is_visible_rather_than_deleted": {
+      "duration_ms": 0.644,
+      "outcome": "passed"
+    },
+    "tests/test_issues_on_a_served_turn.py::test_a_served_turn_puts_issues_in_front_of_the_advocate": {
+      "duration_ms": 20.529,
+      "outcome": "passed"
+    },
+    "tests/test_issues_on_a_served_turn.py::test_an_issue_the_reading_offered_and_the_product_refused_is_disclosed": {
+      "duration_ms": 2.226,
+      "outcome": "passed"
+    },
+    "tests/test_issues_on_a_served_turn.py::test_every_rendered_issue_carries_the_posture_version_it_was_computed_on": {
+      "duration_ms": 20.05,
+      "outcome": "passed"
+    },
+    "tests/test_issues_on_a_served_turn.py::test_nothing_spotted_is_a_different_answer_from_nothing_read": {
+      "duration_ms": 0.376,
+      "outcome": "passed"
+    },
+    "tests/test_issues_on_a_served_turn.py::test_one_refused_issue_does_not_discard_the_others": {
+      "duration_ms": 0.678,
+      "outcome": "passed"
+    },
+    "tests/test_issues_on_a_served_turn.py::test_the_same_issue_runs_the_other_way_on_the_opposite_posture": {
+      "duration_ms": 38.09,
+      "outcome": "passed"
+    },
+    "tests/test_limitation.py::test_a_period_is_counted_by_the_calendar_and_never_in_days": {
+      "duration_ms": 0.338,
+      "outcome": "passed"
+    },
+    "tests/test_limitation.py::test_a_period_of_zero_is_refused_rather_than_computed": {
+      "duration_ms": 0.333,
+      "outcome": "passed"
+    },
+    "tests/test_limitation.py::test_a_position_that_could_not_be_computed_never_reads_as_alive": {
+      "duration_ms": 0.658,
+      "outcome": "passed"
+    },
+    "tests/test_limitation.py::test_an_entry_nobody_examined_is_reported_as_not_assessed": {
+      "duration_ms": 0.508,
+      "outcome": "passed"
+    },
+    "tests/test_limitation.py::test_an_extending_factor_cannot_be_constructed_without_its_provision": {
+      "duration_ms": 0.545,
+      "outcome": "passed"
+    },
+    "tests/test_limitation.py::test_an_uncomputed_position_still_accounts_for_the_chronology": {
+      "duration_ms": 0.513,
+      "outcome": "passed"
+    },
+    "tests/test_limitation.py::test_every_chronology_entry_appears_in_the_coverage_record": {
+      "duration_ms": 0.602,
+      "outcome": "passed"
+    },
+    "tests/test_limitation.py::test_every_computed_position_yields_a_date_and_a_day_count": {
+      "duration_ms": 0.824,
+      "outcome": "passed"
+    },
+    "tests/test_limitation.py::test_on_a_defending_thread_the_opponents_limitation_is_computed": {
+      "duration_ms": 0.469,
+      "outcome": "passed"
+    },
+    "tests/test_limitation.py::test_our_side_and_theirs_are_separate_computations": {
+      "duration_ms": 0.595,
+      "outcome": "passed"
+    },
+    "tests/test_limitation.py::test_text_that_states_no_period_yields_the_third_state_and_not_a_guess": {
+      "duration_ms": 0.644,
+      "outcome": "passed"
+    },
+    "tests/test_limitation.py::test_the_period_cannot_be_supplied_by_the_product": {
+      "duration_ms": 0.474,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_a_better_descriptor_replaces_a_weaker_one": {
+      "duration_ms": 27.925,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_a_descriptor_that_names_nobody_is_not_recorded": {
+      "duration_ms": 0.544,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_a_long_account_keeps_what_this_turn_is_about": {
+      "duration_ms": 1089.865,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_a_narrative_takes_the_latest_provision_and_a_question_the_first": {
+      "duration_ms": 0.447,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_a_question_asked_twice_is_not_put_a_third_time_in_the_same_words": {
+      "duration_ms": 60.393,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_a_question_the_advocate_answered_is_never_asked_again": {
+      "duration_ms": 48.296,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_a_summary_that_cannot_be_built_is_an_explicit_failure": {
+      "duration_ms": 0.332,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_a_withheld_turn_keeps_the_advocates_words": {
+      "duration_ms": 18.67,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_an_account_of_events_never_settles_a_posture_on_the_engine": {
+      "duration_ms": 10.417,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_an_act_named_earlier_is_carried_by_exact_title_only": {
+      "duration_ms": 11.601,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_an_asked_question_carries_three_states_not_two": {
+      "duration_ms": 0.538,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_an_inferred_act_is_disclosed_even_when_it_finds_nothing": {
+      "duration_ms": 10.588,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_an_out_of_vocabulary_role_is_blanked_not_coerced": {
+      "duration_ms": 0.319,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_every_declared_schema_is_satisfiable_when_nothing_was_established": {
+      "duration_ms": 0.42,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_every_model_call_in_a_turn_receives_the_file": {
+      "duration_ms": 34.457,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_nothing_is_computed_behind_a_closed_posture_gate": {
+      "duration_ms": 12.316,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_only_the_gates_that_stopped_firing_are_marked_answered": {
+      "duration_ms": 1.095,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_our_own_question_can_never_settle_a_posture": {
+      "duration_ms": 0.508,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_the_account_budget_stays_a_fraction_of_the_window_it_must_fit_in": {
+      "duration_ms": 0.361,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_the_ask_ledger_survives_a_restart": {
+      "duration_ms": 12.692,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_the_file_is_served_so_the_advocate_can_audit_it": {
+      "duration_ms": 213.058,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_the_role_read_never_fires_without_first_person_representation": {
+      "duration_ms": 0.361,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_the_same_question_bumps_its_count_rather_than_adding_a_row": {
+      "duration_ms": 1.164,
+      "outcome": "passed"
+    },
+    "tests/test_matter_memory.py::test_the_summary_holds_nothing_the_matter_does_not": {
+      "duration_ms": 2.757,
+      "outcome": "passed"
+    },
+    "tests/test_media_never_reaches_reasoning_unadmitted.py::test_an_admission_cannot_be_built_without_purpose_or_authority": {
+      "duration_ms": 0.371,
+      "outcome": "passed"
+    },
+    "tests/test_media_never_reaches_reasoning_unadmitted.py::test_no_reasoning_function_accepts_media": {
+      "duration_ms": 94.555,
+      "outcome": "passed"
+    },
+    "tests/test_media_never_reaches_reasoning_unadmitted.py::test_the_boundary_refuses_what_it_says_it_refuses": {
+      "duration_ms": 0.68,
+      "outcome": "passed"
+    },
+    "tests/test_media_never_reaches_reasoning_unadmitted.py::test_the_scanner_leaves_an_admission_alone": {
+      "duration_ms": 0.464,
+      "outcome": "passed"
+    },
+    "tests/test_media_never_reaches_reasoning_unadmitted.py::test_the_scanner_sees_media_reaching_a_reasoning_function": {
+      "duration_ms": 0.557,
+      "outcome": "passed"
+    },
+    "tests/test_model_calls_are_kept.py::test_a_call_that_raised_is_still_recorded": {
+      "duration_ms": 0.743,
+      "outcome": "passed"
+    },
+    "tests/test_model_calls_are_kept.py::test_a_long_prompt_says_that_it_was_clipped": {
+      "duration_ms": 0.516,
+      "outcome": "passed"
+    },
+    "tests/test_model_calls_are_kept.py::test_a_schema_with_no_marker_is_named_rather_than_left_blank": {
+      "duration_ms": 0.363,
+      "outcome": "passed"
+    },
+    "tests/test_model_calls_are_kept.py::test_a_tracer_that_records_nothing_is_a_violation_and_not_a_silence": {
+      "duration_ms": 18.62,
+      "outcome": "passed"
+    },
+    "tests/test_model_calls_are_kept.py::test_a_turn_does_not_carry_the_previous_turn_s_calls": {
+      "duration_ms": 43.56,
+      "outcome": "passed"
+    },
+    "tests/test_model_calls_are_kept.py::test_an_empty_answer_is_recorded_as_its_own_fact": {
+      "duration_ms": 20.284,
+      "outcome": "passed"
+    },
+    "tests/test_model_calls_are_kept.py::test_embedding_calls_are_not_traced": {
+      "duration_ms": 0.403,
+      "outcome": "passed"
+    },
+    "tests/test_model_calls_are_kept.py::test_every_call_is_named_by_the_read_it_served": {
+      "duration_ms": 18.666,
+      "outcome": "passed"
+    },
+    "tests/test_model_calls_are_kept.py::test_it_is_a_model_port": {
+      "duration_ms": 0.334,
+      "outcome": "passed"
+    },
+    "tests/test_model_calls_are_kept.py::test_the_prompts_are_not_on_disk_in_the_clear": {
+      "duration_ms": 19.631,
+      "outcome": "passed"
+    },
+    "tests/test_model_calls_are_kept.py::test_the_provider_and_the_model_are_the_inner_ones": {
+      "duration_ms": 0.35,
+      "outcome": "passed"
+    },
+    "tests/test_model_calls_are_kept.py::test_the_two_counts_of_one_thing_must_agree": {
+      "duration_ms": 18.238,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_a_required_property_missing_is_refused_by_every_adapter": {
+      "aggregate_of": 2,
+      "duration_ms": 0.95,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_a_required_property_missing_is_refused_by_every_adapter[openai]": {
+      "duration_ms": 0.421,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_a_required_property_missing_is_refused_by_every_adapter[scripted]": {
+      "duration_ms": 0.529,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_a_schema_violation_is_never_best_effort_parsed": {
+      "aggregate_of": 2,
+      "duration_ms": 0.944,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_a_schema_violation_is_never_best_effort_parsed[openai]": {
+      "duration_ms": 0.47,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_a_schema_violation_is_never_best_effort_parsed[scripted]": {
+      "duration_ms": 0.474,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_adapter_satisfies_the_port_protocol": {
+      "aggregate_of": 2,
+      "duration_ms": 0.866,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_adapter_satisfies_the_port_protocol[openai]": {
+      "duration_ms": 0.489,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_adapter_satisfies_the_port_protocol[scripted]": {
+      "duration_ms": 0.377,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_an_empty_prompt_is_refused_at_construction": {
+      "aggregate_of": 2,
+      "duration_ms": 0.872,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_an_empty_prompt_is_refused_at_construction[openai]": {
+      "duration_ms": 0.445,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_an_empty_prompt_is_refused_at_construction[scripted]": {
+      "duration_ms": 0.427,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_an_unconfigured_tier_raises_with_its_reason": {
+      "aggregate_of": 2,
+      "duration_ms": 0.889,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_an_unconfigured_tier_raises_with_its_reason[openai]": {
+      "duration_ms": 0.427,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_an_unconfigured_tier_raises_with_its_reason[scripted]": {
+      "duration_ms": 0.462,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_complete_returns_normalised_usage": {
+      "aggregate_of": 2,
+      "duration_ms": 0.948,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_complete_returns_normalised_usage[openai]": {
+      "duration_ms": 0.518,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_complete_returns_normalised_usage[scripted]": {
+      "duration_ms": 0.43,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_context_budget_is_declared_by_the_port_not_the_provider": {
+      "aggregate_of": 2,
+      "duration_ms": 0.679,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_context_budget_is_declared_by_the_port_not_the_provider[openai]": {
+      "duration_ms": 0.35,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_context_budget_is_declared_by_the_port_not_the_provider[scripted]": {
+      "duration_ms": 0.329,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_context_overflow_is_typed_never_a_truncation": {
+      "aggregate_of": 2,
+      "duration_ms": 1.08,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_context_overflow_is_typed_never_a_truncation[openai]": {
+      "duration_ms": 0.611,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_context_overflow_is_typed_never_a_truncation[scripted]": {
+      "duration_ms": 0.469,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_embed_returns_vectors_and_usage": {
+      "aggregate_of": 2,
+      "duration_ms": 37.036,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_embed_returns_vectors_and_usage[openai]": {
+      "duration_ms": 0.438,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_embed_returns_vectors_and_usage[scripted]": {
+      "duration_ms": 36.598,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_non_json_structured_output_raises_rather_than_returning_none": {
+      "aggregate_of": 2,
+      "duration_ms": 0.87,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_non_json_structured_output_raises_rather_than_returning_none[openai]": {
+      "duration_ms": 0.44,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_non_json_structured_output_raises_rather_than_returning_none[scripted]": {
+      "duration_ms": 0.43,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_openai_content_refusal_is_not_reported_as_a_finding": {
+      "duration_ms": 1.924,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_openai_rate_limit_beyond_the_bound_surfaces_as_typed": {
+      "duration_ms": 1757.577,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_openai_rate_limit_is_normalised_and_retried_with_a_count": {
+      "duration_ms": 1608.281,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_provider_and_resolved_model_are_reported": {
+      "aggregate_of": 2,
+      "duration_ms": 0.831,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_provider_and_resolved_model_are_reported[openai]": {
+      "duration_ms": 0.383,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_provider_and_resolved_model_are_reported[scripted]": {
+      "duration_ms": 0.448,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_structured_returns_parsed_data_and_no_text": {
+      "aggregate_of": 2,
+      "duration_ms": 0.804,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_structured_returns_parsed_data_and_no_text[openai]": {
+      "duration_ms": 0.428,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_structured_returns_parsed_data_and_no_text[scripted]": {
+      "duration_ms": 0.376,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_the_cacheable_prefix_is_accepted_by_every_adapter": {
+      "aggregate_of": 2,
+      "duration_ms": 0.767,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_the_cacheable_prefix_is_accepted_by_every_adapter[openai]": {
+      "duration_ms": 0.369,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_the_cacheable_prefix_is_accepted_by_every_adapter[scripted]": {
+      "duration_ms": 0.398,
+      "outcome": "passed"
+    },
+    "tests/test_model_port_contract.py::test_the_system_prompt_is_sent_first_and_unchanged": {
+      "duration_ms": 1.279,
+      "outcome": "passed"
+    },
+    "tests/test_never_clauses.py::test_a_failed_credential_discloses_nothing_about_which_matters_exist": {
+      "duration_ms": 255.387,
+      "outcome": "passed"
+    },
+    "tests/test_never_clauses.py::test_a_matter_that_cannot_be_read_does_not_vanish_from_the_list": {
+      "duration_ms": 103.312,
+      "outcome": "passed"
+    },
+    "tests/test_never_clauses.py::test_a_passed_deadline_is_on_the_board_and_not_among_the_upcoming": {
+      "duration_ms": 1.173,
+      "outcome": "passed"
+    },
+    "tests/test_never_clauses.py::test_a_recorded_run_cannot_vouch_for_code_it_never_saw": {
+      "duration_ms": 6.851,
+      "outcome": "passed"
+    },
+    "tests/test_never_clauses.py::test_a_survey_of_options_without_a_view_is_not_an_answer": {
+      "duration_ms": 19.299,
+      "outcome": "passed"
+    },
+    "tests/test_never_clauses.py::test_an_anonymous_session_cannot_create_a_matter": {
+      "duration_ms": 106.878,
+      "outcome": "passed"
+    },
+    "tests/test_never_clauses.py::test_an_audit_trail_write_failure_is_never_swallowed": {
+      "duration_ms": 35.307,
+      "outcome": "passed"
+    },
+    "tests/test_never_clauses.py::test_neither_board_carries_analysis": {
+      "duration_ms": 131.847,
+      "outcome": "passed"
+    },
+    "tests/test_never_clauses.py::test_no_path_admits_a_document_fact_without_binding_it_to_a_thread": {
+      "duration_ms": 160.185,
+      "outcome": "passed"
+    },
+    "tests/test_never_clauses.py::test_no_question_this_product_asks_is_a_leading_one": {
+      "duration_ms": 87.88,
+      "outcome": "passed"
+    },
+    "tests/test_never_clauses.py::test_the_first_content_element_is_an_action_or_a_blocking_question": {
+      "duration_ms": 27.922,
+      "outcome": "passed"
+    },
+    "tests/test_never_clauses.py::test_the_invitation_to_brief_is_one_line_and_not_a_field_set": {
+      "duration_ms": 108.395,
+      "outcome": "passed"
+    },
+    "tests/test_never_clauses.py::test_uncertainty_is_stated_and_is_never_a_reason_to_withhold_a_view": {
+      "duration_ms": 17.691,
+      "outcome": "passed"
+    },
+    "tests/test_no_css_class_has_two_owners.py::test_no_class_is_declared_twice_at_the_top_level": {
+      "duration_ms": 1.731,
+      "outcome": "passed"
+    },
+    "tests/test_no_css_class_has_two_owners.py::test_the_scan_finds_the_classes_that_are_there": {
+      "duration_ms": 1.364,
+      "outcome": "passed"
+    },
+    "tests/test_no_css_class_has_two_owners.py::test_the_scan_sees_a_planted_collision": {
+      "duration_ms": 0.33,
+      "outcome": "passed"
+    },
+    "tests/test_no_css_class_has_two_owners.py::test_the_sign_in_gate_is_addressed_by_its_id": {
+      "duration_ms": 1.081,
+      "outcome": "passed"
+    },
+    "tests/test_no_declared_owner_is_dead.py::test_no_function_in_the_product_is_defined_and_never_reached": {
+      "duration_ms": 607.987,
+      "outcome": "passed"
+    },
+    "tests/test_no_declared_owner_is_dead.py::test_the_scan_can_see_the_product": {
+      "duration_ms": 169.723,
+      "outcome": "passed"
+    },
+    "tests/test_no_internal_id_reaches_the_advocate.py::test_a_derivation_with_no_label_falls_back_to_its_key": {
+      "duration_ms": 0.399,
+      "outcome": "passed"
+    },
+    "tests/test_no_internal_id_reaches_the_advocate.py::test_a_derived_value_keeps_its_key_and_gains_a_label": {
+      "duration_ms": 0.529,
+      "outcome": "passed"
+    },
+    "tests/test_no_internal_id_reaches_the_advocate.py::test_no_internal_id_reaches_the_advocate": {
+      "duration_ms": 118.249,
+      "outcome": "passed"
+    },
+    "tests/test_no_internal_id_reaches_the_advocate.py::test_the_sweep_can_see_a_planted_leak": {
+      "duration_ms": 101.27,
+      "outcome": "passed"
+    },
+    "tests/test_no_internal_id_reaches_the_advocate.py::test_the_sweep_can_see_the_text": {
+      "duration_ms": 0.464,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_a_matter_is_never_routed_away_by_a_phrase_inside_it": {
+      "aggregate_of": 4,
+      "duration_ms": 62.923,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_a_matter_is_never_routed_away_by_a_phrase_inside_it[how do you work out the period for a possession suit?]": {
+      "duration_ms": 15.344,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_a_matter_is_never_routed_away_by_a_phrase_inside_it[what areas of the decree are still open?]": {
+      "duration_ms": 16.195,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_a_matter_is_never_routed_away_by_a_phrase_inside_it[what can you do about the limitation period on this suit?]": {
+      "duration_ms": 15.969,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_a_matter_is_never_routed_away_by_a_phrase_inside_it[who are you going to say served the notice?]": {
+      "duration_ms": 15.415,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_a_question_about_the_product_is_still_answered_as_one": {
+      "aggregate_of": 4,
+      "duration_ms": 30.099,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_a_question_about_the_product_is_still_answered_as_one[how do you work]": {
+      "duration_ms": 7.702,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_a_question_about_the_product_is_still_answered_as_one[what areas do you cover?]": {
+      "duration_ms": 7.565,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_a_question_about_the_product_is_still_answered_as_one[what can you do]": {
+      "duration_ms": 7.729,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_a_question_about_the_product_is_still_answered_as_one[who are you]": {
+      "duration_ms": 7.103,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_a_recognised_request_still_searches": {
+      "duration_ms": 0.308,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_a_turn_that_did_not_search_for_authority_says_so": {
+      "duration_ms": 2.704,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_the_disclosure_is_bounded_to_a_turn_that_retrieved_something": {
+      "duration_ms": 2.256,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_the_route_is_read_and_never_counted": {
+      "duration_ms": 2.335,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_these_ways_of_asking_for_authority_are_not_recognised": {
+      "aggregate_of": 4,
+      "duration_ms": 1.6,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_these_ways_of_asking_for_authority_are_not_recognised[any decisions I can rely on?]": {
+      "duration_ms": 0.371,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_these_ways_of_asking_for_authority_are_not_recognised[has any court decided this point?]": {
+      "duration_ms": 0.364,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_these_ways_of_asking_for_authority_are_not_recognised[is there anything from the High Court on this?]": {
+      "duration_ms": 0.447,
+      "outcome": "passed"
+    },
+    "tests/test_no_phrase_list_decides.py::test_these_ways_of_asking_for_authority_are_not_recognised[what have the courts said about section 18?]": {
+      "duration_ms": 0.418,
+      "outcome": "passed"
+    },
+    "tests/test_no_read_picks_its_own_ceiling.py::test_a_fixed_read_is_unmoved_by_a_longer_brief": {
+      "duration_ms": 0.329,
+      "outcome": "passed"
+    },
+    "tests/test_no_read_picks_its_own_ceiling.py::test_an_echoing_read_gets_more_room_for_a_longer_brief": {
+      "duration_ms": 0.437,
+      "outcome": "passed"
+    },
+    "tests/test_no_read_picks_its_own_ceiling.py::test_an_undeclared_read_gets_the_floor_and_not_a_guess": {
+      "duration_ms": 0.351,
+      "outcome": "passed"
+    },
+    "tests/test_no_read_picks_its_own_ceiling.py::test_every_read_declares_whether_it_echoes": {
+      "duration_ms": 0.421,
+      "outcome": "passed"
+    },
+    "tests/test_no_read_picks_its_own_ceiling.py::test_no_structured_read_names_its_own_ceiling": {
+      "duration_ms": 104.246,
+      "outcome": "passed"
+    },
+    "tests/test_no_read_picks_its_own_ceiling.py::test_the_floor_and_the_cap_both_hold": {
+      "duration_ms": 0.54,
+      "outcome": "passed"
+    },
+    "tests/test_no_read_picks_its_own_ceiling.py::test_the_scan_can_see_a_planted_ceiling": {
+      "duration_ms": 63.991,
+      "outcome": "passed"
+    },
+    "tests/test_no_read_picks_its_own_ceiling.py::test_the_scan_ignores_a_prose_completion": {
+      "duration_ms": 127.406,
+      "outcome": "passed"
+    },
+    "tests/test_no_rule_hides_the_overflow.py::test_no_stylesheet_clips_the_document_scroll_width": {
+      "duration_ms": 1.126,
+      "outcome": "passed"
+    },
+    "tests/test_no_rule_hides_the_overflow.py::test_the_overflow_scan_can_see_a_planted_rule": {
+      "duration_ms": 0.378,
+      "outcome": "passed"
+    },
+    "tests/test_no_rule_hides_the_overflow.py::test_the_overflow_scan_leaves_ordinary_containers_alone": {
+      "duration_ms": 0.32,
+      "outcome": "passed"
+    },
+    "tests/test_no_rule_hides_the_overflow.py::test_the_scan_reads_rules_and_not_the_comments_explaining_them": {
+      "duration_ms": 0.312,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_a_wrong_password_is_still_wrong": {
+      "duration_ms": 76.691,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_enrolling_the_other_case_is_refused_as_already_enrolled": {
+      "duration_ms": 77.564,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_register_with_capitals_then_sign_in_with_them": {
+      "duration_ms": 129.252,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_the_canonical_form_is_stripped_and_lower_cased": {
+      "aggregate_of": 6,
+      "duration_ms": 2.242,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_the_canonical_form_is_stripped_and_lower_cased[  r.kumar@example.com  -r.kumar@example.com]": {
+      "duration_ms": 0.389,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_the_canonical_form_is_stripped_and_lower_cased[-]": {
+      "duration_ms": 0.367,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_the_canonical_form_is_stripped_and_lower_cased[ADV_DEMO-adv_demo]": {
+      "duration_ms": 0.368,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_the_canonical_form_is_stripped_and_lower_cased[None-]": {
+      "duration_ms": 0.356,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_the_canonical_form_is_stripped_and_lower_cased[R.Kumar@Example.com-r.kumar@example.com]": {
+      "duration_ms": 0.403,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_the_canonical_form_is_stripped_and_lower_cased[adv_demo-adv_demo]": {
+      "duration_ms": 0.359,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_the_canonical_id_is_accepted": {
+      "duration_ms": 0.397,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_the_ids_already_on_disk_are_canonical": {
+      "duration_ms": 0.295,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_the_store_finds_an_advocate_whatever_case_is_typed": {
+      "duration_ms": 152.761,
+      "outcome": "passed"
+    },
+    "tests/test_one_advocate_one_id.py::test_the_type_refuses_an_id_that_is_not_canonical": {
+      "duration_ms": 0.394,
+      "outcome": "passed"
+    },
+    "tests/test_one_fold.py::test_a_composition_on_the_base_is_permitted": {
+      "duration_ms": 0.431,
+      "outcome": "passed"
+    },
+    "tests/test_one_fold.py::test_nothing_else_compiles_the_word_pattern": {
+      "duration_ms": 186.734,
+      "outcome": "passed"
+    },
+    "tests/test_one_fold.py::test_only_one_module_defines_the_base_fold": {
+      "duration_ms": 176.196,
+      "outcome": "passed"
+    },
+    "tests/test_one_fold.py::test_the_base_fold_is_where_it_says_it_is": {
+      "duration_ms": 225.281,
+      "outcome": "passed"
+    },
+    "tests/test_one_fold.py::test_the_pattern_scan_catches_a_planted_regex": {
+      "duration_ms": 0.399,
+      "outcome": "passed"
+    },
+    "tests/test_one_fold.py::test_the_scan_catches_a_fold_renamed_to_hide": {
+      "duration_ms": 2.974,
+      "outcome": "passed"
+    },
+    "tests/test_one_fold.py::test_the_scan_catches_a_planted_fold": {
+      "duration_ms": 2.79,
+      "outcome": "passed"
+    },
+    "tests/test_one_owner_per_rule.py::test_every_owned_rule_names_a_module_that_exists": {
+      "duration_ms": 0.461,
+      "outcome": "passed"
+    },
+    "tests/test_one_owner_per_rule.py::test_no_rule_has_a_second_home": {
+      "duration_ms": 77.668,
+      "outcome": "passed"
+    },
+    "tests/test_one_owner_per_rule.py::test_the_owner_actually_contains_the_rule": {
+      "duration_ms": 1.173,
+      "outcome": "passed"
+    },
+    "tests/test_one_quotable.py::test_a_read_that_builds_a_prompt_and_a_guard_uses_one_value": {
+      "duration_ms": 197.183,
+      "outcome": "passed"
+    },
+    "tests/test_one_quotable.py::test_a_read_that_cannot_use_the_stamps_is_not_shown_them_twice": {
+      "duration_ms": 2.552,
+      "outcome": "passed"
+    },
+    "tests/test_one_quotable.py::test_nothing_decides_the_advocates_words_by_hand": {
+      "duration_ms": 242.577,
+      "outcome": "passed"
+    },
+    "tests/test_one_quotable.py::test_nothing_quotable_is_said_rather_than_left_silent": {
+      "duration_ms": 0.615,
+      "outcome": "passed"
+    },
+    "tests/test_one_quotable.py::test_the_issue_read_keeps_the_account_and_the_reason_is_recorded": {
+      "duration_ms": 1.28,
+      "outcome": "passed"
+    },
+    "tests/test_one_quotable.py::test_the_prompt_says_what_the_guard_will_take": {
+      "duration_ms": 0.656,
+      "outcome": "passed"
+    },
+    "tests/test_one_quotable.py::test_the_reads_that_take_notes_say_which_they_take": {
+      "duration_ms": 0.957,
+      "outcome": "passed"
+    },
+    "tests/test_one_quotable.py::test_the_refusal_says_which_of_the_three_things_went_wrong": {
+      "duration_ms": 0.391,
+      "outcome": "passed"
+    },
+    "tests/test_one_quotable.py::test_the_scan_catches_a_planted_hand_guard": {
+      "duration_ms": 0.561,
+      "outcome": "passed"
+    },
+    "tests/test_one_quotable.py::test_the_scan_catches_a_prompt_and_a_guard_that_disagree": {
+      "duration_ms": 0.377,
+      "outcome": "passed"
+    },
+    "tests/test_one_quotable.py::test_the_scan_leaves_a_different_question_alone": {
+      "duration_ms": 0.391,
+      "outcome": "passed"
+    },
+    "tests/test_one_quotable.py::test_the_six_reads_are_actually_covered": {
+      "duration_ms": 139.03,
+      "outcome": "passed"
+    },
+    "tests/test_one_register.py::test_a_structured_prompt_does_not_carry_it": {
+      "duration_ms": 0.39,
+      "outcome": "passed"
+    },
+    "tests/test_one_register.py::test_every_advocate_facing_prompt_carries_the_clause": {
+      "duration_ms": 1.256,
+      "outcome": "passed"
+    },
+    "tests/test_one_register.py::test_every_entry_says_why_it_is_there": {
+      "duration_ms": 0.325,
+      "outcome": "passed"
+    },
+    "tests/test_one_register.py::test_every_prompt_is_declared_one_kind_or_the_other": {
+      "duration_ms": 81.542,
+      "outcome": "passed"
+    },
+    "tests/test_one_register.py::test_no_declaration_names_a_prompt_that_is_gone": {
+      "duration_ms": 38.506,
+      "outcome": "passed"
+    },
+    "tests/test_one_register.py::test_the_clause_forbids_reassurance_in_both_directions": {
+      "duration_ms": 0.327,
+      "outcome": "passed"
+    },
+    "tests/test_one_register.py::test_the_clause_is_one_string_and_not_six": {
+      "duration_ms": 1.248,
+      "outcome": "passed"
+    },
+    "tests/test_one_register.py::test_the_clause_says_what_may_not_be_explained_not_how_to_sound": {
+      "duration_ms": 0.383,
+      "outcome": "passed"
+    },
+    "tests/test_one_register.py::test_the_scan_can_see_a_prompt_that_lost_its_clause": {
+      "duration_ms": 153.648,
+      "outcome": "passed"
+    },
+    "tests/test_one_sentence_is_one_fact.py::test_a_blank_statement_cannot_match_everything": {
+      "duration_ms": 0.597,
+      "outcome": "passed"
+    },
+    "tests/test_one_sentence_is_one_fact.py::test_a_dated_reading_of_the_account_sentence_amends_it": {
+      "duration_ms": 1.43,
+      "outcome": "passed"
+    },
+    "tests/test_one_sentence_is_one_fact.py::test_a_different_sentence_is_a_different_fact": {
+      "duration_ms": 1.486,
+      "outcome": "passed"
+    },
+    "tests/test_one_sentence_is_one_fact.py::test_a_duplicate_id_is_still_refused": {
+      "duration_ms": 0.905,
+      "outcome": "passed"
+    },
+    "tests/test_one_sentence_is_one_fact.py::test_a_superseded_fact_does_not_absorb_a_new_reading": {
+      "duration_ms": 1.49,
+      "outcome": "passed"
+    },
+    "tests/test_one_sentence_is_one_fact.py::test_an_undated_repeat_of_a_dated_fact_adds_nothing": {
+      "duration_ms": 1.073,
+      "outcome": "passed"
+    },
+    "tests/test_one_sentence_is_one_fact.py::test_the_identical_fact_twice_is_recorded_once": {
+      "duration_ms": 1.052,
+      "outcome": "passed"
+    },
+    "tests/test_one_sentence_is_one_fact.py::test_the_same_sentence_on_a_later_turn_is_a_new_fact": {
+      "duration_ms": 1.153,
+      "outcome": "passed"
+    },
+    "tests/test_one_sentence_is_one_fact.py::test_the_statement_is_untouched_by_the_amendment": {
+      "duration_ms": 1.361,
+      "outcome": "passed"
+    },
+    "tests/test_one_sentence_is_one_fact.py::test_two_dates_for_one_sentence_are_both_kept": {
+      "duration_ms": 1.278,
+      "outcome": "passed"
+    },
+    "tests/test_one_sentence_is_one_fact.py::test_typography_does_not_make_a_second_fact": {
+      "duration_ms": 1.413,
+      "outcome": "passed"
+    },
+    "tests/test_one_sentence_is_one_fact.py::test_with_fact_goes_through_the_same_rule": {
+      "duration_ms": 1.35,
+      "outcome": "passed"
+    },
+    "tests/test_produces_contracts.py::test_a_basis_that_points_nowhere_is_refused": {
+      "duration_ms": 0.976,
+      "outcome": "passed"
+    },
+    "tests/test_produces_contracts.py::test_a_paraphrase_recorded_as_a_quotation_is_refused": {
+      "duration_ms": 0.786,
+      "outcome": "passed"
+    },
+    "tests/test_produces_contracts.py::test_a_partially_built_summary_never_reads_as_a_complete_handover": {
+      "duration_ms": 0.676,
+      "outcome": "passed"
+    },
+    "tests/test_produces_contracts.py::test_confirmed_has_three_states": {
+      "duration_ms": 1.02,
+      "outcome": "passed"
+    },
+    "tests/test_produces_contracts.py::test_every_required_field_exists_on_the_implementing_type": {
+      "duration_ms": 28.05,
+      "outcome": "passed"
+    },
+    "tests/test_produces_contracts.py::test_the_case_summary_section_list_matches_appendix_e": {
+      "duration_ms": 31.214,
+      "outcome": "passed"
+    },
+    "tests/test_produces_contracts.py::test_the_implemented_type_adds_nothing_the_contract_does_not_declare": {
+      "duration_ms": 27.287,
+      "outcome": "passed"
+    },
+    "tests/test_produces_contracts.py::test_unimplemented_contracts_are_named_rather_than_passing_silently": {
+      "duration_ms": 55.404,
+      "outcome": "passed"
+    },
+    "tests/test_produces_contracts.py::test_weight_defaults_to_not_assessed_rather_than_neutral": {
+      "duration_ms": 0.547,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_a_photocopy_is_not_the_document": {
+      "duration_ms": 0.344,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_a_presumption_that_shifts_the_burden_names_its_provision": {
+      "duration_ms": 0.355,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_a_proof_gap_is_never_a_verdict": {
+      "duration_ms": 0.566,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_a_status_without_a_standard_cannot_be_constructed": {
+      "duration_ms": 0.422,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_a_thing_that_does_not_exist_carries_no_admissibility_position": {
+      "duration_ms": 0.354,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_an_item_at_risk_with_no_preservation_step_is_reported": {
+      "duration_ms": 1.583,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_an_unassessed_element_still_owes_the_advocate_an_account": {
+      "duration_ms": 0.431,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_existence_admissibility_and_weight_are_three_separate_questions": {
+      "duration_ms": 0.702,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_no_element_exists_without_a_burden_a_standard_and_a_status": {
+      "duration_ms": 1.372,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_no_output_characterises_the_clients_honesty_or_character": {
+      "duration_ms": 0.413,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_the_coverage_gate_cannot_certify_itself": {
+      "duration_ms": 0.478,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_the_restraint_does_not_extend_to_the_opponent_or_to_the_finding": {
+      "duration_ms": 0.336,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_the_same_presumption_is_a_gift_or_a_problem_depending_on_the_side": {
+      "duration_ms": 0.347,
+      "outcome": "passed"
+    },
+    "tests/test_proof.py::test_the_served_turn_records_a_characterisation_of_the_client": {
+      "duration_ms": 21.41,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_a_cause_with_no_curated_elements_names_the_reason": {
+      "duration_ms": 3.632,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_a_gap_on_our_side_is_named": {
+      "duration_ms": 4.524,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_a_withheld_cause_says_why_and_does_not_guess": {
+      "duration_ms": 0.354,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_absent_with_no_dead_end_is_refused": {
+      "duration_ms": 0.755,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_against_us_returns_only_our_gaps": {
+      "duration_ms": 0.735,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_an_element_the_model_invents_is_dropped_and_disclosed": {
+      "duration_ms": 0.826,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_an_unestablished_cause_is_not_a_missing_table_entry": {
+      "duration_ms": 0.35,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_an_unresolved_posture_claims_nothing_about_whose_burden_it_is": {
+      "duration_ms": 0.76,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_an_unwired_element_table_says_so_rather_than_saying_nothing": {
+      "duration_ms": 17.769,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_every_cause_is_either_curated_or_withheld_with_a_reason": {
+      "duration_ms": 0.308,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_every_curated_element_gets_a_position_even_when_unmentioned": {
+      "duration_ms": 0.88,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_every_curated_entry_says_where_it_came_from": {
+      "duration_ms": 0.313,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_held_must_be_held_on_the_advocates_own_words": {
+      "duration_ms": 0.899,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_held_on_what_the_advocate_did_write_is_taken": {
+      "duration_ms": 1.041,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_no_element_list_comes_from_the_model": {
+      "duration_ms": 0.391,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_obtainable_that_names_the_material_is_taken": {
+      "duration_ms": 0.738,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_obtainable_with_nothing_named_is_refused": {
+      "duration_ms": 0.943,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_one_refused_position_does_not_discard_the_others": {
+      "duration_ms": 0.949,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_the_burden_knows_the_side_and_not_whether_it_is_ours": {
+      "duration_ms": 0.439,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_the_curated_order_is_the_order_the_advocate_reads": {
+      "duration_ms": 0.783,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_the_positions_reach_the_answer_on_a_served_turn": {
+      "duration_ms": 5.656,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_the_prompt_carries_the_elements_and_the_standard": {
+      "duration_ms": 0.316,
+      "outcome": "passed"
+    },
+    "tests/test_proof_on_a_served_turn.py::test_the_prompt_forbids_a_character_finding": {
+      "duration_ms": 0.369,
+      "outcome": "passed"
+    },
+    "tests/test_provider_independence.py::test_no_module_outside_the_adapters_names_a_provider": {
+      "duration_ms": 18.95,
+      "outcome": "passed"
+    },
+    "tests/test_provider_independence.py::test_the_composition_root_branches_on_the_provider_string_alone": {
+      "duration_ms": 0.981,
+      "outcome": "passed"
+    },
+    "tests/test_provider_independence.py::test_the_same_turn_runs_under_a_flipped_provider_with_no_source_change": {
+      "duration_ms": 41.918,
+      "outcome": "passed"
+    },
+    "tests/test_reached_from_production.py::test_every_module_is_reached_from_production_or_declared_unwired": {
+      "duration_ms": 185.891,
+      "outcome": "passed"
+    },
+    "tests/test_reached_from_production.py::test_every_produces_contract_has_a_type_or_is_declared_untyped": {
+      "duration_ms": 91.893,
+      "outcome": "passed"
+    },
+    "tests/test_reached_from_production.py::test_every_unwired_module_names_a_feature_that_exists": {
+      "duration_ms": 50.915,
+      "outcome": "passed"
+    },
+    "tests/test_reached_from_production.py::test_no_declaration_outlives_its_wiring": {
+      "duration_ms": 228.393,
+      "outcome": "passed"
+    },
+    "tests/test_reached_from_production.py::test_no_feature_is_tested_while_its_eval_runs_every_turn_and_it_has_no_turn": {
+      "duration_ms": 122.667,
+      "outcome": "passed"
+    },
+    "tests/test_reached_from_production.py::test_no_untyped_declaration_outlives_its_type": {
+      "duration_ms": 90.279,
+      "outcome": "passed"
+    },
+    "tests/test_reached_from_production.py::test_the_produces_scan_can_see_an_unimplemented_contract": {
+      "duration_ms": 92.433,
+      "outcome": "passed"
+    },
+    "tests/test_reached_from_production.py::test_the_scan_can_see_an_unreached_module": {
+      "duration_ms": 188.561,
+      "outcome": "passed"
+    },
+    "tests/test_reached_from_production.py::test_the_scan_can_see_the_module_tree": {
+      "duration_ms": 9.623,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_a_read_that_is_not_decisive_is_allowed_to_be_empty": {
+      "duration_ms": 2.181,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_a_routine_read_that_cannot_run_is_not_swallowed": {
+      "duration_ms": 0.692,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_an_absent_hard_tier_degrades_out_loud": {
+      "duration_ms": 0.622,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_every_decisive_read_says_so_when_it_answers_with_nothing": {
+      "duration_ms": 1.492,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_every_declared_read_is_one_the_product_makes": {
+      "duration_ms": 177.565,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_every_read_says_why_it_is_or_is_not_decisive": {
+      "duration_ms": 0.425,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_every_read_the_product_makes_is_declared": {
+      "duration_ms": 170.025,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_no_read_asks_for_the_hard_tier_while_none_is_earned": {
+      "duration_ms": 28.839,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_no_second_copy_of_the_decisive_set_exists": {
+      "duration_ms": 169.906,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_the_composition_root_applies_the_degradation": {
+      "duration_ms": 1.991,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_the_judge_is_not_the_model_under_test": {
+      "duration_ms": 0.728,
+      "outcome": "skipped"
+    },
+    "tests/test_reads_registry.py::test_the_reads_table_still_owns_what_is_decisive": {
+      "duration_ms": 0.409,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_the_scan_can_see_the_schemas": {
+      "duration_ms": 164.759,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_the_second_copy_scan_can_see_a_second_copy": {
+      "duration_ms": 0.425,
+      "outcome": "passed"
+    },
+    "tests/test_reads_registry.py::test_the_turn_discloses_which_read_came_back_empty": {
+      "duration_ms": 36.2,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_a_ceiling_that_binds_is_reported_and_never_silent": {
+      "duration_ms": 21.856,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_a_ceiling_that_does_not_bind_claims_nothing": {
+      "duration_ms": 16.989,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_a_provision_the_advocate_named_outranks_the_graph": {
+      "duration_ms": 11.82,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_a_query_without_a_governing_date_is_rejected_not_defaulted_to_today": {
+      "duration_ms": 0.576,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_a_resolved_finding_cannot_carry_a_similarity_score": {
+      "duration_ms": 0.526,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_authority_under_the_corresponding_old_provision_is_reachable": {
+      "duration_ms": 0.338,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_every_edge_names_what_it_was_curated_from": {
+      "duration_ms": 0.494,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_provenance_nobody_recorded_is_not_reported_as_resolved": {
+      "duration_ms": 0.345,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_the_cause_read_refuses_a_span_the_advocate_never_wrote": {
+      "duration_ms": 0.346,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_the_code_titles_are_derived_from_the_pairs_and_never_retyped": {
+      "duration_ms": 0.455,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_the_engine_sets_the_cause_so_the_graph_can_be_consulted": {
+      "duration_ms": 20.755,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_the_governing_date_is_the_date_of_the_conduct": {
+      "duration_ms": 0.303,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_the_graph_resolves_by_exact_lookup_and_never_by_similarity": {
+      "duration_ms": 0.293,
+      "outcome": "passed"
+    },
+    "tests/test_resolution.py::test_the_turn_routes_a_determinate_question_without_a_named_provision": {
+      "duration_ms": 11.78,
+      "outcome": "passed"
+    },
+    "tests/test_salvage_on_a_served_turn.py::test_a_coordinate_outside_the_seven_is_refused": {
+      "duration_ms": 0.312,
+      "outcome": "passed"
+    },
+    "tests/test_salvage_on_a_served_turn.py::test_a_route_citing_nothing_retrieved_is_dropped_and_the_route_goes": {
+      "duration_ms": 0.564,
+      "outcome": "passed"
+    },
+    "tests/test_salvage_on_a_served_turn.py::test_a_route_that_cites_what_was_actually_retrieved_survives": {
+      "duration_ms": 0.403,
+      "outcome": "passed"
+    },
+    "tests/test_salvage_on_a_served_turn.py::test_a_route_with_no_citation_cannot_be_constructed": {
+      "duration_ms": 0.391,
+      "outcome": "passed"
+    },
+    "tests/test_salvage_on_a_served_turn.py::test_a_route_with_no_strength_cannot_be_constructed": {
+      "duration_ms": 0.423,
+      "outcome": "passed"
+    },
+    "tests/test_salvage_on_a_served_turn.py::test_a_variation_with_no_route_is_ordinary_and_not_a_failure": {
+      "duration_ms": 0.576,
+      "outcome": "passed"
+    },
+    "tests/test_salvage_on_a_served_turn.py::test_salvage_does_not_run_on_a_claim_that_is_fine": {
+      "duration_ms": 20.952,
+      "outcome": "passed"
+    },
+    "tests/test_salvage_on_a_served_turn.py::test_salvage_runs_where_the_claim_is_reported_as_failing": {
+      "duration_ms": 20.965,
+      "outcome": "passed"
+    },
+    "tests/test_salvage_on_a_served_turn.py::test_the_population_is_the_seven_and_not_what_was_tried": {
+      "duration_ms": 0.468,
+      "outcome": "passed"
+    },
+    "tests/test_salvage_on_a_served_turn.py::test_three_states_on_the_salvage_read": {
+      "duration_ms": 0.411,
+      "outcome": "passed"
+    },
+    "tests/test_salvage_on_a_served_turn.py::test_we_lose_and_we_lose_on_this_framing_are_different_answers": {
+      "duration_ms": 20.175,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_a_blocking_screen_says_what_it_blocked_on": {
+      "duration_ms": 0.599,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_a_clearance_is_bound_to_the_party_set_that_was_screened": {
+      "duration_ms": 0.424,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_a_document_fact_cannot_be_built_without_its_document_and_page": {
+      "duration_ms": 0.457,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_a_document_that_contradicts_the_account_renders_as_a_conflict": {
+      "duration_ms": 0.459,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_a_partial_read_produces_an_incomplete_screen_and_never_clears": {
+      "duration_ms": 0.486,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_a_release_records_rather_than_deletes": {
+      "duration_ms": 0.652,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_a_screen_nobody_ran_at_all_appears_as_a_named_row": {
+      "duration_ms": 0.933,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_a_screen_that_did_not_run_never_renders_as_cleared": {
+      "duration_ms": 0.445,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_an_empty_scope_authorises_nothing": {
+      "duration_ms": 0.693,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_an_instruction_inside_a_document_is_quoted_back_and_never_obeyed": {
+      "duration_ms": 0.359,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_an_unconfirmed_inverting_field_cannot_support_a_conclusion": {
+      "duration_ms": 0.57,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_capacity_in_doubt_cannot_make_advice_reliance_ready": {
+      "duration_ms": 0.505,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_no_question_is_asked_whose_answer_is_in_a_supplied_document": {
+      "duration_ms": 0.4,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_no_substance_is_admitted_to_a_matter_whose_screens_do_not_clear": {
+      "duration_ms": 0.948,
+      "outcome": "passed"
+    },
+    "tests/test_screens.py::test_the_emergency_exception_is_express_and_leaves_the_screens_visible": {
+      "duration_ms": 0.409,
+      "outcome": "passed"
+    },
+    "tests/test_signing_in_needs_only_a_password.py::test_a_password_verifies_under_a_completely_different_matter_key": {
+      "duration_ms": 115.138,
+      "outcome": "passed"
+    },
+    "tests/test_signing_in_needs_only_a_password.py::test_a_record_sealed_before_the_change_still_opens_and_migrates": {
+      "duration_ms": 78.684,
+      "outcome": "passed"
+    },
+    "tests/test_signing_in_needs_only_a_password.py::test_client_material_still_needs_the_key": {
+      "duration_ms": 4.732,
+      "outcome": "passed"
+    },
+    "tests/test_signing_in_needs_only_a_password.py::test_the_migration_never_converts_what_it_could_not_read": {
+      "duration_ms": 2.295,
+      "outcome": "passed"
+    },
+    "tests/test_signing_in_needs_only_a_password.py::test_the_record_is_plain_json_and_holds_no_password": {
+      "duration_ms": 40.235,
+      "outcome": "passed"
+    },
+    "tests/test_slice0_foundations.py::test_a_hard_tier_promotion_without_a_measurement_cannot_be_declared": {
+      "duration_ms": 0.397,
+      "outcome": "passed"
+    },
+    "tests/test_slice0_foundations.py::test_an_unlisted_provider_fails_at_startup": {
+      "duration_ms": 0.505,
+      "outcome": "passed"
+    },
+    "tests/test_slice0_foundations.py::test_every_tier_resolves_to_a_pinned_dated_snapshot": {
+      "duration_ms": 0.708,
+      "outcome": "passed"
+    },
+    "tests/test_slice0_foundations.py::test_every_turn_writes_metrics_with_latency_calls_tokens_and_model_mix": {
+      "duration_ms": 36.909,
+      "outcome": "passed"
+    },
+    "tests/test_slice0_foundations.py::test_layercheck_fails_the_build_on_a_core_module_that_reaches_an_adapter": {
+      "duration_ms": 590.757,
+      "outcome": "passed"
+    },
+    "tests/test_slice0_foundations.py::test_no_model_name_or_provider_client_appears_in_the_core": {
+      "duration_ms": 114.39,
+      "outcome": "passed"
+    },
+    "tests/test_slice0_foundations.py::test_the_core_imports_only_core_ports_and_domain": {
+      "duration_ms": 96.888,
+      "outcome": "passed"
+    },
+    "tests/test_slice0_foundations.py::test_the_judge_never_resolves_to_the_model_under_test": {
+      "duration_ms": 0.575,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_a_bare_question_of_law_is_answered_without_a_posture_gate": {
+      "duration_ms": 8.527,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_a_finding_cannot_be_built_without_what_makes_it_auditable": {
+      "duration_ms": 0.614,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_a_named_provision_does_not_spend_the_wandering_budget": {
+      "duration_ms": 2.396,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_a_named_provision_is_still_counted": {
+      "duration_ms": 2.149,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_a_proposition_carries_a_finding_and_an_inference_never_does": {
+      "duration_ms": 0.932,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_a_provision_is_still_read_back_behind_a_closed_posture_gate": {
+      "duration_ms": 14.933,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_a_turn_commits_atomically_and_the_commit_precedes_emission": {
+      "duration_ms": 13.784,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_every_built_gate_declares_a_response_the_engine_can_obey": {
+      "duration_ms": 0.431,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_every_response_class_is_exercised_on_the_served_path": {
+      "duration_ms": 160.4,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_nothing_is_released_except_through_the_byte_boundary": {
+      "duration_ms": 121.835,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_nothing_side_dependent_is_computed_behind_a_closed_gate": {
+      "duration_ms": 14.819,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_reaching_the_evidence_bound_produces_a_visible_gap": {
+      "duration_ms": 17.837,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_the_bound_is_enforced_by_the_engine_not_by_the_caller": {
+      "duration_ms": 18.348,
+      "outcome": "passed"
+    },
+    "tests/test_slice123_closeout.py::test_the_thread_gate_also_computes_nothing": {
+      "duration_ms": 60.983,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_a_bar_is_signalled_loudly_and_is_not_reported_as_a_verdict": {
+      "duration_ms": 20.013,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_a_fact_nobody_examined_is_never_recorded_as_having_no_effect": {
+      "duration_ms": 20.174,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_a_moving_thread_does_not_invent_an_opponents_position": {
+      "duration_ms": 20.218,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_a_passed_deadline_never_becomes_the_by_when_of_an_action": {
+      "duration_ms": 20.214,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_a_recommended_action_carries_the_by_when_the_register_holds": {
+      "duration_ms": 18.975,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_an_article_whose_text_states_no_period_is_not_computed_and_says_so": {
+      "duration_ms": 18.779,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_an_uncomputed_limitation_reports_itself_once_and_not_as_a_gap": {
+      "duration_ms": 19.521,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_an_unresolved_posture_computes_no_limitation_for_either_side": {
+      "duration_ms": 15.513,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_on_a_defending_thread_the_turn_computes_the_opponents_limitation": {
+      "duration_ms": 20.439,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_the_board_distinguishes_no_deadline_from_no_register": {
+      "duration_ms": 2.523,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_the_limitation_lines_read_as_english_to_an_advocate": {
+      "duration_ms": 20.199,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_the_matter_list_orders_by_a_deadline_it_actually_holds": {
+      "duration_ms": 1.563,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_the_period_on_a_served_turn_is_the_one_the_retrieved_text_states": {
+      "duration_ms": 20.544,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_the_thread_board_puts_the_nearest_window_first": {
+      "duration_ms": 1.356,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_the_turn_names_every_threshold_it_did_not_assess": {
+      "duration_ms": 20.257,
+      "outcome": "passed"
+    },
+    "tests/test_slice4_closeout.py::test_where_no_window_could_be_established_the_action_says_which": {
+      "duration_ms": 18.688,
+      "outcome": "passed"
+    },
+    "tests/test_slice6_boards.py::test_a_deferred_thread_stays_on_the_board_with_its_deadline": {
+      "duration_ms": 1.381,
+      "outcome": "passed"
+    },
+    "tests/test_slice6_boards.py::test_a_screen_that_was_never_run_is_not_reported_as_clear": {
+      "duration_ms": 1.275,
+      "outcome": "passed"
+    },
+    "tests/test_slice6_boards.py::test_an_unbuilt_gate_is_never_listed_as_something_to_action": {
+      "duration_ms": 0.958,
+      "outcome": "passed"
+    },
+    "tests/test_slice6_boards.py::test_the_board_and_the_answer_derive_from_the_same_matter": {
+      "duration_ms": 1.569,
+      "outcome": "passed"
+    },
+    "tests/test_store_roundtrip.py::test_a_served_turn_is_recorded_in_full_and_sealed": {
+      "duration_ms": 3.902,
+      "outcome": "passed"
+    },
+    "tests/test_store_roundtrip.py::test_a_transcript_that_cannot_be_written_never_costs_the_advocate_the_turn": {
+      "duration_ms": 17.835,
+      "outcome": "passed"
+    },
+    "tests/test_store_roundtrip.py::test_an_unreadable_transcript_is_reported_rather_than_dropped": {
+      "duration_ms": 3.611,
+      "outcome": "passed"
+    },
+    "tests/test_store_roundtrip.py::test_every_field_of_a_matter_survives_a_save_and_load": {
+      "duration_ms": 7.784,
+      "outcome": "passed"
+    },
+    "tests/test_store_roundtrip.py::test_every_persisted_type_is_covered_by_this_file": {
+      "duration_ms": 1.209,
+      "outcome": "passed"
+    },
+    "tests/test_store_roundtrip.py::test_no_persisted_type_has_a_field_the_decoder_cannot_reach": {
+      "aggregate_of": 6,
+      "duration_ms": 40.38,
+      "outcome": "passed"
+    },
+    "tests/test_store_roundtrip.py::test_no_persisted_type_has_a_field_the_decoder_cannot_reach[AskedQuestion]": {
+      "duration_ms": 6.549,
+      "outcome": "passed"
+    },
+    "tests/test_store_roundtrip.py::test_no_persisted_type_has_a_field_the_decoder_cannot_reach[Fact]": {
+      "duration_ms": 7.04,
+      "outcome": "passed"
+    },
+    "tests/test_store_roundtrip.py::test_no_persisted_type_has_a_field_the_decoder_cannot_reach[Matter]": {
+      "duration_ms": 6.85,
+      "outcome": "passed"
+    },
+    "tests/test_store_roundtrip.py::test_no_persisted_type_has_a_field_the_decoder_cannot_reach[Posture]": {
+      "duration_ms": 6.485,
+      "outcome": "passed"
+    },
+    "tests/test_store_roundtrip.py::test_no_persisted_type_has_a_field_the_decoder_cannot_reach[Provenance]": {
+      "duration_ms": 6.659,
+      "outcome": "passed"
+    },
+    "tests/test_store_roundtrip.py::test_no_persisted_type_has_a_field_the_decoder_cannot_reach[Thread]": {
+      "duration_ms": 6.797,
+      "outcome": "passed"
+    },
+    "tests/test_the_account_says_where_a_fact_came_from.py::test_a_document_kind_with_no_name_says_so_rather_than_nothing": {
+      "duration_ms": 0.505,
+      "outcome": "passed"
+    },
+    "tests/test_the_account_says_where_a_fact_came_from.py::test_a_document_provenance_with_no_page_still_names_the_document": {
+      "duration_ms": 0.549,
+      "outcome": "passed"
+    },
+    "tests/test_the_account_says_where_a_fact_came_from.py::test_a_documented_fact_and_a_claimed_one_are_not_the_same_bytes": {
+      "duration_ms": 2.295,
+      "outcome": "passed"
+    },
+    "tests/test_the_account_says_where_a_fact_came_from.py::test_an_advocate_statement_carries_no_prefix": {
+      "duration_ms": 2.185,
+      "outcome": "passed"
+    },
+    "tests/test_the_account_says_where_a_fact_came_from.py::test_the_document_and_the_page_are_both_named": {
+      "duration_ms": 1.362,
+      "outcome": "passed"
+    },
+    "tests/test_the_account_says_where_a_fact_came_from.py::test_the_heading_is_true_of_every_line_under_it": {
+      "duration_ms": 1.538,
+      "outcome": "passed"
+    },
+    "tests/test_the_adverse_read_knows_whose_side.py::test_an_unresolved_posture_is_stated_and_not_defaulted": {
+      "duration_ms": 0.325,
+      "outcome": "passed"
+    },
+    "tests/test_the_adverse_read_knows_whose_side.py::test_both_reads_that_speak_of_the_client_take_the_side": {
+      "duration_ms": 1.181,
+      "outcome": "passed"
+    },
+    "tests/test_the_adverse_read_knows_whose_side.py::test_the_adverse_read_is_told_which_side_we_act_for": {
+      "duration_ms": 0.365,
+      "outcome": "passed"
+    },
+    "tests/test_the_adverse_read_knows_whose_side.py::test_the_theory_read_still_takes_the_side": {
+      "duration_ms": 0.326,
+      "outcome": "passed"
+    },
+    "tests/test_the_audit_findings_stay_fixed.py::test_a_missing_index_count_is_none_and_not_zero": {
+      "duration_ms": 2.071,
+      "outcome": "passed"
+    },
+    "tests/test_the_audit_findings_stay_fixed.py::test_a_missing_key_is_still_a_hard_failure": {
+      "duration_ms": 0.375,
+      "outcome": "passed"
+    },
+    "tests/test_the_audit_findings_stay_fixed.py::test_a_missing_phrase_raises_rather_than_asserts": {
+      "duration_ms": 0.573,
+      "outcome": "passed"
+    },
+    "tests/test_the_audit_findings_stay_fixed.py::test_no_guard_in_the_product_is_an_assert": {
+      "duration_ms": 162.185,
+      "outcome": "passed"
+    },
+    "tests/test_the_audit_findings_stay_fixed.py::test_nothing_in_the_product_asks_the_machine_what_day_it_is": {
+      "duration_ms": 16.658,
+      "outcome": "passed"
+    },
+    "tests/test_the_audit_findings_stay_fixed.py::test_the_assert_sweep_can_see_a_guard_it_would_delete": {
+      "duration_ms": 170.457,
+      "outcome": "passed"
+    },
+    "tests/test_the_audit_findings_stay_fixed.py::test_the_cipher_refuses_to_downgrade_without_being_told": {
+      "duration_ms": 0.556,
+      "outcome": "passed"
+    },
+    "tests/test_the_audit_findings_stay_fixed.py::test_the_clock_needs_no_timezone_database": {
+      "duration_ms": 3.237,
+      "outcome": "passed"
+    },
+    "tests/test_the_audit_findings_stay_fixed.py::test_the_clock_sweep_can_see_a_call_to_the_machine": {
+      "duration_ms": 18.095,
+      "outcome": "passed"
+    },
+    "tests/test_the_audit_findings_stay_fixed.py::test_the_forum_date_crosses_at_the_forums_midnight": {
+      "duration_ms": 0.329,
+      "outcome": "passed"
+    },
+    "tests/test_the_audit_findings_stay_fixed.py::test_the_forum_sweep_can_see_a_second_owner": {
+      "duration_ms": 18.121,
+      "outcome": "passed"
+    },
+    "tests/test_the_audit_findings_stay_fixed.py::test_the_jurisdiction_has_one_owner": {
+      "duration_ms": 16.273,
+      "outcome": "passed"
+    },
+    "tests/test_the_audit_findings_stay_fixed.py::test_the_session_cookie_is_secure_when_the_connection_is": {
+      "duration_ms": 0.524,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_a_build_rule_cannot_be_lost": {
+      "aggregate_of": 8,
+      "duration_ms": 1997.115,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_a_build_rule_cannot_be_lost[a population that moved without its count-<lambda>-was added or lost without the count]": {
+      "duration_ms": 239.093,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_a_build_rule_cannot_be_lost[a review with no evidence level-<lambda>-what kind of recorded result]": {
+      "duration_ms": 231.756,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_a_build_rule_cannot_be_lost[a rule claimed by the wrong playbook-<lambda>-is claimed by]": {
+      "duration_ms": 273.611,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_a_build_rule_cannot_be_lost[a rule no playbook claims-<lambda>-no playbook claims it]": {
+      "duration_ms": 225.337,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_a_build_rule_cannot_be_lost[a runner naming no check-<lambda>-names no check]": {
+      "duration_ms": 263.134,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_a_build_rule_cannot_be_lost[a runner pointing at a test nobody wrote-<lambda>-does not exist]": {
+      "duration_ms": 266.45,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_a_build_rule_cannot_be_lost[an emptied registry-<lambda>-would pass by having nothing to check]": {
+      "duration_ms": 224.009,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_a_build_rule_cannot_be_lost[an unenforced rule with no reason-<lambda>-an admitted gap]": {
+      "duration_ms": 273.725,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_a_missing_link_is_not_proven": {
+      "duration_ms": 1.613,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_delivery_waves_are_complete_and_ordered": {
+      "duration_ms": 215.776,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_done_cannot_be_authored": {
+      "duration_ms": 218.282,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_every_feature_in_the_prd_is_in_the_registry": {
+      "duration_ms": 298.082,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_gap_closure_is_derived_from_registered_work": {
+      "duration_ms": 263.738,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls": {
+      "aggregate_of": 22,
+      "duration_ms": 5362.757,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[authored-gap-status]": {
+      "duration_ms": 274.697,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[dangling-advice-level]": {
+      "duration_ms": 230.707,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[dangling-feature]": {
+      "duration_ms": 234.119,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[dangling-linked-work-item]": {
+      "duration_ms": 272.842,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[dangling-standard]": {
+      "duration_ms": 259.716,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[dangling-step]": {
+      "duration_ms": 226.301,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[dangling-workflow-state]": {
+      "duration_ms": 224.851,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[duplicate-delivery-wave]": {
+      "duration_ms": 264.919,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[empty-advice-maturity]": {
+      "duration_ms": 228.97,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[empty-advocate-standards]": {
+      "duration_ms": 235.116,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[empty-gap-closures]": {
+      "duration_ms": 263.919,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[empty-gap-links]": {
+      "duration_ms": 274.861,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[empty-roles]": {
+      "duration_ms": 227.827,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[empty-workflow-states]": {
+      "duration_ms": 271.39,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[foundation-after-feature]": {
+      "duration_ms": 228.79,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[invalid-link-stage]": {
+      "duration_ms": 228.799,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[late-foundation-link]": {
+      "duration_ms": 269.09,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[missing-delivery-wave]": {
+      "duration_ms": 223.377,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[null-wave-on-active-work]": {
+      "duration_ms": 230.548,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[out-of-range-delivery-wave]": {
+      "duration_ms": 230.034,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[release-before-feature]": {
+      "duration_ms": 231.253,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_lint_positive_controls[reverse-wave-hard-dependency]": {
+      "duration_ms": 230.631,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_professional_registries_are_complete_and_cross_referenced": {
+      "duration_ms": 213.054,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_ready_routes_to_build_and_verified_routes_to_signoff": {
+      "duration_ms": 1.3,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_signoff_is_required_for_managed_done_and_then_closes_the_router": {
+      "duration_ms": 1.246,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_stage_records_are_sequential_and_the_legacy_population_is_fixed": {
+      "duration_ms": 498.832,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_board_is_not_stale": {
+      "duration_ms": 207.841,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_cycle_check_can_see_a_cycle": {
+      "duration_ms": 434.523,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_lint_can_see_a_planted_duplicate": {
+      "duration_ms": 264.672,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_lint_can_see_a_row_whose_prose_is_missing": {
+      "duration_ms": 226.295,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_registry_lints_clean": {
+      "duration_ms": 216.488,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_step_rules_can_each_fail": {
+      "aggregate_of": 9,
+      "duration_ms": 2246.424,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_step_rules_can_each_fail[AN EMPTY STEPS REGISTRY-<lambda>-exercised by no journey step]": {
+      "duration_ms": 284.166,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_step_rules_can_each_fail[a duplicated step id-<lambda>-appears twice]": {
+      "duration_ms": 232.43,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_step_rules_can_each_fail[a phase that contradicts the id-<lambda>-does not match its id]": {
+      "duration_ms": 229.334,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_step_rules_can_each_fail[a step naming a feature nobody registered-<lambda>-not registered]": {
+      "duration_ms": 228.877,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_step_rules_can_each_fail[a step naming a row nobody registered-<lambda>-not in the registry]": {
+      "duration_ms": 266.326,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_step_rules_can_each_fail[a step resting on a later phase's feature-<lambda>-later phase]": {
+      "duration_ms": 276.11,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_step_rules_can_each_fail[a step that will not say where it came from-<lambda>-whether the PRD states it]": {
+      "duration_ms": 273.114,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_step_rules_can_each_fail[an id that is not STEP-<phase>-<nn>-<lambda>-is not STEP-]": {
+      "duration_ms": 228.167,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_step_rules_can_each_fail[half a contract-<lambda>-not a contract]": {
+      "duration_ms": 227.9,
+      "outcome": "passed"
+    },
+    "tests/test_the_backlog_states_one_truth.py::test_the_two_rules_the_split_dropped_are_back": {
+      "duration_ms": 207.191,
+      "outcome": "passed"
+    },
+    "tests/test_the_court_filter_resolves.py::test_a_court_this_index_does_not_hold_returns_nothing_and_says_so": {
+      "duration_ms": 0.315,
+      "outcome": "passed"
+    },
+    "tests/test_the_court_filter_resolves.py::test_an_unrecognised_string_is_not_coerced_to_the_commonest_court": {
+      "duration_ms": 0.32,
+      "outcome": "passed"
+    },
+    "tests/test_the_court_filter_resolves.py::test_common_spellings_reach_the_same_stored_value": {
+      "aggregate_of": 6,
+      "duration_ms": 2.849,
+      "outcome": "passed"
+    },
+    "tests/test_the_court_filter_resolves.py::test_common_spellings_reach_the_same_stored_value[Andhra Pradesh High Court-High Court of Andhra Pradesh]": {
+      "duration_ms": 0.45,
+      "outcome": "passed"
+    },
+    "tests/test_the_court_filter_resolves.py::test_common_spellings_reach_the_same_stored_value[High Court of Andhra Pradesh-High Court of Andhra Pradesh]": {
+      "duration_ms": 0.469,
+      "outcome": "passed"
+    },
+    "tests/test_the_court_filter_resolves.py::test_common_spellings_reach_the_same_stored_value[SUPREME COURT OF INDIA-Supreme Court of India]": {
+      "duration_ms": 0.48,
+      "outcome": "passed"
+    },
+    "tests/test_the_court_filter_resolves.py::test_common_spellings_reach_the_same_stored_value[Supreme Court-Supreme Court of India]": {
+      "duration_ms": 0.588,
+      "outcome": "passed"
+    },
+    "tests/test_the_court_filter_resolves.py::test_common_spellings_reach_the_same_stored_value[Telangana High Court-High Court of Andhra Pradesh]": {
+      "duration_ms": 0.445,
+      "outcome": "passed"
+    },
+    "tests/test_the_court_filter_resolves.py::test_common_spellings_reach_the_same_stored_value[supreme court of india-Supreme Court of India]": {
+      "duration_ms": 0.417,
+      "outcome": "passed"
+    },
+    "tests/test_the_court_filter_resolves.py::test_no_filter_is_distinguishable_from_a_filter_that_matched_nothing": {
+      "duration_ms": 0.339,
+      "outcome": "passed"
+    },
+    "tests/test_the_court_filter_resolves.py::test_telangana_reaches_the_andhra_pradesh_bench": {
+      "duration_ms": 0.304,
+      "outcome": "passed"
+    },
+    "tests/test_the_court_filter_resolves.py::test_the_resolver_can_tell_a_hit_from_a_miss": {
+      "duration_ms": 0.311,
+      "outcome": "passed"
+    },
+    "tests/test_the_court_filter_resolves.py::test_the_stored_values_are_the_ones_the_index_holds": {
+      "duration_ms": 0.335,
+      "outcome": "passed"
+    },
+    "tests/test_the_cross_file_pass_is_honest.py::test_a_file_with_no_new_threads_is_untouched": {
+      "duration_ms": 0.284,
+      "outcome": "passed"
+    },
+    "tests/test_the_cross_file_pass_is_honest.py::test_a_new_thread_is_still_weighed_against_the_standing_file": {
+      "duration_ms": 0.423,
+      "outcome": "passed"
+    },
+    "tests/test_the_cross_file_pass_is_honest.py::test_a_thread_is_named_to_the_advocate_by_its_label": {
+      "duration_ms": 0.443,
+      "outcome": "passed"
+    },
+    "tests/test_the_cross_file_pass_is_honest.py::test_an_unrecognised_id_is_never_shown_raw": {
+      "duration_ms": 0.438,
+      "outcome": "passed"
+    },
+    "tests/test_the_cross_file_pass_is_honest.py::test_one_new_thread_is_not_a_split": {
+      "duration_ms": 0.327,
+      "outcome": "passed"
+    },
+    "tests/test_the_cross_file_pass_is_honest.py::test_the_exposure_prompt_carries_no_internal_ids": {
+      "duration_ms": 0.457,
+      "outcome": "passed"
+    },
+    "tests/test_the_cross_file_pass_is_honest.py::test_threads_born_from_one_message_are_not_argued_across": {
+      "duration_ms": 0.351,
+      "outcome": "passed"
+    },
+    "tests/test_the_docs_do_not_outlive_the_artefact.py::test_no_live_document_says_an_artefact_is_absent_while_it_is_on_disk": {
+      "duration_ms": 5.012,
+      "outcome": "passed"
+    },
+    "tests/test_the_docs_do_not_outlive_the_artefact.py::test_the_check_can_see_a_stale_claim": {
+      "aggregate_of": 3,
+      "duration_ms": 1.053,
+      "outcome": "passed"
+    },
+    "tests/test_the_docs_do_not_outlive_the_artefact.py::test_the_check_can_see_a_stale_claim[**Embeddings are deliberately deferred, not forgotten.**]": {
+      "duration_ms": 0.324,
+      "outcome": "passed"
+    },
+    "tests/test_the_docs_do_not_outlive_the_artefact.py::test_the_check_can_see_a_stale_claim[tools/build_authority_index.py` has never been run]": {
+      "duration_ms": 0.377,
+      "outcome": "passed"
+    },
+    "tests/test_the_docs_do_not_outlive_the_artefact.py::test_the_check_can_see_a_stale_claim[| Semantic search (embeddings) | **NOT WORKING** \\u2014 see below]": {
+      "duration_ms": 0.352,
+      "outcome": "passed"
+    },
+    "tests/test_the_docs_do_not_outlive_the_artefact.py::test_the_recorded_paragraph_count_matches_the_corpus_arithmetic": {
+      "duration_ms": 0.816,
+      "outcome": "passed"
+    },
+    "tests/test_the_door_counts_wrong_answers.py::test_a_limiter_that_cannot_run_opens_the_door_and_says_so": {
+      "duration_ms": 1.522,
+      "outcome": "passed"
+    },
+    "tests/test_the_door_counts_wrong_answers.py::test_a_refusal_says_when_and_says_nothing_is_locked": {
+      "duration_ms": 0.347,
+      "outcome": "passed"
+    },
+    "tests/test_the_door_counts_wrong_answers.py::test_a_refused_attempt_is_429_and_not_401": {
+      "duration_ms": 1.18,
+      "outcome": "passed"
+    },
+    "tests/test_the_door_counts_wrong_answers.py::test_a_successful_sign_in_adds_nothing_to_the_count": {
+      "duration_ms": 1.13,
+      "outcome": "passed"
+    },
+    "tests/test_the_door_counts_wrong_answers.py::test_a_sweep_across_addresses_trips_the_source_counter": {
+      "duration_ms": 0.359,
+      "outcome": "passed"
+    },
+    "tests/test_the_door_counts_wrong_answers.py::test_an_allowed_attempt_says_nothing_at_all": {
+      "duration_ms": 0.34,
+      "outcome": "passed"
+    },
+    "tests/test_the_door_counts_wrong_answers.py::test_failures_older_than_the_window_do_not_count": {
+      "duration_ms": 0.503,
+      "outcome": "passed"
+    },
+    "tests/test_the_door_counts_wrong_answers.py::test_the_door_opens_until_the_limit_and_then_does_not": {
+      "duration_ms": 0.364,
+      "outcome": "passed"
+    },
+    "tests/test_the_door_counts_wrong_answers.py::test_the_limiter_runs_before_the_password_is_verified": {
+      "duration_ms": 1.348,
+      "outcome": "passed"
+    },
+    "tests/test_the_door_counts_wrong_answers.py::test_the_pause_is_measured_from_the_oldest_attempt_in_the_window": {
+      "duration_ms": 0.525,
+      "outcome": "passed"
+    },
+    "tests/test_the_golden_set_has_one_owner.py::test_a_scenario_whose_control_is_unbuilt_is_not_tagged_runnable": {
+      "aggregate_of": 2,
+      "duration_ms": 1.329,
+      "outcome": "passed"
+    },
+    "tests/test_the_golden_set_has_one_owner.py::test_a_scenario_whose_control_is_unbuilt_is_not_tagged_runnable[GS-03]": {
+      "duration_ms": 0.648,
+      "outcome": "passed"
+    },
+    "tests/test_the_golden_set_has_one_owner.py::test_a_scenario_whose_control_is_unbuilt_is_not_tagged_runnable[GS-04]": {
+      "duration_ms": 0.681,
+      "outcome": "passed"
+    },
+    "tests/test_the_golden_set_has_one_owner.py::test_the_drift_check_can_see_a_disagreement": {
+      "duration_ms": 0.305,
+      "outcome": "passed"
+    },
+    "tests/test_the_golden_set_has_one_owner.py::test_the_two_copies_of_the_golden_set_agree_on_every_slice": {
+      "duration_ms": 1.756,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_a_carried_section_can_still_be_unassessed_on_a_file": {
+      "duration_ms": 1.265,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_a_computed_register_reaches_the_handover": {
+      "duration_ms": 19.836,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_a_derived_thread_stops_saying_not_assessed": {
+      "duration_ms": 22.809,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_a_reservation_is_reactivated_by_a_fact_and_never_by_a_turn": {
+      "duration_ms": 0.414,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_a_reservation_that_was_never_overruled_cannot_be_built": {
+      "duration_ms": 0.384,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_a_screen_reloads_as_data_like_every_other_untyped_field": {
+      "duration_ms": 21.446,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_a_thread_that_derived_nothing_says_not_assessed_not_none": {
+      "duration_ms": 0.999,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_an_empty_matter_is_not_a_complete_handover": {
+      "duration_ms": 0.477,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_an_empty_queue_is_a_finding_and_an_absent_one_is_not": {
+      "duration_ms": 3.446,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_an_overruled_position_is_recorded_once_and_not_restated": {
+      "duration_ms": 0.329,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_an_unreactivated_reservation_refuses_to_state_itself": {
+      "duration_ms": 0.355,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_every_carried_derivation_names_a_real_thread_field": {
+      "duration_ms": 0.667,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_the_assessed_names_come_from_the_derive_phase_and_not_a_second_list": {
+      "duration_ms": 4.971,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_the_blockers_that_remain_are_the_ones_that_are_really_unbuilt": {
+      "duration_ms": 0.536,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_the_engagement_records_who_and_what_and_names_what_it_lacks": {
+      "duration_ms": 19.876,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_the_matter_level_sections_use_the_same_helper": {
+      "duration_ms": 0.77,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_the_persisted_derivation_is_replaced_and_never_merged": {
+      "duration_ms": 6.642,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_the_screens_are_recorded_even_when_they_refuse_the_matter": {
+      "duration_ms": 5.078,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_the_screens_carry_five_states_on_every_matter": {
+      "duration_ms": 19.568,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_the_state_survives_the_store": {
+      "duration_ms": 21.877,
+      "outcome": "passed"
+    },
+    "tests/test_the_handover_says_what_it_did_not_do.py::test_the_store_round_trips_a_set_in_both_directions": {
+      "duration_ms": 0.339,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_a_fresh_read_may_sharpen_a_facet_and_may_not_blank_one": {
+      "duration_ms": 1.054,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_a_named_id_is_carried_so_the_merge_has_a_key": {
+      "duration_ms": 0.748,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_a_new_item_is_added": {
+      "duration_ms": 0.662,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_a_preservation_step_is_never_lost_to_a_fresh_read": {
+      "duration_ms": 0.952,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_a_stored_row_that_cannot_be_rebuilt_is_dropped_and_the_rest_kept": {
+      "duration_ms": 0.624,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_an_id_the_file_does_not_hold_is_dropped": {
+      "duration_ms": 0.614,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_an_item_survives_a_read_that_does_not_mention_it": {
+      "duration_ms": 0.708,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_an_unissued_preservation_survives_the_round_trip": {
+      "duration_ms": 0.665,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_every_item_gets_an_id_even_without_a_named_one": {
+      "duration_ms": 0.471,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_items_come_back_from_the_store_typed": {
+      "duration_ms": 0.541,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_nothing_merges_two_items_by_comparing_their_descriptions": {
+      "duration_ms": 0.573,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_the_read_is_shown_what_is_already_on_the_file": {
+      "duration_ms": 0.481,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_the_thread_carries_the_field": {
+      "duration_ms": 0.564,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_the_turn_persists_the_merged_inventory": {
+      "duration_ms": 1.658,
+      "outcome": "passed"
+    },
+    "tests/test_the_inventory_survives_a_turn.py::test_what_is_carried_is_not_recited": {
+      "duration_ms": 1.501,
+      "outcome": "passed"
+    },
+    "tests/test_the_issues_survive_a_turn.py::test_a_new_question_is_added": {
+      "duration_ms": 0.638,
+      "outcome": "passed"
+    },
+    "tests/test_the_issues_survive_a_turn.py::test_a_restated_question_does_not_become_a_second_issue": {
+      "duration_ms": 0.528,
+      "outcome": "passed"
+    },
+    "tests/test_the_issues_survive_a_turn.py::test_a_stored_row_that_cannot_be_rebuilt_is_dropped_and_the_rest_kept": {
+      "duration_ms": 0.438,
+      "outcome": "passed"
+    },
+    "tests/test_the_issues_survive_a_turn.py::test_an_empty_read_changes_nothing": {
+      "duration_ms": 0.599,
+      "outcome": "passed"
+    },
+    "tests/test_the_issues_survive_a_turn.py::test_an_id_the_thread_does_not_hold_is_dropped": {
+      "duration_ms": 0.543,
+      "outcome": "passed"
+    },
+    "tests/test_the_issues_survive_a_turn.py::test_an_issue_survives_a_read_that_forgets_it": {
+      "duration_ms": 95.126,
+      "outcome": "passed"
+    },
+    "tests/test_the_issues_survive_a_turn.py::test_nothing_decides_two_sentences_are_one_issue_by_comparing_them": {
+      "duration_ms": 0.496,
+      "outcome": "passed"
+    },
+    "tests/test_the_issues_survive_a_turn.py::test_the_read_is_shown_what_is_already_on_the_thread": {
+      "duration_ms": 0.494,
+      "outcome": "passed"
+    },
+    "tests/test_the_issues_survive_a_turn.py::test_the_same_question_asked_twice_is_one_issue": {
+      "duration_ms": 0.706,
+      "outcome": "passed"
+    },
+    "tests/test_the_issues_survive_a_turn.py::test_the_standing_issue_wins_a_match": {
+      "duration_ms": 0.714,
+      "outcome": "passed"
+    },
+    "tests/test_the_issues_survive_a_turn.py::test_they_come_back_from_the_store_typed": {
+      "duration_ms": 18.282,
+      "outcome": "passed"
+    },
+    "tests/test_the_judge_scores_what_was_served.py::test_a_served_turn_is_still_scored_in_full": {
+      "duration_ms": 18.158,
+      "outcome": "passed"
+    },
+    "tests/test_the_judge_scores_what_was_served.py::test_the_judges_material_does_not_carry_a_refused_draft": {
+      "duration_ms": 26.567,
+      "outcome": "passed"
+    },
+    "tests/test_the_judge_scores_what_was_served.py::test_the_record_says_the_turn_was_withheld": {
+      "duration_ms": 23.893,
+      "outcome": "passed"
+    },
+    "tests/test_the_matrix_and_the_plan_agree.py::test_a_feature_still_being_built_may_have_some_gates_built": {
+      "duration_ms": 49.728,
+      "outcome": "passed"
+    },
+    "tests/test_the_matrix_and_the_plan_agree.py::test_no_feature_claims_to_be_done_while_a_gate_of_its_own_is_unbuilt": {
+      "duration_ms": 48.826,
+      "outcome": "passed"
+    },
+    "tests/test_the_matrix_and_the_plan_agree.py::test_the_check_can_see_a_feature_that_outran_its_gate": {
+      "duration_ms": 0.534,
+      "outcome": "passed"
+    },
+    "tests/test_the_matter_cover_tells_ten_files_apart.py::test_a_matter_is_named_for_its_parties": {
+      "duration_ms": 0.448,
+      "outcome": "passed"
+    },
+    "tests/test_the_matter_cover_tells_ten_files_apart.py::test_a_matter_with_no_parties_is_cut_on_a_word": {
+      "duration_ms": 0.372,
+      "outcome": "passed"
+    },
+    "tests/test_the_matter_cover_tells_ten_files_apart.py::test_a_matter_with_only_one_side_says_which": {
+      "duration_ms": 0.503,
+      "outcome": "passed"
+    },
+    "tests/test_the_matter_cover_tells_ten_files_apart.py::test_last_worked_is_a_date_and_not_a_write_count": {
+      "duration_ms": 130.121,
+      "outcome": "passed"
+    },
+    "tests/test_the_matter_cover_tells_ten_files_apart.py::test_not_assessed_and_none_are_not_the_same_row": {
+      "duration_ms": 132.682,
+      "outcome": "passed"
+    },
+    "tests/test_the_matter_cover_tells_ten_files_apart.py::test_the_board_reads_the_register_too": {
+      "duration_ms": 142.902,
+      "outcome": "passed"
+    },
+    "tests/test_the_matter_cover_tells_ten_files_apart.py::test_the_browser_renders_the_four_states_apart": {
+      "duration_ms": 1.558,
+      "outcome": "passed"
+    },
+    "tests/test_the_matter_cover_tells_ten_files_apart.py::test_the_list_names_the_client_and_not_the_advocate": {
+      "duration_ms": 127.626,
+      "outcome": "passed"
+    },
+    "tests/test_the_opponent_is_remembered.py::test_a_value_that_names_nobody_is_not_recorded": {
+      "duration_ms": 0.436,
+      "outcome": "passed"
+    },
+    "tests/test_the_opponent_is_remembered.py::test_an_account_that_states_no_client_names_no_opponent": {
+      "duration_ms": 0.307,
+      "outcome": "passed"
+    },
+    "tests/test_the_opponent_is_remembered.py::test_no_opponent_named_is_none_and_not_an_empty_string": {
+      "duration_ms": 0.491,
+      "outcome": "passed"
+    },
+    "tests/test_the_opponent_is_remembered.py::test_the_opponent_is_taken_from_what_the_advocate_said": {
+      "duration_ms": 0.478,
+      "outcome": "passed"
+    },
+    "tests/test_the_opponent_is_remembered.py::test_the_opponent_reaches_the_record": {
+      "duration_ms": 19.995,
+      "outcome": "passed"
+    },
+    "tests/test_the_opponent_is_remembered.py::test_the_opponent_survives_the_next_turn": {
+      "duration_ms": 40.461,
+      "outcome": "passed"
+    },
+    "tests/test_the_opponent_is_remembered.py::test_the_record_shown_to_the_advocate_says_who_they_are_against": {
+      "duration_ms": 19.517,
+      "outcome": "passed"
+    },
+    "tests/test_the_opponent_is_remembered.py::test_the_summary_carries_the_opponent_into_the_next_call": {
+      "duration_ms": 19.469,
+      "outcome": "passed"
+    },
+    "tests/test_the_page_and_the_script_agree.py::test_every_element_the_script_reaches_for_is_on_the_page": {
+      "duration_ms": 0.659,
+      "outcome": "passed"
+    },
+    "tests/test_the_page_and_the_script_agree.py::test_every_password_reveal_is_a_button_and_not_a_submit": {
+      "duration_ms": 0.419,
+      "outcome": "passed"
+    },
+    "tests/test_the_page_and_the_script_agree.py::test_the_build_banner_draws_above_the_gate": {
+      "duration_ms": 0.39,
+      "outcome": "passed"
+    },
+    "tests/test_the_page_and_the_script_agree.py::test_the_outcome_card_reports_failure_as_well_as_success": {
+      "duration_ms": 0.366,
+      "outcome": "passed"
+    },
+    "tests/test_the_page_and_the_script_agree.py::test_the_registration_outcome_is_wired_in_both_directions": {
+      "duration_ms": 1.601,
+      "outcome": "passed"
+    },
+    "tests/test_the_page_and_the_script_agree.py::test_the_scan_would_catch_a_missing_element": {
+      "duration_ms": 0.554,
+      "outcome": "passed"
+    },
+    "tests/test_the_period_never_runs_from_an_unchosen_date.py::test_a_read_that_names_nothing_does_not_start_the_period": {
+      "duration_ms": 18.955,
+      "outcome": "passed"
+    },
+    "tests/test_the_period_never_runs_from_an_unchosen_date.py::test_an_entry_that_is_not_on_the_chart_is_not_an_accrual": {
+      "duration_ms": 18.942,
+      "outcome": "passed"
+    },
+    "tests/test_the_period_never_runs_from_an_unchosen_date.py::test_every_curated_article_says_when_its_period_starts": {
+      "duration_ms": 0.5,
+      "outcome": "passed"
+    },
+    "tests/test_the_period_never_runs_from_an_unchosen_date.py::test_the_limb_reaches_the_advocate": {
+      "duration_ms": 20.798,
+      "outcome": "passed"
+    },
+    "tests/test_the_period_never_runs_from_an_unchosen_date.py::test_the_period_runs_from_the_entry_the_read_named": {
+      "aggregate_of": 2,
+      "duration_ms": 39.896,
+      "outcome": "passed"
+    },
+    "tests/test_the_period_never_runs_from_an_unchosen_date.py::test_the_period_runs_from_the_entry_the_read_named[first]": {
+      "duration_ms": 19.611,
+      "outcome": "passed"
+    },
+    "tests/test_the_period_never_runs_from_an_unchosen_date.py::test_the_period_runs_from_the_entry_the_read_named[last]": {
+      "duration_ms": 20.285,
+      "outcome": "passed"
+    },
+    "tests/test_the_period_never_runs_from_an_unchosen_date.py::test_the_trigger_lookup_has_one_owner_and_answers_for_every_cause": {
+      "duration_ms": 0.424,
+      "outcome": "passed"
+    },
+    "tests/test_the_product_does_not_speak_in_identifiers.py::test_a_missing_phrase_is_an_import_error_and_not_a_transcript": {
+      "duration_ms": 0.711,
+      "outcome": "passed"
+    },
+    "tests/test_the_product_does_not_speak_in_identifiers.py::test_every_spoken_enum_called_complete": {
+      "duration_ms": 20.29,
+      "outcome": "passed"
+    },
+    "tests/test_the_product_does_not_speak_in_identifiers.py::test_no_enum_value_reaches_the_advocate": {
+      "duration_ms": 1882.006,
+      "outcome": "passed"
+    },
+    "tests/test_the_product_does_not_speak_in_identifiers.py::test_said_has_no_fallback_to_the_value": {
+      "duration_ms": 0.604,
+      "outcome": "passed"
+    },
+    "tests/test_the_product_does_not_speak_in_identifiers.py::test_the_complete_scan_can_see_an_enum_that_never_checks_itself": {
+      "duration_ms": 24.756,
+      "outcome": "passed"
+    },
+    "tests/test_the_product_does_not_speak_in_identifiers.py::test_the_phrases_are_not_the_identifiers_with_the_underscores_removed": {
+      "duration_ms": 0.378,
+      "outcome": "passed"
+    },
+    "tests/test_the_product_does_not_speak_in_identifiers.py::test_the_value_scan_can_see_an_identifier_reaching_the_advocate": {
+      "duration_ms": 1876.439,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_a_fresh_element_is_added_and_a_dropped_one_is_kept": {
+      "duration_ms": 0.543,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_a_gap_that_closes_is_taken": {
+      "duration_ms": 0.524,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_a_held_position_does_not_flicker_across_turns": {
+      "duration_ms": 9.104,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_a_position_held_on_withdrawn_material_falls": {
+      "duration_ms": 0.617,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_a_position_on_material_no_longer_on_the_file_falls_on_the_turn": {
+      "duration_ms": 4.417,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_a_position_still_on_the_file_is_left_alone": {
+      "duration_ms": 0.473,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_a_position_survives_a_read_that_forgets_it": {
+      "duration_ms": 0.613,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_a_position_that_is_not_held_has_no_material_to_withdraw": {
+      "duration_ms": 0.643,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_a_positive_statement_wins_even_when_it_is_worse_news": {
+      "duration_ms": 0.574,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_a_stored_row_that_cannot_be_rebuilt_is_dropped_and_the_rest_kept": {
+      "duration_ms": 0.464,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_against_us_reads_the_merged_list_not_the_fresh_one": {
+      "duration_ms": 5.45,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_it_falls_to_not_assessed_and_never_to_absent": {
+      "duration_ms": 0.727,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_nothing_matches_two_elements_by_resembling_them": {
+      "duration_ms": 0.502,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_positions_come_back_from_the_store_typed": {
+      "duration_ms": 6.677,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_silence_against_silence_changes_nothing": {
+      "duration_ms": 0.539,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_the_positions_are_written_to_the_thread": {
+      "duration_ms": 4.406,
+      "outcome": "passed"
+    },
+    "tests/test_the_proof_survives_a_turn.py::test_the_read_is_still_what_moves_a_position": {
+      "duration_ms": 3.907,
+      "outcome": "passed"
+    },
+    "tests/test_the_register_is_peer_to_peer.py::test_a_ground_does_not_reproduce_the_whole_provision": {
+      "duration_ms": 0.355,
+      "outcome": "passed"
+    },
+    "tests/test_the_register_is_peer_to_peer.py::test_a_position_nobody_assessed_is_not_offered_as_a_step": {
+      "duration_ms": 0.811,
+      "outcome": "passed"
+    },
+    "tests/test_the_register_is_peer_to_peer.py::test_a_span_short_enough_is_left_whole_and_not_flagged": {
+      "duration_ms": 0.323,
+      "outcome": "passed"
+    },
+    "tests/test_the_register_is_peer_to_peer.py::test_a_thread_with_no_positions_adds_nothing": {
+      "duration_ms": 0.559,
+      "outcome": "passed"
+    },
+    "tests/test_the_register_is_peer_to_peer.py::test_an_absent_element_reaches_the_step_with_its_dead_end": {
+      "duration_ms": 0.976,
+      "outcome": "passed"
+    },
+    "tests/test_the_register_is_peer_to_peer.py::test_the_ellipsis_is_never_inside_the_quotation_marks": {
+      "duration_ms": 0.997,
+      "outcome": "passed"
+    },
+    "tests/test_the_register_is_peer_to_peer.py::test_the_excerpt_ends_on_a_sentence_and_not_mid_word": {
+      "duration_ms": 0.303,
+      "outcome": "passed"
+    },
+    "tests/test_the_register_is_peer_to_peer.py::test_the_gate_still_verifies_the_shortened_ground": {
+      "duration_ms": 0.553,
+      "outcome": "passed"
+    },
+    "tests/test_the_register_is_peer_to_peer.py::test_the_recommendation_is_shown_what_the_file_establishes": {
+      "duration_ms": 0.96,
+      "outcome": "passed"
+    },
+    "tests/test_the_register_is_peer_to_peer.py::test_the_rule_is_about_subject_matter_and_not_about_tone": {
+      "duration_ms": 1.767,
+      "outcome": "passed"
+    },
+    "tests/test_the_screen_never_folds_a_disclosure.py::test_a_disclosure_still_looks_different_from_an_assertion": {
+      "duration_ms": 0.463,
+      "outcome": "passed"
+    },
+    "tests/test_the_screen_never_folds_a_disclosure.py::test_only_plain_ground_is_ever_folded": {
+      "duration_ms": 0.857,
+      "outcome": "passed"
+    },
+    "tests/test_the_screen_never_folds_a_disclosure.py::test_the_advocates_own_words_are_still_marked_as_theirs": {
+      "duration_ms": 0.642,
+      "outcome": "passed"
+    },
+    "tests/test_the_screen_never_folds_a_disclosure.py::test_the_fold_says_how_much_is_inside_it": {
+      "duration_ms": 0.503,
+      "outcome": "passed"
+    },
+    "tests/test_the_screen_never_folds_a_disclosure.py::test_the_rendered_turn_puts_no_disclosure_inside_a_fold": {
+      "duration_ms": 290.805,
+      "outcome": "passed"
+    },
+    "tests/test_the_screen_never_folds_a_disclosure.py::test_the_spoken_half_is_the_complement_and_not_a_second_list": {
+      "duration_ms": 0.698,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_a_seal_that_shares_nothing_is_allowed": {
+      "duration_ms": 0.402,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_a_variable_that_is_not_a_credential_does_not_trip_it": {
+      "duration_ms": 0.308,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_an_unset_seal_is_a_different_defect_and_not_this_one": {
+      "duration_ms": 0.348,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_the_real_environment_does_not_share_its_seal": {
+      "duration_ms": 0.6,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_the_refusal_says_what_to_do_and_in_which_order": {
+      "duration_ms": 0.353,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_the_rekey_tool_tells_sealed_from_open_from_unreadable": {
+      "duration_ms": 1.003,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_the_seal_may_not_be_any_other_credential": {
+      "aggregate_of": 7,
+      "duration_ms": 3.574,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_the_seal_may_not_be_any_other_credential[AZURE_CREDENTIAL]": {
+      "duration_ms": 0.563,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_the_seal_may_not_be_any_other_credential[DB_PASSWORD]": {
+      "duration_ms": 0.567,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_the_seal_may_not_be_any_other_credential[GITHUB_TOKEN]": {
+      "duration_ms": 0.478,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_the_seal_may_not_be_any_other_credential[NM_MODEL_API_KEY]": {
+      "duration_ms": 0.533,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_the_seal_may_not_be_any_other_credential[NM_MODEL_API_KEY_ROUTINE]": {
+      "duration_ms": 0.477,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_the_seal_may_not_be_any_other_credential[OPENAI_API_KEY]": {
+      "duration_ms": 0.456,
+      "outcome": "passed"
+    },
+    "tests/test_the_seal_is_not_another_credential.py::test_the_seal_may_not_be_any_other_credential[SOME_PROVIDER_SECRET]": {
+      "duration_ms": 0.5,
+      "outcome": "passed"
+    },
+    "tests/test_the_theory_survives_a_turn.py::test_a_blocked_turn_does_not_erase_the_standing_theory": {
+      "duration_ms": 42.454,
+      "outcome": "passed"
+    },
+    "tests/test_the_theory_survives_a_turn.py::test_a_record_that_cannot_be_read_forms_a_fresh_theory": {
+      "duration_ms": 0.418,
+      "outcome": "passed"
+    },
+    "tests/test_the_theory_survives_a_turn.py::test_a_theory_object_passes_through_unchanged": {
+      "duration_ms": 0.446,
+      "outcome": "passed"
+    },
+    "tests/test_the_theory_survives_a_turn.py::test_a_theory_that_changes_says_what_stopped_fitting": {
+      "duration_ms": 41.353,
+      "outcome": "passed"
+    },
+    "tests/test_the_theory_survives_a_turn.py::test_it_comes_back_from_the_store_typed": {
+      "duration_ms": 18.579,
+      "outcome": "passed"
+    },
+    "tests/test_the_theory_survives_a_turn.py::test_the_read_is_shown_the_theory_it_must_revise": {
+      "duration_ms": 0.432,
+      "outcome": "passed"
+    },
+    "tests/test_the_theory_survives_a_turn.py::test_the_theory_is_the_same_across_four_turns": {
+      "duration_ms": 101.653,
+      "outcome": "passed"
+    },
+    "tests/test_theory.py::test_a_bare_denial_is_a_chosen_strategy_and_never_a_default": {
+      "duration_ms": 0.491,
+      "outcome": "passed"
+    },
+    "tests/test_theory.py::test_a_coordinate_can_be_varied_and_yield_no_route": {
+      "duration_ms": 0.397,
+      "outcome": "passed"
+    },
+    "tests/test_theory.py::test_an_argument_declaring_no_facts_cannot_be_silently_consistent": {
+      "duration_ms": 0.416,
+      "outcome": "passed"
+    },
+    "tests/test_theory.py::test_an_empty_report_and_an_absent_one_cannot_render_alike": {
+      "duration_ms": 0.34,
+      "outcome": "passed"
+    },
+    "tests/test_theory.py::test_coordinates_nobody_moved_are_named": {
+      "duration_ms": 0.714,
+      "outcome": "passed"
+    },
+    "tests/test_theory.py::test_cross_thread_exposure_is_produced_exactly_once_empty_or_not": {
+      "duration_ms": 0.388,
+      "outcome": "passed"
+    },
+    "tests/test_theory.py::test_every_adverse_fact_is_explained_or_expressly_conceded": {
+      "duration_ms": 0.612,
+      "outcome": "passed"
+    },
+    "tests/test_theory.py::test_every_attack_carries_our_answer_or_says_there_is_none": {
+      "duration_ms": 0.412,
+      "outcome": "passed"
+    },
+    "tests/test_theory.py::test_exactly_one_theory_per_thread": {
+      "duration_ms": 0.761,
+      "outcome": "passed"
+    },
+    "tests/test_theory.py::test_no_salvage_route_is_stated_at_category_level": {
+      "duration_ms": 0.508,
+      "outcome": "passed"
+    },
+    "tests/test_theory.py::test_two_arguments_needing_opposite_facts_are_flagged": {
+      "duration_ms": 0.61,
+      "outcome": "passed"
+    },
+    "tests/test_theory_on_a_served_turn.py::test_a_bare_denial_with_no_reasons_is_refused_and_the_advocate_is_told": {
+      "duration_ms": 0.529,
+      "outcome": "passed"
+    },
+    "tests/test_theory_on_a_served_turn.py::test_a_denial_with_reasons_is_accepted": {
+      "duration_ms": 0.53,
+      "outcome": "passed"
+    },
+    "tests/test_theory_on_a_served_turn.py::test_a_fact_cannot_be_both_explained_and_conceded": {
+      "duration_ms": 0.52,
+      "outcome": "passed"
+    },
+    "tests/test_theory_on_a_served_turn.py::test_a_theory_cannot_shrink_the_check_by_naming_facts_nobody_called_adverse": {
+      "duration_ms": 0.576,
+      "outcome": "passed"
+    },
+    "tests/test_theory_on_a_served_turn.py::test_a_theory_reaches_the_advocate": {
+      "duration_ms": 20.165,
+      "outcome": "passed"
+    },
+    "tests/test_theory_on_a_served_turn.py::test_a_theory_that_forgets_the_adverse_facts_names_every_one_of_them": {
+      "duration_ms": 0.93,
+      "outcome": "passed"
+    },
+    "tests/test_theory_on_a_served_turn.py::test_an_adverse_id_the_file_does_not_hold_is_dropped": {
+      "duration_ms": 0.517,
+      "outcome": "passed"
+    },
+    "tests/test_theory_on_a_served_turn.py::test_an_argument_that_declares_nothing_is_reported_not_silently_consistent": {
+      "duration_ms": 0.453,
+      "outcome": "passed"
+    },
+    "tests/test_theory_on_a_served_turn.py::test_no_theory_at_all_leaves_every_adverse_fact_unaccounted": {
+      "duration_ms": 0.584,
+      "outcome": "passed"
+    },
+    "tests/test_theory_on_a_served_turn.py::test_three_states_on_the_read": {
+      "duration_ms": 0.296,
+      "outcome": "passed"
+    },
+    "tests/test_theory_on_a_served_turn.py::test_two_arguments_needing_opposite_values_of_one_fact_are_inconsistent": {
+      "duration_ms": 0.514,
+      "outcome": "passed"
+    },
+    "tests/test_theory_on_a_served_turn.py::test_two_theories_on_one_thread_raise_rather_than_being_ranked": {
+      "duration_ms": 0.586,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_a_case_number_is_recognised_however_it_is_written": {
+      "duration_ms": 0.387,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_a_decisive_identifier_binds_to_the_thread_that_carries_it": {
+      "duration_ms": 1.422,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_a_dispute_read_that_could_not_tell_asks_rather_than_merging": {
+      "duration_ms": 1.373,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_a_new_number_of_record_opens_a_new_thread_rather_than_joining_one": {
+      "duration_ms": 1.517,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_a_renamed_thread_keeps_its_id_and_its_old_label": {
+      "duration_ms": 0.764,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_a_second_dispute_does_not_inherit_the_first_thread_s_posture": {
+      "duration_ms": 35.471,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_an_ambiguous_binding_blocks_the_turn_and_keeps_the_account": {
+      "duration_ms": 52.298,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_an_fir_number_and_a_case_number_are_different_identifiers": {
+      "duration_ms": 0.325,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_identifiers_accumulate_and_are_never_overwritten": {
+      "duration_ms": 1.318,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_label_similarity_never_binds": {
+      "duration_ms": 1.514,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_one_open_thread_is_not_automatically_a_continuation": {
+      "duration_ms": 1.751,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_posture_is_settled_per_thread_not_per_matter": {
+      "duration_ms": 39.146,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_prose_alone_yields_no_identifier": {
+      "duration_ms": 0.386,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_several_threads_and_no_identifier_blocks_rather_than_guessing": {
+      "duration_ms": 1.461,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_the_advocate_naming_a_thread_outranks_everything": {
+      "duration_ms": 1.709,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_the_first_account_opens_the_first_thread": {
+      "duration_ms": 1.047,
+      "outcome": "passed"
+    },
+    "tests/test_thread_binding.py::test_two_threads_with_one_identifier_propose_a_merge_and_never_perform_it": {
+      "duration_ms": 1.664,
+      "outcome": "passed"
+    },
+    "tests/test_three_states.py::test_every_closed_vocabulary_declares_why_it_is_closed": {
+      "duration_ms": 4.974,
+      "outcome": "passed"
+    },
+    "tests/test_three_states.py::test_every_metric_field_survives_into_the_persisted_record": {
+      "duration_ms": 0.642,
+      "outcome": "passed"
+    },
+    "tests/test_three_states.py::test_every_outcome_enum_can_say_that_nothing_was_established": {
+      "duration_ms": 4.745,
+      "outcome": "passed"
+    },
+    "tests/test_three_states.py::test_the_metric_scan_can_see_an_unserialised_field": {
+      "duration_ms": 0.555,
+      "outcome": "passed"
+    },
+    "tests/test_three_states.py::test_the_scan_can_see_the_products_enums": {
+      "duration_ms": 4.522,
+      "outcome": "passed"
+    },
+    "tests/test_three_states.py::test_the_third_state_is_a_value_and_never_a_null": {
+      "duration_ms": 0.365,
+      "outcome": "passed"
+    },
+    "tests/test_thresholds.py::test_a_threshold_answer_inconsistent_with_the_file_s_own_dates_is_caught": {
+      "duration_ms": 0.516,
+      "outcome": "passed"
+    },
+    "tests/test_thresholds.py::test_an_answered_threshold_cannot_be_built_without_its_provision": {
+      "duration_ms": 0.377,
+      "outcome": "passed"
+    },
+    "tests/test_thresholds.py::test_every_threshold_appears_on_the_map_even_when_nobody_assessed_it": {
+      "duration_ms": 0.72,
+      "outcome": "passed"
+    },
+    "tests/test_thresholds.py::test_not_applicable_is_a_finding_and_blocked_is_a_question": {
+      "duration_ms": 0.465,
+      "outcome": "passed"
+    },
+    "tests/test_thresholds.py::test_the_limitation_row_comes_from_the_computation_and_not_beside_it": {
+      "duration_ms": 0.735,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_a_child_that_prints_non_ascii_still_reports_its_failure": {
+      "duration_ms": 449.934,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_a_clean_start_says_nothing": {
+      "duration_ms": 0.532,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_a_failing_step_names_what_failed": {
+      "duration_ms": 451.138,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_a_failure_with_no_recognised_marker_says_so": {
+      "duration_ms": 435.329,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_a_fingerprint_notices_a_changed_source_file": {
+      "duration_ms": 4.567,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_a_killed_mutation_run_is_restored_by_the_next_one": {
+      "duration_ms": 7.443,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_a_scenario_with_no_scripted_turns_is_refused_not_skipped": {
+      "duration_ms": 2.406,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_an_absent_tree_is_not_read_as_unchanged": {
+      "duration_ms": 3.221,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_an_unscored_golden_suite_is_not_reported_as_a_pass": {
+      "duration_ms": 42522.885,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_every_mutation_anchor_still_matches_the_source": {
+      "duration_ms": 38.958,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_every_tool_makes_its_console_survive_the_prose_it_prints": {
+      "duration_ms": 12.619,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_it_refuses_to_re_enrol_an_advocate_that_exists": {
+      "duration_ms": 454.119,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_layercheck_allows_core_importing_ports": {
+      "duration_ms": 594.837,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_layercheck_passes_on_the_real_tree": {
+      "duration_ms": 598.222,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_layercheck_rejects_a_provider_client_in_core": {
+      "duration_ms": 595.969,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_layercheck_rejects_core_importing_an_adapter": {
+      "duration_ms": 587.331,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_anchor_check_can_see_a_stale_anchor": {
+      "duration_ms": 1.44,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_child_is_told_to_write_utf8": {
+      "duration_ms": 445.303,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_console_scan_can_see_a_tool_that_does_not_call_it": {
+      "duration_ms": 12.412,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_fallback_never_lets_a_constant_warning_stand_in_for_a_diagnosis": {
+      "duration_ms": 432.483,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_fingerprint_has_one_owner": {
+      "duration_ms": 0.687,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_gate_scan_sees_code_and_ignores_prose": {
+      "aggregate_of": 3,
+      "duration_ms": 7515.323,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_gate_scan_sees_code_and_ignores_prose[body0-True]": {
+      "duration_ms": 2551.828,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_gate_scan_sees_code_and_ignores_prose[body1-False]": {
+      "duration_ms": 2429.172,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_gate_scan_sees_code_and_ignores_prose[body2-False]": {
+      "duration_ms": 2534.323,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_gate_stamp_covers_what_the_gate_checks_not_what_the_server_runs": {
+      "duration_ms": 21.053,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_gate_stamp_has_a_third_state": {
+      "duration_ms": 28.147,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_gate_stamp_notices_a_tree_that_moved": {
+      "duration_ms": 3.642,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_generated_password_satisfies_the_rule_it_will_be_checked_against": {
+      "duration_ms": 731.67,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_golden_suite_path_cannot_reach_a_model": {
+      "duration_ms": 3.517,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_hook_keeps_the_hook_that_was_there_first": {
+      "duration_ms": 0.502,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_journey_manifest_matches_what_the_suite_collects": {
+      "duration_ms": 2232.699,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_model_scan_can_see_a_runner_that_would_spend": {
+      "duration_ms": 0.491,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_runner_tells_an_unreachable_server_from_a_stale_one": {
+      "duration_ms": 2045.233,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_scenario_runner_mints_its_own_advocate": {
+      "duration_ms": 1362.53,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_the_served_process_reports_which_code_it_loaded": {
+      "duration_ms": 22.408,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_trace_detects_a_stale_spec": {
+      "duration_ms": 2543.196,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_trace_passes_on_the_real_spec": {
+      "duration_ms": 2400.193,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_trace_rejects_a_built_claim_with_no_code": {
+      "duration_ms": 1207.597,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_trace_rejects_a_tested_claim_whose_evals_never_ran": {
+      "duration_ms": 1197.897,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_trace_rejects_an_implements_naming_no_feature": {
+      "duration_ms": 1064.972,
+      "outcome": "passed"
+    },
+    "tests/test_tooling_bites.py::test_utf8_console_survives_a_stream_it_cannot_reconfigure": {
+      "duration_ms": 0.63,
+      "outcome": "passed"
+    },
+    "tests/test_transcript_attribution.py::test_a_legacy_transcript_is_still_found_by_decrypting_it": {
+      "duration_ms": 2.661,
+      "outcome": "passed"
+    },
+    "tests/test_transcript_attribution.py::test_a_transcript_is_read_back_for_its_own_matter": {
+      "duration_ms": 4.068,
+      "outcome": "passed"
+    },
+    "tests/test_transcript_attribution.py::test_a_transcript_with_no_matter_is_named_unattributed_not_dropped": {
+      "duration_ms": 2.501,
+      "outcome": "passed"
+    },
+    "tests/test_transcript_attribution.py::test_an_unreadable_legacy_transcript_is_counted_and_never_attributed": {
+      "duration_ms": 3.565,
+      "outcome": "passed"
+    },
+    "tests/test_transcript_attribution.py::test_an_unreadable_transcript_belongs_to_one_matter_only": {
+      "duration_ms": 3.662,
+      "outcome": "passed"
+    },
+    "tests/test_transcript_attribution.py::test_the_matter_is_readable_from_the_filename_without_the_key": {
+      "duration_ms": 2.673,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_a_finding_whose_span_does_not_support_is_never_a_ground": {
+      "duration_ms": 18.228,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_a_greeting_writes_nothing_to_any_file": {
+      "duration_ms": 6.702,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_a_held_but_not_found_result_is_a_defect_not_a_disclosure": {
+      "duration_ms": 18.742,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_a_judgment_proposition_cannot_come_from_counsels_submission": {
+      "duration_ms": 0.419,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_a_loud_signal_cannot_be_marked_collapsible": {
+      "duration_ms": 0.421,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_a_not_held_result_names_what_is_missing": {
+      "duration_ms": 18.409,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_a_one_word_case_fact_is_a_matter": {
+      "duration_ms": 39.379,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_a_role_outside_the_products_vocabulary_is_blanked": {
+      "duration_ms": 0.432,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_a_stale_commit_is_refused_rather_than_overwriting": {
+      "duration_ms": 9.512,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_a_stated_posture_is_never_silently_flipped": {
+      "duration_ms": 0.331,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_an_action_without_a_by_when_cannot_be_constructed": {
+      "duration_ms": 0.416,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_an_advocate_who_states_their_client_is_understood_however_they_say_it": {
+      "duration_ms": 0.608,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_an_unconfigured_key_is_a_hard_failure": {
+      "duration_ms": 2.207,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_an_unscreened_matter_says_so_rather_than_reading_as_screened": {
+      "duration_ms": 27.436,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_another_advocates_matter_is_not_disclosed": {
+      "duration_ms": 220.18,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_every_answer_in_the_run_carries_the_trailing_disclosures": {
+      "duration_ms": 10.456,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_every_screen_is_named_to_the_advocate_and_none_reads_as_clear": {
+      "duration_ms": 20.862,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_matter_state_is_not_plaintext_on_disk": {
+      "duration_ms": 20.155,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_metrics_are_written_even_when_the_turn_fails": {
+      "duration_ms": 11.6,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_no_element_kind_can_hold_a_recital": {
+      "duration_ms": 0.381,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_posture_is_never_inferred_from_familiar_vocabulary": {
+      "duration_ms": 0.528,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_replaying_a_turn_does_not_apply_it_twice": {
+      "duration_ms": 24.737,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_route_is_not_decided_on_message_length": {
+      "duration_ms": 32.848,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_side_is_derived_from_role_and_never_stored": {
+      "duration_ms": 0.318,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_state_survives_a_restart": {
+      "duration_ms": 20.023,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_the_admit_decision_goes_through_the_module": {
+      "duration_ms": 2.676,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_the_answer_coverage_check_can_see_an_uncovered_site": {
+      "duration_ms": 0.448,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_the_boards_are_bounded_by_row_count_not_turns": {
+      "duration_ms": 262.801,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_the_coverage_position_reaches_the_advocate_not_only_the_metrics": {
+      "duration_ms": 20.083,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_the_fallback_never_guesses_from_length": {
+      "duration_ms": 1.837,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_the_matter_list_is_bounded_by_matter_count": {
+      "duration_ms": 130.235,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_the_screens_run_before_any_substance_is_admitted": {
+      "duration_ms": 20.281,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_the_served_path_answers_end_to_end": {
+      "duration_ms": 126.19,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_the_served_path_blocks_on_unresolved_posture": {
+      "duration_ms": 116.889,
+      "outcome": "passed"
+    },
+    "tests/test_turn_contract.py::test_unresolved_posture_blocks_the_directive_step": {
+      "duration_ms": 15.259,
+      "outcome": "passed"
+    },
+    "tests/test_two_turns_cannot_lose_a_write.py::test_a_stale_higher_version_cannot_overwrite_a_newer_matter": {
+      "duration_ms": 8.566,
+      "outcome": "passed"
+    },
+    "tests/test_two_turns_cannot_lose_a_write.py::test_an_ordinary_sequential_commit_is_unaffected": {
+      "duration_ms": 16.144,
+      "outcome": "passed"
+    },
+    "tests/test_two_turns_cannot_lose_a_write.py::test_the_lock_is_released_when_a_commit_raises": {
+      "duration_ms": 8.538,
+      "outcome": "passed"
+    },
+    "tests/test_two_turns_cannot_lose_a_write.py::test_the_loser_is_told_which_matter_and_why": {
+      "duration_ms": 7.374,
+      "outcome": "passed"
+    },
+    "tests/test_two_turns_cannot_lose_a_write.py::test_two_writers_at_one_version_do_not_both_win": {
+      "duration_ms": 27.262,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_a_contested_side_reaches_the_model": {
+      "duration_ms": 2.812,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_a_documented_date_is_not_the_same_as_a_remembered_one": {
+      "duration_ms": 2.771,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_an_unassessed_basis_is_said_once_and_not_per_fact": {
+      "duration_ms": 1.398,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_an_uncontested_posture_says_nothing_about_a_dispute": {
+      "duration_ms": 1.243,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_every_field_is_told_or_declared": {
+      "duration_ms": 1.916,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_every_withholding_that_can_reopen_says_what_reopens_it": {
+      "duration_ms": 0.382,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_first_person_language_never_arrives_from_our_own_notes": {
+      "duration_ms": 1.498,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_how_the_client_knows_it_reaches_the_model": {
+      "duration_ms": 2.433,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_no_declaration_names_a_field_that_is_gone": {
+      "duration_ms": 1.83,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_the_account_and_the_guard_input_are_not_the_same_string": {
+      "duration_ms": 1.359,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_the_account_stays_inside_its_budget_with_every_note_appended": {
+      "duration_ms": 48.004,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_the_advocates_own_word_for_their_client_survives_the_role": {
+      "duration_ms": 1.234,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_the_guard_input_carries_no_word_this_product_composed": {
+      "duration_ms": 1.359,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_the_ordinary_fact_carries_no_marker": {
+      "duration_ms": 1.476,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_the_source_of_a_basis_travels_with_it": {
+      "duration_ms": 1.423,
+      "outcome": "passed"
+    },
+    "tests/test_what_the_model_is_told.py::test_the_walk_can_see_the_record": {
+      "duration_ms": 2.229,
+      "outcome": "passed"
+    }
+  }
+}

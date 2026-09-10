@@ -35,6 +35,8 @@ except Exception as exc:  # noqa: BLE001 -- NOT ASSESSED, said as a value
 
 import json
 import os
+import platform
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -50,10 +52,22 @@ RESULTS = ROOT / ".nm" / "eval_results.json"
 
 _ran: set[str] = set()
 _failed: set[str] = set()
+_class_a: dict[str, dict] = {}
+_class_a_started = datetime.now(timezone.utc).isoformat(timespec="seconds")
+_class_a_start_fingerprint = ""
+_class_a_full_selection = False
 
 
 def pytest_configure(config):
+    global _class_a_full_selection, _class_a_start_fingerprint
     config.addinivalue_line("markers", "eval_id(*ids): eval ids this test exercises")
+    if os.environ.get("NM_CLASS_A_EVIDENCE_FILE"):
+        from tools.evidence import verification_fingerprint
+
+        _class_a_start_fingerprint = verification_fingerprint()
+        _class_a_full_selection = (
+            tuple(config.invocation_params.args) == ("-m", "class_a", "-q")
+        )
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -67,6 +81,20 @@ def pytest_runtest_makereport(item, call):
     # module is silently not a hook, so the attribute was never set and every
     # phase errored in teardown instead of reporting.
     setattr(item, f"rep_{report.when}", report)
+    if (os.environ.get("NM_CLASS_A_EVIDENCE_FILE")
+            and item.get_closest_marker("class_a") is not None):
+        row = _class_a.setdefault(item.nodeid, {
+            "outcome": "not_run", "duration_ms": 0,
+        })
+        row["duration_ms"] = round(
+            row["duration_ms"] + report.duration * 1000, 3)
+        if report.failed:
+            row["outcome"] = "failed"
+        elif report.skipped and row["outcome"] != "failed":
+            row["outcome"] = "skipped"
+        elif (report.when == "call" and report.passed
+              and row["outcome"] == "not_run"):
+            row["outcome"] = "passed"
     if report.when != "call":
         return
     marker = item.get_closest_marker("eval_id")
@@ -79,6 +107,47 @@ def pytest_runtest_makereport(item, call):
 
 
 def pytest_sessionfinish(session, exitstatus):
+    evidence_path = os.environ.get("NM_CLASS_A_EVIDENCE_FILE")
+    if evidence_path:
+        from tools.evidence import git_identity, verification_fingerprint
+
+        # A parameterised function is a legitimate acceptance reference only
+        # when EVERY collected case passed.  Record that aggregate explicitly;
+        # the linter still performs an exact dictionary lookup rather than a
+        # prefix match that could accept one convenient parameter.
+        grouped: dict[str, list[dict]] = {}
+        for nodeid, row in _class_a.items():
+            base = nodeid.rsplit("[", 1)[0] if nodeid.endswith("]") else nodeid
+            grouped.setdefault(base, []).append(row)
+        recorded = dict(_class_a)
+        for base, rows in grouped.items():
+            if base not in recorded:
+                recorded[base] = {
+                    "outcome": ("passed" if all(r["outcome"] == "passed"
+                                                for r in rows) else "failed"),
+                    "aggregate_of": len(rows),
+                    "duration_ms": round(sum(r["duration_ms"] for r in rows), 3),
+                }
+        target = Path(evidence_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps({
+            "schema": 1,
+            "kind": "class_a",
+            "source_fingerprint": _class_a_start_fingerprint,
+            "finished_fingerprint": verification_fingerprint(),
+            "started_at": _class_a_started,
+            "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "runner": f"pytest {pytest.__version__}; Python {platform.python_version()}",
+            "command": "python -m pytest -m class_a -q",
+            "git": git_identity(),
+            "exit_code": exitstatus,
+            "selection": ("full_class_a" if _class_a_full_selection
+                          else "partial"),
+            "complete": (exitstatus == 0 and bool(recorded)
+                         and _class_a_full_selection),
+            "tests": recorded,
+        }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
     if not _ran:
         return
     if os.environ.get("NM_PARTIAL_RUN"):
