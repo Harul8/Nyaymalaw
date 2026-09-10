@@ -289,6 +289,18 @@ def test_the_turn_discloses_which_read_came_back_empty(tmp_path):
 
 # ==================== the escalation, earned and bounded ====================
 
+def _hard_tier_reads(source: str) -> list[str]:
+    """Return structured-read schemas that explicitly request the hard tier."""
+    asking_hard: list[str] = []
+    for node in ast.walk(ast.parse(source)):
+        if not (isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "structured"):
+            continue
+        if len(node.args) >= 3 and "HARD" in ast.unparse(node.args[2]):
+            asking_hard.append(ast.unparse(node.args[1]))
+    return asking_hard
+
 def test_no_read_asks_for_the_hard_tier_while_none_is_earned():
     """THE ESCALATION WAS TAKEN AND WITHDRAWN, and this is the withdrawal.
 
@@ -305,17 +317,8 @@ def test_no_read_asks_for_the_hard_tier_while_none_is_earned():
     half -- that the reads went BACK, rather than being left half-escalated by
     an incomplete revert.
     """
-    import ast
-
     source = (ROOT / "nm" / "core" / "turn.py").read_text(encoding="utf8")
-    asking_hard = []
-    for node in ast.walk(ast.parse(source)):
-        if not (isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Attribute)
-                and node.func.attr == "structured"):
-            continue
-        if len(node.args) >= 3 and "HARD" in ast.unparse(node.args[2]):
-            asking_hard.append(ast.unparse(node.args[1]))
+    asking_hard = _hard_tier_reads(source)
 
     from nm.domain.tiers import HARD_TIER_STEPS
     if HARD_TIER_STEPS:
@@ -323,7 +326,13 @@ def test_no_read_asks_for_the_hard_tier_while_none_is_earned():
                     "withdrawal and does not apply")
     assert not asking_hard, (
         "these reads ask for the hard tier while nm/domain/tiers.py declares "
-        f"no step has earned it: {asking_hard}")
+          f"no step has earned it: {asking_hard}")
+
+
+def test_the_tier_sweep_can_see_a_planted_hard_read():
+    """BK-52. Exercise the exact call shape the withdrawal sweeps."""
+    planted = "engine.structured(prompt, DATE_SCHEMA, Tier.HARD)\n"
+    assert _hard_tier_reads(planted) == ["DATE_SCHEMA"]
 
 
 def test_the_reads_table_still_owns_what_is_decisive():

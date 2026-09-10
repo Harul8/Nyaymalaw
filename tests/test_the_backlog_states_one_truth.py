@@ -407,7 +407,7 @@ def test_stale_execution_cannot_change_the_persisted_board_projection():
     ("a step that will not say where it came from",
      lambda d: d["steps"][0].pop("basis"), "whether the PRD states it"),
     ("half a contract",
-     lambda d: d["steps"][0].update(actor="advocate"), "not a contract"),
+     lambda d: d["steps"][0].pop("recovery_behaviour"), "not a contract"),
     ("a duplicated step id",
      lambda d: d["steps"].append(dict(d["steps"][0])), "appears twice"),
     ("AN EMPTY STEPS REGISTRY",

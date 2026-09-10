@@ -102,6 +102,20 @@ def _value_reads(text: str) -> list[str]:
     return out
 
 
+def _lazy_phrases(enums, reads_as_itself: set[str]) -> list[str]:
+    """Return phrases that merely remove underscores from identifiers."""
+    lazy: list[str] = []
+    for enum in enums:
+        for member in enum:
+            name = f"{enum.__name__}.{member.name}"
+            if name in reads_as_itself:
+                continue
+            if (member.said == member.value.replace("_", " ")
+                    and "_" in member.value):
+                lazy.append(name)
+    return lazy
+
+
 def test_every_spoken_enum_called_complete():
     """A CHECK SOMEBODY MUST REMEMBER TO INVOKE IS THE ARRANGEMENT THIS
     REPLACED.
@@ -204,15 +218,10 @@ def test_the_phrases_are_not_the_identifiers_with_the_underscores_removed():
     # so would be one people learn to edit rather than obey.
     reads_as_itself = {"Standard.BEYOND_REASONABLE_DOUBT"}
 
-    lazy = []
-    for enum in (Holder, Form, Standard, IssueKind, Effect, Side, Binding):
-        for member in enum:
-            name = f"{enum.__name__}.{member.name}"
-            if name in reads_as_itself:
-                continue
-            if (member.said == member.value.replace("_", " ")
-                    and "_" in member.value):
-                lazy.append(name)
+    lazy = _lazy_phrases(
+        (Holder, Form, Standard, IssueKind, Effect, Side, Binding),
+        reads_as_itself,
+    )
     assert not lazy, (
         "these phrases are the identifier with the underscores taken out, "
         "which reads as an identifier to everyone except the person who "
@@ -246,6 +255,21 @@ def test_the_value_scan_can_see_an_identifier_reaching_the_advocate():
             test_no_enum_value_reaches_the_advocate()
     finally:
         planted.unlink()
+
+
+def test_the_phrase_sweep_can_see_underscores_merely_removed():
+    """BK-52. Plant the exact lazy-phrase relation the sweep rejects."""
+    from enum import Enum, nonmember
+
+    from nm.domain.spoken import Spoken
+
+    class PlantedPhrase(Spoken, str, Enum):
+        INTERNAL_WORDS = "internal_words"
+        SAID = nonmember({"internal_words": "internal words"})
+
+    assert _lazy_phrases((PlantedPhrase,), set()) == [
+        "PlantedPhrase.INTERNAL_WORDS"
+    ]
 
 
 def test_the_complete_scan_can_see_an_enum_that_never_checks_itself():

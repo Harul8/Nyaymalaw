@@ -29,15 +29,15 @@ This persisted view projects the authored registry contract. `backlog check` sep
 
 | Phase | | Features | Steps | Contracted | Verified | Open P0 | Readiness |
 |---|---|---:|---:|---:|---:|---:|---|
-| A | Arrive | 3/4 | 4 | 0/4 | 11/34 | 5 | not releasable |
-| B | Open a matter | 0/6 | 4 | 2/4 | 7/18 | 3 | not releasable |
-| C | Take the brief | 5/7 | 7 | 0/7 | 10/28 | 7 | not releasable |
-| D | Work the file | 8/9 | 14 | 1/14 | 12/35 | 8 | not releasable |
-| E | Advise | 1/5 | 5 | 0/5 | 8/35 | 9 | not releasable |
-| F | Act | 0/7 | 7 | 0/7 | 4/14 | 4 | not releasable |
-| G | Carry | 0/3 | 3 | 0/3 | 5/16 | 3 | not releasable |
-| H | Close | 0/2 | 2 | 0/2 | 4/9 | 0 | not releasable |
-| I | Leave | 1/1 | 1 | 0/1 | 6/20 | 4 | not releasable |
+| A | Arrive | 3/4 | 4 | 4/4 | 12/34 | 5 | not releasable |
+| B | Open a matter | 0/6 | 4 | 2/4 | 8/18 | 3 | not releasable |
+| C | Take the brief | 5/7 | 7 | 0/7 | 11/28 | 7 | not releasable |
+| D | Work the file | 8/9 | 14 | 1/14 | 13/35 | 8 | not releasable |
+| E | Advise | 1/5 | 5 | 0/5 | 9/35 | 9 | not releasable |
+| F | Act | 0/7 | 7 | 0/7 | 5/14 | 4 | not releasable |
+| G | Carry | 0/3 | 3 | 0/3 | 6/16 | 3 | not releasable |
+| H | Close | 0/2 | 2 | 0/2 | 5/9 | 0 | not releasable |
+| I | Leave | 1/1 | 1 | 0/1 | 7/20 | 4 | not releasable |
 
 **85 rows · 16 open P0 · 0 blocked · 18/44 features implemented**
 
@@ -88,8 +88,8 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 ### Admitted gaps in the evidence
 
 - **26 rows rest on prose evidence** (`legacy: true`), closed before this registry existed. Each is retired by attaching an executable proof, not by editing a heading.
-- **33 active rows carry no acceptance criteria yet**, so `done` cannot be derived for them however much work is finished.
-- **44 of 47 journey steps carry no contract**, so what the step must do, refuse and recover from is not yet stated anywhere a check can read.
+- **31 active rows carry no acceptance criteria yet**, so `done` cannot be derived for them however much work is finished.
+- **40 of 47 journey steps carry no contract**, so what the step must do, refuse and recover from is not yet stated anywhere a check can read.
 - **37 steps are DERIVED, not stated by the PRD.** The PRD gives a sequence for Phase B and Phase D and a question for the other seven; a derived step is a reading of the plan and is not the plan.
 
 <!-- BACKLOG_STATUS:END -->
@@ -794,6 +794,18 @@ cleared per run; `report.json` carries the fingerprint and the return code.
 #### BK-52 — twenty-two sweeps have never been shown to be able to fail — **OPEN · P1 · Phase A**
 Opened 9 September 2026, while fixing BK-43. Not from the audit — this one was
 found by the repair.
+
+**Build update — 10 September 2026.** The admitted population is now zero.
+Every candidate was checked against the value its sweep actually accumulates;
+population-only candidates were not promoted. Eight missing controls were
+added by extracting the production comparison into one helper and planting
+the exact bad member: a withheld conclusion, composed citation, forbidden
+core import, named provider, incomplete evidence adapter, invalid strict
+schema, hard-tier read, unwired runtime eval, undeclared contract field and
+identifier dressed as prose. The registry's own comparison now has a planted
+missing control and a planted stale control. The focused Class-A selection
+passed after the one BK-61 test defect described in that row was corrected;
+source-bound full-suite evidence remains the Test-stage exit.
 
 `tests/test_every_sweep_has_a_positive_control.py` is the file that enforces
 B-049's lesson: *a sweep that only ever finds nothing has not been shown to
@@ -2429,6 +2441,14 @@ distortion than naming them apart.
 
 ## BK-61 — the spec restore in the tooling tests fails intermittently — **READY · P2**
 Opened 9 September 2026.
+
+**Build update — 10 September 2026.** All three `features.yaml` mutation
+tests now copy and restore through one content-only helper. A source-level
+contract rejects `copy2` and insists every restore site uses that helper; an
+adversarial control makes metadata copying raise the same planted Errno 22
+while running one hundred exact-byte restoration cycles successfully. The
+focused tests pass. A current complete Class-A evidence pack remains required
+before the row is signed off.
 
 `tools/check.py` failed once on
 

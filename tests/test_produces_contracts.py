@@ -43,6 +43,20 @@ def load() -> list[dict]:
     return yaml.safe_load(SCHEMAS.read_text(encoding="utf8"))["schemas"]
 
 
+def _undeclared_fields(schemas: list[dict], implemented: dict[str, type]) -> list[str]:
+    """Return implemented fields absent from their declared contract."""
+    undeclared: list[str] = []
+    for schema in schemas:
+        cls = implemented.get(schema["name"])
+        if cls is None:
+            continue
+        declared = {field["field"] for field in schema["fields"]}
+        for item in dataclasses.fields(cls):
+            if item.name not in declared:
+                undeclared.append(f"{schema['name']}.{item.name}")
+    return undeclared
+
+
 def test_every_required_field_exists_on_the_implementing_type():
     """A required field in Appendix E that the code does not carry is an
     obligation the next slice cannot read (principle P6)."""
@@ -79,17 +93,24 @@ def test_the_implemented_type_adds_nothing_the_contract_does_not_declare():
     slice knows exists — which is how state accumulates in one module and is
     silently dropped at every boundary it crosses.
     """
-    undeclared: list[str] = []
-    for schema in load():
-        cls = IMPLEMENTED.get(schema["name"])
-        if cls is None:
-            continue
-        declared = {f["field"] for f in schema["fields"]}
-        for f in dataclasses.fields(cls):
-            if f.name not in declared:
-                undeclared.append(f"{schema['name']}.{f.name}")
+    undeclared = _undeclared_fields(load(), IMPLEMENTED)
     assert not undeclared, (
         "the code carries fields Appendix E does not declare: " + ", ".join(undeclared))
+
+
+def test_the_undeclared_field_sweep_can_see_a_planted_extra_field():
+    """BK-52. Plant an implementation field absent from its contract."""
+    @dataclasses.dataclass
+    class Planted:
+        declared: str
+        silently_added: str
+
+    schemas = [{"name": "Planted", "fields": [
+        {"field": "declared", "required": True, "type": "str", "why": "control"},
+    ]}]
+    assert _undeclared_fields(schemas, {"Planted": Planted}) == [
+        "Planted.silently_added"
+    ]
 
 
 def test_unimplemented_contracts_are_named_rather_than_passing_silently():

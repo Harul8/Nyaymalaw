@@ -228,6 +228,26 @@ def _spec(name: str) -> list[dict]:
     return d if isinstance(d, list) else list(d.values())[0]
 
 
+def _tested_unwired_runtime_evals(
+        features: dict[str, dict], evals: dict[str, dict],
+        unwired_features: set[str]) -> list[str]:
+    """Return tested features whose runtime evidence has no runtime path."""
+    bad: list[str] = []
+    for fid in sorted(unwired_features):
+        feature = features.get(fid)
+        if not feature or feature.get("status") not in ("tested", "verified live"):
+            continue
+        for eid in feature.get("eval_ids", []):
+            evaluation = evals.get(eid, {})
+            if (evaluation.get("class") == "B"
+                    and "turn" in str(evaluation.get("cadence", "")).lower()):
+                bad.append(
+                    f"{fid} is `{feature['status']}` and {eid} is class B at "
+                    f"cadence {evaluation['cadence']!r} — but its module is UNWIRED, "
+                    f"so no turn has ever produced what {eid} inspects")
+    return bad
+
+
 def test_no_feature_is_tested_while_its_eval_runs_every_turn_and_it_has_no_turn():
     """A RUNTIME EVAL WITHOUT A RUNTIME HAS NOT RUN.
 
@@ -250,24 +270,21 @@ def test_no_feature_is_tested_while_its_eval_runs_every_turn_and_it_has_no_turn(
     unwired_features = {fid for m in UNWIRED if m in OWNER
                         for fid in OWNER[m]}
 
-    bad = []
-    for fid in sorted(unwired_features):
-        f = features.get(fid)
-        if not f or f.get("status") not in ("tested", "verified live"):
-            continue
-        for eid in f.get("eval_ids", []):
-            e = evals.get(eid, {})
-            if e.get("class") == "B" and "turn" in str(e.get("cadence", "")).lower():
-                bad.append(
-                    f"{fid} is `{f['status']}` and {eid} is class B at "
-                    f"cadence {e['cadence']!r} — but its module is UNWIRED, "
-                    f"so no turn has ever produced what {eid} inspects")
+    bad = _tested_unwired_runtime_evals(features, evals, unwired_features)
 
     assert not bad, (
         "\n  ".join([""] + bad)
         + "\n\nEither wire it, or move the status back to `built`. A "
           "structural eval that ran against a module nothing serves measured "
           "the module, not the product.")
+
+
+def test_the_runtime_evidence_sweep_can_see_a_planted_unwired_feature():
+    """BK-52. Plant a tested feature whose every-turn eval has no caller."""
+    features = {"ZZ": {"id": "ZZ", "status": "tested", "eval_ids": ["E-ZZ"]}}
+    evals = {"E-ZZ": {"id": "E-ZZ", "class": "B", "cadence": "Every turn"}}
+    bad = _tested_unwired_runtime_evals(features, evals, {"ZZ"})
+    assert len(bad) == 1 and "ZZ is `tested`" in bad[0]
 
 
 def test_every_unwired_module_names_a_feature_that_exists():

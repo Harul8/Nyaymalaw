@@ -110,6 +110,17 @@ def test_no_module_outside_the_adapters_names_a_provider():
     assert not offences, "\n  ".join(offences)
 
 
+def test_the_provider_name_sweep_can_see_a_leak_outside_adapters():
+    """BK-52. Plant a provider name in the exact package tree swept."""
+    probe = ROOT / "nm" / "edge" / "_provider_name_probe.py"
+    probe.write_text("PROVIDER = 'anthropic'\n", encoding="utf8")
+    try:
+        with pytest.raises(AssertionError, match="names 'anthropic'"):
+            test_no_module_outside_the_adapters_names_a_provider()
+    finally:
+        probe.unlink()
+
+
 @pytest.mark.class_a
 @pytest.mark.eval_id("E-007")
 def test_the_same_turn_runs_under_a_flipped_provider_with_no_source_change(tmp_path):
@@ -207,6 +218,25 @@ def _declared_schemas() -> dict[str, dict]:
             if name.endswith("_SCHEMA") and isinstance(getattr(m, name), dict):
                 out[f"nm.core.{mod.name}.{name}"] = getattr(m, name)
     return out
+
+
+def _strict_schema_problems(node, path: str) -> list[str]:
+    """Return every shape the provider's strict compiler would reject."""
+    problems: list[str] = []
+    if not isinstance(node, dict):
+        return problems
+    if node.get("type") == "object":
+        props = node.get("properties", {})
+        if node.get("additionalProperties") is not False:
+            problems.append(f"{path}: additionalProperties is not False")
+        missing = set(props) - set(node.get("required") or [])
+        if missing:
+            problems.append(f"{path}: not in `required` -> {sorted(missing)}")
+        for key, value in props.items():
+            problems.extend(_strict_schema_problems(value, f"{path}.{key}"))
+    if node.get("type") == "array":
+        problems.extend(_strict_schema_problems(node.get("items") or {}, f"{path}[]"))
+    return problems
 
 
 def test_the_suite_can_see_the_declared_schemas():
@@ -371,21 +401,6 @@ def test_every_read_schema_can_be_compiled_by_strict_mode():
 
     import nm
 
-    def walk(node, path, problems):
-        if not isinstance(node, dict):
-            return
-        if node.get("type") == "object":
-            props = node.get("properties", {})
-            if node.get("additionalProperties") is not False:
-                problems.append(f"{path}: additionalProperties is not False")
-            missing = set(props) - set(node.get("required") or [])
-            if missing:
-                problems.append(f"{path}: not in `required` -> {sorted(missing)}")
-            for key, value in props.items():
-                walk(value, f"{path}.{key}", problems)
-        if node.get("type") == "array":
-            walk(node.get("items") or {}, f"{path}[]", problems)
-
     checked, bad = 0, []
     for mod in pkgutil.walk_packages(nm.__path__, "nm."):
         try:
@@ -398,11 +413,28 @@ def test_every_read_schema_can_be_compiled_by_strict_mode():
                     and "x-nm-read" in schema):
                 continue
             checked += 1
-            problems: list[str] = []
-            walk(schema, schema["x-nm-read"], problems)
-            bad.extend(problems)
+            bad.extend(_strict_schema_problems(schema, schema["x-nm-read"]))
 
     assert checked >= 10, f"only {checked} read schemas found; the scan is blind"
     assert not bad, (
         "these read schemas cannot be compiled under strict mode:\n  "
         + "\n  ".join(bad))
+
+
+def test_the_strict_schema_sweep_can_see_a_planted_invalid_object():
+    """BK-52. Plant both strict-object violations, including one nested."""
+    planted = {
+        "x-nm-read": "planted",
+        "type": "object",
+        "properties": {
+            "answer": {
+                "type": "object",
+                "properties": {"value": {"type": "string"}},
+                "required": [],
+            },
+        },
+        "required": [],
+    }
+    problems = _strict_schema_problems(planted, "planted")
+    assert any("planted: additionalProperties" in item for item in problems)
+    assert any("planted.answer: not in `required`" in item for item in problems)

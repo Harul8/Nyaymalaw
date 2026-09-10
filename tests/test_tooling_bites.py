@@ -26,6 +26,11 @@ pytestmark = pytest.mark.class_a
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _copy_bytes(source: Path, destination: Path) -> None:
+    """Restore content only; test fixtures never own repository metadata."""
+    shutil.copyfile(source, destination)
+
+
 def run(script: str, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(ROOT / "tools" / script), *args],
@@ -130,7 +135,7 @@ def test_trace_rejects_a_built_claim_with_no_code(tmp_path):
     """
     spec = ROOT / "spec" / "features.yaml"
     backup = tmp_path / "features.yaml"
-    shutil.copy2(spec, backup)
+    _copy_bytes(spec, backup)
     try:
         import yaml
         doc = yaml.safe_load(spec.read_text(encoding="utf8"))
@@ -158,14 +163,14 @@ def test_trace_rejects_a_built_claim_with_no_code(tmp_path):
         assert "[T3]" in r.stdout
         assert "no @implements anywhere" in r.stdout
     finally:
-        shutil.copy2(backup, spec)
+        _copy_bytes(backup, spec)
 
 
 def test_trace_rejects_a_tested_claim_whose_evals_never_ran(tmp_path):
     """T4 COUNTEREXAMPLE: `tested` asserted with no eval run behind it."""
     spec = ROOT / "spec" / "features.yaml"
     backup = tmp_path / "features.yaml"
-    shutil.copy2(spec, backup)
+    _copy_bytes(spec, backup)
     probe = ROOT / "nm" / "core" / "_tested_probe.py"
     try:
         text = spec.read_text(encoding="utf8")
@@ -208,7 +213,7 @@ def test_trace_rejects_a_tested_claim_whose_evals_never_ran(tmp_path):
         assert "[T4]" in r.stdout
         assert "has ever run" in r.stdout
     finally:
-        shutil.copy2(backup, spec)
+        _copy_bytes(backup, spec)
         if probe.exists():
             probe.unlink()
 
@@ -217,7 +222,7 @@ def test_trace_detects_a_stale_spec(tmp_path):
     """T1 COUNTEREXAMPLE: the generator moved and the spec was not regenerated."""
     spec = ROOT / "spec" / "features.yaml"
     backup = tmp_path / "features.yaml"
-    shutil.copy2(spec, backup)
+    _copy_bytes(spec, backup)
     try:
         spec.write_text(spec.read_text(encoding="utf8").replace(
             "  status: decided\n", "  status: decided  # tampered\n", 1), encoding="utf8")
@@ -226,7 +231,51 @@ def test_trace_detects_a_stale_spec(tmp_path):
         assert "[T1]" in r.stdout
         assert "was stale" in r.stdout
     finally:
-        shutil.copy2(backup, spec)
+        _copy_bytes(backup, spec)
+
+
+def test_every_features_spec_mutation_uses_the_byte_only_restore():
+    """BK-61. All three mutations have one restoration owner."""
+    source = Path(__file__).read_text(encoding="utf8")
+    tree = ast.parse(source)
+    metadata_copies = [
+        node.lineno for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "copy2"
+    ]
+    assert metadata_copies == []
+    restores = [
+        node.lineno for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "_copy_bytes"
+        and len(node.args) == 2
+        and isinstance(node.args[0], ast.Name) and node.args[0].id == "backup"
+        and isinstance(node.args[1], ast.Name) and node.args[1].id == "spec"
+    ]
+    assert len(restores) == 3
+
+
+def test_the_byte_only_restore_survives_newer_destination_metadata(
+        tmp_path, monkeypatch):
+    """BK-61. The planted failure is the metadata operation copy2 adds."""
+    source = tmp_path / "original.yaml"
+    destination = tmp_path / "features.yaml"
+    original = b"features:\r\n- id: A1\r\n"
+    source.write_bytes(original)
+    destination.write_bytes(b"tampered and newer")
+
+    # If restoration starts owning timestamps or permissions again, fail at
+    # the exact operation that produced the intermittent Windows error.
+    def metadata_is_not_available(*_args, **_kwargs):
+        raise OSError(22, "planted metadata failure")
+
+    monkeypatch.setattr(shutil, "copystat", metadata_is_not_available)
+    for _ in range(100):
+        destination.write_bytes(b"a later mutation")
+        _copy_bytes(source, destination)
+        assert destination.read_bytes() == original
 
 
 # ================== the mutation anchors, checked in seconds ================

@@ -106,6 +106,16 @@ def test_no_gate_disclosure_reads_as_a_citation():
         + "\n  ".join(sorted(set(offences))))
 
 
+def test_the_composed_text_scan_can_see_a_planted_citation():
+    """BK-52. Exercise the helper both composed-text sweeps accumulate."""
+    offences = _offences(
+        "planted.visible",
+        "Apply Article 141 as stated in Example Corporation v Sample Ltd.",
+    )
+    assert any("provision '141'" in offence for offence in offences)
+    assert any("Example Corporation" in offence for offence in offences)
+
+
 def test_a_rule_id_is_not_a_citation_form():
     """`art-141` and `bind-1` name rules. They must stay unparseable as
     provision references, which is what makes them safe to print."""

@@ -4,7 +4,7 @@
 schema: 1
 generated_note: Bootstrapped 9 September 2026 from the inventory in BACKLOG.md. Hand-authored
   from here; see docs/backlog/SCHEMA.md.
-legacy_lifecycle_population: 51
+legacy_lifecycle_population: 49
 features:
 - id: A1
   phase: A
@@ -751,8 +751,8 @@ items:
   kind: substrate
   priority: P1
   delivery_status: in_progress
-  implementation: partial
-  verification: partial
+  implementation: complete
+  verification: passing
   affects_phases:
   - D
   - E
@@ -1314,8 +1314,34 @@ items:
   depends_on:
   - BK-44
   record: docs/BACKLOG.md#bk-52-twenty-two-sweeps-have-never-been-shown-to-be-able-to-fail
-  next_action: 22 sweeps declared in UNCONTROLLED; verify and move one at a time
-  acceptance: []
+  next_action: verified and signed off on the zero-gap registry; completion derives when
+    its mandatory BK-44 dependency is itself complete
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-52-twenty-two-sweeps-have-never-been-shown-to-be-able-to-fail}
+    build: {result: BUILT, ref: docs/BACKLOG.md#bk-52-twenty-two-sweeps-have-never-been-shown-to-be-able-to-fail}
+    test: {result: VERIFIED, ref: docs/backlog/evidence/class_a.json}
+    signoff: {result: SIGNED_OFF, ref: docs/BACKLOG.md#bk-52-twenty-two-sweeps-have-never-been-shown-to-be-able-to-fail}
+  acceptance:
+  - id: BK-52-AC1
+    requirement: every test that accumulates an offender population and asserts it empty names an existing test that plants a member of that exact population and proves it is reported
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_every_sweep_has_a_positive_control.py::test_every_sweep_names_a_control_that_proves_it_can_fail
+    negative_control:
+      mutation: add a sweep with no registered control or name a test that no longer exists
+      expected_failure: the control registry reports the exact sweep or stale control name
+  - id: BK-52-AC2
+    requirement: no admitted uncontrolled entry remains, and controlled, uncontrolled and discovered sweep populations remain disjoint and non-vacuous
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_every_sweep_has_a_positive_control.py::test_no_sweep_is_left_in_the_admitted_gap_table
+    negative_control:
+      mutation: empty the discovered population or place the same sweep in both state maps
+      expected_failure: the guard on the guard reports the empty or contradictory population
 - id: BK-53
   title: 'Phase B: emergency triage and capacity to instruct'
   kind: journey
@@ -1497,14 +1523,39 @@ items:
   title: the spec restore in the tooling tests fails intermittently
   kind: control
   priority: P2
-  delivery_status: ready
-  implementation: none
-  verification: none
+  delivery_status: in_progress
+  implementation: complete
+  verification: passing
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-61-the-spec-restore-in-the-tooling-tests-fails-intermittently
-  next_action: replace shutil.copy2 with copyfile in the finally blocks that restore
-    spec/features.yaml, and re-measure the failure rate before closing
-  acceptance: []
+  next_action: closed on the exact-byte owner and planted metadata-failure controls; retain
+    the helper whenever a repository specification is mutated in a tooling test
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-61-the-spec-restore-in-the-tooling-tests-fails-intermittently}
+    build: {result: BUILT, ref: docs/BACKLOG.md#bk-61-the-spec-restore-in-the-tooling-tests-fails-intermittently}
+    test: {result: VERIFIED, ref: docs/backlog/evidence/class_a.json}
+    signoff: {result: SIGNED_OFF, ref: docs/BACKLOG.md#bk-61-the-spec-restore-in-the-tooling-tests-fails-intermittently}
+  acceptance:
+  - id: BK-61-AC1
+    requirement: every tooling-test mutation of spec/features.yaml restores the exact original bytes through one byte-only helper even when the destination has newer metadata
+    required_evidence: [domain_test]
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_tooling_bites.py::test_every_features_spec_mutation_uses_the_byte_only_restore
+    negative_control:
+      mutation: replace the byte-only restore with shutil.copy2 or leave one restore site outside the helper
+      expected_failure: the restoration contract reports metadata copying or an unowned restore site
+  - id: BK-61-AC2
+    requirement: repeated restoration neither touches metadata nor leaves the generated specification changed after a planted tool failure
+    required_evidence: [adversarial_test]
+    evidence:
+      adversarial_test:
+        result: PASS
+        ref: tests/test_tooling_bites.py::test_the_byte_only_restore_survives_newer_destination_metadata
+    negative_control:
+      mutation: make the metadata-copy operation fail while exact byte copying remains available
+      expected_failure: a metadata-dependent restore fails and the adversarial control exposes it
 - id: BK-60
   title: the backlog control plane
   kind: control

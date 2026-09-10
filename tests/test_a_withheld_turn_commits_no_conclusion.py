@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import pathlib
 import tempfile
+from dataclasses import replace
 
 import pytest
 
@@ -102,6 +103,19 @@ def _withheld(root: pathlib.Path):
     return store.load(files[0].stem)
 
 
+def _derived_leaks(matter) -> list[str]:
+    """Report conclusions present on a matter that should be input-only."""
+    leaked: list[str] = []
+    for thread in matter.threads:
+        for field in DERIVED:
+            value = getattr(thread, field, None)
+            if value:
+                leaked.append(f"{field} = {value!r}"[:100])
+        if thread.assessed:
+            leaked.append(f"assessed = {list(thread.assessed)}")
+    return leaked
+
+
 def test_a_withheld_turn_keeps_the_facts_the_advocate_stated():
     """THE OTHER HALF, and it is why this is a snapshot and not a rollback.
 
@@ -119,19 +133,22 @@ def test_a_withheld_turn_commits_none_of_what_it_derived():
     with tempfile.TemporaryDirectory() as d:
         matter = _withheld(pathlib.Path(d))
 
-    leaked = []
-    for thread in matter.threads:
-        for field in DERIVED:
-            value = getattr(thread, field, None)
-            if value:
-                leaked.append(f"{field} = {value!r}"[:100])
-        if thread.assessed:
-            leaked.append(f"assessed = {list(thread.assessed)}")
+    leaked = _derived_leaks(matter)
 
     assert not leaked, (
         "a withheld turn committed what it derived, so the next turn will "
         "read as the file's standing position something that was never "
-        "grounded and never served:\n  " + "\n  ".join(leaked))
+          "grounded and never served:\n  " + "\n  ".join(leaked))
+
+
+def test_the_withheld_conclusion_sweep_can_see_a_planted_leak():
+    """BK-52. Plant derived state in the exact matter population checked."""
+    with tempfile.TemporaryDirectory() as d:
+        matter = _withheld(pathlib.Path(d))
+    assert matter.threads, "the control has no thread in which to plant a leak"
+    planted_thread = replace(matter.threads[0], assessed=("theory",))
+    planted = replace(matter, threads=(planted_thread, *matter.threads[1:]))
+    assert _derived_leaks(planted) == ["assessed = ['theory']"]
 
 
 def test_a_withheld_turn_is_not_marked_applied():

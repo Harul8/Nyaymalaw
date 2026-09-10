@@ -15,6 +15,35 @@ steps:
   - BK-31
   - BK-22
   - BK-20
+  actor: advocate
+  entry_conditions:
+  - the advocate has a current invitation to one controlled workspace
+  - the sign-in or recovery surface is available without exposing matter content
+  user_action:
+  - signs in with the invited identity, or uses one advocate-held recovery code
+  expected_visible_result:
+  - the advocate's name and active firm or workspace are unmistakable before any matter
+    content appears
+  - recovery changes the password, consumes the code and requires a fresh sign-in
+  expected_domain_effect:
+  - one server-owned AdvocateIdentity is associated with the authenticated session and
+    its workspace
+  - successful recovery revokes every earlier session and consumes exactly one code
+  failure_behaviour:
+  - unknown identity, wrong password, wrong or used recovery code and absent invitation
+    disclose neither account existence nor matter count
+  - expiry, revocation or a new unrecognised device returns to authentication without
+    rendering cached matter content
+  recovery_behaviour:
+  - an unused recovery code can restore access without an operator; a consumed code can
+    never be used again
+  - after expiry or revocation, a fresh valid sign-in restores the matter list, not the
+    last privileged browser pixels
+  exit_conditions:
+  - a current server-confirmed session names the advocate and active workspace, or access
+    remains closed with a neutral explanation
+  notes: Phase A is a controlled private-roster deployment. MFA remains a production
+    release gate under BK-42; this step neither claims nor silently waives it.
 - id: STEP-A-02
   name: Land on the file list and tell the matters apart
   phase: A
@@ -25,6 +54,34 @@ steps:
   - BK-33
   - BK-32
   - J-1
+  actor: advocate
+  entry_conditions:
+  - authenticated identity and active workspace established
+  user_action:
+  - opens the file list, distinguishes an existing matter, or deliberately starts a new
+    matter from the empty state
+  expected_visible_result:
+  - each matter is recognisable by matter name, client, opponent or subject, nearest
+    deadline including a passed deadline, present block and last meaningful activity
+  - the list order is explained by deadline, block and recency, and the selected matter
+    is visibly distinct
+  expected_domain_effect:
+  - list projection is derived from persisted matter-cover and deadline state without
+    changing the matter
+  failure_behaviour:
+  - missing fields read as not supplied or not assessed, never as invented names, zero
+    urgency or a cleared screen
+  - a create or navigation failure leaves the prior selection intact and does not create
+    a duplicate matter
+  recovery_behaviour:
+  - retrying the list or narrowing the viewport preserves the same files and selection
+  - the advocate can correct matter-cover metadata without rewriting the account or its
+    history
+  exit_conditions:
+  - one existing matter is deliberately selected, or one new matter has a recognisable
+    cover and is selected
+  notes: An empty workspace invites one deliberate first matter. Anonymous users cannot
+    create a matter, and list failures reveal no cached matter data.
 - id: STEP-A-03
   name: Re-enter a matter and see where it was left
   phase: A
@@ -33,6 +90,31 @@ steps:
   - A3
   items:
   - BK-33
+  actor: advocate
+  entry_conditions:
+  - an authenticated advocate has deliberately selected an existing matter
+  user_action:
+  - re-enters the matter after navigating away, reloading, or signing in again
+  expected_visible_result:
+  - the matter cover, served conversation, concise current summary, open questions,
+    nearest deadline and next step restore together
+  - any deadline or block that changed since the last visit is called out as a delta
+  expected_domain_effect:
+  - deadlines and current reorientation are recomputed from persisted file state while
+    the historical turns remain immutable
+  failure_behaviour:
+  - a corrupt, unreadable or concurrently changed file is refused by name; no partial
+    summary is presented as the restored file
+  - re-entry never repeats the last turn, duplicates facts or silently selects a different
+    matter
+  recovery_behaviour:
+  - a safe reload or explicit reselection retries the read; correction creates a new
+    recorded change rather than editing historical turns
+  exit_conditions:
+  - the advocate can state where the file stands, what remains open and what happens next,
+    or sees a named reason the file cannot be trusted
+  notes: Reorientation is a projection of the worked file, not a transcript dump and not
+    an every-turn model call.
 - id: STEP-A-04
   name: Search the corpus and file what is found
   phase: A
@@ -42,6 +124,33 @@ steps:
   items:
   - BK-38
   - J-7
+  actor: advocate
+  entry_conditions:
+  - authenticated identity and one active matter established
+  - the installed corpus identifies its scope and index version
+  user_action:
+  - searches judgments or an exact Act provision, narrows by court or year, opens a hit
+    and deliberately places a selected passage into the matter
+  expected_visible_result:
+  - judgment results are grouped by authority and show canonical citation, court, date,
+    bench where held and paragraph locator; an exact Act lookup returns only that Act and
+    provision
+  - zero results state the searched corpus and filters rather than implying no law exists
+  expected_domain_effect:
+  - search itself changes nothing; explicit placement persists source identity, locator,
+    excerpt and retrieval context as searched-and-placed material on the active matter
+  failure_behaviour:
+  - an ambiguous Act name, missing source identity, stale index or failed placement is
+    refused and cannot become authority or an established matter fact
+  - SEARCHED and PLACED never read as RESOLVED, VERIFIED or BINDING
+  recovery_behaviour:
+  - filters can be cleared without losing the query, and a failed placement can be retried
+    idempotently after the source is reopened
+  exit_conditions:
+  - the advocate leaves with an inspectable authority in research results and, only after
+    an explicit action, a provenance-complete searched-and-placed item in the matter
+  notes: Fuzzy retrieval may rank passages but may not identify an Act or provision. The
+    corpus boundary remains visible throughout.
 - id: STEP-B-01
   name: Route the opening message
   phase: B

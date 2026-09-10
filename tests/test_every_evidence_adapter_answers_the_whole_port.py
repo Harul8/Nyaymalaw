@@ -126,6 +126,30 @@ def _base_names(node: ast.ClassDef) -> set[str]:
     return out
 
 
+def _unanswered(required: set[str], found: dict[str, ast.ClassDef]) -> list[str]:
+    """Return evidence implementations that cannot answer the whole port."""
+    by_name: dict[str, ast.ClassDef] = {}
+    for node in found.values():
+        by_name.setdefault(node.name, node)
+
+    def answered(node: ast.ClassDef, seen: frozenset[str] = frozenset()) -> set[str]:
+        names = _members_of(node)
+        for base in _base_names(node):
+            if base == "EvidencePort":
+                return set(required)
+            parent = by_name.get(base)
+            if parent is not None and base not in seen:
+                names |= answered(parent, seen | {base})
+        return names
+
+    short: list[str] = []
+    for where, node in sorted(found.items()):
+        missing = sorted(required - answered(node))
+        if missing:
+            short.append(f"{where} does not answer {missing}")
+    return short
+
+
 # ================================================== the population, both ways ==
 
 def test_the_port_declares_every_member_the_product_reaches():
@@ -180,25 +204,7 @@ def test_every_evidence_adapter_answers_the_whole_port():
     # purpose is to answer for everyone, so the case this would miss is a
     # double named after another double that answers the port. The
     # alternative fails on real code and teaches people to switch it off.
-    by_name: dict[str, ast.ClassDef] = {}
-    for node in found.values():
-        by_name.setdefault(node.name, node)
-
-    def answered(node: ast.ClassDef, seen: frozenset[str] = frozenset()) -> set[str]:
-        names = _members_of(node)
-        for base in _base_names(node):
-            if base == "EvidencePort":
-                return set(required)
-            parent = by_name.get(base)
-            if parent is not None and base not in seen:
-                names |= answered(parent, seen | {base})
-        return names
-
-    short: list[str] = []
-    for where, node in sorted(found.items()):
-        missing = sorted(required - answered(node))
-        if missing:
-            short.append(f"{where} does not answer {missing}")
+    short = _unanswered(required, found)
 
     assert not short, (
         "these implement `fetch` and cannot answer the rest of "
@@ -232,6 +238,18 @@ def test_the_sweep_can_see_the_population():
     assert any(k.startswith("tests/") for k in found), (
         "the scan missed every test double, which is the population that "
         "hid this defect")
+
+
+def test_the_adapter_sweep_can_see_one_that_answers_only_fetch():
+    """BK-52. Plant the incomplete double that originally hid the defect."""
+    tree = ast.parse(
+        "class Planted:\n"
+        "    def fetch(self, need):\n"
+        "        return ()\n"
+    )
+    planted = next(node for node in tree.body if isinstance(node, ast.ClassDef))
+    short = _unanswered({"fetch", "available", "readiness"}, {"probe": planted})
+    assert short == ["probe does not answer ['available', 'readiness']"]
 
 
 def test_the_protocols_defaults_are_the_honest_direction():

@@ -90,6 +90,31 @@ def test_no_model_name_or_provider_client_appears_in_the_core():
     assert not offences, "\n  ".join(offences)
 
 
+def test_the_core_import_sweep_can_see_a_forbidden_layer():
+    """BK-52. Plant the forbidden import inside the sweep's real tree."""
+    probe = CORE / "_forbidden_layer_probe.py"
+    probe.write_text("from nm.adapters import model\n", encoding="utf8")
+    try:
+        with pytest.raises(AssertionError, match="imports nm.adapters"):
+            test_the_core_imports_only_core_ports_and_domain()
+    finally:
+        probe.unlink()
+
+
+def test_the_core_provider_sweep_can_see_a_named_provider():
+    """BK-52. Plant both provider-client and model-name shapes in core."""
+    probe = CORE / "_named_provider_probe.py"
+    probe.write_text(
+        "import openai\nMODEL = 'gpt-planted-2026-01-01'\n",
+        encoding="utf8",
+    )
+    try:
+        with pytest.raises(AssertionError, match="imports openai"):
+            test_no_model_name_or_provider_client_appears_in_the_core()
+    finally:
+        probe.unlink()
+
+
 @pytest.mark.class_a
 def test_layercheck_fails_the_build_on_a_core_module_that_reaches_an_adapter():
     """The check must BITE, not merely pass on clean code. A lint nobody has

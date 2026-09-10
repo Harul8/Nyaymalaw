@@ -44,6 +44,49 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sweep test  ->  the test that proves it can fail.
 #: A sweep with no control is a sweep that has never been shown to work.
 CONTROLS: dict[str, str] = {
+    # BK-52 -- the admitted population is now zero. These controls were read
+    # against the exact accumulated value each sweep asserts empty; entries
+    # that only proved a scanner had a population gained a planted offender.
+    "test_a_read_that_builds_a_prompt_and_a_guard_uses_one_value":
+        "test_the_scan_catches_a_prompt_and_a_guard_that_disagree",
+    "test_a_structured_prompt_does_not_carry_it":
+        "test_the_scan_can_see_a_prompt_that_lost_its_clause",
+    "test_a_withheld_turn_commits_none_of_what_it_derived":
+        "test_the_withheld_conclusion_sweep_can_see_a_planted_leak",
+    "test_every_answer_in_the_run_carries_the_trailing_disclosures":
+        "test_the_answer_coverage_check_can_see_an_uncovered_site",
+    "test_every_evidence_adapter_answers_the_whole_port":
+        "test_the_adapter_sweep_can_see_one_that_answers_only_fetch",
+    "test_every_read_schema_can_be_compiled_by_strict_mode":
+        "test_the_strict_schema_sweep_can_see_a_planted_invalid_object",
+    "test_every_recurring_shape_has_a_mechanism_more_than_one_defect_points_at":
+        "test_the_enumerator_scan_can_see_a_defect_that_ignores_its_sweep",
+    "test_every_schema_is_identified_by_an_exact_key_and_not_a_substring":
+        "test_the_schema_scan_can_see_a_schema_with_no_responder",
+    "test_no_binding_reason_reads_as_a_citation":
+        "test_the_composed_text_scan_can_see_a_planted_citation",
+    "test_no_feature_is_tested_while_its_eval_runs_every_turn_and_it_has_no_turn":
+        "test_the_runtime_evidence_sweep_can_see_a_planted_unwired_feature",
+    "test_no_gate_disclosure_reads_as_a_citation":
+        "test_the_composed_text_scan_can_see_a_planted_citation",
+    "test_no_model_name_or_provider_client_appears_in_the_core":
+        "test_the_core_provider_sweep_can_see_a_named_provider",
+    "test_no_module_outside_the_adapters_names_a_provider":
+        "test_the_provider_name_sweep_can_see_a_leak_outside_adapters",
+    "test_no_read_asks_for_the_hard_tier_while_none_is_earned":
+        "test_the_tier_sweep_can_see_a_planted_hard_read",
+    "test_the_core_imports_only_core_ports_and_domain":
+        "test_the_core_import_sweep_can_see_a_forbidden_layer",
+    "test_the_golden_suite_path_cannot_reach_a_model":
+        "test_the_model_scan_can_see_a_runner_that_would_spend",
+    "test_the_implemented_type_adds_nothing_the_contract_does_not_declare":
+        "test_the_undeclared_field_sweep_can_see_a_planted_extra_field",
+    "test_the_phrases_are_not_the_identifiers_with_the_underscores_removed":
+        "test_the_phrase_sweep_can_see_underscores_merely_removed",
+    "test_the_scripted_provider_answers_every_schema_the_core_declares":
+        "test_the_schema_scan_can_see_a_schema_with_no_responder",
+    "test_every_sweep_names_a_control_that_proves_it_can_fail":
+        "test_the_control_registry_can_see_an_unregistered_or_stale_claim",
     # BK-69 -- media never reaches reasoning unadmitted, over nm/core,
     # nm/domain and nm/knowledge. Its control plants five media-shaped
     # parameters and asserts each is seen; the population is not empty even
@@ -189,54 +232,14 @@ CONTROLS: dict[str, str] = {
 #:
 #: So each is verified and moved into CONTROLS one at a time. An admitted gap
 #: is work; a silent one is a surprise.
-UNCONTROLLED: dict[str, str] = {
-    "test_a_read_that_builds_a_prompt_and_a_guard_uses_one_value":
-        "candidate: test_the_scan_catches_a_planted_hand_guard",
-    "test_a_structured_prompt_does_not_carry_it":
-        "candidate: test_the_scan_can_see_a_prompt_that_lost_its_clause",
-    "test_a_withheld_turn_commits_none_of_what_it_derived":
-        "NO CANDIDATE FOUND -- nothing in the file plants a withheld turn "
-        "that commits",
-    "test_every_answer_in_the_run_carries_the_trailing_disclosures":
-        "candidate: test_the_answer_coverage_check_can_see_an_uncovered_site",
-    "test_every_evidence_adapter_answers_the_whole_port":
-        "candidate: test_the_sweep_can_see_the_population",
-    "test_every_read_schema_can_be_compiled_by_strict_mode":
-        "candidate: test_the_suite_can_see_the_declared_schemas",
-    "test_every_recurring_shape_has_a_mechanism_more_than_one_defect_points_at":
-        "candidate: test_the_enumerator_scan_can_see_a_defect_that_ignores_"
-        "its_sweep",
-    "test_every_schema_is_identified_by_an_exact_key_and_not_a_substring":
-        "candidate: test_the_schema_scan_can_see_a_schema_with_no_responder",
-    "test_no_binding_reason_reads_as_a_citation":
-        "NO CANDIDATE FOUND",
-    "test_no_feature_is_tested_while_its_eval_runs_every_turn_and_it_has_no_turn":
-        "candidate: test_the_scan_can_see_an_unreached_module",
-    "test_no_gate_disclosure_reads_as_a_citation":
-        "NO CANDIDATE FOUND",
-    "test_no_model_name_or_provider_client_appears_in_the_core":
-        "NO CANDIDATE FOUND -- and this one guards the layering, so it is "
-        "the least comfortable entry in this table",
-    "test_no_module_outside_the_adapters_names_a_provider":
-        "candidate: test_the_wire_scan_can_see_a_leak",
-    "test_no_read_asks_for_the_hard_tier_while_none_is_earned":
-        "candidate: test_the_scan_can_see_the_schemas",
-    "test_the_core_imports_only_core_ports_and_domain":
-        "NO CANDIDATE FOUND -- layercheck covers the same rule from outside "
-        "the suite, which is a different population, not a control",
-    "test_the_golden_suite_path_cannot_reach_a_model":
-        "candidate: test_the_model_scan_can_see_a_runner_that_would_spend",
-    "test_the_implemented_type_adds_nothing_the_contract_does_not_declare":
-        "NO CANDIDATE FOUND",
-    "test_the_phrases_are_not_the_identifiers_with_the_underscores_removed":
-        "candidate: test_the_value_scan_can_see_an_identifier_reaching_the_"
-        "advocate",
-    "test_the_scripted_provider_answers_every_schema_the_core_declares":
-        "candidate: test_the_schema_scan_can_see_a_schema_with_no_responder",
-    "test_every_sweep_names_a_control_that_proves_it_can_fail":
-        "this file's own sweep; its control is the pair of tests below that "
-        "plant an unregistered sweep and a stale entry",
-}
+UNCONTROLLED: dict[str, str] = {}
+
+
+def test_no_sweep_is_left_in_the_admitted_gap_table():
+    """BK-52 closes only when the declaration of missing controls is empty."""
+    assert UNCONTROLLED == {}, (
+        "BK-52 still admits sweeps with no verified positive control: "
+        f"{sorted(UNCONTROLLED)}")
 
 
 @functools.lru_cache(maxsize=1)
@@ -305,6 +308,20 @@ def _sweeps() -> dict[str, str]:
     return found
 
 
+def _control_gaps(sweeps, tests, controls, uncontrolled):
+    """Return unregistered sweeps and controls that name no existing test."""
+    missing, stale = [], []
+    for sweep, file in sorted(sweeps.items()):
+        if sweep in uncontrolled:
+            continue
+        control = controls.get(sweep)
+        if control is None:
+            missing.append(f"{file}::{sweep}")
+        elif control not in tests:
+            stale.append(f"{file}::{sweep} -> {control} (does not exist)")
+    return missing, stale
+
+
 def test_the_suite_contains_sweeps_to_check():
     """A guard on the guard."""
     assert len(_sweeps()) >= 6, (
@@ -314,16 +331,8 @@ def test_the_suite_contains_sweeps_to_check():
 
 def test_every_sweep_names_a_control_that_proves_it_can_fail():
     """THE POINT, and B-049 is why it is not optional."""
-    tests = _tests()
-    uncontrolled, unresolved = [], []
-    for sweep, file in sorted(_sweeps().items()):
-        if sweep in UNCONTROLLED:
-            continue                      # declared, dated and owned by BK-52
-        control = CONTROLS.get(sweep)
-        if control is None:
-            uncontrolled.append(f"{file}::{sweep}")
-        elif control not in tests:
-            unresolved.append(f"{file}::{sweep} -> {control} (does not exist)")
+    uncontrolled, unresolved = _control_gaps(
+        _sweeps(), _tests(), CONTROLS, UNCONTROLLED)
 
     assert not uncontrolled, (
         "these sweeps assert that nothing is broken and nothing shows they "
@@ -336,6 +345,18 @@ def test_every_sweep_names_a_control_that_proves_it_can_fail():
         "these sweeps name a control that is not in the suite:\n  "
         + "\n  ".join(unresolved)
         + "\n\nA rename moved it and left the claim behind.")
+
+
+def test_the_control_registry_can_see_an_unregistered_or_stale_claim():
+    """BK-52. Plant both failure modes in the exact registry comparison."""
+    sweeps = {"missing_control": "test_probe.py", "stale_control": "test_probe.py"}
+    tests = {"a_real_control": ("test_probe.py", "def a_real_control(): pass")}
+    controls = {"stale_control": "a_deleted_control"}
+    missing, stale = _control_gaps(sweeps, tests, controls, {})
+    assert missing == ["test_probe.py::missing_control"]
+    assert stale == [
+        "test_probe.py::stale_control -> a_deleted_control (does not exist)"
+    ]
 
 
 def test_no_admitted_gap_outlives_the_sweep_it_was_admitted_for():
