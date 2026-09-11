@@ -1571,6 +1571,22 @@
         {
           "path": "tools/build_identity_index.py",
           "kind": "existing"
+        },
+        {
+          "path": "nm/knowledge/source_registry.py",
+          "kind": "planned"
+        },
+        {
+          "path": "tools/inventory_legal_sources.py",
+          "kind": "planned"
+        },
+        {
+          "path": "tests/test_legal_source_inventory.py",
+          "kind": "planned"
+        },
+        {
+          "path": "tests/test_source_registry.py",
+          "kind": "planned"
         }
       ],
       "inputs": [
@@ -3636,6 +3652,22 @@
         {
           "path": "nm/knowledge/manifest.py",
           "kind": "existing"
+        },
+        {
+          "path": "nm/knowledge/acquisition.py",
+          "kind": "planned"
+        },
+        {
+          "path": "tools/reconcile_acquisition.py",
+          "kind": "planned"
+        },
+        {
+          "path": "tests/test_judgment_acquisition.py",
+          "kind": "planned"
+        },
+        {
+          "path": "tests/test_acquisition_receipts.py",
+          "kind": "planned"
         }
       ],
       "inputs": [

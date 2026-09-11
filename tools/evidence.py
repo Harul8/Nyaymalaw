@@ -43,6 +43,14 @@ CLASS_A_SELECTOR = "class_a and not class_c and not class_d and not journey"
 CLASS_A_PYTEST_ARGS = ("-m", CLASS_A_SELECTOR, "-q")
 CLASS_A_COMMAND = f'python -m pytest -m "{CLASS_A_SELECTOR}" -q'
 
+# The per-task gate runs Class A first and ordinary local tests second.  The
+# second population must exclude the first: before this selector was named,
+# `not class_c and not class_d and not journey` collected every Class-A test a
+# second time and made the safety gate expensive without adding evidence.
+ORDINARY_SELECTOR = \
+    "not class_a and not class_c and not class_d and not journey"
+ORDINARY_PYTEST_ARGS = ("-m", ORDINARY_SELECTOR, "-q")
+
 
 @dataclass(frozen=True)
 class IdentityInput:

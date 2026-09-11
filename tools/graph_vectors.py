@@ -99,10 +99,18 @@ def lag(db: pathlib.Path | None = None) -> tuple[int, int, int]:
         eligible = con.execute(
             f"select count(*) from nodes where kind not in ({marks})",
             NEVER_EMBEDDED).fetchone()[0]
-        embedded = con.execute(
-            f"""select count(*) from nodes n
-                join embeddings e on e.qualified_name = n.qualified_name
-                where n.kind not in ({marks})""", NEVER_EMBEDDED).fetchone()[0]
+        has_embeddings = con.execute(
+            "select 1 from sqlite_master where type = 'table' and name = ?",
+            ("embeddings",),
+        ).fetchone()
+        embedded = 0
+        if has_embeddings:
+            embedded = con.execute(
+                f"""select count(*) from nodes n
+                    join embeddings e on e.qualified_name = n.qualified_name
+                    where n.kind not in ({marks})""",
+                NEVER_EMBEDDED,
+            ).fetchone()[0]
     finally:
         con.close()
     return eligible, embedded, eligible - embedded
@@ -122,12 +130,25 @@ def examples(limit: int = 5, db: pathlib.Path | None = None) -> list[str]:
     con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     try:
         marks = ",".join("?" * len(NEVER_EMBEDDED))
-        rows = con.execute(
-            f"""select n.qualified_name from nodes n
-                left join embeddings e on e.qualified_name = n.qualified_name
-                where e.qualified_name is null and n.kind not in ({marks})
-                order by n.qualified_name limit ?""",
-            (*NEVER_EMBEDDED, limit)).fetchall()
+        has_embeddings = con.execute(
+            "select 1 from sqlite_master where type = 'table' and name = ?",
+            ("embeddings",),
+        ).fetchone()
+        if has_embeddings:
+            rows = con.execute(
+                f"""select n.qualified_name from nodes n
+                    left join embeddings e on e.qualified_name = n.qualified_name
+                    where e.qualified_name is null and n.kind not in ({marks})
+                    order by n.qualified_name limit ?""",
+                (*NEVER_EMBEDDED, limit),
+            ).fetchall()
+        else:
+            rows = con.execute(
+                f"""select qualified_name from nodes
+                    where kind not in ({marks})
+                    order by qualified_name limit ?""",
+                (*NEVER_EMBEDDED, limit),
+            ).fetchall()
     finally:
         con.close()
     root = str(REPO).replace("\\", "/") + "/"
