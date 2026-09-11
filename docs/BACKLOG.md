@@ -86,7 +86,7 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 - **BK-70** [D/E/F] remedy and enforceability model — *planned* · model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
 - **BK-78** [B/C] emergency admission integration — *planned* · design and prove the scoped integration without relaxing the foundation or claiming unrun evidence
 - **BK-79** [C/G/I] multimodal attribution and deletion integration — *planned* · design and prove the scoped integration without relaxing the foundation or claiming unrun evidence
-- **BK-80** [A/B/C/D/E/F/G/H/I] evidence integrity and release claim enforcement — *planned* · design and prove the scoped integration without relaxing the foundation or claiming unrun evidence
+- **BK-80** [A/B/C/D/E/F/G/H/I] evidence integrity and release claim enforcement — *in_progress* · P01's truthful current-spec, exact-failure and checked-tree identity scope is complete; P03 continues to own AC1, AC2, AC4 and AC6, so the item remains partial and unsigned
 - **BK-81** [A/B/C/D/E/F/G/H/I] India-only modular product and execution blueprint — *verifying* · obtain qualified design review and fresh full evidence after resolving the existing trace failures; no application or release claim is promoted
 - **BK-82** [A/B/C/D/E/F/G/H/I] module proof console and cumulative demonstration control — *in_progress* · build the isolated operator console and run-population controls; the mapping checker exists but does not prove the served console or production readiness
 - **BK-83** [A/B/C/D/E/F/G/H/I] transactional matter store and reversible migration — *planned* · complete the Start record and implement the bounded foundation with current negative and served-path proof
@@ -697,20 +697,21 @@ foundation; it cannot certify W2's end-to-end processing or production privacy.
 
 ## BK-80 — evidence integrity and release claim enforcement
 
-Review found limits in the current control plane. Structured non-Class-A
-records check named fields and criterion identity but not the full evaluated
+At P01 Start, review found limits in the control plane. Structured non-Class-A
+records checked named fields and criterion identity but not the full evaluated
 source/configuration or reviewer qualification and sample. Browser records
-check fingerprint and a matching PASS row without requiring report completion,
-unique rows or the expected population. The fingerprint does not currently
-include all PRD/generated-specification/playbook sources. Build-rule manifests
-and test-name checks do not establish every rule's semantic enforcement or
-that the named test was collected. New wave and release-profile contracts also
-need explicit validation before their manual review becomes an automated gate.
+checked a fingerprint and matching PASS row without requiring report completion,
+unique rows or the expected population. The checked identity omitted effective
+PRD/generated-specification/playbook inputs. Build-rule manifests and test-name
+checks did not establish every rule's semantic enforcement or that a named test
+was collected. New wave and release-profile contracts still need explicit
+validation before their manual review becomes an automated gate.
 
-These are registered W0 control work, not repaired by writing this paragraph.
-The interim sign-off must inspect subject identity, full population, reviewers,
-source changes and reservations explicitly. Start is BLOCKED pending exact
-positive controls and proof design; all acceptance evidence is NOT_RUN.
+P01 closes the local specification, checked-tree and exact-failure subset below.
+It does not repair the remaining evidence-envelope, professional-review,
+browser-population, approval-authority or release-profile obligations by writing
+about them. P03 owns those criteria. Their interim sign-off must still inspect
+subject identity, full population, reviewers, source changes and reservations.
 
 The BK-77 Class-A attempt also demonstrated why a probe must identify the
 specific control that rejected its mutation. Two gate-scan tests asserted the
@@ -720,11 +721,109 @@ evidence about the gate scanner while the baseline is red. Preserve the
 Test playbook's rule that a control must reject for the intended reason when
 designing the BK-80 proof boundary; do not waive the underlying T7 failures.
 
-`export_spec.py` also still obtains historical feature status and S-slice
-metadata from the original workbook. BK-80-AC5 requires current status to come
-from the registry while preserving historical metadata as history. A newly
-specified refusal with no production guard must continue to fail trace T7;
-changing a legacy `tested` label or adding a false guard tag is not a fix.
+At opening, `export_spec.py` obtained present feature status and S-slice metadata
+from the original workbook. P01 now takes present implementation and proof from
+the registry and preserves August status, eval IDs and slice fields explicitly
+as history. A newly specified refusal with no production guard continues to
+fail trace T7; changing a legacy `tested` label or adding a false guard tag was
+not used as a fix.
+
+### P01 corrective build record — opened 10 September 2026
+
+**Start decision: READY.** The product owner directed that every finding from
+the independent `d0fa3f3` review be fixed and P01 completed end to end. This is
+isolated control-plane work under CHOICE-02: no client material, external
+provider, corpus mutation, deployment or legal conclusion is involved. The
+changed promise is that one current registry, one collision-safe identity and
+one exact observed-failure set determine what the exporter and scoped gate may
+say. Historical workbook values remain history; generated verdicts remain
+outputs rather than inputs to their own proof.
+
+**Measured defect families and full populations.** The review planted changes
+in every class of effective gate input, reassigned a `delivers` relation,
+introduced a new trace failure and a new failure reason under an already-known
+pytest node, duplicated and invented workbook feature ids, changed an
+unobserved generated output, removed eval populations, and exercised a second
+unchanged scoped run. The resulting P01 build must therefore close these
+families, not those individual examples:
+
+1. one canonical, framed manifest covers every effective Class-A/gate promise
+   and the delivery relation, while excluding generated verdicts and artifacts;
+2. the stamp binds the exact tree the gate checked, records full versus scoped,
+   and remains valid on a second unchanged scoped run while every full-gate
+   caller refuses it;
+3. known failures are structured facts compared as exact sets, including step,
+   identity and reason, so no extra, changed, duplicated or vanished failure is
+   absorbed by an old line or aggregate test node;
+4. `status.yaml` owns current feature state, code declarations are a separate
+   observed reconciliation signal, and missing, duplicate, unknown,
+   contradicted and trace-only populations are distinguished before publication;
+5. zero, unresolved or unexecuted populations produce `NOT_ASSESSED`, never
+   PASS; every AWAITING blocker is a structured resolvable reference;
+6. all generated outputs are compared without writing before atomic publication,
+   and a clean CI checkout installs every locked runtime dependency used by that
+   check.
+
+**Proof plan.** Each clause above receives an ordinary positive control and a
+restored planted counterexample that asserts the intended refusal reason. The
+integrated candidate must pass P01's focused tests, blueprint/backlog lint,
+the complete Class-A population from a clean dependency declaration, and the
+EVAL-001 P01 observations. The known T3b/T3c reconciliation facts, C1/D2 legal
+refusal gaps and style debt stay visibly red and may support only an exact
+scoped build pass; this packet does not implement their product owners. Build,
+Test and Sign-off remain open until the current execution-bound evidence and
+conformance record are written.
+
+### P01 conformance record — completed 11 September 2026
+
+**Bounded result: SIGNED OFF.** P01's final criteria are BK-80-AC3/AC5/AC7 and
+BK-48-AC1/AC2. Each has its registered domain/adversarial method attached to an
+exact passing node in the current Class-A evidence artifact. This closes the
+packet, not either parent work item: BK-80 remains partial for P03's
+AC1/AC2/AC4/AC6, and BK-48 remains partial for P14's AC3.
+
+**Build record.** One registry-backed projector now separates authored current
+implementation, delivery-row evidence and code declarations. All 44 current
+feature IDs and the preserved historical mapping reconcile before any of six
+generated outputs can be published; publication is explicit and transactional.
+T3b reports the exact trace-only membership and T3c separately reports authored
+denial contradicted by code. Structured AWAITING references resolve to the
+actual owning feature or work item, and zero tested populations are
+`NOT_ASSESSED`, never a vacuous pass.
+
+One collision-safe checked-tree identity covers the Git candidate's effective
+code, tests, PRD, registries, guides, web surface, workflow/configuration and
+hook, including delivery and evidence relations. Semantic projections exclude
+only generated verdict/output fields; PRD OOXML packaging timestamps do not
+change its semantic identity. The gate samples that same identity throughout,
+stamps the final verified digest rather than recomputing it afterward, and the
+hook refuses a staged candidate that differs from the checked tree. The hook is
+tracked executable and fails closed when Python is unavailable.
+
+Known gate failures are typed, collision-safe facts with exact step, identity,
+reason and owning criteria. New, changed, duplicated, vanished, unparseable or
+uncaptured failures block. A matching known set produces only `SCOPED BUILD
+PASS — FULL GATE RED`; repeated unchanged scoped runs remain scoped and every
+full-gate query refuses them. Class-A's canonical offline population excludes
+corpus, judge/model and browser classes and rejects every skipped, failed,
+malformed, partial or empty result. Clean CI installs the locked PRD renderer.
+
+**Evidence and counterexamples.** The P01 controls independently move current
+versus historical feature state, missing/duplicate/unknown mappings, delivery
+relations, each effective input class and framed path/content boundaries. They
+plant new and changed failures, same-count membership swaps, unexpectedly fixed
+declarations, observer gaps, malformed registries, zero populations, partial
+publication, repeated scoped runs, staged/live divergence and full-stamp reuse.
+Every mutation first changes a real field or byte and must trigger its intended
+refusal. The exact execution results live in the excluded Class-A artifact; no
+literal digest is copied into this identity-covered record.
+
+**Conformance limits.** EVAL-001's deterministic P01 observations are covered
+by those bound tests. Its served operator-console and role observations remain
+`NOT_RUN` for BK-82/P04 and are not claimed here. The T3b/T3c registry findings,
+C1/D2 legal refusal gaps and pre-existing Ruff debt remain red with their named
+owners. P01 used no client data, provider/model call, corpus mutation, browser
+claim, counsel review, deployment or release authority.
 
 **Current validation boundary for BK-77.** The refined PRD exposes two genuine
 unimplemented refusal obligations: C1's incomplete/repetitive/unavailable
@@ -1836,9 +1935,9 @@ across `nm/core/route.py`, `nm/core/screens.py`, `nm/core/quarantine.py` and
 `nm/core/turn.py`. All six Phase B features are registered `status: decided`,
 which the PRD's own vocabulary (§0.5) defines as the pre-build state.
 
-`tools/trace.py:359` checks one direction only: T3 fails a feature ABOVE
-`decided` with no implementing code. There is no check for the reverse, so code
-sitting under a `decided` feature passes silently.
+At opening, `tools/trace.py` checked one direction only: T3 failed a feature
+above `decided` with no implementing code. There was no reverse check, so code
+sitting under a `decided` feature passed silently.
 
 **Why it matters beyond tidiness.** `tools/slicegate.py` reads the same record,
 so S10 reports NOT DONE partly on features that are implemented, and the
@@ -1846,9 +1945,14 @@ project's answer to *how far have we travelled* is wrong in the direction that
 hides work. That is the S3 shape pointed inward — an absent declaration read as
 an absent thing.
 
-**Acceptance:** the four implemented B features carry a status their code
-supports; `trace` gains T3b — a feature at `decided` with `@implements` in
-production code FAILS — so the register cannot under-report again.
+**P01 control delivered 11 September 2026.** Present state is now authored only
+in `status.yaml`; `@implements` and delivery links are independent observations
+that cannot promote or silence it. T3b names the exact 24-member trace-only set,
+and T3c separately names C6's authored `none` contradicted by production code.
+Changing the membership even at the same count blocks the scoped gate. The
+report is intentionally still red: delivery owners must reconcile those rows,
+and P14 retains AC3's built-feature PRODUCES-type population. BK-48 is therefore
+partial, not complete.
 
 ### Closed — 3
 
@@ -3451,6 +3555,13 @@ Class-A selection completed successfully. One environment-dependent P4 model
 separation check was explicitly skipped because both optional model tiers were
 not configured; it certifies no backlog acceptance criterion and is recorded
 as skipped rather than silently counted as PASS.
+
+**Superseded Class-A population rule, 11 September 2026.** P01 made the
+every-commit population explicit: a judge/model, corpus or browser-marked test
+is not Class A even if it inherits a broad module marker. Publishable Class-A
+evidence now contains only completed passing nodes; a skip makes the artifact
+unpublishable rather than a qualified success. The P4 separation check is
+Class D and retains its approved-run/configuration requirement.
 
 ## BK-74 — Start Build Test and Sign-off are enforced delivery states with records
 

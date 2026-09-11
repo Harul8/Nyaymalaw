@@ -175,6 +175,34 @@
     </section>
     <button type="button" class="primary wide" id="outcome-signin" hidden>Sign in</button>
     <button type="button" class="primary wide" id="outcome-back" hidden>Back to the form</button>
+    <!-- BK-31-AC20. The acknowledgement for a rotation, which returns to the
+         matters the advocate was already in rather than to a sign-in screen
+         they do not need. Same one-time list, same "they will not be shown
+         again" promise, and the codes leave the document when it is pressed. -->
+    <button type="button" class="primary wide" id="outcome-resume" hidden>I saved them — back to work</button>
+  </section>
+  <!-- BK-31-AC20. FRESH AUTHENTICATION, ASKED SEPARATELY FROM THE CHANGE.
+       The proof this earns is spendable once, expires in five minutes and is
+       bound to this session; it is held in a variable and never written to
+       storage, so a closed tab loses it rather than leaving it behind. -->
+  <section id="reauth" class="login" hidden>
+    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
+    <h2>Replace your recovery codes</h2>
+    <p class="login-lede">This replaces all ten at once. The codes you hold now
+      will stop working, and the new ones are shown once. Confirm your password
+      to continue.</p>
+    <form id="reauth-form" autocomplete="off">
+      <label for="reauth-password">Your password</label>
+      <div class="pw-wrap">
+        <input id="reauth-password" name="current-password" type="password"
+               autocomplete="current-password" required>
+        <button type="button" class="pw-eye" data-for="reauth-password"
+                aria-label="Show password">Show</button>
+      </div>
+      <p class="login-error" id="reauth-error" hidden></p>
+      <button type="submit" class="primary wide" id="reauth-go">Replace my recovery codes</button>
+      <div class="login-alt"><a href="#" id="reauth-cancel">Cancel</a></div>
+    </form>
   </section>
 </div>
 
@@ -220,6 +248,14 @@
          controls, so the control has to be reachable from the one they are
          holding — and the session they press it from survives. -->
     <button id="devices" class="ghost">Sessions</button>
+    <!-- BK-31-AC20. REPLACE THE RECOVERY CODES.
+         D-013 promised this and nothing served it, so an advocate whose
+         printed codes had been seen had exactly one route back: spend one of
+         the compromised codes to recover, leaving the other nine as exposed
+         as they were. It asks for the password again because a session cookie
+         alone would make an unlocked laptop enough to replace the last-resort
+         credential. -->
+    <button id="replace-codes" class="ghost">Recovery codes</button>
     <button id="signout" class="ghost">Sign out</button>
   </div>
   <div class="health" id="health" title="Wired configuration">checking…</div>

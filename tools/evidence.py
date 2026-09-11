@@ -12,13 +12,17 @@ whose source fingerprint still matches this tree.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import json
 import os
 import pathlib
 import subprocess
 import sys
+import zipfile
+from dataclasses import dataclass
 from typing import Any
+from xml.etree import ElementTree
 
 import yaml
 
@@ -31,58 +35,63 @@ utf8_console()
 LOCAL_CLASS_A = ROOT / ".nm" / "class_a_results.json"
 PUBLISHED_CLASS_A = ROOT / "docs" / "backlog" / "evidence" / "class_a.json"
 
-SOURCE_TREES = ("nm", "tests", "tools", "web")
-SOURCE_SUFFIXES = {".py", ".js", ".css", ".html"}
-# Planning contracts are inputs, never generated execution verdicts. Enumerate
-# this tree rather than maintaining a second, inevitably incomplete file list.
-CONTRACT_TREES = ("docs/blueprint",)
-CONTRACT_SUFFIXES = {".json", ".md"}
-CONTRACT_FILES = (
-    "docs/backlog/steps.yaml",
-    "docs/backlog/plan.json",
-    "docs/backlog/professional.json",
-    "docs/backlog/build_rules.json",
-    "docs/backlog/SCHEMA.md",
-    "pyproject.toml",
-    # THE PROMISES THEMSELVES. BK-80-AC3.
-    #
-    # Until 10 September 2026 this fingerprint covered nm, tests, tools, web and
-    # the plan contracts -- and NOT the PRD, the generated specification, or the
-    # rules the build says it follows. So changing a PRD requirement, a release
-    # threshold or a playbook obligation left every existing PASS reading as
-    # current, when the claim those records were about had just changed
-    # underneath them. Evidence names its subject or it is not evidence.
-    #
-    # `spec/release.yaml` is the authored thresholds with owners and cadence.
-    # `spec/coverage.yaml` is deliberately ABSENT: it is what releasegate
-    # MEASURED, and folding a verdict into the identity of the thing it judges
-    # makes every measurement invalidate itself.
-    #
-    # WHAT IS NOT COVERED, STATED RATHER THAN LEFT TO BE NOTICED. BK-80-AC3
-    # names three populations -- authoritative PRD, generated specification,
-    # applicable guide rules -- and this is exactly those three. It does NOT
-    # cover `spec/manifest.yaml` (which Acts the corpus reconciles) or
-    # `docs/BASELINE.md` (what the corpus measurably holds). Both are claims
-    # about KNOWLEDGE rather than about behaviour, a change to either is a
-    # corpus event with its own controls, and widening this digest to them
-    # would make every corpus refresh restale every behavioural proof. That is
-    # an admitted gap with a reason, not an oversight; if a promise is ever
-    # written into the manifest, it belongs here and this comment is wrong.
-    "docs/BUILD_GUIDE.md",
-    "spec/release.yaml",
-    "spec/evals.yaml",
-    "spec/anchors.yaml",
-    "spec/schemas.yaml",
-    "spec/gates.yaml",
+#: One definition of the every-commit population. A test can inherit a broad
+#: module marker and still declare that it needs a corpus, judge/model or
+#: browser. Those approval-bound markers must win: an unavailable dependency
+#: is not a Class-A skip and a skip is not publishable evidence.
+CLASS_A_SELECTOR = "class_a and not class_c and not class_d and not journey"
+CLASS_A_PYTEST_ARGS = ("-m", CLASS_A_SELECTOR, "-q")
+CLASS_A_COMMAND = f'python -m pytest -m "{CLASS_A_SELECTOR}" -q'
+
+
+@dataclass(frozen=True)
+class IdentityInput:
+    """One declared part of the tree whose result the gate can speak for."""
+
+    path: str
+    mode: str = "tree"
+    exclude: tuple[str, ...] = ()
+
+
+#: ONE MANIFEST FOR CLASS-A EVIDENCE, THE RUNNING GATE AND ITS STAMP.
+#:
+#: A suffix allow-list omitted the JavaScript harness that Class A executes,
+#: the PowerShell launcher, the extensionless commit hook and the CI workflow.
+#: Trees here therefore mean every regular file, with generated verdicts named
+#: as exclusions rather than falling out accidentally because of their suffix.
+#:
+#: `docs/backlog/status.yaml`, `spec/features.yaml` and `docs/BACKLOG.md` are
+#: semantic entries: promises, delivery relations and authored rationale are
+#: included, while generated verdicts are not. `spec/coverage.yaml`,
+#: `docs/backlog/evidence/` and the generated current-plan workbook are outputs
+#: of measurement/projection and are deliberately absent. The workbook embeds
+#: this fingerprint and its format is not byte-deterministic; including it would
+#: create a recursive identity that no regeneration could ever satisfy.
+IDENTITY_MANIFEST = (
+    IdentityInput(".", exclude=(
+        "docs/Archives",
+        "docs/BACKLOG.md",
+        "docs/Nyaymalaw_End_to_End_Project_Plan.xlsx",
+        "docs/Nyaymalaw_PRD.docx",
+        "docs/backlog/evidence",
+        "docs/backlog/status.yaml",
+        "spec/coverage.yaml",
+        "spec/features.yaml",
+    )),
+    IdentityInput("docs/backlog/status.yaml", mode="status_contract"),
+    IdentityInput("spec/features.yaml", mode="feature_promises"),
+    IdentityInput("docs/BACKLOG.md", mode="backlog_contract"),
+    IdentityInput("docs/Nyaymalaw_PRD.docx", mode="docx_semantic"),
 )
 
-#: The PRD's editable source, and the playbooks that bind the build method.
-#: Enumerated as trees so a new chapter or a fifth playbook is covered the day
-#: it is written rather than the day somebody remembers to list it.
-PROMISE_TREES = {
-    "spec/prd": {".js"},
-    "docs/playbooks": {".md"},
-}
+_IGNORED_DIRECTORY_NAMES = frozenset({
+    "__pycache__", ".pytest_cache", ".ruff_cache", ".mypy_cache",
+    "node_modules", ".venv", "venv", ".git", ".nm", ".code-review-graph",
+})
+_BINARY_SUFFIXES = frozenset({
+    ".docx", ".xlsx", ".xls", ".pdf", ".png", ".jpg", ".jpeg",
+    ".gif", ".webp", ".ico", ".db", ".sqlite", ".zip",
+})
 
 #: The generated specification carries both halves: the PROMISE (what the
 #: product must do, never do, produce and evaluate) and the VERDICT (what the
@@ -94,36 +103,93 @@ PROMISE_TREES = {
 FEATURE_SPEC = "spec/features.yaml"
 DERIVED_FEATURE_FIELDS = frozenset({
     "status", "implementation", "implementation_basis", "proof",
-    "delivered_by",
+    "delivered_by", "declared_in",
 })
+
+#: Verdict/workflow fields in the authored current registry. Everything not
+#: denied remains part of the claim automatically, including a field added
+#: tomorrow and, critically, both `delivers` and `delivery_items`.
+_STATUS_TOP_VERDICT_FIELDS = frozenset({"events"})
+_STATUS_FEATURE_VERDICT_FIELDS = frozenset({"implementation", "disposition"})
+_STATUS_ITEM_VERDICT_FIELDS = frozenset({
+    "delivery_status", "implementation", "verification",
+})
+_STATUS_EVIDENCE_VERDICT_FIELDS = frozenset({
+    "result", "_effective_result", "note",
+})
+_BACKLOG_BOARD_START = "<!-- BACKLOG_STATUS:START -->"
+_BACKLOG_BOARD_END = "<!-- BACKLOG_STATUS:END -->"
 
 
 def _bytes(path: pathlib.Path) -> bytes:
-    """Hash text identically on CRLF and LF checkouts."""
-    return path.read_text(encoding="utf-8").replace("\r\n", "\n").encode()
+    """Hash text identically on CRLF/LF checkouts and binary files verbatim."""
+    body = path.read_bytes()
+    if path.suffix.lower() in _BINARY_SUFFIXES:
+        return body
+    try:
+        text = body.decode("utf-8")
+    except UnicodeDecodeError:
+        return body
+    return text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+
+
+def _json_default(value: Any) -> dict[str, str]:
+    """Keep YAML dates typed instead of colliding with an ordinary string."""
+    if isinstance(value, (dt.date, dt.datetime)):
+        return {"$type": type(value).__name__, "value": value.isoformat()}
+    raise TypeError(f"cannot canonicalise {type(value).__name__}")
+
+
+def _canonical(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=True, default=_json_default).encode("utf-8")
 
 
 def _status_contract(root: pathlib.Path) -> bytes:
-    """The claim being tested, without its mutable verdict or workflow state."""
+    """The claim and delivery relation, without execution/workflow verdicts."""
     path = root / "docs" / "backlog" / "status.yaml"
     if not path.exists():
         return b"<absent:docs/backlog/status.yaml>"
     doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    rows = []
+    if not isinstance(doc, dict):
+        return _canonical(doc)
+
+    contract = {k: v for k, v in doc.items()
+                if k not in _STATUS_TOP_VERDICT_FIELDS}
+    contract["features"] = [
+        {k: v for k, v in (feature or {}).items()
+         if k not in _STATUS_FEATURE_VERDICT_FIELDS}
+        for feature in doc.get("features") or []
+    ]
+    items = []
     for item in doc.get("items") or []:
-        rows.append({
-            "id": item.get("id"),
-            "kind": item.get("kind"),
-            "priority": item.get("priority"),
-            "depends_on": item.get("depends_on") or [],
-            "acceptance": [{
-                "id": ac.get("id"),
-                "requirement": ac.get("requirement"),
-                "required_evidence": ac.get("required_evidence") or [],
-                "negative_control": ac.get("negative_control"),
-            } for ac in item.get("acceptance") or []],
-        })
-    return json.dumps(rows, sort_keys=True, separators=(",", ":")).encode()
+        kept = {k: v for k, v in (item or {}).items()
+                if k not in _STATUS_ITEM_VERDICT_FIELDS}
+        if "stage_records" in kept:
+            kept["stage_records"] = {
+                stage: {
+                    k: v for k, v in (record or {}).items()
+                    if k not in {"result", "note"}
+                }
+                for stage, record in (kept.get("stage_records") or {}).items()
+            }
+        acceptance_rows = []
+        for acceptance in (item or {}).get("acceptance") or []:
+            acceptance = dict(acceptance or {})
+            evidence = {
+                level: {
+                    k: v for k, v in (record or {}).items()
+                    if k not in _STATUS_EVIDENCE_VERDICT_FIELDS
+                }
+                for level, record in (acceptance.get("evidence") or {}).items()
+            }
+            if "evidence" in acceptance:
+                acceptance["evidence"] = evidence
+            acceptance_rows.append(acceptance)
+        kept["acceptance"] = acceptance_rows
+        items.append(kept)
+    contract["items"] = items
+    return _canonical(contract)
 
 
 def _feature_promises(root: pathlib.Path) -> bytes:
@@ -139,11 +205,206 @@ def _feature_promises(root: pathlib.Path) -> bytes:
     if not path.exists():
         return f"<absent:{FEATURE_SPEC}>".encode()
     doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    rows = [{k: v for k, v in (row or {}).items()
-             if k not in DERIVED_FEATURE_FIELDS}
-            for row in doc.get("features") or []]
-    return json.dumps(rows, sort_keys=True, separators=(",", ":"),
-                      default=str).encode()
+    if not isinstance(doc, dict):
+        return _canonical(doc)
+    promises = dict(doc)
+    promises["features"] = [
+        {k: v for k, v in (row or {}).items()
+         if k not in DERIVED_FEATURE_FIELDS}
+        for row in doc.get("features") or []
+    ]
+    return _canonical(promises)
+
+
+def _backlog_contract(root: pathlib.Path) -> bytes:
+    """Authored backlog record without its reproducible current-status board.
+
+    `tools/backlog.py render` replaces the content between the two markers from
+    `status.yaml`. Hashing that projection again would make an evidence update
+    move the claim identity even though the semantic status verdict is already
+    excluded there. The markers and all authored text around them remain in the
+    identity. A malformed marker population is left raw so the normal backlog
+    controls can reject it without this reader guessing at a range.
+    """
+    path = root / "docs" / "BACKLOG.md"
+    if not path.exists():
+        return b"<absent:docs/BACKLOG.md>"
+    text = path.read_text(encoding="utf-8").replace("\r\n", "\n").replace(
+        "\r", "\n")
+    if (text.count(_BACKLOG_BOARD_START) == 1
+            and text.count(_BACKLOG_BOARD_END) == 1):
+        before, rest = text.split(_BACKLOG_BOARD_START, 1)
+        _generated, after = rest.split(_BACKLOG_BOARD_END, 1)
+        text = (before + _BACKLOG_BOARD_START
+                + "\n<generated-current-status-board>\n"
+                + _BACKLOG_BOARD_END + after)
+    return text.encode("utf-8")
+
+
+def _docx_semantic(root: pathlib.Path) -> bytes:
+    """Canonical OOXML members with volatile package metadata normalised."""
+    path = root / "docs" / "Nyaymalaw_PRD.docx"
+    try:
+        with zipfile.ZipFile(path) as archive:
+            records = []
+            for info in sorted(archive.infolist(), key=lambda row: row.filename):
+                if info.is_dir():
+                    continue
+                body = archive.read(info)
+                if info.filename == "docProps/core.xml":
+                    try:
+                        node = ElementTree.fromstring(body)
+                        for element in node.iter():
+                            local = element.tag.rsplit("}", 1)[-1]
+                            if local in {"created", "modified", "lastPrinted"}:
+                                element.text = "<volatile-package-time>"
+                        body = ElementTree.tostring(node, encoding="utf-8")
+                    except ElementTree.ParseError:
+                        pass
+                records.append((info.filename.encode("utf-8"), body))
+    except (OSError, zipfile.BadZipFile):
+        return b"<invalid-docx>" + (_bytes(path) if path.exists() else b"")
+
+    framed = bytearray(b"nyaymalaw-docx-semantic-v1")
+    for name, body in records:
+        for part in (name, body):
+            framed.extend(len(part).to_bytes(8, "big"))
+            framed.extend(part)
+    return bytes(framed)
+
+
+def _is_excluded(relative: pathlib.PurePosixPath,
+                 exclusions: tuple[str, ...]) -> bool:
+    text = relative.as_posix()
+    return any(text == item or text.startswith(item.rstrip("/") + "/")
+               for item in exclusions)
+
+
+def _indexed_paths(root: pathlib.Path) -> set[str] | None:
+    """The commit-candidate file population, or None outside a Git root.
+
+    A worktree walk admitted ignored machine files and differed from a clean
+    checkout. For a real repository the index is the portable population; its
+    files are still read from the worktree so an unstaged content change moves
+    the live identity and cannot match the staged snapshot at commit time.
+    Temporary fixture trees deliberately keep the ordinary filesystem walk.
+    """
+    try:
+        top = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, timeout=10, check=False,
+        )
+        if top.returncode or not top.stdout.strip():
+            return None
+        resolved_top = pathlib.Path(top.stdout.strip()).resolve()
+        if os.path.normcase(str(resolved_top)) != os.path.normcase(str(root.resolve())):
+            return None
+        listed = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z", "--cached"],
+            capture_output=True, timeout=15, check=False,
+        )
+        if listed.returncode:
+            return None
+        return {
+            raw.decode("utf-8", errors="surrogateescape")
+            for raw in listed.stdout.split(b"\0") if raw
+        }
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def _tree_files(base: pathlib.Path, root: pathlib.Path,
+                exclusions: tuple[str, ...],
+                indexed: set[str] | None = None) -> list[pathlib.Path]:
+    files = []
+    base_relative = base.relative_to(root).as_posix()
+    prefix = "" if base_relative in {"", "."} else base_relative.rstrip("/") + "/"
+    candidates = (
+        (root / relative for relative in indexed
+         if relative.startswith(prefix))
+        if indexed is not None else base.rglob("*")
+    )
+    for path in candidates:
+        if not path.is_file():
+            continue
+        relative_to_base = pathlib.PurePosixPath(
+            path.relative_to(base).as_posix())
+        if any(part in _IGNORED_DIRECTORY_NAMES for part in relative_to_base.parts):
+            continue
+        if _is_excluded(relative_to_base, exclusions):
+            continue
+        files.append(path)
+    return sorted(files, key=lambda p: p.relative_to(root).as_posix())
+
+
+def identity_entries(root: pathlib.Path | None = None) -> list[tuple[str, bytes]]:
+    """Materialise the canonical manifest as unique labelled byte records."""
+    root = root or ROOT
+    indexed = _indexed_paths(root)
+    entries: list[tuple[str, bytes]] = []
+    seen: set[str] = set()
+
+    def add(label: str, body: bytes) -> None:
+        if label in seen:
+            raise RuntimeError(f"identity manifest names {label!r} twice")
+        seen.add(label)
+        entries.append((label, body))
+
+    for source in IDENTITY_MANIFEST:
+        path = root / source.path
+        if source.mode == "tree":
+            prefix = "" if source.path in {"", "."} else source.path.rstrip("/") + "/"
+            indexed_members = ({name for name in indexed if name.startswith(prefix)}
+                               if indexed is not None else None)
+            exact_indexed = indexed is None or source.path in indexed
+            if path.is_dir() and (indexed_members is None or indexed_members):
+                add(f"tree:{source.path}:directory", b"")
+            elif path.exists() and exact_indexed:
+                add(f"tree:{source.path}:not-directory", _bytes(path))
+            else:
+                add(f"tree:{source.path}:missing", b"")
+            if path.is_dir() or indexed_members:
+                for member in _tree_files(path, root, source.exclude, indexed):
+                    relative = member.relative_to(root).as_posix()
+                    add(f"file:{relative}", _bytes(member))
+        elif source.mode == "file":
+            present_in_population = indexed is None or source.path in indexed
+            if path.is_file() and present_in_population:
+                add(f"file:{source.path}", _bytes(path))
+            elif path.exists() and present_in_population:
+                add(f"file:{source.path}:not-file", b"")
+            else:
+                add(f"file:{source.path}:missing", b"")
+        elif source.mode == "status_contract":
+            if path.is_file() and (indexed is None or source.path in indexed):
+                add(f"semantic:{source.path}", _status_contract(root))
+            else:
+                add(f"semantic:{source.path}:missing", b"")
+        elif source.mode == "feature_promises":
+            if path.is_file() and (indexed is None or source.path in indexed):
+                add(f"semantic:{source.path}", _feature_promises(root))
+            else:
+                add(f"semantic:{source.path}:missing", b"")
+        elif source.mode == "backlog_contract":
+            if path.is_file() and (indexed is None or source.path in indexed):
+                add(f"semantic:{source.path}", _backlog_contract(root))
+            else:
+                add(f"semantic:{source.path}:missing", b"")
+        elif source.mode == "docx_semantic":
+            if path.is_file() and (indexed is None or source.path in indexed):
+                add(f"semantic:{source.path}", _docx_semantic(root))
+            else:
+                add(f"semantic:{source.path}:missing", b"")
+        else:
+            raise RuntimeError(f"unknown identity manifest mode {source.mode!r}")
+    return entries
+
+
+def _frame(digest: Any, *parts: bytes) -> None:
+    """Length-frame every component so path/content boundaries cannot collide."""
+    for part in parts:
+        digest.update(len(part).to_bytes(8, "big"))
+        digest.update(part)
 
 
 def verification_fingerprint(root: pathlib.Path | None = None) -> str:
@@ -159,49 +420,11 @@ def verification_fingerprint(root: pathlib.Path | None = None) -> str:
     `spec/coverage.yaml`, the derived feature status fields, and the recorded
     evidence files themselves.
     """
-    root = root or ROOT
     digest = hashlib.sha256()
-    for top in SOURCE_TREES:
-        base = root / top
-        if not base.exists():
-            digest.update(f"<absent:{top}>".encode())
-            continue
-        for path in sorted(p for p in base.rglob("*")
-                           if p.is_file() and p.suffix in SOURCE_SUFFIXES
-                           and "__pycache__" not in p.parts):
-            digest.update(path.relative_to(root).as_posix().encode())
-            digest.update(_bytes(path))
-    for relative in CONTRACT_FILES:
-        path = root / relative
-        digest.update(relative.encode())
-        digest.update(_bytes(path) if path.exists()
-                      else f"<absent:{relative}>".encode())
-    for relative in CONTRACT_TREES:
-        base = root / relative
-        digest.update(relative.encode())
-        if not base.exists():
-            digest.update(b"<absent>")
-        else:
-            for path in sorted(p for p in base.rglob("*")
-                               if p.is_file() and p.suffix in CONTRACT_SUFFIXES):
-                digest.update(path.relative_to(root).as_posix().encode())
-                digest.update(_bytes(path))
-    for relative, suffixes in sorted(PROMISE_TREES.items()):
-        base = root / relative
-        digest.update(relative.encode())
-        if not base.exists():
-            digest.update(b"<absent>")
-            continue
-        for path in sorted(p for p in base.rglob("*")
-                           if p.is_file() and p.suffix in suffixes
-                           and "node_modules" not in p.parts):
-            digest.update(path.relative_to(root).as_posix().encode())
-            digest.update(_bytes(path))
-    digest.update(b"spec/features.promises")
-    digest.update(_feature_promises(root))
-    digest.update(b"docs/backlog/status.contract")
-    digest.update(_status_contract(root))
-    return digest.hexdigest()[:20]
+    _frame(digest, b"nyaymalaw-checked-tree", b"version-2")
+    for label, body in identity_entries(root):
+        _frame(digest, b"entry", label.encode("utf-8"), body)
+    return digest.hexdigest()
 
 
 def git_identity() -> str:
@@ -217,11 +440,22 @@ def git_identity() -> str:
         return "unknown"
 
 
+def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """Refuse JSON whose duplicate keys would silently shrink a population."""
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError(f"duplicate JSON key {key!r}")
+        value[key] = item
+    return value
+
+
 def load_result(path: pathlib.Path = PUBLISHED_CLASS_A) -> dict[str, Any]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(path.read_text(encoding="utf-8"),
+                           object_pairs_hook=_unique_object)
         return value if isinstance(value, dict) else {}
-    except (OSError, json.JSONDecodeError):
+    except (OSError, ValueError):
         return {}
 
 
@@ -242,6 +476,15 @@ def validate_class_a(result: dict[str, Any], *,
     tests = result.get("tests")
     if not isinstance(tests, dict) or not tests:
         bad.append("the recorded Class-A execution has an empty test population")
+    elif any(not isinstance(nodeid, str) or not nodeid.strip()
+             or "::" not in nodeid for nodeid in tests):
+        bad.append("the recorded Class-A execution has a malformed test population")
+    else:
+        for nodeid, row in tests.items():
+            if not isinstance(row, dict) or row.get("outcome") != "passed":
+                outcome = row.get("outcome") if isinstance(row, dict) else None
+                bad.append(
+                    f"Class-A node {nodeid!r} did not pass (outcome={outcome!r})")
     for field in ("started_at", "finished_at", "runner", "command"):
         if not result.get(field):
             bad.append(f"Class-A evidence has no {field}")
@@ -260,7 +503,7 @@ def run_class_a() -> int:
     env = os.environ.copy()
     env["NM_CLASS_A_EVIDENCE_FILE"] = str(LOCAL_CLASS_A)
     return subprocess.run(
-        [sys.executable, "-m", "pytest", "-m", "class_a", "-q"],
+        [sys.executable, "-m", "pytest", *CLASS_A_PYTEST_ARGS],
         cwd=ROOT, env=env, check=False).returncode
 
 

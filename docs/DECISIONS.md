@@ -642,3 +642,389 @@ declared outputs with no type in `nm/`. They are **not** added to that test's
 silence the finding, and the point of the exercise was to stop a status field
 from deciding what gets examined. Registered as a known failure owned by AC3,
 whose final packet owner is **P14**, which builds those screens.
+
+## D-022 — Two generation counters, frozen before any rotation path was written
+
+**10 September 2026. BK-31-AC20, P02 step 0.** Replacing a recovery-code set is
+a compare-and-set on state that two other operations also move. With no
+counter, *has anything changed under me* can only be answered by comparing the
+material — which means reading credential hashes at the edge to settle a race,
+in the one module written so that credential material does not travel.
+
+**Two counters, and that is the design decision.** `credential_generation`
+moves when the password hash changes; `recovery_generation` moves when the code
+set is replaced wholesale. Conflating them would make every password change
+lose a concurrent rotation and every rotation lose a concurrent recovery, and
+the advocate would be told *someone else changed this* about an event that did
+not touch what they were changing. Two questions, two counters — the same
+reason `nm/domain/identity.py` and `tools/evidence.py` keep two fingerprints.
+
+**Consuming one code does not move `recovery_generation`.** `recover` rewrites
+the whole `recovery_codes` list to stamp `used_at` on ONE record: the same set
+with one member spent. Measured on the real adapter — enrol (1,1) → login (1,1)
+→ recover (2,1), one of ten codes spent, no plaintext on disk.
+
+**Absent reads as 0, and 0 is a value rather than an unknown.** An account
+enrolled before this model carries neither field; the only question a counter
+answers is *did it move*, and 0 → 1 is a move. Verified: a legacy account reads
+(0,0) and provisioning takes it to (0,1).
+
+**The invariant is structural, not per-site, because the obvious rule is
+wrong.** *A write touching `recovery_codes` bumps `recovery_generation`* would
+classify `recover` as a replacement. So `_write_account` is the only place the
+counters are persisted and it takes the transition as an argument: whoever
+writes account material must state what happened. `tests/test_the_security_
+generation_model.py` draws its population from the adapter's own AST, so a
+fifth mutation site is covered the day it is written — and a planted forgetful
+write site was confirmed to be caught.
+
+## D-023 — CSRF is a route dependency with an enumerated population
+
+**11 September 2026. BK-31-AC20, P02.** `grep -rn csrf nm/` returned nothing.
+The only thing between a signed-in advocate and a cross-site write was
+`samesite="lax"` on the session cookie — one control, owned by the browser
+rather than by this product, absent in clients that predate it, and no
+protection at all against a same-site origin. It was never a decision; it was a
+default nobody had examined.
+
+**Two checks, because either alone fails open somewhere.** The origin
+comparison is exact and same-origin by default — `startswith` admits
+`http://testserver.evil.example`, which anyone can register today, and scheme
+and port are part of an origin. The token is a double submit **bound to the
+session**: `sha256("nm-csrf:" + session token)` in a readable cookie, echoed as
+a header, recomputed server-side from the httponly cookie. A random per-user
+token would let one session's value authorise another's request.
+
+**An absent Origin is refused, not waved through.** `if origin and origin not
+in trusted` is how most hand-written origin checks are written and it is the
+whole bypass.
+
+**Applied as a route dependency, never a call inside the handler,** because a
+handler that calls the check can return before reaching it and every early
+return becomes a bypass. `tests/test_every_unsafe_route_is_csrf_protected.py`
+draws its population from `app.routes`, so the seventh route is covered the day
+it is written.
+
+**Two things this got wrong first, both found by running rather than
+reasoning.** The check ran before `signed_in`, so an anonymous POST returned
+403 where the contract says 401 — which `web/app.js` keys its
+sign-out-and-restore on. It now waives itself when there is no session cookie
+at all: CSRF is the risk that a browser *attaches credentials*, and with no
+cookie there is nothing to ride. That waiver is only sound while every guarded
+route also requires an advocate — so that became an invariant, and the
+invariant immediately reported `/api/logout`, which is now a declared exemption
+with its reason rather than an assumption.
+
+## D-024 — What a rotation does to sessions, and what its refusal says
+
+**The rotating session survives; every other session ends.** Replacing the
+last-resort credential is a security event and an attacker holding another live
+session must not keep it across one — while signing the advocate out of the
+device they are typing on is a control nobody uses twice. `close_all_sessions`
+already draws that line for `sessions/revoke`.
+
+**The proof is spent BEFORE the set is replaced.** Spend-then-replace can lose
+a rotation to an I/O failure and the advocate authenticates again — an
+inconvenience. Replace-then-spend can leave a live proof beside a replaced set,
+which is a second rotation an attacker gets free. Fail closed. Proven by fault
+injection, and by a mutation that swapped the order — which passed until the
+test's own confound was removed.
+
+**A refused rotation is 409, not 403.** The caller is authenticated and
+permitted; what failed is that the state moved or the proof is spent. A 403
+reads as *you may not*, which sends the advocate to an administrator instead of
+to the retry that works. The message says their existing codes still work,
+because an advocate told only "refused" mid-rotation assumes they are locked
+out.
+
+**Every refusal is the same sentence.** Expired, spent, another session's,
+credential moved, recovery set moved, caller's expectation stale — six causes,
+one message. A refusal that varies by cause tells a holder of a stolen session
+whether the password has changed since they took it.
+
+**Live browser validation, 11 September 2026,** on a dedicated synthetic
+advocate through the real invitation path: registration showed ten codes,
+sign-in set the readable CSRF cookie while the session cookie stayed unreadable
+to script, rotation moved generation 1 → 2 and returned ten codes disjoint from
+the first set, the acknowledgement emptied them from the DOM, `localStorage`
+and `sessionStorage` were empty throughout, and all three superseded codes were
+refused with the identical sentence an invented code receives.
+
+## D-025 — Structured evidence either moves or expires
+
+**11 September 2026. BK-80-AC1, P03.** A Class-A result carries its own
+identity — a fingerprint, an exit code, a node list. A counsel review, a model
+evaluation and a production measurement carry none of that, and the register
+accepted five fields and treated the resulting PASS as good forever.
+
+Both halves of the criterion's negative control passed, and that is measured
+rather than asserted: `tests/test_structured_evidence_binds_its_subject.py`
+runs *reuse a PASS record after changing its subject* and *replace a qualified
+review with an unattributable assertion* against **both** rule sets, and the
+old one admits both.
+
+**The one rule added: either the subject is fingerprintable and the record goes
+stale when it moves, or it is not and the record expires.** `kind: source`
+names a tree digest that is recomputed and compared; `kind: external` — a
+provider's behaviour, a person's judgement — cannot be recomputed here and so
+must carry `valid_until`. There is deliberately no third kind, because a
+subject that can be neither checked nor bounded is what every stale-forever
+record has.
+
+**No grandfather clause.** The one record in `docs/backlog/evidence/` predates
+this schema and binds none of it. `BK-21-AC4` moves from PASS to NOT_RUN until
+whoever observed that credential rotation records what it was about. Accepting
+it because it is old is absence reading as success in the function that decides
+whether work is proven. BK-21 was already not-done on stale Class-A evidence,
+so the board impact is contained to that one criterion.
+
+## D-026 — A browser report proves the run happened, not that its rows are green
+
+**BK-80-AC2 and BK-51-AC1.** `bind_execution_evidence` checked the report's
+fingerprint and the state of one named row. Five reports satisfy both and prove
+nothing, and **every one of them has rows that are entirely PASS**: a run that
+crashed at phase 3, a phase renamed so nothing asks for it, a duplicated row, a
+tree that moved mid-run, and last week's screenshots listed as this run's
+artifacts. The criterion's mutation ends *while retaining a matching
+fingerprint* precisely because the fingerprint was the only check there.
+
+`tools/browser_evidence.py` holds the manifest rule, the required fields and
+the completeness rule, and **both `tools/journey.py` and `tools/backlog.py`
+import them** — a writer that emits less than the reader demands produces
+evidence nobody can use, and splitting the two across files is how they drift.
+A test asserts the runner writes every field the reader requires.
+
+The runner now records **start and end identity** (one fingerprint cannot tell
+a stable tree from one that moved between phase 1 and phase 14), **tags each
+artifact with the run that produced it**, and **checks its own expected
+manifest for duplicates before running** — `expected: len(EXPECTED)` is the
+declared population size, so a duplicate makes a complete run report one phase
+short forever, and the obvious fix for that is to relax the completeness check.
+
+## D-027 — Seven approval states, six of them refusals
+
+**BK-80-AC6.** `check_approvals` answers whether the register parses.
+`adoption_labels` answered *not machine-resolved* for every choice — honest
+while nothing resolved, and a permanent abstention once something could.
+
+`resolve()` returns one of `not_recorded`, `unverified`, `valid`, `stale`,
+`expired`, `revoked`, `out_of_scope`, and **only `valid` authorises**. The
+states are not decoration: `expired` is renewable and `revoked` is not,
+`out_of_scope` means somebody approved a different thing, and `stale` means
+what they approved has changed under them. A boolean sends all four to the same
+place. A test asserts every declared state is reachable, because a vocabulary
+with an unreachable member lies about what the resolver can tell you.
+
+**It reads the approval store and nothing else** — the criterion's first clause
+is that adoption is resolved separately from measurement, and that is checked
+on the function's signature and body rather than by feeding a measurement in,
+because a resolver that *could* see one would eventually be asked to honour it.
+
+**An unreadable register is `unverified`, never `not_recorded`.** Reporting it
+as nothing-recorded sends the reader to write an approval that may already
+exist.
+
+Six tests in `tests/test_blueprint_approvals.py` asserted the interim
+behaviour. They were updated, not deleted, and every safety property they held
+is now asserted more sharply: a packet-gate approval presented at a deployment
+gate is `out_of_scope` **naming the gate**, where before it was an abstention
+about all of them.
+
+## D-028 — A test name in a docstring is not a test that can run
+
+**BK-80-AC4.** `_missing_pytest` read `node not in file.read_text()`, so a node
+id quoted in prose, named in a comment, or sitting in a `CONTROLS` table
+satisfied it — which is exactly *treating test-name existence as executed
+enforcement*. It now parses the file and requires a real function definition.
+
+It still does not prove the test ran; that is `bind_execution_evidence`'s exact
+lookup into the bound Class-A population. Two separate questions, kept separate:
+this one refuses a reference to something never written, that one refuses a
+reference to something that did not pass.
+
+## D-029 — A closed journey scenario cannot quietly reopen
+
+**11 September 2026. BK-44-AC1, P42.** `tools/journey.py` exits non-zero on an
+unexplained failure, a missing phase and a pytest that did not survive — and
+deliberately not on a reproduced defect. That choice is right at wave 0: this
+suite exists to document defects, and failing on every one makes it unrunnable
+until all of them close.
+
+The hole it leaves is the criterion's own mutation. **Turn a closed passing
+scenario into a conditional expected failure and the verdict swallows it**,
+because the runner cannot tell a defect somebody wrote down from one that
+appeared this morning. BK-44's title is that three closed rows can regress and
+the command stay green.
+
+Same three outcomes as the build gate, one level up: a **declared** reproduction
+is permitted, an **undeclared** one blocks, and a **declared one that has started
+passing** also blocks. `REPRODUCING` is empty today and that is a claim, not an
+oversight — no journey phase currently documents a defect by reproducing it.
+
+**A key that never matches is a permission that can never be granted.** The
+first version keyed on `_phase_name`, which returns the human-readable label,
+while `EXPECTED` and `seen` hold test function names — so no declaration could
+ever have matched and every reproduction would have read as undeclared. Caught
+by the tests on their first run.
+
+**BK-60-AC6 is left NOT_RUN deliberately.** Its own note says 3 of 47 steps
+carry a full contract and that a contract invented for a phase with no code
+would be specification, which belongs in the PRD and not in a registry claiming
+to describe what is true. Forcing it would be authoring fiction to close a row.
+
+## D-030 — A source record must claim enough to be checkable
+
+**BK-84-AC1, P19.** The corpus holds a draft and an enacted Act in the same
+shape, an Act as it stood in 2019 and as amended in 2023 in the same shape, and
+a High Court judgement that binds Telangana beside one that does not. **Every
+one of them retrieves successfully** — the defect is never that the lookup
+fails, it is that it succeeds and the answer is wrong in a way nothing
+downstream can see.
+
+`nm/knowledge/provenance.py` refuses reliance and **names the precise basis**,
+because the criterion's expected failure is that use is withheld with the exact
+unresolved reason and the four causes have four different remedies. Every field
+is required and may be explicitly unknown: `effective_from=None` is a record
+saying nobody established when this took effect; a record with no such field
+never raised the question.
+
+**Jurisdiction is asked as a relationship, not a label.** B-044 is why: RG-01
+counted a court label no record carries, got zero, and told the advocate no
+High Court output was held for this jurisdiction while 4,280 binding judgements
+sat on disk. And an undeclared coverage is never a universal one — P19's own
+expectation is that India-only operation must not imply all-India verified
+coverage.
+
+## D-031 — Where P05 and P19 stop, and why that is the criterion's doing
+
+**Both packets require `counsel_review` evidence.** BK-85-AC3 wants *a
+qualified dated India applicability review naming legal roles, operative
+instruments and dates, permissions, retention duties, incident clocks and
+accountability*, and says explicitly that a framework checklist alone is not
+compliance. BK-84-AC1 wants a qualified review of published coverage.
+
+Under **D-025** a `counsel_review` record must carry a stated and evidenced
+authority. That is a person's qualification. No code in this repository can
+supply it, and writing one would be fabricating the exact evidence the
+criterion exists to require. **P05's own expected clause says the record is a
+qualified review artifact and not automatically generated legal advice** — so
+generating it would violate the packet while appearing to complete it.
+
+Both also declare CHOICE prerequisites (CHOICE-01/07 for P19, plus 08/10 for
+P05) which **D-027**'s resolver now reports as `not_recorded`. An approval is a
+signature, and it is the account holder's.
+
+**What was built instead is the half that is mechanism**, and in P05's case it
+is the more durable half. The reviewed position already refuses both incorrect
+claims in `SECURITY_PRIVACY.md` §2 — but as prose, which a tidy-up deletes, a
+summariser inverts, and a sentence three hundred lines later contradicts with
+nothing noticing. CLAUDE.md's rule for a live document is that a rule comes
+with the check that makes it enforceable or it stays archived. Those two
+refusals now have one, including an inverse sweep for a contradicting claim
+added elsewhere, and all four mutations were run.
+
+## D-032 — Egress is refused on the route, before the payload exists
+
+**11 September 2026. BK-85-AC1, P06.** Every defect the first external review
+found lived between a correct module and the served path. Egress is that gap in
+its purest form: the core composes an answer correctly, and then something
+hands a copy to a model provider, a telemetry sink, a crash reporter or a
+support bundle. By the time an audit reads the logs the material has left.
+
+`nm/domain/egress.py` refuses a ROUTE and **never sees the payload**. A policy
+that inspected content would need the content to decide, which is one more
+place privileged text exists — and the decision does not need it: where, who,
+what for, and of what class is enough.
+
+**Fail-closed is the half usually got wrong.** An unknown processor is not one
+nobody wrote a rule for; it is one nobody approved. Telemetry and support may
+never carry client material *whatever the inventory says*: a diagnostic
+pipeline is read by whoever is on call, retained by a vendor's default policy
+and forwarded to a crash aggregator, and none of that is a decision anybody
+made about a privileged brief.
+
+The refusal audit carries the route, the reason and a byte count. A line
+quoting what it refused to send would commit the criterion's second mutation
+through the control written to prevent its first.
+
+## D-033 — One data key per matter, and rotation that retires a key
+
+**BK-85-AC2, BK-21-AC1/AC2, P07.** `_Cipher` seals every matter under one key
+and refuses to run without it, which is right. It cannot scope decrypt
+authority — a process that reads any matter reads all of them — and rotating
+`NM_MATTER_KEY` either re-encrypts everything or locks every advocate out. It
+did the second on 7 September 2026.
+
+Envelope encryption answers both with one indirection: a random data key per
+matter, stored only in wrapped form, **with the matter id bound into the wrap
+as an input rather than a label**. A wrapped key for one matter does not open
+another, and there is no check to forget — the wrong key simply does not open
+it. `CrossMatterAccess` and `WrappedKeyUnreadable` are separate because an
+operator who cannot tell them apart treats an attack as a bad disk.
+
+**A defect in my own first draft, found by probing it rather than reading it:**
+`unwrap` derived from the generation recorded IN THE WRAPPED KEY, so any ring
+holding the same `kek_id` opened every generation and rotation was cosmetic for
+access control. An operator rotating because a generation had leaked would
+still have been exposed. A prior generation is now readable only inside a
+window somebody declared.
+
+`LocalKeyRing` says NOT-KMS in its name and its `scheme`. It has the same key
+shape so the KMS adapter replaces one class — a stand-in with a different shape
+makes the real thing a rewrite, and a rewrite scheduled after a deadline does
+not happen.
+
+## D-034 — Correct arithmetic cannot establish the law it applies
+
+**BK-65-AC2, P22. This closes TRACE-D2**, which the scoped build gate has
+carried as a declared failure since the gate was written.
+
+CLAUDE.md records the previous build's death in one sentence: twelve
+mechanically-checked properties all passed on a transcript where the product
+analysed **a twelve-year limitation on a trespass a day old**. The subtraction
+was right. Every guard was green. The Article was wrong, and nothing was
+looking at that, because nothing treated *which law governs* as a thing that
+could be wrong.
+
+`compute()` already refuses to invent a period — `Period` verifies itself
+against the retrieved span. What it cannot refuse is a period that is real,
+correctly read, correctly applied, and belongs to a different Article than the
+one this matter is under.
+
+**Three premises, not one field.** Applicable law, accrual rule and
+jurisdiction fail differently and are corrected by different people: the wrong
+Article gives a right answer to another question; the right Article from the
+wrong date is what the model most wants to guess from "the first dated fact";
+and the right rule from a forum that does not bind is **silent** — nothing in
+the answer looks wrong. A single `basis: str` collapses all three and the
+advocate correcting it cannot say which they are correcting.
+
+**INFERRED does not run the arithmetic.** That is the entire control. An
+inferred premise is a question, and a number on the screen is acted on whatever
+the note beside it says. The note names what it inferred from AND what else
+matched, which is CLAUDE.md §5's rule for `ActBasis.INFERRED` arriving one
+level up.
+
+A premise-set digest stamps each result, so a stored conclusion can be told the
+ground under it moved **without re-running the arithmetic to find out** — which
+matters because the new premises may block computation entirely. Saying "this
+is being recalculated" where the truth is "the law this rested on is now
+unestablished" is the more comfortable sentence and the wrong one.
+
+## D-035 — Where this chain stopped, and why
+
+**P10 is blocked on infrastructure.** BK-83-AC1 names a PostgreSQL adapter and
+requires `integration_test` evidence. No database is provisioned and I cannot
+provision one; building the adapter without a database to run it against would
+produce code whose only evidence is that it imports.
+
+**P17, P20 and P21 were not started.** Each is a large domain build, and with
+the remaining budget the choice was between four thin packets and two complete
+ones. P06, P07 and P22 are complete and mutation-verified; P22 closes a red the
+build has carried since the gate existed, which none of the other three would
+have.
+
+**P05 remains open on its counsel review**, as recorded in D-031, and P06 and
+P07 are therefore built on an unmet prerequisite. They are sound as mechanisms
+and cannot be signed off until that review lands and the CHOICE approvals are
+recorded.

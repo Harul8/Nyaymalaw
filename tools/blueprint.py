@@ -251,7 +251,8 @@ def readiness_blockers(contracts: dict) -> list[str]:
     from tools.blueprint_approvals import adoption_blockers
     from tools.blueprint_evaluations import deployment_blockers
 
-    blockers = adoption_blockers(contracts.get("approvals"), contracts["decisions"])
+    blockers = adoption_blockers(contracts.get("approvals"),
+                                 contracts["decisions"], contracts.get("packets"))
     blockers.extend(deployment_blockers(contracts["evaluations"]))
     blockers.append("Actual current backlog evidence and scope-specific deployment review "
                     "remain mandatory; this planning checker cannot authorise deployment.")

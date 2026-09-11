@@ -1,5 +1,38 @@
 # Execution-readiness review — 10 September 2026
 
+## P01 conformance record — bounded packet complete, 11 September 2026
+
+P01's five final criteria are implemented and bound to the current Class-A
+artifact: BK-80-AC3/AC5/AC7 and BK-48-AC1/AC2. The exporter now derives all 44
+current feature states from `status.yaml`, preserves August workbook state under
+explicit historical fields, distinguishes registry delivery gaps from authored
+contradictions, validates all generated outputs before an atomic write, and
+reports empty populations as `NOT_ASSESSED`.
+
+The checked-tree identity uses the Git candidate population and covers effective
+code, test, PRD, guide, registry, CI, hook and delivery-relation inputs with
+collision-safe framing. Semantic projections prevent verdicts, evidence output,
+OOXML timestamps and generated board/workbook content from invalidating their
+own proof. The gate binds the final verified digest rather than recomputing it
+afterward, and the commit hook compares that identity to the staged candidate.
+
+Known failures are structured and compared as exact sets. New, changed,
+duplicated, vanished, unparseable or uncaptured failures block. An exact known
+set earns only `SCOPED BUILD PASS — FULL GATE RED`; repeated unchanged runs stay
+scoped and `--require-full` refuses them. The canonical Class-A population
+excludes corpus, judge/model and browser work by definition and permits only
+completed passing nodes to become evidence. The locked PRD renderer is installed
+in CI rather than borrowed from a developer's untracked dependencies.
+
+This is a packet conformance decision, not whole-item or release sign-off.
+BK-80 remains partial for AC1/AC2/AC4/AC6 under P03; BK-48 remains partial for
+AC3 under P14. The exact T3b/T3c registry findings, C1/D2 legal refusal gaps and
+pre-existing Ruff debt remain visibly owned. EVAL-001's deterministic P01
+observations are represented by the bound tests; its future served operator
+console/role observations remain `NOT_RUN` with BK-82/P04. No client data,
+model call, corpus operation, browser claim, counsel approval, deployment or
+release is part of P01.
+
 ## Bounded-autonomy and build-discipline amendment — BK-90
 
 The user approved adaptive reasoning and limited specialists within the existing
@@ -32,9 +65,10 @@ test results are recorded below after the quiet run. The regenerated PRD passes
 content/OOXML checks but its page-layout review is BLOCKED: this environment's
 bundled document renderer has no LibreOffice. No rendered pages were inspected;
 do not treat content reconciliation as visual approval. Existing full-suite
-failures are not waived and no failing result is promoted. Safe isolated P01/P02
-work remains the first build step; actual legal/model, confidential and deployment
-proof retain their named approvals.
+failures are not waived and no failing result is promoted. P01's bounded local
+control-plane packet is now complete; isolated P02 remains available and P03 is
+now dependency-eligible. Actual legal/model, confidential and deployment proof
+retain their named approvals.
 
 **Settled verification:** 1,733 passed, 3 failed, 1 skipped across 1,737 actual
 Class-A nodes; all **524 planning/workbook tests passed**. The 184 additional
@@ -85,8 +119,9 @@ history, not silently rewritten.
   adoption records, Acceptance shows the added obligations, and Evaluation
   Details includes the shared media and observation contracts.
 
-The safe next build remains **P01 or P02 with isolated synthetic data**. Follow
-the applicable stage playbook. Before dependent work, identify the actual
+The safe next build is **P02 with isolated synthetic data**, or P03's remaining
+evidence-envelope controls within its declared boundary. Follow the applicable
+stage playbook. Before dependent work, identify the actual
 approver, exact scope, reviewer availability and evidence population; do not
 infer consent, a procurement decision, confidential-data permission or release
 authority from the user's approval of this plan.
@@ -110,9 +145,10 @@ external-service change is part of this amendment.
 
 ## Decision
 
-The plan now supports bounded, criterion-scoped implementation. Start with P01
-(current specification and evidence identity) and P02 (authenticated recovery-
-code replacement); they can proceed independently using isolated synthetic data.
+The plan now supports bounded, criterion-scoped implementation. P01 (current
+specification and checked-tree identity) is complete for its five final criteria.
+Continue P02 (authenticated recovery-code replacement) using isolated synthetic
+data, or start P03 now that its P01 prerequisite exists.
 Do not treat the packet sequence as approval to process confidential material,
 choose paid providers, migrate the shared corpus or release the product.
 
@@ -165,8 +201,10 @@ passing result.
 
 ## How to use this now
 
-1. Open [the execution guide](blueprint/EXECUTION.md), select P01 or P02, and
-   read its matching row in [the packet catalogue](blueprint/packets.json).
+1. Open [the execution guide](blueprint/EXECUTION.md), select P02 or another
+   dependency-ready packet such as P03, and read its matching row in
+   [the packet catalogue](blueprint/packets.json). Use the P01 record above as
+   the completed predecessor, not as authority to widen the next packet.
 2. Follow only the applicable [Start / Build / Test / Sign-off playbook](BUILD_GUIDE.md).
 3. Use the named source boundary and command/data contract. Preserve working
    behaviour; do not perform the whole architecture migration at once.
@@ -215,8 +253,10 @@ both now display the equivalent explicit UTC instant, not an Excel serial.
 The full suite also caught a missing shared Windows console guard; it was
 fixed in the two new command-line entry points before the final run.
 
-BK-87 therefore records **built / verifying**, not done. The document refinement
-is delivered; complete current evidence publication and final sign-off remain
+BK-87 therefore records **built / verifying**, not done. At that historical
+snapshot, P01/P02 were the bounded next implementation tasks; the current P01
+conformance record above supersedes that scheduling statement. The document
+refinement is delivered; complete current evidence publication and final sign-off remain
 blocked by the product obligations above. No application or corpus changes,
 live model/browser runs, provider activation, commits or release approval were
-made in this pass. P01/P02 are the bounded next implementation tasks.
+made in this pass.

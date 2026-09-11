@@ -55,6 +55,27 @@ ENTRY_POINTS: dict[str, str] = {
 #: behaviour does not, and the difference is invisible to every other check in
 #: this build.
 UNWIRED: dict[str, str] = {
+    # P06/P07/P22 built the mechanisms; wiring each is its own step, and these
+    # say WHICH step rather than leaving three modules that run on no turn.
+    "nm.domain.egress": (
+        "P06's pre-dispatch policy. `nm.bootstrap.composition` wires it in "
+        "front of every model, media and telemetry adapter -- which is the "
+        "same step that gives it a live processor inventory, and an inventory "
+        "needs the approvals P05 is waiting on."),
+    "nm.adapters.store.envelope": (
+        "P07's per-matter data key. `nm.adapters.store.file_store` calls it "
+        "when `_Cipher`'s single shared key is replaced; until then every "
+        "matter still shares one key and this module changes nothing."),
+    "nm.knowledge.provenance": (
+        "P19's source reliance check. `nm.adapters.evidence.corpus` calls "
+        "`unresolved()` before a retrieved provision reaches the grounding "
+        "gate -- P20's cutover step, which needs the snapshot identity P19 "
+        "inventories and the counsel review BK-84-AC1 also requires."),
+    "nm.core.premise": (
+        "P22's legal-premise gate. `nm.core.limitation.compute` calls "
+        "`assess()` before the arithmetic and `nm.core.turn` carries the "
+        "premise digest onto the result -- P22's integration half, which "
+        "needs P18's cascade to carry an invalidation through."),
     "nm.domain.media":
         "BK-69, and deliberately ahead of its caller. `plan.json` places this "
         "boundary at W0 and media intake at W2 (BK-54), because a control "
@@ -212,6 +233,13 @@ def test_the_scan_can_see_an_unreached_module():
 #: was actually wrong, was the one it could not see. A join that silently
 #: drops members is the same defect as a scan whose population went to zero.
 OWNER: dict[str, tuple[str, ...]] = {
+    # P06/P07/P22's mechanisms, each named against the feature whose contract
+    # it serves, so the status check below covers them instead of skipping
+    # three modules that run on no turn.
+    "nm.domain.egress": ("I1",),
+    "nm.adapters.store.envelope": ("I1",),
+    "nm.core.premise": ("D2",),
+    "nm.knowledge.provenance": ("D4",),
     # BK-69's boundary belongs to the feature that will cross it. C6 is
     # document intake and extraction -- the media path -- so when C6 moves off
     # `implementation: none`, the status check above starts asking whether
@@ -331,6 +359,21 @@ def test_every_unwired_module_names_a_feature_that_exists():
 #: The absence itself is B-082, open, and the register test keeps it open.
 #: A declaration whose reason has gone is deleted; the defect it named is not.
 UNTYPED: dict[str, str] = {
+    "TurnRoute":
+        "B1. NAMING DRIFT — represented by `nm.core.route.ReadRoute`: its "
+        "`route`, `mode` and `statement` fields are the contract's route, mode "
+        "and stated reading. Implementation owner: `nm/core/route.py`, wired "
+        "by `nm/core/turn.py::_read_route`.",
+    "ConflictScreen":
+        "B3. GENERIC REPRESENTATION — `nm.core.conflict.screen` produces "
+        "`nm.core.screens.Screen(kind=CONFLICT)`, whose state, covers, unread "
+        "and release fields carry the declared screen. Implementation owners: "
+        "`nm/core/conflict.py` and `nm/core/screens.py`.",
+    "CompetenceAssessment":
+        "B4. GENERIC REPRESENTATION — `TurnEngine._competence_screen` produces "
+        "`nm.core.screens.Screen(kind=COMPETENCE)`; state/detail carry coverage "
+        "and the recorded release model is `screens.Release`. Implementation "
+        "owners: `nm/core/turn.py` and `nm/core/screens.py`.",
     "Reorientation":
         "A3. GENUINELY ABSENT — zero mentions. Consistent with `gaps` and "
         "`cascade` being UNWIRED: nothing composes a re-orientation.",

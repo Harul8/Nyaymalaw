@@ -47,6 +47,7 @@ from nm.adapters.model.traced import TracedModel
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core import theory as theory_reader
 from nm.core.turn import TurnEngine, TurnInput
+from nm.domain.traceability import refuses
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
@@ -158,6 +159,7 @@ def test_the_read_is_shown_the_theory_it_must_revise():
         "or it will look for a theory that does not exist")
 
 
+@refuses("D6", 3)
 def test_a_theory_that_changes_says_what_stopped_fitting(tmp_path):
     """REVISION MEANS A REASON. A theory replaced with no reason given is a
     regeneration wearing a revision's clothes, and it is what produced five

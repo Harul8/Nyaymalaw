@@ -67,11 +67,11 @@ def pytest_configure(config):
     global _class_a_full_selection, _class_a_start_fingerprint
     config.addinivalue_line("markers", "eval_id(*ids): eval ids this test exercises")
     if os.environ.get("NM_CLASS_A_EVIDENCE_FILE"):
-        from tools.evidence import verification_fingerprint
+        from tools.evidence import CLASS_A_PYTEST_ARGS, verification_fingerprint
 
         _class_a_start_fingerprint = verification_fingerprint()
         _class_a_full_selection = (
-            tuple(config.invocation_params.args) == ("-m", "class_a", "-q")
+            tuple(config.invocation_params.args) == CLASS_A_PYTEST_ARGS
         )
 
 
@@ -114,7 +114,11 @@ def pytest_runtest_makereport(item, call):
 def pytest_sessionfinish(session, exitstatus):
     evidence_path = os.environ.get("NM_CLASS_A_EVIDENCE_FILE")
     if evidence_path:
-        from tools.evidence import git_identity, verification_fingerprint
+        from tools.evidence import (
+            CLASS_A_COMMAND,
+            git_identity,
+            verification_fingerprint,
+        )
 
         # A parameterised function is a legitimate acceptance reference only
         # when EVERY collected case passed.  Record that aggregate explicitly;
@@ -143,7 +147,7 @@ def pytest_sessionfinish(session, exitstatus):
             "started_at": _class_a_started,
             "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "runner": f"pytest {pytest.__version__}; Python {platform.python_version()}",
-            "command": "python -m pytest -m class_a -q",
+            "command": CLASS_A_COMMAND,
             "git": git_identity(),
             "exit_code": exitstatus,
             "selection": ("full_class_a" if _class_a_full_selection
@@ -190,7 +194,27 @@ def pytest_sessionfinish(session, exitstatus):
 # --------------------------------------------------------------- the wire ---
 
 @pytest.fixture
-def client(tmp_path, monkeypatch):
+def scripted_application_environment(monkeypatch):
+    """Make composition deterministic without reading a developer ``.env``.
+
+    Class A may construct the real application with scripted ports, but it may
+    not borrow a provider choice, API credential or matter key from the machine
+    running it. Tests that instantiate ``Application`` directly opt into this
+    explicit synthetic profile.
+    """
+    from tests.test_turn_contract import KEY
+
+    monkeypatch.setenv("NM_MATTER_KEY", KEY)
+    monkeypatch.setenv("NM_MODEL_PROVIDER", "scripted")
+    monkeypatch.setenv("NM_MODEL_ROUTINE", "scripted-1")
+    monkeypatch.setenv("NM_EMBED_MODEL", "text-embedding-3-large")
+    monkeypatch.delenv("NM_MODEL_API_KEY", raising=False)
+    monkeypatch.delenv("NM_MODEL_JUDGE", raising=False)
+    monkeypatch.delenv("NM_MODEL_HARD", raising=False)
+
+
+@pytest.fixture
+def client(tmp_path, monkeypatch, scripted_application_environment):
     """Drives the real ASGI app.
 
     Shared here rather than owned by one test file, because "every guard is
@@ -217,17 +241,10 @@ def client(tmp_path, monkeypatch):
     # read a failure from.
     password = "Fixture-password-not-a-secret-1"
 
-    monkeypatch.setenv("NM_MATTER_KEY", KEY)
     # BK-31 needs no environment variable now. The roster is controlled by
     # invitations the operator issues into the directory itself, so there is
     # no installation-wide secret to configure -- and therefore none to leak,
     # replay, or leave set in a deploy script.
-    monkeypatch.setenv("NM_MODEL_PROVIDER", "scripted")
-    monkeypatch.setenv("NM_MODEL_ROUTINE", "scripted-1")
-    monkeypatch.setenv("NM_EMBED_MODEL", "text-embedding-3-large")
-    monkeypatch.delenv("NM_MODEL_JUDGE", raising=False)
-    monkeypatch.delenv("NM_MODEL_HARD", raising=False)
-
     config = ModelConfig(tiers={
         Tier.ROUTINE: TierConfig(Tier.ROUTINE, "scripted", "scripted-1", None, None),
         Tier.EMBED: TierConfig(Tier.EMBED, "scripted", "text-embedding-3-large",
@@ -260,7 +277,34 @@ def client(tmp_path, monkeypatch):
     from tests.test_turn_contract import briefed
     application.engine = briefed(application.engine)
 
-    c = TestClient(create_app(application))
+    def as_a_browser(tc):
+        """Send what a browser sends: an Origin, and the CSRF value it can read.
+
+        BK-31-AC20 put `csrf_protected` on every cookie-authenticated unsafe
+        route, and nine existing tests went 403 -- because they POST with no
+        `Origin` header at all, which no browser has ever done. The tests were
+        exercising a shape the product does not receive.
+
+        SO THE FIXTURE LEARNS TO BE A BROWSER, in ONE place, rather than nine
+        files each remembering two headers. A per-test edit would have been
+        nine chances to forget and no mechanism for the tenth.
+
+        It reads `nm_csrf` from the client's own cookie jar exactly as page
+        script does -- it does not compute the token from the session, because
+        that would prove the derivation agrees with itself rather than that the
+        server hands the browser a usable value.
+        """
+        def carry_browser_headers(request):
+            if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+                request.headers.setdefault("origin", str(tc.base_url).rstrip("/"))
+                value = tc.cookies.get("nm_csrf")
+                if value and "x-nm-csrf" not in request.headers:
+                    request.headers["x-nm-csrf"] = value
+
+        tc.event_hooks["request"].append(carry_browser_headers)
+        return tc
+
+    c = as_a_browser(TestClient(create_app(application)))
 
     def invite(email: str, *, name: str = "", enrolment: str = "",
                practice: str = "", firm_id: str = "",
@@ -301,7 +345,7 @@ def client(tmp_path, monkeypatch):
                     enrolment=f"AP/{abs(hash(advocate_id)) % 9999:04d}/2010",
                     practice="Hyderabad", firm_id=f"firm_{advocate_id}"),
                 credential=enrol(password)))
-        target = TestClient(create_app(application)) if fresh else c
+        target = as_a_browser(TestClient(create_app(application))) if fresh else c
         r = target.post("/api/login",
                         json={"advocate_id": advocate_id, "password": password})
         assert r.status_code == 200, r.text

@@ -32,6 +32,7 @@ import json
 import pathlib
 import subprocess
 import sys
+import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -41,6 +42,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 # after the console fix. `trace.py` does the same thing for the same reason.
 sys.path.insert(0, str(ROOT))
 from tools._console import utf8_console  # noqa: E402
+from tools.browser_evidence import SCHEMA as BROWSER_SCHEMA  # noqa: E402
+from tools.browser_evidence import manifest_problems  # noqa: E402
 from tools.evidence import verification_fingerprint  # noqa: E402
 
 # THE CONSOLE BEFORE THE PROSE. This table prints em-dashes and `·`, and a
@@ -65,6 +68,17 @@ STATE_ORDER = {"FAILED": 0, "NOT RUN": 1, "REPRODUCED": 2, "PASS": 3}
 #: the test file at run time would make a deleted phase delete its own
 #: expectation, which is the same silence with more machinery. Removing a
 #: phase is a deliberate act and it edits this tuple.
+#: PHASES PERMITTED TO REPRODUCE A DEFECT, each with the reason. BK-44-AC1.
+#:
+#: Empty today, and that is a claim rather than an oversight: no journey phase
+#: currently documents a defect by reproducing it. Any phase that starts to
+#: fails the command until somebody either fixes it or writes the reason here.
+#:
+#: DECLARED AND NOT DERIVED, for the same reason EXPECTED is: reading the
+#: permitted set out of the markers at run time would let a marker permit
+#: itself, which is the whole of what a non-strict xfail already does wrong.
+REPRODUCING: dict[str, str] = {}
+
 EXPECTED = (
     "test_phase_1_an_advocate_signs_in_and_the_gate_gives_way",
     "test_phase_2_the_landing_is_not_blank_but_authenticated",
@@ -139,6 +153,20 @@ def run(extra: list[str]) -> int:
     for stale in list(ARTIFACTS.glob("*.png")) + list(ARTIFACTS.glob("*.html")):
         stale.unlink()
 
+    # THE MANIFEST IS CHECKED BEFORE THE RUN, NOT AFTER. BK-51-AC1. `expected:
+    # len(EXPECTED)` is written into the report as the population size, so a
+    # duplicated entry makes a complete run report one phase short forever --
+    # and the obvious fix for that is to relax the completeness check, which is
+    # how a completeness check dies.
+    broken = manifest_problems(EXPECTED)
+    if broken:
+        for problem in broken:
+            print(f"  ! {problem}")
+        return 1
+
+    run_began = time.time()
+    started = _fingerprint()
+
     proc = subprocess.run(
         [sys.executable, "-m", "pytest", "tests/test_the_journey_login_to_logout.py",
          "-m", "journey", "-p", "no:randomly", "-q",
@@ -193,6 +221,44 @@ def run(extra: list[str]) -> int:
     # so a run that emitted passing rows and then died in teardown -- or hit
     # an internal error the summary parser does not model -- reported those
     # rows and exited 0.
+    # BK-44-AC1. A CLOSED SCENARIO THAT STARTS REPRODUCING IS A REGRESSION.
+    #
+    # `reproduced` did not fail the command, deliberately: at wave 0 this suite
+    # documents defects, and exiting non-zero on every one would make it
+    # unrunnable until all of them closed. The hole that leaves is exactly the
+    # criterion's mutation -- TURN A CLOSED PASSING SCENARIO INTO A CONDITIONAL
+    # EXPECTED FAILURE and the verdict swallows it, because the runner cannot
+    # tell a defect somebody wrote down from one that just appeared.
+    #
+    # So the same three outcomes as the build gate, one level up: a declared
+    # reproduction is permitted, an undeclared one blocks, and a DECLARED ONE
+    # THAT HAS STARTED PASSING also blocks -- otherwise the list outlives the
+    # defects and quietly covers the next regression on the same phase.
+    # KEYED ON THE TEST FUNCTION NAME, which is what `EXPECTED` and `seen`
+    # hold. The first version keyed on `_phase_name`, which returns the
+    # human-readable label -- so no declaration could ever match and every
+    # reproduction read as undeclared. A key that never matches is a
+    # permission that can never be granted.
+    undeclared = [r for r in reproduced
+                  if r["nodeid"].split("::")[-1] not in REPRODUCING]
+    if undeclared:
+        print(f"  REGRESSION  {len(undeclared)} scenario(s) reproduced a defect "
+              f"nobody declared:")
+        for row in undeclared:
+            print(f"    {row['nodeid'].split('::')[-1]}  {row.get('note', '')[:70]}")
+        print("    A closed scenario that starts reproducing is a regression, "
+              "not a documented defect. Declare it in REPRODUCING with the "
+              "reason, or fix it.")
+    reproducing = {r["nodeid"].split("::")[-1] for r in reproduced}
+    closed = sorted(name for name in REPRODUCING
+                    if name in seen and name not in reproducing)
+    if closed:
+        print(f"  STALE  {len(closed)} declared reproduction(s) now pass:")
+        for name in closed:
+            print(f"    {name}")
+        print("    Remove them from REPRODUCING. A declaration that outlives "
+              "its defect covers the next one silently.")
+
     broke = proc.returncode not in (0, 1)
     if broke:
         print()
@@ -209,10 +275,23 @@ def run(extra: list[str]) -> int:
     # AN AUDIT RECORD, NOT A LIST OF ROWS. BK-51. The rows alone cannot say
     # which tree they were measured on, so a report file outlived its commit
     # and there was no way to tell.
+    # BOTH ENDS OF THE RUN. BK-80-AC2. One fingerprint cannot tell a stable
+    # tree from one that moved between phase 1 and phase 14 -- and a run whose
+    # tree moved has rows about two different products with no way to say
+    # which row is about which.
+    finished = _fingerprint()
+    # ONLY THIS RUN'S ARTIFACTS. BK-51-AC1. The glob returned every PNG in the
+    # directory, so a screenshot from last week's failure was listed as
+    # evidence of today's pass. Tagging each with the run identity makes a
+    # retained one visible instead of merely present.
+    artifacts = {path.name: started for path in sorted(ARTIFACTS.glob("*.png"))
+                 if path.stat().st_mtime >= run_began}
     REPORT.write_text(json.dumps({
+        "schema": BROWSER_SCHEMA,
         "ran_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
         "commit": _commit(),
-        "fingerprint": _fingerprint(),
+        "fingerprint": started,
+        "finished_fingerprint": finished,
         "argv": ["pytest", *extra],
         "pytest_returncode": proc.returncode,
         "expected": len(EXPECTED),
@@ -220,7 +299,7 @@ def run(extra: list[str]) -> int:
                    "reproduced": len(reproduced), "unexplained": len(failed),
                    "missing": len(absent)},
         "missing": absent,
-        "artifacts": sorted(p.name for p in ARTIFACTS.glob("*.png")),
+        "artifacts": artifacts,
         "rows": rows,
     }, indent=2), encoding="utf8")
     print(f"  {REPORT.relative_to(ROOT)}")
@@ -236,7 +315,7 @@ def run(extra: list[str]) -> int:
     # BK-51 ADDED THE OTHER TWO. `REPRODUCED` is a defect somebody wrote down.
     # A missing phase is a question nobody asked, and a pytest that exited 4 is
     # a run that did not happen -- neither has a row, so neither may be green.
-    return 1 if (failed or absent or broke) else 0
+    return 1 if (failed or absent or broke or undeclared or closed) else 0
 
 
 def _parse(stdout: str) -> list[dict]:

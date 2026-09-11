@@ -34,6 +34,7 @@ by writing the word.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import pathlib
 import re
@@ -240,7 +241,28 @@ EVIDENCE_RECORDS = ROOT / "docs" / "backlog" / "evidence"
 
 
 def _structured_record(acid: str, level: str, ref: str) -> list[str]:
-    """Validate a dated non-automated decision without exposing its subject."""
+    """Validate a dated non-automated decision without exposing its subject.
+
+    THE RULES MOVED TO `tools/structured_evidence.py`. BK-80-AC1. This checked
+    five fields -- subject, method, result, actor, observed_at -- and the
+    resulting PASS was then good forever: `subject` is prose so nothing
+    compared it to anything, `actor` is a string so an unattributable assertion
+    weighed the same as a qualified review, and there was no validity period at
+    all. Both halves of the criterion's negative control passed.
+    """
+    from tools.structured_evidence import problems
+
+    return problems(acid, level, ref,
+                    source_fingerprint=verification_fingerprint())
+
+
+def _structured_record_legacy(acid: str, level: str, ref: str) -> list[str]:
+    """The pre-BK-80-AC1 check, retained only as the thing under test.
+
+    `tests/test_structured_evidence_binds_its_subject.py` runs the criterion's
+    negative control against BOTH, so the claim that the new rules refuse what
+    the old ones admitted is measured rather than asserted.
+    """
     if not ref or "#" in ref:
         return [f"{acid}/{level}: PASS has no structured evidence record"]
     try:
@@ -299,20 +321,35 @@ def bind_execution_evidence(doc: dict, class_a: dict | None = None) -> list[str]
                         evidence["_effective_result"] = "NOT_RUN"
                         bad += record_bad
                 elif level == "browser_journey":
-                    # Browser reports carry the same source identity, plus an
-                    # exact row.  No current browser PASS exists today; this
-                    # branch is what prevents a future stale one being typed.
+                    # THE WHOLE REPORT, NOT ONE ROW. BK-80-AC2.
+                    #
+                    # This checked the fingerprint and looked up one nodeid, so
+                    # every one of these conferred a PASS: a run that crashed
+                    # at phase 3 leaving green rows behind it, a phase renamed
+                    # out of existence so nothing asked for it, a row appearing
+                    # twice, a tree that moved mid-run, and last week's
+                    # screenshots listed as this run's artifacts. All of them
+                    # have `rows` that are green and a fingerprint that matches.
+                    from tools.browser_evidence import load, problems, row_for
+                    from tools.journey import EXPECTED
+
                     ref, _, nodeid = evidence.get("ref", "").partition("#")
-                    try:
-                        report = json.loads((ROOT / ref).read_text(encoding="utf-8"))
-                    except (OSError, json.JSONDecodeError):
-                        report = {}
-                    rows = {r.get("nodeid"): r.get("state")
-                            for r in report.get("rows") or []}
-                    if (report.get("fingerprint") != verification_fingerprint()
-                            or rows.get(nodeid) != "PASS"):
+                    report = load(ROOT / ref) if ref else None
+                    incomplete = problems(
+                        report, expected=EXPECTED,
+                        fingerprint=verification_fingerprint())
+                    state = row_for(report, nodeid)
+                    if incomplete or state != "PASS":
                         evidence["_effective_result"] = "STALE"
-                        bad.append(f"{acid}/{level}: browser PASS is absent or STALE")
+                        if state != "PASS":
+                            bad.append(f"{acid}/{level}: {nodeid!r} did not "
+                                       f"PASS in the bound browser run "
+                                       f"(recorded {state!r})")
+                        # EACH INCOMPATIBLE CONDITION NAMED, not one summary.
+                        # An advocate of this register debugging a refused
+                        # release needs to know which of five things is wrong.
+                        bad += [f"{acid}/{level}: {problem}"
+                                for problem in incomplete]
     doc["_class_a_result"] = class_a
     doc["_execution_problems"] = bad
     return bad
@@ -744,13 +781,38 @@ def _professional(doc: dict, items: set[str], features: set[str],
 
 
 def _missing_pytest(acid: str, ref: str) -> list[str]:
-    """A proof naming a test nobody wrote is worse than no proof."""
+    """A proof naming a test nobody wrote is worse than no proof.
+
+    A DEFINITION, NOT A SUBSTRING. BK-80-AC4 forbids treating test-name
+    existence as executed enforcement, and this read
+    `node not in f.read_text()` -- so a node id quoted in a docstring, named in
+    a comment, or living inside a `CONTROLS` table satisfied it. This suite
+    quotes node ids in prose constantly; the same loose match reported ten
+    false failures when `tools/known_failures.py` first ran, and here it fails
+    the other way, silently.
+
+    It still does not prove the test RAN. That is `bind_execution_evidence`'s
+    exact lookup into the bound Class-A population, and the two are deliberately
+    separate questions: this one refuses a reference to something that was
+    never written, that one refuses a reference to something that did not pass.
+    """
     path, _, node = ref.partition("::")
     f = ROOT / path
     if not f.exists():
         return [f"{acid}: proof names {path}, which does not exist"]
-    if node and node.split("[")[0] not in f.read_text(encoding="utf-8"):
-        return [f"{acid}: proof names {node!r}, which is not in {path}"]
+    if not node:
+        return []
+    wanted = node.split("[")[0].rsplit("::", 1)[-1]
+    try:
+        tree = ast.parse(f.read_text(encoding="utf-8"), filename=str(f))
+    except SyntaxError as exc:
+        return [f"{acid}: proof names {path}, which does not parse ({exc.msg})"]
+    defined = {n.name for n in ast.walk(tree)
+               if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    if wanted not in defined:
+        return [f"{acid}: proof names {wanted!r}, which is not defined in "
+                f"{path} -- it may appear there as prose, but a name in a "
+                f"docstring is not a test that can run"]
     return []
 
 

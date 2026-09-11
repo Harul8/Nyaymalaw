@@ -33,10 +33,12 @@ from pathlib import Path
 
 from nm.adapters.store.file_store import _Cipher
 from nm.domain.advocate import (
+    AccountSecurity,
     AdvocateIdentity,
     Credential,
     Enrolment,
     Invitation,
+    ReauthenticationProof,
     RecoveryCodeRecord,
     RecoveryResult,
     Session,
@@ -44,6 +46,7 @@ from nm.domain.advocate import (
     canonical_id,
     dummy,
     new_invitation,
+    new_reauthentication_proof,
     new_recovery_codes,
     open_session,
     recovery_code_matches,
@@ -54,6 +57,7 @@ from nm.ports.directory import (  # noqa: F401
     AccountBusy,
     AlreadyEnrolled,
     InvitationRefused,
+    ProofRefused,
 )
 
 #: ONE REFUSAL, ONE SENTENCE, AND DELIBERATELY NO ORACLE. BK-31.
@@ -72,6 +76,20 @@ from nm.ports.directory import (  # noqa: F401
 _INVITATION_REFUSED = (
     "That invitation was not recognised or is no longer active. Nothing was "
     "saved. Ask whoever administers this installation to send you a new one.")
+
+#: THE SAME SENTENCE FOR EVERY ROTATION REFUSAL, on the rule above.
+#:
+#: Expired proof, spent proof, another session's proof, a credential that moved
+#: and a recovery set that moved are five facts, and a caller holding a stolen
+#: session must not be able to tell them apart -- "your password changed since"
+#: is precisely the thing such a caller wants to know. `_note` records which.
+#:
+#: IT ALSO SAYS WHAT TO DO NEXT, because an advocate told only "refused" in the
+#: middle of securing their account will assume the product is broken.
+_ROTATION_REFUSED = (
+    "Your recovery codes were not replaced and the ones you already hold still "
+    "work. Confirm your password again and retry; if you have just changed "
+    "your password or replaced these codes elsewhere, reload first.")
 
 
 class _AccountClaim:
@@ -106,8 +124,10 @@ class FileDirectory:
         self._invitations = self._root / "invitations"
         self._used_invitations = self._invitations / "used"
         self._recovery_locks = self._root / "recovery-locks"
+        self._proofs = self._root / "reauth-proofs"
         self._advocates.mkdir(parents=True, exist_ok=True)
         self._sessions.mkdir(parents=True, exist_ok=True)
+        self._proofs.mkdir(parents=True, exist_ok=True)
         self._invitations.mkdir(parents=True, exist_ok=True)
         self._used_invitations.mkdir(parents=True, exist_ok=True)
         self._recovery_locks.mkdir(parents=True, exist_ok=True)
@@ -242,6 +262,26 @@ class FileDirectory:
             "p": credential.p,
         }
 
+    def _write_account(self, path: Path, blob: dict,
+                       security: AccountSecurity) -> None:
+        """THE ONLY PLACE THE GENERATION COUNTERS ARE PERSISTED. BK-31-AC20.
+
+        Every write that touches `credential` or `recovery_codes` comes
+        through here and must SAY what happened to each generation. The
+        alternative -- bumping a counter wherever the material is written --
+        looks like the same rule and is not: `recover` writes the whole
+        `recovery_codes` list to mark ONE code spent, and a rule keyed on the
+        write would call that a replaced set and lose every rotation racing a
+        recovery for no reason.
+
+        Replaced-set and spent-code are different facts. Making the caller
+        pass the transition puts that judgement at the site, where it is
+        reviewable, instead of inside a heuristic that reads the same either
+        way.
+        """
+        blob.update(security.as_dict())
+        self._replace_advocate(path, blob)
+
     def _replace_advocate(self, path: Path, blob: dict) -> None:
         """Replace one account record without exposing a partial JSON write."""
         temporary = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
@@ -262,6 +302,13 @@ class FileDirectory:
             "credential": self._credential_record(enrolment.credential),
             "recovery_codes": [record.as_dict() for record in recovery],
             "created_at": enrolment.created_at.isoformat(),
+            # A NEW ACCOUNT IS GENERATION 1 ON BOTH, not 0. Zero is what an
+            # account enrolled before this model existed reads as, and the two
+            # must be distinguishable: a proof minted against a legacy account
+            # records 0, and the account's first mutation moving it to 1 is
+            # exactly the change that proof must be refused for.
+            **AccountSecurity(credential_generation=1,
+                              recovery_generation=1).as_dict(),
         }
         # IN THE OPEN, DELIBERATELY (BK-22). The credential is an scrypt
         # hash with its salt and cost -- scrypt exists so that such a hash
@@ -358,7 +405,10 @@ class FileDirectory:
             codes, records = new_recovery_codes()
             doc["recovery_codes"] = [record.as_dict() for record in records]
             doc["recovery_codes_issued_at"] = now.isoformat()
-            self._replace_advocate(path, doc)
+            # A SET WAS CREATED WHERE THERE WAS NONE. That is a replacement as
+            # far as anything holding an expectation is concerned.
+            self._write_account(
+                path, doc, AccountSecurity.read(doc).with_new_recovery_set())
             self._note(advocate_id, "recovery codes issued after authentication")
             return codes
         finally:
@@ -389,7 +439,9 @@ class FileDirectory:
                 recovery_codes, records = new_recovery_codes()
                 doc["recovery_codes"] = [record.as_dict() for record in records]
                 doc["recovery_codes_issued_at"] = now.isoformat()
-                self._replace_advocate(self._advocate_path(identity.id), doc)
+                self._write_account(
+                    self._advocate_path(identity.id), doc,
+                    AccountSecurity.read(doc).with_new_recovery_set())
                 self._note(identity.id, "recovery codes issued after authentication")
             token = self.open_session(identity.id, device, now)
             return identity, token, recovery_codes
@@ -440,9 +492,191 @@ class FileDirectory:
             doc["credential"] = self._credential_record(credential)
             doc["recovery_codes"] = updated
             doc["credential_changed_at"] = now.isoformat()
-            self._replace_advocate(self._advocate_path(canonical), doc)
+            # THE CREDENTIAL MOVED AND THE RECOVERY SET DID NOT. `updated`
+            # rewrites the whole list to stamp `used_at` on ONE record: same
+            # set, one member spent. Bumping the recovery generation here
+            # would make every rotation racing a recovery fail as stale when
+            # the set it means to replace is precisely the one still there.
+            self._write_account(
+                self._advocate_path(canonical), doc,
+                AccountSecurity.read(doc).with_new_credential())
             self._note(canonical, f"recovery succeeded; {ended} sessions ended")
             return RecoveryResult(True, ended)
+        finally:
+            claim.release()
+
+    # -------------------------------------------- fresh authentication ---
+
+    def _proof_path(self, fingerprint: str) -> Path:
+        return self._proofs / f"{fingerprint}.nm"
+
+    def _write_proof(self, proof: ReauthenticationProof) -> None:
+        """Sealed, like every other record that names an advocate.
+
+        WHAT IS NOT HERE IS THE POINT: the proof token itself. Only its
+        fingerprint, exactly as with sessions and invitations, so a stolen
+        store is not a set of spendable authorisations.
+        """
+        self._proof_path(proof.token_fingerprint).write_bytes(
+            self._cipher.encrypt(json.dumps({
+                "token_fingerprint": proof.token_fingerprint,
+                "advocate_id": proof.advocate_id,
+                "session_fingerprint": proof.session_fingerprint,
+                "credential_generation": proof.security.credential_generation,
+                "recovery_generation": proof.security.recovery_generation,
+                "issued_at": proof.issued_at.isoformat(),
+                "expires_at": proof.expires_at.isoformat(),
+                "consumed_at": proof.consumed_at.isoformat()
+                               if proof.consumed_at else None,
+            }, indent=2).encode("utf8")))
+
+    def _read_proof(self, fingerprint: str) -> ReauthenticationProof | None:
+        path = self._proof_path(fingerprint)
+        if not path.exists():
+            return None
+        try:
+            raw = path.read_bytes()
+            try:
+                data = json.loads(self._cipher.decrypt(raw).decode("utf8"))
+            except Exception:  # noqa: BLE001 -- pre-seal records stay readable
+                data = json.loads(raw.decode("utf8"))
+        except Exception:  # noqa: BLE001 -- an unreadable proof is not a proof
+            return None
+        consumed = data.get("consumed_at")
+        return ReauthenticationProof(
+            token_fingerprint=data["token_fingerprint"],
+            advocate_id=data["advocate_id"],
+            session_fingerprint=data["session_fingerprint"],
+            security=AccountSecurity.read(data),
+            issued_at=datetime.fromisoformat(data["issued_at"]),
+            expires_at=datetime.fromisoformat(data["expires_at"]),
+            consumed_at=datetime.fromisoformat(consumed) if consumed else None,
+        )
+
+    def account_security(self, advocate_id: str) -> int | None:
+        """The current recovery generation, or None if it cannot be read.
+
+        THREE STATES. An unreadable or absent account returns None rather than
+        0: a client told "generation 0" would send that as its expectation and
+        a legacy account really on 0 would accept it, so an unreadable record
+        would authorise the very replacement it cannot verify.
+        """
+        doc = self._read(canonical_id(advocate_id))
+        if doc is None:
+            return None
+        return AccountSecurity.read(doc).recovery_generation
+
+    def reauthenticate(self, advocate_id: str, password: str,
+                       session_token: str, device: str,
+                       now: datetime) -> str | None:
+        """Prove the current password again, inside this session. BK-31-AC20.
+
+        `None` COVERS FOUR DIFFERENT FAILURES and says which to nobody: a wrong
+        password, a session that is not live, a session belonging to another
+        advocate, and a session presented from another device. A signed-in
+        advocate who could tell them apart could use this to probe the roster,
+        which is A1's second NEVER arriving one layer up.
+
+        The derivation runs even when the session is already disqualified, for
+        the same reason `authenticate` runs it for an unknown advocate: an
+        answer returned in 0.2ms where the other takes 80ms is an oracle
+        whatever the response body says.
+        """
+        session = self.session(session_token, device, now)
+        identity = self.authenticate(advocate_id, password)
+        if identity is None:
+            self.note_failure(canonical_id(advocate_id), "reauthenticate", now)
+            return None
+        if session is None or canonical_id(session.advocate_id) != identity.id:
+            self._note(identity.id,
+                       "reauthentication refused: no live session of this "
+                       "advocate on this device")
+            self.note_failure(identity.id, "reauthenticate", now)
+            return None
+        security = AccountSecurity.read(self._read(identity.id))
+        token, proof = new_reauthentication_proof(
+            identity.id, session.token_fingerprint, security, now)
+        self._write_proof(proof)
+        self._note(identity.id,
+                   f"fresh authentication proof issued, expires "
+                   f"{proof.expires_at.isoformat()}")
+        return token
+
+    def rotate_recovery_codes(self, advocate_id: str, proof_token: str,
+                              session_token: str, device: str,
+                              expected_recovery_generation: int,
+                              now: datetime) -> tuple[str, ...]:
+        """Replace the whole set atomically. The new codes, once. BK-31-AC20.
+
+        THE PROOF IS SPENT BEFORE THE SET IS REPLACED, and the order is the
+        decision. Spend-then-replace can lose a rotation to an I/O failure and
+        the advocate authenticates again -- an inconvenience. Replace-then-spend
+        can leave a live proof beside a replaced set, and that is a second
+        rotation an attacker gets for free. Fail closed.
+
+        SESSION POLICY: the rotating session survives and every other session
+        of this advocate ends. Replacing the last-resort credential is a
+        security event, and an attacker holding another live session should not
+        keep it across one -- while signing the advocate out of the device they
+        are typing on is a control nobody uses twice. `close_all_sessions`
+        already draws that line for `sessions/revoke`.
+        """
+        canonical = canonical_id(advocate_id)
+        session = self.session(session_token, device, now)
+        if session is None or canonical_id(session.advocate_id) != canonical:
+            self._note(canonical, "recovery rotation refused: no live session "
+                                  "of this advocate on this device")
+            self.note_failure(canonical, "rotate-recovery-codes", now)
+            raise ProofRefused(_ROTATION_REFUSED)
+
+        claim = self._claim_recovery(canonical)
+        if claim is None:
+            raise AccountBusy("account access is already changing")
+        try:
+            doc = self._read(canonical)
+            security = AccountSecurity.read(doc)
+            proof = self._read_proof(token_fingerprint((proof_token or "").strip()))
+            if doc is None:
+                why = "the account record could not be read"
+            elif proof is None:
+                why = "no such proof"
+            else:
+                why = proof.why_not(
+                    advocate_id=canonical,
+                    session_fingerprint=session.token_fingerprint,
+                    security=security, now=now)
+            if why is None and expected_recovery_generation != security.recovery_generation:
+                # THE CALLER'S OWN EXPECTATION, checked separately from the
+                # proof's. The proof says nothing moved since it was minted;
+                # this says the client was looking at the same set it is asking
+                # to replace. A client rendered from a stale read would
+                # otherwise silently replace a set it never showed anybody.
+                why = (f"the caller expected recovery generation "
+                       f"{expected_recovery_generation} and the account is on "
+                       f"{security.recovery_generation}")
+            if why is not None:
+                self._note(canonical, f"recovery rotation refused: {why}")
+                self.note_failure(canonical, "rotate-recovery-codes", now)
+                raise ProofRefused(_ROTATION_REFUSED)
+
+            from dataclasses import replace
+
+            self._write_proof(replace(proof, consumed_at=now))
+            codes, records = new_recovery_codes()
+            doc["recovery_codes"] = [record.as_dict() for record in records]
+            doc["recovery_codes_issued_at"] = now.isoformat()
+            self._write_account(self._advocate_path(canonical), doc,
+                                security.with_new_recovery_set())
+            ended = self.close_all_sessions(
+                canonical, "recovery codes replaced", except_token=session_token)
+            # THE EVENT, NEVER THE CODES. `_note` writes one audit line and the
+            # codes exist only in the value returned above.
+            self._note(canonical,
+                       f"recovery codes replaced; generation "
+                       f"{security.recovery_generation} -> "
+                       f"{security.recovery_generation + 1}; "
+                       f"{ended} other sessions ended")
+            return codes
         finally:
             claim.release()
 

@@ -44,6 +44,14 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sweep test  ->  the test that proves it can fail.
 #: A sweep with no control is a sweep that has never been shown to work.
 CONTROLS: dict[str, str] = {
+    "test_every_cookie_authenticated_unsafe_route_declares_the_csrf_dependency":
+        "test_the_sweep_can_see_a_route_that_forgot_the_dependency",
+    "test_every_csrf_guarded_route_also_requires_authentication":
+        "test_the_auth_sweep_can_see_a_guarded_route_with_no_authentication",
+    "test_the_script_never_writes_to_browser_storage_at_all":
+        "test_the_storage_sweep_can_see_a_planted_write",
+    "test_every_write_of_account_material_states_its_generation_transition":
+        "test_the_generation_sweep_can_see_a_planted_forgetful_write",
     # BK-52 -- the admitted population is now zero. These controls were read
     # against the exact accumulated value each sweep asserts empty; entries
     # that only proved a scanner had a population gained a planted offender.

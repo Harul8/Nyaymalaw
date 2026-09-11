@@ -1606,18 +1606,21 @@ items:
   title: Phase B is built and the register says it is not
   kind: control
   priority: P1
-  delivery_status: ready
-  implementation: none
-  verification: none
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
   affects_phases:
   - B
   record: docs/BACKLOG.md#bk-48-phase-b-is-built-and-the-register-says-it-is-not
-  next_action: add `delivers:` to the rows that built the 25 features T3b reports
+  next_action: P01 now reports the exact 24 trace-only features and the separate C6 contradiction without promoting either source; P14 still owns AC3's PRODUCES-type population and the delivery owners must reconcile the reported rows
   acceptance:
   - id: BK-48-AC1
     requirement: "The current feature registry and implementation trace reconcile in both directions without promoting tested status merely from a decorator or importing stale historical status"
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_the_spec_says_what_is_true_now.py::test_the_registry_and_the_code_are_reconciled_in_both_directions
     negative_control:
       mutation: "leave a currently implemented route under a contradictory pre-build state or export a legacy tested label"
       expected_failure: "the mismatch is reported and current proof remains separate from code presence"
@@ -1625,8 +1628,12 @@ items:
     requirement: "every feature whose production code declares @implements is recorded in the current registry as delivered by a named row, or the count of unrecorded features is reported as a build failure that can only fall; the decorator never promotes the registry and the registry never silences the decorator"
     required_evidence: [domain_test, adversarial_test]
     evidence:
-      domain_test: {result: NOT_RUN, ref: ""}
-      adversarial_test: {result: NOT_RUN, ref: ""}
+      domain_test:
+        result: PASS
+        ref: tests/test_the_spec_says_what_is_true_now.py::test_the_registry_and_the_code_are_reconciled_in_both_directions
+      adversarial_test:
+        result: PASS
+        ref: tests/test_the_scoped_gate_cannot_hide_a_new_failure.py::test_t3b_membership_is_exact_even_when_the_count_does_not_move
     negative_control:
       mutation: "add an @implements for a feature no row delivers, or remove a delivers entry from a row that has one"
       expected_failure: "the reported count moves and the build blocks until somebody re-registers the reconciliation, rather than the projection quietly absorbing the change"
@@ -3077,16 +3084,16 @@ items:
   title: evidence integrity and release claim enforcement
   kind: control
   priority: P0
-  delivery_status: planned
-  implementation: none
-  verification: none
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-80-evidence-integrity-and-release-claim-enforcement
-  next_action: design and prove the scoped integration without relaxing the foundation or claiming unrun evidence
+  next_action: P01's truthful current-spec, exact-failure and checked-tree identity scope is complete; P03 continues to own AC1, AC2, AC4 and AC6, so the item remains partial and unsigned
   stage_records:
-    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-80-evidence-integrity-and-release-claim-enforcement}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-80-evidence-integrity-and-release-claim-enforcement}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-80-evidence-integrity-and-release-claim-enforcement}
+    start: {result: READY, ref: docs/BACKLOG.md#p01-corrective-build-record-opened-10-september-2026}
+    build: {result: OPEN, ref: docs/BACKLOG.md#p01-corrective-build-record-opened-10-september-2026}
+    test: {result: OPEN, ref: docs/BACKLOG.md#p01-corrective-build-record-opened-10-september-2026}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-80-evidence-integrity-and-release-claim-enforcement}
   acceptance:
   - id: BK-80-AC1
@@ -3106,7 +3113,13 @@ items:
   - id: BK-80-AC3
     requirement: the fingerprint covers authoritative PRD, generated specification and applicable guide rules or records a narrowly justified separate semantic attestation, so changing a promise invalidates its proof
     required_evidence: [domain_test, adversarial_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: tests/test_checked_tree_identity.py::test_every_effective_input_class_moves_the_checked_tree_identity
+      adversarial_test:
+        result: PASS
+        ref: tests/test_the_spec_says_what_is_true_now.py::test_changing_a_promise_makes_prior_proof_stale
     negative_control:
       mutation: change a PRD requirement, release gate or playbook obligation without changing product code
       expected_failure: prior conformance evidence becomes stale or requires a new attestation
@@ -3122,8 +3135,12 @@ items:
     requirement: generated specifications obtain present feature implementation and proof status from the current registry, preserving historical slice metadata explicitly and never restoring tested status from the legacy workbook without current trace evidence
     required_evidence: [domain_test, adversarial_test]
     evidence:
-      domain_test: {result: NOT_RUN, ref: ''}
-      adversarial_test: {result: NOT_RUN, ref: ''}
+      domain_test:
+        result: PASS
+        ref: tests/test_the_spec_says_what_is_true_now.py::test_no_feature_carries_a_tested_label_it_did_not_currently_earn
+      adversarial_test:
+        result: PASS
+        ref: tests/test_the_spec_says_what_is_true_now.py::test_historical_workbook_state_cannot_overwrite_current_authored_state
     negative_control:
       mutation: regenerate the specification from a legacy workbook after a current feature has been reopened or a new NEVER clause lacks a production refusal
       expected_failure: the export preserves the current gap and trace T7 remains capable of failing rather than inheriting a legacy tested label
@@ -3140,11 +3157,11 @@ items:
     required_evidence: [domain_test, adversarial_test]
     evidence:
       domain_test:
-        result: NOT_RUN
-        ref: ""
+        result: PASS
+        ref: tests/test_checked_tree_identity.py::test_two_unchanged_scoped_runs_remain_valid_but_never_become_full
       adversarial_test:
-        result: NOT_RUN
-        ref: ""
+        result: PASS
+        ref: tests/test_the_scoped_gate_cannot_hide_a_new_failure.py::test_bk80_ac7_rejects_every_non_exact_failure_population
     negative_control:
       mutation: "plant a failure absent from docs/backlog/known_failures.yaml, or make a declared failure pass, or present the scoped stamp to a caller requiring a full gate"
       expected_failure: "the build is blocked in the first two cases and the stamp is refused in the third; a scoped pass never reads as a full green and never lets an acceptance criterion derive done"

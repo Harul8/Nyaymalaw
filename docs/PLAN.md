@@ -95,10 +95,14 @@ Prototype, bounded pilot and production are distinct release profiles, not
 synonyms for these progress states. No profile grants approval by itself.
 Neither local Phase A completion nor D-013 grants a production MFA exception.
 
-The current linter does not yet enforce all new profile semantics, review
-identity, expected browser population or specification-fingerprint coverage.
-BK-80 records that work. Until it is complete, sign-off explicitly reviews
-those limits and cannot claim that a green count proves them automatically.
+P01 now enforces the local specification/checked-tree boundary: current feature
+state comes from the registry, historical verdicts remain history, applicable
+promises and delivery relations move the identity, and exact declared failures
+can support only a scoped build stamp. BK-80 remains partial because P03 still
+owns release-profile semantics, qualified reviewer and configuration identity,
+complete browser/model/counsel/production populations and verified approval
+authority. Until those land, sign-off explicitly reviews the limits and cannot
+claim that a local green or scoped count proves them automatically.
 
 ## Professional review that can change the decision
 
@@ -122,10 +126,13 @@ the current file/re-entry, research-placement and served-proof obligations.
 Read the live rows before selecting work. This refinement changes the plan's
 precision and truthfulness; it does not mark those product outcomes complete.
 
-P01 and P02 remain the independent first synthetic build packets. Follow the
-scoped graph in `blueprint/packets.json` for later work, including P47 and P46;
-do not jump to autonomous runtime before its admission, job, commission,
-evidence and reasoning prerequisites exist. The four existing playbooks now
-also require causal fixes, transfer/boundary evidence and independent review
-under BG-078–BG-081. Deterministic safeguards and reviewed legal rule data stay
-valid; a passing planning check is not runtime or professional certification.
+P01 is complete for its five bounded control-plane criteria; it does not close
+the whole BK-80 or BK-48 rows. P02 remains the independent synthetic access
+packet already being worked, and P03 is now dependency-eligible for the rest of
+BK-80. Follow the scoped graph in `blueprint/packets.json` for later work,
+including P47 and P46; do not jump to autonomous runtime before its admission,
+job, commission, evidence and reasoning prerequisites exist. The four existing
+playbooks require causal fixes, transfer/boundary evidence and independent
+review under BG-078–BG-081. Deterministic safeguards and reviewed legal rule
+data stay valid; a passing planning check is not runtime or professional
+certification.

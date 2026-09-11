@@ -91,21 +91,24 @@ def test_layercheck_allows_core_importing_ports():
 # trace
 # --------------------------------------------------------------------------
 
-def test_trace_passes_on_the_real_spec():
-    """Trace must pass on a CURRENT spec.
+def test_trace_accepts_the_freshly_regenerated_spec():
+    """T1 must accept a CURRENT spec.
 
     The first version of this test ran trace against whatever happened to be on
     disk, and failed twice -- not because trace was wrong, but because a
     generator had been edited and the spec not yet regenerated. A test that
     asserts on live repo state it does not control is testing the author's
     editing sequence rather than the tool. So it establishes its own
-    precondition first, then asserts.
+    precondition first, then asks only T1. The whole trace also reports product
+    obligations; an unrelated C1 or D2 finding says nothing about freshness.
     """
+    from tools.trace import Report, spec_is_current
+
     regen = run("export_spec.py")
     assert regen.returncode == 0, f"export_spec failed:\n{regen.stdout}{regen.stderr}"
-    r = run("trace.py", "--skip-regen")
-    assert r.returncode == 0, f"trace failing on a freshly generated spec:\n{r.stdout}"
-    assert "TRACE OK" in r.stdout
+    report = Report()
+    spec_is_current(report)
+    assert report.failures == [], report.failures
 
 
 def test_trace_rejects_an_implements_naming_no_feature():
@@ -245,7 +248,7 @@ def test_trace_detects_a_stale_spec(tmp_path):
         r = run("trace.py")  # full run, regeneration enabled
         assert r.returncode == 1, "trace did NOT detect a stale spec"
         assert "[T1]" in r.stdout
-        assert "was stale" in r.stdout
+        assert f"{spec.relative_to(ROOT)} is stale" in r.stdout
     finally:
         _copy_bytes(backup, spec)
 
@@ -621,13 +624,16 @@ def test_the_gate_stamp_covers_what_the_gate_checks_not_what_the_server_runs():
     is about, arriving inside it.
     """
     from nm.domain.identity import FINGERPRINTED
+    from tools.evidence import IDENTITY_MANIFEST
     from tools.gatestamp import CHECKED
 
-    assert "spec" in CHECKED and "tools" in CHECKED
-    assert set(FINGERPRINTED) < set(CHECKED), (
-        "the gate stamp covers no more than the served fingerprint, so a "
-        "change to spec/ or tools/ would commit against a green that never "
-        "saw it")
+    assert CHECKED[0] == ".", (
+        "the gate identity is not rooted at the repository, so an effective "
+        "input added outside a hand-maintained directory list can escape it")
+    repository = next(part for part in IDENTITY_MANIFEST if part.path == ".")
+    for required in (*FINGERPRINTED, "spec", "tools"):
+        assert required not in repository.exclude, (
+            f"the repository identity excludes the effective {required}/ tree")
 
 
 def test_the_gate_stamp_notices_a_tree_that_moved(tmp_path):
@@ -675,7 +681,7 @@ def test_the_gate_stamp_has_a_third_state():
     from tools.gatestamp import state
 
     verdict, sentence = state()
-    assert verdict in ("current", "stale", "not_assessed")
+    assert verdict in ("current", "current_scoped", "stale", "not_assessed")
     assert sentence.strip(), "a verdict with no sentence tells nobody anything"
 
 
@@ -697,7 +703,7 @@ def test_the_hook_refreshes_vectors_and_keeps_the_gate_blocking():
     """BK-76-AC2. Search freshness may warn; build identity must decide."""
     hook = (ROOT / "tools" / "hooks" / "pre-commit").read_text(encoding="utf8")
     vector = "python tools/graph_vectors.py --embed || true"
-    gate = "python tools/gatestamp.py --quiet || exit 1"
+    gate = "python tools/gatestamp.py --quiet --require-index || exit 1"
 
     assert vector in hook, (
         "the hook updates the structural graph without refreshing its vectors")
@@ -707,6 +713,17 @@ def test_the_hook_refreshes_vectors_and_keeps_the_gate_blocking():
     assert hook.index(vector) < hook.index(gate), (
         "the semantic report no longer accompanies the graph update before the "
         "blocking build-identity decision")
+    assert "if ! command -v python" in hook, (
+        "the hook silently skips its blocking control when Python is absent")
+
+
+def test_the_canonical_hook_is_tracked_as_executable():
+    row = subprocess.run(
+        ["git", "ls-files", "--stage", "tools/hooks/pre-commit"],
+        cwd=ROOT, capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    assert row.startswith("100755 "), (
+        "a POSIX checkout cannot execute the canonical hook; track it as 100755")
 
 
 def test_the_golden_suite_path_cannot_reach_a_model():
@@ -991,7 +1008,8 @@ def test_a_clean_start_says_nothing():
 
 # ========= the scenario runner does not depend on a remembered password ====
 
-def test_the_scenario_runner_mints_its_own_advocate(tmp_path, monkeypatch):
+def test_the_scenario_runner_mints_its_own_advocate(
+        tmp_path, monkeypatch, scripted_application_environment):
     """BK-3. `adv_scenarios` was enrolled once and its generated password
     printed once. Nobody has it, it is not in `.env`, and it blocked a
     SERVED-PATH judged run -- E-102 was judged in-process instead, which is
@@ -1017,7 +1035,8 @@ def test_the_scenario_runner_mints_its_own_advocate(tmp_path, monkeypatch):
     assert Application().directory.authenticate("adv_probe", "nope") is None
 
 
-def test_it_refuses_to_re_enrol_an_advocate_that_exists(tmp_path, monkeypatch):
+def test_it_refuses_to_re_enrol_an_advocate_that_exists(
+        tmp_path, monkeypatch, scripted_application_environment):
     """THE BOUND, and it is the one that matters. Re-enrolling would replace a
     credential somebody may still be signing in with -- which is the refusal
     `directory.enrol` already makes, and this must not go around it."""
@@ -1085,15 +1104,15 @@ def test_the_gate_scan_sees_code_and_ignores_prose(body, caught):
     planted = ROOT / "nm" / "core" / "_gate_scan_probe.py"
     planted.write_text(chr(10).join(body) + chr(10), encoding="utf8")
     try:
-        result = subprocess.run(
-            [sys.executable, str(ROOT / "tools" / "trace.py")],
-            capture_output=True, text=True, cwd=ROOT)
-        assert (result.returncode != 0) is caught, (
-            f"planting {body!r} behaved the wrong way:" + chr(10)
-            + (result.stdout + result.stderr)[-600:])
+        from tools.trace import gate_consultations
+
+        relative = str(planted.relative_to(ROOT))
+        locations = gate_consultations().get("G-LIMITATION", [])
+        detected = relative in locations
+        assert detected is caught, (
+            f"planting {body!r} yielded G-LIMITATION locations {locations!r}")
         if caught:
-            assert "G-LIMITATION" in result.stdout, (
-                "T9 failed and did not name the gate it failed on")
+            assert relative in locations, "the scan did not name the planted file"
     finally:
         planted.unlink()
 

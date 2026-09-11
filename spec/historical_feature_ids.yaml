@@ -1,0 +1,10 @@
+# Hand-authored registry for feature identifiers retained by historical inputs.
+# Current feature identity is defined by the PRD contracts. An id may appear in
+# the August Feature Map only when it is declared here as an alias or tombstone.
+
+schema: 1
+historical_feature_ids:
+- id: D5.1
+  disposition: tombstone
+  canonical_id: D5
+  reason: The August plan tracked the D5.1 subsection separately; the current PRD contracts it under D5.

@@ -99,7 +99,31 @@ function clearPrivileged() {
   if (chooser) chooser.innerHTML = '<option value="">Choose a matter…</option>';
 }
 
+// BK-31-AC20. The value the server hands this page so it can prove a request
+// came from here. It is a SEPARATE, READABLE cookie: the session cookie is
+// httponly and this script cannot see it, which is the whole point -- a
+// cross-site page can read neither, and cannot set a custom header at all.
+function cookie(name) {
+  const match = document.cookie.match(
+    new RegExp('(?:^|;\\s*)' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+const UNSAFE = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
 async function api(path, options) {
+  // IN THE ONE HELPER, NOT AT THE CALL SITES. Every request in this file goes
+  // through here, so no future caller can forget the header and discover it as
+  // a 403 in a browser somebody else is using. CLAUDE.md §4: what refuses the
+  // second copy is that there is nowhere else to put it.
+  const method = ((options && options.method) || 'GET').toUpperCase();
+  if (UNSAFE.has(method)) {
+    const token = cookie('nm_csrf');
+    if (token) {
+      options = { ...(options || {}) };
+      options.headers = { ...(options.headers || {}), 'X-NM-CSRF': token };
+    }
+  }
   const res = await fetch(path, options);
   let body = null;
   try { body = await res.json(); } catch { /* non-JSON error page */ }
@@ -1637,6 +1661,104 @@ async function showSessions() {
 
 $('devices').addEventListener('click', showSessions);
 
+// ------------------------------------------------ replacing recovery codes
+//
+// BK-31-AC20. Two steps, and the separation is the control: the password is
+// proved at the moment of the change, so an unlocked laptop is not enough to
+// replace the last-resort credential.
+//
+// THE PROOF NEVER LEAVES THIS CLOSURE. Not localStorage, not sessionStorage,
+// not a data attribute -- a variable, spent once, dropped in `finally`. A
+// closed tab loses it, which is the correct outcome: the advocate
+// authenticates again. There is no read-back of either the proof or the codes,
+// because a second place a secret lives is a second place it leaks from.
+let rotationProof = null;
+
+function forgetRotationSecrets() {
+  rotationProof = null;
+  const field = $('reauth-password');
+  if (field) field.value = '';
+}
+
+$('replace-codes').addEventListener('click', () => {
+  forgetRotationSecrets();
+  $('gate').hidden = false;
+  $('masthead').hidden = true;
+  showForm('reauth');
+  $('reauth-password').focus();
+});
+
+$('reauth-cancel').addEventListener('click', (ev) => {
+  ev.preventDefault();
+  forgetRotationSecrets();
+  $('gate').hidden = true;
+  $('masthead').hidden = false;
+});
+
+$('reauth-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const go = $('reauth-go');
+  const problem = $('reauth-error');
+  problem.hidden = true;
+  go.disabled = true;
+  try {
+    // THE CURRENT GENERATION IS READ IMMEDIATELY BEFORE THE CHANGE, and sent
+    // with it. If another device replaced the set between this page loading
+    // and this button, the server refuses rather than silently replacing a set
+    // this page never showed anybody.
+    const who = await api('/api/session');
+    // NULL IS NOT ZERO. A directory that cannot say which generation this
+    // account is on must stop the rotation, not let the page guess a number
+    // that a legacy account would happen to accept.
+    if (who.recovery_generation === null || who.recovery_generation === undefined) {
+      throw new Error('This installation cannot confirm which recovery codes '
+        + 'are current, so nothing was changed. Your existing codes still work.');
+    }
+    const earned = await api('/api/reauthenticate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: $('reauth-password').value }),
+    });
+    rotationProof = earned.proof;
+    $('reauth-password').value = '';
+
+    const replaced = await api('/api/recovery-codes/rotate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        proof: rotationProof,
+        expected_recovery_generation: who.recovery_generation,
+      }),
+    });
+    showOutcome('good', 'Your new recovery codes',
+      'The ten codes you held before are now dead. Save these before you '
+      + 'continue; they will not be shown again.',
+      replaced.recovery_codes, 'resume');
+  } catch (err) {
+    // ONE LINE, WHATEVER FAILED. The server already refuses to say which, and
+    // a page that guessed a friendlier reason would reintroduce the oracle the
+    // server just closed.
+    problem.textContent = err.message
+      || 'That did not work. Your existing recovery codes still work.';
+    problem.hidden = false;
+    $('reauth-password').value = '';
+  } finally {
+    // SPENT OR NOT, THE PROOF IS GONE. A failed rotation must not leave a
+    // usable authorisation sitting in this tab.
+    rotationProof = null;
+    go.disabled = false;
+  }
+});
+
+$('outcome-resume').addEventListener('click', () => {
+  // The acknowledgement. The codes leave the document here -- hiding the card
+  // would leave them readable to anything running later on this page.
+  clearRecoveryCodeDisplay();
+  forgetRotationSecrets();
+  $('gate').hidden = true;
+  $('masthead').hidden = false;
+});
+
 // ------------------------------------------------------------- registration
 //
 // SELF-SERVICE, as of 6 September 2026. The sign-in page used to say enrolment
@@ -1656,6 +1778,17 @@ function showForm(which) {
   $('register').hidden = which !== 'register';
   $('recovery').hidden = which !== 'recovery';
   $('outcome').hidden = which !== 'outcome';
+  // A PASSWORD IS NOT FORM STATE EITHER. Leaving the reauthentication field
+  // filled while the card is merely hidden would let the next person on this
+  // machine return to a form already carrying the credential.
+  if (which !== 'reauth') {
+    const field = $('reauth-password');
+    if (field) field.value = '';
+    const problem = $('reauth-error');
+    if (problem) { problem.hidden = true; problem.textContent = ''; }
+  }
+  const reauth = $('reauth');
+  if (reauth) reauth.hidden = which !== 'reauth';
   $('login-state').textContent = '';
 }
 
@@ -1676,8 +1809,13 @@ function showOutcome(kind, title, body, recoveryCodes = [], returnTo = 'register
   $('outcome-title').textContent = title;
   $('outcome-body').textContent = body;
   $('outcome-title').className = `outcome-title ${kind}`;
-  $('outcome-signin').hidden = kind !== 'good';
+  // THREE EXITS, NOT TWO. A rotation returns the advocate to the matters they
+  // were already in; sending them to a sign-in screen they do not need would
+  // make the control cost a login every time it is used.
+  const resuming = returnTo === 'resume';
+  $('outcome-signin').hidden = kind !== 'good' || resuming;
   $('outcome-back').hidden = kind === 'good';
+  $('outcome-resume').hidden = !resuming;
   outcomeReturn = returnTo;
   const codes = $('recovery-codes');
   const list = $('recovery-code-list');

@@ -51,6 +51,12 @@ SESSION_HOURS = 12
 INVITATION_HOURS = 48
 RECOVERY_CODE_COUNT = 10
 
+#: How long a fresh-authentication proof stays usable. Five minutes: long
+#: enough to read a warning and press a button, short enough that a proof left
+#: on a walked-away-from screen is not a standing licence to replace the
+#: account's last-resort credential.
+REAUTHENTICATION_MINUTES = 5
+
 _UNSAFE_FILE_ID = re.compile(r'[<>:"/\\|?*]|[\x00-\x1f]')
 _WINDOWS_DEVICE_IDS = frozenset(
     {"CON", "PRN", "AUX", "NUL"}
@@ -256,6 +262,170 @@ def dummy() -> Credential:
     return Credential(algorithm="scrypt", salt="0" * 32,
                       hash=_derive(secrets.token_hex(32), "0" * 32,
                                    SCRYPT_N, SCRYPT_R, SCRYPT_P))
+
+
+# ------------------------------------------------- the generation model ---
+#
+# BK-31-AC20. FROZEN BEFORE ANY ROTATION PATH WAS WRITTEN, deliberately.
+#
+# Replacing a recovery-code set is a compare-and-set on state two other
+# operations also move: `recover` changes the credential, and first-login
+# provisioning creates a set. Without a counter, "has anything changed under
+# me" can only be answered by comparing the material itself -- which means
+# reading hashes at the edge to decide a race, and the one rule this file
+# exists to keep is that credential material does not travel.
+#
+# TWO COUNTERS, NOT ONE, AND THAT IS THE WHOLE DESIGN DECISION.
+#
+#   credential_generation   moves when the password hash changes.
+#   recovery_generation     moves when the code SET is replaced wholesale.
+#
+# Conflating them would make every password change lose a concurrent rotation
+# and every rotation lose a concurrent recovery, and the advocate would be told
+# "someone else changed this" for an event that did not touch what they were
+# changing. Two different questions, two counters -- the same reason
+# `nm/domain/identity.py` and `tools/evidence.py` keep two fingerprints.
+#
+# CONSUMING ONE CODE DOES NOT MOVE `recovery_generation`. The set is the same
+# set with one member spent; a rotation racing a recovery is not stale, it is
+# replacing exactly the set it meant to. What a recovery DOES move is the
+# credential, which is why the reauthentication proof carries both.
+#
+# ABSENT READS AS 0, AND 0 IS A VALUE RATHER THAN AN UNKNOWN. An account
+# enrolled before this model existed carries neither field. Zero is honest for
+# a comparison whose only question is DID IT MOVE: such an account's first
+# generation-bearing mutation writes 1, and a proof issued before that
+# mutation recorded 0 and is correctly refused.
+
+@dataclass(frozen=True)
+class AccountSecurity:
+    """Which credential and which recovery set this account currently has."""
+
+    credential_generation: int = 0
+    recovery_generation: int = 0
+
+    @classmethod
+    def read(cls, doc: dict | None) -> AccountSecurity:
+        def counter(name: str) -> int:
+            value = (doc or {}).get(name)
+            return value if isinstance(value, int) and value >= 0 else 0
+
+        return cls(credential_generation=counter("credential_generation"),
+                   recovery_generation=counter("recovery_generation"))
+
+    def as_dict(self) -> dict:
+        return {"credential_generation": self.credential_generation,
+                "recovery_generation": self.recovery_generation}
+
+    def with_new_credential(self) -> AccountSecurity:
+        return AccountSecurity(self.credential_generation + 1,
+                               self.recovery_generation)
+
+    def with_new_recovery_set(self) -> AccountSecurity:
+        return AccountSecurity(self.credential_generation,
+                               self.recovery_generation + 1)
+
+
+def csrf_token(session_token: str) -> str:
+    """The value a cookie-authenticated unsafe request must echo in a header.
+
+    DERIVED FROM THE SESSION TOKEN, so it is bound to one session and needs no
+    server-side record and no second secret to manage. A token minted for one
+    session cannot authorise a request carrying another, and ending a session
+    invalidates its CSRF value at the same instant rather than a cache later.
+
+    WHY THIS IS SAFE TO HAND THE BROWSER. The session cookie is `httponly`, so
+    page script cannot read it; this derived value goes in a SEPARATE readable
+    cookie, which page script on the serving origin can read and echo as a
+    header. A cross-site page can neither read another origin's cookies nor set
+    a custom header on a form post, so it can produce neither half.
+
+    ONE-WAY, and that matters: `sha256` of the token means a leaked CSRF value
+    does not yield the session token it came from. The reverse construction --
+    handing out the token and deriving the session from it -- would make the
+    readable cookie as good as the httponly one.
+    """
+    return hashlib.sha256(
+        f"nm-csrf:{session_token or ''}".encode("utf8")).hexdigest()
+
+
+#: THE REFUSAL IS NOT DECLARED HERE. `ProofRefused` lives in
+#: `nm/ports/directory.py`, beside `AccountBusy` and `InvitationRefused`,
+#: because an exception is part of a contract as much as a return type is and
+#: the edge must catch it without knowing which adapter is live. This module
+#: answers WHY in a sentence; turning that sentence into a refusal that says
+#: nothing is the adapter's job, exactly as `Session.why_not` becomes a bare
+#: `None` from `session()`.
+
+
+@dataclass(frozen=True)
+class ReauthenticationProof:
+    """Fresh authentication, bound to one session and spendable once.
+
+    Holds a FINGERPRINT of its token and never the token, exactly as `Session`
+    and `Invitation` do. The advocate's copy exists only in the response that
+    minted it; a lost response is replaced by authenticating again, never by
+    reading one back out of the store.
+    """
+
+    token_fingerprint: str
+    advocate_id: str
+    session_fingerprint: str
+    security: AccountSecurity
+    issued_at: datetime
+    expires_at: datetime
+    consumed_at: datetime | None = None
+
+    def __post_init__(self) -> None:
+        for name in ("token_fingerprint", "advocate_id", "session_fingerprint"):
+            if blank(getattr(self, name)):
+                raise ValueError(f"a reauthentication proof with no {name} "
+                                 f"cannot be checked")
+        if self.expires_at <= self.issued_at:
+            raise ValueError("a proof that expires when it is issued is not a proof")
+
+    def why_not(self, *, advocate_id: str, session_fingerprint: str,
+                security: AccountSecurity, now: datetime) -> str | None:
+        """The REASON it cannot be spent, for the log — never for the caller.
+
+        Every clause here is a refusal the packet names: expiry, replay,
+        session binding, and the two generations moving underneath. It returns
+        a sentence rather than a bool so the operator log can say which, while
+        `ProofRefused` says the same nothing to everyone.
+        """
+        if self.consumed_at is not None:
+            return f"already spent at {self.consumed_at.isoformat()}"
+        if now >= self.expires_at:
+            return f"expired at {self.expires_at.isoformat()}"
+        if canonical_id(self.advocate_id) != canonical_id(advocate_id):
+            return "issued to a different advocate"
+        if not hmac.compare_digest(self.session_fingerprint, session_fingerprint):
+            return "issued to a different session"
+        if self.security.credential_generation != security.credential_generation:
+            return (f"the credential moved from generation "
+                    f"{self.security.credential_generation} to "
+                    f"{security.credential_generation}")
+        if self.security.recovery_generation != security.recovery_generation:
+            return (f"the recovery set moved from generation "
+                    f"{self.security.recovery_generation} to "
+                    f"{security.recovery_generation}")
+        return None
+
+
+def new_reauthentication_proof(
+        advocate_id: str, session_fingerprint: str, security: AccountSecurity,
+        now: datetime, minutes: int = REAUTHENTICATION_MINUTES,
+        ) -> tuple[str, ReauthenticationProof]:
+    """Returns the token ONCE, and a proof that cannot reproduce it."""
+    token = new_token()
+    return token, ReauthenticationProof(
+        token_fingerprint=token_fingerprint(token),
+        advocate_id=advocate_id,
+        session_fingerprint=session_fingerprint,
+        security=security,
+        issued_at=now,
+        expires_at=now + timedelta(minutes=minutes),
+    )
 
 
 # -------------------------------------------------------- recovery codes ---

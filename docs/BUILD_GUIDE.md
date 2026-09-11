@@ -165,16 +165,23 @@ A named runner means a check exists, not that the entire professional rule is
 automatically enforced. Human review remains necessary where the declared
 check covers only part of the promise.
 
-Execution-bound Class-A evidence checks a source fingerprint and exact test
-outcomes. Current structured counsel/model/production records validate required
-fields and claim identity, but do not yet mechanically establish reviewer
-qualification, build/configuration identity or continuing validity. Browser
-binding checks the fingerprint and named result, but does not by itself prove
-report completeness. The current fingerprint also excludes PRD source and
-playbook prose. Record the additional identity and review manually, and keep
-these assurance gaps visible in BK-80 until their
-controls exist. A clean lint result is not professional acceptance or release
-permission.
+Execution-bound Class-A evidence now checks one canonical checked-tree identity
+and exact passing test outcomes. The identity covers the indexed repository
+population, including PRD source, applicable playbook/build rules, CI and hook
+configuration, delivery relations and semantic PRD output. Generated verdicts
+and evidence artifacts are excluded from the claim they judge so recording a
+result reaches a fixed point. A skipped, failed, malformed, duplicate, partial
+or stale Class-A population cannot be published as complete.
+
+That closes P01's local control-plane scope; it does not close BK-80. Structured
+counsel/model/production records still need P03's reviewer-authority,
+configuration, population and continuing-validity enforcement. Browser reports
+still need P03's complete expected-population contract. Record those additional
+facts manually until their controls exist. A clean local or scoped result is not
+professional acceptance, operated-service proof or release permission. Keep
+volatile results and literal fingerprints in the excluded evidence artifacts,
+not in an identity-covered guide or completion narrative that would invalidate
+the identity it names.
 
 ## Approval boundaries
 

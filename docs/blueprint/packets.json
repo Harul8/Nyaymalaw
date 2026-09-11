@@ -74,22 +74,117 @@
         {
           "path": "docs/backlog/known_failures.yaml",
           "kind": "existing"
+        },
+        {
+          "path": "tools/feature_state.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/releasegate.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/hooks/pre-commit",
+          "kind": "existing"
+        },
+        {
+          "path": ".github/workflows/class-a.yml",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_the_spec_says_what_is_true_now.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_the_scoped_gate_cannot_hide_a_new_failure.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_p01_ci_is_reproducible.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_checked_tree_identity.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/conftest.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_reads_registry.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_reached_from_production.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_the_theory_survives_a_turn.py",
+          "kind": "existing"
+        },
+        {
+          "path": "spec/features.yaml",
+          "kind": "existing"
+        },
+        {
+          "path": "spec/historical_feature_ids.yaml",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/backlog/status.yaml",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/BACKLOG.md",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/packets.json",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/Nyaymalaw_End_to_End_Project_Plan.xlsx",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/BUILD_GUIDE.md",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/EXECUTION_READINESS.md",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/PLAN.md",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/EXECUTION.md",
+          "kind": "existing"
         }
       ],
       "inputs": [
         "Current PRD capture output, status.yaml and unchanged historical workbook",
-        "Baseline trace output and source fingerprint"
+        "Baseline trace output and canonical checked-tree identity"
       ],
       "outputs": [
-        "Registry-backed current feature export; explicitly historical slice/eval fields",
-        "Fingerprint including applicable promises without including generated verdicts"
+        "Registry-backed current feature export with explicitly historical slice/eval fields and atomic all-output publication",
+        "Canonical checked-tree identity including applicable promises and delivery relations without self-invalidating generated verdicts",
+        "Exact structured failure comparison plus scoped/full stamp semantics that refuse new, changed, vanished or uncaptured failures",
+        "Locked clean-checkout Class-A execution whose publishable population contains only completed passing nodes"
       ],
       "steps": [
         "Read main() in export_spec.py: replace workbook Status authority with one registry-derived projection; preserve historical eval IDs and slice metadata explicitly.",
         "Reject missing, duplicate and unknown feature IDs before any generated output is published; compare all 44 current features, not a selected sample.",
         "Add a temporary-tree test changing one current feature while historical Status remains tested, and a fingerprint test changing one applicable promise; regenerate and compare only after the tests pass.",
         "Declare every already-known gate failure with an owning acceptance criterion in docs/backlog/known_failures.yaml, and compare the observed red against it: the declared set exactly is a scoped build pass, a new failure blocks, and a declared failure that has started passing also blocks so the registry can only shrink.",
-        "Mark the gate stamp scoped, carrying the waived ids and the registry digest, so a caller asking whether the FULL gate is green is refused and no acceptance criterion derives done from a scoped run."
+        "Mark the gate stamp scoped, carrying the waived ids and the registry digest, so a caller asking whether the FULL gate is green is refused and no acceptance criterion derives done from a scoped run.",
+        "Use one collision-safe manifest for every effective gate and Class-A input, including the delivery relation, and sample that same identity before, between and after stages; generated verdicts and artifacts remain outside their own claim identity.",
+        "Represent observed failures as structured facts and compare exact sets, including reason beneath an aggregate or parameterised pytest node; reject extra, changed, duplicate, vanished or uncaptured failures.",
+        "Separate authored current feature state from observed code reconciliation; reject missing, duplicate and unknown current or historical mappings, distinguish contradicted from trace-only populations, and validate every generated output before atomic publication.",
+        "Return NOT_ASSESSED for empty, unresolved or unexecuted populations, validate structured AWAITING owners, and prove two consecutive scoped runs plus full-gate refusal.",
+        "Install the locked Node dependency in clean Class-A CI and run the exact export and mutation controls without relying on an untracked node_modules directory."
       ],
       "proof": {
         "positive": [

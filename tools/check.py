@@ -17,7 +17,8 @@ WHAT IT RUNS, AND WHY IN THIS ORDER
                    a stale call site after a rename raised NameError on every
                    matter for weeks in the previous build.
  6. pytest -m class_a  -- the invariants. No corpus, no model, seconds.
- 7. pytest (rest)      -- everything else that does not need approval.
+ 7. pytest (local)     -- unmarked/local tests; excludes corpus, browser and
+                          judged populations, which have separate authority.
 
 Class-D judged runs are NOT here and never will be: they cost money and need
 explicit per-run approval. `tools/check.py` must stay cheap enough that there is
@@ -37,8 +38,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 sys.path.insert(0, str(ROOT))
-from nm.domain.identity import source_fingerprint  # noqa: E402
 from tools._console import utf8_console  # noqa: E402
+from tools.evidence import (  # noqa: E402
+    CLASS_A_PYTEST_ARGS,
+    verification_fingerprint,
+)
 
 utf8_console()
 
@@ -124,7 +128,8 @@ def _why(proc: subprocess.CompletedProcess) -> str:
     ])
 
 
-def _scoped_verdict(failed: list[str], captured: dict[str, str]) -> int | None:
+def _scoped_verdict(failed: list[str], captured: dict[str, str],
+                    checked_digest: str) -> int | None:
     """A scoped build pass, or None to fall through to CHECK FAILED. BK-80-AC7.
 
     Returns 0 ONLY when every failing step failed for reasons this repository
@@ -144,7 +149,6 @@ def _scoped_verdict(failed: list[str], captured: dict[str, str]) -> int | None:
             load,
             observed,
             registry_digest,
-            unexplained,
         )
         rows = load()
     except Exception as exc:  # noqa: BLE001 -- a broken registry is not a pass
@@ -152,22 +156,20 @@ def _scoped_verdict(failed: list[str], captured: dict[str, str]) -> int | None:
         return None
 
     # A FAILING STEP WITH NO CAPTURED OUTPUT CANNOT BE EXPLAINED.
-    # Only the three steps whose output is captured can be reasoned about; any
-    # other failing step means the gate failed somewhere this control cannot
-    # see, and that is not a scoped pass.
+    # Only steps whose output is captured can be reasoned about. Any other
+    # failing step means the gate failed somewhere this control cannot see.
     blind = [name for name in failed if name not in captured]
     if blind:
         print(f"  (failing step(s) with no captured output: {', '.join(blind)})")
         return None
 
-    seen = {name: observed(name, text) for name, text in captured.items()}
+    seen = {
+        name: observed(name, text, failed=name in failed)
+        for name, text in captured.items()
+    }
     ran = set(captured)
     verdict = compare(rows, seen, ran)
 
-    for name in failed:
-        if unexplained(name, rows, seen[name]):
-            print(f"  ({name} failed for a reason the registry does not name)")
-            return None
     if not verdict.ok:
         for step_name, node in verdict.new:
             print(f"  NEW FAILURE in {step_name}: {node}")
@@ -186,7 +188,7 @@ def _scoped_verdict(failed: list[str], captured: dict[str, str]) -> int | None:
     try:
         from tools.gatestamp import record
 
-        record(kind="scoped", waived=verdict.matched,
+        record(checked_digest, kind="scoped", waived=verdict.matched,
                baseline=registry_digest())
     except Exception as exc:  # noqa: BLE001
         print(f"  (gate stamp not recorded: {type(exc).__name__}: {exc})")
@@ -233,7 +235,7 @@ def main() -> int:
     # WHAT IT STILL CANNOT SEE: a change made and undone entirely within one
     # stage. That is a narrower hole than the one it closes, and it is stated
     # here rather than left for someone to find.
-    prints: list[tuple[str, str]] = [("start", source_fingerprint())]
+    prints: list[tuple[str, str]] = [("start", verification_fingerprint())]
 
     #: Each step's output, so a failing gate can be asked WHICH failures
     #: occurred rather than only that some did. BK-80-AC7.
@@ -241,28 +243,31 @@ def main() -> int:
     results = []
     ok, _ = step("layercheck", [py, "tools/layercheck.py"])
     results.append(("layercheck", ok))
-    prints.append(("layercheck", source_fingerprint()))
+    prints.append(("layercheck", verification_fingerprint()))
     ok, _ = step("export_spec", [py, "tools/export_spec.py"])
     results.append(("export_spec", ok))
-    prints.append(("export_spec", source_fingerprint()))
+    prints.append(("export_spec", verification_fingerprint()))
     ok, out = step("trace", [py, "tools/trace.py", "--skip-regen"])
     captured["trace"] = out
     results.append(("trace", ok))
-    prints.append(("trace", source_fingerprint()))
+    prints.append(("trace", verification_fingerprint()))
     ok, _ = step("speccheck", [py, "tools/speccheck.py"])
     results.append(("speccheck", ok))
-    prints.append(("speccheck", source_fingerprint()))
+    prints.append(("speccheck", verification_fingerprint()))
     ok, out = step("ruff", [py, "-m", "ruff", "check", "nm", "tools", "tests"])
     captured["ruff"] = out
     results.append(("ruff", ok))
-    prints.append(("ruff", source_fingerprint()))
+    prints.append(("ruff", verification_fingerprint()))
     # The rename sweep. pyflakes does not find these, and a stale call site
     # after a rename raised NameError on every matter for weeks.
-    ok, _ = step("pylint E0601,E0606",
-                 [py, "-m", "pylint", "--disable=all", "--enable=E0601,E0606",
-                  "--score=n", "nm"])
+    ok, out = step(
+        "pylint E0601,E0606",
+        [py, "-m", "pylint", "--disable=all", "--enable=E0601,E0606",
+         "--score=n", "nm"],
+    )
+    captured["pylint"] = out
     results.append(("pylint", ok))
-    prints.append(("pylint", source_fingerprint()))
+    prints.append(("pylint", verification_fingerprint()))
     # NOT allow_warn, AND IT WAS FOR MONTHS WITH NO REASON GIVEN.
     #
     # class_a is the every-commit tier -- the logic checks. Letting it WARN
@@ -275,10 +280,13 @@ def main() -> int:
     #
     # An exemption someone typed is a decision; this one was typed by nobody
     # and explained by nothing.
-    ok, out = step("pytest -m class_a", [py, "-m", "pytest", "-m", "class_a", "-q"])
+    ok, out = step(
+        "pytest Class-A (offline every-commit)",
+        [py, "-m", "pytest", *CLASS_A_PYTEST_ARGS],
+    )
     captured["class_a"] = out
     results.append(("class_a", ok))
-    prints.append(("class_a", source_fingerprint()))
+    prints.append(("class_a", verification_fingerprint()))
     # `journey` IS EXCLUDED, AND THIS IS AN ADMITTED GAP RATHER THAN A TIDY
     # ONE. BK-30's browser suite needs a Chromium binary that `.[dev]` does
     # not install, and it starts a real HTTP server and a real browser for
@@ -297,11 +305,17 @@ def main() -> int:
     # _owners.py` and `tests/test_the_page_and_the_script_agree.py` are class_a
     # and DO run here -- they catch the two failure shapes that have actually
     # bitten, from the text alone.
-    ok, out = step("pytest (all local)",
-                   [py, "-m", "pytest", "-q", "-m", "not class_d and not journey"])
+    # CLASS C IS NOT AN ORDINARY LOCAL TEST. It can read the legal corpus or a
+    # live provider and its own marker says it runs on an ingest/index change.
+    # `not class_d and not journey` accidentally selected it on every build;
+    # a missing credential commonly made that look harmless by skipping. A
+    # skip caused by absent authority is not permission to enter the class.
+    ok, out = step("pytest (ordinary local)",
+                   [py, "-m", "pytest", "-q", "-m",
+                    "not class_c and not class_d and not journey"])
     captured["pytest"] = out
     results.append(("pytest", ok))
-    prints.append(("pytest", source_fingerprint()))
+    prints.append(("pytest", verification_fingerprint()))
 
     if args.slice is not None:
         # A SLICE DOES NOT CLOSE ON UNIT EVALS ALONE.
@@ -335,7 +349,7 @@ def main() -> int:
             print()
             results.append(("scenarios", False))
 
-    prints.append(("end", source_fingerprint()))
+    prints.append(("end", verification_fingerprint()))
     moved = [(a[0], b[0]) for a, b in zip(prints, prints[1:], strict=False)
              if a[1] != b[1]]
     if moved:
@@ -366,7 +380,7 @@ def main() -> int:
         # PASSING also blocks, because a waiver that outlives its defect
         # silently covers the next one -- the non-strict xfail hole, one level
         # up. See docs/backlog/known_failures.yaml.
-        scoped = _scoped_verdict(failed, captured)
+        scoped = _scoped_verdict(failed, captured, prints[-1][1])
         if scoped is not None:
             return scoped
         print(f"CHECK FAILED  -- {', '.join(failed)}")
@@ -382,7 +396,7 @@ def main() -> int:
     try:
         from tools.gatestamp import record
 
-        record()
+        record(prints[-1][1])
     except Exception as exc:  # noqa: BLE001 -- never fail a green gate on this
         # SAID, NOT SWALLOWED. A stamp that silently did not get written would
         # make every later check report `not_assessed` with no reason, which is

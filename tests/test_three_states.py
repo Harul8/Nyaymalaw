@@ -69,6 +69,17 @@ ESCAPES = (
 #: Enums that are CLOSED VOCABULARIES, not outcomes. Each with the reason it
 #: cannot be "not assessed" — because something always chose it.
 CLOSED: dict[str, str] = {
+    "Sink": (
+        "a destination vocabulary, not an outcome. There is no unknown sink a "
+        "dispatch could be sent to -- a route names where it is going or it is "
+        "refused before a sink is chosen, and that refusal lives in "
+        "`nm.domain.egress.refuse` rather than in this enum."),
+    "DataClass": (
+        "the unclassified state is the EMPTY SET, not a member. "
+        "`nm.domain.egress.refuse` refuses a dispatch declaring no data "
+        "classes at all -- an UNCLASSIFIED member would be a value a producer "
+        "could pick and dispatch under, which is the opposite of what the "
+        "absence means here."),
     "Section": "It FILES an element, it does not judge one. BK-37 files every "
                "line of an answer under the question it answers -- where this "
                "stands, time, what cuts against us, next step -- and every "

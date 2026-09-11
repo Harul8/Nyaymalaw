@@ -63,7 +63,13 @@ def test_structurally_valid_manual_attestation_is_not_machine_verified():
     assert record["id"] in labels["CHOICE-02"]
     assert labels["CHOICE-01"] == "no adoption record recorded"
     blockers = blueprint.readiness_blockers(contracts)
-    assert any("CHOICE-02" in line and "manual verification required" in line for line in blockers)
+    # BK-80-AC6 IS NOW IMPLEMENTED, so the criterion's own "until implemented,
+    # report it as not machine-resolved" clause no longer applies. What this
+    # test protects is unchanged and is asserted more sharply below: a record
+    # scoped to a PACKET gate must not authorise a DEPLOYMENT gate, and the
+    # reason must name which gate rather than abstaining about all of them.
+    assert any("CHOICE-02" in line and "out_of_scope" in line
+               for line in blockers), blockers
     assert not any("has not approved" in line for line in blockers)
     assert any("cannot authorise deployment" in line for line in blockers)
     # The proposal remains a proposal; populating a separate store does not
@@ -292,5 +298,9 @@ def test_cli_reports_unavailable_adoption_register_without_empty_success(tmp_pat
         assert "FAIL: approvals: register unavailable" in output
         assert "no adoption record recorded" not in output
         if command == "readiness":
-            assert "CHOICE-01: approval evaluation unavailable / manual verification required" in output
+            # UNREADABLE IS NOT EMPTY, and that is the whole point of this
+            # parametrisation. The wording moved when the resolver replaced the
+            # abstention; the distinction it exists to protect did not.
+            assert "CHOICE-01" in output and "unverified" in output, output
+            assert "unreadable" in output or "does not verify" in output
             assert "cannot authorise deployment" in output

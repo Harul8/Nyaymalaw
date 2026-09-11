@@ -51,6 +51,25 @@ class AccountBusy(RuntimeError):
     """A credential or recovery mutation currently owns this account."""
 
 
+class ProofRefused(RuntimeError):
+    """A fresh-authentication proof cannot authorise this replacement.
+
+    ONE EXCEPTION FOR EVERY CAUSE, on the same rule as `InvitationRefused`.
+    Expired, already spent, issued to another session, issued for another
+    advocate, and superseded by a credential or recovery change are five
+    different facts, and the caller learns none of them: a refusal that says
+    WHICH would tell a holder of a stolen session whether the account's
+    password has changed since they took it.
+
+    DECLARED HERE RATHER THAN IN THE DOMAIN because an exception is part of a
+    contract as much as a return type is, and the edge must be able to catch it
+    without knowing which adapter is live. `ReauthenticationProof.why_not`
+    returns the reason as a sentence for the operator log; turning that
+    sentence into this exception is the adapter's job, exactly as `Session.
+    why_not` becomes a bare `None` from `session()`.
+    """
+
+
 class DirectoryPort(Protocol):
     def issue_invitation(self, identity: AdvocateIdentity, issued_by: str,
                          now: datetime) -> str:
@@ -90,6 +109,52 @@ class DirectoryPort(Protocol):
     def recover(self, advocate_id: str, code: str, credential: Credential,
                 now: datetime) -> RecoveryResult:
         """Consume one recovery code, change credential and end sessions."""
+        ...
+
+    def account_security(self, advocate_id: str) -> int | None:
+        """The current recovery generation, or `None` when it cannot be read.
+
+        A counter and not a secret: it says how many times this advocate's own
+        recovery set has been replaced and nothing about the codes. A client
+        needs it so `rotate_recovery_codes` can compare against what the
+        advocate was actually shown rather than against the request's own echo.
+        """
+        ...
+
+    def reauthenticate(self, advocate_id: str, password: str,
+                       session_token: str, device: str,
+                       now: datetime) -> str | None:
+        """Prove the current password again, INSIDE this session. BK-31-AC20.
+
+        Returns the proof token ONCE, or `None` — and `None` covers a wrong
+        password, a session that is not live, a session belonging to somebody
+        else and a session presented from another device alike. A signed-in
+        advocate must not be able to use this to discover which.
+
+        The proof it mints is spendable once, expires in five minutes, is bound
+        to this session's fingerprint and carries both generation counters, so
+        anything that moves the credential or the recovery set underneath it
+        makes it unusable rather than merely old.
+        """
+        ...
+
+    def rotate_recovery_codes(self, advocate_id: str, proof_token: str,
+                              session_token: str, device: str,
+                              expected_recovery_generation: int,
+                              now: datetime) -> tuple[str, ...]:
+        """Replace the whole recovery set atomically. The new codes, once.
+
+        THE EXPECTED GENERATION IS THE RECOVERY ONE, NOT THE SESSION'S. A
+        rotation is a compare-and-set against the set being replaced; the
+        session version says nothing about whether that set moved. Raises
+        `ProofRefused` on any refusal and `AccountBusy` when another credential
+        or recovery mutation holds the account.
+
+        A LOST RESPONSE IS NOT RECOVERABLE, and that is the design. The codes
+        exist in the successful return value and nowhere else; an advocate who
+        loses it authenticates again and replaces the set again. There is no
+        read-back, because a read-back is a second place the plaintext lives.
+        """
         ...
 
     def open_session(self, advocate_id: str, device: str,

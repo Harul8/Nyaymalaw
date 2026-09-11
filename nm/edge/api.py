@@ -12,6 +12,8 @@ invariant-check, and commit.
 """
 from __future__ import annotations
 
+import hmac
+import os
 from datetime import date
 from pathlib import Path
 from typing import Annotated
@@ -24,14 +26,18 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
 from nm.domain import attempts, brief
 from nm.domain import summary as matter_memory
-from nm.domain.advocate import utcnow
+from nm.domain.advocate import (
+    REAUTHENTICATION_MINUTES,
+    csrf_token,
+    utcnow,
+)
 from nm.domain.answer import Answer
 from nm.domain.clock import FORUM
 from nm.domain.clock import today as forum_today
 from nm.domain.identity import source_fingerprint
 from nm.domain.traceability import implements
 from nm.edge.projections import board_projection, matter_list_projection
-from nm.ports.directory import AccountBusy
+from nm.ports.directory import AccountBusy, ProofRefused
 from nm.ports.store import StaleWrite
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -209,6 +215,94 @@ def signed_in(nm_session: str | None = Cookie(default=None),
 
 
 Advocate = Annotated[str, Depends(signed_in)]
+
+
+#: Origins this installation serves its own page from. Comma-separated. UNSET
+#: MEANS SAME-ORIGIN ONLY, which is the correct default for a product served
+#: with its own static page and needs no configuration to be right.
+_TRUSTED_ORIGINS = "NM_TRUSTED_ORIGINS"
+
+#: ONE REFUSAL FOR EVERY CSRF CAUSE. A missing header, a wrong header and a
+#: foreign origin are three facts and the caller learns none of them, on the
+#: same rule as every other refusal in this file.
+_CSRF_REFUSED = ("This request could not be verified as coming from the "
+                 "Nyaymalaw page in this browser. Reload the page and try "
+                 "again.")
+
+
+def _origins(request: Request) -> set[str]:
+    configured = (os.environ.get(_TRUSTED_ORIGINS) or "").strip()
+    if configured:
+        return {o.strip().rstrip("/") for o in configured.split(",") if o.strip()}
+    return {str(request.base_url).rstrip("/")}
+
+
+def csrf_protected(request: Request,
+                   nm_session: str | None = Cookie(default=None),
+                   x_nm_csrf: str | None = Header(default=None)) -> None:
+    """Refuse an unsafe cookie-authenticated request the page did not make.
+
+    BK-31-AC20. Until this existed the only thing between a signed-in advocate
+    and a cross-site write was `samesite=lax` on the session cookie -- one
+    control, owned by the browser rather than by us, absent in older clients
+    and no help at all against a same-site origin.
+
+    TWO CHECKS, BECAUSE EITHER ALONE FAILS OPEN SOMEWHERE.
+
+    The origin check is exact and same-origin by default. It refuses a request
+    that declares NO origin and no referer, which is the fail-closed choice: a
+    browser sends `Origin` on every cross-origin unsafe request, so an absent
+    one is either a same-origin request (which will also carry the header
+    below) or a client this endpoint has no reason to serve. An absent input
+    reading as permission is §9, and it is how most hand-written origin checks
+    are bypassed.
+
+    The token check is a double submit BOUND TO THE SESSION: the readable
+    cookie carries `sha256("nm-csrf:" + session token)`, page script echoes it
+    as a header, and the server recomputes it from the httponly session cookie
+    it received. A cross-site page can read neither cookie nor set the header,
+    and a token minted for one session cannot authorise a request carrying
+    another -- which a random per-user token would allow.
+    """
+    # NO SESSION COOKIE, NOTHING TO PROTECT, AND THE 401 IS THE HONEST ANSWER.
+    #
+    # A route-level dependency runs BEFORE the handler's own, so without this a
+    # caller with no session at all got 403 from here instead of 401 from
+    # `signed_in`. That is not a harmless swap: `web/app.js` keys its
+    # sign-out-and-restore behaviour on 401, and the contract test for the turn
+    # route asserts it.
+    #
+    # It is not a weakening either. CSRF is the risk that a browser ATTACHES
+    # CREDENTIALS the caller could not otherwise supply; with no session cookie
+    # there is no credential to ride and no privileged operation to reach --
+    # every route carrying this dependency also requires `Advocate`, which
+    # `tests/test_every_unsafe_route_is_csrf_protected` enforces so this
+    # sentence cannot quietly stop being true.
+    if not nm_session:
+        return
+
+    origin = (request.headers.get("origin") or "").rstrip("/")
+    referer = request.headers.get("referer") or ""
+    trusted = _origins(request)
+    if origin:
+        if origin not in trusted:
+            raise HTTPException(status_code=403, detail=_CSRF_REFUSED)
+    elif referer:
+        if not any(referer.startswith(o + "/") or referer.rstrip("/") == o
+                   for o in trusted):
+            raise HTTPException(status_code=403, detail=_CSRF_REFUSED)
+    else:
+        raise HTTPException(status_code=403, detail=_CSRF_REFUSED)
+
+    expected = csrf_token(nm_session or "")
+    if not x_nm_csrf or not hmac.compare_digest(x_nm_csrf, expected):
+        raise HTTPException(status_code=403, detail=_CSRF_REFUSED)
+
+
+#: Applied as a route dependency rather than at each call site, so a handler
+#: cannot forget to call it. `tests/test_every_unsafe_route_is_csrf_protected`
+#: draws its population from the router itself and fails on a new one.
+CsrfProtected = Depends(csrf_protected)
 
 
 class TurnRequest(BaseModel):
@@ -503,7 +597,7 @@ def matter_summary(matter_id: str, advocate_id: Advocate) -> dict:
     return matter_memory.build(m).as_dict()
 
 
-@app.post("/api/turn")
+@app.post("/api/turn", dependencies=[CsrfProtected])
 def turn(req: TurnRequest, advocate_id: Advocate) -> _Released:
     engine: TurnEngine = application().engine
     payload = TurnInput(
@@ -916,13 +1010,24 @@ def login(body: Credentials, request: Request, response: Response,
         response.set_cookie(name, value, httponly=True, samesite="lax",
                             secure=secure,
                             max_age=60 * 60 * 12, path="/")
+    # THE CSRF HALF, AND IT IS THE ONE COOKIE THAT MUST BE READABLE.
+    #
+    # `samesite=lax` already blocks a cross-site POST from carrying the session
+    # cookie in a current browser, and it was the only thing standing between a
+    # signed-in advocate and a cross-site request until now. It is one control,
+    # it is the browser's rather than ours, and it does not cover a same-site
+    # attacker or a client that predates it. `strict` here because this value
+    # has no top-level-navigation use at all.
+    response.set_cookie("nm_csrf", csrf_token(token), httponly=False,
+                        samesite="strict", secure=secure,
+                        max_age=60 * 60 * 12, path="/")
     result = {"advocate": identity.as_dict(), "workspace": _workspace(identity)}
     if recovery_codes:
         result["recovery_codes"] = list(recovery_codes)
     return result
 
 
-@app.post("/api/logout")
+@app.post("/api/logout", dependencies=[CsrfProtected])
 def logout(response: Response,
            nm_session: str | None = Cookie(default=None)) -> dict:
     """Ends the session server-side, THEN clears the cookie, and SAYS WHICH.
@@ -985,7 +1090,7 @@ def sessions(advocate_id: Advocate,
     return {"sessions": rows, "count": len(rows)}
 
 
-@app.post("/api/sessions/revoke")
+@app.post("/api/sessions/revoke", dependencies=[CsrfProtected])
 def revoke_sessions(advocate_id: Advocate,
                     nm_session: str | None = Cookie(default=None)) -> dict:
     """Sign out everywhere else. BK-31.
@@ -1017,7 +1122,112 @@ def whoami(advocate_id: Advocate) -> dict:
         # deleted or will not open; either way this session must stop working
         # now rather than at expiry.
         raise HTTPException(status_code=401, detail="not signed in")
-    return {"advocate": identity.as_dict(), "workspace": _workspace(identity)}
+    # THE CURRENT RECOVERY GENERATION, so a page can state what it was looking
+    # at when it asks to replace the set. BK-31-AC20.
+    #
+    # A COUNTER, NOT A SECRET: it says how many times this advocate's own codes
+    # have been replaced and nothing about their value. Without it the client
+    # would have to echo whatever the proof told it, which makes the
+    # compare-and-set agree with itself instead of with what the advocate saw.
+    directory = application().directory
+    reader = getattr(directory, "account_security", None)
+    generation = reader(advocate_id) if callable(reader) else None
+    return {"advocate": identity.as_dict(), "workspace": _workspace(identity),
+            # THREE STATES. `null` means this deployment's directory cannot say,
+            # which a client must treat as "do not attempt a rotation" rather
+            # than as generation zero.
+            "recovery_generation": generation}
+
+
+# ------------------------------------------- replacing the recovery codes ---
+
+
+class ReauthenticateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    password: str = Field(min_length=1, max_length=512)
+
+
+class RotateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    proof: str = Field(min_length=1, max_length=512)
+    #: THE GENERATION THE PAGE WAS LOOKING AT. Required, not optional: a
+    #: default would let a client that never read the current state replace a
+    #: set it has not seen, and "the caller did not say" would then be
+    #: indistinguishable from "the caller checked and it matched".
+    expected_recovery_generation: int = Field(ge=0)
+
+
+@app.post("/api/reauthenticate", dependencies=[CsrfProtected])
+def reauthenticate(body: ReauthenticateRequest, advocate_id: Advocate,
+                   nm_session: str | None = Cookie(default=None),
+                   nm_device: str | None = Cookie(default=None),
+                   user_agent: str | None = Header(default=None)) -> dict:
+    """Prove the current password again, inside this session. BK-31-AC20.
+
+    A SEPARATE STEP FROM THE ROTATION ON PURPOSE. Replacing the last-resort
+    credential on the strength of a session cookie alone means an unlocked
+    laptop is enough; requiring the password at the moment of the change is
+    what makes it a decision the advocate made.
+
+    401 FOR EVERY FAILURE, and the response says nothing about which. A signed
+    in advocate who could distinguish "wrong password" from "your session is
+    not valid here" has an oracle the rest of this file is built to deny them.
+    """
+    directory = application().directory
+    if not hasattr(directory, "reauthenticate"):
+        raise HTTPException(
+            status_code=501,
+            detail="this deployment's directory cannot re-authenticate")
+    proof = directory.reauthenticate(
+        advocate_id, body.password, nm_session or "",
+        _device(nm_device, user_agent), utcnow())
+    if not proof:
+        raise HTTPException(status_code=401, detail="that did not match")
+    # THE PROOF TRAVELS IN THE BODY, NOT A COOKIE. A cookie would ride along
+    # with every later request for its whole life; this is handed to the page,
+    # held in a variable, spent once and dropped.
+    return {"proof": proof, "expires_in_seconds": REAUTHENTICATION_MINUTES * 60}
+
+
+@app.post("/api/recovery-codes/rotate", dependencies=[CsrfProtected])
+def rotate_recovery_codes(body: RotateRequest, advocate_id: Advocate,
+                          nm_session: str | None = Cookie(default=None),
+                          nm_device: str | None = Cookie(default=None),
+                          user_agent: str | None = Header(default=None)) -> dict:
+    """Replace every recovery code at once. THE CODES ARE RETURNED ONCE.
+
+    D-013 promised this and nothing served it, so an advocate whose printed
+    codes had been seen had one route back: spend one of the compromised codes
+    to recover, leaving the other nine exactly as exposed.
+
+    THERE IS NO READ-BACK ENDPOINT AND THERE MUST NEVER BE ONE. These codes
+    exist in this response and nowhere else -- not on disk, not in the audit
+    line, not in a later `GET`. An advocate who loses this response
+    re-authenticates and replaces the set again, which is a minor inconvenience
+    and the only design in which a stolen store is not a stolen account.
+    """
+    directory = application().directory
+    if not hasattr(directory, "rotate_recovery_codes"):
+        raise HTTPException(
+            status_code=501,
+            detail="this deployment's directory cannot replace recovery codes")
+    try:
+        codes = directory.rotate_recovery_codes(
+            advocate_id, body.proof, nm_session or "",
+            _device(nm_device, user_agent),
+            body.expected_recovery_generation, utcnow())
+    except ProofRefused as refused:
+        # 409, NOT 403. The caller is authenticated and permitted; what failed
+        # is that the state they were acting on has moved or their proof is
+        # spent. A 403 here would read as "you may not do this", which sends
+        # the advocate to an administrator instead of to the retry that works.
+        raise HTTPException(status_code=409, detail=str(refused)) from None
+    except AccountBusy:
+        raise HTTPException(
+            status_code=409,
+            detail="another change to this account is in progress. "
+                   "Wait a moment and try again.") from None
+    return {"recovery_codes": list(codes), "replaced": len(codes)}
 
 
 # ------------------------------------------------------------------- static ---

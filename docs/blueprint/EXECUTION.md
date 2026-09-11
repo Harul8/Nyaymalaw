@@ -52,8 +52,10 @@ Use this order for each next change:
 
 ### Final pre-build controls — BK-89
 
-Keep the existing order. P01/P02 may start with isolated synthetic data; these
-corrections do not turn every approval into a whole-project prerequisite.
+Keep the existing order. P01's five bounded criteria are complete; P02 may
+continue with isolated synthetic data and P03 may now consume P01's scoped
+output. These corrections do not turn every approval into a whole-project
+prerequisite.
 
 | Obligation | Foundation / integration / final proof |
 |---|---|
@@ -87,7 +89,8 @@ this plan. Portfolio preparation can proceed alongside independent engineering.
 
 ### Bounded autonomy amendment — BK-90
 
-P01/P02 remain the first independent synthetic entry points. The new work
+P01 supplied the first independent synthetic control-plane output. P02 remains
+the access entry point and P03 is now eligible to consume P01. The new work
 extends the existing modular application; it does not require a rewrite or
 grant permission for a live-model run. Read [autonomy.json](autonomy.json) for
 the proposed task, result, claim, budget and comparison contracts.
@@ -131,18 +134,19 @@ to collapse distinct legal rules or replace missing evidence with an answer
 pattern. The design checker preserves these obligations, not their future
 semantic or runtime correctness.
 
-### Two changes that can start immediately
+### First bounded changes
 
-**P01 — truthful current-spec export and proof identity.** The current exporter
-reads `Status` from the historical workbook in `tools/export_spec.py:main`.
-Replace that source of present status with the registry's one current
-projection, preserving historical eval IDs and slice metadata explicitly.
-First write isolated tests: change a current feature while historical status
-remains `tested`; delete/duplicate a mapped feature; change an applicable PRD
-promise after proof. The result must follow current truth or fail, never
-restore the old claim. Compare the whole feature population and keep current
-substantive trace failures visible. This is not permission to downgrade the
-PRD so that old code passes. Follow P01's exact boundaries and rollback.
+**P01 — truthful current-spec export and proof identity — complete in its
+bounded scope.** Current feature state now comes only from the registry; August
+workbook status, eval IDs and slice metadata survive under explicit historical
+names. All 44 current and historical feature IDs are reconciled before an
+atomic six-output publication. The canonical checked-tree identity covers
+applicable promises and delivery relations while excluding generated verdicts,
+and exact known failures can issue only a scoped stamp that full-gate callers
+refuse. Bound Class-A controls prove current-versus-historical projection,
+missing/duplicate/unknown rows, promise mutation, zero populations, exact
+failure drift, staged-candidate identity and clean-CI dependencies. This does
+not close BK-80's P03 criteria, BK-48-AC3/P14, or any substantive trace gap.
 
 **P02 — signed-in recovery-code replacement.** The current directory port has
 `recover` and `ensure_recovery_codes`, but no authenticated replacement
@@ -161,9 +165,9 @@ it does not close the separate strong-authentication pilot requirement.
 ### Packet index
 
 IDs are stable labels, not a mandatory numerical sequence. In particular P19
-read-only source inventory can run alongside P01/P02, P42 maintains existing
-controls, and P43 records plan adoption. Follow the dependency graph, not a
-whole-module completion checklist.
+read-only source inventory can run alongside the active P02/P03 work, P42
+maintains existing controls, and P43 records plan adoption. Follow the
+dependency graph, not a whole-module completion checklist.
 
 | Packets | Bounded outcome |
 |---|---|
@@ -300,11 +304,12 @@ Consequently there is no M03 → M08 → M03 completion loop.
 
 ### Block 0 — reconcile promises and make demonstration claims honest
 
-Implement M00's narrow first slice. Resolve the current specification/export
-and evidence-identity work (BK-80); preserve the substantive refusal gaps for
-their implementation owners. Run the mapping checker and its planted controls.
-Prepare the fixture set below and a minimal operator proof surface (BK-82).
-Do not wait for a polished console before writing unit-tested domain work.
+P01 has completed M00's current specification/export, checked-tree identity and
+exact scoped-failure slice. Preserve its substantive trace gaps for their
+implementation owners. Next, P03 must complete the evidence-envelope,
+population, approval-authority and release-claim controls; P04/BK-82 supplies
+the minimal operator proof surface. Do not wait for a polished console before
+writing unit-tested domain work.
 
 In parallel, implement the scoped security foundation (BK-85) and prepare
 M05's read-only corpus inventory/manifest work (BK-84). An inventory must not
@@ -488,10 +493,10 @@ are limitations or failures, not successes.
 
 ## 7. M00 detailed engineering tasks
 
-1. Reconcile the real PRD/refusal and evidence export failures under BK-80 and
-   their legal/intake owners. Keep current status distinct from historical eval
-   metadata. Extend the fingerprint to the applicable design contracts without
-   including generated verdicts that invalidate themselves.
+1. **P01 complete:** current status is distinct from historical eval metadata;
+   applicable design contracts and delivery relations are in the checked-tree
+   identity; generated verdicts cannot invalidate themselves; exact unresolved
+   PRD/refusal gaps remain with their legal/intake owners.
 2. Implement BK-82's module/scenario registry and complete manifest validation
    in Class-A CI. Keep `status.yaml` authoritative; the module view should say
    which criteria are unproven rather than manufacture a ready flag.

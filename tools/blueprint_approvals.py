@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import SchemaError
@@ -156,12 +157,173 @@ def adoption_labels(store: dict | None, choices: dict) -> dict[str, str]:
     return labels
 
 
-def adoption_blockers(store: dict | None, choices: dict) -> list[str]:
-    """Presence-only report. Call after structural checks; never grants a gate.
+def adoption_blockers(store: dict | None, choices: dict,
+                      packets: dict | None = None, *,
+                      now: datetime | None = None) -> list[str]:
+    """What still stands between each CHOICE and the gate it governs.
 
-    Even a populated, perfectly shaped record is unverified. The checker does
-    not fetch signed artifacts, establish human authority, or evaluate scope.
+    BK-80-AC6 REPLACED THE ABSTENTION. This returned the same sentence for
+    every choice -- "this checker has not verified authority, scope, validity,
+    revocation or evidence" -- which was honest while nothing resolved and
+    became a permanent refusal to look once `resolve` existed.
+
+    It now reports the resolved state per choice and per gate the choice
+    declares it is required for, because an approval valid at a packet gate
+    says nothing about a deployment gate and reporting one line per choice
+    would have to pick one of them to be wrong about.
     """
-    return [f"{choice}: {label}; this checker has not verified authority, scope, "
-            "validity, revocation or evidence."
-            for choice, label in adoption_labels(store, choices).items()]
+    if packets is None:
+        # NOT ASSESSED, SAID AS A VALUE. Without the packet catalogue the scope
+        # half cannot be evaluated at all, and a resolver silently skipping it
+        # would report `valid` for an approval that names no packet.
+        return [f"{choice}: scope cannot be resolved without the packet "
+                f"catalogue; manual verification required"
+                for choice in sorted(row["id"] for row in choices["choices"])]
+    lines: list[str] = []
+    for choice in choices["choices"]:
+        for gate in choice.get("approval_required_for") or ["unspecified"]:
+            got = resolve(store, choices, packets,
+                          choice=choice["id"], gate=gate, now=now)
+            if not got.authorises:
+                lines.append(f"{choice['id']} at the {gate} gate: "
+                             f"{got.state} -- {got.why}")
+    return lines
+
+
+# ------------------------------------------------------------ resolution ---
+#
+# BK-80-AC6. Everything above is STRUCTURE: does this store parse, do its
+# references resolve, is its chronology coherent. None of it answers the
+# question a packet actually asks -- MAY THIS DECISION PROCEED -- and the
+# labels it produced said only "not machine-resolved" for every choice, which
+# was honest while nothing resolved and is a permanent abstention once
+# something can.
+#
+# SEVEN STATES, AND SIX OF THEM ARE REFUSALS. The criterion names them because
+# collapsing them loses the only information the reader can act on: `expired`
+# is renewed, `revoked` is not, `out_of_scope` means somebody approved a
+# different thing, and `stale` means the thing they approved has changed under
+# them. A boolean would send all four to the same place.
+#
+# THIS FUNCTION READS THE APPROVAL STORE AND NOTHING ELSE. It never consults a
+# measurement, an evaluation result or a proposal flag -- "resolve scoped
+# CHOICE adoption records separately from measurements" is the criterion's
+# first clause, and a resolver that could see a PASS would eventually be asked
+# to accept one.
+
+NOT_RECORDED = "not_recorded"
+UNVERIFIED = "unverified"
+VALID = "valid"
+STALE = "stale"
+EXPIRED = "expired"
+REVOKED = "revoked"
+OUT_OF_SCOPE = "out_of_scope"
+
+STATES = (NOT_RECORDED, UNVERIFIED, VALID, STALE, EXPIRED, REVOKED, OUT_OF_SCOPE)
+
+
+@dataclass(frozen=True)
+class Resolution:
+    """What the approval register says about one decision, at one gate."""
+
+    state: str
+    why: str
+    record: str | None = None
+
+    @property
+    def authorises(self) -> bool:
+        """ONLY `valid`. Every other state is a refusal that reads differently
+        to a person and identically to a gate."""
+        return self.state == VALID
+
+
+def resolve(store: dict | None, choices: dict, packets: dict, *,
+            choice: str, gate: str, packet: str | None = None,
+            proposal_sha256: str | None = None,
+            configuration: str | None = None,
+            now: datetime | None = None,
+            schema: dict | None = None) -> Resolution:
+    """The state of one CHOICE's adoption, for one gate and one packet."""
+    moment = now or datetime.now(timezone.utc)
+
+    if schema is not None:
+        structural = check_approvals(store, schema, choices, packets)
+        if structural:
+            return Resolution(
+                UNVERIFIED,
+                f"the adoption register does not verify: {structural[0]}")
+    if not isinstance(store, dict) or not isinstance(store.get("records"), list):
+        # UNVERIFIED, NOT NOT_RECORDED. An unreadable register is not an empty
+        # one, and reporting it as "nothing recorded" sends the reader to write
+        # an approval that may already exist.
+        return Resolution(UNVERIFIED,
+                          "the adoption register is unavailable or unreadable, "
+                          "which is not the same as no approval having been given")
+
+    superseded = {prior for row in store["records"]
+                  for prior in (row.get("supersedes") or [])}
+    candidates = [row for row in store["records"]
+                  if row.get("choice") == choice and row.get("id") not in superseded]
+    if not candidates:
+        return Resolution(NOT_RECORDED,
+                          f"no adoption record names {choice}")
+
+    row = max(candidates, key=lambda r: str(r.get("approved_at") or ""))
+    label = row.get("id")
+
+    for revocation in store.get("revocations") or []:
+        if (revocation.get("approval_id") == label
+                and _instant(revocation.get("effective_at")) <= moment):
+            return Resolution(REVOKED,
+                              f"{label} was revoked at "
+                              f"{revocation.get('effective_at')}: "
+                              f"{revocation.get('reason') or 'no reason recorded'}",
+                              label)
+
+    if _instant(row.get("valid_until")) <= moment:
+        return Resolution(EXPIRED,
+                          f"{label} expired at {row.get('valid_until')}", label)
+    if moment < _instant(row.get("effective_from")):
+        return Resolution(UNVERIFIED,
+                          f"{label} does not take effect until "
+                          f"{row.get('effective_from')}", label)
+
+    scope = row.get("scope") or {}
+    if scope.get("gate") != gate:
+        return Resolution(OUT_OF_SCOPE,
+                          f"{label} approves the {scope.get('gate')!r} gate and "
+                          f"this is {gate!r}", label)
+    if packet is not None and packet not in (scope.get("packets") or []):
+        return Resolution(OUT_OF_SCOPE,
+                          f"{label} does not name packet {packet}", label)
+
+    if proposal_sha256 is not None and row.get("proposal_sha256") != proposal_sha256:
+        return Resolution(STALE,
+                          f"{label} approved proposal "
+                          f"{row.get('proposal_sha256')} and the current "
+                          f"proposal is {proposal_sha256}", label)
+    if configuration is not None and scope.get("configuration") != configuration:
+        return Resolution(STALE,
+                          f"{label} approved configuration "
+                          f"{scope.get('configuration')!r} and this is "
+                          f"{configuration!r}", label)
+
+    if not (row.get("signed_record") or {}).get("sha256"):
+        return Resolution(UNVERIFIED,
+                          f"{label} carries no signed record", label)
+    qualified = [a for a in row.get("approvers") or []
+                 if str(a.get("authority_basis") or "").strip()
+                 and (a.get("authority_evidence") or {}).get("sha256")]
+    if not qualified:
+        return Resolution(UNVERIFIED,
+                          f"{label} names no approver whose authority is "
+                          f"stated and evidenced", label)
+    unmet = [c.get("id") for c in row.get("conditions") or []
+             if not (c.get("evidence") or {}).get("sha256")]
+    if unmet:
+        return Resolution(UNVERIFIED,
+                          f"{label} carries conditions with no evidence: "
+                          f"{', '.join(map(str, unmet))}", label)
+
+    return Resolution(VALID,
+                      f"{label} authorises {choice} at the {gate} gate", label)

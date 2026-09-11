@@ -465,13 +465,21 @@ def score(rows: list[dict], m: dict) -> Score:
               "" if not broken else
               f"The matrix and the code disagree on {', '.join(broken)}. The "
               f"matrix is what the advocate is told evaluates their matter.")
-        s.add("RG-12", PASS if not tr["inflated"] else FAIL,
-              f"{tr['evals_run']} evals have run; "
-              f"{len(tr['inflated'])} feature(s) claim `tested` on evals that "
-              f"never ran",
-              blocking("RG-12"),
-              "" if not tr["inflated"] else
-              f"{', '.join(tr['inflated'])} claim evidence that does not exist.")
+        assessment = tr["status_assessment"]
+        release_state = {
+            "PASS": PASS,
+            "FAIL": FAIL,
+            "NOT_ASSESSED": UNMEASURED,
+        }[assessment.state.value]
+        s.add(
+            "RG-12",
+            release_state,
+            f"{assessment.population} tested feature(s) assessed; "
+            f"{tr['evals_run']} evals have run; {len(assessment.issues)} "
+            "T3/T4 support issue(s)",
+            blocking("RG-12"),
+            "" if not assessment.issues else "; ".join(assessment.issues),
+        )
 
     # ---- RG-11: the suite bites, against THIS source -----------------------
     mu = measure_mutations()
@@ -604,33 +612,32 @@ def measure_trace() -> dict:
     known = {g["id"] for g in gates}
     orphan = sorted(set(consulted) - known)
 
-    # T3 / T4 -- status inflation. A feature at `tested` whose evals have
-    # never run is claiming evidence that does not exist.
+    # T3 / T4 -- one shared typed population result. Zero tested features is
+    # NOT_ASSESSED, and a tested feature with no declared eval is a failure.
     ran = set(tracer.recorded_runs()) if hasattr(tracer, "recorded_runs") else set()
     if not ran:
         results = ROOT / ".nm" / "eval_results.json"
         if results.exists():
             ran = set(json.loads(results.read_text(encoding="utf8"))
                       .get("evals_run", []))
-    # A ZERO POPULATION IS REPORTED, NOT PASSED OVER. BK-80-AC5 moved feature
-    # status to the current registry, where `tested` requires a complete
-    # delivering row with currently passing evidence -- and no feature reaches
-    # it today. This check therefore examines nothing and finds nothing
-    # inflated, which is correct and reads exactly like a clean result. The
-    # count travels with the verdict so a reader can tell the two apart.
-    inflated = []
-    claiming = 0
-    for f in features:
-        if (f.get("status") or "decided") != "tested":
-            continue
-        claiming += 1
-        declared = set(f.get("historical_eval_ids") or [])
-        if declared and not (declared & ran):
-            inflated.append(f["id"])
+    implementations = tracer.scan_tree(tracer.SRC, "implements")
+    impl_by_feature: dict[str, list[str]] = {}
+    for args, files in implementations.items():
+        for fid in args:
+            impl_by_feature.setdefault(str(fid), []).extend(files)
+    t3, t4 = tracer.assess_status_support(features, impl_by_feature, ran)
+    status_issues = (*t3.issues, *t4.issues)
+    status_assessment = tracer.assess_population(
+        "RG-12",
+        t4.population,
+        "tested feature(s) with implementation and evaluation support",
+        status_issues,
+    )
 
     return {"available": True, "unwired": unwired, "undeclared": undeclared,
-            "orphan_gates": orphan, "inflated": sorted(inflated),
-            "tested_population": claiming,
+            "orphan_gates": orphan, "inflated": list(t4.issues),
+            "tested_population": t4.population,
+            "status_assessment": status_assessment,
             "gates": len(gates), "evals_run": len(ran)}
 
 
