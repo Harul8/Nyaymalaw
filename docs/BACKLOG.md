@@ -4196,6 +4196,46 @@ candidate files remain unpublished. P20 must validate rights, review and source
 identity before publishing any candidate. Generated workbook reconciliation is
 deferred to integration with the user's concurrent foundation branch.
 
+### P44 scoped build and test record — 11 September 2026
+
+**Outcome: BUILT and locally tested, not published.** P44 now has a shared,
+versioned selection policy in `nm/knowledge/acquisition.py` and both acquisition
+entry points use it: `tools/fetch_judgments.py` for the sanctioned API path and
+`tools/scrape_judgments.py` for the one-time web exception path. The legacy
+`--min-cited-by` input is recorded by the web command but is no longer an
+eligibility filter. Citation count affects priority only inside an eligible
+source-year cohort; it cannot make an out-of-scope decision eligible and it
+cannot suppress a recent otherwise eligible decision merely because citations
+have not accumulated.
+
+**Quarantine and receipts.** `stage_acquisition` writes immutable run
+directories under staging, commits the receipt last, and refuses run-id reuse.
+Each receipt records the authorised scope, route, policy identity, planned and
+observed counts, accepted/rejected/unresolved decisions, artifact digests,
+source ids, failures, unexpected responses and the explicit state of every
+candidate: unknown rights, unreviewed legal status, candidate publication state
+and `published: false`. Unsupported policy identities are refused before
+staging, and tampered policy or scope metadata is refused during reconciliation.
+`tools/reconcile_acquisition.py` reads those receipts without publishing them
+and returns complete, partial, refused or not-assessed.
+
+**Evidence run.** Focused P19/P44 local evidence passed in the isolated
+worktree:
+`python -m pytest tests/test_legal_source_inventory.py tests/test_source_registry.py tests/test_judgment_acquisition.py tests/test_acquisition_receipts.py tests/test_three_states.py -q`
+reported 53 passed. Current-plan and production-reach tests reported 33 passed.
+Ruff on the touched acquisition files passed. A full-gate rerun on this final
+tree was not completed while a separate main-checkout Class-A run was already
+active; the last completed full-gate run on the branch reported **SCOPED BUILD
+PASS — FULL GATE RED** before the final policy-metadata hardening, with only
+declared/owned trace and planning-ruff failures remaining. This is
+synthetic/offline proof only: it made no paid API call, no live scrape, no
+full corpus scan, no publication and no browser claim.
+
+**Remaining limits.** BK-24 remains verification-partial until the isolated
+branch is integrated with the user's foundation branch and the combined tree is
+gated. P20 still owns publication, rights/legal review and active corpus
+cutover. BK-84 still needs qualified source/legal review for real coverage.
+
 Opened 7 September 2026, from the first real run. **The ingestion is stopped
 and is to be resumed once this is fixed.**
 

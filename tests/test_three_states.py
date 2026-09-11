@@ -69,6 +69,11 @@ ESCAPES = (
 #: Enums that are CLOSED VOCABULARIES, not outcomes. Each with the reason it
 #: cannot be "not assessed" — because something always chose it.
 CLOSED: dict[str, str] = {
+    "AcquisitionRoute": (
+        "the authorised transport named by an acquisition scope, not an "
+        "outcome. A run with no chosen API or web route is refused before "
+        "discovery; absence lives outside the route vocabulary and cannot "
+        "silently choose a network path."),
     "Sink": (
         "a destination vocabulary, not an outcome. There is no unknown sink a "
         "dispatch could be sent to -- a route names where it is going or it is "

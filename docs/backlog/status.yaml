@@ -674,22 +674,25 @@ items:
   title: the citation filter excludes exactly the years the corpus needs
   kind: substrate
   priority: P1
-  delivery_status: planned
-  implementation: none
-  verification: none
+  delivery_status: verifying
+  implementation: complete
+  verification: partial
   affects_phases:
   - D
   record: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs
+  next_action: integrate the isolated P44 engineering branch with the user's foundation branch, then let P20 perform rights/review/publication work before any live corpus use
   stage_records:
-    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs}
+    start: {result: READY, ref: docs/BACKLOG.md#p44-acquisition-foundation-start-record--11-september-2026}
+    build: {result: BUILT, ref: docs/BACKLOG.md#p44-scoped-build-and-test-record--11-september-2026}
+    test: {result: VERIFIED, ref: docs/BACKLOG.md#p44-scoped-build-and-test-record--11-september-2026}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs}
   acceptance:
   - id: BK-24-AC1
     requirement: "Judgment acquisition selection does not reject recent otherwise eligible decisions merely for low citation count and records source, recency and selection reasons"
     required_evidence: [integration_test, adversarial_test]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_judgment_acquisition.py::test_p44_integration_witness_covers_both_entrypoints_and_reconcile_command', note: 'Offline scripted transports exercise both acquisition entry points and the reconciliation command; no external download, scrape, corpus publication or browser route was run.'}
+      adversarial_test: {result: PASS, ref: 'tests/test_judgment_acquisition.py::test_p44_adversarial_witness_covers_bias_scope_and_receipt_guards', note: 'Counterexamples cover citation-age bias, ineligible popularity and receipt-state tampering; receipt corruption, escaped paths and request-budget exhaustion are also covered by focused P44 tests.'}
     negative_control:
       mutation: "offer equally relevant old and new decisions with zero citations on the new one"
       expected_failure: "the new decision is not excluded solely by citation age and the selection report names the governing rule"

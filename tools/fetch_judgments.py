@@ -62,7 +62,6 @@ the material that should not appear in an advocate's answer unreviewed.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import sys
@@ -70,11 +69,21 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
 sys.path.insert(0, str(ROOT))
+from nm.knowledge.acquisition import (  # noqa: E402
+    AcquiredArtifact,
+    AcquisitionRoute,
+    AcquisitionScope,
+    JudgmentCandidate,
+    SelectionState,
+    select_candidates,
+    stage_acquisition,
+)
 from tools._console import utf8_console  # noqa: E402
 
 utf8_console()
@@ -159,41 +168,43 @@ def document(docid: int) -> dict:
     return _post(f"/doc/{docid}/", {"maxcites": 50})
 
 
-def stage(year: int, docs: list[dict], query: str, doctype: str) -> Path:
-    """Write to quarantine with a manifest. NOTHING enters the corpus here."""
-    out = STAGING / str(year)
-    out.mkdir(parents=True, exist_ok=True)
-    manifest = []
-    for d in docs:
-        raw = json.dumps(d, ensure_ascii=False, indent=1)
-        digest = hashlib.sha256(raw.encode("utf8")).hexdigest()[:16]
-        name = f"IK_{year}_{d.get('tid') or d.get('docid')}_{digest}.json"
-        (out / name).write_text(raw, encoding="utf8")
-        manifest.append({
-            "file": name, "docid": d.get("tid") or d.get("docid"),
-            "title": d.get("title"), "sha256_16": digest,
-            "citedby": len(d.get("citedbyList") or []),
-        })
-    (out / "_manifest.json").write_text(json.dumps({
-        "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "source": "api.indiankanoon.org",
-        "query": query, "doctypes": doctype, "year": year,
-        "documents": len(manifest),
-        "promoted": False,
-        "note": "STAGED, NOT INGESTED. Promotion into legal_database is a "
-                "separate deliberate step.",
-        "items": manifest,
-    }, indent=2), encoding="utf8")
-    return out
+def source_date(document_row: dict) -> date | None:
+    """Read a stated API date; a query year is not invented as a judgment day."""
+    for key in ("publishdate", "publish_date", "judgmentdate", "doc_date", "date"):
+        raw = document_row.get(key)
+        if not isinstance(raw, str) or not raw.strip():
+            continue
+        for pattern in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%d %B %Y"):
+            try:
+                return datetime.strptime(raw.strip(), pattern).date()
+            except ValueError:
+                continue
+    return None
+
+
+def candidate(document_row: dict, *, doctype: str,
+              readable: bool = True) -> JudgmentCandidate:
+    docid = document_row.get("tid") or document_row.get("docid")
+    if docid is None:
+        raise ValueError("API candidate has no document identifier")
+    cited = document_row.get("citedbyList")
+    citation_count = len(cited) if isinstance(cited, list) else None
+    return JudgmentCandidate(
+        candidate_id=str(docid),
+        source="api.indiankanoon.org",
+        jurisdiction=doctype,
+        issuing_body=str(document_row.get("court") or doctype),
+        document_type=doctype,
+        source_url=f"{API}/doc/{docid}/",
+        source_date=source_date(document_row),
+        citation_count=citation_count,
+        readable=readable,
+    )
 
 
 def run(year: int, doctype: str, want: int, cap: int, delay: float,
-        query: str) -> int:
-    """Fetch one year, ranked by cited-by, within the cap.
-
-    Ranking is LOCAL because the API offers no citation sort. Every candidate
-    costs a metered call, so the cap is a real limit and not a formality.
-    """
+        query: str, authorization_id: str) -> int:
+    """Fetch one exact scope, then use the shared explainable selection rule."""
     to_month_day = "31-08" if year == 2026 else "31-12"
     fromdate, todate = f"01-01-{year}", f"{to_month_day}-{year}"
 
@@ -209,22 +220,56 @@ def run(year: int, doctype: str, want: int, cap: int, delay: float,
         time.sleep(delay)
 
     candidates = candidates[:cap]
-    enriched = []
+    observed: list[JudgmentCandidate] = []
+    documents: dict[str, dict] = {}
     for d in candidates:
         docid = d.get("tid") or d.get("docid")
         if docid is None:
             continue
         try:
-            enriched.append(document(int(docid)))
+            fetched = document(int(docid))
+            fetched.setdefault("tid", docid)
+            observed.append(candidate(fetched, doctype=doctype))
+            documents[str(docid)] = fetched
         except urllib.error.HTTPError as exc:
             print(f"    ! {docid}: HTTP {exc.code}", file=sys.stderr)
+            failed = dict(d)
+            failed.setdefault("tid", docid)
+            observed.append(candidate(failed, doctype=doctype, readable=False))
         time.sleep(delay)
-
-    enriched.sort(key=lambda d: len(d.get("citedbyList") or []), reverse=True)
-    kept = enriched[:want]
-    out = stage(year, kept, query, doctype)
-    print(f"  {year}: {len(kept)} staged (from {len(candidates)} candidates) -> {out}")
-    return len(kept)
+    scope = AcquisitionScope(
+        route=AcquisitionRoute.API,
+        source="api.indiankanoon.org",
+        jurisdiction=doctype,
+        document_types=(doctype,),
+        from_date=date(year, 1, 1),
+        to_date=date(year, 8, 31) if year == 2026 else date(year, 12, 31),
+        discovery_budget=cap,
+        selection_budget=min(want, cap),
+        authorization_id=authorization_id,
+    )
+    selection = select_candidates(scope, observed)
+    by_id = {row.candidate_id: row for row in observed}
+    artifacts = []
+    for candidate_id in selection.selected_ids:
+        source = by_id[candidate_id]
+        payload = json.dumps(
+            documents[candidate_id], ensure_ascii=False, indent=1,
+        ).encode("utf8")
+        artifacts.append(AcquiredArtifact(
+            candidate_id, source.canonical_source_id, source.source_url, payload,
+        ))
+    run_id = f"api-{year}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}"
+    out = stage_acquisition(
+        STAGING, run_id=run_id, scope=scope, selection=selection,
+        artifacts=artifacts, observed_at=datetime.now(timezone.utc),
+    )
+    selected = selection.count(SelectionState.SELECTED)
+    unresolved = selection.count(SelectionState.UNRESOLVED)
+    rejected = selection.count(SelectionState.REJECTED)
+    print(f"  {year}: {selected} staged, {unresolved} unresolved, "
+          f"{rejected} rejected from {len(observed)} observed -> {out}")
+    return selected
 
 
 def main() -> int:
@@ -232,6 +277,8 @@ def main() -> int:
     ap.add_argument("--plan", action="store_true",
                     help="show what would be requested; makes NO call")
     ap.add_argument("--run", action="store_true", help="actually fetch")
+    ap.add_argument("--authorization-id",
+                    help="approval record for this exact API scope and run")
     ap.add_argument("--year", type=int, action="append")
     ap.add_argument("--doctype", default=TELANGANA)
     ap.add_argument("--query", default="",
@@ -273,11 +320,13 @@ def main() -> int:
         print("\n  Re-run with --run to fetch.")
         return 0
 
+    if not (args.authorization_id or "").strip():
+        ap.error("--run requires --authorization-id for this exact scope")
     token()
     total = 0
     for year in years:
         total += run(year, args.doctype, args.per_year, args.cap, args.delay,
-                     args.query)
+                     args.query, args.authorization_id)
     print(f"\n  {total} judgments staged in {STAGING}")
     print("  NOTHING HAS ENTERED THE CORPUS. Review the staged manifests, then "
           "promote deliberately.")

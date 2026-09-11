@@ -66,13 +66,14 @@ UNWIRED: dict[str, str] = {
         "P07's per-matter data key. `nm.adapters.store.file_store` calls it "
         "when `_Cipher`'s single shared key is replaced; until then every "
         "matter still shares one key and this module changes nothing."),
-    "nm.knowledge.source_registry": (
-        "P19's non-serving source register. P20's controlled corpus cutover "
-        "will wire its approved readiness projection into the evidence "
-        "adapter; until then it may inventory and assess synthetic candidates "
-        "but cannot publish or affect a served turn. Its import of provenance "
-        "makes that older guard structurally reachable, not operationally "
-        "served, so this outer boundary owns the remaining wiring gap."),
+    "nm.knowledge.acquisition": (
+        "P44's non-serving acquisition staging boundary. P20's controlled "
+        "corpus cutover will consume only reviewed and permitted source "
+        "projections; until then acquisition may select synthetic candidates, "
+        "write receipts and reconcile quarantine state, but cannot publish or "
+        "affect a served turn. Its import of the P19 source register makes "
+        "that register structurally reachable, not operationally served, so "
+        "this outer boundary owns the remaining wiring gap."),
     "nm.core.premise": (
         "P22's legal-premise gate. `nm.core.limitation.compute` calls "
         "`assess()` before the arithmetic and `nm.core.turn` carries the "
@@ -241,7 +242,7 @@ OWNER: dict[str, tuple[str, ...]] = {
     "nm.domain.egress": ("I1",),
     "nm.adapters.store.envelope": ("I1",),
     "nm.core.premise": ("D2",),
-    "nm.knowledge.source_registry": ("D4",),
+    "nm.knowledge.acquisition": ("D4",),
     # BK-69's boundary belongs to the feature that will cross it. C6 is
     # document intake and extraction -- the media path -- so when C6 moves off
     # `implementation: none`, the status check above starts asking whether

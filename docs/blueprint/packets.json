@@ -3655,19 +3655,19 @@
         },
         {
           "path": "nm/knowledge/acquisition.py",
-          "kind": "planned"
+          "kind": "existing"
         },
         {
           "path": "tools/reconcile_acquisition.py",
-          "kind": "planned"
+          "kind": "existing"
         },
         {
           "path": "tests/test_judgment_acquisition.py",
-          "kind": "planned"
+          "kind": "existing"
         },
         {
           "path": "tests/test_acquisition_receipts.py",
-          "kind": "planned"
+          "kind": "existing"
         }
       ],
       "inputs": [
