@@ -59,6 +59,12 @@ markers = [
     # separately only because it starts a browser and cannot run in the
     # every-commit cadence.
     "journey: drives the real page in a browser. Needs `.[journey]`.",
+    # BK-83. NEEDS A REAL POSTGRESQL SERVER, named by NM_POSTGRES_DSN and
+    # owned by whoever runs it. Marked separately because it cannot run in the
+    # every-commit cadence and because a SKIP here is NOT a pass: a control in
+    # the Class-A tier refuses any BK-83-AC1 evidence claim while no run of
+    # this marker has been recorded.
+    "postgres: needs a disposable PostgreSQL instance. NM_POSTGRES_DSN.",
 ]
 
 [tool.ruff]

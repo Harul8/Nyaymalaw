@@ -131,6 +131,22 @@ CONTROLS: dict[str, str] = {
     # replaced were in tools/
     "test_only_one_module_writes_down_the_attributable_labels":
         "test_the_checker_can_actually_fail",
+    # a claim is never surrendered by a step that did not establish it --
+    # one owner for removing a name, over every module in nm/. The three
+    # second owners each decided for themselves what a failed removal meant,
+    # and one of them refused a legitimate enrolment.
+    "test_only_one_module_in_the_product_removes_a_name":
+        "test_the_removal_sweep_can_see_a_second_owner",
+    # BK-85-AC1 -- every sink is policed or declared absent, over the seven
+    # declared sinks. Four have no destination, so the sweep's real job is to
+    # notice one appearing; its control plants all four conditions at once.
+    "test_the_absent_sinks_are_still_absent":
+        "test_the_absence_check_can_see_every_destination_that_could_appear",
+    # BK-83 -- no database criterion is claimed while no run is recorded, over
+    # the criteria that need a real server. The population is small and the
+    # sweep's real job is to notice a hopeful edit, so its control forges one.
+    "test_no_database_criterion_is_claimed_while_no_run_is_recorded":
+        "test_the_check_can_see_a_claim_with_no_run_behind_it",
     # BK-17 -- no guard in nm/ is an assert, over every module
     "test_no_guard_in_the_product_is_an_assert":
         "test_the_assert_sweep_can_see_a_guard_it_would_delete",

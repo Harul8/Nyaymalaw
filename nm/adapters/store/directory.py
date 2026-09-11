@@ -31,6 +31,7 @@ from datetime import datetime
 from io import BufferedRandom
 from pathlib import Path
 
+from nm.adapters.store.cleanup import discard
 from nm.adapters.store.file_store import _Cipher
 from nm.domain.advocate import (
     AccountSecurity,
@@ -204,12 +205,22 @@ class FileDirectory:
             self._note(audit_key, "invitation refused: claim unavailable")
             raise InvitationRefused(_INVITATION_REFUSED) from None
 
-        try:
-            active.unlink()
-        except OSError:
-            used.unlink(missing_ok=True)
-            self._note(audit_key, "invitation refused: claim unavailable")
-            raise InvitationRefused(_INVITATION_REFUSED) from None
+        # THE CLAIM IS HELD FROM HERE, AND NOTHING BELOW MAY SURRENDER IT.
+        #
+        # Removing the active name is HYGIENE, not the claim. `used` is the
+        # sole authority on whether this fingerprint is spent -- nothing else
+        # in the product reads the active directory -- so a presentation that
+        # still finds the active record is refused by the exclusive create
+        # above regardless of whether this succeeded.
+        #
+        # It used to raise AND delete `used`, which un-spent a claim the other
+        # claimant had ALREADY been refused against: both callers were refused
+        # and the invitation went back on the door. On Windows that is not
+        # hypothetical -- removing a file another thread still holds open
+        # raises -- and `test_two_directory_instances_cannot_both_spend_one_
+        # invitation` caught it on the first of twenty attempts.
+        if not discard(active):
+            self._note(audit_key, "invitation claimed; active record retained")
 
         try:
             # The FILE, not the request, owns the identity that is saved.
@@ -220,10 +231,20 @@ class FileDirectory:
                        "invitation consumed: advocate already enrolled")
             raise
         except Exception:
-            # An I/O failure is not consumption. Restore the claim so the
-            # operator does not have to reissue after a transient disk error.
-            if used.exists() and not active.exists():
-                os.replace(used, active)
+            # An I/O failure is not consumption. NOTHING WAS DELIVERED here, so
+            # the claim is RELEASED rather than held, and exactly one live
+            # record is left behind -- whichever name survived the hygiene step
+            # above -- so the operator does not have to reissue after a
+            # transient disk error.
+            if active.exists():
+                discard(used)
+            else:
+                try:
+                    os.replace(used, active)
+                except OSError:
+                    self._note(audit_key,
+                               "enrolment failed and the invitation could not "
+                               "be restored; it must be reissued")
             raise
         self._note(invitation.identity.id, "invitation consumed and enrolled")
         return invitation.identity, codes
@@ -292,7 +313,10 @@ class FileDirectory:
                 os.fsync(handle.fileno())
             os.replace(temporary, path)
         finally:
-            temporary.unlink(missing_ok=True)
+            # The replace either happened or it did not; the temporary name
+            # decides nothing either way, so its removal may not raise over a
+            # write that succeeded.
+            discard(temporary)
 
     def enrol(self, enrolment: Enrolment) -> tuple[str, ...]:
         path = self._advocate_path(enrolment.identity.id)
@@ -335,7 +359,11 @@ class FileDirectory:
             # A failed first write must not leave a corrupt record that reads
             # as an enrolled advocate and locks out a corrected retry.
             if created:
-                path.unlink(missing_ok=True)
+                # A ROLLBACK, not housekeeping: the write is what failed, so
+                # nothing was delivered and the name must go. It still routes
+                # through `discard` so a failure here cannot replace the
+                # exception that says what actually went wrong.
+                discard(path)
             raise
         return codes
 

@@ -89,9 +89,9 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 - **BK-80** [A/B/C/D/E/F/G/H/I] evidence integrity and release claim enforcement — *in_progress* · P01's truthful current-spec, exact-failure and checked-tree identity scope is complete; P03 continues to own AC1, AC2, AC4 and AC6, so the item remains partial and unsigned
 - **BK-81** [A/B/C/D/E/F/G/H/I] India-only modular product and execution blueprint — *verifying* · obtain qualified design review and fresh full evidence after resolving the existing trace failures; no application or release claim is promoted
 - **BK-82** [A/B/C/D/E/F/G/H/I] module proof console and cumulative demonstration control — *in_progress* · build the isolated operator console and run-population controls; the mapping checker exists but does not prove the served console or production readiness
-- **BK-83** [A/B/C/D/E/F/G/H/I] transactional matter store and reversible migration — *planned* · complete the Start record and implement the bounded foundation with current negative and served-path proof
+- **BK-83** [A/B/C/D/E/F/G/H/I] transactional matter store and reversible migration — *planned* · Built 11 September 2026 and UNPROVEN against a database. P10's adapter, the operation/outbox contract and the version-conditional write exist behind the existing StorePort; P11's job lifecycle (leases, bounded retries, cancellation, permission rechecks, UNKNOWN reconciliation) and P12's migration rehearsal and rollback refusals are exercised against real stores. What is missing is a PostgreSQL server: install one plus psycopg and run `python -m pytest -m postgres`, then record the run. Until then AC1's integration_test stays NOT_RUN and tests/test_no_database_means_no_evidence.py fails the build on any claim to the contrary. AC3 also needs a production_measure, which no test can produce.
 - **BK-84** [A/C/D/E/F/G] versioned Indian legal corpus publication and coverage governance — *planned* · complete the Start record and implement the bounded foundation with current negative and served-path proof
-- **BK-85** [A/B/C/D/E/F/G/H/I] India-scoped key processor and security operations foundation — *planned* · complete the Start record and implement the bounded foundation with current negative and served-path proof
+- **BK-85** [A/B/C/D/E/F/G/H/I] India-scoped key processor and security operations foundation — *planned* · Start recorded 11 September 2026. The India applicability DRAFT was accepted and its sign-off particulars deferred by the user, which is an engineering unblock and NOT legal compliance or deployment approval: BK-85-AC3 stays NOT_RUN and its dependent packet and deployment gates stay closed. AC1 measured four of seven sinks with no live destination at all, so P06 polices the live ones and a product-derived sweep refuses a destination added to an unpoliced sink; AC2 wires the envelope into the matter store and replaces a hand-rolled keystream wrap with a vetted AEAD, and remains explicitly NOT KMS-backed evidence.
 - **BK-86** [A/B/C/D/E/F/G/H/I] strong authentication before confidential pilot — *planned* · agree the strong authentication and recovery assurance design before confidential pilot implementation
 - **BK-87** [A/B/C/D/E/F/G/H/I] execution readiness contracts and cross-plan reconciliation — *verifying* · retain the completed planning artifacts; resolve the existing product trace failures before publishing complete current Class-A evidence and final sign-off
 - **BK-88** [A/B/C/D/E/F/G/H/I] confidential path security and lifecycle integration — *planned* · prove the actual confidential path after the independent security, storage and media foundations
@@ -186,7 +186,40 @@ counterexamples are in `backlog/status.yaml`. Assigned W0 as foundations;
 no existing wave was moved. Module integration may occur in later waves,
 and foundation closure does not claim an end-to-end module is complete.
 
-**Stage record.** Start BLOCKED until the bounded design, ownership and exact proof population are reviewed; Build NOT_STARTED, Test NOT_RUN, Sign-off NOT_RUN. This does not prohibit synthetic design or isolated experimentation.
+**Stage record — Start READY, 11 September 2026.** Build OPEN, Test NOT_RUN, Sign-off NOT_RUN.
+
+*Measured baseline.* No PostgreSQL is reachable from tooling already present:
+no `psycopg`, `psycopg2` or `asyncpg`; no `psql`, `initdb`, `pg_ctl` or
+`postgres` on PATH or on disk; no Docker or Podman; and the WSL2 Ubuntu distro
+has no postgres packages installed. A disposable local cluster therefore
+cannot be started without an installation step. Separately, `nm/ports/store.py`
+has no operation or outbox concept at all, so AC1 is new contract surface and
+not an adapter swap. No job, lease or worker code exists for AC2. The only
+migration-shaped tool is `tools/rekey_matter_store.py`.
+
+*Bounded scope.* Build the operation/outbox contract and the PostgreSQL
+adapter behind the existing `StorePort`, with the integration suite written
+against a real server and selected by an explicit DSN. Build the durable job
+lifecycle (AC2) and the migration rehearsal (AC3) against the store contract
+so they are exercised by the existing adapter today and by PostgreSQL when one
+exists.
+
+*Excluded, explicitly.* BK-83-AC1's `integration_test` evidence stays NOT_RUN
+until a real PostgreSQL instance is available. SQLite, a mock or an in-memory
+double does not establish PostgreSQL integration and must never be recorded as
+though it did. The file store remains the sole live write authority; the
+PostgreSQL adapter is synthetic and shadow only. No production measure is
+claimed for AC3.
+
+*Proof population.* Positive — one accepted command produces exactly one
+version, one operation row and one outbox row, committed together. Negative —
+two writers from one version, a replayed idempotency key, a pooled connection
+reused under a second tenant, an interrupted migration and a rollback after
+target-only writes. Control — the absence of a database must surface as
+NOT_ASSESSED in the evidence, never as a pass or a silent skip.
+
+*Rollback.* The new adapter is never the live writer; discarding its named
+disposable schema removes it entirely.
 
 ## BK-84 — versioned Indian legal corpus publication and coverage governance
 
@@ -208,7 +241,44 @@ counterexamples are in `backlog/status.yaml`. Assigned W0 as foundations;
 no existing wave was moved. Module integration may occur in later waves,
 and foundation closure does not claim an end-to-end module is complete.
 
-**Stage record.** Start BLOCKED until the bounded design, ownership and exact proof population are reviewed; Build NOT_STARTED, Test NOT_RUN, Sign-off NOT_RUN. This does not prohibit synthetic design or isolated experimentation.
+**Stage record — Start READY, 11 September 2026.** Build OPEN, Test NOT_RUN, Sign-off NOT_RUN.
+
+*Measured baseline, read from the tree rather than recalled.* Seven sinks are
+declared in `nm/domain/egress.py`. Only three have a live destination: MODEL
+(`adapters/model/openai_adapter.py`, `scripted.py`), STORAGE
+(`adapters/store/file_store.py`, `directory.py`) and INDEX
+(`adapters/evidence/corpus.py`, `adapters/search/authority.py`,
+`knowledge/identity.py`). MEDIA exists as `domain/media.py` but is declared
+UNWIRED; BACKUP and SUPPORT have no implementation; `nm/obs/` contains only an
+empty `__init__.py`, so TELEMETRY has no destination either. MODEL is policed
+at the composition root. The other two live sinks are not.
+`adapters/store/envelope.py` is complete and imported by nothing, so every
+matter still shares one `NM_MATTER_KEY`.
+
+*Bounded scope.* AC1 — police the live STORAGE and INDEX sinks at their
+adapter boundaries, and add a control that derives the egress-point population
+FROM THE PRODUCT so a destination added to an unpoliced sink fails the build.
+AC2 — wire the envelope into the matter store and replace the hand-rolled
+keystream wrap with a vetted AEAD. Affected callers: `bootstrap/composition.py`
+and `adapters/store/directory.py` are the only product importers of
+`file_store`; the constructor signature is preserved because thirty-one tests
+and tools construct it.
+
+*Excluded, explicitly.* AC3 stays NOT_RUN: the applicability DRAFT was
+accepted and its sign-off particulars deferred, which unblocks engineering and
+is not legal compliance or deployment approval. AC4, AC5 and AC6 are not in
+this packet. The local key ring stays labelled NOT-KMS and is not evidence for
+a KMS-backed criterion. No production measure is claimed.
+
+*Proof population.* Positive — a permitted synthetic dispatch at each live
+sink actually reaches its destination. Negative — an unlisted processor at
+each live sink is refused before the destination is touched, with a
+content-free audit line. Control — the sweep is shown to catch a planted
+unpoliced destination, so an empty population cannot read as a pass.
+
+*Rollback.* Remove the wrapper from the composition root and the store reverts
+to its current behaviour; envelope records remain readable because the store
+reads both the legacy sealed form and the envelope form.
 
 ## BK-86 — strong authentication before confidential pilot
 

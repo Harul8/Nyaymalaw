@@ -1028,3 +1028,120 @@ have.
 P07 are therefore built on an unmet prerequisite. They are sound as mechanisms
 and cannot be signed off until that review lands and the CHOICE approvals are
 recorded.
+
+## D-036 — A claim is not surrendered by a step that did not establish it
+
+**The gate found it, not a review.** `test_two_directory_instances_cannot_both_
+spend_one_invitation` runs its race twenty times because *"one lucky pass is not
+evidence of exclusion"*, and on this run it failed on attempt 1 with both
+claimants refused. A probe of 200 standalone attempts reproduced it zero times,
+which is exactly why it survived every earlier gate: it is load-dependent.
+
+**What it was.** `accept_invitation` claims an invitation by exclusively
+creating the used record, then removes the active name — and answered a failure
+of *that removal* by deleting the used record and refusing. On Windows the
+removal genuinely fails: a file another thread still holds open cannot be
+unlinked. So the loser was refused by the exclusive create, the winner was
+refused by its own tidying, and the claim the loser had already been refused
+against was deleted underneath it.
+
+**The general form, stated without the site that exposed it:** *a claim that is
+already established is never surrendered by the failure of a step that did not
+establish it.* After a compare-and-set succeeds, every later step is either
+delivery — whose failure is a genuine rollback, because nothing was delivered —
+or housekeeping, whose failure must be recorded and tolerated.
+
+**The sweep.** Five removals exist in `nm/`, four of them call sites of this
+pattern, and three had their own idea of what a failed removal meant.
+`nm/adapters/store/cleanup.discard` is now the only place in the product
+permitted to remove a name, and
+`test_only_one_module_in_the_product_removes_a_name` fails the build on a
+second one. Two of the other three were the same shape one notch quieter: a
+cleanup in a `finally` that could raise over a write that had already
+succeeded, and a rollback that could replace the exception saying what actually
+went wrong.
+
+**Tolerated is not unrecorded.** A retained active record is written to the
+audit. A swallowed failure nobody can see is the absent-reads-as-success shape
+(§9), and this fix must not introduce it while removing another.
+
+**Verified by mutation.** With the old behaviour restored, six of the nine new
+tests fail; the two negative controls and the sweep's positive control pass
+either way, as they must.
+
+## D-037 — Sealing moved behind one owner, and the wrap became an AEAD
+
+**A hand-rolled keystream was reintroduced inside the module written to stop
+one.** `LocalKeyRing.wrap` XORed each data key with an HMAC output derived
+from (kek, generation, matter). That stream is deterministic, so two data keys
+wrapped for one matter under one generation reused it and the ciphertexts
+cancel to the XOR of the two keys. `file_store._Cipher` refuses that exact
+construction in writing, two modules away. Replaced with HKDF-SHA256 plus
+AES-GCM, a random nonce per wrap, and the matter binding as associated data.
+Verified by mutation: with the old construction restored, three of the new
+tests fail, including one that computes the cancellation as arithmetic.
+
+**The wrapped key lives in exactly one place.** The first wiring wrote it into
+every sealed record AND into a key record, which made rotating the
+key-encrypting key two populations to update — and whichever was missed would
+have been unreadable for good. Sealed records now carry format and matter and
+no key material.
+
+**`tools/rekey_matter_store.py` had become dangerous and was fixed with the
+same change.** Envelope and key records are both JSON, so its classifier filed
+them under "deliberately open, leave alone" — right for the ciphertext, fatal
+for the keys, and silent. It now rewraps the key records, walks `.nm/keys`
+beside `.nm/matters`, and verifies a rewrapped key by unwrapping it rather
+than by decrypting it with a cipher that never sealed it.
+
+## D-038 — Every live destination is policed; four sinks have none
+
+Seven sinks are declared and three have a live destination. MODEL was policed;
+STORAGE and INDEX now are, through one `Gatekeeper` shared by every wrapper so
+the decision exists once. MEDIA, BACKUP, SUPPORT and TELEMETRY have no
+destination at all, and that is recorded as absence WITH THE EVIDENCE OF IT,
+measured against the filesystem — `nm/obs/` holding nothing but an empty
+`__init__`, and so on — so growing a destination turns the build red instead of
+shipping unpoliced.
+
+**The port proxy is generic on purpose.** Hand-writing a wrapper for a
+fourteen-method port is fourteen chances to repeat the `embed` hole. The gated
+population is read from the Protocol, so a method added tomorrow is gated
+because it was declared.
+
+**Measured on the served path.** One advise turn produced six
+`egress REFUSED ... processor 'openai' is not in the reviewed inventory` lines
+and no client text in the audit. The turn recorded seven violations naming the
+refusal, established nothing, and asked a blocking question — a refused
+dispatch did not become the shape of a clean answer.
+
+## D-039 — P10 is built and unproven, and the registry says both
+
+No PostgreSQL server, client library, container runtime or WSL package exists
+on this machine, so no disposable cluster can be started from tooling already
+present. The adapter, the operation/outbox contract and the integration suite
+are written; the suite skips, and `tests/test_no_database_means_no_evidence.py`
+fails the build on any BK-83-AC1 evidence claim while no run is recorded.
+
+**A recording double is not integration evidence and the file that uses one
+says so in its first paragraph.** What it does establish, on every commit, is
+that every statement touching a tenant table names a workspace — a missing
+`WHERE workspace_id` is a cross-tenant read that looks exactly like a
+successful one, and no amount of local testing with one tenant finds it.
+
+## D-040 — What P11 and P12 claim, and what they do not
+
+**P11 claims at-least-once delivery with an idempotency key and an explicit
+UNKNOWN — never exactly-once.** Exactly-once external delivery does not exist
+over a network nobody controls, and a test holds that line in the source.
+`Outcome.UNKNOWN` is not retryable by construction rather than by a caller
+remembering. Its store is a reference implementation in memory: the lifecycle
+is proven, durability is not, and durability is P10's.
+
+**P12 rehearses and refuses.** A rollback after target-only writes is refused,
+so is one where the target is ahead on a shared matter, and so is one where
+reconciliation could not run — "we could not check" being the worst possible
+reason to proceed with an irreversible step. Two empty unreadable stores
+reconcile as NOT_ASSESSED and never as equal. The comparison is on decrypted
+content and key references, because two correct stores seal one matter to
+different bytes.

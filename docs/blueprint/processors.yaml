@@ -1,0 +1,78 @@
+# THE PROCESSORS THIS INSTALLATION MAY SEND MATTER MATERIAL TO. BK-85-AC1.
+#
+# Read by `nm/bootstrap/egress_policy.py` and enforced by the policed
+# wrappers in front of every live destination: `adapters/model/policed.py`
+# for the model, `adapters/store/policed.py` for the originals and
+# `adapters/search/policed.py` for the authority index.
+#
+# EMPTY PERMITS NOTHING, and an unlisted processor is unapproved rather than
+# unconsidered. That is deliberately inconvenient: an installation that has
+# recorded nothing refuses to call a model until somebody records what was
+# approved, which is the only moment anybody will.
+#
+# `approval_id` NAMES THE ADOPTION RECORD that admitted this processor, so a
+# reader can check it against `docs/blueprint/approvals.json` with
+# `tools/blueprint_approvals.py`. A row with no approval is refused by
+# `nm.domain.egress.refuse` -- an inventory entry is not a decision.
+#
+# `region` IS WHERE THE PROCESSOR OPERATES. Anything other than `in` needs a
+# named legal review under `approved_foreign_regions`, and
+# `docs/blueprint/SECURITY_PRIVACY.md` §2.6 records India-region storage as
+# this product's own policy and explicitly NOT a claim that the law requires
+# it. This file enforces the policy; it asserts nothing about the law.
+
+schema: 1
+
+#: EVERY ENTRY HERE IS IN-PROCESS. No third party has been approved, and
+#: that is a claim rather than an oversight: CHOICE-03 (processor and egress
+#: policy) and CHOICE-05 have no adoption record -- `tools/blueprint.py
+#: readiness` reports both as `not_recorded` -- so nothing outside this
+#: machine may receive matter material, and `openai` is refused today.
+#: The rows below record the destinations that DO exist, because an
+#: inventory can only refuse a route it was asked about.
+processors:
+  # IN-PROCESS, SO NOTHING LEAVES. `nm/adapters/model/scripted.py` answers from
+  # a dictionary in this process: no socket is opened, no region is crossed and
+  # no third party receives anything. It is recorded HERE rather than exempted
+  # by a branch in `PolicedModel`, because a code path that skips the policy for
+  # some providers is a code path somebody extends to one that does egress.
+  #
+  # It carries a real approval id for the same reason: an entry with none is
+  # refused, and an in-process adapter that slipped in with no decision behind
+  # it would be the one exception nobody reviewed.
+  - processor_id: scripted
+    region: in
+    purposes: [model]
+    data_classes: [operational, client_matter, restricted]
+    approval_id: IN-PROCESS-NO-EGRESS
+
+  # THE DISK THIS INSTALLATION RUNS ON. `nm/adapters/store/file_store.py` and
+  # `directory.py` write matters, transcripts and the roster to a local
+  # directory. That is a processor relationship with an answer -- the operator
+  # themselves -- and recording it is what lets the inventory REFUSE the day it
+  # becomes a bucket somewhere else. A sink nobody asks about cannot be denied.
+  #
+  # `backup` is listed with it because a copy of the originals is the same
+  # custody question, and splitting them would mean an approved store with an
+  # unapproved backup of the same bytes.
+  - processor_id: local-disk
+    region: in
+    purposes: [storage, backup]
+    data_classes: [operational, client_matter, restricted]
+    approval_id: IN-PROCESS-NO-EGRESS
+
+  # THE AUTHORITY INDEX, in this process, over a local SQLite file. The query
+  # carries what the advocate is working on, which is why the index is a sink
+  # at all -- the answer coming back is public law, and the question going out
+  # is not.
+  - processor_id: local-index
+    region: in
+    purposes: [index]
+    data_classes: [operational, client_matter, restricted]
+    approval_id: IN-PROCESS-NO-EGRESS
+
+#: Regions outside `in`, each with the legal review that admitted it. Empty is
+#: the correct default: a foreign processor is refused until a review names the
+#: region, and a boolean flag would be a switch somebody sets during an
+#: incident.
+approved_foreign_regions: {}

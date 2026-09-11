@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import secrets
 import shutil
 import sys
@@ -47,6 +48,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from nm.adapters.store.envelope import (  # noqa: E402
+    LocalKeyRing,
+    WrappedKey,
+)
 from nm.adapters.store.file_store import _Cipher  # noqa: E402
 from tools._console import utf8_console  # noqa: E402
 
@@ -55,6 +60,12 @@ utf8_console()
 SEALED = "sealed"
 OPEN = "open"
 UNREADABLE = "unreadable"
+#: A record sealed under its MATTER's data key. Its ciphertext is not
+#: re-encrypted by a rotation -- the key that changes is the one that wraps
+#: the data key, and that lives in a key record.
+ENVELOPE = "envelope"
+#: A wrapped data key. THIS is what a rotation rewrites.
+KEY_RECORD = "key_record"
 
 
 #: A Fernet token is version byte 0x80 base64-encoded, so every one of them
@@ -84,6 +95,14 @@ def classify(blob: bytes, old: _Cipher) -> str:
         return SEALED
     except Exception:                       # noqa: BLE001 -- classification
         pass
+    # ENVELOPES BEFORE THE TEXT TEST, and that order is the whole point. An
+    # envelope record and a key record are both JSON, so the "is it readable
+    # text?" question waves them through as deliberately open -- correct for
+    # the ciphertext, which a rotation must not touch, and FATAL for the key
+    # records, which are the only thing a rotation must touch.
+    kind = _envelope_kind(blob)
+    if kind is not None:
+        return kind
     if blob.lstrip()[:len(_FERNET_PREFIX)] == _FERNET_PREFIX:
         return UNREADABLE                   # sealed, but not with this key
     try:
@@ -91,6 +110,44 @@ def classify(blob: bytes, old: _Cipher) -> str:
         return OPEN
     except UnicodeDecodeError:
         return UNREADABLE
+
+
+def _envelope_kind(blob: bytes) -> str | None:
+    """ENVELOPE, KEY_RECORD, or None if these bytes are neither."""
+    head = blob[:96].lstrip()
+    if not head.startswith(b"{"):
+        return None
+    try:
+        doc = json.loads(blob.decode("utf8"))
+    except Exception:                       # noqa: BLE001 -- classification
+        return None
+    if not isinstance(doc, dict):
+        return None
+    if doc.get("envelope") == 1 and "ciphertext" in doc:
+        return ENVELOPE
+    if "key_ref" in doc and "matter_id" in doc:
+        return KEY_RECORD
+    return None
+
+
+def rewrap_key_records(paths: list[Path], old_seal: str,
+                       new_seal: str) -> list[tuple[Path, bytes]]:
+    """The new bytes for every key record, or raise before writing any.
+
+    ALL OR NOTHING, COMPUTED FIRST. A rotation that rewrapped half the records
+    would leave the other half openable only by a key the operator is about to
+    discard, and the failure surfaces later as an unreadable matter rather
+    than now as a failed rotation.
+    """
+    old_ring = LocalKeyRing(old_seal, kek_id="matter-store")
+    new_ring = LocalKeyRing(new_seal, kek_id="matter-store")
+    out: list[tuple[Path, bytes]] = []
+    for path in paths:
+        wrapped = WrappedKey.from_dict(json.loads(path.read_bytes()))
+        data_key = old_ring.unwrap(wrapped.matter_id, wrapped)
+        rewrapped = new_ring.wrap(wrapped.matter_id, data_key)
+        out.append((path, json.dumps(rewrapped.as_dict()).encode("utf8")))
+    return out
 
 
 def main() -> int:
@@ -121,14 +178,25 @@ def main() -> int:
         return 2
 
     old = _Cipher(old_key)
-    files = sorted(p for p in store.rglob("*") if p.is_file())
-    buckets: dict[str, list[Path]] = {SEALED: [], OPEN: [], UNREADABLE: []}
+    # THE KEY RECORDS LIVE BESIDE THE MATTERS, NOT INSIDE THEM. `--store`
+    # points at `.nm/matters`, and the wrapped data keys are at `.nm/keys`, so
+    # a walk of the store alone would rotate the seal and leave every data key
+    # wrapped under a key nobody holds. The whole store root is walked.
+    roots = [store]
+    keys_dir = store.parent / "keys"
+    if keys_dir.exists() and keys_dir not in roots:
+        roots.append(keys_dir)
+    files = sorted({p for root in roots for p in root.rglob("*") if p.is_file()})
+    buckets: dict[str, list[Path]] = {
+        SEALED: [], OPEN: [], UNREADABLE: [], ENVELOPE: [], KEY_RECORD: []}
     for p in files:
         buckets[classify(p.read_bytes(), old)].append(p)
 
     print(f"store   {store}")
     print(f"  files      {len(files)}")
     print(f"  sealed     {len(buckets[SEALED])}  (will be re-keyed)")
+    print(f"  envelopes  {len(buckets[ENVELOPE])}  (ciphertext untouched)")
+    print(f"  data keys  {len(buckets[KEY_RECORD])}  (will be rewrapped)")
     print(f"  open       {len(buckets[OPEN])}  (left exactly as they are)")
     print(f"  unreadable {len(buckets[UNREADABLE])}")
 
@@ -145,8 +213,8 @@ def main() -> int:
         print("\ndry run: nothing was written.")
         return 0
 
-    if not buckets[SEALED]:
-        print("\nnothing sealed to re-key.")
+    if not buckets[SEALED] and not buckets[KEY_RECORD]:
+        print("\nnothing sealed to re-key and no data keys to rewrap.")
         return 0
 
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -159,9 +227,16 @@ def main() -> int:
 
     rewritten = []
     try:
+        # COMPUTED BEFORE ANYTHING IS WRITTEN, so a key that will not unwrap
+        # stops the rotation while the store is still whole.
+        rewrapped = rewrap_key_records(
+            buckets[KEY_RECORD], old_key, new_key)
         for p in buckets[SEALED]:
             p.write_bytes(new.encrypt(old.decrypt(p.read_bytes())))
             rewritten.append(p)
+        for path, body in rewrapped:
+            path.write_bytes(body)
+            rewritten.append(path)
     except Exception as exc:                # noqa: BLE001
         print(f"\nFAILED after {len(rewritten)} file(s): {exc}",
               file=sys.stderr)
@@ -172,9 +247,19 @@ def main() -> int:
 
     # VERIFY BEFORE CLAIMING. Every rewritten file must open with the new key.
     bad = []
+    new_ring = LocalKeyRing(new_key, kek_id="matter-store")
     for p in rewritten:
         try:
-            new.decrypt(p.read_bytes())
+            body = p.read_bytes()
+            if _envelope_kind(body) == KEY_RECORD:
+                # A REWRAPPED KEY IS VERIFIED BY UNWRAPPING IT, not by
+                # decrypting the file: it is not sealed with the store cipher
+                # and never was, so `new.decrypt` would call every rotation a
+                # failure and restore a backup over a correct result.
+                wrapped = WrappedKey.from_dict(json.loads(body))
+                new_ring.unwrap(wrapped.matter_id, wrapped)
+            else:
+                new.decrypt(body)
         except Exception:                   # noqa: BLE001
             bad.append(p)
     if bad:

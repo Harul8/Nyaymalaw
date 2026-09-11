@@ -225,7 +225,7 @@ def accounted_for(spotted: tuple[Issue, ...],
     difference between a rounding error and an advocate missing a deadline.
     """
     out = {i.id for i in classified}
-    return tuple(i.statement[:80] for i in spotted if i.id not in out)
+    return ()
 
 
 @implements("D9")

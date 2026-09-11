@@ -3248,11 +3248,11 @@ items:
   verification: none
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration
-  next_action: complete the Start record and implement the bounded foundation with current negative and served-path proof
+  next_action: 'Built 11 September 2026 and UNPROVEN against a database. P10''s adapter, the operation/outbox contract and the version-conditional write exist behind the existing StorePort; P11''s job lifecycle (leases, bounded retries, cancellation, permission rechecks, UNKNOWN reconciliation) and P12''s migration rehearsal and rollback refusals are exercised against real stores. What is missing is a PostgreSQL server: install one plus psycopg and run `python -m pytest -m postgres`, then record the run. Until then AC1''s integration_test stays NOT_RUN and tests/test_no_database_means_no_evidence.py fails the build on any claim to the contrary. AC3 also needs a production_measure, which no test can produce.'
   stage_records:
-    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration}
+    start: {result: READY, ref: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration}
+    build: {result: BUILT, ref: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration}
+    test: {result: OPEN, ref: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration}
   acceptance:
   - id: BK-83-AC1
@@ -3322,11 +3322,11 @@ items:
   verification: none
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-85-india-scoped-key-processor-and-security-operations-foundation
-  next_action: complete the Start record and implement the bounded foundation with current negative and served-path proof
+  next_action: 'Start recorded 11 September 2026. The India applicability DRAFT was accepted and its sign-off particulars deferred by the user, which is an engineering unblock and NOT legal compliance or deployment approval: BK-85-AC3 stays NOT_RUN and its dependent packet and deployment gates stay closed. AC1 measured four of seven sinks with no live destination at all, so P06 polices the live ones and a product-derived sweep refuses a destination added to an unpoliced sink; AC2 wires the envelope into the matter store and replaces a hand-rolled keystream wrap with a vetted AEAD, and remains explicitly NOT KMS-backed evidence.'
   stage_records:
-    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-85-india-scoped-key-processor-and-security-operations-foundation}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-85-india-scoped-key-processor-and-security-operations-foundation}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-85-india-scoped-key-processor-and-security-operations-foundation}
+    start: {result: READY, ref: docs/BACKLOG.md#bk-85-india-scoped-key-processor-and-security-operations-foundation}
+    build: {result: BUILT, ref: docs/BACKLOG.md#bk-85-india-scoped-key-processor-and-security-operations-foundation}
+    test: {result: OPEN, ref: docs/BACKLOG.md#bk-85-india-scoped-key-processor-and-security-operations-foundation}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-85-india-scoped-key-processor-and-security-operations-foundation}
   acceptance:
   - id: BK-85-AC1

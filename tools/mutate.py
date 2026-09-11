@@ -574,10 +574,14 @@ MUTATIONS = [
      # proved only that the anchor matched.
      "test_a_one_word_case_fact_is_a_matter", "E-012"),
 
+    # P07 moved the seal behind `_seal`, which chooses this matter's own data
+    # key. The mutation is the same one -- write the record without sealing it
+    # -- and the anchor is the line that now does the sealing.
     ("matter state written in plaintext",
      "nm/adapters/store/file_store.py",
-     "        blob = self._cipher.encrypt(json.dumps(_enc(matter)).encode(\"utf8\"))",
-     "        blob = json.dumps(_enc(matter)).encode(\"utf8\")",
+     "            blob = self._seal(\n"
+     "                str(matter.id), json.dumps(_enc(matter)).encode(\"utf8\"))",
+     "            blob = json.dumps(_enc(matter)).encode(\"utf8\")",
      "test_matter_state_is_not_plaintext_on_disk", "E-011"),
 
     ("a replayed turn applied twice",

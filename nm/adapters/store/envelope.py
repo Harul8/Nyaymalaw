@@ -49,13 +49,24 @@ holding privileged client material.
 from __future__ import annotations
 
 import base64
-import hashlib
-import hmac
 import json
 import os
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timezone
+
+try:
+    from cryptography.exceptions import InvalidTag
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+except ImportError as _missing:  # pragma: no cover -- refused, not chosen
+    raise ImportError(
+        "nm.adapters.store.envelope needs `cryptography` for AES-GCM. There "
+        "is deliberately no fallback, because the fallback this module HAD "
+        "was a hand-rolled keystream -- which is the thing it was rewritten "
+        "to stop being."
+    ) from _missing
 
 from nm.domain.text import refuses_blank_text
 
@@ -128,7 +139,7 @@ class LocalKeyRing:
     and a rewrite scheduled after a deadline is a rewrite that does not happen.
     """
 
-    scheme = "local-hkdf(NOT-KMS)"
+    scheme = "local-hkdf-aesgcm(NOT-KMS)"
 
     def __init__(self, secret: str | None = None, *, kek_id: str = "local",
                  generation: int = 1, accepts: tuple[int, ...] = ()) -> None:
@@ -155,28 +166,60 @@ class LocalKeyRing:
         self.ref = KeyRef(kek_id, generation)
         self.accepts = tuple(sorted({generation, *accepts}))
 
+    @staticmethod
+    def _binding(kek_id: str, generation: int, matter_id: str) -> bytes:
+        """WHAT THIS WRAP IS FOR, as bytes. One definition, two uses.
+
+        It is the KDF's `info` AND the AEAD's associated data, so the matter
+        id is bound twice over: a wrapped key for matter A is opened with a
+        different key and authenticated against different data than matter B.
+        There is no check to forget, because the wrong key does not open it.
+        """
+        return f"nm-kek:{kek_id}:{generation}:{matter_id}".encode()
+
     def _derive(self, matter_id: str, generation: int) -> bytes:
         """The wrapping key for ONE matter under ONE generation.
 
-        The matter id is an input, not a label. That is what makes a wrapped
-        key for matter A useless against matter B -- there is no check to
-        forget, because the wrong key simply does not open it.
+        HKDF-SHA256, which is the standard construction for exactly this job:
+        turning one high-entropy secret into many independent subkeys.
         """
-        return hmac.new(
-            self._raw,
-            f"nm-kek:{self.ref.kek_id}:{generation}:{matter_id}".encode(),
-            hashlib.sha256).digest()
+        return HKDF(
+            algorithm=hashes.SHA256(), length=32, salt=None,
+            info=self._binding(self.ref.kek_id, generation, matter_id),
+        ).derive(self._raw)
 
     def wrap(self, matter_id: str, data_key: bytes,
              now: datetime | None = None) -> WrappedKey:
+        """AES-GCM WITH A FRESH NONCE. Never a keystream.
+
+        THE DEFECT THIS REPLACED, found by reading and not by a failure. The
+        first version XORed the data key with an HMAC output derived from
+        (kek, generation, matter). That stream is DETERMINISTIC, so wrapping
+        two different data keys for one matter under one generation reused it,
+        and the two ciphertexts XORed together cancel the stream and leave the
+        XOR of the two data keys.
+
+        `file_store._Cipher` refuses that exact construction, in writing, two
+        modules away -- *"Keystream XOR under a REUSED key is trivially
+        broken: two ciphertexts XORed together cancel the keystream"* -- and
+        it was reintroduced inside the module written to fix shared-key
+        exposure. That is CLAUDE.md section 1 measured on its own author:
+        stating a rule generally is not applying it generally, and the
+        population is every place the shape can occur.
+
+        So: a vetted AEAD, a random 96-bit nonce per wrap, and the binding as
+        associated data. Wrapping the same key twice now produces different
+        bytes, which is a property the old construction could not have had.
+        """
         if not (matter_id or "").strip():
             raise CrossMatterAccess("a data key cannot be wrapped for no matter")
-        stream = self._derive(matter_id, self.ref.generation)
-        sealed = bytes(a ^ b for a, b in zip(data_key, stream, strict=True))
-        tag = hmac.new(stream, sealed, hashlib.sha256).digest()[:16]
+        nonce = secrets.token_bytes(12)
+        sealed = AESGCM(self._derive(matter_id, self.ref.generation)).encrypt(
+            nonce, data_key,
+            self._binding(self.ref.kek_id, self.ref.generation, matter_id))
         return WrappedKey(
             matter_id=matter_id, key_ref=self.ref,
-            ciphertext=base64.b64encode(sealed + tag).decode("ascii"),
+            ciphertext=base64.b64encode(nonce + sealed).decode("ascii"),
             wrapped_at=(now or datetime.now(timezone.utc)).isoformat(
                 timespec="seconds"))
 
@@ -198,27 +241,33 @@ class LocalKeyRing:
             blob = base64.b64decode(wrapped.ciphertext, validate=True)
         except Exception as exc:  # noqa: BLE001 -- a corrupt blob is a disk
             raise WrappedKeyUnreadable("wrapped key is not decodable") from exc
-        if len(blob) < 17:
+        if len(blob) < 12 + 16 + 1:
             raise WrappedKeyUnreadable("wrapped key is truncated")
-        sealed, tag = blob[:-16], blob[-16:]
-        stream = self._derive(matter_id, wrapped.key_ref.generation)
-        if not hmac.compare_digest(
-                tag, hmac.new(stream, sealed, hashlib.sha256).digest()[:16]):
-            # THE ID IS AN INPUT TO THE DERIVATION, so a mismatch here is
-            # either the wrong matter or a tampered blob -- and the wrapped
-            # key states which matter it was made for, so we can say.
+        nonce, sealed = blob[:12], blob[12:]
+        try:
+            opened = AESGCM(
+                self._derive(matter_id, wrapped.key_ref.generation)
+            ).decrypt(nonce, sealed, self._binding(
+                wrapped.key_ref.kek_id, wrapped.key_ref.generation, matter_id))
+        except InvalidTag:
+            # THE ID IS AN INPUT TO BOTH THE DERIVATION AND THE AAD, so a
+            # failure here is either the wrong matter or a tampered blob --
+            # and the wrapped key states which matter it was made for, so we
+            # can say which. An operator who cannot tell them apart treats an
+            # attack as a bad disk and restores from backup.
             if wrapped.matter_id != matter_id:
                 raise CrossMatterAccess(
                     f"this key was wrapped for {wrapped.matter_id!r} and was "
-                    f"presented for {matter_id!r}")
-            raise WrappedKeyUnreadable("wrapped key does not authenticate")
+                    f"presented for {matter_id!r}") from None
+            raise WrappedKeyUnreadable(
+                "wrapped key does not authenticate") from None
         if wrapped.matter_id != matter_id:
             # Belt and braces: unreachable while the id is bound into the
             # derivation, and it stays here because a future KEK that binds
             # the id differently would otherwise silently lose this property.
             raise CrossMatterAccess(
                 f"this key was wrapped for {wrapped.matter_id!r}")
-        return bytes(a ^ b for a, b in zip(sealed, stream, strict=True))
+        return opened
 
     def rotated(self) -> LocalKeyRing:
         """The next generation. Re-wrapping is the caller's, and audited."""

@@ -32,6 +32,8 @@ from pathlib import Path
 from types import UnionType
 from typing import Union, get_args, get_origin, get_type_hints
 
+from nm.adapters.store.cleanup import discard
+from nm.adapters.store.sealing import MatterSealer, is_envelope
 from nm.domain.matter import (
     Fact,
     Matter,
@@ -228,7 +230,17 @@ def _matter(d: dict) -> Matter:
 _LOCK_TIMEOUT = 10.0
 _LOCK_POLL = 0.02
 
+
 _SEP = "__"
+
+
+#: The scheme name `_Cipher` reports when it fell back. The envelope is NOT
+#: built on that path: the opt-in exists so a developer with no `cryptography`
+#: wheel can run the suite, and dressing that in envelope encryption would
+#: make an explicitly insecure mode look like the secure one.
+_INSECURE = "xor-keystream(NOT-SECURE)"
+
+
 
 
 @implements("I1")
@@ -238,14 +250,61 @@ class FileMatterStore:
         self._matters = self._root / "matters"
         self._metrics = self._root / "metrics"
         self._transcripts = self._root / "transcripts"
+        self._keys = self._root / "keys"
         self._matters.mkdir(parents=True, exist_ok=True)
         self._metrics.mkdir(parents=True, exist_ok=True)
-        self._cipher = _Cipher(
-            key if key is not None else os.environ.get("NM_MATTER_KEY", ""))
+        seal = key if key is not None else os.environ.get("NM_MATTER_KEY", "")
+        self._cipher = _Cipher(seal)
+        # THE SEAL BECOMES A KEY-ENCRYPTING KEY. P07, BK-85-AC2.
+        #
+        # It used to BE the data key, so every matter on an installation was
+        # sealed with one value: a process that could read any matter could
+        # read all of them, and rotating the seal meant re-encrypting every
+        # matter or locking every advocate out. It did the second on 7
+        # September 2026.
+        #
+        # Now each matter has its own random data key, wrapped under this and
+        # never stored unwrapped. Rotation rewraps a few small records and
+        # touches no ciphertext, and scope is the wrap itself -- a wrapped key
+        # for one matter does not open another, enforced cryptographically
+        # rather than by a check somebody can forget.
+        self._sealer: MatterSealer | None = None
+        if self._cipher.scheme != _INSECURE:
+            self._sealer = MatterSealer(seal, self._keys)
 
     @property
     def scheme(self) -> str:
-        return self._cipher.scheme
+        """WHAT ACTUALLY SEALS THESE FILES, for `/api/health`.
+
+        Both halves, because they are two different keys doing two different
+        jobs and an operator reading one name would not know the other exists.
+        """
+        if self._sealer is None:
+            return self._cipher.scheme
+        return f"{self._cipher.scheme}+{self._sealer.scheme}"
+
+    # ------------------------------------------------------- the envelope ---
+
+    def _seal(self, matter_id: str, data: bytes) -> bytes:
+        if self._sealer is None:
+            return self._cipher.encrypt(data)
+        return self._sealer.seal(matter_id, data)
+
+    def _open(self, matter_id: str, blob: bytes) -> bytes:
+        """A sealed record, or one written before there were any.
+
+        THIS IS A FORMAT DISCRIMINATOR AND NOT A FALLBACK, and the difference
+        matters enough to say so. `docs/BASELINE.md` records what a silent
+        fallback with different behaviour costs -- the three-stores defect
+        wearing a helpful face -- and that is a fallback whose RECALL differs.
+        This one reads the same bytes either way and is decided by what the
+        record says it is, so a CORRUPT SEALED RECORD IS NEVER RETRIED AS
+        LEGACY: it raises, because a damaged record must not be reported as a
+        record of another kind that also would not open.
+        """
+        if self._sealer is None or not is_envelope(blob):
+            return self._cipher.decrypt(blob)
+        return self._sealer.open(str(matter_id), blob)
 
     def _path(self, matter_id: MatterId) -> Path:
         return self._matters / f"{matter_id}.nm"
@@ -254,7 +313,8 @@ class FileMatterStore:
         p = self._path(matter_id)
         if not p.exists():
             return None
-        return _matter(json.loads(self._cipher.decrypt(p.read_bytes()).decode("utf8")))
+        return _matter(json.loads(
+            self._open(str(matter_id), p.read_bytes()).decode("utf8")))
 
     def commit(self, matter: Matter, *, expected_version: int) -> Matter:
         """Write the matter, or refuse because the file moved underneath.
@@ -283,7 +343,8 @@ class FileMatterStore:
                         f"{current.version} while this turn was deriving. Re-derive "
                         f"against the current state rather than overwriting it."
                     )
-            blob = self._cipher.encrypt(json.dumps(_enc(matter)).encode("utf8"))
+            blob = self._seal(
+                str(matter.id), json.dumps(_enc(matter)).encode("utf8"))
             # Atomic: a crash mid-write leaves the previous file intact.
             fd, tmp = tempfile.mkstemp(dir=str(self._matters), suffix=".tmp")
             try:
@@ -293,7 +354,10 @@ class FileMatterStore:
                     os.fsync(fh.fileno())
                 os.replace(tmp, p)
             except BaseException:
-                Path(tmp).unlink(missing_ok=True)
+                # A ROLLBACK: the write failed, so the partial temporary must
+                # go. Routed through `discard` so a failure removing it cannot
+                # replace the exception that says what actually went wrong.
+                discard(Path(tmp))
                 raise
             return matter
 
@@ -335,13 +399,20 @@ class FileMatterStore:
                 fh.write(f"pid={os.getpid()} at={time.time():.3f}")
             yield
         finally:
-            lock.unlink(missing_ok=True)
+            # HOUSEKEEPING. The commit inside the block either happened or it
+            # did not, and releasing the lock does not change which -- so a
+            # failure here must never surface as a failed save the caller
+            # retries against a matter that was already written. A lock that
+            # could not be released stays, and the next writer's `StaleWrite`
+            # already names its holder.
+            discard(lock)
 
     def list_for(self, advocate_id: str) -> MatterList:
         out, unreadable = [], []
         for p in sorted(self._matters.glob("*.nm")):
             try:
-                m = _matter(json.loads(self._cipher.decrypt(p.read_bytes()).decode("utf8")))
+                m = _matter(json.loads(
+                    self._open(p.stem, p.read_bytes()).decode("utf8")))
             except Exception:  # noqa: BLE001 -- named, never swallowed
                 # One unreadable matter must not take the whole list down, and
                 # it must not VANISH either. It used to `continue` here with a
@@ -396,7 +467,8 @@ class FileMatterStore:
         self._transcripts.mkdir(parents=True, exist_ok=True)
         matter = str(transcript.get("matter_id") or "unattributed")
         path = self._transcripts / f"{matter}{_SEP}{transcript['turn_id']}.nm"
-        blob = self._cipher.encrypt(
+        blob = self._seal(
+            matter,
             json.dumps(transcript, indent=2, default=str).encode("utf8"))
         path.write_bytes(blob)
 
@@ -419,7 +491,8 @@ class FileMatterStore:
         for p in sorted(self._transcripts.glob(f"{matter_id}{_SEP}*.nm")):
             try:
                 out.append(json.loads(
-                    self._cipher.decrypt(p.read_bytes()).decode("utf8")))
+                    self._open(str(matter_id),
+                               p.read_bytes()).decode("utf8")))
             except Exception as exc:  # noqa: BLE001 -- reported, never dropped
                 out.append({"turn_id": p.name.split(_SEP, 1)[1][:-3],
                             "matter_id": matter_id, "unreadable": True,

@@ -36,6 +36,7 @@ control written to prevent its first.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -183,3 +184,61 @@ def audit_line(route: Route, reasons: list[str]) -> str:
             f"classes={sorted(c.value for c in route.data_classes)} "
             f"bytes={route.size_bytes}"
             + (f" because={reasons[0]}" if reasons else ""))
+
+
+class EgressRefused(RuntimeError):
+    """This dispatch was not permitted. NEVER converted into an answer.
+
+    It propagates. It is not caught at the boundary and turned into an empty
+    result, because a refused dispatch that returns the shape of a clean
+    result is the single most repeated defect in this codebase -- and here it
+    would be that defect holding privileged client material.
+    """
+
+
+@dataclass
+class Gatekeeper:
+    """The decision, once, for every sink.
+
+    WHY THIS IS NOT A METHOD ON EACH WRAPPER. `PolicedModel` had `_permit`
+    inline, and the moment a second sink needed the same three steps -- build
+    the route, refuse, audit -- there were two implementations of one decision.
+    That is the shape CLAUDE.md section 4 records, and the answer it gives is
+    not "keep them in sync" but "make the second copy impossible". So the
+    wrappers hold one of these and contribute only the thing they actually
+    know: which processor they are about to talk to, and how many bytes.
+
+    THE AUDIT RECORDS PERMITTED DISPATCHES TOO. An audit that keeps only
+    refusals cannot answer *where has this matter's material been sent*, which
+    is the question asked after an incident and not before one.
+    """
+
+    policy: Policy
+    audit: Callable[[str], None] | None = None
+    refused: list[str] = field(default_factory=list)
+    """Refusals this process has made. Counted so a policy that is refusing
+    everything reads as a number here rather than as an outage somebody
+    diagnoses from the other end."""
+
+    def permit(self, sink: Sink, processor_id: str,
+               data_classes: tuple[DataClass, ...], *, size_bytes: int = 0,
+               purpose: Sink | None = None) -> None:
+        """Raise unless the inventory admits this exact dispatch."""
+        route = Route(sink=sink, processor_id=processor_id,
+                      purpose=purpose or sink, data_classes=data_classes,
+                      size_bytes=size_bytes)
+        reasons = refuse(route, self.policy)
+        line = audit_line(route, reasons)
+        if self.audit is not None:
+            self.audit(line)
+        if not reasons:
+            return
+        self.refused.append(line)
+        # THE FIRST REASON AND THE ROUTE. Not the payload, not a fragment of
+        # it, not its first hundred characters -- the whole argument for
+        # deciding on the route is that the refusal can then say everything
+        # useful without quoting anything privileged.
+        raise EgressRefused(
+            f"this installation does not permit sending "
+            f"{sorted(c.value for c in data_classes)} to "
+            f"{processor_id!r} for {route.purpose.value}: {reasons[0]}")

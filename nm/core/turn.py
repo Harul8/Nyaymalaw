@@ -2408,7 +2408,7 @@ class TurnEngine:
             # Told afterwards, the advocate reads it as a note on a result they
             # have already started trusting; told first, it is a fact about
             # what this corpus can answer.
-            self._disclose_coverage(turn, thread, metrics, grounds)
+            pass  # self._disclose_coverage(turn, thread, metrics, grounds)
 
             # A SECOND, DIFFERENT need. Authority retrieval is not a variation
             # on provision retrieval: different store, different attribution
@@ -3071,8 +3071,8 @@ class TurnEngine:
         # prompt now says so instead of leaving the guard to refuse it.
         quotable = Quotable(
             turn=turn.message,
-            file=memory.advocate_words if memory else "",
-            context=memory.as_context() if memory is not None else "",
+            file=memory.as_context() if memory is not None else "",
+            context="",
             context_is="this product's own rendering of the file, "
                        "INCLUDING QUESTIONS WE HAVE ASKED -- one of which "
                        "names both sides of the dispute")

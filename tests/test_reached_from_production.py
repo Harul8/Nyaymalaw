@@ -55,17 +55,31 @@ ENTRY_POINTS: dict[str, str] = {
 #: behaviour does not, and the difference is invisible to every other check in
 #: this build.
 UNWIRED: dict[str, str] = {
-    # P06/P07/P22 built the mechanisms; wiring each is its own step, and these
-    # say WHICH step rather than leaving three modules that run on no turn.
-    "nm.domain.egress": (
-        "P06's pre-dispatch policy. `nm.bootstrap.composition` wires it in "
-        "front of every model, media and telemetry adapter -- which is the "
-        "same step that gives it a live processor inventory, and an inventory "
-        "needs the approvals P05 is waiting on."),
-    "nm.adapters.store.envelope": (
-        "P07's per-matter data key. `nm.adapters.store.file_store` calls it "
-        "when `_Cipher`'s single shared key is replaced; until then every "
-        "matter still shares one key and this module changes nothing."),
+    # P07/P22 built the mechanisms; wiring each is its own step, and these say
+    # WHICH step rather than leaving modules that run on no turn.
+    #
+    # `nm.domain.egress` WAS HERE AND IS NOT. P06 wired it into the composition
+    # root -- `PolicedModel` in front of `TracedModel` -- and
+    # `test_no_declaration_outlives_its_wiring` refused the stale declaration
+    # the moment it did. That is the build gate's third outcome applied one
+    # level up: a declaration that outlives what it was written for covers the
+    # next unwired module silently.
+    "nm.core.worker": (
+        "P11's job lifecycle. `nm.bootstrap.composition` runs it once the "
+        "store it reads owes work -- which needs P10's outbox, and P10 is "
+        "unproven for want of a PostgreSQL server. The lifecycle itself is "
+        "exercised end to end against a reference store; what is unproven is "
+        "that the rows survive a process death, not that the leases, retries "
+        "and reconciliation behave."),
+    "nm.adapters.store.postgres": (
+        "P10's transactional store, and DELIBERATELY not the live writer. "
+        "`nm.bootstrap.composition` wires it when BK-83-AC1 carries "
+        "integration evidence from a real server AND P12's migration "
+        "rehearsal has been run and approved -- two live writers is the "
+        "defect P12 exists to prevent, not a configuration option. No "
+        "PostgreSQL is reachable on this machine, so the adapter is built and "
+        "unproven, which `tests/test_no_database_means_no_evidence.py` keeps "
+        "the registry honest about."),
     "nm.knowledge.provenance": (
         "P19's source reliance check. `nm.adapters.evidence.corpus` calls "
         "`unresolved()` before a retrieved provision reaches the grounding "
@@ -238,6 +252,15 @@ OWNER: dict[str, tuple[str, ...]] = {
     # three modules that run on no turn.
     "nm.domain.egress": ("I1",),
     "nm.adapters.store.envelope": ("I1",),
+    # P10's transactional store serves the same persistence contract the
+    # file store does -- one matter, versioned and sealed -- so it is named
+    # against I1 rather than given a feature of its own. What it adds is
+    # atomicity across three records, which is a property of the write and
+    # not a new promise to the advocate.
+    "nm.adapters.store.postgres": ("I1",),
+    # P11's worker publishes what a turn accepted, so it serves the turn
+    # contract rather than a promise of its own.
+    "nm.core.worker": ("I1",),
     "nm.core.premise": ("D2",),
     "nm.knowledge.provenance": ("D4",),
     # BK-69's boundary belongs to the feature that will cross it. C6 is

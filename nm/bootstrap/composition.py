@@ -15,20 +15,35 @@ from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority
 from nm.adapters.knowledge.elements import CuratedElements
 from nm.adapters.model.config import ModelConfig, load, load_dotenv
 from nm.adapters.model.openai_adapter import OpenAIModelAdapter
+from nm.adapters.model.policed import PolicedModel
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.model.traced import TracedModel
+from nm.adapters.policed_port import PolicedPort
 from nm.adapters.search.authority import AuthorityIndexSearch
+from nm.adapters.search.policed import PolicedSearch
 from nm.adapters.store.directory import FileDirectory
 from nm.adapters.store.file_store import FileMatterStore
+from nm.bootstrap.egress_policy import egress_policy
 from nm.core.turn import TurnEngine
+from nm.domain.advocate import utcnow
 from nm.domain.clock import FORUM
+from nm.domain.egress import DataClass, Gatekeeper, Sink
 from nm.domain.gates import GATES, withholding
 from nm.knowledge.coverage import CoverageProfile
 from nm.knowledge.manifest import Manifest
 from nm.ports.directory import DirectoryPort
 from nm.ports.model import ModelPort, Tier
+from nm.ports.store import StorePort
 
 ROOT = Path(__file__).resolve().parents[2]
+
+#: WHICH RECORDED PROCESSOR EACH LOCAL DESTINATION IS. Named here, once,
+#: because the composition root is the only place that knows which adapter is
+#: real -- the same argument `build_model` already makes for providers. They
+#: must resolve in `docs/blueprint/processors.yaml` or the application refuses
+#: to start.
+STORAGE_PROCESSOR = "local-disk"
+INDEX_PROCESSOR = "local-index"
 
 
 def build_model(config: ModelConfig) -> ModelPort:
@@ -63,12 +78,41 @@ class Application:
             key = _ensure_local_key(self.root)
         _refuse_a_shared_seal(key)
 
-        self.store = store or FileMatterStore(
-            os.environ.get("NM_MATTER_STORE") or (self.root / ".nm"), key=key)
+        # ONE GATEKEEPER FOR EVERY SINK. The decision -- build the route,
+        # refuse, audit -- exists once; each wrapper contributes only what it
+        # alone knows, which is the processor it is about to talk to. Two
+        # implementations of one decision is the shape CLAUDE.md section 4
+        # records, and it is how a change described as global lands in half
+        # the product.
+        self._gate = Gatekeeper(policy=egress_policy(self.root),
+                                audit=self._egress_audit)
+        # EVERY LIVE DESTINATION IS ADMITTED BEFORE IT EXISTS. BK-85-AC1.
+        #
+        # `Sink.STORAGE` is a real sink even when the destination is this
+        # machine's own disk: recording it is what lets the inventory refuse
+        # the day it becomes a bucket in another region, and an inventory can
+        # only refuse a route it was asked about. An installation whose
+        # storage processor is unapproved therefore cannot be constructed at
+        # all, rather than failing at its first write with a store object
+        # somebody is already holding.
+        self.store = PolicedPort(
+            inner=store or FileMatterStore(
+                os.environ.get("NM_MATTER_STORE") or (self.root / ".nm"),
+                key=key),
+            gate=self._gate, port=StorePort, sink=Sink.STORAGE,
+            processor_id=STORAGE_PROCESSOR)
         # A1. THE SAME KEY AS THE MATTERS, and the same root. Two stores with
         # two keys is two things to configure and one of them to forget.
-        self.directory: DirectoryPort = directory or FileDirectory(
-            os.environ.get("NM_MATTER_STORE") or (self.root / ".nm"), key=key)
+        self.directory: DirectoryPort = PolicedPort(
+            inner=directory or FileDirectory(
+                os.environ.get("NM_MATTER_STORE") or (self.root / ".nm"),
+                key=key),
+            gate=self._gate, port=DirectoryPort, sink=Sink.STORAGE,
+            processor_id=STORAGE_PROCESSOR,
+            # THE ROSTER IS NOT A MATTER. It holds advocate identities and
+            # credential material, which is restricted rather than client
+            # matter, and saying so keeps the two separable in the audit.
+            data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
         self.evidence = evidence or CorpusEvidenceAdapter(
             os.environ.get("NM_CORPUS_DIR")
             or (self.root / "legal_database" / "vector_store"),
@@ -82,9 +126,14 @@ class Application:
         # and the evidence adapter came to hold different provision patterns
         # (CLAUDE.md §4) -- so the search surface takes the resolved path
         # rather than re-reading the environment.
-        self.search = search or AuthorityIndexSearch(
-            os.environ.get("NM_AUTHORITY_INDEX")
-            or default_authority_index(self.root))
+        # THE QUERY IS WHAT LEAVES. An advocate searching for authority types
+        # the substance of the matter into the box, so the text going TO the
+        # index is client material even though the law coming back is public.
+        self.search = PolicedSearch(
+            inner=search or AuthorityIndexSearch(
+                os.environ.get("NM_AUTHORITY_INDEX")
+                or default_authority_index(self.root)),
+            gate=self._gate, processor_id=INDEX_PROCESSOR)
         # EVERY MODEL CALL IS KEPT, and the wrapping happens HERE.
         #
         # `TurnMetrics` already counts the calls; it does not say which read
@@ -96,7 +145,17 @@ class Application:
         #
         # The trace rides in the TRANSCRIPT, which is sealed with the matter
         # cipher, because a prompt carries everything the advocate has said.
-        self.model = TracedModel(inner=model or build_model(self.config))
+        # THE POLICY IS IN FRONT OF THE PROVIDER, NOT BESIDE IT. BK-85-AC1.
+        #
+        # `TracedModel` records what was sent; `PolicedModel` decides whether
+        # it may be sent at all, and the order matters: a refused dispatch must
+        # never reach the provider, so the policy wraps the tracer rather than
+        # the other way round. The trace still records the attempt, because a
+        # refusal is exactly the call an operator wants to find later.
+        self.model = PolicedModel(
+            inner=TracedModel(inner=model or build_model(self.config)),
+            policy=self._gate.policy, audit=self._egress_audit,
+            gate=self._gate)
         self.coverage = CoverageProfile.load(self.root / "spec" / "coverage.yaml")
         # D5'S ELEMENT TABLE, WIRED. `nm.core` may not import `nm.knowledge`,
         # so the curated lists reach the turn through a port -- the same route
@@ -108,6 +167,26 @@ class Application:
         self.engine = TurnEngine(store=self.store, evidence=self.evidence,
                                  model=self.model, coverage=self.coverage,
                                  elements=self.elements)
+
+    def _egress_audit(self, line: str) -> None:
+        """One line per dispatch decision, beside the auth log.
+
+        CONTENT-FREE BY CONSTRUCTION, not by discipline: `audit_line` composes
+        the route, the reason and a byte count and has no access to the prompt
+        at all. A writer that could quote the payload would eventually be asked
+        to, for debugging, by somebody reasonable.
+
+        NEVER RAISES. An audit that can break a turn is worse than one that
+        misses a line -- the same rule `note_failure` already follows.
+        """
+        try:
+            path = self.root / ".nm" / "egress.log"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf8") as handle:
+                stamp = utcnow().isoformat(timespec="seconds")
+                handle.write(stamp + "\t" + line + "\n")
+        except OSError:
+            pass
 
     def health(self) -> dict:
         return {

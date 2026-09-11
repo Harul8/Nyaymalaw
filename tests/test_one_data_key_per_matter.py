@@ -209,3 +209,72 @@ def test_the_local_ring_says_it_is_not_a_kms():
     without doing the work."""
     assert "NOT-KMS" in LocalKeyRing.scheme
     assert "NOT a KMS" in (LocalKeyRing.__doc__ or "")
+
+
+# ==================== a wrap is never a deterministic stream ================
+
+def test_wrapping_one_key_twice_does_not_produce_the_same_bytes(ring):
+    """THE RULE, stated without the construction that broke it: a wrap must
+    not be a function of its inputs alone.
+
+    Deterministic encryption leaks equality -- two identical ciphertexts say
+    the two plaintexts are identical -- and when the determinism comes from a
+    reused keystream it leaks far more than that. A fresh nonce per wrap is
+    what makes this hold, and a future KEK that drops one fails here.
+    """
+    key = new_data_key()
+    first = ring.wrap("matter-A", key).ciphertext
+    second = ring.wrap("matter-A", key).ciphertext
+    assert first != second
+    assert ring.unwrap("matter-A", ring.wrap("matter-A", key)) == key
+
+
+def test_two_wraps_for_one_matter_do_not_cancel_to_the_two_data_keys(ring):
+    """THE CONCRETE BREAK, asserted as arithmetic rather than as a principle.
+
+    The replaced construction XORed the data key with a stream derived from
+    (kek, generation, matter). For one matter under one generation that stream
+    was identical, so `ct1 XOR ct2 == dk1 XOR dk2` -- an attacker holding two
+    wrapped keys learned the exact relationship between them without touching
+    the KEK. This computes that equality and requires it to be false.
+    """
+    import base64
+
+    one, two = new_data_key(), new_data_key()
+    left = base64.b64decode(ring.wrap("matter-A", one).ciphertext)
+    right = base64.b64decode(ring.wrap("matter-A", two).ciphertext)
+    expected = bytes(a ^ b for a, b in zip(one, two, strict=True))
+
+    for offset in range(0, max(1, min(len(left), len(right)) - len(expected) + 1)):
+        window = bytes(a ^ b for a, b in zip(left[offset:offset + len(expected)],
+                                             right[offset:offset + len(expected)],
+                                             strict=False))
+        assert window != expected, (
+            f"the two ciphertexts cancel at offset {offset} to the XOR of the "
+            f"two data keys, so the wrap is a reused keystream")
+
+
+def test_no_wrapping_path_xors_anything():
+    """THE SHAPE, REFUSED STRUCTURALLY rather than by substring.
+
+    Checked on the AST of the wrapping functions, not on their text: the
+    docstrings deliberately say "keystream" to explain what was replaced, and
+    a text scan would either trip on that or be softened until it caught
+    nothing. What is actually forbidden is the OPERATION, so that is what is
+    looked for.
+    """
+    import ast
+    import inspect
+
+    import nm.adapters.store.envelope as envelope
+
+    tree = ast.parse(inspect.getsource(envelope.LocalKeyRing))
+    guilty = [
+        node.lineno for node in ast.walk(tree)
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitXor)
+    ]
+    assert not guilty, (
+        f"the key ring XORs at lines {guilty}. A wrap is an AEAD call; a XOR "
+        f"in here is the reused keystream coming back.")
+    assert "AESGCM" in inspect.getsource(envelope.LocalKeyRing.wrap)
+    assert "NOT-KMS" in envelope.LocalKeyRing.scheme
