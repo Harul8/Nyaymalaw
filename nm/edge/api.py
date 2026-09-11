@@ -32,11 +32,24 @@ from nm.domain.advocate import (
     utcnow,
 )
 from nm.domain.answer import Answer
+from nm.domain.authority import Act, ActingAs, permits
 from nm.domain.clock import FORUM
 from nm.domain.clock import today as forum_today
+from nm.domain.commission import (
+    Commission,
+    Deadline,
+    Party,
+    WorkProduct,
+    material_changes,
+)
+from nm.domain.emergency import Declaration, latest
 from nm.domain.identity import source_fingerprint
 from nm.domain.traceability import implements
-from nm.edge.projections import board_projection, matter_list_projection
+from nm.edge.projections import (
+    board_projection,
+    cover_projection,
+    matter_list_projection,
+)
 from nm.ports.directory import AccountBusy, ProofRefused
 from nm.ports.store import StaleWrite
 
@@ -573,6 +586,407 @@ def matter(matter_id: str, advocate_id: Advocate) -> dict:
     # deadlines on this matter", which was false on every matter that had
     # ever been advised on.
     return board_projection(m, _register_of(m))
+
+
+@app.get("/api/matters/{matter_id}/cover")
+@implements("A1")
+def matter_cover(matter_id: str, advocate_id: Advocate) -> dict:
+    """THE COVER. BK-33-AC1.
+
+    Separate from the thread board because it answers a different question --
+    *what is this file and who is it for* rather than *where does each dispute
+    stand* -- and because giving the board a second subject would give its
+    arity rule a second bound.
+    """
+    m = _owned(matter_id, advocate_id)
+    return cover_projection(m, _register_of(m))
+
+
+@app.get("/api/matters/{matter_id}/casefile")
+def get_casefile(matter_id: str, advocate_id: Advocate) -> dict:
+    """THE ATTRIBUTED LIVING FILE. BK-64-AC1, J-4-AC1. P17.
+
+    A projection, holding nothing the matter does not: every entry carries its
+    certainty, its confirmation state, where in the original it came from, the
+    contradictions it is linked to and the version it superseded.
+
+    THE TWO CHECKS ARE SERVED WITH IT rather than run somewhere the advocate
+    cannot see. `repetition_upgrades` names any fact that reached DOCUMENTED
+    with no document to be documented by, and `one_dispute_stays_one` names a
+    statement recorded twice with two different answers. Both are normally
+    empty, and an empty list is the honest way to say so.
+    """
+    from nm.core.casefile import build, one_dispute_stays_one, repetition_upgrades
+
+    m = _owned(matter_id, advocate_id)
+    casefile = build(m)
+    casefile["repetition_upgrades"] = list(repetition_upgrades(m.facts or ()))
+    casefile["split_disputes"] = list(one_dispute_stays_one(casefile["live"]))
+    return casefile
+
+
+@app.get("/api/matters/{matter_id}/commission")
+def get_commission(matter_id: str, advocate_id: Advocate) -> dict:
+    """The current commission, its history and what it does not establish."""
+    m = _owned(matter_id, advocate_id)
+    current = Commission.from_stored(m.commission)
+    return {
+        "state": "ok",
+        "matter_id": m.id,
+        "commission": current.as_dict() if current else None,
+        # THE HISTORY IS SERVED, not kept for an audit nobody can reach. An
+        # advice given under version 1 was correct work under version 1, and
+        # a receiving advocate has to be able to see which version it was.
+        "history": [Commission.from_stored(h).as_dict()
+                    for h in (m.commission_history or ())
+                    if Commission.from_stored(h) is not None],
+        "refusals": [r for r in (m.authority_refusals or ())],
+    }
+
+
+@app.post("/api/matters/{matter_id}/commission", dependencies=[CsrfProtected])
+def set_commission(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
+    """Record or change what this advocate was instructed to do. BK-62-AC1.
+
+    THE AUTHORITY IS ASKED BEFORE ANYTHING IS WRITTEN, through the one policy
+    in `nm/domain/authority.py`. This route does not decide who may instruct;
+    it asks, and it records the answer either way -- because BK-63-AC1 requires
+    a refused operation to be refused AND RECORDED, and a 403 that leaves no
+    trace records nothing.
+
+    A MATERIAL CHANGE REOPENS WORK. `material_changes` names which fields
+    moved, and the response says so, so an advocate who widens the scope is
+    told which readiness state has reopened rather than discovering it later.
+    """
+    m = _owned(matter_id, advocate_id)
+    # TWO DIFFERENT QUESTIONS, and conflating them was the first draft's bug.
+    #
+    # (1) MAY THIS PERSON KEEP THE FILE? The advocate records what they were
+    #     instructed; that is their ordinary work and is `Act.RECORD`. Asking
+    #     `Act.INSTRUCT` here made an advocate unable to write down their own
+    #     instructions, which the served test caught.
+    acting_as = _capacity_of(m, advocate_id, body.get("acting_as"))
+    ruling = permits(advocate_id, acting_as, Act.RECORD)
+    if not ruling.authorises():
+        _record_refusal(m, ruling)
+        raise HTTPException(
+            status_code=403,
+            detail=(f"this instruction was not recorded: {ruling.why}"))
+
+    previous = Commission.from_stored(m.commission)
+    proposed = _commission_from(body, previous, advocate_id)
+
+    # (2) IS THE INSTRUCTION ATTRIBUTABLE? BK-63-AC1 asks that every material
+    #     instruction be attributable to an ALLOWED ROLE -- a question about
+    #     the party the commission names, not about the person typing. A
+    #     commission recording that a clerk instructed a change of scope is
+    #     not a record of an instruction; it is a record of a problem.
+    moved = material_changes(previous, proposed)
+    source = proposed.instructing
+    if moved and source is not None:
+        attributable = permits(source.party_id, source.capacity, Act.INSTRUCT)
+        if not attributable.authorises():
+            _record_refusal(m, attributable)
+            raise HTTPException(
+                status_code=403,
+                detail=(f"this instruction is not attributable to anyone who "
+                        f"could give it: {attributable.why} It is recorded on "
+                        f"the file that it was attempted."))
+
+    import dataclasses
+
+    history = tuple(m.commission_history or ())
+    if previous is not None:
+        history = (*history, previous.as_dict())
+    updated = dataclasses.replace(
+        m, commission=proposed.as_dict(), commission_history=history,
+        version=m.version + 1)
+    try:
+        application().store.commit(updated, expected_version=m.version)
+    except StaleWrite as moved_underneath:
+        raise HTTPException(status_code=409,
+                            detail=str(moved_underneath)) from None
+    return {
+        "state": "commission_recorded",
+        "matter_id": m.id,
+        "commission": proposed.as_dict(),
+        # WHAT THIS REOPENED. Empty is a real and common answer.
+        "material_changes": list(moved),
+        "reopened": bool(moved),
+        "unknowns": list(proposed.unknowns()),
+    }
+
+
+@app.post("/api/matters/{matter_id}/emergency", dependencies=[CsrfProtected])
+def declare_emergency(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
+    """Declare an emergency. BK-78-AC1.
+
+    IT BUYS PROTECTIVE OR REFERRAL GUIDANCE AND NOTHING ELSE, and the record
+    says so in the same words the screen module uses. What is persisted is the
+    actor, the basis, the screens that were outstanding AT THAT MOMENT and an
+    expiry -- because BK-78-AC2 requires the declaration and its expiry to
+    survive retry and re-entry, and a boolean survives neither.
+
+    A BASIS IS REQUIRED. A declaration with no basis is a switch, and a switch
+    is what this route must not become.
+    """
+    import dataclasses
+
+    m = _owned(matter_id, advocate_id)
+
+    # REVOCATION IS THIS ROUTE, NOT A SECOND PATH. A `/emergency/revoke` path
+    # existed here and was POST-only, so an unauthenticated GET answered 405
+    # instead of 401 -- which discloses that the endpoint exists. One path
+    # with a GET beside it cannot do that, and revocation is still a new
+    # record rather than an erasure.
+    if body.get("revoke"):
+        return _revoke_emergency(m, advocate_id)
+
+    basis = str(body.get("basis") or "").strip()
+    if not basis:
+        raise HTTPException(
+            status_code=400,
+            detail=("an emergency declaration needs its basis -- what the "
+                    "danger is. A declaration with no basis is a switch."))
+
+    outstanding = _outstanding_screens(m)
+    declared = Declaration.declare(
+        actor_id=advocate_id, basis=basis, outstanding=outstanding,
+        now=utcnow(), hours=int(body.get("hours") or 24))
+    updated = dataclasses.replace(
+        m, emergencies=(*(m.emergencies or ()), declared.as_dict()),
+        version=m.version + 1)
+    try:
+        application().store.commit(updated, expected_version=m.version)
+    except StaleWrite as moved:
+        raise HTTPException(status_code=409, detail=str(moved)) from None
+    return {
+        "state": "emergency_declared",
+        "matter_id": m.id,
+        "emergency": declared.as_dict(),
+        "said": declared.said(utcnow()),
+        "permits_substance": False,
+        "outstanding": list(outstanding),
+    }
+
+
+@app.get("/api/matters/{matter_id}/emergency")
+def get_emergency(matter_id: str, advocate_id: Advocate) -> dict:
+    """What governs NOW, and everything ever declared.
+
+    THE GOVERNING ONE IS COMPUTED FROM THE CLOCK rather than stored, so
+    re-entry two days later gets the true answer instead of the one that was
+    true when somebody last wrote a field.
+    """
+    m = _owned(matter_id, advocate_id)
+    now = utcnow()
+    governing = latest(m.emergencies or (), now)
+    history = [Declaration.from_stored(x) for x in (m.emergencies or ())]
+    return {
+        "state": "ok",
+        "matter_id": m.id,
+        "governing": governing.as_dict() if governing else None,
+        "said": (governing.said(now) if governing
+                 else "no emergency exception is live on this matter"),
+        # HISTORY IS KEPT AND SERVED. An expired declaration is evidence of
+        # why the file was handled as it was; only the permission lapsed.
+        "history": [
+            {**d.as_dict(), "state": d.state_at(now), "said": d.said(now)}
+            for d in history if d is not None],
+        "permits_substance": False,
+    }
+
+
+def _outstanding_screens(matter) -> tuple[str, ...]:
+    """Which screens are not clear RIGHT NOW, through the screen owner.
+
+    `nm/core/screens.unscreened` decides this. Recomputing it here would be
+    the second copy that P14's own brief forbids -- *use the existing
+    screening owner consistently* -- and the copy is where an incomplete
+    screen starts counting as good enough.
+    """
+    from nm.core.screens import unscreened
+
+    try:
+        return tuple(unscreened(tuple(matter.screens or ())))
+    except Exception:  # noqa: BLE001 -- an unreadable screen set is outstanding
+        return ("the screen set on this matter could not be read",)
+
+
+@app.get("/api/matters/{matter_id}/concede")
+def conceded(matter_id: str, advocate_id: Advocate) -> dict:
+    """What has been conceded on this matter, and what was refused.
+
+    THIS EXISTS SO THE PATH IS NOT POST-ONLY, and it earns its place: the
+    refused attempts were previously readable only through the commission
+    route, which is a strange place to look for them.
+    """
+    m = _owned(matter_id, advocate_id)
+    return {
+        "state": "ok",
+        "matter_id": m.id,
+        "refused": [r for r in (m.authority_refusals or ())
+                    if isinstance(r, dict) and r.get("act") == "concede"],
+    }
+
+
+def _revoke_emergency(matter, advocate_id: str) -> dict:
+    """End a live declaration early. A NEW RECORD, never an erasure."""
+    import dataclasses
+
+    now = utcnow()
+    governing = latest(matter.emergencies or (), now)
+    if governing is None:
+        raise HTTPException(
+            status_code=404,
+            detail="no emergency exception is live on this matter")
+    revoked = governing.revoke(advocate_id, now)
+    kept = [x for x in (matter.emergencies or ())
+            if Declaration.from_stored(x) != governing]
+    updated = dataclasses.replace(
+        matter, emergencies=(*kept, revoked.as_dict()),
+        version=matter.version + 1)
+    try:
+        application().store.commit(updated, expected_version=matter.version)
+    except StaleWrite as moved:
+        raise HTTPException(status_code=409, detail=str(moved)) from None
+    return {"state": "emergency_revoked", "matter_id": matter.id,
+            "said": revoked.said(now)}
+
+
+@app.post("/api/matters/{matter_id}/concede", dependencies=[CsrfProtected])
+def concede(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
+    """Give up a point. THE ACT THIS WHOLE PACKET EXISTS TO REFUSE WRONGLY.
+
+    Served so that the refusal is exercisable through the real surface rather
+    than only in a unit test: an advocate is `ADVISING`, and advising may not
+    concede however reasonable the concession looks.
+    """
+    m = _owned(matter_id, advocate_id)
+    acting_as = _capacity_of(m, advocate_id, body.get("acting_as"))
+    ruling = permits(advocate_id, acting_as, Act.CONCEDE)
+    if not ruling.authorises():
+        _record_refusal(m, ruling)
+        raise HTTPException(
+            status_code=403,
+            detail=(f"this concession was not made: {ruling.why} It is "
+                    f"recorded on the file that it was attempted."))
+    return {"state": "conceded", "matter_id": m.id,
+            "on": str(body.get("on") or "").strip()}
+
+
+def _owned(matter_id: str, advocate_id: str):
+    """The matter, or the same 404 whether it is absent or somebody else's."""
+    m = application().store.load(matter_id)
+    if m is None or m.advocate_id != advocate_id:
+        raise HTTPException(status_code=404, detail="no such matter")
+    return m
+
+
+def _capacity_of(matter, advocate_id: str, claimed) -> ActingAs:
+    """What this person is TO THIS MATTER. READ, NEVER TAKEN FROM THE REQUEST.
+
+    A caller that could name its own capacity could name `deciding` and
+    concede the client's case, which would make the whole policy decorative.
+    So the commission is the source: if it records this person as instructing
+    or deciding, that is their capacity; the signed-in advocate is otherwise
+    `ADVISING`; and a claimed capacity is accepted only when it NARROWS.
+    """
+    current = Commission.from_stored(matter.commission)
+    if current is not None:
+        for party in (current.deciding, current.instructing):
+            if party is not None and party.party_id == advocate_id:
+                return party.capacity
+    default = ActingAs.ADVISING
+    try:
+        asked = ActingAs(str(claimed)) if claimed else default
+    except ValueError:
+        return default
+    # NARROWING ONLY. `ASSISTING` is a smaller claim than `ADVISING` and an
+    # advocate may make it; anything wider is ignored rather than honoured.
+    return asked if asked is ActingAs.ASSISTING else default
+
+
+def _record_refusal(matter, ruling) -> None:
+    """Keep the attempt. NEVER FATAL -- a refusal that could not be written
+    down is still a refusal, and failing the request here would turn an audit
+    problem into an outage."""
+    import dataclasses
+
+    try:
+        line = {**ruling.as_dict(), "at": utcnow().isoformat(timespec="seconds")}
+        application().store.commit(
+            dataclasses.replace(
+                matter,
+                authority_refusals=(*(matter.authority_refusals or ()), line),
+                version=matter.version + 1),
+            expected_version=matter.version)
+    except Exception:  # noqa: BLE001 -- audit failure is not an outage
+        pass
+
+
+def _commission_from(body: dict, previous, recorded_by: str) -> "Commission":
+    """Build the next version from what was sent, keeping what was not.
+
+    A PATCH, NOT A REPLACE. An advocate correcting the deadline must not have
+    to resend the objective, and a field they omitted must not silently become
+    empty -- which would read as an instruction that said nothing.
+    """
+    base = previous or Commission()
+    deadline = base.deadline
+    sent = body.get("deadline")
+    if isinstance(sent, dict):
+        kind = str(sent.get("kind") or "unknown")
+        if kind == "date":
+            deadline = Deadline.on_date(
+                on=str(sent.get("on") or "").strip(),
+                basis=str(sent.get("basis") or "").strip())
+        elif kind == "none_applies":
+            deadline = Deadline.none_applies(
+                str(sent.get("reason") or "").strip()
+                or "the advocate recorded that none applies")
+        else:
+            deadline = Deadline.unknown(
+                str(sent.get("reason") or "").strip()
+                or "the advocate has not established it")
+
+    def party(key: str, fallback):
+        value = body.get(key)
+        if not isinstance(value, dict):
+            return fallback
+        try:
+            capacity = ActingAs(str(value.get("capacity") or "unknown"))
+        except ValueError:
+            capacity = ActingAs.UNKNOWN
+        return Party(
+            party_id=str(value.get("party_id") or "").strip() or "(unnamed)",
+            described_as=(str(value.get("described_as") or "").strip()
+                          or "(not described)"),
+            capacity=capacity)
+
+    try:
+        work = (WorkProduct(str(body["work_product"]))
+                if body.get("work_product") else base.work_product)
+    except ValueError:
+        work = base.work_product
+
+    fields = dict(
+        objective=str(body.get("objective", base.objective) or "").strip(),
+        work_product=work,
+        scope=str(body.get("scope", base.scope) or "").strip(),
+        exclusions=tuple(body.get("exclusions", base.exclusions) or ()),
+        instructing=party("instructing", base.instructing),
+        deciding=party("deciding", base.deciding),
+        forum=str(body.get("forum", base.forum) or "").strip(),
+        deadline=deadline,
+        constraints=tuple(body.get("constraints", base.constraints) or ()),
+        recorded_by=recorded_by,
+        recorded_at=utcnow().isoformat(timespec="seconds"),
+        because=str(body.get("because") or "").strip(),
+    )
+    if previous is None:
+        return Commission(version=1, **fields)
+    return previous.next_version(**fields)
 
 
 @app.get("/api/matters/{matter_id}/summary")

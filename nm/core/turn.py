@@ -2408,7 +2408,13 @@ class TurnEngine:
             # Told afterwards, the advocate reads it as a note on a result they
             # have already started trusting; told first, it is a fact about
             # what this corpus can answer.
-            pass  # self._disclose_coverage(turn, thread, metrics, grounds)
+            # RESTORED BY P14. The call was commented out in the
+            # foundation handoff, which left `_disclose_coverage`
+            # defined and reached by nothing -- so the coverage gate
+            # never fired and `test_no_declared_owner_is_dead` said
+            # the function was dead. A disclosure nobody makes is the
+            # absent-input defect on the control built to prevent it.
+            self._disclose_coverage(turn, thread, metrics, grounds)
 
             # A SECOND, DIFFERENT need. Authority retrieval is not a variation
             # on provision retrieval: different store, different attribution
@@ -3071,8 +3077,13 @@ class TurnEngine:
         # prompt now says so instead of leaving the guard to refuse it.
         quotable = Quotable(
             turn=turn.message,
-            file=memory.as_context() if memory is not None else "",
-            context="",
+            # RESTORED BY P14. The handoff swapped these two: the advocate's
+            # own words went into `context` and the product's rendering into
+            # `file`, which inverts what may be quoted. `Quotable` exists to
+            # keep the advocate's words quotable and this product's own
+            # rendering not, and the swap made the guard protect the wrong one.
+            file=memory.advocate_words if memory else "",
+            context=memory.as_context() if memory is not None else "",
             context_is="this product's own rendering of the file, "
                        "INCLUDING QUESTIONS WE HAVE ASKED -- one of which "
                        "names both sides of the dispute")

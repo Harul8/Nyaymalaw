@@ -224,8 +224,16 @@ def accounted_for(spotted: tuple[Issue, ...],
     limitation, bail and forum -- and which three were lost is the entire
     difference between a rounding error and an advocate missing a deadline.
     """
+    # RESTORED. This read `return ()` in the foundation handoff -- a debugging
+    # stub that made the conservation check report nothing lost, ever, which
+    # is the E-060 defect wearing the shape of its own control. `out` was left
+    # assigned and unused, which is how the linter found it.
+    #
+    # NOT OWNED BY P13-P17. It is restored here only because a red gate blocks
+    # every commit on this branch and the hook may not be bypassed; it is
+    # flagged as a shared-file consideration for the offline branch.
     out = {i.id for i in classified}
-    return ()
+    return tuple(i.statement[:80] for i in spotted if i.id not in out)
 
 
 @implements("D9")

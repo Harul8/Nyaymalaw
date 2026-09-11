@@ -59,6 +59,15 @@ REACHED_ELSEWHERE = {
     # the half that matters: an API nobody calls is not a feature, and the
     # first version of this row had exactly that.
     "sessions", "revoke_sessions",
+    # P13's four. Registered the same way, and with a BROWSER caller too --
+    # the cover and commission panels in `web/app.js`. The note above about
+    # `search` applies here in reverse: these have distinctive names, so the
+    # sweep sees them as dead and the declaration is what tells it otherwise.
+    "matter_cover", "get_commission", "set_commission", "concede",
+    # P14's three, registered the same way.
+    "declare_emergency", "get_emergency", "conceded",
+    # P17's projection, registered the same way.
+    "get_casefile",
     # `@implements` markers: their whole purpose is to be SCANNED by
     # tools/trace.py rather than called.
     "_implements_c4",

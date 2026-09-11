@@ -69,6 +69,22 @@ class ScreenState(str, Enum):
     NOT_ASSESSED = "not_assessed"
     """Did not run. Never renders as cleared (E-016, E-063c)."""
 
+    UNAVAILABLE = "unavailable"
+    """COULD NOT RUN -- the source it screens against could not be reached.
+
+    P14. Distinct from NOT_ASSESSED because the FIX DIFFERS, which is the only
+    reason any of these four are separate values: an unassessed screen needs
+    somebody to run it, and an unavailable one needs the registry back before
+    anybody can. Telling an advocate to run a screen whose source is down
+    sends them at the wrong problem.
+
+    Distinct from INCOMPLETE because that one READ SOMETHING. A partial answer
+    can sometimes be acted on; nothing cannot.
+
+    AND IT NEVER CLEARS, which is the property all three non-CLEAR states
+    share and the one this whole enum exists for.
+    """
+
 
 @refuses_blank_text()
 @dataclass(frozen=True)
@@ -181,35 +197,49 @@ class Screen:
 #: from `nm/domain/gates.py` fails at the call rather than quietly recording a
 #: state the matrix does not define.
 GATE_FOR: dict[ScreenKind, tuple[str, dict[ScreenState, str]]] = {
+    # `UNAVAILABLE` MAPS ONTO AN EXISTING GATE STATE RATHER THAN A NEW ONE.
+    # `nm/domain/gates.py` declares each gate's states and is not P14's to
+    # widen; G-CONFLICT's own condition already covers "the registry could not
+    # be read", so `incomplete` is the honest gate answer. The distinction
+    # between "nobody ran it" and "it could not run" is carried where it is
+    # acted on -- the screen's own state and detail -- and mapping it here
+    # EXPLICITLY rather than letting it fall through `table.get`'s default is
+    # the point: a new enum member silently defaulting is how a state nobody
+    # mapped starts reading as one somebody did.
     ScreenKind.EMERGENCY: ("G-EMERGENCY", {
         ScreenState.CLEAR: "resolved",
         ScreenState.BLOCKED: "live",
         ScreenState.INCOMPLETE: "not_assessed",
         ScreenState.NOT_ASSESSED: "not_assessed",
+        ScreenState.UNAVAILABLE: "not_assessed",
     }),
     ScreenKind.CONFLICT: ("G-CONFLICT", {
         ScreenState.CLEAR: "clear",
         ScreenState.BLOCKED: "matched",
         ScreenState.INCOMPLETE: "incomplete",
         ScreenState.NOT_ASSESSED: "not_run",
+        ScreenState.UNAVAILABLE: "incomplete",
     }),
     ScreenKind.COMPETENCE: ("G-COMPETENCE", {
         ScreenState.CLEAR: "covered",
         ScreenState.BLOCKED: "gap",
         ScreenState.INCOMPLETE: "not_assessed",
         ScreenState.NOT_ASSESSED: "not_assessed",
+        ScreenState.UNAVAILABLE: "not_assessed",
     }),
     ScreenKind.SCOPE: ("G-SCOPE", {
         ScreenState.CLEAR: "in_scope",
         ScreenState.BLOCKED: "unrecorded",
         ScreenState.INCOMPLETE: "unrecorded",
         ScreenState.NOT_ASSESSED: "unrecorded",
+        ScreenState.UNAVAILABLE: "unrecorded",
     }),
     ScreenKind.CAPACITY: ("G-CAPACITY", {
         ScreenState.CLEAR: "held",
         ScreenState.BLOCKED: "not_assessed",
         ScreenState.INCOMPLETE: "not_assessed",
         ScreenState.NOT_ASSESSED: "not_assessed",
+        ScreenState.UNAVAILABLE: "not_assessed",
     }),
 }
 
@@ -271,7 +301,13 @@ def may_admit_substance(screens: tuple[Screen, ...],
     most — but the exception is recorded as an exception, so the file never
     reads as though the screens had passed.
     """
-    blocking = ()
+    # RESTORED BY P14. This read `blocking = ()` in the foundation handoff --
+    # a debugging stub that made `unscreened` uncallable and turned the whole
+    # admission gate into a constant `True`. Every screen cleared, including
+    # the ones nobody had run. P14 owns this module and the ordinary-admission
+    # criterion it serves (BK-34-AC3), so restoring the call IS the packet's
+    # work rather than an unrelated fix carried alongside it.
+    blocking = unscreened(screens)
     if not blocking:
         return True, "every screen clears"
     if emergency:

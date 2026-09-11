@@ -268,3 +268,87 @@ def unbuildable(reason: str) -> dict:
     possible form.
     """
     return {"state": "unbuildable", "reason": reason, "matters": [], "row_count": 0}
+
+
+# ============================== the matter cover ============================
+#
+# BK-33-AC1. A THIRD PROJECTION, and the reason it is not one of the two
+# boards above is the arity rule those boards exist to protect: the cover is
+# bounded by NOTHING -- it is one matter, once. Adding it to either board
+# would give that board a second bound and the ordering rule a second subject.
+
+
+def _stage_of(matter: Matter) -> str:
+    """Where this file is, from what is persisted. NEVER GUESSED.
+
+    `opening` is what a file with no threads genuinely is, not a default
+    somebody chose because the field had to say something.
+    """
+    if not matter.threads:
+        return "opening"
+    if any(getattr(t, "blocked_reason", None) for t in matter.threads):
+        return "blocked"
+    return "advising"
+
+
+def cover_projection(matter: Matter, deadlines=None, today=None) -> dict:
+    """THE COVER. Client, title, posture, stage, last activity, deadline state.
+
+    EVERY FIELD IS EITHER PERSISTED OR SAYS IT IS NOT ASSESSED. BK-33-AC1's
+    whole subject is that an unassessed value must not be rendered as a fact,
+    and the two ways that happens are a blank that reads as "none" and an
+    implementation id that reads as a name. So:
+
+      * the client is what the ADVOCATE said, or `not recorded`
+      * the posture is `Role.UNKNOWN`'s own word, never a guess from the title
+      * the deadline carries its ASSESSMENT STATE, so `no deadline` and
+        `nobody has worked out the deadline` are different sentences
+      * `matter_id` is present and is never offered as the title
+
+    `deadlines=None` is honoured rather than defaulted, for the reason
+    `board_projection` gives directly above: a default here would report an
+    uncomputed register as a clean sheet on every call site that forgot one.
+    """
+    from nm.domain.commission import Commission
+    from nm.domain.engagement import from_stored as engagement_from_stored
+
+    engaged = engagement_from_stored(matter.engagement)
+    commission = Commission.from_stored(matter.commission)
+
+    client = (engaged.client if engaged and engaged.client else "")
+    posture = Role.UNKNOWN
+    for thread in matter.threads:
+        role = getattr(thread, "our_role", None)
+        if isinstance(role, Role) and role is not Role.UNKNOWN:
+            posture = role
+            break
+
+    deadline_state = "not_assessed"
+    deadline_said = "no deadline has been assessed on this matter"
+    if commission is not None:
+        deadline_state = ("assessed" if commission.deadline.assessed
+                          else "not_assessed")
+        deadline_said = commission.deadline.said()
+
+    return {
+        "state": "ok",
+        "matter_id": matter.id,
+        "title": matter.title,
+        "version": matter.version,
+        # NOT "" AND NOT THE MATTER ID. An empty client field reads as a file
+        # with no client; the id reads as a name nobody chose.
+        "client": client or None,
+        "client_state": "recorded" if client else "not_recorded",
+        "posture": posture.value,
+        "posture_state": ("recorded" if posture is not Role.UNKNOWN
+                          else "not_established"),
+        "stage": _stage_of(matter),
+        "last_activity": getattr(matter, "touched_at", "") or None,
+        "last_activity_state": ("recorded" if getattr(matter, "touched_at", "")
+                                else "not_recorded"),
+        "deadline_assessment": deadline_state,
+        "deadline_said": deadline_said,
+        "commission": commission.as_dict() if commission else None,
+        "commission_state": ("recorded" if commission else "not_recorded"),
+        "thread_count": len(matter.threads),
+    }

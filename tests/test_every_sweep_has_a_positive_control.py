@@ -147,6 +147,12 @@ CONTROLS: dict[str, str] = {
     # sweep's real job is to notice a hopeful edit, so its control forges one.
     "test_no_database_criterion_is_claimed_while_no_run_is_recorded":
         "test_the_check_can_see_a_claim_with_no_run_behind_it",
+    # BK-63-AC1 -- one module decides who may act, over every module in nm/.
+    # Four callers ask the question and the moment two answer it there are two
+    # answers; the control plants both assignment forms because the probe was
+    # blind to one of them.
+    "test_only_one_module_decides_who_may_act":
+        "test_the_sweep_can_see_a_second_decider",
     # BK-17 -- no guard in nm/ is an assert, over every module
     "test_no_guard_in_the_product_is_an_assert":
         "test_the_assert_sweep_can_see_a_guard_it_would_delete",

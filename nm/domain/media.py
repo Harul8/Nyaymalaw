@@ -181,7 +181,8 @@ def admitted(media_id: str, kind: MediaKind, *, purpose: str, authority: str,
              processors: tuple[Processor, ...] = (),
              retention: Retention = Retention.NOT_DECIDED,
              retain_until: date | None = None,
-             derived_from: str = "") -> MediaAdmission:
+             derived_from: str = "",
+             operations: tuple[str, ...] = ()) -> MediaAdmission:
     """Build an admission, REFUSING an incomplete one rather than repairing it.
 
     Every argument that could be defaulted into a safe-looking wrong answer is
@@ -201,6 +202,30 @@ def admitted(media_id: str, kind: MediaKind, *, purpose: str, authority: str,
             "an admission needs the authority it was taken on. 'The advocate' "
             "by default makes an unauthorised recording indistinguishable "
             "from an authorised one")
+    # THE PROCESSOR DECISION, CHECKED HERE. BK-69-AC3, P15.
+    #
+    # An admission that recorded a prohibited operation would be an approval
+    # of it: `MediaAdmission` is the only thing legal reasoning receives, so
+    # admitting material for voiceprint matching is how that inference reaches
+    # the file. `nm/domain/media_policy.py` owns the decision -- the lists are
+    # read from the blueprint contract -- and this asks it rather than
+    # restating it.
+    #
+    # AN EMPTY `operations` IS NOT CHECKED, deliberately: material admitted
+    # without any processing is the ordinary case (the advocate uploads a
+    # document and reads it themselves), and requiring an operation would
+    # force callers to name one they are not performing.
+    if operations:
+        from nm.domain.media_policy import Route, refuse_request
+
+        refused = refuse_request(Route(
+            processor=(processors[0].name if processors else "(unnamed)"),
+            operations=tuple(operations)))
+        if refused:
+            raise ValueError(
+                "this material cannot be admitted for that processing: "
+                + refused[0])
+
     if retention is Retention.FIXED_PERIOD and retain_until is None:
         raise ValueError(
             "a fixed retention period with no date is not a period; either "

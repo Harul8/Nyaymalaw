@@ -69,6 +69,14 @@ ESCAPES = (
 #: Enums that are CLOSED VOCABULARIES, not outcomes. Each with the reason it
 #: cannot be "not assessed" — because something always chose it.
 CLOSED: dict[str, str] = {
+    "Act": (
+        "a vocabulary of ATTEMPTS, not an outcome. Somebody always chose what "
+        "they were trying to do -- there is no unknown act a person could be "
+        "attempting -- and the three-state answer lives in "
+        "`nm.domain.authority.Standing`, whose NOT_ESTABLISHED is exactly the "
+        "'nobody recorded this person's capacity' case. Adding a fourth member "
+        "here would give callers an act to pass when they mean they do not "
+        "know, and `permits` would then have to guess what it was."),
     "Sink": (
         "a destination vocabulary, not an outcome. There is no unknown sink a "
         "dispatch could be sent to -- a route names where it is going or it is "

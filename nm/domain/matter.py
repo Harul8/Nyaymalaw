@@ -666,6 +666,42 @@ class Matter:
     invited to wonder which persisted fields are typed and why.
     """
 
+    commission: "object | None" = None
+    """WHAT THIS ADVOCATE WAS INSTRUCTED TO DO, versioned. BK-62-AC1.
+
+    `None` until somebody records one, which is a real state and NOT the same
+    as a commission whose fields are blank: the first says nobody has been
+    instructed, the second says an instruction was taken and says nothing.
+    `nm/domain/commission.py` owns the type; this follows `engagement`'s
+    convention of holding it untyped so a reader is not invited to wonder
+    which persisted fields are typed and why.
+
+    SUPERSEDED VERSIONS ARE NOT HERE. This is the current one; the history
+    lives in `commission_history` because an advice given under version 1 was
+    correct work under version 1, and losing version 1 makes it look wrong.
+    """
+
+    commission_history: tuple[object, ...] = ()
+    """Every superseded commission, oldest first. Evidence, not clutter."""
+
+    emergencies: tuple[object, ...] = ()
+    """EVERY EMERGENCY DECLARED ON THIS FILE, oldest first. BK-78-AC2.
+
+    A tuple and not a single field because an emergency re-declared after
+    expiry is a SECOND moment of danger and a second fact. Keeping only the
+    latest would make a file that was urgent twice look like a file that was
+    urgent once, and the first declaration is the evidence for how the file
+    was handled at the time.
+
+    Expiry never removes one. What lapses is the permission, not the history.
+    """
+
+    authority_refusals: tuple[object, ...] = ()
+    """UNAUTHORISED ATTEMPTS, KEPT. BK-63-AC1 requires that a refused
+    operation is refused AND RECORDED, and a refusal that exists only as an
+    HTTP status is one nobody can review. Each holds who attempted what and
+    why it was refused; none holds any client material."""
+
     reservations: tuple[object, ...] = ()
     """E5. POSITIONS THIS PRODUCT TOOK THAT THE ADVOCATE WENT AGAINST.
 

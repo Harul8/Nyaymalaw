@@ -41,10 +41,19 @@ from dataclasses import dataclass
 #: which of these they must establish before relying on the file -- and a
 #: paragraph saying "some details are missing" is a disclaimer, which is
 #: silence in more words.
+#: P13 RECORDED ONE OF THESE AND NARROWED TWO, and the diff says so, which is
+#: what this list promised above. `nm/domain/commission.py` now holds who
+#: instructs and who decides as separate parties, so that entry is gone -- not
+#: softened, gone. The scope and standing-authority entries SURVIVE in narrowed
+#: form: a commission records scope for the matter and not per thread and step,
+#: and `nm/domain/authority.py` records who may give an instruction without
+#: recording the standing authorities themselves. Rewriting either as though
+#: it were now complete would be the disclaimer this list exists to refuse.
 NOT_RECORDED: tuple[str, ...] = (
-    "the scope of the engagement, at thread and step granularity",
-    "standing authorities and who may give them",
-    "who decides, as distinct from who instructs",
+    "the scope of the engagement at THREAD AND STEP granularity; a commission "
+    "records it for the matter as a whole",
+    "the standing authorities themselves; who may give one is recorded, what "
+    "has been given standing is not",
     "fees, disbursements and document custody",
     "the termination and complaints route",
 )

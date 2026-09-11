@@ -461,7 +461,21 @@ def test_the_engagement_records_who_and_what_and_names_what_it_lacks(tmp_path):
     # that nobody granted.
     assert engaged.not_recorded == NOT_RECORDED, (
         "the engagement does not name what it lacks, so it reads as complete")
-    assert len(engaged.not_recorded) == 5
+    assert engaged.not_recorded, (
+        "the list is empty, so the engagement claims to record everything an "
+        "engagement needs -- which it does not")
+
+    # THE COUNT IS NOT ASSERTED, AND USED TO BE. `len(...) == 5` was a
+    # snapshot of current behaviour rather than an invariant, and
+    # `engagement.py` promises the opposite: *the day one of these is
+    # recorded, it comes off this list and the diff says so.* P13 recorded
+    # who decides as distinct from who instructs, so the list is shorter by
+    # one and the test that pinned the number was the thing in the way.
+    #
+    # What IS invariant is that the list stops naming what is now recorded.
+    assert not any("who decides" in entry for entry in engaged.not_recorded), (
+        "a commission records who decides as distinct from who instructs, so "
+        "the engagement must no longer list it as missing")
 
     s = summary_mod.build(out.matter)
     assert s.sections["engagement"]["state"] != "not_assessed"
