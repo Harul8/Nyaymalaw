@@ -220,6 +220,12 @@ CONTROLS: dict[str, str] = {
     # every metric reaches the record the release gate reads it from
     "test_every_metric_field_survives_into_the_persisted_record":
         "test_the_metric_scan_can_see_an_unserialised_field",
+    # P20 -- the same test holds one publisher at the durable candidate
+    # boundary, plants a competing publisher, and requires the lock to report
+    # it. The trailing empty failure list then proves the original writer did
+    # not fail while the planted collision was refused.
+    "test_concurrent_publisher_is_refused_while_first_writer_holds_lock":
+        "test_concurrent_publisher_is_refused_while_first_writer_holds_lock",
 }
 
 #: SWEEPS WITH NO VERIFIED CONTROL, declared 9 September 2026. BK-52.

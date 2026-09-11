@@ -3288,11 +3288,11 @@ items:
   verification: partial
   affects_phases: [A, C, D, E, F, G]
   record: docs/BACKLOG.md#bk-84-versioned-indian-legal-corpus-publication-and-coverage-governance
-  next_action: obtain qualified counsel and source-rights review for real coverage, then let P20 consume the scoped P19 register; the synthetic engineering contribution alone cannot close AC1
+  next_action: integrate P20 with P07 after P13-P17 stabilises; this isolated commit used the user's authorised --no-verify exception because no full-gate stamp was produced; run the combined full gate before sign-off and obtain the AC1/AC3 real-source review
   stage_records:
-    start: {result: READY, ref: docs/BACKLOG.md#p19-bounded-source-foundation-start-record--11-september-2026}
-    build: {result: OPEN, ref: docs/BACKLOG.md#p19-scoped-build-and-test-record--11-september-2026}
-    test: {result: OPEN, ref: docs/BACKLOG.md#p19-scoped-build-and-test-record--11-september-2026}
+    start: {result: READY, ref: docs/BACKLOG.md#p20-immutable-corpus-publication-start-record--11-september-2026}
+    build: {result: BUILT, ref: docs/BACKLOG.md#p20-scoped-build-and-test-record--11-september-2026}
+    test: {result: VERIFIED, ref: docs/BACKLOG.md#p20-scoped-build-and-test-record--11-september-2026}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-84-versioned-indian-legal-corpus-publication-and-coverage-governance}
   acceptance:
   - id: BK-84-AC1
@@ -3305,7 +3305,9 @@ items:
   - id: BK-84-AC2
     requirement: Corpus ingestion is staged and rights-reviewed, publishing an immutable manifest atomically only after reconciliation and source quality checks; rollback and amendment-triggered invalidation preserve previous snapshots
     required_evidence: [integration_test, adversarial_test]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_immutable_corpus_publication.py::test_application_composition_serves_one_published_generation', note: 'The production composition opens one active pointer and shares the exact verified snapshot across evidence and authority search; the fixture uses synthetic source and index bytes only.'}
+      adversarial_test: {result: PASS, ref: 'tests/test_immutable_corpus_publication.py::test_p20_adversarial_witness_rejects_partial_changed_and_withdrawn_law', note: 'The named witness interrupts cutover, substitutes bytes and withdraws relied-on law; the remaining focused P20 population covers concurrency, corruption, path, population, rollback and cross-snapshot invalidation controls.'}
     negative_control:
       mutation: interrupt publication, change the source hash or withdraw an authority after indexing
       expected_failure: readers cannot see a half-published snapshot and dependent work is flagged for reassessment

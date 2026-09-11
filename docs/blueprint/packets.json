@@ -1659,6 +1659,10 @@
         {
           "path": "nm/adapters/search/authority.py",
           "kind": "existing"
+        },
+        {
+          "path": "nm/bootstrap/composition.py",
+          "kind": "existing"
         }
       ],
       "inputs": [

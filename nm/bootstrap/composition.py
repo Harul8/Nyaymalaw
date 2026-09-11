@@ -24,7 +24,7 @@ from nm.core.turn import TurnEngine
 from nm.domain.clock import FORUM
 from nm.domain.gates import GATES, withholding
 from nm.knowledge.coverage import CoverageProfile
-from nm.knowledge.manifest import Manifest
+from nm.knowledge.manifest import Manifest, PublishedCorpus
 from nm.ports.directory import DirectoryPort
 from nm.ports.model import ModelPort, Tier
 
@@ -69,22 +69,56 @@ class Application:
         # two keys is two things to configure and one of them to forget.
         self.directory: DirectoryPort = directory or FileDirectory(
             os.environ.get("NM_MATTER_STORE") or (self.root / ".nm"), key=key)
-        self.evidence = evidence or CorpusEvidenceAdapter(
+        corpus_path = Path(
             os.environ.get("NM_CORPUS_DIR")
-            or (self.root / "legal_database" / "vector_store"),
-            self.manifest,
-            authority_index=(os.environ.get("NM_AUTHORITY_INDEX")
-                             or default_authority_index(self.root)),
-            identity_index=(os.environ.get("NM_IDENTITY_INDEX")
-                            or (self.root / ".nm" / "identity.db")))
+            or (self.root / "legal_database" / "vector_store")
+        )
+        published_corpus = (corpus_path / "current.json").is_file()
+        published_snapshot = None
+        if published_corpus and evidence is None and any(
+            os.environ.get(name) for name in (
+                "NM_AUTHORITY_INDEX", "NM_IDENTITY_INDEX",
+            )
+        ):
+            raise RuntimeError(
+                "NM_CORPUS_DIR names an immutable published corpus; standalone "
+                "authority or identity index overrides would mix generations"
+            )
+        if evidence is not None:
+            self.evidence = evidence
+        elif published_corpus:
+            published_snapshot = PublishedCorpus.open(corpus_path, verify_all=True)
+            self.manifest = Manifest.load(
+                published_snapshot.member_path("corpus/manifest.yaml")
+            )
+            self.evidence = CorpusEvidenceAdapter.from_published_snapshot(
+                published_snapshot,
+            )
+        else:
+            self.evidence = CorpusEvidenceAdapter(
+                corpus_path,
+                self.manifest,
+                authority_index=(os.environ.get("NM_AUTHORITY_INDEX")
+                                 or default_authority_index(self.root)),
+                identity_index=(os.environ.get("NM_IDENTITY_INDEX")
+                                or (self.root / ".nm" / "identity.db")))
         # A4. The SAME index the evidence adapter reads, named once. Two
         # paths to one file, configured separately, is how the grounding gate
         # and the evidence adapter came to hold different provision patterns
         # (CLAUDE.md §4) -- so the search surface takes the resolved path
         # rather than re-reading the environment.
-        self.search = search or AuthorityIndexSearch(
-            os.environ.get("NM_AUTHORITY_INDEX")
-            or default_authority_index(self.root))
+        if search is not None:
+            self.search = search
+        elif published_corpus and evidence is None:
+            if published_snapshot is None:
+                raise AssertionError("published corpus snapshot was not bound")
+            self.search = AuthorityIndexSearch.from_published_snapshot(
+                published_snapshot,
+            )
+        else:
+            self.search = AuthorityIndexSearch(
+                os.environ.get("NM_AUTHORITY_INDEX")
+                or default_authority_index(self.root))
         # EVERY MODEL CALL IS KEPT, and the wrapping happens HERE.
         #
         # `TurnMetrics` already counts the calls; it does not say which read

@@ -66,14 +66,6 @@ UNWIRED: dict[str, str] = {
         "P07's per-matter data key. `nm.adapters.store.file_store` calls it "
         "when `_Cipher`'s single shared key is replaced; until then every "
         "matter still shares one key and this module changes nothing."),
-    "nm.knowledge.acquisition": (
-        "P44's non-serving acquisition staging boundary. P20's controlled "
-        "corpus cutover will consume only reviewed and permitted source "
-        "projections; until then acquisition may select synthetic candidates, "
-        "write receipts and reconcile quarantine state, but cannot publish or "
-        "affect a served turn. Its import of the P19 source register makes "
-        "that register structurally reachable, not operationally served, so "
-        "this outer boundary owns the remaining wiring gap."),
     "nm.core.premise": (
         "P22's legal-premise gate. `nm.core.limitation.compute` calls "
         "`assess()` before the arithmetic and `nm.core.turn` carries the "
@@ -104,9 +96,6 @@ UNWIRED: dict[str, str] = {
     "nm.domain.tiers":
         "S0's tier vocabulary. Consulted by the model config through the "
         "environment rather than by import.",
-    "nm.knowledge.artefact":
-        "S11's artefact-identity check, whose counterexample is the real "
-        "dense index. Nothing builds a derived artefact on a turn yet.",
 }
 
 
@@ -242,7 +231,6 @@ OWNER: dict[str, tuple[str, ...]] = {
     "nm.domain.egress": ("I1",),
     "nm.adapters.store.envelope": ("I1",),
     "nm.core.premise": ("D2",),
-    "nm.knowledge.acquisition": ("D4",),
     # BK-69's boundary belongs to the feature that will cross it. C6 is
     # document intake and extraction -- the media path -- so when C6 moves off
     # `implementation: none`, the status check above starts asking whether
@@ -337,8 +325,7 @@ def test_every_unwired_module_names_a_feature_that_exists():
     assert not missing, f"OWNER names features that do not exist: {missing}"
 
     unowned = sorted(m for m in UNWIRED
-                     if m not in OWNER and not m.startswith(("nm.domain.tiers",
-                                                            "nm.knowledge.artefact")))
+                     if m not in OWNER and not m.startswith("nm.domain.tiers"))
     assert not unowned, (
         f"these modules are UNWIRED and name no feature, so the status check "
         f"above skips them entirely: {unowned}")

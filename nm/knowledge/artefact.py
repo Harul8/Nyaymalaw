@@ -19,6 +19,7 @@ knowable is that it shipped an identity file beside it.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -27,6 +28,92 @@ from nm.domain.text import refuses_blank_text
 
 class ArtefactRefused(RuntimeError):
     """The artefact does not match what it must have been built from."""
+
+
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
+@refuses_blank_text()
+@dataclass(frozen=True)
+class ArtefactLineage:
+    """Byte-exact build identity for one derived corpus member.
+
+    Model and dimensions are not meaningful for every artefact.  Their basis
+    is nevertheless explicit: a lexical SQLite index can say
+    ``model="not_applicable: deterministic FTS5"`` and
+    ``dimension_basis="not_applicable: lexical index"``.  Missing metadata is
+    never made indistinguishable from an intentional non-applicability.
+    """
+
+    artefact: str
+    builder: str
+    source_versions: tuple[str, ...]
+    content_sha256: str
+    model: str
+    tokenizer: str
+    dimension_basis: str
+    population_basis: str
+    expected_population: int
+    observed_population: int
+    dimensions: int | None = None
+
+    def __post_init__(self) -> None:
+        if not self.source_versions:
+            raise ValueError("derived artefact lineage requires source versions")
+        if len(self.source_versions) != len(set(self.source_versions)):
+            raise ValueError("derived artefact source versions must be unique")
+        if not _SHA256.fullmatch(self.content_sha256):
+            raise ValueError("content_sha256 must be a full lowercase sha256")
+        if self.dimensions is not None and self.dimensions < 1:
+            raise ValueError("artefact dimensions must be positive")
+        if self.expected_population < 1 or self.observed_population < 0:
+            raise ValueError(
+                "artefact populations require a positive expectation and "
+                "non-negative observation"
+            )
+
+    def as_dict(self) -> dict:
+        return {
+            "artefact": self.artefact,
+            "builder": self.builder,
+            "source_versions": list(self.source_versions),
+            "content_sha256": self.content_sha256,
+            "model": self.model,
+            "tokenizer": self.tokenizer,
+            "dimension_basis": self.dimension_basis,
+            "population_basis": self.population_basis,
+            "expected_population": self.expected_population,
+            "observed_population": self.observed_population,
+            "dimensions": self.dimensions,
+        }
+
+    def require_payload(self, payload: bytes) -> None:
+        """Refuse a derived member changed after its build was recorded."""
+        import hashlib
+
+        observed = hashlib.sha256(payload).hexdigest()
+        if observed != self.content_sha256:
+            raise ArtefactRefused(
+                f"{self.artefact!r} content is {observed}, but its lineage "
+                f"records {self.content_sha256}; the changed artefact is refused"
+            )
+
+    def require_sources(self, published_versions: tuple[str, ...]) -> None:
+        """Refuse lineage outside the exact source population being published."""
+        missing = sorted(set(self.source_versions) - set(published_versions))
+        if missing:
+            raise ArtefactRefused(
+                f"{self.artefact!r} was built from source versions outside this "
+                f"snapshot: {', '.join(missing)}"
+            )
+
+    def require_reconciled(self) -> None:
+        if self.observed_population != self.expected_population:
+            raise ArtefactRefused(
+                f"{self.artefact!r} expected {self.expected_population} records "
+                f"on {self.population_basis}, but contains "
+                f"{self.observed_population}"
+            )
 
 
 @refuses_blank_text()
