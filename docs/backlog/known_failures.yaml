@@ -104,24 +104,29 @@ known_failures:
   step: ruff
   fact:
     kind: ruff
-    count: 150
-    digest: 28920b492862afad12aea16f2e055a4a91940697aeefe76e977fadb32460c22f
+    count: 144
+    digest: ae0ebd6dc9693a5ab027b573c502ef307d51bb729d399c326385eb62c540f093
   owner: [BK-87-AC1]
   because: >-
-    RE-REGISTERED 11 September 2026: 151 -> 150. Updating the approvals suite
-    for BK-80-AC6's resolver replaced an over-length line, so one diagnostic
-    went. The gate reported the declared failure as NOW PASSING and blocked --
+    RE-REGISTERED 11 September 2026: 151 -> 150 -> 144. Updating the approvals
+    suite for BK-80-AC6's resolver replaced seven over-length lines in total.
+    The gate reported the old declared failure as NOW PASSING and blocked --
     which is the exact-count design working: a debt whose number falls is
-    re-registered by somebody rather than absorbed.
+    re-registered by somebody rather than absorbed. The digest was then
+    re-registered without changing the count after the clean release-profile
+    population check inserted ten lines in tools/plan_view.py. An independent
+    reverse transform proved that exactly nine existing diagnostics shifted by
+    ten lines and that reversing only those positions reproduces the prior
+    digest bbe61034e7fe99197af2c735b17cb6e44a5ee8f1a8020e08475cd3cabda0fe23.
 
     Style debt introduced by the execution-readiness planning pass, entirely in
     tools/blueprint_evaluations.py, tools/plan_view.py, tests/test_blueprint_media.py
-    and their neighbours: 148 over-length lines and 3 zip() calls without an
+    and their neighbours: 141 over-length lines and 3 zip() calls without an
     explicit strict=. No product code is affected and no rule was relaxed to
     accommodate them -- ruff still runs with the same configuration.
 
     The fact binds both the count and the digest of every path, position, rule
-    and reason in the 151-diagnostic set measured at d0fa3f3. Fixing, adding or
+    and reason in the 144-diagnostic set measured during P03. Fixing, adding or
     replacing even one diagnostic changes it and blocks; the declaration cannot
     absorb a new finding merely because another was fixed at the same time.
 

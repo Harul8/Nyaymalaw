@@ -5,13 +5,22 @@ no Boolean bypass or 'valid' state: BK-80 owns the future verified resolver.
 """
 from __future__ import annotations
 
+import hashlib
 import re
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Iterable, Mapping
 
 from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import SchemaError
+
+from tools.evidence_verification import (
+    EvidenceVerifier,
+    UnavailableVerifier,
+    Verification,
+    canonical_json,
+)
 
 
 def _formats() -> FormatChecker:
@@ -30,8 +39,14 @@ def _formats() -> FormatChecker:
     return checker
 
 
-def _instant(value: str) -> datetime:
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+def _instant(value: object) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else None
 
 
 def _local_refs(value: object, root: dict, *, is_root: bool = False) -> list[str]:
@@ -227,103 +242,439 @@ class Resolution:
     """What the approval register says about one decision, at one gate."""
 
     state: str
-    why: str
+    reasons: tuple[str, ...]
     record: str | None = None
+    availability: str = "available"
+    attempted_scope: dict | None = None
+
+    @property
+    def why(self) -> str:
+        return "; ".join(self.reasons)
 
     @property
     def authorises(self) -> bool:
         """ONLY `valid`. Every other state is a refusal that reads differently
         to a person and identically to a gate."""
-        return self.state == VALID
+        return self.availability == "available" and self.state == VALID
+
+
+EVALUATION_UNAVAILABLE = "evaluation_unavailable"
+
+
+def _resolution(state: str, reason: str | Iterable[str], record: str | None = None,
+                *, available: bool = True,
+                attempted_scope: dict | None = None) -> Resolution:
+    reasons = (reason,) if isinstance(reason, str) else tuple(reason)
+    return Resolution(
+        state, reasons, record,
+        "available" if available else EVALUATION_UNAVAILABLE,
+        attempted_scope,
+    )
+
+
+def _unavailable(reasons: Iterable[str], record: str | None,
+                 attempted_scope: dict) -> Resolution:
+    return _resolution(UNVERIFIED, reasons, record, available=False,
+                       attempted_scope=attempted_scope)
+
+
+def _artifact_equal(left: object, right: object) -> bool:
+    return isinstance(left, dict) and isinstance(right, dict) and left == right
+
+
+def _verification_reasons(check: Verification) -> list[str]:
+    return list(check.reasons) or ["the verifier supplied no reason"]
+
+
+def _authenticate_record(row: dict, verifier: EvidenceVerifier, *,
+                         required_approvers: frozenset[str],
+                         gate: str, at: datetime) -> tuple[list[str], list[str]]:
+    """Return unavailable and unverified reasons for the adoption itself."""
+    unavailable: list[str] = []
+    refused: list[str] = []
+    approvers = row.get("approvers") or []
+    people = frozenset(str(person.get("person_id")) for person in approvers
+                       if isinstance(person, dict) and person.get("person_id"))
+    missing = sorted(required_approvers - people)
+    if missing:
+        refused.append("required joint approver(s) are absent: " + ", ".join(missing))
+
+    payload = {key: value for key, value in row.items() if key != "signed_record"}
+    signed = verifier.signed_payload(
+        row.get("signed_record"), purpose=f"approval {row.get('id')} signed record",
+        expected_payload=payload, required_signers=people,
+    )
+    if not signed.verified:
+        target = unavailable if not signed.available else refused
+        target.extend(_verification_reasons(signed))
+
+    approved_at = _instant(row.get("approved_at"))
+    if approved_at is None:
+        refused.append("approval time is not a timezone-bearing instant")
+        return unavailable, refused
+    for person in approvers:
+        if not isinstance(person, dict):
+            refused.append("an approver row is malformed")
+            continue
+        checked = verifier.authority(
+            person.get("authority_evidence"),
+            person_id=str(person.get("person_id") or ""),
+            role=str(person.get("role") or ""),
+            basis=str(person.get("authority_basis") or ""),
+            scope=f"approval:{row.get('choice')}:{gate}",
+            at=approved_at,
+        )
+        if not checked.verified:
+            target = unavailable if not checked.available else refused
+            target.extend(_verification_reasons(checked))
+    return unavailable, refused
+
+
+def _authenticate_revocation(revocation: dict, row: dict,
+                             verifier: EvidenceVerifier) -> tuple[list[str], list[str]]:
+    unavailable: list[str] = []
+    refused: list[str] = []
+    person = revocation.get("revoked_by") or {}
+    person_id = str(person.get("person_id") or "")
+    payload = {key: value for key, value in revocation.items()
+               if key != "signed_record"}
+    signed = verifier.signed_payload(
+        revocation.get("signed_record"),
+        purpose=f"revocation {revocation.get('id')}",
+        expected_payload=payload, required_signers=frozenset({person_id}),
+    )
+    if not signed.verified:
+        target = unavailable if not signed.available else refused
+        target.extend(_verification_reasons(signed))
+    effective_at = _instant(revocation.get("effective_at"))
+    if effective_at is None:
+        refused.append("revocation time is not a timezone-bearing instant")
+        return unavailable, refused
+    authority = verifier.authority(
+        person.get("authority_evidence"), person_id=person_id,
+        role=str(person.get("role") or ""),
+        basis=str(person.get("authority_basis") or ""),
+        scope=f"revoke:{row.get('choice')}:{(row.get('scope') or {}).get('gate')}",
+        at=effective_at,
+    )
+    if not authority.verified:
+        target = unavailable if not authority.available else refused
+        target.extend(_verification_reasons(authority))
+    return unavailable, refused
 
 
 def resolve(store: dict | None, choices: dict, packets: dict, *,
             choice: str, gate: str, packet: str | None = None,
             proposal_sha256: str | None = None,
-            configuration: str | None = None,
+            environment: str | None = None,
+            release_profile: str | None = None,
+            release_manifest: object | None = None,
+            configuration: object | None = None,
+            coverage_manifest: object | None = None,
+            capabilities: Iterable[str] | None = None,
+            data_classes: Iterable[str] | None = None,
+            run_id: str | None = None,
+            used_run_ids: frozenset[str] = frozenset(),
+            required_approvers: frozenset[str] = frozenset(),
+            verifier: EvidenceVerifier | None = None,
+            time_available: bool = True,
             now: datetime | None = None,
             schema: dict | None = None) -> Resolution:
     """The state of one CHOICE's adoption, for one gate and one packet."""
+    attempted_scope = {
+        "gate": gate, "environment": environment,
+        "release_profile": release_profile,
+        "release_manifest": release_manifest, "configuration": configuration,
+        "coverage_manifest": coverage_manifest, "packet": packet,
+        "capabilities": sorted(capabilities or ()),
+        "data_classes": sorted(data_classes or ()), "run_id": run_id,
+    }
+    if not time_available:
+        return _unavailable(["the trusted time source is unavailable"], None,
+                            attempted_scope)
     moment = now or datetime.now(timezone.utc)
+    verifier = verifier or UnavailableVerifier()
+
+    if not isinstance(store, dict) or not isinstance(store.get("records"), list):
+        # The bytes could not be interpreted as a register. That is an
+        # unavailable assessment, not a successfully-read empty population.
+        return _unavailable(
+            ["the adoption register is unavailable or unreadable, which is not "
+             "the same as no approval having been given"], None, attempted_scope)
 
     if schema is not None:
         structural = check_approvals(store, schema, choices, packets)
         if structural:
-            return Resolution(
-                UNVERIFIED,
-                f"the adoption register does not verify: {structural[0]}")
-    if not isinstance(store, dict) or not isinstance(store.get("records"), list):
-        # UNVERIFIED, NOT NOT_RECORDED. An unreadable register is not an empty
-        # one, and reporting it as "nothing recorded" sends the reader to write
-        # an approval that may already exist.
-        return Resolution(UNVERIFIED,
-                          "the adoption register is unavailable or unreadable, "
-                          "which is not the same as no approval having been given")
-
-    superseded = {prior for row in store["records"]
-                  for prior in (row.get("supersedes") or [])}
+            return _resolution(
+                UNVERIFIED, f"the adoption register does not verify: {structural[0]}",
+                attempted_scope=attempted_scope)
     candidates = [row for row in store["records"]
-                  if row.get("choice") == choice and row.get("id") not in superseded]
+                  if row.get("choice") == choice]
     if not candidates:
-        return Resolution(NOT_RECORDED,
-                          f"no adoption record names {choice}")
+        return _resolution(NOT_RECORDED, f"no adoption record names {choice}",
+                           attempted_scope=attempted_scope)
 
-    row = max(candidates, key=lambda r: str(r.get("approved_at") or ""))
+    if not required_approvers:
+        return _unavailable(
+            ["the required human-approval policy was not supplied"], None,
+            attempted_scope)
+
+    # AUTHENTICATE BEFORE SELECTING. Scope and supersession live inside the
+    # signed payload; using either to choose a candidate first would let an
+    # unsigned index row decide which real approval the resolver sees. Every
+    # candidate for this choice is checked. A malformed competing record is a
+    # safe refusal, never a reason to fall back to a broader old permission.
+    for candidate in candidates:
+        candidate_gate = str((candidate.get("scope") or {}).get("gate") or gate)
+        unavailable, refused = _authenticate_record(
+            candidate, verifier, required_approvers=required_approvers,
+            gate=candidate_gate, at=moment,
+        )
+        if unavailable:
+            return _unavailable(
+                ["a competing approval cannot be evaluated", *unavailable],
+                str(candidate.get("id") or "") or None, attempted_scope)
+        if refused:
+            return _resolution(
+                UNVERIFIED,
+                ["an unverified competing approval prevents permission", *refused],
+                str(candidate.get("id") or "") or None,
+                attempted_scope=attempted_scope)
+
+    superseded_by: dict[str, list[str]] = {}
+    for candidate in candidates:
+        for prior in candidate.get("supersedes") or []:
+            superseded_by.setdefault(str(prior), []).append(
+                str(candidate.get("id")))
+    active = [candidate for candidate in candidates
+              if str(candidate.get("id")) not in superseded_by]
+
+    def applies(candidate: dict) -> bool:
+        scope = candidate.get("scope") or {}
+        return (scope.get("gate") == gate
+                and (packet is None or packet in (scope.get("packets") or [])))
+
+    applicable = [candidate for candidate in active if applies(candidate)]
+    if len(applicable) > 1:
+        labels = ", ".join(sorted(str(row.get("id")) for row in applicable))
+        return _resolution(
+            UNVERIFIED,
+            f"multiple current approval records ({labels}) govern this gate and "
+            "packet; an explicit authenticated supersession is required",
+            attempted_scope=attempted_scope)
+    if not applicable:
+        retired = [candidate for candidate in candidates
+                   if applies(candidate)
+                   and str(candidate.get("id")) in superseded_by]
+        if retired:
+            prior = max(retired, key=lambda r: str(r.get("approved_at") or ""))
+            replacements = ", ".join(sorted(
+                superseded_by[str(prior.get("id"))]))
+            return _resolution(
+                STALE,
+                f"{prior.get('id')} was superseded by verified record(s) "
+                f"{replacements}, whose scope does not authorise this attempt",
+                str(prior.get("id")), attempted_scope=attempted_scope)
+        newest = max(candidates, key=lambda r: str(r.get("approved_at") or ""))
+        return _resolution(
+            OUT_OF_SCOPE,
+            f"no current verified record for {choice} names gate {gate!r}"
+            + (f" and packet {packet}" if packet is not None else ""),
+            str(newest.get("id")), attempted_scope=attempted_scope)
+
+    row = applicable[0]
     label = row.get("id")
 
     for revocation in store.get("revocations") or []:
-        if (revocation.get("approval_id") == label
-                and _instant(revocation.get("effective_at")) <= moment):
-            return Resolution(REVOKED,
-                              f"{label} was revoked at "
-                              f"{revocation.get('effective_at')}: "
-                              f"{revocation.get('reason') or 'no reason recorded'}",
-                              label)
+        effective_at = _instant(revocation.get("effective_at"))
+        if (revocation.get("approval_id") == label and effective_at is not None
+                and effective_at <= moment):
+            unavailable, refused = _authenticate_revocation(
+                revocation, row, verifier)
+            if unavailable:
+                return _unavailable(
+                    ["a recorded revocation cannot be evaluated", *unavailable],
+                    label, attempted_scope)
+            if refused:
+                return _resolution(
+                    UNVERIFIED,
+                    ["an unverified competing revocation prevents permission", *refused],
+                    label, attempted_scope=attempted_scope)
+            return _resolution(
+                REVOKED,
+                f"{label} was revoked at {revocation.get('effective_at')}: "
+                f"{revocation.get('reason') or 'no reason recorded'}",
+                label, attempted_scope=attempted_scope)
 
-    if _instant(row.get("valid_until")) <= moment:
-        return Resolution(EXPIRED,
-                          f"{label} expired at {row.get('valid_until')}", label)
-    if moment < _instant(row.get("effective_from")):
-        return Resolution(UNVERIFIED,
-                          f"{label} does not take effect until "
-                          f"{row.get('effective_from')}", label)
+    valid_until = _instant(row.get("valid_until"))
+    effective_from = _instant(row.get("effective_from"))
+    if valid_until is None or effective_from is None:
+        return _resolution(
+            UNVERIFIED, f"{label} has unreadable validity dates", label,
+            attempted_scope=attempted_scope)
+    if valid_until <= moment:
+        return _resolution(EXPIRED, f"{label} expired at {row.get('valid_until')}",
+                           label, attempted_scope=attempted_scope)
+    if moment < effective_from:
+        return _resolution(
+            UNVERIFIED,
+            f"{label} does not take effect until {row.get('effective_from')}",
+            label, attempted_scope=attempted_scope)
 
     scope = row.get("scope") or {}
     if scope.get("gate") != gate:
-        return Resolution(OUT_OF_SCOPE,
-                          f"{label} approves the {scope.get('gate')!r} gate and "
-                          f"this is {gate!r}", label)
+        return _resolution(
+            OUT_OF_SCOPE, f"{label} approves the {scope.get('gate')!r} gate and "
+            f"this is {gate!r}", label, attempted_scope=attempted_scope)
     if packet is not None and packet not in (scope.get("packets") or []):
-        return Resolution(OUT_OF_SCOPE,
-                          f"{label} does not name packet {packet}", label)
+        return _resolution(OUT_OF_SCOPE, f"{label} does not name packet {packet}",
+                           label, attempted_scope=attempted_scope)
+
+    for field, attempted in (("environment", environment),
+                             ("release_profile", release_profile)):
+        if attempted is None:
+            return _unavailable([f"the attempted {field} was not supplied"], label,
+                                attempted_scope)
+        if scope.get(field) != attempted:
+            return _resolution(
+                OUT_OF_SCOPE, f"{label} does not permit {field} {attempted!r}",
+                label, attempted_scope=attempted_scope)
+    for field, attempted in (("capabilities", set(capabilities or ())),
+                             ("data_classes", set(data_classes or ()))):
+        if not attempted:
+            return _unavailable([f"the attempted {field} population is empty"], label,
+                                attempted_scope)
+        missing = sorted(attempted - set(scope.get(field) or ()))
+        if missing:
+            return _resolution(
+                OUT_OF_SCOPE, f"{label} does not permit {field}: {', '.join(missing)}",
+                label, attempted_scope=attempted_scope)
+    approved_run = scope.get("run_id")
+    if gate in ("approved_real_model", "paid_or_long_load") and run_id is None:
+        return _unavailable(["the attempted bounded run identity was not supplied"],
+                            label, attempted_scope)
+    if approved_run != run_id:
+        return _resolution(
+            OUT_OF_SCOPE, f"{label} permits run {approved_run!r}, not {run_id!r}",
+            label, attempted_scope=attempted_scope)
+    if run_id is not None and run_id in used_run_ids:
+        return _resolution(
+            OUT_OF_SCOPE, f"bounded run {run_id!r} has already consumed its approval",
+            label, attempted_scope=attempted_scope)
 
     if proposal_sha256 is not None and row.get("proposal_sha256") != proposal_sha256:
-        return Resolution(STALE,
-                          f"{label} approved proposal "
-                          f"{row.get('proposal_sha256')} and the current "
-                          f"proposal is {proposal_sha256}", label)
-    if configuration is not None and scope.get("configuration") != configuration:
-        return Resolution(STALE,
-                          f"{label} approved configuration "
-                          f"{scope.get('configuration')!r} and this is "
-                          f"{configuration!r}", label)
+        return _resolution(
+            STALE, f"{label} approved proposal {row.get('proposal_sha256')} and "
+            f"the current proposal is {proposal_sha256}", label,
+            attempted_scope=attempted_scope)
+    if proposal_sha256 is None:
+        choice_row = next((candidate for candidate in choices.get("choices") or []
+                           if candidate.get("id") == choice), None)
+        if choice_row is None:
+            return _unavailable([f"the current proposal {choice} is unavailable"],
+                                label, attempted_scope)
+        proposal_sha256 = hashlib.sha256(canonical_json(choice_row)).hexdigest()
+        if row.get("proposal_sha256") != proposal_sha256:
+            return _resolution(
+                STALE, f"{label} approved a different proposal identity", label,
+                attempted_scope=attempted_scope)
 
-    if not (row.get("signed_record") or {}).get("sha256"):
-        return Resolution(UNVERIFIED,
-                          f"{label} carries no signed record", label)
-    qualified = [a for a in row.get("approvers") or []
-                 if str(a.get("authority_basis") or "").strip()
-                 and (a.get("authority_evidence") or {}).get("sha256")]
-    if not qualified:
-        return Resolution(UNVERIFIED,
-                          f"{label} names no approver whose authority is "
-                          f"stated and evidenced", label)
-    unmet = [c.get("id") for c in row.get("conditions") or []
-             if not (c.get("evidence") or {}).get("sha256")]
-    if unmet:
-        return Resolution(UNVERIFIED,
-                          f"{label} carries conditions with no evidence: "
-                          f"{', '.join(map(str, unmet))}", label)
+    artifact_attempts = {
+        "release_manifest": release_manifest,
+        "configuration": configuration,
+        "coverage_manifest": coverage_manifest,
+    }
+    for field, attempted in artifact_attempts.items():
+        if attempted is None:
+            return _unavailable([f"the attempted {field} identity was not supplied"],
+                                label, attempted_scope)
+        if not _artifact_equal(scope.get(field), attempted):
+            return _resolution(
+                STALE, f"{label} approved a different {field} identity", label,
+                attempted_scope=attempted_scope)
+        checked = verifier.integrity(scope.get(field), purpose=f"{label} {field}")
+        if not checked.verified:
+            reasons = _verification_reasons(checked)
+            if not checked.available:
+                return _unavailable(reasons, label, attempted_scope)
+            return _resolution(UNVERIFIED, reasons, label,
+                               attempted_scope=attempted_scope)
 
-    return Resolution(VALID,
-                      f"{label} authorises {choice} at the {gate} gate", label)
+    for condition in row.get("conditions") or []:
+        checked = verifier.condition(
+            condition.get("evidence"), approval_id=str(label),
+            condition_id=str(condition.get("id") or ""),
+            requirement=str(condition.get("requirement") or ""), at=moment,
+        )
+        if not checked.verified:
+            reasons = _verification_reasons(checked)
+            if not checked.available:
+                return _unavailable(reasons, label, attempted_scope)
+            return _resolution(UNVERIFIED, reasons, label,
+                               attempted_scope=attempted_scope)
+
+    # Authority is checked again at attempted use. A valid signature proves a
+    # historical act; it does not make a lapsed delegation current forever.
+    for person in row.get("approvers") or []:
+        checked = verifier.authority(
+            person.get("authority_evidence"),
+            person_id=str(person.get("person_id") or ""),
+            role=str(person.get("role") or ""),
+            basis=str(person.get("authority_basis") or ""),
+            scope=f"approval:{choice}:{gate}", at=moment,
+        )
+        if not checked.verified:
+            reasons = _verification_reasons(checked)
+            if not checked.available:
+                return _unavailable(reasons, label, attempted_scope)
+            return _resolution(UNVERIFIED, reasons, label,
+                               attempted_scope=attempted_scope)
+
+    return _resolution(
+        VALID, f"{label} authorises {choice} at the {gate} gate", label,
+        attempted_scope=attempted_scope)
+
+
+def resolve_packet_approvals(
+        store: dict | None, choices: dict, packets: dict, *,
+        packet: str, gate: str, environment: str,
+        release_profile: str, release_manifest: object,
+        configuration: object, coverage_manifest: object,
+        capabilities: Iterable[str], data_classes: Iterable[str],
+        run_id: str | None, proposal_sha256: Mapping[str, str],
+        required_approvers: Mapping[str, frozenset[str]],
+        verifier: EvidenceVerifier, used_run_ids: frozenset[str] = frozenset(),
+        time_available: bool = True, now: datetime | None = None,
+        schema: dict | None = None) -> dict[str, Resolution]:
+    """Resolve only the choices applicable to one actual packet attempt.
+
+    This is deliberately not named ``packet_eligible``: approval is one
+    prerequisite and cannot make incomplete build/evidence/deployment gates
+    disappear. Callers combine these resolutions with those separate gates.
+    """
+    packet_row = next((row for row in packets.get("packets") or []
+                       if row.get("id") == packet), None)
+    if packet_row is None:
+        unavailable = _unavailable(
+            [f"unknown attempted packet {packet}"], None,
+            {"packet": packet, "gate": gate})
+        return {"__packet__": unavailable}
+    choice_map = {row.get("id"): row for row in choices.get("choices") or []}
+    applicable = [choice_id for choice_id in packet_row.get("decisions") or []
+                  if gate in ((choice_map.get(choice_id) or {})
+                              .get("approval_required_for", []))]
+    return {
+        choice_id: resolve(
+            store, choices, packets, choice=choice_id, gate=gate, packet=packet,
+            proposal_sha256=proposal_sha256.get(choice_id),
+            environment=environment, release_profile=release_profile,
+            release_manifest=release_manifest, configuration=configuration,
+            coverage_manifest=coverage_manifest, capabilities=capabilities,
+            data_classes=data_classes, run_id=run_id,
+            used_run_ids=used_run_ids,
+            required_approvers=required_approvers.get(choice_id, frozenset()),
+            verifier=verifier, time_available=time_available, now=now,
+            schema=schema,
+        )
+        for choice_id in applicable
+    }

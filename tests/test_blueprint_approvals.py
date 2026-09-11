@@ -63,12 +63,11 @@ def test_structurally_valid_manual_attestation_is_not_machine_verified():
     assert record["id"] in labels["CHOICE-02"]
     assert labels["CHOICE-01"] == "no adoption record recorded"
     blockers = blueprint.readiness_blockers(contracts)
-    # BK-80-AC6 IS NOW IMPLEMENTED, so the criterion's own "until implemented,
-    # report it as not machine-resolved" clause no longer applies. What this
-    # test protects is unchanged and is asserted more sharply below: a record
-    # scoped to a PACKET gate must not authorise a DEPLOYMENT gate, and the
-    # reason must name which gate rather than abstaining about all of them.
-    assert any("CHOICE-02" in line and "out_of_scope" in line
+    # The resolver now exists, but this fixture still supplies only digest
+    # strings and no maintained verifier or attempted release scope. It must
+    # therefore remain explicitly unavailable/unverified rather than becoming
+    # an out-of-scope or valid decision by structural inference.
+    assert any("CHOICE-02" in line and "unverified" in line
                for line in blockers), blockers
     assert not any("has not approved" in line for line in blockers)
     assert any("cannot authorise deployment" in line for line in blockers)
@@ -78,7 +77,8 @@ def test_structurally_valid_manual_attestation_is_not_machine_verified():
 
 
 @pytest.mark.parametrize("store", [None, {}, {"records": []},
-                                   {"schema": 1, "purpose": "x", "records": [None], "revocations": []}])
+                                   {"schema": 1, "purpose": "x",
+                                    "records": [None], "revocations": []}])
 def test_unavailable_or_unreadable_population_never_reads_as_no_approval(store):
     contracts = blueprint.load_contracts()
     labels = adoption_labels(store, contracts["decisions"])
@@ -91,7 +91,8 @@ def test_unavailable_or_unreadable_population_never_reads_as_no_approval(store):
     ("missing_population", "records"), ("unknown_store_field", "Additional properties"),
     ("authored_valid", "Additional properties"), ("authored_verified", "Additional properties"),
     ("synthetic_bypass", "Additional properties"), ("missing_signer", "approvers"),
-    ("missing_authority_evidence", "authority_evidence"), ("missing_signed_record", "signed_record"),
+    ("missing_authority_evidence", "authority_evidence"),
+    ("missing_signed_record", "signed_record"),
     ("malformed_digest", "does not match"), ("unknown_choice", "unknown choice"),
     ("digest_trailing_newline", "too long"),
     ("unknown_packet", "unknown packet"), ("wrong_packet_choice", "does not govern packet"),
@@ -136,7 +137,8 @@ def test_adoption_controls_reject_planted_failures(probe, expected):
     elif probe == "unknown_packet":
         row["scope"]["packets"] = ["P999"]
     elif probe == "wrong_packet_choice":
-        other = next(p for p in contracts["packets"]["packets"] if "CHOICE-02" not in p["decisions"])
+        other = next(p for p in contracts["packets"]["packets"]
+                     if "CHOICE-02" not in p["decisions"])
         row["scope"]["packets"] = [other["id"]]
     elif probe == "wrong_gate":
         row["scope"]["gate"] = "procurement"
@@ -244,7 +246,8 @@ def test_signed_history_is_retained_without_becoming_a_validity_claim():
     store["records"].append(second)
     store["revocations"] = [{"id": "REVOKE-synthetic-02", "approval_id": second["id"],
                             "effective_at": "2026-09-03T12:00:00Z",
-                            "revoked_by": deepcopy(first["approvers"][0]), "reason": "Synthetic test",
+                            "revoked_by": deepcopy(first["approvers"][0]),
+                            "reason": "Synthetic test",
                             "signed_record": deepcopy(first["signed_record"])}]
     assert _errors(contracts, store) == []
     label = adoption_labels(store, contracts["decisions"])["CHOICE-02"]
@@ -254,8 +257,11 @@ def test_signed_history_is_retained_without_becoming_a_validity_claim():
     assert adoption_labels(store, contracts["decisions"])["CHOICE-02"] == label
 
 
-@pytest.mark.parametrize("probe", ["missing", "unreadable", "malformed", "duplicate_key", "invalid_utf8"])
-def test_cli_reports_unavailable_adoption_register_without_empty_success(tmp_path, monkeypatch, capsys, probe):
+@pytest.mark.parametrize("probe", [
+    "missing", "unreadable", "malformed", "duplicate_key", "invalid_utf8",
+])
+def test_cli_reports_unavailable_adoption_register_without_empty_success(
+        tmp_path, monkeypatch, capsys, probe):
     # Read the real contract population from an isolated copy. The CLI keeps its
     # actual module/backlog/source checks; only the loader's root is redirected.
     # Neither the loader result nor any validation/readiness verdict is mocked.

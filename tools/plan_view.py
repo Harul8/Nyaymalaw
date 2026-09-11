@@ -428,6 +428,16 @@ def check_view(tables: dict[str, list[dict]], root: Path = ROOT) -> list[str]:
     profile_rows = tables["Release Profiles"]
     if [row.get("Profile") for row in profile_rows if row.get("Aspect") == "Scope"] != [p["id"] for p in profiles]:
         errors.append("Release Profiles: exact profile population differs")
+    for profile in profiles:
+        expected = _list(profile.get("required_criteria")) or (
+            "No unconditional criteria are listed. Activated conditional work "
+            "contributes its complete criterion population.")
+        rows = [row for row in profile_rows
+                if row.get("Profile") == profile["id"]
+                and row.get("Aspect") == "Required criteria"]
+        if len(rows) != 1 or rows[0].get("Requirement") != expected:
+            errors.append(f"Release Profiles: {profile['id']} exact required "
+                          "criterion population differs")
     profile_index = len(groups) + 4
     formula("Reconciliation", f"C{profile_index}", f'=COUNTIF(\'Release Profiles\'!B4:B{len(profile_rows)+3},"Scope")', len(profiles))
     formula("Reconciliation", f"D{profile_index}", f"=C{profile_index}-B{profile_index}", 0)

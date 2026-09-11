@@ -28,11 +28,10 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
-import json
 import pathlib
 import subprocess
 import sys
-import time
+import uuid
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -41,10 +40,16 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 # `ModuleNotFoundError` -- which is how this tool crashed on its first run
 # after the console fix. `trace.py` does the same thing for the same reason.
 sys.path.insert(0, str(ROOT))
+from tools import browser_evidence as _browser_evidence  # noqa: E402
 from tools._console import utf8_console  # noqa: E402
-from tools.browser_evidence import SCHEMA as BROWSER_SCHEMA  # noqa: E402
-from tools.browser_evidence import manifest_problems  # noqa: E402
 from tools.evidence import verification_fingerprint  # noqa: E402
+
+BROWSER_SCHEMA = _browser_evidence.SCHEMA
+artifact_inventory = _browser_evidence.artifact_inventory
+execution_identity = _browser_evidence.execution_identity
+manifest_problems = _browser_evidence.manifest_problems
+report_problems = _browser_evidence.problems
+publish = _browser_evidence.publish
 
 # THE CONSOLE BEFORE THE PROSE. This table prints em-dashes and `·`, and a
 # Windows console defaulting to cp1252 raises `UnicodeEncodeError` half way
@@ -142,6 +147,14 @@ def _phase_name(nodeid: str) -> str:
     return f"{words}{f' [{param}]' if param else ''}"
 
 
+def _display_path(path: pathlib.Path) -> str:
+    """Prefer a repository-relative label without rejecting isolated outputs."""
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
 def run(extra: list[str]) -> int:
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     # THE WHOLE DIRECTORY, NOT JUST THE REPORT. BK-51. Only `report.json` was
@@ -164,18 +177,20 @@ def run(extra: list[str]) -> int:
             print(f"  ! {problem}")
         return 1
 
-    run_began = time.time()
+    run_id = str(uuid.uuid4())
     started = _fingerprint()
 
+    pytest_argv = [
+        "pytest", "tests/test_the_journey_login_to_logout.py",
+        "-m", "journey", "-p", "no:randomly", "-q",
+        "--tb=short", "-rA", *extra,
+    ]
     proc = subprocess.run(
-        [sys.executable, "-m", "pytest", "tests/test_the_journey_login_to_logout.py",
-         "-m", "journey", "-p", "no:randomly", "-q",
-         # One line per phase, machine readable, so this runner reports what
-         # actually happened rather than parsing prose.
-         "--tb=short", "-rA", *extra],
+        [sys.executable, "-m", *pytest_argv],
         cwd=ROOT, capture_output=True, text=True)
 
     rows = _parse(proc.stdout)
+    no_rows = not rows
     if not rows:
         print("NOT RUN  the journey suite produced no phases at all.")
         print("         This is not a pass. The browser may be missing:")
@@ -184,9 +199,8 @@ def run(extra: list[str]) -> int:
         print()
         print(proc.stdout[-4000:])
         print(proc.stderr[-2000:], file=sys.stderr)
-        return 2
 
-    width = max(len(r["phase"]) for r in rows) + 2
+    width = max((len(r["phase"]) for r in rows), default=24) + 2
     print()
     print("=" * (width + 40))
     print("  THE JOURNEY  login to confirmed logout")
@@ -199,7 +213,7 @@ def run(extra: list[str]) -> int:
         print()
         print(f"  artifacts for every phase that did not pass ({len(art)}):")
         for p in art:
-            print(f"    {p.relative_to(ROOT)}")
+            print(f"    {_display_path(p)}")
 
     failed = [r for r in rows if r["state"] in ("FAILED", "NOT RUN")]
     reproduced = [r for r in rows if r["state"] == "REPRODUCED"]
@@ -284,25 +298,50 @@ def run(extra: list[str]) -> int:
     # directory, so a screenshot from last week's failure was listed as
     # evidence of today's pass. Tagging each with the run identity makes a
     # retained one visible instead of merely present.
-    artifacts = {path.name: started for path in sorted(ARTIFACTS.glob("*.png"))
-                 if path.stat().st_mtime >= run_began}
-    REPORT.write_text(json.dumps({
+    artifact_paths = [
+        path for pattern in ("*.png", "*.html")
+        for path in sorted(ARTIFACTS.glob(pattern))
+    ]
+    artifacts = artifact_inventory(artifact_paths, root=ARTIFACTS, run_id=run_id)
+    python_runtime = {
+        "implementation": sys.implementation.name,
+        "version": list(sys.version_info[:3]),
+        "executable": pathlib.Path(sys.executable).name,
+    }
+    configuration = execution_identity(
+        argv=pytest_argv, expected=list(EXPECTED), python=python_runtime,
+    )
+    unexpected = sorted(seen - set(EXPECTED))
+    report = {
         "schema": BROWSER_SCHEMA,
+        "run_id": run_id,
         "ran_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
         "commit": _commit(),
         "fingerprint": started,
         "finished_fingerprint": finished,
-        "argv": ["pytest", *extra],
+        "configuration_identity": configuration,
+        "argv": pytest_argv,
+        "python": python_runtime,
         "pytest_returncode": proc.returncode,
-        "expected": len(EXPECTED),
+        "expected": list(EXPECTED),
         "counts": {"pass": len(rows) - len(failed) - len(reproduced),
                    "reproduced": len(reproduced), "unexplained": len(failed),
-                   "missing": len(absent)},
+                   "missing": len(absent), "unexpected": len(unexpected)},
         "missing": absent,
         "artifacts": artifacts,
         "rows": rows,
-    }, indent=2), encoding="utf8")
-    print(f"  {REPORT.relative_to(ROOT)}")
+    }
+    publish(REPORT, report)
+    print(f"  {_display_path(REPORT)}")
+
+    incompatible = report_problems(
+        report, expected=EXPECTED, fingerprint=started,
+        configuration_identity=configuration, artifact_root=ARTIFACTS,
+    )
+    if incompatible:
+        print("  REPORT REFUSED")
+        for problem in incompatible:
+            print(f"    {problem}")
     print()
 
     # AN UNEXPLAINED FAILURE IS THE ONLY NON-ZERO EXIT -- and a phase that
@@ -315,7 +354,10 @@ def run(extra: list[str]) -> int:
     # BK-51 ADDED THE OTHER TWO. `REPRODUCED` is a defect somebody wrote down.
     # A missing phase is a question nobody asked, and a pytest that exited 4 is
     # a run that did not happen -- neither has a row, so neither may be green.
-    return 1 if (failed or absent or broke or undeclared or closed) else 0
+    if no_rows:
+        return 2
+    return 1 if (failed or absent or broke or undeclared or closed
+                 or unexpected or incompatible) else 0
 
 
 def _parse(stdout: str) -> list[dict]:
@@ -334,6 +376,7 @@ def _parse(stdout: str) -> list[dict]:
                         "marker; " + note)
             rows.append({"phase": _phase_name(nodeid.strip()),
                          "state": state, "note": note.strip()[:120],
+                         "scenario": nodeid.strip().rsplit("::", 1)[-1],
                          "nodeid": nodeid.strip()})
             break
     return rows

@@ -118,7 +118,7 @@ const readme = [
   ['Currently proved','Effective evidence and derived done come from the existing backlog functions bound to the current execution artifact. Missing, failing or stale proof remains unproved. Legacy closures are identified separately.'],
   ['Execution evidence at snapshot',(data._execution_problems||[]).length?data._execution_problems:'No execution-artifact validation problem reported by the existing binder. This does not replace counsel, browser or deployment evidence.'],
   ['Released','This workbook records no deployment authorisation. Item readiness is not a release decision. Use a separately recorded release-profile decision with its exact population, environment, owners and current evidence.'],
-  ['Wave and release controls','Wave contracts and release profiles are intended manual decisions until BK-80 implements their mechanical gate. A populated profile or green registry lint cannot approve a release.'],
+  ['Wave and release controls','BK-80 checks exact release-profile criterion membership and current bound evidence. A populated profile, complete obligation report or green registry lint still cannot approve a release.'],
   ['Core workflow','Take the Brief is an interactive loop: hear or receive material, retrieve what is permitted, assess, ask the next useful question, preserve the response, and reassess. Work the File and Advise return to the affected earlier state when facts, law, scope or readiness change.'],
   ['Senior-advocate quality','Test independent judgment, adverse-case candour, proportionality, source discipline, scope and role authority. Accurate calculation does not establish the legal premise. Professional review is independent of code-test success.'],
   ['Media scope','The intended intake includes voice, audio/video, images and documents. Publish supported formats, limits, language and processing capability; quarantine or refuse unsupported, unsafe or unconsented material without pretending it was read.'],
@@ -187,13 +187,14 @@ const profileRows=data.plan.release_profiles.flatMap(r=>[
   [r.id,'Scope',r.scope],
   [r.id,'Entry conditions',r.entry_conditions],
   [r.id,'Required work',(r.required_items||[]).length?list(r.required_items):'No unconditional work items are listed. Apply the conditional scope requirements below.'],
+  [r.id,'Required criteria',(r.required_criteria||[]).length?list(r.required_criteria):'No unconditional criteria are listed. Activated conditional work contributes its complete criterion population.'],
   [r.id,'Conditional work',(r.conditional_items||[]).length?r.conditional_items.map(c=>`${c.when}: ${list(c.items)}`):'No additional conditional items are listed.'],
   [r.id,'Required evidence',r.required_evidence],
   [r.id,'Excluded claims',r.excluded_claims],
   [r.id,'Approval',r.approval],
   [r.id,'Control',r.control],
 ]);
-const profiles=addTable('Release Profiles','Permitted release scopes','Intended manual profiles until BK-80 enforces membership and evidence. This snapshot does not approve a release or waive MFA, privacy or legal-quality protections.',['Profile','Aspect','Requirement'],profileRows,[23,25,142]);
+const profiles=addTable('Release Profiles','Permitted release scopes','BK-80 enforces exact obligation membership and current bound evidence. This snapshot does not approve a release or waive MFA, privacy or legal-quality protections.',['Profile','Aspect','Requirement'],profileRows,[23,25,142]);
 profiles.getRange(`A4:C${profileRows.length+3}`).format.font={name:'Arial',size:11,color:'#20272B'};
 profiles.getRange('A3:C3').format.font={name:'Arial',size:11,bold:true,color:'#FFFFFF'};
 profileRows.forEach((row,i)=>{
@@ -237,7 +238,7 @@ const acceptanceRows=data.items.flatMap(item=>(item.acceptance||[]).map(ac=>{
     text(item._plan_view.criteria[ac.id]),'Declared tests and criteria are not execution results.'];
 }));
 addTable('Acceptance','Every registered acceptance criterion','Exactly one final packet owns each in-scope criterion. BK-87, BK-89 and BK-90 are planning deliveries, explicitly outside future application packets.',['Criterion','Work item','Required behaviour','Required evidence methods','Planted mutation','Expected refusal / failure','Contributing packets','Final packet','Effective proof','Limit'],acceptanceRows,[20,14,100,42,88,88,25,28,30,58]);
-addTable('Decisions','Recommended defaults and approval boundaries','Manual adoption records: docs/blueprint/approvals.json. Their schema and verification contract are in APPROVALS.md. Recorded is not verified; BK-80/P03 owns automated authority resolution.',['Choice','Decision','Recommendation','Reason','Fallback','Accountable approver','Approval required for','Current approval'],blueprint.decisions.choices.map(r=>[
+addTable('Decisions','Recommended defaults and approval boundaries','Manual adoption records: docs/blueprint/approvals.json. APPROVALS.md defines verification. This planning view records presence only; actual attempted-use callers supply protected trust and exact scope to the P03 resolver.',['Choice','Decision','Recommendation','Reason','Fallback','Accountable approver','Approval required for','Current approval'],blueprint.decisions.choices.map(r=>[
   r.id,r.title,r.recommendation,r.rationale,r.fallback,r.approver,list(r.approval_required_for),blueprint.adoption_labels[r.id],
 ]),[18,40,100,68,90,42,44,50]);
 addTable('Command Contracts','Versioned application command contracts','Target contracts, not routes claimed implemented. Complete JSON schemas and positive/negative witnesses live in docs/blueprint/contracts/commands.json.',['Command','Method','Target path','Owner criteria','Current route / migration','Request schema','Response schema','Retry / concurrency'],blueprint.commands['x-commands'].map(r=>[

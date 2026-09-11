@@ -1,200 +1,284 @@
-"""A BROWSER REPORT PROVES THE RUN HAPPENED, NOT THAT ITS ROWS ARE GREEN.
-
-BK-80-AC2 (the reader) and BK-51-AC1 (the runner's reconciliation).
-
-`bind_execution_evidence` checked two things: the report's fingerprint, and the
-state of one named row. Every report below satisfies both and proves nothing —
-and every one of them has rows that are entirely `PASS`:
-
-    the run crashed at phase 3      three green rows, then nothing
-    a phase was renamed away        nothing asks for it, so nothing is missing
-    a row appears twice             the count says 24, the population is 23
-    the tree moved mid-run          half the rows describe different code
-    last week's screenshots         artifacts from a product that is not this one
-
-THE CRITERION'S OWN MUTATION is *supply an unfinished report, duplicate a row
-or omit one expected scenario while retaining a matching fingerprint* — the
-last clause being the point: the fingerprint check was the only thing there,
-and all three mutations keep it valid.
-"""
+"""A browser report proves one complete, byte-bound run or proves nothing."""
 from __future__ import annotations
 
 import copy
+import json
+from types import SimpleNamespace
 
 import pytest
 
-from tools.browser_evidence import SCHEMA, manifest_problems, problems, row_for
+from tools import browser_evidence, journey
+from tools.browser_evidence import (
+    SCHEMA,
+    artifact_inventory,
+    execution_identity,
+    manifest_problems,
+    problems,
+    publish,
+    row_for,
+)
 
 pytestmark = pytest.mark.class_a
 
 TREE = "0123456789abcdef0123"
+RUN = "12345678-1234-4234-9234-123456789abc"
 EXPECTED = ("phase_one", "phase_two", "phase_three")
+ARGV = ["pytest", "tests/journey.py", "-m", "journey"]
+PYTHON = {"implementation": "cpython", "version": [3, 11, 9],
+          "executable": "python.exe"}
+
+
+def _rows(names=EXPECTED) -> list[dict]:
+    return [{"nodeid": f"tests/journey.py::{name}", "scenario": name,
+             "state": "PASS", "phase": name, "note": ""} for name in names]
+
+
+def _counts(rows: list[dict]) -> dict:
+    scenarios = {row["scenario"] for row in rows}
+    return {
+        "pass": sum(row["state"] == "PASS" for row in rows),
+        "reproduced": sum(row["state"] == "REPRODUCED" for row in rows),
+        "unexplained": sum(row["state"] in ("FAILED", "NOT RUN") for row in rows),
+        "missing": len(set(EXPECTED) - scenarios),
+        "unexpected": len(scenarios - set(EXPECTED)),
+    }
 
 
 def _report(**overrides) -> dict:
+    rows = overrides.pop("rows", _rows())
+    expected = overrides.pop("expected", list(EXPECTED))
+    argv = overrides.pop("argv", list(ARGV))
+    python = overrides.pop("python", copy.deepcopy(PYTHON))
     base = {
         "schema": SCHEMA,
+        "run_id": RUN,
         "ran_at": "2026-09-11T09:00:00+00:00",
         "commit": "abc1234",
         "fingerprint": TREE,
         "finished_fingerprint": TREE,
-        "argv": ["pytest"],
+        "argv": argv,
+        "python": python,
+        "configuration_identity": execution_identity(
+            argv=argv, expected=expected, python=python),
         "pytest_returncode": 0,
-        "expected": len(EXPECTED),
-        "rows": [{"nodeid": f"tests/journey.py::{name}", "state": "PASS",
-                  "phase": name, "note": ""} for name in EXPECTED],
-        "artifacts": {"phase_one.png": TREE},
+        "expected": expected,
+        "rows": rows,
+        "counts": _counts(rows),
+        "artifacts": [],
     }
     base.update(overrides)
     return base
 
 
-def _check(report, **kwargs):
-    return problems(report, expected=EXPECTED, fingerprint=TREE, **kwargs)
+def _check(report, *, root=None, **kwargs):
+    return problems(report, expected=EXPECTED, fingerprint=TREE,
+                    artifact_root=root, **kwargs)
 
-
-# ============================ the negative control ==========================
 
 def test_a_complete_run_reconciles():
-    """Without this, a reader that refused everything would satisfy the whole
-    file and stop every release for a reason nobody could find."""
     assert _check(_report()) == []
     assert row_for(_report(), "tests/journey.py::phase_one") == "PASS"
 
 
-# ======================= the criterion's own mutations ======================
-
-def test_an_unfinished_run_cannot_prove_the_phases_it_never_reached():
-    """A crash at phase 3 leaves three green rows behind it, and a reader that
-    looks only at rows sees three passes."""
+def test_an_unfinished_run_cannot_prove_green_rows():
     found = _check(_report(pytest_returncode=2))
-    assert any("did not complete" in p for p in found), found
+    assert any("did not complete" in problem for problem in found), found
 
 
-def test_a_duplicated_row_is_reported_rather_than_counted_twice():
+def test_population_process_and_artifact_mutations_are_each_refused(tmp_path):
+    duplicate = _rows()
+    duplicate.append(copy.deepcopy(duplicate[0]))
+    assert any("appears 2 times" in p for p in _check(_report(rows=duplicate)))
+
+    missing = _rows(("phase_one", "phase_three"))
+    assert any("phase_two produced no row" in p
+               for p in _check(_report(rows=missing)))
+
+    unexpected = _rows((*EXPECTED, "phase_four"))
+    assert any("phase_four is an unexpected row" in p
+               for p in _check(_report(rows=unexpected)))
+
+    assert any("did not complete" in problem
+               for problem in _check(_report(pytest_returncode=2)))
+
+    retained = tmp_path / "last-weeks-failure.png"
+    retained.write_bytes(b"old")
+    inventory = artifact_inventory([retained], root=tmp_path, run_id=RUN)
+    inventory[0]["run_id"] = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    assert any("different run" in problem
+               for problem in _check(_report(artifacts=inventory), root=tmp_path))
+
+
+def test_suffix_similarity_cannot_replace_an_exact_scenario():
+    rows = _rows(("phase_one", "phase_two", "renamed_phase_three"))
+    found = _check(_report(rows=rows))
+    assert any("phase_three produced no row" in problem for problem in found)
+    assert any("renamed_phase_three is an unexpected" in problem for problem in found)
+
+
+def test_row_identity_and_summary_counts_are_reconciled():
     report = _report()
-    report["rows"].append(copy.deepcopy(report["rows"][0]))
+    report["rows"][0]["scenario"] = "not-phase-one"
+    report["counts"]["pass"] = 99
     found = _check(report)
-    assert any("appears 2 times" in p for p in found), found
+    assert any("exact scenario identity" in problem for problem in found)
+    assert any("counts do not reconcile" in problem for problem in found)
 
 
-def test_a_scenario_that_produced_no_row_is_not_a_scenario_that_passed():
-    """§9 on the browser surface. The omitted phase's silence is indistinguish-
-    able from success unless something holds the expected population."""
+def test_start_end_tree_and_execution_configuration_are_bound():
+    moved = _check(_report(finished_fingerprint="f" * 20))
+    assert any("moved during the run" in problem for problem in moved)
+
     report = _report()
-    report["rows"] = [r for r in report["rows"] if "phase_two" not in r["nodeid"]]
+    report["argv"].append("-k")
     found = _check(report)
-    assert any("phase_two produced no row" in p for p in found), found
+    assert any("configuration identity" in problem for problem in found)
 
 
-def test_all_three_mutations_keep_the_fingerprint_valid():
-    """THE MEASUREMENT BEHIND THE CRITERION'S LAST CLAUSE. The fingerprint
-    check was the only thing there, and it survives every one of them."""
-    unfinished = _report(pytest_returncode=2)
-    duplicated = _report()
-    duplicated["rows"].append(copy.deepcopy(duplicated["rows"][0]))
-    omitted = _report()
-    omitted["rows"] = omitted["rows"][:-1]
-    for mutated in (unfinished, duplicated, omitted):
-        assert mutated["fingerprint"] == TREE, "the mutation moved the fingerprint"
-        assert all(row["state"] == "PASS" for row in mutated["rows"])
-        assert _check(mutated), "a mutation with a valid fingerprint reconciled"
+def test_report_retains_the_exact_expected_manifest():
+    report = _report(expected=["phase_one", "phase_two"])
+    found = _check(report)
+    assert any("expected manifest differs" in problem for problem in found)
 
 
-# ========================== identity across the run =========================
+def test_artifact_bytes_are_bound_to_the_run(tmp_path):
+    screenshot = tmp_path / "phase_one.png"
+    screenshot.write_bytes(b"actual screenshot bytes")
+    report = _report(artifacts=artifact_inventory(
+        [screenshot], root=tmp_path, run_id=RUN))
+    assert _check(report, root=tmp_path) == []
 
-def test_a_tree_that_moved_during_the_run_is_two_products():
-    found = _check(_report(finished_fingerprint="ffffffffffffffffffff"))
-    assert any("moved during the run" in p for p in found), found
-
-
-def test_a_report_about_another_tree_is_stale():
-    found = _check(_report(fingerprint="ffffffffffffffffffff",
-                           finished_fingerprint="ffffffffffffffffffff"))
-    assert any("stale" in p for p in found), found
-
-
-def test_a_narrower_question_can_be_asked_without_a_tree():
-    """The runner asks *is my own output complete* before printing a verdict,
-    which is a different question from *is it about this tree*."""
-    # THE ARTIFACTS ARE RETAGGED TOO, and the first version of this test forgot
-    # to: it moved the fingerprint and left `phase_one.png` tagged with the old
-    # one, so the artifact check fired and the test failed for a reason it was
-    # not about. The check was right -- artifacts are anchored to the report's
-    # OWN run identity, which is what makes a retained one visible.
-    report = _report(fingerprint="somewhere-else",
-                     finished_fingerprint="somewhere-else",
-                     artifacts={"phase_one.png": "somewhere-else"})
-    assert problems(report, expected=EXPECTED) == []
-    assert problems(report, expected=EXPECTED, fingerprint=TREE)
+    screenshot.write_bytes(b"changed later")
+    found = _check(report, root=tmp_path)
+    assert any("bytes changed" in problem or "byte count changed" in problem
+               for problem in found), found
 
 
-# ============================== absent inputs ===============================
+def test_retained_or_unavailable_artifacts_are_not_accepted(tmp_path):
+    screenshot = tmp_path / "failure.png"
+    screenshot.write_bytes(b"old")
+    inventory = artifact_inventory([screenshot], root=tmp_path, run_id=RUN)
+    inventory[0]["run_id"] = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    report = _report(artifacts=inventory)
+    assert any("different run" in problem
+               for problem in _check(report, root=tmp_path))
+    assert any("not available" in problem for problem in _check(report))
+
+
+def test_atomic_publish_leaves_neither_partial_report_nor_temp_file(tmp_path,
+                                                                    monkeypatch):
+    target = tmp_path / "report.json"
+    target.write_text('{"old": true}', encoding="utf-8")
+
+    def refuse_replace(source, destination):
+        raise OSError("planted publication failure")
+
+    monkeypatch.setattr(browser_evidence.os, "replace", refuse_replace)
+    with pytest.raises(OSError, match="planted publication failure"):
+        publish(target, _report())
+    assert json.loads(target.read_text(encoding="utf-8")) == {"old": True}
+    assert list(tmp_path.glob("*.tmp")) == []
+
 
 @pytest.mark.parametrize("report,expected", [
     (None, "absent or unreadable"),
     ({}, "unsupported schema"),
     ({"schema": 99}, "unsupported schema"),
 ])
-def test_an_absent_report_never_reads_as_a_failed_run(report, expected):
-    found = problems(report, expected=EXPECTED)
-    assert any(expected in p for p in found), found
+def test_absent_or_incompatible_reports_never_pass(report, expected):
+    assert any(expected in problem for problem in problems(report, expected=EXPECTED))
 
 
-def test_an_empty_row_population_is_refused():
-    found = _check(_report(rows=[]))
-    assert any("empty row population" in p for p in found), found
-
-
-@pytest.mark.parametrize("field", [
-    "ran_at", "commit", "fingerprint", "finished_fingerprint", "artifacts",
-])
-def test_every_binding_field_is_required(field):
-    found = _check(_report(**{field: None}))
-    assert any(field in p for p in found), (field, found)
-
-
-def test_a_retained_artifact_from_another_run_is_named():
-    """A screenshot from last week is a picture of a product that is not this
-    one, and a reader cannot tell by looking at the file."""
-    found = _check(_report(artifacts={"phase_one.png": TREE,
-                                      "old_failure.png": "an-earlier-run"}))
-    assert any("old_failure.png" in p for p in found), found
-
-
-# ===================== the manifest the runner declares =====================
-
-def test_a_duplicated_expectation_makes_a_complete_run_report_short():
-    """BK-51-AC1. `expected: len(EXPECTED)` is the declared population size, so
-    a duplicate makes a perfect run look one phase short forever -- and the
-    obvious fix is to relax the completeness check."""
-    found = manifest_problems(("a", "b", "a"))
-    assert any("names a 2 times" in p for p in found), found
-
-
-def test_an_empty_manifest_would_reconcile_a_run_that_did_nothing():
-    found = manifest_problems(())
-    assert any("empty" in p for p in found), found
-
-
-def test_the_real_manifest_is_unique_and_nonempty():
-    """The population this repository actually declares, not a fixture."""
+def test_manifest_is_nonempty_unique_and_the_real_one_is_populated():
+    assert any("empty" in problem for problem in manifest_problems(()))
+    assert any("names a 2 times" in problem
+               for problem in manifest_problems(("a", "b", "a")))
     from tools.journey import EXPECTED as REAL
-
     assert manifest_problems(REAL) == []
     assert len(REAL) == len(set(REAL)) >= 20
 
 
-def test_the_runner_writes_what_the_reader_requires():
-    """THE TWO HALVES, CHECKED AGAINST EACH OTHER. A writer that emits less
-    than the reader demands produces evidence nobody can use, and the drift
-    would only appear the first time a browser PASS was recorded."""
+def test_the_runner_writes_every_reader_field():
     import inspect
 
     from tools import journey
-    from tools.browser_evidence import REQUIRED_FIELDS
-
     written = inspect.getsource(journey.run)
-    for field in REQUIRED_FIELDS:
-        assert f'"{field}"' in written, (
-            f"the reader requires {field!r} and tools/journey.py never writes it")
+    for field in browser_evidence.REQUIRED_FIELDS:
+        assert f'"{field}"' in written, field
+
+
+def _drive_runner(monkeypatch, tmp_path, *, returncode=0,
+                  reported=("phase_one", "phase_two")):
+    artifacts = tmp_path / "journey"
+    report_path = artifacts / "report.json"
+    artifacts.mkdir()
+    stale = artifacts / "last-weeks-failure.png"
+    stale.write_bytes(b"old screenshot")
+    monkeypatch.setattr(journey, "ARTIFACTS", artifacts)
+    monkeypatch.setattr(journey, "REPORT", report_path)
+    monkeypatch.setattr(journey, "EXPECTED", ("phase_one", "phase_two"))
+    monkeypatch.setattr(journey, "_fingerprint", lambda: TREE)
+
+    def controlled_process(argv, **_kwargs):
+        if argv[:2] == ["git", "rev-parse"]:
+            return SimpleNamespace(returncode=0, stdout="abc1234\n", stderr="")
+        if argv[:2] == ["git", "status"]:
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+        (artifacts / "phase_one.png").write_bytes(b"current screenshot")
+        stdout = "\n".join(
+            f"PASSED tests/test_the_journey_login_to_logout.py::{name}"
+            for name in reported
+        )
+        return SimpleNamespace(returncode=returncode, stdout=stdout, stderr="")
+
+    monkeypatch.setattr(journey.subprocess, "run", controlled_process)
+    result = journey.run([])
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    return result, report, artifacts, stale
+
+
+def test_real_runner_publishes_one_complete_byte_bound_execution(monkeypatch,
+                                                                  tmp_path):
+    result, report, artifacts, stale = _drive_runner(monkeypatch, tmp_path)
+    assert result == 0
+    assert not stale.exists()
+    assert {row["scenario"] for row in report["rows"]} == {
+        "phase_one", "phase_two",
+    }
+    assert [row["path"] for row in report["artifacts"]] == ["phase_one.png"]
+    assert problems(
+        report, expected=("phase_one", "phase_two"), fingerprint=TREE,
+        configuration_identity=report["configuration_identity"],
+        artifact_root=artifacts,
+    ) == []
+
+
+def test_real_runner_retains_partial_teardown_failure_as_a_refusal(monkeypatch,
+                                                                   tmp_path):
+    result, report, artifacts, _ = _drive_runner(
+        monkeypatch, tmp_path, returncode=2, reported=("phase_one",))
+    assert result == 1
+    assert report["pytest_returncode"] == 2
+    found = problems(
+        report, expected=("phase_one", "phase_two"), fingerprint=TREE,
+        configuration_identity=report["configuration_identity"],
+        artifact_root=artifacts,
+    )
+    assert any("did not complete" in problem for problem in found), found
+    assert any("phase_two produced no row" in problem for problem in found), found
+
+
+def test_real_runner_records_an_interruption_that_produces_no_rows(monkeypatch,
+                                                                   tmp_path):
+    result, report, artifacts, _ = _drive_runner(
+        monkeypatch, tmp_path, returncode=4, reported=())
+    assert result == 2
+    assert report["rows"] == []
+    found = problems(
+        report, expected=("phase_one", "phase_two"), fingerprint=TREE,
+        configuration_identity=report["configuration_identity"],
+        artifact_root=artifacts,
+    )
+    assert any("empty row population" in problem for problem in found), found
+    assert all(any(name in problem for problem in found)
+               for name in ("phase_one", "phase_two"))

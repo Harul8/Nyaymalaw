@@ -86,7 +86,7 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 - **BK-70** [D/E/F] remedy and enforceability model — *planned* · model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
 - **BK-78** [B/C] emergency admission integration — *planned* · design and prove the scoped integration without relaxing the foundation or claiming unrun evidence
 - **BK-79** [C/G/I] multimodal attribution and deletion integration — *planned* · design and prove the scoped integration without relaxing the foundation or claiming unrun evidence
-- **BK-80** [A/B/C/D/E/F/G/H/I] evidence integrity and release claim enforcement — *in_progress* · P01's truthful current-spec, exact-failure and checked-tree identity scope is complete; P03 continues to own AC1, AC2, AC4 and AC6, so the item remains partial and unsigned
+- **BK-80** [A/B/C/D/E/F/G/H/I] evidence integrity and release claim enforcement — *verifying* · P01 and P03 are signed off on the complete control-plane scope; provision operator-owned trust configuration before consuming professional evidence, and wire the scoped resolver at each later application dispatch without treating approval as build or release proof
 - **BK-81** [A/B/C/D/E/F/G/H/I] India-only modular product and execution blueprint — *verifying* · obtain qualified design review and fresh full evidence after resolving the existing trace failures; no application or release claim is promoted
 - **BK-82** [A/B/C/D/E/F/G/H/I] module proof console and cumulative demonstration control — *in_progress* · build the isolated operator console and run-population controls; the mapping checker exists but does not prove the served console or production readiness
 - **BK-83** [A/B/C/D/E/F/G/H/I] transactional matter store and reversible migration — *planned* · complete the Start record and implement the bounded foundation with current negative and served-path proof
@@ -696,6 +696,109 @@ Start remains BLOCKED pending the integrated proof design. W0 may certify the
 foundation; it cannot certify W2's end-to-end processing or production privacy.
 
 ## BK-80 — evidence integrity and release claim enforcement
+
+### P03 evidence-assurance build record — opened 11 September 2026
+
+**Start decision: READY.** P03 runs in the isolated
+`codex/p03-evidence-assurance` worktree at `4ea7c29`. That base contains P01
+and its P02 ancestor. P19/P44 and the owner's P13–P17 application work remain
+separate lanes; this packet does not touch `nm/**` or `web/**`.
+
+**Owned outcome.** Replace five permissive document checks with reusable,
+fail-closed mechanisms: authenticated structured evidence; complete browser-run
+and artifact reconciliation; atomic journey publication; release obligations
+derived from explicit profile, wave and professional mappings; and scoped
+approval resolution that cannot turn a digest string, measurement PASS or
+proposal flag into authority. The real approval register remains empty. No
+client material, paid/model/browser run, deployment or professional conclusion
+is authorised or implied by this build.
+
+**Boundary amendment.** P03 already named the shared evidence, backlog and
+journey tools, but omitted the existing structured/browser/approval readers it
+must change. Its packet boundary now names those files, two narrow shared
+mechanisms (`evidence_verification.py`, `release_obligations.py`) and their
+focused Class-A tests. This records scope before implementation rather than
+quietly widening it afterwards.
+
+**Planned refusal probes.** The build must independently reject a changed or
+unsigned professional record, empty population, incomplete/duplicate/unexpected
+browser row, retained or altered artifact, cancelled/failed publication,
+uncollected or skipped required test, deleted profile criterion, missing
+professional evidence, wrong signer or joint authority, changed relevant scope,
+expiry, authenticated revocation/supersession, forged adverse event, unavailable
+trust/evidence/time input and bounded-run replay. Each probe restores its input
+and must fail for the intended reason.
+
+### P03 evidence-assurance conformance record — completed 11 September 2026
+
+**Bounded result: SIGNED OFF for the P03 tooling boundary.** BK-80-AC1,
+BK-80-AC2, BK-80-AC4, BK-80-AC6 and BK-51-AC1 are implemented on the isolated
+branch. The focused Class-A population is 140 tests and passes; every changed
+P03 file passes Ruff. The repository-wide Ruff debt is independently measured
+as the exact pre-existing 144-diagnostic set and re-registered rather than
+hidden. Current cumulative-gate and final-integration results remain separate
+facts and are recorded after the stable tree is run.
+
+**Structured evidence.** Schema 2 authenticates the complete indexed payload,
+the exact referenced bytes, actor and authority grant against operator-owned
+Ed25519 public trust. It binds current source and evidence-configuration
+identity, finite validity, counted population and reservations. A method is now
+an enumerated procedure rather than a phrase; a rubric carries uniquely named,
+supported findings, and an overall PASS cannot conceal FAIL or NOT_ASSESSED.
+The completion consumer rechecks the current operator configuration rather than
+accepting the configuration named by the record itself. The repository ships
+no trust root or private key. `NM_EVIDENCE_TRUST` must point to a closed
+operator document naming `schema`, `configuration_identity`, `allowed_roots`,
+`authority_issuers` and Ed25519 public `keys`; missing trust is verification
+unavailable.
+
+**Browser and journey evidence.** Schema 2 uses an independent nonempty exact
+scenario manifest, UUIDv4 run identity, process result, start/end checked-tree
+identity, command/Python configuration, unique canonical rows and reconciled
+counts. Artifacts are contained file names whose current bytes, sizes, digest
+and run identity are checked. The runner clears the whole prior artifact
+population, inventories everything produced by the controlled run, publishes
+atomically and records even an interruption that produces zero rows. Its old
+CLI outcomes remain: zero-row non-execution exits 2, an incompatible or failed
+run exits 1, and a complete compatible run exits 0. A complete report may
+truthfully contain failures; only the exact named PASS row can satisfy its own
+browser evidence requirement.
+
+**Release obligations and approvals.** Release profiles now enumerate their
+exact criterion population independently of outcomes. `python tools/backlog.py
+obligations <profile>` reports current criterion and professional rows; missing,
+skipped, stale or merely authored/test-named PASS evidence stays visible and
+blocks. The approval resolver authenticates every competing record before
+using its signed scope, separates all seven states from evaluation availability,
+handles explicit narrower supersession and separately scoped gates, verifies
+revocation/conditions/authority twice, and refuses one-run replay. The packet
+entry point resolves only CHOICE records applicable to that packet and gate;
+`valid` satisfies only that approval prerequisite.
+
+**Independently planted failures.** The positive controls were restored after
+source/configuration movement, unsigned or unattributed review, empty rubric
+work, digest and payload tampering, missing/duplicate/unexpected browser rows,
+failed teardown, zero-row interruption, old or changed artifacts, unexecuted
+tests, deleted profile criteria, missing professional evidence, wrong/joint
+signers, separate gates, narrower supersession, forged replacement/revocation,
+expiry, unavailable trust/time and bounded-run replay. Those probes found and
+fixed four defects in this build itself: the completion consumer initially did
+not supply current configuration identity; the trust loader shadowed it with a
+key tuple; an mtime comparison dropped freshly written Windows artifacts; and
+the empty-row reader returned before naming every missing scenario.
+
+**Compatibility and limits.** Existing schema-1 structured and browser records
+remain historical and incompatible; regenerate them from the original subject
+and evidence rather than relabelling them. The existing real approval register
+remains empty. Synthetic keys and records prove the mechanism only: they are no
+qualified review, real approval, production measure or deployment permission.
+No paid model run, corpus job, live browser journey, client-data operation or
+external verification ran. Wiring `resolve_packet_approvals` immediately before
+each consequential application dispatch remains the owning application
+packet's integration obligation; it cannot be claimed from this tooling branch.
+Final combination with `43f62e4` must reconcile shared backlog/plan files,
+regenerate views and rerun the cumulative gate because separate branch proof
+does not establish the integrated product.
 
 At P01 Start, review found limits in the control plane. Structured non-Class-A
 records checked named fields and criterion identity but not the full evaluated

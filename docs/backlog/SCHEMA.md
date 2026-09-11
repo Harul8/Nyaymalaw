@@ -234,11 +234,33 @@ verdicts and generated prose, so publishing a result does not invalidate
 itself. It includes each acceptance claim, required evidence level and negative
 control, so weakening the promise does invalidate the result.
 
-Model, counsel and production PASS claims point to a JSON record under
-`docs/backlog/evidence/` naming the criterion, evidence level, subject, method,
-result, accountable actor and observation time. Browser PASS additionally
-names an exact passing journey row in a report whose fingerprint matches the
-same source boundary. Missing or stale records resolve to NOT_RUN or STALE and
+Model, counsel and production PASS claims point to a schema-2 JSON record under
+`docs/backlog/evidence/`. The record binds the criterion and level; exact
+subject and current configuration identity; finite source/external validity;
+named actor; separately evidenced authority; counted and described population;
+reservations; and an authenticated attestation over the complete indexed
+payload. `method` is a closed `procedure`/`steps` object. `rubric` identifies
+the applied standard and carries a nonempty, uniquely identified population of
+`id`/`result`/`basis` findings; an overall PASS cannot coexist with a failed or
+unassessed finding. This makes method application inspectable without pretending
+that software has judged the legal merits.
+
+The repository contains no universal evidence key. The completion consumer
+loads an operator-owned trust document through `NM_EVIDENCE_TRUST`. That closed
+document identifies the current evidence configuration, permitted artifact
+roots, Ed25519 public keys and authority issuers. A missing or malformed trust
+document is `verification unavailable`, never digest-only success. Referenced
+bytes must match their SHA-256 before signatures, authority or conditions are
+evaluated. Schema-1 structured records remain historical and incompatible;
+they must be re-reviewed and re-attested, not relabelled.
+
+Browser PASS additionally names an exact passing journey row inside a schema-2
+report. The report retains its independent nonempty expected manifest, UUIDv4
+run identity, exact command/Python configuration, process exit, start/end tree
+identity, reconciled unique rows and a byte-verified artifact inventory belonging
+to that run. A complete report may truthfully contain failed scenarios; only an
+exact passing named row can satisfy its own browser criterion. Missing, stale,
+partial, incompatible or unverified records resolve to NOT_RUN or STALE and
 cannot derive completion.
 
 ### Negative controls
