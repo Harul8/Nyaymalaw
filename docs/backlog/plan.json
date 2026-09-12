@@ -135,6 +135,7 @@
     "Confidential client material requires the pilot identity, security and processing gates, including BK-85 and BK-86, even if the session is called a demonstration."
    ],
    "required_items": [],
+   "required_criteria": [],
    "required_evidence": [
     "Current local controls for every exercised path",
     "Human inspection of known limitations and data authority"
@@ -146,7 +147,7 @@
     "Production MFA or deployment recovery"
    ],
    "approval": "This is a scope definition, not approval to run a demonstration or use client data. Record the accountable authorisation for the intended use.",
-   "control": "manual_until_BK-80",
+    "control": "mechanical_obligation_population_BK-80",
    "conditional_items": [
     {
      "when": "the demonstration exercises registration, recovery or privileged matter access",
@@ -211,6 +212,26 @@
     "BK-86",
     "BK-88"
    ],
+   "required_criteria": [
+    "BK-21-AC1", "BK-21-AC2", "BK-21-AC3", "BK-21-AC4",
+    "BK-31-AC1", "BK-31-AC2", "BK-31-AC3", "BK-31-AC4",
+    "BK-31-AC5", "BK-31-AC6", "BK-31-AC7", "BK-31-AC8",
+    "BK-31-AC9", "BK-31-AC10", "BK-31-AC11", "BK-31-AC12",
+    "BK-31-AC13", "BK-31-AC14", "BK-31-AC15", "BK-31-AC16",
+    "BK-31-AC17", "BK-31-AC18", "BK-31-AC19", "BK-31-AC20",
+    "BK-32-AC1", "BK-33-AC1", "BK-33-AC2",
+    "BK-34-AC1", "BK-34-AC2", "BK-34-AC3", "BK-34-AC4",
+    "BK-38-AC1", "BK-38-AC2", "BK-40-AC1", "BK-40-AC2",
+    "BK-53-AC1", "BK-53-AC2", "BK-62-AC1", "BK-63-AC1",
+    "BK-66-AC1", "BK-66-AC2", "BK-66-AC3", "BK-67-AC1",
+    "BK-67-AC2", "BK-67-AC3", "BK-67-AC4", "BK-78-AC1",
+    "BK-78-AC2", "BK-80-AC1", "BK-80-AC2", "BK-80-AC3",
+    "BK-80-AC4", "BK-80-AC5", "BK-80-AC6", "BK-80-AC7",
+    "BK-85-AC1", "BK-85-AC2", "BK-85-AC3", "BK-85-AC4",
+    "BK-85-AC5", "BK-85-AC6", "BK-86-AC1", "BK-86-AC2",
+    "BK-86-AC3", "BK-88-AC1", "BK-88-AC2", "BK-88-AC3",
+    "BK-88-AC4"
+   ],
    "conditional_items": [
     {
      "when": "any spoken, uploaded or mixed-media material is enabled",
@@ -263,7 +284,7 @@
     "Automatic waiver of MFA or other material security requirements"
    ],
    "approval": "Pilot activation requires an explicit accountable, bounded approval naming material risks and compensating controls. No prototype decision or this plan grants it.",
-   "control": "manual_until_BK-80"
+    "control": "mechanical_obligation_population_BK-80"
   },
   {
    "id": "production",
@@ -288,6 +309,27 @@
     "BK-85",
     "BK-86",
     "BK-88"
+   ],
+   "required_criteria": [
+    "BK-21-AC1", "BK-21-AC2", "BK-21-AC3", "BK-21-AC4",
+    "BK-31-AC1", "BK-31-AC2", "BK-31-AC3", "BK-31-AC4",
+    "BK-31-AC5", "BK-31-AC6", "BK-31-AC7", "BK-31-AC8",
+    "BK-31-AC9", "BK-31-AC10", "BK-31-AC11", "BK-31-AC12",
+    "BK-31-AC13", "BK-31-AC14", "BK-31-AC15", "BK-31-AC16",
+    "BK-31-AC17", "BK-31-AC18", "BK-31-AC19", "BK-31-AC20",
+    "BK-34-AC1", "BK-34-AC2", "BK-34-AC3", "BK-34-AC4",
+    "BK-40-AC1", "BK-40-AC2", "BK-41-AC1",
+    "BK-42-AC1", "BK-42-AC2", "BK-42-AC3", "BK-42-AC4",
+    "BK-42-AC5", "BK-42-AC6", "BK-42-AC7", "BK-42-AC8",
+    "BK-42-AC9", "BK-62-AC1", "BK-63-AC1",
+    "BK-66-AC1", "BK-66-AC2", "BK-66-AC3", "BK-67-AC1",
+    "BK-67-AC2", "BK-67-AC3", "BK-67-AC4",
+    "BK-80-AC1", "BK-80-AC2", "BK-80-AC3", "BK-80-AC4",
+    "BK-80-AC5", "BK-80-AC6", "BK-80-AC7",
+    "BK-85-AC1", "BK-85-AC2", "BK-85-AC3", "BK-85-AC4",
+    "BK-85-AC5", "BK-85-AC6", "BK-86-AC1", "BK-86-AC2",
+    "BK-86-AC3", "BK-88-AC1", "BK-88-AC2", "BK-88-AC3",
+    "BK-88-AC4"
    ],
    "conditional_items": [
     {
@@ -344,7 +386,7 @@
     "Approval inferred from row counts, a test-only PASS or a generated workbook"
    ],
    "approval": "No release is authorised by this plan. Accountable production sign-off is required; any material exception must be separately approved, owned, expiring and visible with compensating controls. D-013 does not grant a production MFA exception.",
-   "control": "manual_until_BK-80"
+    "control": "mechanical_obligation_population_BK-80"
   }
  ],
  "journey_model": {

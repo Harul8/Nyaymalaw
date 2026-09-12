@@ -4,7 +4,7 @@
 schema: 1
 generated_note: Bootstrapped 9 September 2026 from the inventory in BACKLOG.md. Hand-authored
   from here; see docs/backlog/SCHEMA.md.
-legacy_lifecycle_population: 49
+legacy_lifecycle_population: 48
 features:
 - id: A1
   phase: A
@@ -1699,12 +1699,19 @@ items:
   - E
   - I
   record: docs/BACKLOG.md#bk-51-the-journey-runner-cannot-tell-a-deleted-phase-from-a-passing-one
-  next_action: manifest bite proven on a truncated run
+  next_action: P03 runner and reader are signed off on controlled complete, partial, interrupted, duplicate and stale-artifact executions; run a fresh live browser journey only when that separately authorised gate is needed
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#p03-evidence-assurance-build-record-opened-11-september-2026}
+    build: {result: BUILT, ref: docs/BACKLOG.md#p03-evidence-assurance-conformance-record-completed-11-september-2026}
+    test: {result: OPEN, ref: docs/BACKLOG.md#p03-evidence-assurance-conformance-record-completed-11-september-2026}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#p03-evidence-assurance-conformance-record-completed-11-september-2026}
   acceptance:
   - id: BK-51-AC1
     requirement: "Journey result validation reconciles the expected unique scenario manifest, process exit, run identity and only-current artifacts before reporting a completed outcome"
-    required_evidence: [domain_test]
-    evidence: {}
+    required_evidence: [domain_test, adversarial_test]
+    evidence:
+      domain_test: {result: PASS, ref: tests/test_browser_evidence_is_a_complete_run.py::test_real_runner_publishes_one_complete_byte_bound_execution}
+      adversarial_test: {result: PASS, ref: tests/test_browser_evidence_is_a_complete_run.py::test_population_process_and_artifact_mutations_are_each_refused}
     negative_control:
       mutation: "delete a required row, duplicate another, retain an old screenshot or fail teardown"
       expected_failure: "the report refuses completion and identifies each incompatible condition"
@@ -3084,29 +3091,33 @@ items:
   title: evidence integrity and release claim enforcement
   kind: control
   priority: P0
-  delivery_status: in_progress
-  implementation: partial
+  delivery_status: verifying
+  implementation: complete
   verification: partial
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-80-evidence-integrity-and-release-claim-enforcement
-  next_action: P01's truthful current-spec, exact-failure and checked-tree identity scope is complete; P03 continues to own AC1, AC2, AC4 and AC6, so the item remains partial and unsigned
+  next_action: P01 and P03 are signed off on the complete control-plane scope; provision operator-owned trust configuration before consuming professional evidence, and wire the scoped resolver at each later application dispatch without treating approval as build or release proof
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#p01-corrective-build-record-opened-10-september-2026}
-    build: {result: OPEN, ref: docs/BACKLOG.md#p01-corrective-build-record-opened-10-september-2026}
-    test: {result: OPEN, ref: docs/BACKLOG.md#p01-corrective-build-record-opened-10-september-2026}
-    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-80-evidence-integrity-and-release-claim-enforcement}
+    build: {result: BUILT, ref: docs/BACKLOG.md#p03-evidence-assurance-conformance-record-completed-11-september-2026}
+    test: {result: OPEN, ref: docs/BACKLOG.md#p03-evidence-assurance-conformance-record-completed-11-september-2026}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#p03-evidence-assurance-conformance-record-completed-11-september-2026}
   acceptance:
   - id: BK-80-AC1
     requirement: structured model, counsel and production evidence binds the evaluated source and applicable configuration, model, prompt and corpus identity, reviewer authority, rubric, population, reservations and validity period
     required_evidence: [domain_test, adversarial_test]
-    evidence: {}
+    evidence:
+      domain_test: {result: PASS, ref: tests/test_structured_evidence_binds_its_subject.py::test_a_complete_authenticated_record_confers_a_pass}
+      adversarial_test: {result: PASS, ref: tests/test_structured_evidence_binds_its_subject.py::test_a_record_whose_subject_or_configuration_moved_is_stale}
     negative_control:
       mutation: reuse a PASS record after changing its subject or replace a qualified review with an unattributable assertion
       expected_failure: stale or unqualified evidence cannot confer completion
   - id: BK-80-AC2
     requirement: browser evidence requires a completed report with matching start and end identity, nonempty expected population, unique rows and explicit outcomes for every required scenario
     required_evidence: [domain_test, adversarial_test]
-    evidence: {}
+    evidence:
+      domain_test: {result: PASS, ref: tests/test_browser_evidence_is_a_complete_run.py::test_a_complete_run_reconciles}
+      adversarial_test: {result: PASS, ref: tests/test_browser_evidence_is_a_complete_run.py::test_population_process_and_artifact_mutations_are_each_refused}
     negative_control:
       mutation: supply an unfinished report, duplicate a row or omit one expected scenario while retaining a matching fingerprint
       expected_failure: the evidence reader refuses incomplete or contradictory proof
@@ -3126,7 +3137,9 @@ items:
   - id: BK-80-AC4
     requirement: wave, profile and professional criterion mappings are validated without treating a declared manual review or test-name existence as executed enforcement
     required_evidence: [domain_test, adversarial_test]
-    evidence: {}
+    evidence:
+      domain_test: {result: PASS, ref: tests/test_release_obligations_are_executed.py::test_a_bound_complete_population_can_complete_its_profile}
+      adversarial_test: {result: PASS, ref: tests/test_release_obligations_are_executed.py::test_the_real_release_profile_mapping_is_exact_and_the_probe_bites}
     negative_control:
       mutation: reference an uncollected test or remove a required profile criterion while preserving document keywords
       expected_failure: the release claim fails and identifies the uncovered obligation
@@ -3148,7 +3161,9 @@ items:
   - id: BK-80-AC6
     requirement: "Resolve scoped CHOICE adoption records separately from measurements, using the approval contract's exact authority, signed evidence, proposal/configuration identity, scope, conditions, validity and revocation checks. Preserve not-recorded, unverified, valid, stale, expired, revoked and out-of-scope distinctions; only verified matching approval satisfies that decision prerequisite, never all packet or deployment gates. Until implemented, require recorded manual verification and report it as not machine-resolved."
     required_evidence: [domain_test, adversarial_test]
-    evidence: {}
+    evidence:
+      domain_test: {result: PASS, ref: tests/test_approval_resolves_to_one_of_seven_states.py::test_a_complete_authentic_matching_approval_authorises_one_prerequisite}
+      adversarial_test: {result: PASS, ref: tests/test_approval_resolves_to_one_of_seven_states.py::test_bk80_ac6_refuses_stale_revoked_unauthorised_and_wider_use}
     negative_control:
       mutation: "reuse approval after relevant configuration changes, revoke or expire it, substitute an unauthorised signer, widen scope or replace signed authority with a PASS measurement or proposal flag"
       expected_failure: "only current verified matching authority satisfies the affected decision prerequisite; all other states remain visible and cannot authorise protected operations"
@@ -3683,6 +3698,18 @@ items:
       expected_failure: the family-level delegation decision remains unapproved until the comparable complete population and safety obligations are satisfied
 
 events:
+- item: BK-80
+  at: '2026-09-11'
+  from: in_progress
+  to: verifying
+  reason: P03 completed authenticated structured evidence, complete browser and journey proof, executed release-obligation coverage and exact scoped approval resolution; only current bound evidence can derive completion
+  evidence: docs/BACKLOG.md#p03-evidence-assurance-conformance-record-completed-11-september-2026
+- item: BK-51
+  at: '2026-09-11'
+  from: verifying
+  to: verifying
+  reason: P03 completed the runner lifecycle and artifact-integrity proof and added the previously missing recorded stage lifecycle; the exact current Class-A result remains the machine authority
+  evidence: docs/BACKLOG.md#p03-evidence-assurance-conformance-record-completed-11-september-2026
 - item: BK-87
   at: '2026-09-10'
   from: in_progress

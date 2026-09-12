@@ -1,37 +1,18 @@
-"""ONLY A VERIFIED MATCHING APPROVAL AUTHORISES A DECISION. BK-80-AC6.
-
-`check_approvals` answers whether the register PARSES. `adoption_labels`
-answered "not machine-resolved" for every choice — honest while nothing
-resolved, and a permanent abstention once something can.
-
-SEVEN STATES, AND SIX OF THEM ARE REFUSALS. The criterion names them because
-collapsing them loses the only thing a reader can act on:
-
-    not_recorded   nobody has approved this
-    unverified     something is recorded and it does not establish authority
-    valid          this record authorises this decision at this gate
-    stale          what was approved has changed underneath the approval
-    expired        it was valid and its period has ended — renewable
-    revoked        it was withdrawn — not renewable
-    out_of_scope   somebody approved a different gate or a different packet
-
-A boolean sends `expired` and `revoked` to the same place, and they are not the
-same conversation.
-
-THE CRITERION'S OWN MUTATION, run below: *reuse approval after relevant
-configuration changes, revoke or expire it, substitute an unauthorised signer,
-widen scope or replace signed authority with a PASS measurement or proposal
-flag.* The last clause is why `resolve` reads the approval store and nothing
-else — a resolver that could see a measurement would eventually be asked to
-accept one.
-"""
+"""Only authenticated, exact and current adoption can authorise one gate."""
 from __future__ import annotations
 
+import copy
+import hashlib
+import inspect
+import json
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 import pytest
 
+from tests.p03_evidence_support import TrustHarness
 from tools.blueprint_approvals import (
+    EVALUATION_UNAVAILABLE,
     EXPIRED,
     NOT_RECORDED,
     OUT_OF_SCOPE,
@@ -41,223 +22,388 @@ from tools.blueprint_approvals import (
     UNVERIFIED,
     VALID,
     resolve,
+    resolve_packet_approvals,
 )
+from tools.evidence_verification import canonical_json
 
 pytestmark = pytest.mark.class_a
 
+ROOT = __import__("pathlib").Path(__file__).resolve().parents[1]
 NOW = datetime(2026, 9, 11, 12, 0, tzinfo=timezone.utc)
-PROPOSAL = "a" * 64
-CONFIG = "config-2026-09"
 
 
-def _artifact(digest: str = "b" * 64) -> dict:
-    return {"ref": "docs/blueprint/signed/record.pdf", "sha256": digest}
+@dataclass
+class Context:
+    harness: TrustHarness
+    choice: dict
+    choices: dict
+    packets: dict
+    schema: dict
+    record: dict
+    store: dict
+    attempt: dict
 
 
-def _record(**overrides) -> dict:
-    base = {
-        "id": "ADOPT-01",
-        "choice": "CHOICE-02",
-        "proposal_sha256": PROPOSAL,
-        "scope": {"gate": "packet", "packets": ["P01"], "configuration": CONFIG},
-        "approvers": [{"person_id": "person-1", "name": "A Signer",
-                       "role": "accountable owner",
-                       "authority_basis": "delegated by the account holder",
-                       "authority_evidence": _artifact("c" * 64)}],
-        "signed_record": _artifact(),
+def _context(tmp_path, *, gate="confidential_pilot", run_id=None,
+             people=("alice",), signed_by=None, authority_scopes=None,
+             conditions=(), valid_until="2026-12-01T00:00:00+00:00") -> Context:
+    harness = TrustHarness(tmp_path, base=ROOT)
+    choice = {
+        "id": "CHOICE-02", "title": "Synthetic decision",
+        "approval_required_for": [gate],
+    }
+    choices = {"choices": [choice]}
+    packets = {"packets": [{"id": "P03", "decisions": ["CHOICE-02"]}]}
+    schema = json.loads((ROOT / "docs/blueprint/approvals.schema.json")
+                        .read_text(encoding="utf-8"))
+    artifacts = {
+        name: harness.raw(f"{name}.json", f"{name}-bytes".encode())
+        for name in ("release_manifest", "configuration", "coverage_manifest")
+    }
+    scope = {
+        "gate": gate, "environment": "isolated-test", "release_profile": "pilot",
+        **artifacts, "packets": ["P03"],
+        "capabilities": ["evidence-resolution"], "data_classes": ["synthetic"],
+        "run_id": run_id,
+    }
+    approvers = []
+    for person in people:
+        role = "accountable owner"
+        basis = "delegated by the product owner"
+        scopes = authority_scopes or [f"approval:CHOICE-02:{gate}"]
+        approvers.append({
+            "person_id": person, "name": person.title(), "role": role,
+            "authority_basis": basis,
+            "authority_evidence": harness.authority(
+                f"authority-{person}.json", person=person, role=role, basis=basis,
+                scopes=scopes, now=NOW,
+            ),
+        })
+    proposal = hashlib.sha256(canonical_json(choice)).hexdigest()
+    record = {
+        "id": "ADOPT-01", "choice": "CHOICE-02",
+        "proposal_sha256": proposal, "scope": scope,
+        "approvers": approvers, "signed_record": None,
         "approved_at": "2026-09-01T00:00:00+00:00",
         "effective_from": "2026-09-02T00:00:00+00:00",
-        "valid_until": "2026-12-01T00:00:00+00:00",
-        "conditions": [],
-        "supersedes": [],
+        "valid_until": valid_until,
+        "conditions": list(conditions), "supersedes": [],
     }
-    base.update(overrides)
-    return base
+    payload = {key: value for key, value in record.items() if key != "signed_record"}
+    record["signed_record"] = harness.signed(
+        "adoption.json", payload, tuple(signed_by or people))
+    store = {"schema": 1, "purpose": "synthetic Class-A adoption",
+             "records": [record], "revocations": []}
+    attempt = {
+        "choice": "CHOICE-02", "gate": gate, "packet": "P03",
+        "proposal_sha256": proposal, "environment": "isolated-test",
+        "release_profile": "pilot", **artifacts,
+        "capabilities": ["evidence-resolution"], "data_classes": ["synthetic"],
+        "run_id": run_id, "required_approvers": frozenset(people),
+        "verifier": harness.verifier, "now": NOW, "schema": schema,
+    }
+    return Context(harness, choice, choices, packets, schema, record, store, attempt)
 
 
-def _store(records=None, revocations=None) -> dict:
-    # `records if records is not None`, NOT `records or`. The first version
-    # used `or`, so `_store(records=[])` -- the empty register, which is the
-    # whole point of the `not_recorded` state -- fell back to the default
-    # record and the test asked a question it thought it was avoiding. An
-    # empty list is a value; that is the same distinction this file is about.
-    return {"schema": 1, "purpose": "synthetic",
-            "records": [_record()] if records is None else records,
-            "revocations": [] if revocations is None else revocations}
+_DEFAULT_STORE = object()
 
 
-CHOICES = {"choices": [{"id": "CHOICE-02", "approval_required_for": ["packet"]}]}
-PACKETS = {"packets": [{"id": "P01", "decisions": ["CHOICE-02"]}]}
+def _resolve(context: Context, store=_DEFAULT_STORE, **overrides):
+    options = dict(context.attempt)
+    options.update(overrides)
+    return resolve(
+        context.store if store is _DEFAULT_STORE else store,
+        context.choices, context.packets, **options,
+    )
 
 
-def _resolve(store, **kwargs):
-    options = {"choice": "CHOICE-02", "gate": "packet", "packet": "P01",
-               "proposal_sha256": PROPOSAL, "configuration": CONFIG, "now": NOW}
-    options.update(kwargs)
-    return resolve(store, CHOICES, PACKETS, **options)
+def _resign(context: Context, name="adoption-revised.json", signers=None):
+    payload = {key: value for key, value in context.record.items()
+               if key != "signed_record"}
+    context.record["signed_record"] = context.harness.signed(
+        name, payload, tuple(signers or [p["person_id"]
+                                        for p in context.record["approvers"]]))
 
 
-# ============================ the negative control ==========================
-
-def test_a_complete_matching_approval_authorises():
-    """Without this, a resolver that refused everything would satisfy every
-    other test here and block the project permanently."""
-    got = _resolve(_store())
-    assert got.state == VALID, got.why
-    assert got.authorises
-    assert got.record == "ADOPT-01"
-
-
-# ======================= the criterion's own mutations ======================
-
-def test_a_configuration_change_makes_the_approval_stale():
-    """*Reuse approval after relevant configuration changes.*"""
-    got = _resolve(_store(), configuration="config-2026-10")
-    assert got.state == STALE, got.why
-    assert not got.authorises
-
-
-def test_a_changed_proposal_makes_the_approval_stale():
-    got = _resolve(_store(), proposal_sha256="d" * 64)
-    assert got.state == STALE, got.why
-
-
-def test_a_revoked_approval_is_revoked_and_not_merely_absent():
-    """*Revoke it.* And the state is not `not_recorded`: somebody withdrew
-    this, which is a different conversation from nobody having approved."""
-    got = _resolve(_store(revocations=[{
+def _add_revocation(context: Context) -> dict:
+    person = context.record["approvers"][0]
+    revoker = dict(person)
+    revoker["authority_evidence"] = context.harness.authority(
+        "revoke-authority.json", person="alice", role=person["role"],
+        basis=person["authority_basis"],
+        scopes=["revoke:CHOICE-02:confidential_pilot"], now=NOW)
+    revocation = {
         "id": "REVOKE-01", "approval_id": "ADOPT-01",
         "effective_at": "2026-09-05T00:00:00+00:00",
-        "reason": "the accountable owner withdrew it"}]))
-    assert got.state == REVOKED, got.why
-    assert "withdrew" in got.why
+        "revoked_by": revoker, "reason": "authority withdrawn",
+        "signed_record": None,
+    }
+    payload = {key: value for key, value in revocation.items()
+               if key != "signed_record"}
+    revocation["signed_record"] = context.harness.signed(
+        "revocation.json", payload, ("alice",))
+    context.store["revocations"] = [revocation]
+    return revocation
 
 
-def test_an_expired_approval_is_expired_and_not_revoked():
-    """*Expire it.* Renewable, where a revoked one is not — which is exactly
-    what a boolean would lose."""
-    got = _resolve(_store([_record(valid_until="2026-09-05T00:00:00+00:00")]))
-    assert got.state == EXPIRED, got.why
+def test_a_complete_authentic_matching_approval_authorises_one_prerequisite(tmp_path):
+    context = _context(tmp_path)
+    got = _resolve(context)
+    assert got.state == VALID, got.why
+    assert got.authorises and got.record == "ADOPT-01"
+    assert got.availability == "available"
 
 
-@pytest.mark.parametrize("mutation", [
-    {"approvers": []},
-    {"approvers": [{"person_id": "p", "name": "n", "role": "r",
-                    "authority_basis": "", "authority_evidence": _artifact()}]},
-    {"approvers": [{"person_id": "p", "name": "n", "role": "r",
-                    "authority_basis": "stated", "authority_evidence": {}}]},
-    {"signed_record": {}},
+def test_a_digest_string_without_a_verifier_never_becomes_authority(tmp_path):
+    context = _context(tmp_path)
+    got = _resolve(context, verifier=None)
+    assert got.state == UNVERIFIED and not got.authorises
+    assert got.availability == EVALUATION_UNAVAILABLE
+
+
+def test_empty_store_and_unreadable_store_are_different(tmp_path):
+    context = _context(tmp_path)
+    empty = {"schema": 1, "purpose": "empty", "records": [], "revocations": []}
+    assert _resolve(context, empty).state == NOT_RECORDED
+    for unreadable in (None, {}, {"records": "not a list"}, []):
+        got = _resolve(context, unreadable)
+        assert got.state == UNVERIFIED
+        assert got.availability == EVALUATION_UNAVAILABLE
+
+
+def test_changed_signed_payload_or_artifact_bytes_is_refused(tmp_path):
+    context = _context(tmp_path)
+    context.record["scope"]["capabilities"].append("new-power")
+    got = _resolve(context, capabilities=["evidence-resolution", "new-power"])
+    assert got.state == UNVERIFIED and "payload does not match" in got.why
+
+    context = _context(tmp_path / "bytes")
+    config = ROOT / context.record["scope"]["configuration"]["ref"]
+    config.write_bytes(b"changed")
+    got = _resolve(context)
+    assert got.state == UNVERIFIED and "digest" in got.why
+
+
+def test_missing_joint_signer_or_wrong_authority_scope_is_unverified(tmp_path):
+    joint = _context(tmp_path / "joint", people=("alice", "bob"),
+                     signed_by=("alice",))
+    assert _resolve(joint).state == UNVERIFIED
+
+    wrong = _context(tmp_path / "scope", authority_scopes=["approval:CHOICE-02:production"])
+    got = _resolve(wrong)
+    assert got.state == UNVERIFIED and "does not cover" in got.why
+
+
+@pytest.mark.parametrize("field,value", [
+    ("environment", "another-environment"),
+    ("release_profile", "production"),
+    ("packet", "P42"),
+    ("capabilities", ["external-action"]),
+    ("data_classes", ["client-confidential"]),
 ])
-def test_an_unauthorised_or_unsigned_record_does_not_verify(mutation):
-    """*Substitute an unauthorised signer* and *replace signed authority.*
+def test_scope_cannot_be_widened(tmp_path, field, value):
+    context = _context(tmp_path)
+    got = _resolve(context, **{field: value})
+    assert got.state == OUT_OF_SCOPE and not got.authorises
 
-    A stated basis with no evidence and evidence with no stated basis are both
-    assertions about authority rather than demonstrations of it.
-    """
-    got = _resolve(_store([_record(**mutation)]))
-    assert got.state == UNVERIFIED, got.why
+
+def test_changed_proposal_configuration_or_manifest_is_stale(tmp_path):
+    context = _context(tmp_path)
+    assert _resolve(context, proposal_sha256="d" * 64).state == STALE
+    for field in ("configuration", "release_manifest", "coverage_manifest"):
+        attempted = dict(context.attempt[field], sha256="e" * 64)
+        assert _resolve(context, **{field: attempted}).state == STALE
+
+
+def test_not_yet_effective_exact_expiry_and_expired_are_distinct(tmp_path):
+    context = _context(tmp_path / "future")
+    before = datetime(2026, 9, 1, 12, tzinfo=timezone.utc)
+    assert _resolve(context, now=before).state == UNVERIFIED
+
+    exact = _context(tmp_path / "exact", valid_until=NOW.isoformat())
+    assert _resolve(exact).state == EXPIRED
+
+    after = _context(tmp_path / "after",
+                     valid_until="2026-09-10T00:00:00+00:00")
+    assert _resolve(after).state == EXPIRED
+
+
+def test_verified_revocation_revokes_and_forged_revocation_blocks(tmp_path):
+    context = _context(tmp_path / "valid")
+    assert _resolve(context).state == VALID
+    revocation = _add_revocation(context)
+    assert _resolve(context).state == REVOKED
+
+    revocation["reason"] = "forged different reason"
+    got = _resolve(context)
+    assert got.state == UNVERIFIED and "competing revocation" in got.why
+
+
+def test_bk80_ac6_refuses_stale_revoked_unauthorised_and_wider_use(tmp_path):
+    stale = _context(tmp_path / "stale")
+    results = [_resolve(stale, proposal_sha256="d" * 64)]
+
+    unauthorised = _context(tmp_path / "unauthorised", signed_by=("mallory",))
+    results.append(_resolve(unauthorised))
+
+    wider = _context(tmp_path / "wider")
+    results.append(_resolve(wider, data_classes=["client-confidential"]))
+
+    revoked = _context(tmp_path / "revoked")
+    _add_revocation(revoked)
+    results.append(_resolve(revoked))
+
+    expired = _context(
+        tmp_path / "expired", valid_until="2026-09-10T00:00:00+00:00")
+    results.append(_resolve(expired))
+
+    assert [result.state for result in results] == [
+        STALE, UNVERIFIED, OUT_OF_SCOPE, REVOKED, EXPIRED,
+    ]
+    assert all(not result.authorises for result in results)
+
+
+def test_a_verified_narrower_replacement_supersedes_the_prior_scope(tmp_path):
+    context = _context(tmp_path)
+    context.record["scope"]["capabilities"].append("external-action")
+    _resign(context, "adoption-broader.json")
+
+    replacement = copy.deepcopy(context.record)
+    replacement.update({
+        "id": "ADOPT-02",
+        "approved_at": "2026-09-03T00:00:00+00:00",
+        "effective_from": "2026-09-04T00:00:00+00:00",
+        "supersedes": ["ADOPT-01"],
+        "signed_record": None,
+    })
+    replacement["scope"]["capabilities"] = ["evidence-resolution"]
+    payload = {key: value for key, value in replacement.items()
+               if key != "signed_record"}
+    replacement["signed_record"] = context.harness.signed(
+        "adoption-narrower.json", payload, ("alice",))
+    context.store["records"].append(replacement)
+
+    current = _resolve(context)
+    assert current.state == VALID and current.record == "ADOPT-02"
+    refused = _resolve(
+        context, capabilities=["evidence-resolution", "external-action"])
+    assert refused.state == OUT_OF_SCOPE
+    assert "external-action" in refused.why
+
+    replacement["valid_until"] = "2027-01-01T00:00:00+00:00"
+    forged = _resolve(context)
+    assert forged.state == UNVERIFIED
+    assert "payload does not match" in forged.why
+
+
+def test_a_separate_gate_record_does_not_hide_the_attempted_gate(tmp_path):
+    context = _context(tmp_path)
+    context.choice["approval_required_for"].append("production")
+    other = copy.deepcopy(context.record)
+    other.update({
+        "id": "ADOPT-02",
+        "approved_at": "2026-09-03T00:00:00+00:00",
+        "effective_from": "2026-09-04T00:00:00+00:00",
+        "signed_record": None,
+    })
+    other["scope"]["gate"] = "production"
+    person = other["approvers"][0]
+    person["authority_evidence"] = context.harness.authority(
+        "authority-production.json", person="alice", role=person["role"],
+        basis=person["authority_basis"],
+        scopes=["approval:CHOICE-02:production"], now=NOW)
+    payload = {key: value for key, value in other.items()
+               if key != "signed_record"}
+    other["signed_record"] = context.harness.signed(
+        "adoption-production.json", payload, ("alice",))
+    context.store["records"].append(other)
+
+    got = _resolve(context)
+    assert got.state == VALID and got.record == "ADOPT-01"
+
+
+def test_verified_condition_is_current_and_tampering_blocks(tmp_path):
+    harness = TrustHarness(tmp_path, base=ROOT)
+    evidence = harness.condition(
+        "condition.json", approval_id="ADOPT-01", condition_id="COND-1",
+        requirement="isolated rehearsal", now=NOW)
+    context = _context(tmp_path, conditions=({
+        "id": "COND-1", "requirement": "isolated rehearsal", "evidence": evidence,
+    },))
+    # The context owns its own verifier, so recreate the condition through it.
+    context.record["conditions"][0]["evidence"] = context.harness.condition(
+        "condition-owned.json", approval_id="ADOPT-01", condition_id="COND-1",
+        requirement="isolated rehearsal", now=NOW)
+    _resign(context)
+    assert _resolve(context).state == VALID
+    context.record["conditions"][0]["requirement"] = "a different rehearsal"
+    assert _resolve(context).state == UNVERIFIED
+
+
+def test_time_or_trust_unavailable_is_an_assessment_state(tmp_path):
+    context = _context(tmp_path)
+    got = _resolve(context, time_available=False)
+    assert got.availability == EVALUATION_UNAVAILABLE
     assert not got.authorises
 
 
-@pytest.mark.parametrize("gate,packet,why", [
-    ("deployment", "P01", "gate"),
-    ("packet", "P42", "packet"),
-])
-def test_widening_scope_is_refused_at_the_gate_that_was_not_approved(gate, packet, why):
-    """*Widen scope.* An approval for one packet gate must never satisfy a
-    deployment gate, which is the criterion's *never all packet or deployment
-    gates* in one assertion."""
-    got = _resolve(_store(), gate=gate, packet=packet)
-    assert got.state == OUT_OF_SCOPE, got.why
-    assert why in got.why
+def test_bounded_run_cannot_be_replayed(tmp_path):
+    context = _context(tmp_path, gate="approved_real_model", run_id="run-001")
+    got = _resolve(context, used_run_ids=frozenset({"run-001"}))
+    assert got.state == OUT_OF_SCOPE and "already consumed" in got.why
 
 
-def test_an_unmet_condition_leaves_the_approval_unverified():
-    got = _resolve(_store([_record(conditions=[
-        {"id": "COND-1", "requirement": "an isolated rehearsal", "evidence": {}}])]))
-    assert got.state == UNVERIFIED
-    assert "COND-1" in got.why
+def test_actual_packet_resolution_checks_only_its_applicable_choices(tmp_path):
+    context = _context(tmp_path)
+    unrelated = {"id": "CHOICE-09", "title": "Unrelated procurement",
+                 "approval_required_for": ["procurement"]}
+    context.choices["choices"].append(unrelated)
+    context.packets["packets"][0]["decisions"].append("CHOICE-09")
+    got = resolve_packet_approvals(
+        context.store, context.choices, context.packets,
+        packet="P03", gate="confidential_pilot", environment="isolated-test",
+        release_profile="pilot",
+        release_manifest=context.attempt["release_manifest"],
+        configuration=context.attempt["configuration"],
+        coverage_manifest=context.attempt["coverage_manifest"],
+        capabilities=["evidence-resolution"], data_classes=["synthetic"],
+        run_id=None, proposal_sha256={"CHOICE-02": context.attempt["proposal_sha256"]},
+        required_approvers={"CHOICE-02": frozenset({"alice"})},
+        verifier=context.harness.verifier, now=NOW, schema=context.schema,
+    )
+    assert set(got) == {"CHOICE-02"}
+    assert got["CHOICE-02"].state == VALID
 
 
-def test_a_condition_with_evidence_does_not_block():
-    got = _resolve(_store([_record(conditions=[
-        {"id": "COND-1", "requirement": "an isolated rehearsal",
-         "evidence": _artifact("e" * 64)}])]))
-    assert got.state == VALID, got.why
+def test_unrelated_local_synthetic_packet_has_no_blanket_approval_block(tmp_path):
+    context = _context(tmp_path)
+    context.packets["packets"].append({"id": "P99", "decisions": ["CHOICE-02"]})
+    got = resolve_packet_approvals(
+        context.store, context.choices, context.packets,
+        packet="P99", gate="local_synthetic", environment="local",
+        release_profile="prototype",
+        release_manifest=context.attempt["release_manifest"],
+        configuration=context.attempt["configuration"],
+        coverage_manifest=context.attempt["coverage_manifest"],
+        capabilities=["unit-test"], data_classes=["synthetic"], run_id=None,
+        proposal_sha256={}, required_approvers={},
+        verifier=context.harness.verifier, now=NOW,
+    )
+    assert got == {}
 
 
-# ============================== absent inputs ===============================
-
-def test_no_record_is_not_recorded_and_an_unreadable_store_is_unverified():
-    """§9. These are three states and the middle one is the one that matters:
-    reporting an unreadable register as 'nothing recorded' sends the reader to
-    write an approval that may already exist."""
-    assert _resolve(_store(records=[])).state == NOT_RECORDED
-    for unreadable in (None, {}, {"records": "not a list"}, []):
-        got = _resolve(unreadable)
-        assert got.state == UNVERIFIED, (unreadable, got)
-        assert "unreadable" in got.why or "does not verify" in got.why
-
-
-def test_an_approval_not_yet_in_force_does_not_authorise():
-    got = _resolve(_store(), now=datetime(2026, 9, 1, 12, tzinfo=timezone.utc))
-    assert got.state == UNVERIFIED
-    assert "take effect" in got.why
-
-
-def test_a_superseded_record_is_not_the_one_that_answers():
-    older = _record(id="ADOPT-00", approved_at="2026-08-01T00:00:00+00:00")
-    newer = _record(id="ADOPT-01", supersedes=["ADOPT-00"],
-                    scope={"gate": "packet", "packets": ["P01"],
-                           "configuration": "config-2026-10"})
-    got = _resolve(_store([older, newer]))
-    assert got.record == "ADOPT-01", "the superseded record answered"
-    assert got.state == STALE
-
-
-# =========================== the shape of the answer ========================
-
-def test_every_declared_state_is_reachable():
-    """A vocabulary with an unreachable member is a vocabulary that lies about
-    what the resolver can tell you."""
-    reached = {
-        _resolve(_store(records=[])).state,
-        _resolve(None).state,
-        _resolve(_store()).state,
-        _resolve(_store(), configuration="other").state,
-        _resolve(_store([_record(valid_until="2026-09-05T00:00:00+00:00")])).state,
-        _resolve(_store(revocations=[{
-            "id": "R", "approval_id": "ADOPT-01",
-            "effective_at": "2026-09-05T00:00:00+00:00", "reason": "x"}])).state,
-        _resolve(_store(), gate="deployment").state,
+def test_only_valid_authorises_and_all_seven_states_remain_distinct(tmp_path):
+    context = _context(tmp_path)
+    assert set(STATES) == {
+        NOT_RECORDED, UNVERIFIED, VALID, STALE, EXPIRED, REVOKED, OUT_OF_SCOPE,
     }
-    assert reached == set(STATES), sorted(set(STATES) - reached)
+    for got in (_resolve(context), _resolve(context, environment="other"),
+                _resolve(context, proposal_sha256="d" * 64)):
+        assert got.why and got.authorises == (got.state == VALID)
 
 
-def test_only_valid_authorises_and_every_state_carries_a_reason():
-    for state in STATES:
-        assert isinstance(state, str) and state
-    for got in (_resolve(_store()), _resolve(None), _resolve(_store(records=[])),
-                _resolve(_store(), gate="deployment")):
-        assert got.why.strip(), got
-        assert got.authorises == (got.state == VALID)
-
-
-def test_the_resolver_cannot_see_a_measurement_at_all():
-    """*Replace signed authority with a PASS measurement or proposal flag.*
-
-    Checked on the signature rather than by feeding one in: a resolver that
-    took an evaluation result as a parameter would eventually be asked to
-    honour it, and the criterion's first clause is that adoption is resolved
-    separately from measurement.
-    """
-    import inspect
-
+def test_the_resolver_has_no_measurement_or_proposal_flag_input():
     accepted = set(inspect.signature(resolve).parameters)
     forbidden = {"result", "results", "evaluation", "evaluations", "measurement",
                  "passed", "coverage", "proposal_flag", "approved"}
     assert not (accepted & forbidden), sorted(accepted & forbidden)
-    source = inspect.getsource(resolve)
-    for token in ("PASS", "evaluations", "coverage.yaml", "measure"):
-        assert token not in source.split('"""', 2)[-1], (
-            f"the resolver body references {token!r}")

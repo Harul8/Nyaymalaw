@@ -250,10 +250,16 @@ def _structured_record(acid: str, level: str, ref: str) -> list[str]:
     weighed the same as a qualified review, and there was no validity period at
     all. Both halves of the criterion's negative control passed.
     """
+    from tools.evidence_verification import configured_verifier
     from tools.structured_evidence import problems
 
-    return problems(acid, level, ref,
-                    source_fingerprint=verification_fingerprint())
+    verifier = configured_verifier(base=ROOT)
+    return problems(
+        acid, level, ref,
+        source_fingerprint=verification_fingerprint(),
+        configuration_identity=verifier.configuration_identity,
+        verifier=verifier,
+    )
 
 
 def _structured_record_legacy(acid: str, level: str, ref: str) -> list[str]:
@@ -337,7 +343,8 @@ def bind_execution_evidence(doc: dict, class_a: dict | None = None) -> list[str]
                     report = load(ROOT / ref) if ref else None
                     incomplete = problems(
                         report, expected=EXPECTED,
-                        fingerprint=verification_fingerprint())
+                        fingerprint=verification_fingerprint(),
+                        artifact_root=(ROOT / ref).parent if ref else None)
                     state = row_for(report, nodeid)
                     if incomplete or state != "PASS":
                         evidence["_effective_result"] = "STALE"
@@ -507,6 +514,8 @@ def lint(doc: dict, *, verify_execution: bool = False) -> list[str]:
     bad += wave_bad
     bad += _professional(doc, known, set(feature_map),
                          {s.get("id") for s in doc.get("steps") or []}, waves)
+    from tools.release_obligations import mapping_problems
+    bad += mapping_problems(doc)
 
     for ev in doc.get("events") or []:
         if ev.get("item") not in known:
@@ -1409,7 +1418,8 @@ def stage_report(doc: dict, rid: str, *, as_of: date | None = None) -> tuple[str
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("command", choices=["lint", "status", "graph", "render",
-                                        "check", "stage", "rules"])
+                                        "check", "stage", "rules",
+                                        "obligations"])
     ap.add_argument("item", nargs="?", help="BK-/J- id, for `stage`")
     ap.add_argument("--as-of", type=calendar_date,
                     help="India calendar date for read-only status/stage review")
@@ -1417,6 +1427,21 @@ def main() -> int:
     if args.as_of is not None and args.command not in {"status", "stage"}:
         ap.error("--as-of is only allowed for read-only status or stage")
     doc = load()
+
+    if args.command == "obligations":
+        if not args.item:
+            print("usage: backlog.py obligations <profile>", file=sys.stderr)
+            return 2
+        from tools.release_obligations import obligations
+        report = obligations(doc, args.item)
+        for problem in report.problems:
+            print(f"  ! {problem}")
+        for row in report.rows:
+            reason = f" -- {'; '.join(row.reasons)}" if row.reasons else ""
+            print(f"  [{row.state:<14}] {row.kind}:{row.identifier}{reason}")
+        print(f"\n{len(report.rows)} obligations; "
+              f"{'complete' if report.complete else 'NOT complete'}")
+        return 0 if report.complete else 1
 
     if args.command == "stage":
         if not args.item:

@@ -18,12 +18,13 @@ remain NOT RUN; packet proofs also require every registered criterion's exact
 requirement, negative control and required evidence methods.
 
 Final pre-build corrections retain the same 28-sheet layout. The Decisions
-view reads the scoped adoption register, not proposal `approval` flags. A
-recorded manual attestation remains explicitly not machine-resolved until
-BK-80/P03 verifies authority. Acceptance includes the media policy's foundation,
-served integration and confidential-path criteria. BK-87/BK-89/BK-90 are current
-planning deliveries, not future application packets; their evidence remains
-subject to the normal backlog lifecycle.
+view reads the scoped adoption register, not proposal `approval` flags. The
+planning view reports presence only because it has no attempted operation or
+protected trust input; P03's resolver performs those checks at actual use.
+Acceptance includes the media policy's foundation, served integration and
+confidential-path criteria. BK-87/BK-89/BK-90 are current planning deliveries,
+not future application packets; their evidence remains subject to the normal
+backlog lifecycle.
 
 The bounded-autonomy amendment preserves the 28-sheet layout. Its measured
 source population on 10 September 2026 is **101 work items, 198 acceptance
@@ -98,7 +99,8 @@ not a substitute for current product, browser, professional or deployment proof.
 - Effective evidence is the existing evidence binder's current result.
 - A legacy closure is a declared prose exception, not current executable proof.
 - Derived item readiness is not permission to activate a pilot or production.
-- The release profiles remain manual until the registered enforcement is built.
+- Release-profile criterion membership and evidence state are mechanically
+  checked; accountable adoption and release authority remain separate.
 - Professional and privacy reference links inherited from the earlier plan
   require current qualified verification for the actual release jurisdiction.
 

@@ -331,9 +331,65 @@
           "kind": "existing"
         },
         {
+          "path": "tools/structured_evidence.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/browser_evidence.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/blueprint_approvals.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/evidence_verification.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/release_obligations.py",
+          "kind": "existing"
+        },
+        {
           "path": "tests/test_evidence_is_bound_to_execution.py",
           "kind": "existing"
-        }
+        },
+        {
+          "path": "tests/test_structured_evidence_binds_its_subject.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_browser_evidence_is_a_complete_run.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_approval_resolves_to_one_of_seven_states.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_release_obligations_are_executed.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/p03_evidence_support.py",
+          "kind": "existing"
+        },
+      {
+        "path": "tests/test_blueprint_approvals.py",
+        "kind": "existing"
+      },
+      {
+        "path": "tools/plan_view.py",
+        "kind": "existing"
+      },
+      {
+        "path": "spec/plan/build_current_plan.mjs",
+        "kind": "existing"
+      },
+      {
+        "path": "spec/plan/README.md",
+        "kind": "existing"
+      }
       ],
       "inputs": [
         "Declared browser/model/counsel/production method, scenario IDs and source/configuration identities",

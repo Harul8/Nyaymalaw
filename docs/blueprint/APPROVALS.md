@@ -2,11 +2,14 @@
 
 ## What is implemented now, and what is not
 
-BK-89 records this pre-build clarification. **BK-80-AC6 / P03 owns the future
-verified approval resolver and its integration with packet eligibility.**
-The current checker validates record shape, registered references and event
-chronology. It does not establish identity, authority, authenticity, current
-scope or evidence adequacy, and cannot unlock confidential processing or release.
+BK-89 records the pre-build clarification. **BK-80-AC6 / P03 now owns the
+verified approval resolver and its packet-scoped tooling entry point.** The
+structural checker still validates only record shape, registered references and
+event chronology. `resolve` and `resolve_packet_approvals` additionally verify
+identity, authority, authenticity, current scope, conditions and evidence using
+operator-owned trust. They satisfy only an approval prerequisite. No application
+dispatch is wired by this tooling packet, and nothing here can unlock confidential
+processing or release without the independent build, evidence and deployment gates.
 
 - [decisions.json](decisions.json) owns proposed choices. Its `approval` fields
   stay null: do not type a person, PASS or true there to adopt a proposal.
@@ -22,9 +25,12 @@ scope or evidence adequacy, and cannot unlock confidential processing or release
   records answer **who permits what, subject to which conditions**. Neither
   replaces the other. Approval does not turn FAIL, NOT RUN or STALE into PASS.
 
-CLI and workbook use one presence-label function. A recorded attestation reads
-**approval not machine-resolved / manual verification required**, even when its
-shape is flawless. An unavailable register reads **approval evaluation
+CLI and workbook use one presence-label function and do not pretend that a
+planning view has the attempted operation or protected trust inputs needed to
+resolve authority. A recorded attestation there therefore reads **approval not
+machine-resolved / manual verification required**, even when its shape is
+flawless. An actual caller supplies exact attempted scope and the configured
+verifier to the resolver. An unavailable register reads **approval evaluation
 unavailable**, not absent approval. There is no authored `valid`, `verified`,
 `ready`, synthetic bypass or cryptographic-assurance flag.
 
@@ -62,7 +68,7 @@ Do not copy sensitive artifacts into the repository to satisfy this schema.
 Restricted references may remain unresolved by ordinary developer tools. Such
 a record is unverified until the designated reviewer/resolver can inspect it.
 
-## Future resolver and packet eligibility — binding P03 specification
+## Resolver and packet prerequisite — implemented P03 contract
 
 Input: attempted packet, gate, exact environment/profile/manifest/configuration,
 capability/data/coverage scope, proposed-choice identity, time and bounded run
@@ -116,9 +122,9 @@ not merely render a green planning card. Restart and stale-cache behaviour must
 retain safe refusal. Replayed use of a one-run approval must not grant a second
 run. Record refusal reasons without leaking the signed artifact or client data.
 
-## Manual operation until P03 is implemented
+## Operation until real trust and application enforcement are deployed
 
-For any affected consequential path, the accountable reviewer must inspect the
+For any affected consequential path not yet wired to the resolver, the accountable reviewer must inspect the
 actual signed record, authority, exact scope, versions, expiry/revocation and
 required evidence, and record the comparison and its limits in the existing
 Start/Sign-off record. Index the real adoption here; do not invent attestations
@@ -126,7 +132,7 @@ to clear the report. Unresolved checks block only that path. Permitted P01/P02
 synthetic-local work remains possible under its stated fallback; the presence
 label never authorises paid, confidential, external or production use.
 
-## Required future test vectors — specifications, not executed proof
+## Required test vectors — executed as synthetic Class-A mechanism proof
 
 P03/BK-80-AC6 must implement and execute these against the resolver and its real
 caller. Each mutation begins from a genuinely verified scoped candidate, changes
@@ -150,5 +156,7 @@ an existing input, proves the expected refusal, then restores and rechecks it.
 | Valid adoption but missing build, counsel or release evidence | Approval prerequisite satisfied, packet/deployment still blocked. |
 | A different unresolved choice while running permitted synthetic P01/P02 | Unrelated work remains permitted; no blanket block and no global confidential approval. |
 
-The current Class-A tests cover the offline record format and honest readiness
-labels only. They do **not** execute these future authority-verification vectors.
+P03's Class-A suite executes these vectors with ephemeral Ed25519 keys, signed
+records and isolated artifacts through the resolver and packet entry point.
+Those fixtures prove the mechanism and refusal states only. They are not real
+people, authority, adoption, client scope or application-dispatch enforcement.

@@ -50,15 +50,22 @@ import json
 import pathlib
 from datetime import datetime, timezone
 
+from tools.evidence_verification import (
+    EvidenceVerifier,
+    UnavailableVerifier,
+    instant,
+)
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 RECORDS = ROOT / "docs" / "backlog" / "evidence"
 
-SCHEMA = 1
+SCHEMA = 2
 
 #: Every record, whatever its level.
 REQUIRED = ("schema", "criterion", "level", "result", "subject", "method",
             "actor", "authority", "rubric", "population", "reservations",
-            "observed_at", "subject_identity")
+            "observed_at", "subject_identity", "configuration_identity",
+            "attestation")
 
 #: What a given level must ALSO bind, and why the omission matters.
 BY_LEVEL: dict[str, tuple[str, ...]] = {
@@ -67,7 +74,7 @@ BY_LEVEL: dict[str, tuple[str, ...]] = {
     # Approval without a stated standard is a signature, not a review.
     "counsel_review": (),
     # "It worked" about an unstated number of cases is not a measurement.
-    "production_measure": ("configuration",),
+    "production_measure": (),
 }
 
 KINDS = ("source", "external")
@@ -75,16 +82,6 @@ KINDS = ("source", "external")
 
 class RecordError(RuntimeError):
     """The record itself is wrong. Never read as 'no evidence recorded'."""
-
-
-def _instant(value: object) -> datetime | None:
-    if not isinstance(value, str) or not value.strip():
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.strip())
-    except ValueError:
-        return None
-    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
 def load(ref: str) -> dict:
@@ -110,7 +107,9 @@ def load(ref: str) -> dict:
 
 def problems(acid: str, level: str, ref: str, *,
              now: datetime | None = None,
-             source_fingerprint: str | None = None) -> list[str]:
+             source_fingerprint: str | None = None,
+             configuration_identity: str | None = None,
+             verifier: EvidenceVerifier | None = None) -> list[str]:
     """Everything wrong with this record, or an empty list.
 
     `source_fingerprint` is injected rather than imported so a caller can ask
@@ -147,6 +146,67 @@ def problems(acid: str, level: str, ref: str, *,
         if value in (None, "", [], {}):
             bad.append(f"{where}: evidence record has no {field}")
 
+    actor = record.get("actor")
+    if not isinstance(actor, dict):
+        bad.append(f"{where}: actor must name a stable person_id and display name")
+    else:
+        for field in ("person_id", "name"):
+            if not str(actor.get(field) or "").strip():
+                bad.append(f"{where}: actor has no {field}")
+
+    authority = record.get("authority")
+    if not isinstance(authority, dict):
+        bad.append(f"{where}: authority must bind role, basis and evidence")
+    else:
+        for field in ("role", "basis", "evidence"):
+            if authority.get(field) in (None, "", [], {}):
+                bad.append(f"{where}: authority has no {field}")
+
+    method = record.get("method")
+    if not isinstance(method, dict) or set(method) != {"procedure", "steps"}:
+        bad.append(f"{where}: method must be a closed object with procedure and steps")
+    else:
+        if not str(method.get("procedure") or "").strip():
+            bad.append(f"{where}: method has no procedure")
+        steps = method.get("steps")
+        if (not isinstance(steps, list) or not steps
+                or any(not isinstance(step, str) or not step.strip()
+                       for step in steps)):
+            bad.append(f"{where}: method steps must be a nonempty list of text")
+
+    rubric = record.get("rubric")
+    if not isinstance(rubric, dict) or set(rubric) != {"identity", "findings"}:
+        bad.append(f"{where}: rubric must be a closed object with identity and findings")
+    else:
+        if not str(rubric.get("identity") or "").strip():
+            bad.append(f"{where}: rubric has no identity")
+        findings = rubric.get("findings")
+        if not isinstance(findings, list) or not findings:
+            bad.append(f"{where}: rubric has no substantive finding population")
+        else:
+            identities: list[str] = []
+            for finding in findings:
+                if not isinstance(finding, dict) or set(finding) != {
+                        "id", "result", "basis"}:
+                    bad.append(f"{where}: a rubric finding is not a closed "
+                               "id/result/basis object")
+                    continue
+                identities.append(str(finding.get("id") or ""))
+                if not str(finding.get("id") or "").strip():
+                    bad.append(f"{where}: a rubric finding has no identity")
+                if finding.get("result") not in {"PASS", "FAIL", "NOT_ASSESSED"}:
+                    bad.append(f"{where}: rubric finding {finding.get('id')!r} "
+                               "has an unknown result")
+                if not str(finding.get("basis") or "").strip():
+                    bad.append(f"{where}: rubric finding {finding.get('id')!r} "
+                               "has no stated basis")
+                if record.get("result") == "PASS" and finding.get("result") != "PASS":
+                    bad.append(f"{where}: a PASS record has rubric finding "
+                               f"{finding.get('id')!r} at {finding.get('result')!r}")
+            named = [identity for identity in identities if identity]
+            if len(named) != len(set(named)):
+                bad.append(f"{where}: rubric finding identities are not unique")
+
     if record.get("criterion") != acid or record.get("level") != level:
         bad.append(f"{where}: evidence record names a different claim")
     if record.get("result") != "PASS":
@@ -156,6 +216,14 @@ def problems(acid: str, level: str, ref: str, *,
         if not record.get(field):
             bad.append(f"{where}: a {level} that does not name its {field} "
                        f"cannot be reproduced or invalidated")
+
+    configured = str(record.get("configuration_identity") or "").strip()
+    if configuration_identity is None:
+        bad.append(f"{where}: the current evidence configuration identity is "
+                   "unavailable, so the record cannot be established as current")
+    elif configured != configuration_identity:
+        bad.append(f"{where}: the evaluated configuration was {configured!r} and "
+                   f"the current configuration is {configuration_identity!r}")
 
     # Shape-checked ONLY when present. Its absence is already reported by the
     # required-field sweep above, and saying it twice in different words sends
@@ -176,6 +244,11 @@ def problems(acid: str, level: str, ref: str, *,
 
     bad += _identity_problems(where, record, now=now,
                               source_fingerprint=source_fingerprint)
+    bad += _verification_problems(
+        where, record, level=level,
+        verifier=verifier or UnavailableVerifier(),
+        at=now or datetime.now(timezone.utc),
+    )
     return bad
 
 
@@ -201,22 +274,61 @@ def _identity_problems(where: str, record: dict, *, now: datetime | None,
             bad.append(f"{where}: the reviewed source was {declared} and this "
                        f"tree is {source_fingerprint} -- the judgement is about "
                        f"code that is no longer running")
-    else:
-        # EXTERNAL: not recomputable here, so it must be bounded in time.
-        until = _instant(identity.get("valid_until"))
-        if until is None:
-            bad.append(f"{where}: an externally-identified record must carry a "
-                       f"`valid_until`; nothing else can ever retire it")
-        elif (now or datetime.now(timezone.utc)) > until:
-            bad.append(f"{where}: the record's validity ended "
-                       f"{until.isoformat()} and it can no longer confer a PASS")
+    # Every judgement is finite. Source identity additionally makes a changed
+    # tree stale before that time; external identity can retire only by time.
+    until = instant(identity.get("valid_until"))
+    if until is None:
+        bad.append(f"{where}: subject identity must carry a timezone-bearing "
+                   f"`valid_until`; nothing else can retire this judgement")
+    elif (now or datetime.now(timezone.utc)) >= until:
+        bad.append(f"{where}: the record's validity ended "
+                   f"{until.isoformat()} and it can no longer confer a PASS")
 
-    observed = _instant(record.get("observed_at"))
+    observed = instant(record.get("observed_at"))
     if observed is None:
         bad.append(f"{where}: observed_at is not a readable instant")
     else:
-        frm = _instant(identity.get("valid_from"))
+        moment = now or datetime.now(timezone.utc)
+        if observed > moment:
+            bad.append(f"{where}: observed_at is in the future")
+        frm = instant(identity.get("valid_from"))
         if frm is not None and observed < frm:
             bad.append(f"{where}: the record was observed before its own "
                        f"validity began")
+    return bad
+
+
+def _verification_problems(where: str, record: dict, *, level: str,
+                           verifier: EvidenceVerifier,
+                           at: datetime) -> list[str]:
+    """Authenticate the exact record and the actor's asserted authority."""
+    actor = record.get("actor")
+    authority = record.get("authority")
+    if not isinstance(actor, dict) or not isinstance(authority, dict):
+        return []  # shape failures above are already specific
+    person_id = str(actor.get("person_id") or "")
+    role, basis = str(authority.get("role") or ""), str(authority.get("basis") or "")
+    if not person_id or not role or not basis:
+        return []
+
+    bad: list[str] = []
+    payload = {key: value for key, value in record.items() if key != "attestation"}
+    attested = verifier.signed_payload(
+        record.get("attestation"), purpose=f"{where} attestation",
+        expected_payload=payload, required_signers=frozenset({person_id}),
+    )
+    if not attested.verified:
+        prefix = "verification unavailable" if not attested.available else "unverified"
+        reasons = "; ".join(attested.reasons) or "no reason supplied"
+        bad.append(f"{where}: {prefix} attestation: {reasons}")
+
+    authority_check = verifier.authority(
+        authority.get("evidence"), person_id=person_id, role=role, basis=basis,
+        scope=f"evidence:{level}", at=at,
+    )
+    if not authority_check.verified:
+        prefix = ("authority verification unavailable" if not authority_check.available
+                  else "authority is not verified")
+        reasons = "; ".join(authority_check.reasons) or "no reason supplied"
+        bad.append(f"{where}: {prefix}: {reasons}")
     return bad
