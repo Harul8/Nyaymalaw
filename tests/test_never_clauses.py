@@ -520,9 +520,18 @@ def test_neither_board_carries_analysis(client):
     # theory, proof gaps and reasoning are the analysis A2 keeps off the board.
     # A passed deadline is on the board precisely because A2.5 requires it to
     # be, and it carries its consequence rather than an argument about it.
+    # P18 ADDED TWO, on the same argument as `next_deadline_status`:
+    # `next_deadline_currency` is one of three words saying whether the
+    # leading date is still about the file as it stands, and `stale_deadline`
+    # is the DATE that stopped counting after a correction -- the number the
+    # advocate was working to, so they recognise it. Neither carries why: the
+    # reason is the ledger's sentence and it lives on the cover and the case
+    # file. The first draft put a list with `because` here and this test
+    # refused it, which is exactly the question it exists to ask.
     thread_keys = {"thread_id", "thread", "our_client_is", "side", "against",
                    "forum", "stage", "next_deadline", "next_deadline_status",
-                   "passed_deadlines", "loud", "conflict", "deferred_reason"}
+                   "passed_deadlines", "loud", "conflict", "deferred_reason",
+                   "next_deadline_currency", "stale_deadline"}
     for row in board["threads"]:
         extra = set(row) - thread_keys
         assert not extra, (
@@ -541,9 +550,11 @@ def test_neither_board_carries_analysis(client):
     # them -- the test for this list is whether a row states something the
     # advocate would otherwise have to open the file to learn, and a party
     # name is on the cover of every brief ever written.
+    # `stale_deadlines` on the LIST is a COUNT (P18): how many windows on the
+    # file stopped counting after a correction. A number, like `threads`.
     matter_keys = {"matter_id", "matter", "client", "opponent", "threads",
                    "next_deadline", "next_deadline_status", "blocked",
-                   "last_touched"}
+                   "last_touched", "stale_deadlines"}
     for row in listing["matters"]:
         extra = set(row) - matter_keys
         assert not extra, f"the matter list carries {sorted(extra)}"

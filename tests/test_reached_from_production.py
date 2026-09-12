@@ -85,17 +85,13 @@ UNWIRED: dict[str, str] = {
         "`assess()` before the arithmetic and `nm.core.turn` carries the "
         "premise digest onto the result -- P22's integration half, which "
         "needs P18's cascade to carry an invalidation through."),
-    "nm.core.dependency": (
-        "P18's currency ledger, landed ahead of its wiring on 12 September "
-        "2026 and declared here on the same commit rather than left to be "
-        "found. `nm.core.turn` will record a node for every value it derives "
-        "-- built from the `cascade.Derived` rows it already produces, through "
-        "`dependency.from_derived`, so the product keeps ONE statement of what "
-        "a derived value rests on -- and `nm.edge.projections` will refuse to "
-        "present a stale one as current. The mechanism is complete and "
-        "unit-proved; what does not exist yet is the turn writing the ledger "
-        "onto the matter, and that is the only thing that makes it bite on a "
-        "served turn."),
+    # `nm.core.dependency` WAS HERE, from 3586ea9 until the same day. P18 wired
+    # it on 12 September 2026: `nm.core.turn` observes the file after ADMIT-B,
+    # settles every value it derives against its inputs, and the projections
+    # refuse to present a stale one as current. The declaration went the
+    # moment the import landed, as `test_no_declaration_outlives_its_wiring`
+    # requires -- a declaration that outlives its wiring is the next unwired
+    # module's hiding place.
     "nm.domain.media":
         "BK-69, and deliberately ahead of its caller. `plan.json` places this "
         "boundary at W0 and media intake at W2 (BK-54), because a control "

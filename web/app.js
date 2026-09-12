@@ -97,6 +97,12 @@ function clearPrivileged() {
   if (composer) composer.value = '';
   const chooser = $('history-matter');
   if (chooser) chooser.innerHTML = '<option value="">Choose a matter…</option>';
+  const cf = $('casefile-matter');
+  if (cf) cf.innerHTML = '<option value="">Choose a matter…</option>';
+  ['casefile-entries', 'currency-stale', 'currency-nodes', 'currency-history',
+   'currency-state', 'casefile-state'].forEach((id) => {
+    const el = $(id); if (el) el.textContent = '';
+  });
 }
 
 // BK-31-AC20. The value the server hands this page so it can prove a request
@@ -235,7 +241,31 @@ function deadlineField(m) {
   if (status === 'not_computed') {
     return { pill: 'unknown', text: 'a deadline with no date established' };
   }
+  // P18. STALE IS NOT A DATE. The window the file holds rested on something
+  // the advocate has since corrected, and it must not lead the row however
+  // near it is; the figure it used to be is shown under `stale` below.
+  if (status === 'stale') {
+    return { pill: 'blocked', text: 'STALE — awaiting recomputation' };
+  }
+  if (status === 'not_established') {
+    return { pill: 'unknown', text: `${m.next_deadline} — currency not established` };
+  }
+  if (m.next_deadline && m.next_deadline_currency === 'not_established') {
+    return { pill: 'unknown', text: `${m.next_deadline} — currency not established` };
+  }
   return m.next_deadline || 'none recorded';
+}
+
+// P18. THE WINDOW THAT STOPPED COUNTING, shown as the date it was. Hiding it
+// would tell the advocate the file has no deadline; leading with it would
+// tell them to work to a date they corrected. WHY it stopped is reasoning,
+// and A2 keeps reasoning off the board -- the case file carries it.
+function staleDeadlineFields(dl, t) {
+  if (!t.stale_deadline) return;
+  field(dl, 'stale', {
+    pill: 'blocked',
+    text: `${t.stale_deadline} — was the deadline; see the case file for why`,
+  });
 }
 
 async function showMatterList() {
@@ -363,6 +393,7 @@ async function showThreadBoard(
     field(dl, 'forum', t.forum);
     field(dl, 'stage', t.stage);
     field(dl, 'deadline', deadlineField(t));
+    staleDeadlineFields(dl, t);
     row.append(title, dl);
     return row;
   }));
@@ -573,10 +604,20 @@ function renderTurn(entry) {
   // Plain GROUND is the SUPPORT for a claim stated above it -- retrieved
   // statutory text, quoted paragraphs -- and it is what actually crowds the
   // screen. Nothing is lost by folding it and it can be opened in one click.
-  let support = entry.answer.elements.filter(
-    (el) => el.kind === 'ground' && !el.disclosure);
-  let spoken = entry.answer.elements.filter(
-    (el) => !(el.kind === 'ground' && !el.disclosure));
+  // AND ONLY WHAT THE SERVER FILED AS AUTHORITY. `nm/domain/brief.py` puts a
+  // ground with refs under `authority` and a ground carrying a loud signal
+  // under `window` or `risk` -- the expired limitation is a ground with the
+  // LIMITATION_BAR signal, filed under Time. This folded every plain ground
+  // whatever its section, so "Limitation for our side runs to 2021-03-14 ...
+  // That period has run" sat behind "4 supporting passages" and the one
+  // date the advocate came for was available rather than visible. Measured
+  // by journey phase 6b on the integrated tree, 12 September 2026, and it
+  // predates P18: the fold was written before the sections were. An element
+  // with no section (an older transcript) folds as before.
+  const isSupport = (el) => el.kind === 'ground' && !el.disclosure
+    && (!el.section || el.section === 'authority');
+  let support = entry.answer.elements.filter(isSupport);
+  let spoken = entry.answer.elements.filter((el) => !isSupport(el));
 
   // BK-37. AN ANSWER THAT IS ONLY GROUNDS IS NOT SUPPORT FOR ANYTHING.
   //
@@ -1087,7 +1128,7 @@ boot();
  * quickest way to break that is a shared object both panes write to.
  */
 
-const PANES = ['advise', 'search', 'history'];
+const PANES = ['advise', 'search', 'casefile', 'history'];
 
 function showTab(name) {
   PANES.forEach((p) => { $(`pane-${p}`).hidden = (p !== name); });
@@ -1096,6 +1137,7 @@ function showTab(name) {
   });
   if (name === 'search') $('q').focus();
   if (name === 'history') loadHistoryMatters();
+  if (name === 'casefile') loadCasefileMatters();
 }
 
 document.querySelectorAll('#tabs .tab').forEach((b) => {
@@ -1283,6 +1325,237 @@ $('search-form').addEventListener('submit', async (ev) => {
  * the one that ran.
  */
 
+/* ===================== P17/P18 — THE CASE FILE =====================
+ *
+ * Renders what `/api/matters/{id}/casefile` and `/dependencies` say and adds
+ * nothing. The one write on this pane is a CORRECTION, and it goes with the
+ * version this pane read -- a file that moved under the advocate is refused
+ * by the server with both versions, and the pane re-reads rather than retries.
+ */
+
+async function loadCasefileMatters() {
+  const sel = $('casefile-matter');
+  const st = $('casefile-state');
+  try {
+    const d = await api('/api/matters');
+    const rows = d.matters || [];
+    const held = sel.value;
+    sel.textContent = '';
+    const first = document.createElement('option');
+    first.value = '';
+    first.textContent = d.state !== 'ok'
+      ? 'The matter list could not be read'
+      : (rows.length ? 'Choose a matter…' : 'No matters yet');
+    sel.appendChild(first);
+    rows.forEach((m) => {
+      const o = document.createElement('option');
+      o.value = m.matter_id;
+      o.textContent = m.matter || m.matter_id;
+      sel.appendChild(o);
+    });
+    // THE FILE THE ADVOCATE IS IN, unless they chose another. A pane that
+    // opens on "Choose a matter" over the matter they are working is a
+    // pane that asks them what they just told it.
+    const want = held || state.matterId || '';
+    if (want && rows.some((m) => m.matter_id === want)) {
+      sel.value = want;
+      await showCasefile(want);
+    }
+  } catch (err) {
+    st.textContent = '';
+    st.appendChild(stateBlock('loud',
+      `The matter list could not be read: ${err.message}`));
+  }
+}
+
+async function showCasefile(matterId) {
+  const st = $('casefile-state');
+  const entries = $('casefile-entries');
+  st.textContent = ''; entries.textContent = '';
+  renderCurrency(null);
+  if (!matterId) return;
+
+  let file; let deps;
+  try {
+    file = await api(`/api/matters/${matterId}/casefile`);
+    deps = await api(`/api/matters/${matterId}/dependencies`);
+  } catch (err) {
+    st.appendChild(stateBlock('loud', `The case file could not be read: ${err.message}`));
+    return;
+  }
+  if (file.state !== 'ok') {
+    st.appendChild(stateBlock('loud', `The case file is ${file.state}.`));
+  }
+  renderCurrency(deps);
+
+  const live = new Set((file.live || []).map((e) => e.fact_id));
+  (file.entries || []).forEach((e) => {
+    entries.appendChild(renderEntry(matterId, e, live.has(e.fact_id), file.version));
+  });
+  if (!(file.entries || []).length) {
+    entries.appendChild(stateBlock('empty', 'Nothing has been recorded on this file yet.'));
+  }
+}
+
+// P18. THE CURRENCY BLOCK. Three states at the top and the third is a file
+// with no ledger: `not assessed` is rendered as a value, never as a clean
+// sheet, because an empty list of stale conclusions is not a certificate.
+function renderCurrency(deps) {
+  const stateEl = $('currency-state');
+  const staleEl = $('currency-stale');
+  const nodesEl = $('currency-nodes');
+  const histEl = $('currency-history');
+  stateEl.textContent = ''; staleEl.textContent = '';
+  nodesEl.textContent = ''; histEl.textContent = '';
+  if (!deps) return;
+
+  const pill = document.createElement('span');
+  pill.className = 'pill ' + (deps.state === 'current' ? 'ok'
+    : deps.state === 'stale' ? 'blocked' : 'unknown');
+  pill.textContent = deps.state === 'current' ? 'current'
+    : deps.state === 'stale' ? 'NOT CURRENT' : 'not assessed';
+  pill.dataset.currency = deps.state;
+  const said = document.createElement('span');
+  said.className = 'currency-said';
+  said.textContent = ' ' + (deps.said || '');
+  stateEl.append(pill, said);
+
+  (deps.stale || []).forEach((n) => {
+    const li = document.createElement('li');
+    li.className = 'stale-node';
+    li.dataset.node = n.name;
+    const strong = document.createElement('strong');
+    strong.textContent = n.shown || n.name;
+    li.append(strong, document.createTextNode(
+      ` — ${n.currency}: ${n.because}` +
+      (n.value ? ` It read ${n.value}.` : '') +
+      (n.rework_exhausted ? ' No further recomputation is scheduled.' : '')));
+    staleEl.appendChild(li);
+  });
+
+  (deps.nodes || []).forEach((n) => {
+    const row = document.createElement('div');
+    row.className = 'node-row';
+    row.dataset.node = n.name;
+    row.dataset.currency = n.currency;
+    const dl = document.createElement('dl'); dl.className = 'r-fields';
+    field(dl, 'conclusion', n.shown || n.name);
+    field(dl, 'value', n.value || '—');
+    field(dl, 'currency', {
+      pill: n.currency === 'current' ? 'ok' : n.currency === 'stale' ? 'blocked' : 'unknown',
+      text: n.currency,
+    });
+    field(dl, 'rests on', (n.rests_on || []).map((r) => `${r.kind} ${r.id} v${r.version}`).join('; ') || 'nothing recorded');
+    row.appendChild(dl);
+    nodesEl.appendChild(row);
+  });
+
+  (deps.history || []).forEach((h) => {
+    const row = document.createElement('div');
+    row.className = 'revision';
+    row.dataset.node = h.name;
+    row.textContent =
+      `${h.at || ''} — ${h.name}: was ${h.was || '—'}` +
+      (h.now ? `, now ${h.now}` : ', not yet recomputed') +
+      ` — ${h.reason || ''}`;
+    histEl.appendChild(row);
+  });
+}
+
+function renderEntry(matterId, e, isLive, version) {
+  const row = document.createElement('div');
+  row.className = 'entry' + (isLive ? '' : ' superseded');
+  row.dataset.factId = e.fact_id;
+  const text = document.createElement('div');
+  text.className = 'entry-text';
+  text.textContent = e.statement;
+  const meta = document.createElement('div');
+  meta.className = 'entry-meta';
+  const bits = [e.date ? `dated ${e.date}` : 'undated', e.certainty, e.confirmed,
+                e.attribution && e.attribution.said];
+  if (e.superseded_by) bits.push(`superseded by ${e.superseded_by}`);
+  meta.textContent = bits.filter(Boolean).join(' · ');
+  row.append(text, meta);
+
+  if (isLive) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'ghost correct';
+    btn.textContent = 'Correct';
+    btn.setAttribute('aria-label', `Correct: ${e.statement.slice(0, 60)}`);
+    btn.addEventListener('click', () => {
+      if (row.querySelector('form')) return;
+      row.appendChild(correctionForm(matterId, e, version));
+    });
+    row.appendChild(btn);
+  }
+  return row;
+}
+
+function correctionForm(matterId, e, version) {
+  const form = document.createElement('form');
+  form.className = 'correction';
+  const id = e.fact_id.replace(/[^a-zA-Z0-9_-]/g, '');
+  const mk = (name, label, opt, type) => {
+    const lab = document.createElement('label');
+    lab.htmlFor = `corr-${name}-${id}`;
+    lab.textContent = label + ' ';
+    if (opt) {
+      const o = document.createElement('span'); o.className = 'opt'; o.textContent = opt;
+      lab.appendChild(o);
+    }
+    const inp = document.createElement('input');
+    inp.name = name; inp.id = `corr-${name}-${id}`;
+    if (type) inp.type = type;
+    return [lab, inp];
+  };
+  const [l1, statement] = mk('statement', 'Corrected wording', '— leave blank to keep the words');
+  statement.placeholder = e.statement.slice(0, 80);
+  const [l2, date] = mk('date', 'Corrected date', '— or blank to keep it', 'date');
+  const [l3, reason] = mk('reason', 'Why it changes', '');
+  reason.required = true;
+  reason.placeholder = 'the invoice is dated 2019, not 2023';
+  const rowEl = document.createElement('div'); rowEl.className = 'composer-row';
+  const stateEl = document.createElement('span'); stateEl.className = 'hint correction-state';
+  const go = document.createElement('button'); go.type = 'submit'; go.className = 'primary';
+  go.textContent = 'Record the correction';
+  rowEl.append(stateEl, go);
+  form.append(l1, statement, l2, date, l3, reason, rowEl);
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const why = reason.value.trim();
+    if (!why) { stateEl.textContent = 'Say why it changes.'; return; }
+    const body = { reason: why, expected_version: version };
+    if (statement.value.trim()) body.statement = statement.value.trim();
+    if (date.value) body.date = date.value;
+    stateEl.textContent = 'Recording…';
+    let out;
+    try {
+      out = await api(`/api/matters/${matterId}/facts/${e.fact_id}/corrections`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      // A REFUSAL IS SHOWN AS ONE, with what the server said. A file that
+      // moved is re-read; nothing is retried on the advocate's behalf.
+      const detail = err.detail || {};
+      stateEl.textContent = detail.why || err.message;
+      if (detail.code === 'STALE_VERSION') await showCasefile(matterId);
+      return;
+    }
+    stateEl.textContent =
+      `Recorded. Not current until reworked: ${(out.affected || []).length}; ` +
+      `left alone: ${(out.unaffected || []).length}.`;
+    if (state.matterId === matterId) state.matterVersion = out.version;
+    await showCasefile(matterId);
+    // THE BOARD SAYS SO TOO, if it is the file that is open.
+    if (state.matterId === matterId) {
+      showThreadBoard(matterId, { restore: false, closeNavigator: false });
+    }
+  });
+  return form;
+}
+
 async function loadHistoryMatters() {
   const sel = $('history-matter');
   try {
@@ -1391,6 +1664,7 @@ async function showHistory(matterId) {
 }
 
 $('history-matter').addEventListener('change', (ev) => showHistory(ev.target.value));
+$('casefile-matter').addEventListener('change', (ev) => showCasefile(ev.target.value));
 
 /* ========================= A1 — THE GATE =========================
  *

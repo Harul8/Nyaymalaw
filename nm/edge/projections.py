@@ -77,7 +77,39 @@ def _recency(row: dict) -> int:
         return 0
 
 
-def _thread_row(thread, deadlines, today=None) -> dict:
+def _currency_of(ledger, thread_id: str, deadline) -> tuple[str, str]:
+    """Whether one register row may be shown as current. THREE STATES.
+
+    `current`         the ledger holds the node and nothing it rests on moved
+    `stale`           something moved and it has not been recomputed (or was
+                      recomputed and failed, or is being recomputed now)
+    `not_established` no node is recorded for it -- a register written before
+                      the ledger existed, or a kind the ledger does not track
+
+    The third is a VALUE and it is rendered, because the two failures it
+    stands between are opposite: a stale deadline the advocate acts on, and a
+    real deadline the board hides because nobody recorded its inputs.
+    """
+    from nm.core.deadlines import DeadlineKind
+    from nm.core.dependency import Currency, names_for, presentable
+
+    if getattr(deadline, "kind", None) is not DeadlineKind.LIMITATION:
+        return "not_established", "the ledger does not track this kind of deadline"
+    name = names_for(thread_id).deadline
+    node = ledger.node(name)
+    if node is None:
+        return ("not_established",
+                "no dependency record exists for this deadline, so whether it "
+                "is still current has not been established")
+    ok, why = presentable(ledger, name)
+    if ok:
+        return "current", ""
+    state = ("stale" if node.currency in (Currency.STALE, Currency.REWORKING)
+             else "not_established")
+    return state, why
+
+
+def _thread_row(thread, deadlines, today=None, currency=None) -> dict:
     """Six fields. One row. No analysis.
 
     A line that is a conclusion, a reason, or a piece of reasoning does not
@@ -89,30 +121,54 @@ def _thread_row(thread, deadlines, today=None) -> dict:
     null` and an advocate reading it saw a file with no deadlines on it. That
     is defect shape S1: the absent input produced the shape of a clean result,
     and `()` could not be told from "nobody computed a register".
+
+    `currency` IS THE MATTER'S DEPENDENCY LEDGER (P18). A deadline whose
+    node is STALE is not the nearest live deadline however near its date: it
+    is listed, labelled, and kept out of `next_deadline`, because the one
+    thing the board must never do is put a date the advocate has corrected
+    at the top of their day.
+
+    A deadline whose currency is NOT_ESTABLISHED -- a register written before
+    the ledger existed -- stays in the running and carries the label. The two
+    are different facts: stale is a FINDING that an input moved, and
+    not-established is a GAP in what was recorded. Hiding a real window
+    because nobody recorded its inputs is the opposite failure, and the
+    label is what keeps the gap from reading as a clean sheet.
     """
 
     from nm.core.deadlines import passed as _passed
     from nm.core.deadlines import upcoming as _upcoming
+    from nm.core.dependency import Ledger
 
     today = today or forum_today()   # BK-14: the forum's date
+    ledger = Ledger.from_stored(currency)
     if deadlines is None:
         # NOT ASSESSED, said as a value. Not the same as a file with no
         # deadlines, and the two must not render alike.
         window = {"next_deadline": None,
                   "next_deadline_status": "not_assessed",
-                  "passed_deadlines": None}
+                  "passed_deadlines": None,
+                  "stale_deadline": None,
+                  "next_deadline_currency": None}
     else:
         ours = tuple(d for d in deadlines if d.thread == thread.id)
-        mine = _upcoming(ours, today)
-        gone = _passed(ours, today)
+        judged = {id(d): _currency_of(ledger, thread.id, d) for d in ours}
+        live_rows = tuple(d for d in ours if judged[id(d)][0] != "stale")
+        not_live = tuple(d for d in ours if judged[id(d)][0] == "stale")
+        mine = _upcoming(live_rows, today)
+        gone = _passed(live_rows, today)
         window = {
             # A2.5. THE NEAREST LIVE DEADLINE, and the passed ones separately.
             # This was hard-coded `None`, so the clause forbidding a passed
             # deadline from being dropped was a rule about a field that never
             # held anything.
             "next_deadline": (mine[0].on.isoformat() if mine else None),
-            "next_deadline_status": (mine[0].status(today).value if mine
-                                     else "none_on_this_thread"),
+            "next_deadline_status": (
+                mine[0].status(today).value if mine
+                # NOTHING LIVE, BUT NOT NOTHING. The state names why the
+                # nearest is missing rather than reading as a clean sheet.
+                else judged[id(not_live[0])][0] if not_live
+                else "none_on_this_thread"),
             # PASSED ROWS ARE THEIR OWN LIST. Merging them into what is
             # upcoming buries the thing that can no longer be done among the
             # things that still can, and the advocate scans the second for work.
@@ -120,6 +176,18 @@ def _thread_row(thread, deadlines, today=None) -> dict:
                 {"on": d.on.isoformat(), "action": d.action,
                  "consequence": d.consequence, "days_ago": -d.days(today)}
                 for d in gone],
+            # THE WINDOW THAT STOPPED COUNTING, as a DATE and nothing more.
+            # The advocate recognises the number they were working to; WHY it
+            # stopped is reasoning, and reasoning is what A2 keeps off the
+            # board -- it is on the cover and the case file, with the ledger's
+            # own words. A2's test enumerates the board's keys, and this one
+            # was admitted as a status field on that argument.
+            "stale_deadline": (not_live[0].on.isoformat()
+                               if not_live and not_live[0].on else None),
+            # THE LABEL ON THE ROW THAT LEADS, so `not_established` is seen
+            # even while it is allowed to lead. Three words; no reasoning.
+            "next_deadline_currency": (judged[id(mine[0])][0] if mine
+                                       else None),
         }
     posture = thread.posture
     unresolved = not posture.resolved
@@ -153,7 +221,8 @@ def board_projection(matter: Matter, deadlines, today=None) -> dict:
     """
     # D3 — THE NEAREST WINDOW LEADS, regardless of which thread is legally the
     # most interesting. The interesting one will still be there next week.
-    rows = nearest_first([_thread_row(t, deadlines, today)
+    rows = nearest_first([_thread_row(t, deadlines, today,
+                                      currency=getattr(matter, "dependencies", None))
                           for t in matter.threads])
     return {
         "state": "ok",
@@ -202,6 +271,7 @@ def matter_list_projection(matters, registers=None) -> dict:
     """
 
     from nm.core.deadlines import upcoming as _upcoming
+    from nm.core.dependency import Ledger
 
     unreadable = tuple(getattr(matters, "unreadable", ()))
     today = forum_today()            # BK-14: the forum's date
@@ -215,6 +285,17 @@ def matter_list_projection(matters, registers=None) -> dict:
         # row above and same answer: three states, and a register that has to
         # be supplied rather than defaulted into silence.
         register = None if registers is None else registers.get(m.id, ())
+        # ONLY CURRENT ROWS COMPETE FOR THE NEAREST DEADLINE (P18). The same
+        # judgement the thread board makes, asked of the same ledger; a stale
+        # window at the top of the matter list is the corrected date at the
+        # top of the advocate's day.
+        ledger = Ledger.from_stored(getattr(m, "dependencies", None))
+        stale_rows = 0
+        if register is not None:
+            judged = [(d, _currency_of(ledger, d.thread, d)[0])
+                      for d in register]
+            stale_rows = sum(1 for _, state in judged if state == "stale")
+            register = tuple(d for d, state in judged if state != "stale")
         live = () if register is None else _upcoming(tuple(register), today)
         rows.append({
             "matter_id": m.id,
@@ -233,7 +314,10 @@ def matter_list_projection(matters, registers=None) -> dict:
             "next_deadline_status": (
                 "not_assessed" if register is None
                 else live[0].status(today).value if live
+                else "stale" if stale_rows
                 else "none_on_this_matter"),
+            # NAMED, so a list whose nearest deadline vanished says why.
+            "stale_deadlines": stale_rows,
             # What is BLOCKED is a status field, not analysis: it is the handle
             # the advocate uses to decide what to open.
             "blocked": (f"{unresolved} thread(s) awaiting posture" if unresolved else None),
@@ -351,4 +435,52 @@ def cover_projection(matter: Matter, deadlines=None, today=None) -> dict:
         "commission": commission.as_dict() if commission else None,
         "commission_state": ("recorded" if commission else "not_recorded"),
         "thread_count": len(matter.threads),
+        # WHAT ON THIS FILE IS STILL CURRENT (P18). One block, read from the
+        # ledger the turn writes; the same names the board uses.
+        "currency": currency_projection(matter),
+    }
+
+
+def currency_projection(matter: Matter) -> dict:
+    """Every recorded conclusion, its currency, and its history. BK-65-AC1.
+
+    THREE STATES AT THE TOP, and the third is a file with no ledger at all:
+    `not_assessed` is a record written before P18 or a matter no turn has
+    derived on, and it must not render as `current` -- which is what an
+    empty list of stale nodes would say if the state were derived from it.
+
+    THE HISTORY CARRIES `was`, `now`, the reason AND the versions that moved,
+    so the advocate sees the old date and the corrected one and who changed
+    it (EVAL-010) rather than a value that is different from the one they
+    remember with nothing saying why.
+    """
+    from nm.core.dependency import Ledger
+
+    ledger = Ledger.from_stored(getattr(matter, "dependencies", None))
+    # NO NODES IS NOT ASSESSED, whatever inputs are tracked. The first draft
+    # tested `not nodes and not tracked` and a matter whose turn had observed
+    # its facts and concluded nothing reported `current` -- an empty list of
+    # stale conclusions read as a certificate, which is the S1 shape this
+    # block exists to refuse. Found by the test written for it.
+    if not ledger.nodes:
+        return {"state": "not_assessed",
+                "said": ("no conclusion on this file has a recorded "
+                         "dependency yet; currency cannot be certified"),
+                "nodes": [], "history": [], "stale": []}
+    stale = ledger.stale()
+    return {
+        "state": "stale" if stale else "current",
+        "said": (f"{len(stale)} conclusion(s) on this file are not current"
+                 if stale else
+                 "every recorded conclusion is current against the inputs "
+                 "it was computed from"),
+        "nodes": [{**n.as_dict(),
+                   "source_versions": list(ledger.source_versions(n.name))}
+                  for n in ledger.nodes],
+        "stale": [{"name": n.name, "shown": n.label, "value": n.value,
+                   "currency": n.currency.value, "because": n.stale_because,
+                   "rework_exhausted": n.rework_exhausted}
+                  for n in stale],
+        "history": [r.as_dict() for r in ledger.history],
+        "tracked": [t.as_dict() for t in ledger.tracked],
     }

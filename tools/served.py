@@ -24,6 +24,7 @@ provider from a test run, and a harness that could pick up the production
 from __future__ import annotations
 
 import contextlib
+import os
 import socket
 import threading
 import time
@@ -85,6 +86,22 @@ def served(root: Path, *, responses: dict | None = None,
     from nm.bootstrap.composition import Application
     from nm.bootstrap.main import create_app
     from nm.ports.model import Tier
+
+    # THE SYNTHETIC PROFILE, DEFAULTED HERE AND NOT READ FROM A `.env`.
+    #
+    # `Application.__init__` loads the model configuration whether or not a
+    # model is passed in, and refuses to start without a provider. In the
+    # main checkout a developer `.env` supplied one -- which is exactly the
+    # borrowing this module's docstring says it does not do, and it went
+    # unnoticed until the suite ran in a worktree with no `.env`, where every
+    # phase errored on `NM_MODEL_PROVIDER is not set`. `setdefault`, so a
+    # value the caller set deliberately still wins; the defaults name the
+    # scripted provider and the fixture key, neither of which reaches a real
+    # system. Same values as `tests/conftest.py::scripted_application_environment`.
+    os.environ.setdefault("NM_MODEL_PROVIDER", "scripted")
+    os.environ.setdefault("NM_MODEL_ROUTINE", "scripted-1")
+    os.environ.setdefault("NM_EMBED_MODEL", "text-embedding-3-large")
+    os.environ.setdefault("NM_MATTER_KEY", KEY)
 
     config = ModelConfig(tiers={
         Tier.ROUTINE: TierConfig(Tier.ROUTINE, "scripted", "scripted-1",

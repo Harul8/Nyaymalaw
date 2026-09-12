@@ -122,7 +122,7 @@ Gap status below is computed from the linked BK/J rows. It is never authored in 
 | GC-03 | W2 | W2 | W7 | PLANNED | BK-54, BK-67 |
 | GC-04 | W0 | W2 | W7 | IN_PROGRESS | BK-69, BK-54, BK-79, BK-42 |
 | GC-05 | W2 | W3 | W7 | PLANNED | BK-64, BK-67 |
-| GC-06 | W3 | W3 | W7 | PLANNED | BK-65, BK-67 |
+| GC-06 | W3 | W3 | W7 | IN_PROGRESS | BK-65, BK-67 |
 | GC-07 | W3 | W4 | W7 | PLANNED | BK-70, BK-55, BK-67 |
 | GC-08 | W4 | W4 | W7 | IN_PROGRESS | BK-37, BK-55, BK-67 |
 | GC-09 | W4 | W5 | W7 | PLANNED | BK-55, BK-57, BK-67 |
@@ -132,7 +132,7 @@ Gap status below is computed from the linked BK/J rows. It is never authored in 
 | GC-13 | W2 | W6 | W7 | IN_PROGRESS | BK-68, BK-32, BK-37, BK-39, BK-56, BK-59, BK-42 |
 | GC-14 | W0 | W2 | W7 | IN_PROGRESS | BK-69, BK-54, BK-79, BK-42 |
 
-Derived gap state: IN_PROGRESS 6, PLANNED 8
+Derived gap state: IN_PROGRESS 7, PLANNED 7
 
 ### Open P0 — what is unsafe
 
@@ -148,7 +148,7 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 - **BK-62** [B/C/E/F/G] commission and task authority record — *planned* · specify and build the versioned commission, scope, objective, deadline, output and decision-authority record
 - **BK-63** [A/B/C/D/E/F/G/I] professional role and authority control — *planned* · bind instruction, decision, drafting, filing, negotiation, administration and support operations to explicit professional roles and recorded authority
 - **BK-64** [C/D/E] typed proposition and evidence model — *planned* · define immutable sources, locators and proposition types for instructions, allegations, admissions, documents, testimony, inference and assumptions
-- **BK-65** [D/E] legal dependency graph and selective invalidation — *planned* · model predicates, issues, rules, evidence, remedies and conclusions as a versioned dependency graph
+- **BK-65** [D/E] legal dependency graph and selective invalidation — *in_progress* · P18 wired the currency ledger onto the served product on 12 September 2026 and AC1 carries domain, integration, adversarial and browser results; AC2 is P22, which also needs P21. The cumulative gate on the final integrated candidate derives AC1's completion, not this record
 - **BK-67** [C/D/E/F] expert-advocate evaluation gate — *planned* · turn PA-01 to PA-20 into representative matter rubrics with named reviewers, thresholds, reservations and regression policy
 - **BK-69** [C/G/I] multimodal privacy and processing boundary — *in_progress* · verify and sign off only the W0 admission foundation; BK-79 owns W2 end-to-end attribution and deletion after BK-54 intake
 - **BK-70** [D/E/F] remedy and enforceability model — *planned* · model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
@@ -3954,6 +3954,171 @@ remaining 71% of Class-A is unmeasured on both the baseline and this commit**.
 Nothing here may be read as a cumulative result, and BK-65-AC1 gains no
 evidence from it.
 
+**A measurement to correct on the way past.** The full gate on `a3d9c47`
+took **eleven minutes** on an otherwise idle machine on 12 September 2026
+(`class_a` 616 s, everything else under ten). The forty-minutes-for-29%
+figure above was measured while a second full run and a browser suite were
+competing for the same cores, and it is the figure that made the bypass look
+necessary. A number measured under contention is a number about the
+contention.
+
+### P18 Build record — wiring the ledger onto the served product — 12 September 2026
+
+**Starting point verified in code, not in a report.** `3586ea9` is one commit
+ahead of `a3d9c47` and its worktree is clean. `nm/core/dependency.py` exists
+with `observe`, `record`, `closure`, `invalidate`, `recomputed`, `due`, `claim`,
+`rework_failed`, `presentable`, `withheld`, `released`, `from_derived`,
+`report`, and `Ledger.as_dict`/`from_stored`. Nothing in `nm/` imports it —
+`tests/test_reached_from_production.py::UNWIRED` says so, and that entry is
+the work queue this record drains.
+
+**What the served product does today, measured.** A correction is a turn: the
+advocate says the date was different, the extraction supersedes the old fact
+(`Fact.superseded_by`), and on the turn AFTER that `_cascade` compares this
+turn's `derived` rows with the last transcript's and announces what moved. Between
+the correction and that next turn — and after any restart, and for every value
+derived from a derived value — the cover, the thread board and the deadline
+register go on serving the old figure with no mark on it. That is the served
+form of the defect the ledger was written for.
+
+**Producers of derived values, enumerated from `nm/core/turn.py`.**
+
+| Producer | Value | Rests on |
+|---|---|---|
+| `_derived_now` → `limitation on {thread}` | `expires_on` | FACT: every live chronology entry (`Derived.from_facts`); AUTHORITY: the Article `Finding` (`store:locator`, digested on its span) |
+| `_register` → the limitation deadline | `Deadline.on` | DERIVED: `limitation on {thread}` — the transitive edge |
+| `Posture.enrich` → the party role | `role` | FACT: `posture.source_fact` |
+| measurements (`Kind.MEASUREMENT`) | counts | **not recorded** — a count is the file growing, not a conclusion (§5.4's bound), and `cascade.lost` already watches it |
+
+Positions, issues and theory are model-read conclusions that `proof.still_supported`
+withdraws when their material goes; they are not ledger nodes in this packet,
+and that is recorded rather than left implicit. Their currency is the next
+producer this table gains, and gaining one is a row here first.
+
+**Consumers, enumerated.** `nm/edge/projections.py::_thread_row`, `board_projection`,
+`cover_projection`, `matter_list_projection` (the deadline status and the nearest
+deadline); `nm/edge/api.py::_register_of`; the transcript's `derived` rows; the
+turn's own EMIT where an ACTION carries a by-when. Each of these presents a
+derived value, so each is where a stale one could appear current.
+
+**Mechanism, and why it is one.** `Matter.dependencies: dict` holds
+`Ledger.as_dict()` and persists through the generic `_enc`/`_decode` codec, so a
+restart reads the same currency the correction wrote. The turn (i) observes every
+live fact and every retrieved authority at DERIVE, (ii) invalidates the closure
+of anything that moved, (iii) records this turn's nodes through `from_derived`,
+(iv) claims and recomputes stale nodes it re-derives, or records `rework_failed`
+when the re-derivation is NOT_COMPUTED. `POST /api/matters/{id}/facts/{fact_id}/corrections`
+is the compatibility form of the design-only `correct-proposition` command:
+it supersedes the fact through `Matter.recording`/`amending` (the ONE fact
+owner), then runs the same `observe`→`invalidate` the turn runs — one function,
+`dependency_step`, called from both. Every projection that presents a derived
+value asks `presentable` and carries `currency`/`stale_because`; a stale
+deadline is shown labelled stale and never counted as the nearest live obligation;
+`released` blocks the turn's EMIT from carrying a stale figure as current.
+
+**Boundary extension, registered in `docs/blueprint/packets.json` on this commit
+before any of these files was edited:** `nm/edge/api.py`, `nm/edge/projections.py`,
+`web/app.js`, `web/index.html`, `web/app.css`, `tests/test_reached_from_production.py`,
+`tests/test_store_roundtrip.py`, `tests/test_a_correction_is_served_and_survives_restart.py`
+(new), `tests/test_the_journey_of_a_correction.py` (new, browser).
+
+**Acceptance-to-test mapping (BK-65-AC1), planned and then measured below.**
+
+| Required evidence | Test | What it plants |
+|---|---|---|
+| `domain_test` | `tests/test_a_correction_reaches_exactly_what_it_touched.py` (33, existing) | non-transitive closure, over-broad invalidation, exhausted rework reading current, inputless node reading current |
+| `integration_test` | `tests/test_a_correction_is_served_and_survives_restart.py` | EVAL-010 through the ASGI app: two nodes on one matter, correct the fact one rests on, **rebuild the application on the same store**, read both; `dependent.current_without_reassessment == false`, `independent.invalidated == false`, `history.source_versions == {1, 2}`; STALE_VERSION on a stale `expected_version`; the same correction twice is one revision |
+| `adversarial_test` | same file, the planted negative | serve the version-1 figure as current after version 2 is accepted → the projection carries `source_version_stale` and the register row is not counted live; a projection built without the ledger fails the sweep |
+| browser | `tests/test_the_journey_of_a_correction.py` | the advocate corrects a date on the case file, the cover shows the deadline STALE with the reason and the old and new date, the role stays current, and a reload shows the same |
+
+**Rollback.** Revert the wiring commit; `Matter.dependencies` decodes to `{}` on
+older records, and `presentable` refuses an unrecorded node — so a rolled-back
+tree WITHHOLDS currency labels rather than certifying anything. Unknown
+dependencies are not marked current on the way out.
+
+### P18 Test and Sign-off record — 12 September 2026
+
+**Outcome: BUILT and VERIFIED on the served path and in the browser. BK-65-AC1's
+three required evidence methods carry results; the criterion is not closed by
+registry derivation until the cumulative gate on the final integrated candidate
+is green, and this record says so.**
+
+**What now works through the actual application.** A brief derives a
+limitation, its deadline and the party role, and the turn writes all three to
+`Matter.dependencies` with typed, versioned edges — the limitation on every live
+chronology fact and on the Article's locator (digested on its span), the deadline
+on the limitation, the role on the statement it was read from. `POST
+/api/matters/{id}/facts/{fact_id}/corrections` supersedes an entry through
+`Matter.superseding`, the one owner of the link the turn now uses too, and
+`dependency.sync_inputs` invalidates exactly the closure. `GET
+/api/matters/{id}/dependencies` and the cover's `currency` block serve every node,
+its currency, its source versions and every revision with `was`, `now`, the
+versions that moved, the reason and who. The thread board and the matter list
+carry `stale_deadlines` and never lead with a stale window; a not-established
+one leads with the label. The next turn reworks stale nodes through the
+derivation it already runs, closes the revision with `now`, or records a failed
+attempt against the bound. A new **Case file** tab renders the entries with
+their dates and attribution, a Correct control per live entry, and the currency
+block. G-CURRENCY is in the matrix as `disclose`/`step`/`sticky` and fires on
+every turn.
+
+**Measured, criterion by criterion (BK-65-AC1).**
+
+| Evidence | Population | Result |
+|---|---|---|
+| `domain_test` | `tests/test_a_correction_reaches_exactly_what_it_touched.py` | 33 passed |
+| `integration_test` | `tests/test_a_correction_is_served_and_survives_restart.py` — 10 tests through the ASGI app, one of which rebuilds the application on the same store before reading | 10 passed. Affected set `{limitation, deadline}` exactly; role `unaffected`; `history.source_versions ⊇ {1, 2}`; STALE_VERSION 409 on a stale `expected_version`; INVALID_TRANSITION 409 on a second correction of a withdrawn entry; 422 on a correction that changes nothing |
+| `adversarial_test` | `test_planted_serving_the_old_figure_as_current_is_refused` — the projection built WITHOUT the ledger leads with the corrected date and labels it `not_established`; the wired one refuses it, leads with nothing, and lists it under `stale_deadlines` with the reason | passed |
+| browser | `tests/test_the_journey_of_a_correction.py` — 7 phases in Chromium on the served product | 7 passed: brief → current deadline; case file current; a correction with no reason does not reach the file; correcting the dated event marks exactly the limitation and deadline stale, the role stays current, the history names `adv_ledger` and the reason, the superseded entry stays struck through; the board shows `STALE — awaiting recomputation` with `2035-03-14 — was the deadline`; a reload reads the same from the file; the next brief reworks to `2031-03-14` and closes the revision |
+| affected regressions | 26 files: turn contract, cascade, correction supersedes, deadlines, boards, cover, store round-trip (ledger populated), persisted-field writers, blank values, three states, gate matrix, disclosure reaches the advocate, reached-from-production, produces contracts, served-turn suites | all passed |
+| existing browser journey | `tests/test_the_journey_login_to_logout.py` | 24 passed on a quiet tree |
+
+**What the test suite caught in the build, in order.** (1) `Names` accepted a
+whitespace node name — `test_blank_values` — fixed with `@refuses_blank_text`.
+(2) The correction route carried `Fact.material` forward and the field was
+declared writer-less — `test_every_persisted_field_has_a_writer` — the
+declaration deleted. (3) A field literally named `date` on the pydantic body
+shadowed the type and the app failed to import — renamed `on`, aliased `date`
+on the wire. (4) The cover reported `current` for a matter whose turn had
+observed its facts and concluded nothing: `not nodes and not tracked` let an
+empty stale list read as a certificate — S1 inside the block written for S1,
+found by `test_an_unrecorded_conclusion_is_not_assessed_rather_than_current`.
+(5) Authority edges were stamped version 0 because the retrieved findings were
+observed nowhere — the node would never have noticed a republished provision;
+`_currency_settle` now observes them before recording. (6) The browser suite's
+first run corrected the ACCOUNT entry, which the role also rests on, and the
+ledger correctly reopened the role — the test had picked the wrong entry, and
+`_dated_entry` now says which and why.
+
+**Two findings that predate P18, fixed on the way because the browser suite
+could not run without them.** `tools/served.py` borrowed `NM_MODEL_PROVIDER`
+from a developer `.env` — in a worktree with none, every journey phase errored
+at composition; the harness now defaults the synthetic profile itself. And
+journey phase 6b fails on the integrated tree `3586ea9` as it stood: the client
+folded EVERY plain ground under "supporting passages", including the expired
+limitation the server files under Time (`Signal.LIMITATION_BAR` → `Section.WINDOW`),
+so "runs to 2021-03-14 … has run" was behind a triangle. The fold now takes only
+grounds the server filed as `authority`; `test_only_plain_ground_is_ever_folded`
+states the clause. A third, harness-only: `wait_for_function(expr, first, …)`
+passed the argument positionally and the installed Playwright refuses that;
+`arg=first`.
+
+**Observed and left standing, named.** In `nm/core/turn.py::_run`, the
+conclusions written to the thread (`if concluded:`) are those of the FIRST
+derivation; when B-104's late-citation round re-derives, the second
+derivation's `concluded` is never written back. The ledger is settled after the
+second derivation so it is not affected, but the thread's theory, issues and
+register are. Not P18's to fix and not fixed here; it belongs to the turn's
+owner and is recorded so it is not rediscovered.
+
+**Not claimed.** BK-65-AC1's registry state stays `in_progress` with evidence
+recorded, not `complete`: the cumulative gate on the final P18→P21→P22
+candidate is what derives it. P20's withdrawal fan-out (`withdraw_corpus` →
+`affected_work`) does not yet reach the ledger's AUTHORITY rows — that is P21's
+integration, where the matter is registered as a `work_id`. Positions, issues
+and theory carry no currency yet; the producer table above is where the next
+node is added first.
+
 ## BK-66 — advocate trust evaluation
 Opened 9 September 2026.
 
@@ -4285,6 +4450,35 @@ command that can refresh them. A second Class-A control reads the canonical
 hook and proves the reporter remains best effort while `gatestamp.py` remains
 blocking. The two different operational decisions are preserved rather than
 being weakened to make the test pass.
+
+**Reopened and closed again 12 September 2026 — the hook was right and the
+index was 600 nodes behind anyway.** Measured against `graph.db`: 3,830 of
+4,383 non-File nodes carried a vector; `manifest.py` 43 missing,
+`source_registry.py` 43, `test_immutable_corpus_publication.py` 42,
+`commission.py` 25, fifteen more files. A query about sealed corpus
+generations returned five confident results about matter-store seals and none
+of `PublishedCorpus`, `CorpusPublicationRefused` or `WithdrawalResult`. Every
+missing node had arrived by a path `pre-commit` never sees: `1399a53` as a
+fast-forward (no commit hook runs), `68927c3` and `a3d9c47` as merge commits
+(git runs `pre-merge-commit`, not `pre-commit`), and the work itself committed
+on `codex/` branches on another machine where the hook was not installed. A
+refresh correct for one of the four ways a tree changes is bypassed by the
+other three, and the symptom is a plausible wrong answer (S3).
+
+Three changes, one mechanism. (1) `tools/hooks/refresh-graph` is now the ONE
+owner of "update the graph, then embed"; `pre-commit`, the new `post-merge`
+and the new `post-rewrite` all call it and none carries its own copy, which
+`tests/test_every_way_the_tree_changes_refreshes_the_index.py` enforces by
+scanning the directory. (2) Installation is `git config core.hooksPath
+tools/hooks`, not `cp` — the `.git/hooks` copy was measured two revisions
+behind the tracked file, lacking `--require-index` and the Python-absent
+refusal, and nothing had compared them. `.gitattributes` pins the directory
+to LF because `core.autocrlf=true` would otherwise hand `sh` a `|| true\r`.
+(3) The SessionStart hook in `.claude/settings.json` now prints the lag, so
+"STALE BY N" appears where somebody is looking rather than above a commit
+that has already scrolled away. `post-merge` measured at 3.2 s on a quiet
+tree; the 624-node catch-up embed ran once by hand and pruned the 47 stale
+vectors on the way.
 
 ## BK-30 — executable login-to-logout acceptance journey — **PARTLY DONE · P1**
 

@@ -476,6 +476,32 @@ GATES: tuple[Gate, ...] = (
         built=True,
     ),
     Gate(
+        id="G-CURRENCY",
+        condition="A recorded conclusion rests on an input that has since "
+                  "moved -- a corrected or withdrawn fact, a republished "
+                  "provision, or another conclusion that itself moved -- and "
+                  "has not yet been recomputed.",
+        states=("current", "stale", "not_assessed"),
+        response=Response.DISCLOSE,
+        scope=Scope.STEP,
+        # ON THE MATTER, because a currency held in a process is a currency
+        # a restart converts to `current`. The ledger persists with the file,
+        # and the cover reads it before any turn runs.
+        persistence=Persistence.STICKY,
+        recovery=Recovery.SYSTEM,
+        visible="BK-65-AC1: changing a material predicate invalidates every "
+                "dependent conclusion and NO unrelated one, keeping the prior "
+                "state and the reason. G-CASCADE announces what MOVED between "
+                "two turns; this is what is STILL NOT CURRENT -- between the "
+                "correction and the recomputation, after a restart, and two "
+                "hops away where a deadline rests on a limitation that rests "
+                "on a date. A stale value is shown labelled stale, never "
+                "counted as the nearest live deadline, and a node whose "
+                "inputs nobody recorded is not_assessed rather than current.",
+        feature="A3",
+        built=True,
+    ),
+    Gate(
         id="G-GAP",
         condition="Something is missing that BLOCKS a named action, ranked "
                   "across the whole file: blocking gates, then deadline "

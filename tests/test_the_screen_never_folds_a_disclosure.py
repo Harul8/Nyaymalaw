@@ -68,12 +68,14 @@ def test_only_plain_ground_is_ever_folded():
     """
     src = _app_js()
 
-    m = re.search(r"(?:const|let) support = entry\.answer\.elements\.filter\(\s*"
-                  r"\(el\) => ([^;]+)\);", src)
+    # THE PREDICATE IS NAMED (`isSupport`) since 12 September 2026 and read
+    # off its definition; `support` must be filtered by that name.
+    m = re.search(r"const (\w+) = \(el\) => ([^;]+);\s*let support = "
+                  r"entry\.answer\.elements\.filter\(\1\);", src)
     assert m, ("the `support` partition is gone or renamed; whatever decides "
                "what folds is now unchecked")
 
-    predicate = " ".join(m.group(1).split())
+    predicate = " ".join(m.group(2).split())
     assert "el.kind === 'ground'" in predicate, (
         f"the fold no longer restricts itself to ground elements, so an "
         f"ACTION could be collapsed: {predicate}")
@@ -81,6 +83,12 @@ def test_only_plain_ground_is_ever_folded():
         f"THE FOLD NO LONGER EXCLUDES DISCLOSURES: {predicate}\n\n"
         f"A disclosure behind a collapsed row is B-128 at the last inch -- "
         f"the bytes are served and the advocate still cannot see them.")
+    # AND ONLY WHAT WAS FILED AS AUTHORITY. A ground the server filed under
+    # `window` or `risk` is the advice, not its support; the expired
+    # limitation sat behind "4 supporting passages" until this clause.
+    assert "el.section === 'authority'" in predicate, (
+        f"the fold no longer restricts itself to authority grounds, so a "
+        f"limitation position filed under Time can be collapsed: {predicate}")
 
 
 def test_the_spoken_half_is_the_complement_and_not_a_second_list():
@@ -92,16 +100,25 @@ def test_the_spoken_half_is_the_complement_and_not_a_second_list():
     rendered nowhere -- silently, because nothing counts them.
     """
     src = _app_js()
-    m = re.search(r"(?:const|let) spoken = entry\.answer\.elements\.filter\(\s*"
-                  r"\(el\) => ([^;]+)\);", src)
+    # ONE NAMED PREDICATE, USED TWICE. The fold rule grew a third clause on 12
+    # September 2026 (a ground the server filed under `window` or `risk` is
+    # not support), and a predicate that long is named once rather than
+    # written inline twice -- which is the rule this test states, in the form
+    # that makes the second copy impossible rather than merely detectable.
+    named = re.search(r"const (\w+) = \(el\) => el\.kind === 'ground' && !el\.disclosure",
+                      src)
+    assert named, "the support predicate is gone or renamed"
+    predicate = named.group(1)
+    assert re.search(rf"let support = entry\.answer\.elements\.filter\({predicate}\);",
+                     src), "`support` does not use the named predicate"
+    m = re.search(r"let spoken = entry\.answer\.elements\.filter\(\(el\) => ([^;]+)\);",
+                  src)
     assert m, "the `spoken` partition is gone or renamed"
-
     spoken = " ".join(m.group(1).split())
-    assert spoken.startswith("!("), (
+    assert spoken == f"!{predicate}(el)", (
         f"`spoken` is not the negation of `support`'s predicate but a second "
         f"list of its own: {spoken}. An element kind added tomorrow can fall "
         f"between them and render nowhere at all.")
-    assert "el.kind === 'ground'" in spoken and "!el.disclosure" in spoken
 
 
 def test_the_fold_says_how_much_is_inside_it():

@@ -333,13 +333,25 @@ def _unguarded_matter_routes(app, caller) -> list[str]:
     app that deliberately carries one. A sweep whose walk cannot be exercised
     is a sweep whose empty result nobody has ever seen.
     """
+    import re
+
     found = []
     for route in app.routes:
         path = getattr(route, "path", "")
         if not path.startswith("/api/matters"):
             continue
-        probe = path.replace("{matter_id}", "mat_000000000000")
-        if caller.get(probe).status_code != 401:
+        # EVERY PLACEHOLDER, AND THE ROUTE'S OWN METHOD. The first version
+        # substituted `{matter_id}` alone and always sent GET, so a POST-only
+        # route with a second parameter -- `/facts/{fact_id}/corrections` --
+        # answered 405 and the sweep reported it as unguarded, while a GET
+        # on it would never have reached the dependency either way. A sweep
+        # that cannot exercise the route it is sweeping is asserting on the
+        # wrong status; this asks each route in the shape it is served.
+        probe = re.sub(r"\{[^}]+\}", "mat_000000000000", path)
+        methods = sorted(getattr(route, "methods", None) or {"GET"})
+        method = "GET" if "GET" in methods else methods[0]
+        response = caller.request(method, probe, json={} if method != "GET" else None)
+        if response.status_code != 401:
             found.append(path)
     return found
 

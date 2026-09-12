@@ -2334,24 +2334,31 @@ items:
   title: legal dependency graph and selective invalidation
   kind: substrate
   priority: P0
-  delivery_status: planned
-  implementation: none
-  verification: none
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
   affects_phases: [D, E]
   depends_on:
   - BK-64
   record: docs/BACKLOG.md#bk-65-legal-dependency-graph-and-selective-invalidation
-  next_action: model predicates, issues, rules, evidence, remedies and conclusions as a versioned dependency graph
+  next_action: P18 wired the currency ledger onto the served product on 12 September 2026
+    and AC1 carries domain, integration, adversarial and browser results; AC2 is P22, which
+    also needs P21. The cumulative gate on the final integrated candidate derives AC1's
+    completion, not this record
   stage_records:
-    start: {result: READY, ref: docs/BACKLOG.md#bk-65-legal-dependency-graph-and-selective-invalidation}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-65-legal-dependency-graph-and-selective-invalidation}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-65-legal-dependency-graph-and-selective-invalidation}
-    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-65-legal-dependency-graph-and-selective-invalidation}
+    start: {result: READY, ref: docs/BACKLOG.md#p18-start-record--12-september-2026}
+    build: {result: BUILT, ref: docs/BACKLOG.md#p18-build-record--wiring-the-ledger-onto-the-served-product--12-september-2026}
+    test: {result: OPEN, ref: docs/BACKLOG.md#p18-test-and-sign-off-record--12-september-2026, note: 'AC1 verified on the served path and in the browser; AC2 (P22) not started, so the row''s Test record stays open'}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#p18-test-and-sign-off-record--12-september-2026}
   acceptance:
   - id: BK-65-AC1
     requirement: changing a material predicate invalidates every dependent conclusion and no unrelated conclusion, while preserving the prior state and reason for change
     required_evidence: [domain_test, integration_test, adversarial_test]
-    evidence: {}
+    evidence:
+      domain_test: {result: PASS, ref: 'tests/test_a_correction_reaches_exactly_what_it_touched.py::test_the_independent_issue_is_left_completely_alone', note: 'one node of 33 in the file, all passing; mutation-verified on 12 September 2026 (non-transitive closure, over-broad invalidation, exhausted rework reading current, inputless node reading current)'}
+      integration_test: {result: PASS, ref: 'tests/test_a_correction_is_served_and_survives_restart.py::test_a_stale_conclusion_is_labelled_stale_on_the_served_cover', note: 'EVAL-010 through the ASGI app: correct the dated event through the case-file route, rebuild the application on the same store, read cover, board, matter list and ledger; dependent stale with prior value and reason, independent current, source_versions {1, 2}. 10 tests in the file, all passing'}
+      adversarial_test: {result: PASS, ref: 'tests/test_a_correction_is_served_and_survives_restart.py::test_planted_serving_the_old_figure_as_current_is_refused', note: 'EVAL-010 planted negative: a projection built without the ledger leads with the corrected date; the wired projection refuses it and lists it under stale_deadlines with the reason'}
+      browser_journey: {result: PASS, ref: '.nm/journey/report.json#tests/test_the_journey_of_a_correction.py::test_phase_3b_correcting_the_date_marks_exactly_the_dependents_stale', note: 'Not a required method for this criterion; recorded because it ran and is bound. `python tools/journey.py` drives both browser suites into one report (31 phases, 12 September 2026); this row is the correction phase. Synthetic matter, scripted model: exact closure, history with who and why, board STALE with the prior figure, reload, rework'}
     negative_control:
       mutation: reverse one controlling fact after a concluded position exists
       expected_failure: stale dependent advice cannot remain current and unrelated analysis is not needlessly discarded
@@ -2816,8 +2823,10 @@ items:
   verification: passing
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-76-graph-vector-hook-can-execute-the-reporter-it-invokes
-  next_action: closed on the executable-path and hook-contract controls and signed off
-    10 September 2026; retain the measured lag report as advisory operational evidence
+  next_action: reopened 12 September 2026 when the index was measured 600 nodes behind
+    with the pre-commit refresh working -- merges, fast-forwards and rewrites never ran
+    it; closed the same day with one owner script called from every tree-changing hook,
+    core.hooksPath installation and a session-start lag report
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#bk-76-graph-vector-hook-can-execute-the-reporter-it-invokes}
     build: {result: BUILT, ref: docs/BACKLOG.md#bk-76-graph-vector-hook-can-execute-the-reporter-it-invokes}
@@ -2842,6 +2851,17 @@ items:
     negative_control:
       mutation: remove the vector reporter or make the gate stamp best effort
       expected_failure: the hook contract test identifies the missing refresh or weakened release decision
+  - id: BK-76-AC3
+    requirement: every local git path that changes the tree -- commit, merge, rewrite --
+      refreshes the graph and its vectors through one owner script, and no hook carries
+      its own copy of the refresh
+    required_evidence: [domain_test]
+    evidence:
+      domain_test: {result: PASS, ref: 'tests/test_every_way_the_tree_changes_refreshes_the_index.py::test_no_hook_carries_its_own_copy_of_the_refresh', note: 'one node of twelve in the file; the second-copy scan is the control the criterion names'}
+    negative_control:
+      mutation: delete tools/hooks/post-merge, or paste the embed line into it directly
+      expected_failure: the per-path coverage test names the missing hook, or the
+        second-copy scan names the hook that duplicated the owner
 - id: J-1
   title: The file list cannot tell one matter from another
   kind: finding
@@ -3703,6 +3723,12 @@ items:
       expected_failure: the family-level delegation decision remains unapproved until the comparable complete population and safety obligations are satisfied
 
 events:
+- item: BK-65
+  at: '2026-09-12'
+  from: planned
+  to: in_progress
+  reason: P18 wired the currency ledger -- turn writes it, correction route and projections read it, restart keeps it -- and BK-65-AC1 carries domain, integration, adversarial and browser results; AC2 is P22 and completion derives from the cumulative gate on the final candidate
+  evidence: docs/BACKLOG.md#p18-test-and-sign-off-record--12-september-2026
 - item: BK-80
   at: '2026-09-11'
   from: in_progress

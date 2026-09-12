@@ -12,6 +12,7 @@ reported reason, not merely on a non-zero exit code.
 from __future__ import annotations
 
 import ast
+import pathlib
 import re
 import shutil
 import sqlite3
@@ -722,13 +723,24 @@ def test_the_hook_keeps_the_hook_that_was_there_first():
 
 
 def test_the_hook_refreshes_vectors_and_keeps_the_gate_blocking():
-    """BK-76-AC2. Search freshness may warn; build identity must decide."""
+    """BK-76-AC2. Search freshness may warn; build identity must decide.
+
+    The refresh moved into `tools/hooks/refresh-graph` on 12 September 2026
+    so that post-merge and post-rewrite could share it (see
+    `test_every_way_the_tree_changes_refreshes_the_index.py`). The rule here
+    is unchanged: pre-commit reaches the vectors, non-blocking, BEFORE the
+    blocking gate.
+    """
     hook = (ROOT / "tools" / "hooks" / "pre-commit").read_text(encoding="utf8")
-    vector = "python tools/graph_vectors.py --embed || true"
+    owner = (ROOT / "tools" / "hooks" / "refresh-graph").read_text(encoding="utf8")
+    vector = "tools/hooks/refresh-graph"
     gate = "python tools/gatestamp.py --quiet --require-index || exit 1"
 
     assert vector in hook, (
         "the hook updates the structural graph without refreshing its vectors")
+    assert "python tools/graph_vectors.py --embed || true" in owner, (
+        "refresh-graph no longer refreshes the vectors, or lets a failed "
+        "embed fail the hook")
     assert gate in hook, (
         "the hook made the exact-build gate best effort, so an unverified tree "
         "can be committed")
@@ -1162,18 +1174,21 @@ def test_the_journey_manifest_matches_what_the_suite_collects():
     journey = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(journey)
 
+    # EVERY SUITE THE RUNNER DRIVES, from the runner's own list. Collecting
+    # one file by name while EXPECTED spans two is how the manifest and the
+    # suite drifted the day a second suite was added (P18, 12 September 2026).
     out = subprocess.run(
-        [sys.executable, "-m", "pytest",
-         "tests/test_the_journey_login_to_logout.py",
+        [sys.executable, "-m", "pytest", *journey.SUITES,
          "-m", "journey", "--collect-only", "-p", "no:randomly"],
         capture_output=True, text=True, cwd=ROOT)
 
     # `-q` prints only a count; the tree form prints the node ids, which is
-    # what this needs. The module itself matches the pattern, so drop it.
-    module = "test_the_journey_login_to_logout"
+    # what this needs. The module names match the pattern too, so every
+    # suite's stem is dropped -- from the runner's list, not a literal.
+    modules = {pathlib.Path(m).stem for m in journey.SUITES}
     collected = {n for n in re.findall(r"test_[a-z0-9_]+(?:\[[^\]]*\])?",
                                        out.stdout)
-                 if n != module}
+                 if n not in modules}
 
     assert collected, (
         "the journey suite collected nothing, so this check read an empty "

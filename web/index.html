@@ -234,6 +234,7 @@
   <nav class="tabs" id="tabs">
     <button class="tab is-on" data-tab="advise">Advise</button>
     <button class="tab" data-tab="search">Search the corpus</button>
+    <button class="tab" data-tab="casefile">Case file</button>
     <button class="tab" data-tab="history">History</button>
   </nav>
 
@@ -381,6 +382,39 @@
      Every turn as it was SERVED, read back from the encrypted transcript
      store. Nothing else keeps it: the matter holds facts, the metrics hold
      counts and no client words, and the answer was held by neither. -->
+<!-- ===================== P17/P18 — THE CASE FILE =====================
+     Every entry on the file with where it came from, and every conclusion
+     with what it rests on and whether it still holds. The one place an
+     advocate corrects an entry by hand: the correction supersedes the entry,
+     keeps the old one on the record, and marks exactly what rested on it
+     stale -- the cover and the board say so until the next brief reworks it. -->
+<main id="pane-casefile" class="single" hidden>
+  <section class="casefile">
+    <div class="casefile-head">
+      <h2>The case file</h2>
+      <select id="casefile-matter" aria-label="Matter"><option value="">Choose a matter…</option></select>
+    </div>
+    <div id="casefile-state"></div>
+
+    <section class="currency" id="currency" aria-labelledby="currency-h">
+      <h3 id="currency-h">What still holds</h3>
+      <div id="currency-state" class="currency-state"></div>
+      <ul id="currency-stale" class="currency-stale"></ul>
+      <details class="currency-history">
+        <summary>Every conclusion, and every revision</summary>
+        <div id="currency-nodes"></div>
+        <div id="currency-history"></div>
+      </details>
+    </section>
+
+    <h3 id="entries-h">Entries</h3>
+    <p class="casefile-lede">Correct an entry here and I will mark everything
+      that rested on it as not current until the next brief reworks it. The
+      entry you corrected stays on the record, marked superseded.</p>
+    <div id="casefile-entries" aria-labelledby="entries-h"></div>
+  </section>
+</main>
+
 <main id="pane-history" class="single" hidden>
   <section class="history">
     <div class="history-head">

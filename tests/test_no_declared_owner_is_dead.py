@@ -68,6 +68,11 @@ REACHED_ELSEWHERE = {
     "declare_emergency", "get_emergency", "conceded",
     # P17's projection, registered the same way.
     "get_casefile",
+    # P18's two, registered the same way, and both with a BROWSER caller: the
+    # Case file pane's Correct control posts the correction and the pane reads
+    # the ledger. The sweep sees neither call because both are template
+    # literals in `web/app.js`, which is the same blindness as `sessions`.
+    "correct_fact", "get_dependencies",
     # `@implements` markers: their whole purpose is to be SCANNED by
     # tools/trace.py rather than called.
     "_implements_c4",

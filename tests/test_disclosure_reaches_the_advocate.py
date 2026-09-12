@@ -101,6 +101,9 @@ PROVEN: dict[str, str] = {
     "G-READ":
         "test_reads_registry.py::"
         "test_the_turn_discloses_which_read_came_back_empty",
+    "G-CURRENCY":
+        "test_a_correction_is_served_and_survives_restart.py::"
+        "test_a_stale_conclusion_is_labelled_stale_on_the_served_cover",
 }
 
 #: gate id -> WHY nothing proves the advocate sees it. Six of the thirteen,

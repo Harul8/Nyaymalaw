@@ -926,9 +926,12 @@ MUTATIONS = [
     # the most interesting.
     ("a thread board that does not put the nearest window first",
      "nm/edge/projections.py",
-     "    rows = nearest_first([_thread_row(t, deadlines, today)\n"
+     "    rows = nearest_first([_thread_row(t, deadlines, today,\n"
+     "                                      currency=getattr(matter, \"dependencies\", None))\n"
      "                          for t in matter.threads])",
-     "    rows = [_thread_row(t, deadlines, today) for t in matter.threads]",
+     "    rows = [_thread_row(t, deadlines, today,\n"
+     "                        currency=getattr(matter, \"dependencies\", None))\n"
+     "            for t in matter.threads]",
      "test_the_thread_board_puts_the_nearest_window_first", "E-063d"),
 
     # E-063e. The matter list growing with the threads inside its matters.
@@ -1349,9 +1352,11 @@ MUTATIONS = [
     # deprioritised it believing they would see it again.
     ("a deferred thread dropped from the board",
      "nm/edge/projections.py",
-     "    rows = nearest_first([_thread_row(t, deadlines, today)\n"
+     "    rows = nearest_first([_thread_row(t, deadlines, today,\n"
+     "                                      currency=getattr(matter, \"dependencies\", None))\n"
      "                          for t in matter.threads])",
-     "    rows = nearest_first([_thread_row(t, deadlines, today)\n"
+     "    rows = nearest_first([_thread_row(t, deadlines, today,\n"
+     "                                      currency=getattr(matter, \"dependencies\", None))\n"
      "                          for t in matter.threads if not t.deferred_reason])",
      "test_a_deferred_thread_stays_on_the_board_with_its_deadline", "E-063f"),
 

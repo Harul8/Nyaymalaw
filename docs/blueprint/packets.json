@@ -1569,6 +1569,50 @@
         {
           "path": "tests/test_a_correction_reaches_exactly_what_it_touched.py",
           "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/projections.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        },
+        {
+          "path": "web/index.html",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.css",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_reached_from_production.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_store_roundtrip.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_a_correction_is_served_and_survives_restart.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_the_journey_of_a_correction.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/casefile.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_the_journey_login_to_logout.py",
+          "kind": "existing"
         }
       ],
       "inputs": [
@@ -3525,7 +3569,8 @@
         "BK-75-AC2",
         "BK-75-AC3",
         "BK-76-AC1",
-        "BK-76-AC2"
+        "BK-76-AC2",
+        "BK-76-AC3"
       ],
       "prerequisites": [],
       "decisions": [
@@ -3605,7 +3650,8 @@
         "BK-75-AC2",
         "BK-75-AC3",
         "BK-76-AC1",
-        "BK-76-AC2"
+        "BK-76-AC2",
+        "BK-76-AC3"
       ],
       "requires_completed_items": []
     },

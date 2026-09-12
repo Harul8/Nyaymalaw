@@ -33,6 +33,7 @@ from nm.core import (
     chronology,
     consistency,
     deadlines,
+    dependency,
     grounding,
     limitation,
     proof,
@@ -733,6 +734,17 @@ class TurnEngine:
         matter, bound = self._admit_facts(matter, turn, metrics)
         metrics.stages["admit_ms"] = int((time.perf_counter() - t0) * 1000)
 
+        # WHAT MOVED ON THE FILE, before anything is derived from it. P18.
+        #
+        # A correction spoken on this turn has just superseded a fact. Every
+        # conclusion recorded against that fact is stale FROM THIS LINE, and
+        # the derivation below reworks it -- so the correction turn itself
+        # shows the old value, the new value and why, rather than the turn
+        # after it noticing a difference. This is an INPUT fact about the
+        # file and it is kept on a withheld turn too: `admitted` is taken
+        # below this line on purpose.
+        matter = self._currency_inputs(matter, turn, metrics)
+
         # THE FILE, BUILT ONCE AND GIVEN TO EVERYTHING THAT DERIVES.
         # A projection over the matter, holding nothing the matter does
         # not -- so it can never disagree with the file it summarises.
@@ -1095,6 +1107,23 @@ class TurnEngine:
              *self._refused_reads(metrics), *_reactivated(matter),
              *self._tier_degraded(metrics)]))
 
+        # WHAT THIS TURN DERIVED, RECORDED AGAINST WHAT IT RESTED ON. P18.
+        #
+        # After the answer is assembled and before the invariants read it,
+        # because the one thing this can add to the answer is a disclosure
+        # that something on the file is still stale -- and a disclosure
+        # appended after the invariants and the grounding gate have run is a
+        # sentence nothing checked.
+        matter, currency_notes = self._currency_settle(
+            matter, thread, derived_values, concluded, retrieved, turn, metrics,
+            # A BLOCKED TURN DID NOT TRY. A posture question is not a failed
+            # recomputation, and counting it against the rework bound would
+            # exhaust a node on three unanswered questions.
+            attempted=not answer.blocked)
+        if currency_notes:
+            answer = replace(answer, elements=tuple(
+                [*answer.elements, *currency_notes]))
+
         # Class-B invariants, asserted on the ASSEMBLED object, before emission.
         self._assert_invariants(answer, metrics)
 
@@ -1149,13 +1178,21 @@ class TurnEngine:
                 # Assembling the list before constructing, rather than
                 # constructing twice, is also what stops the rows being
                 # added once at each step.
+                # THE SECOND DERIVATION IS THE ONE THAT COUNTS, so the ledger
+                # is settled again against it -- `record` re-stamps, and a
+                # node recomputed twice on one turn is recomputed once in
+                # the history because the revision was already closed.
+                matter, currency_notes = self._currency_settle(
+                    matter, thread, derived_values, concluded, retrieved,
+                    turn, metrics, attempted=True)
                 answer = Answer(
                     route=route, mode=mode, mode_statement=mode_statement,
                     elements=_with_screens(
                         [*head, *derived, *exposure, *self._late_note(late),
                          *self._decisive_empties(metrics),
                          *self._refused_reads(metrics), *_reactivated(matter),
-                         *self._tier_degraded(metrics)], screens, split_note))
+                         *self._tier_degraded(metrics), *currency_notes],
+                        screens, split_note))
                 self._assert_invariants(answer, metrics)
                 report = grounding.verify(answer, relied_on, retrieved)
 
@@ -1883,8 +1920,10 @@ class TurnEngine:
                 if superseded is not None and superseded.superseded_by is None:
                     metrics.fire("G-CORRECTION", "superseded",
                                  f"{row.corrects} replaced by {event.id}")
-                    matter = matter.amending(
-                        replace(superseded, superseded_by=event.id))
+                    # THROUGH THE ONE OWNER OF THE LINK. The case-file
+                    # correction route (P18) supersedes the same way, so a
+                    # spoken correction and a typed one leave the same record.
+                    matter = matter.superseding(superseded.id, event.id)
 
         thread = replace(thread, chronology=thread.chronology + tuple(ids))
         matter = matter.with_thread(thread)
@@ -4103,6 +4142,168 @@ class TurnEngine:
                 from_facts=tuple(r.get("from_facts") or ()))
                 for r in rows if r.get("name"))
         return None
+
+    # ------------------------------------------------------ currency (P18) ---
+
+    @implements("A3")
+    def _currency_inputs(self, matter: Matter, turn: TurnInput,
+                         metrics: TurnMetrics) -> Matter:
+        """Observe every fact on the file and invalidate what a change reached.
+
+        BK-65-AC1's first clause, at the seam where it bites: after ADMIT-B
+        has recorded this turn's facts and corrections, before DERIVE reads
+        them. `dependency.sync_inputs` is the one observer; the served
+        correction route calls the same function, so a correction typed into
+        the case file and one spoken into the brief invalidate identically.
+
+        NOTHING HERE DECIDES WHAT "MOVED" MEANS. The digest does, once, in
+        `dependency.fact_digest`.
+        """
+        ledger = dependency.Ledger.from_stored(matter.dependencies)
+        ledger, affected, moved = dependency.sync_inputs(
+            ledger, matter,
+            reason=f"corrected on turn {turn.turn_id} by {turn.advocate_id}",
+            at=turn.today.isoformat())
+        if affected:
+            metrics.fire("G-CURRENCY", "stale",
+                         f"{len(moved)} input(s) moved; "
+                         f"{', '.join(affected)} must be recomputed")
+        return replace(matter, dependencies=ledger.as_dict())
+
+    @implements("A3")
+    def _currency_settle(self, matter: Matter, thread: Thread | None,
+                         derived: tuple, concluded: dict, retrieved: tuple,
+                         turn: TurnInput, metrics: TurnMetrics, *,
+                         attempted: bool = True,
+                         ) -> tuple[Matter, list[Element]]:
+        """Record this turn's conclusions against their inputs; rework the stale.
+
+        THE NODES, and what each rests on -- enumerated here because this is
+        the one place the turn knows all three at once:
+
+            limitation on {thread}    FACT: every live chronology entry (the
+                                      `cascade.Derived.from_facts` the turn
+                                      already builds); AUTHORITY: the Article
+                                      it was read from, keyed on its locator.
+            limitation deadline       DERIVED: the limitation. The transitive
+                                      edge `cascade` cannot express.
+            party role                FACT: the statement the role was read
+                                      from. Independent of the chronology,
+                                      which is what makes EVAL-010's second
+                                      half provable on one thread.
+
+        A NODE THE TURN COULD NOT RECOMPUTE IS FAILED, NOT FORGOTTEN. The
+        limitation that went NOT_COMPUTED after a date was withdrawn leaves a
+        stale node with one more attempt against its bound, and the advocate
+        is told; a loop that only recorded what it produced would leave it
+        stale with no attempts forever.
+
+        THE DISCLOSURE IS THE ANSWER'S, NOT THE METRICS'. Whatever is still
+        stale when this turn is done is said in an element, because a
+        currency the advocate cannot see is a currency they will act against.
+        """
+        if thread is None:
+            return matter, []
+        ledger = dependency.Ledger.from_stored(matter.dependencies)
+        names = dependency.names_for(thread.id)
+        at = turn.today.isoformat()
+        produced: list[dependency.Node] = []
+
+        # THE AUTHORITIES THIS TURN READ ARE OBSERVED BEFORE THE NODES ARE
+        # STAMPED, so an Article edge carries the version the ledger tracks
+        # rather than 0 -- and a provision whose text moved since the last
+        # turn invalidates what rested on it HERE, where the same turn then
+        # recomputes it. Facts were observed after ADMIT-B; observing them
+        # again costs a digest comparison and moves nothing.
+        ledger, affected, _moved = dependency.sync_inputs(
+            ledger, matter, retrieved,
+            reason=f"the retrieved text moved before turn {turn.turn_id}",
+            at=at)
+        if affected:
+            metrics.fire("G-CURRENCY", "stale",
+                         f"a retrieved authority moved; {', '.join(affected)} "
+                         f"must be recomputed")
+
+        # THE LIMITATION, through the one bridge. Its authority edge is the
+        # Article `_limitation` read the period from, matched on the ref the
+        # position carries, so the node names the exact text it rests on.
+        limitation_row = next(
+            (d for d in derived if d.name == names.limitation), None)
+        if limitation_row is not None:
+            article = None
+            register = concluded.get("deadlines") or ()
+            source = next((d.source for d in register
+                           if getattr(d, "thread", None) == thread.id), "")
+            for finding in retrieved:
+                if source and finding.ref == source:
+                    article = finding
+                    break
+            produced.append(dependency.from_derived(
+                limitation_row,
+                authorities=((dependency.authority_id(article),)
+                             if article is not None else ()),
+                # NO ARTICLE MATCHED IS SAID, NOT ASSUMED AWAY. A limitation
+                # computed from a provision nothing can name rests on
+                # something the product cannot track.
+                unknown=article is None,
+                reason=f"computed on turn {turn.turn_id}", at=at))
+
+        # THE DEADLINE, resting on the limitation -- the edge that makes a
+        # corrected date reach the register two hops away.
+        for row in concluded.get("deadlines") or ():
+            if getattr(row, "thread", None) != thread.id:
+                continue
+            if getattr(row, "kind", None) is not deadlines.DeadlineKind.LIMITATION:
+                continue
+            if row.on is None:
+                continue
+            produced.append(dependency.Node(
+                name=names.deadline, value=row.on.isoformat(),
+                shown=f"the limitation deadline on {thread.label!r}",
+                rests_on=(dependency.Rest(dependency.InputKind.DERIVED,
+                                          names.limitation),),
+                computed_at=at, reason=f"computed on turn {turn.turn_id}"))
+            break
+
+        # THE ROLE, resting on the statement it was read from.
+        posture = thread.posture
+        if posture.resolved:
+            rests = ((dependency.Rest(dependency.InputKind.FACT,
+                                      str(posture.source_fact)),)
+                     if posture.source_fact else ())
+            produced.append(dependency.Node(
+                name=names.role, value=posture.role.value,
+                shown=f"our side on {thread.label!r}", rests_on=rests,
+                computed_at=at, reason=f"read on turn {turn.turn_id}"))
+
+        ledger = dependency.settle(
+            ledger, tuple(produced),
+            expected=((names.limitation, names.deadline, names.role)
+                      if attempted else ()), at=at,
+            why_missing=("this turn did not compute the value -- the position "
+                         "says why"))
+
+        stale = [n for n in ledger.stale()
+                 if n.name in (names.limitation, names.deadline, names.role)]
+        notes: list[Element] = []
+        if stale:
+            metrics.fire("G-CURRENCY", "stale", "; ".join(
+                f"{n.label}: {n.currency.value}" for n in stale))
+            notes.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                gate="G-CURRENCY", signal=Signal.CONTRADICTION,
+                text=("Not current on this thread: "
+                      + " ".join(dependency.report(dependency.Ledger(
+                          nodes=tuple(stale))))
+                      + " Nothing above relies on those values as they stood.")))
+        elif produced:
+            metrics.fire("G-CURRENCY", "current",
+                         f"{len(produced)} conclusion(s) recorded against "
+                         f"their inputs")
+        else:
+            metrics.fire("G-CURRENCY", "not_assessed",
+                         "this turn derived no value whose currency is tracked")
+        return replace(matter, dependencies=ledger.as_dict()), notes
 
     @implements("A3")
     def _ask(self, gaps: list, thread: Thread,

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hmac
 import os
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 from typing import Annotated
@@ -622,7 +623,157 @@ def get_casefile(matter_id: str, advocate_id: Advocate) -> dict:
     casefile = build(m)
     casefile["repetition_upgrades"] = list(repetition_upgrades(m.facts or ()))
     casefile["split_disputes"] = list(one_dispute_stays_one(casefile["live"]))
+    # THE VERSION THE CORRECTION ROUTE WANTS BACK, so a correction typed
+    # against a file that has since moved is refused rather than applied to
+    # an entry the advocate was not looking at.
+    casefile["version"] = m.version
     return casefile
+
+
+class Correction(BaseModel):
+    """One correction to one entry on the case file. BK-65-AC1, P18.
+
+    THE COMPATIBILITY FORM OF `correct-proposition`, whose target route is
+    design-only: `proposition n -> n+1 + prior preserved; dependent findings
+    stale atomically; unaffected findings retained`. The replacement is a new
+    fact; the old one is marked superseded and stays on the file, so the
+    advocate can see both and the ledger can see what moved.
+
+    `expected_version` IS REQUIRED. A correction is the one write on this
+    surface an advocate composes while looking at a specific entry, and a
+    file that moved under them may not hold that entry any more.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    statement: str | None = None
+    # `on`, ALIASED `date` ON THE WIRE. A field literally named `date` shadows
+    # the type inside the class body, and pydantic then evaluates the
+    # annotation `date | None` as `None | None` -- a TypeError at import,
+    # found by the first test that imported the app.
+    on: date | None = Field(default=None, alias="date")
+    reason: NonBlank = Field(min_length=1)
+    expected_version: int
+
+
+@app.post("/api/matters/{matter_id}/facts/{fact_id}/corrections",
+          dependencies=[CsrfProtected], status_code=201)
+def correct_fact(matter_id: str, fact_id: str, body: Correction,
+                 advocate_id: Advocate) -> dict:
+    """Correct one entry, and invalidate exactly what rested on it. P18.
+
+    ONE MECHANISM WITH THE TURN. The replacement goes through
+    `Matter.recording`, the link through `Matter.superseding`, and the
+    invalidation through `dependency.sync_inputs` -- the same three the turn
+    uses when the advocate speaks a correction into the brief. A correction
+    typed here and one spoken there leave the same record and reach the same
+    closure, because there is one of each.
+
+    WHAT IS RETURNED IS WHAT MOVED: the affected node names and the ones that
+    were left alone, so the advocate -- and the test -- can see that the
+    party role survived a corrected date. `history` carries `was`, the
+    versions, the reason and who.
+    """
+    from nm.core import dependency
+    from nm.domain.matter import Fact, Provenance
+    from nm.edge.projections import currency_projection
+
+    m = _owned(matter_id, advocate_id)
+    if m.version != body.expected_version:
+        raise HTTPException(status_code=409, detail={
+            "code": "STALE_VERSION",
+            "why": (f"this matter moved while you were correcting it: you were "
+                    f"looking at version {body.expected_version} and it is now "
+                    f"at {m.version}. Re-read the entry before correcting it."),
+            "expected_version": body.expected_version,
+            "matter_version": m.version,
+            "committed": "not_committed",
+        })
+    old = m.fact(fact_id)
+    if old is None:
+        raise HTTPException(status_code=404, detail="no such entry on this matter")
+    if old.superseded_by is not None:
+        raise HTTPException(status_code=409, detail={
+            "code": "INVALID_TRANSITION",
+            "why": (f"entry {fact_id} was already replaced by {old.superseded_by}; "
+                    f"correct the current entry, not the withdrawn one"),
+            "committed": "not_committed",
+        })
+    statement = (body.statement or "").strip() or old.statement
+    on = body.on if body.on is not None else old.date
+    if statement == old.statement and on == old.date:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST",
+            "why": "the correction changes neither the words nor the date, so "
+                   "there is nothing to correct",
+            "committed": "not_committed",
+        })
+
+    today = forum_today()
+    correction_id = f"correction-{m.version + 1}"
+    replacement = Fact.create(
+        statement=statement,
+        provenance=Provenance(kind="advocate_statement", turn=correction_id,
+                              span=body.reason.strip()),
+        certainty=old.certainty, date=on, material=old.material)
+    m, replacement = m.recording(replacement)
+    m = m.superseding(old.id, replacement.id)
+    # THE REPLACEMENT JOINS EVERY CHRONOLOGY THE ORIGINAL WAS ON, so the
+    # next derivation runs from the corrected entry rather than from nothing.
+    for thread in m.threads:
+        if old.id in thread.chronology and replacement.id not in thread.chronology:
+            m = m.with_thread(replace(
+                thread, chronology=(*thread.chronology, replacement.id)))
+
+    ledger = dependency.Ledger.from_stored(m.dependencies)
+    ledger, affected, moved = dependency.sync_inputs(
+        ledger, m, reason=f"corrected by {advocate_id}: {body.reason.strip()}",
+        at=today.isoformat())
+    m = replace(m, dependencies=ledger.as_dict(),
+                last_activity=today.isoformat())
+
+    try:
+        committed = application().store.commit(m, expected_version=body.expected_version)
+    except StaleWrite as exc:
+        raise HTTPException(status_code=409, detail={
+            "code": "STALE_VERSION", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+    untouched = tuple(n.name for n in ledger.nodes if n.name not in affected)
+    return {
+        "state": "corrected",
+        "matter_id": committed.id,
+        "version": committed.version,
+        "fact": {"was": old.id, "now": replacement.id,
+                 "was_statement": old.statement,
+                 "now_statement": replacement.statement,
+                 "was_date": old.date.isoformat() if old.date else None,
+                 "now_date": (replacement.date.isoformat()
+                              if replacement.date else None)},
+        "moved": [r.as_dict() for r in moved],
+        "affected": list(affected),
+        "unaffected": list(untouched),
+        "currency": currency_projection(committed),
+        "by": advocate_id,
+        "at": today.isoformat(),
+    }
+
+
+@app.get("/api/matters/{matter_id}/dependencies")
+def get_dependencies(matter_id: str, advocate_id: Advocate) -> dict:
+    """WHAT EVERY CONCLUSION ON THIS FILE RESTS ON, AND WHETHER IT STILL
+    HOLDS. BK-65-AC1, P18.
+
+    Read from the persisted ledger and nothing else, so what this returns
+    after a restart is what the correction wrote before it. The cover
+    carries the same block; this is the full record with every tracked input
+    and every revision.
+    """
+    from nm.edge.projections import currency_projection
+
+    m = _owned(matter_id, advocate_id)
+    return {"state": "ok", "matter_id": m.id, "version": m.version,
+            **currency_projection(m)}
 
 
 @app.get("/api/matters/{matter_id}/commission")

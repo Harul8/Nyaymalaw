@@ -87,6 +87,10 @@ def _fully_populated() -> Matter:
         id="mat_1", advocate_id="adv_1", title="Kukatpally",
         threads=(thread,), facts=(fact,),
         turns_applied=("turn_1", "turn_2"),
+        # P18. THE LEDGER, POPULATED, so the round trip below is a real
+        # comparison and not `{} == {}`. Built through the type so the shape
+        # written here is the shape the product writes.
+        dependencies=_ledger(),
         asked=(
             AskedQuestion(gate="G-POSTURE", text="Whose side are we on?",
                           asked_on="turn_1", thread="thr_1",
@@ -96,6 +100,23 @@ def _fully_populated() -> Matter:
                           answered_by=None, times_asked=1),
         ),
         version=7)
+
+
+def _ledger() -> dict:
+    from nm.core import dependency as dep
+
+    ledger = dep.Ledger()
+    ledger, _ = dep.observe(ledger, dep.InputKind.FACT, "fact_1", "d1")
+    ledger = dep.record(ledger, dep.Node(
+        name="limitation on thr_1", value="2027-06-12",
+        shown="the limitation on 'Kukatpally possession'",
+        rests_on=(dep.Rest(dep.InputKind.FACT, "fact_1"),),
+        computed_at="2026-08-30", reason="computed on turn_1"))
+    ledger, _ = dep.observe(ledger, dep.InputKind.FACT, "fact_1", "d2",
+                            reason="corrected")
+    ledger, _ = dep.invalidate(ledger, (dep.Rest(dep.InputKind.FACT, "fact_1", 2),),
+                               reason="the date moved", at="2026-08-31")
+    return ledger.as_dict()
 
 
 def test_every_field_of_a_matter_survives_a_save_and_load(tmp_path):
@@ -117,6 +138,11 @@ def test_every_field_of_a_matter_survives_a_save_and_load(tmp_path):
     # the failure the ledger exists to make impossible.
     assert reloaded.asked == original.asked
     assert [q.open for q in reloaded.asked] == [False, True]
+    # THE LEDGER. A currency that does not survive a restart is a currency
+    # the restart converts to `current`, which is the defect P18 exists for.
+    assert reloaded.dependencies == original.dependencies
+    from nm.core.dependency import Ledger
+    assert [n.currency.value for n in Ledger.from_stored(reloaded.dependencies).nodes] == ["stale"]
 
 
 @pytest.mark.parametrize("cls", [Matter, Fact, Thread, Posture, Provenance,

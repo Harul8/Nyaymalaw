@@ -936,3 +936,75 @@ button.ghost.cancel { margin-right: 0.6rem; }
  * The masthead wrapping above is the actual fix. If something else overflows
  * later, the check is still able to notice.
  */
+
+/* ===================== P17/P18 -- THE CASE FILE ===================== */
+
+.casefile-head {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 12px;
+}
+.casefile-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.casefile-head select {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 13px;
+  min-width: 260px;
+  padding: 7px 9px;
+}
+.casefile h3 {
+  font-family: var(--f-serif); font-size: 1rem; font-weight: 500;
+  margin: 1.2rem 0 0.4rem;
+}
+.casefile-lede { color: var(--ink-3); font-size: 0.82rem; margin: 0 0 0.6rem; }
+
+/* The currency block. The pill is the state; the list under it is every
+ * conclusion that may not be shown as current, with the reason. */
+.currency { border: 1px solid var(--rule); border-radius: 4px; padding: 0.8rem 1rem; }
+.currency h3 { margin-top: 0; }
+.currency-state { font-size: 0.85rem; }
+.currency-said { color: var(--ink-2); }
+.currency-stale { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+.currency-stale li {
+  border-left: 3px solid var(--amber); font-size: 0.85rem;
+  margin: 0.35rem 0; padding: 0.2rem 0 0.2rem 0.6rem;
+}
+.currency-history { margin-top: 0.6rem; font-size: 0.82rem; }
+.currency-history summary { cursor: pointer; color: var(--ink-2); }
+.node-row { border-bottom: 1px solid var(--rule); padding: 0.4rem 0; }
+.node-row[data-currency="stale"] { border-left: 3px solid var(--amber); padding-left: 0.6rem; }
+.revision { color: var(--ink-2); padding: 0.25rem 0; }
+
+/* One entry on the file. A superseded entry stays on the record, greyed and
+ * marked, so the advocate can see both the old and the corrected reading. */
+.entry {
+  border-bottom: 1px solid var(--rule);
+  padding: 0.6rem 0;
+}
+.entry.superseded { color: var(--ink-3); }
+.entry.superseded .entry-text { text-decoration: line-through; }
+.entry-text { font-size: 0.92rem; }
+.entry-meta { color: var(--ink-3); font-size: 0.72rem; margin-top: 0.15rem; }
+.entry button.correct { margin-top: 0.4rem; }
+
+/* The correction form, shaped like intake because it asks the same way. */
+.correction {
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
+  display: flex; flex-direction: column; gap: 0.3rem;
+  margin-top: 0.6rem; padding: 0.8rem 1rem;
+}
+.correction label {
+  color: var(--ink-3); font-size: 0.68rem; letter-spacing: 0.07em;
+  margin-top: 0.4rem; text-transform: uppercase;
+}
+.correction label .opt { letter-spacing: 0; text-transform: none; font-size: 0.72rem; }
+.correction input {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+  font: inherit; font-size: 0.9rem; padding: 0.45rem 0.6rem;
+}
+.correction input:focus { border-color: var(--accent); outline: none; }

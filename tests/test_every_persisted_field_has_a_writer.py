@@ -277,11 +277,12 @@ RESERVED: dict[str, str] = {
         "`Fact.quoted` returns '' rather than guessing, and every quote gate "
         "reads `quoted`. A fact with no verbatim record is one that may not "
         "be quoted, which is the intended behaviour and not a gap.",
-    "Fact.material":
-        "Defaults TRUE, so the empty case is the INCLUSIVE one: a fact nobody "
-        "graded is treated as material and reaches the proof position. The "
-        "dangerous direction would be defaulting false and silently dropping "
-        "it.",
+    # `Fact.material` WAS HERE. The case-file correction route (P18, 12
+    # September 2026) carries it forward onto the replacement fact, so it has
+    # a writer -- a correction to a fact nobody graded must not quietly grade
+    # it, in either direction. The clause that stood here stays true of the
+    # default: TRUE, the inclusive case, so an ungraded fact reaches the proof
+    # position rather than being dropped.
 
     # -- OPEN, and named as open --------------------------------------------
     "Fact.confirmed":

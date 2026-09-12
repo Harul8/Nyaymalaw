@@ -818,6 +818,24 @@ class Matter:
     abandoned, and it renders as such rather than as an epoch.
     """
 
+    dependencies: dict = field(default_factory=dict)
+    """WHAT EVERY DERIVED CONCLUSION ON THIS FILE RESTS ON, and whether it still
+    holds. BK-65-AC1, P18. `nm.core.dependency.Ledger.as_dict()`.
+
+    A DICT AND NOT THE TYPE, for the cycle reason `Thread.deadlines` records:
+    `nm.core` imports this module, so this module cannot name a core type, and
+    the store decoder rebuilds what it can name. `Ledger.from_stored` is the
+    one reader and `Ledger.as_dict` the one writer; a second shape here is a
+    second owner of what a value rests on.
+
+    ON THE MATTER, NOT IN THE PROCESS. A currency held in memory is a currency
+    a restart silently converts to "current" -- EVAL-010 restarts between the
+    correction and the read for exactly that reason. Decodes to `{}` on a
+    record written before the field existed, and `dependency.presentable`
+    REFUSES an unrecorded node, so an old record withholds currency labels
+    rather than certifying anything.
+    """
+
     version: int = 0
 
     @staticmethod
@@ -960,6 +978,35 @@ class Matter:
             self, facts=tuple(fact if f.id == fact.id else f
                               for f in self.facts),
             version=self.version + 1)
+
+    def superseding(self, old_id: FactId, new_id: FactId) -> "Matter":
+        """Mark `old_id` as replaced by `new_id`. THE ONE OWNER OF THE LINK.
+
+        Two paths correct a fact -- the turn, when the date read names the
+        entry a spoken correction replaces, and the case file, when the
+        advocate corrects an entry by hand (P18) -- and each wrote
+        `superseded_by` itself. Two writers of one link is how one of them
+        comes to supersede a fact that was already superseded, which leaves a
+        chain nothing walks and a chart that has dropped the wrong entry.
+
+        REFUSES, rather than returning the matter unchanged: a correction
+        that did nothing and said nothing is the silent miss B-088 was
+        about, one layer down.
+        """
+        old = self.fact(old_id)
+        if old is None:
+            raise ValueError(f"fact {old_id} is not on this matter, so there is "
+                             f"nothing to supersede")
+        if self.fact(new_id) is None:
+            raise ValueError(f"fact {new_id} is not on this matter; record the "
+                             f"replacement before naming it as one")
+        if old_id == new_id:
+            raise ValueError(f"fact {old_id} cannot supersede itself")
+        if old.superseded_by is not None:
+            raise ValueError(
+                f"fact {old_id} was already superseded by {old.superseded_by}; "
+                f"correct the current entry, not the withdrawn one")
+        return self.amending(replace(old, superseded_by=new_id))
 
     def has_applied(self, turn_id: TurnId) -> bool:
         return turn_id in self.turns_applied

@@ -739,6 +739,150 @@ def released(ledger: Ledger) -> tuple[bool, tuple[str, ...]]:
     return (not blocking), blocking
 
 
+# ------------------------------------------------- the inputs, as the file has them ---
+#
+# WIRED 12 September 2026. Everything above is the ledger; everything here is
+# how the FILE reaches it, and it exists once so that the turn and the served
+# correction route cannot observe the same fact two different ways. Two
+# observers with two digests is a change that reaches half the closure.
+
+
+@refuses_blank_text()
+@dataclass(frozen=True)
+class Names:
+    """The node names one thread carries. ONE OWNER, read by the turn that
+    records them and the projections that present them -- a projection that
+    spelled the key differently would find no node and refuse everything, and
+    a turn that spelled it differently would record a node nothing reads.
+
+    `limitation` is `cascade.Derived`'s own key for the value, unchanged, so
+    the ledger node and the cascade row are one value under one name."""
+
+    limitation: str
+    deadline: str
+    role: str
+
+
+def names_for(thread_id: str) -> Names:
+    return Names(limitation=f"limitation on {thread_id}",
+                 deadline=f"limitation deadline on {thread_id}",
+                 role=f"party role on {thread_id}")
+
+
+def fact_digest(fact) -> str:
+    """WHAT IS MATERIAL ABOUT A FACT: its words, its date, and whether it has
+    left the chart. Not the turn it arrived on, not its weight, not whether
+    the advocate has confirmed it -- a confirmation changes what a value is
+    worth, not what it is, and hashing it would mark every conclusion stale on
+    the turn the advocate agreed with them."""
+    return digest_of(getattr(fact, "statement", ""), getattr(fact, "date", None),
+                     getattr(fact, "superseded_by", None))
+
+
+def authority_id(finding) -> str:
+    """The exact key of a retrieved provision or paragraph: which store, and
+    where in it. `Finding.locator` is what `read back` opens, so it is what a
+    conclusion rests on. No title, no score."""
+    return f"{getattr(finding, 'store', '')}:{getattr(finding, 'locator', '')}"
+
+
+def authority_digest(finding) -> str:
+    """The span is the material: a republished provision whose words moved has
+    moved the conclusion built on the old words."""
+    return digest_of(getattr(finding, "span", ""))
+
+
+@implements("A3")
+def sync_inputs(ledger: Ledger, matter, findings=(), *, reason: str = "",
+                at: str = "") -> tuple[Ledger, tuple[str, ...], tuple[Rest, ...]]:
+    """Observe every input the file holds, and invalidate what moved.
+
+    Returns the ledger, the affected node names, and the edges that moved.
+
+    THE POPULATION IS THE FILE, NOT THE CHANGE. A caller that told the ledger
+    "this fact moved" would be a caller that could forget one; this walks
+    every fact on the matter -- superseded ones included, because a
+    superseded fact IS the moved input -- and every authority the turn
+    retrieved, and lets `observe` decide what moved by comparing digests.
+
+    ONE CALLER SHAPE FOR TWO CALLERS. The turn calls this after ADMIT-B, so a
+    correction spoken on this turn invalidates before this turn derives; the
+    served correction route calls it after superseding the fact. Neither
+    decides what "moved" means.
+    """
+    moved: list[Rest] = []
+    for fact in getattr(matter, "facts", ()) or ():
+        fid = str(getattr(fact, "id", "") or "")
+        if not fid:
+            continue
+        withdrawn = getattr(fact, "superseded_by", None) is not None
+        ledger, did = observe(ledger, InputKind.FACT, fid, fact_digest(fact),
+                              reason=reason, withdrawn=withdrawn)
+        if did:
+            tracked = ledger.input_of(InputKind.FACT, fid)
+            moved.append(Rest(InputKind.FACT, fid,
+                              tracked.version if tracked else 0))
+    for finding in findings or ():
+        aid = authority_id(finding)
+        if aid.strip(":") == "":
+            continue
+        ledger, did = observe(ledger, InputKind.AUTHORITY, aid,
+                              authority_digest(finding), reason=reason)
+        if did:
+            tracked = ledger.input_of(InputKind.AUTHORITY, aid)
+            moved.append(Rest(InputKind.AUTHORITY, aid,
+                              tracked.version if tracked else 0))
+    if not moved:
+        return ledger, (), ()
+    ledger, affected = invalidate(ledger, tuple(moved), reason=reason, at=at)
+    return ledger, affected, tuple(moved)
+
+
+@implements("A3")
+def settle(ledger: Ledger, produced: tuple[Node, ...], *, expected: tuple[str, ...],
+           at: str = "", why_missing: str = "") -> Ledger:
+    """Record what a turn derived, and close or fail the rework it owed.
+
+    `produced` is what the turn computed this time. `expected` is every node
+    name the turn is RESPONSIBLE for on this thread, computed or not -- so a
+    stale node the turn could not recompute is failed rather than forgotten.
+
+    THREE OUTCOMES PER NODE, and the third is the one a simpler loop loses:
+      * produced and was stale     -> claimed and RECOMPUTED, revision closed
+      * produced and was current   -> RECORDED against today's versions
+      * expected, not produced, stale -> claimed and REWORK FAILED, attempt
+                                         counted, exhausted at the bound
+
+    A node that was stale and is simply absent from `produced` is the silent
+    case: nothing would have touched it and it would have gone on reading as
+    stale-with-no-attempts forever, which is a queue that never drains.
+    """
+    made = {n.name: n for n in produced}
+    for node in produced:
+        prior = ledger.node(node.name)
+        if prior is not None and prior.currency in (Currency.STALE,
+                                                    Currency.REWORKING):
+            ledger = claim(ledger, node.name)
+            ledger = record(ledger, node)
+            ledger = recomputed(ledger, node.name, node.value, at=at,
+                                reason=node.reason)
+        else:
+            ledger = record(ledger, node)
+    for name in expected:
+        if name in made:
+            continue
+        prior = ledger.node(name)
+        if prior is None or prior.currency is not Currency.STALE:
+            continue
+        if prior.rework_exhausted or prior.rework_attempts >= REWORK_LIMIT:
+            continue
+        ledger = claim(ledger, name)
+        ledger = rework_failed(ledger, name, why_missing or (
+            "this turn did not produce the value, so it could not be "
+            "recomputed"))
+    return ledger
+
+
 # ------------------------------------------------ the one bridge to cascade ---
 
 
