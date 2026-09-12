@@ -466,6 +466,21 @@ Class (274) is embedded. **Do not read the 246 as a gap to close** — and do no
 read it as full coverage either, because a File node will never match a
 semantic query no matter how the index is rebuilt.
 
+**`head_matches_build: true` says nothing about the vectors.** Measured 12
+September 2026: the graph was built at HEAD, the tree was clean, semantic
+search answered in `search_mode: semantic` — and 600 of 4,383 non-File nodes
+had no vector, every one of them from the previous two days' commits. A query
+about sealed corpus generations returned five confident, plausible, wrong
+results and nothing said so. `update` refreshes structure; only `embed`
+refreshes vectors; and the pre-commit hook that ran both was **bypassed by
+every merge, fast-forward and rebase**, which is how the 600 arrived.
+`tools/hooks/refresh-graph` is now the one owner of both steps, called from
+`pre-commit`, `post-merge` and `post-rewrite`; hooks install by `git config
+core.hooksPath tools/hooks`, never by `cp`; and the SessionStart hook prints
+`semantic index current: N/N` or `SEMANTIC INDEX STALE BY N` — **read that
+line before trusting a semantic miss**, and `python tools/graph_vectors.py
+--check` reprints it on demand.
+
 **What is embedded is the node's IDENTITY, not its body.** `_node_to_text`
 composes the dotted `Parent.name`, the bare name, the identifier split into
 words, the kind, the module directory, the signature, and **the docstring
