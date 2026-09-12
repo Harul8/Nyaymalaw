@@ -25,6 +25,7 @@ The first is a static scan of the SQL, which is the highest-value check here:
 a missing `WHERE workspace_id` is a cross-tenant read that looks exactly like
 a successful one, and no amount of local testing with one tenant finds it.
 """
+
 from __future__ import annotations
 
 import ast
@@ -101,8 +102,7 @@ def test_every_statement_against_a_tenant_table_is_scoped(table):
         "SELECT workspace_id, sealed FROM nm_matter WHERE matter_id = %s",
     ]
     surprising = [s for s in unscoped if s not in allowed]
-    assert not surprising, (
-        f"these touch {table} without naming a workspace: {surprising}")
+    assert not surprising, f"these touch {table} without naming a workspace: {surprising}"
 
 
 def test_the_one_unscoped_read_exists_to_tell_absent_from_not_yours():
@@ -148,76 +148,141 @@ def test_a_foreign_row_raises_rather_than_reading_as_absent():
         def close(self):
             pass
 
-    store = pg.PostgresMatterStore(connect=lambda: _Foreign(), sealer=None,
-                                   workspace_id="ws_mine")
+    store = pg.PostgresMatterStore(connect=lambda: _Foreign(), sealer=None, workspace_id="ws_mine")
     with pytest.raises(TenantMismatch):
         store.load("mat_1")
 
 
 def test_asking_this_store_for_another_workspaces_operation_is_refused():
-    store = pg.PostgresMatterStore(connect=lambda: None, sealer=None,
-                                   workspace_id="ws_mine")
+    store = pg.PostgresMatterStore(connect=lambda: None, sealer=None, workspace_id="ws_mine")
     with pytest.raises(TenantMismatch):
         store.operation("ws_other", "key-1")
     with pytest.raises(TenantMismatch):
         store.claim_outbox("ws_other", worker="w1", lease_seconds=30)
 
 
+def test_the_sealed_matter_carries_exactly_the_returned_database_version():
+    import json
+
+    from nm.domain.matter import Matter
+
+    class Sealer:
+        payload = None
+
+        def seal(self, matter_id, payload):
+            self.payload = json.loads(payload)
+            return b"synthetic sealed bytes"
+
+    class Cursor:
+        rowcount = 1
+
+        def execute(self, *args):
+            pass
+
+    sealer = Sealer()
+    store = pg.PostgresMatterStore(connect=lambda: None, sealer=sealer, workspace_id="ws_a")
+    for expected in (0, 4):
+        saved = store._write_matter(
+            Cursor(),
+            Matter(id="mat_1", advocate_id="adv_a", title="Synthetic matter", version=99),
+            expected,
+        )
+        assert saved.version == expected + 1
+        assert sealer.payload["version"] == saved.version
+
+
+def test_real_adapter_declares_every_worker_capability_without_optional_fallback():
+    for name in ("claim_outbox", "renew_outbox", "record_job_outcome", "request_cancellation"):
+        assert callable(getattr(pg.PostgresMatterStore, name, None)), name
+
+
+def test_unknown_operation_still_exposes_its_persisted_cancellation_request():
+    class Cursor:
+        def execute(self, sql, args):
+            assert "cancel_requested_at" in sql
+
+        def fetchone(self):
+            return (
+                "op",
+                "ws",
+                "adv",
+                "advise",
+                "unknown",
+                "matter",
+                1,
+                "{}",
+                "digest",
+                "2026-09-12",
+                "2026-09-12T01:00:00+00:00",
+            )
+
+    operation = pg.PostgresMatterStore._operation(Cursor(), "op")
+    assert operation.outcome is Outcome.UNKNOWN
+    assert operation.cancel_requested_at == "2026-09-12T01:00:00+00:00"
+
+
 # ===================== the outbox cannot contradict itself ==================
 
+
 def _operation(**over) -> Operation:
-    base = dict(idempotency_key="key-1", workspace_id="ws_a",
-                advocate_id="adv@example.test", command="create-matter",
-                matter_id="mat_1", request_digest=request_digest({"a": 1}))
+    base = dict(
+        idempotency_key="key-1",
+        workspace_id="ws_a",
+        advocate_id="adv@example.test",
+        command="create-matter",
+        matter_id="mat_1",
+        request_digest=request_digest({"a": 1}),
+    )
     base.update(over)
     return Operation(**base)
 
 
 def test_an_outbox_entry_for_another_workspace_is_refused():
-    entry = OutboxEntry(entry_id="e1", workspace_id="ws_b",
-                        operation_key="key-1", kind="advise")
-    problems = refuse_outbox(entry, workspace_id="ws_a",
-                             operation=_operation())
+    entry = OutboxEntry(entry_id="e1", workspace_id="ws_b", operation_key="key-1", kind="advise")
+    problems = refuse_outbox(entry, workspace_id="ws_a", operation=_operation())
     assert problems and "ws_b" in problems[0]
 
 
 def test_an_outbox_entry_naming_another_operation_is_refused():
-    entry = OutboxEntry(entry_id="e1", workspace_id="ws_a",
-                        operation_key="someone-elses", kind="advise")
+    entry = OutboxEntry(
+        entry_id="e1", workspace_id="ws_a", operation_key="someone-elses", kind="advise"
+    )
     assert refuse_outbox(entry, workspace_id="ws_a", operation=_operation())
 
 
 def test_an_outbox_entry_about_another_matter_is_refused():
-    entry = OutboxEntry(entry_id="e1", workspace_id="ws_a",
-                        operation_key="key-1", kind="advise",
-                        matter_id="mat_other")
+    entry = OutboxEntry(
+        entry_id="e1",
+        workspace_id="ws_a",
+        operation_key="key-1",
+        kind="advise",
+        matter_id="mat_other",
+    )
     assert refuse_outbox(entry, workspace_id="ws_a", operation=_operation())
 
 
 def test_a_consistent_entry_is_accepted():
     """The negative control: a refusal function that refused everything would
     satisfy the three tests above and the product would commit nothing."""
-    entry = OutboxEntry(entry_id="e1", workspace_id="ws_a",
-                        operation_key="key-1", kind="advise",
-                        matter_id="mat_1")
-    assert refuse_outbox(entry, workspace_id="ws_a",
-                         operation=_operation()) == []
+    entry = OutboxEntry(
+        entry_id="e1", workspace_id="ws_a", operation_key="key-1", kind="advise", matter_id="mat_1"
+    )
+    assert refuse_outbox(entry, workspace_id="ws_a", operation=_operation()) == []
 
 
 def test_the_adapter_refuses_a_contradictory_entry_before_touching_the_database():
     """Refused BEFORE the transaction opens, so a bad entry cannot leave a
     half-written state behind."""
     store = pg.PostgresMatterStore(
-        connect=lambda: pytest.fail("the database was opened"),
-        sealer=None, workspace_id="ws_a")
-    entry = OutboxEntry(entry_id="e1", workspace_id="ws_b",
-                        operation_key="key-1", kind="advise")
+        connect=lambda: pytest.fail("the database was opened"), sealer=None, workspace_id="ws_a"
+    )
+    entry = OutboxEntry(entry_id="e1", workspace_id="ws_b", operation_key="key-1", kind="advise")
     with pytest.raises(OutboxRefused):
-        store.commit_accepted(object(), expected_version=0,
-                              operation=_operation(), outbox=(entry,))
+        store.commit_accepted(object(), expected_version=0, operation=_operation(), outbox=(entry,))
 
 
 # ============================== replay and conflict =========================
+
 
 def test_one_key_with_the_same_request_is_a_replay():
     digest = request_digest({"message": "we act for the plaintiff"})
@@ -229,10 +294,8 @@ def test_one_key_with_the_same_request_is_a_replay():
 def test_one_key_with_a_different_request_is_a_conflict_not_a_replay():
     """Returning the first answer would answer a question nobody asked."""
     recorded = _operation(request_digest=request_digest({"message": "one"}))
-    assert recorded.same_key_different_request(
-        "create-matter", request_digest({"message": "two"}))
-    assert recorded.same_key_different_request(
-        "delete-matter", recorded.request_digest)
+    assert recorded.same_key_different_request("create-matter", request_digest({"message": "two"}))
+    assert recorded.same_key_different_request("delete-matter", recorded.request_digest)
 
 
 def test_an_opening_command_carries_no_matter_and_that_is_the_hard_case():
@@ -245,6 +308,7 @@ def test_an_opening_command_carries_no_matter_and_that_is_the_hard_case():
 
 
 # ================================ the states ================================
+
 
 def test_an_ambiguous_outcome_is_never_retryable():
     """*Ambiguous external effects reconcile before retry* is a rule a call
@@ -266,5 +330,5 @@ def test_the_adapter_satisfies_the_transactional_port():
 
 
 def test_the_schema_says_which_version_it_is():
-    assert pg.SCHEMA_VERSION == 1
+    assert pg.SCHEMA_VERSION == 2
     assert any("nm_schema" in statement for statement in pg.DDL)

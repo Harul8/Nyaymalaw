@@ -6,8 +6,8 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
-import yaml
 
+from tools._documents import safe_load
 from tools.blueprint_evaluations import check_evaluations, deployment_blockers
 
 pytestmark = pytest.mark.class_a
@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def _inputs():
     catalog = json.loads((ROOT / "docs/blueprint/evaluations.json").read_text(encoding="utf-8"))
-    registry = yaml.safe_load((ROOT / "docs/backlog/status.yaml").read_text(encoding="utf-8"))
+    registry = safe_load((ROOT / "docs/backlog/status.yaml").read_text(encoding="utf-8"))
     criteria = {ac["id"] for row in registry["items"] for ac in row.get("acceptance", [])}
     return catalog, criteria
 

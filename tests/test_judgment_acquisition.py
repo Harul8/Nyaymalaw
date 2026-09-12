@@ -5,6 +5,8 @@ import json
 from dataclasses import replace
 from datetime import date, datetime, timezone
 
+import pytest
+
 from nm.knowledge.acquisition import (
     POLICY_ID,
     POLICY_VERSION,
@@ -235,6 +237,7 @@ def test_web_entrypoint_refuses_request_budget_exhaustion_without_receipt(
     assert list(tmp_path.iterdir()) == []
 
 
+@pytest.mark.class_a
 def test_p44_integration_witness_covers_both_entrypoints_and_reconcile_command(
         tmp_path, monkeypatch, capsys):
     test_api_entrypoint_uses_shared_selection_and_quarantine(
@@ -265,6 +268,7 @@ def test_p44_integration_witness_covers_both_entrypoints_and_reconcile_command(
     assert "complete: 1 staged" in capsys.readouterr().out
 
 
+@pytest.mark.class_a
 def test_p44_adversarial_witness_covers_bias_scope_and_receipt_guards(tmp_path):
     bias = select_candidates(_scope(selection_budget=1), (
         _candidate("old-popular", 2020, 1000),

@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "record_type": "concurrency_test_diagnostic",
+  "owners": [
+    "BK-80",
+    "BK-96"
+  ],
+  "observation": {
+    "artifact": ".nm/conformance/class-a-after-parsing.json",
+    "fingerprint": "3dd9d87a95741ad2751ec4376ae370d8dcbd543b1dca8f91e1d0a567216ff5c1",
+    "class_a_seconds": 501.4,
+    "actual_cases": 2971,
+    "passed": 2970,
+    "failed": 1,
+    "aggregate_reference_rows_not_separate_cases": 210,
+    "failure": "Concurrent immutable-upload writers: BrokenBarrierError before receipt CAS, 10193.818ms. No overwrite is established by this result. Canonical evidence was not promoted.",
+    "unchanged_recheck": {
+      "artifact": ".nm/conformance/concurrent-upload-reproduction.xml",
+      "passed": 1,
+      "seconds": 1.641,
+      "meaning": "An unchanged pass is not a root-cause diagnosis or a repair."
+    }
+  },
+  "diagnostic_defect": "Ordered pool.map could raise writer one's later barrier timeout before observing writer two's earlier error. The stored Class-A artifact contains only the first reported failure, not the peer's outcome.",
+  "correction": "Join both futures, abort the rendezvous when either writer raises, and propagate an ExceptionGroup of all errors. Keep the 10-second timeout, two fresh real stores, real sealed writes, same pre-CAS barrier, and unchanged one-winner/one-StaleWrite/version/digest assertions. Two planted object-write failures in opposite peers must expose their OSError and leave the receipt version/chunk list unchanged.",
+  "underlying_cause": "Originally unestablished. The whole upload module rerun with complete peer observations reproduces an actual ValueError from SealedUploadStore._path before immutable put: 'upload object is outside its storage root'. The barrier error is secondary, not a CAS failure. Python 3.11 Windows realpath can retain the extended namespace after a concurrent directory creation changes ERROR_PATH_NOT_FOUND to ERROR_FILE_NOT_FOUND; deterministic namespace/transition and escape controls are required before treating that mechanism as confirmed and fixed.",
+  "complete_peer_reproduction": {
+    "artifact": ".nm/conformance/concurrent-upload-diagnostics.xml",
+    "tests": 29,
+    "passed": 28,
+    "failed": 1,
+    "meaning": "Normal competing writes reproduce the containment refusal. Both deliberately failing peers correctly expose their original OSError and preserve the receipt. An additional instrumented unchanged run passed; it is diagnostic only and does not cancel the reproduced failure."
+  },
+  "root_cause_confirmed": "The native Windows realpath probe changes its observed error from missing parent (3) to missing leaf (2) while the parent is created. The returned candidate retains the extended namespace and the root does not; the original is_relative_to comparison explicitly rejects them in the deterministic test. This is a representational false refusal, not permission to escape the root.",
+  "production_repair": "One shared resolved-path containment helper promotes ordinary Windows drive/UNC paths into the extended namespace for comparison, preserving existing extended-path semantics and POSIX rules. Filesystem resolve still follows actual links; the returned I/O path is unchanged. Device paths, other drives/shares/hosts, siblings and real junction/symlink redirects remain refused. Both reads and writes use the same _path owner.",
+  "verification": {
+    "status": "FOCUSED_PASS_PENDING_CUMULATIVE",
+    "artifact": ".nm/conformance/upload-containment-fixed.xml",
+    "tests": 51,
+    "passed": 51,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "new_controls": 22,
+    "native_race_proved": true,
+    "real_junction_escape_refused": true,
+    "required": "Final browser and canonical cumulative gate on settled source."
+  },
+  "final_verification": {
+    "status": "CURRENT_CANONICAL_AND_BROWSER_PASS",
+    "record": "a3-conformance-final.json#final_execution",
+    "actual_class_a_cases": 2997,
+    "passed": 2997,
+    "expanded_browser_passed": 50,
+    "canonical_journey_passed": 24,
+    "meaning": "Supersedes the historical focused-only or pending cumulative status above; full packet and release obligations stay open."
+  }
+}

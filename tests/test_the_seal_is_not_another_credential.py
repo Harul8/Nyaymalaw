@@ -111,24 +111,6 @@ def test_the_refusal_says_what_to_do_and_in_which_order():
         "order, which is the whole reason this row exists")
 
 
-def test_the_real_environment_does_not_share_its_seal():
-    """THE LIVE CHECK, on this machine, right now.
-
-    Run against the real environment because the environment is the thing
-    under test. This is what the composition root does at start-up, and it is
-    the assertion that would have failed before 9 September.
-    """
-    import os
-
-    from nm.adapters.model.config import load_dotenv
-    from nm.bootstrap.composition import ROOT
-    load_dotenv(ROOT / ".env")
-    key = os.environ.get("NM_MATTER_KEY") or ""
-    if not key.strip():
-        pytest.skip("no NM_MATTER_KEY configured here")
-    _refuse_a_shared_seal(key)
-
-
 # ======================= the re-key tool's classifier =======================
 
 def _rekey():

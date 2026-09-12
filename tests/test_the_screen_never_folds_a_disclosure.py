@@ -38,10 +38,14 @@ encodes rather than replaces.
 """
 from __future__ import annotations
 
+import json
 import pathlib
 import re
 
 import pytest
+
+from nm.domain.answer import Element, ElementKind, Signal
+from nm.domain.brief import section_of
 
 pytestmark = pytest.mark.class_a
 
@@ -53,6 +57,26 @@ def _app_js() -> str:
     return (WEB / "app.js").read_text(encoding="utf-8")
 
 
+def renderer_signal_cases() -> list[dict]:
+    """Renderer-only fixtures, derived from the domain enum and section owner."""
+    signals = tuple(signal for signal in Signal if signal is not Signal.NONE)
+    assert signals and len(set(signal.value for signal in signals)) == len(signals)
+    rows = []
+    for signal in signals:
+        element = Element(kind=ElementKind.GROUND,
+                          text=f"Renderer-only warning {signal.value}.", signal=signal)
+        rows.append({"kind": element.kind.value, "text": element.text,
+                     "signal": signal.value, "disclosure": False, "refs": [],
+                     "section": section_of(element).value})
+    return rows
+
+
+def _fold_predicate(src: str) -> str:
+    matched = re.search(r"const foldsAsSupport = \(el\) => ([^;]+);", src)
+    assert matched, "the single support predicate is missing or unchecked"
+    return " ".join(matched.group(1).split())
+
+
 def test_only_plain_ground_is_ever_folded():
     """THE PARTITION, read off the source.
 
@@ -60,20 +84,14 @@ def test_only_plain_ground_is_ever_folded():
     that is ONLY plain grounds -- a courtesy reply, a question-of-law answer
     -- has no claim for the support to sit under, so the two lists are
     swapped and the answer is shown rather than folded into invisibility.
-    The predicate below is unchanged and is still the thing under test.
-
-    `support` is what folds. Its filter must require BOTH that the element is
-    ground AND that it carries no disclosure -- dropping the second clause is
-    the whole defect, and it is a two-character edit.
+    `support` is what folds. The single predicate requires a ground, no
+    disclosure AND an explicitly none signal. Every actual loud signal, not
+    merely limitation, must stay visible; unknown signal metadata also stays.
     """
     src = _app_js()
 
-    m = re.search(r"(?:const|let) support = entry\.answer\.elements\.filter\(\s*"
-                  r"\(el\) => ([^;]+)\);", src)
-    assert m, ("the `support` partition is gone or renamed; whatever decides "
-               "what folds is now unchecked")
-
-    predicate = " ".join(m.group(1).split())
+    predicate = _fold_predicate(src)
+    assert re.search(r"let support = entry\.answer\.elements\.filter\(foldsAsSupport\);", src)
     assert "el.kind === 'ground'" in predicate, (
         f"the fold no longer restricts itself to ground elements, so an "
         f"ACTION could be collapsed: {predicate}")
@@ -81,6 +99,9 @@ def test_only_plain_ground_is_ever_folded():
         f"THE FOLD NO LONGER EXCLUDES DISCLOSURES: {predicate}\n\n"
         f"A disclosure behind a collapsed row is B-128 at the last inch -- "
         f"the bytes are served and the advocate still cannot see them.")
+    assert "el.signal === 'none'" in predicate, (
+        f"the fold no longer requires an explicitly unsignalled ground: {predicate}")
+    assert predicate == "el.kind === 'ground' && !el.disclosure && el.signal === 'none'"
 
 
 def test_the_spoken_half_is_the_complement_and_not_a_second_list():
@@ -92,16 +113,11 @@ def test_the_spoken_half_is_the_complement_and_not_a_second_list():
     rendered nowhere -- silently, because nothing counts them.
     """
     src = _app_js()
-    m = re.search(r"(?:const|let) spoken = entry\.answer\.elements\.filter\(\s*"
-                  r"\(el\) => ([^;]+)\);", src)
-    assert m, "the `spoken` partition is gone or renamed"
-
-    spoken = " ".join(m.group(1).split())
-    assert spoken.startswith("!("), (
-        f"`spoken` is not the negation of `support`'s predicate but a second "
-        f"list of its own: {spoken}. An element kind added tomorrow can fall "
-        f"between them and render nowhere at all.")
-    assert "el.kind === 'ground'" in spoken and "!el.disclosure" in spoken
+    _fold_predicate(src)
+    assert re.search(r"let support = entry\.answer\.elements\.filter\(foldsAsSupport\);", src)
+    assert re.search(r"let spoken = entry\.answer\.elements\.filter\(\s*"
+                     r"\(el\) => !foldsAsSupport\(el\)\);", src), (
+        "spoken must negate the identical support owner, not repeat or narrow its predicate")
 
 
 def test_the_fold_says_how_much_is_inside_it():
@@ -174,7 +190,9 @@ def test_the_rendered_turn_puts_no_disclosure_inside_a_fold():
             "This is a third state, not a pass.")
 
     script = ROOT / "tests" / "js" / "render_turn_partition.mjs"
-    result = subprocess.run([node, str(script)], capture_output=True,
+    cases = renderer_signal_cases()
+    assert {row["signal"] for row in cases} == {s.value for s in Signal if s.is_loud}
+    result = subprocess.run([node, str(script), json.dumps(cases)], capture_output=True,
                             text=True, cwd=ROOT)
     assert result.returncode == 0, (
         "the rendered turn breaks the disclosure rule:\n"

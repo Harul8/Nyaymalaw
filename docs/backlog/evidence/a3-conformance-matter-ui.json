@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "record_kind": "scoped_conformance_work_record",
+  "base": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "scope": ["P13 served cover and commission", "P17 read-only attributed casefile", "P14 protective handoff controls"],
+  "start": {
+    "status": "RECORDED",
+    "observed_on": "2026-09-12",
+    "problem": "Existing owned matter APIs have no discoverable browser controls for inspecting instructions and source attribution, updating the commission or explicitly declaring and ending a bounded protective exception.",
+    "invariants": [
+      "Render only served values, with unknown and unavailable distinct from empty or established.",
+      "Instruction descriptions do not grant trusted decision-making authority.",
+      "Extraction quality, documentary status and human confirmation remain separate.",
+      "Declaration is not a turn; only a separate explicit protective-triage action sends a turn.",
+      "Every asynchronous paint, write completion and subsequent action belongs to one session, matter, rail generation and dialog generation.",
+      "No privileged field persists in browser storage; navigation and sign-out close and wipe the dialog."
+    ],
+    "owned_files": ["web/matter-workspace.js", "web/matter-workspace.css", "web/index.html (new asset includes only)", "tests/js/matter_workspace.mjs", "tests/test_the_matter_workspace_uses_saved_records.py"]
+  },
+  "build": {
+    "status": "IMPLEMENTED_PENDING_VALIDATION",
+    "cover_consistency_start": {
+      "observed_on": "2026-09-12",
+      "status": "IMPLEMENTED_PENDING_CENTRAL_VALIDATION",
+      "finding": "Parent's actual browser intake showed a named client, saved activity and deadline on list/board while the cover read nonexistent Thread.our_role, Matter.touched_at and Thread.blocked_reason, ignored intake parties and discarded its supplied deadline register.",
+      "contract": "One saved matter must yield consistent client/activity/posture/deadline facts across its list, board and cover. Mixed, unknown and conflicting thread postures stay explicit. Existence of threads alone must not establish advising. Case deadlines and instruction/commission deadlines remain separate, including legacy commission field semantics.",
+      "owned_files": ["nm/edge/projections.py", "web/matter-workspace.js (cover renderer only)", "tests/test_the_cover_matches_the_saved_matter.py", "tests/js/matter_workspace.mjs (cover witness only)", "docs/backlog/evidence/a3-conformance-matter-ui.json"],
+      "planned_proof": ["Actual served intake, subsequent turn, list/board/cover and fresh store-reader restart agree", "Unknown, partial, mixed and conflicting postures are not collapsed", "Passed and uncomputed case deadlines remain visible separately from the next live date", "Commission-only deadlines cannot establish a case register and case dates cannot replace the instruction deadline", "Parent repeats the real browser cover check on current source"],
+      "implementation": "Cover/list share the existing party resolver with a legacy engagement fallback. Cover reads actual Thread.posture and Matter.last_activity, names partial/mixed/conflicted positions, and does not infer advising from thread presence. A shared deadline projection consumes the strict RegisterRead authored by the other owner: known live, passed and uncomputed rows remain visible; unreadable/unassessed populations remain separate, including assessed-empty plus unassessed-thread incompleteness. Cover adds case_deadlines and explicitly retains old deadline fields as commission aliases. UI renders separate case and instruction sections. Attributed-file headings now use numbered statement/revision labels, retaining full stable identity as Record reference and all contradiction/supersession references.",
+      "test_changes": "17 new Class-A cases in tests/test_the_cover_matches_the_saved_matter.py, one focused real-browser test in tests/test_the_matter_cover_in_the_browser.py, stronger existing Node cover/casefile witnesses. The closed board-status allowlists add only named read-accounting fields and retain every forbidden-analysis assertion. Existing passed_deadlines=None unassessed contract and legacy commission deadline assertions remain unchanged.",
+      "test_status": "NOT_RUN",
+      "lint": "Ruff passed on projections.py and the three edited/new Python test files; no pytest or browser execution by this agent. Parent will run against frozen source."
+    },
+    "reopened_start": {
+      "findings": ["A matching matter ID in an HTTP-200 response did not prove the command succeeded; the returned state was unchecked", "Commission forms omitted the version the user inspected, so a later stale form could overwrite newer instructions despite a per-request store CAS"],
+      "contract": "Confirm only the exact result state for the command; require the observed saved-matter version for every commission write, retaining the store CAS for races after the precondition read.",
+      "compatibility": "Commission POST without expected_version now refuses422 deliberately. This endpoint has no plan-authorised unversioned-writer exception; known callers are the new UI and focused commission tests, migrated to explicit observed versions. The older turn endpoint's optional-version contract is unchanged.",
+      "proof": ["Positive-ID unknown/malformed successful HTTP replies do not yield confirmation or refresh", "Two forms observing the same real saved version: first accepted, second409 and canonical instructions/history unchanged", "Missing, bool, string and negative versions rejected; future versions also409", "Fresh read then edit remains usable; a competing write after the precondition still meets actual store CAS"],
+      "implementation": "Commission GET and POST expose saved-matter version; POST checks expected_version before any instruction/authority-refusal mutation and existing store CAS remains. Browser compares cover/commission versions and submits its captured observed version. Every command confirmation checks its exact state, and commission reopened must be boolean.",
+      "lint": "Bounded Ruff check of composition.py, api.py, tools/served.py and three owned test files passed after fixing7 formatting findings. No pytest executed by this agent."
+    },
+    "changes": [
+      "Added discoverable matter toolbar and accessible dialog with text-only rendering, current-context guards and close/wipe on matter/session events.",
+      "Cover reads existing cover/commission endpoints, checks matching instruction versions, renders unknowns/history/refusals and does not infer authority from descriptive parties.",
+      "Commission form submits existing wire fields including separate instructing and deciding parties, deadline kind/date/basis/reason, exclusions, constraints and version-change reason. Shared board refreshes the saved file version after successful writes.",
+      "Casefile reads existing projection: certainty, human confirmation, reading quality, attributed location, contradictions, supersession and integrity warnings remain separate. No source-opening link is invented.",
+      "Protective dialog reads governing exception/expiry/history, declares 1–24 hours with basis, revokes explicitly and rechecks the live exception before a separate protective_triage send. Declaration never sends a turn.",
+      "Added ten behavioral Node witnesses executing the shipped controller plus one asset-load-order test. Runtime absence remains NOT ASSESSED; tests were not executed by this agent."
+    ]
+  },
+  "test": {
+    "status": "PENDING_REVALIDATION",
+    "selection": ["tests/test_the_matter_workspace_uses_saved_records.py", "tests/test_the_commission_is_served_and_authority_refuses.py"],
+    "population": {"controller_pytest_cases_authored": 16, "new_served_precondition_cases_authored": 11, "behavioral_modes": ["cover", "commission", "casefile", "declaration", "protective", "revoke", "stale_read", "stale_write", "wipe", "mutation", "confirmation_commission", "confirmation_declaration", "confirmation_revoke", "confirmation_mutation", "cover_changed"]},
+    "observed_run": {
+      "runner": "main agent; independently inspected by integration_review",
+      "report": ".nm/conformance/matter-ui.xml",
+      "sha256": "80a7d3926d93f208f57d962482e6c656588cfc7634848eea28120e9a3f5ae0d5",
+      "timestamp": "2026-09-12T16:38:07.858995+05:30",
+      "combined_tests": 35,
+      "own_controller_tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "duration_seconds": 8.030,
+      "additional_population": ["page and script agreement", "CSS ownership", "overflow guards", "two tooling golden-selection controls"]
+    },
+    "reason": "The recorded35-test run precedes the response-state and observed-version corrections and does not certify them. Main agent must rerun the expanded selections."
+  },
+  "signoff": {"status": "NOT_RUN", "claim": "No full-packet, Class-A or current-browser pass asserted."}
+}

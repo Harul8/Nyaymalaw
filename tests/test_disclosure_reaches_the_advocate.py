@@ -38,6 +38,7 @@ import pathlib
 import pytest
 
 from nm.domain.gates import GATES, Response
+from tools._source import SourceSegments
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TESTS = ROOT / "tests"
@@ -152,14 +153,14 @@ def _body(spec: str) -> str:
     node = defined.get(name)
     assert node is not None, f"{spec} names a test that does not exist"
 
-    out = [ast.get_source_segment(src, node) or ""]
+    segments = SourceSegments(src)
+    out = [segments.get(node) or ""]
     for call in ast.walk(node):
         if (isinstance(call, ast.Call)
                 and isinstance(call.func, ast.Name)
                 and call.func.id in defined
                 and call.func.id != name):
-            out.append(ast.get_source_segment(src, defined[call.func.id])
-                       or "")
+            out.append(segments.get(defined[call.func.id]) or "")
     return "\n".join(out)
 
 def test_every_built_disclose_gate_is_accounted_for():

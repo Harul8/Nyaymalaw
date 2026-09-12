@@ -27,7 +27,6 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -38,6 +37,7 @@ from typing import Callable, Iterable, Iterator
 
 import yaml
 
+from nm.infrastructure.cleanup import discard, discard_tree
 from nm.knowledge.acquisition import ReconciliationState, reconcile_acquisition
 from nm.knowledge.artefact import ArtefactLineage, ArtefactRefused
 from nm.knowledge.source_registry import PublicationState, SourceRegistry
@@ -455,8 +455,7 @@ def _write_new_json(path: Path, value: dict) -> bytes:
             )
         os.replace(temporary, path)
     finally:
-        if temporary.exists():
-            temporary.unlink()
+        discard(temporary)
     return payload
 
 
@@ -469,8 +468,7 @@ def _replace_pointer(path: Path, value: dict) -> bytes:
         _write_bytes(temporary, payload)
         os.replace(temporary, path)
     finally:
-        if temporary.exists():
-            temporary.unlink()
+        discard(temporary)
     return payload
 
 
@@ -502,10 +500,9 @@ def _publication_lock(root: Path) -> Iterator[None]:
             os.fsync(handle.fileno())
         yield
     finally:
-        try:
-            lock.unlink()
-        except FileNotFoundError:
-            pass
+        # A retained lock blocks later writers and requires operator recovery;
+        # a housekeeping error must not mask an already-committed publication.
+        discard(lock)
 
 
 def _layout(root: Path) -> None:
@@ -526,7 +523,7 @@ def _safe_remove_transaction(root: Path, transaction: Path) -> None:
     candidate = transaction.resolve()
     if (candidate.parent == transactions
             and candidate.name.startswith("partial-") and candidate.exists()):
-        shutil.rmtree(candidate)
+        discard_tree(candidate)
 
 
 def _pointer_for(
@@ -867,7 +864,22 @@ class PublishedCorpus:
     def has_member(self, relative_path: str) -> bool:
         return _contained_relative(relative_path) in self._members
 
+    def require_usable(self) -> None:
+        """Retained bytes do not grant continued permission after withdrawal.
+
+        Old complete generations remain usable across an ordinary cutover.
+        Version-global withdrawal is different and applies to cached readers
+        too. No file payload is opened while checking this small event set.
+        """
+        if _is_withdrawn(
+            self.root, self.snapshot_id, set(self.manifest["expected_versions"]),
+        ):
+            raise CorpusPublicationRefused(
+                f"corpus snapshot {self.snapshot_id} has been withdrawn"
+            )
+
     def member_path(self, relative_path: str) -> Path:
+        self.require_usable()
         path = _contained_relative(relative_path)
         row = self._members.get(path)
         if row is None:
@@ -889,7 +901,13 @@ class PublishedCorpus:
         return absolute
 
     def read(self, relative_path: str) -> bytes:
-        return self.member_path(relative_path).read_bytes()
+        path = _contained_relative(relative_path)
+        payload = self.member_path(path).read_bytes()
+        row = self._members[path]
+        if len(payload) != row["bytes"] or _digest(payload) != row["sha256"]:
+            raise CorpusPublicationRefused("published member changed during read")
+        self.require_usable()
+        return payload
 
     def get_source(self, version_id: str) -> bytes:
         matches = [row for row in self.manifest["sources"]
@@ -905,13 +923,24 @@ class PublishedCorpus:
             self.member_path(path)
 
 
+def _register_records(directory: Path, label: str) -> tuple[Path, ...]:
+    """An unavailable register is not an observed empty population."""
+    try:
+        entries = tuple(directory.iterdir())
+    except OSError as exc:
+        raise CorpusPublicationRefused(
+            f"corpus {label} register is unavailable"
+        ) from exc
+    return tuple(sorted(path for path in entries if path.suffix == ".json"))
+
+
 def _is_withdrawn(
     root: Path,
     snapshot_id: str,
     source_versions: set[str],
 ) -> bool:
     """A withdrawn legal version invalidates every snapshot that contains it."""
-    for path in (root / "withdrawals").glob("*.json"):
+    for path in _register_records(root / "withdrawals", "withdrawal"):
         event, _ = _load_json(path, "corpus withdrawal")
         _validate_withdrawal(path, event)
         if event.get("snapshot_id") == snapshot_id or source_versions.intersection(
@@ -1268,6 +1297,12 @@ def rollback_corpus(
             "previous_snapshot_id": current.snapshot_id,
             "reason": reason,
             "observed_at": observed_at.isoformat(),
+            "reassessment_required": True,
+            "affected_work": list(_affected_work(
+                publication_root,
+                set(current.manifest["expected_versions"])
+                - set(target.manifest["expected_versions"]),
+            )),
         }
         transition_id = _event_id("transition", event_body)
         _write_new_json(
@@ -1334,7 +1369,7 @@ def _affected_work(
     source_versions: set[str],
 ) -> tuple[str, ...]:
     affected: set[str] = set()
-    for path in sorted((root / "dependencies").glob("*.json")):
+    for path in _register_records(root / "dependencies", "dependency"):
         value, _ = _load_json(path, "corpus dependency")
         _validate_dependency(path, value)
         if source_versions.intersection(value.get("source_versions") or ()):

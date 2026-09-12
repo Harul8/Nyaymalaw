@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "record_kind": "scoped_conformance_work_record",
+  "base": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "scope": "P14/BK-53-AC2 actual capacity admission, distinct from professional role authority and future informed DecisionRecord work.",
+  "start": {
+    "status": "RECORDED",
+    "cause": "The served TurnRequest accepts arbitrary release.capacity text. TurnEngine stores every truthy answer and _screen makes any existing CAPACITY answer CLEAR. The separate Engagement in-doubt guard is not consumed by that branch.",
+    "invariant": "Only a valid explicit human not-in-doubt assessment can clear capacity. Missing, legacy prose, malformed, future, unassessed or in-doubt state cannot authorise substantive instructions. State is not inferred from wording, vulnerability, professional role or account access.",
+    "mechanism": "Move the existing Capacity enum to one domain owner, add a real CapacityPosition carrying state/basis/raised_at/resolved_by and source/next-step attribution, record it under the existing canonical intake answer with history, and make the actual screen consume its rule. The authenticated actor and injected clock stamp records; the client supplies only state and basis.",
+    "compatibility": "Existing imports of core.screens.Capacity continue to resolve. Legacy stored prose remains visible but unassessed until explicit reassessment; no blanket grandfathered clearance. Dedicated positive fixtures and the actual checkbox send typed state, not a phrase-recognition compatibility rule.",
+    "proof_plan": ["Every enum state through the actual served screen", "Legacy affirmative and negative prose both remain unassessed", "Spoofed actor/timestamp, unknown state and missing affirmative basis refuse", "Uncertainty supersedes prior clearance and survives fresh store reload", "Explicit reassessment opens only the capacity screen and does not clear other screens", "An actual admission-guard mutation makes the served witness fail"],
+    "exclusions": ["No medical capacity diagnosis", "No inferred authority or role grant", "No decorative UrgencyRegister or DecisionRecord type", "No new UNTYPED exemption", "No pytest or gate run by this worker"]
+  },
+  "scope_shape_followup_start": {
+    "status": "RECORDED",
+    "cause": "The adjacent SCOPE branch converts truthy input to str and clears any truthy stored object, supplying a fictitious confirmed-at-intake answer when attribution or answer is absent.",
+    "contract": "Legacy instruction capture accepts only nonblank strings at the known scope/capacity input keys. The scope screen may acknowledge only an exact attributed record with a real nonfuture date and the matter's advocate; malformed, blank and unauthenticated records remain unassessed. Do not infer the semantic sufficiency of an instruction from its wording.",
+    "exclusion": "This is instruction-record integrity, not completed Commission acceptance, scope-to-proposed-work compatibility or legal authority. Those full B5/P13 obligations stay open; no phrase-specific unknown classifier or automatic authority is added.",
+    "proof": "Actual served blank/nonstring refusal; malformed stored shape cannot reach fact admission; old dated and new timestamped attributable records preserve the positive capture path; mutating the shared scope consumer must defeat the served negative witness.",
+    "implementation": "nm/core/screens.py::scope_screen validates exact attribution and time, nm/core/turn.py rejects malformed legacy input before reading and records the server instant. Legacy valid date-only records remain readable. The shared consumer has no fabricated answer/source defaults.",
+    "test_selection": "tests/test_scope_admission_needs_an_attributed_record.py",
+    "expected_cases": 29,
+    "test_result": "NOT_RUN; coordinating agent owns execution; focused Ruff passed"
+  },
+  "screen_readback_followup_start": {
+    "status": "RECORDED",
+    "measured_run": ".nm/conformance/receipts-capacity-focused.xml: 209 cases, 189 passed, 20 failed; these new test expectations incorrectly used Screen attributes on the intentionally serialized dict representation and compared MatterList to a bare list.",
+    "production_finding": "Matter.screens deliberately uses tuple[object] to avoid the domain/core cycle, but emergency _outstanding_screens passes reloaded dictionaries to unscreened, which dereferences .kind and falls back to the whole set unreadable. This is a real restart-consumer defect, not a reason to make tests alone coerce state.",
+    "repair": "Add strict reconstruction in the existing nm/core/screens.py owner and make unscreened use it. Accept actual typed Screen or its complete recorded field shape, preserving Release and coverage. Unknown/malformed/duplicate entries remain an explicit error, never dropped or defaulted to CLEAR. Tests inspect the actual serialized record through this same production decoder and assert the structured MatterList contract.",
+    "proof": "Fresh FileMatterStore readback through the real emergency outstanding-screen consumer preserves exact per-screen states; malformed/duplicate/unknown records refuse. Existing capacity and scope mutation witnesses must reach their intended assertion rather than fail during setup.",
+    "build": "IMPLEMENTED_PENDING_TEST: screens.from_stored owns reconstruction and unscreened calls it for both typed and restored populations. The stored representation is unchanged, and no domain-to-core or core-to-adapter import was added. One actual saved-screen/emergency-consumer positive and five malformed readback cases were added; scope now has 29 cases. Focused Ruff passed."
+  },
+  "build": {
+    "status": "IMPLEMENTED_PENDING_TEST",
+    "files": ["nm/domain/capacity.py", "nm/core/screens.py", "nm/core/turn.py (capacity validation/recording/screen dispatch only)", "nm/edge/api.py (capacity request field/mapping only)", "tests/test_capacity_admission_uses_a_record_not_prose.py", "tests/test_turn_contract.py (opted-in intake fixture only)", "tests/test_the_matter_cover_tells_ten_files_apart.py (four positive input fixtures only)"],
+    "details": ["The only accepted capacity payload keys are state and basis; spoofed source/timestamp fields refuse", "Existing Capacity is re-exported at core.screens while the domain position is the sole typed assessment owner", "Typed assessments and prior positions are durably stored in existing intake_answers/capacity_history; old answer text is not deleted or auto-cleared", "Every served capacity screen calls the typed current-assessment rule; scope stays separately required", "The actual browser checkbox-to-typed-input and immutable request-envelope changes are coordinated with the replay/UI owner", "No full E4 DecisionRecord, legal diagnosis or professional authority grant is claimed"]
+  },
+  "test": {"status": "NOT_RUN", "selection": ["tests/test_capacity_admission_uses_a_record_not_prose.py", "tests/test_screens.py", "tests/test_the_emergency_route_admits_only_protection.py", "tests/test_the_matter_cover_tells_ten_files_apart.py", "tests/test_turn_contract.py", "tests/test_the_commission_is_served_and_authority_refuses.py"], "new_expected_cases": 24, "reason": "Main coordinates test execution after all related owners freeze. Test source and prior focused runs are not current passing evidence."},
+  "signoff": {"status": "NOT_RUN"}
+}

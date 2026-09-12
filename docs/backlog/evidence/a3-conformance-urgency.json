@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "record_type": "bounded_manual_urgency_foundation",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "packets": ["P14"],
+  "features": ["B2"],
+  "items": ["BK-78", "BK-48"],
+  "start": {
+    "state": "READY_FOR_MANUAL_REGISTER_ONLY",
+    "authority": "Coordinator authorised manual persisted urgency and explicit resolution, with served emergency/re-entry/protective-handoff consumers. No model assessment, new legal reasoning, source-derived deadline, automatic clearance or action execution.",
+    "sources": ["spec/prd/part_b.js:B2", "docs/blueprint/packets.json:P14", "docs/BUILD_GUIDE.md", "docs/playbooks/START_A_CHANGE.md", "docs/playbooks/BUILD_A_CHANGE.md", "docs/DEFECT_SHAPES.md"],
+    "graph": {"query": "file_summary nm/domain/emergency.py", "built_at_sha": "a3d9c47764eb2f53c5bc486076df423b21488158", "updated_at": "2026-09-12T16:49:49", "limitation": "Current declaration, matter codec, API and protective consumer source read after the graph; concurrent owners coordinate precise shared hunks."},
+    "finding": "The persisted Declaration governs permission, not the state of each danger. The protective route currently uses a generic handoff and carries no typed per-class urgency/action/owner/due/resolution. Naming a type alone would not meet the live persistence promise.",
+    "taxonomy_discrepancy": "Search of docs/blueprint and spec found no independent urgency class registry. B2 DOES explicitly lists ten semicolon-delimited groups, while its NEVER/eval example says five of eleven. This bounded manual form uses only the ten named groups, discloses the discrepancy and makes no complete taxonomy or applicability assertion; the product source owner must resolve the count.",
+    "contract": "An authenticated matter owner may explicitly record one of the ten urgency classes named in B2 with a supplied danger basis, action, responsible person and due time or a stated reason each remains unknown. Entries have stable IDs, authenticated raiser/time and immutable keyed acceptance. Live dangers remain live across silence, turns, restart and declaration expiry/revocation. Resolution requires the exact entry, observed file version and a named authenticated resolver, basis and time. Replays recover the original acceptance; changed offers or stale writes refuse. The served emergency view and protective handoff consume this register, put known nearest windows first and retain unknown-time dangers prominently without treating them as safe.",
+    "proof_intent": "Typed vocabulary and unknown-state controls; real encrypted round trip and restarted subprocess after nine protective turns; two independent urgencies; declaration expiry/revocation independent of resolution; missing inputs, stale/concurrent version, changed request key offer, replay and failed commit; real protective wire output leads with recorded urgent action/owner/due and creates no model call or facts. Coordinator owns all execution and browser proof.",
+    "exclusions": "No complete B2/P14 or counsel acceptance claim. Every-turn discovery/assessment of applicable classes, substantive protective advice, deadline verification, calibration and externally performed action remain unbuilt. Absent classes are not_assessed, never cleared. Existing shared registries remain independently owned."
+  },
+  "build": {
+    "state": "AUTHORED_AWAITING_COORDINATED_EXECUTION",
+    "files": ["nm/domain/urgency.py", "nm/domain/matter.py (two disjoint fields)", "nm/edge/api.py (emergency register projection and command helper)", "nm/core/turn.py (_protective_turn register elements only)", "web/matter-workspace.js", "tests/test_recorded_dangers_require_explicit_resolution.py", "tests/js/matter_workspace.mjs", "tests/test_the_matter_workspace_uses_saved_records.py", "tests/test_store_roundtrip.py (two nondefault fixture fields)", "tests/test_recorded_urgency_is_visible_in_the_workspace.py"],
+    "implementation": "UrgencyRegister validates manual danger class and supplied/explicitly unknown action, owner and timezone-aware due time; explicit resolution records authenticated actor, basis and time. Matter keeps independent danger rows and immutable keyed command receipts. Existing emergency GET exposes class non-assessment and all ordered entries; POST accepts one exclusive raise/resolve command with observed version. Replay precedes stale-version rejection and never reapplies a resolved danger. The protective consumer leads with saved live dangers, keeps unknown-time and unreadable states explicit and leaves Declaration permission and turn receipt hooks unchanged. Browser forms preserve unresolved request keys and original observed versions through same-session reopening; confirmed 4xx refusal permits a deliberate new attempt after rereading.",
+    "postgres_review": "PostgresMatterStore._encode delegates to FileMatterStore._enc and _decode to _matter; the sealed JSON includes all Matter dataclass fields. Urgency rows/acceptance receipts require no new SQL columns or hand-maintained serializer. A new codec roundtrip witness is authored, but this inspection and synthetic codec test do not constitute a live PostgreSQL run.",
+    "limitations": "Manual record and protective display only, not every-turn urgency discovery, complete applicability screening, calibrated signal quality, counsel acceptance or externally performed action. All class assessment remains not_assessed. The ten-versus-eleven source discrepancy remains explicit. Existing unadmitted turn words are not turned into facts or model input."
+  },
+  "test": {
+    "state": "NOT_RUN",
+    "execution_owner": "coordinating_agent",
+    "expected_population": {"new_api_domain_test_functions": 13, "new_api_domain_cases": 22, "new_node_witness_cases": 2, "controller_module_cases_including_existing": 19, "new_browser_functions": 1, "new_browser_cases": 2},
+    "commands_for_coordinator": ["pytest tests/test_recorded_dangers_require_explicit_resolution.py tests/test_the_matter_workspace_uses_saved_records.py tests/test_store_roundtrip.py tests/test_the_emergency_route_admits_only_protection.py", "Approved browser run: tests/test_recorded_urgency_is_visible_in_the_workspace.py (390 and 1280 pixels)"],
+    "static_lint": "Scoped Ruff check passed on new urgency sources/tests and shared Python integration files. No pytest, Node witness or browser was run by this worker.",
+    "artifacts_on_browser_run": ".nm/conformance/browser via the shared real-browser fixture; captures PNG, DOM and request identity without external assets"
+  },
+  "receipt_followup": {
+    "start": "Independent source review found that exact urgency retry checked only selected saved result fields and then spread the whole saved result. A genuinely sealed malformed receipt could therefore claim action_performed:true or verified assessment, expose an unknown field, or name an unrelated saved danger. Coordinator authorised a bounded closed-receipt repair after releasing the shared-source test lock.",
+    "contract": "Validate the complete receipt envelope, normalised original offer, exact result schema and primitive types; reconcile version and named danger/actor/instruction/resolution linkage. Reconstruct response constants from a parsed receipt, never spread saved result dictionaries. A historical raise acceptance remains valid after its danger is explicitly resolved and cannot reapply the raise.",
+    "proof_intent": "Mutate actual sealed stored receipt fields, assert a nonempty changed population, drive the served retry, require explicit refusal with no leaked assertion or canonical mutation, and retain genuine exact raise/resolution replay after later changes. No tests executed by this worker.",
+    "build": "UrgencyReceipt now validates closed envelope/offer/result schemas, exact primitive types, immutable normalised instructions, actor, accepted version and danger/resolution linkage. Every saved operation is reconciled before new mutation or retry; duplicate command or request identities refuse. New and replayed responses are reconstructed from named fields and constants, never spread saved results. Historical raises remain valid after resolution. Generic PostgreSQL codec witness now uses a genuinely valid receipt rather than placeholder dictionaries.",
+    "test_state": "NOT_RUN",
+    "authored_population": {"additional_functions": 3, "additional_cases": 22, "sealed_receipt_mutations": 18, "sealed_resolution_linkage_mutations": 3, "historical_positive_cases": 1, "total_api_domain_functions": 16, "total_api_domain_cases": 44}
+  },
+  "signoff": {"state": "NOT_RUN"}
+}

@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "record_type": "bounded_conformance_repair_work_record",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "packets": ["P19", "P20", "P44"],
+  "criteria": ["BK-84-AC1", "BK-84-AC2", "BK-24-AC1"],
+  "start": {
+    "state": "READY_FOR_BOUNDED_ENGINEERING_REPAIR",
+    "authority": "User-authorised exact-base conformance repair; isolated synthetic engineering only",
+    "findings": [
+      "P19 inventories can follow file links or silently omit unreadable directories while claiming complete.",
+      "P20 cached readers check withdrawal only at construction; rollback records no dependent-work reassessment.",
+      "P20 manifest cleanup duplicates the adapter cleanup owner and can mask a publication outcome.",
+      "P44 entry points retain an August 2026 date cutoff rather than an explicit approved date range.",
+      "P44 receipt reconciliation compares counts without matching selected candidate identities to artifact identities."
+    ],
+    "mechanisms": [
+      "One restricted infrastructure owner for best-effort removal; no filesystem I/O enters domain or core.",
+      "Check a published generation before and after every live read; persist rollback reassessment for exactly affected recorded work.",
+      "One explicit acquisition date interval shared by planning, request and receipt selection.",
+      "Reconcile exact selected and received identity populations in addition to counts.",
+      "Refuse linked source entries and propagate traversal/hash incompleteness without opening private targets."
+    ],
+    "proof_plan": "Original witnesses and transfer/boundary controls are written before implementation; no tests or gates run until the coordinating agent schedules them.",
+    "exclusions": [
+      "No parallel P18/P21/P22 code is imported.",
+      "No real corpus, network acquisition, model call, credential, legal opinion or release approval.",
+      "HTTP publication/curator commands and complete published legal-review metadata remain downstream scope, not silently claimed complete."
+    ]
+  },
+  "build": {
+    "state": "IMPLEMENTED_FOCUSED_CHECKS_PASSED",
+    "test_result": "FINAL_FOCUSED_POPULATION_PASS_NOT_FULL_GATE",
+    "diagnostic_runs": [
+      {
+        "kind": "focused_engineering_test_run",
+        "executed_by": "coordinating_agent",
+        "artifact": ".nm/conformance/corpus-final-focused.xml",
+        "population": {"count": 131, "passed": 131, "failed": 0, "errors": 0, "skipped": 0},
+        "scope": "All seven previously named corpus test modules including seven follow-up cases. Synthetic local fixtures only; no real-source or release claim."
+      },
+      {
+        "kind": "focused_engineering_test_run",
+        "executed_by": "coordinating_agent",
+        "artifact": ".nm/conformance/corpus.xml",
+        "artifact_sha256": "f7c0695b0060be6e0acecd12b83ae0ded7bbf5471d5b4d7b12950fdc36e86ffe",
+        "observed_at": "2026-09-12T16:20:03.134004+05:30",
+        "population": {"count": 124, "passed": 124, "failed": 0, "errors": 0, "skipped": 0},
+        "test_modules": [
+          "tests/test_a_completed_claim_survives_its_own_housekeeping.py",
+          "tests/test_acquisition_receipts.py",
+          "tests/test_corpus_conformance.py",
+          "tests/test_immutable_corpus_publication.py",
+          "tests/test_judgment_acquisition.py",
+          "tests/test_legal_source_inventory.py",
+          "tests/test_source_registry.py"
+        ],
+        "scope": "Frozen corpus repair tree before the two follow-up hardenings; XML population and digest inspected independently. Not an acceptance or release approval."
+      }
+    ],
+    "followup": {
+      "test_result": "SEVEN_FOLLOWUP_CASES_PASS_IN_131_CASE_RUN",
+      "changes": [
+        "Missing or unreadable dependency registers now refuse rollback and withdrawal before changing any event or active pointer, using the same checked enumeration as withdrawal reads.",
+        "A nested FileNotFoundError during tree cleanup reports success only when the root name is confirmed absent; present or unreadable roots report incomplete cleanup."
+      ],
+      "regressions": [
+        "tests/test_corpus_conformance.py::test_unavailable_dependency_register_cannot_erase_affected_work (four missing/unreadable x rollback/withdrawal cases)",
+        "tests/test_corpus_conformance.py::test_tree_cleanup_checks_root_after_a_nested_file_disappears (three present/absent/unreadable root cases)"
+      ],
+      "proof_order": "Seven regression cases authored before the follow-up implementation. Execution reserved for the coordinating agent; no pytest or gates run by this worker."
+    }
+  },
+  "signoff": {"state": "NOT_RUN", "claim": "No completion or evidence PASS is created by this work record."}
+}

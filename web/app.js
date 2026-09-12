@@ -22,6 +22,7 @@ const state = {
   // BK-36. THE VERSION THIS TAB LAST SAW, sent with every brief so the server
   // can refuse a write built on a file this tab has never read.
   matterVersion: null,
+  matterReady: false,
   // B3-B5. The intake answers, held from the form until the first brief
   // carries them onto the file.
   intake: null,
@@ -43,10 +44,91 @@ const state = {
   // advocate navigates again while its request is in flight, the old render
   // loses the right to paint or close anything.
   railGeneration: 0,
+  sessionGeneration: 0,
+  searchGeneration: 0,
+  historyGeneration: 0,
+  historyListGeneration: 0,
+  sessionsGeneration: 0,
 };
 
 let pendingApplication = null;
 let outcomeReturn = 'register';
+let activeDelivery = null;
+let retiringSession = null;
+
+// In-memory work belongs to an advocate, workspace and file (or one unsaved
+// opening), not to the composer DOM. The immutable pending request belongs to
+// that same context, even if its acknowledgement or session is lost.
+const intentContexts = new Map();
+const INTAKE_INPUTS = ['in-client', 'in-adverse', 'in-others', 'in-scope'];
+let activeIntent = null;
+
+function intentKey(matterId) {
+  return JSON.stringify([state.advocate, state.workspace, matterId || 'unsaved-opening']);
+}
+
+function ownsIntent(intent) {
+  return intent && intent === activeIntent && intent.advocate === state.advocate
+    && intent.workspace === state.workspace;
+}
+
+function matchesIntake(entry, intake) {
+  return JSON.stringify(entry.request.parties) === JSON.stringify((intake && intake.parties) || {})
+    && JSON.stringify(entry.request.release) === JSON.stringify((intake && intake.release) || {})
+    && JSON.stringify(entry.request.capacity || null) === JSON.stringify((intake && intake.capacity) || null);
+}
+
+function snapshotIntent() {
+  if (!ownsIntent(activeIntent)) return;
+  activeIntent.text = $('message').value;
+  activeIntent.intake = state.intake;
+  activeIntent.intakeOpen = !$('intake').hidden;
+  activeIntent.fields = Object.fromEntries(INTAKE_INPUTS.map((id) => [id, $(id).value]));
+  activeIntent.capacity = $('in-capacity').checked;
+}
+
+function restoreIntent() {
+  const intent = activeIntent;
+  $('message').value = intent ? intent.text : '';
+  state.intake = intent ? intent.intake : null;
+  INTAKE_INPUTS.forEach((id) => { $(id).value = (intent && intent.fields[id]) || ''; });
+  $('in-capacity').checked = Boolean(intent && intent.capacity);
+  $('intake-state').textContent = '';
+  showIntake(Boolean(intent && intent.intakeOpen));
+}
+
+function selectIntent(matterId, { opening = false } = {}) {
+  snapshotIntent();
+  if (!state.advocate || (!matterId && !opening)) activeIntent = null;
+  else {
+    const key = intentKey(matterId);
+    if (!intentContexts.has(key)) intentContexts.set(key, {
+      key, advocate: state.advocate, workspace: state.workspace,
+      matterId: matterId || null, text: '', intake: null, intakeOpen: opening,
+      fields: {}, capacity: false, pending: [],
+    });
+    activeIntent = intentContexts.get(key);
+  }
+  restoreIntent();
+}
+
+function reconcileIntent(transcript) {
+  if (!activeIntent) return;
+  snapshotIntent();
+  const recorded = new Set(transcript.filter(turn => turn.committed === true
+    && turn.release_state === 'released').map(turn => turn.turn_id).filter(Boolean));
+  activeIntent.pending = activeIntent.pending.filter((entry) => {
+    if (!recorded.has(entry.turnId)) return true;
+    const receipt = transcript.find(turn => turn.turn_id === entry.turnId);
+    if (receipt.input_admitted === true && activeIntent.text.trim() === entry.brief.trim()) {
+      activeIntent.text = '';
+    }
+    if (matchesIntake(entry, activeIntent.intake)) activeIntent.intake = null;
+    return false;
+  });
+  restoreIntent();
+  state.turns.push(...activeIntent.pending);
+}
 
 /* --------------------------------------------------------------- fetch --- */
 
@@ -73,22 +155,47 @@ function sessionEnded(message) {
 // THE DRAFT IS FROZEN, NOT DISCARDED. An advocate half-way through a brief
 // when the session lapses has typed the most expensive thing on the screen.
 function keepDraft() {
-  const composer = $('message');
-  const text = composer ? composer.value : '';
-  if (text && text.trim()) state.draft = { advocate: state.advocate, text };
+  snapshotIntent();
+  state.draft = activeIntent;
 }
 
 // PRIVILEGED CONTENT COMES OFF THE GLASS IMMEDIATELY, in one place, so a
 // surface added later cannot be the one that keeps painting a matter after
 // the session behind it is gone.
 function clearPrivileged() {
+  state.sessionGeneration += 1;
+  state.searchGeneration += 1;
+  state.historyGeneration += 1;
+  state.historyListGeneration += 1;
+  state.sessionsGeneration += 1;
+  $('sessions-dialog').close();
+  $('sessions-body').textContent = '';
+  forgetRotationSecrets();
+  clearRecoveryCodeDisplay();
+  pendingApplication = null;
+  if (activeDelivery) {
+    activeDelivery.entry.state = 'unknown';
+    activeDelivery.entry.error = 'The session ended before this request was confirmed.';
+    activeDelivery.controller.abort();
+  }
+  activeDelivery = null;
+  activeIntent = null;
   state.railGeneration += 1;
   state.advocate = null;
   state.workspace = null;
   state.matterId = null;
   state.turns = [];
   ['thread', 'rail-body', 'rail-meta', 'search-results', 'history-body',
-   'who-detail'].forEach((id) => { const el = $(id); if (el) el.textContent = ''; });
+   'who-detail', 'save-status', 'search-index', 'search-state', 'history-state']
+    .forEach((id) => { const el = $(id); if (el) el.textContent = ''; });
+  $('matter-heading').textContent = 'My work';
+  $('workspace-eyebrow').textContent = 'YOUR WORKSPACE';
+  state.matterVersion = null;
+  state.matterReady = false;
+  state.intake = null;
+  ['in-client', 'in-adverse', 'in-others', 'in-scope', 'q', 'f-court', 'f-from', 'f-to']
+    .forEach((id) => { $(id).value = ''; });
+  $('in-capacity').checked = false;
   const who = $('who-name');
   if (who) who.textContent = '—';
   const workspace = $('workspace-name');
@@ -97,6 +204,7 @@ function clearPrivileged() {
   if (composer) composer.value = '';
   const chooser = $('history-matter');
   if (chooser) chooser.innerHTML = '<option value="">Choose a matter…</option>';
+  window.dispatchEvent(new Event('nm:session-ended'));
 }
 
 // BK-31-AC20. The value the server hands this page so it can prove a request
@@ -111,7 +219,11 @@ function cookie(name) {
 
 const UNSAFE = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
-async function api(path, options) {
+async function api(path, options, { sessionBound = true } = {}) {
+  if (['/api/login', '/api/register', '/api/recover'].includes(path)) {
+    await settleRetirementForLogin();
+  }
+  const sessionGeneration = state.sessionGeneration;
   // IN THE ONE HELPER, NOT AT THE CALL SITES. Every request in this file goes
   // through here, so no future caller can forget the header and discover it as
   // a 403 in a browser somebody else is using. CLAUDE.md §4: what refuses the
@@ -127,6 +239,11 @@ async function api(path, options) {
   const res = await fetch(path, options);
   let body = null;
   try { body = await res.json(); } catch { /* non-JSON error page */ }
+  if (sessionBound && sessionGeneration !== state.sessionGeneration) {
+    const err = new Error('The session changed before this response arrived.');
+    err.obsolete = true;
+    throw err;
+  }
   if (res.status === 401 && state.advocate && !state.ended) {
     sessionEnded('Your session ended, so I signed you out and stopped work on '
                  + 'this matter. Sign in again and I will put your draft back '
@@ -165,18 +282,13 @@ async function loadHealth() {
     // whoever needs it and out of the reading line for everyone else.
     const readable = h.corpus === 'readable';
     el.textContent = readable
-      ? 'Corpus ready'
-      : 'Corpus not readable — answers will be short of authority';
-    el.title = [
-      `${h.provider}/${h.routine_model}`,
-      `hard: ${h.hard_tier}`,
-      `judge: ${h.judge_tier}`,
-      `store: ${h.encryption}`,
-      `corpus: ${h.corpus}`,
-      `manifest: ${h.manifest_acts} acts`,
-    ].join('  ·  ');
+      ? 'Legal library available · check the scope of each result'
+      : 'Legal library unavailable · authority-backed research is limited';
+    el.title = 'Library availability does not establish legal coverage or currency.';
     el.classList.toggle('bad', !readable);
+    $('rehearsal-warning').hidden = h.provider !== 'scripted';
   } catch (e) {
+    if (e.obsolete) return;
     // A CONFIGURATION THAT WAS REFUSED IS AN ADVOCATE-FACING FACT: the
     // product cannot answer. The detail stays in the title.
     el.textContent = 'Not ready — I cannot answer on this matter yet';
@@ -220,30 +332,56 @@ function field(dl, label, value) {
 // first thing in the morning.
 function deadlineField(m) {
   const status = m.next_deadline_status;
-  if (status === 'not_assessed') {
-    return { pill: 'unknown', text: 'not assessed — no register on this file' };
+  const gone = Array.isArray(m.passed_deadlines) ? m.passed_deadlines : [];
+  const uncomputed = Array.isArray(m.uncomputed_deadlines) ? m.uncomputed_deadlines : [];
+  const unreadable = Array.isArray(m.deadline_unreadable) ? m.deadline_unreadable.length : 0;
+  const unassessed = Array.isArray(m.deadline_unassessed) ? m.deadline_unassessed.length : 0;
+  const incomplete = m.deadline_assessment === 'incomplete' || unreadable > 0
+    || (unassessed > 0 && m.deadline_assessment !== 'not_assessed');
+  const parts = [];
+  if (m.next_deadline) parts.push(`${m.next_deadline}${status === 'near' ? ' — soon' : ''}`);
+  if (gone.length) {
+    parts.push(`${gone[0].on} — PASSED${gone.length > 1 ? ` (+${gone.length - 1} more)` : ''}`);
+  } else if (status === 'passed') {
+    parts.push('passed deadline — recorded date unavailable');
   }
-  if (status === 'none_on_this_matter') {
-    return { pill: 'ok', text: 'none on this matter' };
+  if (uncomputed.length) parts.push(`${uncomputed.length} deadline(s) with no date established`);
+  else if (status === 'not_computed') parts.push('a deadline with no date established');
+  if (!parts.length) {
+    if (status === 'not_assessed' || m.deadline_assessment === 'not_assessed') {
+      parts.push('deadline register not assessed');
+    } else if (!incomplete && ['none_on_this_matter', 'none_on_this_thread'].includes(status)) {
+      parts.push(status === 'none_on_this_thread' ? 'none on this thread' : 'none on this matter');
+    } else parts.push('deadline position not established');
   }
-  if (status === 'passed') {
-    return { pill: 'blocked', text: `${m.next_deadline} — PASSED` };
+  if (incomplete) parts.push('register incomplete');
+  if (unreadable) parts.push(`${unreadable} unreadable record(s)`);
+  if (unassessed) parts.push(`${unassessed} thread(s) not assessed`);
+  const text = parts.join(' · ');
+  if (gone.length || status === 'passed' || status === 'near') return { pill: 'blocked', text };
+  if (incomplete || status === 'not_assessed' || status === 'not_computed') {
+    return { pill: 'unknown', text };
   }
-  if (status === 'near') {
-    return { pill: 'blocked', text: `${m.next_deadline} — soon` };
-  }
-  if (status === 'not_computed') {
-    return { pill: 'unknown', text: 'a deadline with no date established' };
-  }
-  return m.next_deadline || 'none recorded';
+  if (['none_on_this_matter', 'none_on_this_thread'].includes(status)) return { pill: 'ok', text };
+  return text;
 }
 
-async function showMatterList() {
+async function showMatterList({ preserveIntent = false } = {}) {
+  if (!preserveIntent) selectIntent(null);
   const generation = ++state.railGeneration;
   state.matterId = null;
+  state.matterVersion = null;
+  state.matterReady = false;
+  state.turns = [];
+  $('thread').textContent = '';
   $('pane-advise').dataset.matterId = '';
   $('rail-title').textContent = 'Matters';
   $('back').hidden = true;
+  $('matter-heading').textContent = 'My work';
+  $('workspace-eyebrow').textContent = 'YOUR WORKSPACE';
+  $('save-status').textContent = '';
+  updateWorkspace();
+  window.dispatchEvent(new Event('nm:matter-changed'));
   const body = $('rail-body');
   body.replaceChildren(stateBlock('building', 'Loading matters…'));
 
@@ -257,16 +395,18 @@ async function showMatterList() {
       'unbuildable',
       `The matter list could not be built: ${e.message}. This is a failure to ` +
       `read, not a statement that you have no matters.`));
-    $('rail-meta').textContent = 'state: unbuildable';
+    $('rail-meta').textContent = 'Matter list unavailable';
     return;
   }
   if (generation !== state.railGeneration) return;
 
-  $('rail-meta').textContent =
-    `${data.row_count} row(s) · bounded by ${data.bounded_by}`;
+  $('rail-meta').textContent = `${data.row_count} matter${data.row_count === 1 ? '' : 's'}`;
+  const incomplete = data.state !== 'ok';
+  const notice = incomplete ? stateBlock('unbuildable',
+    'Some matters could not be loaded. This list may be incomplete. Retry before relying on it.') : null;
 
   if (!data.matters.length) {
-    body.replaceChildren(stateBlock('empty', 'No matters yet. Brief me and I will open one.'));
+    body.replaceChildren(notice || stateBlock('empty', 'No matters yet. Start with a new brief.'));
     return;
   }
 
@@ -274,6 +414,9 @@ async function showMatterList() {
     const row = document.createElement('div');
     row.className = 'row' + (m.blocked ? ' loud' : '');
     row.dataset.matterId = m.matter_id;
+    row.setAttribute('role', 'button');
+    row.tabIndex = 0;
+    row.setAttribute('aria-label', `Open ${m.matter}`);
     const t = document.createElement('div');
     t.className = 'r-title'; t.textContent = m.matter;
     const dl = document.createElement('dl'); dl.className = 'r-fields';
@@ -284,25 +427,54 @@ async function showMatterList() {
     field(dl, 'against', m.opponent || 'not recorded');
     field(dl, 'deadline', deadlineField(m));
     field(dl, 'last worked', m.last_touched || 'never worked');
-    field(dl, 'blocked', m.blocked
+    field(dl, 'posture', m.blocked
       ? { pill: 'blocked', text: m.blocked }
-      : { pill: 'ok', text: 'nothing blocking' });
+      : { pill: 'unknown', text: 'no unresolved posture recorded' });
     row.append(t, dl);
     row.onclick = () => showThreadBoard(m.matter_id);
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        showThreadBoard(m.matter_id);
+      }
+    });
     return row;
   }));
+  if (notice) body.prepend(notice);
 }
 
 async function showThreadBoard(
-  matterId, { restore = true, closeNavigator = true } = {}) {
+  matterId, { restore = true, closeNavigator = true, adoptOpening = false } = {}) {
+  // Only a confirmed opening operation may transfer its local draft to the
+  // newly saved shell. Selecting a list row must never imply this transfer.
+  if (adoptOpening && ownsIntent(activeIntent) && !activeIntent.matterId
+      && !activeIntent.pending.length) {
+    snapshotIntent();
+    intentContexts.delete(activeIntent.key);
+    activeIntent.matterId = matterId;
+    activeIntent.key = intentKey(matterId);
+    activeIntent.intakeOpen = false;
+    intentContexts.set(activeIntent.key, activeIntent);
+    restoreIntent();
+  }
+  selectIntent(matterId);
   const generation = ++state.railGeneration;
   // OPENING A MATTER CLOSES THE LIST at narrow widths. Leaving it up would
   // put the advocate on the answer they asked for with the index still over
   // it, which is the same unreachability wearing the other face.
   if (closeNavigator) toggleMatters(false);
   state.matterId = matterId;
+  state.matterVersion = null;
+  state.matterReady = false;
+  $('matter-heading').textContent = 'Loading matter…';
+  $('save-status').textContent = '';
+  if (restore) {
+    state.turns = [];
+    $('thread').textContent = '';
+  }
+  window.dispatchEvent(new Event('nm:matter-changed'));
   $('pane-advise').dataset.matterId = matterId;
-  $('rail-title').textContent = 'Threads';
+  $('rail-title').textContent = 'Issues in this matter';
   $('back').hidden = false;
   const body = $('rail-body');
   body.replaceChildren(stateBlock('building', 'Loading threads…'));
@@ -314,17 +486,25 @@ async function showThreadBoard(
     // BK-36. THE VERSION THIS TAB HAS NOW SEEN. Every brief carries it, so a
     // tab that loaded the file and sat is refused rather than writing onto a
     // version it never read.
-    if (typeof data.version === 'number') state.matterVersion = data.version;
+    if (!Number.isInteger(data.version) || data.version < 0) {
+      throw new Error('The saved file version could not be established. Please reopen the matter.');
+    }
+    state.matterVersion = data.version;
+    state.matterReady = true;
   } catch (e) {
     if (generation !== state.railGeneration) return;
     body.replaceChildren(stateBlock(
       'unbuildable', `The thread board could not be built: ${e.message}`));
-    $('rail-meta').textContent = 'state: unbuildable';
+    $('rail-meta').textContent = 'Matter could not be loaded';
     return;
   }
 
-  $('rail-meta').textContent =
-    `${data.row_count} row(s) · bounded by ${data.bounded_by} · v${data.version}`;
+  $('rail-meta').textContent = `${data.row_count} recorded issue${data.row_count === 1 ? '' : 's'}`;
+  $('matter-heading').textContent = data.title || 'Untitled matter';
+  $('workspace-eyebrow').textContent = 'MATTER WORKSPACE';
+  $('save-status').textContent = 'Recorded file';
+  updateWorkspace();
+  window.dispatchEvent(new Event('nm:matter-changed'));
 
   // BK-33. THE CONVERSATION COMES BACK WITH THE FILE.
   //
@@ -393,32 +573,22 @@ async function restoreConversation(matterId, generation = state.railGeneration) 
           kind: 'ground', disclosure: true, section: 'needed', refs: [],
           signal: 'none',
           text: `I could not read this matter's served conversation back: `
-              + `${e.message}. What you were told is not lost — it could not `
-              + `be decoded here, and the file itself is intact.`,
+              + `${e.message}. I cannot verify the conversation's completeness `
+              + `or integrity from this failed read. Do not assume missing records are intact.`,
         }],
         metrics: null, restored: true,
       },
     }];
+    reconcileIntent([]);
     repaint();
     return true;
   }
 
   if (generation !== state.railGeneration) return false;
 
-  state.turns = (d.turns || []).map((t) => ({
-    brief: t.message || '',
-    answer: {
-      elements: t.elements || [],
-      blocked: t.blocked,
-      blocked_reason: t.blocked_reason,
-      // `metrics: null` IS THE FLAG. `renderTurn` shows the audit line only
-      // when there is something measured to show.
-      metrics: null,
-      restored: true,
-      at: t.at || '',
-    },
-  }));
+  state.turns = (d.turns || []).map(restoredTurn);
 
+  reconcileIntent(d.turns || []);
   if (d.unreadable_reason) {
     state.turns.push({
       brief: '',
@@ -443,6 +613,23 @@ const KIND_LABEL = {
   question: 'Blocking question',
   ground: 'Ground',
 };
+
+// Both matter re-entry and History consume the same release projection.
+// Diagnostic presence alone never turns a withheld draft into ordinary advice.
+function restoredTurn(turn) {
+  if (turn.committed !== true || !['released', 'legacy_released'].includes(turn.release_state)) {
+    return { brief: turn.message || turn.asked || '', state: 'not_established',
+      error: turn.blocked_reason || 'Release and successful commitment could not be established.',
+      refusal: { withheld_by: turn.withheld_by || [],
+        why: turn.blocked_reason || 'This archival record is not a released answer.',
+        not_established: turn.not_established || [] } };
+  }
+  return { brief: turn.message || turn.asked || '', answer: {
+    elements: turn.elements || [], blocked: turn.blocked,
+    blocked_reason: turn.blocked_reason, metrics: null, restored: true,
+    at: turn.at || '', raw: turn,
+  } };
+}
 
 // BK-37. THE SECTIONS, IN THE ORDER COUNSEL READS THEM.
 //
@@ -494,7 +681,7 @@ function renderTurn(entry) {
     f.className = 'failure';
     const refusal = entry.refusal;
 
-    if (refusal && refusal.withheld_by) {
+    if (refusal && refusal.withheld_by && refusal.withheld_by.length) {
       const h = document.createElement('div');
       h.className = 'refusal-head';
       h.textContent = `Withheld by ${refusal.withheld_by.join(', ')} — nothing was emitted.`;
@@ -529,6 +716,9 @@ function renderTurn(entry) {
       unknown: 'I could not tell whether your brief was saved. Sending again '
              + 'is safe: it carries the same turn id, so if it did land the '
              + 'server recognises it rather than recording it twice.',
+      replay_refused: 'The earlier response remains saved, but cannot be replayed '
+                     + 'under the current permission. No new answer was saved or released. '
+                     + 'Review the current declaration before making a new request.',
     };
     if (SAID[entry.state]) {
       const d = document.createElement('div');
@@ -536,7 +726,7 @@ function renderTurn(entry) {
       d.textContent = SAID[entry.state];
       f.appendChild(d);
     }
-    if (entry.turnId && entry.state !== 'committed') {
+    if (entry.turnId && ['unknown', 'not_committed'].includes(entry.state)) {
       const again = document.createElement('button');
       again.className = 'ghost';
       again.textContent = 'Send this brief again';
@@ -562,6 +752,14 @@ function renderTurn(entry) {
     return wrap;
   }
 
+  if (entry.answer.replayed) {
+    wrap.appendChild(stateBlock('quiet',
+      'Earlier recorded response recovered. This is not a new assessment; the file may have changed since it was prepared.'));
+  } else if (entry.answer.restored) {
+    wrap.appendChild(stateBlock('quiet',
+      'Recorded response. It has not been reassessed against later changes to the file.'));
+  }
+
   // WHAT FOLDS AND WHAT MAY NEVER FOLD.
   //
   // A GROUND element carrying `disclosure` is what could not be established --
@@ -570,13 +768,14 @@ function renderTurn(entry) {
   // advocate could not see. §9 wants the third state visible in the OUTPUT,
   // and behind a triangle is available rather than visible.
   //
-  // Plain GROUND is the SUPPORT for a claim stated above it -- retrieved
-  // statutory text, quoted paragraphs -- and it is what actually crowds the
-  // screen. Nothing is lost by folding it and it can be opened in one click.
-  let support = entry.answer.elements.filter(
-    (el) => el.kind === 'ground' && !el.disclosure);
-  let spoken = entry.answer.elements.filter(
-    (el) => !(el.kind === 'ground' && !el.disclosure));
+  // A non-none signal is equally material, whatever kind carries it. Only
+  // an explicitly unsignalled, non-disclosure GROUND can be support; missing
+  // or unfamiliar signal metadata stays visible. One predicate owns both
+  // halves, so a newly introduced signal or kind cannot fall between lists.
+  const foldsAsSupport = (el) => el.kind === 'ground'
+    && !el.disclosure && el.signal === 'none';
+  let support = entry.answer.elements.filter(foldsAsSupport);
+  let spoken = entry.answer.elements.filter((el) => !foldsAsSupport(el));
 
   // BK-37. AN ANSWER THAT IS ONLY GROUNDS IS NOT SUPPORT FOR ANYTHING.
   //
@@ -814,6 +1013,14 @@ function repaint() {
   const t = $('thread');
   t.replaceChildren(...state.turns.map(renderTurn));
   t.scrollTop = t.scrollHeight;
+  updateWorkspace();
+}
+
+function updateWorkspace() {
+  const intakeOpen = !$('intake').hidden;
+  const welcome = !state.matterId && !state.turns.length && !state.intake && !intakeOpen;
+  $('welcome').hidden = !welcome;
+  $('composer').hidden = welcome || intakeOpen;
 }
 
 /* ------------------------------------------------------------------ send --- */
@@ -836,38 +1043,53 @@ function newTurnId() {
   return `turn_${Date.now().toString(16)}${Math.random().toString(16).slice(2, 10)}`;
 }
 
-async function send(message) {
-  const entry = { brief: message, turnId: newTurnId(), state: 'sending' };
+async function send(message, { workProduct } = {}) {
+  if (activeDelivery || (state.matterId && !state.matterReady)) return;
+  if (!activeIntent) selectIntent(state.matterId, { opening: !state.matterId });
+  snapshotIntent();
+  // Re-entering Send with an unresolved identical intent is also a retry.
+  const pending = activeIntent.pending.find((entry) => entry.brief === message
+    && entry.request.work_product === workProduct && matchesIntake(entry, state.intake)
+    && ['unknown', 'not_committed', 'sending'].includes(entry.state));
+  if (pending) { await deliver(pending); return; }
+  const entry = { brief: message, turnId: newTurnId(), state: 'sending',
+    context: activeIntent,
+    request: { matter_id: state.matterId, expected_version: state.matterVersion,
+      parties: { ...((state.intake && state.intake.parties) || {}) },
+      release: { ...((state.intake && state.intake.release) || {}) },
+      capacity: state.intake && state.intake.capacity ? { ...state.intake.capacity } : null,
+      work_product: workProduct } };
+  // This serialized envelope never changes across navigation, reauthentication
+  // or retry. Only the rendering attempt receives a fresh lifetime.
+  entry.envelope = JSON.stringify({
+    message: entry.brief, matter_id: entry.request.matter_id, turn_id: entry.turnId,
+    parties: entry.request.parties, release: entry.request.release,
+    capacity: entry.request.capacity,
+    expected_version: entry.request.expected_version, work_product: entry.request.work_product,
+  });
+  activeIntent.pending.push(entry);
   state.turns.push(entry);
   repaint();
   await deliver(entry);
 }
 
-// THE RETRY IS THE SAME TURN, and that is the whole point of the id. It is a
-// separate function because the retry button calls it too -- a retry that
-// re-entered `send` would mint a new id and duplicate the brief, which is the
-// defect wearing the costume of a fix.
 async function deliver(entry) {
+  if (activeDelivery || !ownsIntent(entry.context)) return;
+  const intent = entry.context;
+  const attempt = { session: state.sessionGeneration };
+  entry.attempt = attempt;
+  const current = () => entry.attempt === attempt && ownsIntent(intent)
+    && attempt.session === state.sessionGeneration;
   const btn = $('send');
-  // BK-41. THE COMPOSER STAYS USABLE.
-  //
-  // It was globally disabled for the length of a turn, and a turn's measured
-  // p90 is about 18 seconds -- 20 for one making eight or more model calls.
-  // An advocate who thinks of the next thing to say while the last one is
-  // running had nowhere to put it, so they held it in their head or lost it.
-  // Only SEND is held, because two turns in flight on one thread is a
-  // different problem (BK-36 owns it).
+  // Writing remains available while delivery is in flight; only Send is held.
   btn.disabled = true;
   btn.textContent = 'Working…';
-  // CANCEL, and it is honest about what it can promise: it abandons the
-  // REQUEST, which is all a browser can do. Whether the server committed
-  // before the abort is unknown to us -- so the entry lands in `unknown`,
-  // the state BK-36 already built for exactly this, and its retry carries
-  // the same turn id.
   const cancel = document.createElement('button');
   cancel.className = 'ghost cancel';
   cancel.textContent = 'Cancel';
   const stop = new AbortController();
+  const delivery = { controller: stop, entry };
+  activeDelivery = delivery;
   cancel.addEventListener('click', () => {
     entry.cancelled = true;
     stop.abort();
@@ -876,89 +1098,67 @@ async function deliver(entry) {
   entry.state = 'sending';
   entry.error = null;
   entry.refusal = null;
+  entry.cancelled = false;
   repaint();
   try {
     const answer = await api('/api/turn', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      signal: stop.signal,
-      body: JSON.stringify({
-        message: entry.brief,
-        matter_id: state.matterId,
-        turn_id: entry.turnId,
-        // B3-B5. Sent with the brief they were given for, and only until the
-        // matter has recorded them: re-sending on every turn would re-answer
-        // a screen the advocate answered once.
-        parties: (state.intake && state.intake.parties) || {},
-        release: (state.intake && state.intake.release) || {},
-        // WHAT THIS TAB BELIEVES IT IS WRITING ON TOP OF. A second tab that
-        // loaded the matter and sat for ten minutes was writing onto a file
-        // it had never seen; now the server refuses with both numbers and
-        // this tab re-derives.
-        expected_version: state.matterVersion,
-      }),
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      signal: stop.signal, body: entry.envelope,
     });
+    if (entry.attempt !== attempt) return;
+    if (current()) snapshotIntent();
     entry.answer = answer;
-    // A SCREEN BLOCK RE-OPENS THE FORM. The block is the question, and an
-    // advocate who is told the file cannot be worked until the scope is
-    // recorded needs the place to record it, not just the sentence.
-    if (answer.blocked && /screen|scope|capacity|part(y|ies)/i.test(
-        answer.blocked_reason || '')) {
-      showIntake(true);
-    }
     entry.state = answer.replayed ? 'replayed' : 'committed';
-    // THE INTAKE HAS LANDED ON THE FILE and does not travel again.
-    state.intake = null;
-    // THE BRIEF IS ON THE FILE, so the composer may let go of it. This is the
-    // only place that clears it.
-    if ($('message').value.trim() === entry.brief.trim()) $('message').value = '';
-    if (answer.matter_id && answer.matter_id !== state.matterId) {
-      state.matterId = answer.matter_id;
+    intent.pending = intent.pending.filter((item) => item !== entry);
+    if (matchesIntake(entry, intent.intake)) intent.intake = null;
+    if ((answer.input_admitted === true || answer.route === 'non_matter')
+        && intent.text.trim() === entry.brief.trim()) intent.text = '';
+    intent.intakeOpen = Boolean(answer.blocked && /screen|scope|capacity|part(y|ies)/i.test(
+      answer.blocked_reason || ''));
+    // A saved opening acquires a file identity, but its original turn envelope
+    // keeps matter_id:null for idempotent replay if this acknowledgement is lost.
+    if (answer.matter_id && !intent.matterId) {
+      intentContexts.delete(intent.key);
+      intent.matterId = answer.matter_id;
+      intent.key = JSON.stringify([intent.advocate, intent.workspace, intent.matterId]);
+      intentContexts.set(intent.key, intent);
     }
-    if (typeof answer.matter_version === 'number') {
-      state.matterVersion = answer.matter_version;
-    }
+    if (!current()) return;
+    restoreIntent();
+    state.matterId = intent.matterId;
+    if (Number.isInteger(answer.matter_version)) state.matterVersion = answer.matter_version;
     repaint();
-    // `restore: false` -- the turn on screen IS the live one, and reading it
-    // back would replace it with a copy that has no metrics.
-    if (state.matterId) {
-      await showThreadBoard(state.matterId, {
-        restore: false,
-        closeNavigator: false,
-      });
-    }
+    if (state.matterId) await showThreadBoard(state.matterId, {
+      restore: false, closeNavigator: false,
+    });
   } catch (e) {
+    // clearPrivileged already freezes an abandoned attempt as unknown. Neither
+    // that old response nor a later retry can rewrite one another's outcome.
+    if (e.obsolete || entry.attempt !== attempt) return;
     entry.error = e.message;
     entry.refusal = (e.detail && typeof e.detail === 'object') ? e.detail : null;
-    // WAS IT SAVED? The one question a failed send has to answer, and it used
-    // to be unanswerable. The server now says so on every failure it can, and
-    // where it says nothing at all -- a lost response, which is the case this
-    // is really for -- `unknown` is the honest word and it is not `no`.
     const said = entry.refusal && entry.refusal.committed;
     entry.state = said === 'not_committed' ? 'not_committed' : 'unknown';
+    if (said === 'previously_committed' && entry.refusal.release_state === 'replay_refused') {
+      entry.state = 'replay_refused';
+    }
     if (entry.cancelled) {
-      // CANCELLING ABANDONS THE REQUEST, NOT THE TURN. The server may have
-      // committed before the abort reached it, and saying "cancelled --
-      // nothing was saved" would be a claim we are in no position to make.
-      // `unknown` is the honest state and its retry is already safe: it
-      // carries the same turn id, so a turn that did land is recognised
-      // rather than written twice.
       entry.state = 'unknown';
-      entry.error = 'You cancelled this turn.';
+      entry.error = 'You cancelled this turn’s request; whether it was saved is not confirmed.';
     }
-    if (e.status === 409) {
-      // A STALE WRITE RE-DERIVES RATHER THAN ASKING. The advocate did not do
-      // anything wrong and cannot fix it by reading a message about versions.
-      entry.state = 'stale';
-      if (state.matterId) {
-        await showThreadBoard(state.matterId).catch(() => {});
-      }
+    if (e.status === 409) entry.state = 'stale';
+    if (!current()) return;
+    if (entry.state === 'stale' && state.matterId) {
+      await showThreadBoard(state.matterId).catch(() => {});
     }
-    repaint();
+    if (ownsIntent(intent) && attempt.session === state.sessionGeneration) repaint();
   } finally {
     cancel.remove();
-    btn.disabled = false;
-    btn.textContent = 'Send';
+    if (activeDelivery === delivery) {
+      activeDelivery = null;
+      btn.disabled = false;
+      btn.textContent = 'Send';
+    }
   }
 }
 
@@ -1011,6 +1211,7 @@ $('matters-toggle').addEventListener('click', () => toggleMatters());
 // first brief screenable at all, which is why this is a form and not a read.
 function showIntake(show) {
   $('intake').hidden = !show;
+  updateWorkspace();
   if (show) $('in-client').focus();
 }
 
@@ -1028,9 +1229,12 @@ function intakeFields() {
     parties,
     release: {
       scope: $('in-scope').value.trim(),
-      capacity: $('in-capacity').checked
-        ? 'the advocate confirms the client can give instructions'
-        : '',
+    },
+    capacity: {
+      state: $('in-capacity').checked ? 'not_in_doubt' : 'not_assessed',
+      basis: $('in-capacity').checked
+        ? 'The advocate explicitly confirms that the client can give these instructions.'
+        : 'The advocate has not assessed capacity to give these instructions.',
     },
   };
 }
@@ -1047,30 +1251,33 @@ $('intake').addEventListener('submit', (ev) => {
   $('message').focus();
 });
 
-$('new-matter').addEventListener('click', () => {
+function startMatter() {
+  showTab('advise');
+  selectIntent(null, { opening: true });
   state.matterVersion = null;
-  state.intake = null;
-  // STARTING A MATTER CLOSES THE LIST, for the same reason opening one does.
-  //
-  // `showThreadBoard` already says it: leaving the drawer up "would put the
-  // advocate on the answer they asked for with the index still over it, which
-  // is the same unreachability wearing the other face." That reasoning was
-  // applied at one site and not the other, so below 820px an advocate tapped
-  // "Brief a new matter", got the intake form BEHIND the drawer they had just
-  // used, and had `focus()` called on a field they could not see.
-  //
-  // Found by the journey suite at 390px and 768px once phase 3 started
-  // driving narrow widths for real -- which is the whole reason that phase
-  // was repaired.
   toggleMatters(false);
-  showIntake(true);
   state.matterId = null;
   $('pane-advise').dataset.matterId = '';
-  state.turns = [];
+  state.turns = [...activeIntent.pending];
   repaint();
   $('mode-line').hidden = true;
-  $('message').focus();
-  showMatterList();
+  showMatterList({ preserveIntent: true });
+  // The list refresh clears its transcript surface, not the opening's intent.
+  state.turns = [...activeIntent.pending];
+  repaint();
+  $('matter-heading').textContent = 'New matter';
+  $('workspace-eyebrow').textContent = 'THE INSTRUCTION';
+  $('save-status').textContent = 'Not yet saved';
+  if (!$('intake').hidden) $('in-client').focus();
+  else $('message').focus();
+}
+
+$('new-matter').addEventListener('click', startMatter);
+$('welcome-start').addEventListener('click', startMatter);
+$('welcome-matters').addEventListener('click', () => {
+  toggleMatters(true);
+  const first = $('rail-body').querySelector('[role="button"]');
+  (first || $('new-matter')).focus();
 });
 
 /* THE GATE RUNS FIRST.
@@ -1093,6 +1300,8 @@ function showTab(name) {
   PANES.forEach((p) => { $(`pane-${p}`).hidden = (p !== name); });
   document.querySelectorAll('#tabs .tab').forEach((b) => {
     b.classList.toggle('is-on', b.dataset.tab === name);
+    if (b.dataset.tab === name) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
   });
   if (name === 'search') $('q').focus();
   if (name === 'history') loadHistoryMatters();
@@ -1128,7 +1337,9 @@ function renderIndexLine(d) {
   // about whether the search covered their question. The scope and the
   // freshness do, and they are below.
   const what = document.createElement('span');
-  what.textContent = `Searched the case law · for “${d.query}”`;
+  what.textContent = d.coverage === 'not_assessed'
+    ? `Search not performed · for “${d.query}”`
+    : `Searched the case law · for “${d.query}”`;
   el.appendChild(what);
 
   // WHICH FILTERS ACTUALLY RAN. A zero beside `court: Supreme Court` reads
@@ -1148,24 +1359,24 @@ function renderIndexLine(d) {
     // guarded, so an identity carrying no index count crashed the
     // results renderer -- the guard sat one line from where it was
     // missing.
-    const held = d.identity.held ? d.identity.held.toLocaleString() : null;
-    const of = d.identity.of_source ? d.identity.of_source.toLocaleString() : null;
+    const held = Number.isInteger(d.identity.held) ? d.identity.held.toLocaleString() : null;
+    const of = Number.isInteger(d.identity.of_source) ? d.identity.of_source.toLocaleString() : null;
     const detail = document.createElement('span');
     detail.className = 'index-detail';
     // BOTH NUMBERS, because the RATIO is the disclosure. "451,548 paragraphs"
     // reads as the corpus; "451,548 of 1,015,780" does not.
-    const size = (held && of)
-      ? `${held} of ${of} source paragraphs (${(frac * 100).toFixed(1)}%)`
-      : `${held} paragraphs · source size not recorded`;
+    const size = `${held === null ? 'Indexed count not recorded' : `${held} indexed paragraphs`}`
+      + (of === null ? ' · source size not recorded' : ` of ${of} source paragraphs`)
+      + (typeof frac === 'number' ? ` (${(frac * 100).toFixed(1)}%)` : '');
     // SCOPE FIRST. It is the disclosure that changes whether the whole result
     // means anything: an empty answer to a Kerala question is not an answer
     // about Kerala law, and only this line says so.
-    // FRESHNESS AS A DATE, not a build timestamp. `built
-    // 2026-08-30T07:51:38` is an engineering artefact; what an advocate
-    // needs is how current the law they are being shown is.
+    // A build timestamp is not a reviewed legal-currentness date. Naming it
+    // "current to" would convert an operational fact into a legal assurance.
     const day = String(d.identity.built_at || '').slice(0, 10);
     detail.textContent = ` · ${d.identity.scope} · ${size}`
-      + (day ? ` · current to ${day}` : '');
+      + (day ? ` · index prepared ${day}` : '')
+      + ' · legal currency is not established by the index date';
     el.appendChild(detail);
   }
 }
@@ -1191,7 +1402,16 @@ function renderSearch(d) {
   if (d.coverage === 'not_assessed') {
     // NOT A ZERO. Nothing was searched, and saying "no results" here would be
     // the most repeated defect in this project, in the advocate's face.
-    st.appendChild(stateBlock('loud', `NOT SEARCHED — ${d.why}`));
+    st.appendChild(stateBlock('loud',
+      'NOT SEARCHED — this search could not be completed. This is not a finding that no relevant law exists.'));
+    const detail = document.createElement('details');
+    detail.className = 'search-diagnostic';
+    const summary = document.createElement('summary');
+    summary.textContent = 'Why the search did not run';
+    const reason = document.createElement('p');
+    reason.textContent = d.why;
+    detail.append(summary, reason);
+    st.appendChild(detail);
     return;
   }
 
@@ -1245,6 +1465,7 @@ function renderSearch(d) {
 
 $('search-form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
+  const generation = ++state.searchGeneration;
   const params = new URLSearchParams({
     q: $('q').value,
     limit: '25',
@@ -1264,8 +1485,11 @@ $('search-form').addEventListener('submit', async (ev) => {
   $('search-state').textContent = '';
   $('search-state').appendChild(stateBlock('quiet', 'Searching…'));
   try {
-    renderSearch(await api(`/api/search?${params}`));
+    const result = await api(`/api/search?${params}`);
+    if (generation !== state.searchGeneration) return;
+    renderSearch(result);
   } catch (err) {
+    if (err.obsolete || generation !== state.searchGeneration) return;
     // AN ERROR IS NOT A ZERO. Rendering a failed request as "no results" is
     // the same defect the coverage field exists to prevent.
     $('search-results').textContent = '';
@@ -1284,9 +1508,11 @@ $('search-form').addEventListener('submit', async (ev) => {
  */
 
 async function loadHistoryMatters() {
+  const generation = ++state.historyListGeneration;
   const sel = $('history-matter');
   try {
     const d = await api('/api/matters');
+    if (generation !== state.historyListGeneration) return;
     const rows = d.matters || [];
     sel.textContent = '';
     const first = document.createElement('option');
@@ -1312,6 +1538,7 @@ async function loadHistoryMatters() {
       sel.appendChild(o);
     });
   } catch (err) {
+    if (err.obsolete || generation !== state.historyListGeneration) return;
     $('history-state').textContent = '';
     $('history-state').appendChild(stateBlock('loud',
       `The matter list could not be read: ${err.message}`));
@@ -1319,6 +1546,7 @@ async function loadHistoryMatters() {
 }
 
 async function showHistory(matterId) {
+  const generation = ++state.historyGeneration;
   const st = $('history-state');
   const body = $('history-body');
   st.textContent = ''; body.textContent = '';
@@ -1327,7 +1555,9 @@ async function showHistory(matterId) {
   let d;
   try {
     d = await api(`/api/matters/${matterId}/transcript`);
+    if (generation !== state.historyGeneration) return;
   } catch (err) {
+    if (err.obsolete || generation !== state.historyGeneration) return;
     st.appendChild(stateBlock('loud', `The history could not be read: ${err.message}`));
     return;
   }
@@ -1373,18 +1603,7 @@ async function showHistory(matterId) {
     h.textContent = t.at ? `Turn ${i + 1} · ${t.at}` : `Turn ${i + 1}`;
     card.appendChild(h);
 
-    card.appendChild(renderTurn({
-      brief: t.message || t.asked || '',
-      answer: {
-        elements: t.elements || [],
-        blocked: t.blocked,
-        blocked_reason: t.blocked_reason,
-        metrics: null,
-        restored: true,
-        at: t.at || '',
-        raw: t,
-      },
-    }));
+    card.appendChild(renderTurn(restoredTurn(t)));
 
     body.appendChild(card);
   });
@@ -1426,15 +1645,19 @@ function showApplication(advocate, workspace) {
       + 'remains closed; ask the installation administrator to check this account.');
     return;
   }
+  forgetRetirement();
   state.advocate = advocate.id;
+  state.sessionGeneration += 1;
+  $('send').disabled = false;
+  $('send').textContent = 'Send';
   state.workspace = workspace && workspace.id;
+  // A different person or workspace must not inherit even an invisible draft.
+  for (const [key, intent] of intentContexts) {
+    if (intent.advocate !== advocate.id || intent.workspace !== workspace.id) {
+      intentContexts.delete(key);
+    }
+  }
   $('who-name').textContent = advocate.name;
-  // ENROLMENT AND FIRM, ON SCREEN. The firm is recorded on every file, so
-  // an advocate signed in under the wrong one should see it before they
-  // brief a matter rather than after. It does NOT scope the conflict
-  // check -- that runs against the matters this advocate holds, and
-  // BK-31 is explicit that no firm-wide claim may be made until a
-  // verified membership and a working registry exist.
   $('who-detail').textContent = `${advocate.enrolment} · ${advocate.practice}`;
   $('workspace-name').textContent = workspace.label;
   $('gate').hidden = true;
@@ -1443,15 +1666,15 @@ function showApplication(advocate, workspace) {
   showTab('advise');
   loadHealth();
   showMatterList();
-  showIntake(false);
 
-  // THE DRAFT COMES BACK, AND ONLY TO THE ADVOCATE WHO WROTE IT. BK-40 asks
-  // for exactly that scoping: a brief names a client, and restoring one into
-  // the next person's composer on a shared machine would be a disclosure, not
-  // a convenience.
-  if (state.draft && state.draft.advocate === advocate.id) {
-    $('message').value = state.draft.text;
-    $('message').focus();
+  // Restore the entire original intent, not a new instruction made from its
+  // text. Transcript reconciliation may confirm a turn whose acknowledgement
+  // was lost; unavailable read-back retains its exact retry envelope.
+  if (state.draft && state.draft.advocate === advocate.id
+      && state.draft.workspace === workspace.id) {
+    const draft = state.draft;
+    if (draft.matterId) showThreadBoard(draft.matterId);
+    else startMatter();
   }
   state.draft = null;
 }
@@ -1473,7 +1696,8 @@ function showApplication(advocate, workspace) {
 async function checkBuild() {
   const el = $('build-warning');
   try {
-    const h = await api('/api/health');
+    // Build identity is public and independent of whichever session boot resolves.
+    const h = await api('/api/health', undefined, { sessionBound: false });
     if (h.code_state === 'current') { el.hidden = true; return; }
     el.className = `build-warning${h.code_state === 'stale' ? '' : ' unknown'}`;
     el.textContent = h.code_state === 'stale'
@@ -1555,62 +1779,94 @@ async function revoke() {
   const r = await api('/api/logout', { method: 'POST' });
   // `outcome` is `closed`, `already_ended` or `unknown` -- the route stopped
   // asserting `signed_out: true` over all three on 8 September 2026.
-  return r && r.signed_out === true;
+  if (!r || r.signed_out !== true) {
+    throw new Error('The server did not confirm that the session ended.');
+  }
+  return true;
+}
+
+function retirementCurrent(token) {
+  return retiringSession === token && token.session === state.sessionGeneration
+    && !state.advocate;
+}
+
+function forgetRetirement() {
+  if (retiringSession && retiringSession.online) {
+    window.removeEventListener('online', retiringSession.online);
+  }
+  retiringSession = null;
+  state.signOut = 'none';
+}
+
+async function settleRetirementForLogin() {
+  const token = retiringSession;
+  if (!token) return;
+  // Stop new retries before waiting for one already dispatched. Waiting matters
+  // even if its body is ignored: its Set-Cookie must precede the next login.
+  token.accepting = false;
+  if (token.online) window.removeEventListener('online', token.online);
+  if (token.task) await token.task;
+  if (retiringSession === token) forgetRetirement();
+}
+
+function unconfirmedRetirement(token) {
+  if (!retirementCurrent(token)) return;
+  state.signOut = 'unconfirmed';
+  showGate(null);
+  $('login-state').appendChild(stateBlock('loud',
+    'The server did not confirm the end of your session, so YOU MAY STILL BE '
+    + 'SIGNED IN on it. This screen is not proof that you are signed out. '
+    + 'Retry before leaving a shared machine.'));
+  const again = document.createElement('button');
+  again.type = 'button';
+  again.className = 'ghost';
+  again.textContent = 'Try to end the session again';
+  again.addEventListener('click', () => retryRevoke(token));
+  $('login-state').appendChild(again);
+  if (!token.online) {
+    token.online = () => retryRevoke(token);
+    window.addEventListener('online', token.online);
+  }
+}
+
+async function retire(token) {
+  if (!retirementCurrent(token) || !token.accepting) return;
+  if (token.task) return token.task;
+  token.task = (async () => {
+    try {
+      try { await revoke(); }
+      catch (err) { if (err.status !== 401) throw err; }
+      if (!retirementCurrent(token)) return;
+      forgetRetirement();
+      state.ended = false;
+      showGate(null);
+      $('login-state').appendChild(stateBlock('quiet',
+        'The session is now closed on the server.'));
+    } catch {
+      unconfirmedRetirement(token);
+    }
+  })();
+  try { await token.task; }
+  finally { token.task = null; }
 }
 
 async function signOut() {
   const btn = $('signout');
   btn.disabled = true;
-  state.signOut = 'signing_out';
   keepDraft();
   clearPrivileged();
+  forgetRetirement();
+  state.signOut = 'signing_out';
+  const token = { session: state.sessionGeneration, accepting: true, task: null, online: null };
+  retiringSession = token;
   $('login-id').value = '';
-  try {
-    await revoke();
-    state.signOut = 'none';
-    state.ended = false;
-    showGate(null);
-  } catch (err) {
-    // A 401 IS A CONFIRMATION HERE, not a failure: the token no longer
-    // authenticates, which is the thing being asked for.
-    if (err.status === 401) {
-      state.signOut = 'none';
-      state.ended = false;
-      showGate(null);
-      return;
-    }
-    state.signOut = 'unconfirmed';
-    showGate(null);
-    $('login-state').appendChild(stateBlock('loud',
-      'I could not reach the server to end your session, so YOU MAY STILL BE '
-      + 'SIGNED IN on it. This screen is not proof that you are signed out. '
-      + 'I will keep trying; if you are on a shared machine, do not walk away '
-      + 'until it says the session is closed.'));
-    const again = document.createElement('button');
-    again.className = 'ghost';
-    again.textContent = 'Try to end the session again';
-    again.addEventListener('click', retryRevoke);
-    $('login-state').appendChild(again);
-    // AND WHEN CONNECTIVITY COMES BACK, without being asked. An advocate who
-    // has closed the laptop is the case this is for.
-    window.addEventListener('online', retryRevoke, { once: true });
-  } finally {
-    btn.disabled = false;
-  }
+  try { await retire(token); }
+  finally { btn.disabled = false; }
 }
 
-async function retryRevoke() {
-  if (state.signOut !== 'unconfirmed') return;
-  try {
-    await revoke();
-  } catch (err) {
-    if (err.status !== 401) return;   // still unreachable; the notice stands
-  }
-  state.signOut = 'none';
-  state.ended = false;
-  showGate(null);
-  $('login-state').appendChild(stateBlock('quiet',
-    'The session is now closed on the server.'));
+async function retryRevoke(token = retiringSession) {
+  if (!token || !retirementCurrent(token) || state.signOut !== 'unconfirmed') return;
+  await retire(token);
 }
 
 $('signout').addEventListener('click', signOut);
@@ -1624,40 +1880,74 @@ $('signout').addEventListener('click', signOut);
 // THE COUNT COMES BACK FROM THE REVOKE. "Signed out everywhere" is
 // unverifiable otherwise, and the case this is used in is exactly the case
 // where they need to know it worked.
-const NEWLINE = String.fromCharCode(10);
-
 async function showSessions() {
+  const generation = ++state.sessionsGeneration;
+  const dialog = $('sessions-dialog');
+  const body = $('sessions-body');
+  const revokeButton = $('sessions-revoke');
+  body.replaceChildren(stateBlock('quiet', 'Reading your sessions…'));
+  $('sessions-action-state').textContent = '';
+  revokeButton.hidden = true;
+  dialog.showModal();
   let d;
   try {
     d = await api('/api/sessions');
   } catch (e) {
-    window.alert(`I could not read your sessions: ${e.message}`);
+    if (e.obsolete || generation !== state.sessionsGeneration) return;
+    body.replaceChildren(stateBlock('loud', `I could not read your sessions: ${e.message}`));
     return;
   }
-  const lines = d.sessions.map((s) => {
+  if (generation !== state.sessionsGeneration || !dialog.open) return;
+  body.replaceChildren(...d.sessions.map((s) => {
     const when = String(s.issued_at).slice(0, 16).replace('T', ' ');
-    const state = s.this_one ? 'this device'
+    const label = s.this_one ? 'This device'
       : (s.live ? 'signed in' : `ended — ${s.ended_because || 'no reason recorded'}`);
-    return `· ${when} · device ${s.device} · ${state}`;
-  });
+    const row = document.createElement('article');
+    row.className = 'session-row';
+    const title = document.createElement('strong'); title.textContent = label;
+    const detail = document.createElement('p'); detail.textContent = `${when} · Device ${s.device}`;
+    row.append(title, detail);
+    return row;
+  }));
   const live = d.sessions.filter((s) => s.live && !s.this_one).length;
-  const body = [`You have ${d.count} session(s) on record:`, '', ...lines, ''];
-  body.push(live
-    ? `Sign out the ${live} other signed-in session(s)? This device stays signed in.`
-    : 'Nothing else is signed in.');
+  $('sessions-action-state').textContent = live
+    ? `${live} other session${live === 1 ? '' : 's'} currently signed in.`
+    : 'No other sessions are signed in.';
+  revokeButton.hidden = !live;
+  revokeButton.textContent = `End ${live} other session${live === 1 ? '' : 's'}`;
+}
 
-  if (!live) { window.alert(body.join(NEWLINE)); return; }
-  if (!window.confirm(body.join(NEWLINE))) return;
+new ResizeObserver(() => {
+  document.documentElement.style.setProperty('--build-warning-height',
+    `${$('build-warning').getBoundingClientRect().height}px`);
+}).observe($('build-warning'));
+
+$('sessions-close').addEventListener('click', () => $('sessions-dialog').close());
+$('sessions-dialog').addEventListener('close', () => {
+  state.sessionsGeneration += 1;
+  $('sessions-body').textContent = '';
+  $('sessions-action-state').textContent = '';
+});
+$('sessions-revoke').addEventListener('click', async () => {
+  const generation = state.sessionsGeneration;
+  const button = $('sessions-revoke');
+  button.disabled = true;
   try {
     const r = await api('/api/sessions/revoke', { method: 'POST' });
-    window.alert(r.ended === 1
+    if (generation !== state.sessionsGeneration) return;
+    button.hidden = true;
+    $('sessions-action-state').textContent = r.ended === 1
       ? 'Ended 1 other session.'
-      : `Ended ${r.ended} other sessions.`);
+      : `Ended ${r.ended} other sessions.`;
+    $('sessions-body').textContent = 'This device stays signed in. Reopen Sessions to review the updated record.';
   } catch (e) {
-    window.alert(`I could not end them: ${e.message}. They may still be `
-               + `signed in — this is not a confirmation.`);
+    if (e.obsolete || generation !== state.sessionsGeneration) return;
+    $('sessions-action-state').replaceChildren(stateBlock('loud',
+      `I could not end them: ${e.message}. They may still be signed in — this is not a confirmation.`));
+  } finally {
+    button.disabled = false;
   }
-}
+});
 
 $('devices').addEventListener('click', showSessions);
 

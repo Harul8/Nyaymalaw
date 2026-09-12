@@ -1,0 +1,391 @@
+{
+  "schema": 1,
+  "record_type": "pinned_base_engineering_conformance_review",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "worktree": "outputs/Nyaymalaw-a3d9c47-conformance-ui",
+  "branch": "codex/a3d9c47-conformance-ui",
+  "authority": "User-authorised review and repair of delivered pinned-base work, with browser validation and professional UI refinement. User subsequently authorised verification, close-out, commit and push of this isolated branch, excluding P24 dependency builds. Parallel work remains excluded.",
+  "scope": {
+    "packets_reviewed": [
+      "P01",
+      "P02",
+      "P03",
+      "P04",
+      "P05",
+      "P06",
+      "P07",
+      "P08",
+      "P09",
+      "P10",
+      "P11",
+      "P12",
+      "P13",
+      "P14",
+      "P15",
+      "P16",
+      "P17",
+      "P19",
+      "P20",
+      "P44"
+    ],
+    "meaning": "Review each packet's delivered foundation and full contractual gaps. Packet numbering is not a completion claim; code presence is not acceptance evidence.",
+    "excluded": [
+      "Parallel branches including P18, P21 and P22",
+      "New P23, P24, P46 or P47 dependency builds",
+      "Real client files or credentials",
+      "External model/judge calls",
+      "Live source acquisition",
+      "Production database activation or migration",
+      "Counsel authority fabrication",
+      "External KMS/provider proof",
+      "Deployment or root-tree merge"
+    ]
+  },
+  "records": [
+    "a3-conformance-packet-inventory.json",
+    "a3-conformance-access.json",
+    "a3-conformance-egress.json",
+    "a3-conformance-corpus.json",
+    "a3-conformance-served-isolation.json",
+    "a3-conformance-journey-harness.json",
+    "a3-conformance-signal-visibility.json",
+    "a3-conformance-matter-packets.json",
+    "a3-conformance-matter.json",
+    "a3-conformance-worker-migration.json",
+    "a3-conformance-intake-ui.json",
+    "a3-conformance-capacity-admission.json",
+    "a3-conformance-observed-command.json",
+    "a3-conformance-urgency.json",
+    "a3-conformance-turn-receipts.json",
+    "a3-conformance-class-a-selection.json",
+    "a3-conformance-deadline-read.json",
+    "a3-conformance-matter-ui.json",
+    "a3-conformance-ui.json",
+    "a3-conformance-browser.json",
+    "a3-conformance-browser-assets.json",
+    "a3-conformance-class-a-controls.json",
+    "a3-conformance-contract-alignment.json",
+    "a3-conformance-integration-controls.json",
+    "a3-conformance-gate-performance.json",
+    "a3-conformance-concurrency-observation.json",
+    "a3-conformance-p44-proof-classification.json",
+    "a3-conformance-design.json"
+  ],
+  "verification_policy": "Only the final settled-tree executions establish current engineering results. Earlier focused runs remain diagnostics. The canonical Class-A artifact is promoted only after validating its complete selected population, exact identity and all passing outcomes. Browser proof uses the actual served application with isolated encrypted synthetic data and explicit scripted ports; it is not independent legal quality or production proof.",
+  "trace_remeasurement": {
+    "command": "python tools/export_spec.py --write; python tools/trace.py --skip-regen",
+    "features": 44,
+    "built": 27,
+    "decided": 17,
+    "tested": 0,
+    "registry_basis": 44,
+    "trace_only": 0,
+    "authored_none_code_present": 0,
+    "remaining_failure": "TRACE-C1: C1: 1 of 5 NEVER clauses have no test declaring @refuses",
+    "owner": "P24/BK-54-AC3",
+    "removal_rule": "Removed obsolete T3b/T3c and historical 144-diagnostic Ruff declarations. No new failure is absorbed. Independent planted membership/style controls remain after real defects close."
+  },
+  "intermediate_verification": {
+    "initial_cumulative_class_a": {
+      "artifact": ".nm/conformance/class-a-first.json",
+      "seconds": 860,
+      "actual_cases": 2919,
+      "aggregate_reference_rows": 194,
+      "passed": 2900,
+      "failed": 14,
+      "skipped": 4,
+      "not_run": 1,
+      "meaning": "Failed, not promoted. Execution cases are distinguished using aggregate_of, not inferred from punctuation in node IDs."
+    },
+    "repaired_controls": {
+      "artifact": ".nm/conformance/class-a-repair-focused.xml",
+      "tests": 301,
+      "passed": 301,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 130.601,
+      "meaning": "Focused structural, identity, recorder, domain-contract, safe-parser and source-segment controls. Not a replacement for cumulative Class-A."
+    },
+    "optimized_cumulative_class_a": {
+      "artifact": ".nm/conformance/class-a-after-parsing.json",
+      "fingerprint": "3dd9d87a95741ad2751ec4376ae370d8dcbd543b1dca8f91e1d0a567216ff5c1",
+      "seconds": 501.4,
+      "actual_cases": 2971,
+      "aggregate_reference_rows": 210,
+      "passed": 2970,
+      "failed": 1,
+      "skipped": 0,
+      "not_run": 0,
+      "remaining_failure": "Concurrent upload writer barrier timeout; complete peer diagnostics subsequently expose path containment refusal before receipt CAS. No evidence promotion or gate stamp."
+    },
+    "journey_staging_refusal": {
+      "artifact": ".nm/conformance/journey-staging-refused.json",
+      "tests": 24,
+      "passed": 24,
+      "accepted": false,
+      "reason": "Root staged a previously untracked source during this run, changing the source population. The report correctly refused mixed-tree evidence. Retained as diagnostic only."
+    },
+    "expanded_browser_observed_before_final_integration": {
+      "artifact": ".nm/conformance/browser-observed-prestage.xml",
+      "tests": 50,
+      "passed": 50,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 144.836,
+      "meaning": "47 workflow/rendering cases plus three deliberately broken asset controls. Before final integration repairs; final frozen-tree run still required."
+    },
+    "canonical_journey_after_fold_repair": {
+      "artifact": ".nm/conformance/journey-after-fold.json",
+      "run_id": "0a913365-4881-4a2f-b5a2-d135b520e00c",
+      "fingerprint": "cc3898545fdc520950724df6400236ded113d8c7a001600385cce27b9723f01f",
+      "tests": 24,
+      "passed": 24,
+      "reproduced": 0,
+      "unexplained": 0,
+      "missing": 0,
+      "unexpected": 0,
+      "sha256": "70d4ed1f8eee7dc51667684166d9246246e3bbd0ce0c66f88d21ec91ff434ff5",
+      "meaning": "Complete canonical journey after the general visible-signal fix, before adding static-asset diagnostics to the separate expanded browser fixture."
+    },
+    "expanded_browser_asset_incident": {
+      "artifact": ".nm/conformance/browser-release-candidate.xml",
+      "tests": 47,
+      "passed": 46,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 158.553,
+      "observation": "Desktop urgency page lacked both the matter toolbar and dialog, while the app and later upload controller initialized. Request initiation for the script was captured, but its response and resource-load errors were not. This is not established as a selector or urgency-state defect. The transport cause remains unestablished; a passing retry does not establish a repair.",
+      "unchanged_recheck": {
+        "artifact": ".nm/conformance/urgency-recheck.xml",
+        "tests": 2,
+        "passed": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 8.554
+      },
+      "artifact_limit": "The original failure XML is retained. The original PNG/HTML was inspected but then overwritten by the unchanged rerun under the same case name; it is not claimed as preserved evidence."
+    },
+    "signal_partition": {
+      "artifact": ".nm/conformance/signal-partition.xml",
+      "tests": 6,
+      "passed": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "sha256": "2e3676183fb0515fce3b076be8d9173eba4c521ff25f51698b1736d77e8d3b25"
+    },
+    "browser_before_final_fold_repair": {
+      "artifact": ".nm/conformance/browser-confirmed.xml",
+      "tests": 44,
+      "passed": 44,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 234.74,
+      "meaning": "Complete scoped browser population before the separate canonical journey exposed a loud-ground folding defect; not substituted for the canonical journey or subsequent final tree."
+    },
+    "canonical_journey_initial": {
+      "artifact": ".nm/conformance/journey-before.json",
+      "run_id": "4718be68-ac90-48bf-a8dc-fbb48d52e868",
+      "fingerprint": "3993dd85d7e2c583ae8e11fc46d1332c993a8eeb4153423f13124b87ac891a9c",
+      "tests": 24,
+      "passed": 15,
+      "failures": 9,
+      "reproduced": 0,
+      "meaning": "Eight stale navigation/wording assumptions and one real product defect: a non-disclosure GROUND with a loud limitation-bar signal was folded. The expired-period assertion remains unchanged; same 24 named journey phases remain mandatory."
+    },
+    "cover_deadline": {
+      "artifact": ".nm/conformance/cover-deadline-final.xml",
+      "tests": 162,
+      "passed": 162,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 27.937
+    },
+    "record_refresh": {
+      "artifact": ".nm/conformance/record-refresh.xml",
+      "tests": 20,
+      "passed": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 30.005,
+      "count_correction": "The earlier verbal 21 count was wrong; the XML population is 20."
+    },
+    "repair_boundaries": {
+      "artifact": ".nm/conformance/repair-boundaries-final.xml",
+      "tests": 280,
+      "passed": 279,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 55.437,
+      "remaining_at_that_run": "A restart test referenced nonexistent FileMatterStore.root; corrected to the actual _root without changing its assertions. Subsequent strict replay/archive repairs require a fresh run."
+    },
+    "worker_migration": {
+      "artifact": ".nm/conformance/worker-migration-final.xml",
+      "tests": 110,
+      "passed": 110,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 1.951
+    },
+    "design": {
+      "artifact": ".nm/conformance/design-focused.xml",
+      "tests": 6,
+      "passed": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 12.007
+    },
+    "workbook": {
+      "sheets": 28,
+      "items": 105,
+      "features": 44,
+      "steps": 47,
+      "criteria": 220,
+      "formula_errors": 0,
+      "id_mismatches": 0,
+      "status_mismatches": 0,
+      "meaning": "Current-source derived view, pending final evidence refresh. Spreadsheet workflow retained the established sheet structure, generator and styles."
+    }
+  },
+  "manual_walkthrough_findings": {
+    "method": "Actual in-app Chromium browser against the isolated synthetic served application; invitation fixture sign-in, intake, first brief, matter cover, changed instructions, attributed file, protective controls and research inspected. No real client data, legal source corpus or external model calls.",
+    "cover": "Fixed actual persisted-field projection and shared deadline readback; absent or unreadable assessment cannot become an empty all-clear. Case dates and commission instruction dates are distinct.",
+    "historical_advice": "Saved read-back now labels itself Recorded response and explicitly says it has not been reassessed against later file changes. The first 44-case browser run caught one genuine follow-up defect: shared record-command success refreshed only the board, retaining the unqualified live answer. The shared success path now restores the saved conversation using the existing intent-preserving owner. The unchanged browser witness changes instructions through the actual route and checks the same immutable receipt in workspace, History and reopen; Node controls require every successful record command to request that restore.",
+    "research": "Not-assessed search no longer carries a Searched header. Primary unavailable/no-negative-legal-finding notice remains visible; exact operational reason is retained in an inspectable disclosure. Index build date is labelled index prepared, never legal current-to; unknown and zero indexed counts remain different. Four real served browser cases use missing or tiny synthetic SQLite indexes, not a fabricated live corpus.",
+    "attributed_file": "Readable statement/revision headings retain the full stable record reference and all attribution/quality qualifications.",
+    "limitations": "Manual observations and synthetic browser tests establish engineering behavior, not qualified legal quality, real provider approval, production readiness or full future-packet delivery."
+  },
+  "final_execution": {
+    "state": "SCOPED_ENGINEERING_VERIFICATION_COMPLETE",
+    "observed_on": "2026-09-12",
+    "source_fingerprint": "25e6a503b714e4ee14b5272175734370445c434ef3c0952768e3455a2d66b2e2",
+    "source_stability": "Class-A and both final browser populations began and finished on this identity. Only evidence outputs and generated verdict views are refreshed afterward; the normal staged-index gate must still accept the commit.",
+    "gate": {
+      "command": "python tools/check.py",
+      "exit_code": 0,
+      "verdict": "SCOPED BUILD PASS -- FULL GATE RED",
+      "full_gate": "RED",
+      "class_a_seconds": 496.3,
+      "ordinary_local_seconds": 7.8,
+      "passing_stages": [
+        "layercheck",
+        "export_spec",
+        "speccheck",
+        "ruff",
+        "pylint E0601/E0606",
+        "canonical Class-A",
+        "ordinary local"
+      ],
+      "declared_failures": [
+        {
+          "id": "TRACE-C1",
+          "owner": "BK-54-AC3",
+          "packet": "P24",
+          "meaning": "C1: 1 of 5 NEVER clauses have no test declaring @refuses"
+        }
+      ],
+      "new_exceptions": 0
+    },
+    "class_a": {
+      "status": "PASS_PROMOTED_AND_VERIFIED",
+      "artifact": "docs/backlog/evidence/class_a.json",
+      "sha256": "cfae2b9e147c08aeb93ba5218eee0becc49bad2d674a7b8b78fc49631885bea0",
+      "actual_cases": 2997,
+      "passed": 2997,
+      "failed": 0,
+      "skipped": 0,
+      "not_run": 0,
+      "aggregate_reference_rows": 212,
+      "recorded_keys": 3209,
+      "population_rule": "Rows without aggregate_of are separately executed cases. Every actual outcome passed; complete artifact, zero exit code, matching start/end identity."
+    },
+    "acceptance_population_preflight": {
+      "selected_cases": 2997,
+      "authored_automatic_PASS_references": 87,
+      "missing": 0,
+      "meaning": "Actual pytest collection includes both unchanged P44 witnesses."
+    },
+    "expanded_browser": {
+      "status": "PASS",
+      "artifact": "docs/backlog/evidence/a3-conformance-browser-closeout.xml",
+      "sha256": "9719902d8a9473d072804f551027ab8bf691667725616abb0d248b92646d8513",
+      "tests": 50,
+      "passed": 50,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "wall_seconds": 149.359,
+      "xml_suite_seconds": 146.227,
+      "started_at": "2026-09-12T14:39:40.686317+00:00",
+      "finished_at": "2026-09-12T14:42:10.044970+00:00",
+      "population": "47 served workflow/rendering cases plus three intentional required-asset refusal controls; synthetic encrypted stores and scripted ports only."
+    },
+    "canonical_journey": {
+      "status": "PASS",
+      "artifact": "docs/backlog/evidence/a3-conformance-journey-closeout.json",
+      "sha256": "1cb6a1a05b681321152b07a93b44d6a2c7f7d49acbcd48dcfd31d8ae72e4f102",
+      "run_id": "0e22379a-7bfa-44ee-8df3-eac044ba23f4",
+      "tests": 24,
+      "passed": 24,
+      "reproduced": 0,
+      "unexplained": 0,
+      "missing": 0,
+      "unexpected": 0
+    },
+    "manual_browser": {
+      "status": "OBSERVED_ON_RESTARTED_FINAL_SERVER",
+      "url": "http://127.0.0.1:65220/",
+      "account": "synthetic adv_design_review",
+      "actions": [
+        "Sign in; inspect active workspace and local-rehearsal warning",
+        "Reopen the existing synthetic matter",
+        "Verify saved response explicitly has not been reassessed",
+        "Inspect saved cover fields, unassessed instruction deadline and no-authority-grant warnings",
+        "Visually inspect the matter cover",
+        "Sign out with server confirmation",
+        "Reload: login screen, no authenticated matter content"
+      ],
+      "limits": "Engineering observation, not accessibility certification, real-model evaluation, counsel acceptance or production proof."
+    },
+    "control_plane": {
+      "backlog_lint_problems": 0,
+      "blueprint_problems": 0,
+      "items": 105,
+      "features": 44,
+      "steps": 47,
+      "modules": 13,
+      "packets": 47,
+      "commands": 50,
+      "workbook": {
+        "status": "REGENERATED_AND_READ_ONLY_RECONCILIATION_PASSED",
+        "sheets": 28,
+        "items": 105,
+        "criteria": 220,
+        "formula_errors": 0,
+        "status_mismatches": 0,
+        "basis_mismatches": 0,
+        "exact_id_mismatches": 0,
+        "plan_view_problems": 0,
+        "snapshot_time": "2026-09-12T14:47:38.253Z",
+        "method": "Established bundled-runtime spreadsheet generator and independent tools/plan_view.py check; preserved sheet structure and styling."
+      }
+    },
+    "independent_review": "Separate read-only integration and staged-record reviewers examined repairs and scope. No packet-completion inflation found; stale progress descriptions corrected without removing historical failures or substantive gaps.",
+    "handoff": {
+      "authorised": "Commit and push codex/a3d9c47-conformance-ui only",
+      "commit_policy": "Normal pre-commit hook and exact staged-index gate; no --no-verify",
+      "excluded": "No root-tree merge, deployment, parallel integration, P24 implementation or new P23/P46/P47 dependency builds. Previously authorised pinned P19/P20/P44 repairs are retained."
+    }
+  },
+  "completion": "CLOSED for requested bounded repair verification and engineering close-out, subject to the normal staged-commit check. Full P01-P17 acceptance, P24 and dependency builds, qualified review, actual provider/database operation and production/release sign-off remain OPEN as recorded in the inventories. No broader acceptance completion is derived. Commit and push outcomes are reported separately after they occur."
+}

@@ -44,6 +44,12 @@ from enum import Enum
 
 from nm.domain.text import refuses_blank_text
 
+# Operational capacity bounds, independent of legal subject or file contents.
+MAX_UPLOAD_BYTES = 32 * 1024 * 1024
+MAX_CHUNK_BYTES = 1024 * 1024
+MAX_MATTER_UPLOADS = 64
+MAX_UPLOAD_CHUNKS = 1024
+
 
 class ReceiptState(str, Enum):
     """How an upload session ended, or that it has not."""

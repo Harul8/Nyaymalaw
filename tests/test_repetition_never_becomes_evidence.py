@@ -115,6 +115,30 @@ def test_an_unextracted_fact_is_unread_rather_than_clear():
     assert entry["attribution"]["read_quality"] == ReadQuality.UNREAD.value
 
 
+def test_recorded_extraction_quality_and_version_survive_sealed_restart(tmp_path):
+    from dataclasses import replace
+
+    from nm.adapters.store.file_store import FileMatterStore
+
+    key = "casefile-test-key-" + "q" * 32
+    store = FileMatterStore(tmp_path, key=key)
+    original = Fact(id="f1", statement="x", provenance=DOC,
+                    read_quality=ReadQuality.CLEAR, confirmed=False, version=3)
+    saved = store.commit(_matter(original), expected_version=0)
+    loaded = FileMatterStore(tmp_path, key=key).load(saved.id)
+    entry = build(loaded)["live"][0]
+    assert entry["attribution"]["read_quality"] == "clear"
+    assert entry["confirmed"] == "disputed"
+    assert entry["version"] == 3
+
+    changed = loaded.amending(replace(loaded.facts[0], confirmed=True))
+    saved = store.commit(changed, expected_version=loaded.version)
+    again = FileMatterStore(tmp_path, key=key).load(saved.id)
+    assert build(again)["live"][0]["version"] == 4
+    assert again.facts[0].provenance == original.provenance
+    assert original.confirmed is False
+
+
 # ========================= the locator is inspectable =======================
 
 def test_a_documented_fact_opens_at_a_page():

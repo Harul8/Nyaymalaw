@@ -33,10 +33,12 @@ the limit leaves a file that never had a problem, which is a different file.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass, field, fields
+from datetime import date, datetime
 from enum import Enum
 
+from nm.domain.capacity import Capacity as Capacity
+from nm.domain.capacity import CapacityPosition
 from nm.domain.text import blank, refuses_blank_text
 from nm.domain.traceability import implements
 
@@ -266,6 +268,49 @@ def gate_for(screen: Screen) -> tuple[str, str]:
     return gate_id, table.get(screen.state, "not_assessed")
 
 
+def from_stored(values) -> tuple[Screen, ...]:
+    """Reconstruct the deliberately untyped persisted screen projection.
+
+    Matter cannot depend on this core type. Its store therefore returns dicts;
+    readers use this owner rather than misreporting every restored set unreadable.
+    Malformed records raise, because dropping one would invent a clean screen.
+    """
+    if not isinstance(values, (tuple, list)):
+        raise ValueError("the stored screen population is not a sequence")
+    restored: list[Screen] = []
+    for value in values:
+        if isinstance(value, Screen):
+            screen = value
+        else:
+            if not isinstance(value, dict) or set(value) != {f.name for f in fields(Screen)}:
+                raise ValueError("a stored screen has missing or unknown fields")
+            if any(not isinstance(value[key], str)
+                   for key in ("kind", "state", "detail", "not_assessed_because")):
+                raise ValueError("a stored screen has invalid text or state")
+            for key in ("covers", "unread"):
+                if (not isinstance(value[key], (list, tuple, frozenset))
+                        or any(not isinstance(x, str) or blank(x) for x in value[key])):
+                    raise ValueError("a stored screen has invalid coverage or unread entries")
+            release = value["released"]
+            if release is not None:
+                if (not isinstance(release, dict)
+                        or set(release) != {f.name for f in fields(Release)}
+                        or any(not isinstance(release[key], str) or blank(release[key])
+                               for key in ("by", "because", "at"))):
+                    raise ValueError("a stored screen release lacks valid attribution")
+                release = Release(by=release["by"], because=release["because"],
+                                  at=datetime.fromisoformat(release["at"]))
+            screen = Screen(
+                kind=ScreenKind(value["kind"]), state=ScreenState(value["state"]),
+                detail=value["detail"], covers=frozenset(value["covers"]),
+                unread=tuple(value["unread"]), released=release,
+                not_assessed_because=value["not_assessed_because"])
+        if any(prior.kind is screen.kind for prior in restored):
+            raise ValueError("the stored screen population repeats a kind")
+        restored.append(screen)
+    return tuple(restored)
+
+
 @implements("B3")
 def unscreened(screens: tuple[Screen, ...]) -> tuple[str, ...]:
     """Every screen that does NOT clear, with why. THE POPULATION IS THE KINDS.
@@ -275,7 +320,7 @@ def unscreened(screens: tuple[Screen, ...]) -> tuple[str, ...]:
     threshold map already uses, and for the identical reason: an advocate
     reading four rows believes the fifth was checked.
     """
-    by_kind = {s.kind: s for s in screens}
+    by_kind = {s.kind: s for s in from_stored(screens)}
     out: list[str] = []
     for kind in ScreenKind:
         s = by_kind.get(kind)
@@ -319,12 +364,53 @@ def may_admit_substance(screens: tuple[Screen, ...],
 # ------------------------------------------------------------ B5 and B6 ---
 
 
-class Capacity(str, Enum):
-    """B6. `IN_DOUBT` is a question about the record, never about the person."""
+def scope_screen(record, actor: str, now: datetime) -> Screen:
+    """Acknowledge an attributed instruction, not professional scope authority.
 
-    NOT_IN_DOUBT = "not_in_doubt"
-    IN_DOUBT = "in_doubt"
-    NOT_ASSESSED = "not_assessed"
+    Older intake recorded an ISO date; newer intake records the server instant.
+    Neither a malformed record nor a future assertion may count as answered.
+    The complete Commission/work compatibility decision is a separate boundary.
+    """
+    valid = (isinstance(record, dict) and set(record) == {"by", "answer", "at"}
+             and all(isinstance(record[key], str) and not blank(record[key])
+                     for key in ("by", "answer", "at"))
+             and record["by"] == actor and not blank(actor))
+    if valid:
+        try:
+            raw = record["at"]
+            if len(raw) == 10:
+                recorded = date.fromisoformat(raw)
+                valid = recorded.isoformat() == raw and recorded <= now.date()
+            else:
+                recorded = datetime.fromisoformat(raw)
+                valid = (recorded.tzinfo is not None and now.tzinfo is not None
+                         and recorded <= now)
+        except (ValueError, TypeError, AttributeError):
+            valid = False
+    if valid:
+        return Screen(
+            kind=ScreenKind.SCOPE, state=ScreenState.CLEAR,
+            detail=(f"instruction statement recorded by {record['by']} on "
+                    f"{record['at']}: {record['answer']}"))
+    return Screen(
+        kind=ScreenKind.SCOPE, state=ScreenState.NOT_ASSESSED,
+        not_assessed_because=(
+            "the engagement instruction is missing or its recorded source cannot "
+            "be verified; state the work you are instructed to do"))
+
+
+def capacity_screen(record, now: datetime) -> Screen:
+    """The real admission decision uses the typed position, never prose truthiness."""
+    position = CapacityPosition.from_stored(record)
+    if position.authorises_at(now):
+        return Screen(kind=ScreenKind.CAPACITY, state=ScreenState.CLEAR,
+                      detail=position.said())
+    if position.state is Capacity.IN_DOUBT:
+        return Screen(kind=ScreenKind.CAPACITY, state=ScreenState.BLOCKED,
+                      detail=position.said())
+    return Screen(kind=ScreenKind.CAPACITY, state=ScreenState.NOT_ASSESSED,
+                  not_assessed_because=(position.said() +
+                      " No current capacity clearance is established."))
 
 
 @refuses_blank_text("scope", "decision_owner", "authority")

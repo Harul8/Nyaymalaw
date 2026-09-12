@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "kind": "engineering_change_record",
+  "baseline": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "observed_at": "2026-09-12",
+  "start": {
+    "packets": ["P02", "P13", "P14", "P16"],
+    "criteria": ["BK-40-AC1", "BK-36-AC1"],
+    "scope": "Browser context/intent lifetime only in the isolated conformance checkout; no parallel packet code imported.",
+    "witness": "Navigation changes matterId without clearing the composer's prior matter text or intake fields. Session draft preservation drops the immutable turn identity after a potentially committed request. An unconfirmed logout's online callback remains active after another successful login.",
+    "invariant": "Draft text, intake fields and unresolved request envelopes belong to one authenticated advocate/workspace/matter or unsaved opening context. Reauthentication restores only that owner, and retry preserves the exact original turn identity and payload. A retirement callback may act only on the session it was created to end.",
+    "change": "Introduce one in-memory context owner for snapshot/clear/restore and unresolved send envelopes; fence retire/retry lifecycle by generation and serialize login behind any already-dispatched retirement. Retain existing public matter hooks and module boundaries. Narrow posture/readback wording to facts actually established.",
+    "recovery": "Lost acknowledgement remains unknown, not unsaved. A transcript can reconcile its exact turn identity; otherwise retry uses the original envelope. Missing transcript proof remains visibly unknown. No localStorage/sessionStorage of client material.",
+    "verification": "NOT_RUN: add real-browser cross-matter/new-intake isolation, late acknowledgement plus expired-session exact retry identity, and unconfirmed logout followed by login/online controls. Parent coordinates all execution."
+  },
+  "build": "IMPLEMENTED_FOCUSED_VERIFICATION_PENDING",
+  "implementation": {
+    "owner": "web/app.js intentContexts keyed by advocate/workspace/matter or one unsaved opening",
+    "requests": "A pending turn retains its serialized original envelope. Reauthentication or retry changes only an attempt/render lifetime, never the instruction identity or expected version. Confirmed transcript identities reconcile pending entries; failed read-back retains unknown pending intents.",
+    "sessions": "Logout callbacks capture their retiring session epoch. Establishing a new authenticated session first disables callbacks and awaits any logout already dispatched, so an old cookie-clearing response cannot arrive after new authentication.",
+    "wording": "An empty posture count says no unresolved posture recorded, not nothing blocking. An unreadable transcript does not assert intact or preserved records.",
+    "limits": "Drafts remain document-memory only. Closing/reloading the tab still loses unsaved local material; no new cross-device persistence or logout revocation guarantee is claimed."
+  },
+  "verification_nodes": [
+    "tests/test_the_workspace_respects_its_current_context.py::test_a_pending_answer_can_rejoin_its_own_reopened_context",
+    "tests/test_the_workspace_respects_its_current_context.py::test_drafts_and_unsubmitted_intake_belong_to_the_selected_file",
+    "tests/test_the_workspace_respects_its_current_context.py::test_lost_acknowledgement_and_expired_session_keep_the_exact_turn_envelope",
+    "tests/test_the_workspace_respects_its_current_context.py::test_a_retired_logout_cannot_end_a_new_login[False]",
+    "tests/test_the_workspace_respects_its_current_context.py::test_a_retired_logout_cannot_end_a_new_login[True]"
+  ],
+  "coordination_notes": [
+    "Main corrected P11 cancellation timestamp ownership from an accidental OutboxEntry field onto Operation after the focused run exposed 12 failures; no production assertions weakened. The subsequent parent-reported focused run passed 267 tests with 15 real-PostgreSQL skips.",
+    "Main relocated the policed UploadService from core to edge to comply with the unchanged architectural sweep; parent reports 39 runtime/upload tests passing. These are parent-reported diagnostics, not new Class-A or release evidence."
+  ],
+  "browser_harness_followup": {
+    "start": "Parent's final browser population ran 38 cases: 36 passed and two failed in _HeldReply.wait, which observed the browser-held tag while its Python rows collection was still empty. The response callback performed synchronous response.json() before appending, and protocol reentrancy could return the outer browser wait first. This was a harness synchronisation failure, not established product failure.",
+    "invariant": "The response listener records the original response object without body I/O. A response waiter is armed before triggering the request, and normal control flow obtains that exact response and body before trusting the browser-held marker. Nonzero and duplicate-request assertions remain mandatory; no sleeps, invented response bodies or timeout-based acceptance.",
+    "implementation": "_HeldReply pre-arms page.expect_response before the triggering action. Its event listener appends only the original Response object; wait reads that same object and JSON in normal control flow, then observes the held browser promise. Exact one-response assertions run before and after body/held-marker synchronisation, and release still refuses duplicate sends. Teardown cancels an unused waiter without releasing the held application promise.",
+    "verification_nodes": [
+      "tests/test_the_workspace_respects_its_current_context.py::test_a_delayed_turn_cannot_repaint_or_retarget_a_newly_selected_matter",
+      "tests/test_the_workspace_respects_its_current_context.py::test_late_authenticated_responses_cannot_repopulate_dom_after_logout[sessions]",
+      "the full parent-selected 38-case final browser population"
+    ],
+    "status": "IMPLEMENTED_FOCUSED_VERIFICATION_PENDING; no tests or gates run by this agent. Parent coordinates the rerun."
+  },
+  "test": "NOT_RUN",
+  "signoff": "NOT_RUN"
+}

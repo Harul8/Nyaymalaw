@@ -91,15 +91,33 @@ const context = {
   setTimeout,
   clearTimeout,
   navigator: { userAgent: "node" },
+  // The responsive warning-height observer is armed at page load. This
+  // tree-only harness deliberately does not simulate layout or invoke its
+  // callback; the three real-browser widths measure that separate boundary.
+  ResizeObserver: class { observe() {} },
 };
 context.globalThis = context;
 vm.createContext(context);
 vm.runInContext(app, context, { filename: "web/app.js" });
 
 // ------------------------------------------------------------- the facts ---
+// Python supplies EVERY actual Signal member via the domain enum. No copied
+// JS list can quietly stop this population at today's six loud signals.
+const signalCases = JSON.parse(process.argv[2] || "null");
+if (!Array.isArray(signalCases) || !signalCases.length
+    || new Set(signalCases.map(row => row.signal)).size !== signalCases.length
+    || signalCases.some(row => !row.signal || row.signal === "none" || row.kind !== "ground")) {
+  console.error("FAIL: a nonempty, distinct domain Signal population is required");
+  process.exit(1);
+}
 const mk = (kind, text, extra = {}) => ({
   kind, text, signal: "none", disclosure: false, refs: [], ...extra,
 });
+const uncertainSignals = [
+  mk("ground", "Renderer-only absent signal.", { signal: undefined, section: "risk" }),
+  mk("ground", "Renderer-only null signal.", { signal: null, section: "risk" }),
+  mk("ground", "Renderer-only unfamiliar signal.", { signal: "future_signal", section: "risk" }),
+];
 
 const entry = {
   brief: "We act for the plaintiff at Hyderabad.",
@@ -118,6 +136,8 @@ const entry = {
          { disclosure: true }),
       mk("ground", "I looked for adverse facts and found none.",
          { disclosure: true }),
+      ...signalCases,
+      ...uncertainSignals,
     ],
   },
 };
@@ -165,8 +185,8 @@ const folds = [];
 const support = folds.filter((f) => String(f.className).includes("support"));
 const audit = folds.filter((f) => String(f.className).includes("audit"));
 
-if (support.length > 1) {
-  fails.push(`expected at most 1 support fold, rendered ${support.length}`);
+if (support.length !== 1) {
+  fails.push(`expected exactly 1 support fold for the two plain grounds, rendered ${support.length}`);
 }
 if (audit.length > 1) {
   fails.push(`expected at most 1 audit fold, rendered ${audit.length}`);
@@ -182,6 +202,37 @@ for (const fold of folds) {
   }
 }
 
+// Inspect original body bytes, not a CSS signal class the faulty branch could
+// drop. Every source element is accounted for exactly once in the actual tree.
+const rendered = [];
+(function findElements(node, insideFold = false) {
+  const folded = insideFold || node.tagName === "DETAILS";
+  if (String(node.className).split(/\s+/).includes("el")) {
+    const bodies = node.children.filter(child => child.className === "body");
+    if (bodies.length !== 1) fails.push("an answer element lost its unique body");
+    else rendered.push({text: bodies[0].textContent, folded});
+  }
+  for (const kid of node.children) findElements(kid, folded);
+})(turn);
+if (rendered.length !== entry.answer.elements.length) {
+  fails.push(`expected ${entry.answer.elements.length} elements, rendered ${rendered.length}`);
+}
+for (const source of entry.answer.elements) {
+  const matches = rendered.filter(row => row.text === source.text);
+  if (matches.length !== 1) {
+    fails.push(`expected one exact rendered body, got ${matches.length}: ${source.text}`);
+    continue;
+  }
+  const ordinarySupport = source.kind === "ground" && source.disclosure === false
+    && source.signal === "none";
+  if (matches[0].folded !== ordinarySupport) {
+    fails.push(`wrong visibility for signal=${String(source.signal)}: ${source.text}`);
+  }
+}
+if (rendered.filter(row => row.folded).length !== 2) {
+  fails.push("the fold must contain exactly the two plain unsignalled grounds");
+}
+
 // The advocate's own words are set apart.
 let bubble = false;
 (function findBubble(node) {
@@ -195,4 +246,5 @@ if (fails.length) {
   process.exit(1);
 }
 console.log(`OK  ${disclosures.length} disclosures, all in the open; `
-  + `${folds.length} fold, closed`);
+  + `${signalCases.length} domain signals and ${uncertainSignals.length} uncertain signals visible; `
+  + `${rendered.length} exact bodies; ${folds.length} folds, closed`);

@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "record_type": "bounded_intake_ui_work_record",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "packets": ["P16"],
+  "criteria": ["BK-54-AC1"],
+  "start": {
+    "state": "READY_FOR_SCOPED_RECEIPT_AND_LOCAL_CAPTURE",
+    "authority": "Coordinating agent authorised original-file upload and explicit local voice capture UI against the new synthetic backend. No live microphone, external processing or test execution by this worker.",
+    "outcome": "An advocate may supply original files or an explicitly recorded voice note without inventing or typing a placeholder case narrative; receipt never means admission, reading, verified authority or established fact.",
+    "inputs": "Existing shared api/state/showThreadBoard and nm:session-ended/nm:matter-changed events; UploadService served receipt contract verified in nm/edge/uploads.py, nm/domain/intake.py and nm/edge/api.py. The coordinator moved the byte-handling service from core to edge without exempting the reasoning-boundary sweep.",
+    "contract": {
+      "entry": "Authenticated current context, explicit supplied purpose, authority statement and retention selection; no automatic consent or defaults.",
+      "does": "Serial bounded chunks, SHA-256 identity, server-receipt reconciliation, honest cancellation, local record/pause/stop/playback, prompt media-track and object-URL cleanup.",
+      "never": "No unsolicited microphone, background egress, browser persistence of client material, arbitrary server preview, scanner/OCR/transcription claim or legal fact promotion.",
+      "refuses": "Empty/oversized files, unknown context, incomplete decisions, mismatching reselected file, stale response, unknown receipt or unsupported recording capability.",
+      "recovers": "Retain stable attempt keys only in current authenticated in-memory UI; reopen reads server receipts and requires exact file/hash/size identity before continuing at observed_size. Cancellation does not imply deletion of accepted bytes."
+    },
+    "limits": {"file_bytes": 33554432, "chunk_bytes": 1048576, "local_recording_seconds": 300},
+    "proof_intent": "New journey tests use real served browser uploads with synthetic files and fake microphone only where explicit permission/capture is exercised. Original-byte storage, resumed digest/offset and no narrative turn are inspected; UI signals and logout cleanup are judged live.",
+    "exclusions": ["No extraction/scanner/OCR/transcription engine or original-download approval", "No full P16/BK-54 completion claim", "No app.js/app.css changes, shared registry changes or test execution", "No localStorage/sessionStorage or live user media"]
+  },
+  "build": {
+    "state": "AUTHORED_AWAITING_EXECUTION",
+    "files": ["web/intake-materials.js", "web/intake-materials.css", "web/index.html (two include lines only)", "tests/test_original_materials_can_arrive_without_a_typed_brief.py"],
+    "implementation": "One current-context receipt/capture dialog. File-only openings use a supplied filename/title, never a model turn. SHA-256 identity and server-observed offsets govern serial encrypted-store receipt. Explicit instructions remain user assertions; the UI discloses withheld processing and unimplemented automatic retention. Session/view generations and receipt-read generations prevent stale responses from reviving protected or superseded state. Recorder callbacks are owned by their capture; stopped recorders cannot stop a later one.",
+    "safety_review": "Bounded local files and capture; explicit microphone action; in-memory attempt identity only; unsupported or unconfirmed operations remain withheld. Close/session end abort sending, release microphone tracks, revoke playback URLs and clear local selections. Acceptance or pause/cancel does not claim deletion, scanning, extraction, admission or established facts. The independent follow-up review found and fixed self-consistent crossed receipt IDs: every existing-asset response must also match the caller's requested asset, so a returned ID cannot change the next chunk target.",
+    "limitations": "No independent test run or browser observation by this worker. No full P16 completion or external assurance claim. Existing app/backend owners must freeze shared sources before recording browser identity evidence."
+  },
+  "landing_entry_repair": {
+    "start": "Coordinator's real browser run 64597 found #materials-open inside the hidden landing composer, while the alternative intake entry was also hidden. This prevents file-first or voice-first opening without a typed brief. Existing browser tests correctly expose the defect; their entry helper must remain unchanged.",
+    "scope": "Move the existing unique launch control into its own visible workspace action row beside the heading, shared across landing, intake and an existing matter; preserve session guards and all upload/capture behavior.",
+    "state": "REPAIR_AUTHORED_AWAITING_COORDINATED_REVALIDATION",
+    "build": "The single #materials-open button is now in a dedicated visible action row immediately after #workspace-focus, independent of composer/intake visibility. Its label wraps within the available width with a 42px minimum target. No test helper, API, upload, capture or context-lifetime behavior changed."
+  },
+  "test": {
+    "state": "NOT_RUN",
+    "execution_owner": "coordinating_agent",
+    "module": "tests/test_original_materials_can_arrive_without_a_typed_brief.py",
+    "expected_population": {"test_functions": 8, "parameterized_cases": 11},
+    "witnesses": ["390/768/1280 real-browser file-only opening, two independent originals, sealed-store exact-byte reconstruction and withheld content route", "Explicit instructions and oversized original refusal", "Real accepted chunk with lost acknowledgement, mismatching reselected digest refusal and resumption from observed offset", "Confirmed cancellation retains accepted sealed bytes", "A genuine delayed receipt list cannot replace a subsequently confirmed cancellation", "Changing both internally matching receipt IDs cannot select the next chunk's upload target", "No microphone request without the explicit Record button; permission refusal", "Fake local capture pause/resume/stop, playback URL cleanup, late old-recorder error isolation, and active-track release on dialog close or actual server session expiry"],
+    "artifacts_on_run": ".nm/conformance/browser (PNG, HTML and request-identity metadata through the shared journey fixture)",
+    "fixtures": "Real served application and bounded synthetic original bytes; microphone/media fixtures never access the user's device. Delayed receipt proof holds consumption of a genuine unchanged served response; the separate crossed-identity control explicitly mutates a real response's two identity fields.",
+    "static_lint": "Scoped ruff on this and the workspace browser module passed after import and line-length fixes. No behavioral test execution is inferred."
+  },
+  "signoff": {"state": "NOT_RUN", "claim": "Scoped UI implementation only; no manufactured acceptance PASS."}
+}

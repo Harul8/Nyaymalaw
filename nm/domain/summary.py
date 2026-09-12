@@ -35,6 +35,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from nm.domain.intake import ReadQuality
 from nm.domain.matter import AskedQuestion, Certainty, FactBasis, Matter, Role, Thread
 from nm.domain.text import refuses_blank_text
 
@@ -560,7 +561,12 @@ def _source(f) -> str:
         return ""
     where = prov.document or "a document"
     page = f" p.{prov.page}" if prov.page else ""
-    return f"{where}{page}: "
+    # Readability qualifies the extracted words, not legal authenticity or
+    # truth. Keep all three states beside the source; never apply OCR labels
+    # to an ordinary advocate statement or put our label into advocate_words.
+    quality = getattr(f, "read_quality", ReadQuality.UNREAD).value
+    return (f"{where}{page} [extraction {quality}; "
+            "not verification of truth]: ")
 
 
 def _marks(f) -> str:

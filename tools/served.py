@@ -97,10 +97,25 @@ def served(root: Path, *, responses: dict | None = None,
         evidence = _Evidence()
 
     directory = FileDirectory(root, key=KEY)
+    # A complete runtime selection, not a patch to shared os.environ. Corpus
+    # and search stay unavailable under this temporary root unless this
+    # harness explicitly supplies their fixture artefacts.
+    environment = {
+        "NM_MODEL_PROVIDER": "scripted",
+        "NM_MODEL_ROUTINE": "scripted-1",
+        "NM_EMBED_MODEL": "text-embedding-3-large",
+        "NM_MATTER_KEY": KEY,
+        "NM_MATTER_STORE": str(root),
+        "NM_CORPUS_DIR": str(root / "corpus"),
+        "NM_AUTHORITY_INDEX": str(root / "authority.db"),
+        "NM_IDENTITY_INDEX": str(root / "identity.db"),
+    }
     application = Application(
         store=FileMatterStore(root, key=KEY),
         evidence=evidence,
         directory=directory,
+        environment=environment,
+        audit_root=root / "audit",
         model=model or ScriptedModelAdapter(config, responses=responses or {
             "__default__": "Issue the statutory notice and diarise the window."}),
     )

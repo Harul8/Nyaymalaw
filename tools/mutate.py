@@ -16,7 +16,6 @@ unexercised claim, and T6 reports it as one.
 from __future__ import annotations
 
 import json
-import os
 import pathlib
 import subprocess
 import sys
@@ -29,6 +28,7 @@ from tools._console import utf8_console  # noqa: E402
 utf8_console()
 
 from tools._fingerprint import source_fingerprint  # noqa: E402
+from tools.evidence import child_environment  # noqa: E402
 
 # (label, file, original, mutation, test that must fail, eval it proves)
 MUTATIONS = [
@@ -298,8 +298,8 @@ MUTATIONS = [
      # a writer holding a stale HIGHER version passed a `>` check and
      # overwrote a newer matter -- and the whole block moved one level
      # deeper under the per-matter lock.
-     "                if current is not None and current.version != expected_version:",
-     "                if False and current is not None:",
+     "            if current is not None and current.version != expected_version:",
+     "            if False and current is not None:",
      "test_a_stale_commit_is_refused_rather_than_overwriting", "E-021b"),
 
     # E-020b. A turn that ran out of rounds and said nothing is
@@ -316,8 +316,8 @@ MUTATIONS = [
     # record. Better to fail before showing than to show and fail to save.
     ("advice emitted without the commit that records it",
      "nm/core/turn.py",
-     "            matter = self._store.commit(matter, expected_version=expected_version)",
-     "            pass  # commit skipped",
+     "        return self._store.commit(updated, expected_version=expected_version)",
+     "        return updated  # commit skipped",
      "test_a_turn_commits_atomically_and_the_commit_precedes_emission",
      "E-017"),
 
@@ -1552,22 +1552,25 @@ MUTATIONS = [
     # never passed a register, so every row read as a file with no deadlines.
     ("a board that cannot say whether a deadline register was computed",
      "nm/edge/projections.py",
-     '                  "next_deadline_status": "not_assessed",',
-     '                  "next_deadline_status": "none_on_this_thread",',
+     '"not_assessed" if not complete else',
+     '"none_on_this_thread" if not complete else',
      "test_the_board_distinguishes_no_deadline_from_no_register", "E-046"),
 
     # S11. The list sorts nearest-deadline-first and reads `next_deadline`
     # first -- and that field was hard-coded None, so the rule never applied.
     ("a matter list whose nearest-deadline ordering cannot fire",
      "nm/edge/projections.py",
-     '            "next_deadline": live[0].on.isoformat() if live else None,',
-     '            "next_deadline": None,',
+     '        "next_deadline": live[0].on.isoformat() if live else None,',
+     '        "next_deadline": None,',
      "test_the_matter_list_orders_by_a_deadline_it_actually_holds", "E-046"),
 ]
 
 
 def run_test(test: str) -> bool:
-    env = dict(os.environ, NM_PARTIAL_RUN="1")
+    # A mutation child owns partial eval output, never the enclosing gate's
+    # canonical Class-A artifact. Use the same lease boundary as check.py.
+    env = child_environment()
+    env["NM_PARTIAL_RUN"] = "1"
     r = subprocess.run(
         [sys.executable, "-m", "pytest", "-q", "-k", test,
          "--no-header", "-x", "-p", "no:cacheprovider"],

@@ -69,6 +69,14 @@ ESCAPES = (
 #: Enums that are CLOSED VOCABULARIES, not outcomes. Each with the reason it
 #: cannot be "not assessed" — because something always chose it.
 CLOSED: dict[str, str] = {
+    "UrgencyClass": (
+        "the named danger a human explicitly selects for a manual record, "
+        "not an assessment outcome. `normalise_instruction` refuses an "
+        "unknown or missing class; it never guesses a class from a narrative. "
+        "Unknown assessment is `UrgencyState.NOT_ASSESSED`, and `project` "
+        "reports it for every class not actually assessed. The manual "
+        "foundation cannot clear applicability or manufacture an eleventh "
+        "class to settle the recorded PRD taxonomy discrepancy."),
     "Act": (
         "a vocabulary of ATTEMPTS, not an outcome. Somebody always chose what "
         "they were trying to do -- there is no unknown act a person could be "

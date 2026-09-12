@@ -61,18 +61,25 @@ _class_a: dict[str, dict] = {}
 _class_a_started = datetime.now(timezone.utc).isoformat(timespec="seconds")
 _class_a_start_fingerprint = ""
 _class_a_full_selection = False
+_class_a_selection_problems: list[str] = []
+_class_a_evidence_path: Path | None = None
 
 
 def pytest_configure(config):
     global _class_a_full_selection, _class_a_start_fingerprint
+    global _class_a_selection_problems, _class_a_evidence_path
     config.addinivalue_line("markers", "eval_id(*ids): eval ids this test exercises")
-    if os.environ.get("NM_CLASS_A_EVIDENCE_FILE"):
-        from tools.evidence import CLASS_A_PYTEST_ARGS, verification_fingerprint
+    # The runner lends this session an output once. An application-environment
+    # test may clear NM_* or plant another value during its call phase; that
+    # must neither erase its outcome nor redirect this session's evidence.
+    lease = os.environ.get("NM_CLASS_A_EVIDENCE_FILE")
+    _class_a_evidence_path = Path(lease) if lease else None
+    if _class_a_evidence_path is not None:
+        from tools.evidence import class_a_selection_problems, verification_fingerprint
 
         _class_a_start_fingerprint = verification_fingerprint()
-        _class_a_full_selection = (
-            tuple(config.invocation_params.args) == CLASS_A_PYTEST_ARGS
-        )
+        _class_a_selection_problems = class_a_selection_problems(config)
+        _class_a_full_selection = not _class_a_selection_problems
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -86,7 +93,7 @@ def pytest_runtest_makereport(item, call):
     # module is silently not a hook, so the attribute was never set and every
     # phase errored in teardown instead of reporting.
     setattr(item, f"rep_{report.when}", report)
-    if (os.environ.get("NM_CLASS_A_EVIDENCE_FILE")
+    if (_class_a_evidence_path is not None
             and item.get_closest_marker("class_a") is not None):
         row = _class_a.setdefault(item.nodeid, {
             "outcome": "not_run", "duration_ms": 0,
@@ -112,8 +119,8 @@ def pytest_runtest_makereport(item, call):
 
 
 def pytest_sessionfinish(session, exitstatus):
-    evidence_path = os.environ.get("NM_CLASS_A_EVIDENCE_FILE")
-    if evidence_path:
+    evidence_path = _class_a_evidence_path
+    if evidence_path is not None:
         from tools.evidence import (
             CLASS_A_COMMAND,
             git_identity,
@@ -152,6 +159,7 @@ def pytest_sessionfinish(session, exitstatus):
             "exit_code": exitstatus,
             "selection": ("full_class_a" if _class_a_full_selection
                           else "partial"),
+            "selection_problems": _class_a_selection_problems,
             "complete": (exitstatus == 0 and bool(recorded)
                          and _class_a_full_selection),
             "tests": recorded,

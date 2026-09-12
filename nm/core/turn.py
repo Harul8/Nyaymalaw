@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import re
 import time
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import date, datetime, timezone
 
 from nm.core import accrual as accrual_reader
@@ -56,6 +56,7 @@ from nm.domain import citation, decision, engagement, issue, reads, reservation
 from nm.domain import proof as domain_proof
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
+from nm.domain.capacity import CapacityPosition
 from nm.domain.clock import FORUM
 from nm.domain.matter import (
     Basis,
@@ -74,8 +75,16 @@ from nm.domain.metrics import Outcome, Phase, TurnMetrics
 from nm.domain.proof import ProofStatus
 from nm.domain.quotable import Quotable
 from nm.domain.register import PEER
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import blank, refuses_blank_text
 from nm.domain.traceability import implements
+from nm.domain.turn_receipt import (
+    TurnReceipt,
+    answer_from_payload,
+    answer_payload,
+    opening_id,
+    release_index,
+)
+from nm.domain.turn_receipt import fingerprint as offer_fingerprint
 from nm.ports.coverage import CoveragePort
 from nm.ports.elements import ElementsPort
 from nm.ports.evidence import (
@@ -151,14 +160,12 @@ _WANTS_AUTHORITY = (
 
 
 class TurnRefused(Exception):
-    """Raised before any ANSWER is emitted. THE ANSWER is not saved.
+    """No new answer is emitted; input persistence depends on admission.
 
-    What the advocate SAID is. The docstring said "nothing has been shown or
-    saved" and that was true and was a leak: a withheld turn discarded their
-    own words along with the answer, so GS-15 turn 1 was refused and the
-    matter was never created. The gates that withhold are about whether the
-    ANSWER is supported by what was retrieved — none of them is a finding
-    about the input.
+    A grounding refusal may retain admitted input without saving its derived
+    answer. A refused replay is different: prior_receipt_saved identifies the
+    already recorded response, whose current release is refused. Neither case
+    may assert that unadmitted narrative was saved or that a new answer exists.
 
     It carries the gates that withheld it and the DISCLOSURES the turn had
     already computed. Withholding the answer is not the same as withholding the
@@ -169,7 +176,8 @@ class TurnRefused(Exception):
 
     def __init__(self, message: str, *, gates: tuple[str, ...] = (),
                  disclosures: tuple[str, ...] = (),
-                 matter_id: str | None = None) -> None:
+                 matter_id: str | None = None,
+                 prior_receipt_saved: bool = False) -> None:
         super().__init__(message)
         self.message = message
         self.gates = gates
@@ -180,6 +188,7 @@ class TurnRefused(Exception):
         A caller that cannot name the matter opens a new one on the next
         turn — which is how GS-15 came to run four turns across four
         different files, each blocking on a posture nobody had stated."""
+        self.prior_receipt_saved = prior_receipt_saved
 
 
 @refuses_blank_text()
@@ -192,6 +201,10 @@ class TurnInput:
     thread_id: str | None = None
     today: date = field(default_factory=date.today)
     jurisdiction: str = FORUM
+    work_product: str = ""
+    request_offer: dict | None = None
+    """Normalized transport offer, excluding only its id; None for core callers."""
+    expected_version: int | None = None
 
     parties: dict = field(default_factory=dict)
     """BK-34. WHO IS INVOLVED, given at intake: name -> `client` | `adverse`
@@ -224,6 +237,9 @@ class TurnInput:
     EMPTY IS THE ORDINARY VALUE. Most turns release nothing because the
     matter was released once, when it was opened.
     """
+
+    capacity: dict[str, str] | None = None
+    """Explicit human capacity state and basis; actor/time belong to the server."""
 
 
 @dataclass
@@ -543,7 +559,10 @@ class TurnEngine:
 
     def __init__(self, store: StorePort, evidence: EvidencePort, model: ModelPort,
                  coverage: CoveragePort | None = None,
-                 elements: "ElementsPort | None" = None) -> None:
+                 elements: "ElementsPort | None" = None, clock=None) -> None:
+        from nm.domain.advocate import utcnow
+
+        self._clock = clock or utcnow
         self._store = store
         self._evidence = evidence
         self._model = model
@@ -563,7 +582,22 @@ class TurnEngine:
         metrics = TurnMetrics(turn_id=turn.turn_id, matter_id=turn.matter_id)
         started = time.perf_counter()
         try:
-            return self._run(turn, metrics, started)
+            known = self._known_matter(turn)
+            if known is not None:
+                receipt = self._matching_receipt(known, turn)
+                if receipt is not None:
+                    from nm.domain.emergency import PERMITTED_WORK
+
+                    if turn.work_product == PERMITTED_WORK:
+                        # A prior receipt does not extend emergency permission.
+                        return self._protective_turn(turn, metrics, started)
+                    metrics.matter_id = known.id
+                    metrics.outcome = Outcome.BLOCKED if receipt.answer["blocked"] else Outcome.OK
+                    self._store.record_metrics(metrics.as_dict())
+                    return TurnOutput(turn.turn_id, answer_from_payload(receipt.answer),
+                                      known, metrics, replayed=True)
+                self._require_version(known, turn)
+            return self._run(turn, metrics, started, known)
         except TurnRefused:
             # A DELIBERATE refusal, already recorded by the branch that raised
             # it, with its outcome and the gate that fired. Re-recording here
@@ -581,8 +615,79 @@ class TurnEngine:
             self._store.record_metrics(metrics.as_dict())
             raise
 
+    def _known_matter(self, turn: TurnInput) -> Matter | None:
+        matter = self._store.load(turn.matter_id or opening_id(turn.advocate_id, turn.turn_id))
+        if matter is not None and matter.advocate_id != turn.advocate_id:
+            raise TurnRefused("this matter belongs to another advocate")
+        if turn.matter_id and matter is None:
+            raise TurnRefused("the requested matter could not be found")
+        return matter
+
+    @staticmethod
+    def _require_version(matter: Matter, turn: TurnInput) -> None:
+        if turn.expected_version is not None and matter.version != turn.expected_version:
+            moved = StaleWrite(
+                f"this matter moved from version {turn.expected_version} to {matter.version}")
+            moved.expected_version = turn.expected_version
+            moved.matter_version = matter.version
+            raise moved
+
+    @staticmethod
+    def _offer(turn: TurnInput, matter_id: str) -> str:
+        offer = dict(turn.request_offer) if turn.request_offer is not None else {
+            key: value for key, value in asdict(turn).items()
+            if key not in {"request_offer", "turn_id"}}
+        # The assigned id and an opening whose id was not acknowledged name
+        # the same target, not different instructions. Every other field stays.
+        offer["matter_id"] = matter_id
+        return offer_fingerprint(offer)
+
+    def _matching_receipt(self, matter: Matter, turn: TurnInput) -> TurnReceipt | None:
+        receipts, problems = release_index(matter)
+        if problems:
+            raise TurnRefused("recorded release evidence is inconsistent; no replay is authorised")
+        if turn.turn_id in receipts:
+            receipt = receipts[turn.turn_id]
+            if receipt.offer_fingerprint != self._offer(turn, matter.id):
+                raise StaleWrite("this turn identity names different original instructions")
+            return receipt
+        if matter.has_applied(turn.turn_id):
+            raise TurnRefused(
+                "the legacy turn has no verifiable original-offer receipt; review the file")
+        return None
+
+    def _commit_released(self, matter: Matter, turn: TurnInput, answer: Answer,
+                         expected_version: int, *, input_admitted: bool = True) -> Matter:
+        receipt = TurnReceipt(
+            turn_id=turn.turn_id, offer_fingerprint=self._offer(turn, matter.id),
+            recorded_at=self._clock().isoformat(), answer=answer_payload(answer),
+            message=turn.message if input_admitted else "", input_admitted=input_admitted)
+        updated = replace(matter.applied(turn.turn_id),
+                          turn_receipts=(*matter.turn_receipts, receipt))
+        return self._store.commit(updated, expected_version=expected_version)
+
     # ---------------------------------------------------------------------
-    def _run(self, turn: TurnInput, metrics: TurnMetrics, started: float) -> TurnOutput:
+    def _run(self, turn: TurnInput, metrics: TurnMetrics, started: float,
+             admitted_snapshot: Matter | None) -> TurnOutput:
+        from nm.domain.emergency import PERMITTED_WORK
+
+        if turn.work_product == PERMITTED_WORK:
+            return self._protective_turn(turn, metrics, started)
+        try:
+            if turn.release is not None:
+                if (not isinstance(turn.release, dict)
+                        or set(turn.release) - {"scope", "capacity"}):
+                    raise ValueError("intake answers must name only scope or legacy capacity")
+                if any(not isinstance(answer, str) or blank(answer)
+                       for answer in turn.release.values()):
+                    raise ValueError("an intake answer must be nonblank text")
+            if turn.capacity is not None and (turn.release or {}).get("capacity"):
+                raise ValueError("use the explicit capacity assessment, not two capacity answers")
+            capacity = (CapacityPosition.record(
+                turn.capacity, actor=turn.advocate_id, now=self._clock())
+                if turn.capacity is not None else None)
+        except (ValueError, TypeError) as exc:
+            raise TurnRefused(str(exc)) from exc
         # ---------------- ADMIT ----------------
         t0 = time.perf_counter()
         metrics.failed_phase = Phase.ADMIT
@@ -602,18 +707,8 @@ class TurnEngine:
             self._store.record_metrics(metrics.as_dict())
             return TurnOutput(turn.turn_id, answer, None, metrics)
 
-        matter = self._load_or_create(turn)
+        matter = self._load_or_create(turn, admitted_snapshot)
         metrics.matter_id = matter.id
-
-        # Idempotency: replaying a turn returns the committed result rather
-        # than applying it twice. Without this a network retry duplicates
-        # facts, splits threads, and re-raises resolved urgencies -- invisibly.
-        if matter.has_applied(turn.turn_id):
-            metrics.outcome = Outcome.OK
-            metrics.latency_ms = int((time.perf_counter() - started) * 1000)
-            self._store.record_metrics(metrics.as_dict())
-            return TurnOutput(turn.turn_id, self._replay_answer(mode, mode_statement),
-                              matter, metrics, replayed=True)
 
         # ---- G-DUTY: is this an instruction that must be REFUSED? ---------
         #
@@ -636,6 +731,8 @@ class TurnEngine:
         if refusal.must_refuse:
             answer = self._refusal_answer(turn, refusal, mode,
                                           mode_statement, metrics)
+            matter = self._commit_released(
+                matter, turn, answer, matter.version, input_admitted=False)
             metrics.outcome = Outcome.BLOCKED
             metrics.stages["admit_ms"] = int((time.perf_counter() - t0) * 1000)
             metrics.latency_ms = int((time.perf_counter() - started) * 1000)
@@ -665,11 +762,18 @@ class TurnEngine:
         if turn.release:
             matter = replace(matter, intake_answers={
                 **(matter.intake_answers or {}),
-                **{str(kind): {"by": turn.advocate_id,
-                               "answer": str(answer),
-                               "at": turn.today.isoformat()}
-                   for kind, answer in turn.release.items() if answer},
+                **{kind: {"by": turn.advocate_id, "answer": answer,
+                          "at": self._clock().isoformat()}
+                   for kind, answer in turn.release.items()},
             })
+        if capacity is not None:
+            answers = dict(matter.intake_answers or {})
+            previous = answers.get("capacity")
+            history = tuple(answers.get("capacity_history") or ())
+            if previous is not None:
+                history = (*history, previous)
+            answers.update(capacity=capacity.as_dict(), capacity_history=history)
+            matter = replace(matter, intake_answers=answers)
 
         # ---- ADMIT-A: screens, on names and danger only --------------------
         # An external review found this code doing what the first draft of the
@@ -712,16 +816,11 @@ class TurnEngine:
             # them.
             #
             # Committing is safe here for the reason the branch exists:
-            # NO SUBSTANCE has been read. What is written is the screen
-            # states and the advocate's own words -- the same rule a
-            # withheld turn follows.
-            try:
-                matter = self._store.commit(
-                    matter, expected_version=matter.version)
-            except Exception as exc:  # noqa: BLE001 -- never fatal
-                metrics.violate(
-                    "I1", f"a screened-out turn did not keep its screen "
-                          f"states: {type(exc).__name__}: {exc}")
+            # NO SUBSTANCE has been read. The receipt retains only the safe
+            # question and offer digest, not the unadmitted narrative. A failed
+            # commit must not be reported as a saved instruction.
+            matter = self._commit_released(
+                matter, turn, answer, matter.version, input_admitted=False)
             metrics.latency_ms = int((time.perf_counter() - started) * 1000)
             self._store.record_metrics(metrics.as_dict())
             return TurnOutput(turn.turn_id, answer, matter, metrics)
@@ -1255,9 +1354,8 @@ class TurnEngine:
             assessed=tuple(dict.fromkeys(
                 (*matter.assessed, "engagement"))))
 
-        matter = matter.applied(turn.turn_id)
         try:
-            matter = self._store.commit(matter, expected_version=expected_version)
+            matter = self._commit_released(matter, turn, answer, expected_version)
         except StaleWrite as exc:
             # The matter moved underneath. Re-derive rather than overwrite --
             # and NAME the gate, so the matrix's claim is one the metrics can
@@ -1279,13 +1377,12 @@ class TurnEngine:
                      metrics: TurnMetrics,
                      derived: tuple = (), withheld_by: tuple[str, ...] = ()
                      ) -> None:
-        """The served turn, kept. AFTER the commit, and never instead of it.
+        """A diagnostic archive, never a substitute for the canonical receipt.
 
-        Nothing else held this. The matter keeps facts and questions, the
-        metrics keep counts and carry no client words by design, and the
-        ANSWER -- the thing the advocate actually read -- was held by neither.
-        A run could be inspected only while its stdout was still on screen,
-        which is no way to review a conversation a week later.
+        Released answers are now sealed with the matter in TurnReceipt. This
+        archive additionally keeps derivation/call traces and, when withheld,
+        an unapproved draft. Browser readback must use the release projection,
+        not assume every archived draft was shown or successfully committed.
 
         FAILING TO RECORD MUST NOT FAIL THE TURN. The advocate has been given
         advice and the file has it; losing the review copy is a real defect and
@@ -1403,6 +1500,88 @@ class TurnEngine:
                 "I1", f"the turn was served and not recorded for review: "
                       f"{type(exc).__name__}: {exc}")
 
+    @implements("B2")
+    def _protective_turn(self, turn: TurnInput, metrics: TurnMetrics,
+                         started: float) -> TurnOutput:
+        """A recorded emergency handoff, before any narrative or model read.
+
+        No legal merits, new facts or screen clearance are produced here. The
+        declaration permits a bounded protective/referral step only; it cannot
+        authorise sending the raw brief to a provider.
+
+        B2 is partial: this consumes the persisted declaration, rechecks its
+        permission against the clock and records a protective-only handoff.
+        The manual per-danger UrgencyRegister leads this handoff, including
+        unknown times. Automatic every-turn assessment and calibration remain
+        unbuilt; a recorded action is not verified advice or performed work.
+        """
+        from nm.domain.emergency import latest
+        from nm.domain.urgency import protective_texts
+
+        matter = self._store.load(turn.matter_id) if turn.matter_id else None
+        if matter is None or matter.advocate_id != turn.advocate_id:
+            raise TurnRefused("open an authorised matter before requesting protective triage")
+        now = self._clock()
+        declaration = latest(matter.emergencies or (), now)
+        permitted = declaration is not None and declaration.permits(turn.work_product)
+        prior = self._matching_receipt(matter, turn)
+        if prior is not None:
+            recorded = prior.validated_answer()
+            metrics.matter_id = matter.id
+            metrics.latency_ms = int((time.perf_counter() - started) * 1000)
+            if not recorded.blocked and not permitted:
+                metrics.outcome = Outcome.BLOCKED
+                self._store.record_metrics(metrics.as_dict())
+                raise TurnRefused(
+                    "The earlier handoff remains recorded, but its protective permission "
+                    "is no longer live. No answer is replayed and no new work is committed. "
+                    "Review the declaration and make a new request if appropriate.",
+                    matter_id=matter.id, prior_receipt_saved=True)
+            # A historical refusal remains a refusal even if permission changed.
+            # Changes to danger records do not rewrite the old released bytes.
+            metrics.outcome = Outcome.BLOCKED if recorded.blocked else Outcome.OK
+            self._store.record_metrics(metrics.as_dict())
+            return TurnOutput(turn.turn_id, recorded, matter, metrics, replayed=True)
+        self._require_version(matter, turn)
+        text = (
+            "Confirm the immediate danger, the verified deadline and the person "
+            "who can give instructions; arrange urgent assistance from the "
+            "responsible advocate or appropriate emergency service if needed. "
+            "Keep the original material available. No merits position, filing "
+            "or communication is authorised by this handoff."
+            if permitted else
+            "A live emergency declaration is required for this protective handoff. "
+            "The recorded urgency remains on the file. Renew or review the "
+            "declaration; ordinary screens still govern any substantive advice."
+        )
+        elements = [Element(kind=ElementKind.QUESTION, text=line, signal=Signal.EMERGENCY)
+                    for line in protective_texts(matter.urgency_records)]
+        elements.append(Element(kind=ElementKind.QUESTION, text=text,
+                                signal=Signal.EMERGENCY))
+        if declaration:
+            elements.append(Element(kind=ElementKind.GROUND, disclosure=True,
+                                    signal=Signal.EMERGENCY,
+                                    text=declaration.said(now)))
+        answer = Answer(route=Route.MATTER, mode=Mode.SHORT_QUESTION,
+                        mode_statement="Protective handoff only; no legal merits assessed.",
+                        elements=tuple(elements), blocked=not permitted,
+                        blocked_reason=None if permitted else "no live emergency declaration")
+        # Even a refusal retains its attempt, but never the unadmitted narrative.
+        receipt = {"turn_id": turn.turn_id, "actor_id": turn.advocate_id,
+                   "at": now.isoformat(), "permitted": permitted,
+                   "work_product": turn.work_product,
+                   "declaration": declaration.as_dict() if declaration else None,
+                   "substance_admitted": False}
+        updated = replace(matter,
+                          emergency_triage=(*(matter.emergency_triage or ()), receipt))
+        matter = self._commit_released(
+            updated, turn, answer, matter.version, input_admitted=False)
+        metrics.matter_id = matter.id
+        metrics.outcome = Outcome.OK if permitted else Outcome.BLOCKED
+        metrics.latency_ms = int((time.perf_counter() - started) * 1000)
+        self._store.record_metrics(metrics.as_dict())
+        return TurnOutput(turn.turn_id, answer, matter, metrics)
+
     # ------------------------------------------------------------ helpers ---
     @implements("B3")
     def _run_screens(self, matter: Matter, turn: TurnInput,
@@ -1516,9 +1695,14 @@ class TurnEngine:
             # a parser for a format nobody declared.
             screens=outstanding)
 
+    @implements("B6")
     def _screen(self, kind, matter: Matter, turn: TurnInput,
                 metrics: TurnMetrics):
         """ONE SCREEN, ANSWERED. BK-34's producers.
+
+        B6 is partial: the capacity branch consumes an explicit attributed
+        CapacityPosition, not prose. Decision-specific vulnerability assessment
+        and the authoritative DecisionRecord contract remain separate work.
 
         THE POPULATION IS `ScreenKind`, so a sixth screen added to the
         vocabulary arrives here unanswered and lands NOT_ASSESSED naming
@@ -1533,6 +1717,9 @@ class TurnEngine:
         from nm.core import conflict as conflict_mod
 
         answered = (matter.intake_answers or {}).get(kind.value)
+
+        if kind is screens_mod.ScreenKind.CAPACITY:
+            return screens_mod.capacity_screen(answered, self._clock())
 
         if kind is screens_mod.ScreenKind.CONFLICT:
             named = self._parties_of(matter)
@@ -1552,6 +1739,14 @@ class TurnEngine:
             return self._competence_screen(matter, turn, metrics)
 
         if kind is screens_mod.ScreenKind.EMERGENCY:
+            from nm.domain.emergency import latest
+
+            declaration = latest(matter.emergencies or (), self._clock())
+            if declaration is not None:
+                return screens_mod.Screen(
+                    kind=kind, state=screens_mod.ScreenState.BLOCKED,
+                    detail=declaration.said(self._clock()) +
+                    " Request protective_triage explicitly; this does not admit merits.")
             # NOT A MODEL READ, AND THAT IS THE POINT OF WHERE IT SITS.
             # ADMIT-A runs before any substance reaches a provider, so a
             # screen here cannot ask a model without sending the very
@@ -1570,7 +1765,7 @@ class TurnEngine:
                         "liberty or an irreversible deadline is in play, say "
                         "so and I will work that first"))
 
-        # SCOPE and CAPACITY: RELEASED BY THE ADVOCATE, ON THE RECORD.
+        # SCOPE: RECORDED BY THE ADVOCATE. Capacity is typed and handled above.
         #
         # The deployment is a controlled roster of practising advocates and
         # the advocate IS the firm, so requiring a second person would stop
@@ -1579,26 +1774,11 @@ class TurnEngine:
         # is RECORDED with who and when, sits beside the finding rather than
         # deleting it, and has to be given once per matter rather than
         # assumed.
-        if answered:
-            # CLEAR, AND CARRYING NO `Release`. The screen asked a question,
-            # the advocate answered it, and the answer is the detail. There is
-            # no finding here to lift -- `Screen.__post_init__` refuses a
-            # CLEAR screen with a release for exactly that reason, and it
-            # caught this modelled the other way round within the minute.
-            return screens_mod.Screen(
-                kind=kind, state=screens_mod.ScreenState.CLEAR,
-                detail=(f"answered by {answered.get('by', 'the advocate')} on "
-                        f"{answered.get('at', 'an unrecorded date')}: "
-                        f"{answered.get('answer', 'confirmed at intake')}"))
+        if kind is screens_mod.ScreenKind.SCOPE:
+            return screens_mod.scope_screen(answered, matter.advocate_id, self._clock())
         return screens_mod.Screen(
-            kind=kind, state=screens_mod.ScreenState.BLOCKED,
-            detail=(
-                "the engagement scope for this matter is yours to confirm, "
-                "once. Tell me the work you are instructed to do and I will "
-                "record it and carry on"
-                if kind is screens_mod.ScreenKind.SCOPE else
-                "confirm that the client can give instructions on this "
-                "matter, and I will record it and carry on"))
+            kind=kind, state=screens_mod.ScreenState.NOT_ASSESSED,
+            not_assessed_because=f"the {kind.value} screen has no current assessment")
 
     def _competence_screen(self, matter: Matter, turn: TurnInput,
                            metrics: TurnMetrics = None):
@@ -1713,14 +1893,12 @@ class TurnEngine:
             max_tokens=ceiling.for_read(key, prompt,
                                         echoes=reads.echoes(key)))
 
-    def _load_or_create(self, turn: TurnInput) -> Matter:
-        if turn.matter_id:
-            existing = self._store.load(turn.matter_id)
-            if existing is None:
-                raise TurnRefused(f"matter {turn.matter_id} not found")
-            if existing.advocate_id != turn.advocate_id:
-                raise TurnRefused("this matter belongs to another advocate")
-            return existing
+    def _load_or_create(self, turn: TurnInput, admitted_snapshot: Matter | None) -> Matter:
+        # Work on exactly the version admitted before routing. Reloading here
+        # would silently adopt concurrent changes (including another receipt)
+        # between the caller's version check and the final compare-and-swap.
+        if admitted_snapshot is not None:
+            return admitted_snapshot
         # A NAME AN ADVOCATE RECOGNISES, not the first 60 characters.
         #
         # This took `message[:60]`, which cuts mid-word and gives ten
@@ -1736,7 +1914,8 @@ class TurnEngine:
         # and the intake read fills the name in on the turn that names a
         # party.
         title = _matter_name(turn.message, turn.parties)
-        return Matter.create(advocate_id=turn.advocate_id, title=title)
+        return Matter(id=opening_id(turn.advocate_id, turn.turn_id),
+                      advocate_id=turn.advocate_id, title=title)
 
     @implements("B1")
     def _read_route(self, turn: TurnInput,
@@ -5327,14 +5506,6 @@ class TurnEngine:
             refs=(f.locator,)) for f in cited[:3]]
         return Answer(route=Route.NON_MATTER, mode=mode,
                       mode_statement=mode_statement, elements=tuple(rows))
-
-    def _replay_answer(self, mode, mode_statement) -> Answer:
-        return Answer(
-            route=Route.MATTER, mode=mode, mode_statement=mode_statement,
-            elements=(Element(
-                kind=ElementKind.QUESTION,
-                text="This turn was already applied to the file; nothing has been "
-                     "changed a second time. Send the next instruction."),))
 
     def _assert_invariants(self, answer: Answer, metrics: TurnMetrics) -> None:
         """Class-B checks, on the assembled Answer, BEFORE the byte boundary."""

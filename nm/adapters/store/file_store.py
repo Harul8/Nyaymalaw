@@ -32,14 +32,15 @@ from pathlib import Path
 from types import UnionType
 from typing import Union, get_args, get_origin, get_type_hints
 
-from nm.adapters.store.cleanup import discard
 from nm.adapters.store.sealing import MatterSealer, is_envelope
 from nm.domain.matter import (
     Fact,
     Matter,
     MatterId,
 )
+from nm.domain.text import blank
 from nm.domain.traceability import implements
+from nm.infrastructure.cleanup import discard
 from nm.ports.store import MatterList, StaleWrite
 
 
@@ -188,6 +189,10 @@ def _decode(cls, value):
 
     if isinstance(cls, type):
         if is_dataclass(cls):
+            if getattr(cls, "__stored_fields_closed__", False) is True:
+                declared = {field.name for field in fields(cls)}
+                if not isinstance(value, dict) or set(value) != declared:
+                    raise ValueError(f"{cls.__name__} stored fields do not match its closed schema")
             hints = get_type_hints(cls)
             return cls(**{f.name: _decode(hints.get(f.name, object),
                                           value.get(f.name))
@@ -232,6 +237,24 @@ _LOCK_POLL = 0.02
 
 
 _SEP = "__"
+
+
+def _transcript_payload(blob: bytes) -> dict:
+    """Read a historical archive safely without inventing release evidence.
+
+    Old archives need not have today's answer schema, but consumers still need
+    attributable string identities and a sortable timestamp when one is present.
+    JSON decoding alone proves none of those things.
+    """
+    document = json.loads(blob)
+    if not isinstance(document, dict):
+        raise ValueError("the transcript payload is not an object")
+    if any(not isinstance(document.get(key), str) or blank(document[key])
+           for key in ("matter_id", "turn_id")):
+        raise ValueError("the transcript payload lacks attributable string identities")
+    if "at" in document and not isinstance(document["at"], str):
+        raise ValueError("the transcript timestamp is not text")
+    return document
 
 
 #: The scheme name `_Cipher` reports when it fell back. The envelope is NOT
@@ -283,6 +306,18 @@ class FileMatterStore:
             return self._cipher.scheme
         return f"{self._cipher.scheme}+{self._sealer.scheme}"
 
+    def upload_storage(self):
+        """Composition-only factory: original bytes share this root and key scope.
+
+        The returned adapter MUST be wrapped as UploadPort by composition.
+        Insecure test ciphers never acquire an original-byte store.
+        """
+        from nm.adapters.store.uploads import SealedUploadStore
+
+        if self._sealer is None:
+            raise EncryptionNotConfigured("original-byte uploads require the sealed store")
+        return SealedUploadStore(self._root, self._sealer)
+
     # ------------------------------------------------------- the envelope ---
 
     def _seal(self, matter_id: str, data: bytes) -> bytes:
@@ -329,20 +364,26 @@ class FileMatterStore:
         transactional store is the right long-run answer and is a
         migration; this does not pretend to be one.
         """
+        if type(expected_version) is not int or expected_version < 0:
+            raise ValueError("expected_version must be a nonnegative integer")
         p = self._path(matter.id)
         with self._locked(matter.id):
-            if p.exists():
-                current = self.load(matter.id)
-                # `!=`, NOT `>`. A writer holding a stale HIGHER version --
-                # from a restored file or a bug -- passed a `>` check and
-                # overwrote a newer matter. The only safe question is
-                # whether the file is still what this turn read.
-                if current is not None and current.version != expected_version:
-                    raise StaleWrite(
-                        f"matter {matter.id} moved from version {expected_version} to "
-                        f"{current.version} while this turn was deriving. Re-derive "
-                        f"against the current state rather than overwriting it."
-                    )
+            current = self.load(matter.id)
+            if current is None and expected_version != 0:
+                # Absence is an initial-create precondition, not permission
+                # to resurrect a previously loaded matter from a stale turn.
+                raise StaleWrite(
+                    f"matter {matter.id} was expected at version {expected_version} "
+                    "and is absent. Re-derive against the current state."
+                )
+            # `!=`, NOT `>`. A writer holding a stale HIGHER version --
+            # from a restored file or a bug -- must also be refused.
+            if current is not None and current.version != expected_version:
+                raise StaleWrite(
+                    f"matter {matter.id} moved from version {expected_version} to "
+                    f"{current.version} while this turn was deriving. Re-derive "
+                    f"against the current state rather than overwriting it."
+                )
             blob = self._seal(
                 str(matter.id), json.dumps(_enc(matter)).encode("utf8"))
             # Atomic: a crash mid-write leaves the previous file intact.
@@ -490,9 +531,11 @@ class FileMatterStore:
         # RECORD; an unreadable file belonging to another matter is not.
         for p in sorted(self._transcripts.glob(f"{matter_id}{_SEP}*.nm")):
             try:
-                out.append(json.loads(
-                    self._open(str(matter_id),
-                               p.read_bytes()).decode("utf8")))
+                document = _transcript_payload(self._open(str(matter_id), p.read_bytes()))
+                owned_turn = p.name.split(_SEP, 1)[1][:-3]
+                if document["matter_id"] != matter_id or document["turn_id"] != owned_turn:
+                    raise ValueError("the transcript identity conflicts with its archive name")
+                out.append(document)
             except Exception as exc:  # noqa: BLE001 -- reported, never dropped
                 out.append({"turn_id": p.name.split(_SEP, 1)[1][:-3],
                             "matter_id": matter_id, "unreadable": True,
@@ -506,8 +549,7 @@ class FileMatterStore:
             if _SEP in p.name:
                 continue
             try:
-                doc = json.loads(
-                    self._cipher.decrypt(p.read_bytes()).decode("utf8"))
+                doc = _transcript_payload(self._cipher.decrypt(p.read_bytes()))
             except Exception:  # noqa: BLE001 -- counted by unattributable()
                 continue
             if doc.get("matter_id") == matter_id:
@@ -532,7 +574,7 @@ class FileMatterStore:
             if _SEP in p.name:
                 continue
             try:
-                self._cipher.decrypt(p.read_bytes())
+                _transcript_payload(self._cipher.decrypt(p.read_bytes()))
             except Exception:  # noqa: BLE001 -- that IS the finding
                 lost.append(p.stem)
         return tuple(lost)

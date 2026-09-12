@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "record_kind": "scoped_conformance_work_record",
+  "base": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "scope": "The temporary served harness must not inherit or mutate live runtime configuration, read a live search index or write outside its supplied runtime root.",
+  "start": {
+    "status": "RECORDED",
+    "observed_on": "2026-09-12",
+    "cause": "tools.served injects a scripted model and temporary stores, but Application unconditionally loads ROOT/.env, reads os.environ for other configuration and defaults audit to repository .nm. The injected model prevents a proven real model call; it does not isolate configuration, default search or audit writes.",
+    "mechanism": "An explicit copied read-only environment snapshot and audit-root argument at Application composition; omitted arguments preserve the production dotenv/default behavior. The shared harness passes only its safe scripted values and temporary destinations. No process-wide environment patch/restore.",
+    "population": ["Application model configuration", "matter seal selection and credential separation", "matter/directory storage paths", "corpus and authority/identity index paths", "egress audit destination", "tools.served and its callers"],
+    "proof_plan": ["Actual served construction rejects ambient poison by not observing it", "dotenv loader bomb is never invoked with explicit environment", "snapshot survives caller-map mutation", "search is bound to temporary missing index, not ambient sentinel", "audit and receipt writes remain inside supplied runtime root", "omitted environment preserves production load behavior", "a bypass of explicit configuration makes a planted control fail"],
+    "exclusions": ["No live model calls", "No real corpus or legal-data access", "No operating-system ACL or deployed-environment claim", "No changes to P16 upload implementation owned by another agent", "create_app still selects one process-global ASGI application; concurrent multiple-box request isolation is not provided or claimed by this configuration repair"]
+  },
+  "build": {
+    "status": "IMPLEMENTED_PENDING_VALIDATION",
+    "files": ["nm/bootstrap/composition.py", "tools/served.py", "tests/test_the_served_harness_owns_its_runtime.py"],
+    "changes": ["Optional explicit environment snapshot is copied and read-only; all existing runtime path, tier and key consumers use it", "Only omitted environment applies the original dotenv behavior; an empty explicit environment remains empty and fails configuration", "Audit root is explicit for the temporary harness and retains its production default otherwise", "Harness fixes its model, seal, storage, corpus, authority and identity destinations without modifying os.environ", "Seven Class-A tests include temporary-write guards, poisoned ambient configuration, a dotenv reader bomb, mutation of the actual config consumer, shared-seal refusal and default-behavior compatibility"]
+  },
+  "test": {"status": "NOT_RUN", "selection": ["tests/test_the_served_harness_owns_its_runtime.py"], "authored_population": 7, "reason": "Main agent coordinates test execution; authored tests are not passing evidence."},
+  "signoff": {"status": "NOT_RUN"}
+}

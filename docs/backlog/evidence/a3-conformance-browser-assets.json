@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "record_type": "browser_asset_delivery_diagnostic",
+  "owners": ["BK-41", "BK-30"],
+  "start": {
+    "status": "RECORDED_BEFORE_REPAIR",
+    "finding": "The 47-case browser candidate had 46 passing cases and one desktop urgency failure: the matter toolbar and dialog were both absent while the main app, saved matter and later upload controller existed. Static script requests were logged, but response bodies/statuses, request failures and console errors were not; no lower transport cause can be established from those artifacts.",
+    "original_xml": {"path": ".nm/conformance/browser-release-candidate.xml", "sha256": "ff52e7cbe0e04fa7d5899a56b9df1e738c38cf1c0a86edaf154fa156fbee987e", "tests": 47, "passed": 46, "failed": 1},
+    "recheck": {"changed_assertions": false, "tests": 2, "passed": 2, "seconds": 8.554, "meaning": "An unchanged recheck passed; it neither identifies nor fixes the original transport cause."},
+    "artifact_limit": "The original XML is retained. The diagnostic JSON, HTML and PNG at the same test-derived paths were overwritten by the recheck; this record does not claim their original bytes are preserved.",
+    "contract": "Record local static response status, body length and SHA256 outside event callbacks; callbacks retain only response references or cached metadata. Guard real goto/reload against missing, unsuccessful or empty required assets derived from the current document's script/stylesheet manifest before workflow assertions. Preserve all existing test assertions and populations.",
+    "scope": "Shared synthetic browser fixture diagnostic and its fail-closed coverage check only. No production transport fix, file retry, new failure allowance or urgency assertion change."
+  },
+  "build": {
+    "status": "FROZEN_PENDING_CENTRAL_RUN",
+    "files": ["tests/test_the_workspace_respects_its_current_context.py", "tests/test_required_browser_assets_are_observed.py"],
+    "changes": "The shared fixture observes local static responses and failed requests/console errors, hashes response bodies only outside callbacks, and guards goto/reload against missing, unsuccessful or empty document-required scripts/styles before workflow assertions. No original workflow assertion was changed.",
+    "negative_controls": "Three separate parameterized browser controls plant HTTP503 with a body, HTTP200 with an empty body, or an aborted response for a script confirmed in the actual served document. Each requires exactly one intercepted request, the navigation guard's refusal naming that required asset, and matching response/hash or failure diagnostics. These three controls are not counted as successful user journeys.",
+    "static_check": "Ruff checked both changed Python files: all checks passed. No pytest, browser or gate execution was performed by this author."
+  },
+  "central_diagnostic": {"artifact": ".nm/conformance/browser-observer-debug.xml", "result": "One workflow passed; teardown raised KeyError removing the same held-response listener twice. The added independent asset observer kept the response event alive and exposed a pre-existing subscription-ownership defect. The initial expanded run was interrupted after repeated teardown errors and is not a complete result.", "repair": "HeldReply now owns an explicit listening flag and one idempotent unsubscribe method used by release and abandon. It does not remove other observers or swallow exceptions; every user-flow assertion is unchanged."},
+  "test": {"status": "PENDING_CENTRAL_RERUN", "next": "Coordinator runs the existing 47-case browser population plus the three new delivery controls after source freeze; report user journeys and negative controls separately."},
+  "completion": "The original transport cause remains unresolved. Better observation and prevention of unobserved asset coverage is not a claim to have repaired that cause, completed BK-41 or earned release approval."
+}

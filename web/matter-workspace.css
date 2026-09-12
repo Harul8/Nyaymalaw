@@ -1,0 +1,36 @@
+.matter-tools { display: flex; flex-wrap: wrap; gap: .5rem; padding: .65rem 2.25rem; background: var(--surface); border-bottom: 1px solid var(--rule); }
+.matter-tools[hidden], .matter-dialog [hidden] { display: none; }
+.matter-tools button { font-size: .8rem; min-height: 42px; padding: .5rem .85rem; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
+.matter-tools button:hover { border-color: var(--accent); background: var(--surface); }
+.matter-dialog { width: min(52rem, calc(100% - 2rem)); }
+.matter-dialog-body { line-height: 1.55; overflow-wrap: anywhere; }
+.matter-section { padding-block: 1rem; border-bottom: 1px solid var(--rule); }
+.matter-section h3, .matter-form h3 { margin: 0 0 .75rem; font: 500 1.25rem/1.35 var(--f-serif); }
+.matter-section h4 { margin: 1rem 0 .35rem; font-size: .85rem; }
+.matter-fields { display: grid; grid-template-columns: minmax(7rem, 1fr) minmax(0, 2.7fr); gap: .5rem 1rem; margin: .5rem 0; font-size: .9rem; }
+.matter-fields dt { color: var(--ink-2); }
+.matter-fields dd { margin: 0; white-space: pre-wrap; }
+.matter-muted { color: var(--ink-2); font-size: .85rem; }
+.matter-notice, .matter-warning { padding: .8rem 1rem; border-left: 3px solid var(--ink-2); background: var(--wash, #f3f5f2); font-size: .9rem; }
+.matter-warning { border-color: #a25c29; background: #fff4e7; color: #5d351a; }
+.matter-statement { font: 400 1.1rem/1.6 var(--f-serif); white-space: pre-wrap; }
+.matter-list { padding-left: 1.25rem; font-size: .9rem; }
+.matter-superseded { border-left: 3px solid var(--rule); padding-left: 1rem; }
+.matter-form { display: grid; gap: 1rem; padding-block: 1rem; }
+.matter-input { display: grid; gap: .4rem; font-size: .875rem; }
+.matter-input input, .matter-input textarea, .matter-input select { width: 100%; box-sizing: border-box; border: 1px solid var(--rule); border-radius: 5px; padding: .65rem .75rem; background: var(--surface); color: var(--ink); font: inherit; }
+.matter-input textarea { resize: vertical; min-height: 5rem; }
+.matter-form fieldset { border: 1px solid var(--rule); border-radius: 6px; padding: 1rem; display: grid; gap: .8rem; min-width: 0; }
+.matter-form legend { padding-inline: .4rem; font-weight: 600; font-size: .9rem; }
+.matter-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.matter-dialog details { padding-block: .6rem; }
+.matter-dialog summary { cursor: pointer; font-size: .9rem; }
+.matter-action-status { font-size: .875rem; line-height: 1.5; white-space: pre-wrap; }
+.matter-dialog button:disabled { cursor: wait; opacity: .6; }
+@media (max-width: 560px) {
+  .matter-dialog { padding: 1rem; }
+  .matter-fields { grid-template-columns: 1fr; gap: .2rem; }
+  .matter-fields dd { margin-bottom: .55rem; }
+  .matter-tools { gap: .4rem; padding: .6rem 1rem; }
+  .matter-tools button { flex: 1 1 auto; }
+}

@@ -68,6 +68,11 @@ REACHED_ELSEWHERE = {
     "declare_emergency", "get_emergency", "conceded",
     # P17's projection, registered the same way.
     "get_casefile",
+    # P16 quarantine receipt routes: FastAPI registrations exercised by the
+    # route-table authentication sweep and served upload browser journey.
+    # The held-content route deliberately refuses original-byte release.
+    "open_upload_first_intake", "begin_upload", "list_uploads", "inspect_upload",
+    "receive_upload_chunk", "complete_upload", "cancel_upload", "held_upload_content",
     # `@implements` markers: their whole purpose is to be SCANNED by
     # tools/trace.py rather than called.
     "_implements_c4",

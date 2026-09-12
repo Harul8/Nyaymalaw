@@ -37,6 +37,8 @@ from pathlib import Path
 
 import pytest
 
+from tools._source import SourceSegments
+
 pytestmark = pytest.mark.class_a
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -284,9 +286,10 @@ def _tests() -> dict[str, tuple[str, str]]:
     out: dict[str, tuple[str, str]] = {}
     for f in sorted((ROOT / "tests").glob("test_*.py")):
         src = f.read_text(encoding="utf8")
+        segments = SourceSegments(src)
         for node in ast.walk(ast.parse(src)):
             if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
-                out[node.name] = (f.name, ast.get_source_segment(src, node) or "")
+                out[node.name] = (f.name, segments.get(node) or "")
     return out
 
 

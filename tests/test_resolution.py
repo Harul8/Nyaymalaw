@@ -378,6 +378,7 @@ def test_a_ceiling_that_does_not_bind_claims_nothing(tmp_path):
 
 
 @pytest.mark.eval_id("E-051")
+@pytest.mark.class_c
 def test_the_turn_routes_a_determinate_question_without_a_named_provision(
         tmp_path):
     """B-065, CLOSED, and asserted where it actually failed.
@@ -414,6 +415,7 @@ def test_the_turn_routes_a_determinate_question_without_a_named_provision(
 
 
 @pytest.mark.eval_id("E-051")
+@pytest.mark.class_c
 def test_a_provision_the_advocate_named_outranks_the_graph(tmp_path):
     """THE ADVOCATE'S INSTRUCTION WINS.
 

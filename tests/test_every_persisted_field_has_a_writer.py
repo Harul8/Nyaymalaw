@@ -243,6 +243,16 @@ def written_precisely(package: str) -> tuple[set[str], set[str]]:
 # ========================== the declared reservations =======================
 
 RESERVED: dict[str, str] = {
+    "Matter.authority_bindings":
+        "OPEN (P13/BK-63). Trusted authority provisioning has no production "
+        "writer yet. `capacity_for` and served `_capacity_of` already read "
+        "this field and refuse protected acts without a current, attributable, "
+        "unrevoked commission-bound grant; ordinary advising is not such a "
+        "grant. Keeping the reserved field preserves that fail-closed consumer. "
+        "Retire this reservation only when an authenticated, independently "
+        "authorised grant/revoke workflow persists it, with expiry, commission "
+        "invalidation and replay proof. A test seed or self-asserted capacity "
+        "is not the missing writer, and this reservation does not complete P13.",
     "Matter.emergency_because":
         "B2. The emergency screen READS it -- a matter carrying a reason is "
         "BLOCKED with the exception on the face of the file -- and nothing "

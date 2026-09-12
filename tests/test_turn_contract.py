@@ -129,8 +129,9 @@ class _Evidence(EvidencePort):
 #: screens read it. `build(..., intake=False)` opts out, and the tests that
 #: are about the screens use it.
 INTAKE_PARTIES = {"Ramesh Traders": "client", "Kiran Steels": "adverse"}
-INTAKE_ANSWERS = {"scope": "the recovery work described in this brief",
-                  "capacity": "the client instructs directly"}
+INTAKE_ANSWERS = {"scope": "the recovery work described in this brief"}
+INTAKE_CAPACITY = {"state": "not_in_doubt",
+                   "basis": "the fixture advocate explicitly assessed capacity to instruct"}
 
 
 class briefed:  # noqa: N801 -- reads as a verb at every call site
@@ -165,9 +166,9 @@ class briefed:  # noqa: N801 -- reads as a verb at every call site
 
     def run(self, turn):
         from dataclasses import replace as _replace
-        if not turn.parties and not turn.release:
+        if not turn.parties and not turn.release and turn.capacity is None:
             turn = _replace(turn, parties=dict(INTAKE_PARTIES),
-                            release=dict(INTAKE_ANSWERS))
+                            release=dict(INTAKE_ANSWERS), capacity=dict(INTAKE_CAPACITY))
         return self.inner.run(turn)
 
 

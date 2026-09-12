@@ -195,3 +195,144 @@ def test_the_other_sessions_end_and_this_one_survives(client):
     assert client.get("/api/session").status_code == 200, "the rotating session ended"
     assert other.get("/api/session").status_code == 401, (
         "another session survived a recovery-credential replacement")
+
+
+# ========================= sensitive failure admission =======================
+
+def _sensitive_attempt(client, operation, proof):
+    if operation == "reauthenticate":
+        return _proof(client)
+    return _rotate(client, proof, generation=_generation(client))
+
+
+def _assert_paused(response):
+    assert response.status_code == 429, response.text
+    assert int(response.headers["retry-after"]) > 0
+    assert "Nothing is locked" in response.json()["detail"]
+
+
+@pytest.mark.parametrize("path,body", [
+    ("/api/register", {"password": PASSWORD, "password_again": PASSWORD}),
+    ("/api/recover", {"advocate_id": "adv_demo", "recovery_code": "unissued",
+                      "password": PASSWORD, "password_again": PASSWORD}),
+    ("/api/login", {"advocate_id": "adv_demo", "password": PASSWORD}),
+    ("/api/reauthenticate", {"password": PASSWORD}),
+    ("/api/recovery-codes/rotate", {"proof": "unissued",
+                                    "expected_recovery_generation": 1}),
+])
+def test_every_failure_counted_authentication_door_obeys_source_admission(
+        client, path, body):
+    from nm.domain import attempts
+    from nm.edge import api
+
+    now = api.utcnow()
+    for number in range(attempts.PER_SOURCE):
+        client.directory.note_failure(f"other-{number}", "testclient", now)
+    _assert_paused(client.post(path, json=body))
+
+
+@pytest.mark.parametrize("operation", ["reauthenticate", "rotate_recovery_codes"])
+@pytest.mark.parametrize("limit", ["account", "source"])
+def test_sensitive_limits_refuse_before_the_consumer_without_changing_state(
+        client, monkeypatch, operation, limit):
+    from nm.domain import attempts
+    from nm.edge import api
+
+    now = api.utcnow()
+    monkeypatch.setattr(api, "utcnow", lambda: now)
+    # A real positive path precedes the planted limiting population.
+    earned = _proof(client)
+    assert earned.status_code == 200, earned.text
+    proof = earned.json()["proof"]
+    before = _generation(client)
+    calls = []
+    original = getattr(client.directory, operation)
+
+    def watched(*args, **kwargs):
+        calls.append(True)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(client.directory, operation, watched)
+    count = attempts.PER_ADVOCATE if limit == "account" else attempts.PER_SOURCE
+    for number in range(count):
+        client.directory.note_failure(
+            "adv_demo" if limit == "account" else f"other-{number}",
+            "elsewhere" if limit == "account" else "testclient", now)
+    counts = client.directory.failures_since(
+        "adv_demo", "testclient", now - attempts.WINDOW)
+    assert counts is not None and len(counts[0 if limit == "account" else 1]) == count
+
+    paused = _sensitive_attempt(client, operation, proof)
+    _assert_paused(paused)
+    assert calls == [], "a throttled attempt still reached secret verification/mutation"
+    assert _generation(client) == before
+    assert client.get("/api/session").status_code == 200
+    assert client.directory.failures_since(
+        "adv_demo", "testclient", now - attempts.WINDOW) == counts, (
+        "a refused retry must not extend the pause")
+
+
+@pytest.mark.parametrize("operation", ["reauthenticate", "rotate_recovery_codes"])
+def test_sensitive_failure_records_the_observed_source_once(client, operation):
+    from nm.domain import attempts
+    from nm.edge import api
+
+    since = api.utcnow() - attempts.WINDOW
+    assert client.directory.failures_since("adv_demo", "testclient", since) == ((), ())
+    response = (_proof(client, "Wrong-password-9") if operation == "reauthenticate"
+                else _rotate(client, "unissued-proof", generation=_generation(client)))
+    assert response.status_code == (401 if operation == "reauthenticate" else 409)
+    counts = client.directory.failures_since("adv_demo", "testclient", since)
+    assert counts is not None
+    assert len(counts[0]) == len(counts[1]) == 1, (
+        "one failure must count once for both the account and the real source")
+
+
+def test_a_claimed_forwarded_address_cannot_reset_a_sensitive_source_limit(client):
+    from nm.domain import attempts
+    from nm.edge import api
+
+    now = api.utcnow()
+    # An observed failure participates in the same source counter as the
+    # synthetic other-account population; the caller cannot rename that source.
+    assert _proof(client, "Wrong-password-9").status_code == 401
+    for number in range(attempts.PER_SOURCE - 1):
+        client.directory.note_failure(f"other-{number}", "testclient", now)
+    response = client.post(
+        "/api/reauthenticate", json={"password": PASSWORD},
+        headers={"x-forwarded-for": "198.51.100.17"})
+    _assert_paused(response)
+
+
+def test_the_sensitive_pause_ages_out_without_locking_the_account(client, monkeypatch):
+    from datetime import timedelta
+
+    from nm.domain import attempts
+    from nm.edge import api
+
+    now = api.utcnow()
+    monkeypatch.setattr(api, "utcnow", lambda: now)
+    for _ in range(attempts.PER_ADVOCATE):
+        assert _proof(client, "Wrong-password-9").status_code == 401
+    _assert_paused(_proof(client))
+    now += attempts.WINDOW + timedelta(seconds=1)
+    response = _proof(client)
+    assert response.status_code == 200, response.text
+    assert response.json()["proof"]
+
+
+def test_the_sensitive_limit_witness_rejects_an_admission_bypass(client, monkeypatch):
+    from nm.domain import attempts
+    from nm.edge import api
+
+    assert _proof(client).status_code == 200
+    now = api.utcnow()
+    for _ in range(attempts.PER_ADVOCATE):
+        client.directory.note_failure("adv_demo", "testclient", now)
+    _assert_paused(_proof(client))
+    original = api._admit_auth_attempt
+    assert callable(original)
+    monkeypatch.setattr(api, "_admit_auth_attempt", lambda *args, **kwargs: None)
+    assert api._admit_auth_attempt is not original
+    with pytest.raises(AssertionError):
+        _assert_paused(_proof(client))

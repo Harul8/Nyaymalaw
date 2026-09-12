@@ -183,9 +183,23 @@ def test_every_feature_says_which_source_answered_for_it():
         assert isinstance(feature["declared_in"], list)
 
 
-def test_code_and_delivery_cannot_overwrite_authored_implementation():
-    """C6 supplies both observations and is still the authored ``none`` fact."""
-    state = project(["C6"])["C6"]
+def _plant_authored_denial(root: pathlib.Path, feature_id: str = "C6") -> None:
+    """A code-declared, delivered feature explicitly denied in this copied tree."""
+    before = project([feature_id], root=root, bind_execution=False)[feature_id]
+    assert before.declared_in and before.delivered_by, "the counterexample needs both observations"
+
+    def deny(document: dict) -> None:
+        rows = [row for row in document["features"] if row["id"] == feature_id]
+        assert len(rows) == 1
+        rows[0]["implementation"] = "none"
+
+    _rewrite_status(root, deny)
+
+
+def test_code_and_delivery_cannot_overwrite_authored_implementation(tree):
+    """Plant the old C6 denial; a healthier live registry must not remove this control."""
+    _plant_authored_denial(tree)
+    state = project(["C6"], root=tree, bind_execution=False)["C6"]
     assert state.declared_in and state.delivered_by, "the negative control is vacuous"
     assert state.implementation == "none"
     assert state.implementation_basis == "registry"
@@ -196,8 +210,18 @@ def test_code_and_delivery_cannot_overwrite_authored_implementation():
 def test_a_reconciliation_control_row_cannot_supply_feature_proof(tree):
     """A control may inspect delivery reconciliation; it cannot prove A2 itself."""
     def make_control_deliver(document: dict) -> None:
+        feature = next(row for row in document["features"] if row["id"] == "A2")
+        feature["implementation"] = "complete"
+        # Establish a control-only delivery population explicitly. Real A2
+        # delivery can grow without supplying this test's counterexample.
+        for item in document["items"]:
+            if "A2" in (item.get("delivers") or []):
+                item["delivers"].remove("A2")
         control = next(item for item in document["items"] if item["id"] == "BK-48")
+        assert control["kind"] != "journey"
         control["delivers"] = ["A2"]
+        assert [item["id"] for item in document["items"]
+                if "A2" in (item.get("delivers") or [])] == ["BK-48"]
         for criterion in control["acceptance"]:
             criterion["required_evidence"] = []
 
@@ -211,7 +235,9 @@ def test_a_reconciliation_control_row_cannot_supply_feature_proof(tree):
 def test_the_registry_and_the_code_are_reconciled_in_both_directions():
     """Delivery gaps and implementation contradictions remain separate sets."""
     ids = [f["id"] for f in _features()]
+    assert ids and len(set(ids)) == len(ids)
     state = project(ids)
+    assert set(state) == set(ids)
     exported = _features()
     observed = {fid: list(value.declared_in) for fid, value in state.items()}
     assert {feature["id"]: feature["declared_in"] for feature in exported} == observed
@@ -220,7 +246,8 @@ def test_the_registry_and_the_code_are_reconciled_in_both_directions():
     assert set(trace_only) == {fid for fid, value in state.items() if value.delivery_gap}
     assert set(contradicted) == {
         fid for fid, value in state.items() if value.implementation_contradicted}
-    assert "C6" in contradicted and "C6" not in trace_only
+    # The separate planted denial/delivery-removal controls below require
+    # both failures. This live reconciliation must also permit their repair.
 
 
 # ============================ what the export refuses ========================
@@ -375,6 +402,7 @@ def test_historical_workbook_state_cannot_overwrite_current_authored_state(tree)
 
 def test_delivery_and_contradiction_signatures_move_independently(tree):
     """Removing C6's delivery link cannot make its authored denial disappear."""
+    _plant_authored_denial(tree)
     _payloads, baseline = build(root=tree, bind_execution=False)
     before_features = baseline["features"]
     implementation_sites = {
@@ -384,8 +412,13 @@ def test_delivery_and_contradiction_signatures_move_independently(tree):
     assert "C6" not in before_trace and "C6" in before_contradicted
 
     def remove_delivery(document: dict) -> None:
-        row = next(item for item in document["items"] if item["id"] == "BK-54")
-        row["delivers"].remove("C6")
+        rows = [item for item in document["items"]
+                if item.get("kind") == "journey" and "C6" in (item.get("delivers") or [])]
+        assert rows, "a deletion that changes no delivery relation proves nothing"
+        for row in rows:
+            row["delivers"].remove("C6")
+        assert not any(item.get("kind") == "journey" and "C6" in (item.get("delivers") or [])
+                       for item in document["items"])
 
     _rewrite_status(tree, remove_delivery)
     _payloads, changed = build(root=tree, bind_execution=False)
@@ -396,7 +429,10 @@ def test_delivery_and_contradiction_signatures_move_independently(tree):
 
 
 def test_every_generated_output_is_compared_before_explicit_publication(tree, capsys):
-    payloads, _built = build(root=tree, bind_execution=False)
+    # Use the same real evidence-binding mode as the CLI. An unbound authored
+    # PASS and a bound STALE verdict are legitimately different candidates;
+    # comparing those was not a publication-integrity check.
+    payloads, _built = build(root=tree)
     assert set(payloads) == set(generated_paths(tree))
     publish(payloads)
     assert compare_payloads(payloads) == []

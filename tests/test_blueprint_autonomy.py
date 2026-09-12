@@ -7,8 +7,8 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
-import yaml
 
+from tools._documents import safe_load
 from tools.blueprint_autonomy import (
     BOUNDARIES,
     COMPARISON_POLICIES,
@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _registered():
-    registry = yaml.safe_load((ROOT / "docs/backlog/status.yaml").read_text(encoding="utf-8"))
+    registry = safe_load((ROOT / "docs/backlog/status.yaml").read_text(encoding="utf-8"))
     packet_book = json.loads((ROOT / "docs/blueprint/packets.json").read_text(encoding="utf-8"))
     return {
         "known_items": {row["id"] for row in registry["items"]},

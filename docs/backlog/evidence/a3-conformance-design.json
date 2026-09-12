@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "record_type": "diagnostic_browser_design_review",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "owners": ["BK-32-AC1", "BK-42-AC7", "BK-43", "J-7"],
+  "start": "READY: verify the revised professional workspace with visible file-first intake, keyboard access and readable themes at the supported phone/tablet/desktop widths.",
+  "changes": [
+    "Warm restrained surfaces, local system typography, meaningful landing state, explicit workspace identity and responsive navigation.",
+    "Visible bordered upload/voice action outside hidden typed-intake forms, with consistent matter-tool spacing and clear clickable targets.",
+    "No source-of-truth or legal-confidence claim encoded in decoration; restrictions and scripted rehearsal warning remain visible."
+  ],
+  "manual_review": {
+    "method": "Opened the actual isolated local application in the in-app browser, traversed the workspace and original-material dialog, inspected accessibility tree and screenshots.",
+    "finding_and_repair": "The initially moved upload button was reachable but visually flush and weakly distinguished. Added consistent toolbar inset, border, surface and minimum target height; no workflow assertion was removed.",
+    "limit": "This was visual inspection during ongoing source edits. The running-server mismatch warning was visible and was not hidden or treated as current-build acceptance."
+  },
+  "focused_browser_run": {
+    "command": "python -m pytest tests/test_the_workspace_design_remains_readable.py -q --junitxml=.nm/conformance/design-focused.xml",
+    "population": {"tests": 6, "passed": 6, "failed": 0, "errors": 0, "skipped": 0},
+    "seconds": 12.007,
+    "configurations": ["390x844 light", "390x844 dark", "768x1024 light", "768x1024 dark", "1280x900 light", "1280x900 dark"],
+    "checks": ["Visible enabled file/voice entry", "At least 42px launch target", "Keyboard Enter opens and Escape closes the dialog", "Focus returns to the launcher", "At least ten actual visible text/control colour pairs at 4.5:1 or higher", "No page/dialog horizontal overflow", "No page errors or external asset requests"],
+    "source_followup": "Two imported pytest fixture names were subsequently aliased to satisfy F811 without a suppression or behavioral change. Final frozen-tree browser execution remains required."
+  },
+  "not_claimed": ["Full WCAG conformance", "Actual screen-reader validation", "Representative advocate acceptance", "Legal quality", "Real microphone capture", "Production approval"],
+  "final_frozen_execution": "PENDING"
+}

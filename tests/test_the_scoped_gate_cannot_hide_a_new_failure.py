@@ -40,22 +40,16 @@ FAILED {_PRODUCES}
 """.lstrip()
 _TRACE = (
     "FAILURES\n"
-    "  [T3b] trace-only 24 of 44: A1, A2, A3, A4, B1, B3, B4, B5, C1, "
-    "C3, C4, C5, C7, D1, D2, D3, D4, D5, D6, D7, D8, D9, E2, I1\n"
-    "  [T3c] authored-none/code-present 1 of 44: C6\n"
-    # D2 WAS HERE AND IS NOT. P22 built the legal-premise gate and
-    # `tests/test_arithmetic_cannot_establish_the_law.py` declares
-    # `@refuses("D2", 4)`, so `TRACE-D2` started passing and the registry
-    # shrank. This fixture is the declared red the gate commits over, so it
-    # shrinks with it -- which is the third outcome working on the control's
-    # own test data rather than only on the product's.
+    # Reconciliation removed T3b/T3c; style debt was repaired. This fixture
+    # follows the measured declared red. Independent planted controls below
+    # continue testing those diagnostic families after the real defects close.
     "  [T7] C1: 1 of 5 NEVER clauses have no test declaring @refuses\n"
-    "TRACE FAILED  -- 3 failure(s), 29 warning(s)\n"
+    "TRACE FAILED  -- 1 failure(s), 46 warning(s)\n"
 )
 
 
 def _declared(step: str) -> Observed:
-    """Stand in for Ruff's 151-line output without copying it into this test."""
+    """Only currently declared structured diagnostics, including the empty set."""
     return Observed(frozenset(row.fact for row in ROWS if step in row.steps))
 
 
@@ -89,8 +83,8 @@ def test_the_declared_red_is_recognised_as_unchanged():
 
 def test_a_trace_failure_t99_nobody_registered_blocks():
     planted = _TRACE.replace(
-        "TRACE FAILED  -- 3",
-        "  [T99] planted trace failure\nTRACE FAILED  -- 5",
+        "TRACE FAILED  -- 1",
+        "  [T99] planted trace failure\nTRACE FAILED  -- 2",
     )
     verdict = compare(ROWS, _seen(trace_out=planted), set(_seen()))
     assert not verdict.ok
@@ -110,7 +104,7 @@ def test_a_missing_declared_trace_failure_blocks():
     planted = _TRACE.replace(
         "  [T7] C1: 1 of 5 NEVER clauses have no test declaring @refuses\n",
         "",
-    ).replace("TRACE FAILED  -- 3", "TRACE FAILED  -- 2")
+    ).replace("TRACE FAILED  -- 1", "TRACE FAILED  -- 0")
     verdict = compare(ROWS, _seen(trace_out=planted), set(_seen()))
     assert not verdict.ok
     assert "TRACE-C1" in verdict.fixed
@@ -191,21 +185,26 @@ def test_an_unparseable_nonzero_step_is_new_and_cannot_be_declared():
 def test_unexplained_now_means_any_set_difference_in_either_direction():
     assert not unexplained("trace", ROWS, observed("trace", _TRACE, failed=True))
     extra = _TRACE.replace(
-        "TRACE FAILED  -- 3",
-        "  [T99] extra\nTRACE FAILED  -- 5",
+        "TRACE FAILED  -- 1",
+        "  [T99] extra\nTRACE FAILED  -- 2",
     )
     assert unexplained("trace", ROWS, observed("trace", extra, failed=True))
 
 
 def test_t3b_membership_is_exact_even_when_the_count_does_not_move():
-    planted = _TRACE.replace(
-        "D8, D9, E2, I1",
-        "D8, D9, E2, H1",
-    )
-    verdict = compare(ROWS, _seen(trace_out=planted), set(_seen()))
+    base = ("FAILURES\n  [T3b] trace-only 2 of 44: E2, I1\n"
+            "TRACE FAILED  -- 1 failure(s), 0 warning(s)\n")
+    facts = observed("trace", base, failed=True).facts
+    assert len(facts) == 1
+    expected = next(iter(facts))
+    known = [_known("trace", expected, "PLANTED-T3B")]
+    assert compare(known, {"trace": observed("trace", base, failed=True)}, {"trace"}).ok
+    planted = base.replace("E2, I1", "E2, H1")
+    assert planted != base
+    verdict = compare(known, {"trace": observed("trace", planted, failed=True)}, {"trace"})
     assert not verdict.ok
-    assert "TRACE-T3B" in verdict.fixed
-    assert any("D8, D9, E2, H1" in fact for _, fact in verdict.new)
+    assert "PLANTED-T3B" in verdict.fixed
+    assert any("E2, H1" in fact for _, fact in verdict.new)
 
 
 @pytest.mark.parametrize(
@@ -229,8 +228,8 @@ def test_bk80_ac7_rejects_every_non_exact_failure_population(
     """
     if mutation == "new":
         output = _TRACE.replace(
-            "TRACE FAILED  -- 3",
-            "  [T99] planted trace failure\nTRACE FAILED  -- 5",
+            "TRACE FAILED  -- 1",
+            "  [T99] planted trace failure\nTRACE FAILED  -- 2",
         )
         verdict = compare(ROWS, _seen(trace_out=output), set(_seen()))
         observed_result = "\n".join(fact for _, fact in verdict.new)
@@ -242,7 +241,7 @@ def test_bk80_ac7_rejects_every_non_exact_failure_population(
         output = _TRACE.replace(
             "  [T7] C1: 1 of 5 NEVER clauses have no test declaring @refuses\n",
             "",
-        ).replace("TRACE FAILED  -- 3", "TRACE FAILED  -- 2")
+        ).replace("TRACE FAILED  -- 1", "TRACE FAILED  -- 0")
         verdict = compare(ROWS, _seen(trace_out=output), set(_seen()))
         observed_result = "\n".join(verdict.fixed)
     elif mutation == "uncaptured":
@@ -341,7 +340,13 @@ def test_a_node_id_quoted_in_prose_is_not_an_observed_failure():
 
 
 def test_a_step_that_did_not_run_is_not_evidence_its_failure_is_fixed():
-    verdict = compare(ROWS, _seen(), {"trace"})
+    output = ("E501 Line too long (101 > 100)\n"
+              "  --> tools/one.py:1:101\nFound 1 error.\n")
+    facts = observed("ruff", output, failed=True).facts
+    assert len(facts) == 1
+    skipped = _known("ruff", next(iter(facts)), "NOT-RUN-RUFF")
+    verdict = compare([*ROWS, skipped], _seen(), {"trace"})
     assert verdict.ok, (verdict.new, verdict.fixed)
-    assert "RUFF-PLANNING-DEBT" not in verdict.fixed
+    assert "NOT-RUN-RUFF" not in verdict.fixed
+    assert "NOT-RUN-RUFF" not in verdict.matched
     assert "TRACE-C1" in verdict.matched

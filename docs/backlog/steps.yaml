@@ -160,6 +160,7 @@ steps:
   features:
   - B1
   items:
+  - BK-93
   - BK-8
   - BK-48
   actor: advocate
@@ -331,6 +332,7 @@ steps:
   features:
   - C3
   items:
+  - BK-94
   - BK-62
   - BK-63
   - BK-64
@@ -356,6 +358,7 @@ steps:
   features:
   - C4
   items:
+  - BK-94
   - BK-27
   - J-4
   - BK-64
@@ -381,6 +384,7 @@ steps:
   features:
   - C5
   items:
+  - BK-94
   - BK-14
   - BK-64
   - BK-65
@@ -431,6 +435,7 @@ steps:
   features:
   - C7
   items:
+  - BK-94
   - BK-6
   - BK-64
   - BK-79
@@ -456,6 +461,7 @@ steps:
   features:
   - C3
   items:
+  - BK-94
   - BK-63
   - BK-65
   actor: advocate
@@ -480,6 +486,7 @@ steps:
   features:
   - D1
   items:
+  - BK-95
   - J-2
   - BK-65
   - BK-67
@@ -538,6 +545,7 @@ steps:
   features:
   - D1
   items:
+  - BK-95
   - BK-65
   - BK-70
   actor: advocate
@@ -562,6 +570,7 @@ steps:
   features:
   - D1
   items:
+  - BK-95
   - BK-15
   - BK-65
   - BK-70
@@ -587,6 +596,7 @@ steps:
   features:
   - D1
   items:
+  - BK-95
   - BK-65
   - BK-70
   actor: advocate
@@ -611,6 +621,7 @@ steps:
   features:
   - D1
   items:
+  - BK-95
   - BK-65
   - BK-70
   actor: advocate
@@ -635,6 +646,7 @@ steps:
   features:
   - D3
   items:
+  - BK-95
   - BK-33
   - BK-65
   actor: advocate
@@ -659,6 +671,7 @@ steps:
   features:
   - D4
   items:
+  - BK-95
   - BK-25
   - BK-24
   - BK-38
@@ -685,6 +698,7 @@ steps:
   features:
   - D5
   items:
+  - BK-95
   - BK-64
   - BK-65
   - BK-67
@@ -710,6 +724,7 @@ steps:
   features:
   - D6
   items:
+  - BK-95
   - BK-65
   - BK-67
   actor: advocate
@@ -734,6 +749,7 @@ steps:
   features:
   - D7
   items:
+  - BK-95
   - J-3
   - BK-67
   actor: advocate
@@ -759,6 +775,7 @@ steps:
   features:
   - D8
   items:
+  - BK-95
   - BK-65
   - BK-67
   - BK-70
@@ -784,6 +801,7 @@ steps:
   features:
   - D9
   items:
+  - BK-95
   - BK-64
   - BK-65
   - BK-67
@@ -833,6 +851,7 @@ steps:
   features:
   - E2
   items:
+  - BK-96
   - BK-37
   - J-6
   - J-5

@@ -130,11 +130,13 @@ def test_a_document_provenance_with_no_page_still_names_the_document():
     that guard holding somewhere else. A guard that is right in the core and
     assumed at the edge is CLAUDE.md 8.
     """
-    assert summary._source(_loose(document="sale_deed.pdf"))         == "sale_deed.pdf: "
+    assert summary._source(_loose(document="sale_deed.pdf")) == (
+        "sale_deed.pdf [extraction unread; not verification of truth]: ")
 
 
 def test_a_document_kind_with_no_name_says_so_rather_than_nothing():
     """The third state. A document-sourced fact whose document was lost must
     not silently render as the advocate's word -- that is the exact defect,
     arriving through the degraded path instead of the ordinary one."""
-    assert summary._source(_loose()) == "a document: "
+    assert summary._source(_loose()) == (
+        "a document [extraction unread; not verification of truth]: ")

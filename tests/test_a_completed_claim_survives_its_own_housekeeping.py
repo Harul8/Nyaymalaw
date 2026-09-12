@@ -215,7 +215,7 @@ def test_the_claim_is_released_even_when_the_tidying_had_already_failed(
 
 # ===================== one owner, over the whole product =====================
 
-OWNER = "nm/adapters/store/cleanup.py"
+OWNER = "nm/infrastructure/cleanup.py"
 
 
 def _removals_in(name: str, source: str) -> list[str]:
@@ -235,6 +235,10 @@ def _removals_in(name: str, source: str) -> list[str]:
         elif (isinstance(func, ast.Attribute) and func.attr == "remove"
                 and isinstance(func.value, ast.Name) and func.value.id == "os"):
             found.append(f"{name}:{node.lineno} os.remove(")
+        elif (isinstance(func, ast.Attribute) and func.attr in {"rmtree", "rmdir"}
+                and isinstance(func.value, ast.Name)
+                and func.value.id in {"shutil", "os"}):
+            found.append(f"{name}:{node.lineno} {func.value.id}.{func.attr}(")
     return found
 
 
@@ -266,11 +270,15 @@ def test_the_removal_sweep_can_see_a_second_owner():
         "def release(lock, tmp):",
         "    lock.unlink(missing_ok=True)",
         "    os.remove(tmp)",
+        "    shutil.rmtree(tmp)",
+        "    os.rmdir(tmp)",
     ))
     seen = _removals_in("planted.py", planted)
-    assert len(seen) == 2, seen
+    assert len(seen) == 4, seen
     assert any(".unlink(" in line for line in seen)
     assert any("os.remove(" in line for line in seen)
+    assert any("shutil.rmtree(" in line for line in seen)
+    assert any("os.rmdir(" in line for line in seen)
     # AND IT DOES NOT FIRE ON EVERYTHING, or the sweep above is unfalsifiable.
     assert not _removals_in(
         "clean.py", "def release(path):\n    discard(path)\n")

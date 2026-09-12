@@ -1215,7 +1215,8 @@
         "BK-78-AC2",
         "BK-53-AC1",
         "BK-53-AC2",
-        "BK-48-AC3"
+        "BK-48-AC3",
+        "BK-93-AC1"
       ],
       "prerequisites": [
         "P13"
@@ -1249,6 +1250,10 @@
         {
           "path": "tests/test_a_new_party_stales_the_clearance.py",
           "kind": "existing"
+        },
+        {
+          "path": "nm/core/route.py",
+          "kind": "existing"
         }
       ],
       "inputs": [
@@ -1261,7 +1266,8 @@
         "Use the screen owner, not duplicate edge logic; adding a party stales clearance before substance from the same turn can release.",
         "Persist emergency actor, basis, permitted protective/referral scope, outstanding screens and expiry; connect BK-53 triage without admitting merits.",
         "Re-enter/retry after expiry, inject unavailable screening and request merits via the emergency route; inspect blocked result and preserved urgency.",
-        "Record capacity/authority to instruct as assessed, unresolved or insufficient with its source and needed next step; account access alone is not capacity."
+        "Record capacity/authority to instruct as assessed, unresolved or insufficient with its source and needed next step; account access alone is not capacity.",
+        "Complete the inherited text opening-route contract BK-93-AC1 before ordinary admission: content-based correctable reading, non-matter no-file behavior, short real emergencies, unsupported scope and improper-instruction refusal. P25 owns the later admitted-material opening matrix; this baseline ownership is not a claim of completed routing proof."
       ],
       "proof": {
         "positive": [
@@ -1288,7 +1294,8 @@
         "BK-78-AC2",
         "BK-53-AC1",
         "BK-53-AC2",
-        "BK-48-AC3"
+        "BK-48-AC3",
+        "BK-93-AC1"
       ],
       "requires_completed_items": []
     },
@@ -1453,7 +1460,12 @@
       "kind": "implementation",
       "criteria": [
         "BK-64-AC1",
-        "J-4-AC1"
+        "J-4-AC1",
+        "BK-94-AC1",
+        "BK-94-AC2",
+        "BK-94-AC3",
+        "BK-94-AC4",
+        "BK-94-AC5"
       ],
       "prerequisites": [
         "P10"
@@ -1485,6 +1497,18 @@
           "kind": "existing"
         },
         {
+          "path": "nm/core/posture.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/threading.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/turn.py",
+          "kind": "existing"
+        },
+        {
           "path": "nm/edge/projections.py",
           "kind": "existing"
         },
@@ -1503,7 +1527,8 @@
         "Persist asserted/documented/disputed/inferred status, source location, extraction confidence and confirmation separately.",
         "Apply corrections as new versions with attribution; preserve original evidence and competing accounts.",
         "Repeat an unsupported assertion and then correct a date; inspect persisted provenance, source drawer and contradictions after restart.",
-        "Keep factual dispute identity distinct from alternative remedies/procedural questions; proposed thread splits require attributable reasons and cannot duplicate the same dispute into inconsistent files."
+        "Keep factual dispute identity distinct from alternative remedies/procedural questions; proposed thread splits require attributable reasons and cannot duplicate the same dispute into inconsistent files.",
+        "Complete the inherited C3/C4/C5/C7 living-file contracts under BK-94-AC1 through AC4: versioned posture, stable attributable thread identity, source-aware chronology and separate existence/admissibility/weight with owned preservation. Preserve existing consumers and prove their full served contracts; a Fact projection alone does not close them. P17 supplies the source/thread identity foundation for AC5, whose actual media binding and correction acceptance belongs to P25."
       ],
       "proof": {
         "positive": [
@@ -1523,7 +1548,11 @@
       "rollback": "Disable new correction commands if needed; retain versions and render the last authorised state with freshness limits.",
       "final_criteria": [
         "BK-64-AC1",
-        "J-4-AC1"
+        "J-4-AC1",
+        "BK-94-AC1",
+        "BK-94-AC2",
+        "BK-94-AC3",
+        "BK-94-AC4"
       ],
       "requires_completed_items": []
     },
@@ -1763,7 +1792,8 @@
         "BK-25-AC1",
         "BK-38-AC1",
         "BK-38-AC2",
-        "BK-45-AC1"
+        "BK-45-AC1",
+        "BK-95-AC3"
       ],
       "prerequisites": [
         "P17",
@@ -1803,6 +1833,10 @@
         {
           "path": "nm/knowledge/citator.py",
           "kind": "existing"
+        },
+        {
+          "path": "nm/core/turn.py",
+          "kind": "existing"
         }
       ],
       "inputs": [
@@ -1815,7 +1849,8 @@
         "Keep exact identity resolution distinct from hybrid candidate ranking; apply authorised scope before retrieval and return coverage/index identity.",
         "Persist consulted sources, adverse searches and stopping limits; attach selected authority to an issue with precise locators.",
         "Test correct quote with wrong applicability, broken index, unresolved citation and cross-tenant sentinel; qualified review scores legal conclusions, not retrieval rank.",
-        "Implement case-level discovery then paragraph expansion, controlled court/date filters and grouped inspection; the browser proof must assert post-submission results/no-results/unavailable state, not static labels."
+        "Implement case-level discovery then paragraph expansion, controlled court/date filters and grouped inspection; the browser proof must assert post-submission results/no-results/unavailable state, not static labels.",
+        "Close the baseline D4 research journey BK-95-AC3 using actual decision-linked bounded tasks, consulted and negative-result ledgers and the strongest opposing propositions; source retrieval and quotation do not themselves prove legal applicability. BK-95 is organized under M07, while this research contribution remains owned by M06/P21."
       ],
       "proof": {
         "positive": [
@@ -1838,7 +1873,8 @@
         "BK-25-AC1",
         "BK-38-AC1",
         "BK-38-AC2",
-        "BK-45-AC1"
+        "BK-45-AC1",
+        "BK-95-AC3"
       ],
       "requires_completed_items": []
     },
@@ -1850,7 +1886,9 @@
       "criteria": [
         "BK-65-AC2",
         "BK-35-AC1",
-        "BK-35-AC2"
+        "BK-35-AC2",
+        "BK-95-AC1",
+        "BK-95-AC2"
       ],
       "prerequisites": [
         "P18",
@@ -1902,7 +1940,8 @@
         "Represent source, applicability, disputed premise and reviewer state separately from dates/period arithmetic.",
         "Require a selected or openly conditional legal premise before computing; preserve competing premises and controlling unknowns.",
         "Test identical arithmetic under wrong accrual, wrong forum and superseded law; changing a premise invalidates its dependent computation before release.",
-        "Serve the cover, answer and deadline register from the same premise/calculation version; an inconsistency is explicit and cannot produce conflicting deadlines."
+        "Serve the cover, answer and deadline register from the same premise/calculation version; an inconsistency is explicit and cannot produce conflicting deadlines.",
+        "Complete the inherited D1/D3 contracts under BK-95-AC1/AC2 across every applicable threshold and registered deadline, not only limitation: attributed answered/blocked/not-applicable findings, recomputed near/passed states, factual urgency, owned action times and consistent thread ordering."
       ],
       "proof": {
         "positive": [
@@ -1923,7 +1962,9 @@
       "final_criteria": [
         "BK-65-AC2",
         "BK-35-AC1",
-        "BK-35-AC2"
+        "BK-35-AC2",
+        "BK-95-AC1",
+        "BK-95-AC2"
       ],
       "requires_completed_items": []
     },
@@ -1933,7 +1974,13 @@
       "title": "Reason through relief and enforceability",
       "kind": "implementation",
       "criteria": [
-        "BK-70-AC1"
+        "BK-70-AC1",
+        "BK-95-AC4",
+        "BK-95-AC5",
+        "BK-95-AC6",
+        "BK-95-AC7",
+        "BK-95-AC8",
+        "BK-95-AC9"
       ],
       "prerequisites": [
         "P22"
@@ -1962,6 +2009,22 @@
         {
           "path": "nm/domain/answer.py",
           "kind": "existing"
+        },
+        {
+          "path": "nm/core/adversarial.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/issues.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/issue.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/turn.py",
+          "kind": "existing"
         }
       ],
       "inputs": [
@@ -1973,7 +2036,8 @@
       "steps": [
         "Add remedy availability, executable outcome, interim protection and proportionality to issue assessment without confusing merits with useful relief.",
         "Connect asset/limitation/procedure uncertainty as attributed premises, not model guesses.",
-        "Compare the controlled same-merits variants; counsel verifies recommendation changes for the remedy reason and not unrelated narrative drift."
+        "Compare the controlled same-merits variants; counsel verifies recommendation changes for the remedy reason and not unrelated narrative drift.",
+        "Complete baseline D5-D9 and their served integration under BK-95-AC4 through AC9: independent element coverage, strongest consistent theories, adverse-fact accountability, once-per-file cross-thread exposure, lawful grounded salvage and complete issue dispositions. Reuse and repair the real existing consumers; remedy-only examples or a future adaptive-lead plan cannot certify this complete worked-file population."
       ],
       "proof": {
         "positive": [
@@ -1992,7 +2056,13 @@
       ],
       "rollback": "Fall back to qualified limited merits analysis with relief unassessed; do not preserve a full recommendation from incomplete remedy work.",
       "final_criteria": [
-        "BK-70-AC1"
+        "BK-70-AC1",
+        "BK-95-AC4",
+        "BK-95-AC5",
+        "BK-95-AC6",
+        "BK-95-AC7",
+        "BK-95-AC8",
+        "BK-95-AC9"
       ],
       "requires_completed_items": []
     },
@@ -2094,7 +2164,9 @@
         "BK-79-AC3",
         "BK-88-AC1",
         "BK-88-AC2",
-        "BK-88-AC4"
+        "BK-88-AC4",
+        "BK-93-AC2",
+        "BK-94-AC5"
       ],
       "prerequisites": [
         "P16",
@@ -2146,7 +2218,8 @@
         "Carry cancel/retry/logout/deletion through pending uploads, jobs, temp objects, derivatives, browser state and processor acknowledgements.",
         "Inspect a page and timestamp behind a correction, then cancel and log out; re-enter and enumerate every retained/erased component with its reason.",
         "For BK-79-AC3, exercise each served upload, capture, retry and worker path against the shared media policy. A permitted transcript must prove provider call/result, source locators, preserved original, correction and restart; absent/null/malformed observations must fail rather than default to false.",
-        "Plant forbidden requests and nested response derivatives and inspect logs, cache, storage, reasoning and UI for leakage. Keep the real confidential route disabled until BK-88-AC4's configuration-specific proof; synthetic integration does not activate it."
+        "Plant forbidden requests and nested response derivatives and inspect logs, cache, storage, reasoning and UI for leakage. Keep the real confidential route disabled until BK-88-AC4's configuration-specific proof; synthetic integration does not activate it.",
+        "Close BK-93-AC2's document-only/multiple-dispute opening matrix and BK-94-AC5's visible correctable source-version-to-thread binding. An upload receipt is not an admitted fact; hostile source instructions, missing bindings and stale correction offers must fail through the real served path without defaulting to the first thread."
       ],
       "proof": {
         "positive": [
@@ -2168,7 +2241,9 @@
         "BK-54-AC1",
         "BK-79-AC1",
         "BK-79-AC2",
-        "BK-79-AC3"
+        "BK-79-AC3",
+        "BK-93-AC2",
+        "BK-94-AC5"
       ],
       "requires_completed_items": []
     },
@@ -2179,7 +2254,9 @@
       "kind": "implementation",
       "criteria": [
         "BK-37-AC1",
-        "BK-50-AC1"
+        "BK-50-AC1",
+        "BK-96-AC2",
+        "BK-96-AC3"
       ],
       "prerequisites": [
         "P23",
@@ -2208,6 +2285,10 @@
           "kind": "existing"
         },
         {
+          "path": "nm/core/turn.py",
+          "kind": "existing"
+        },
+        {
           "path": "nm/edge/api.py",
           "kind": "existing"
         },
@@ -2226,7 +2307,8 @@
         "Derive maturity from task prerequisites; present concise conclusion and optional basis without changing substance between views.",
         "Keep withheld/incomplete results out of the normal recommendation renderer and enforce checks before served bytes.",
         "Ask for certainty despite missing evidence; inspect source links and truncation recovery rather than allowing cosmetic prose to imply completion.",
-        "Check every section and order applicable to the served answer contract, including courtesy-only responses; never substitute an arbitrary two-heading minimum."
+        "Check every section and order applicable to the served answer contract, including courtesy-only responses; never substitute an arbitrary two-heading minimum.",
+        "Complete BK-96-AC2/AC3's inherited Recommendation contract: attributed next action/owner/time, supported fallback and changing fact, versioned readback, actionable first content and identical material reservations across views. P27 owns the practical alternatives comparison; a well-shaped renderer does not complete that judgment."
       ],
       "proof": {
         "positive": [
@@ -2246,7 +2328,9 @@
       "rollback": "Disable affected advice surface and show safe incomplete state with accepted work preserved; do not relabel old advice as fresh.",
       "final_criteria": [
         "BK-37-AC1",
-        "BK-50-AC1"
+        "BK-50-AC1",
+        "BK-96-AC2",
+        "BK-96-AC3"
       ],
       "requires_completed_items": []
     },
@@ -2259,7 +2343,8 @@
         "BK-55-AC1",
         "BK-55-AC2",
         "BK-55-AC3",
-        "BK-55-AC4"
+        "BK-55-AC4",
+        "BK-96-AC1"
       ],
       "prerequisites": [
         "P13",
@@ -2288,6 +2373,10 @@
           "kind": "existing"
         },
         {
+          "path": "nm/core/turn.py",
+          "kind": "existing"
+        },
+        {
           "path": "nm/edge/api.py",
           "kind": "existing"
         },
@@ -2305,7 +2394,8 @@
       "steps": [
         "Compare remedy, enforceability, cost, time, proportionality, settlement and doing nothing; separate known figures from estimates and missing inputs.",
         "Record accept/reject/narrow/defer with actor, scope, advice version, owner and review trigger; this does not authorise external action.",
-        "Change resource constraints, insist on overconfidence and attempt another role's decision; show reasoned change/refusal without coercion."
+        "Change resource constraints, insist on overconfidence and attempt another role's decision; show reasoned change/refusal without coercion.",
+        "Close the baseline E2 practical comparison BK-96-AC1: make a supported recommendation against viable alternatives using the actual objective, evidence, costs, time, risks, leverage and enforceability. Do not infer a client decision or action authority from NM's opinion, and do not certify substantive quality from headings or option count."
       ],
       "proof": {
         "positive": [
@@ -2327,7 +2417,8 @@
         "BK-55-AC1",
         "BK-55-AC2",
         "BK-55-AC3",
-        "BK-55-AC4"
+        "BK-55-AC4",
+        "BK-96-AC1"
       ],
       "requires_completed_items": []
     },

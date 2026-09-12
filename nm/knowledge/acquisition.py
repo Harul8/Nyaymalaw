@@ -70,6 +70,27 @@ def _normal(value: str) -> str:
     return " ".join(unicodedata.normalize("NFKC", value).split()).casefold()
 
 
+def acquisition_dates(
+    year: int, *, from_date: date | None = None, to_date: date | None = None,
+) -> tuple[date, date]:
+    """One explicit interval shared by planning, requests and selection.
+
+    An explicit year is a bounded full-year scope for compatibility. Both
+    optional dates narrow it. No wall clock or remembered release cutoff
+    silently changes the approved population.
+    """
+    if (from_date is None) != (to_date is None):
+        raise ValueError("acquisition requires both from_date and to_date")
+    start, end = date(year, 1, 1), date(year, 12, 31)
+    if from_date is not None and to_date is not None:
+        if from_date > to_date:
+            raise ValueError("acquisition date interval starts after it ends")
+        start, end = max(start, from_date), min(end, to_date)
+        if start > end:
+            raise ValueError("selected year is outside the acquisition date interval")
+    return start, end
+
+
 def _stable_id(prefix: str, value: dict) -> str:
     payload = json.dumps(
         value, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
@@ -481,6 +502,12 @@ def reconcile_acquisition(run_path: str | Path) -> ReconciliationReport:
             resolved, ReconciliationState.REFUSED,
             "acquisition receipt is malformed or unreadable",
         )
+    if not isinstance(counts, dict) or not isinstance(rows, list) \
+            or not isinstance(selection, dict):
+        return _empty_report(
+            resolved, ReconciliationState.REFUSED,
+            "acquisition receipt population types are malformed",
+        )
 
     reasons: list[str] = []
     refused = False
@@ -488,7 +515,7 @@ def reconcile_acquisition(run_path: str | Path) -> ReconciliationReport:
         "planned", "observed", "accepted", "rejected", "unresolved",
         "staged", "failed",
     )
-    if any(not isinstance(counts.get(name), int) or counts[name] < 0
+    if any(type(counts.get(name)) is not int or counts[name] < 0
            for name in required_counts):
         return _empty_report(
             resolved, ReconciliationState.REFUSED,
@@ -580,6 +607,14 @@ def reconcile_acquisition(run_path: str | Path) -> ReconciliationReport:
             refused = True
     if len(candidate_ids) != len(set(candidate_ids)):
         reasons.append("artifact candidate ids are duplicated")
+        refused = True
+    selected_ids = [row.get("candidate_id") for row in decisions
+                    if isinstance(row, dict)
+                    and row.get("state") == SelectionState.SELECTED.value]
+    if any(not isinstance(value, str) or not value.strip() for value in selected_ids) \
+            or len(selected_ids) != len(set(selected_ids)) \
+            or set(candidate_ids) != set(selected_ids):
+        reasons.append("artifact identities do not exactly match selected candidate identities")
         refused = True
     if len(declared_files) != len(set(declared_files)):
         reasons.append("artifact files are duplicated")

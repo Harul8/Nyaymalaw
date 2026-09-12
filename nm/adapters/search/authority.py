@@ -26,7 +26,7 @@ import sqlite3
 from pathlib import Path
 
 from nm.knowledge.jurisdiction import stored_court
-from nm.knowledge.manifest import PublishedCorpus
+from nm.knowledge.manifest import CorpusPublicationRefused, PublishedCorpus
 from nm.ports.evidence import Coverage
 from nm.ports.search import CorpusSearch, IndexIdentity, SearchHit
 
@@ -122,6 +122,28 @@ class AuthorityIndexSearch:
     def search(self, query: str, *, court: str | None = None,
                from_year: int | None = None, to_year: int | None = None,
                limit: int = 20) -> CorpusSearch:
+        """A cached reader may not serve law withdrawn before it emits."""
+        try:
+            if self._published_snapshot is not None:
+                self._published_snapshot.require_usable()
+            result = self._search(
+                query, court=court, from_year=from_year, to_year=to_year, limit=limit,
+            )
+            if self._published_snapshot is not None:
+                self._published_snapshot.require_usable()
+            return result
+        except CorpusPublicationRefused as exc:
+            return CorpusSearch(
+                query=query, index=self.name, coverage=Coverage.NOT_ASSESSED,
+                filters={key: value for key, value in (
+                    ("court", court), ("from_year", from_year), ("to_year", to_year),
+                ) if value is not None},
+                why=f"Published legal source is not usable: {exc}",
+            )
+
+    def _search(self, query: str, *, court: str | None = None,
+                from_year: int | None = None, to_year: int | None = None,
+                limit: int = 20) -> CorpusSearch:
         # BK-38. THE COURT IS RESOLVED ONCE, HERE, and both the WHERE clause
         # and the disclosure read the same answer. Resolving it at the query
         # and describing it at the response would be two answers to one

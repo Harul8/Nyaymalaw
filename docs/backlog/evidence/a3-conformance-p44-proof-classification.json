@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "record_type": "acceptance_population_reconciliation",
+  "owners": [
+    "BK-24",
+    "BK-80"
+  ],
+  "observation": "The 2995-case Class-A run passed and its artifact validated, but promotion then exposed two exact BK-24-AC1 references absent from the canonical population. Both tests existed and ran in the ordinary-local stage; that is not the bound Class-A evidence the acceptance registry requires. Backlog lint correctly refused both claims.",
+  "repair": "Classify the two existing offline scripted integration/adversarial witnesses as Class-A. Assertions, fixtures, production code, test bodies and authority are unchanged. The ordinary selector excludes Class-A, so this moves two cases between disjoint local populations instead of duplicating their execution. It does not authorize real acquisition or external requests.",
+  "verification": {
+    "status": "PASS_IN_FINAL_CANONICAL_POPULATION",
+    "focused": {
+      "artifact": ".nm/conformance/p44-classification.xml",
+      "tests": 2,
+      "passed": 2
+    },
+    "preflight": {
+      "selected_cases": 2997,
+      "authored_automatic_PASS_references": 87,
+      "missing": 0
+    },
+    "cumulative": {
+      "actual_cases": 2997,
+      "passed": 2997,
+      "backlog_lint_problems": 0,
+      "record": "a3-conformance-final.json#final_execution"
+    },
+    "limits": "Test bodies and production code unchanged. No live acquisition or full packet acceptance claim."
+  },
+  "lesson": "Check claimed automatic acceptance references against the selected population before an expensive run; function existence alone cannot establish membership. The previous valid Class-A artifact was not sufficient to validate every authored acceptance claim."
+}

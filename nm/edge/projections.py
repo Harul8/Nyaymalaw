@@ -77,6 +77,51 @@ def _recency(row: dict) -> int:
         return 0
 
 
+def _deadline_window(deadlines, today, *, thread_id=None) -> dict:
+    """One read-accounting rule shared by the matter list, board and cover."""
+    from nm.core.deadlines import DeadlineStatus, RegisterRead, passed, register, upcoming
+
+    if isinstance(deadlines, RegisterRead):
+        held = tuple(d for d in deadlines.rows if thread_id is None or d.thread == thread_id)
+        unreadable = [{"thread": p.thread, "index": p.index, "reason": p.reason}
+                      for p in deadlines.unreadable
+                      if thread_id is None or p.thread in (None, thread_id)]
+        unassessed = [t for t in deadlines.unassessed if thread_id is None or t == thread_id]
+        assessed = [t for t in deadlines.assessed if thread_id is None or t == thread_id]
+        complete = bool(assessed) and not unreadable and not unassessed
+    else:
+        # A direct tuple is an explicitly supplied, assessed register. The
+        # served caller uses RegisterRead and cannot acquire that assumption.
+        held = tuple(d for d in (deadlines or ()) if thread_id is None or d.thread == thread_id)
+        unreadable, unassessed, assessed = [], [], []
+        complete = deadlines is not None
+    assessment = ("assessed" if complete else "incomplete" if held or unreadable or assessed
+                  else "not_assessed")
+    ordered = register(held, today)
+    live, gone = upcoming(ordered, today), passed(ordered, today)
+    unknown = tuple(d for d in ordered if d.status(today) is DeadlineStatus.NOT_COMPUTED)
+
+    def row(d):
+        return {"thread": d.thread, "on": d.on.isoformat() if d.on else None,
+                "action": d.action, "owner": d.owner, "source": d.source,
+                "consequence": d.consequence, "status": d.status(today).value}
+
+    status = (live[0].status(today).value if live else "passed" if gone else
+              "not_computed" if unknown else "not_assessed" if not complete else
+              "none_on_this_thread" if thread_id is not None else "none_on_this_matter")
+    return {
+        "next_deadline": live[0].on.isoformat() if live else None,
+        "next_deadline_status": status,
+        "deadline_assessment": assessment,
+        "deadline_unreadable": unreadable,
+        "deadline_unassessed": unassessed,
+        "passed_deadlines": ([{**row(d), "days_ago": -d.days(today)} for d in gone]
+                             if held or complete else None),
+        "uncomputed_deadlines": [row(d) for d in unknown],
+        "deadline_entries": [row(d) for d in ordered],
+    }
+
+
 def _thread_row(thread, deadlines, today=None) -> dict:
     """Six fields. One row. No analysis.
 
@@ -91,36 +136,9 @@ def _thread_row(thread, deadlines, today=None) -> dict:
     and `()` could not be told from "nobody computed a register".
     """
 
-    from nm.core.deadlines import passed as _passed
-    from nm.core.deadlines import upcoming as _upcoming
-
     today = today or forum_today()   # BK-14: the forum's date
-    if deadlines is None:
-        # NOT ASSESSED, said as a value. Not the same as a file with no
-        # deadlines, and the two must not render alike.
-        window = {"next_deadline": None,
-                  "next_deadline_status": "not_assessed",
-                  "passed_deadlines": None}
-    else:
-        ours = tuple(d for d in deadlines if d.thread == thread.id)
-        mine = _upcoming(ours, today)
-        gone = _passed(ours, today)
-        window = {
-            # A2.5. THE NEAREST LIVE DEADLINE, and the passed ones separately.
-            # This was hard-coded `None`, so the clause forbidding a passed
-            # deadline from being dropped was a rule about a field that never
-            # held anything.
-            "next_deadline": (mine[0].on.isoformat() if mine else None),
-            "next_deadline_status": (mine[0].status(today).value if mine
-                                     else "none_on_this_thread"),
-            # PASSED ROWS ARE THEIR OWN LIST. Merging them into what is
-            # upcoming buries the thing that can no longer be done among the
-            # things that still can, and the advocate scans the second for work.
-            "passed_deadlines": [
-                {"on": d.on.isoformat(), "action": d.action,
-                 "consequence": d.consequence, "days_ago": -d.days(today)}
-                for d in gone],
-        }
+    window = _deadline_window(deadlines, today, thread_id=thread.id)
+    window.pop("deadline_entries")  # The board stays a summary, not a second register.
     posture = thread.posture
     unresolved = not posture.resolved
     return {
@@ -178,6 +196,12 @@ def _party(matter, side: str) -> str:
     for name, recorded in (getattr(matter, "intake_parties", None) or {}).items():
         if recorded == side:
             return str(name)
+    if side == "client":
+        from nm.domain.engagement import from_stored
+
+        engagement = from_stored(matter.engagement)
+        if engagement is not None and engagement.client:
+            return engagement.client
     for thread in getattr(matter, "threads", ()):
         for name, recorded in (getattr(thread, "parties", None) or {}).items():
             if recorded == side:
@@ -201,8 +225,6 @@ def matter_list_projection(matters, registers=None) -> dict:
     because it looks right.
     """
 
-    from nm.core.deadlines import upcoming as _upcoming
-
     unreadable = tuple(getattr(matters, "unreadable", ()))
     today = forum_today()            # BK-14: the forum's date
     rows = []
@@ -214,8 +236,9 @@ def matter_list_projection(matters, registers=None) -> dict:
         # and every board fell through to recency. Same shape as the thread
         # row above and same answer: three states, and a register that has to
         # be supplied rather than defaulted into silence.
-        register = None if registers is None else registers.get(m.id, ())
-        live = () if register is None else _upcoming(tuple(register), today)
+        register = None if registers is None else registers.get(m.id)
+        window = _deadline_window(register, today)
+        window.pop("deadline_entries")
         rows.append({
             "matter_id": m.id,
             "matter": m.title,
@@ -229,11 +252,7 @@ def matter_list_projection(matters, registers=None) -> dict:
             "client": _party(m, "client") or "not recorded",
             "opponent": _party(m, "adverse") or "not recorded",
             "threads": len(m.threads),
-            "next_deadline": live[0].on.isoformat() if live else None,
-            "next_deadline_status": (
-                "not_assessed" if register is None
-                else live[0].status(today).value if live
-                else "none_on_this_matter"),
+            **window,
             # What is BLOCKED is a status field, not analysis: it is the handle
             # the advocate uses to decide what to open.
             "blocked": (f"{unresolved} thread(s) awaiting posture" if unresolved else None),
@@ -286,9 +305,38 @@ def _stage_of(matter: Matter) -> str:
     """
     if not matter.threads:
         return "opening"
-    if any(getattr(t, "blocked_reason", None) for t in matter.threads):
+    if any(t.deferred_reason or not t.posture.resolved or t.posture.conflicts
+           for t in matter.threads):
         return "blocked"
-    return "advising"
+    # A saved dispute is evidence of work in progress, not of a released
+    # professional opinion or a particular advice-maturity level.
+    return "work_in_progress"
+
+
+def _cover_posture(matter: Matter) -> dict:
+    """An aggregate cannot turn the first thread's role into every thread's role."""
+    rows = [{"thread_id": thread.id, "thread": thread.label,
+             "role": thread.posture.role.value, "basis": thread.posture.basis.value,
+             "resolved": thread.posture.resolved,
+             "conflicts": [{"on_record": c.on_record.value,
+                            "now_suggested": c.now_suggested.value, "applied": c.applied}
+                           for c in thread.posture.conflicts]}
+            for thread in matter.threads]
+    roles = {thread.posture.role for thread in matter.threads
+             if thread.posture.role is not Role.UNKNOWN}
+    if any(row["conflicts"] for row in rows):
+        state = "conflicted"
+    elif not roles:
+        state = "not_established"
+    elif any(not row["resolved"] for row in rows):
+        state = "partial"
+    elif len(roles) > 1:
+        state = "mixed"
+    else:
+        state = "recorded"
+    posture = next(iter(roles)).value if state == "recorded" else (
+        "mixed" if state == "mixed" else "unknown")
+    return {"posture": posture, "posture_state": state, "postures": rows}
 
 
 def cover_projection(matter: Matter, deadlines=None, today=None) -> dict:
@@ -310,21 +358,11 @@ def cover_projection(matter: Matter, deadlines=None, today=None) -> dict:
     uncomputed register as a clean sheet on every call site that forgot one.
     """
     from nm.domain.commission import Commission
-    from nm.domain.engagement import from_stored as engagement_from_stored
-
-    engaged = engagement_from_stored(matter.engagement)
     commission = Commission.from_stored(matter.commission)
-
-    client = (engaged.client if engaged and engaged.client else "")
-    posture = Role.UNKNOWN
-    for thread in matter.threads:
-        role = getattr(thread, "our_role", None)
-        if isinstance(role, Role) and role is not Role.UNKNOWN:
-            posture = role
-            break
+    client = _party(matter, "client")
 
     deadline_state = "not_assessed"
-    deadline_said = "no deadline has been assessed on this matter"
+    deadline_said = "no instruction deadline has been assessed on this matter"
     if commission is not None:
         deadline_state = ("assessed" if commission.deadline.assessed
                           else "not_assessed")
@@ -339,15 +377,16 @@ def cover_projection(matter: Matter, deadlines=None, today=None) -> dict:
         # with no client; the id reads as a name nobody chose.
         "client": client or None,
         "client_state": "recorded" if client else "not_recorded",
-        "posture": posture.value,
-        "posture_state": ("recorded" if posture is not Role.UNKNOWN
-                          else "not_established"),
+        **_cover_posture(matter),
         "stage": _stage_of(matter),
-        "last_activity": getattr(matter, "touched_at", "") or None,
-        "last_activity_state": ("recorded" if getattr(matter, "touched_at", "")
-                                else "not_recorded"),
+        "last_activity": matter.last_activity or None,
+        "last_activity_state": "recorded" if matter.last_activity else "not_recorded",
+        # Legacy aliases retain their commission meaning. A case-register
+        # date must not overwrite a separate deadline in the instructions.
+        "deadline_scope": "commission",
         "deadline_assessment": deadline_state,
         "deadline_said": deadline_said,
+        "case_deadlines": _deadline_window(deadlines, today or forum_today()),
         "commission": commission.as_dict() if commission else None,
         "commission_state": ("recorded" if commission else "not_recorded"),
         "thread_count": len(matter.threads),

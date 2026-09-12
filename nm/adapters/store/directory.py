@@ -31,7 +31,6 @@ from datetime import datetime
 from io import BufferedRandom
 from pathlib import Path
 
-from nm.adapters.store.cleanup import discard
 from nm.adapters.store.file_store import _Cipher
 from nm.domain.advocate import (
     AccountSecurity,
@@ -54,6 +53,7 @@ from nm.domain.advocate import (
     token_fingerprint,
 )
 from nm.domain.traceability import implements
+from nm.infrastructure.cleanup import discard
 from nm.ports.directory import (  # noqa: F401
     AccountBusy,
     AlreadyEnrolled,
@@ -596,7 +596,7 @@ class FileDirectory:
 
     def reauthenticate(self, advocate_id: str, password: str,
                        session_token: str, device: str,
-                       now: datetime) -> str | None:
+                       now: datetime, *, source: str = "reauthenticate") -> str | None:
         """Prove the current password again, inside this session. BK-31-AC20.
 
         `None` COVERS FOUR DIFFERENT FAILURES and says which to nobody: a wrong
@@ -613,13 +613,13 @@ class FileDirectory:
         session = self.session(session_token, device, now)
         identity = self.authenticate(advocate_id, password)
         if identity is None:
-            self.note_failure(canonical_id(advocate_id), "reauthenticate", now)
+            self.note_failure(canonical_id(advocate_id), source, now)
             return None
         if session is None or canonical_id(session.advocate_id) != identity.id:
             self._note(identity.id,
                        "reauthentication refused: no live session of this "
                        "advocate on this device")
-            self.note_failure(identity.id, "reauthenticate", now)
+            self.note_failure(identity.id, source, now)
             return None
         security = AccountSecurity.read(self._read(identity.id))
         token, proof = new_reauthentication_proof(
@@ -633,7 +633,8 @@ class FileDirectory:
     def rotate_recovery_codes(self, advocate_id: str, proof_token: str,
                               session_token: str, device: str,
                               expected_recovery_generation: int,
-                              now: datetime) -> tuple[str, ...]:
+                              now: datetime, *,
+                              source: str = "rotate-recovery-codes") -> tuple[str, ...]:
         """Replace the whole set atomically. The new codes, once. BK-31-AC20.
 
         THE PROOF IS SPENT BEFORE THE SET IS REPLACED, and the order is the
@@ -654,7 +655,7 @@ class FileDirectory:
         if session is None or canonical_id(session.advocate_id) != canonical:
             self._note(canonical, "recovery rotation refused: no live session "
                                   "of this advocate on this device")
-            self.note_failure(canonical, "rotate-recovery-codes", now)
+            self.note_failure(canonical, source, now)
             raise ProofRefused(_ROTATION_REFUSED)
 
         claim = self._claim_recovery(canonical)
@@ -684,7 +685,7 @@ class FileDirectory:
                        f"{security.recovery_generation}")
             if why is not None:
                 self._note(canonical, f"recovery rotation refused: {why}")
-                self.note_failure(canonical, "rotate-recovery-codes", now)
+                self.note_failure(canonical, source, now)
                 raise ProofRefused(_ROTATION_REFUSED)
 
             from dataclasses import replace

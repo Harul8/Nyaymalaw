@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "record_type": "bounded_conformance_browser_work_record",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "items": ["BK-30", "BK-32", "BK-33", "BK-36", "BK-40", "BK-41", "BK-72"],
+  "start": {
+    "state": "READY_FOR_BOUNDED_TEST_AUTHORING",
+    "authority": "Coordinating agent assigned new browser witnesses for the user-authorised isolated conformance repair; execution is separately scheduled.",
+    "sources": ["CLAUDE.md", "docs/BUILD_GUIDE.md", "docs/DEFECT_SHAPES.md", "docs/playbooks/START_A_CHANGE.md", "docs/playbooks/BUILD_A_CHANGE.md", "docs/playbooks/TEST_A_CHANGE.md", "docs/backlog/status.yaml", "tools/served.py", "tests/test_the_journey_login_to_logout.py", "web/app.js", "web/index.html"],
+    "graph": {"pattern": "file_summary", "target": "web/app.js", "built_at_sha": "a3d9c47764eb2f53c5bc486076df423b21488158", "updated_at": "2026-09-12T16:11:02", "limitation": "Graph predates ongoing web edits; actual current source governs selectors and request contracts."},
+    "invariant": "Only the current authenticated view may paint protected results or select the next write target; partial input stays visibly partial and request success is not revocation confirmation.",
+    "defect_shapes": ["S1", "S2", "S6", "S7", "S9"],
+    "population": ["390/768/1280 viewport navigation and overflow", "keyboard matter activation", "empty and nonempty partial matter boards", "pending turn across matter navigation", "repeated Enter while sending", "late History list, History transcript, research and sessions responses after logout", "HTTP 200 logout with signed_out false"],
+    "proof_design": "Use the real tools.served composition with encrypted temporary stores and scripted model/evidence. Establish matters by browser intake and send. Hold genuine served responses at the browser request boundary; verify a nonzero intercepted population, perform navigation/logout, then release. Mutate only declared partial-board fields and logout confirmation for adversarial controls. Record screenshots and request identity metadata on every case.",
+    "exclusions": ["No product/web changes by this worker", "No existing journey manifest or registry edits", "No real corpus, credentials, model/provider calls or remote resources", "No legal-quality or production-readiness claim", "No pytest or gate execution by this worker"]
+  },
+  "build": {
+    "state": "AUTHORED_AWAITING_EXECUTION",
+    "tests": "tests/test_the_workspace_respects_its_current_context.py",
+    "expected_population": {"test_functions": 6, "parameterized_cases": 12},
+    "implementation": "A separate journey-marked module reuses the existing real-product fixture and sign-in/intake/send helpers. Native Response.json observation identifies consumed bodies without changing their content. A pre-armed path-specific promise gate delays delivery of the original parsed object to the product while Python observes the genuine HTTP request and response; the browser waits for consumption plus rendering frames before judging absence. Every case writes a screenshot, HTML and request-identity metadata under .nm/conformance/browser; no cookies or credentials are recorded in request metadata.",
+    "boundary_controls": "Requests and replies must have nonzero named populations. Two distinct matters are opened through served browser interactions; keyboard navigation waits for the exact selected transcript, even if display titles match. The unconfirmed-logout control confirms the actual session remains live, then retries genuine logout and confirms revocation.",
+    "limitations": "No new Class-A static substitute was added: these promises require the real DOM. Tests are authored, not executed or proven. The coordinating agent owns any journey-manifest registration and approved run."
+  },
+  "test": {
+    "state": "REPAIR_NOT_RUN",
+    "execution_owner": "coordinating_agent",
+    "prior_run": {
+      "artifact": ".nm/conformance/workspace-browser.xml",
+      "reported_by": "coordinating_agent",
+      "expected": 12, "passed": 4, "failed": 8,
+      "limitations": ["Two identity checks observed a changing tree; assertions retained for a frozen rerun.", "Six delayed-response cases could not release a synchronously retained Route; unsupported harness lifetime, not a product conformance verdict."],
+      "repair": "Replaced retained Route objects with controlled native JSON-promise delay. Actual server requests, replies and values remain untouched. No rerun by this worker."
+    }
+  },
+  "signoff": {"state": "NOT_RUN", "claim": "This record does not assert browser conformance, acceptance PASS or completion."}
+}

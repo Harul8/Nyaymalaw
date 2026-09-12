@@ -1,4 +1,5 @@
 """Class-A design controls must reject planted contract drift, not certify API work."""
+
 from __future__ import annotations
 
 import copy
@@ -6,8 +7,8 @@ import json
 from pathlib import Path
 
 import pytest
-import yaml
 
+from tools._documents import safe_load
 from tools.blueprint_commands import check_commands
 
 pytestmark = pytest.mark.class_a
@@ -16,8 +17,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.fixture(scope="module")
 def population():
-    catalogue = json.loads((ROOT / "docs/blueprint/contracts/commands.json").read_text(encoding="utf-8"))
-    registry = yaml.safe_load((ROOT / "docs/backlog/status.yaml").read_text(encoding="utf-8"))
+    catalogue = json.loads(
+        (ROOT / "docs/blueprint/contracts/commands.json").read_text(encoding="utf-8")
+    )
+    registry = safe_load((ROOT / "docs/backlog/status.yaml").read_text(encoding="utf-8"))
     criteria = {a["id"] for row in registry["items"] for a in row.get("acceptance", [])}
     assert catalogue["x-commands"] and criteria
     assert check_commands(catalogue, criteria) == []
@@ -28,9 +31,16 @@ def test_every_proposed_command_has_four_schema_witnesses(population):
     catalogue, criteria = population
     commands = catalogue["x-commands"]
     assert len(commands) == len({row["id"] for row in commands})
-    assert sum(len([key for key in row["examples"] if key in {
-        "valid_request", "invalid_request", "valid_response", "invalid_response"
-    }]) for row in commands) == 4 * len(commands)
+    assert sum(
+        len(
+            [
+                key
+                for key in row["examples"]
+                if key in {"valid_request", "invalid_request", "valid_response", "invalid_response"}
+            ]
+        )
+        for row in commands
+    ) == 4 * len(commands)
     assert check_commands(catalogue, criteria) == []
 
 
@@ -92,9 +102,13 @@ def _plant(doc, kind):
     elif kind == "invalid_date":
         row["examples"]["valid_response"]["observed_at"] = "2026-02-30T12:00:00Z"
     elif kind == "invalid_uri":
-        _command(doc, "begin-factor")["examples"]["valid_response"]["data"]["provider_challenge_url"] = "https://has a space.invalid/"
+        _command(doc, "begin-factor")["examples"]["valid_response"]["data"][
+            "provider_challenge_url"
+        ] = "https://has a space.invalid/"
     elif kind == "missing_csrf":
-        doc["$defs"]["create-matter_request"]["properties"]["headers"]["required"].remove("X-CSRF-Token")
+        doc["$defs"]["create-matter_request"]["properties"]["headers"]["required"].remove(
+            "X-CSRF-Token"
+        )
     elif kind == "route_param_mismatch":
         _command(doc, "get-matter")["path"] = "/v1/matters/{other_id}"
     elif kind == "unknown_error":
@@ -111,41 +125,44 @@ def _plant(doc, kind):
         raise AssertionError(f"unrecognised planted mutation {kind}")
 
 
-@pytest.mark.parametrize("kind,expected", [
-    ("empty_population", "empty or malformed command population"),
-    ("duplicate_command", "duplicate command"),
-    ("missing_command", "definitions and command population differ"),
-    ("orphan_definition", "definitions and command population differ"),
-    ("missing_definition", "unresolved/nonlocal"),
-    ("dangling_criterion", "unregistered acceptance"),
-    ("empty_owner", "owner_ac"),
-    ("authored_live_claim", "non-design claim"),
-    ("unknown_catalogue_field", "catalogue fields"),
-    ("unknown_command_field", "command fields"),
-    ("unknown_example_field", "example fields"),
-    ("empty_auth_rule", "missing authorization"),
-    ("empty_records", "authoritative_records"),
-    ("empty_retry", "missing retry"),
-    ("invalid_current_route", "compatibility route"),
-    ("nonlocal_ref", "unresolved/nonlocal"),
-    ("dynamic_ref", "dynamic/recursive"),
-    ("nested_schema_id", "nested schema identity/rebasing"),
-    ("open_object", "object must be closed"),
-    ("unconstrained_response", "unconstrained field schema"),
-    ("bad_required", "required/properties"),
-    ("positive_rejected", "positive request witness rejected"),
-    ("negative_unchanged", "mutation changed nothing"),
-    ("negative_still_valid", "negative request witness was not rejected"),
-    ("invalid_date", "positive response witness rejected"),
-    ("invalid_uri", "positive response witness rejected"),
-    ("missing_csrf", "mutation missing idempotency/CSRF"),
-    ("route_param_mismatch", "route and required path parameters differ"),
-    ("unknown_error", "unknown error code"),
-    ("error_status_drift", "error-catalogue combinations differ"),
-    ("binary_proof_missing", "binary byte-verification"),
-    ("boolean_status", "invalid success status"),
-    ("schema_alias", "own its named definition"),
-])
+@pytest.mark.parametrize(
+    "kind,expected",
+    [
+        ("empty_population", "empty or malformed command population"),
+        ("duplicate_command", "duplicate command"),
+        ("missing_command", "definitions and command population differ"),
+        ("orphan_definition", "definitions and command population differ"),
+        ("missing_definition", "unresolved/nonlocal"),
+        ("dangling_criterion", "unregistered acceptance"),
+        ("empty_owner", "owner_ac"),
+        ("authored_live_claim", "non-design claim"),
+        ("unknown_catalogue_field", "catalogue fields"),
+        ("unknown_command_field", "command fields"),
+        ("unknown_example_field", "example fields"),
+        ("empty_auth_rule", "missing authorization"),
+        ("empty_records", "authoritative_records"),
+        ("empty_retry", "missing retry"),
+        ("invalid_current_route", "compatibility route"),
+        ("nonlocal_ref", "unresolved/nonlocal"),
+        ("dynamic_ref", "dynamic/recursive"),
+        ("nested_schema_id", "nested schema identity/rebasing"),
+        ("open_object", "object must be closed"),
+        ("unconstrained_response", "unconstrained field schema"),
+        ("bad_required", "required/properties"),
+        ("positive_rejected", "positive request witness rejected"),
+        ("negative_unchanged", "mutation changed nothing"),
+        ("negative_still_valid", "negative request witness was not rejected"),
+        ("invalid_date", "positive response witness rejected"),
+        ("invalid_uri", "positive response witness rejected"),
+        ("missing_csrf", "mutation missing idempotency/CSRF"),
+        ("route_param_mismatch", "route and required path parameters differ"),
+        ("unknown_error", "unknown error code"),
+        ("error_status_drift", "error-catalogue combinations differ"),
+        ("binary_proof_missing", "binary byte-verification"),
+        ("boolean_status", "invalid success status"),
+        ("schema_alias", "own its named definition"),
+    ],
+)
 def test_contract_control_rejects_its_planted_failure(population, kind, expected):
     original, criteria = population
     mutated = copy.deepcopy(original)

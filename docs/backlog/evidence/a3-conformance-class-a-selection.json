@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "record_kind": "scoped_conformance_work_record",
+  "base": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "scope": "Canonical Class-A child environment and authoritative recorder selection; no change to the product, selected Class-A marker expression, acceptance requirements or external evidence.",
+  "start": {
+    "status": "RECORDED",
+    "cause": "pytest invocation_params.args excludes inherited PYTEST_ADDOPTS and ini addopts. The recorder compared only those original args, so effective -k, --deselect or collection-path restrictions could yield a nonempty passing subset labelled full_class_a.",
+    "mechanism": "One shared canonical child-environment helper removes inherited output leases and PYTEST_ADDOPTS for canonical runs. The recorder independently validates effective pytest selection, configured collection paths and collection filters, and records why a noncanonical run is partial. A green process cannot overrule this result.",
+    "proof_plan": ["Actual pytest Config.parse with canonical argv plus inherited -k", "Actual ini/addopts --deselect and ignore filters", "Effective collection-path and mark-expression restriction", "Real recorder output remains partial and the existing validator refuses it", "An ordinary canonical configuration stays eligible and ordinary child commands cannot overwrite evidence", "The real shared helper and recorder negative control bite when bypassed"],
+    "exclusions": ["No full pytest children executed by this agent", "No new blanket failure exception", "No external model or corpus access", "No claim to defeat a deliberately malicious pytest plugin rewriting reports"]
+  },
+  "build": {
+    "status": "IMPLEMENTED_PENDING_TEST",
+    "files": ["tools/evidence.py", "tests/conftest.py", "tests/test_the_gate_records_only_its_canonical_class_a_run.py"],
+    "coordinating_change": "tools/check.py delegates _child_env to the shared evidence.child_environment helper; the coordinating agent owns that hunk.",
+    "details": ["Canonical runners strip PYTEST_ADDOPTS and exclusively lease the local evidence path through one helper", "The authoritative recorder checks effective marker expression, keyword/deselect/ignore/last-failed/stepwise options, collection roots/testpaths and discovery patterns/overrides", "A recorder result carries selection_problems and remains partial/incomplete when effective selection is narrowed", "The unchanged result validator also refuses an internally contradictory full result carrying unresolved selection_problems", "The parser/recorder tests load a separate conftest module so they cannot discard the outer run's own call-phase evidence"],
+    "lint": "Focused Ruff check passed for the three owned source/test files; this is not test execution."
+  },
+  "test": {"status": "NOT_RUN", "selection": ["tests/test_the_gate_records_only_its_canonical_class_a_run.py", "tests/test_evidence_is_bound_to_execution.py", "tests/test_checked_tree_identity.py"], "primary_file_expected_cases": 24, "reason": "The coordinating agent owns serial test execution. Eleven real pytest configuration cases, the real recorder and its mutation are authored but not yet executed."},
+  "signoff": {"status": "NOT_RUN"}
+}

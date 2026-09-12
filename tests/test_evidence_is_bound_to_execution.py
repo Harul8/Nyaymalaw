@@ -87,7 +87,14 @@ def test_non_automated_pass_needs_a_structured_dated_record():
     doc = tool.load()
     result = _passing_run(tool, doc)
     measured = next(i for i in doc["items"] if i["id"] == "BK-21")
-    evidence = measured["acceptance"][3]["evidence"]["production_measure"]
+    criterion = next(a for a in measured["acceptance"] if a["id"] == "BK-21-AC4")
+    assert "production_measure" in criterion["required_evidence"]
+    evidence = criterion["evidence"]["production_measure"]
+    assert "result" in evidence and "ref" in evidence
+    # This is an intentionally planted PASS in the in-memory fixture. The
+    # real record may correctly be STALE; retaining that state would never
+    # exercise the guard against a non-automated PASS backed only by prose.
+    evidence["result"] = "PASS"
     evidence["ref"] = "measured on somebody's machine"
 
     problems = tool.bind_execution_evidence(doc, result)

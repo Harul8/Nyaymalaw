@@ -41,11 +41,10 @@ import re
 import sys
 from datetime import date, datetime, timedelta, timezone
 
-import yaml
-
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools._console import utf8_console  # noqa: E402
+from tools._documents import safe_load  # noqa: E402
 from tools.evidence import (  # noqa: E402
     exact_outcome,
     load_result,
@@ -223,8 +222,8 @@ def _deferral_report(doc: dict, *, as_of: date | None = None,
 
 
 def load() -> dict:
-    doc = yaml.safe_load(STATUS.read_text(encoding="utf-8"))
-    doc["steps"] = (yaml.safe_load(STEPS.read_text(encoding="utf-8"))
+    doc = safe_load(STATUS.read_text(encoding="utf-8"))
+    doc["steps"] = (safe_load(STEPS.read_text(encoding="utf-8"))
                     or {}).get("steps", []) if STEPS.exists() else []
     doc["plan"] = json.loads(PLAN.read_text(encoding="utf-8"))
     doc["professional"] = json.loads(
@@ -366,6 +365,9 @@ def bind_execution_evidence(doc: dict, class_a: dict | None = None) -> list[str]
 
 def lint(doc: dict, *, verify_execution: bool = False) -> list[str]:
     bad: list[str] = []
+    # One source observation per file for this invocation only. The next
+    # lint starts fresh, so deleting/changing a named test still bites.
+    definitions: dict[pathlib.Path, tuple[set[str], str | None]] = {}
     items = doc.get("items") or []
     feats = doc.get("features") or []
 
@@ -479,7 +481,8 @@ def lint(doc: dict, *, verify_execution: bool = False) -> list[str]:
                                f"approved reason")
                 if lvl in ("domain_test", "integration_test",
                            "adversarial_test"):
-                    bad += _missing_pytest(f"{acid}/{lvl}", e.get("ref", ""))
+                    bad += _missing_pytest(f"{acid}/{lvl}", e.get("ref", ""),
+                                           definitions=definitions)
             if it.get("priority") == "P0" and not ac.get("negative_control"):
                 bad.append(f"{acid}: a P0 criterion with no negative control. "
                            f"A passing test is not evidence until it has been "
@@ -487,7 +490,7 @@ def lint(doc: dict, *, verify_execution: bool = False) -> list[str]:
 
     bad += _cycles(items, seen)
     bad += _missing_records(items)
-    bad += _build_rules(doc)
+    bad += _build_rules(doc, definitions=definitions)
     bad += _delivery_lifecycle(doc, items)
     if verify_execution:
         bad += doc.get("_execution_problems") or bind_execution_evidence(doc)
@@ -789,7 +792,8 @@ def _professional(doc: dict, items: set[str], features: set[str],
     return bad
 
 
-def _missing_pytest(acid: str, ref: str) -> list[str]:
+def _missing_pytest(acid: str, ref: str, *,
+                    definitions: dict | None = None) -> list[str]:
     """A proof naming a test nobody wrote is worse than no proof.
 
     A DEFINITION, NOT A SUBSTRING. BK-80-AC4 forbids treating test-name
@@ -812,12 +816,18 @@ def _missing_pytest(acid: str, ref: str) -> list[str]:
     if not node:
         return []
     wanted = node.split("[")[0].rsplit("::", 1)[-1]
-    try:
-        tree = ast.parse(f.read_text(encoding="utf-8"), filename=str(f))
-    except SyntaxError as exc:
-        return [f"{acid}: proof names {path}, which does not parse ({exc.msg})"]
-    defined = {n.name for n in ast.walk(tree)
-               if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    definitions = {} if definitions is None else definitions
+    if f not in definitions:
+        try:
+            tree = ast.parse(f.read_text(encoding="utf-8"), filename=str(f))
+        except SyntaxError as exc:
+            definitions[f] = set(), exc.msg
+        else:
+            definitions[f] = ({n.name for n in ast.walk(tree)
+                               if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}, None)
+    defined, parse_error = definitions[f]
+    if parse_error is not None:
+        return [f"{acid}: proof names {path}, which does not parse ({parse_error})"]
     if wanted not in defined:
         return [f"{acid}: proof names {wanted!r}, which is not defined in "
                 f"{path} -- it may appear there as prose, but a name in a "
@@ -890,7 +900,7 @@ def _steps(doc: dict, items: set, features: dict) -> list[str]:
     return bad
 
 
-def _build_rules(doc: dict) -> list[str]:
+def _build_rules(doc: dict, *, definitions: dict | None = None) -> list[str]:
     """THE BUILD GUIDE, MADE UNABLE TO LOSE A RULE.
 
     Splitting the 792-line guide into four stage playbooks was right: a
@@ -916,6 +926,7 @@ def _build_rules(doc: dict) -> list[str]:
     the few rules whose loss would be worst, so a card cannot claim a rule it
     no longer states.
     """
+    definitions = {} if definitions is None else definitions
     reg = doc.get("build_rules") or {}
     rules = reg.get("rules") or []
     if not rules:
@@ -949,7 +960,7 @@ def _build_rules(doc: dict) -> list[str]:
         # worse than one admitting it has none.
         chk = r.get("check", "")
         if "::" in chk:
-            bad += _missing_pytest(rid, chk)
+            bad += _missing_pytest(rid, chk, definitions=definitions)
 
     # ---- every rule is claimed by exactly one playbook, and by the right one
     claimed: dict[str, str] = {}

@@ -376,12 +376,15 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
     target.click()
     page.wait_for_function(
         "() => document.querySelector('#rail-title')"
-        ".textContent.trim() === 'Threads'", timeout=15000)
+        ".textContent.trim() === 'Issues in this matter'", timeout=15000)
     page.wait_for_function(
         "expected => document.querySelector('#pane-advise').dataset.matterId "
-        "=== expected", first, timeout=15000)
+        "=== expected", arg=first, timeout=15000)
     assert page.get_attribute("#pane-advise", "data-matter-id") != second, (
         f"at {width}px clicking another row left the same matter open")
+    page.wait_for_selector("#thread h3.section", timeout=30000)
+    assert f"Width {width} First Traders" in page.inner_text("#matter-heading")
+    assert "Goods were supplied" in page.inner_text("#thread")
     assert not page.errors, f"at {width}px opening a file threw: {page.errors}"
 
     # ---- 4. TRAVERSE the rest of the application at this width -----------
@@ -407,8 +410,45 @@ def test_phase_4_a_brief_can_be_filed_without_a_mouse(page, journey):
     is not an accessibility edge case -- it is the ordinary way a long brief
     gets typed."""
     _sign_in(page, journey)
+    page.wait_for_selector("#welcome:not([hidden])", timeout=15000)
+    assert page.is_hidden("#composer"), "this phase must begin at the actual Welcome page"
 
-    page.focus("#message")
+    def active_id():
+        return page.evaluate("() => document.activeElement.id")
+
+    # Real Tab navigation proves reachability; focus() would bypass a broken
+    # tab order. Authentication above is setup; every action from Welcome on
+    # uses keys, including activating the new-matter and intake controls.
+    for _ in range(64):
+        if active_id() == "welcome-start":
+            break
+        page.keyboard.press("Tab")
+    assert active_id() == "welcome-start", "Welcome's new-matter control is not keyboard reachable"
+    assert page.is_visible("#welcome-start")
+    page.keyboard.press("Enter")
+    page.wait_for_selector("#intake:not([hidden])", timeout=15000)
+    assert active_id() == "in-client"
+    client_name = "Keyboard Synthetic Client"
+    adverse_name = "Keyboard Synthetic Opponent"
+    scope = "Review the supplied invoice and advise on recovery"
+    page.keyboard.type(client_name)
+    page.keyboard.press("Tab")
+    assert active_id() == "in-adverse"
+    page.keyboard.type(adverse_name)
+    page.keyboard.press("Tab")
+    assert active_id() == "in-others"
+    page.keyboard.press("Tab")
+    assert active_id() == "in-scope"
+    page.keyboard.type(scope)
+    page.keyboard.press("Tab")
+    assert active_id() == "in-capacity"
+    page.keyboard.press("Space")
+    assert page.is_checked("#in-capacity")
+    page.keyboard.press("Tab")
+    assert active_id() == "in-go"
+    page.keyboard.press("Enter")
+    page.wait_for_selector("#intake", state="hidden", timeout=15000)
+    assert active_id() == "message"
     page.keyboard.type(BRIEF)
     # The composer is a form: Enter submits from a focused control. If it does
     # not, the advocate must reach for the mouse to send a brief they just
@@ -418,8 +458,40 @@ def test_phase_4_a_brief_can_be_filed_without_a_mouse(page, journey):
     # because an imperative xfail only fires on the branch that takes it. The
     # marker above is strict, so the day Ctrl+Enter works this phase XPASSes
     # and the runner says to remove it. BK-44.
-    page.keyboard.press("Control+Enter")
-    page.wait_for_selector(".turn", timeout=60000)
+    with page.expect_response(lambda reply: reply.url.endswith("/api/turn")
+                              and reply.request.method == "POST", timeout=90000) as sent:
+        page.keyboard.press("Control+Enter")
+    response = sent.value
+    assert response.status == 200, response.text()
+    answer = response.json()
+    assert answer["route"] == "matter"
+    assert answer["turn_id"] and answer["matter_id"]
+    assert answer["committed"] == "committed" and answer["input_admitted"] is True
+    assert answer["elements"], "a keyboard submit must release an actual nonempty answer"
+    page.wait_for_selector("#send:not([disabled])", timeout=90000)
+    page.wait_for_selector("#thread h3.section", timeout=30000)
+    assert BRIEF in page.inner_text("#thread")
+    assert page.input_value("#message") == ""
+    assert page.get_attribute("#pane-advise", "data-matter-id") == answer["matter_id"]
+
+    from nm.domain.turn_receipt import release_index
+
+    saved = journey["box"].application.store.load(answer["matter_id"])
+    assert saved is not None and saved.advocate_id == journey["advocate"]
+    assert saved.intake_parties == {client_name: "client", adverse_name: "adverse"}
+    assert saved.intake_answers["scope"]["answer"] == scope
+    assert saved.intake_answers["capacity"]["state"] == "not_in_doubt"
+    assert saved.intake_answers["capacity"]["raised_by"] == journey["advocate"]
+    receipts, problems = release_index(saved)
+    assert not problems and len(receipts) == 1
+    receipt = receipts[answer["turn_id"]]
+    assert saved.turns_applied.count(answer["turn_id"]) == 1
+    assert receipt.message == BRIEF and receipt.input_admitted is True
+    assert receipt.validated_answer().elements
+    held = receipt.answer["elements"]
+    assert len(held) == len(answer["elements"])
+    for recorded, served in zip(held, answer["elements"], strict=True):
+        assert {key: recorded[key] for key in served} == served
     assert not page.errors, f"the page threw: {page.errors}"
 
 
@@ -548,23 +620,36 @@ def test_phase_5d_the_masthead_is_not_a_configuration_dump(page, journey):
     `hard: not configured` reads as something broken, `fernet` is a cipher
     name, and the model id is ours. None of it is a fact about their matter.
     """
-    _sign_in(page, journey)
+    with page.expect_response(lambda reply: reply.url.endswith("/api/health")
+                              and reply.request.method == "GET", timeout=30000) as checked:
+        _sign_in(page, journey)
     # WAIT FOR THE LINE TO RESOLVE. `loadHealth()` is async and the field
     # reads `checking…` until it lands -- so reading immediately after
     # sign-in asserts against a placeholder, which contains none of the
     # tokens this phase is about and would pass on any product at all.
+    response = checked.value
+    assert response.status == 200, response.text()
+    health = response.json()
+    assert health["corpus"] in ("readable", "NOT READABLE")
+    expected = ("Legal library available · check the scope of each result"
+                if health["corpus"] == "readable" else
+                "Legal library unavailable · authority-backed research is limited")
     page.wait_for_function(
-        "!document.querySelector('#health').textContent.includes('checking')",
-        timeout=30000)
+        "expected => document.querySelector('#health').textContent.trim() === expected",
+        arg=expected, timeout=30000)
     masthead = page.inner_text("#masthead")
 
     for token in ("fernet", "gpt-", "scripted-1", "not configured",
                   "manifest:"):
         assert token not in masthead, (
             f"{token!r} is in the masthead on every screen")
-    assert "Corpus" in masthead, (
+    assert expected in masthead, (
         "the masthead says nothing about whether the corpus can be read, "
         "which is the one thing on that line an advocate needs")
+    assert page.get_attribute("#health", "title") == (
+        "Library availability does not establish legal coverage or currency.")
+    assert ("bad" in (page.get_attribute("#health", "class") or "").split()) is (
+        health["corpus"] != "readable")
 
 
 def test_phase_6b_an_expired_period_is_never_a_window_to_act_within(
@@ -772,7 +857,7 @@ def test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead(
     own. The advocate is looking at their own name above a product that can no
     longer do anything for them.
     """
-    _sign_in(page, journey)
+    _open_matter(page, journey, client="Expiry Draft Synthetic Client")
 
     # THE BROKEN DRAFT SURVIVES, OR IT DOES NOT -- either way it is part of
     # what expiry costs the advocate, so it is typed before the session goes.
@@ -837,7 +922,7 @@ def test_phase_13_a_send_that_fails_keeps_the_brief_and_offers_one_retry(
     that had actually landed was written to the file a second time. Both are
     the same absence: an identity for the attempt that outlives the attempt.
     """
-    _sign_in(page, journey)
+    _open_matter(page, journey, client="Failed Send Synthetic Client")
     page.route("**/api/turn", lambda route: route.abort())
     page.fill("#message", BRIEF)
     page.click("#send")
@@ -954,9 +1039,10 @@ def test_phase_11_a_logout_the_server_refuses_is_not_shown_as_done(
     # THE SERVER REFUSES THE LOGOUT, and the session stays live.
     page.route("**/api/logout", lambda route: route.abort())
     page.click("#signout")
-    # THE SIGN-OUT HAS SETTLED, one way or the other: either the gate is up
-    # (which is the defect) or the page says the logout was not confirmed.
-    page.wait_for_selector("#gate:not([hidden]), #login-state", timeout=15000)
+    # The gate is cleared before the asynchronous refusal settles. Wait for
+    # the actual retry control, not its pre-existing empty parent container.
+    page.get_by_role("button", name="Try to end the session again", exact=True).wait_for(
+        state="visible", timeout=15000)
 
     # THE RULE, ASSERTED. The gate may be up, but not SILENTLY: an advocate
     # shown the sign-in screen believes they are signed out, and on a shared
@@ -964,9 +1050,18 @@ def test_phase_11_a_logout_the_server_refuses_is_not_shown_as_done(
     # carries the row so this XPASSes the day the product says so. BK-44.
     shown = _visible_text(page).lower()
     assert not page.is_visible("#gate") or any(
-        p in shown for p in ("could not", "not confirmed", "unconfirmed")), (
+        p in shown for p in ("could not", "not confirmed", "unconfirmed",
+                            "server did not confirm")), (
         "the sign-in screen is shown after a logout the server never "
         "confirmed, and nothing on the page says the logout was unconfirmed")
+    assert "the server did not confirm the end of your session" in shown
+    assert "you may still be signed in" in shown
+    assert "this screen is not proof that you are signed out" in shown
+    # Browser routing aborted logout, not the actual server session. The
+    # context's real cookies must still authenticate at the server.
+    session = page.request.get(journey["base"] + "/api/session")
+    assert session.status == 200, session.text()
+    assert session.json()["advocate"]["id"] == journey["advocate"]
 
 
 def test_phase_12_a_confirmed_logout_cannot_be_undone_by_reload(page, journey):

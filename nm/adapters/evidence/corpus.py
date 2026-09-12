@@ -43,7 +43,12 @@ from nm.domain.traceability import implements
 from nm.knowledge.citator import Citator
 from nm.knowledge.identity import IdentityIndex
 from nm.knowledge.jurisdiction import binding_status
-from nm.knowledge.manifest import Manifest, PublishedCorpus, title_without_year
+from nm.knowledge.manifest import (
+    CorpusPublicationRefused,
+    Manifest,
+    PublishedCorpus,
+    title_without_year,
+)
 from nm.knowledge.resolution import (
     CODE_TITLES,
     article_for,
@@ -167,11 +172,16 @@ class CorpusEvidenceAdapter:
     # ----------------------------------------------------------- readiness ---
     @property
     def available(self) -> bool:
+        try:
+            if self._published_snapshot is not None:
+                self._published_snapshot.require_usable()
+        except CorpusPublicationRefused:
+            return False
         return self._db.exists()
 
     @property
     def authority_available(self) -> bool:
-        return bool(self._authority_db and self._authority_db.exists())
+        return self.available and bool(self._authority_db and self._authority_db.exists())
 
     @property
     def published_snapshot_id(self) -> str | None:
@@ -186,6 +196,13 @@ class CorpusEvidenceAdapter:
         A capability that cannot run must be visible BEFORE a turn depends on
         it, not discovered as an empty answer afterwards.
         """
+        if self._published_snapshot is not None:
+            try:
+                self._published_snapshot.require_usable()
+            except CorpusPublicationRefused as exc:
+                return {name: f"NOT ASSESSED -- {exc}" for name in (
+                    "provisions", "authorities", "citator", "identity", "denylist",
+                )}
         return {
             "provisions": "readable" if self.available else "NOT READABLE",
             "authorities": ("readable" if self.authority_available else
@@ -233,6 +250,22 @@ class CorpusEvidenceAdapter:
 
     # --------------------------------------------------------------- fetch ---
     def fetch(self, need: EvidenceNeed) -> EvidenceResult:
+        """Permission to use a retained generation is checked at each boundary."""
+        try:
+            if self._published_snapshot is not None:
+                self._published_snapshot.require_usable()
+            result = self._fetch(need)
+            if self._published_snapshot is not None:
+                self._published_snapshot.require_usable()
+            return result
+        except CorpusPublicationRefused as exc:
+            return EvidenceResult(
+                coverage=Coverage.NOT_ASSESSED,
+                missing=f"Published legal source is not usable: {exc}",
+                searched_stores=(),
+            )
+
+    def _fetch(self, need: EvidenceNeed) -> EvidenceResult:
         if not self.available:
             # The corpus could not be read. That is NOT "nothing is held" --
             # an absent input must never read as an answer.

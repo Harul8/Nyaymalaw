@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "record_type": "gate_performance_diagnostic",
+  "start": {
+    "status": "RECORDED_BEFORE_REPAIR",
+    "owners": [
+      "BK-41",
+      "BK-80"
+    ],
+    "scope": "Make unchanged Class-A controls cheaper through fresh safe parsing, invocation-local reuse and exact source slicing. Do not reduce populations, waive failures, cache stale evidence across runs, parallelize mutation tests, or change assertions to pass.",
+    "baseline": {
+      "class_a_wall_seconds_reported": 860,
+      "ordinary_wall_seconds_reported": 8.8,
+      "actual_node_rows": 2919,
+      "actual_node_duration_seconds": 847.084,
+      "additional_parameterized_reference_aggregate_rows": 194,
+      "duplicated_aggregate_duration_seconds": 559.079,
+      "note": "3113 recorded keys are not 3113 separately executed nodes. Summing parameterized aggregate durations with their child rows is not wall time."
+    },
+    "profile": {
+      "method": "One read-only normal backlog.load then backlog.lint under cProfile; no pytest or gate run.",
+      "items": 105,
+      "lint_problems": 0,
+      "profiled_seconds": 4.347,
+      "yaml_load_calls": 4,
+      "yaml_cumulative_seconds": 2.814,
+      "lint_seconds": 1.22,
+      "proof_lookup_calls": 119,
+      "proof_lookup_cumulative_seconds": 1.176,
+      "proof_ast_walks": 99,
+      "note": "Instrumented timing identifies mechanisms; it is not a fair full-run before/after benchmark."
+    },
+    "findings": [
+      "Registry and fingerprint paths repeatedly use pure-Python YAML parsing despite an installed safe C parser.",
+      "One lint invocation repeatedly parses and walks the same proof source file for distinct acceptance references.",
+      "The source-sweep index invokes ast.get_source_segment for each test function, repeatedly splitting its entire module."
+    ]
+  },
+  "build": {
+    "status": "IMPLEMENTED_CENTRAL_MEASUREMENT_COMPLETE",
+    "changes": [
+      "tools/_documents.py uses the installed CSafeLoader or SafeLoader fallback on fresh supplied input; it never caches a file, parsed result, or evidence verdict.",
+      "backlog, blueprint, plan_view and four direct blueprint test readers use the shared safe parser. The evidence owner adopted the same helper for both fingerprint YAML inputs; hash framing, field selection and evidence binding remain unchanged.",
+      "backlog.lint shares parsed function-name sets within exactly one invocation, including build-rule references; the next lint observes changed, removed, malformed or restored proof files again.",
+      "tools/_source.py indexes UTF8 source lines once per observed module, preserving AST byte offsets and CR/LF/CRLF rather than treating form-feed or Unicode separators as source line breaks. The two existing source sweep readers retain their populations and assertions."
+    ],
+    "new_control_population": {
+      "reader_safety_and_freshness": 16,
+      "source_segment_equivalence": 16,
+      "total": 32,
+      "status": "PASSED_IN_ROOT_FOCUSED_AND_FINAL_CANONICAL_RUNS",
+      "historical_owner_status": "Originally authored without delegated execution; root subsequently coordinated verification."
+    },
+    "static_check": "Ruff passed all 13 files owned in this repair. No pytest or gate was run by this author.",
+    "compatibility_limits": "Safe decoder errors retain PyYAML's error hierarchy; C and Python parser wording is not asserted byte-identical. Existing source scanners request unpadded segments, the exact mode implemented and checked here."
+  },
+  "verification": {
+    "status": "FINAL_CANONICAL_PASS",
+    "actual_cases": 2997,
+    "passed": 2997,
+    "failed": 0,
+    "skipped": 0,
+    "not_run": 0,
+    "aggregate_reference_rows": 212,
+    "class_a_seconds": 496.3,
+    "ordinary_seconds": 7.8,
+    "final_record": "a3-conformance-final.json#final_execution",
+    "gate": "SCOPED BUILD PASS -- FULL GATE RED; only TRACE-C1/P24 remains."
+  },
+  "comparison": {
+    "status": "MEASURED_CURRENT_ENGINEERING_RUN",
+    "wall_seconds_before": 860,
+    "wall_seconds_after": 496.3,
+    "wall_reduction_percent": 42.3,
+    "actual_cases_before": 2919,
+    "actual_cases_after": 2997,
+    "limits": "Measured runs on this machine, not a controlled benchmark or guarantee. Original failed and intermediate optimized observations remain preserved. No whole-packet acceptance follows."
+  },
+  "prior_verification": {
+    "status": "CONTROLS_PASS_CUMULATIVE_RUN_HAS_ONE_UNRELATED_FAILURE",
+    "focused": {
+      "artifact": ".nm/conformance/class-a-repair-focused.xml",
+      "tests": 301,
+      "passed": 301,
+      "skipped": 0,
+      "seconds": 130.601
+    },
+    "cumulative": {
+      "artifact": ".nm/conformance/class-a-after-parsing.json",
+      "actual_cases": 2971,
+      "passed": 2970,
+      "failed": 1,
+      "skipped": 0,
+      "not_run": 0,
+      "aggregate_reference_rows": 210,
+      "class_a_seconds": 501.4,
+      "ordinary_seconds": 7.9,
+      "remaining_failure": "Concurrent upload barrier timeout, subsequently diagnosed as path containment refusal; no gate stamp or evidence promotion."
+    }
+  },
+  "prior_comparison": {
+    "status": "MEASURED_NOT_FINAL_ACCEPTANCE",
+    "wall_seconds_before": 860,
+    "wall_seconds_after": 501.4,
+    "wall_reduction_percent": 41.7,
+    "shared_actual_cases": 2914,
+    "shared_case_duration_seconds_before": 847.042,
+    "shared_case_duration_seconds_after": 487.303,
+    "population_reconciliation": "57 added actual cases, one renamed witness and four approval/environment-dependent cases moved to their proper populations: 2919 - 5 + 57 = 2971. Aggregate rows are excluded using their explicit aggregate_of field. No original local invariant was removed to obtain a faster pass.",
+    "limits": "Two measured runs, not a controlled hardware benchmark; final timing still required after the unrelated upload repair. The optimized run was not a passing gate."
+  }
+}

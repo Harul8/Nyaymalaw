@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "record_type": "engineering_contract_alignment_diagnostic",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "scope": [
+    "P13 authority reservation",
+    "P14 manual urgency vocabulary",
+    "P17 Fact contract",
+    "Matter-to-model boundary"
+  ],
+  "start": {
+    "state": "READY_FOR_BOUNDED_REPAIR",
+    "observed": "The completed cumulative Class-A run reported contract drift. Root authorised direct invocation of four read-only assertion functions solely to print their existing offenders, not to certify a passing result.",
+    "offenders": {
+      "unwritten": [
+        "Matter.authority_bindings"
+      ],
+      "undeclared_schema": [
+        "Fact.read_quality",
+        "Fact.version"
+      ],
+      "unclassified_enum": [
+        "nm.domain.urgency.UrgencyClass"
+      ],
+      "undecided_model_fields": [
+        "Matter.intake_request_key",
+        "Fact.read_quality",
+        "Fact.version",
+        "TurnReceipt.turn_id",
+        "TurnReceipt.offer_fingerprint",
+        "TurnReceipt.recorded_at",
+        "TurnReceipt.message",
+        "TurnReceipt.input_admitted"
+      ]
+    },
+    "decisions_before_implementation": [
+      "Keep authority_bindings: capacity_for and served authority admission already consume it and refuse missing, stale, expired or revoked bindings. Declare only its missing trusted provisioning writer RESERVED under P13/BK-63, with a retirement condition. Do not invent an authority grant or mark P13 complete.",
+      "UrgencyClass names an explicitly human-selected class, not an outcome. Declare this exact vocabulary closed; unknown assessment remains the existing UrgencyState.NOT_ASSESSED and unknown class strings remain refused. Keep the PRD ten-named-versus-eleven-prose discrepancy open.",
+      "Declare read_quality and version in the canonical Appendix E source, preserving the distinction between extraction readability, evidential certainty, confirmation and full immutable revision history. Regeneration is owned by the root agent.",
+      "Carry all document read-quality states beside document provenance in the model context without changing admission or the raw advocate-words guard. A clear extraction is not verified truth. Ordinary advocate statements are not OCR and must not inherit an unread-document claim.",
+      "Withhold operation identities, concurrency/revision counters and release-receipt metadata from reasoning. Receipt narratives and prior answers are not an independent source of case facts and must not feed back as evidence; admitted facts remain carried through the canonical Fact account. Declare each scalar field separately and prove context does not change from operational receipts.",
+      "Preserve every enumeration, nonempty-population, stale-declaration and planted-failure assertion; no blanket exclusions. Record authoring separately from root-owned execution."
+    ]
+  },
+  "build": {
+    "state": "AUTHORED_FROZEN_FOR_CENTRAL_VERIFICATION",
+    "changes": [
+      "Added one specific authority_bindings reservation; no authority writer or grant created.",
+      "Declared only UrgencyClass closed with the actual unknown-state consumer and refusal rationale; all sweep and planted controls remain unchanged.",
+      "Added Fact.read_quality and Fact.version to canonical spec/prd/schemas.js. Generated artifacts must be rebuilt centrally.",
+      "Document-source prefixes carry clear/uncertain/unread with a non-verification caveat. Legacy loose projections missing quality explicitly render unread; ordinary advocate statements remain unlabelled. Existing missing-source/page controls now assert the precise fuller prefix.",
+      "Declared each operational scalar individually in the model-boundary registry. Added nine parameterized cases proving quality disclosure, raw-word isolation, ordinary statement treatment, receipt narrative exclusion and counter-only non-interference.",
+      "Updated BK-21-AC3 to the relocated optional deployment observation, preserving the historical 9 September rekey narrative while marking it STALE and the current isolated deployment observation NOT ASSESSED. No synthetic PASS substituted."
+    ],
+    "new_test_functions": [
+      "tests/test_what_the_model_is_told.py::test_document_read_quality_qualifies_the_model_account_not_the_guard",
+      "tests/test_what_the_model_is_told.py::test_an_advocate_statement_is_not_labelled_as_an_extracted_document",
+      "tests/test_what_the_model_is_told.py::test_release_and_opening_receipts_cannot_reintroduce_narratives",
+      "tests/test_what_the_model_is_told.py::test_proposition_revision_changes_do_not_invent_new_case_content"
+    ],
+    "static_check": "Scoped Ruff check over five edited Python files passed before the final project/helper spelling correction. This is static lint, not acceptance execution."
+  },
+  "verification": {
+    "state": "ROOT_ENGINEERING_EXECUTION_PASSED",
+    "historical_owner_status": "Delegated author ran no tests; authored build chronology is preserved.",
+    "focused_cases": 301,
+    "focused_passed": 301,
+    "final_canonical_cases": 2997,
+    "final_canonical_passed": 2997,
+    "final_record": "a3-conformance-final.json#final_execution",
+    "limits": "Missing engineering and professional obligations below remain open."
+  },
+  "remaining": [
+    "Authenticated authority provisioning and full P13 scope",
+    "Admitted document derivation and full P16/P17 scope",
+    "Complete historical Fact revision lineage",
+    "Every-turn urgency assessment and calibration"
+  ]
+}

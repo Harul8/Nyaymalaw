@@ -1,4 +1,5 @@
 """Final planning corrections have exact owners; none is runtime proof."""
+
 from copy import deepcopy
 
 import pytest
@@ -14,8 +15,7 @@ def test_final_review_obligations_have_exact_delivery_and_packet_owners():
     contracts = blueprint.load_contracts()
     assert blueprint.check_all(modules, registry, contracts) == []
     packets = contracts["packets"]["packets"]
-    expected = {"BK-69-AC3": "P15", "BK-79-AC3": "P25",
-                "BK-88-AC4": "P39", "BK-80-AC6": "P03"}
+    expected = {"BK-69-AC3": "P15", "BK-79-AC3": "P25", "BK-88-AC4": "P39", "BK-80-AC6": "P03"}
     assert len(expected) == 4
     for criterion, owner in expected.items():
         assert [p["id"] for p in packets if criterion in p["final_criteria"]] == [owner]
@@ -47,8 +47,14 @@ def test_planning_delivery_exclusions_cannot_hide_product_work(mutation):
         exclusions[0]["reason"] = " "
     assert exclusions != before
     problems = check_packets(
-        catalog, registry, modules,
+        catalog,
+        registry,
+        modules,
         {r["id"] for r in contracts["commands"]["x-commands"]},
         {r["id"] for r in contracts["decisions"]["choices"]},
-        {r["id"] for r in contracts["evaluations"]["synthetic_cases"]}, blueprint.ROOT)
-    assert any("only the explained BK-87, BK-89 and BK-90 planning deliveries" in p for p in problems)
+        {r["id"] for r in contracts["evaluations"]["synthetic_cases"]},
+        blueprint.ROOT,
+    )
+    assert any(
+        "only the explained BK-87, BK-89 and BK-90 planning deliveries" in p for p in problems
+    )

@@ -19,35 +19,34 @@ features:
   slice: S6
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-32, BK-33]
 - id: A3
   phase: A
   title: Re-entry and re-orientation
   slice: S9
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-33]
 - id: A4
   phase: A
   title: Search the corpus — acts and judgments
   slice: S10
   implementation: partial
   disposition: building
-  delivery_items: []
+  delivery_items: [BK-38]
 - id: B1
   phase: B
   title: Opening-message routing
   slice: S10
   implementation: partial
   disposition: building
-  delivery_items:
-  - BK-48
+  delivery_items: [BK-93]
 - id: B2
   phase: B
   title: Emergency triage
   slice: S10
-  implementation: none
-  disposition: planned
+  implementation: partial
+  disposition: building
   delivery_items:
   - BK-53
 - id: B3
@@ -57,7 +56,7 @@ features:
   implementation: partial
   disposition: building
   delivery_items:
-  - BK-48
+  - BK-34
 - id: B4
   phase: B
   title: Competence screen
@@ -65,7 +64,7 @@ features:
   implementation: partial
   disposition: building
   delivery_items:
-  - BK-48
+  - BK-34
 - id: B5
   phase: B
   title: Engagement, authority and scope
@@ -73,22 +72,22 @@ features:
   implementation: partial
   disposition: building
   delivery_items:
-  - BK-48
+  - BK-34
 - id: B6
   phase: B
   title: Capacity to instruct  ⟨tenet 32⟩
   slice: S10
-  implementation: none
-  disposition: planned
+  implementation: partial
+  disposition: building
   delivery_items:
   - BK-53
 - id: C1
   phase: C
   title: The account
   slice: S1
-  implementation: complete
-  disposition: delivered
-  delivery_items: [BK-91]
+  implementation: partial
+  disposition: building
+  delivery_items: [BK-54, BK-91]
 - id: C2
   phase: C
   title: Objectives and constraints
@@ -104,27 +103,27 @@ features:
   slice: S3
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-94]
 - id: C4
   phase: C
   title: Thread identity
   slice: S3
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-94]
 - id: C5
   phase: C
   title: The chronology
   slice: S4
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-94]
 - id: C6
   phase: C
   title: Multimodal intake and extraction
   slice: S10
-  implementation: none
-  disposition: planned
+  implementation: partial
+  disposition: building
   delivery_items:
   - BK-54
 - id: C7
@@ -133,70 +132,70 @@ features:
   slice: S7
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-94]
 - id: D1
   phase: D
   title: The threshold map
   slice: S4
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-95]
 - id: D2
   phase: D
   title: Limitation as a computed date
   slice: S4
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-35]
 - id: D3
   phase: D
   title: The deadline register  ⟨tenet 29⟩
   slice: S4
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-95]
 - id: D4
   phase: D
   title: Research plan and execution
   slice: S5
   implementation: complete
   disposition: delivered
-  delivery_items: [BK-91]
+  delivery_items: [BK-95, BK-91]
 - id: D5
   phase: D
   title: Elements, burden and proof
   slice: S7
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-95]
 - id: D6
   phase: D
   title: Case theory
   slice: S8
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-95]
 - id: D7
   phase: D
   title: The adversarial pass
   slice: S8
   implementation: partial
   disposition: building
-  delivery_items: []
+  delivery_items: [BK-95]
 - id: D8
   phase: D
   title: Salvage — the weak case
   slice: S8
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-95]
 - id: D9
   phase: D
   title: Issue facets and disposition
   slice: S6
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-95]
 - id: E1
   phase: E
   title: Scenarios and contingencies
@@ -211,7 +210,7 @@ features:
   slice: S1
   implementation: complete
   disposition: delivered
-  delivery_items: [BK-91]
+  delivery_items: [BK-96, BK-91]
 - id: E3
   phase: E
   title: Proportionality  ⟨tenet 33⟩
@@ -340,7 +339,7 @@ features:
   slice: S1
   implementation: complete
   disposition: delivered
-  delivery_items: []
+  delivery_items: [BK-40]
 items:
 - id: BK-1
   title: E-102 still fails, and the verdict has moved
@@ -618,10 +617,15 @@ items:
     required_evidence: [domain_test]
     evidence:
       domain_test:
-        result: PASS
-        ref: tests/test_the_seal_is_not_another_credential.py::test_the_real_environment_does_not_share_its_seal
-        note: 247 sealed files re-keyed 9 September 2026 and verified with the new
-          key; the application composes and opens real matters
+        result: STALE
+        ref: tests/test_the_deployment_environment_keeps_its_seal_separate.py::test_the_real_environment_does_not_share_its_seal
+        note: >-
+          Historical observation preserved: 247 sealed files re-keyed 9
+          September 2026 and verified with the new key; the application composed
+          and opened real matters. The isolated conformance environment has no
+          actual deployment configuration: current real-environment assessment is
+          NOT ASSESSED. This optional deployment observation is not synthetic
+          Class-A evidence and needs an attributable current deployment rerun.
     negative_control:
       mutation: restore the previous .env, where NM_MATTER_KEY equalled NM_MODEL_API_KEY
       expected_failure: composition refuses to start
@@ -630,7 +634,7 @@ items:
     required_evidence: [production_measure]
     evidence:
       production_measure:
-        result: PASS
+        result: STALE
         ref: docs/backlog/evidence/BK-21-AC4.json
         note: 'ROTATED AND VERIFIED. Measured rather than taken on trust: the previous
           value now returns HTTP 401 token_invalidated from the provider, so the
@@ -829,6 +833,7 @@ items:
 - id: BK-31
   title: account access, recovery and workspace identity
   kind: journey
+  delivers: [A1]
   priority: P0
   delivery_status: in_progress
   implementation: partial
@@ -1082,7 +1087,7 @@ items:
       new codes once and records the security event without recording the codes
     required_evidence: [integration_test, adversarial_test, browser_journey]
     evidence:
-      integration_test: {result: NOT_RUN, ref: '', note: D-013 promises rotation but no served rotation path is built}
+      integration_test: {result: NOT_RUN, ref: 'tests/test_the_served_rotation_path.py::test_a_signed_in_advocate_replaces_their_codes_over_http', note: 'Served rotation exists and scoped access tests ran; current full-Class-A and browser acceptance remain required.'}
       adversarial_test: {result: NOT_RUN, ref: ''}
       browser_journey: {result: NOT_RUN, ref: ''}
     negative_control:
@@ -1092,6 +1097,7 @@ items:
 - id: BK-32
   title: responsive advocate home and matter navigation
   kind: journey
+  delivers: [A2]
   priority: P1
   delivery_status: in_progress
   implementation: partial
@@ -1110,6 +1116,7 @@ items:
 - id: BK-33
   title: recognisable matter cover, truthful board and real reopen
   kind: journey
+  delivers: [A2, A3]
   priority: P0
   delivery_status: in_progress
   implementation: partial
@@ -1137,6 +1144,7 @@ items:
 - id: BK-34
   title: front-door legal and professional screens before substance
   kind: journey
+  delivers: [B3, B4, B5]
   priority: P0
   delivery_status: in_progress
   implementation: partial
@@ -1209,6 +1217,7 @@ items:
 - id: BK-35
   title: cause-specific accrual and answer-consistency gate
   kind: journey
+  delivers: [D2]
   priority: P0
   delivery_status: in_progress
   implementation: partial
@@ -1284,6 +1293,7 @@ items:
 - id: BK-38
   title: search-to-authority-to-matter research workflow
   kind: journey
+  delivers: [A4]
   priority: P1
   delivery_status: in_progress
   implementation: partial
@@ -1338,6 +1348,7 @@ items:
 - id: BK-40
   title: session expiry and confirmed logout
   kind: journey
+  delivers: [I1]
   priority: P0
   delivery_status: in_progress
   implementation: partial
@@ -1615,7 +1626,7 @@ items:
   affects_phases:
   - B
   record: docs/BACKLOG.md#bk-48-phase-b-is-built-and-the-register-says-it-is-not
-  next_action: P01 now reports the exact 24 trace-only features and the separate C6 contradiction without promoting either source; P14 still owns AC3's PRODUCES-type population and the delivery owners must reconcile the reported rows
+  next_action: The pinned-base audit reconciled all 24 trace-only features through genuine journey owners and corrected C6 to partial foundation scope; normal export now reports zero T3b/T3c findings. Bind the current full Class-A run and retain P14's real PRODUCES-type and downstream feature-completion obligations; no tested status follows from delivery links.
   acceptance:
   - id: BK-48-AC1
     requirement: "The current feature registry and implementation trace reconcile in both directions without promoting tested status merely from a decorator or importing stale historical status"
@@ -1702,7 +1713,7 @@ items:
   - E
   - I
   record: docs/BACKLOG.md#bk-51-the-journey-runner-cannot-tell-a-deleted-phase-from-a-passing-one
-  next_action: P03 runner and reader are signed off on controlled complete, partial, interrupted, duplicate and stale-artifact executions; run a fresh live browser journey only when that separately authorised gate is needed
+  next_action: P03 runner and reader are implemented; reconcile current complete control-plane evidence and the open Test and Sign-off records before claiming closure. Historical scoped runs are not current full-gate evidence.
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#p03-evidence-assurance-build-record-opened-11-september-2026}
     build: {result: BUILT, ref: docs/BACKLOG.md#p03-evidence-assurance-conformance-record-completed-11-september-2026}
@@ -1767,8 +1778,8 @@ items:
   title: 'Phase B: emergency triage and capacity to instruct'
   kind: journey
   priority: P1
-  delivery_status: planned
-  implementation: none
+  delivery_status: in_progress
+  implementation: partial
   verification: none
   phase: B
   depends_on:
@@ -1777,10 +1788,10 @@ items:
   - B2
   - B6
   record: docs/BACKLOG.md#bk-53-phase-b-emergency-triage-and-capacity-to-instruct
-  next_action: specify DOES / NEVER / PRODUCES / EVAL for B2, B6
+  next_action: P14 records bounded, expiring and revocable emergency declarations and an explicit protective-only served path; ordinary intake also records the advocate's capacity answer. Complete the wider B2 risk-assessment and B6 decision-specific capacity contracts, then obtain the registered browser and qualified review evidence. These foundations do not establish full triage or capacity assessment.
   stage_records:
-    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-53-phase-b-emergency-triage-and-capacity-to-instruct}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-53-phase-b-emergency-triage-and-capacity-to-instruct}
+    start: {result: READY, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    build: {result: OPEN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
     test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-53-phase-b-emergency-triage-and-capacity-to-instruct}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-53-phase-b-emergency-triage-and-capacity-to-instruct}
   acceptance:
@@ -1802,21 +1813,22 @@ items:
   title: 'Phase C: objectives, constraints and document intake'
   kind: journey
   priority: P1
-  delivery_status: planned
-  implementation: none
+  delivery_status: in_progress
+  implementation: partial
   verification: none
   phase: C
   depends_on:
   - BK-64
   - BK-69
   delivers:
+  - C1
   - C2
   - C6
   record: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake
-  next_action: specify DOES / NEVER / PRODUCES / EVAL for C2, C6
+  next_action: P16 original-byte intake and receipt foundations are being connected to the browser; complete current scoped verification without claiming scanning or extraction. P24 adaptive briefing and P25 derivatives remain unbuilt obligations, including BK-54-AC3 and TRACE-C1.
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake}
+    build: {result: OPEN, ref: docs/BACKLOG.md#pinned-base-conformance-and-advocate-experience--12-september-2026}
     test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake}
   acceptance:
@@ -2265,15 +2277,23 @@ items:
   title: commission and task authority record
   kind: substrate
   priority: P0
-  delivery_status: planned
-  implementation: none
+  delivery_status: in_progress
+  implementation: partial
   verification: none
   affects_phases: [B, C, E, F, G]
   record: docs/BACKLOG.md#bk-62-commission-and-task-authority-record
-  next_action: specify and build the versioned commission, scope, objective, deadline, output and decision-authority record
+  next_action: >-
+    Preserve the existing versioned commission, distinct instructing/deciding parties,
+    scope/objective/forum/deadline/work-product fields, history and served controls.
+    Material instruction changes already reopen recorded scope; complete current
+    commission and authority checks for every substantive task through the actual
+    turn consumer. A stored commission and faithful cover do not establish complete
+    readiness or confer authority. Retain the full missing-instruction, changed-version,
+    integration and qualified-review population before acceptance; the current bounded
+    foundation and remaining scope are reconciled in a3-conformance-matter-packets.json.
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#bk-62-commission-and-task-authority-record}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-62-commission-and-task-authority-record}
+    build: {result: OPEN, ref: docs/BACKLOG.md#bk-62-commission-and-task-authority-record}
     test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-62-commission-and-task-authority-record}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-62-commission-and-task-authority-record}
   acceptance:
@@ -2288,15 +2308,23 @@ items:
   title: professional role and authority control
   kind: control
   priority: P0
-  delivery_status: planned
-  implementation: none
+  delivery_status: in_progress
+  implementation: partial
   verification: none
   affects_phases: [A, B, C, D, E, F, G, I]
   record: docs/BACKLOG.md#bk-63-professional-role-and-authority-control
-  next_action: bind instruction, decision, drafting, filing, negotiation, administration and support operations to explicit professional roles and recorded authority
+  next_action: >-
+    Preserve the central professional-role policy, trusted expiring/revocable
+    commission-version bindings, served internal-decision receipts and attributable
+    refusal records. A named party or authored commission grants no operational power.
+    Complete the trusted provisioning consumer and the same current role/scope check
+    across substantive tasks, workers and applicable external-action consumers before
+    claiming the full contract. Prove authorised positive paths and missing, stale,
+    revoked and out-of-scope refusal with the registered professional review; current
+    engineering does not authorise an external act or close acceptance.
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#bk-63-professional-role-and-authority-control}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-63-professional-role-and-authority-control}
+    build: {result: OPEN, ref: docs/BACKLOG.md#bk-63-professional-role-and-authority-control}
     test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-63-professional-role-and-authority-control}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-63-professional-role-and-authority-control}
   acceptance:
@@ -2311,15 +2339,24 @@ items:
   title: typed proposition and evidence model
   kind: substrate
   priority: P0
-  delivery_status: planned
-  implementation: none
+  delivery_status: in_progress
+  implementation: partial
   verification: none
   affects_phases: [C, D, E]
   record: docs/BACKLOG.md#bk-64-typed-proposition-and-evidence-model
-  next_action: define immutable sources, locators and proposition types for instructions, allegations, admissions, documents, testimony, inference and assumptions
+  next_action: >-
+    Preserve the canonical Fact-based proposition view, typed certainty/read quality,
+    human-confirmation state, contradictions, supersession and source metadata already
+    persisted and served. Complete preserved attributable proposition-version history,
+    version-conditional correction commands and authorised exact source-version/locator
+    resolution; a version counter or recorded page field alone does not supply those
+    consumers. Prove that every material conclusion uses the exact proposition/source
+    and retains incompatible accounts. Extraction/admission dependencies keep their
+    existing owners. This partial substrate does not implement C2's full interactive
+    briefing feature, semantic dispute identity or independent admissibility review.
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#bk-64-typed-proposition-and-evidence-model}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-64-typed-proposition-and-evidence-model}
+    build: {result: OPEN, ref: docs/BACKLOG.md#bk-64-typed-proposition-and-evidence-model}
     test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-64-typed-proposition-and-evidence-model}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-64-typed-proposition-and-evidence-model}
   acceptance:
@@ -3025,16 +3062,27 @@ items:
   title: emergency admission integration
   kind: control
   priority: P0
-  delivery_status: planned
-  implementation: none
+  delivery_status: in_progress
+  implementation: partial
   verification: none
   affects_phases: [B, C]
   depends_on: [BK-34, BK-53]
   record: docs/BACKLOG.md#bk-78-emergency-admission-integration
-  next_action: design and prove the scoped integration without relaxing the foundation or claiming unrun evidence
+  next_action: >-
+    Preserve the served actor/basis/outstanding-screen declaration, original keyed
+    expiry, explicit revocation and exact lost-acknowledgement replay/refusal. The
+    protective-only pre-model path and manual persisted urgency/resolution controls
+    now exist without clearing merits gates, verifying reported danger or performing
+    actions. Start READY applies to this already authorised bounded foundation; the
+    former BLOCKED start remains the historical full-target prerequisite position,
+    and BK-34/BK-53 dependencies are unchanged. Complete automatic every-turn triage,
+    applicability/calibration, full capacity/commission/authority integration and
+    qualified review before whole-target acceptance. The ten named urgency classes
+    versus eleven-class counterexample discrepancy remains explicit. Bind actual
+    final browser/integration evidence separately; no result is promoted here.
   stage_records:
-    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-78-emergency-admission-integration}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-78-emergency-admission-integration}
+    start: {result: READY, ref: docs/BACKLOG.md#bk-78-emergency-admission-integration}
+    build: {result: OPEN, ref: docs/BACKLOG.md#bk-78-emergency-admission-integration}
     test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-78-emergency-admission-integration}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-78-emergency-admission-integration}
   acceptance:
@@ -3099,7 +3147,7 @@ items:
   verification: partial
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-80-evidence-integrity-and-release-claim-enforcement
-  next_action: P01 and P03 are signed off on the complete control-plane scope; provision operator-owned trust configuration before consuming professional evidence, and wire the scoped resolver at each later application dispatch without treating approval as build or release proof
+  next_action: P01 and P03 control mechanisms are implemented; Test remains open and Sign-off is not run on the current candidate. Reconcile current full evidence, provision operator-owned trust before professional evidence consumption, and retain later dispatch integration obligations.
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#p01-corrective-build-record-opened-10-september-2026}
     build: {result: BUILT, ref: docs/BACKLOG.md#p03-evidence-assurance-conformance-record-completed-11-september-2026}
@@ -3261,15 +3309,29 @@ items:
   title: transactional matter store and reversible migration
   kind: substrate
   priority: P0
-  delivery_status: planned
-  implementation: none
+  delivery_status: in_progress
+  implementation: partial
   verification: none
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration
-  next_action: 'Built 11 September 2026 and UNPROVEN against a database. P10''s adapter, the operation/outbox contract and the version-conditional write exist behind the existing StorePort; P11''s job lifecycle (leases, bounded retries, cancellation, permission rechecks, UNKNOWN reconciliation) and P12''s migration rehearsal and rollback refusals are exercised against real stores. What is missing is a PostgreSQL server: install one plus psycopg and run `python -m pytest -m postgres`, then record the run. Until then AC1''s integration_test stays NOT_RUN and tests/test_no_database_means_no_evidence.py fails the build on any claim to the contrary. AC3 also needs a production_measure, which no test can produce.'
+  next_action: >-
+    Preserve the shadow PostgreSQL adapter, atomic accepted-operation/outbox contract,
+    conditional writes, leased worker lifecycle and synthetic file-copy/rollback
+    safeguards. These are partial foundations, not a complete served transactional
+    journey or production cutover. Complete actual worker/operation composition and
+    governed permission/effect consumers; the target importer, enforced sole-writer
+    fence, reverse/delta recovery and reconciliation of original objects and every
+    accepted-work artifact remain engineering work. Prove runtime-role/tenant/matter
+    policy and crash/CAS/replay/recovery against an approved disposable PostgreSQL
+    configuration. A PostgreSQL server alone cannot supply missing consumers or
+    migration mechanisms. Keep AC1 integration evidence unearned until that actual
+    run and retain AC3's independent production measurement and approved cutover
+    obligations. Historical focused runs and full remaining scope are in
+    a3-conformance-matter-packets.json and a3-conformance-final.json; no live writer
+    switch, external effect or acceptance promotion is authorised by this record.
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration}
-    build: {result: BUILT, ref: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration}
+    build: {result: OPEN, ref: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration}
     test: {result: OPEN, ref: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration}
   acceptance:
@@ -3337,8 +3399,8 @@ items:
   title: India-scoped key processor and security operations foundation
   kind: substrate
   priority: P0
-  delivery_status: planned
-  implementation: none
+  delivery_status: in_progress
+  implementation: partial
   verification: none
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-85-india-scoped-key-processor-and-security-operations-foundation
@@ -3701,6 +3763,211 @@ items:
     negative_control:
       mutation: exclude failed or cancelled children and retry costs, change the compared corpus or conceal a critical leak behind an average quality gain
       expected_failure: the family-level delegation decision remains unapproved until the comparable complete population and safety obligations are satisfied
+
+- id: BK-93
+  title: opening-route journey and safe risk handoff
+  kind: journey
+  phase: B
+  priority: P0
+  delivery_status: in_progress
+  implementation: partial
+  verification: none
+  delivers: [B1]
+  record: docs/BACKLOG.md#bk-93-opening-route-journey-and-safe-risk-handoff
+  next_action: adopt the existing route reader and non-matter no-write path; finish the complete text opening matrix and risk handoff under P14, then document-only and hostile-material routing under P25; source declarations and synthetic examples do not close semantic or browser proof
+  stage_records:
+    start: {result: READY, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    build: {result: OPEN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    test: {result: NOT_RUN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    signoff: {result: NOT_RUN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+  acceptance:
+  - id: BK-93-AC1
+    requirement: the served text opening routes by disclosed matter content rather than length, states its correctable reading, distinguishes non-matter without file writes from real disputes, and hands short emergencies to bounded protective admission without skipping ordinary substantive screens; unsupported scope and improper instructions receive the applicable refusal rather than an advancing interview
+    required_evidence: [domain_test, integration_test, adversarial_test, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: preserve the disclosed dispute while changing length or pleasantries, swap a short emergency with a long non-matter question, and request improper action through the same route
+      expected_failure: the intended route remains content-based, non-matter never writes a file, and emergency or improper wording cannot admit unpermitted substantive work
+  - id: BK-93-AC2
+    requirement: the complete B1 opening matrix including a document without accompanying words and several matters is exercised through served admitted-material intake; source instructions remain data, each real dispute is identified without silently attaching to another file, the stated reading is visible and the advocate can correct it without losing source provenance
+    required_evidence: [integration_test, adversarial_test, browser_journey, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: place an instruction to clear the matter inside an uploaded document, omit all accompanying text, or mix two distinct disputes while retaining similar labels
+      expected_failure: no embedded instruction gains authority, unread material is not claimed read, and the original sources and distinct disputes remain visible and correctable
+
+- id: BK-94
+  title: living-file parties threads chronology and evidence journey
+  kind: journey
+  phase: C
+  priority: P0
+  delivery_status: in_progress
+  implementation: partial
+  verification: none
+  delivers: [C3, C4, C5, C7]
+  record: docs/BACKLOG.md#bk-94-living-file-parties-threads-chronology-and-evidence-journey
+  next_action: preserve the existing posture, stable thread, chronology and evidence-inventory consumers; complete attributable correction history and source inspection in P17 and actual correctable document-to-thread admission in P25; no full living-file or admissibility review is certified by the read-only Fact projection
+  stage_records:
+    start: {result: READY, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    build: {result: OPEN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    test: {result: NOT_RUN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    signoff: {result: NOT_RUN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+  acceptance:
+  - id: BK-94-AC1
+    requirement: each thread records forum-correct parties and versioned posture with stated inferred or unknown basis before dependent provision or directive advice; side derives from role, contradictory stated posture is preserved for explicit resolution and cannot silently reverse the client position
+    required_evidence: [domain_test, integration_test, adversarial_test, browser_journey, model_eval]
+    evidence: {}
+    negative_control:
+      mutation: omit the represented side, substitute familiar party vocabulary or contradict an already stated role on a later turn
+      expected_failure: missing posture restricts its dependent directive, conflicts remain visible with prior attribution, and side never becomes an independently stored or silently flipped value
+  - id: BK-94-AC2
+    requirement: stable thread identity survives rename and alias enrichment; decisive identifiers and attributable parties proceeding and forum distinguish disputes, while the same parties or similar labels alone never merge them; any merge identifies its reason and retains attached chronology issues and provenance after restart
+    required_evidence: [domain_test, integration_test, adversarial_test, browser_journey, model_eval]
+    evidence: {}
+    negative_control:
+      mutation: rename a thread with attached state, or submit separate proceedings between the same parties using near-identical labels
+      expected_failure: renaming changes no identity or attachment, distinct disputes remain separate absent a justified visible merge, and replay cannot duplicate or lose the file state
+  - id: BK-94-AC3
+    requirement: each thread opinion uses an ordered chronology of attributed Fact references with documented asserted undated and disputed dates distinguished; unambiguous relative dates retain their reference date and timezone, ambiguous dates remain unresolved or explicitly ranged, and asserted premises stay labelled at each dependent conclusion
+    required_evidence: [domain_test, integration_test, adversarial_test, browser_journey, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: remove a date year or reference timezone, supply conflicting source dates, or replace a documented date with an assertion while retaining a settled dependent conclusion
+      expected_failure: no point date is invented or silently selected, conflict and uncertainty remain visible, and dependent advice cannot present an asserted or unresolved premise as settled
+  - id: BK-94-AC4
+    requirement: the served evidence inventory separately records existence holder original-or-copy authenticity completeness custody admissibility and weight; each material admissibility position identifies its basis or what is missing, at-risk material has a lawful preservation action owner and date, and neither mere existence nor repetition establishes proof
+    required_evidence: [domain_test, integration_test, adversarial_test, browser_journey, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: keep an item present while removing authenticity or admissibility support, separate it from its original holder, omit the preservation owner, or suggest unlawful acquisition or witness contamination
+      expected_failure: the distinct deficiencies remain visible and prevent unsupported proof claims; preservation is attributable and the unlawful or contaminating route is refused
+  - id: BK-94-AC5
+    requirement: every admitted document has a visible correctable source-version-to-thread binding before contributing facts; an unattached source never defaults to the first or largest thread, and correction preserves original custody and explicitly invalidates the affected derived state without corrupting other threads
+    required_evidence: [domain_test, integration_test, adversarial_test, browser_journey]
+    evidence: {}
+    negative_control:
+      mutation: submit an unattached source, replay a binding after changing the target thread, or correct a mistaken binding while another thread has valid derived work
+      expected_failure: unbound or stale material cannot contribute facts, the changed binding has one durable attributed result, and affected versus unaffected derivations remain distinguishable on re-entry
+
+- id: BK-95
+  title: grounded work-file assessment journey
+  kind: journey
+  phase: D
+  priority: P0
+  delivery_status: in_progress
+  implementation: partial
+  verification: none
+  delivers: [D1, D3, D4, D5, D6, D7, D8, D9]
+  record: docs/BACKLOG.md#bk-95-grounded-work-file-assessment-journey
+  next_action: retain existing served threshold deadline research proof theory adversarial salvage and issue consumers; complete each PRD contract and current source-dependent integration under P21-P23 with independent legal proof; P18 supplies selective invalidation and P46 later adaptive orchestration, neither a substitute for this baseline journey
+  stage_records:
+    start: {result: READY, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    build: {result: OPEN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    test: {result: NOT_RUN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    signoff: {result: NOT_RUN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+  acceptance:
+  - id: BK-95-AC1
+    requirement: every applicable per-thread threshold in D1 has an attributed answered blocked or expressly not-applicable result before dependent merits reliance; jurisdiction standing maintainability notices fees service procedural bars and relief receive the same source and premise rigor as limitation, without preventing permitted investigation of unresolved questions
+    required_evidence: [domain_test, integration_test, adversarial_test, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: omit an applicable threshold, label an unread premise not-applicable or preserve correct arithmetic under the wrong forum or accrual rule
+      expected_failure: the missing or unsupported threshold remains explicit, dependent reliance is restricted and no calculation certifies its own governing legal premise
+  - id: BK-95-AC2
+    requirement: one version-consistent deadline register includes legal deadlines court events and attributed factual urgency; status is recomputed from the clock each turn, passed deadlines retain consequences and available relief, nearest relevant thread governs ordering, and every action carries an attributed by-when or explicit no-deadline basis
+    required_evidence: [domain_test, integration_test, adversarial_test, browser_journey, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: advance the clock across near and passed boundaries, add an earlier deadline on a less interesting thread, or give cover and answer different premise versions
+      expected_failure: all deadline states remain reachable, no passed item disappears or reads as upcoming, and conflicting projections cannot supply contradictory current instructions
+  - id: BK-95-AC3
+    requirement: research tasks name the proposition decision it changes permitted sources and reasoned stop condition; execution records consulted primary sources negative results opposing propositions currency binding treatment factual fit and divergence from the brief, and a citation is usable only with an inspectable supporting passage
+    required_evidence: [domain_test, integration_test, adversarial_test, browser_journey, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: remove a stop condition, return an adverse source or an unavailable index, or supply a correct quotation that does not support the asserted legal proposition
+      expected_failure: research stays bounded, adverse and negative or unassessed results remain in the ledger, and exact quotation alone cannot certify entailment applicability or complete legal research
+  - id: BK-95-AC4
+    requirement: every cause defence and remedy element records who bears or shifts the burden its standard and held obtainable or absent supporting material; each gap names what would close it or an explicit dead end, and independent coverage compares actual elements with proof positions without judging client honesty
+    required_evidence: [domain_test, integration_test, adversarial_test, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: remove a proof position while retaining a success conclusion, swap client posture under a presumption, or let the coverage check author the same expected population it certifies
+      expected_failure: the missing or wrongly attributed burden prevents supported completion, independent population reconciliation fails, and the output states evidential weakness without inventing an honesty assessment
+  - id: BK-95-AC5
+    requirement: each thread carries one explicit supported client theory and the strongest opponent theory, with ranked relief and accounted-for material adverse facts; inconsistent factual accounts are flagged, bare denial requires a reasoned chosen strategy and a changed theory identifies its changed source and effect on prior advice
+    required_evidence: [domain_test, integration_test, adversarial_test, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: omit a material adverse fact, run incompatible factual arguments or change a controlling fact while retaining the old theory without notice
+      expected_failure: adverse-fact coverage or inconsistency fails visibly and the affected theory and advice cannot remain silently current
+  - id: BK-95-AC6
+    requirement: the adversarial pass addresses the strongest grounds against each thread and assesses cross-thread exposure after per-thread work; multi-thread exposure is assessed-none assessed-present or explicitly unavailable, rendered exactly once, and an unanswered attack is stated plainly with its consequence and next action
+    required_evidence: [domain_test, integration_test, adversarial_test, browser_journey, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: make one thread's admission damage another, fail the exposure read, weaken the opponent before responding or render the same exposure in every thread
+      expected_failure: exposure cannot disappear or be falsely none, duplicate presentation is detected and substantive review rejects the straw opponent
+  - id: BK-95-AC7
+    requirement: before a failure conclusion NM assesses the applicable party cause relief forum timing procedure and burden coordinates, distinguishes failed framing from a failed case, and gives only concrete source-grounded alternatives with strength; defending containment time and leverage can be legitimate outcomes, and a reasoned do-not-proceed recommendation need not invent a route
+    required_evidence: [domain_test, integration_test, adversarial_test, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: declare a case dead without varying its framing, reward an invented unsupported escape route or retain a generic different-relief suggestion as completed salvage
+      expected_failure: unassessed coordinates or unsupported alternatives cannot certify salvage; a genuine grounded dead end remains an allowed candid result
+  - id: BK-95-AC8
+    requirement: every classified issue retains stable identity thread kind posture-derived effect proof urgency and an explicit run parked blocked or closed disposition; accounting equals the input issue population, parked or closed reasons remain visible and unknown facets are re-derived rather than silently accepted or dropped
+    required_evidence: [domain_test, integration_test, adversarial_test, browser_journey]
+    evidence: {}
+    negative_control:
+      mutation: discard a threshold issue during classification, inject an unknown facet or reverse posture while retaining the old effect and hiding a parked issue
+      expected_failure: input-to-disposition equality fails, invalid state cannot propagate and the visible issue effect and reason follow the current posture version
+  - id: BK-95-AC9
+    requirement: the served multi-thread work-file outcome composes D1 and D3-D9 over the same authorised source and matter versions, preserves independent work on correction, and withholds or restricts only the affected unsupported directive; restart and retry restore the exact accepted worked position and never substitute a fluent answer for failed grounding attribution quotation or persistence
+    required_evidence: [integration_test, adversarial_test, browser_journey, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: change a controlling source between analysis and release, fail a store write or one research dependency, and replay after losing the accepted response
+      expected_failure: stale unsupported or uncommitted work cannot appear as accepted advice, the same logical operation is not duplicated and genuinely independent conclusions remain intact
+
+- id: BK-96
+  title: reasoned recommendation and owned next-step journey
+  kind: journey
+  phase: E
+  priority: P0
+  delivery_status: in_progress
+  implementation: partial
+  verification: none
+  delivers: [E2]
+  record: docs/BACKLOG.md#bk-96-reasoned-recommendation-and-owned-next-step-journey
+  next_action: preserve the existing served recommendation builder, complete its typed Recommendation and practical comparison contract across P26-P27, and prove source-supported substance rather than headings; explicit source-linked fallback changing fact owner and time remain required and the recommendation never grants action authority
+  stage_records:
+    start: {result: READY, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    build: {result: OPEN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    test: {result: NOT_RUN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    signoff: {result: NOT_RUN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+  acceptance:
+  - id: BK-96-AC1
+    requirement: viable routes are compared against the actual objective legality evidence cost timing risk leverage and enforceability; NM states its supported view and why alternatives lose while leaving the decision to the advocate and client, and uncertainty limits the view without replacing it with a neutral menu or fabricated practical figures
+    required_evidence: [integration_test, adversarial_test, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: present equally polished options without choosing, keep merits constant while changing real recovery cost or enforceability, or invent an unstated client objective or amount
+      expected_failure: review rejects non-advice unsupported figures and an unchanged recommendation that ignores the controlling practical difference
+  - id: BK-96-AC2
+    requirement: the persisted and served Recommendation names its position why alternatives lose next action responsible owner attributed by-when fallback and the fact that would change it; absent support remains explicit, and source-linked rendering never turns a suggested action into a client decision or an executed external act
+    required_evidence: [domain_test, integration_test, adversarial_test, browser_journey, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: omit the owner time fallback or changing fact, swap the underlying advice version on re-entry, or render a recommendation as though NM has filed conceded settled or sent it
+      expected_failure: incomplete or stale advice remains visibly limited, versioned readback agrees with the accepted output and no unauthorised execution or client decision is implied
+  - id: BK-96-AC3
+    requirement: each served turn begins with its appropriate supported recommendation permitted action or controlling blocking question, not background; maturity follows actual prerequisites, uncertainty and reservations survive concise versus detailed views, and failed or withheld analysis cannot enter the ordinary recommendation renderer
+    required_evidence: [integration_test, adversarial_test, browser_journey, model_eval, counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: retain persuasive recommendation prose after failing a controlling grounding check, move the operative block behind background or remove a material reservation in the concise view
+      expected_failure: unsafe or incomplete output never presents normal concluded advice and every view retains the same controlling limits and first actionable content
 
 events:
 - item: BK-80

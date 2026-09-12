@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import re
+import stat
 import unicodedata
 from dataclasses import asdict, dataclass
 from datetime import date, datetime
@@ -132,39 +133,70 @@ def _sha256(path: Path) -> str:
 
 def _iter_entries(root: Path) -> Iterable[tuple[Path, bool]]:
     """Yield deterministically without following links below the selected root."""
-    for current, directories, files in os.walk(root, topdown=True, followlinks=False):
+    def traversal_failed(error: OSError) -> None:
+        raise error
+
+    for current, directories, files in os.walk(
+        root, topdown=True, followlinks=False, onerror=traversal_failed,
+    ):
         directories.sort(key=str.casefold)
         files.sort(key=str.casefold)
         for name in tuple(directories):
             path = Path(current, name)
             yield path, True
-            if classify_asset(path.relative_to(root)) is AssetKind.PRIVATE:
+            if classify_asset(path.relative_to(root)) is AssetKind.PRIVATE or _is_link(path):
                 directories.remove(name)
         for name in files:
             yield Path(current, name), False
 
 
-def find_consumers(root: Path, terms: Iterable[str]) -> tuple[ConsumerRecord, ...]:
+def _is_link(path: Path) -> bool:
+    """Refuse symlinks and Windows junction/reparse entries below the root."""
+    return path.is_symlink() or bool(
+        getattr(path.lstat(), "st_file_attributes", 0)
+        & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    )
+
+
+def find_consumers(root: Path, terms: Iterable[str], *,
+                   max_entries: int = 10_000,
+                   issues: list[str] | None = None) -> tuple[ConsumerRecord, ...]:
     """Report code references to storage names; the report is not call-graph proof."""
     wanted = tuple(sorted({term for term in terms if term.strip()}))
     found: list[ConsumerRecord] = []
+    notes = issues if issues is not None else []
     if not root.is_dir() or not wanted:
+        if wanted:
+            notes.append("consumer inventory root is unavailable")
         return ()
-    for path in sorted(root.rglob("*")):
-        if not path.is_file() or path.suffix.casefold() not in _CONSUMER_SUFFIXES:
-            continue
-        try:
-            lines = path.read_text(encoding="utf8").splitlines()
-        except (OSError, UnicodeError):
-            continue
-        for number, line in enumerate(lines, 1):
-            for term in wanted:
-                if term in line:
-                    found.append(ConsumerRecord(
-                        path=path.relative_to(root).as_posix(),
-                        line=number,
-                        reference=term,
-                    ))
+    root = root.resolve()
+    try:
+        for seen, (path, is_directory) in enumerate(_iter_entries(root), 1):
+            if seen > max_entries:
+                notes.append(f"consumer inventory entry limit {max_entries} reached")
+                break
+            if is_directory or path.suffix.casefold() not in _CONSUMER_SUFFIXES:
+                continue
+            if _is_link(path) or root not in path.resolve(strict=True).parents:
+                notes.append("linked consumer entry excluded without reading its target")
+                continue
+            if classify_asset(path.relative_to(root)) is AssetKind.PRIVATE:
+                continue
+            try:
+                lines = path.read_text(encoding="utf8").splitlines()
+            except (OSError, UnicodeError):
+                notes.append("consumer source could not be read")
+                continue
+            for number, line in enumerate(lines, 1):
+                for term in wanted:
+                    if term in line:
+                        found.append(ConsumerRecord(
+                            path=path.relative_to(root).as_posix(),
+                            line=number,
+                            reference=term,
+                        ))
+    except OSError:
+        notes.append("consumer inventory traversal failed")
     return tuple(found)
 
 
@@ -220,6 +252,25 @@ def inventory_sources(
                 reservations.append(f"entry limit {max_entries} reached")
                 break
             kind = classify_asset(relative)
+            try:
+                linked = _is_link(path)
+                contained = linked or resolved in path.resolve(strict=True).parents
+            except OSError:
+                unreadable += 1
+                status = Assessment.PARTIAL
+                records.append(AssetRecord(
+                    relative.as_posix(), kind, None, None,
+                    DigestState.UNREADABLE, note="entry metadata could not be assessed",
+                ))
+                continue
+            if linked or not contained:
+                status = Assessment.PARTIAL
+                records.append(AssetRecord(
+                    relative.as_posix(), kind, None, None,
+                    DigestState.EXCLUDED,
+                    note="linked or out-of-root entry deliberately not opened",
+                ))
+                continue
             if is_directory:
                 if kind is AssetKind.PRIVATE:
                     private += 1
@@ -239,6 +290,7 @@ def inventory_sources(
                 size = path.stat().st_size
                 if size > max_hash_bytes:
                     unhashed += 1
+                    status = Assessment.PARTIAL
                     records.append(AssetRecord(
                         relative.as_posix(), kind, size, None,
                         DigestState.NOT_ASSESSED,
@@ -266,7 +318,14 @@ def inventory_sources(
     if not records and status is Assessment.COMPLETE:
         status = Assessment.NOT_ASSESSED
         reservations.append("selected root contained no assessable entries")
-    consumers = find_consumers(Path(consumer_root), consumer_terms) if consumer_root else ()
+    consumer_issues: list[str] = []
+    consumers = find_consumers(
+        Path(consumer_root), consumer_terms, max_entries=max_entries,
+        issues=consumer_issues,
+    ) if consumer_root else ()
+    if consumer_issues:
+        status = Assessment.PARTIAL
+        reservations.extend(consumer_issues)
     return InventoryReport(
         requested_root=str(requested), resolved_root=str(resolved),
         observed_at=observed_at.isoformat(), status=status,

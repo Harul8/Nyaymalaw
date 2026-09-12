@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nyaymalaw</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/matter-workspace.css">
+<link rel="stylesheet" href="/static/intake-materials.css">
 </head>
 <body>
+<a class="skip-link" href="#workspace-focus">Skip to your work</a>
 
 <!-- ================== A1 — THE GATE ==================
      Rendered FIRST and on top, and the application below it stays hidden
@@ -24,9 +25,17 @@
 <div id="build-warning" class="build-warning" role="status" hidden></div>
 
 <div id="gate">
+  <aside class="arrival-story" aria-label="About this workspace">
+    <div class="arrival-wordmark"><span class="mark">NM</span> NYAYMALAW</div>
+    <p class="eyebrow">THE ADVOCATE'S WORKSPACE</p>
+    <h1>A clearer view.<br>A considered next step.</h1>
+    <p>Bring the instruction, the questions and the file.<br>Keep your professional judgment at the centre.</p>
+    <div class="arrival-note">Take the brief <span aria-hidden="true">/</span> Work the file <span aria-hidden="true">/</span> Advise</div>
+  </aside>
   <form id="login" class="login" autocomplete="on">
     <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
-    <p class="login-lede">Sign in to reach your matters.</p>
+    <h2 class="login-title">Welcome back.</h2>
+    <p class="login-lede">Sign in to your practice workspace.</p>
 
     <!-- EMAIL, because that is what registration makes the id: the route
          lower-cases it and uses it as the handle, so an advocate cannot be
@@ -49,7 +58,7 @@
       <span aria-hidden="true"> · </span>
       <a href="#" id="show-recovery">Use a recovery code</a>
     </div>
-    <div id="login-state" class="login-state"></div>
+    <div id="login-state" class="login-state" role="status" aria-live="polite"></div>
 
     <p class="login-foot">
       <!-- BK-31. NO FALSE ASSURANCE ABOUT CONFLICT SCOPE.
@@ -58,9 +67,8 @@
            THIS advocate holds, and says so in its own words. A promise about
            the one check whose whole value is being trusted is the worst
            place in the product to be approximately right. -->
-      Your invitation carries the roster profile recorded by your practice. I
-      check new matters against the files YOU hold — not a firm-wide registry,
-      which this product does not have.
+      Access is by invitation from your practice. Conflict checks cover only
+      the matters you hold here, not a firm-wide registry.
     </p>
   </form>
 
@@ -231,9 +239,9 @@
   <button id="matters-toggle" class="ghost matters-toggle" aria-expanded="false"
           aria-controls="rail">Matters</button>
 
-  <nav class="tabs" id="tabs">
-    <button class="tab is-on" data-tab="advise">Advise</button>
-    <button class="tab" data-tab="search">Search the corpus</button>
+  <nav class="tabs" id="tabs" aria-label="Workspace navigation">
+    <button class="tab is-on" data-tab="advise" aria-current="page">My work</button>
+    <button class="tab" data-tab="search">Research</button>
     <button class="tab" data-tab="history">History</button>
   </nav>
 
@@ -258,9 +266,10 @@
     <button id="replace-codes" class="ghost">Recovery codes</button>
     <button id="signout" class="ghost">Sign out</button>
   </div>
-  <div class="health" id="health" title="Wired configuration">checking…</div>
+  <div class="health" id="health" role="status">Checking research availability…</div>
 </header>
 
+<div id="rehearsal-warning" class="rehearsal-warning" role="status" hidden>Local rehearsal · Responses are scripted test output, not legal advice. Use synthetic information only.</div>
 <main id="pane-advise" hidden>
   <!-- ================= THE MATTER LIST / THREAD BOARD =================
        Two surfaces, deliberately distinct. The matter list is bounded by
@@ -277,7 +286,30 @@
   </aside>
 
   <!-- ========================= THE ANSWER ========================= -->
-  <section class="conversation">
+  <section class="conversation" aria-label="Matter workspace">
+    <div class="workspace-heading" id="workspace-focus" tabindex="-1">
+      <div><p class="eyebrow" id="workspace-eyebrow">YOUR WORKSPACE</p>
+        <h1 id="matter-heading">My work</h1></div>
+      <span id="save-status" class="save-status" role="status"></span>
+    </div>
+    <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+      <p class="eyebrow">A PLACE TO THINK THROUGH THE MATTER</p>
+      <h2 id="welcome-title">Begin with the instruction.</h2>
+      <p class="welcome-lede">Who do you act for, what happened, and what needs to happen next?
+        Start a matter or return to a file you've already worked on.</p>
+      <div class="welcome-actions">
+        <button type="button" id="welcome-start" class="primary">Brief a new matter <span aria-hidden="true">↗</span></button>
+        <button type="button" id="welcome-matters" class="secondary">View matters</button>
+      </div>
+      <div class="welcome-guidance">
+        <article><span class="guide-number" aria-hidden="true">01</span><h3>The instruction first</h3>
+          <p>Set out the client, the other side and the work you've been asked to do.</p></article>
+        <article><span class="guide-number" aria-hidden="true">02</span><h3>The record within reach</h3>
+          <p>Reopen a matter to review its recorded conversation and continue the brief.</p></article>
+        <article><span class="guide-number" aria-hidden="true">03</span><h3>The decision stays yours</h3>
+          <p>Review the basis and limitations. NM does not send, serve or file on your behalf.</p></article>
+      </div>
+    </section>
     <!-- ================= B3-B5 — INTAKE, BEFORE SUBSTANCE =================
          The screens run before any fact is admitted, and the conflict screen
          cannot run against a party set nobody has given. So the advocate is
@@ -288,10 +320,11 @@
          then covered by a dialog has to remember what they were saying; this
          sits above the composer and stays until it is answered. -->
     <form id="intake" class="intake" hidden>
-      <h2>Before I work this file</h2>
+      <p class="eyebrow">NEW MATTER · THE INSTRUCTION</p>
+      <h2>First, establish the brief.</h2>
       <p class="intake-lede">
         I check a new matter against the other files you hold, so I need the
-        names. This is your own matters, not a firm-wide registry.
+        names. These checks cover only your matters, not a firm-wide registry.
       </p>
       <label for="in-client">Who we act for</label>
       <input id="in-client" placeholder="the client's name" required>
@@ -313,13 +346,15 @@
       </label>
 
       <button type="submit" class="primary" id="in-go">Record and continue</button>
-      <div id="intake-state"></div>
+      <p class="field-help">These details are saved with your first brief, not by opening this form.</p>
+      <div id="intake-state" role="status"></div>
     </form>
 
     <div id="mode-line" class="mode-line" hidden></div>
     <div id="thread" class="thread"></div>
 
     <form id="composer" class="composer" autocomplete="off">
+      <label class="composer-label" for="message">Your brief</label>
       <textarea id="message" rows="3" placeholder="Brief me — who the client is, what happened, and when."></textarea>
       <div class="composer-row">
         <span class="hint" id="hint">Enter to send · Shift+Enter for a new line</span>
@@ -335,6 +370,9 @@
      way a statute is read. -->
 <main id="pane-search" class="single" hidden>
   <section class="searcher">
+    <div class="page-intro"><p class="eyebrow">THE LEGAL LIBRARY</p><h1>Research with context.</h1>
+      <p>Search the available judgments. The results retain their source and searched scope;
+        they do not become facts in a matter simply by being opened.</p></div>
     <!-- BK-42. EVERY FIELD HAS A LABEL, NOT ONLY A PLACEHOLDER.
          A placeholder is not an accessible name: it is announced once, it
          disappears the moment anything is typed, and a screen reader user
@@ -383,8 +421,11 @@
      counts and no client words, and the answer was held by neither. -->
 <main id="pane-history" class="single" hidden>
   <section class="history">
+    <div class="page-intro"><p class="eyebrow">THE WORKING RECORD</p><h1>Return to the conversation.</h1>
+      <p>Review what was recorded for a matter. Earlier advice retains the limitations of its original file.</p></div>
     <div class="history-head">
       <h2>Conversations, as they were served</h2>
+      <label class="sr-only" for="history-matter">Matter to review</label>
       <select id="history-matter"><option value="">Choose a matter…</option></select>
     </div>
     <div id="history-state"></div>
@@ -392,6 +433,17 @@
   </section>
 </main>
 
+<dialog id="sessions-dialog" class="account-dialog" aria-labelledby="sessions-title">
+  <div class="dialog-heading"><div><p class="eyebrow">ACCOUNT SECURITY</p>
+    <h2 id="sessions-title">Your signed-in devices</h2></div>
+    <button type="button" id="sessions-close" class="ghost" aria-label="Close sessions">Close</button></div>
+  <p>Review activity on your account. Ending other sessions leaves this device signed in.</p>
+  <div id="sessions-body" aria-live="polite"></div>
+  <div id="sessions-action-state" role="status"></div>
+  <button type="button" id="sessions-revoke" class="ghost" hidden>End other sessions</button>
+</dialog>
 <script src="/static/app.js"></script>
+<script src="/static/matter-workspace.js"></script>
+<script src="/static/intake-materials.js"></script>
 </body>
 </html>

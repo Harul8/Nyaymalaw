@@ -24,11 +24,10 @@ from dataclasses import dataclass
 from typing import Any
 from xml.etree import ElementTree
 
-import yaml
-
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools._console import utf8_console  # noqa: E402
+from tools._documents import safe_load  # noqa: E402
 
 utf8_console()
 
@@ -50,6 +49,67 @@ CLASS_A_COMMAND = f'python -m pytest -m "{CLASS_A_SELECTOR}" -q'
 ORDINARY_SELECTOR = \
     "not class_a and not class_c and not class_d and not journey"
 ORDINARY_PYTEST_ARGS = ("-m", ORDINARY_SELECTOR, "-q")
+
+
+def child_environment(*, class_a_output: pathlib.Path | None = None) -> dict[str, str]:
+    """Own the canonical output lease and refuse ambient selection drift.
+
+    Other children inherit normal pytest preferences but never the evidence
+    lease. Canonical runners use the declared command without PYTEST_ADDOPTS;
+    the recorder separately checks effective ini/options, so this is not its
+    only defence and direct invocations cannot bypass the selection rule.
+    """
+    env = dict(os.environ)
+    env["PYTHONIOENCODING"] = "utf-8"
+    env.pop("NM_CLASS_A_EVIDENCE_FILE", None)
+    if class_a_output is not None:
+        env.pop("PYTEST_ADDOPTS", None)
+        env["NM_CLASS_A_EVIDENCE_FILE"] = str(class_a_output)
+    return env
+
+
+def class_a_selection_problems(config) -> list[str]:
+    """Inspect pytest's effective population, not only its original argv.
+
+    Pytest intentionally leaves environment/ini addopts out of
+    invocation_params.args. Its parsed keyword, deselection and collection
+    fields are the authority for what will actually run. The approved root
+    is the whole tests directory; a single file/node or overridden testpaths
+    is not a complete execution, even when it has a passing test.
+    """
+    bad: list[str] = []
+    if tuple(config.invocation_params.args) != CLASS_A_PYTEST_ARGS:
+        bad.append("the invocation is not the canonical Class-A command")
+    if config.getoption("markexpr", default="") != CLASS_A_SELECTOR:
+        bad.append("the effective marker expression is not the Class-A population")
+    for option in ("keyword", "deselect", "ignore", "ignore_glob", "lf",
+                   "stepwise", "stepwise_skip", "pyargs", "collectonly"):
+        if config.getoption(option, default=None):
+            bad.append(f"effective pytest {option} changes or does not execute the population")
+    for override in config.getoption("override_ini", default=()) or ():
+        name = override.partition("=")[0].strip()
+        if name in {"addopts", "testpaths", "python_files", "python_classes",
+                    "python_functions", "norecursedirs"}:
+            bad.append(f"pytest overrides the configured {name} collection contract")
+
+    expected = config.rootpath / "tests"
+    actual = tuple((config.invocation_params.dir / arg).resolve()
+                   for arg in config.args)
+    if actual != (expected.resolve(),) or tuple(config.getini("testpaths")) != ("tests",):
+        bad.append("the effective collection roots are not the whole tests directory")
+
+    # These are pytest's standard discovery patterns used by this repository.
+    # An -o override can otherwise silently narrow discovery before the marker
+    # selector sees a test. Changing the project's discovery contract requires
+    # an explicit review, not an inherited option on one canonical run.
+    for name, expected_patterns in (
+        ("python_files", ("test_*.py", "*_test.py")),
+        ("python_classes", ("Test",)),
+        ("python_functions", ("test",)),
+    ):
+        if tuple(config.getini(name)) != expected_patterns:
+            bad.append(f"effective pytest {name} changes the discovery population")
+    return bad
 
 
 @dataclass(frozen=True)
@@ -158,7 +218,7 @@ def _status_contract(root: pathlib.Path) -> bytes:
     path = root / "docs" / "backlog" / "status.yaml"
     if not path.exists():
         return b"<absent:docs/backlog/status.yaml>"
-    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    doc = safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(doc, dict):
         return _canonical(doc)
 
@@ -212,7 +272,7 @@ def _feature_promises(root: pathlib.Path) -> bytes:
     path = root / FEATURE_SPEC
     if not path.exists():
         return f"<absent:{FEATURE_SPEC}>".encode()
-    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    doc = safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(doc, dict):
         return _canonical(doc)
     promises = dict(doc)
@@ -481,6 +541,8 @@ def validate_class_a(result: dict[str, Any], *,
         bad.append("the recorded Class-A execution did not complete successfully")
     if result.get("selection") != "full_class_a":
         bad.append("the recorded Class-A execution was a narrowed selection")
+    if result.get("selection_problems"):
+        bad.append("the recorded Class-A execution has unresolved selection problems")
     tests = result.get("tests")
     if not isinstance(tests, dict) or not tests:
         bad.append("the recorded Class-A execution has an empty test population")
@@ -508,11 +570,10 @@ def run_class_a() -> int:
     LOCAL_CLASS_A.parent.mkdir(parents=True, exist_ok=True)
     if LOCAL_CLASS_A.exists():
         LOCAL_CLASS_A.unlink()
-    env = os.environ.copy()
-    env["NM_CLASS_A_EVIDENCE_FILE"] = str(LOCAL_CLASS_A)
     return subprocess.run(
         [sys.executable, "-m", "pytest", *CLASS_A_PYTEST_ARGS],
-        cwd=ROOT, env=env, check=False).returncode
+        cwd=ROOT, env=child_environment(class_a_output=LOCAL_CLASS_A),
+        check=False).returncode
 
 
 def promote() -> int:

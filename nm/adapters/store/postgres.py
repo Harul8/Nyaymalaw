@@ -60,12 +60,12 @@ from nm.domain.operation import (
     refuse_outbox,
 )
 from nm.ports.store import MatterList, StaleWrite
-from nm.ports.transactional import OperationConflict, TenantMismatch
+from nm.ports.transactional import LeaseLost, OperationConflict, TenantMismatch
 
 #: The schema, versioned in one place. Applied by `create_schema`, which is
 #: for disposable test databases -- a real deployment gets a migration with a
 #: review, and P12 owns that.
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 DDL = (
     """
@@ -124,6 +124,9 @@ DDL = (
     CREATE INDEX IF NOT EXISTS nm_outbox_claimable
         ON nm_outbox (workspace_id, done_at, leased_until)
     """,
+    "ALTER TABLE nm_outbox ADD COLUMN IF NOT EXISTS outcome text NOT NULL DEFAULT 'accepted'",
+    "ALTER TABLE nm_outbox ADD COLUMN IF NOT EXISTS detail text NOT NULL DEFAULT ''",
+    "ALTER TABLE nm_operation ADD COLUMN IF NOT EXISTS cancel_requested_at text",
 )
 
 
@@ -155,7 +158,7 @@ class PostgresMatterStore:
         conn = self.connect()
         try:
             with conn.cursor() as cur:
-                cur.execute("SET LOCAL app.workspace_id = %s",
+                cur.execute("SELECT set_config('app.workspace_id', %s, true)",
                             (self.workspace_id,))
                 yield cur
             conn.commit()
@@ -244,7 +247,7 @@ class PostgresMatterStore:
     def _operation(cur, idempotency_key: str) -> Operation | None:
         cur.execute(
             "SELECT idempotency_key, workspace_id, advocate_id, command, "
-            "outcome, matter_id, matter_version, result, request_digest, at "
+            "outcome, matter_id, matter_version, result, request_digest, at, cancel_requested_at "
             "FROM nm_operation "
             "WHERE workspace_id = current_setting('app.workspace_id') "
             "AND idempotency_key = %s",
@@ -256,7 +259,7 @@ class PostgresMatterStore:
             idempotency_key=row[0], workspace_id=row[1], advocate_id=row[2],
             command=row[3], outcome=Outcome(row[4]), matter_id=row[5] or "",
             matter_version=int(row[6]), result=json.loads(row[7] or "{}"),
-            request_digest=row[8] or "", at=row[9])
+            request_digest=row[8] or "", at=row[9], cancel_requested_at=row[10] or "")
 
     # ------------------------------------------------------------ writes ----
 
@@ -302,13 +305,13 @@ class PostgresMatterStore:
             cur.execute(
                 "INSERT INTO nm_operation (workspace_id, idempotency_key, "
                 "advocate_id, command, outcome, matter_id, matter_version, "
-                "request_digest, result, at) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "request_digest, result, at, cancel_requested_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (self.workspace_id, operation.idempotency_key,
                  operation.advocate_id, operation.command,
                  operation.outcome.value, str(saved.id), saved.version,
                  operation.request_digest, json.dumps(operation.result),
-                 operation.at or now_text()))
+                 operation.at or now_text(), operation.cancel_requested_at or None))
             for entry in outbox:
                 cur.execute(
                     "INSERT INTO nm_outbox (workspace_id, entry_id, "
@@ -334,8 +337,9 @@ class PostgresMatterStore:
         writing would leave an interval, and the interval is where two turns
         interleaving on one derivation graph both win.
         """
-        sealed = self.sealer.seal(str(matter.id),
-                                  json.dumps(_encode(matter)).encode("utf8"))
+        saved = _with_version(matter, expected_version + 1)
+        sealed = self.sealer.seal(str(saved.id),
+                                  json.dumps(_encode(saved)).encode("utf8"))
         stamp = now_text()
         if expected_version == 0:
             cur.execute(
@@ -348,7 +352,7 @@ class PostgresMatterStore:
                 raise StaleWrite(
                     f"matter {matter.id} already exists; this write expected "
                     f"to create it. Re-derive against the current state.")
-            return _with_version(matter, 1)
+            return saved
 
         cur.execute(
             "UPDATE nm_matter SET version = version + 1, sealed = %s, "
@@ -366,13 +370,13 @@ class PostgresMatterStore:
                 f"matter {matter.id} was expected at version "
                 f"{expected_version} and is {found}. Re-derive against the "
                 f"current state rather than overwriting it.")
-        return _with_version(matter, expected_version + 1)
+        return saved
 
     # ------------------------------------------------------------ outbox ----
 
     def claim_outbox(self, workspace_id: str, *, worker: str,
                      lease_seconds: int,
-                     limit: int = 1) -> tuple[OutboxEntry, ...]:
+                     limit: int = 1, reconcile: bool = False) -> tuple[OutboxEntry, ...]:
         """Take a lease nobody else holds. P11 drives this.
 
         `FOR UPDATE SKIP LOCKED` is what makes two workers safe without a
@@ -382,22 +386,27 @@ class PostgresMatterStore:
         if workspace_id != self.workspace_id:
             raise TenantMismatch(
                 f"this store serves {self.workspace_id!r}")
+        if not worker.strip() or lease_seconds <= 0 or limit < 1:
+            raise ValueError("claims need a worker, a positive lease and a positive limit")
         with self._tx() as cur:
             cur.execute(
                 "WITH claimable AS ("
                 "  SELECT entry_id FROM nm_outbox "
                 "  WHERE workspace_id = %s AND done_at IS NULL "
+                "    AND ((%s AND outcome = 'unknown') OR "
+                "         (NOT %s AND outcome IN ('accepted', 'running'))) "
                 "    AND (leased_until IS NULL "
                 "         OR leased_until < extract(epoch from now())) "
                 "  ORDER BY at LIMIT %s FOR UPDATE SKIP LOCKED) "
                 "UPDATE nm_outbox o SET leased_by = %s, "
                 "  leased_until = extract(epoch from now()) + %s, "
-                "  attempts = o.attempts + 1 "
+                "  attempts = o.attempts + 1, "
+                "  outcome = CASE WHEN %s THEN 'unknown' ELSE 'running' END "
                 "FROM claimable c WHERE o.workspace_id = %s "
                 "  AND o.entry_id = c.entry_id "
                 "RETURNING o.entry_id, o.operation_key, o.kind, o.matter_id, "
-                "  o.matter_version, o.payload, o.attempts, o.at",
-                (self.workspace_id, limit, worker, lease_seconds,
+                "  o.matter_version, o.payload, o.at, o.attempts, o.leased_by",
+                (self.workspace_id, reconcile, reconcile, limit, worker, lease_seconds, reconcile,
                  self.workspace_id))
             rows = cur.fetchall()
         return tuple(
@@ -405,8 +414,78 @@ class PostgresMatterStore:
                         operation_key=r[1], kind=r[2], matter_id=r[3] or "",
                         matter_version=int(r[4]),
                         payload=json.loads(r[5] or "{}"),
-                        attempts=int(r[6]), at=r[7])
+                        at=r[6], attempts=int(r[7]), lease_owner=r[8])
             for r in rows)
+
+    def renew_outbox(self, workspace_id: str, entry: OutboxEntry,
+                     *, lease_seconds: int) -> None:
+        self._owned_claim(workspace_id, entry)
+        if lease_seconds <= 0:
+            raise ValueError("a lease must have a positive duration")
+        with self._tx() as cur:
+            cur.execute(
+                "UPDATE nm_outbox SET leased_until = extract(epoch from now()) + %s "
+                "WHERE workspace_id = %s AND entry_id = %s AND leased_by = %s "
+                "AND attempts = %s AND leased_until > extract(epoch from now()) "
+                "AND done_at IS NULL",
+                (lease_seconds, self.workspace_id, entry.entry_id,
+                 entry.lease_owner, entry.attempts))
+            if cur.rowcount != 1:
+                raise LeaseLost("the job lease expired or belongs to another claim")
+
+    def _owned_claim(self, workspace_id: str, entry: OutboxEntry) -> None:
+        if workspace_id != self.workspace_id or entry.workspace_id != self.workspace_id:
+            raise TenantMismatch("a job claim crossed the workspace boundary")
+        if not entry.lease_owner or entry.attempts < 1:
+            raise LeaseLost("no fenced claim was supplied")
+
+    def record_job_outcome(self, workspace_id: str, entry: OutboxEntry,
+                           *, outcome: Outcome, detail: str) -> None:
+        self._owned_claim(workspace_id, entry)
+        if outcome not in (Outcome.COMPLETED, Outcome.FAILED, Outcome.UNKNOWN):
+            raise ValueError("a job settlement must be completed, failed or unknown")
+        with self._tx() as cur:
+            # Serialise aggregation for several jobs belonging to one operation.
+            cur.execute("SELECT outcome FROM nm_operation WHERE workspace_id = %s "
+                        "AND idempotency_key = %s FOR UPDATE",
+                        (self.workspace_id, entry.operation_key))
+            if cur.fetchone() is None:
+                raise OperationConflict("the job's operation is absent")
+            cur.execute(
+                "UPDATE nm_outbox SET outcome = %s, detail = %s, done_at = %s, "
+                "leased_by = NULL, leased_until = NULL "
+                "WHERE workspace_id = %s AND entry_id = %s AND leased_by = %s "
+                "AND attempts = %s AND leased_until > extract(epoch from now()) "
+                "AND done_at IS NULL",
+                (outcome.value, detail, now_text() if outcome.settled() else None,
+                 self.workspace_id, entry.entry_id, entry.lease_owner, entry.attempts))
+            if cur.rowcount != 1:
+                raise LeaseLost("an expired or superseded claim cannot settle a job")
+            cur.execute(
+                "SELECT outcome FROM nm_outbox WHERE workspace_id = %s AND operation_key = %s",
+                (self.workspace_id, entry.operation_key))
+            states = [Outcome(row[0]) for row in cur.fetchall()]
+            aggregate = (Outcome.UNKNOWN if Outcome.UNKNOWN in states else
+                         Outcome.RUNNING if any(not s.settled() for s in states) else
+                         Outcome.FAILED if Outcome.FAILED in states else Outcome.COMPLETED)
+            cur.execute(
+                "UPDATE nm_operation SET outcome = CASE "
+                "WHEN cancel_requested_at IS NOT NULL AND %s = 'running' "
+                "THEN 'cancel_requested' ELSE %s END "
+                "WHERE workspace_id = %s AND idempotency_key = %s",
+                (aggregate.value, aggregate.value, self.workspace_id, entry.operation_key))
+
+    def request_cancellation(self, workspace_id: str, idempotency_key: str) -> Operation | None:
+        if workspace_id != self.workspace_id:
+            raise TenantMismatch("a cancellation crossed the workspace boundary")
+        with self._tx() as cur:
+            cur.execute(
+                "UPDATE nm_operation SET cancel_requested_at = COALESCE(cancel_requested_at, %s), "
+                "outcome = CASE WHEN outcome IN ('accepted', 'running') "
+                "THEN 'cancel_requested' ELSE outcome END "
+                "WHERE workspace_id = %s AND idempotency_key = %s",
+                (now_text(), self.workspace_id, idempotency_key))
+            return self._operation(cur, idempotency_key)
 
     # ------------------------------------------------------------ sealing ---
 

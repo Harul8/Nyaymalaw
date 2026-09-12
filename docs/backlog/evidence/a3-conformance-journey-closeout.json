@@ -1,0 +1,235 @@
+{
+  "schema": 2,
+  "run_id": "0e22379a-7bfa-44ee-8df3-eac044ba23f4",
+  "ran_at": "2026-09-12T14:43:58+00:00",
+  "commit": "a3d9c47764eb2f53c5bc486076df423b21488158+dirty",
+  "fingerprint": "25e6a503b714e4ee14b5272175734370445c434ef3c0952768e3455a2d66b2e2",
+  "finished_fingerprint": "25e6a503b714e4ee14b5272175734370445c434ef3c0952768e3455a2d66b2e2",
+  "configuration_identity": "245db5e9e3a6db400836a71da109e1506594dcc42169d082402c02f8d7a8d4f2",
+  "argv": [
+    "pytest",
+    "tests/test_the_journey_login_to_logout.py",
+    "-m",
+    "journey",
+    "-p",
+    "no:randomly",
+    "-q",
+    "--tb=short",
+    "-rA"
+  ],
+  "python": {
+    "implementation": "cpython",
+    "version": [
+      3,
+      11,
+      9
+    ],
+    "executable": "python.exe"
+  },
+  "pytest_returncode": 0,
+  "expected": [
+    "test_phase_1_an_advocate_signs_in_and_the_gate_gives_way",
+    "test_phase_2_the_landing_is_not_blank_but_authenticated",
+    "test_phase_3_the_matter_navigator_is_reachable_at_every_width[1280px]",
+    "test_phase_3_the_matter_navigator_is_reachable_at_every_width[390px]",
+    "test_phase_3_the_matter_navigator_is_reachable_at_every_width[768px]",
+    "test_phase_4_a_brief_can_be_filed_without_a_mouse",
+    "test_phase_5_no_internal_identifier_or_raw_trace_reaches_the_screen",
+    "test_phase_5b_the_answer_does_not_speak_engineering",
+    "test_phase_5c_the_answer_reads_as_a_brief_and_not_a_log",
+    "test_phase_5d_the_masthead_is_not_a_configuration_dump",
+    "test_phase_6b_an_expired_period_is_never_a_window_to_act_within",
+    "test_phase_7_search_answers_or_says_why",
+    "test_phase_8_history_shows_the_turn_that_was_served",
+    "test_phase_8b_history_is_a_record_and_not_a_json_dump",
+    "test_phase_9_reload_restores_the_matter",
+    "test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead",
+    "test_phase_11_a_logout_the_server_refuses_is_not_shown_as_done",
+    "test_phase_12_a_confirmed_logout_cannot_be_undone_by_reload",
+    "test_phase_13_a_send_that_fails_keeps_the_brief_and_offers_one_retry",
+    "test_phase_13b_a_cancelled_turn_does_not_claim_it_was_not_saved",
+    "test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways[1280px]",
+    "test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways[390px]",
+    "test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways[768px]",
+    "test_the_journey_is_actually_driving_a_browser"
+  ],
+  "counts": {
+    "pass": 24,
+    "reproduced": 0,
+    "unexplained": 0,
+    "missing": 0,
+    "unexpected": 0
+  },
+  "missing": [],
+  "artifacts": [],
+  "rows": [
+    {
+      "phase": "phase 1 an advocate signs in and the gate gives way",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_1_an_advocate_signs_in_and_the_gate_gives_way",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_1_an_advocate_signs_in_and_the_gate_gives_way"
+    },
+    {
+      "phase": "phase 2 the landing is not blank but authenticated",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_2_the_landing_is_not_blank_but_authenticated",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_2_the_landing_is_not_blank_but_authenticated"
+    },
+    {
+      "phase": "phase 3 the matter navigator is reachable at every width [390px]",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_3_the_matter_navigator_is_reachable_at_every_width[390px]",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_3_the_matter_navigator_is_reachable_at_every_width[390px]"
+    },
+    {
+      "phase": "phase 3 the matter navigator is reachable at every width [768px]",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_3_the_matter_navigator_is_reachable_at_every_width[768px]",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_3_the_matter_navigator_is_reachable_at_every_width[768px]"
+    },
+    {
+      "phase": "phase 3 the matter navigator is reachable at every width [1280px]",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_3_the_matter_navigator_is_reachable_at_every_width[1280px]",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_3_the_matter_navigator_is_reachable_at_every_width[1280px]"
+    },
+    {
+      "phase": "phase 4 a brief can be filed without a mouse",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_4_a_brief_can_be_filed_without_a_mouse",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_4_a_brief_can_be_filed_without_a_mouse"
+    },
+    {
+      "phase": "phase 5 no internal identifier or raw trace reaches the screen",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_5_no_internal_identifier_or_raw_trace_reaches_the_screen",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_5_no_internal_identifier_or_raw_trace_reaches_the_screen"
+    },
+    {
+      "phase": "phase 5b the answer does not speak engineering",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_5b_the_answer_does_not_speak_engineering",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_5b_the_answer_does_not_speak_engineering"
+    },
+    {
+      "phase": "phase 5c the answer reads as a brief and not a log",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_5c_the_answer_reads_as_a_brief_and_not_a_log",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_5c_the_answer_reads_as_a_brief_and_not_a_log"
+    },
+    {
+      "phase": "phase 5d the masthead is not a configuration dump",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_5d_the_masthead_is_not_a_configuration_dump",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_5d_the_masthead_is_not_a_configuration_dump"
+    },
+    {
+      "phase": "phase 6b an expired period is never a window to act within",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_6b_an_expired_period_is_never_a_window_to_act_within",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_6b_an_expired_period_is_never_a_window_to_act_within"
+    },
+    {
+      "phase": "phase 7 search answers or says why",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_7_search_answers_or_says_why",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_7_search_answers_or_says_why"
+    },
+    {
+      "phase": "phase 8 history shows the turn that was served",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_8_history_shows_the_turn_that_was_served",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_8_history_shows_the_turn_that_was_served"
+    },
+    {
+      "phase": "phase 8b history is a record and not a json dump",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_8b_history_is_a_record_and_not_a_json_dump",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_8b_history_is_a_record_and_not_a_json_dump"
+    },
+    {
+      "phase": "phase 9 reload restores the matter",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_9_reload_restores_the_matter",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_9_reload_restores_the_matter"
+    },
+    {
+      "phase": "phase 10 an expired session does not leave a signed in masthead",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead"
+    },
+    {
+      "phase": "phase 13 a send that fails keeps the brief and offers one retry",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_13_a_send_that_fails_keeps_the_brief_and_offers_one_retry",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_13_a_send_that_fails_keeps_the_brief_and_offers_one_retry"
+    },
+    {
+      "phase": "phase 13b a cancelled turn does not claim it was not saved",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_13b_a_cancelled_turn_does_not_claim_it_was_not_saved",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_13b_a_cancelled_turn_does_not_claim_it_was_not_saved"
+    },
+    {
+      "phase": "phase 14 every control has a name and the page does not scroll sideways [390px]",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways[390px]",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways[390px]"
+    },
+    {
+      "phase": "phase 14 every control has a name and the page does not scroll sideways [768px]",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways[768px]",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways[768px]"
+    },
+    {
+      "phase": "phase 14 every control has a name and the page does not scroll sideways [1280px]",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways[1280px]",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways[1280px]"
+    },
+    {
+      "phase": "phase 11 a logout the server refuses is not shown as done",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_11_a_logout_the_server_refuses_is_not_shown_as_done",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_11_a_logout_the_server_refuses_is_not_shown_as_done"
+    },
+    {
+      "phase": "phase 12 a confirmed logout cannot be undone by reload",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_12_a_confirmed_logout_cannot_be_undone_by_reload",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_phase_12_a_confirmed_logout_cannot_be_undone_by_reload"
+    },
+    {
+      "phase": "the journey is actually driving a browser",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_the_journey_is_actually_driving_a_browser",
+      "nodeid": "tests/test_the_journey_login_to_logout.py::test_the_journey_is_actually_driving_a_browser"
+    }
+  ]
+}

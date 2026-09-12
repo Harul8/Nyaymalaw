@@ -39,6 +39,8 @@ const SCHEMAS = [
      ['basis_source', 'string|null', true, 'Where the basis points — the document, the person, the inference\'s inputs. C1 forbids a source that points nowhere; `null` is permitted only where basis is `direct_knowledge` or `belief`.'],
      ['date', 'date|null', true, '`null` means UNDATED. It is never an estimate, and never today.'],
      ['certainty', 'enum {documented, asserted}', true, 'An assertion and a document are different evidential positions and must not merge on the board.'],
+     ['read_quality', 'enum {clear, uncertain, unread}', true, 'Extraction readability, independent of evidential certainty and advocate confirmation. Defaults to unread; clear does not establish authenticity or legal truth. A document-sourced proposition carries this state beside its source into the reasoning context; an advocate statement is not represented as an OCR result.'],
+     ['version', 'positive integer', true, 'Revision of this stable proposition identity; starts at 1 and advances on correction. This counter does not satisfy the separate requirement to retain the prior statement and its full source lineage: immutable historical revision storage remains required.'],
      ['provenance', 'Provenance', true, 'Non-optional by construction. An advocate who cannot audit the chain has to take the answer on trust.'],
      ['material', 'bool', true, 'Materiality drives what is confirmed and what is pleaded.'],
      ['weight', 'enum {favourable, unfavourable, neutral, not_assessed}', true, '**C1 requires unfavourable facts to be explored as hard as favourable ones.** With no field, nothing can check that they were — and the adverse-fact accounting in D6 has nothing to compare against.'],

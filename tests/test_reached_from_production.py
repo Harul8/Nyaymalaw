@@ -85,15 +85,6 @@ UNWIRED: dict[str, str] = {
         "`assess()` before the arithmetic and `nm.core.turn` carries the "
         "premise digest onto the result -- P22's integration half, which "
         "needs P18's cascade to carry an invalidation through."),
-    "nm.domain.media":
-        "BK-69, and deliberately ahead of its caller. `plan.json` places this "
-        "boundary at W0 and media intake at W2 (BK-54), because a control "
-        "written after its subject is a control written around whatever the "
-        "subject already does. BK-54 wires it: the intake adapter builds a "
-        "`MediaAdmission` and nothing in `nm/core` ever sees the bytes. Until "
-        "then `tests/test_media_never_reaches_reasoning_unadmitted.py` sweeps "
-        "the reasoning layers and fails the day an unadmitted parameter "
-        "appears, so the boundary is enforced before it is called.",
     # `nm.domain.reads` WAS HERE. It is wired as of 5 September 2026 -- not by
     # the tier escalation it was built for, which still needs a hard-tier
     # model, but by the general form of B-088: a DECISIVE read that answers
@@ -105,8 +96,10 @@ UNWIRED: dict[str, str] = {
         "B4. Deliberate — the conflict screen that quarantines is slice 10 "
         "and is declared unbuilt in the gate matrix.",
     "nm.core.intake":
-        "C6. Deliberate — document intake is declared `decided`; nothing "
-        "accepts an upload.",
+        "C6. The historical document-reading helper is still unwired. "
+        "The served nm.edge.uploads path accepts sealed original-byte "
+        "receipts through MediaAdmission, but does not invoke this helper "
+        "or claim extraction. Full reading and correction remain unbuilt.",
     "nm.domain.tiers":
         "S0's tier vocabulary. Consulted by the model config through the "
         "environment rather than by import.",

@@ -338,9 +338,29 @@ def _unguarded_matter_routes(app, caller) -> list[str]:
         path = getattr(route, "path", "")
         if not path.startswith("/api/matters"):
             continue
-        probe = path.replace("{matter_id}", "mat_000000000000")
-        if caller.get(probe).status_code != 401:
-            found.append(path)
+        # Exercise the registered verb and a routable value for EVERY path
+        # parameter. A GET against a PUT route proves only a 405, not auth.
+        from uuid import UUID
+
+        from starlette.convertors import (
+            FloatConvertor,
+            IntegerConvertor,
+            PathConvertor,
+            StringConvertor,
+            UUIDConvertor,
+        )
+
+        values = {StringConvertor: "0", PathConvertor: "0",
+                  IntegerConvertor: 0, FloatConvertor: 0.0,
+                  UUIDConvertor: UUID(int=0)}
+        probe = route.path_format
+        for name, converter in route.param_convertors.items():
+            assert type(converter) in values, "add a routable converter probe"
+            value = converter.to_string(values[type(converter)])
+            probe = probe.replace("{" + name + "}", value)
+        for method in sorted(route.methods):
+            if caller.request(method, probe, json={}).status_code != 401:
+                found.append(f"{method} {path}")
     return found
 
 
@@ -384,6 +404,34 @@ def test_the_route_sweep_can_see_an_unguarded_route():
         return {"secret": "another advocate\'s file"}
 
     found = _unguarded_matter_routes(planted, TestClient(planted))
-    assert found == ["/api/matters/{matter_id}"], (
+    assert found == ["GET /api/matters/{matter_id}"], (
         f"the sweep did not see a matter route that answers without a "
         f"session; it reported {found}")
+
+
+@pytest.mark.parametrize("method", ["GET", "POST", "PUT", "PATCH", "DELETE"])
+def test_the_route_sweep_exercises_each_verb_and_nested_parameters(method):
+    from fastapi import FastAPI, HTTPException
+    from fastapi.testclient import TestClient
+
+    planted = FastAPI()
+    path = "/api/matters/{matter_id}/uploads/{upload_id}/chunks/{offset:int}"
+    observed = []
+
+    def unguarded(matter_id: str, upload_id: str, offset: int):
+        observed.append((matter_id, upload_id, offset))
+        return {"secret": "planted"}
+
+    planted.add_api_route(path, unguarded, methods=[method])
+    with TestClient(planted) as caller:
+        assert _unguarded_matter_routes(planted, caller) == [f"{method} {path}"]
+    assert observed == [("0", "0", 0)], "a routing error is not an auth probe"
+
+    guarded = FastAPI()
+
+    def deny(matter_id: str, upload_id: str, offset: int):  # noqa: ARG001
+        raise HTTPException(401, "session required")
+
+    guarded.add_api_route(path, deny, methods=[method])
+    with TestClient(guarded) as caller:
+        assert _unguarded_matter_routes(guarded, caller) == []

@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "kind": "engineering_change_record",
+  "baseline": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "observed_at": "2026-09-12",
+  "scope": "Read and repair only the isolated a3d9c47 conformance checkout; no P18/P21 parallel work imported.",
+  "graph": {"built_at_sha": "a3d9c47764eb2f53c5bc486076df423b21488158", "nodes": 4738, "edges": 46811, "files": 355, "source_checked": true},
+  "start": [
+    {
+      "packets": ["P10", "P11"],
+      "criteria": ["BK-83-AC1", "BK-83-AC2"],
+      "ready": true,
+      "witness": "PostgresMatterStore seals the caller version before normalising the stored version; JobRunner silently accepts a store with no record_job_outcome. The real adapter has no outcome write, cancellation or lease renewal, while the reference test store supplies outcome recording.",
+      "invariant": "Persist the same canonical matter version returned to the caller. Every claimed job has a durable fenced lease and durable outcome; UNKNOWN is excluded from ordinary retries and requires explicit reconciliation.",
+      "change": "Complete the transactional worker port and PostgreSQL implementation, fail closed on absent required capabilities, retain permission checks and idempotent sink keys, and add controlled-clock/real-adapter regression tests.",
+      "recovery": "Expired lease holders cannot settle; cancelled and ambiguous work remains recorded. A missing database yields NOT_RUN, not proof of durability.",
+      "exclusions": "No live store activation, migration, PostgreSQL installation, confidential data, model call or external effect.",
+      "verification": "NOT_RUN; source diagnosis only until focused tests are coordinated by the parent. Test both allowed completion and cancellation/lease expiry/UNKNOWN; retain every existing assertion."
+    },
+    {
+      "packets": ["P13"],
+      "criteria": ["BK-62-AC1", "BK-63-AC1", "BK-33-AC1"],
+      "ready": true,
+      "witness": "The same authenticated advocate can POST themselves as deciding in the commission then concede; the positive test currently makes that self-grant its setup. Success is returned without any persisted decision. A material change returns reopened=true without invalidating scope admission. Audit failure is silently swallowed.",
+      "invariant": "Authored instructions never grant their author new authority. Internal decisions commit before success, remain attributable and confer no external-action authority. Material commission changes invalidate the scope assessment that relied on the prior commission.",
+      "change": "Separate trusted, expiring/revocable matter-authority bindings from authored commissions; retain the one role-to-act owner. Keep authoritative bindings non-writable through HTTP. Persist internal decision receipts and explicit scope invalidations. Report audit-write failures rather than claiming durable refusal.",
+      "compatibility": "Correct misleading implementation state conceded to decision_recorded with externally_effective=false. Preserve the positive test's successful authorised decision, but seed its authority through trusted provisioning rather than the self-service commission route.",
+      "recovery": "Use existing conditional matter commit and explicit conflict responses. Duplicate supplied decision keys replay only identical internal decisions. Expired/revoked/version-stale bindings fail closed.",
+      "exclusions": "No filing, sending, legal concession to another party, new pilot authorisation, or invented client authority. Trusted provisioning is an explicit engineering boundary, not a claimed user-facing grant flow.",
+      "verification": "NOT_RUN; add self-grant, trusted positive, expiry/revocation/staleness, replay, persistence failure and reopened-scope controls."
+    },
+    {
+      "packets": ["P14"],
+      "criteria": ["BK-78-AC1", "BK-78-AC2", "BK-34-AC3"],
+      "ready": true,
+      "witness": "The declaration route persists Matter.emergencies but TurnEngine reads only legacy emergency_because; no production caller consults Declaration.permits. Existing tests prove the domain record rather than the declared protective journey.",
+      "invariant": "Only a live attributable declaration plus explicit protective_triage request permits the bounded protective branch. It never admits merits, clears outstanding screens, creates client facts, or invokes a provider before admission. Expiry and revocation are checked on every retry.",
+      "change": "Add optional work_product to the existing turn request and connect a pre-model, record-backed protective handoff in TurnEngine. Retain the declaration's frozen outstanding screens and make ordinary admission reflect its current state. Bound declaration duration and handle malformed dates safely.",
+      "recovery": "Commit the triage receipt before emitting; re-entry reevaluates the clock, with urgency retained even after expiry. No general emergency boolean grants permission.",
+      "exclusions": "No substantive legal opinion, statute-specific emergency answer, external action, or fabricated deadline. Generic protective handoff is not a claim of completed merits triage.",
+      "verification": "NOT_RUN; real route tests with model sentinel, expiry, revocation, ordinary-merits refusal, restart/replay and failed commit."
+    },
+    {
+      "packets": ["P15", "P17"],
+      "criteria": ["BK-69-AC3", "BK-64-AC1"],
+      "ready": true,
+      "witness": "Unknown unavoidable media operations are not rejected; casefile reads Fact.read_quality and Fact.version through getattr although neither field exists, so every projection defaults.",
+      "invariant": "Unknown processor work denies transmission. Extraction quality and proposition version reflect explicitly stored values, never invented confidence or human confirmation.",
+      "change": "Apply the existing media allowlist to unavoidable as well as requested operations; add typed optional/default-unknown canonical Fact quality and version with serializer round-trip and correction increment checks.",
+      "exclusions": "P16/P25 upload, transcription and source-byte retrieval remain unbuilt where the record says so; adding canonical metadata does not certify those workflows or invent extracted values.",
+      "verification": "NOT_RUN; add unknown-background operation and non-default metadata persistence/projection controls."
+    }
+  ],
+  "p16_start": {
+    "packet": "P16",
+    "criteria": ["BK-54-AC1"],
+    "ready": true,
+    "witness": "The declared packet includes resumable upload and source locators, but the baseline has only UploadSession/Asset domain types and no served upload producer or encrypted original-byte adapter.",
+    "invariant": "Ownership and approved storage precede receipt; observed bytes are bounded, sealed with the existing per-matter key, and published only by conditional canonical Matter commit. Received never means scanned, admitted, read, confirmed, or established.",
+    "change": "Add a policed upload-object port, immutable sealed object adapter, intake-edge receipt service, authenticated upload-first empty matter shell, resume/list/complete/cancel routes and opaque original locators. Preserve the existing Matter store as the one metadata/CAS owner. The unchanged media-reasoning sweep caught the first core-layer placement; move raw receipt handling to nm/edge/uploads.py instead of exempting it.",
+    "recovery": "Exact repeated chunks replay; conflicting chunks and concurrent state changes refuse. Failed metadata commits leave prior receipt authoritative, with at most unreferenced sealed objects and never plaintext. Reopen uses persisted receipts and recomputes original digest at completion.",
+    "limits": "32 MiB per original, 1 MiB per chunk, 1024 chunks per original and 64 receipt records per matter are operational capacity bounds, not legal coverage rules. They are disclosed and enforced on observed bytes and metadata population.",
+    "exclusions": "No scanner, parser, transcript, external media processor, legal fact, automatic retention deletion or arbitrary source preview. Quarantine and EVAL008 transcription/quality/scanner proof remain NOT_ASSESSED/NOT_RUN. P25 extraction and complete P16 evaluation are not certified.",
+    "verification": "NOT_RUN until coordinated focused tests; positive restart/resume and digest/locator controls plus ownership, hard limits, replay conflicts, stale CAS, encrypted-byte isolation, corruption and policy refusal. Browser evidence belongs to the main integration record."
+  },
+  "independent_review_repairs": [
+    {"packet": "P11", "finding": "Cancellation intent stored beside UNKNOWN was omitted from operation rehydration, allowing an undispatched sibling. Budget/cancellation could falsely report no effect before reconciling a prior delivery; positive slow reconciliation omitted a second permission check.", "fix": "Carry cancellation timestamp independently of aggregate outcome; query definite sink delivery before terminal no-effect claims; retain UNKNOWN for unanswerable status; recheck current authority after the lookup. Add reference and real-database sibling/recovery controls."},
+    {"packet": "P14", "finding": "Second-precision stored timestamps selected an older declaration on ties; a malformed revoked_at was treated as absent.", "fix": "Later append order resolves equal timestamps. Damaged revocation/history fails closed and is reported incomplete instead of reviving old authority. Add same-second restrictive replacement and malformed-record controls."},
+    {"packet": "P16", "finding": "The first receipt implementation assumed FileMatterStore normalized the next version like PostgreSQL. It preserves the caller version, so concurrent receipts could overwrite. Opening retries also compared immutable intent against mutable current title/parties.", "fix": "Create shells at version1 and increment every receipt mutation before canonical CAS. Real concurrent writer control requires exactly one accepted mutation and one StaleWrite. Persist the immutable normalized opening offer and compare retries against it; later legitimate changes remain unchanged, different offers refuse and missing legacy opening identity is not manufactured."}
+  ],
+  "build": "IMPLEMENTED_FOCUSED_VERIFICATION_PENDING",
+  "test": "PARTIAL_RUN_RECORDED_NOT_SIGNED_OFF",
+  "test_runs": [
+    {"runner": "parent coordinated pytest", "artifact": ".nm/conformance/matter-final-focused.xml", "tests": 282, "passed": 267, "failed": 0, "errors": 0, "skipped": 15, "elapsed_seconds": 19.551, "scope": "Current authority, commission/version, emergency, media policy, casefile, worker, store, egress and matter UI controller checks. Later emergency-key and app-context repairs require revalidation. Real PostgreSQL tests remain skipped, not passed."},
+    {"runner": "parent coordinated pytest", "artifact": ".nm/conformance/runtime-uploads.xml", "tests": 39, "passed": 39, "failed": 0, "errors": 0, "skipped": 0, "elapsed_seconds": 7.734, "scope": "Explicit isolated configuration, original upload/resume/CAS and unchanged media-reasoning architecture sweep. All pass after moving raw-upload receipt orchestration to the intake edge."},
+    {"runner": "parent coordinated pytest", "artifact": ".nm/conformance/matter.xml", "tests": 218, "passed": 203, "failed": 1, "skipped": 14, "failure": "New canonical-version test fixture omitted required Matter.title; fixed to Synthetic matter without changing production or assertions. Later P16 and independent-review controls were not in this run.", "skips": "Real PostgreSQL tests have no configured DSN; no integration claim."}
+  ],
+  "signoff": "NOT_RUN",
+  "external_limits": ["P08 approved strong-factor design remains open", "P09 actual-device/provider proof remains open", "P10/P11 PostgreSQL integration must run against a real disposable server", "P12 migration and production measurement remain open", "No counsel or deployment approval is created by this engineering record"]
+}

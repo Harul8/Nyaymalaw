@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "kind": "engineering_change_record",
+  "baseline": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "observed_at": "2026-09-12",
+  "start": {
+    "witness": "The unchanged canonical browser journey phase 6b received an expired-window ground with Signal.LIMITATION_BAR in the server's window section, but renderTurn folded every non-disclosure ground into supporting material. The warning was served but not visible.",
+    "invariant": "Every non-none Signal remains visible regardless of element kind. Only expressly unsignalled non-disclosure grounds may fold, and spoken content must be the exact complement of that single rule.",
+    "scope": "One renderer partition owner, existing structural and Node behavioural controls, and three-width real-DOM renderer-only transfer using every actual Signal enum value. Canonical expired-case integration test and server legal computation stay unchanged.",
+    "verification": "NOT_RUN by delegated owner; all execution belongs to the parent. Synthetic renderer fixtures are not evidence of legal reasoning or clinical acceptance."
+  },
+  "build": "IMPLEMENTED_PENDING_CENTRAL_VERIFICATION",
+  "implementation": {
+    "owner": "web/app.js renderTurn has one foldsAsSupport predicate requiring ground, no disclosure and signal exactly none. Spoken uses its exact complement; the existing grounds-only visibility guard remains unchanged.",
+    "structural_controls": "Existing six Class-A tests retain disclosure distinction, support count, advocate words and actual Node renderer execution. Predicate assertions now hold all three requirements and direct owner/complement references, avoiding independent copied conditions.",
+    "behavioural_population": "Python enumerates every current non-none Signal and supplies its real domain-owned section to the Node renderer witness. The witness counts every original body exactly once, keeps two disclosures and all current signals plus three absent/null/unfamiliar cases visible, and requires exactly two ordinary grounds in one closed support fold.",
+    "browser_population": "Three authored journey cases, one per canonical width, run the shipped renderTurn and CSS after real sign-in with explicit synthetic renderer-only elements. They account for all bodies, visible signals and disclosures, closed ordinary support, reopening, horizontal bounds, no turn request and no page error. This is renderer transfer, not legal-quality or saved-advice evidence.",
+    "preserved_integration": "The canonical phase 6b served expired-case test and server computation are untouched. Parent owns all execution and records actual results."
+  },
+  "central_run_followup": {
+    "reported_population": "Parent reported 18 focused cases: 17 passed, one failed. All nine repaired canonical cases, including unchanged phase 6b, and all three signal browser widths passed. This is the reported focused run, not a full-gate signoff.",
+    "failure": "The existing Node harness failed during page-script load: ResizeObserver was not defined. Production now arms a responsive warning-height observer; no renderer assertion had run yet.",
+    "repair": "Added only a no-op ResizeObserver.observe in the Node VM context. It does not simulate layout or call the observer callback; the actual browser cases measure layout. Inspected current bootstrap observer/global calls; no additional new observer runtime dependency was found. Production code and all assertions remain unchanged.",
+    "artifact": ".nm/conformance/journey-repairs.xml",
+    "rerun": "NOT_RUN by delegated owner; parent will rerun the six partition controls."
+  },
+  "test": "PARTIAL_CENTRAL_RESULTS_RECORDED_HARNESS_RERUN_PENDING",
+  "signoff": "NOT_RUN"
+}

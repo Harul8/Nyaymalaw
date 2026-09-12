@@ -20,6 +20,8 @@ to go but everywhere.
 """
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from nm.adapters.store.file_store import FileMatterStore
@@ -100,7 +102,6 @@ def test_a_legacy_transcript_is_still_found_by_decrypting_it(tmp_path):
     store = _store(tmp_path)
     legacy = tmp_path / "transcripts"
     legacy.mkdir(parents=True, exist_ok=True)
-    import json
     (legacy / "turn_old.nm").write_bytes(store._cipher.encrypt(
         json.dumps(_turn("mat_ddd", "turn_old")).encode("utf8")))
 
@@ -124,3 +125,72 @@ def test_an_unreadable_legacy_transcript_is_counted_and_never_attributed(tmp_pat
     assert store.unattributable() == ("turn_lost",)
     assert [t.get("unreadable") for t in store.transcripts_for("mat_eee")] == [None], (
         "an unattributable legacy transcript was charged to a matter")
+
+
+@pytest.mark.parametrize("payload", [None, [], ["private payload"], "private payload", 7, True])
+def test_decrypted_nonobject_owned_archive_is_named_unreadable_only_to_its_owner(
+        tmp_path, payload):
+    store = _store(tmp_path)
+    store.record_turn(_turn("mat_aaa", "good"))
+    store.record_turn(_turn("mat_bbb", "other"))
+    path = tmp_path / "transcripts" / "mat_aaa__broken.nm"
+    path.write_bytes(store._seal("mat_aaa", json.dumps(payload).encode("utf8")))
+
+    mine = store.transcripts_for("mat_aaa")
+    assert len(mine) == 2
+    broken = next(row for row in mine if row["turn_id"] == "broken")
+    assert broken["unreadable"] is True
+    assert broken["matter_id"] == "mat_aaa"
+    assert "private payload" not in broken["why"]
+    assert next(row for row in mine if row["turn_id"] == "good") == _turn("mat_aaa", "good")
+    assert store.transcripts_for("mat_bbb") == (_turn("mat_bbb", "other"),)
+    assert store.unattributable() == ()
+
+
+@pytest.mark.parametrize("payload", [None, [], ["private payload"], "private payload", 7, True])
+def test_decrypted_nonobject_legacy_archive_is_unattributable_not_somebodys_turn(
+        tmp_path, payload):
+    store = _store(tmp_path)
+    store.record_turn(_turn("mat_aaa", "good"))
+    path = tmp_path / "transcripts" / "lost.nm"
+    path.write_bytes(store._cipher.encrypt(json.dumps(payload).encode("utf8")))
+
+    assert store.unattributable() == ("lost",)
+    assert store.transcripts_for("mat_aaa") == (_turn("mat_aaa", "good"),)
+    assert store.transcripts_for("mat_bbb") == ()
+
+
+@pytest.mark.parametrize("field,value", [
+    ("at", None), ("at", 1), ("at", {}),
+    ("turn_id", []), ("turn_id", ""), ("matter_id", None), ("matter_id", {}),
+])
+def test_malformed_archive_fields_have_the_same_safe_attribution_boundary(tmp_path, field, value):
+    store = _store(tmp_path)
+    store.record_turn(_turn("mat_aaa", "good"))
+    payload = {**_turn("mat_aaa", "broken"), field: value}
+    encoded = json.dumps(payload).encode("utf8")
+    owned = tmp_path / "transcripts" / "mat_aaa__broken.nm"
+    owned.write_bytes(store._seal("mat_aaa", encoded))
+    legacy = tmp_path / "transcripts" / "legacy_bad.nm"
+    legacy.write_bytes(store._cipher.encrypt(encoded))
+
+    mine = store.transcripts_for("mat_aaa")
+    assert len(mine) == 2
+    broken = next(row for row in mine if row["turn_id"] == "broken")
+    assert broken["unreadable"] is True
+    assert broken["matter_id"] == "mat_aaa"
+    assert store.unattributable() == ("legacy_bad",)
+    assert store.transcripts_for("mat_bbb") == ()
+
+
+@pytest.mark.parametrize("field,value", [("matter_id", "mat_bbb"), ("turn_id", "other")])
+def test_payload_identity_cannot_replace_the_owned_filename_identity(tmp_path, field, value):
+    store = _store(tmp_path)
+    store.record_turn(_turn("mat_aaa", "good"))
+    payload = {**_turn("mat_aaa", "broken"), field: value}
+    path = tmp_path / "transcripts" / "mat_aaa__broken.nm"
+    path.write_bytes(store._seal("mat_aaa", json.dumps(payload).encode("utf8")))
+    broken = next(row for row in store.transcripts_for("mat_aaa") if row["turn_id"] == "broken")
+    assert broken["unreadable"] is True and broken["matter_id"] == "mat_aaa"
+    assert "conflicts with its archive name" in broken["why"]
+    assert store.transcripts_for("mat_bbb") == ()

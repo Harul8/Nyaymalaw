@@ -35,7 +35,7 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 
 from nm.domain.matter import Matter
-from nm.domain.operation import Operation, OutboxEntry
+from nm.domain.operation import Operation, OutboxEntry, Outcome
 
 
 class TenantMismatch(Exception):
@@ -56,6 +56,10 @@ class OperationConflict(Exception):
     asking a new question under an old name, and answering it with the old
     result would answer a question nobody asked.
     """
+
+
+class LeaseLost(Exception):
+    """This claim no longer owns the work; it cannot renew or settle it."""
 
 
 @runtime_checkable
@@ -80,6 +84,20 @@ class TransactionalStorePort(Protocol):
 
     def claim_outbox(self, workspace_id: str, *, worker: str,
                      lease_seconds: int,
-                     limit: int = 1) -> tuple[OutboxEntry, ...]:
+                     limit: int = 1, reconcile: bool = False) -> tuple[OutboxEntry, ...]:
         """Take a lease on work nobody else holds. P11 drives this."""
+        ...
+
+    def renew_outbox(self, workspace_id: str, entry: OutboxEntry,
+                     *, lease_seconds: int) -> None:
+        """Renew the current unexpired fenced claim, or raise LeaseLost."""
+        ...
+
+    def record_job_outcome(self, workspace_id: str, entry: OutboxEntry,
+                           *, outcome: Outcome, detail: str) -> None:
+        """Durably settle this fenced claim and derive its operation's outcome."""
+        ...
+
+    def request_cancellation(self, workspace_id: str, idempotency_key: str) -> Operation | None:
+        """Retain the cancellation request; accepted work and results are not erased."""
         ...

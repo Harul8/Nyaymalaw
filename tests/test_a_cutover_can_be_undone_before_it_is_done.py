@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from pathlib import Path
 
 import pytest
 
@@ -34,6 +35,7 @@ from nm.domain.matter import Matter
 from tools.migrate_store import (
     MigrationRefused,
     Reconciled,
+    Reconciliation,
     WriteAuthority,
     inventory,
     reconcile,
@@ -329,3 +331,194 @@ def test_the_key_reference_is_part_of_the_comparison(tmp_path):
     record = inventory(target, SEAL).matters["mat_00000000"]
     assert record.key_ref and "generation" in record.key_ref
     assert json.loads(record.key_ref)["kek_id"] == "matter-store"
+
+
+@pytest.mark.parametrize("damage", ["same_version_content", "unreadable_source",
+                                    "unreadable_target", "missing_source_matter",
+                                    "missing_key", "unassessed_source", "unassessed_target"])
+def test_rollback_refuses_every_unmatched_aggregate_even_with_an_old_matched_report(
+        tmp_path, damage):
+    source, target = tmp_path / "src", tmp_path / "dst"
+    _populate(source, count=1)
+    rehearse(source, target, SEAL, authority=_quiesced())
+    old = reconcile(inventory(source, SEAL), inventory(target, SEAL))
+    assert old.state is Reconciled.MATCHED
+    if damage == "same_version_content":
+        store = FileMatterStore(target, key=SEAL)
+        path = target / "matters" / "mat_00000000.nm"
+        doc = json.loads(store._open(path.stem, path.read_bytes()))
+        original_version = doc["version"]
+        doc["title"] = "Changed without advancing version"
+        path.write_bytes(store._seal(path.stem, json.dumps(doc).encode()))
+        assert inventory(target, SEAL).matters[path.stem].version == original_version
+    elif damage.startswith("unreadable_"):
+        root = source if damage == "unreadable_source" else target
+        (root / "matters" / "mat_00000000.nm").write_bytes(b"corrupt")
+    elif damage == "missing_source_matter":
+        (source / "matters" / "mat_00000000.nm").unlink()
+    elif damage == "missing_key":
+        (target / "keys" / "mat_00000000.key").unlink()
+    src, dst = inventory(source, SEAL), inventory(target, SEAL)
+    if damage == "unassessed_source":
+        src.assessed = False
+    elif damage == "unassessed_target":
+        dst.assessed = False
+    assert refuse_rollback(src, dst, old), "an old MATCHED cannot overrule current inputs"
+    assert refuse_rollback(src, dst, reconcile(src, dst))
+
+
+@pytest.mark.parametrize("state", [Reconciled.NOT_ASSESSED, Reconciled.DIFFERS])
+def test_a_failed_supplied_reconciliation_cannot_be_overruled_by_matching_inputs(tmp_path, state):
+    source, target = tmp_path / "src", tmp_path / "dst"
+    _populate(source, count=1)
+    rehearse(source, target, SEAL, authority=_quiesced())
+    refused = Reconciliation(state, differences=["unresolved finding"], why="review needed")
+    assert refuse_rollback(inventory(source, SEAL), inventory(target, SEAL), refused)
+
+
+@pytest.mark.parametrize("relation", ["descendant", "ancestor", "normalised_self",
+                                      "existing_empty", "existing_keys"])
+def test_rehearsal_refuses_overlapping_or_preexisting_targets_before_any_write(tmp_path, relation):
+    source = tmp_path / "src"
+    _populate(source, count=1)
+    targets = {"descendant": source / "copy", "ancestor": tmp_path,
+               "normalised_self": source / ".." / "src",
+               "existing_empty": tmp_path / "empty", "existing_keys": tmp_path / "key-only"}
+    target = targets[relation]
+    if relation.startswith("existing_"):
+        target.mkdir()
+        if relation == "existing_keys":
+            (target / "keys").mkdir()
+            (target / "keys" / "retained.key").write_bytes(b"must survive")
+    before = _tree_bytes(tmp_path)
+    with pytest.raises(MigrationRefused):
+        rehearse(source, target, SEAL, authority=_quiesced())
+    assert _tree_bytes(tmp_path) == before
+
+
+def _tree_bytes(root):
+    return {path.relative_to(root).as_posix(): path.read_bytes() if path.is_file() else None
+            for path in sorted(root.rglob("*"))}
+
+
+def test_resolved_directory_alias_to_the_source_is_refused_without_opening_a_target(
+        tmp_path, monkeypatch):
+    source, alias = tmp_path / "src", tmp_path / "alias"
+    _populate(source, count=1)
+    original = Path.resolve
+    # Portable resolver boundary: Windows junction creation may require a host
+    # privilege. This exercises the actual canonical-path decision, not that OS API.
+    def resolve(path, *args, **kwargs):
+        return original(source if path == alias else path, *args, **kwargs)
+    monkeypatch.setattr(Path, "resolve", resolve)
+    before = _tree_bytes(source)
+    with pytest.raises(MigrationRefused):
+        rehearse(source, alias, SEAL, authority=_quiesced())
+    assert not alias.exists() and _tree_bytes(source) == before
+
+
+def test_inventory_does_not_create_source_directories(tmp_path):
+    source = tmp_path / "src"
+    _populate(source, count=1)
+    (source / "metrics").rmdir()
+    before = _tree_bytes(source)
+    assert inventory(source, SEAL).count == 1
+    assert _tree_bytes(source) == before
+
+
+def test_inventory_cannot_report_an_unreadable_directory_as_an_empty_store(tmp_path, monkeypatch):
+    source = tmp_path / "src"
+    _populate(source, count=1)
+    original = Path.iterdir
+    def denied(path):
+        if path == source / "matters":
+            raise PermissionError("synthetic denied directory")
+        return original(path)
+    monkeypatch.setattr(Path, "iterdir", denied)
+    found = inventory(source, SEAL)
+    assert not found.assessed and found.why
+    assert reconcile(found, found).state is Reconciled.NOT_ASSESSED
+
+
+@pytest.mark.parametrize("change", ["new_matter", "content", "key", "removed_matter"])
+def test_source_changes_during_copy_refuse_instead_of_certifying_a_moving_snapshot(
+        tmp_path, monkeypatch, change):
+    source, target = tmp_path / "src", tmp_path / "dst"
+    _populate(source, count=2)
+    original = Path.open
+    changes = []
+    def mutate_during_copy(path, mode="r", *args, **kwargs):
+        handle = original(path, mode, *args, **kwargs)
+        if path.parent == target / "matters" and "x" in mode and not changes:
+            changes.append(change)
+            if change == "new_matter":
+                FileMatterStore(source, key=SEAL).commit(
+                    Matter(id="mat_new", advocate_id="adv@example.test", title="Concurrent"),
+                    expected_version=0)
+            elif change == "removed_matter":
+                (source / "matters" / "mat_00000001.nm").unlink()
+            elif change == "key":
+                key = source / "keys" / "mat_00000000.key"
+                key.write_bytes(key.read_bytes() + b" ")
+            else:
+                store = FileMatterStore(source, key=SEAL)
+                changed = source / "matters" / "mat_00000001.nm"
+                doc = json.loads(store._open(changed.stem, changed.read_bytes()))
+                doc["title"] = "Concurrent same-version change"
+                changed.write_bytes(store._seal(changed.stem, json.dumps(doc).encode()))
+        return handle
+    monkeypatch.setattr(Path, "open", mutate_during_copy)
+    with pytest.raises(MigrationRefused, match="source|snapshot"):
+        rehearse(source, target, SEAL, authority=_quiesced())
+    assert changes == [change], "the mutation must actually run"
+
+
+def test_a_missing_source_refuses_before_creating_a_target(tmp_path):
+    target = tmp_path / "dst"
+    with pytest.raises(MigrationRefused):
+        rehearse(tmp_path / "missing", target, SEAL, authority=_quiesced())
+    assert not target.exists()
+
+
+def test_cli_cannot_invent_a_quiescence_assertion(tmp_path, capsys):
+    from tools.migrate_store import main
+
+    source, target = tmp_path / "src", tmp_path / "dst"
+    _populate(source, count=1)
+    result = main(["rehearse", "--source", str(source), "--target", str(target),
+                   "--seal", SEAL])
+    assert result != 0 and not target.exists()
+    assert "writer fence" in capsys.readouterr().err
+
+
+def test_an_exclusive_target_file_cannot_overwrite_a_concurrent_hard_link(tmp_path, monkeypatch):
+    source, target = tmp_path / "src", tmp_path / "dst"
+    _populate(source, count=1)
+    original = Path.open
+    introduced = []
+    original_bytes = (source / "matters" / "mat_00000000.nm").read_bytes()
+    def introduce_target_link(path, mode="r", *args, **kwargs):
+        if path.parent == target / "matters" and "x" in mode and not introduced:
+            path.hardlink_to(source / "matters" / path.name)
+            introduced.append(path)
+        return original(path, mode, *args, **kwargs)
+    monkeypatch.setattr(Path, "open", introduce_target_link)
+    with pytest.raises(MigrationRefused, match="incomplete"):
+        rehearse(source, target, SEAL, authority=_quiesced())
+    assert len(introduced) == 1
+    assert (source / "matters" / "mat_00000000.nm").read_bytes() == original_bytes
+
+
+@pytest.mark.parametrize("version", [None, True, "0", -1])
+def test_a_malformed_canonical_version_is_unreadable_not_a_guessed_zero(tmp_path, version):
+    source = tmp_path / "src"
+    _populate(source, count=1)
+    store = FileMatterStore(source, key=SEAL)
+    path = source / "matters" / "mat_00000000.nm"
+    doc = json.loads(store._open(path.stem, path.read_bytes()))
+    doc["version"] = version
+    path.write_bytes(store._seal(path.stem, json.dumps(doc).encode()))
+    found = inventory(source, SEAL)
+    assert found.count == 1 and found.unreadable == [path.stem]
+    assert not found.matters[path.stem].readable
+    assert reconcile(found, found).state is not Reconciled.MATCHED

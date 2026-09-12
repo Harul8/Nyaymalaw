@@ -122,6 +122,14 @@ def test_an_unknown_operation_is_denied_rather_than_assumed_benign():
     assert refused and "not in the approved set" in refused[0]
 
 
+def test_unknown_unavoidable_processing_is_denied_too():
+    refused = refuse_request(Route("vendor-z", ("transcription",),
+                                   unavoidable=("unreviewed_analysis",)), CONTRACT)
+    assert refused and any("unapproved background" in reason for reason in refused)
+    assert refuse_request(Route("vendor-z", ("transcription",),
+                                unavoidable=("transcription",)), CONTRACT) == []
+
+
 def test_a_route_that_names_no_operation_is_denied():
     """The contract's default is deny; an unnamed operation cannot have been
     approved."""

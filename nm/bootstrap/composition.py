@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Mapping
 from pathlib import Path
+from types import MappingProxyType
 
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
 from nm.adapters.knowledge.elements import CuratedElements
@@ -23,28 +25,25 @@ from nm.adapters.search.authority import AuthorityIndexSearch
 from nm.adapters.search.policed import PolicedSearch
 from nm.adapters.store.directory import FileDirectory
 from nm.adapters.store.file_store import FileMatterStore
-from nm.bootstrap.egress_policy import egress_policy
+from nm.bootstrap.egress_policy import (
+    INDEX_PROCESSOR,
+    STORAGE_PROCESSOR,
+    egress_policy,
+)
 from nm.core.turn import TurnEngine
 from nm.domain.advocate import utcnow
 from nm.domain.clock import FORUM
 from nm.domain.egress import DataClass, Gatekeeper, Sink
 from nm.domain.gates import GATES, withholding
+from nm.edge.uploads import UploadService
 from nm.knowledge.coverage import CoverageProfile
 from nm.knowledge.manifest import Manifest, PublishedCorpus
 from nm.ports.directory import DirectoryPort
 from nm.ports.model import ModelPort, Tier
 from nm.ports.store import StorePort
+from nm.ports.upload import UploadPort
 
 ROOT = Path(__file__).resolve().parents[2]
-
-#: WHICH RECORDED PROCESSOR EACH LOCAL DESTINATION IS. Named here, once,
-#: because the composition root is the only place that knows which adapter is
-#: real -- the same argument `build_model` already makes for providers. They
-#: must resolve in `docs/blueprint/processors.yaml` or the application refuses
-#: to start.
-STORAGE_PROCESSOR = "local-disk"
-INDEX_PROCESSOR = "local-index"
-
 
 def build_model(config: ModelConfig) -> ModelPort:
     """Pick the adapter by PROVIDER NAME ALONE.
@@ -65,18 +64,27 @@ def build_model(config: ModelConfig) -> ModelPort:
 class Application:
     def __init__(self, *, root: Path | None = None, model: ModelPort | None = None,
                  store=None, evidence=None, search=None,
-                 directory=None) -> None:
-        load_dotenv(ROOT / ".env")
+                 directory=None, uploads=None,
+                 environment: Mapping[str, str] | None = None,
+                 audit_root: Path | None = None) -> None:
+        # Explicit composition must never read or temporarily replace process
+        # configuration: another served app may be running in the same process.
+        # The omitted case retains the production startup contract.
+        if environment is None:
+            load_dotenv(ROOT / ".env")
+        settings = MappingProxyType(dict(os.environ if environment is None else environment))
+        self.environment = settings
         self.root = root or ROOT
-        self.config = load()
+        self.audit_root = Path(audit_root) if audit_root is not None else self.root / ".nm"
+        self.config = load(dict(settings))
         self.manifest = Manifest.load(self.root / "spec" / "manifest.yaml")
 
-        key = os.environ.get("NM_MATTER_KEY") or ""
+        key = settings.get("NM_MATTER_KEY") or ""
         if not key.strip():
             # Generated per-installation rather than defaulted to empty: an
             # unconfigured key must never become "no encryption".
             key = _ensure_local_key(self.root)
-        _refuse_a_shared_seal(key)
+        _refuse_a_shared_seal(key, settings)
 
         # ONE GATEKEEPER FOR EVERY SINK. The decision -- build the route,
         # refuse, audit -- exists once; each wrapper contributes only what it
@@ -97,15 +105,29 @@ class Application:
         # somebody is already holding.
         self.store = PolicedPort(
             inner=store or FileMatterStore(
-                os.environ.get("NM_MATTER_STORE") or (self.root / ".nm"),
+                settings.get("NM_MATTER_STORE") or (self.root / ".nm"),
                 key=key),
             gate=self._gate, port=StorePort, sink=Sink.STORAGE,
             processor_id=STORAGE_PROCESSOR)
+        # Originals use the same root and per-matter keys as the injected or
+        # live file store. An unsupported store requires an explicit adapter;
+        # never silently write uploads to a second default location.
+        upload_adapter = uploads
+        if upload_adapter is None and isinstance(self.store.inner, FileMatterStore):
+            upload_adapter = self.store.inner.upload_storage()
+        self.uploads = None
+        if upload_adapter is not None:
+            upload_objects = PolicedPort(
+                inner=upload_adapter, gate=self._gate, port=UploadPort,
+                sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+                weigh=lambda args, kwargs: len(
+                    kwargs.get("data", args[2] if len(args) > 2 else b"")))
+            self.uploads = UploadService(self.store, upload_objects)
         # A1. THE SAME KEY AS THE MATTERS, and the same root. Two stores with
         # two keys is two things to configure and one of them to forget.
         self.directory: DirectoryPort = PolicedPort(
             inner=directory or FileDirectory(
-                os.environ.get("NM_MATTER_STORE") or (self.root / ".nm"),
+                settings.get("NM_MATTER_STORE") or (self.root / ".nm"),
                 key=key),
             gate=self._gate, port=DirectoryPort, sink=Sink.STORAGE,
             processor_id=STORAGE_PROCESSOR,
@@ -114,13 +136,13 @@ class Application:
             # matter, and saying so keeps the two separable in the audit.
             data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
         corpus_path = Path(
-            os.environ.get("NM_CORPUS_DIR")
+            settings.get("NM_CORPUS_DIR")
             or (self.root / "legal_database" / "vector_store")
         )
         published_corpus = (corpus_path / "current.json").is_file()
         published_snapshot = None
         if published_corpus and evidence is None and any(
-            os.environ.get(name) for name in (
+            settings.get(name) for name in (
                 "NM_AUTHORITY_INDEX", "NM_IDENTITY_INDEX",
             )
         ):
@@ -142,9 +164,9 @@ class Application:
             self.evidence = CorpusEvidenceAdapter(
                 corpus_path,
                 self.manifest,
-                authority_index=(os.environ.get("NM_AUTHORITY_INDEX")
+                authority_index=(settings.get("NM_AUTHORITY_INDEX")
                                  or default_authority_index(self.root)),
-                identity_index=(os.environ.get("NM_IDENTITY_INDEX")
+                identity_index=(settings.get("NM_IDENTITY_INDEX")
                                 or (self.root / ".nm" / "identity.db")))
         # A4. The SAME index the evidence adapter reads, named once. Two
         # paths to one file, configured separately, is how the grounding gate
@@ -161,7 +183,7 @@ class Application:
             )
         else:
             search_adapter = AuthorityIndexSearch(
-                os.environ.get("NM_AUTHORITY_INDEX")
+                settings.get("NM_AUTHORITY_INDEX")
                 or default_authority_index(self.root))
         # THE QUERY IS WHAT LEAVES. An advocate searching for authority types
         # the substance of the matter into the box, so the text going TO the
@@ -217,7 +239,7 @@ class Application:
         misses a line -- the same rule `note_failure` already follows.
         """
         try:
-            path = self.root / ".nm" / "egress.log"
+            path = self.audit_root / "egress.log"
             path.parent.mkdir(parents=True, exist_ok=True)
             with path.open("a", encoding="utf8") as handle:
                 stamp = utcnow().isoformat(timespec="seconds")
@@ -281,7 +303,7 @@ class SharedSealRefused(RuntimeError):
     """The seal on client files is also being used for something else."""
 
 
-def _refuse_a_shared_seal(key: str, env: dict[str, str] | None = None) -> None:
+def _refuse_a_shared_seal(key: str, env: Mapping[str, str] | None = None) -> None:
     """BK-21. THE SEAL ON CLIENT FILES MAY NOT BE ANY OTHER CREDENTIAL.
 
     `NM_MATTER_KEY` and `NM_MODEL_API_KEY` held the same `sk-proj-...` value,

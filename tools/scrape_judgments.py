@@ -92,6 +92,7 @@ from nm.knowledge.acquisition import (  # noqa: E402
     AcquisitionScope,
     JudgmentCandidate,
     SelectionState,
+    acquisition_dates,
     select_candidates,
     stage_acquisition,
 )
@@ -281,7 +282,12 @@ def candidate(docid: str, html: str, citation_count: int | None,
 
 # --------------------------------------------------------------------- plan ---
 
-def plan(years: list[int], pages: int, legacy_min_cited: int) -> None:
+def plan(years: list[int], pages: int, legacy_min_cited: int, *,
+         from_date: date | None = None, to_date: date | None = None) -> None:
+    if not years:
+        raise ValueError("acquisition needs a non-empty year population")
+    intervals = [acquisition_dates(year, from_date=from_date, to_date=to_date)
+                 for year in years]
     searches = len(years) * pages
     docs = searches * 10
     seconds = (searches + docs) * DELAY
@@ -289,6 +295,7 @@ def plan(years: list[int], pages: int, legacy_min_cited: int) -> None:
     print("  PLAN — no request is made by this command.")
     print()
     print(f"    years                 {years[0]}–{years[-1]} ({len(years)})")
+    print(f"    source dates          {intervals[0][0]} through {intervals[-1][1]}")
     print(f"    pages per year        {pages}")
     print(f"    search requests       {searches}")
     print(f"    documents to open     ~{docs}  (~10 results per page)")
@@ -312,7 +319,12 @@ def plan(years: list[int], pages: int, legacy_min_cited: int) -> None:
 # ------------------------------------------------------------------ running ---
 
 def run(years: list[int], pages: int, legacy_min_cited: int, cap: int,
-        selection_budget: int, authorization_id: str) -> int:
+        selection_budget: int, authorization_id: str, *,
+        from_date: date | None = None, to_date: date | None = None) -> int:
+    if not years:
+        raise ValueError("acquisition needs a non-empty year population")
+    intervals = {year: acquisition_dates(year, from_date=from_date, to_date=to_date)
+                 for year in years}
     allowed, why = robots_allows(SEARCH)
     print(f"  robots.txt: {why}")
     if not allowed:
@@ -324,10 +336,12 @@ def run(years: list[int], pages: int, legacy_min_cited: int, cap: int,
     kept_total = 0
 
     for year in years:
+        start, end = intervals[year]
         seen: list[str] = []
         for page in range(pages):
             q = urllib.parse.urlencode({
-                "formInput": f"doctypes: {DOCTYPE} year: {year}",
+                "formInput": (f"doctypes: {DOCTYPE} year: {year} "
+                              f"fromdate: {start:%d-%m-%Y} todate: {end:%d-%m-%Y}"),
                 "pagenum": page})
             try:
                 html = _get(f"{SITE}{SEARCH}?{q}", budget)
@@ -368,8 +382,8 @@ def run(years: list[int], pages: int, legacy_min_cited: int, cap: int,
             source="indiankanoon.org",
             jurisdiction=DOCTYPE,
             document_types=(DOCTYPE,),
-            from_date=date(year, 1, 1),
-            to_date=date(year, 8, 31) if year == 2026 else date(year, 12, 31),
+            from_date=start,
+            to_date=end,
             discovery_budget=cap,
             selection_budget=min(selection_budget, cap),
             authorization_id=authorization_id,
@@ -417,8 +431,12 @@ def main() -> int:
     ap.add_argument("--run", action="store_true", help="actually fetch")
     ap.add_argument("--authorization-id",
                     help="approval record for this exact web scope and run")
-    ap.add_argument("--from-year", type=int, default=2018)
-    ap.add_argument("--to-year", type=int, default=2026)
+    ap.add_argument("--from-year", type=int)
+    ap.add_argument("--to-year", type=int)
+    ap.add_argument("--from-date", type=date.fromisoformat,
+                    help="inclusive approved source-date lower bound, YYYY-MM-DD")
+    ap.add_argument("--to-date", type=date.fromisoformat,
+                    help="inclusive approved source-date upper bound, YYYY-MM-DD")
     ap.add_argument("--pages-per-year", type=int, default=15)
     ap.add_argument("--min-cited-by", type=int, default=2)
     ap.add_argument("--selection-budget", type=int, default=100,
@@ -427,8 +445,14 @@ def main() -> int:
                     help="hard ceiling on total requests")
     args = ap.parse_args()
 
-    years = list(range(args.from_year, args.to_year + 1))
-    plan(years, args.pages_per_year, args.min_cited_by)
+    first = args.from_year or (args.from_date.year if args.from_date else 2018)
+    last = args.to_year or (args.to_date.year if args.to_date else 2026)
+    years = list(range(first, last + 1))
+    try:
+        plan(years, args.pages_per_year, args.min_cited_by,
+             from_date=args.from_date, to_date=args.to_date)
+    except ValueError as exc:
+        ap.error(str(exc))
 
     if not args.run:
         print("  Re-run with --run to fetch. This is a long job and it is "
@@ -437,10 +461,13 @@ def main() -> int:
 
     if not (args.authorization_id or "").strip():
         ap.error("--run requires --authorization-id for this exact web scope")
+    if args.from_date is None or args.to_date is None:
+        ap.error("--run requires explicit --from-date and --to-date for the approved scope")
 
     return run(
         years, args.pages_per_year, args.min_cited_by, args.cap,
         args.selection_budget, args.authorization_id,
+        from_date=args.from_date, to_date=args.to_date,
     )
 
 

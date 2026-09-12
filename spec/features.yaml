@@ -11,8 +11,9 @@ features:
   status: built
   implementation: partial
   implementation_basis: registry
-  proof: NOT_RUN
-  delivered_by: []
+  proof: STALE
+  delivered_by:
+  - BK-31
   declared_in:
   - nm/adapters/store/directory.py
   - nm/edge/api.py
@@ -64,7 +65,9 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-32
+  - BK-33
   declared_in:
   - nm/edge/projections.py
   does:
@@ -115,7 +118,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-33
   declared_in:
   - nm/core/cascade.py
   - nm/core/gaps.py
@@ -153,7 +157,8 @@ features:
   implementation: partial
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-38
   declared_in:
   - nm/edge/api.py
   does:
@@ -212,7 +217,8 @@ features:
   implementation: partial
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-93
   declared_in:
   - nm/core/route.py
   - nm/core/turn.py
@@ -253,13 +259,14 @@ features:
 - id: B2
   title: Emergency triage
   phase: B
-  status: decided
-  implementation: none
+  status: built
+  implementation: partial
   implementation_basis: registry
   proof: NOT_RUN
   delivered_by:
   - BK-53
-  declared_in: []
+  declared_in:
+  - nm/core/turn.py
   does:
   - 'Screen every applicable urgency class, **every turn**: limitation and filing dates; hearings and
     orders; arrest or liberty risk; personal safety; child safety; injunction or status-quo need; asset
@@ -301,8 +308,9 @@ features:
   status: built
   implementation: partial
   implementation_basis: registry
-  proof: NOT_RUN
-  delivered_by: []
+  proof: STALE
+  delivered_by:
+  - BK-34
   declared_in:
   - nm/core/screens.py
   - nm/core/turn.py
@@ -342,8 +350,9 @@ features:
   status: built
   implementation: partial
   implementation_basis: registry
-  proof: NOT_RUN
-  delivered_by: []
+  proof: STALE
+  delivered_by:
+  - BK-34
   declared_in:
   - nm/core/quarantine.py
   does:
@@ -382,8 +391,9 @@ features:
   status: built
   implementation: partial
   implementation_basis: registry
-  proof: NOT_RUN
-  delivered_by: []
+  proof: STALE
+  delivered_by:
+  - BK-34
   declared_in:
   - nm/core/screens.py
   does:
@@ -420,13 +430,15 @@ features:
 - id: B6
   title: Capacity to instruct  ⟨tenet 32⟩
   phase: B
-  status: decided
-  implementation: none
+  status: built
+  implementation: partial
   implementation_basis: registry
   proof: NOT_RUN
   delivered_by:
   - BK-53
-  declared_in: []
+  declared_in:
+  - nm/core/turn.py
+  - nm/domain/capacity.py
   does:
   - 'Record a capacity position on any decision that becomes authority: assessed, not assessed, or in
     doubt.'
@@ -456,10 +468,11 @@ features:
   title: The account
   phase: C
   status: built
-  implementation: complete
+  implementation: partial
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-54
   declared_in:
   - nm/core/turn.py
   does:
@@ -550,7 +563,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-94
   declared_in:
   - nm/core/turn.py
   does:
@@ -594,7 +608,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-94
   declared_in:
   - nm/core/threading.py
   - nm/core/turn.py
@@ -637,7 +652,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-94
   declared_in:
   - nm/core/turn.py
   does:
@@ -673,8 +689,8 @@ features:
 - id: C6
   title: Multimodal intake and extraction
   phase: C
-  status: decided
-  implementation: none
+  status: built
+  implementation: partial
   implementation_basis: registry
   proof: NOT_RUN
   delivered_by:
@@ -740,7 +756,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-94
   declared_in:
   - nm/core/evidence_item.py
   - nm/core/turn.py
@@ -781,7 +798,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-95
   declared_in:
   - nm/core/thresholds.py
   - nm/core/turn.py
@@ -820,7 +838,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-35
   declared_in:
   - nm/core/factors.py
   - nm/core/limitation.py
@@ -883,7 +902,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-95
   declared_in:
   - nm/core/deadlines.py
   - nm/core/turn.py
@@ -923,7 +943,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-95
   declared_in:
   - nm/adapters/evidence/corpus.py
   - nm/core/cause.py
@@ -965,7 +986,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-95
   declared_in:
   - nm/adapters/knowledge/elements.py
   - nm/core/proof.py
@@ -1010,7 +1032,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-95
   declared_in:
   - nm/core/theory.py
   - nm/core/turn.py
@@ -1062,7 +1085,8 @@ features:
   implementation: partial
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-95
   declared_in:
   - nm/core/adversarial.py
   - nm/core/turn.py
@@ -1105,7 +1129,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-95
   declared_in:
   - nm/core/adversarial.py
   - nm/core/turn.py
@@ -1153,7 +1178,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-95
   declared_in:
   - nm/core/issues.py
   - nm/core/turn.py
@@ -1232,7 +1258,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-96
   declared_in:
   - nm/core/turn.py
   does:
@@ -1753,7 +1780,8 @@ features:
   implementation: complete
   implementation_basis: registry
   proof: NOT_RUN
-  delivered_by: []
+  delivered_by:
+  - BK-40
   declared_in:
   - nm/adapters/store/file_store.py
   does:

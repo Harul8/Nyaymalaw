@@ -1,0 +1,181 @@
+{
+  "schema": 1,
+  "record_type": "plan_to_code_scope_inventory",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "scope": "P08 through P17 in the isolated a3d9c47 conformance checkout, including authorised current repairs. No parallel P18/P21 code imported or assessed.",
+  "status_authority": "docs/backlog/status.yaml remains authoritative. This inventory neither derives done nor grants acceptance, legal authority, live-data permission or release approval.",
+  "current_handoff": {
+    "record": "docs/backlog/evidence/a3-conformance-final.json",
+    "meaning": "This overlay supersedes the initial implementation/next-action/test-count observations preserved in the packet rows below. Those rows retain the full contractual gaps, not a fresh execution claim. Only the final record establishes settled-tree test identity, populations and final engineering outcomes; all professional and release acceptance remains separate.",
+    "alignment_start": "Coordinator authorised record-only reconciliation of BK-62/63/64/78/83 after the final read-only handoff audit. No source code, acceptance criterion, dependency, test result or evidence PASS is changed. Preserve earlier planned/none/NOT_STARTED values here as historical state rather than deny the actual partial build.",
+    "prior_registry_state": {"BK-62": "planned/none, Build NOT_STARTED", "BK-63": "planned/none, Build NOT_STARTED", "BK-64": "planned/none, Build NOT_STARTED", "BK-78": "planned/none, Start BLOCKED, Build NOT_STARTED; the full-target prerequisite block is retained", "BK-83": "in_progress/partial but Build BUILT and next_action described PostgreSQL availability as the sole engineering gap"},
+    "current_foundations": {
+      "P11_P12": "Canonical-version/permission guards and truthful rollback/copy refusals were repaired. The earlier worker/migration 110-case run is a historical diagnostic in the final record, not a final current-tree result. Served worker/operation composition, complete target importer, enforced sole writer, reverse/delta recovery, original-object population and target PostgreSQL policy/proof remain open.",
+      "P13": "Versioned commission, central authority policy and internal decision/refusal receipts exist, with actual client/posture/activity and distinct case/instruction deadlines in the served cover. Full substantive-task commission admission and authorised grant provisioning remain incomplete.",
+      "P14": "Stable declaration replay and attributed capacity/scope integrity are implemented; completing replay identity is no longer a next action. Manual persisted urgency and explicit resolution are real consumers, with closed command receipts and unchanged no-action/no-verification limits. The initial 13-function/22-case note below predates the receipt follow-up: the current urgency file has 16 functions/44 authored cases. Actual execution belongs only to the final record. Full automatic every-turn triage, applicability/calibration, remaining commission integration and qualified review stay open.",
+      "P16_P17": "Original-byte quarantine/upload/local capture and the attributed canonical Fact view exist. Full extraction/coverage/inspection and preserved proposition correction/source-resolution remain missing under their original owners. These partial substrate changes do not implement or promote C2's full interactive briefing feature."
+    },
+    "registry_alignment": "BK-62/63/64/78 are in_progress/partial with Build OPEN, verification none, Test NOT_RUN and Sign-off NOT_RUN. BK-78 Start READY applies only to its already authorised bounded foundation; its prior BLOCKED full-target dependency state is historical and its BK-34/BK-53 dependencies are unchanged. BK-83 Build is OPEN; partial implementation, existing Test OPEN, verification none and every empty acceptance evidence map remain unchanged.",
+    "verification": "No tests or gates run for this record alignment. Final execution remains owned by the coordinating record; no result is inferred from this overlay."
+  },
+  "method": "Read exact packet rows, registered requirements, command records, evaluation expectations and current production callers. Read a3-conformance-matter.json first. Code-review graph consulted, then actual source: the graph is at the base and predates these uncommitted repairs. No pytest, gate, database, model or real microphone run by this reviewer.",
+  "graph": {"built_at_sha": "a3d9c47764eb2f53c5bc486076df423b21488158", "updated_at": "2026-09-12T16:11:02", "queries": ["file_summary nm/core/casefile.py", "callers_of JobRunner (ambiguous; resolved through source search rather than counted as a caller result)"]},
+  "population": {"expected": 10, "observed": 10, "ids": ["P08", "P09", "P10", "P11", "P12", "P13", "P14", "P15", "P16", "P17"]},
+  "sources": ["docs/blueprint/packets.json", "docs/blueprint/contracts/commands.json", "docs/blueprint/evaluations.json", "docs/blueprint/EXECUTION.md", "docs/blueprint/EXPERIENCE.md", "docs/blueprint/SECURITY_PRIVACY.md", "docs/backlog/status.yaml", "docs/backlog/evidence/a3-conformance-matter.json", "docs/BUILD_GUIDE.md", "docs/playbooks/START_A_CHANGE.md", "docs/playbooks/BUILD_A_CHANGE.md", "docs/playbooks/TEST_A_CHANGE.md", "CLAUDE.md"],
+  "interpretation": [
+    "A packet may supply a bounded foundation while its complete output remains unbuilt; the narrower claim must be stated.",
+    "An empty final_criteria list does not remove the packet's outputs, implementation steps or required evaluations.",
+    "A proposed command current_route:null is not by itself proof of a missing HTTP requirement. Actual packet output and declared delivered scope govern the distinction.",
+    "Synthetic controls and unexecuted test source are not actual-provider, PostgreSQL, professional or production proof.",
+    "An external approval cannot supply missing engineering. Conversely, a disabled, honestly scoped integration does not imply that an implemented foundation must be discarded.",
+    "These observations precede final coordinated results. Earlier partial results in a3-conformance-matter.json are historical diagnostics, not current acceptance."
+  ],
+  "packets": [
+    {
+      "id": "P08",
+      "criteria": ["BK-31-AC1", "BK-31-AC2", "BK-31-AC3", "BK-31-AC4", "BK-31-AC5", "BK-31-AC6", "BK-31-AC7", "BK-31-AC8", "BK-31-AC9", "BK-31-AC10", "BK-31-AC11", "BK-31-AC12", "BK-31-AC13", "BK-31-AC14", "BK-31-AC15", "BK-31-AC16", "BK-31-AC17", "BK-31-AC18", "BK-31-AC19", "BK-86-AC1", "BK-86-AC2", "BK-40-AC1", "BK-40-AC2"],
+      "intended_output": "Protected-entry assurance enforcement and compatible session/recovery lifecycle; preserve the complete invitation/account-generation/workspace regression population.",
+      "assessment": "LOCAL_ACCOUNT_FOUNDATION_PRESENT_STRONG_ASSURANCE_NOT_BUILT",
+      "implemented_scope": ["Invitation-controlled roster identity and server-owned workspace; password sign-in; one-time recovery codes; session list/revocation; current-password reauthentication and code rotation", "Central served failure admission/rate-limit repair and session-bound browser cleanup are current engineering contributions"],
+      "remaining_engineering": ["No factor/passkey challenge/enrolment/completion implementation or provider bridge found in the protected entry path", "No current assurance level enforced across remembered sessions, direct APIs and sensitive changes for the confidential profile", "Factor replacement/loss/recovery notification and global-invalidation policy must be implemented against the approved assurance model, not inferred from local password recovery"],
+      "external_needed": ["CHOICE-04 exact assurance/provider decision", "Real configuration-specific evidence belongs to P09; procurement or approval alone cannot implement P08"],
+      "evidence_needed": ["Cumulative BK-31 population plus strong-factor positive/direct-bypass/replay/credential-race negatives", "BK-40 actual server-expiry and unconfirmed logout browser proof", "EVAL-003/004 expectations under the permitted configuration"],
+      "code_anchors": ["nm/ports/directory.py", "nm/adapters/store/directory.py", "nm/domain/advocate.py", "nm/edge/api.py::login/recover/reauthenticate/rotate_recovery_codes", "web/app.js", "tests/test_the_served_rotation_path.py"],
+      "next_safe_slice": "Keep local-only assurance truthful; build the approved strong-assurance server boundary before enabling privileged access."
+    },
+    {
+      "id": "P09",
+      "criteria": ["BK-86-AC3", "BK-40-AC1", "BK-40-AC2", "BK-46-AC1"],
+      "intended_output": "Fresh access evidence covering enrolment, factor loss, recovery, revocation and logout on the real configured device/provider.",
+      "assessment": "LOCAL_BROWSER_HARNESS_PRESENT_ACTUAL_PROVIDER_REHEARSAL_OUTSTANDING",
+      "implemented_scope": ["Real local browser harness and same-server session operations exist", "Current workspace and intake browser witnesses are authored to exercise actual session revocation, protected-response ownership and local capture cleanup"],
+      "remaining_engineering": ["P08's factor lifecycle is a real prerequisite and remains unbuilt", "Ensure the exact two-session actual-provider protocol captures enrolment, loss, sensitive changes, cross-identity draft refusal, stale tab/back/reload and API denial; local tests cover only a subset"],
+      "external_needed": ["CHOICE-03/04/10 bounded actual-device/provider rehearsal", "Named device, browser, provider/configuration and expected population; genuine artifacts incompatible with a scripted-factor substitute"],
+      "evidence_needed": ["BK-86-AC3 browser_journey and production_measure", "BK-40-AC1/AC2 and BK-46-AC1 cumulative live transitions", "Current code/configuration identity rather than screenshots from another tree"],
+      "code_anchors": ["tools/journey.py", "tools/served.py", "tests/test_the_journey_login_to_logout.py", "tests/test_the_workspace_respects_its_current_context.py", "tests/test_original_materials_can_arrive_without_a_typed_brief.py"],
+      "next_safe_slice": "Run the approved frozen local browser population now without calling it actual-provider or confidential-pilot sign-off."
+    },
+    {
+      "id": "P10",
+      "criteria": ["BK-83-AC1", "BK-36-AC1", "BK-36-AC2"],
+      "intended_output": "PostgreSQL adapter behind the existing store contract with atomic matter, accepted-operation and outbox records, tenant/matter policy and version-conditional writes.",
+      "assessment": "SHADOW_TRANSACTIONAL_ADAPTER_PRESENT_TARGET_POLICY_AND_DATABASE_PROOF_REMAIN",
+      "implemented_scope": ["PostgresMatterStore and TransactionalStorePort preserve the existing store boundary and expose commit_accepted, operation lookup and outbox operations", "Workspace-scoped SQL, transaction-local context, encrypted matter payload, request-digest replay checks and CAS exist", "Conformance repair normalises the canonical persisted and returned matter version before sealing"],
+      "remaining_engineering": ["The live Application still deliberately uses FileMatterStore; no live PostgreSQL activation is claimed or authorised", "The packet's target runtime-role/least-privilege tenant/matter policy is not fully supplied by WHERE clauses: no deployed role/RLS configuration is established here", "Served accepted-operation/outbox integration and get-operation projection remain unconnected; the adapter API is not the full served transactional journey"],
+      "external_needed": ["Approved disposable PostgreSQL server/configuration for the real-adapter population", "CHOICE-02/03 target infrastructure and bounded-run decisions; actual migration waits for P12"],
+      "evidence_needed": ["tests/test_postgres_persists_one_matter.py with a real runtime role, cross-tenant connection reuse and crash/CAS/replay cases", "All-field comparison with FileMatterStore, including currently added upload links", "A skip is not a database pass; tests/test_no_database_means_no_evidence.py remains relevant"],
+      "code_anchors": ["nm/adapters/store/postgres.py::PostgresMatterStore", "nm/ports/transactional.py::TransactionalStorePort", "nm/bootstrap/composition.py::Application", "tests/test_the_transactional_store_refuses_by_construction.py"],
+      "next_safe_slice": "Prove the shadow adapter against an approved disposable database and close exact policy gaps before proposing a live writer switch."
+    },
+    {
+      "id": "P11",
+      "criteria": ["BK-83-AC2"],
+      "intended_output": "Leased worker lifecycle, retry budget and publication-time permission/version recheck with explicit unknown outcomes.",
+      "assessment": "WORKER_VERSION_GUARD_AUTHORED_SERVED_INTEGRATION_AND_DATABASE_PROOF_REMAIN",
+      "implemented_scope": ["Leased claim/renewal and fenced durable settlement; stable sink idempotency keys; explicit reconciliation path for UNKNOWN", "Current repairs preserve cancellation intent beside UNKNOWN, inspect the sink before claiming terminal no-effect, and recheck permission after a slow reconciliation call", "Required store capabilities fail closed rather than silently omitting durable outcomes", "Authorised follow-up adds exact-True permission plus canonical store matter/version checks at every existing permission boundary; stale recovery remains UNKNOWN and confirmed sink effects are recorded even when release is refused. See a3-conformance-worker-migration.json; tests await coordinator execution."],
+      "remaining_engineering": ["No production JobRunner composition/caller or concrete effect/permission implementation found outside the module/tests; no served get-job/get-operation/cancel-operation consumer", "The canonical version guard is a read-time foundation check, not an atomic guarantee against a write after that check or a distributed transaction around the sink", "A complete worker integration needs governed operation kinds and current authority/expected-version policy, not a permissive test sink"],
+      "external_needed": ["P10 real-database prerequisite proof", "Any real external sink requires its own approved route and reconciliation semantics; no live dispatch permission is created"],
+      "evidence_needed": ["tests/test_owed_work_happens_once_or_says_it_cannot_tell.py", "Real PostgreSQL crash/lease/cancellation/reconciliation tests", "New stale-matter-version and revoked-authority witnesses through the actual worker consumer before whole-packet closure"],
+      "code_anchors": ["nm/core/worker.py::JobRunner._run", "nm/core/worker.py::JobRunner._permitted", "nm/core/worker.py::Permits", "nm/domain/operation.py::OutboxEntry", "nm/adapters/store/postgres.py::record_job_outcome/request_cancellation"],
+      "next_safe_slice": "Integrate the concrete worker permission/version consumer with a no-send synthetic sink and prove it cannot publish against superseded matter state."
+    },
+    {
+      "id": "P12",
+      "criteria": ["BK-83-AC3"],
+      "intended_output": "Reconciliation manifest, sole-writer switch and tested reverse/delta recovery preserving accepted writes, version history and original links.",
+      "assessment": "FILE_COPY_REHEARSAL_PRIMITIVE_EXISTS_NOT_A_COMPLETE_CUTOVER",
+      "implemented_scope": ["tools/migrate_store.py inventories and reconciles file-store matter IDs, versions and plaintext digests, copies sealed matters/key records into a target, and reports unreadable state", "Authorised follow-up makes inventory read-only, recomputes full rollback reconciliation, refuses existing/overlapping/resolved-alias targets, creates copy files exclusively and refuses changed source snapshots. Tests await coordinator execution; see a3-conformance-worker-migration.json."],
+      "remaining_engineering": ["This is file-to-file copying, not the packet's importer into PostgreSQL; no reverse/delta applicator or actual runtime sole-writer switch exists", "CLI now requires an explicit --synthetic-quiesced assertion and says live fencing is NOT_ASSESSED. No runtime writer consumes this holder, so this acknowledgement cannot establish actual sole-writer authority", "rehearse copies matters and key records only; it does not copy/reconcile separately stored original upload objects or all other accepted-work artifacts", "An actually enforced quiescence fence and complete aggregate/object population remain necessary before any real migration; snapshot comparison is not that guarantee"],
+      "external_needed": ["CHOICE-03/08/10 scoped migration window, backups and responsible operations owner", "Actual restore/reverse-delta production measurement after engineering exists"],
+      "evidence_needed": ["tests/test_a_cutover_can_be_undone_before_it_is_done.py is only existing primitive coverage", "Controlled concurrent source-write and source/target alias witnesses", "Target-only writes, original asset links, every persisted field and recovery under target permissions"],
+      "code_anchors": ["tools/migrate_store.py::inventory/reconcile/rehearse/refuse_rollback", "tools/migrate_store.py::main", "tools/migrate_store.py::WriteAuthority", "nm/adapters/store/uploads.py"],
+      "correction_to_earlier_review": "An earlier quick review inferred that the migration tool was absent. It exists; the missing work is a genuine target importer, enforced writer authority and complete reverse recovery, not the whole tool.",
+      "next_safe_slice": "Keep the utility synthetic-only. Build an enforced writer fence and complete aggregate/object reconciliation before a separately approved cutover."
+    },
+    {
+      "id": "P13",
+      "criteria": ["BK-62-AC1", "BK-63-AC1", "BK-33-AC1"],
+      "intended_output": "Versioned commission plus central instruction/action authority checks, with an honest persisted matter cover.",
+      "assessment": "COMMISSION_COVER_AND_INTERNAL_DECISION_BOUNDARY_PRESENT_NOT_EVERY_SUBSTANTIVE_TASK_GATED",
+      "implemented_scope": ["Commission holds distinct instructing/deciding parties, objective, work product, scope, forum/deadline and unknowns; history is served", "Central role policy and trusted expiring/revocable commission-version authority bindings; authored commissions cannot self-grant decision authority", "Internal decision receipts commit before success, replay exact keys, and explicitly carry externally_effective:false; refusal-write failure is visible", "Material commission changes invalidate recorded scope; current matter-workspace UI exposes persisted cover and instructions"],
+      "remaining_engineering": ["TurnEngine does not consume Commission or authority_bindings: current substantive task admission can use legacy scope answers without checking a complete/current commission. This does not meet BK-62-AC1's every-substantive-task requirement", "Trusted bind_authority has no production provisioning consumer; the correct default refusal is not a completed authorised grant workflow", "Background jobs and future external actions must consume the same role/scope decision; no shared end-to-end action authority is claimed"],
+      "external_needed": ["CHOICE-01/07 exact operating/legal scope", "Genuine instructor/decision-maker authority and counsel review; no UI statement is equivalent to an authenticated grant"],
+      "evidence_needed": ["Current served cover/commission/refusal/expiry/replay tests and browser reload", "Missing/changed commission must block substantive work through the actual turn consumer", "BK-62/BK-63 required counsel_review; BK-33 cover browser_journey"],
+      "code_anchors": ["nm/domain/commission.py", "nm/domain/authority.py::permits/bind_authority/capacity_for", "nm/edge/api.py::set_commission/concede/_capacity_of", "nm/core/turn.py::_run_screens", "web/matter-workspace.js"],
+      "next_safe_slice": "Connect the existing commission/authority owners to substantive admission, with a positive authorised flow and missing/stale-commission refusal; do not add a second role policy."
+    },
+    {
+      "id": "P14",
+      "criteria": ["BK-34-AC1", "BK-34-AC2", "BK-34-AC3", "BK-34-AC4", "BK-78-AC1", "BK-78-AC2", "BK-53-AC1", "BK-53-AC2", "BK-48-AC3"],
+      "intended_output": "Ordinary screen decision plus expiring protective-only emergency declaration; recorded capacity/authority and bounded urgent re-entry.",
+      "assessment": "SCREENING_AND_RECORD_BACKED_PROTECTIVE_HANDOFF_PRESENT_FULL_TRIAGE_REVIEW_REMAINS",
+      "implemented_scope": ["Existing screen owner preserves non-clear/incomplete states and stales party-population clearances", "Emergency declarations persist actor, basis, frozen outstanding screens and expiry; current repairs resolve same-second replacement and damaged revocation safely", "Explicit protective_triage reaches a pre-model recorded handoff, preserves urgency and does not create case facts or clear merits gates", "Current UI can view/declare/end an exception and request the bounded handoff", "The authorised follow-up now requires an explicit stable request key and persists its normalised immutable offer beside the canonical declaration. Replay reads the same expiry and current revocation/expiry state; conflicting offers refuse. UI retains unresolved keys in session memory across reopening. Focused proof is authored, not yet run."],
+      "manual_urgency_followup": "Authorised UrgencyRegister foundation now persists named live dangers and explicit resolution, independently of Declaration. Emergency GET/POST, live protective output and browser controls consume it with observed versions, stable keyed receipts, supplied/unverified labels and explicit unknowns. Thirteen new domain/API tests (22 cases) and two browser cases are authored, not yet executed. See a3-conformance-urgency.json; full B2 remains partial.",
+      "remaining_engineering": ["The handoff includes manually recorded danger/action/owner/due, not independently assessed case-specific legal triage. Automatic every-turn assessment, applicability and calibration remain unbuilt; the ten named classes versus eleven-class counterexample discrepancy needs product-source reconciliation", "Capacity/scope and commission-bound authority integration are separately owned; the manual urgency register supplies no capacity or action permission", "BK-48-AC3's undefined PRODUCES population remains a separate exact control-plane obligation, not closed merely because one real typed register and its consumers now exist"],
+      "external_needed": ["Qualified counsel review of BK-78-AC1 and BK-53-AC1/AC2 protective/capacity semantics", "CHOICE-01/07 relevant operational scope; no invented legal deadline or emergency authority"],
+      "evidence_needed": ["Real route/no-model/expiry/revocation/failed-commit controls; declared retry and same-second replacements", "Current browser re-entry plus withheld-merits test", "EVAL-005/028 required observations and registered evidence methods, not merely a domain enum test"],
+      "code_anchors": ["nm/core/screens.py", "nm/core/conflict.py", "nm/domain/emergency.py::Declaration/latest", "nm/edge/api.py::declare_emergency/get_emergency/_revoke_emergency", "nm/core/turn.py::_protective_turn/_run_screens", "web/matter-workspace.js::renderEmergency"],
+      "next_safe_slice": "Preserve the safe generic handoff; complete replay identity and the attributable capacity/commission integration before claiming complete emergency re-entry."
+    },
+    {
+      "id": "P15",
+      "criteria": ["BK-69-AC1", "BK-69-AC2", "BK-69-AC3"],
+      "intended_output": "Typed admission records and enforced rejection before reasoning, with shared request/configuration and nested-response media prohibitions.",
+      "assessment": "DENY_BY_DEFAULT_MEDIA_FOUNDATION_PRESENT_PROCESSOR_INTEGRATION_NOT_CLAIMED",
+      "implemented_scope": ["MediaAdmission keeps unassessed/held/released and purpose/authority states explicit; current uploaded originals always remain unassessed and unreachable by reasoning", "Shared authored operation lists, preflight prohibited/unknown/unavoidable-operation rejection and recursive closed response allowlist naming paths not values", "The existing reasoning-boundary sweep remains unchanged; the new raw-byte UploadService moved to nm/edge/uploads.py rather than exempting it from the sweep"],
+      "remaining_engineering": ["No live media processor consumer of refuse_response is built; P25 owns the complete configured intake integration and P39 deployed proof, not a hidden existing pipeline", "The packet's complete hash/actor/matter/processor-decision binding is not represented by the MediaAdmission fields alone. Reconcile the approval reference against canonical asset/version and current permission when building the admitted-derivative consumer", "Foundation tests cannot prove forbidden values stayed out of every real sink when no processing route or sink population exists"],
+      "external_needed": ["CHOICE-05 selected operation/configuration review, including absence of mandatory prohibited analysis", "CHOICE-08 relevant retention authority; no whole-vendor or user-consent override of prohibited processing"],
+      "evidence_needed": ["tests/test_media_never_reaches_reasoning_unadmitted.py plus shared media policy positive/negative controls", "EVAL-007/027 configured-path assertions and EVAL-008 sink inventory when that pipeline exists", "No real-provider result inferred from a scripted allowed-transcription fixture"],
+      "code_anchors": ["nm/domain/media.py::MediaAdmission/admitted", "nm/domain/media_policy.py::refuse_request/refuse_response", "nm/ports/media.py", "nm/edge/uploads.py::UploadService.project"],
+      "next_safe_slice": "Retain the admission foundation and unmodified sweep. Build only explicitly authorised derivative consumers behind canonical permission/asset references."
+    },
+    {
+      "id": "P16",
+      "criteria": ["BK-54-AC1"],
+      "intended_output": "Resumable receipt, sandboxed extraction coverage and original page/time inspector; local recording controls and uncertainty-preserving review.",
+      "assessment": "ORIGINAL_RECEIPT_AND_LOCAL_CAPTURE_AUTHORED_EXTRACTION_AND_INSPECTION_NOT_BUILT",
+      "implemented_scope": ["Authenticated file-only shell without a fabricated typed narrative; canonical receipt/version CAS and immutable opening identity", "32 MiB original/1 MiB chunks, observed digest/size, sealed original objects, resume/list/complete/cancel, duplicate replay/conflict refusal and withheld content route", "New UI supports explicit file selection and local record/pause/stop/playback, supplied purpose/authority/retention, server-offset resumption with full file identity, and truthful cancellation/unknown outcomes", "Session/view ownership, stale-list supersession and requested asset identity checks; close/logout releases local tracks, URLs and selections"],
+      "remaining_engineering": ["Sandboxed malware/format validation and document parsing/OCR/transcription are not built; observed container signature is not successful parsing or safety assessment", "No per-page/time extraction coverage, uncertain names/dates/amounts, derivative-version lineage or exact original page/time inspector", "No user correction of a transcript/proposition against its exact source locator; recording-local speaker separation and complete EVAL-008 are not supplied by a voice-note blob", "No durable extraction job/outbox integration. P11 primitives and an upload cancellation route are not complete get-operation/cancel-operation semantics for processing", "Expiry/processing-permission and automatic retention/deletion enforcement remain unimplemented and explicitly disclosed", "The packet itself promises extraction/inspection despite having no final_criteria. These missing P16 outputs cannot be reassigned wholesale to P25 or concealed by a receipt-only completion claim"],
+      "external_needed": ["CHOICE-05 exact parser/transcription configuration and operation authority before real processing", "Any real recording/processing approval and relevant security/operator review; authored tests use fake capture only"],
+      "evidence_needed": ["Current focused backend receipt/cipher/ownership/CAS controls scheduled by main", "tests/test_original_materials_can_arrive_without_a_typed_brief.py: 8 functions / 11 cases, authored and static-linted, not run by this reviewer", "Full BK-54-AC1/EVAL-007/008 including exact source attribution, corrupted/partial pages and uncertainty correction after the missing consumers exist"],
+      "code_anchors": ["nm/edge/uploads.py::UploadService", "nm/domain/intake.py::UploadSession/Asset", "nm/ports/upload.py", "nm/adapters/store/uploads.py", "nm/edge/api.py (intake/uploads routes)", "web/intake-materials.js", "web/intake-materials.css"],
+      "next_safe_slice": "Validate the bounded original-receipt/local-capture slice, then separately build approved sandbox extraction, coverage, source inspection and correction without claiming originals were already read."
+    },
+    {
+      "id": "P17",
+      "criteria": ["BK-64-AC1", "J-4-AC1"],
+      "intended_output": "Typed versioned propositions, contradiction links and chronology views with attributable preserved corrections and inspectable source premises.",
+      "assessment": "CANONICAL_FACT_PROJECTION_PRESENT_COMPLETE_CORRECTION_LINEAGE_AND_SOURCE_READER_REMAIN",
+      "implemented_scope": ["Reuses Fact rather than introducing a second proposition owner; separate certainty, three-state human confirmation, contradictions, supersession and provenance", "Current repairs persist typed read_quality and Fact.version instead of silently defaulting nonexistent fields", "Served casefile and current UI expose assertions, document/source metadata and explicit source-opening unavailability; repetition is not documentation"],
+      "remaining_engineering": ["Matter.amending increments version but replaces the prior same-ID fact in place. A counter alone is not the packet's preserved attributable proposition-version history", "No served correct-proposition command with expected proposition/matter versions, correction actor/basis and exact source-version resolution", "Attribution.inspectable means a document/page field is present, not that authorised original bytes actually resolve; UI honestly states source opening is unavailable", "Current split-dispute helper compares normalised identical statement strings. It does not establish semantic dispute identity across paraphrased remedy/procedural questions or preserve reasons for justified splits", "Trace every material conclusion to the exact canonical proposition/source and preserve incompatible accounts; displaying a casefile list alone does not prove this end-to-end invariant"],
+      "external_needed": ["J-4-AC1 requires approved model_eval and counsel_review of dispute identity; deterministic string controls are not a substitute", "No invented source locator, reading quality or human confirmation to fill historical gaps"],
+      "evidence_needed": ["Current metadata serializer/projection and contradiction controls", "EVAL-009/010 original-preserving correction/restart/source-readback observations", "Actual browser source/correction view and every BK-64/J-4 required evidence method"],
+      "code_anchors": ["nm/domain/matter.py::Fact/Matter.amending", "nm/core/casefile.py::Attribution/build/repetition_upgrades/one_dispute_stays_one", "nm/edge/api.py::get_casefile", "web/matter-workspace.js::renderCasefile"],
+      "next_safe_slice": "Implement correction history and source resolution on the existing Fact owner, then prove preserved originals/versions and precise affected-work behavior with P18 when available."
+    }
+  ],
+  "ui_review": {
+    "scope": "web/intake-materials.js current-session/current-matter request and local-capture lifetime; no other UI owner's source edited",
+    "event_contract": "integration_gates confirmed preservation of state.matterId/matterVersion/matterReady, showThreadBoard and nm:session-ended/nm:matter-changed events. The new app.js intent owner remains separate from upload receipt ownership.",
+    "invariants_checked_in_source": ["Explicit Record action is the only getUserMedia caller", "Pending permission and recorder events cannot survive a different dialog/session/matter context", "Requested upload identity remains fixed across re-read/chunks/complete/cancel; self-consistent but crossed server fields are insufficient", "Only acknowledged observed_size controls resumption; file name/size/full digest must match", "Local pause/cancel/close never claims already accepted bytes were erased", "Superseded list reads cannot restore an earlier receipt after mutation", "No browser persistent storage or protected-data recovery under another actor"],
+    "concrete_repair": "Added optional expected asset ID to the common receipt verifier and applied it at every existing-asset request, including follow-on chunk/complete calls. Added an adversarial browser response mutation changing both internally matching IDs; the next target must remain fixed and no further chunk may dispatch.",
+    "static_lint": {"scope": ["tests/test_the_workspace_respects_its_current_context.py", "tests/test_original_materials_can_arrive_without_a_typed_brief.py"], "result": "PASS", "method": "Python311 -m ruff check on these two files only after import/line-length repair", "qualification": "Static lint only; no browser or behavioral acceptance is inferred."},
+    "behavioral_result": "NOT_RUN_BY_REVIEWER; main owns frozen coordinated execution"
+  },
+  "p14_replay_start": {
+    "state": "READY_FOR_BOUNDED_REPAIR",
+    "criteria": ["BK-78-AC2", "BK-36-AC1"],
+    "authority": "Coordinator authorised repair of the concrete served emergency declaration replay defect, including its current UI and focused tests; no test execution by this worker.",
+    "witness": "Reposting a declaration currently recomputes utcnow and appends another expiry. A lost response can therefore renew an exception without a new deliberate declaration.",
+    "invariant": "A stable explicit request key owns one immutable normalised request and one original declaration/expiry. Exact retries only read that receipt, changed requests conflict, and expiry/revocation remain effective on replay.",
+    "scope": ["nm/edge/api.py emergency declaration/revocation subsections only", "web/matter-workspace.js declaration identity only", "tests/test_the_emergency_route_admits_only_protection.py", "tests/js/matter_workspace.mjs and its existing pytest dispatcher"],
+    "method": "Persist request identity alongside the existing declaration in canonical Matter.emergencies, preserving it through revocation. No new declaration or second state store. Require a request_key before declaration. UI keeps unresolved keys in current-session memory and clears them on confirmed acceptance or session end.",
+    "proof_intent": "Real served response/retry, expiry, revocation, conflict, missing/damaged identity, save failure and CAS conflict. Existing Node controller witness checks key reuse after a lost response and fresh key after deliberate accepted redeclaration. All earlier assertions retained.",
+    "build": "AUTHORED_AWAITING_COORDINATED_TESTS",
+    "implementation_detail": "No new domain type was needed. Matter.emergencies retains request_key and request_offer beside the existing declaration. Revocation updates only the governing equal-timestamp append and preserves its original request metadata, preventing revival or erasure of a separate accepted key. A CAS loser receives explicit409 and can reread/retry the same key; no automatic new command is minted.",
+    "proof_population": {"new_api_test_functions": 8, "new_api_parameterized_cases": 15, "new_node_controller_cases": 1},
+    "test": "NOT_RUN",
+    "signoff": "NOT_RUN"
+  },
+  "completion_claim": "NONE: 10-packet source-conformance inventory, not packet sign-off or release approval."
+}

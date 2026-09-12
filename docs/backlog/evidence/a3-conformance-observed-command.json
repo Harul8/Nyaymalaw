@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "record_type": "diagnostic_conformance_work",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "owners": ["BK-78-AC2", "BK-36-AC1"],
+  "start": "READY: a mutation from an open view must bind the record and version the user actually reviewed, not whichever record is current when its handler runs.",
+  "population": ["commission expected-version command", "emergency declaration immutable request replay", "emergency revocation observed target"],
+  "finding": "The first two paths carry the reviewed intent. Revocation instead selected the latest declaration at dispatch, so a view of A could end B created in another tab.",
+  "repair": "Expose an opaque governing-record reference and matter version on read; require both before revocation and retain store CAS. Legacy declarations receive a content-bound reference rather than an invented request key. Reject malformed, changed and expired targets without writes.",
+  "verification": "PENDING: served positive, malformed/stale/wrong-target/expiry/no-write controls; shipped JavaScript must use the captured view, not mutable application state.",
+  "completion_claim": "NONE: diagnostic record, not acceptance evidence or legal approval."
+}

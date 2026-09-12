@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "record_type": "scoped_browser_harness_correction",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "start": {
+    "status": "RECORDED_BEFORE_EDITS",
+    "authority": "Coordinator authorised test-only correction after the complete canonical 24-case run finished. Only tests/test_the_journey_login_to_logout.py and this diagnostic are owned here; production code, phase names and the runner manifest are excluded.",
+    "observed_run": {"run_id": "4718be68-ac90-48bf-a8dc-fbb48d52e868", "expected": 24, "passed": 15, "failed": 9, "source_fingerprint": "3993dd85d7e2c583ae8e11fc46d1332c993a8eeb4153423f13124b87ac891a9c"},
+    "classification": {
+      "stale_harness_cases": 8,
+      "stale_population": ["phase3 at 390px", "phase3 at 768px", "phase3 at 1280px", "phase4 keyboard path", "phase5d health wording/completion", "phase10 expiry setup", "phase13 failed-send setup", "phase11 settled unconfirmed logout"],
+      "real_product_cases": 1,
+      "real_product_population": ["phase6b: a plain-ground limitation-bar signal was folded by the rendered-support filter"],
+      "real_product_action": "The coordinator owns the product repair. This task will not edit phase6b or weaken its expiry/date assertions."
+    },
+    "invariants": ["Same 24 canonical names and manifest, no xfail/skip addition", "All three width cases still create two distinct matters and actually switch", "Keyboard-only welcome-to-intake-to-saved-brief proof, not direct focus of a hidden composer", "Health state must come from a captured real response and a nonempty completed rendering", "Expiry and failed-send negative assertions stay intact after real intake setup", "Unconfirmed logout must settle visibly while the actual server session demonstrably remains live", "No test or gate run by this worker"]
+  },
+  "build": {
+    "status": "FROZEN_PENDING_CENTRAL_RUN",
+    "changes": [
+      "Phase3 retains all three widths, two newly created distinct matters, exact row selection and cross-pane traversal. It now waits for the approved Issues in this matter label, passes Playwright's argument by keyword, and additionally requires the first client's heading and restored brief/answer content.",
+      "Phase4 uses authenticated setup followed only by Tab/Enter/typing/Space from Welcome through every intake field and Ctrl+Enter submission. It asserts actual focus transitions, visible rendered answer, cleared composer, matching HTTP receipt, persisted actor/parties/scope/typed capacity, exactly one valid saved receipt and applied-turn identity, and exact served-element equality against that receipt.",
+      "Phase5d captures the actual health response, validates its explicit readiness vocabulary, waits for the complete corresponding Legal library status, checks the unavailable styling and legal-coverage disclaimer, and retains every forbidden engineering-token assertion.",
+      "Phase10 and phase13 now open and answer real intake before typing into the composer. All original expiry, draft retention, failure, uncertainty and retry assertions remain intact.",
+      "Phase11 waits for the actual retry button rather than an existing empty container, retains the no-silent-signout assertion, asserts the full server-did-not-confirm warning, and proves the actual server still accepts that browser's session."
+    ],
+    "preserved": "No production code, phase6b assertion, canonical test name, 24-case manifest, failure allowance or skip/xfail marker changed. A .turn-only keyboard pass was replaced by actual served and persisted proof.",
+    "verification": "Ruff check of the single changed test module passed. No pytest, browser or gate executed by this worker."
+  },
+  "test": {"status": "NOT_RUN", "next": "Coordinator reruns the unchanged complete canonical 24-case population after all source owners freeze."},
+  "completion": "No current browser PASS, acceptance PASS or release claim is made by this correction record."
+}

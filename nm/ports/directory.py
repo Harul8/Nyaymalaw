@@ -123,7 +123,7 @@ class DirectoryPort(Protocol):
 
     def reauthenticate(self, advocate_id: str, password: str,
                        session_token: str, device: str,
-                       now: datetime) -> str | None:
+                       now: datetime, *, source: str = "reauthenticate") -> str | None:
         """Prove the current password again, INSIDE this session. BK-31-AC20.
 
         Returns the proof token ONCE, or `None` — and `None` covers a wrong
@@ -135,13 +135,17 @@ class DirectoryPort(Protocol):
         to this session's fingerprint and carries both generation counters, so
         anything that moves the credential or the recovery set underneath it
         makes it unusable rather than merely old.
+
+        The HTTP caller supplies its observed connection source for failed
+        attempt accounting; it is never a client-claimed forwarded address.
         """
         ...
 
     def rotate_recovery_codes(self, advocate_id: str, proof_token: str,
                               session_token: str, device: str,
                               expected_recovery_generation: int,
-                              now: datetime) -> tuple[str, ...]:
+                              now: datetime, *,
+                              source: str = "rotate-recovery-codes") -> tuple[str, ...]:
         """Replace the whole recovery set atomically. The new codes, once.
 
         THE EXPECTED GENERATION IS THE RECOVERY ONE, NOT THE SESSION'S. A

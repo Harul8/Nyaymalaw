@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "kind": "engineering_change_record",
+  "baseline": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "observed_at": "2026-09-12",
+  "start": {
+    "witness": "Cumulative Class A reported fourteen failed nodes, four dependency skips and one not_run. This owner handles P01 control integration only: stale C6/A2 assumptions, mismatched publication evidence binding, recorder source-name/lease controls, four moved mutation anchors and three corpus plus one environment-tier misclassifications.",
+    "invariant": "A control must plant its own defect in an isolated copy and still reject the specific causal failure. A canonical evidence lease belongs to the configured session, not mutable application environment. External dependencies remain external evidence requirements, not fabricated local passes.",
+    "scope": "Tests, pytest recorder, current mutation anchor locations and this diagnostic. No production feature changes, weakened assertions, new waivers or acceptance-status promotion.",
+    "timing": "The report has 2919 real node rows totaling 847.083955 seconds and 194 parameterized acceptance aggregate rows duplicating 559.078873 seconds. Summing all 3113 rows gives 1406.162828 seconds but is not elapsed runtime; measured suite wall time was about 860 seconds. No double-execution conclusion follows.",
+    "verification": "NOT_RUN by delegated owner. Root coordinates focused reruns after all owners freeze."
+  },
+  "build": "IMPLEMENTED_CENTRAL_ENGINEERING_VERIFICATION_PASSED",
+  "implementation": {
+    "feature_state_controls": "C6 denial and A2 control-only delivery are planted in copied trees with exact nonempty observation/population checks. Delivery removal covers every genuine C6 delivering row. Live two-way reconciliation remains exact but no longer requires a defect the product has repaired.",
+    "publication_control": "The candidate now uses the same real execution-evidence binding as export_main. Comparing bind_execution=False authored verdicts with a bound CLI STALE verdict was the stale-output failure. Every generated path still receives a corruption probe, check mode must refuse without writing, and explicit publication must restore the exact candidate.",
+    "recorder_lease": "tests/conftest.py captures the output Path once in pytest_configure. Application environment mutation cannot suppress a call result, redirect the output or acquire a lease mid-session. Three new meta-controls use a separately loaded recorder and explicitly synthetic reports, never mutate outer recorder globals, and account for all setup/call/teardown duration.",
+    "mutation_boundary": "Four anchors follow their actual owners: locked stale-version refusal, canonical commit-before-release, shared unknown-register status and nearest-date projection. Read-only AST inspection found 166 anchors, all matching exactly once; no runtime mutations were executed. tools/mutate.run_test now uses existing child_environment plus NM_PARTIAL_RUN so nested pytest cannot inherit a canonical output lease; two launch-boundary controls preserve the original test target and success/failure interpretation.",
+    "dependency_populations": "Three existing actual corpus/index controls are explicitly Class C and retain their assertions. The independent IndexIdentity scope-construction refusal remains Class A. The unchanged actual deployment seal observation moved to its own unmarked optional module; absence remains NOT ASSESSED and does not become Class-A proof. Four structural controls require these named observations to remain in their intended populations. Registry-reference update is coordinated with the registry owner, with no PASS promotion.",
+    "parser_only_coordination": "The two evidence.py document readers use the shared safe YAML decoder approved under the performance owner. No verdict cache, fingerprint field change or population weakening was added.",
+    "static_verification": "Final Ruff over all eleven owned Python files passed. Removed the now-unused tools/mutate.py os import after the shared environment owner replaced it. No pytest, gate, browser or corpus run by this delegated owner."
+  },
+  "test": {
+    "status": "ROOT_EXECUTION_PASSED",
+    "historical_owner_status": "Not run by delegated author; preserved in start.verification and implementation.static_verification.",
+    "focused_cases": 301,
+    "focused_passed": 301,
+    "final_canonical_cases": 2997,
+    "final_canonical_passed": 2997,
+    "final_record": "a3-conformance-final.json#final_execution"
+  },
+  "signoff": "Bounded engineering verification recorded by root. Broader item, professional and release sign-off is not supplied by this diagnostic."
+}

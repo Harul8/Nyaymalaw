@@ -82,6 +82,9 @@ class Declaration:
     @staticmethod
     def declare(actor_id: str, basis: str, outstanding: tuple[str, ...],
                 now: datetime, hours: int = DEFAULT_HOURS) -> "Declaration":
+        if (not isinstance(hours, int) or isinstance(hours, bool)
+                or not 1 <= hours <= DEFAULT_HOURS):
+            raise ValueError(f"an emergency must expire within 1–{DEFAULT_HOURS} hours")
         return Declaration(
             actor_id=actor_id, basis=basis, declared_at=now,
             expires_at=now + timedelta(hours=hours),
@@ -96,20 +99,26 @@ class Declaration:
         later gets the true answer rather than the one that was true when
         somebody last wrote a field.
         """
-        if self.revoked_at is not None and now >= self.revoked_at:
-            return False
-        return self.declared_at <= now < self.expires_at
+        try:
+            if self.revoked_at is not None and now >= self.revoked_at:
+                return False
+            return self.declared_at <= now < self.expires_at
+        except TypeError:
+            return False  # incompatible historic timestamps grant nothing
 
     def state_at(self, now: datetime) -> str:
         """`live`, `expired` or `revoked`. THREE, because the advocate does
         different things about each: a live one is working, an expired one is
         re-declared if the danger persists, and a revoked one was ended by a
         person who should be asked why."""
-        if self.revoked_at is not None and now >= self.revoked_at:
-            return "revoked"
-        if now >= self.expires_at:
-            return "expired"
-        return "live"
+        try:
+            if self.revoked_at is not None and now >= self.revoked_at:
+                return "revoked"
+            if now >= self.expires_at:
+                return "expired"
+            return "live" if self.declared_at <= now else "not_assessed"
+        except TypeError:
+            return "not_assessed"
 
     def permits(self, work_product: str) -> bool:
         """Whether this declaration admits that work. PROTECTIVE ONLY.
@@ -131,6 +140,8 @@ class Declaration:
     def said(self, now: datetime) -> str:
         """What the advocate reads. NAMES THE EXCEPTION AS AN EXCEPTION."""
         state = self.state_at(now)
+        if state == "not_assessed":
+            return "the emergency validity cannot be established; no exception is granted"
         if state == "live":
             return (f"EMERGENCY EXCEPTION, live until "
                     f"{self.expires_at.isoformat(timespec='minutes')}: "
@@ -163,7 +174,8 @@ class Declaration:
     def from_stored(value) -> "Declaration | None":
         if isinstance(value, Declaration):
             return value
-        if not isinstance(value, dict) or not value.get("actor_id"):
+        if (not isinstance(value, dict) or not value.get("actor_id")
+                or not isinstance(value.get("basis"), str) or not value["basis"].strip()):
             return None
 
         def when(key):
@@ -176,14 +188,19 @@ class Declaration:
         declared, expires = when("declared_at"), when("expires_at")
         if declared is None or expires is None:
             return None
+        revoked = when("revoked_at")
+        # Malformed is not absent. Collapsing a damaged revocation into None
+        # would recreate a live exception nobody currently authorised.
+        if value.get("revoked_at") is not None and revoked is None:
+            return None
         return Declaration(
             actor_id=value["actor_id"],
-            basis=value.get("basis") or "(no basis recorded)",
+            basis=value["basis"],
             declared_at=declared, expires_at=expires,
             outstanding=tuple(value.get("outstanding") or ()),
             permitted_scope=value.get("permitted_scope")
             or "immediate protective or referral guidance only",
-            revoked_at=when("revoked_at"),
+            revoked_at=revoked,
             revoked_by=value.get("revoked_by", ""))
 
 
@@ -196,8 +213,19 @@ def latest(declarations: tuple, now: datetime) -> "Declaration | None":
     NOTHING is, and an expired declaration must not be returned as though it
     still permitted anything.
     """
-    live = [d for d in (Declaration.from_stored(x) for x in declarations or ())
-            if d is not None and d.active_at(now)]
-    if not live:
+    candidates = []
+    for index, row in enumerate(declarations or ()):
+        declaration = Declaration.from_stored(row)
+        if declaration is None:
+            return None  # damaged history cannot silently revive an older grant
+        try:
+            if declaration.declared_at <= now:
+                candidates.append((declaration.declared_at, index, declaration))
+        except TypeError:
+            return None
+    if not candidates:
         return None
-    return max(live, key=lambda d: d.declared_at)
+    # Stored timestamps historically have second precision. Later append order
+    # decides a tie, so a restrictive replacement in that second wins.
+    governing = max(candidates, key=lambda candidate: candidate[:2])[2]
+    return governing if governing.active_at(now) else None

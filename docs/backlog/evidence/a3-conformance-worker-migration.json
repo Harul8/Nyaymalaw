@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "record_type": "bounded_worker_migration_repair",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "items": ["BK-83"],
+  "wave": "W0",
+  "packets": ["P11", "P12"],
+  "criteria": ["BK-83-AC2", "BK-83-AC3"],
+  "start": {
+    "state": "READY_FOR_BOUNDED_REPAIR",
+    "authority": "Coordinator authorised foundation-invariant repairs, not a served worker, PostgreSQL cutover, production migration or external dispatch.",
+    "sources": ["CLAUDE.md", "docs/BUILD_GUIDE.md", "docs/playbooks/START_A_CHANGE.md", "docs/playbooks/BUILD_A_CHANGE.md", "docs/DEFECT_SHAPES.md", "docs/blueprint/packets.json", "docs/backlog/status.yaml", "docs/backlog/plan.json", "docs/BACKLOG.md#bk-83-transactional-matter-store-and-reversible-migration"],
+    "graph": {"query": "file_summary nm/core/worker.py", "built_at_sha": "a3d9c47764eb2f53c5bc486076df423b21488158", "updated_at": "2026-09-12T16:49:49", "limitation": "Graph narrows ownership only; current source and whole-product JobRunner/refuse_rollback/rehearse searches govern the actual call population."},
+    "observed_source_findings": [
+      "JobRunner._permitted coerces arbitrary truthy values and never reads entry.matter_version. All four permission boundaries share this method.",
+      "refuse_rollback ignores DIFFERS except target-only and newer versions. Unreadable or same-version changed content can yield no reasons; an authored reconciliation can disagree with its inventories.",
+      "rehearse compares unnormalised root spellings and writes into pre-existing empty destinations. Nested or aliased target paths can write within the source.",
+      "inventory calls FileMatterStore.__init__, which creates matters/metrics directories despite the promised read-only inspection. Source mutations during a copy are not compared against a frozen starting identity."
+    ],
+    "contract": "Worker permission must be exactly True and the current canonical store read must match the entry's matter identity/version at each existing pre-read, pre-effect and pre-publication boundary. Missing, stale, malformed or unanswerable input refuses; previous uncertain effects remain UNKNOWN and proven sink effects remain explicitly recorded. Rollback reasons reuse complete fresh reconciliation of the supplied inventories and refuse any differing or unassessed result. Synthetic file rehearsal only copies into a newly created disjoint resolved target, refuses aliases/nesting before writing, never creates source directories, and refuses a changed source identity during copying.",
+    "proof_plan": "Preserve current positive lifecycle and real sealed-file reconciliation tests. Add stale/missing/wrong-identity/malformed/unavailable matter and non-boolean permission cases; mutate source version during status reads, permission evaluation and effect completion, including reconciliation and UNKNOWN recovery. Add unchanged-version content/unreadable/key/assessment rollback controls, mismatching supplied reconciliation, nested/alias target refusal, exclusive target creation, source mutation during copy and read-only inventory controls.",
+    "shapes": ["S1", "S6", "S7", "S9", "S11"],
+    "exclusions": "No production activation, new worker sink, real PostgreSQL run, sole-writer mechanism, reverse-delta applicator, original-object migration or legal approval. Read-time version checks do not promise atomic exclusion of a concurrent database write after the final check, and copied-file identity checks do not establish a writer fence. Shared registry/backlog and browser sources remain coordinator-owned."
+  },
+  "build": {
+    "state": "AUTHORED_AWAITING_COORDINATED_EXECUTION",
+    "files": ["nm/core/worker.py", "tools/migrate_store.py", "tests/test_owed_work_happens_once_or_says_it_cannot_tell.py", "tests/test_a_cutover_can_be_undone_before_it_is_done.py"],
+    "worker": "All four existing _permitted call sites now require exact True permission before a canonical store read identifying the entry's exact matter and integer version. Invalid expected versions, missing readers, stale state and failed reads refuse. Missing operations during recovery preserve UNKNOWN. Post-effect refusal records confirmed delivery rather than claiming no effect. The one in-memory test store now explicitly stores and loads synthetic canonical Matter records; real PostgreSQL adapter callers already expose load and persist the canonical outbox version.",
+    "migration": "Rollback recomputes full reconciliation from the supplied inventories and never overrides either unresolved verdict. Read-only inventory uses the existing cipher/sealer without constructing directories and classifies malformed matter versions as unreadable. Rehearsal resolves disjoint roots, refuses every existing target, creates target files exclusively, and compares source matter/key identities before, during and after copying. Partial targets are retained for inspection. CLI now requires --synthetic-quiesced, explicitly an acknowledgement rather than an enforced writer fence.",
+    "sweep": "Source search found JobRunner consumers in the lifecycle tests and PostgreSQL tests only; no served worker activation. Four shared permission call sites, one rollback helper and one rehearsal implementation are covered. Current PostgreSQL callers need no permissive compatibility shim. Unchanged positive lifecycle, sealed-content and rekey/reconciliation controls remain in place.",
+    "limitations": "No test execution by this worker. New protections are bounded foundation changes, not complete P11/P12 acceptance. Destination aliases are checked and exclusive file creation prevents overwrite; this is not an adversarial operating-system sandbox or a live sole-writer guarantee. Source identity covers this primitive's matter/key files, not separate original objects, job stores or all production artifacts."
+  },
+  "test": {
+    "state": "FOCUSED_RUN_RECORDED_NOT_FULL_ACCEPTANCE",
+    "execution_owner": "coordinating_agent",
+    "observed_run": {"artifact": ".nm/conformance/worker-migration-final.xml", "sha256": "57458e307abc8ae0723fcced0966c3bbb3d85eb65158ff48ab3c08eb419bd4ad", "tests": 110, "failures": 0, "errors": 0, "skipped": 0, "duration_seconds": 1.951, "timestamp": "2026-09-12T17:14:30.649075+05:30", "worker_cases": 61, "migration_cases": 49},
+    "discarded_followup_hypothesis": "Coordinator proposed that an UNREADABLE metadata sentinel could pass reconciliation. Source inspection showed existing explicit source/target key guards already reject it and empty metadata. Coordinator withdrew the hypothesis; no speculative fix or retest was performed. The passing repair remains frozen.",
+    "expected_population": {"worker_functions": 36, "worker_cases": 61, "migration_functions": 32, "migration_cases": 49, "combined_cases": 110, "new_worker_cases": 29, "new_migration_cases": 28},
+    "count_basis": "Source enumeration of top-level test definitions and explicit parametrization; coordinator must confirm actual collected population.",
+    "static_lint": "Scoped ruff check on the four changed Python files passed after correcting one long line. This is not behavioral evidence.",
+    "portable_alias_control": "The directory-alias case substitutes Path.resolve at the OS resolver boundary because Windows junction creation may require host privilege. It does not claim actual junction creation. A separate real hard-link race proves exclusive create cannot truncate the source."
+  },
+  "signoff": {"state": "NOT_RUN", "claim": "Diagnostic repair record, not acceptance PASS or release authority."}
+}

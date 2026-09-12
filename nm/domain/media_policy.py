@@ -186,6 +186,11 @@ def refuse_request(route: Route,
                 f"background processing, so the route is rejected rather than "
                 f"the request: what is approved is the operation AND its "
                 f"configuration")
+        elif operation not in contract.allowed:
+            bad.append(
+                f"{route.processor!r} performs unapproved background operation "
+                f"{operation!r}; unknown processing is denied just as an "
+                f"unknown requested operation is denied")
 
     if not route.configuration_known and contract.unknown_configuration_denies:
         bad.append(

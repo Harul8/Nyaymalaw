@@ -30,7 +30,6 @@ A red result blocks the claim. Not the work -- the claim.
 from __future__ import annotations
 
 import argparse
-import os
 import subprocess
 import sys
 import time
@@ -42,7 +41,11 @@ sys.path.insert(0, str(ROOT))
 from tools._console import utf8_console  # noqa: E402
 from tools.evidence import (  # noqa: E402
     CLASS_A_PYTEST_ARGS,
+    LOCAL_CLASS_A,
     ORDINARY_PYTEST_ARGS,
+    child_environment,
+    load_result,
+    validate_class_a,
     verification_fingerprint,
 )
 
@@ -64,21 +67,32 @@ utf8_console()
 #: Both halves are needed. The environment variable makes the child write utf-8;
 #: `errors="replace"` means a child that ignores it -- a shell, a wrapper, a
 #: tool with its own encoding -- still yields a readable report instead of None.
-def _child_env() -> dict:
-    env = dict(os.environ)
-    env["PYTHONIOENCODING"] = "utf-8"
-    return env
+def _child_env(*, record_class_a: bool = False) -> dict:
+    return child_environment(class_a_output=LOCAL_CLASS_A if record_class_a else None)
 
 
 def step(label: str, cmd: list[str], allow_warn: bool = False) -> tuple[bool, str]:
     t0 = time.time()
+    canonical_class_a = cmd == [sys.executable, "-m", "pytest", *CLASS_A_PYTEST_ARGS]
+    if canonical_class_a:
+        LOCAL_CLASS_A.parent.mkdir(parents=True, exist_ok=True)
+        LOCAL_CLASS_A.unlink(missing_ok=True)
     proc = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True,
-                          encoding="utf8", errors="replace", env=_child_env())
+                          encoding="utf8", errors="replace",
+                          env=_child_env(record_class_a=canonical_class_a))
     dt = time.time() - t0
     ok = proc.returncode == 0
+    evidence_problems = (validate_class_a(load_result(LOCAL_CLASS_A))
+                         if canonical_class_a and ok else [])
+    if evidence_problems:
+        ok = False
     mark = "PASS" if ok else ("WARN" if allow_warn else "FAIL")
     print(f"  [{mark}] {label:<34} {dt:5.1f}s")
     out = (proc.stdout or "") + (proc.stderr or "")
+    if evidence_problems:
+        report = "\n".join("ERROR: Class-A evidence: " + p for p in evidence_problems)
+        out += "\n" + report
+        print("\n" + report + "\n")
     if not ok:
         print("\n" + "\n".join("      " + ln for ln in _why(proc).splitlines()) + "\n")
     return ok or allow_warn, out

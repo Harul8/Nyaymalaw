@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "record_type": "bounded_conformance_repair_work_record",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "packets": ["P06"],
+  "criteria": ["BK-85-AC1"],
+  "start": {
+    "state": "READY_FOR_BOUNDED_ENGINEERING_REPAIR",
+    "authority": "Coordinator-approved controlled-local fail-closed repair under exact-base user conformance request",
+    "finding": "Runtime policy loading accepts a nonempty authored approval_id and foreign-region string as permission without authentic scoped approval resolution. Malformed root and collection types can crash parsing; duplicate processor IDs let order choose policy.",
+    "outcome": "The existing controlled-local installation remains usable under its recorded inventory. An external recipient cannot receive data merely because somebody added a purported approval ID to YAML. Unreadable or structurally ambiguous inventory refuses rather than guessing.",
+    "mechanism": "One bootstrap-owned catalogue binds the three concrete built local recipients to composition. The inventory still owns allowed purposes/data classes and may restrict or remove recipients. Runtime loading admits only India-local in-process recipients carrying the declared no-egress basis; no external recipient or foreign-region attestation is accepted until authenticated scoped approval dispatch is implemented. Strict shapes and duplicate IDs fail the entire load closed.",
+    "files": ["nm/bootstrap/egress_policy.py", "nm/bootstrap/composition.py", "nm/domain/egress.py", "tests/test_the_runtime_inventory_cannot_self_approve.py"],
+    "proof_plan": ["Real Application scripted model and local store remain callable", "Authored external approval IDs, local-basis impersonation and foreign-region strings cannot reach a destination spy", "Malformed root/collection/enum/duplicate populations are refused", "Removing local inventory permission remains binding", "Shared parser mutation is rejected by the actual dispatcher witness"],
+    "exclusions": ["No production processor inventory or actual approvals are changed", "No external call, real model, actual privileged data or counsel statement", "No P39 completion claim or fabricated signed approval", "No KMS or proof-console expansion"]
+  },
+  "build": {
+    "state": "BOUNDED_ENGINEERING_CHECKS_PASSED",
+    "mechanism": "Strict runtime loader admits only the existing three local receiver identities under India-local/no-egress basis. Inventory restrictions remain authoritative, malformed or duplicate rows refuse the entire load, and a Policy.problems value preserves absent/unreadable/malformed reasons through the same pre-dispatch gate. No processor inventory changes were needed.",
+    "proof_written_before_implementation": true,
+    "focused_test_population": ["tests/test_the_runtime_inventory_cannot_self_approve.py", "tests/test_every_live_destination_is_policed.py", "tests/test_the_model_is_policed_before_it_is_called.py", "tests/test_unapproved_egress_fails_closed.py", "tests/test_immutable_corpus_publication.py", "tests/test_provider_independence.py (Class-A marked tests only; no real-provider comparison)"],
+    "checks": ["git diff --check on owned code/test files: no whitespace problems", "Read the provider-independence AST contract before finalizing composition; provider-name-only branch remains unchanged"],
+    "test_result": "PASS_FOR_RECORDED_FOCUSED_POPULATION_ONLY",
+    "first_execution": {"runner": "coordinating agent", "historical_report_path": ".nm/conformance/egress.xml", "report_replaced_by_rerun": true, "tests": 122, "failed": 9, "causes": ["Eight new Application fixtures omitted the required checked-in spec/manifest.yaml", "One mutation precondition used Python equality, which considers schema True equal to schema 1"], "correction": "Provide the real public manifest in an isolated fixture root and pin custody/index paths there; use canonical JSON comparison to prove the typed mutation occurred. Runtime policy and refusal assertions are unchanged."},
+    "test_execution": {"runner": "coordinating agent", "report": ".nm/conformance/egress.xml", "report_sha256": "1c7b62c0d03f6b962d2165f681076e9e2f19db96d758138d39f2dccd0a11a5dd", "tests": 122, "failures": 0, "errors": 0, "skipped": 0, "elapsed_seconds": 3.627, "independent_report_check": "JUnit population and digest read independently; focused synthetic engineering only, not current full-Class-A or deployed processor approval"},
+    "limitations": ["External approvals remain unavailable at runtime until authenticated scoped dispatch is integrated; this is refusal, not P39 implementation", "No production or actual-device evidence", "Pure Policy constructors used by synthetic unit tests are not production approval issuers"]
+  },
+  "signoff": {"state": "NOT_RUN", "claim": "No completion or evidence PASS is created by this work record."}
+}

@@ -30,12 +30,13 @@ still be there next week, and the one expiring on Friday will not.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import asdict, dataclass, fields
 from datetime import date, timedelta
 from enum import Enum
 
 from nm.domain.matter import ThreadId
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import blank, refuses_blank_text
 from nm.domain.traceability import implements
 
 #: How near is NEAR. Authored once, here, so the board and the answer cannot
@@ -100,6 +101,16 @@ class Deadline:
     the advocate nothing they can act on."""
     on: date | None = None
 
+    def __post_init__(self) -> None:
+        for name in ("thread", "source", "action", "owner", "consequence"):
+            value = getattr(self, name)
+            if type(value) is not str or blank(value):
+                raise ValueError(f"deadline {name} must be attributable text")
+        if not isinstance(self.kind, DeadlineKind):
+            raise ValueError("deadline kind is not registered")
+        if self.on is not None and type(self.on) is not date:
+            raise ValueError("deadline on must be a date or explicitly not computed")
+
     def status(self, today: date) -> DeadlineStatus:
         """Recomputed every time. NEVER stored.
 
@@ -117,6 +128,89 @@ class Deadline:
 
     def days(self, today: date) -> int | None:
         return None if self.on is None else (self.on - today).days
+
+
+@dataclass(frozen=True)
+class RegisterProblem:
+    thread: str | None
+    index: int | None
+    reason: str
+
+
+@dataclass(frozen=True)
+class RegisterRead:
+    """Read integrity and assessment provenance alongside every valid saved row."""
+
+    rows: tuple[Deadline, ...]
+    unreadable: tuple[RegisterProblem, ...]
+    unassessed: tuple[str, ...]
+    assessed: tuple[str, ...]
+    threads: tuple[str, ...]
+
+
+def from_stored(value, *, thread: str) -> Deadline:
+    """Reconstruct exactly one saved obligation without coercing facts or status."""
+    encoded = asdict(value) if isinstance(value, Deadline) else value
+    if not isinstance(encoded, dict) or set(encoded) != {field.name for field in fields(Deadline)}:
+        raise ValueError("deadline fields do not match the saved schema")
+    on = encoded["on"]
+    if isinstance(on, str):
+        parsed = date.fromisoformat(on)
+        if parsed.isoformat() != on:
+            raise ValueError("deadline date is not canonical")
+        on = parsed
+    kind = encoded["kind"]
+    if not isinstance(kind, DeadlineKind):
+        if type(kind) is not str:
+            raise ValueError("deadline kind has invalid type")
+        kind = DeadlineKind(kind)
+    row = Deadline(**{**encoded, "kind": kind, "on": on})
+    if row.thread != thread:
+        raise ValueError("deadline belongs to a different thread")
+    return row
+
+
+def read_matter(matter) -> RegisterRead:
+    """No persistence/model calls, no dropped failures and no default assessment."""
+    population = getattr(matter, "threads", None)
+    if not isinstance(population, (tuple, list)):
+        return RegisterRead((), (RegisterProblem(None, None, "thread population unreadable"),),
+                            (), (), ())
+    identities = [getattr(thread, "id", None) for thread in population]
+    counts = Counter(identity for identity in identities if type(identity) is str)
+    rows, problems, unassessed, assessed, threads = [], [], [], [], []
+    for thread in population:
+        identity = getattr(thread, "id", None)
+        if type(identity) is not str or blank(identity):
+            problems.append(RegisterProblem(None, None, "thread identity unreadable"))
+            continue
+        if identity not in threads:
+            threads.append(identity)
+        if counts[identity] != 1:
+            problems.append(RegisterProblem(identity, None, "thread identity duplicated"))
+            if identity not in unassessed:
+                unassessed.append(identity)
+            continue
+        marker = getattr(thread, "assessed", None)
+        if not isinstance(marker, (tuple, list)) or any(
+                type(value) is not str or blank(value) for value in marker):
+            problems.append(RegisterProblem(identity, None, "assessment record unreadable"))
+            unassessed.append(identity)
+        elif "deadlines" in marker:
+            assessed.append(identity)
+        else:
+            unassessed.append(identity)
+        saved = getattr(thread, "deadlines", None)
+        if not isinstance(saved, (tuple, list)):
+            problems.append(RegisterProblem(identity, None, "deadline collection unreadable"))
+            continue
+        for index, value in enumerate(saved):
+            try:
+                rows.append(from_stored(value, thread=identity))
+            except (KeyError, TypeError, ValueError):
+                problems.append(RegisterProblem(identity, index, "saved deadline row unreadable"))
+    return RegisterRead(tuple(rows), tuple(problems), tuple(unassessed), tuple(assessed),
+                        tuple(threads))
 
 
 @implements("D3")

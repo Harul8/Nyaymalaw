@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "kind": "engineering_change_record",
+  "baseline": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "observed_at": "2026-09-12",
+  "start": {
+    "scope": "Served turn identity, durable release receipt and every browser transcript renderer; isolated conformance checkout only.",
+    "witness": "The API rejects the immutable original expected_version before reaching an already-applied turn. Separately, transcripts include grounding-withheld archival drafts, and browser restore both renders those drafts and treats their turn identity as successful commitment.",
+    "invariant": "An exact already-completed instruction is reconciled before stale new-work admission. Reused identity with a different original offer refuses. Archival presence does not prove successful commitment or permitted release. Withheld advice is never rendered as ordinary advice; unresolved drafts survive uncertain or failed commitment.",
+    "change": "Persist an authoritative original-offer/release receipt through the canonical matter commit, validate exact replay, project transcript release state explicitly, and have every readback renderer and local-intent reconciliation consume that projection.",
+    "boundaries": "No provider calls on confirmed replay, no new permission for protective work, no inferred success for legacy rows without evidence, no changes to the independent capacity/scope owner.",
+    "verification": "NOT_RUN; add actual route lost-ack replay and conflicting-key tests, withheld readback and failed-input-commit controls, and ordinary/history browser rendering assertions. Parent coordinates all execution."
+  },
+  "build": {
+    "status": "IMPLEMENTED_FOCUSED_VERIFICATION_PENDING",
+    "mechanism": "TurnReceipt records the canonical released Answer and SHA-256 identity of the entire normalized original request in the same sealed matter CAS. Exact completed replay precedes new-work version admission; changed request fields refuse. Opening identities are stable per authenticated advocate and original turn. The once-admitted snapshot flows through ordinary work and cannot silently adopt a concurrent later version. Protective replay separately rechecks the live declaration and exact current receipt.",
+    "readback": "nm.edge.transcripts is the single browser projection. Atomic receipts recover approved answers even if archive writing fails. A legacy archive is released only with both canonical turns_applied membership and an explicit empty withheld_by marker, and never qualifies for exact automatic replay. Withheld and unestablished archive elements, raw model traces and hidden raw-JSON escape paths are excluded. Ordinary re-entry and History both consume restoredTurn; reconciliation clears pending identity only for a canonical committed release, and clears narrative only when input_admitted is true.",
+    "files": [
+      "nm/domain/turn_receipt.py",
+      "nm/adapters/store/file_store.py:_decode closed-schema opt-in (all other persisted types preserve their existing decoding behavior)",
+      "nm/domain/matter.py:turn_receipts",
+      "nm/core/turn.py:run, _require_version, _matching_receipt, _commit_released, _load_or_create and protected commit sites",
+      "nm/edge/api.py:released output, served turn and transcript projection",
+      "nm/edge/transcripts.py",
+      "web/app.js:reconcileIntent, restoredTurn, deliver, intakeFields and History",
+      "tests/test_a_turn_receipt_is_not_an_archival_trace.py",
+      "tests/test_store_roundtrip.py:TurnReceipt population and decoder reach",
+      "tests/test_the_workspace_respects_its_current_context.py:lost acknowledgement and withheld readback variants"
+    ],
+    "verification_population": [
+      "tests/test_a_turn_receipt_is_not_an_archival_trace.py (44 cases: original 16, 13 strict sealed/decode controls, 4 protective replay controls, 4 null/ambiguous population controls and 7 actual legacy archive schema cases)",
+      "tests/test_store_roundtrip.py (existing complete field/type population plus nondefault TurnReceipt)",
+      "tests/test_a_brief_lands_exactly_once.py (existing positive and stale-write controls)",
+      "tests/test_a_withheld_turn_commits_no_conclusion.py (existing withheld/input-only semantics retained)",
+      "tests/test_the_workspace_respects_its_current_context.py (full context journey population, including unavailable/withheld replay readback and both renderers)"
+    ],
+    "limitations": "No tests or gates executed by this agent. This is engineering evidence awaiting the parent-coordinated focused and browser runs, not legal-quality acceptance or production permission. A withheld attempt without a completed canonical receipt remains unresolved; archive presence never self-certifies it. Previously applied legacy turns without an original-offer receipt refuse exact automatic replay and require file review. The independent capacity, urgency, emergency-revocation and worker owners retain their own scopes and evidence."
+  },
+  "boundary_followup": {
+    "start": "Parent-authorized follow-up after the original focused receipt population passed: a valid encrypted record could still contain malformed receipt primitives, unknown answer fields or a receipt absent from the applied ledger. Primitive decoding does not itself establish release validity.",
+    "mechanism": "TurnReceipt validates exact declared Answer/Element wire fields and strict primitive types, metadata and canonical derived sections. It opts into generic closed stored-schema decoding, so unknown receipt fields cannot be discarded before validation. release_index is the shared receipt/applied-ledger consistency boundary for replay, live release and transcript projection. Projection serializes the validated Answer, never a spread of arbitrary stored fields. Schema metadata, not data verdicts, is cached to avoid repeated type-hint reflection.",
+    "controls": "Thirteen controls alter the real served receipt inside its valid sealed matter record, assert actual serialized subject change (false and zero are not conflated), exercise real store decoding, then check served transcript and replay refusal with zero model reads. Original ciphertext is restored in finally. Existing positive controls are retained. Raw diagnostic and transcript docstrings now describe the safe release projection rather than falsely promise raw traces.",
+    "status": "IMPLEMENTED_FOCUSED_VERIFICATION_PENDING; no tests or gates run by this agent. Parent reported original receipt/roundtrip/turn population passed before this follow-up; the new 13 controls require their coordinated run."
+  },
+  "replay_and_legacy_followup": {
+    "start": "Parent-authorized final boundary repair: protective replay recomputed different content while claiming the saved response; null receipt entries bypassed early decoding and crashed identity counting; legacy raw elements escaped the strict release schema. These are release-evidence defects, not extensions to automatic legal assessment.",
+    "mechanism": "An exact protective receipt replays its exact recorded Answer. A saved refusal cannot upgrade under the same key. A previously permitted handoff needs current live permission; otherwise HTTP 422 explicitly reports previously_committed/prior_receipt_saved/replay_refused, emits no Answer and makes no matter commit. Browser state distinguishes that known refusal from unknown or unsaved work and does not offer automatic same-key retry. Malformed receipt populations produce incomplete readback, preserve independent valid canonical rows and suppress legacy promotion. A dedicated historical archive adapter reconstructs actual saved Answer/Element fields through the strict decoder; only the missing nonlegal feature-attribution tag uses its real empty default. Raw diagnostic envelope fields never become browser output.",
+    "tests": "Four protective cases cover expiry, revocation, blocked-to-permitted non-upgrade and exact output after real urgency resolution/addition; the existing emergency expiry witness now requires refusal with preserved original receipt rather than a newly recomputed 200 answer. Four null-population and seven legacy-schema cases mutate real sealed records, preserve valid controls and restore ciphertext. One added browser journey loses a real committed protective reply, advances permission expiry, retries the exact envelope and verifies truthful saved-history/refusal wording, unchanged file, retained narrative and no same-key retry control.",
+    "coordinated_archive_boundary": "integration_review independently repaired FileMatterStore._transcript_payload/transcripts_for/unattributable: decrypted nonobject or malformed identity becomes an owned unreadable marker when the filename proves ownership, otherwise an unattributable legacy warning; no guessed owner. Their tests/test_transcript_attribution.py population is 27 cases (21 additions), no tests executed by that agent. They also own any subsequent missing-target CAS guard, separately recorded by the parent.",
+    "status": "IMPLEMENTED_FOCUSED_VERIFICATION_PENDING. Parent coordinates all focused/browser/full-gate runs; no execution or acceptance claim is made here."
+  },
+  "coordinated_missing_target_cas": {
+    "start": "integration_review confirmed StorePort and Postgres refuse an absent update target, while FileMatterStore skipped the expected-version check when the matter disappeared. A turn could therefore recreate a transferred-away stale snapshot.",
+    "mechanism": "Inside the existing per-matter lock, expected_version must be an exact nonnegative integer, the target is loaded once, and absence is allowed only for expected_version 0. No stored/output version is renumbered. Three original test seeds changed None to the port's declared initial version 0 while retaining their populated version and roundtrip assertions.",
+    "verification_population": "tests/test_a_missing_matter_is_not_a_create_precondition.py: 10 cases covering fresh creation, transferred-away stale state, malformed expected versions and a real served after-admission transfer with 409/no recreation/retained encrypted original/no receipt. Agent reported Ruff PASS and no tests run; parent owns cumulative verification.",
+    "status": "IMPLEMENTED_FOCUSED_VERIFICATION_PENDING (coordinated agent work, not an independent execution claim)."
+  },
+  "test": "NOT_RUN",
+  "signoff": "NOT_RUN"
+}

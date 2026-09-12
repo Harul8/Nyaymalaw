@@ -9,7 +9,7 @@ is not a guard.*
 THE HARD HALF IS THE SINKS WITH NO DESTINATION
 ------------------------------------------------
 Seven sinks are declared. Measured on 11 September 2026, three have a live
-destination and four do not: MEDIA exists but is unwired, BACKUP and SUPPORT
+destination and four do not: MEDIA has no processing adapter, BACKUP and SUPPORT
 have no implementation, and `nm/obs/` holds nothing but an empty `__init__`.
 
 A file that reported "all seven sinks policed" would be reporting an EMPTY
@@ -26,7 +26,7 @@ WHAT IS ASSERTED
     an unapproved processor is refused BEFORE the destination is touched
     every method a policed port declares is gated, derived from the Protocol
     a refused search reports NOT_ASSESSED and never an empty hit list
-    the composition root wires all four live destinations
+    the composition root wires all live destinations
     every sink is policed or declared absent, and the absence is measured
 """
 from __future__ import annotations
@@ -282,9 +282,11 @@ def test_the_composition_root_polices_every_live_destination():
     source = inspect.getsource(composition.Application.__init__)
     for wrapper in ("PolicedPort(", "PolicedSearch(", "PolicedModel("):
         assert wrapper in source, f"the composition root does not use {wrapper}"
-    assert source.count("PolicedPort(") == 2, (
-        "the matter store and the roster directory are both storage "
-        "destinations and both must be wrapped")
+    assert source.count("PolicedPort(") == 3, (
+        "matter metadata, the roster directory and original-byte upload "
+        "storage are distinct destinations and each must be wrapped")
+    for port in ("StorePort", "DirectoryPort", "UploadPort"):
+        assert f"port={port}" in source, f"the {port} destination is not policed"
     assert "Gatekeeper(" in source, (
         "each wrapper builds its own decision point, so refusals land in "
         "different places and no audit holds the whole story")
@@ -321,9 +323,10 @@ POLICED: dict[Sink, str] = {
 #: stops holding, the product has grown a destination and this file says so.
 ABSENT: dict[Sink, tuple[str, str]] = {
     Sink.MEDIA: (
-        "nm/domain/media.py",
-        "exists and is declared UNWIRED; BK-69 places the boundary ahead of "
-        "its caller deliberately, so nothing dispatches media anywhere yet"),
+        "nm/adapters/media",
+        "no media processing adapter exists; the reached domain admission "
+        "record keeps uploaded originals quarantined. Original-byte storage "
+        "uses the separately policed UploadPort, not a media processor"),
     Sink.BACKUP: (
         "nm/adapters/backup",
         "no backup writer exists; `local-disk` is approved for the purpose so "
@@ -360,7 +363,7 @@ def test_each_policed_sink_has_a_module_that_names_it(sink: Sink):
         f"name that sink")
 
 
-def unpoliced_sinks(root: pathlib.Path, unwired: dict[str, str]) -> list[str]:
+def unpoliced_sinks(root: pathlib.Path) -> list[str]:
     """Destinations that exist for a sink declared to have none.
 
     ONE PROBE, read by the sweep and by its control. A control that re-states
@@ -370,11 +373,7 @@ def unpoliced_sinks(root: pathlib.Path, unwired: dict[str, str]) -> list[str]:
     """
     found: list[str] = []
 
-    if (root / ABSENT[Sink.MEDIA][0]).exists() and "nm.domain.media" not in unwired:
-        found.append(
-            "nm/domain/media.py is wired and no wrapper polices Sink.MEDIA")
-
-    for sink in (Sink.BACKUP, Sink.SUPPORT):
+    for sink in (Sink.MEDIA, Sink.BACKUP, Sink.SUPPORT):
         if (root / ABSENT[sink][0]).exists():
             found.append(
                 f"{ABSENT[sink][0]} now exists, so {sink.value} has a "
@@ -397,9 +396,7 @@ def test_the_absent_sinks_are_still_absent():
     is checked against the real tree, and growing a destination cannot be
     silent.
     """
-    from tests.test_reached_from_production import UNWIRED
-
-    found = unpoliced_sinks(ROOT, UNWIRED)
+    found = unpoliced_sinks(ROOT)
     assert not found, (
         "a sink declared to have no destination has grown one. Police it "
         "through the Gatekeeper and move it from ABSENT to POLICED: "
@@ -414,8 +411,7 @@ def test_the_absence_check_can_see_every_destination_that_could_appear(tmp_path)
     probe that can see telemetry and is blind to support does not pass as a
     working control.
     """
-    (tmp_path / "nm" / "domain").mkdir(parents=True)
-    (tmp_path / "nm" / "domain" / "media.py").write_text("", encoding="utf8")
+    (tmp_path / "nm" / "adapters" / "media").mkdir(parents=True)
     (tmp_path / "nm" / "adapters" / "backup").mkdir(parents=True)
     (tmp_path / "nm" / "adapters" / "support").mkdir(parents=True)
     obs = tmp_path / "nm" / "obs"
@@ -423,21 +419,23 @@ def test_the_absence_check_can_see_every_destination_that_could_appear(tmp_path)
     (obs / "__init__.py").write_text("", encoding="utf8")
     (obs / "telemetry.py").write_text("# ships crash reports", encoding="utf8")
 
-    # UNWIRED is EMPTY here, so a media boundary that exists reads as wired --
-    # which is the condition the real check is looking for.
-    found = unpoliced_sinks(tmp_path, {})
+    found = unpoliced_sinks(tmp_path)
     assert len(found) == 4, found
-    for expected in ("Sink.MEDIA", "backup", "support", "telemetry.py"):
+    for expected in ("media", "backup", "support", "telemetry.py"):
         assert any(expected in line for line in found), (expected, found)
 
     # AND IT DOES NOT FIRE ON THE EMPTY TREE, or the sweep is unfalsifiable.
-    assert unpoliced_sinks(tmp_path / "nowhere", {}) == []
+    assert unpoliced_sinks(tmp_path / "nowhere") == []
 
 
-def test_a_declared_unwired_media_boundary_reads_as_absent(tmp_path):
-    """The other half of the media probe: existing is not the same as wired,
-    and the check must not fire on a boundary that is correctly declared."""
+def test_a_quarantine_domain_record_is_not_a_media_processing_destination(tmp_path):
+    """Reachable admission policy does not itself send bytes to a processor.
+
+    No UNWIRED exemption is supplied: the actual adapter's absence is checked.
+    Planting that adapter immediately changes the verdict.
+    """
     (tmp_path / "nm" / "domain").mkdir(parents=True)
     (tmp_path / "nm" / "domain" / "media.py").write_text("", encoding="utf8")
-    found = unpoliced_sinks(tmp_path, {"nm.domain.media": "declared"})
-    assert not any("MEDIA" in line for line in found), found
+    assert unpoliced_sinks(tmp_path) == []
+    (tmp_path / "nm" / "adapters" / "media").mkdir(parents=True)
+    assert len(unpoliced_sinks(tmp_path)) == 1

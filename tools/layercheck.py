@@ -48,8 +48,11 @@ ALLOWED: dict[str, set[str]] = {
     # Evidence -> {graph, manifest, indices} edge. The knowledge plane is built
     # OFFLINE and only read at turn time, so this does not put ingestion on the
     # serving path.
-    "adapters": {"adapters", "ports", "domain", "core", "knowledge"},
-    "knowledge": {"knowledge", "ports", "domain"},
+    "adapters": {"adapters", "ports", "domain", "core", "knowledge", "infrastructure"},
+    "knowledge": {"knowledge", "ports", "domain", "infrastructure"},
+    # Shared local I/O belongs below concrete adapters, never in pure domain.
+    # Infrastructure cannot import application layers or provider clients.
+    "infrastructure": {"infrastructure"},
     # The edge renders and serves. It may NOT reach an adapter: which adapter
     # is live is the composition root's business, and letting the edge choose
     # would put provider knowledge on the serving path.
@@ -59,7 +62,8 @@ ALLOWED: dict[str, set[str]] = {
     # THE COMPOSITION ROOT. The one layer permitted to know every concrete
     # adapter, because wiring them together is its entire job. Nothing imports
     # it back, which is what keeps the dependency direction one-way.
-    "bootstrap": {"bootstrap", "domain", "ports", "core", "adapters", "knowledge", "edge"},
+    "bootstrap": {"bootstrap", "domain", "ports", "core", "adapters", "knowledge",
+                  "edge", "infrastructure"},
 }
 
 # Third-party modules that must never appear outside nm.adapters / nm.knowledge.

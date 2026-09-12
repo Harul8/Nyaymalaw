@@ -103,6 +103,8 @@ class Operation:
     result: dict = field(default_factory=dict)
     request_digest: str = ""
     at: str = ""
+    cancel_requested_at: str = ""
+    """Cancellation intent survives aggregate UNKNOWN/COMPLETED and sibling jobs."""
 
     def replaying(self, command: str, request_digest: str) -> bool:
         """Whether a new arrival is this same operation coming back.
@@ -153,6 +155,8 @@ class OutboxEntry:
     matter_version: int = 0
     attempts: int = 0
     at: str = ""
+    lease_owner: str = ""
+    """Owner of this claim; attempts is its monotonically increasing fencing token."""
 
 
 class OutboxRefused(RuntimeError):

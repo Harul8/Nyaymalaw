@@ -15,6 +15,7 @@ from __future__ import annotations
 import hmac
 import os
 from datetime import date
+from math import ceil
 from pathlib import Path
 from typing import Annotated
 
@@ -32,7 +33,7 @@ from nm.domain.advocate import (
     utcnow,
 )
 from nm.domain.answer import Answer
-from nm.domain.authority import Act, ActingAs, permits
+from nm.domain.authority import Act, ActingAs, capacity_for, permits
 from nm.domain.clock import FORUM
 from nm.domain.clock import today as forum_today
 from nm.domain.commission import (
@@ -44,12 +45,14 @@ from nm.domain.commission import (
 )
 from nm.domain.emergency import Declaration, latest
 from nm.domain.identity import source_fingerprint
+from nm.domain.intake import MAX_CHUNK_BYTES
 from nm.domain.traceability import implements
 from nm.edge.projections import (
     board_projection,
     cover_projection,
     matter_list_projection,
 )
+from nm.edge.uploads import UploadRefused
 from nm.ports.directory import AccountBusy, ProofRefused
 from nm.ports.store import StaleWrite
 
@@ -92,21 +95,12 @@ class _Released(BaseModel):
     elements: list[dict]
     metrics: dict
     replayed: bool
-    # BK-36. WHAT HAPPENED TO THE BRIEF, in the caller's own terms.
-    #
-    # `replayed` already said "this turn id has been applied before", and the
-    # browser had no way to ask the question it actually needs answered after
-    # a lost response: WAS MY BRIEF SAVED? Those are the same fact from two
-    # ends, and the browser was left inferring it from an HTTP status it never
-    # received.
-    #
-    #   committed   the brief is on the file, derived from and served
-    #   replayed    it was already on the file; this is that same turn again
-    #
-    # There is no third value HERE, and that is deliberate: a turn that was
-    # not committed does not reach this function at all -- it raises, and the
-    # error carries `turn_id` so the retry can name it.
+    # A receipt establishes a saved released response. `input_admitted`
+    # separately says whether the narrative passed admission: a safely saved
+    # blocking question must not claim the unadmitted brief was retained.
+    # Non-matter replies have no matter commitment to assert.
     committed: str
+    input_admitted: bool
     matter_version: int | None
 
 
@@ -131,6 +125,12 @@ def _release(output) -> _Released:
                 status_code=500,
                 detail=f"refusing to emit: {element.signal.value} marked collapsible")
 
+    from nm.domain.turn_receipt import release_index
+
+    receipts, problems = release_index(output.matter) if output.matter else ({}, [])
+    receipt = receipts.get(output.turn_id)
+    if output.matter is not None and (problems or receipt is None):
+        raise HTTPException(status_code=500, detail="released response has no valid saved receipt")
     return _Released(
         turn_id=output.turn_id,
         matter_id=output.matter.id if output.matter else None,
@@ -164,7 +164,9 @@ def _release(output) -> _Released:
         ],
         metrics=output.metrics.as_dict(),
         replayed=output.replayed,
-        committed="replayed" if output.replayed else "committed",
+        committed=("replayed" if output.replayed else "committed") if receipt
+        else "not_committed" if output.matter else "not_applicable",
+        input_admitted=receipt.input_admitted if receipt is not None else False,
         matter_version=output.matter.version if output.matter else None,
     )
 
@@ -318,6 +320,79 @@ def csrf_protected(request: Request,
 CsrfProtected = Depends(csrf_protected)
 
 
+def _uploads():
+    service = application().uploads
+    if service is None:
+        raise HTTPException(503, "sealed original-byte intake is not configured")
+    return service
+
+
+def _upload_call(method, *args):
+    try:
+        return method(*args)
+    except UploadRefused as exc:
+        raise HTTPException(exc.status, str(exc)) from None
+    except StaleWrite:
+        raise HTTPException(409, "matter changed; reload its receipt before resuming") from None
+    except Exception:
+        # No key, filename, byte content or provider error escapes this edge.
+        # A lost response does not prove rollback; the persisted receipt is
+        # authoritative and must be read before retrying the same request key.
+        raise HTTPException(503, "receipt could not be confirmed; reload before retrying") from None
+
+
+@app.post("/api/matters/intake", dependencies=[CsrfProtected])
+def open_upload_first_intake(body: dict, advocate_id: Advocate) -> dict:
+    """An empty owned file, not a dummy brief, inferred fact or passed screen."""
+    return _upload_call(_uploads().create_intake, advocate_id, body)
+
+
+@app.post("/api/matters/{matter_id}/uploads", dependencies=[CsrfProtected])
+def begin_upload(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
+    return _upload_call(_uploads().begin, matter_id, advocate_id, body)
+
+
+@app.get("/api/matters/{matter_id}/uploads")
+def list_uploads(matter_id: str, advocate_id: Advocate) -> dict:
+    return _upload_call(_uploads().list, matter_id, advocate_id)
+
+
+@app.get("/api/matters/{matter_id}/uploads/{upload_id}")
+def inspect_upload(matter_id: str, upload_id: str, advocate_id: Advocate) -> dict:
+    return _upload_call(_uploads().get, matter_id, advocate_id, upload_id)
+
+
+@app.put("/api/matters/{matter_id}/uploads/{upload_id}/chunks/{offset}",
+         dependencies=[CsrfProtected])
+async def receive_upload_chunk(matter_id: str, upload_id: str, offset: int,
+                               request: Request, advocate_id: Advocate) -> dict:
+    service = _uploads()
+    # Refuse foreign/nonexistent receipts before consuming request bytes.
+    _upload_call(service.get, matter_id, advocate_id, upload_id)
+    data = bytearray()
+    async for chunk in request.stream():
+        if len(data) + len(chunk) > MAX_CHUNK_BYTES:
+            raise HTTPException(413, "chunk exceeds the observed-byte bound")
+        data.extend(chunk)
+    return _upload_call(service.append, matter_id, advocate_id, upload_id, offset, bytes(data))
+
+
+@app.post("/api/matters/{matter_id}/uploads/{upload_id}/complete", dependencies=[CsrfProtected])
+def complete_upload(matter_id: str, upload_id: str, advocate_id: Advocate) -> dict:
+    return _upload_call(_uploads().complete, matter_id, advocate_id, upload_id)
+
+
+@app.post("/api/matters/{matter_id}/uploads/{upload_id}/cancel", dependencies=[CsrfProtected])
+def cancel_upload(matter_id: str, upload_id: str, advocate_id: Advocate) -> dict:
+    return _upload_call(_uploads().cancel, matter_id, advocate_id, upload_id)
+
+
+@app.get("/api/matters/{matter_id}/uploads/{upload_id}/content")
+def held_upload_content(matter_id: str, upload_id: str, advocate_id: Advocate):
+    row = _upload_call(_uploads().get, matter_id, advocate_id, upload_id)
+    raise HTTPException(423, row["reason"] + "; original preview and download remain held")
+
+
 class TurnRequest(BaseModel):
     # NO `advocate_id`. It came from the body, which means the caller asserted
     # who they were and the product recorded that assertion on the file. It now
@@ -328,6 +403,8 @@ class TurnRequest(BaseModel):
     turn_id: str | None = None
     today: date | None = None
     jurisdiction: str = FORUM
+    work_product: str = ""
+    """An explicit protective_triage request is not permission without a live declaration."""
     # BK-36. THE VERSION THE CALLER BELIEVES IT IS WRITING ON TOP OF.
     #
     # The per-matter lock and the exact version check already stop two writers
@@ -354,6 +431,9 @@ class TurnRequest(BaseModel):
     the session, never from the body, so a caller cannot release a screen in
     somebody else's name.
     """
+
+    capacity: dict[str, str] | None = None
+    """Explicit capacity state/basis; authenticated actor and time are server-owned."""
 
 
 #: THE CODE THIS PROCESS ACTUALLY LOADED, captured ONCE at import.
@@ -441,10 +521,10 @@ def health() -> dict:
 def transcript(matter_id: str, advocate_id: Advocate) -> dict:
     """THE CONVERSATION, AS IT WAS SERVED. For review, later.
 
-    Every turn on this matter in full — what the advocate wrote, what came
-    back, which gates fired and what was violated. Nothing else keeps it: the
-    matter holds facts, the metrics hold counts and no client words, and the
-    answer was held by neither.
+    Canonical saved releases and explicitly marked unresolved/withheld archive
+    records. Unapproved recommendations and raw model/diagnostic traces are
+    not browser advice. Release receipts are checked against the applied-turn
+    ledger; archival presence alone never establishes successful commitment.
 
     THE SAME 404 AS EVERY OTHER MATTER LOOKUP, and for the same reason: a
     failed lookup must disclose nothing about what exists. A transcript is the
@@ -458,6 +538,9 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
     store = application().store
     turns = store.transcripts_for(matter_id)
     unreadable = [t for t in turns if t.get("unreadable")]
+    from nm.edge.transcripts import project
+
+    projected, release_problems = project(m, turns)
 
     # A FACT ABOUT THE STORE, NOT ABOUT THIS CONVERSATION.
     #
@@ -474,16 +557,18 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
         # NOT "ok" when a turn could not be decrypted. A review that renders
         # nine of ten turns and says "ok" is reviewing a different
         # conversation from the one that ran.
-        "state": "ok" if not unreadable else "incomplete",
+        "state": "ok" if not unreadable and not release_problems else "incomplete",
         "matter_id": matter_id,
         "title": m.title,
-        "turns": [t for t in turns if not t.get("unreadable")],
-        "turn_count": len(turns),
+        "turns": projected,
+        "turn_count": len(projected),
+        "release_problems": release_problems,
         "unreadable": [t["turn_id"] for t in unreadable],
         "unreadable_reason": (
-            f"{len(unreadable)} turn(s) on this matter could not be read back "
-            f"and are missing from what follows."
-            if unreadable else None),
+            f"{len(unreadable)} diagnostic archive(s) could not be read back. "
+            f"Only independently established releases are shown as answers; "
+            f"the archive's completeness cannot be verified."
+            if unreadable else "; ".join(release_problems) or None),
         "unattributable_count": len(lost),
         "unattributable_reason": (
             f"{len(lost)} transcript(s) in the store could not be read back at "
@@ -493,55 +578,11 @@ def transcript(matter_id: str, advocate_id: Advocate) -> dict:
     }
 
 
-def _register_of(matter) -> tuple:
-    """Every deadline this matter's threads hold. ONE OWNER.
+def _register_of(matter):
+    """One strict deadline read, including integrity and assessment provenance."""
+    from nm.core.deadlines import read_matter
 
-    `None` REMAINS REACHABLE AND MEANS WHAT IT SAYS. A matter whose threads
-    carry no `deadlines` attribute at all -- decoded from a store that
-    predates the field -- is not a matter with no deadlines, and returning
-    `()` for it would be exactly the collapse the projection refuses.
-    """
-    from datetime import date as _date
-
-    from nm.core.deadlines import Deadline, DeadlineKind
-
-    rows: list = []
-    saw_register = False
-    for thread in getattr(matter, "threads", ()):
-        held = getattr(thread, "deadlines", None)
-        if held is None:
-            continue
-        saw_register = True
-        for row in held:
-            # REHYDRATED, BECAUSE `Thread.deadlines` IS `tuple[object, ...]`.
-            #
-            # The field is untyped for the cycle reason every persisted
-            # derivation here carries -- `nm.core.deadlines` imports the
-            # matter module -- so the store decoder cannot rebuild the type
-            # and hands back dicts. `_thread_row` reads `d.thread` and
-            # `d.status(today)`, so passing the raw rows raised
-            # `AttributeError: 'dict' object has no attribute 'thread'` on
-            # the first board that had ever been advised on.
-            #
-            # A DICT THAT CANNOT BE REBUILT IS SKIPPED AND THE REGISTER
-            # STILL COUNTS AS PRESENT. Dropping the whole register for one
-            # unreadable row would report `not_assessed` -- nobody looked --
-            # for a file where somebody did.
-            if not isinstance(row, dict):
-                rows.append(row)
-                continue
-            try:
-                on = row.get("on")
-                rows.append(Deadline(
-                    thread=str(row["thread"]),
-                    kind=DeadlineKind(row["kind"]),
-                    source=str(row["source"]), action=str(row["action"]),
-                    owner=str(row["owner"]),
-                    consequence=str(row["consequence"]),
-                    on=_date.fromisoformat(on) if isinstance(on, str) else on))
-            except (KeyError, ValueError, TypeError):
-                continue
-    return tuple(rows) if saw_register else None
+    return read_matter(matter)
 
 
 def _registers(held) -> dict:
@@ -633,6 +674,7 @@ def get_commission(matter_id: str, advocate_id: Advocate) -> dict:
     return {
         "state": "ok",
         "matter_id": m.id,
+        "version": m.version,
         "commission": current.as_dict() if current else None,
         # THE HISTORY IS SERVED, not kept for an audit nobody can reach. An
         # advice given under version 1 was correct work under version 1, and
@@ -659,6 +701,18 @@ def set_commission(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
     told which readiness state has reopened rather than discovering it later.
     """
     m = _owned(matter_id, advocate_id)
+    # The version the advocate reviewed, not the one this request just loaded.
+    # Store CAS still protects the interval from this read to the commit.
+    observed_version = body.get("expected_version")
+    if type(observed_version) is not int or observed_version < 0:
+        raise HTTPException(
+            status_code=422,
+            detail="read the matter first and supply its nonnegative integer expected_version")
+    if observed_version != m.version:
+        raise HTTPException(
+            status_code=409,
+            detail=("the matter changed since these instructions were reviewed; "
+                    "reopen before editing"))
     # TWO DIFFERENT QUESTIONS, and conflating them was the first draft's bug.
     #
     # (1) MAY THIS PERSON KEEP THE FILE? The advocate records what they were
@@ -674,7 +728,10 @@ def set_commission(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
             detail=(f"this instruction was not recorded: {ruling.why}"))
 
     previous = Commission.from_stored(m.commission)
-    proposed = _commission_from(body, previous, advocate_id)
+    try:
+        proposed = _commission_from(body, previous, advocate_id)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     # (2) IS THE INSTRUCTION ATTRIBUTABLE? BK-63-AC1 asks that every material
     #     instruction be attributable to an ALLOWED ROLE -- a question about
@@ -701,6 +758,23 @@ def set_commission(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
     updated = dataclasses.replace(
         m, commission=proposed.as_dict(), commission_history=history,
         version=m.version + 1)
+    if moved:
+        from nm.core.screens import ScreenKind
+
+        # Only scope rests on these instructions; retain unrelated assessments.
+        prior_answer = (m.intake_answers or {}).get("scope")
+        updated = dataclasses.replace(
+            updated,
+            intake_answers={k: v for k, v in (m.intake_answers or {}).items()
+                            if k != "scope"},
+            screens=tuple(s for s in (m.screens or ())
+                          if getattr(s, "kind", None) is not ScreenKind.SCOPE
+                          and not (isinstance(s, dict) and s.get("kind") == "scope")),
+            commission_invalidations=(*(m.commission_invalidations or ()), {
+                "from_version": previous.version, "to_version": proposed.version,
+                "fields": list(moved), "by": advocate_id,
+                "at": proposed.recorded_at, "prior_scope_answer": prior_answer,
+                "why": "material instructions changed; scope must be confirmed again"}))
     try:
         application().store.commit(updated, expected_version=m.version)
     except StaleWrite as moved_underneath:
@@ -709,6 +783,7 @@ def set_commission(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
     return {
         "state": "commission_recorded",
         "matter_id": m.id,
+        "version": updated.version,
         "commission": proposed.as_dict(),
         # WHAT THIS REOPENED. Empty is a real and common answer.
         "material_changes": list(moved),
@@ -739,32 +814,74 @@ def declare_emergency(matter_id: str, body: dict, advocate_id: Advocate) -> dict
     # instead of 401 -- which discloses that the endpoint exists. One path
     # with a GET beside it cannot do that, and revocation is still a new
     # record rather than an erasure.
-    if body.get("revoke"):
-        return _revoke_emergency(m, advocate_id)
+    if "urgency_command" in body:
+        return _record_urgency(m, advocate_id, body)
+    if "revoke" in body:
+        if body["revoke"] is not True:
+            raise HTTPException(status_code=422, detail="revocation must be explicitly true")
+        return _revoke_emergency(m, advocate_id, body)
 
-    basis = str(body.get("basis") or "").strip()
-    if not basis:
+    import re
+
+    request_key = body.get("request_key")
+    if not isinstance(request_key, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", request_key):
+        raise HTTPException(status_code=422, detail="supply a stable declaration request_key")
+    basis = body.get("basis")
+    if not isinstance(basis, str) or not basis.strip():
         raise HTTPException(
             status_code=400,
             detail=("an emergency declaration needs its basis -- what the "
                     "danger is. A declaration with no basis is a switch."))
+    basis = basis.strip()
+    hours = body.get("hours", 24)
+    if not isinstance(hours, int) or isinstance(hours, bool):
+        raise HTTPException(status_code=422, detail="emergency duration must be whole hours")
+    offer = {"actor_id": advocate_id, "basis": basis, "hours": hours}
+    matches = [row for row in (m.emergencies or ())
+               if isinstance(row, dict) and row.get("request_key") == request_key]
+    if matches:
+        if len(matches) != 1:
+            raise HTTPException(status_code=503, detail="declaration identity is ambiguous")
+        prior = matches[0]
+        if prior.get("request_offer") != offer:
+            raise HTTPException(
+                status_code=409, detail="declaration key names different instructions")
+        declared = Declaration.from_stored(prior)
+        if declared is None:
+            raise HTTPException(status_code=503, detail="the recorded declaration is unreadable")
+        # No clock arithmetic, mutation or fresh screening on a replay. Its
+        # expiry, revocation and original outstanding population remain intact.
+        observed = utcnow()
+        return {"state": "emergency_declared", "matter_id": m.id,
+                "request_key": request_key, "replayed": True,
+                "emergency": declared.as_dict(), "said": declared.said(observed),
+                "declaration_state": declared.state_at(observed),
+                "permits_substance": False, "outstanding": list(declared.outstanding)}
 
     outstanding = _outstanding_screens(m)
-    declared = Declaration.declare(
-        actor_id=advocate_id, basis=basis, outstanding=outstanding,
-        now=utcnow(), hours=int(body.get("hours") or 24))
+    try:
+        declared = Declaration.declare(
+            actor_id=advocate_id, basis=basis, outstanding=outstanding,
+            now=utcnow(), hours=hours)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     updated = dataclasses.replace(
-        m, emergencies=(*(m.emergencies or ()), declared.as_dict()),
+        m, emergencies=(*(m.emergencies or ()), {
+            **declared.as_dict(), "request_key": request_key, "request_offer": offer}),
         version=m.version + 1)
     try:
         application().store.commit(updated, expected_version=m.version)
     except StaleWrite as moved:
         raise HTTPException(status_code=409, detail=str(moved)) from None
+    observed = utcnow()
     return {
         "state": "emergency_declared",
         "matter_id": m.id,
+        "request_key": request_key,
+        "replayed": False,
         "emergency": declared.as_dict(),
-        "said": declared.said(utcnow()),
+        "said": declared.said(observed),
+        "declaration_state": declared.state_at(observed),
         "permits_substance": False,
         "outstanding": list(outstanding),
     }
@@ -779,15 +896,25 @@ def get_emergency(matter_id: str, advocate_id: Advocate) -> dict:
     true when somebody last wrote a field.
     """
     m = _owned(matter_id, advocate_id)
+    from nm.domain.urgency import project
+
+    urgency = project(m.urgency_records)
     now = utcnow()
-    governing = latest(m.emergencies or (), now)
+    governing, target_ref, _ = _emergency_target(m, now)
     history = [Declaration.from_stored(x) for x in (m.emergencies or ())]
+    unreadable = sum(d is None for d in history)
     return {
-        "state": "ok",
+        "state": "incomplete" if unreadable or urgency["unreadable_records"] else "ok",
         "matter_id": m.id,
+        "version": m.version,
+        "urgency_register": urgency,
+        "governing_ref": target_ref,
         "governing": governing.as_dict() if governing else None,
         "said": (governing.said(now) if governing
+                 else "emergency history could not be assessed; no exception is granted"
+                 if unreadable
                  else "no emergency exception is live on this matter"),
+        "unreadable_records": unreadable,
         # HISTORY IS KEPT AND SERVED. An expired declaration is evidence of
         # why the file was handled as it was; only the permission lapsed.
         "history": [
@@ -795,6 +922,86 @@ def get_emergency(matter_id: str, advocate_id: Advocate) -> dict:
             for d in history if d is not None],
         "permits_substance": False,
     }
+
+
+def _record_urgency(matter, advocate_id: str, body: dict) -> dict:
+    """Persist a manual danger or its explicit resolution, never a permission."""
+    import dataclasses
+    import re
+
+    from nm.domain.matter import new_id
+    from nm.domain.urgency import (
+        UrgencyReceipt,
+        UrgencyRegister,
+        normalise_instruction,
+        read_receipts,
+        read_register,
+    )
+
+    command = body.get("urgency_command")
+    fields = {"urgency_command", "request_key", "expected_version"}
+    fields |= {"urgency"} if command == "raise" else {"urgency_id", "resolution_basis"}
+    expected, request_key = body.get("expected_version"), body.get("request_key")
+    if (command not in ("raise", "resolve") or set(body) != fields
+            or type(expected) is not int or expected < 0 or not isinstance(request_key, str)
+            or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", request_key)):
+        raise HTTPException(status_code=422, detail="supply one exact keyed urgency command "
+                            "and the observed matter version")
+    offer = {"actor_id": advocate_id, "command": command, "expected_version": expected}
+    try:
+        if command == "raise":
+            offer["urgency"] = normalise_instruction(body["urgency"])
+        else:
+            for name in ("urgency_id", "resolution_basis"):
+                value = body[name]
+                if not isinstance(value, str) or not value.strip() or len(value) > 4000:
+                    raise ValueError(f"supply the named {name}")
+                offer[name] = value.strip()
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    rows, unreadable = read_register(matter.urgency_records)
+    operations = matter.urgency_operations
+    if unreadable:
+        raise HTTPException(status_code=503, detail="the urgency record cannot be reconciled")
+    try:
+        receipts = read_receipts(operations, rows, matter.id, matter.version)
+    except (ValueError, TypeError, KeyError) as exc:
+        raise HTTPException(
+            status_code=503, detail="the urgency receipt cannot be reconciled") from exc
+    prior = receipts.get(request_key)
+    if prior is not None:
+        if prior.offer != offer:
+            raise HTTPException(status_code=409, detail="urgency key names different instructions")
+        return prior.projected(replayed=True)
+    if expected != matter.version:
+        raise HTTPException(status_code=409, detail="the file changed; reopen the urgency register")
+    try:
+        if command == "raise":
+            changed = UrgencyRegister.raise_manual(new_id("urgency"), offer["urgency"],
+                                                  advocate_id, utcnow())
+            saved_rows = (*rows, changed)
+        else:
+            selected = next((row for row in rows if row.urgency_id == offer["urgency_id"]), None)
+            if selected is None:
+                raise HTTPException(status_code=404, detail="the named urgency was not found")
+            changed = selected.resolve(advocate_id, offer["resolution_basis"], utcnow())
+            saved_rows = tuple(changed if row.urgency_id == selected.urgency_id else row
+                               for row in rows)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    receipt = UrgencyReceipt(request_key, offer, matter.id, changed.urgency_id, matter.version + 1)
+    result = receipt.projected()
+    updated = dataclasses.replace(
+        matter, urgency_records=tuple(row.as_dict() for row in saved_rows),
+        urgency_operations=(*operations, receipt.as_dict()), version=matter.version + 1)
+    try:
+        application().store.commit(updated, expected_version=matter.version)
+    except StaleWrite as exc:
+        raise HTTPException(
+            status_code=409, detail="the file changed; reopen the urgency register") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="the urgency change was not confirmed") from exc
+    return result
 
 
 def _outstanding_screens(matter) -> tuple[str, ...]:
@@ -825,32 +1032,64 @@ def conceded(matter_id: str, advocate_id: Advocate) -> dict:
     return {
         "state": "ok",
         "matter_id": m.id,
+        "decisions": list(m.decisions or ()),
+        "externally_effective": False,
         "refused": [r for r in (m.authority_refusals or ())
                     if isinstance(r, dict) and r.get("act") == "concede"],
     }
 
 
-def _revoke_emergency(matter, advocate_id: str) -> dict:
-    """End a live declaration early. A NEW RECORD, never an erasure."""
+def _emergency_target(matter, now):
+    """Name the exact governing append, including legacy unkeyed records."""
+    import hashlib
+    import json
+
+    rows = matter.emergencies or ()
+    governing = latest(rows, now)
+    if governing is None:
+        return None, None, None
+    selected = max(i for i, row in enumerate(rows)
+                   if Declaration.from_stored(row) == governing)
+    identity = [matter.id, selected, rows[selected]]
+    reference = hashlib.sha256(json.dumps(
+        identity, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
+    return governing, reference, selected
+
+
+def _revoke_emergency(matter, advocate_id: str, body: dict) -> dict:
+    """End only the declaration the user observed, never its replacement."""
     import dataclasses
 
-    now = utcnow()
-    governing = latest(matter.emergencies or (), now)
-    if governing is None:
+    expected = body.get("expected_version")
+    reference = body.get("governing_ref")
+    if (type(expected) is not int or expected < 0 or not isinstance(reference, str)
+            or len(reference) != 64 or any(c not in "0123456789abcdef" for c in reference)):
         raise HTTPException(
-            status_code=404,
-            detail="no emergency exception is live on this matter")
+            status_code=422, detail="supply the observed declaration and file version")
+    if expected != matter.version:
+        raise HTTPException(status_code=409, detail="the file changed; reopen the declaration")
+    now = utcnow()
+    governing, current_ref, selected = _emergency_target(matter, now)
+    if governing is None or reference != current_ref:
+        raise HTTPException(
+            status_code=409,
+            detail="the observed exception is no longer current; reopen the declaration")
     revoked = governing.revoke(advocate_id, now)
-    kept = [x for x in (matter.emergencies or ())
-            if Declaration.from_stored(x) != governing]
+    kept = list(matter.emergencies or ())
+    # The governing append is the last equal declaration when second-precision
+    # records coincide. Preserve every other record and the immutable request
+    # identity on this one; revocation must not make its key available again.
+    original = kept[selected] if isinstance(kept[selected], dict) else {}
+    kept[selected] = {**original, **revoked.as_dict()}
     updated = dataclasses.replace(
-        matter, emergencies=(*kept, revoked.as_dict()),
+        matter, emergencies=tuple(kept),
         version=matter.version + 1)
     try:
         application().store.commit(updated, expected_version=matter.version)
     except StaleWrite as moved:
         raise HTTPException(status_code=409, detail=str(moved)) from None
     return {"state": "emergency_revoked", "matter_id": matter.id,
+            "governing_ref": reference, "version": updated.version,
             "said": revoked.said(now)}
 
 
@@ -871,8 +1110,42 @@ def concede(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
             status_code=403,
             detail=(f"this concession was not made: {ruling.why} It is "
                     f"recorded on the file that it was attempted."))
-    return {"state": "conceded", "matter_id": m.id,
-            "on": str(body.get("on") or "").strip()}
+    import dataclasses
+
+    from nm.domain.matter import new_id
+
+    point = str(body.get("on") or "").strip()
+    if not point:
+        raise HTTPException(status_code=422, detail="name the point being decided")
+    decision_id = str(body.get("decision_id") or new_id("decision"))
+    current = Commission.from_stored(m.commission)
+    record = {"decision_id": decision_id, "on": point, "by": advocate_id,
+              "act": ruling.act.value, "capacity": ruling.capacity.value,
+              "commission_version": current.version if current else None,
+              "at": utcnow().isoformat(), "externally_effective": False}
+    previous = next((d for d in (m.decisions or ())
+                     if isinstance(d, dict) and d.get("decision_id") == decision_id), None)
+    if previous:
+        if any(previous.get(k) != record[k] for k in
+               ("on", "by", "act", "commission_version")):
+            raise HTTPException(status_code=409,
+                                detail="this decision key identifies another decision")
+        record = previous
+    else:
+        try:
+            application().store.commit(dataclasses.replace(
+                m, decisions=(*(m.decisions or ()), record), version=m.version + 1),
+                expected_version=m.version)
+        except StaleWrite as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="the internal decision was not recorded; no action was taken") from exc
+    return {"state": "decision_recorded", "matter_id": m.id,
+            "decision": record, "externally_effective": False,
+            "said": "Recorded as an internal decision only; "
+                    "nothing was sent, filed or conceded externally."}
 
 
 def _owned(matter_id: str, advocate_id: str):
@@ -888,29 +1161,17 @@ def _capacity_of(matter, advocate_id: str, claimed) -> ActingAs:
 
     A caller that could name its own capacity could name `deciding` and
     concede the client's case, which would make the whole policy decorative.
-    So the commission is the source: if it records this person as instructing
-    or deciding, that is their capacity; the signed-in advocate is otherwise
-    `ADVISING`; and a claimed capacity is accepted only when it NARROWS.
+    Authored commissions are not grants. Trusted provisioning records are
+    bound to a commission version, expire and can be revoked; a request may
+    narrow those powers but cannot create them.
     """
     current = Commission.from_stored(matter.commission)
-    if current is not None:
-        for party in (current.deciding, current.instructing):
-            if party is not None and party.party_id == advocate_id:
-                return party.capacity
-    default = ActingAs.ADVISING
-    try:
-        asked = ActingAs(str(claimed)) if claimed else default
-    except ValueError:
-        return default
-    # NARROWING ONLY. `ASSISTING` is a smaller claim than `ADVISING` and an
-    # advocate may make it; anything wider is ignored rather than honoured.
-    return asked if asked is ActingAs.ASSISTING else default
+    return capacity_for(advocate_id, matter.authority_bindings,
+                        current.version if current else 0, utcnow(), claimed)
 
 
 def _record_refusal(matter, ruling) -> None:
-    """Keep the attempt. NEVER FATAL -- a refusal that could not be written
-    down is still a refusal, and failing the request here would turn an audit
-    problem into an outage."""
+    """Keep the attempt or disclose the failed audit; never permit the action."""
     import dataclasses
 
     try:
@@ -921,8 +1182,10 @@ def _record_refusal(matter, ruling) -> None:
                 authority_refusals=(*(matter.authority_refusals or ()), line),
                 version=matter.version + 1),
             expected_version=matter.version)
-    except Exception:  # noqa: BLE001 -- audit failure is not an outage
-        pass
+    except Exception as exc:  # noqa: BLE001 -- refusal stands, audit failure is visible
+        raise HTTPException(status_code=503, detail=(
+            "the operation was refused, but its audit record could not be saved; "
+            "no decision or external action was made")) from exc
 
 
 def _commission_from(body: dict, previous, recorded_by: str) -> "Commission":
@@ -1029,28 +1292,17 @@ def turn(req: TurnRequest, advocate_id: Advocate) -> _Released:
         # day short.
         today=req.today or forum_today(),
         jurisdiction=req.jurisdiction,
+        work_product=req.work_product,
         parties=dict(req.parties or {}),
         release=dict(req.release or {}),
+        capacity=dict(req.capacity) if req.capacity is not None else None,
+        expected_version=req.expected_version,
+        request_offer=req.model_dump(mode="json", exclude={"turn_id"}),
         **({"turn_id": req.turn_id} if req.turn_id else {}),
     )
-    # THE VERSION IS CHECKED BEFORE THE MODEL RUNS, not after. A stale write
-    # detected at commit has already spent the calls; detected here it costs
-    # one read, and the advocate gets the same answer sooner.
-    if req.expected_version is not None and req.matter_id:
-        try:
-            held = application().store.load(req.matter_id)
-        except Exception:  # noqa: BLE001 -- an unreadable matter is the store's
-            held = None    # own error, raised where it is understood
-        if held is not None and held.version != req.expected_version:
-            raise HTTPException(status_code=409, detail={
-                "why": (f"this matter moved while you were writing: you were "
-                        f"working on version {req.expected_version} and it is "
-                        f"now at {held.version}"),
-                "expected_version": req.expected_version,
-                "matter_version": held.version,
-                "turn_id": req.turn_id,
-                "committed": "not_committed",
-            })
+    # The engine reconciles an exact durable receipt BEFORE stale new-work
+    # admission, and both happen before any model read. Changing the caller's
+    # expected version on retry would change its original instructions.
 
     try:
         output = engine.run(payload)
@@ -1066,13 +1318,18 @@ def turn(req: TurnRequest, advocate_id: Advocate) -> _Released:
             # A WITHHELD TURN IS STILL A TURN THAT RAN. The id is what makes
             # a retry the SAME turn rather than a second one.
             "turn_id": req.turn_id,
-            "committed": "not_committed",
+            "committed": ("previously_committed" if exc.prior_receipt_saved
+                          else "not_committed"),
+            **({"prior_receipt_saved": True, "release_state": "replay_refused"}
+               if exc.prior_receipt_saved else {}),
         }) from exc
     except StaleWrite as exc:
         raise HTTPException(status_code=409, detail={
             "why": str(exc),
             "turn_id": req.turn_id,
             "committed": "not_committed",
+            "expected_version": getattr(exc, "expected_version", req.expected_version),
+            "matter_version": getattr(exc, "matter_version", None),
         }) from exc
     return _release(output)
 
@@ -1229,6 +1486,24 @@ _REFUSED = {
 _REFUSED_DEFAULT = "those credentials were not accepted"
 
 
+def _admit_auth_attempt(directory, advocate_id, source, now, *, action: str) -> None:
+    """One admission boundary for every failure-counted authentication door.
+
+    Counters and thresholds remain owned by the directory and attempts policy.
+    The existing controlled-local availability policy remains explicit: an
+    unreadable counter cannot enforce and health reports it as not running.
+    No refused retry is itself a failure, so knocking cannot extend a pause.
+    """
+    counts = directory.failures_since(advocate_id, source, now - attempts.WINDOW)
+    if counts is None:
+        return
+    seen = attempts.verdict(counts[0], counts[1], now)
+    if not seen.allowed:
+        retry_after = max(1, ceil(seen.retry_after.total_seconds()))
+        raise HTTPException(status_code=429, detail=seen.said_for(action),
+                            headers={"Retry-After": str(retry_after)})
+
+
 @app.post("/api/register")
 @implements("A1")
 def register(body: Registration, request: Request,
@@ -1256,13 +1531,8 @@ def register(body: Registration, request: Request,
     source = request.client.host if request.client else "unknown-source"
     invitation = (x_enrolment_invitation or "").strip()
     rate_key = f"invitation:{token_fingerprint(invitation)}"
-    counts = application().directory.failures_since(
-        rate_key, source, now - attempts.WINDOW)
-    if counts is not None:
-        seen = attempts.verdict(counts[0], counts[1], now)
-        if not seen.allowed:
-            raise HTTPException(status_code=429,
-                                detail=seen.said_for("enrolment"))
+    _admit_auth_attempt(application().directory, rate_key, source, now,
+                        action="enrolment")
 
     if body.password != body.password_again:
         # BEFORE the credential is derived, so a typo costs nothing and the
@@ -1304,13 +1574,8 @@ def recover(body: Recovery, request: Request) -> dict:
     now = utcnow()
     source = request.client.host if request.client else "unknown-source"
     rate_key = f"recovery:{canonical_id(body.advocate_id)}"
-    counts = application().directory.failures_since(
-        rate_key, source, now - attempts.WINDOW)
-    if counts is not None:
-        seen = attempts.verdict(counts[0], counts[1], now)
-        if not seen.allowed:
-            raise HTTPException(status_code=429,
-                                detail=seen.said_for("recovery"))
+    _admit_auth_attempt(application().directory, rate_key, source, now,
+                        action="recovery")
 
     if body.password != body.password_again:
         raise HTTPException(
@@ -1355,23 +1620,8 @@ def login(body: Credentials, request: Request, response: Response,
     # shared by a chambers, which is why PER_SOURCE is twenty and not five.
     now = utcnow()
     source = (request.client.host if request.client else "unknown-source")
-    counts = application().directory.failures_since(
-        body.advocate_id, source, now - attempts.WINDOW)
-
-    if counts is None:
-        # THE LIMITER COULD NOT RUN. The door opens -- refusing every
-        # sign-in would be a self-inflicted outage on a product used under
-        # time pressure -- and this is NOT silent: `/api/health` reports
-        # rate limiting as NOT RUNNING, which is the third state the
-        # operator sees before an incident rather than during one.
-        pass
-    else:
-        seen = attempts.verdict(counts[0], counts[1], now)
-        if not seen.allowed:
-            # 429, NOT 401. A refused attempt is not a wrong password, and
-            # calling it one would tell an advocate to check credentials
-            # that may be perfectly correct.
-            raise HTTPException(status_code=429, detail=seen.said)
+    _admit_auth_attempt(application().directory, body.advocate_id, source, now,
+                        action="sign-in")
 
     import secrets
 
@@ -1572,7 +1822,8 @@ class RotateRequest(BaseModel):
 
 
 @app.post("/api/reauthenticate", dependencies=[CsrfProtected])
-def reauthenticate(body: ReauthenticateRequest, advocate_id: Advocate,
+def reauthenticate(body: ReauthenticateRequest, request: Request,
+                   advocate_id: Advocate,
                    nm_session: str | None = Cookie(default=None),
                    nm_device: str | None = Cookie(default=None),
                    user_agent: str | None = Header(default=None)) -> dict:
@@ -1592,9 +1843,13 @@ def reauthenticate(body: ReauthenticateRequest, advocate_id: Advocate,
         raise HTTPException(
             status_code=501,
             detail="this deployment's directory cannot re-authenticate")
+    now = utcnow()
+    source = request.client.host if request.client else "unknown-source"
+    _admit_auth_attempt(directory, advocate_id, source, now,
+                        action="re-authentication")
     proof = directory.reauthenticate(
         advocate_id, body.password, nm_session or "",
-        _device(nm_device, user_agent), utcnow())
+        _device(nm_device, user_agent), now, source=source)
     if not proof:
         raise HTTPException(status_code=401, detail="that did not match")
     # THE PROOF TRAVELS IN THE BODY, NOT A COOKIE. A cookie would ride along
@@ -1604,7 +1859,8 @@ def reauthenticate(body: ReauthenticateRequest, advocate_id: Advocate,
 
 
 @app.post("/api/recovery-codes/rotate", dependencies=[CsrfProtected])
-def rotate_recovery_codes(body: RotateRequest, advocate_id: Advocate,
+def rotate_recovery_codes(body: RotateRequest, request: Request,
+                          advocate_id: Advocate,
                           nm_session: str | None = Cookie(default=None),
                           nm_device: str | None = Cookie(default=None),
                           user_agent: str | None = Header(default=None)) -> dict:
@@ -1625,11 +1881,15 @@ def rotate_recovery_codes(body: RotateRequest, advocate_id: Advocate,
         raise HTTPException(
             status_code=501,
             detail="this deployment's directory cannot replace recovery codes")
+    now = utcnow()
+    source = request.client.host if request.client else "unknown-source"
+    _admit_auth_attempt(directory, advocate_id, source, now,
+                        action="recovery-code replacement")
     try:
         codes = directory.rotate_recovery_codes(
             advocate_id, body.proof, nm_session or "",
             _device(nm_device, user_agent),
-            body.expected_recovery_generation, utcnow())
+            body.expected_recovery_generation, now, source=source)
     except ProofRefused as refused:
         # 409, NOT 403. The caller is authenticated and permitted; what failed
         # is that the state they were acting on has moved or their proof is

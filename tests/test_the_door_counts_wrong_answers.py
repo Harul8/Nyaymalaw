@@ -106,33 +106,45 @@ def test_an_allowed_attempt_says_nothing_at_all():
 
 # ===================== the door, on the served path =======================
 
-def test_the_limiter_runs_before_the_password_is_verified():
+def test_the_limiter_runs_before_the_password_is_verified(client, monkeypatch):
     """The point of a limiter is that the EXPENSIVE part stops happening. A
     guard after the derivation still pays for every guess."""
-    import inspect
-
     from nm.edge import api
 
-    src = inspect.getsource(api.login)
-    guard = src.index("attempts.verdict")
-    verify = src.index("directory.authenticate")
-    assert guard < verify, (
-        "the rate limit is consulted after the password is derived, so a "
-        "refused attempt still costs what it was meant to save")
+    calls = []
+    original = client.directory.authenticate_and_open_session
+
+    def watched(*args, **kwargs):
+        calls.append(True)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(client.directory, "authenticate_and_open_session", watched)
+    credentials = {"advocate_id": "adv_demo",
+                   "password": "Fixture-password-not-a-secret-1"}
+    assert client.post("/api/login", json=credentials).status_code == 200
+    assert calls == [True], "the positive path never reached credential verification"
+    calls.clear()
+    for _ in range(attempts.PER_ADVOCATE):
+        client.directory.note_failure("adv_demo", "testclient", api.utcnow())
+    response = client.post("/api/login", json=credentials)
+    assert response.status_code == 429, response.text
+    assert calls == [], "a refused attempt still reached credential verification"
 
 
-def test_a_refused_attempt_is_429_and_not_401():
+def test_a_refused_attempt_is_429_and_not_401(client):
     """A refusal is NOT a wrong password, and calling it one tells an advocate
     to check credentials that may be perfectly correct."""
-    import inspect
-
     from nm.edge import api
 
-    src = inspect.getsource(api.login)
-    assert "status_code=429" in src
+    for _ in range(attempts.PER_ADVOCATE):
+        client.directory.note_failure("adv_demo", "testclient", api.utcnow())
+    response = client.post("/api/login", json={
+        "advocate_id": "adv_demo", "password": "Fixture-password-not-a-secret-1"})
+    assert response.status_code == 429, response.text
+    assert int(response.headers["retry-after"]) > 0
 
 
-def test_a_limiter_that_cannot_run_opens_the_door_and_says_so():
+def test_a_limiter_that_cannot_run_opens_the_door_and_says_so(client, monkeypatch):
     """FAILING OPEN IS THE RIGHT DIRECTION AND MUST BE VISIBLE.
 
     Refusing every sign-in because a log file is unwritable would be a
@@ -146,20 +158,19 @@ def test_a_limiter_that_cannot_run_opens_the_door_and_says_so():
     import inspect
 
     from nm.adapters.store.directory import FileDirectory
-    from nm.bootstrap import composition
-    from nm.edge import api
-
     reader = inspect.getsource(FileDirectory.failures_since)
     assert "return None" in reader, (
         "the store no longer distinguishes 'could not read' from 'no failures'")
 
-    door = inspect.getsource(api.login)
-    assert "if counts is None:" in door, (
-        "the door does not handle a limiter that could not run")
-
-    health = inspect.getsource(composition)
-    assert "rate_limiting" in health and "NOT RUNNING" in health, (
-        "a limiter that is not running is invisible until an incident")
+    monkeypatch.setattr(client.directory, "failures_since", lambda *args: None)
+    monkeypatch.setattr(client.directory, "limiter_available", lambda: False)
+    response = client.post("/api/login", json={
+        "advocate_id": "adv_demo", "password": "Fixture-password-not-a-secret-1"})
+    assert response.status_code == 200, response.text
+    health = client.get("/api/health")
+    assert health.status_code == 200, health.text
+    assert "NOT RUNNING" in health.json()["rate_limiting"], (
+        "the unavailable limiter was hidden from the served health response")
 
 
 def test_a_successful_sign_in_adds_nothing_to_the_count():

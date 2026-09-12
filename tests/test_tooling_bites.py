@@ -351,6 +351,33 @@ def test_every_mutation_anchor_still_matches_the_source():
           "the copy has to move with it — sweeping a rename includes this file.")
 
 
+@pytest.mark.parametrize("returncode", [0, 1])
+def test_mutation_children_cannot_inherit_the_canonical_evidence_lease(
+    tmp_path, monkeypatch, returncode,
+):
+    """Inspect the actual launch boundary; no child pytest or mutation runs."""
+    import tools.mutate as mutate
+
+    canonical = tmp_path / "parent-class-a.json"
+    canonical.write_text("parent evidence remains owned", encoding="utf8")
+    monkeypatch.setenv("NM_CLASS_A_EVIDENCE_FILE", str(canonical))
+    monkeypatch.setenv("KEEP_MUTATION_SETTING", "preserved")
+    calls = []
+
+    def child(command, **kwargs):
+        calls.append(command)
+        assert "NM_CLASS_A_EVIDENCE_FILE" not in kwargs["env"]
+        assert kwargs["env"]["NM_PARTIAL_RUN"] == "1"
+        assert kwargs["env"]["KEEP_MUTATION_SETTING"] == "preserved"
+        assert command[command.index("-k") + 1] == "test_explicit_mutation_target"
+        return subprocess.CompletedProcess(command, returncode, "synthetic child outcome", "")
+
+    monkeypatch.setattr(mutate.subprocess, "run", child)
+    assert mutate.run_test("test_explicit_mutation_target") is (returncode == 0)
+    assert len(calls) == 1
+    assert canonical.read_text(encoding="utf8") == "parent evidence remains owned"
+
+
 def test_the_anchor_check_can_see_a_stale_anchor():
     """THE POSITIVE CONTROL. A scan over anchors that all happen to match
     proves nothing about the scan; a checker that always returns [] satisfies
@@ -815,7 +842,10 @@ def test_an_unscored_golden_suite_is_not_reported_as_a_pass():
     release criterion. A criterion nobody computed is the one that gets
     assumed.
     """
-    r = run("run_goldens.py", "--suite", "full", "--approve")
+    # This checks reporting of an unexecuted rubric, not legal-source quality.
+    # Keep the explicitly corpus-free entry path; Class A cannot borrow corpus
+    # access merely because an unscored suite also exposes that option.
+    r = run("run_goldens.py", "--suite", "full", "--approve", "--skip-authority")
     assert r.returncode != 0, (
         "an all-unscored judged suite reported success:\n" + r.stdout[-2000:])
     assert "NOT MEASURED" in r.stdout
@@ -826,6 +856,24 @@ def test_an_unscored_golden_suite_is_not_reported_as_a_pass():
     assert r.stdout.count("NOT ASSESSED") == 25, (
         f"only {r.stdout.count('NOT ASSESSED')} of 25 scenarios reached the "
         f"report")
+
+
+def test_the_golden_authority_boundary_obeys_the_explicit_selection(monkeypatch, capsys):
+    from tools import run_goldens
+
+    class AuthorityBoundaryReached(Exception):
+        pass
+
+    def reached():
+        raise AuthorityBoundaryReached
+
+    monkeypatch.setattr(run_goldens, "check_authority", reached)
+    monkeypatch.setattr(sys, "argv", ["run_goldens.py", "--skip-authority"])
+    assert run_goldens.main() == 0
+    assert "AUTHORITY [E-002]" not in capsys.readouterr().out
+    monkeypatch.setattr(sys, "argv", ["run_goldens.py"])
+    with pytest.raises(AuthorityBoundaryReached):
+        run_goldens.main()
 
 
 def test_a_failing_step_names_what_failed():

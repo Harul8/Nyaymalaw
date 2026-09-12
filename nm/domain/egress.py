@@ -105,6 +105,9 @@ class Policy:
     #: Regions other than `in` that a named legal review has admitted, each
     #: with the review that admitted it. Empty is the correct default.
     approved_foreign_regions: dict[str, str] = field(default_factory=dict)
+    #: Loader failures are not an unexplained empty inventory. These messages
+    #: describe shape/availability only and never contain configuration values.
+    problems: tuple[str, ...] = ()
 
     def find(self, processor_id: str) -> Processor | None:
         for row in self.processors:
@@ -120,6 +123,8 @@ def refuse(route: Route, policy: Policy) -> list[str]:
     content-free audit identifies the refusal, and a message quoting what it
     refused to send defeats the control it is part of.
     """
+    if policy.problems:
+        return list(policy.problems)
     bad: list[str] = []
 
     if not str(route.processor_id or "").strip():

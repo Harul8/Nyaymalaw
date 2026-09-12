@@ -20,9 +20,11 @@ from datetime import date
 from enum import Enum, nonmember
 from typing import Literal
 
+from nm.domain.intake import ReadQuality
 from nm.domain.spoken import Spoken
 from nm.domain.text import fold, refuses_blank_text
 from nm.domain.traceability import implements
+from nm.domain.turn_receipt import TurnReceipt
 
 # --------------------------------------------------------------------- ids ---
 MatterId = str
@@ -190,8 +192,16 @@ class Fact:
     basis: FactBasis = FactBasis.NOT_ASSESSED
     basis_source: str | None = None
     weight: Weight = Weight.NOT_ASSESSED
+    read_quality: ReadQuality = ReadQuality.UNREAD
+    """Extraction quality, independent of legal certainty and confirmation."""
+    version: int = 1
+    """Version of this proposition; old records load as their first version."""
 
     def __post_init__(self) -> None:
+        if not isinstance(self.read_quality, ReadQuality):
+            raise ValueError("a fact's extraction quality must be a ReadQuality")
+        if not isinstance(self.version, int) or isinstance(self.version, bool) or self.version < 1:
+            raise ValueError("a proposition version must be a positive integer")
         needs_source = (FactBasis.DOCUMENT, FactBasis.HEARSAY, FactBasis.INFERENCE)
         if self.basis in needs_source and not (self.basis_source or "").strip():
             # C1: never record a source for a basis that points nowhere.
@@ -428,8 +438,11 @@ class Thread:
     a reading: a persisted derivation that can disagree with the
     computation behind it is the three-stores defect, and the only reason
     it does not arise here is that every deriving turn replaces it whole.
-    A turn that could not compute it writes nothing and leaves the section
-    reading `not_assessed`.
+    Assessment provenance is the existing `"deadlines" in Thread.assessed`
+    marker, written only when the register phase produces a result. The empty
+    default alone means not assessed. Legacy dated rows remain visible without
+    manufacturing this marker. A turn unable to compute a register preserves
+    any previously recorded register and assessment; it does not reassess it.
 
     Untyped for the cycle reason `issues` and `proof` carry --
     `nm.core.deadlines` imports this module.
@@ -696,11 +709,35 @@ class Matter:
     Expiry never removes one. What lapses is the permission, not the history.
     """
 
+    urgency_records: tuple[object, ...] = ()
+    """Manual per-danger UrgencyRegister rows; permission expiry never resolves them."""
+    urgency_operations: tuple[object, ...] = ()
+    """Immutable keyed acceptance of urgency recording and explicit resolution."""
+
     authority_refusals: tuple[object, ...] = ()
     """UNAUTHORISED ATTEMPTS, KEPT. BK-63-AC1 requires that a refused
     operation is refused AND RECORDED, and a refusal that exists only as an
     HTTP status is one nobody can review. Each holds who attempted what and
     why it was refused; none holds any client material."""
+
+    authority_bindings: tuple[object, ...] = ()
+    """Trusted, expiring matter-authority grants; never authored by commission HTTP."""
+    decisions: tuple[object, ...] = ()
+    """Attributable internal decision receipts. No record performs an external act."""
+    commission_invalidations: tuple[object, ...] = ()
+    """Prior scope assessments reopened by changed instructions, with their reason."""
+    emergency_triage: tuple[object, ...] = ()
+    """Bounded protective handoffs, not legal conclusions or established facts."""
+    uploads: dict[str, dict] = field(default_factory=dict)
+    """Original receipt records; the same sealed matter CAS owns their publication.
+
+    Chunk objects are immutable, sealed and never legal facts. Quarantine,
+    receipt integrity and reading remain separate states.
+    """
+    intake_request_key: str = ""
+    """Idempotency identity for an upload-first empty matter shell."""
+    intake_opening_offer: dict[str, object] = field(default_factory=dict)
+    """Immutable normalized opening instructions, never derived from later edits."""
 
     reservations: tuple[object, ...] = ()
     """E5. POSITIONS THIS PRODUCT TOOK THAT THE ADVOCATE WENT AGAINST.
@@ -794,6 +831,13 @@ class Matter:
     """
 
     turns_applied: tuple[TurnId, ...] = ()
+    turn_receipts: tuple[TurnReceipt, ...] = ()
+    """Approved outputs and exact original-offer identities, atomic with the file.
+
+    An archival transcript is not this receipt: it may hold a withheld draft
+    or outlive a failed commit. Legacy absence proves neither release nor an
+    exact replay identity.
+    """
     asked: tuple[AskedQuestion, ...] = ()
     """Every question put to the advocate, and whether it came back.
 
@@ -956,6 +1000,10 @@ class Matter:
             raise ValueError(
                 f"fact {fact.id} is not on this matter, so there is nothing "
                 f"to amend. `with_fact` is how a new one is added.")
+        held = next(f for f in self.facts if f.id == fact.id)
+        if fact == held:
+            return self
+        fact = replace(fact, version=held.version + 1)
         return replace(
             self, facts=tuple(fact if f.id == fact.id else f
                               for f in self.facts),

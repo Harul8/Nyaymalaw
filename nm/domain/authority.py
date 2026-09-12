@@ -227,3 +227,56 @@ def permits(actor_id: str, capacity: ActingAs, act: Act) -> Ruling:
         why=f"{actor_id} is recorded as {capacity.value} on this matter and "
             f"{capacity.value} may {sorted(a.value for a in allowed)}; "
             f"{act.value} is not among them")
+
+
+def bind_authority(*, actor_id: str, capacity: ActingAs, issued_by: str,
+                   basis: str, commission_version: int, issued_at, expires_at) -> dict:
+    """Trusted provisioning contract, NOT an HTTP or commission field.
+
+    The provisioning caller must authenticate the grantor and check the named
+    authority evidence. This pure constructor records that decision; it cannot
+    verify a signature or turn an authored instruction into permission.
+    """
+    if not all(isinstance(v, str) and v.strip()
+               for v in (actor_id, issued_by, basis)):
+        raise ValueError("an authority binding needs actor, grantor and basis")
+    if actor_id == issued_by or capacity is ActingAs.UNKNOWN:
+        raise ValueError("self-issued or unknown authority cannot grant access")
+    if commission_version < 1 or expires_at <= issued_at:
+        raise ValueError("authority needs a commission version and bounded validity")
+    return {"actor_id": actor_id, "capacity": capacity.value,
+            "issued_by": issued_by, "basis": basis,
+            "commission_version": commission_version,
+            "issued_at": issued_at.isoformat(), "expires_at": expires_at.isoformat(),
+            "revoked_at": None}
+
+
+def capacity_for(actor_id: str, bindings: tuple, commission_version: int,
+                 now, claimed=None) -> ActingAs:
+    """Resolve trusted authority now, never from the commission it authorises.
+
+    Version, expiry and revocation are checked at the point of use. Invalid
+    historic records confer nothing. Only a narrower request may override a
+    binding. Absence leaves the authenticated advocate in the advising role.
+    """
+    from datetime import datetime
+
+    if claimed == ActingAs.ASSISTING.value:
+        return ActingAs.ASSISTING
+    for row in reversed(bindings or ()):
+        if not isinstance(row, dict) or row.get("actor_id") != actor_id:
+            continue
+        try:
+            issued = datetime.fromisoformat(row["issued_at"])
+            expires = datetime.fromisoformat(row["expires_at"])
+            capacity = ActingAs(row["capacity"])
+            if (row.get("issued_by") and row["issued_by"] != actor_id
+                    and str(row.get("basis", "")).strip()
+                    and row.get("commission_version") == commission_version
+                    and not row.get("revoked_at") and issued <= now < expires):
+                return capacity
+        except (KeyError, TypeError, ValueError):
+            pass
+        # A newer revocation/expiry must not revive an older grant.
+        return ActingAs.ADVISING
+    return ActingAs.ADVISING

@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "record_type": "bounded_conformance_repair_work_record",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "packets": ["P02"],
+  "criteria": ["BK-31-AC20"],
+  "start": {
+    "state": "READY_FOR_BOUNDED_ENGINEERING_REPAIR",
+    "authority": "User-authorised exact-base conformance repair; isolated synthetic engineering only",
+    "outcome": "A signed-in advocate can replace compromised recovery codes, while failed sensitive authentication attempts receive the existing bounded pause before password verification or credential mutation.",
+    "finding": "Source inspection: register, recover and login consult attempts.verdict, but reauthenticate and recovery-code rotation only record failures. P02 explicitly requires rate-limited sensitive failures to refuse. No runtime reproduction has yet run.",
+    "defect_shapes": ["S2", "S8", "S9"],
+    "graph": {"built_at_sha": "a3d9c47764eb2f53c5bc486076df423b21488158", "files": 355, "nodes": 4738, "limitation": "Dynamic directory dispatch has no statically visible callers; all five HTTP entry points were verified in source."},
+    "population": ["POST /api/register", "POST /api/recover", "POST /api/login", "POST /api/reauthenticate", "POST /api/recovery-codes/rotate"],
+    "mechanism": "One HTTP admission helper reuses nm.domain.attempts policy for all five existing failure-counted authentication doors. Sensitive directory methods receive the observed connection source so one failure contributes once to both account and source counters. No password, proof, code or device cookie is a rate-limit identity.",
+    "compatibility": "Existing thresholds and 15-minute window stay unchanged. Existing sign-in availability policy for unavailable attempt storage remains explicit; this bounded repair does not change deployment policy. Throttling emits 429 and Retry-After; refusal does not spend proof, change recovery generation or revoke sessions.",
+    "test_contract_correction": "Coordinator approved replacing three source-location-only assertions in test_the_door_counts_wrong_answers.py. Their promises are unchanged: admission precedes credential derivation, refusal is 429 rather than 401, and unavailable counter preserves sign-in while health discloses NOT RUNNING. Literal source searches inside api.login cannot follow extraction into the single shared helper; replacements drive the real HTTP path, record consumer calls and assert actual health bytes. Domain policy and existing test names remain unchanged; no threshold or forbidden outcome is weakened.",
+    "proof_plan": ["Existing successful rotation remains positive control", "Both sensitive routes stop before their directory consumer at each existing account/source limit", "Failures record the observed source exactly once", "Source limits transfer across distinct accounts", "Changing device or proxy-supplied headers cannot reset source identity", "Window expiry permits legitimate use again", "Admission bypass mutation restores the forbidden call and is rejected by the same witness"],
+    "exclusions": ["No P09 strong-factor or confidential-profile completion claim", "No session-revocation concurrency redesign", "No parallel P18/P21 code, real model, live data, external approval or counsel signature", "No current-browser proof or PASS until separately executed"]
+  },
+  "build": {
+    "state": "BOUNDED_ENGINEERING_CHECKS_PASSED",
+    "files": ["nm/edge/api.py", "nm/ports/directory.py", "nm/adapters/store/directory.py", "tests/test_the_served_rotation_path.py", "tests/test_the_door_counts_wrong_answers.py"],
+    "mechanism": "All five routes call _admit_auth_attempt; reauthenticate and rotate pass request.client.host into the existing single failure-recording owner. No authored threshold was changed. A rejected attempt returns 429 plus a positive Retry-After before consumer invocation.",
+    "proof_written_before_implementation": true,
+    "added_case_count": 14,
+    "focused_test_population": ["tests/test_the_served_rotation_path.py", "tests/test_recovery_codes_are_replaced_safely.py", "tests/test_the_rotation_surface_keeps_no_secrets.py", "tests/test_the_door_counts_wrong_answers.py", "tests/test_account_recovery.py", "tests/test_enrolment_is_authorised.py"],
+    "checks": ["git diff --check on owned code/test files: no whitespace problems"],
+    "test_result": "PASS_FOR_RECORDED_FOCUSED_POPULATION_ONLY",
+    "test_execution": {"runner": "coordinating agent", "report": ".nm/conformance/access.xml", "tests": 90, "failures": 0, "errors": 0, "skipped": 0, "elapsed_seconds": 23.300, "independent_report_check": "JUnit aggregate and all six class populations read from actual report; not a full Class-A/current-identity/browser attestation"},
+    "limitations": ["No final Class-A or browser verdict issued", "The existing unavailable-counter availability policy is preserved, not represented as confidential deployment assurance", "Session-revocation versus rotation race remains a separately unmeasured concurrency hypothesis"]
+  },
+  "signoff": {"state": "NOT_RUN", "claim": "No completion or evidence PASS is created by this work record."}
+}

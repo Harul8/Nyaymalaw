@@ -81,6 +81,7 @@ from nm.knowledge.acquisition import (  # noqa: E402
     AcquisitionScope,
     JudgmentCandidate,
     SelectionState,
+    acquisition_dates,
     select_candidates,
     stage_acquisition,
 )
@@ -125,7 +126,8 @@ def _post(path: str, params: dict) -> dict:
 
 # --------------------------------------------------------------------- plan ---
 
-def plan(years: list[int], doctype: str, per_year: int) -> list[dict]:
+def plan(years: list[int], doctype: str, per_year: int, *,
+         from_date: date | None = None, to_date: date | None = None) -> list[dict]:
     """What would be requested, and roughly what it would cost.
 
     A PLAN IS NOT A DRY RUN OF THE REAL THING -- it makes no call at all. The
@@ -133,14 +135,15 @@ def plan(years: list[int], doctype: str, per_year: int) -> list[dict]:
     do is show the shape of the spend before any of it happens.
     """
     rows = []
+    if not years:
+        raise ValueError("acquisition needs a non-empty year population")
     for year in years:
-        to_month = "08" if year == 2026 else "12"
-        to_day = "31" if to_month == "12" else "31"
+        start, end = acquisition_dates(year, from_date=from_date, to_date=to_date)
         rows.append({
             "year": year,
             "doctypes": doctype,
-            "fromdate": f"01-01-{year}",
-            "todate": f"{to_day}-{to_month}-{year}",
+            "fromdate": start.strftime("%d-%m-%Y"),
+            "todate": end.strftime("%d-%m-%Y"),
             "wanted": per_year,
             "search_pages": "1 per 10 results, so >= "
                             f"{max(1, per_year // 10)} for a relevance pass",
@@ -203,10 +206,11 @@ def candidate(document_row: dict, *, doctype: str,
 
 
 def run(year: int, doctype: str, want: int, cap: int, delay: float,
-        query: str, authorization_id: str) -> int:
+        query: str, authorization_id: str, *,
+        from_date: date | None = None, to_date: date | None = None) -> int:
     """Fetch one exact scope, then use the shared explainable selection rule."""
-    to_month_day = "31-08" if year == 2026 else "31-12"
-    fromdate, todate = f"01-01-{year}", f"{to_month_day}-{year}"
+    start, end = acquisition_dates(year, from_date=from_date, to_date=to_date)
+    fromdate, todate = start.strftime("%d-%m-%Y"), end.strftime("%d-%m-%Y")
 
     candidates: list[dict] = []
     page = 0
@@ -242,8 +246,8 @@ def run(year: int, doctype: str, want: int, cap: int, delay: float,
         source="api.indiankanoon.org",
         jurisdiction=doctype,
         document_types=(doctype,),
-        from_date=date(year, 1, 1),
-        to_date=date(year, 8, 31) if year == 2026 else date(year, 12, 31),
+        from_date=start,
+        to_date=end,
         discovery_budget=cap,
         selection_budget=min(want, cap),
         authorization_id=authorization_id,
@@ -280,6 +284,10 @@ def main() -> int:
     ap.add_argument("--authorization-id",
                     help="approval record for this exact API scope and run")
     ap.add_argument("--year", type=int, action="append")
+    ap.add_argument("--from-date", type=date.fromisoformat,
+                    help="inclusive approved source-date lower bound, YYYY-MM-DD")
+    ap.add_argument("--to-date", type=date.fromisoformat,
+                    help="inclusive approved source-date upper bound, YYYY-MM-DD")
     ap.add_argument("--doctype", default=TELANGANA)
     ap.add_argument("--query", default="",
                     help="base search text; empty means the whole period")
@@ -289,10 +297,15 @@ def main() -> int:
     ap.add_argument("--delay", type=float, default=DEFAULT_DELAY)
     args = ap.parse_args()
 
-    years = args.year or list(range(2019, 2027))
+    years = args.year or (list(range(args.from_date.year, args.to_date.year + 1))
+                         if args.from_date and args.to_date else list(range(2019, 2027)))
+    try:
+        rows = plan(years, args.doctype, args.per_year,
+                    from_date=args.from_date, to_date=args.to_date)
+    except ValueError as exc:
+        ap.error(str(exc))
 
     if args.plan or not args.run:
-        rows = plan(years, args.doctype, args.per_year)
         print("=" * 76)
         print("PLAN — no call is made by this command")
         print("=" * 76)
@@ -322,11 +335,14 @@ def main() -> int:
 
     if not (args.authorization_id or "").strip():
         ap.error("--run requires --authorization-id for this exact scope")
+    if args.from_date is None or args.to_date is None:
+        ap.error("--run requires explicit --from-date and --to-date for the approved scope")
     token()
     total = 0
     for year in years:
         total += run(year, args.doctype, args.per_year, args.cap, args.delay,
-                     args.query, args.authorization_id)
+                     args.query, args.authorization_id,
+                     from_date=args.from_date, to_date=args.to_date)
     print(f"\n  {total} judgments staged in {STAGING}")
     print("  NOTHING HAS ENTERED THE CORPUS. Review the staged manifests, then "
           "promote deliberately.")

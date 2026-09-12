@@ -1,4 +1,5 @@
 """Static execution contracts. These checks neither run NM nor approve a release."""
+
 from __future__ import annotations
 
 from collections import Counter
@@ -6,9 +7,12 @@ from pathlib import Path
 
 
 def strings(value: object, *, nonempty: bool = True) -> bool:
-    return (isinstance(value, list) and (bool(value) or not nonempty)
-            and all(isinstance(x, str) and x.strip() for x in value)
-            and len(value) == len(set(value)))
+    return (
+        isinstance(value, list)
+        and (bool(value) or not nonempty)
+        and all(isinstance(x, str) and x.strip() for x in value)
+        and len(value) == len(set(value))
+    )
 
 
 def nonblank(value: object) -> bool:
@@ -21,8 +25,9 @@ def cycles(edges: dict[str, list[str]]) -> list[str]:
 
     def visit(node: str) -> None:
         if node in stack:
-            errors.append("combined dependency cycle: "
-                          + " -> ".join(stack[stack.index(node):] + [node]))
+            errors.append(
+                "combined dependency cycle: " + " -> ".join(stack[stack.index(node) :] + [node])
+            )
             return
         if node in seen:
             return
@@ -38,24 +43,46 @@ def cycles(edges: dict[str, list[str]]) -> list[str]:
 
 
 CHOICE_FIELDS = {
-    "id", "title", "owner_criteria", "recommendation", "rationale", "fallback",
-    "approver", "local_synthetic", "approval_required_for", "approval", "sources",
+    "id",
+    "title",
+    "owner_criteria",
+    "recommendation",
+    "rationale",
+    "fallback",
+    "approver",
+    "local_synthetic",
+    "approval_required_for",
+    "approval",
+    "sources",
 }
 APPROVAL_SCOPES = {
-    "confidential_pilot", "production", "approved_real_model", "paid_or_long_load",
-    "procurement", "new_coverage_pack", "external_action_activation",
+    "confidential_pilot",
+    "production",
+    "approved_real_model",
+    "paid_or_long_load",
+    "procurement",
+    "new_coverage_pack",
+    "external_action_activation",
 }
 EXECUTION_POLICY_FIELDS = {
-    "order", "module_semantics", "criterion_semantics", "evidence_semantics",
-    "path_semantics", "final_criteria", "proof_semantics", "completion_edges",
+    "order",
+    "module_semantics",
+    "criterion_semantics",
+    "evidence_semantics",
+    "path_semantics",
+    "final_criteria",
+    "proof_semantics",
+    "completion_edges",
 }
 
 
 def check_decisions(catalog: dict, criteria: set[str]) -> list[str]:
     errors = []
-    if (not isinstance(catalog, dict)
-            or set(catalog) != {"schema", "note", "choices"}
-            or catalog.get("schema") != 1):
+    if (
+        not isinstance(catalog, dict)
+        or set(catalog) != {"schema", "note", "choices"}
+        or catalog.get("schema") != 1
+    ):
         return ["decisions: malformed schema or fields"]
     rows = catalog.get("choices")
     if not isinstance(rows, list) or not rows:
@@ -79,12 +106,13 @@ def check_decisions(catalog: dict, criteria: set[str]) -> list[str]:
         if row["local_synthetic"] != "permitted_with_stated_fallback":
             errors.append(f"{label}: unknown local permission policy")
         scopes = row["approval_required_for"]
-        if (not strings(scopes)
-                or not {"confidential_pilot", "production"} <= set(scopes)
-                or not set(scopes) <= APPROVAL_SCOPES):
+        if (
+            not strings(scopes)
+            or not {"confidential_pilot", "production"} <= set(scopes)
+            or not set(scopes) <= APPROVAL_SCOPES
+        ):
             errors.append(f"{label}: confidential approval boundary missing")
-        elif (label in {"CHOICE-05", "CHOICE-06"}
-                and "approved_real_model" not in scopes):
+        elif label in {"CHOICE-05", "CHOICE-06"} and "approved_real_model" not in scopes:
             errors.append(f"{label}: real-model approval boundary missing")
         elif label == "CHOICE-06" and "paid_or_long_load" not in scopes:
             errors.append(f"{label}: paid/load approval boundary missing")
@@ -102,26 +130,59 @@ def check_decisions(catalog: dict, criteria: set[str]) -> list[str]:
 
 
 PACKET_FIELDS = {
-    "id", "module", "title", "kind", "criteria", "prerequisites", "decisions",
-    "commands", "boundaries", "inputs", "outputs", "steps", "proof", "expected",
-    "rollback", "final_criteria", "requires_completed_items",
+    "id",
+    "module",
+    "title",
+    "kind",
+    "criteria",
+    "prerequisites",
+    "decisions",
+    "commands",
+    "boundaries",
+    "inputs",
+    "outputs",
+    "steps",
+    "proof",
+    "expected",
+    "rollback",
+    "final_criteria",
+    "requires_completed_items",
 }
 
 
-def check_packets(catalog: dict, registry: dict, modules: dict, commands: set[str],
-                  decisions: set[str], scenarios: set[str], root: Path) -> list[str]:
+def check_packets(
+    catalog: dict,
+    registry: dict,
+    modules: dict,
+    commands: set[str],
+    decisions: set[str],
+    scenarios: set[str],
+    root: Path,
+) -> list[str]:
     errors: list[str] = []
-    expected_fields = {"schema", "purpose", "readiness_rule", "execution_policy",
-                       "packets", "planning_delivery_exclusions"}
-    if (not isinstance(catalog, dict) or set(catalog) != expected_fields
-            or catalog.get("schema") != 1):
+    expected_fields = {
+        "schema",
+        "purpose",
+        "readiness_rule",
+        "execution_policy",
+        "packets",
+        "planning_delivery_exclusions",
+    }
+    if (
+        not isinstance(catalog, dict)
+        or set(catalog) != expected_fields
+        or catalog.get("schema") != 1
+    ):
         return ["packets: malformed schema or fields"]
     for field in ("purpose", "readiness_rule"):
         if not nonblank(catalog[field]):
             errors.append(f"packets: missing {field}")
     policy = catalog["execution_policy"]
-    if (not isinstance(policy, dict) or set(policy) != EXECUTION_POLICY_FIELDS
-            or any(not nonblank(value) for value in policy.values())):
+    if (
+        not isinstance(policy, dict)
+        or set(policy) != EXECUTION_POLICY_FIELDS
+        or any(not nonblank(value) for value in policy.values())
+    ):
         errors.append("packets: execution policy missing, unknown or blank")
     rows = catalog.get("packets")
     if not isinstance(rows, list) or not rows:
@@ -138,11 +199,20 @@ def check_packets(catalog: dict, registry: dict, modules: dict, commands: set[st
     module_ids = {r["id"] for r in modules["modules"]}
     exclusions = catalog["planning_delivery_exclusions"]
     planning_items = {"BK-87", "BK-89", "BK-90"}
-    if (not isinstance(exclusions, list) or len(exclusions) != len(planning_items)
-            or any(not isinstance(row, dict) or set(row) != {"item", "reason"}
-                   or not nonblank(row.get("reason")) for row in exclusions)
-            or {row.get("item") for row in exclusions if isinstance(row, dict)} != planning_items):
-        errors.append("packets: only the explained BK-87, BK-89 and BK-90 planning deliveries are excluded")
+    if (
+        not isinstance(exclusions, list)
+        or len(exclusions) != len(planning_items)
+        or any(
+            not isinstance(row, dict)
+            or set(row) != {"item", "reason"}
+            or not nonblank(row.get("reason"))
+            for row in exclusions
+        )
+        or {row.get("item") for row in exclusions if isinstance(row, dict)} != planning_items
+    ):
+        errors.append(
+            "packets: only the explained BK-87, BK-89 and BK-90 planning deliveries are excluded"
+        )
     required = set()
     for iid, item in items.items():
         if item.get("legacy") or item["delivery_status"] in {"deferred", "superseded"}:
@@ -160,9 +230,12 @@ def check_packets(catalog: dict, registry: dict, modules: dict, commands: set[st
     mapped_commands: set[str] = set()
     for row in rows:
         pid = row["id"]
-        if (not nonblank(row["module"]) or row["module"] not in module_ids
-                or not nonblank(row["kind"])
-                or row["kind"] not in {"implementation", "verification", "review", "release"}):
+        if (
+            not nonblank(row["module"])
+            or row["module"] not in module_ids
+            or not nonblank(row["kind"])
+            or row["kind"] not in {"implementation", "verification", "review", "release"}
+        ):
             errors.append(f"{pid}: unknown module or kind")
         for field in ("title", "rollback"):
             if not nonblank(row[field]):
@@ -174,13 +247,25 @@ def check_packets(catalog: dict, registry: dict, modules: dict, commands: set[st
             if not strings(row[field], nonempty=False):
                 errors.append(f"{pid}: malformed {field}")
         # Stop this row after a shape error instead of crashing on unhashable IDs.
-        if any(not strings(row[f], nonempty=False) for f in (
-                "criteria", "prerequisites", "commands", "final_criteria", "decisions",
-                "requires_completed_items")):
+        if any(
+            not strings(row[f], nonempty=False)
+            for f in (
+                "criteria",
+                "prerequisites",
+                "commands",
+                "final_criteria",
+                "decisions",
+                "requires_completed_items",
+            )
+        ):
             continue
-        for field, population in (("criteria", criteria), ("prerequisites", ids),
-                                  ("decisions", decisions), ("commands", commands),
-                                  ("requires_completed_items", items)):
+        for field, population in (
+            ("criteria", criteria),
+            ("prerequisites", ids),
+            ("decisions", decisions),
+            ("commands", commands),
+            ("requires_completed_items", items),
+        ):
             for ref in row[field]:
                 if ref not in population:
                     errors.append(f"{pid}: unknown {field} reference {ref}")
@@ -190,10 +275,12 @@ def check_packets(catalog: dict, registry: dict, modules: dict, commands: set[st
             contributors.setdefault(ac, []).append(pid)
             spec = criteria.get(ac, {})
             control = spec.get("negative_control") or {}
-            if (not nonblank(spec.get("requirement"))
-                    or not strings(spec.get("required_evidence"))
-                    or not nonblank(control.get("mutation"))
-                    or not nonblank(control.get("expected_failure"))):
+            if (
+                not nonblank(spec.get("requirement"))
+                or not strings(spec.get("required_evidence"))
+                or not nonblank(control.get("mutation"))
+                or not nonblank(control.get("expected_failure"))
+            ):
                 errors.append(f"{pid}: {ac} lacks criterion-specific proof specification")
         for ac in row["final_criteria"]:
             counts[ac] += 1
@@ -212,9 +299,12 @@ def check_packets(catalog: dict, registry: dict, modules: dict, commands: set[st
             errors.append(f"{pid}: missing source boundaries")
             continue
         for boundary in boundaries:
-            if (not isinstance(boundary, dict) or set(boundary) != {"path", "kind"}
-                    or not nonblank(boundary.get("path"))
-                    or boundary.get("kind") not in {"existing", "planned"}):
+            if (
+                not isinstance(boundary, dict)
+                or set(boundary) != {"path", "kind"}
+                or not nonblank(boundary.get("path"))
+                or boundary.get("kind") not in {"existing", "planned"}
+            ):
                 errors.append(f"{pid}: malformed source boundary")
                 continue
             path = (root / boundary["path"]).resolve()
@@ -236,11 +326,13 @@ def check_packets(catalog: dict, registry: dict, modules: dict, commands: set[st
         dependencies = list(item.get("depends_on") or [])
         if any(dep not in items for dep in dependencies):
             errors.append(f"{iid}: unknown completion dependency")
-        edges[iid] = dependencies + sorted({final[ac["id"]]
-                        for ac in item.get("acceptance") or [] if ac["id"] in final})
+        edges[iid] = dependencies + sorted(
+            {final[ac["id"]] for ac in item.get("acceptance") or [] if ac["id"] in final}
+        )
     errors.extend(cycles(edges))
-    packet_edges = {r["id"]: r["prerequisites"] for r in rows
-                    if strings(r["prerequisites"], nonempty=False)}
+    packet_edges = {
+        r["id"]: r["prerequisites"] for r in rows if strings(r["prerequisites"], nonempty=False)
+    }
 
     def ancestors(pid: str) -> set[str]:
         found, todo = set(), list(packet_edges.get(pid, []))

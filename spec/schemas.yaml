@@ -40,6 +40,19 @@ schemas:
     type: enum {documented, asserted}
     required: true
     why: An assertion and a document are different evidential positions and must not merge on the board.
+  - field: read_quality
+    type: enum {clear, uncertain, unread}
+    required: true
+    why: Extraction readability, independent of evidential certainty and advocate confirmation. Defaults
+      to unread; clear does not establish authenticity or legal truth. A document-sourced proposition
+      carries this state beside its source into the reasoning context; an advocate statement is not represented
+      as an OCR result.
+  - field: version
+    type: positive integer
+    required: true
+    why: 'Revision of this stable proposition identity; starts at 1 and advances on correction. This counter
+      does not satisfy the separate requirement to retain the prior statement and its full source lineage:
+      immutable historical revision storage remains required.'
   - field: provenance
     type: Provenance
     required: true

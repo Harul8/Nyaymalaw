@@ -143,13 +143,7 @@ def _attribution_of(fact: Fact) -> Attribution:
     nothing wearing the shape of a citation.
     """
     provenance = getattr(fact, "provenance", None)
-    quality = getattr(fact, "read_quality", None)
-    if not isinstance(quality, ReadQuality):
-        # UNREAD IS THE HONEST DEFAULT for a fact nothing extracted: the
-        # advocate typed it, so no machine read anything and claiming CLEAR
-        # would be an extraction confidence for an extraction that never
-        # happened.
-        quality = ReadQuality.UNREAD
+    quality = fact.read_quality
     if provenance is None:
         return Attribution(read_quality=quality)
     return Attribution(
@@ -168,7 +162,7 @@ def build(matter: Matter) -> dict:
               confirmed=_confirmation(f), attribution=_attribution_of(f),
               conflicts_with=tuple(str(x) for x in (f.conflicts_with or ())),
               superseded_by=str(f.superseded_by or ""),
-              version=int(getattr(f, "version", 1) or 1))
+              version=f.version)
         for f in (matter.facts or ())]
 
     live = [e for e in entries if not e.superseded_by]

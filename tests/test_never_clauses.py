@@ -446,7 +446,7 @@ def test_a_matter_that_cannot_be_read_does_not_vanish_from_the_list(tmp_path, cl
 
     store = FileMatterStore(tmp_path, key=KEY)
     good = Matter.create(advocate_id="adv", title="a readable matter")
-    store.commit(good, expected_version=None)
+    store.commit(good, expected_version=0)
     # A file that is on disk and cannot be decoded -- a truncated write, a
     # rotated key, a corrupted volume. All of them look like this.
     (tmp_path / "matters" / "mat_corrupted.nm").write_bytes(b"not decryptable")
@@ -522,7 +522,9 @@ def test_neither_board_carries_analysis(client):
     # be, and it carries its consequence rather than an argument about it.
     thread_keys = {"thread_id", "thread", "our_client_is", "side", "against",
                    "forum", "stage", "next_deadline", "next_deadline_status",
-                   "passed_deadlines", "loud", "conflict", "deferred_reason"}
+                   "passed_deadlines", "loud", "conflict", "deferred_reason",
+                   "deadline_assessment", "deadline_unreadable", "deadline_unassessed",
+                   "uncomputed_deadlines"}
     for row in board["threads"]:
         extra = set(row) - thread_keys
         assert not extra, (
@@ -543,7 +545,8 @@ def test_neither_board_carries_analysis(client):
     # name is on the cover of every brief ever written.
     matter_keys = {"matter_id", "matter", "client", "opponent", "threads",
                    "next_deadline", "next_deadline_status", "blocked",
-                   "last_touched"}
+                   "last_touched", "deadline_assessment", "deadline_unreadable",
+                   "deadline_unassessed", "passed_deadlines", "uncomputed_deadlines"}
     for row in listing["matters"]:
         extra = set(row) - matter_keys
         assert not extra, f"the matter list carries {sorted(extra)}"

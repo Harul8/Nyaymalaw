@@ -228,6 +228,7 @@ def test_the_query_builder_never_scores_a_title_against_a_title():
 
 @refuses("A4", 3)
 @pytest.mark.eval_id("E-116")
+@pytest.mark.class_c
 def test_every_result_says_which_law_it_searched():
     """THE CORPUS IS TELANGANA AND THE UNION, and a result that does not say
     so is read as an answer about wherever the advocate is asking from.
@@ -248,9 +249,9 @@ def test_every_result_says_which_law_it_searched():
         "the index answered without saying what law it covers")
     assert "Telangana" in result.identity.scope, result.identity.scope
 
-    # AND IT HAS NO DEFAULT ON THE TYPE. A field that defaults quietly becomes
-    # a field nobody sets, and a wrong scope then looks exactly like a right
-    # one. Constructing without it must be a TypeError.
+
+def test_the_index_identity_cannot_default_its_legal_scope():
+    """The independent type refusal remains Class A without an attached index."""
     with pytest.raises(TypeError):
         IndexIdentity(name="p", built_at="x", source="y", corpus_version="z",
                       held=1, of_source=2)

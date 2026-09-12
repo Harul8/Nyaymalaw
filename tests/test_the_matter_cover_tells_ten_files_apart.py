@@ -94,7 +94,8 @@ def test_the_list_names_the_client_and_not_the_advocate(client):
     """The column that exists to tell files apart must tell them apart."""
     _open(client, parties={"Ramesh Traders": "client",
                            "Kiran Steels": "adverse"},
-          release={"scope": "recovery", "capacity": "instructs directly"})
+          release={"scope": "recovery"},
+          capacity={"state": "not_in_doubt", "basis": "explicit fixture assessment"})
 
     rows = client.get("/api/matters").json()["matters"]
     assert rows, "the list is empty"
@@ -109,7 +110,8 @@ def test_the_list_names_the_client_and_not_the_advocate(client):
 def test_last_worked_is_a_date_and_not_a_write_count(client):
     """`last_touched` was `m.version`. A counter is not a time."""
     _open(client, parties={"A Co": "client", "B Co": "adverse"},
-          release={"scope": "recovery", "capacity": "instructs directly"})
+          release={"scope": "recovery"},
+          capacity={"state": "not_in_doubt", "basis": "explicit fixture assessment"})
     row = client.get("/api/matters").json()["matters"][0]
 
     assert row["last_touched"] == TODAY.isoformat(), (
@@ -130,7 +132,8 @@ def test_not_assessed_and_none_are_not_the_same_row(client):
     thread, so a matter that has been advised on reports a real state.
     """
     _open(client, parties={"C Co": "client", "D Co": "adverse"},
-          release={"scope": "recovery", "capacity": "instructs directly"})
+          release={"scope": "recovery"},
+          capacity={"state": "not_in_doubt", "basis": "explicit fixture assessment"})
     row = client.get("/api/matters").json()["matters"][0]
 
     assert row["next_deadline_status"] != "not_assessed", (
@@ -149,8 +152,8 @@ def test_the_board_reads_the_register_too(client):
     """The same defect, one route over. Both projections take a register and
     both were called with `None`."""
     matter_id = _open(client, parties={"E Co": "client", "F Co": "adverse"},
-                      release={"scope": "recovery",
-                               "capacity": "instructs directly"})
+                      release={"scope": "recovery"},
+                      capacity={"state": "not_in_doubt", "basis": "explicit fixture assessment"})
     board = client.get(f"/api/matters/{matter_id}").json()
     states = {t["next_deadline_status"] for t in board["threads"]}
 

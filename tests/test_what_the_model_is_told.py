@@ -51,6 +51,8 @@ from dataclasses import replace
 import pytest
 
 from nm.domain import summary
+from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
+from nm.domain.intake import ReadQuality
 from nm.domain.matter import (
     Basis,
     Certainty,
@@ -62,6 +64,7 @@ from nm.domain.matter import (
     Role,
     Thread,
 )
+from nm.domain.turn_receipt import TurnReceipt, answer_payload
 
 pytestmark = pytest.mark.class_a
 
@@ -143,6 +146,11 @@ WITHHELD: dict[str, str] = {
     "Matter.advocate_id": "structure. Who is signed in decides access, not "
                           "advice.",
     "Matter.version": "structure — the optimistic-concurrency counter.",
+    "Matter.intake_request_key":
+        "WITHHELD. A stable request identity for opening/retrying the intake "
+        "shell, not a case fact. The intake receipt consumer uses it to avoid "
+        "duplicate matters. REOPENS only for a separate operational audit "
+        "consumer, never as legal evidence in the reasoning account.",
     "Matter.title": "derived FROM the account, so telling it back would "
                     "spend budget restating the first line of the file.",
     "Thread.id": "an identifier, as above.",
@@ -151,6 +159,32 @@ WITHHELD: dict[str, str] = {
                            "account; the pointer is not content.",
     "Fact.id": "an identifier. It is used to PIN and to supersede, both "
                "inside the product.",
+    "Fact.version":
+        "WITHHELD. A proposition revision counter, not the content of a "
+        "correction or its evidential weight. The current canonical Fact "
+        "statement is carried. REOPENS when a history-aware comparison "
+        "consumer is built; a number alone must not pretend to preserve "
+        "the missing immutable historical revision lineage.",
+    "TurnReceipt.turn_id":
+        "WITHHELD. Release/replay identity, consumed by the exact receipt "
+        "ledger, not a new fact or legal authority for the reasoning model.",
+    "TurnReceipt.offer_fingerprint":
+        "WITHHELD. An integrity digest of an original operation offer. "
+        "Matching it authorises exact retry, not an inference about the case.",
+    "TurnReceipt.recorded_at":
+        "WITHHELD. Release-record time, not an event date, deadline or source "
+        "currency date. The historical response UI consumes it explicitly.",
+    "TurnReceipt.message":
+        "WITHHELD. A released operation's admitted instruction is retained "
+        "for attributed History, not reintroduced as an independent source. "
+        "Canonical admitted Facts already supply the account; refeeding an "
+        "archive duplicates evidence and can revive superseded instructions. "
+        "REOPENS only for an expressly scoped historical audit consumer.",
+    "TurnReceipt.input_admitted":
+        "WITHHELD. Input-persistence status is enforced by receipt and turn "
+        "owners; it is not a truth label or a model instruction. A false "
+        "value cannot retain an unadmitted message. REOPENS only for a "
+        "separate operational receipt explanation, not case reasoning.",
     "Provenance.turn": "structure — which turn recorded it.",
     "Provenance.span": "structure — offsets into the message.",
     "AskedQuestion.gate": "structure. The question's TEXT is carried; the "
@@ -177,6 +211,11 @@ WITHHELD: dict[str, str] = {
     "Fact.statement": "CARRIED. It is the account.",
     "Fact.date": "CARRIED, stamped at the head of the line.",
     "Fact.certainty": "CARRIED (B-094) where `documented`.",
+    "Fact.read_quality":
+        "CARRIED for document provenance in `_source`, in all three states, "
+        "with an explicit non-verification caveat. It qualifies extraction "
+        "readability, not advocate statements, authenticity or truth. The "
+        "raw advocate-words guard remains free of these product labels.",
     "Fact.basis": "CARRIED (B-094), with the third state said ONCE.",
     "Fact.basis_source": "CARRIED (B-094), beside the basis it evidences.",
     "Provenance.document": "CARRIED (B-093).",
@@ -414,6 +453,63 @@ def _matter_with(fact: Fact) -> tuple[Matter, Thread]:
                      chronology=("f1",))
     return replace(Matter.create(advocate_id="adv_1", title="a sale"),
                    facts=(fact,), threads=(thread,)), thread
+
+
+@pytest.mark.parametrize("quality", list(ReadQuality))
+def test_document_read_quality_qualifies_the_model_account_not_the_guard(quality):
+    fact = Fact(
+        id="f1", statement=STATEMENT, read_quality=quality,
+        provenance=Provenance(kind="document", turn="t1",
+                              document="sale_deed.pdf", page=3))
+    matter, thread = _matter_with(fact)
+    built = summary.build(matter, thread.id)
+    context = built.as_context()
+    assert "sale_deed.pdf p.3" in context
+    assert f"extraction {quality.value}" in context
+    assert "not verification of truth" in context
+    assert built.advocate_words == STATEMENT
+    assert "extraction" not in built.advocate_words
+
+
+@pytest.mark.parametrize("quality", list(ReadQuality))
+def test_an_advocate_statement_is_not_labelled_as_an_extracted_document(quality):
+    context = _context(read_quality=quality)
+    assert STATEMENT in context
+    assert "extraction" not in context
+    assert "not verification of truth" not in context
+
+
+@pytest.mark.parametrize("admitted", [True, False])
+def test_release_and_opening_receipts_cannot_reintroduce_narratives(admitted):
+    fact = Fact(id="f1", statement=STATEMENT, provenance=SAID)
+    matter, thread = _matter_with(fact)
+    original = summary.build(matter, thread.id)
+    historical = "earlier output must not become evidence"
+    receipt = TurnReceipt(
+        turn_id="historical-turn-identifier", offer_fingerprint="a" * 64,
+        recorded_at="2026-01-01T10:00:00+00:00",
+        answer=answer_payload(Answer(
+            route=Route.MATTER, mode=Mode.SHORT_QUESTION,
+            mode_statement="earlier-response-mode",
+            elements=(Element(kind=ElementKind.QUESTION, text=historical),))),
+        message="superseded historical instruction" if admitted else "",
+        input_admitted=admitted)
+    with_receipt = replace(
+        matter, intake_request_key="opening-request-identifier",
+        turn_receipts=(receipt,), turns_applied=(receipt.turn_id,))
+    observed = summary.build(with_receipt, thread.id)
+    assert observed.as_context() == original.as_context()
+    assert observed.advocate_words == original.advocate_words == STATEMENT
+    assert historical not in observed.as_context()
+    assert "superseded historical instruction" not in observed.as_context()
+
+
+def test_proposition_revision_changes_do_not_invent_new_case_content():
+    fact = Fact(id="f1", statement=STATEMENT, provenance=SAID)
+    matter, thread = _matter_with(fact)
+    revised = replace(matter, facts=(replace(fact, version=7),))
+    assert summary.build(revised, thread.id).as_context() == (
+        summary.build(matter, thread.id).as_context())
 
 
 def test_the_guard_input_carries_no_word_this_product_composed():

@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "record_type": "conformance_integration_diagnostic",
+  "owners": [
+    "BK-30",
+    "BK-69",
+    "BK-80",
+    "BK-85"
+  ],
+  "basis": "Cumulative frozen-tree gate failed after 860 seconds in Class-A; no stamp or PASS evidence was issued. This record describes repairs, not earned acceptance.",
+  "scope": "Pinned a3d9c47 isolated conformance worktree; excludes parallel delivery.",
+  "changes": [
+    "Authentication sweep now exercises every registered matter HTTP method and every path parameter using the router's converters. Five planted verb/nested-path cases require the unguarded handler actually to execute, then require the corresponding guarded route to refuse with 401. A GET-only 405 was not authentication evidence.",
+    "Eight exact FastAPI quarantine-upload endpoints are declared framework-reached, with the existing real route-table and served-browser controls as callers. No blanket decorator exemption was added.",
+    "MEDIA absence evidence now watches the media processing adapter directory, like the existing backup and support boundaries. A reachable domain quarantine policy is not a processor destination. Planting each of the four absent destinations remains a required positive control; introducing a media adapter after a harmless domain record changes the verdict. Original-byte UploadPort storage remains separately policed and quarantined. This does not claim MEDIA processing is implemented or approved."
+  ],
+  "validation": {
+    "status": "FOCUSED_PASS_NOT_FINAL_SIGNOFF",
+    "artifact": ".nm/conformance/class-a-repair-focused.xml",
+    "population": 301,
+    "passed": 301,
+    "failures": 0,
+    "skipped": 0,
+    "independent_review": "Separate read-only review confirmed all eight routes are registered, all three storage destinations are wrapped, and the absence-control correction does not claim media processing exists.",
+    "required": "A passing cumulative canonical Class-A and final frozen-tree browser/journey validation before promotion."
+  },
+  "final_verification": {
+    "status": "CURRENT_CANONICAL_AND_BROWSER_PASS",
+    "record": "a3-conformance-final.json#final_execution",
+    "actual_class_a_cases": 2997,
+    "passed": 2997,
+    "expanded_browser_passed": 50,
+    "canonical_journey_passed": 24,
+    "meaning": "Supersedes the historical focused-only or pending cumulative status above; full packet and release obligations stay open."
+  }
+}

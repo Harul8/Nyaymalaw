@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "kind": "engineering_change_record",
+  "baseline": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "observed_at": "2026-09-12",
+  "start": {
+    "scope": "Shared persisted deadline read and its matter-list/thread-board disclosures; coordinated cover projection uses the same result. No new deadline computation algorithms or parallel packets.",
+    "witness": "API _register_of discarded malformed stored rows but still marked the register present. Default Thread.deadlines=() also appeared assessed despite no actual register phase. These states could become a false no-deadlines report.",
+    "invariant": "Known valid deadlines remain visible, malformed rows remain counted with attributable diagnostics, and an empty collection is assessed-empty only with explicit persisted assessment provenance. Date/status computation remains with the existing deadline owner.",
+    "change": "Use the existing Thread.assessed marker written from the actual concluded register phase, strict shared persisted reconstruction, and RegisterRead carrying rows, unreadable diagnostics, unassessed/assessed thread IDs and the observed thread population. Legacy dated rows without the marker remain known rows, not invented proof of full assessment.",
+    "verification": "NOT_RUN. Add actual served mixed/malformed/default-empty/assessed-empty/legacy/restart controls plus persistence population. Parent owns all test execution."
+  },
+  "build": "IMPLEMENTED_PENDING_CENTRAL_VERIFICATION",
+  "implementation": {
+    "owner": "nm/core/deadlines.py: strict saved Deadline reconstruction and RegisterRead with row, failure and assessment populations; nm/edge/api.py shared _register_of delegates to this owner.",
+    "provenance": "Reused existing Thread.assessed, which the real turn settlement fills only from concluded phases. No duplicate marker, additional assessment algorithm or default empty-register proof was added. Thread field documentation and fully populated encrypted roundtrip now cover this existing provenance.",
+    "display": "The coordinated single deadline-window projection drives list, board and cover. app.js deadlineField keeps known dates alongside incomplete/unreadable/unassessed warnings and passed/uncomputed obligations; passed dates never come from a null next-live value.",
+    "authored_controls": "23 cases in tests/test_deadline_readback_never_manufactures_an_all_clear.py: two default/explicit empty assessments, zero-thread population, legacy known rows, thirteen malformed saved-row mutations alongside a valid row, two all-malformed/collection cases, assessed-empty plus unknown thread, mixed persisted restart, and two passed/uncomputed cases. Reads assert real served list/board/cover and encrypted population, with routing replaced by a raising sentinel. These controls are authored, not a claimed execution result.",
+    "related_controls": "Existing test_store_roundtrip fully populated matter now retains assessed deadline provenance and a real saved obligation; original field-equality assertions remain. Parent coordinates existing deadline/handover producer tests and cover/browser populations.",
+    "limits": "This closes shared read integrity and assessment disclosure only. It does not claim broader P22 deadline computation, legal applicability or external-model quality acceptance. No pytest, gate or browser execution was run by the delegated owner."
+  },
+  "test": "NOT_RUN",
+  "signoff": "NOT_RUN"
+}

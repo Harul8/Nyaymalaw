@@ -115,6 +115,14 @@ class Deadline:
         if self.kind is DeadlineKind.DATE:
             if not (self.on or "").strip():
                 raise ValueError("a dated deadline needs a date")
+            from datetime import date
+
+            try:
+                parsed = date.fromisoformat(self.on)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("a dated deadline needs a valid ISO calendar date") from exc
+            if parsed.isoformat() != self.on:
+                raise ValueError("a dated deadline must use YYYY-MM-DD")
             if not (self.basis or "").strip():
                 raise ValueError(
                     "a dated deadline needs its basis -- which provision or "

@@ -27,6 +27,7 @@ from datetime import date
 import pytest
 
 from nm.adapters.store.file_store import FileMatterStore
+from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
 from nm.domain.matter import (
     AskedQuestion,
     Basis,
@@ -41,6 +42,7 @@ from nm.domain.matter import (
     Thread,
     Weight,
 )
+from nm.domain.turn_receipt import TurnReceipt, answer_payload
 
 pytestmark = pytest.mark.class_a
 
@@ -81,12 +83,33 @@ def _fully_populated() -> Matter:
                                        now_suggested=Role.DEFENDANT,
                                        applied=False),)),
         chronology=("fact_1",),
+        assessed=("deadlines",),
+        deadlines=({"thread": "thr_1", "kind": "listed_hearing", "source": "Supplied listing",
+                    "action": "Attend the listed hearing", "owner": "Instructing advocate",
+                    "consequence": "The listing would be missed", "on": "2026-10-10"},),
         deferred_reason="awaiting the sale deed",
     )
     return Matter(
         id="mat_1", advocate_id="adv_1", title="Kukatpally",
         threads=(thread,), facts=(fact,),
         turns_applied=("turn_1", "turn_2"),
+        urgency_records=({"urgency_id": "urgency_1", "class": "personal_safety",
+                          "state": "live", "basis": "Supplied danger",
+                          "raised_by": "adv_1", "raised_at": "2026-09-12T12:00:00+00:00",
+                          "action": None, "owner": "Responsible advocate", "due": None,
+                          "unknowns": {"action": "Awaiting instructions", "due": "Order missing"},
+                          "resolver": None, "resolved_at": None, "resolution_basis": None},),
+        urgency_operations=({"request_key": "urgency-request",
+                             "offer": {"basis": "Supplied danger"},
+                             "result": {"urgency_id": "urgency_1", "version": 7}},),
+        turn_receipts=(TurnReceipt(
+            turn_id="turn_1", offer_fingerprint="a" * 64,
+            recorded_at="2026-09-12T12:00:00+00:00", message="The supplied instruction",
+            input_admitted=True, answer=answer_payload(Answer(
+                route=Route.MATTER, mode=Mode.SHORT_QUESTION,
+                mode_statement="A recorded blocking question.",
+                elements=(Element(kind=ElementKind.QUESTION,
+                                  text="Which original supports that statement?"),)))),),
         asked=(
             AskedQuestion(gate="G-POSTURE", text="Whose side are we on?",
                           asked_on="turn_1", thread="thr_1",
@@ -102,7 +125,7 @@ def test_every_field_of_a_matter_survives_a_save_and_load(tmp_path):
     """THE COUNTEREXAMPLE: a field encoded faithfully and dropped on read."""
     store = FileMatterStore(tmp_path, key=KEY)
     original = _fully_populated()
-    store.commit(original, expected_version=None)
+    store.commit(original, expected_version=0)
 
     reloaded = FileMatterStore(tmp_path, key=KEY).load("mat_1")
     assert reloaded is not None
@@ -111,6 +134,12 @@ def test_every_field_of_a_matter_survives_a_save_and_load(tmp_path):
     assert reloaded.threads[0].posture == original.threads[0].posture
     assert reloaded.facts[0] == original.facts[0]
     assert reloaded.threads[0] == original.threads[0]
+    from nm.core.deadlines import read_matter
+
+    register = read_matter(reloaded)
+    assert register.assessed == ("thr_1",) and register.unassessed == ()
+    assert not register.unreadable and len(register.rows) == 1
+    assert register.rows[0].on == date(2026, 10, 10)
     assert reloaded.turns_applied == original.turns_applied
     # THE ASK LEDGER. A question that does not survive a restart is a
     # question the advocate gets asked again on the next session, which is
@@ -120,7 +149,7 @@ def test_every_field_of_a_matter_survives_a_save_and_load(tmp_path):
 
 
 @pytest.mark.parametrize("cls", [Matter, Fact, Thread, Posture, Provenance,
-                                 AskedQuestion])
+                                 AskedQuestion, TurnReceipt])
 def test_no_persisted_type_has_a_field_the_decoder_cannot_reach(cls, tmp_path):
     """THE GENERAL PROPERTY, checked per type.
 
@@ -130,7 +159,7 @@ def test_no_persisted_type_has_a_field_the_decoder_cannot_reach(cls, tmp_path):
     construction rather than by remembering to update a second place.
     """
     store = FileMatterStore(tmp_path, key=KEY)
-    store.commit(_fully_populated(), expected_version=None)
+    store.commit(_fully_populated(), expected_version=0)
     reloaded = FileMatterStore(tmp_path, key=KEY).load("mat_1")
 
     def pick(m):
@@ -141,6 +170,7 @@ def test_no_persisted_type_has_a_field_the_decoder_cannot_reach(cls, tmp_path):
             Posture: m.threads[0].posture,
             Provenance: m.facts[0].provenance,
             AskedQuestion: m.asked[0],
+            TurnReceipt: m.turn_receipts[0],
         }[cls]
 
     found = pick(reloaded)
@@ -189,7 +219,7 @@ def test_every_persisted_type_is_covered_by_this_file():
 
     walk(domain.Matter)
     covered = {domain.Matter, Fact, Thread, Posture, Provenance,
-               PostureConflict, AskedQuestion}
+               PostureConflict, AskedQuestion, TurnReceipt}
     missing = reachable - covered
     assert not missing, (
         f"these persisted types are not round-tripped: "

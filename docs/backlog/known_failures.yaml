@@ -2,10 +2,18 @@
 #
 # WHY THIS EXISTS, 10 September 2026
 # ------------------------------------
-# Four exact trace facts remain: two unbuilt PRD refusal obligations and two
-# registry/code reconciliation findings. Tests of trace mechanics isolate the
+# This baseline recorded three trace facts: one unbuilt PRD refusal and two
+# registry/code reconciliation findings, plus an exact Ruff diagnostic set.
+# The rows below must shrink when remeasurement proves a repair. Tests of trace mechanics isolate the
 # mechanism they exercise; they do not inherit these product findings as their
 # own failures.
+#
+# REMEASURED 12 September 2026, isolated a3d9c47 conformance candidate:
+# TRACE-T3B and TRACE-T3C no longer occur after genuine journey ownership and
+# partial-foundation reconciliation. The 144 Ruff diagnostics were repaired,
+# not re-registered. Their historical records remain in the base commit and
+# a3-conformance-packet-inventory.json. Only the unbuilt P24/C1 refusal remains;
+# any current style or test failure is NEW and blocks this scoped allowance.
 #
 # But `tools/check.py` returns 1 on any failure, writes no stamp, and
 # `tools/hooks/pre-commit` then refuses every commit. So the repository was in
@@ -60,78 +68,3 @@ known_failures:
     claim completion while a material controlling gap remains, so no test can
     declare @refuses against that clause without asserting a behaviour the
     product does not have.
-
-
-- id: TRACE-T3B
-  step: trace
-  fact:
-    kind: trace
-    check: T3b
-    reason: "trace-only 24 of 44: A1, A2, A3, A4, B1, B3, B4, B5, C1, C3, C4, C5, C7, D1, D2, D3, D4, D5, D6, D7, D8, D9, E2, I1"
-  owner: [BK-48-AC2]
-  because: >-
-    BK-48's title is this finding: *Phase B is built and the register says it
-    is not*. Until BK-80-AC5 the register was a spreadsheet column and nothing
-    could see the mismatch; T3b now reports it in the direction T3 cannot look.
-
-    Twenty-four features carry @implements in nm/ and no row in status.yaml
-    declares `delivers:` for them. `delivers:` exists on seven planning rows
-    covering nineteen unbuilt features, so the relation is real and simply has
-    not been recorded for the work already done. Closing this is registry
-    authoring -- deciding which row delivered which feature -- and that is a
-    delivery decision, not a code change.
-
-    THE STRUCTURED REASON CARRIES THE EXACT COUNT, on the same rule as
-    RUFF-PLANNING-DEBT: a new module claiming a feature, or a row gaining
-    `delivers:`, moves the number and blocks until somebody re-registers it.
-
-- id: TRACE-T3C
-  step: trace
-  fact:
-    kind: trace
-    check: T3c
-    reason: "authored-none/code-present 1 of 44: C6"
-  owner: [BK-48-AC1]
-  because: >-
-    C6 is not an unrecorded delivery relation like T3b. Its authoritative
-    current row explicitly says `implementation: none`, while
-    nm/core/intake.py declares @implements(C6). Silence and denial are different
-    facts: the decorator cannot promote the registry, and the registry cannot
-    erase contrary production evidence. BK-48-AC1 owns reconciling the two
-    sources without importing the historical workbook's tested verdict.
-
-- id: RUFF-PLANNING-DEBT
-  step: ruff
-  fact:
-    kind: ruff
-    count: 144
-    digest: ae0ebd6dc9693a5ab027b573c502ef307d51bb729d399c326385eb62c540f093
-  owner: [BK-87-AC1]
-  because: >-
-    RE-REGISTERED 11 September 2026: 151 -> 150 -> 144. Updating the approvals
-    suite for BK-80-AC6's resolver replaced seven over-length lines in total.
-    The gate reported the old declared failure as NOW PASSING and blocked --
-    which is the exact-count design working: a debt whose number falls is
-    re-registered by somebody rather than absorbed. The digest was then
-    re-registered without changing the count after the clean release-profile
-    population check inserted ten lines in tools/plan_view.py. An independent
-    reverse transform proved that exactly nine existing diagnostics shifted by
-    ten lines and that reversing only those positions reproduces the prior
-    digest bbe61034e7fe99197af2c735b17cb6e44a5ee8f1a8020e08475cd3cabda0fe23.
-
-    Style debt introduced by the execution-readiness planning pass, entirely in
-    tools/blueprint_evaluations.py, tools/plan_view.py, tests/test_blueprint_media.py
-    and their neighbours: 141 over-length lines and 3 zip() calls without an
-    explicit strict=. No product code is affected and no rule was relaxed to
-    accommodate them -- ruff still runs with the same configuration.
-
-    The fact binds both the count and the digest of every path, position, rule
-    and reason in the 144-diagnostic set measured during P03. Fixing, adding or
-    replacing even one diagnostic changes it and blocks; the declaration cannot
-    absorb a new finding merely because another was fixed at the same time.
-
-    Discovered on 10 September 2026 while wiring the scoped gate, and it is
-    worth recording that it was NOT in the reported baseline of three failures:
-    that baseline came from running trace and pytest directly rather than the
-    whole gate, so a fourth red step went unseen. A baseline measured on part
-    of a population is a baseline about that part.

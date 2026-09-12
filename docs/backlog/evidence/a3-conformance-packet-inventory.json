@@ -1,0 +1,1319 @@
+{
+  "schema": 1,
+  "record_type": "plan_to_code_scope_inventory",
+  "base_commit": "a3d9c47764eb2f53c5bc486076df423b21488158",
+  "scope": "The isolated a3d9c47 conformance worktree and its authorized repairs only; no parallel P18/P21 changes inspected or imported.",
+  "status_authority": "docs/backlog/status.yaml remains authoritative. These observations neither derive done nor replace registered requirements or evidence.",
+  "current_handoff": {
+    "record": "docs/backlog/evidence/a3-conformance-final.json",
+    "meaning": "This current summary supersedes the explicitly preserved initial observations below. Only the coordinating final record may describe final execution identity and the exact remaining gate population; this inventory does not certify a test run or complete a packet.",
+    "delivery_reconciliation": "All 24 originally trace-only features now have genuine journey owners: 10 existing relations and 14 adopted by BK-93 through BK-96. Normal export reports 44 registry-basis features, zero trace-only declarations and zero authored-none/code-present contradictions. The 19 step links are registered; historical pending checks below are not current missing work.",
+    "trace_disposition": "T3B, T3C and the 144-diagnostic historical Ruff allowance were removed by actual remeasurement, not waived. TRACE-C1 remains open under P24/BK-54-AC3. No newly failing test or diagnostic is absorbed into the old baseline.",
+    "repair_followups": [
+      {
+        "scope": "B6/P14 capacity and attributed scope admission",
+        "record": "docs/backlog/evidence/a3-conformance-capacity-admission.json",
+        "current": "CapacityPosition is now a real persisted, attributed assessment consumed by the ordinary screen. Legacy prose and unknown/in-doubt states do not grant clearance. Stored screens reconstruct through their production owner. Decision-specific informed authority and the full future DecisionRecord contract remain outside this foundation."
+      },
+      {
+        "scope": "B2/P14 manual urgency",
+        "record": "docs/backlog/evidence/a3-conformance-urgency.json",
+        "current": "A genuine manual UrgencyRegister and explicit versioned resolution now persist independently of expiring protective permission and reach served controls. Expiry/revocation does not resolve a danger. Automatic every-turn assessment and qualified class calibration remain unbuilt; no full B2 completion follows."
+      },
+      {
+        "scope": "P13/BK-33 cover, saved records and historical advice",
+        "record": "docs/backlog/evidence/a3-conformance-matter-ui.json",
+        "current": "Cover/list/board read the actual shared client, posture, activity and deadline owners. Mixed/conflicting posture stays explicit; case dates remain separate from instruction dates. Record-command refresh restores the saved conversation and its historical-response qualification rather than leaving stale live advice visible."
+      },
+      {
+        "scope": "D3 deadline read integrity",
+        "record": "docs/backlog/evidence/a3-conformance-deadline-read.json",
+        "current": "Strict RegisterRead retains known live/passed/uncomputed entries and exposes unreadable/unassessed thread populations. Default empty fields do not establish assessment. This repairs saved-register and cover consistency, not the whole future P22 deadline and urgency contract."
+      }
+    ],
+    "observed_verification": "Historical XML records 162 passing cover/deadline/matter checks and 20 passing record-refresh/browser-command checks (not the earlier verbal 21). Final scoped verification is now recorded in a3-conformance-final.json#final_execution: 2997 canonical Class-A cases, 50 expanded browser cases and 24 canonical journey phases passed on one source identity. Only TRACE-C1/P24 remains in the scoped gate. This does not complete the broader packet contracts.",
+    "registry_recommendation_disposition": "The baseline recommendations for C1 partial/building, C6 partial foundation, the real served rotation note, control-plane lifecycle wording, BK-85 partial local foundation and BK-48 reconciled counts have been applied. Current acceptance binding and any corpus evidence refresh still follow the normal final-execution process. No counsel, browser-criterion or production result is authored by this summary."
+  },
+  "baseline_delivery_registration_start": {
+    "result": "READY_FOR_RECONCILIATION_ONLY",
+    "authorization": "The coordinating agent authorised four genuine baseline journey records for the 14 remaining trace-only features. This adopts existing partial implementation and assigns full-target acceptance; it does not authorise external evidence, parallel code imports or a new product build.",
+    "population": {
+      "items": [
+        "BK-93",
+        "BK-94",
+        "BK-95",
+        "BK-96"
+      ],
+      "features": [
+        "B1",
+        "C3",
+        "C4",
+        "C5",
+        "C7",
+        "D1",
+        "D3",
+        "D4",
+        "D5",
+        "D6",
+        "D7",
+        "D8",
+        "D9",
+        "E2"
+      ]
+    },
+    "scope": "Add genuine journey delivery relations, atomic PRD-derived acceptance, one wave and one module owner per item, and exact final packet criteria. Preserve every existing row, criterion, evidence result, packet ID and prerequisite. Stage records adopt the existing partial build; Test and Sign-off remain NOT_RUN.",
+    "entry": "Authenticated advocate on an owned file where applicable; non-matter routing must not create one. Existing packet prerequisites and scoped approvals remain mandatory for subsequent implementation and evidence.",
+    "professional_contract": "PA/EW/AM/ROLE standards already linked through each registered feature and journey step remain applicable. The PRD DOES/NEVER/PRODUCES/EVAL fields are the complete feature contract; these acceptance rows are execution ownership, not a replacement or weakening of those fields.",
+    "mechanism": "The same reverse journey delivers relation used by genuine_delivery_items assigns product ownership. The P01 detector does not become a delivering item. Module ownership is organizational; criterion final owners can be in a contributing module. Packet prerequisites consume scoped outputs, avoiding fabricated whole-row completion cycles.",
+    "recovery_and_return": "Re-entry and restart preserve attributed state; corrections, changed posture and changed source versions invalidate dependent reliance rather than rewrite history. Missing source, incomplete reads, disputed premises and failed writes remain explicit. The new ownership records do not change runtime behavior.",
+    "proof": "Read-only backlog and blueprint lint must reconcile the full populations and exactly one final packet for every new criterion. Normal export/trace is owned by the coordinator. Existing named tests are candidate reuse anchors, not evidence; criterion-specific full populations, adversarial mutations, browser results and qualified review remain required.",
+    "exclusions": [
+      "No acceptance PASS, complete implementation or sign-off is authored",
+      "No legacy/control/substrate row is relabelled as full journey delivery",
+      "No new waiver, UNTYPED exemption or weak test is introduced",
+      "No source code from another worktree is read or imported",
+      "No workbook or generated specification is edited by this worker"
+    ]
+  },
+  "assessment_method": "Read packet outputs/steps/final_criteria, registered criteria, source implementations and actual callers. Graph built at the base commit was consulted first; uncommitted repairs are not indexed, so current source controls. Diagnostic XML was inspected only; this review executed no tests, gates, models or live acquisition.",
+  "delivery_reconciliation_start": {
+    "status": "RECORDED_NOT_GATE_VALIDATED",
+    "scope": "P01 TRACE-T3B: all 24 originally trace-only feature IDs, plus review of B2/B6/C2 previously authored none. B2/B6 have actual partial feature consumers; the initial C2 field-overlap inference was corrected after reading its consumers. Only status.yaml delivery relations and this diagnostic are in scope.",
+    "rule": "A genuine journey owner must own the feature's user outcome. A narrow historical defect, a substrate prerequisite, a trace decorator or a passing control-plane test is not a substitute. Adding ownership does not assert completed implementation or passing evidence.",
+    "sources": [
+      "docs/backlog/SCHEMA.md",
+      "tools/feature_state.py::genuine_delivery_items",
+      "docs/backlog/status.yaml",
+      "docs/BACKLOG.md",
+      "spec/prd/part_b.js",
+      "docs/blueprint/packets.json",
+      "nm/core/turn.py",
+      "nm/domain/commission.py",
+      "nm/domain/emergency.py"
+    ],
+    "expected_population": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "B1",
+      "B3",
+      "B4",
+      "B5",
+      "C1",
+      "C3",
+      "C4",
+      "C5",
+      "C7",
+      "D1",
+      "D2",
+      "D3",
+      "D4",
+      "D5",
+      "D6",
+      "D7",
+      "D8",
+      "D9",
+      "E2",
+      "I1"
+    ],
+    "verification": "Read-only structural reconciliation only. No test or gate execution and no evidence result promotion; the coordinating agent must remeasure the exact changed trace population through normal publication."
+  },
+  "baseline_delivery_registration_result": {
+    "status": "REGISTERED_AND_NORMALLY_REEXPORTED_FINAL_EXECUTION_PENDING",
+    "initial_status": "REGISTERED_STRUCTURAL_RELATIONS_CHECKED_NORMAL_EXPORT_PENDING",
+    "original_trace_only_population": 24,
+    "existing_genuine_owners": 10,
+    "newly_owned_features": 14,
+    "remaining_unowned_features": [],
+    "new_items": [
+      {
+        "id": "BK-93",
+        "module": "M02",
+        "wave": "W2",
+        "delivers": [
+          "B1"
+        ],
+        "criteria": 2,
+        "final_owners": {
+          "BK-93-AC1": "P14",
+          "BK-93-AC2": "P25"
+        },
+        "why": "Text routing and risk handoff belong to ordinary admission; the complete document-only and hostile-material opening population cannot close before actual P25 admitted-media integration. W2 records whole-item scope, not a fictitious W1 multimodal completion."
+      },
+      {
+        "id": "BK-94",
+        "module": "M04",
+        "wave": "W2",
+        "delivers": [
+          "C3",
+          "C4",
+          "C5",
+          "C7"
+        ],
+        "criteria": 5,
+        "final_owners": {
+          "BK-94-AC1": "P17",
+          "BK-94-AC2": "P17",
+          "BK-94-AC3": "P17",
+          "BK-94-AC4": "P17",
+          "BK-94-AC5": "P25"
+        },
+        "why": "The living-file owner includes posture, identity, chronology and evidence; P17 supplies the binding identities but cannot certify actual media-to-thread admission before P25. A Fact projection is not full C7 professional admissibility proof."
+      },
+      {
+        "id": "BK-95",
+        "module": "M07",
+        "wave": "W3",
+        "delivers": [
+          "D1",
+          "D3",
+          "D4",
+          "D5",
+          "D6",
+          "D7",
+          "D8",
+          "D9"
+        ],
+        "criteria": 9,
+        "final_owners": {
+          "BK-95-AC1": "P22",
+          "BK-95-AC2": "P22",
+          "BK-95-AC3": "P21",
+          "BK-95-AC4": "P23",
+          "BK-95-AC5": "P23",
+          "BK-95-AC6": "P23",
+          "BK-95-AC7": "P23",
+          "BK-95-AC8": "P23",
+          "BK-95-AC9": "P23"
+        },
+        "why": "M07 organizes the single worked-file outcome; M06/P21 owns its bounded research contribution, P22 owns thresholds/deadlines and P23 owns proof/theory/adverse/salvage/issue integration. Later adaptive orchestration is not substituted for baseline quality."
+      },
+      {
+        "id": "BK-96",
+        "module": "M09",
+        "wave": "W4",
+        "delivers": [
+          "E2"
+        ],
+        "criteria": 3,
+        "final_owners": {
+          "BK-96-AC1": "P27",
+          "BK-96-AC2": "P26",
+          "BK-96-AC3": "P26"
+        },
+        "why": "P26 owns truthful supported rendering and versioned next-step records; P27 owns actual practical comparison and the recommended choice. Headings, source links and maturity labels cannot self-certify substantive judgment."
+      }
+    ],
+    "feature_reconciliation": [
+      {
+        "feature": "B1",
+        "owner": "BK-93",
+        "actual_code": [
+          "nm/core/route.py::interpret",
+          "nm/core/turn.py::_read_route"
+        ],
+        "candidate_tests": [
+          "tests/test_turn_contract.py"
+        ],
+        "remaining": "Complete all text/material opening cases, corrective reading, no-file non-matter and safe improper/emergency routing with semantic and browser evidence."
+      },
+      {
+        "feature": "C3",
+        "owner": "BK-94",
+        "actual_code": [
+          "nm/core/posture.py::interpret",
+          "nm/core/turn.py::_read_posture"
+        ],
+        "remaining": "Full source-attributed posture conflicts and versioned correction in the served living file; unknown posture is not a client side."
+      },
+      {
+        "feature": "C4",
+        "owner": "BK-94",
+        "actual_code": [
+          "nm/core/threading.py",
+          "nm/domain/matter.py::Thread"
+        ],
+        "candidate_tests": [
+          "tests/test_one_message_many_disputes.py"
+        ],
+        "remaining": "Full stable rename/merge/alias proof plus actual admitted-source binding, visible correction and selective invalidation; no parallel implementation imported."
+      },
+      {
+        "feature": "C5",
+        "owner": "BK-94",
+        "actual_code": [
+          "nm/core/chronology.py::interpret",
+          "nm/core/chronology.py::chart",
+          "nm/core/turn.py::_read_dates"
+        ],
+        "candidate_tests": [
+          "tests/test_chronology.py"
+        ],
+        "remaining": "Source/range/reference-time semantics, full chronology before dependent opinion and uncertainty at conclusions across real served variants."
+      },
+      {
+        "feature": "C7",
+        "owner": "BK-94",
+        "actual_code": [
+          "nm/core/evidence_item.py::EvidenceItem",
+          "nm/core/evidence_item.py::read_inventory",
+          "nm/core/turn.py::_inventory"
+        ],
+        "remaining": "Full custody/authenticity/completeness/admissibility/weight and owned lawful preservation; receipt quarantine is never read or proven evidence."
+      },
+      {
+        "feature": "D1",
+        "owner": "BK-95",
+        "actual_code": [
+          "nm/core/thresholds.py",
+          "nm/core/turn.py::_thresholds"
+        ],
+        "candidate_tests": [
+          "tests/test_thresholds.py"
+        ],
+        "remaining": "All applicable thresholds with reviewed premises and blocked/not-applicable reasons, not merely the existing limitation path."
+      },
+      {
+        "feature": "D3",
+        "owner": "BK-95",
+        "actual_code": [
+          "nm/core/deadlines.py",
+          "nm/core/turn.py::_register"
+        ],
+        "candidate_tests": [
+          "tests/test_deadlines.py"
+        ],
+        "remaining": "All deadline kinds, factual urgency, current category transitions, nearest-thread ordering and version-consistent cover/answer/register."
+      },
+      {
+        "feature": "D4",
+        "owner": "BK-95",
+        "actual_code": [
+          "nm/core/cause.py",
+          "nm/knowledge/resolution.py",
+          "nm/adapters/evidence/corpus.py"
+        ],
+        "remaining": "Persist and serve the complete ResearchTask decision/source/stop/negative-result contract with independent current-law and adverse-authority review."
+      },
+      {
+        "feature": "D5",
+        "owner": "BK-95",
+        "actual_code": [
+          "nm/core/proof.py",
+          "nm/core/proof_read.py",
+          "nm/knowledge/elements.py"
+        ],
+        "candidate_tests": [
+          "tests/test_proof_on_a_served_turn.py",
+          "tests/test_proof.py"
+        ],
+        "remaining": "Complete cause/defence/remedy element coverage, side-specific burdens, proof-gap actions and independent non-self-certifying review."
+      },
+      {
+        "feature": "D6",
+        "owner": "BK-95",
+        "actual_code": [
+          "nm/core/theory.py",
+          "nm/core/turn.py::_theory"
+        ],
+        "candidate_tests": [
+          "tests/test_theory_on_a_served_turn.py",
+          "tests/test_theory.py"
+        ],
+        "remaining": "Strongest opponent, every material adverse fact, one consistent client account and explicit source-triggered theory revision."
+      },
+      {
+        "feature": "D7",
+        "owner": "BK-95",
+        "actual_code": [
+          "nm/core/adversarial.py::read_attacks",
+          "nm/core/adversarial.py::read_exposures",
+          "nm/core/turn.py"
+        ],
+        "candidate_tests": [
+          "tests/test_adversarial_on_a_served_turn.py"
+        ],
+        "remaining": "Full-file cross-thread exposure consumer and once-only render, genuine unknown versus none, strongest counter-case and qualified professional scoring."
+      },
+      {
+        "feature": "D8",
+        "owner": "BK-95",
+        "actual_code": [
+          "nm/core/adversarial.py::read_salvage",
+          "nm/core/turn.py::_salvage"
+        ],
+        "candidate_tests": [
+          "tests/test_salvage_on_a_served_turn.py"
+        ],
+        "remaining": "All applicable coordinates, case-versus-framing scope, lawful concrete supported alternatives and candid do-not-proceed outcomes."
+      },
+      {
+        "feature": "D9",
+        "owner": "BK-95",
+        "actual_code": [
+          "nm/core/issues.py",
+          "nm/domain/issue.py",
+          "nm/core/turn.py::_issues"
+        ],
+        "candidate_tests": [
+          "tests/test_issues_on_a_served_turn.py",
+          "tests/test_the_issues_survive_a_turn.py"
+        ],
+        "remaining": "Full served issue/disposition population, invalid facet refusal/re-derivation, posture-versioned effects and visible parked/closed reasons."
+      },
+      {
+        "feature": "E2",
+        "owner": "BK-96",
+        "actual_code": [
+          "nm/core/turn.py::_recommend",
+          "nm/core/turn.py::_salvage"
+        ],
+        "remaining": "Complete typed Recommendation and practical comparison, owner/time/fallback/changing fact, mature supported view and qualified substance proof rather than shape compliance."
+      }
+    ],
+    "status_semantics": "All four adopted baseline rows are in_progress/partial/verification none with Build OPEN, Test NOT_RUN and Sign-off NOT_RUN. Their 19 new criteria have no passing evidence. Existing feature implementation labels and old evidence were not promoted; the genuine partial delivering rows determine the current built-not-tested projection.",
+    "historical_record": "delivery_reconciliation_initial preserves the earlier 10-linked/14-missing observation and recommendations; it is not the current ownership state. Initial check results and trace bodies below are retained as historical evidence. current_handoff and a3-conformance-final.json record the subsequent normal remeasurement and pending final execution.",
+    "initial_historical_record": "delivery_reconciliation_initial below preserves the earlier 10-linked/14-missing observation and recommendations. It is not the current ownership state. The P01 inventory and old trace findings likewise retain their pre-registration observations until the coordinator remeasures the normal export/trace.",
+    "checks_initial_observation": "Read-only blueprint check: 0 problems over 13 modules, 105 items, 44 features, 47 steps and 47 packets. Backlog lint: only 2 existing execution-evidence problems remain: stale Class-A fingerprint and skipped tests/test_reads_registry.py::test_the_judge_is_not_the_model_under_test. No schema, wave, lifecycle or missing-record problem remains. Four forensic BACKLOG headings were appended without changing the prior body. The subsequent mechanical step.items additions are awaiting the coordinator's final structural check; no tests or full gate executed by this worker.",
+    "checks_current_authority": "The preceding check is the original pre-export snapshot, not current gate status. Normal export and trace have since reconciled all feature owners and removed T3B/T3C. Read docs/backlog/evidence/a3-conformance-final.json for current structural, execution and browser results; full-gate completion is not asserted here.",
+    "step_navigation": {
+      "method": "Enumerate every existing step whose features intersect the four new delivering populations; append only its actual owner and preserve all previous refs, contracts, basis and order.",
+      "population": 19,
+      "by_item": {
+        "BK-93": [
+          "STEP-B-01"
+        ],
+        "BK-94": [
+          "STEP-C-03",
+          "STEP-C-04",
+          "STEP-C-05",
+          "STEP-C-07",
+          "STEP-D-01"
+        ],
+        "BK-95": [
+          "STEP-D-02",
+          "STEP-D-04",
+          "STEP-D-05",
+          "STEP-D-06",
+          "STEP-D-07",
+          "STEP-D-08",
+          "STEP-D-09",
+          "STEP-D-10",
+          "STEP-D-11",
+          "STEP-D-12",
+          "STEP-D-13",
+          "STEP-D-14"
+        ],
+        "BK-96": [
+          "STEP-E-02"
+        ]
+      }
+    }
+  },
+  "delivery_reconciliation_initial": {
+    "original_population": 24,
+    "linked_to_existing_genuine_owners": 10,
+    "remaining_without_a_full_target_journey_owner": 14,
+    "remaining_ids": [
+      "B1",
+      "C3",
+      "C4",
+      "C5",
+      "C7",
+      "D1",
+      "D3",
+      "D4",
+      "D5",
+      "D6",
+      "D7",
+      "D8",
+      "D9",
+      "E2"
+    ],
+    "meaning": "A delivers relation assigns delivery responsibility; it does not declare the whole feature implemented. No legacy row, substrate, control row or test result was promoted to product delivery. Every new owner remains partial and has absent or unexecuted required evidence. Existing complete feature labels were not promoted or used as proof.",
+    "rows": [
+      {
+        "feature": "A1",
+        "owners": [
+          "BK-31"
+        ],
+        "basis": "Account access, recovery and workspace identity are the actual outcome of BK-31, with invitation, recovery, concurrency, identity and browser criteria AC1-AC20.",
+        "code": [
+          "nm/edge/api.py::login",
+          "nm/adapters/store/directory.py::FileDirectory"
+        ],
+        "remaining": "Current full evidence and browser acceptance remain open; strong-assurance confidential-profile engineering is P08/P09 and is not delivered by the local password foundation."
+      },
+      {
+        "feature": "A2",
+        "owners": [
+          "BK-32",
+          "BK-33"
+        ],
+        "basis": "BK-32 owns accessible matter navigation; BK-33 owns the truthful persisted matter cover and board. Their scopes jointly own the list/board rather than only the old 390px defect.",
+        "code": [
+          "nm/edge/projections.py",
+          "web/app.js::showThreadBoard"
+        ],
+        "remaining": "Verify the full PRD list ordering, unknown/deadline rendering and width/keyboard population; no current browser PASS is inferred from these links."
+      },
+      {
+        "feature": "A3",
+        "owners": [
+          "BK-33"
+        ],
+        "basis": "BK-33-AC2 explicitly owns restoring the authoritative selected matter summary, conversation and next action without cross-matter leakage.",
+        "code": [
+          "nm/core/cascade.py",
+          "nm/core/turn.py",
+          "web/app.js::showThreadBoard"
+        ],
+        "remaining": "Full reopen and changed-position behavior must be checked beyond the current dialog; P32 owns the registered final re-entry criterion."
+      },
+      {
+        "feature": "A4",
+        "owners": [
+          "BK-38"
+        ],
+        "basis": "BK-38 is the search-to-authority-to-matter journey; AC1 and AC2 require filters, source inspection, exact locators, deliberate attachment and honest search states.",
+        "code": [
+          "nm/edge/api.py::search",
+          "nm/adapters/search/authority.py"
+        ],
+        "remaining": "Grouped source inspection, verified deliberate attachment and the complete research browser journey remain engineering/evidence obligations, not satisfied by corpus publication alone."
+      },
+      {
+        "feature": "B1",
+        "owners": [],
+        "basis": "BK-34 owns admission screens after routing; it does not own the PRD's matter/non-matter distinction and no-file non-matter contract. BK-48 is only reconciliation, so its feature delivery_items placeholder was removed.",
+        "code": [
+          "nm/core/route.py",
+          "nm/core/turn.py::_read_route"
+        ],
+        "remaining": "Register a journey owner with both routing directions, short real disputes, non-matter no-file behavior, and the risk-routing handoff; preserve TRACE-T3B until that scope and its evidence are registered."
+      },
+      {
+        "feature": "B3",
+        "owners": [
+          "BK-34"
+        ],
+        "basis": "BK-34's historical Change and Acceptance own pre-substance conflict screening, registry completeness, human release and quarantine; current AC1/AC2/AC4 cover only part of that target.",
+        "code": [
+          "nm/core/turn.py::_screen",
+          "nm/core/conflict.py",
+          "nm/core/screens.py::Screen"
+        ],
+        "remaining": "The controlled-local own-file check is not a firm-wide registry. Full human release/quarantine lifecycle, registry scope and professional acceptance remain open."
+      },
+      {
+        "feature": "B4",
+        "owners": [
+          "BK-34"
+        ],
+        "basis": "BK-34's professional front door explicitly includes competence review and measured coverage disclosure, not a fabricated new owner.",
+        "code": [
+          "nm/core/turn.py::_competence_screen",
+          "nm/core/quarantine.py"
+        ],
+        "remaining": "Do not equate the current measured coverage disclosure with every professional competence/referral/reliance condition in the PRD; keep full-scope acceptance open."
+      },
+      {
+        "feature": "B5",
+        "owners": [
+          "BK-34"
+        ],
+        "basis": "BK-34 owns intake instruction source/scope, decision owner and named engagement release. P13 commission/authority are supporting foundations, not alternate control-plane evidence for this feature.",
+        "code": [
+          "nm/core/screens.py::Engagement",
+          "nm/domain/commission.py::Commission",
+          "nm/edge/api.py::set_commission"
+        ],
+        "remaining": "The current authored commission does not implement the complete engagement contract, including all reliance, payer/intermediary, fees, custody and termination fields. Preserve scope and named authority boundaries."
+      },
+      {
+        "feature": "C1",
+        "owners": [
+          "BK-54"
+        ],
+        "basis": "BK-54-AC2 and AC3 already own the interactive account/clarification loop, supplied-material reuse, correction, controlling gaps and stop/resume. BK-91 remains a substrate dependency, not a genuine delivering row.",
+        "code": [
+          "nm/core/turn.py::_admit_facts",
+          "nm/core/intake.py"
+        ],
+        "remaining": "P24/BK-54-AC3 remains unbuilt work: unavailable-material stop/resume and no repeated questions. TRACE-C1's fifth NEVER must not disappear merely because ownership is now registered."
+      },
+      {
+        "feature": "C3",
+        "owners": [],
+        "basis": "Neither BK-14's date repair, BK-27's split repair nor BK-36's durability scope owns parties/posture and directed advice.",
+        "code": [
+          "nm/core/turn.py::_read_posture",
+          "nm/domain/matter.py::Posture"
+        ],
+        "remaining": "Register a journey owner for unknown/inferred/stated/conflicting posture, role-derived side, versioned correction and same-side/opponent advice; require the complete served contract, not an unrelated persistence test."
+      },
+      {
+        "feature": "C4",
+        "owners": [],
+        "basis": "BK-27 repairs one opening-message split defect and J-4 is a finding; neither presently owns the entire stable identity, aliases, identifier-based merge and document-binding feature.",
+        "code": [
+          "nm/core/threading.py",
+          "nm/domain/matter.py::Thread"
+        ],
+        "remaining": "Register full identity/merge/document-binding ownership with rename persistence, same-party different-dispute separation, explicit merge disclosure and unbound-document refusal. Do not claim parallel P18 implementation here."
+      },
+      {
+        "feature": "C5",
+        "owners": [],
+        "basis": "BK-14 fixes the reference clock; it cannot own all per-thread chronology, date certainty, conflicting dates, provenance and pre-opinion completeness.",
+        "code": [
+          "nm/core/turn.py::_read_dates",
+          "nm/domain/matter.py::Fact"
+        ],
+        "remaining": "Register the chronology outcome and exact source/range/correction assertions; P17's living-file projection is a foundation and not every C5 contract."
+      },
+      {
+        "feature": "C7",
+        "owners": [],
+        "basis": "BK-6 only repairs the evidence bound. Original-byte intake, preservation and the evidence inventory are related but not equivalent whole features.",
+        "code": [
+          "nm/core/evidence_item.py",
+          "nm/core/turn.py::_inventory"
+        ],
+        "remaining": "Register ownership of the evidence inventory and preservation target, including held/obtainable/absent originals, custody and missing material. Quarantined P16 uploads must not be represented as read evidence."
+      },
+      {
+        "feature": "D1",
+        "owners": [],
+        "basis": "BK-15 consolidates jurisdiction naming and BK-35 owns limitation; neither owns the full threshold map across forum, maintainability, jurisdiction and other prerequisites.",
+        "code": [
+          "nm/core/thresholds.py",
+          "nm/core/turn.py::_thresholds"
+        ],
+        "remaining": "Register threshold-map delivery with source-bound checks, explicit unresolved conditions, material changing facts and blocking consequences across supported causes."
+      },
+      {
+        "feature": "D2",
+        "owners": [
+          "BK-35"
+        ],
+        "basis": "BK-35-AC1 owns reviewed cause-specific limitation computation including uncertain ranges and applicable qualifications; AC2 owns its version-consistent served answer, cover and register.",
+        "code": [
+          "nm/core/limitation.py",
+          "nm/core/factors.py",
+          "nm/core/turn.py::_limitation"
+        ],
+        "remaining": "Do not call deterministic arithmetic qualified legal premise proof. The full PRD also requires factor coverage, opponent computation and explicitly represented conditional alternatives; current engineering and counsel evidence must establish these before whole-feature closure."
+      },
+      {
+        "feature": "D3",
+        "owners": [],
+        "basis": "BK-35 can compare a limitation-derived deadline but does not own all court dates, notice windows, factual urgencies, owners and cross-thread priority in D3.",
+        "code": [
+          "nm/core/deadlines.py",
+          "nm/core/turn.py::_register"
+        ],
+        "remaining": "Register a full deadline-register journey owner with every deadline kind, derived category transitions, passed-deadline retention, answer ordering and action-by-when behavior."
+      },
+      {
+        "feature": "D4",
+        "owners": [],
+        "basis": "BK-38 owns the search surface; corpus/index rows and BK-91 are substrates. None currently owns ranked decision-changing research tasks with permitted sources, stop conditions and negative results.",
+        "code": [
+          "nm/core/cause.py",
+          "nm/knowledge/resolution.py",
+          "nm/adapters/evidence/corpus.py"
+        ],
+        "remaining": "Register the full research-task outcome and exact current-law, adverse-authority, stop-condition and readable-passage requirements. Corpus preparation alone does not complete it."
+      },
+      {
+        "feature": "D5",
+        "owners": [],
+        "basis": "The proof primitives and serving caller exist, but no current journey row owns the element/burden/proof feature. J-3 is a finding and not delivery ownership.",
+        "code": [
+          "nm/core/proof.py",
+          "nm/core/proof_read.py",
+          "nm/knowledge/elements.py"
+        ],
+        "remaining": "Register supported causes, burdens/presumptions by side, held/obtainable/absent evidence, gap-to-action and grounded legal/evidential proof acceptance."
+      },
+      {
+        "feature": "D6",
+        "owners": [],
+        "basis": "BK-5's ordinary-turn cascade repair and BK-37's answer-shape scope do not own case theory construction, revision and alternatives.",
+        "code": [
+          "nm/core/theory.py",
+          "nm/core/turn.py::_theory"
+        ],
+        "remaining": "Register full case-theory outcome, fact/proof support, adverse material, alternative theory and version-sensitive revision rather than borrowing the cascade test."
+      },
+      {
+        "feature": "D7",
+        "owners": [],
+        "basis": "An adversarial implementation is declared, but no journey item owns the counter-case and stress-test outcome; a release evaluation or sweep owner cannot supply it.",
+        "code": [
+          "nm/core/adversarial.py",
+          "nm/core/turn.py"
+        ],
+        "remaining": "Register adversarial-pass delivery and grounded hardest counterarguments, material weaknesses, responses and residual reservations under counsel review."
+      },
+      {
+        "feature": "D8",
+        "owners": [],
+        "basis": "The weak-case salvage code is real; neither an answer folding defect nor a threshold repetition defect owns the full lawful alternative route outcome.",
+        "code": [
+          "nm/core/adversarial.py",
+          "nm/core/turn.py"
+        ],
+        "remaining": "Register weak-case salvage with source-supported alternative cause/remedy, honest dead ends and no invented route merely to keep advice positive."
+      },
+      {
+        "feature": "D9",
+        "owners": [],
+        "basis": "Issue reconciliation is implemented, but no present journey row owns typed issue facets, disposition and accounting for every live issue.",
+        "code": [
+          "nm/core/issues.py",
+          "nm/domain/issue.py",
+          "nm/core/turn.py::_issues"
+        ],
+        "remaining": "Register issue/facet delivery with grounded identity, explicit disposition, retained unresolved work and no silently omitted issue."
+      },
+      {
+        "feature": "E2",
+        "owners": [],
+        "basis": "BK-37 owns answer shape and maturity; BK-55 owns adjacent strategy/proportionality/decision outcomes; BK-91 is a substrate. None currently states ownership of the whole recommendation contract.",
+        "code": [
+          "nm/core/turn.py::_recommend",
+          "nm/core/turn.py::_salvage"
+        ],
+        "remaining": "Explicitly extend a genuine advice journey scope or register one for a chosen position, why alternatives lose, owner/by-when, fallback and changing fact, with qualified substantive rather than shape-only acceptance."
+      },
+      {
+        "feature": "I1",
+        "owners": [
+          "BK-40"
+        ],
+        "basis": "BK-40-AC1 and AC2 directly own server expiry, confirmed revocation, cross-identity isolation and protected-view/pending-intake cleanup.",
+        "code": [
+          "nm/edge/api.py::logout",
+          "web/app.js",
+          "web/matter-workspace.js"
+        ],
+        "remaining": "Observe current actual expiry, failed logout and cross-identity browser transitions. Storage encryption alone would not prove this session-end feature."
+      }
+    ],
+    "authored_none_corrections": [
+      {
+        "feature": "B2",
+        "now": "partial",
+        "owner": "BK-53",
+        "present": "nm/domain/emergency.py plus declare/revoke/readback endpoints and TurnEngine._protective_turn persist basis, actor, outstanding screens and clock-evaluated expiry; the browser requires an explicit protective-only request.",
+        "absent_full_target": "The full per-urgency-class UrgencyRegister, every-turn class assessment, priority ordering and resolved-by-class history are not supplied by a declaration. No counsel or current full browser PASS follows.",
+        "effect": "BK-53 becomes in_progress/partial, build OPEN, verification none; acceptance evidence is unchanged. Prior START BLOCKED / BUILD NOT_STARTED were historical scope statements, now superseded by this recorded foundation."
+      },
+      {
+        "feature": "B6",
+        "now": "partial",
+        "owner": "BK-53",
+        "present": "The ordinary intake stores an attributed capacity answer; Engagement.reliance_ready refuses unassessed/in-doubt capacity. Signing in alone does not answer the screen.",
+        "absent_full_target": "CapacityPosition on each authoritative DecisionRecord and distinct vulnerability/decision-specific resolution are not implemented by one matter-level intake answer. Party.capacity in Commission means professional role, not mental capacity, and is not counted as B6 proof."
+      }
+    ],
+    "related_non_corrections": [
+      {
+        "feature": "C2",
+        "kept": "none",
+        "reason": "Correction to this review's initial partial proposal: Commission stores the task objective and untyped constraint strings, but a source scan found no commission.objective/commission.constraints consumer in nm/core/turn.py. Capture/serialization/material-change checks support B5's commission foundation; they do not implement C2's client practical-versus-legal objective, source-quoted Constraint, absolute/breach semantics or advice-compatibility assessment. The feature remains genuinely unbuilt; field-name overlap is not its implementation.",
+        "sources": [
+          "nm/domain/commission.py::Commission.unknowns",
+          "nm/domain/commission.py::Commission.as_dict",
+          "nm/domain/commission.py::material_changes",
+          "nm/edge/api.py::_commission_from",
+          "nm/core/turn.py",
+          "spec/prd/part_b.js (C2)"
+        ]
+      },
+      {
+        "feature": "E4",
+        "kept": "none",
+        "reason": "The A3 Decision is a provisional product/advocate inference history, not the full E4 informed authority record. The scoped concession ledger is a concrete P13 foundation, but neither records all explained risks/cost/irreversibility, capacity, voluntariness and confirmation required by DecisionRecord. It is not enough to declare the E4 outcome built."
+      },
+      {
+        "feature": "C6",
+        "kept": "partial",
+        "reason": "The coordinating agent already corrected this authored denial. Original-byte receipts and intake confirmation primitives do not claim scanning, safe extraction or full multimodal interpretation."
+      }
+    ],
+    "decision_needed": "Register or explicitly expand genuine journey scopes for the remaining 14 features, with PRD-derived acceptance, owned packet exit criteria and wave/dependency reconciliation. Existing technical prerequisites and current code should be linked without altering their history. This review does not invent 14 superficial work items merely to erase TRACE-T3B.",
+    "newly_measurable_gaps": "B2/B6 moving from none to partial correctly puts UrgencyRegister and CapacityPosition/DecisionRecord obligations into the built-feature contract population. If normal trace reports undefined/unsatisfied outputs, retain those exact facts with engineering owners; do not rename unrelated types or weaken PRODUCES to get green. C2 remains none after the explicit consumer-based correction above, not because a failed test was waived.",
+    "post_edit_validation": "Pending coordinating agent's normal export and trace. Ten linked plus fourteen retained equals the original 24; no PASS or feature-complete value was authored by this reconciliation."
+  },
+  "population": {
+    "expected": 10,
+    "observed": 10,
+    "ids": [
+      "P01",
+      "P02",
+      "P03",
+      "P04",
+      "P05",
+      "P06",
+      "P07",
+      "P19",
+      "P20",
+      "P44"
+    ]
+  },
+  "sources": [
+    "docs/blueprint/packets.json",
+    "docs/blueprint/contracts/commands.json",
+    "docs/blueprint/evaluations.json",
+    "docs/backlog/status.yaml",
+    "docs/backlog/known_failures.yaml",
+    "docs/BUILD_GUIDE.md",
+    "docs/playbooks/START_A_CHANGE.md",
+    "docs/playbooks/BUILD_A_CHANGE.md",
+    "CLAUDE.md"
+  ],
+  "interpretation": [
+    "A present primitive or successful synthetic adapter is not proof of its complete user journey.",
+    "A packet's final_criteria identifies closure ownership; an empty list does not mean its outputs or required evidence are optional.",
+    "A proposed command with current_route:null does not prove a served route exists. It also does not override a deliberately scoped foundational build record.",
+    "External legal authority, processor approval, deployed enforcement and real-corpus quality cannot be manufactured by code or synthetic tests.",
+    "Current full-gate and full-Class-A acceptance remain separate from the focused diagnostic results referenced here."
+  ],
+  "packets": [
+    {
+      "id": "P01",
+      "criteria": [
+        "BK-80-AC3",
+        "BK-80-AC5",
+        "BK-80-AC7",
+        "BK-48-AC1",
+        "BK-48-AC2"
+      ],
+      "intended_scope": "Truthful registry-derived current feature export over all 44 features; exact current/historical identity reconciliation and atomic publication; collision-safe checked-tree identity; exact known-failure comparison; scoped versus full stamps; nonvacuous populations and locked clean-checkout CI.",
+      "assessment": "CONTROL_MECHANISMS_PRESENT_PRODUCT_FAILURES_REMAIN_EXPLICIT",
+      "built": [
+        "Feature projection preserves authored implementation separately from trace declarations and historical metadata",
+        "Export checks all generated payloads before publication and handles restoration",
+        "Evidence identity includes effective promises and delivery relations while excluding generated verdicts",
+        "Structured known-failure comparison rejects added, changed, vanished or uncaptured facts; scoped stamps cannot answer full-gate questions",
+        "Population assessments distinguish NOT_ASSESSED from passing"
+      ],
+      "excluded": [
+        "Implementing the later adaptive briefing or multimodal journey merely to erase its trace finding",
+        "Treating an acceptance test name or scoped gate as current full execution proof"
+      ],
+      "required_missing": [
+        {
+          "kind": "registry_reconciliation",
+          "disposition": "RECONCILED_NOT_MISSING; retained here to preserve the original finding",
+          "detail": "baseline_delivery_registration_result records all 24 former trace-only declarations assigned to genuine journey owners. Normal export now reports 44 registry-basis features, no trace-only declaration and no C6 denial contradiction. B2/B6 remain partial and C2 remains genuinely unbuilt. Full-target acceptance and current final execution binding remain open; delivery ownership is not product completion.",
+          "initial_detail": "The original 24 trace-only declarations are reconciled in delivery_reconciliation: 10 now have defensible existing journey owners; 14 still need full-target journey scope/acceptance ownership. C6's authored denial was already corrected, and B2/B6 now truthfully say partial. C2 remains none: a source-level consumer check corrected this review's initial field-overlap inference. Normal export/trace must remeasure every affected contract; this is not a PASS or whole-product closure.",
+          "owner": "BK-48-AC1/BK-48-AC2/BK-48-AC3"
+        },
+        {
+          "kind": "execution_evidence",
+          "detail": "Refresh exact current-tree control-plane/full-Class-A and combined gate evidence after repairs and generated status views settle. Preserve any remaining scoped red facts.",
+          "owner": "BK-80"
+        }
+      ],
+      "code_anchors": [
+        "tools/feature_state.py::reconcile",
+        "tools/feature_state.py::project",
+        "tools/export_spec.py::publish",
+        "tools/evidence.py::verification_fingerprint",
+        "tools/check.py::_scoped_verdict",
+        "tools/trace.py::assess_population"
+      ],
+      "evidence_needed": [
+        "tests/test_checked_tree_identity.py",
+        "tests/test_the_spec_says_what_is_true_now.py",
+        "tests/test_the_scoped_gate_cannot_hide_a_new_failure.py",
+        "Exact full versus scoped gate report and clean locked CI execution"
+      ],
+      "initial_next_action": "Keep P01's detector distinct from detected product gaps; reconcile genuine delivery ownership, regenerate through the normal exporter, then record the actual remaining gate population.",
+      "next_action": "Retain the completed delivery reconciliation and normal re-export without declaring product acceptance. Bind the settled candidate's actual full-Class-A and gate execution in a3-conformance-final.json; keep the separate P24 TRACE-C1 refusal visible and refuse any new unowned failure."
+    },
+    {
+      "id": "P02",
+      "criteria": [
+        "BK-31-AC20"
+      ],
+      "intended_scope": "Controlled-local current-password reauthentication yields a five-minute session/generation-bound single-use proof; rotation compares recovery generation under the account claim, atomically replaces old hashes, applies session policy, returns codes once and leaves no secret browser storage. CSRF, stale/replay/concurrency and failure-rate controls must reach the served path.",
+      "assessment": "SERVED_LOCAL_ENGINEERING_PROVEN_BROWSER_ACCEPTANCE_PENDING",
+      "built": [
+        "Real reauthenticate, rotate, session and logout endpoints and one-time browser controls",
+        "Account claim, proof consumption, credential/recovery generations, old-code invalidation and other-session revocation",
+        "Conformance repair adds one admission helper across five authentication doors and records the observed connection source exactly once",
+        "90 focused tests passed with no failures/errors/skips in the coordinating run"
+      ],
+      "excluded": [
+        "Confidential-profile strong-factor assurance belongs to P09",
+        "No production MFA or current browser-journey claim follows from HTTP tests",
+        "Revocation-versus-rotation interleaving was noted as an unmeasured hypothesis, not asserted as a reproduced defect"
+      ],
+      "required_missing": [
+        {
+          "kind": "browser_evidence",
+          "detail": "Current complete byte-bound browser evidence for one-time display, acknowledgement, lost response recovery, navigation/logout secret clearing and ordinary successful rotation.",
+          "owner": "BK-31-AC20"
+        }
+      ],
+      "code_anchors": [
+        "nm/edge/api.py::reauthenticate",
+        "nm/edge/api.py::rotate_recovery_codes",
+        "nm/edge/api.py::_admit_auth_attempt",
+        "nm/adapters/store/directory.py::FileDirectory.rotate_recovery_codes",
+        "nm/domain/advocate.py::ReauthenticationProof",
+        "web/app.js (recovery-code replacement handlers)"
+      ],
+      "evidence_needed": [
+        "docs/backlog/evidence/a3-conformance-access.json",
+        "Current full-Class-A execution binding for the six recorded test modules",
+        "Current BK-31-AC20 browser_journey record"
+      ],
+      "next_action": "Correct the stale no-served-path note; retain browser NOT_RUN until that exact journey is observed and bound."
+    },
+    {
+      "id": "P03",
+      "criteria": [
+        "BK-80-AC1",
+        "BK-80-AC2",
+        "BK-80-AC4",
+        "BK-80-AC6",
+        "BK-51-AC1"
+      ],
+      "intended_scope": "Authenticate structured external evidence and scoped approvals separately from measurements; bind subject/configuration/authority/validity and exact completed populations; reject missing, duplicate, unexpected, changed, cancelled, expired and revoked evidence.",
+      "assessment": "ASSURANCE_CONTROL_PLANE_PRESENT_EXTERNAL_ADOPTION_NOT_CONFERRED",
+      "built": [
+        "EvidenceVerifier boundary and Ed25519 verifier consume operator-supplied trust anchors, with explicit unavailable state",
+        "Structured record and browser-run readers validate identity, population, artifacts, authority, reservations and expiry",
+        "Scoped approval resolver preserves seven decision states and cannot turn a proposal/measurement into approval",
+        "Release-obligation readers reconcile their exact required population"
+      ],
+      "excluded": [
+        "Generating a real reviewer or trust anchor",
+        "Automatically applying a valid CHOICE record to every future runtime action",
+        "Inferring browser/model/counsel execution from successful reader tests"
+      ],
+      "required_missing": [
+        {
+          "kind": "execution_evidence",
+          "detail": "Current combined-tree execution for the already implemented controls and consistent lifecycle references.",
+          "owner": "BK-80/BK-51"
+        },
+        {
+          "kind": "external_operational_setup",
+          "detail": "Operator-owned trust configuration and authentic scoped records before any actual professional evidence or approval can be consumed.",
+          "owner": "Later adopted deployment/dispatch scope"
+        }
+      ],
+      "code_anchors": [
+        "tools/evidence_verification.py::EvidenceVerifier",
+        "tools/structured_evidence.py::problems",
+        "tools/browser_evidence.py::problems",
+        "tools/blueprint_approvals.py::resolve",
+        "tools/blueprint_approvals.py::resolve_packet_approvals",
+        "tools/release_obligations.py"
+      ],
+      "evidence_needed": [
+        "tests/test_structured_evidence_binds_its_subject.py",
+        "tests/test_browser_evidence_is_a_complete_run.py",
+        "tests/test_approval_resolves_to_one_of_seven_states.py",
+        "tests/test_release_obligations_are_executed.py",
+        "tests/test_evidence_is_bound_to_execution.py"
+      ],
+      "next_action": "Retain the completed mechanism without calling external approvals complete; reconcile next_action wording with OPEN/NOT_RUN lifecycle records."
+    },
+    {
+      "id": "P04",
+      "criteria": [
+        "BK-82-AC1",
+        "BK-82-AC2",
+        "BK-82-AC3",
+        "BK-28-AC1",
+        "BK-30-AC1"
+      ],
+      "intended_scope": "Operator-only synthetic proof console exposing registry-derived modes, fixture/run identity and evidence; isolated fault/fixture control, wrong-actor and forged-production refusal, and a separate restricted run ledger through the real composition.",
+      "assessment": "UNBUILT_FUTURE_PACKET_NOT_A_COMPLETED_CLAIM_REPAIR",
+      "built": [
+        "CLI registry/evidence readers and browser evidence infrastructure provide prerequisites"
+      ],
+      "excluded": [
+        "Ordinary advocate UI is not the operator proof console",
+        "No fixture-control capability may leak into production"
+      ],
+      "required_missing": [
+        {
+          "kind": "implementation",
+          "detail": "The dedicated operator-authorized proof surface, isolated fixture/fault controls and restricted run-ledger integration are absent.",
+          "owner": "P04/BK-82"
+        },
+        {
+          "kind": "execution_evidence",
+          "detail": "EVAL-002 plus criterion-specific domain/adversarial and browser proof of wrong actor, wrong mode and exact scenario population.",
+          "owner": "P04"
+        }
+      ],
+      "code_anchors": [
+        "tools/blueprint.py",
+        "tools/backlog.py",
+        "nm/edge/api.py (no proof-console endpoint)",
+        "tools/browser_evidence.py"
+      ],
+      "evidence_needed": [
+        "BK-82 criterion population and EVAL-002 through the built proof consumer"
+      ],
+      "next_action": "Keep OPEN and schedule a separately scoped P04 build; do not imply current UI polish implements this packet."
+    },
+    {
+      "id": "P05",
+      "criteria": [
+        "BK-85-AC3"
+      ],
+      "intended_scope": "Qualified dated India applicability review of actual purposes/data flows, operative instruments/dates, roles, permissions, retention, incidents and accountability, including explicit reservations and review triggers.",
+      "assessment": "EXTERNAL_QUALIFIED_REVIEW_NOT_COMPLETE",
+      "built": [
+        "Evidence contract and authority/expiry verification machinery exist; the work record distinguishes draft acceptance from qualified sign-off"
+      ],
+      "excluded": [
+        "User deferral of qualification particulars is not an authenticated counsel review",
+        "No AI-generated signature or framework checklist can close the criterion"
+      ],
+      "required_missing": [
+        {
+          "kind": "external_authority_and_evidence",
+          "detail": "Attributable qualified review, evidenced authority, signed/digested artifact, explicit reservations and validity expiry under the existing evidence contract.",
+          "owner": "BK-85-AC3 qualified reviewer"
+        }
+      ],
+      "code_anchors": [
+        "docs/blueprint/SECURITY_PRIVACY.md",
+        "docs/backlog/status.yaml (BK-85-AC3 evidence is empty)",
+        "tools/structured_evidence.py::_verification_problems"
+      ],
+      "evidence_needed": [
+        "Authentic current counsel_review record for BK-85-AC3; EVAL-026 is a review protocol, not a substitute signature"
+      ],
+      "next_action": "Keep NOT_RUN and its legal/deployment dependencies visible until the reviewer provides the required evidence; continue only explicitly authorized synthetic engineering."
+    },
+    {
+      "id": "P06",
+      "criteria": [
+        "BK-85-AC1"
+      ],
+      "intended_scope": "Central pre-dispatch processor purpose/region/data-class policy across live destinations, with default-deny and content-free diagnostics. Local adapter proof is explicitly a foundation; deployed enforcement remains P39/P41.",
+      "assessment": "CONTROLLED_LOCAL_FOUNDATION_PROVEN_EXTERNAL_DISPATCH_REFUSED",
+      "built": [
+        "One Gatekeeper fronts live model, matter/directory storage and authority-search wrappers",
+        "Current conformance repair restricts loaded policy to three concrete India-local receivers; authored external approval IDs and foreign-region notes confer no permission",
+        "Malformed/unreadable/duplicate inventory fails closed with explicit content-free reasons",
+        "122 focused synthetic tests passed with zero failures/errors/skips after fixture correction"
+      ],
+      "excluded": [
+        "No approved external recipient is created",
+        "Unbuilt media/backup/support/telemetry destinations are measured absences, not passing sink tests",
+        "Direct synthetic Policy constructors are not production approval issuers"
+      ],
+      "required_missing": [
+        {
+          "kind": "later_implementation_and_deployment",
+          "detail": "Authentic current scoped approval resolution at external runtime dispatch, real sink configuration and operational/deployed enforcement proof.",
+          "owner": "P39/P41; full BK-85-AC1"
+        }
+      ],
+      "code_anchors": [
+        "nm/bootstrap/egress_policy.py::egress_policy",
+        "nm/domain/egress.py::Gatekeeper",
+        "nm/bootstrap/composition.py::Application.__init__",
+        "nm/adapters/model/policed.py::PolicedModel",
+        "nm/adapters/policed_port.py::PolicedPort",
+        "nm/adapters/search/policed.py::PolicedSearch"
+      ],
+      "evidence_needed": [
+        "docs/backlog/evidence/a3-conformance-egress.json",
+        "Current full-Class-A binding",
+        "Configuration-specific production_measure and approved processor evidence before release"
+      ],
+      "next_action": "Preserve controlled-local restrictions, record BK-85 as partial rather than none, and keep its production criterion open."
+    },
+    {
+      "id": "P07",
+      "criteria": [
+        "BK-85-AC2",
+        "BK-21-AC1",
+        "BK-21-AC2"
+      ],
+      "intended_scope": "Provider-independent key-service boundary, wrapped scoped data-key references, key-versioned encryption/decryption and audited atomic rotation; preserve credential separation and sealed/open/unreadable distinctions. Target restore is separate P38 proof.",
+      "assessment": "LOCAL_ENVELOPE_FOUNDATION_PRESENT_NOT_FULL_TARGET_KEY_SERVICE",
+      "built": [
+        "LocalKeyRing uses vetted HKDF/AES-GCM wrapping with matter/version binding",
+        "MatterSealer integrates per-matter data keys into FileMatterStore",
+        "Credential-collision refusal and re-key classification/rotation controls exist",
+        "The adapter explicitly labels its scheme NOT-KMS"
+      ],
+      "excluded": [
+        "Local round trips do not prove KMS authorization, least-privilege restore or deployed key custody",
+        "No production key rotation or real secret inspection is performed by this review"
+      ],
+      "required_missing": [
+        {
+          "kind": "remaining_target_engineering",
+          "detail": "The packet's provider-independent key-service port/injection boundary is not represented: MatterSealer constructs LocalKeyRing directly. This is a missing full-target output, not evidence that the existing scoped local-envelope claim is false.",
+          "owner": "Remaining P07 target boundary"
+        },
+        {
+          "kind": "deployment_evidence",
+          "detail": "KMS-backed scoped authority, denied access and rotation/restore under target credentials require actual implementation/configuration and external operational proof.",
+          "owner": "BK-85-AC2/P38"
+        }
+      ],
+      "code_anchors": [
+        "nm/adapters/store/envelope.py::LocalKeyRing",
+        "nm/adapters/store/envelope.py::rewrap_all",
+        "nm/adapters/store/sealing.py::MatterSealer",
+        "nm/bootstrap/composition.py::_refuse_a_shared_seal",
+        "nm/ports (no key-service port at reviewed scope)"
+      ],
+      "evidence_needed": [
+        "tests/test_one_data_key_per_matter.py",
+        "tests/test_the_matter_store_uses_its_own_key.py",
+        "tests/test_rotating_the_seal_keeps_every_matter_readable.py",
+        "tests/test_the_seal_is_not_another_credential.py",
+        "Target key-service and deployment proof before full BK-85-AC2 closure"
+      ],
+      "next_action": "Retain accurate local foundation status; explicitly scope the missing key-service boundary before claiming the entire intended P07 output complete."
+    },
+    {
+      "id": "P19",
+      "criteria": [
+        "BK-84-AC1"
+      ],
+      "intended_scope": "Bounded read-only original-versus-derived inventory and canonical source/alias registry with provenance, jurisdiction, language, dates, rights and hashes; unresolved law/coverage remains explicit and no shared database rebuild is implied.",
+      "assessment": "SYNTHETIC_INVENTORY_AND_SOURCE_GOVERNANCE_FOUNDATION",
+      "built": [
+        "Separate asset/consumer inventory, exact canonical identities and aliases, typed source versions and explicit readiness/rights/legal-review states",
+        "Conformance repair refuses linked source entries and propagates traversal/hash incompleteness instead of claiming complete inventory"
+      ],
+      "excluded": [
+        "No private chat history was read",
+        "No live shared corpus resurvey, acquisition, indexing or embedding was run",
+        "SourceVersion's typed review fields do not authenticate a real qualified reviewer"
+      ],
+      "required_missing": [
+        {
+          "kind": "external_review_and_actual_population",
+          "detail": "Complete reviewed actual-source metadata and explicit supported coverage under qualified counsel; current synthetic controls do not establish all-India coverage.",
+          "owner": "BK-84-AC1"
+        },
+        {
+          "kind": "downstream_integration",
+          "detail": "Complete durable published legal-review/coverage projection and curator/HTTP get-source/get-corpus surfaces remain outside the delivered tooling scope.",
+          "owner": "Corpus consumer integration"
+        }
+      ],
+      "code_anchors": [
+        "nm/knowledge/source_registry.py::inventory_sources",
+        "nm/knowledge/source_registry.py::CanonicalSource",
+        "nm/knowledge/source_registry.py::SourceVersion",
+        "nm/knowledge/source_registry.py::SourceRegistry.readiness",
+        "tools/inventory_legal_sources.py::main"
+      ],
+      "evidence_needed": [
+        "tests/test_legal_source_inventory.py",
+        "tests/test_source_registry.py",
+        "tests/test_corpus_conformance.py",
+        "docs/backlog/evidence/a3-conformance-corpus.json",
+        "Qualified real-source counsel_review for BK-84-AC1"
+      ],
+      "next_action": "Retain inventory as a foundation, collect approved actual-source review separately and do not close BK-84-AC1 from filesystem or synthetic tests alone."
+    },
+    {
+      "id": "P20",
+      "criteria": [
+        "BK-84-AC2"
+      ],
+      "intended_scope": "Stage reconciled rights-reviewed sources and lineage-bound derived artifacts, publish immutable candidate/published/withdrawn snapshots atomically, preserve prior readers, and flag exactly dependent work on withdrawal/rollback without silently mutating the active shared database.",
+      "assessment": "PUBLICATION_AND_READER_FOUNDATION_INTEGRATED_DEPENDENT_WORK_CONSUMERS_PENDING",
+      "built": [
+        "Source/staging/hash/rights-readiness and artifact-lineage population checks precede atomic pointer publication",
+        "Real Application binds evidence and authority search to one verified published generation behind egress guards",
+        "Conformance repair checks withdrawal before and after cached reads, records rollback reassessment and refuses unavailable dependency registers before changing state",
+        "Explicit dependency and reassessment records are available to future work consumers"
+      ],
+      "excluded": [
+        "No indexing job, real corpus cutover or network acquisition ran",
+        "No curator publication HTTP command is claimed",
+        "Source-review semantics are checked at publication from the supplied registry, not independently established by a source hash"
+      ],
+      "required_missing": [
+        {
+          "kind": "downstream_served_integration",
+          "detail": "record_corpus_dependency has no served production writer outside its module at this scope. Actual matter/job dependency recording, invalidation and UI reassessment therefore remain pending; a synthetic supplied dependency is not that integration.",
+          "owner": "Downstream matter/research dependency integration"
+        },
+        {
+          "kind": "published_metadata_boundary",
+          "detail": "Published source rows retain IDs/hash/binding/staging, not the complete SourceVersion legal-review/coverage object. Do not claim full published metadata or expiry re-evaluation from current snapshot loading.",
+          "owner": "Full BK-84-AC1 and downstream reviewed source use"
+        },
+        {
+          "kind": "execution_evidence",
+          "detail": "The original focused-evidence concern is resolved: all 131 synthetic follow-up cases passed, including dependency-register and cleanup controls. Current canonical/ordinary engineering and browser binding is in a3-conformance-final.json#final_execution. Actual-source/provider evidence and the distinct engineering gaps above remain unearned; this is not full P20 acceptance.",
+          "owner": "BK-84-AC2",
+          "historical_detail": "Bind the final repaired corpus population to current execution; earlier focused results precede the recorded dependency-register/cleanup follow-up."
+        }
+      ],
+      "code_anchors": [
+        "nm/knowledge/manifest.py::publish_corpus",
+        "nm/knowledge/manifest.py::PublishedCorpus",
+        "nm/knowledge/manifest.py::rollback_corpus",
+        "nm/knowledge/manifest.py::withdraw_corpus",
+        "nm/knowledge/manifest.py::record_corpus_dependency",
+        "nm/bootstrap/composition.py::Application.__init__"
+      ],
+      "evidence_needed": [
+        "tests/test_immutable_corpus_publication.py",
+        "tests/test_corpus_conformance.py",
+        "docs/backlog/evidence/a3-conformance-corpus.json",
+        "Actual served dependency propagation proof when downstream integration is built"
+      ],
+      "next_action": "Finish and bind current foundation verification; preserve downstream dependency and metadata gaps rather than extending a passing publication primitive into a whole-journey claim."
+    },
+    {
+      "id": "P44",
+      "criteria": [
+        "BK-24-AC1"
+      ],
+      "intended_scope": "Explainable versioned selection accepts otherwise eligible recent uncited decisions, rejects ineligible popular ones, prepares bounded acquisition commands and reconciles exact receipts into P20 staging without altering the active corpus or running downloads without approval.",
+      "assessment": "BOUNDED_ACQUISITION_TOOLING_IMPLEMENTED_REAL_EXECUTION_NOT_AUTHORIZED",
+      "built": [
+        "Shared eligibility/recency selection policy and explicit included/excluded reasons",
+        "Both acquisition entry points stage bounded quarantined outputs with authorization/scope/receipt identity",
+        "Conformance repair removes the historical hard-coded cutoff, shares explicit acquisition dates, and reconciles selected candidate identities to received artifacts rather than counts alone"
+      ],
+      "excluded": [
+        "No actual scrape/download was run",
+        "Acquisition success does not establish legal applicability, rights permission or corpus completeness",
+        "Preparing publish-corpus handoff does not implement a curator HTTP workflow"
+      ],
+      "required_missing": [
+        {
+          "kind": "execution_evidence",
+          "detail": "Current focused and full-tree binding of both acquisition entry points and exact receipt tampering controls.",
+          "owner": "BK-24-AC1"
+        },
+        {
+          "kind": "external_authorization",
+          "detail": "A separately approved bounded actual acquisition, rights/source review and P20 publication acceptance before any live law is adopted.",
+          "owner": "Actual acquisition/publication operation, not a prerequisite for claiming the synthetic tooling implemented"
+        }
+      ],
+      "code_anchors": [
+        "nm/knowledge/acquisition.py::acquisition_dates",
+        "nm/knowledge/acquisition.py::select_candidates",
+        "nm/knowledge/acquisition.py::stage_acquisition",
+        "nm/knowledge/acquisition.py::reconcile_acquisition",
+        "tools/fetch_judgments.py",
+        "tools/scrape_judgments.py",
+        "tools/reconcile_acquisition.py"
+      ],
+      "evidence_needed": [
+        "tests/test_judgment_acquisition.py",
+        "tests/test_acquisition_receipts.py",
+        "tests/test_corpus_conformance.py",
+        "docs/backlog/evidence/a3-conformance-corpus.json"
+      ],
+      "next_action": "Retain the narrow BK-24 implementation claim, refresh repair evidence and obtain explicit operation-specific authority before any real acquisition."
+    }
+  ],
+  "trace_findings_current_disposition": {
+    "TRACE-C1": "OPEN: the P24/BK-54-AC3 unavailable-material refusal remains unbuilt; C1 is already partial/building rather than complete.",
+    "TRACE-T3C": "HISTORICAL_RESOLVED_BY_REMEASUREMENT: C6 is partial foundation and the authored-none contradiction is gone. P16 now has real served upload/quarantine controls; full extraction/inspection remains unbuilt. The original finding below describes the earlier tree, not current served absence.",
+    "TRACE-T3B": "HISTORICAL_RESOLVED_BY_REMEASUREMENT: the original 24/44 population is preserved below; current trace-only count is zero after genuine ownership registration, not control-row substitution.",
+    "RUFF-PLANNING-DEBT": "HISTORICAL_RESOLVED_BY_REMEASUREMENT: the 144-diagnostic allowance is removed; its original count is preserved below and no new style finding is waived."
+  },
+  "trace_findings": [
+    {
+      "id": "TRACE-C1",
+      "kind": "future_product_behavior_not_a_trace_engine_defect",
+      "owner": "P24/BK-54-AC3",
+      "source": "spec/features.yaml C1.never[4]; docs/blueprint/packets.json P24; tools/trace.py T7",
+      "finding": "The unavailable-material/completion/stop-resume refusal is genuinely unbuilt. Existing C1 @refuses cover indices 0-3, not index 4.",
+      "required_action": "Keep the refusal visible and implement it under P24. C1 complete/delivered overstates the extended contract; partial/building is truthful and still projects built, so it must not silence T7. Do not add a decorative @refuses or AWAITING exception."
+    },
+    {
+      "id": "TRACE-T3C",
+      "kind": "registry_versus_declared_foundation_mismatch",
+      "owner": "BK-48-AC1",
+      "source": "nm/core/intake.py; docs/backlog/status.yaml C6/BK-54; tools/trace.py::implementation_discrepancies",
+      "finding": "C6 declares document helper primitives in nm/core/intake.py, but no outside production consumer was found. Its current none field denies code presence; promoting it to full multimodal completion would be equally wrong.",
+      "required_action": "Record only partial, unwired document/intake foundations and retain full P16/P24/P25 requirements and NOT_RUN evidence. Reconcile the corresponding delivery row deliberately; no decorator proves a served feature."
+    },
+    {
+      "id": "TRACE-T3B",
+      "kind": "missing_genuine_delivery_provenance",
+      "owner": "BK-48-AC2",
+      "observed_count": 24,
+      "observed_population": 44,
+      "source": "docs/backlog/known_failures.yaml TRACE-T3B; tools/feature_state.py::genuine_delivery_items",
+      "finding": "Feature delivery_items annotations and control-row references are not the reverse journey delivers relation. Assigning every feature to the reconciliation control would let the checker certify the product it checks.",
+      "required_action": "Map each reviewed feature to its genuine journey implementation owner; keep exact membership/count failures until that authorized reconciliation is complete."
+    },
+    {
+      "id": "RUFF-PLANNING-DEBT",
+      "kind": "historical_exact_style_debt_signature",
+      "owner": "BK-87-AC1",
+      "observed_registry_count": 144,
+      "required_action": "Re-measure after coherent changes. Do not widen or refresh its exact digest blindly to cover new diagnostics; distinguish moved old lines from new debt."
+    }
+  ],
+  "registry_recommendations_initial": [
+    {
+      "path": "docs/backlog/status.yaml",
+      "selector": "features[id=C1]",
+      "current": "implementation: complete; disposition: delivered",
+      "recommendation": "partial/building for the expanded account/briefing contract; preserve the separately owned P24 refusal and T7 visibility"
+    },
+    {
+      "path": "docs/backlog/status.yaml",
+      "selector": "features[id=C6] and items[id=BK-54]",
+      "current": "none/planned plus NOT_STARTED despite reviewed document and upload foundation code",
+      "recommendation": "Record partial/in_progress foundation scope only, with next_action naming the actual missing integration/evidence. Do not mark full C6 built end-to-end or promote browser/model/counsel results."
+    },
+    {
+      "path": "docs/backlog/status.yaml",
+      "selector": "BK-31-AC20.evidence.integration_test.note",
+      "current": "D-013 promises rotation but no served rotation path is built",
+      "recommendation": "Replace false absence with implemented served rotation plus current scoped 90-test repair result; bind an appropriate current test reference through the normal evidence mechanism. Browser_journey remains NOT_RUN until actual proof."
+    },
+    {
+      "path": "docs/backlog/status.yaml",
+      "selector": "BK-80.next_action and BK-51.next_action versus stage_records",
+      "current": "next_action says signed off while test is OPEN and signoff NOT_RUN",
+      "recommendation": "Describe implemented control-plane scope and historical focused verification without implying final current sign-off. Preserve actual lifecycle status until evidence is refreshed."
+    },
+    {
+      "path": "docs/backlog/status.yaml",
+      "selector": "items[id=BK-85]",
+      "current": "implementation:none/verification:none/delivery_status:planned, while the same row records Build BUILT and P06/P07 foundations",
+      "recommendation": "Use partial/in_progress with precise current local foundations. Keep AC1 production measure, AC2 KMS/restore and AC3 counsel evidence open; do not convert draft acceptance into release authority."
+    },
+    {
+      "path": "docs/backlog/status.yaml",
+      "selector": "items[id=BK-48].next_action",
+      "current": "Exact trace-only/C6 population from the previous export",
+      "recommendation": "After authorized delivery reconciliation and regeneration, update counts from observed trace facts and shrink obsolete known-failure entries only when their exact facts genuinely disappear."
+    },
+    {
+      "path": "docs/backlog/status.yaml",
+      "selector": "BK-84/BK-24 evidence and next_action",
+      "current": "Older scoped references remain present and generally describe their foundation limitations honestly",
+      "recommendation": "Retain valid named witnesses and add the current corpus conformance repair record/binding once its follow-up run is complete. BK-84 stays partial; narrow BK-24 implementation complete need not be downgraded merely because no live acquisition was authorized."
+    }
+  ],
+  "completion_claim": "NONE: this is a scoped audit inventory, not a packet sign-off, counsel review, acceptance PASS or release approval."
+}
