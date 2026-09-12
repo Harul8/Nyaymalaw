@@ -80,11 +80,6 @@ UNWIRED: dict[str, str] = {
         "PostgreSQL is reachable on this machine, so the adapter is built and "
         "unproven, which `tests/test_no_database_means_no_evidence.py` keeps "
         "the registry honest about."),
-    "nm.knowledge.provenance": (
-        "P19's source reliance check. `nm.adapters.evidence.corpus` calls "
-        "`unresolved()` before a retrieved provision reaches the grounding "
-        "gate -- P20's cutover step, which needs the snapshot identity P19 "
-        "inventories and the counsel review BK-84-AC1 also requires."),
     "nm.core.premise": (
         "P22's legal-premise gate. `nm.core.limitation.compute` calls "
         "`assess()` before the arithmetic and `nm.core.turn` carries the "
@@ -115,9 +110,6 @@ UNWIRED: dict[str, str] = {
     "nm.domain.tiers":
         "S0's tier vocabulary. Consulted by the model config through the "
         "environment rather than by import.",
-    "nm.knowledge.artefact":
-        "S11's artefact-identity check, whose counterexample is the real "
-        "dense index. Nothing builds a derived artefact on a turn yet.",
 }
 
 
@@ -262,7 +254,6 @@ OWNER: dict[str, tuple[str, ...]] = {
     # contract rather than a promise of its own.
     "nm.core.worker": ("I1",),
     "nm.core.premise": ("D2",),
-    "nm.knowledge.provenance": ("D4",),
     # BK-69's boundary belongs to the feature that will cross it. C6 is
     # document intake and extraction -- the media path -- so when C6 moves off
     # `implementation: none`, the status check above starts asking whether
@@ -357,8 +348,7 @@ def test_every_unwired_module_names_a_feature_that_exists():
     assert not missing, f"OWNER names features that do not exist: {missing}"
 
     unowned = sorted(m for m in UNWIRED
-                     if m not in OWNER and not m.startswith(("nm.domain.tiers",
-                                                            "nm.knowledge.artefact")))
+                     if m not in OWNER and not m.startswith("nm.domain.tiers"))
     assert not unowned, (
         f"these modules are UNWIRED and name no feature, so the status check "
         f"above skips them entirely: {unowned}")

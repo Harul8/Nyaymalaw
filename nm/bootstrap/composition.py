@@ -30,7 +30,7 @@ from nm.domain.clock import FORUM
 from nm.domain.egress import DataClass, Gatekeeper, Sink
 from nm.domain.gates import GATES, withholding
 from nm.knowledge.coverage import CoverageProfile
-from nm.knowledge.manifest import Manifest
+from nm.knowledge.manifest import Manifest, PublishedCorpus
 from nm.ports.directory import DirectoryPort
 from nm.ports.model import ModelPort, Tier
 from nm.ports.store import StorePort
@@ -113,26 +113,63 @@ class Application:
             # credential material, which is restricted rather than client
             # matter, and saying so keeps the two separable in the audit.
             data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
-        self.evidence = evidence or CorpusEvidenceAdapter(
+        corpus_path = Path(
             os.environ.get("NM_CORPUS_DIR")
-            or (self.root / "legal_database" / "vector_store"),
-            self.manifest,
-            authority_index=(os.environ.get("NM_AUTHORITY_INDEX")
-                             or default_authority_index(self.root)),
-            identity_index=(os.environ.get("NM_IDENTITY_INDEX")
-                            or (self.root / ".nm" / "identity.db")))
+            or (self.root / "legal_database" / "vector_store")
+        )
+        published_corpus = (corpus_path / "current.json").is_file()
+        published_snapshot = None
+        if published_corpus and evidence is None and any(
+            os.environ.get(name) for name in (
+                "NM_AUTHORITY_INDEX", "NM_IDENTITY_INDEX",
+            )
+        ):
+            raise RuntimeError(
+                "NM_CORPUS_DIR names an immutable published corpus; standalone "
+                "authority or identity index overrides would mix generations"
+            )
+        if evidence is not None:
+            self.evidence = evidence
+        elif published_corpus:
+            published_snapshot = PublishedCorpus.open(corpus_path, verify_all=True)
+            self.manifest = Manifest.load(
+                published_snapshot.member_path("corpus/manifest.yaml")
+            )
+            self.evidence = CorpusEvidenceAdapter.from_published_snapshot(
+                published_snapshot,
+            )
+        else:
+            self.evidence = CorpusEvidenceAdapter(
+                corpus_path,
+                self.manifest,
+                authority_index=(os.environ.get("NM_AUTHORITY_INDEX")
+                                 or default_authority_index(self.root)),
+                identity_index=(os.environ.get("NM_IDENTITY_INDEX")
+                                or (self.root / ".nm" / "identity.db")))
         # A4. The SAME index the evidence adapter reads, named once. Two
         # paths to one file, configured separately, is how the grounding gate
         # and the evidence adapter came to hold different provision patterns
         # (CLAUDE.md §4) -- so the search surface takes the resolved path
         # rather than re-reading the environment.
+        if search is not None:
+            search_adapter = search
+        elif published_corpus and evidence is None:
+            if published_snapshot is None:
+                raise AssertionError("published corpus snapshot was not bound")
+            search_adapter = AuthorityIndexSearch.from_published_snapshot(
+                published_snapshot,
+            )
+        else:
+            search_adapter = AuthorityIndexSearch(
+                os.environ.get("NM_AUTHORITY_INDEX")
+                or default_authority_index(self.root))
         # THE QUERY IS WHAT LEAVES. An advocate searching for authority types
         # the substance of the matter into the box, so the text going TO the
         # index is client material even though the law coming back is public.
+        # Every adapter selection reaches this one wrapper, including a
+        # published generation and an explicitly supplied search port.
         self.search = PolicedSearch(
-            inner=search or AuthorityIndexSearch(
-                os.environ.get("NM_AUTHORITY_INDEX")
-                or default_authority_index(self.root)),
+            inner=search_adapter,
             gate=self._gate, processor_id=INDEX_PROCESSOR)
         # EVERY MODEL CALL IS KEPT, and the wrapping happens HERE.
         #

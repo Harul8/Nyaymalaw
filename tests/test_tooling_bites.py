@@ -14,6 +14,7 @@ from __future__ import annotations
 import ast
 import re
 import shutil
+import sqlite3
 import subprocess
 import sys
 import textwrap
@@ -597,6 +598,27 @@ def test_the_graph_vector_report_starts_through_its_documented_path(tmp_path):
         "the executable returned without producing its freshness verdict")
     assert "traceback" not in report.lower(), (
         "the reporter still failed before it could measure the graph")
+
+
+def test_a_graph_without_an_embedding_table_reports_full_lag(tmp_path):
+    """A structural-only graph is stale, not a reporter crash or zero lag."""
+    from tools.graph_vectors import examples, lag
+
+    database = tmp_path / "graph.db"
+    connection = sqlite3.connect(database)
+    try:
+        connection.execute(
+            "create table nodes (qualified_name text primary key, kind text)"
+        )
+        connection.execute(
+            "insert into nodes values (?, ?)", ("nm.example.rule", "Function")
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    assert lag(database) == (1, 0, 1)
+    assert examples(db=database) == ["nm.example.rule"]
 
 
 #: What a module has to reach to make a model call. Names rather than a

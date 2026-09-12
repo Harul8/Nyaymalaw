@@ -674,22 +674,25 @@ items:
   title: the citation filter excludes exactly the years the corpus needs
   kind: substrate
   priority: P1
-  delivery_status: planned
-  implementation: none
-  verification: none
+  delivery_status: verifying
+  implementation: complete
+  verification: partial
   affects_phases:
   - D
   record: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs
+  next_action: P19/P44/P20 branch integrated into the common development tree on 12 September 2026; retain scoped acquisition proof, obtain current combined-gate evidence and required rights/review acceptance before live corpus use
   stage_records:
-    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs}
+    start: {result: READY, ref: docs/BACKLOG.md#p44-acquisition-foundation-start-record--11-september-2026}
+    build: {result: BUILT, ref: docs/BACKLOG.md#p44-scoped-build-and-test-record--11-september-2026}
+    test: {result: VERIFIED, ref: docs/BACKLOG.md#p44-scoped-build-and-test-record--11-september-2026}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-24-the-citation-filter-excludes-exactly-the-years-the-corpus-needs}
   acceptance:
   - id: BK-24-AC1
     requirement: "Judgment acquisition selection does not reject recent otherwise eligible decisions merely for low citation count and records source, recency and selection reasons"
     required_evidence: [integration_test, adversarial_test]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_judgment_acquisition.py::test_p44_integration_witness_covers_both_entrypoints_and_reconcile_command', note: 'Offline scripted transports exercise both acquisition entry points and the reconciliation command; no external download, scrape, corpus publication or browser route was run.'}
+      adversarial_test: {result: PASS, ref: 'tests/test_judgment_acquisition.py::test_p44_adversarial_witness_covers_bias_scope_and_receipt_guards', note: 'Counterexamples cover citation-age bias, ineligible popularity and receipt-state tampering; receipt corruption, escaped paths and request-budget exhaustion are also covered by focused P44 tests.'}
     negative_control:
       mutation: "offer equally relevant old and new decisions with zero citations on the new one"
       expected_failure: "the new decision is not excluded solely by citation age and the selection report names the governing rule"
@@ -3295,16 +3298,16 @@ items:
   title: versioned Indian legal corpus publication and coverage governance
   kind: substrate
   priority: P0
-  delivery_status: planned
-  implementation: none
-  verification: none
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
   affects_phases: [A, C, D, E, F, G]
   record: docs/BACKLOG.md#bk-84-versioned-indian-legal-corpus-publication-and-coverage-governance
-  next_action: complete the Start record and implement the bounded foundation with current negative and served-path proof
+  next_action: P20 and its P19/P44 prerequisites are integrated with P03 and P06-P17 in the common development tree; preserve the shared corpus identity and pre-dispatch guards, record the combined full-gate result before sign-off, and obtain AC1/AC3 real-source review. The isolated P20 and intermediate consolidation commit exceptions remain development-only and confer no release approval.
   stage_records:
-    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-84-versioned-indian-legal-corpus-publication-and-coverage-governance}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-84-versioned-indian-legal-corpus-publication-and-coverage-governance}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-84-versioned-indian-legal-corpus-publication-and-coverage-governance}
+    start: {result: READY, ref: docs/BACKLOG.md#p20-immutable-corpus-publication-start-record--11-september-2026}
+    build: {result: BUILT, ref: docs/BACKLOG.md#p20-scoped-build-and-test-record--11-september-2026}
+    test: {result: VERIFIED, ref: docs/BACKLOG.md#p20-scoped-build-and-test-record--11-september-2026}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-84-versioned-indian-legal-corpus-publication-and-coverage-governance}
   acceptance:
   - id: BK-84-AC1
@@ -3317,7 +3320,9 @@ items:
   - id: BK-84-AC2
     requirement: Corpus ingestion is staged and rights-reviewed, publishing an immutable manifest atomically only after reconciliation and source quality checks; rollback and amendment-triggered invalidation preserve previous snapshots
     required_evidence: [integration_test, adversarial_test]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_immutable_corpus_publication.py::test_application_composition_serves_one_published_generation', note: 'The production composition opens one active pointer and shares the exact verified snapshot across evidence and authority search; the fixture uses synthetic source and index bytes only.'}
+      adversarial_test: {result: PASS, ref: 'tests/test_immutable_corpus_publication.py::test_p20_adversarial_witness_rejects_partial_changed_and_withdrawn_law', note: 'The named witness interrupts cutover, substitutes bytes and withdraws relied-on law; the remaining focused P20 population covers concurrency, corruption, path, population, rollback and cross-snapshot invalidation controls.'}
     negative_control:
       mutation: interrupt publication, change the source hash or withdraw an authority after indexing
       expected_failure: readers cannot see a half-published snapshot and dependent work is flagged for reassessment

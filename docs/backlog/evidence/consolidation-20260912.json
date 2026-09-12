@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "kind": "development_consolidation_report",
+  "date": "2026-09-12",
+  "branch": "s0-foundations",
+  "source_commits": {
+    "foundation": "43f62e4af9f85b7ae82a103d885d74f81513ce26",
+    "P13_P17": "1399a535c23980821126e21ac97de72082377f75",
+    "P03": "2ede08ce3664a0e139d006b18f6610a8fe9331f8",
+    "P19": "68ce1490785f5bf7b22cd6588c87f11a1cf3ac54",
+    "P44": "34a88132c701b1d32ff6fc05893b66a9a2b23e42",
+    "P20": "a5ea429d5306079b74f0415da4c242debd3e7c48"
+  },
+  "focused_tests": {
+    "files": 29,
+    "tests": 542,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "seconds": 47.163,
+    "selector": "not class_c and not class_d and not journey",
+    "junit": ".nm/integration-20260912/focused.xml"
+  },
+  "cumulative_gate": {
+    "result": "FAIL",
+    "command": "python -u tools/check.py",
+    "started_at": "2026-09-12T04:54:59.023513+00:00",
+    "finished_at": "2026-09-12T05:08:28.376978+00:00",
+    "seconds": 809.359,
+    "exit_code": 1,
+    "started_fingerprint": "83d9d42995782596c16daf0ec6c3cd35fb2ce766af35c7eef9fe16524e5e8897",
+    "finished_fingerprint": "83d9d42995782596c16daf0ec6c3cd35fb2ce766af35c7eef9fe16524e5e8897",
+    "source_unchanged": true,
+    "log": ".nm/integration-20260912/full-gate.log",
+    "log_sha256": "2e9c1f1a3217c68b381ba1178cd05db1dc651d1718912fe4f96a2bcd15646536",
+    "passed_stages": ["layercheck", "export_spec", "speccheck", "pylint E0601,E0606", "pytest ordinary local"],
+    "failed_stages": ["trace", "ruff", "pytest Class-A"],
+    "matched_known_failures": ["TRACE-C1", "TRACE-T3B", "TRACE-T3C", "RUFF-PLANNING-DEBT"],
+    "additional_failure": {
+      "nodeid": "tests/test_a_completed_claim_survives_its_own_housekeeping.py::test_only_one_module_in_the_product_removes_a_name",
+      "owner": "BK-84-AC2",
+      "reason": "P20 nm/knowledge/manifest.py directly calls unlink at lines 459, 473 and 506, bypassing the product's shared cleanup owner.",
+      "inherited_from": "a5ea429",
+      "next_action": "Reconcile corpus publication with the shared cleanup policy without introducing a knowledge-to-adapter dependency. Prove post-publication cleanup failure cannot invalidate a durable published result, preserve fail-closed lock handling, then rerun the cumulative gate. Do not waive the ownership sweep."
+    },
+    "new_gate_stamp": false,
+    "class_a_seconds": 770.4,
+    "ordinary_seconds": 7.4,
+    "latency_observation": "The Class-A refusal test test_an_unscored_golden_suite_is_not_reported_as_a_pass invoked run_goldens.py without --skip-authority and entered real-corpus authority checking. This incidental Class-C work should be isolated from the refusal test in a separate gate-performance change; no test was weakened during consolidation."
+  },
+  "workbook_reconciliation": {
+    "result": "PASS",
+    "sheets": 28,
+    "items": 101,
+    "acceptance_criteria": 201,
+    "problems": 0,
+    "formula_errors": 0,
+    "changed_formula_definitions": 0,
+    "changed_scalar_cells": 23,
+    "changed_worksheet_xml_members": 6,
+    "styles_and_other_package_members_preserved": true,
+    "source_fingerprint": "83d9d42995782596c16daf0ec6c3cd35fb2ce766af35c7eef9fe16524e5e8897",
+    "visual_review": "Original Overview and final Reconciliation rendered and inspected.",
+    "detail": ".nm/integration-20260912/preservation-verification.json"
+  },
+  "consolidation_status": "Completed-commit branches reconciled; commit under the development-only exception, with full gate still red.",
+  "acceptance_evidence_promoted": false,
+  "release_authorised": false,
+  "older_staged_worktrees": "Preserved untouched: P01 staging is superseded; unique BK-85 schema-1 draft package awaits compatibility migration to P03 schema 2.",
+  "commit_exception": "User delegated discretion for consolidation commits only. Used --no-verify for the P03 intermediate merge and final P20 consolidation because the combined full gate remains red and produced no current gate stamp. The failed ownership sweep and all existing acceptance obligations remain open. No permission for deployment or standing bypass on future feature work."
+}

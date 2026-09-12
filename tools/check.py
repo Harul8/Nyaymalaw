@@ -17,8 +17,9 @@ WHAT IT RUNS, AND WHY IN THIS ORDER
                    a stale call site after a rename raised NameError on every
                    matter for weeks in the previous build.
  6. pytest -m class_a  -- the invariants. No corpus, no model, seconds.
- 7. pytest (local)     -- unmarked/local tests; excludes corpus, browser and
-                          judged populations, which have separate authority.
+ 7. pytest (local)     -- ordinary unmarked/local tests; excludes Class-A,
+                          corpus, browser and judged populations, which have
+                          already run or have separate authority.
 
 Class-D judged runs are NOT here and never will be: they cost money and need
 explicit per-run approval. `tools/check.py` must stay cheap enough that there is
@@ -41,6 +42,7 @@ sys.path.insert(0, str(ROOT))
 from tools._console import utf8_console  # noqa: E402
 from tools.evidence import (  # noqa: E402
     CLASS_A_PYTEST_ARGS,
+    ORDINARY_PYTEST_ARGS,
     verification_fingerprint,
 )
 
@@ -311,8 +313,7 @@ def main() -> int:
     # a missing credential commonly made that look harmless by skipping. A
     # skip caused by absent authority is not permission to enter the class.
     ok, out = step("pytest (ordinary local)",
-                   [py, "-m", "pytest", "-q", "-m",
-                    "not class_c and not class_d and not journey"])
+                   [py, "-m", "pytest", *ORDINARY_PYTEST_ARGS])
     captured["pytest"] = out
     results.append(("pytest", ok))
     prints.append(("pytest", verification_fingerprint()))

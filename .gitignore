@@ -38,6 +38,9 @@ build/
 # Generated at run time
 .nm/
 spec/prd/node_modules/
+# Local generated artifacts and parallel worktrees, never source inputs.
+# Existing contents are preserved on disk; tracked plan outputs live in docs/.
+/outputs/
 
 # Stores written at runtime
 *.db

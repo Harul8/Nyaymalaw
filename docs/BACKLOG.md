@@ -4,7 +4,7 @@ What is known, not done, and not yet a defect row. Opened 6 September 2026.
 
 ## Development-tree consolidation — 12 September 2026
 
-**In progress; engineering integration, not release sign-off.** User-authorised
+**Implementation reconciled; engineering integration, not release sign-off.** User-authorised
 scope: bring the completed parallel branches into `s0-foundations` before P18,
 P21 and P22. Preserve P13–P17 (`1399a53`), P03 (`2ede08c`) and the whole P20
 ancestry (`68ce149` P19, `34a8813` P44, `a5ea429` P20). Do not cherry-pick only
@@ -15,7 +15,9 @@ Plan: reconcile composition and shared sweep registries; inspect older staged
 work for unique changes without overwriting its source; regenerate the board
 and workbook from the combined authoritative records; run focused integration
 proof and the cumulative engineering gate once the candidate is settled.
-Record the measured outcomes below before closing this consolidation.
+Final machine-readable outcomes are recorded in
+`docs/backlog/evidence/consolidation-20260912.json`. That record is an
+integration report, not criterion acceptance evidence or a gate stamp.
 
 Intermediate merge commits may use the user's delegated, documented
 `--no-verify` discretion to preserve the combined work while the gate exception
@@ -23,6 +25,50 @@ remains open. Their workbook is an intermediate snapshot, pending regeneration.
 This is a development-history exception only, never a full-gate PASS, counsel
 approval or deployment authority. Review it at final consolidation verification;
 do not carry it forward as standing permission for later feature commits.
+
+Older-worktree audit: 20 of 23 staged P01 paths match the later foundation
+commit exactly; the remaining three are superseded failure/ownership records.
+They are not reapplied. The staged BK-85 applicability package is genuinely
+unique but still emits schema-1 review evidence, incompatible with P03's
+authenticated schema-2 verifier. Both old worktrees are preserved untouched.
+The applicability draft needs a separate schema migration before integration;
+no historic draft acceptance is promoted into a signed counsel PASS. This
+consolidation brings together completed commits, not that unfinished package.
+
+The root `outputs/` directory contains local generated artifacts and parallel
+worktrees, not tracked product sources. It is now ignored at the repository
+root only; no files or worktrees are deleted. All conflicting workbook versions
+are additionally preserved in `.nm/integration-20260912/`, with Git blob hashes
+checked against the corresponding merge stages before resolution.
+
+Integration findings and proof: one verified published-corpus snapshot is
+shared by evidence and search; the selected published, legacy or injected
+search adapter always enters the existing `PolicedSearch`. Both storage
+wrappers and the model guard remain in place. Three new real-application cases
+prove a successful search followed by permission revocation and no subsequent
+inner-index call. Sweep/enum registries retain the union of all three branches;
+obsolete provenance/artefact unwired declarations are removed, while the
+PostgreSQL/worker boundaries remain explicitly unwired.
+
+The 29-file focused population completed **542 tests, 0 failures, 0 errors,
+0 skips** in 47.163 seconds. Blueprint structural checks reported 0 problems
+across 13 modules, 101 items and 47 packets; focused Ruff passed. Execution-bound
+backlog lint still reports stale Class-A evidence, a historical skipped node
+in that artifact, and the pre-binding BK-21-AC4 production record. Those
+historical records are preserved and are not promoted into current evidence.
+The P20 branch's existing disjoint ordinary/Class-A selectors are retained.
+
+Reconciliation follows the spreadsheet edit discipline: retain all 28 sheets
+and existing styles, source the rows/formulas from the canonical generator,
+and verify the saved workbook against the current registries. The bundled JS
+artifact package is unavailable; the local fallback uses the bundled Python
+artifact engine for formula calculation and preserves the original XLSX
+package around the source-derived cells. No dependency directory is modified.
+
+Final cumulative gate outcome, candidate fingerprint, log digests and commit
+exception decision belong to the integration report linked above. Resolve its
+remaining failures before claiming full-gate sign-off; qualified review,
+database proof and live journey/release work keep their existing owners.
 
 **The defect register is `spec/plan/build_plan.py` and it stays the record of
 things that BROKE.** This holds the other two kinds: work deliberately deferred
@@ -112,7 +158,7 @@ Derived gap state: IN_PROGRESS 6, PLANNED 8
 - **BK-81** [A/B/C/D/E/F/G/H/I] India-only modular product and execution blueprint — *verifying* · obtain qualified design review and fresh full evidence after resolving the existing trace failures; no application or release claim is promoted
 - **BK-82** [A/B/C/D/E/F/G/H/I] module proof console and cumulative demonstration control — *in_progress* · build the isolated operator console and run-population controls; the mapping checker exists but does not prove the served console or production readiness
 - **BK-83** [A/B/C/D/E/F/G/H/I] transactional matter store and reversible migration — *planned* · Built 11 September 2026 and UNPROVEN against a database. P10's adapter, the operation/outbox contract and the version-conditional write exist behind the existing StorePort; P11's job lifecycle (leases, bounded retries, cancellation, permission rechecks, UNKNOWN reconciliation) and P12's migration rehearsal and rollback refusals are exercised against real stores. What is missing is a PostgreSQL server: install one plus psycopg and run `python -m pytest -m postgres`, then record the run. Until then AC1's integration_test stays NOT_RUN and tests/test_no_database_means_no_evidence.py fails the build on any claim to the contrary. AC3 also needs a production_measure, which no test can produce.
-- **BK-84** [A/C/D/E/F/G] versioned Indian legal corpus publication and coverage governance — *planned* · complete the Start record and implement the bounded foundation with current negative and served-path proof
+- **BK-84** [A/C/D/E/F/G] versioned Indian legal corpus publication and coverage governance — *in_progress* · P20 and its P19/P44 prerequisites are integrated with P03 and P06-P17 in the common development tree; preserve the shared corpus identity and pre-dispatch guards, record the combined full-gate result before sign-off, and obtain AC1/AC3 real-source review. The isolated P20 and intermediate consolidation commit exceptions remain development-only and confer no release approval.
 - **BK-85** [A/B/C/D/E/F/G/H/I] India-scoped key processor and security operations foundation — *planned* · Start recorded 11 September 2026. The India applicability DRAFT was accepted and its sign-off particulars deferred by the user, which is an engineering unblock and NOT legal compliance or deployment approval: BK-85-AC3 stays NOT_RUN and its dependent packet and deployment gates stay closed. AC1 measured four of seven sinks with no live destination at all, so P06 polices the live ones and a product-derived sweep refuses a destination added to an unpoliced sink; AC2 wires the envelope into the matter store and replaces a hand-rolled keystream wrap with a vetted AEAD, and remains explicitly NOT KMS-backed evidence.
 - **BK-86** [A/B/C/D/E/F/G/H/I] strong authentication before confidential pilot — *planned* · agree the strong authentication and recovery assurance design before confidential pilot implementation
 - **BK-87** [A/B/C/D/E/F/G/H/I] execution readiness contracts and cross-plan reconciliation — *verifying* · retain the completed planning artifacts; resolve the existing product trace failures before publishing complete current Class-A evidence and final sign-off
@@ -253,6 +299,216 @@ no existing wave was moved. Module integration may occur in later waves,
 and foundation closure does not claim an end-to-end module is complete.
 
 **Stage record.** Start BLOCKED until the bounded design, ownership and exact proof population are reviewed; Build NOT_STARTED, Test NOT_RUN, Sign-off NOT_RUN. This does not prohibit synthetic design or isolated experimentation.
+
+### P19 bounded source-foundation Start record — 11 September 2026
+
+**Decision: READY for local synthetic engineering only.** CHOICE-01 and
+CHOICE-07 permit the stated fallback: preserve the shared corpus and build the
+identity, provenance and read-only inventory mechanisms without publishing a
+coverage pack. Qualified counsel and source-rights review remain required to
+close BK-84-AC1; this Start decision does not supply either.
+
+**Outcome and boundary.** P19 will produce (1) a bounded read-only asset and
+consumer inventory, (2) one canonical source/version/alias register and (3) an
+inspectable provenance/readiness projection. It may read explicitly selected
+public-law paths and source code. It will not inspect `chat_history`, mutate the
+shared junction target, build an index, make a model/network call, install the
+designed HTTP routes, publish a corpus or infer all-India coverage.
+
+**Frozen implementation files.** Existing owners remain
+`nm/knowledge/identity.py`, `nm/knowledge/manifest.py` and
+`tools/build_identity_index.py`. Additive owners are
+`nm/knowledge/source_registry.py` and `tools/inventory_legal_sources.py`.
+Proof lives in `tests/test_legal_source_inventory.py` and
+`tests/test_source_registry.py`. Existing consumers of the manifest and case
+identity remain regression witnesses and are not rewritten.
+
+**Proof population.** Inventory proof covers a readable bounded tree, missing
+root, private exclusion, unknown asset, duplicate bytes, unreadable file,
+bounded/cancelled traversal and a source/output overlap refusal. Registry proof
+covers identical copies, changed versions, same display name with different
+legal identity, alias collision, legacy-locator collision, unknown rights,
+missing effective dates, wrong-source substitution and stale review. Each
+negative control must change an existing field and fail for the intended
+reason. Synthetic records prove the machinery, not the legal premise.
+
+**Rollback and integration.** The new local reports and candidate registers are
+non-serving artifacts. They can be withdrawn without changing the shared
+sources or current runtime adapters. P20 must later consume an approved P19
+output and separately implement immutable publication and activation.
+
+### P19 scoped Build and Test record — 11 September 2026
+
+**Build result: BUILT for the bounded engineering contribution; BK-84-AC1
+remains OPEN.** `nm/knowledge/source_registry.py` now owns bounded inventory,
+canonical source identity, byte-exact version identity, explicit alias and
+legacy-locator bindings, and a non-serving readiness projection. The CLI writes
+an inventory report atomically and refuses to put its output inside the source
+tree. It never follows links, opens pruned private directories, indexes content
+or changes the selected source root.
+
+Identity is based on source kind, jurisdiction, issuing body and official
+identifier; a display label or byte hash cannot silently create or merge a
+legal identity. Alias and legacy-locator collisions remain ambiguous instead
+of becoming last-write-wins mappings. Readiness separately reports READY,
+CANDIDATE, NOT_ASSESSED and REFUSED. It verifies the full content digest and
+withholds unknown rights, missing legal dates, stale or refused review and
+unsupported coverage for their own stated reasons.
+
+**Test result: PASS for synthetic engineering proof; no counsel-review PASS is
+claimed.** The focused offline population covers readable, missing, empty,
+bounded, cancelled, unreadable, private and overlapping inventory states;
+same-name/different-law and same-law/different-version identities; alias and
+legacy collisions; wrong bytes; unknown or restricted rights; current,
+missing, stale and refused review; instrument and judgment dates; and an
+inspectable projection. The final consolidated focused population comprised 88
+inventory, identity, provenance, blank-value, media-boundary, production-reach,
+plan-reconciliation and gate-selector tests, all passing. Focused Ruff passed.
+The generated current-plan reader view was regenerated from the authoritative
+records and reconciles exactly.
+
+**Reservation and handoff.** These tests prove the mechanism using synthetic
+records. They do not establish that any real Indian source may be published,
+is current, has the right jurisdictional mapping or has been reviewed by
+qualified counsel. P19's scoped output may now feed P44's offline acquisition
+foundation; P20 must still refuse publication until the real rights and legal
+review records exist.
+
+### P20 immutable-corpus publication Start record — 11 September 2026
+
+**Decision: READY for isolated synthetic implementation.** P19 supplies the
+canonical source/version and readiness contract and P44 supplies immutable
+quarantine receipts. P07's completed transactional and reversible-storage
+contract is a final-integration prerequisite; this isolated branch deliberately
+does not import the user's concurrent P13–P17 changes or their temporary red
+stubs. CHOICE-01, CHOICE-07 and CHOICE-08 remain pilot/production approvals,
+not permission to publish unreviewed real sources.
+
+**Outcome and boundary.** P20 will make one publication authority responsible
+for candidate creation, exact source-population reconciliation, immutable
+published and withdrawn manifests, atomic active-pointer replacement, rollback
+and amendment/withdrawal invalidation. Readers will resolve only the active
+pointer and verify the referenced manifest and bytes before use. They will
+observe either the previous complete snapshot or the next complete snapshot,
+never a candidate directory, half-written manifest or mixed generation.
+
+Implementation is confined to `nm/knowledge/artefact.py`,
+`nm/knowledge/manifest.py`, `nm/adapters/evidence/corpus.py`,
+`nm/adapters/search/authority.py` and the retrieval wiring in
+`nm/bootstrap/composition.py`, with additive P20 tests. The composition owner
+was added during Build because safe constructors that no production path calls
+would reproduce the repository's previously measured “built but not served”
+failure. It does not scrape,
+download, enrich, migrate matter data, change the live shared corpus, decide
+legal applicability or silently broaden India coverage. Source bytes and
+derived artifacts remain separate manifest members; every derived artifact
+must identify its exact source versions, builder, model basis, dimensions basis
+and tokenizer basis.
+
+**Invariants and proof population.** Publication requires a non-empty, unique
+and exactly reconciled expected version population; matching staged bytes;
+P19 readiness `ready` for every source; unique contained paths; and valid
+derived-artifact lineage. Proof will cover successful publish/read, repeated
+immutable reads, rollback and withdrawal. Adversarial proof will plant an
+interruption at each durable boundary, changed source and artifact bytes,
+unknown/restricted rights, stale/refused review, missing/duplicate/unexpected
+population, corrupt pointer/manifest/member, path escape, publication-id reuse,
+concurrent publishers and withdrawal after dependent work is recorded. Each
+probe must mutate an existing field or durable object and fail for the intended
+reason.
+
+**Rollback, authority and reservation.** Cutover is one atomic pointer replace;
+rollback writes a new immutable transition to a retained verified snapshot.
+Withdrawal never edits history: it adds a content-addressed event, moves the
+pointer only after the fallback verifies and emits exact dependent-work
+invalidation records. A crashed writer may leave an unreferenced candidate or
+a fail-closed lock requiring operator reconciliation, but may not expose it to
+readers. All tests use synthetic legal sources. Passing them can satisfy the
+engineering evidence of BK-84-AC2; it cannot close AC1, provide counsel review,
+establish source rights, claim a live corpus publication or approve pilot or
+production use.
+
+### P20 scoped Build and Test record — 11 September 2026
+
+**Build result: BUILT and VERIFIED for BK-84-AC2's isolated engineering
+scope.** Publication now starts from P44's reconciled immutable quarantine
+receipt, then independently requires the P19 registry to report the exact
+staged bytes, rights, legal review, legal dates and requested coverage ready.
+The expected source set must be non-empty, unique and exact. Every derived
+member records byte identity, source-version lineage, builder, model basis,
+tokenizer basis, dimension basis and an expected-versus-observed population;
+the source union and every population must reconcile before publication.
+
+Candidate bytes and their candidate manifest are committed under a
+content-derived snapshot identity. A separate immutable published manifest and
+content-derived transition are made durable before the only mutable object—the
+active pointer—is atomically replaced. Readers validate the pointer,
+transition, published and candidate manifests, snapshot content identity,
+exact member population, contained paths, sizes and hashes. Rollback creates a
+new transition to a retained verified snapshot; it changes no earlier record.
+Withdrawal is one immutable invalidation event over exact source versions. It
+flags every recorded dependent work item across snapshots, invalidates every
+snapshot containing those versions and refuses an older fallback containing
+the same withdrawn law.
+
+**Served integration.** `NM_CORPUS_DIR` may now name the immutable publication
+root. The composition owner opens the current pointer once and passes the same
+bound `PublishedCorpus` object to both evidence and authority-search adapters;
+a cutover cannot place those two ports on different generations. A standalone
+authority or identity override beside a published root is refused as a mixed
+generation. Raw legacy paths remain available when no published pointer is
+configured, so integration is reversible without rewriting the retained
+corpus.
+
+**Test result.** The dedicated P20 Class-A population reports **40 passed**.
+It covers complete publication and production composition; interruption at
+five durable boundaries; changed staged, source and derived bytes; wrong
+source identity; unknown/restricted rights; stale/refused legal review;
+empty, missing, duplicate and unexpected populations; unreconciled derived
+counts; path escapes; corrupt pointer, transition, candidate/published manifest
+and member; immutable release reuse; concurrent writers; explicit rollback;
+withdrawal with and without a safe fallback; global version invalidation; and
+exact dependent-work flags. The consolidated P19/P44/P20 and affected adapter,
+port and reachability population selected **146 cases** and exited green, with only
+the environment-dependent real-corpus cases skipped. Focused Ruff and the
+blueprint checker pass.
+
+**Defects caught during Build.** The first run exposed Windows path-length
+pressure from repeating full content ids in temporary names. A receipt fixture
+also proved that separately supplied bytes could drift from the registered
+version, so P20 now reads bytes only from a successfully reconciled P44 run.
+Impact review then found two deeper design errors: safe constructors were not
+on the production composition path, and a snapshot-local withdrawal could
+reactivate the same withdrawn authority from an older snapshot. Both were
+fixed at the mechanism boundary and have planted controls. A second adversarial
+review found the same class at two less obvious edges: changing an immutable
+dependency or withdrawal record could hide reliance or revive invalidated law,
+and withdrawing a historical snapshot could invalidate the current generation
+without reporting that loss of availability. Content-derived record validation
+and version-global active-state handling now cover those cases. No scenario- or
+source-specific exception was added.
+
+**Honest remainder.** This branch is based on the clean P19/P44 line to avoid
+the user's active P13–P17 work. P07 is a completed contractual prerequisite on
+the sibling foundation line and must be reconciled when those branches are
+integrated; the P20 filesystem publication boundary does not substitute for
+P07's matter-store guarantees. No real Indian source, shared corpus, live
+browser, external network, model or counsel judgement was used or changed.
+BK-84 therefore remains partial: AC2 has local integration and adversarial
+evidence, while AC1 and AC3 and final cross-branch/full-gate sign-off remain
+open.
+
+**Commit control exception — 11 September 2026.** The user expressly
+authorised committing this isolated P20 packet with `--no-verify` after the
+normal hook refused it because no current gate stamp existed. The first full
+gate run took about 20 minutes and exposed three P20-local failures; all three
+were repaired and their exact tests passed. A later full-gate attempt ended
+without a usable result or stamp. Focused Ruff, the 40-test P20 population, the
+146-test affected population, blueprint validation, plan reconciliation and
+staged-diff checks passed. This exception is not a full-gate pass, does not
+advance sign-off, and does not make the effective evidence current. The
+combined integrated tree must still complete the full gate before BK-84 can be
+signed off.
 
 ## BK-85 — India-scoped key processor and security operations foundation
 
@@ -1029,6 +1285,35 @@ exists. The Word visual review is NOT_RUN because the document-rendering
 dependency is unavailable. Authored refinements and successful structural
 checks do not justify signing off either gap; full evidence and visual review
 remain the next step of BK-77.
+
+### Per-task gate population optimization — 11 September 2026
+
+**Start and Build: COMPLETE under BK-80-AC7's existing gate ownership.** A
+measured `tools/check.py` run executed the explicit Class-A population and then
+selected `not class_c and not class_d and not journey` for its ordinary local
+population. Because that second expression did not exclude `class_a`, every
+eligible Class-A node was collected and executed a second time. This was
+duplicate work, not independent evidence.
+
+The shared evidence module now owns both exact selectors. Class-A remains
+`class_a and not class_c and not class_d and not journey`; ordinary local is
+`not class_a and not class_c and not class_d and not journey`. They are
+disjoint, while an unmarked ordinary test remains selected and approval-bound
+corpus, judged and browser populations remain excluded from both defaults.
+No caching or parallel execution was added: this suite contains fault-injection
+tests that create transient files, and preserving its between-stage fingerprint
+checks is more valuable than speculative concurrency.
+
+**Test: PASS for the selector and local-report contracts.** Eleven focused
+Class-A controls pass. They pin both exact selectors, prove representative
+unmarked, Class-A and Class-A-plus-protected states enter the intended
+populations, retain the clean-CI dependency and approval-boundary checks, and
+prove that a structural graph whose optional embedding table has not yet been
+created reports full semantic lag instead of crashing. Focused Ruff passes.
+The first optimized full gate measured ordinary-local time at 4.6 seconds,
+down from 421.0 seconds in the immediately preceding run; Class-A remained a
+separate complete population. This is removal of duplicate execution, not a
+reduced assurance population.
 
 ### Phase A closure programme — opened 10 September 2026
 
@@ -4250,6 +4535,84 @@ disagreeing with the code about the code, which is the S4 shape and the
 cheapest possible instance of it to leave standing.
 
 ## BK-24 - the citation filter excludes exactly the years the corpus needs
+
+### P44 acquisition-foundation Start record — 11 September 2026
+
+**Decision: BLOCKED on P19's scoped source-register output; contract ready.**
+Once that output exists, local scripted transports may exercise P44. No live
+download, scrape, paid API request, corpus promotion or publication is included.
+The 7 September web permission remains a one-time, precisely recorded scope and
+does not silently authorise a new selection policy or another run.
+
+**Outcome and boundary.** P44 will produce (4) one shared, versioned eligibility
+and prioritisation mechanism used by both acquisition entry points and (5)
+immutable quarantine receipts with reconciliation. Eligibility comes from the
+approved source, jurisdiction, document type and date scope; citation count may
+prioritise within an eligible cohort but cannot make a document eligible or
+exclude a recent otherwise eligible decision. Missing citation metadata remains
+unknown rather than zero.
+
+**Frozen implementation files.** Existing entry points remain
+`tools/fetch_judgments.py` and `tools/scrape_judgments.py`. Additive owners are
+`nm/knowledge/acquisition.py` and `tools/reconcile_acquisition.py`. Proof lives
+in `tests/test_judgment_acquisition.py` and
+`tests/test_acquisition_receipts.py`. No job, store, bootstrap, model, edge or
+browser owner is changed.
+
+**Proof population.** Selection covers recent uncited, older eligible, highly
+cited ineligible, missing metadata, duplicate and budget-limited candidates
+through both entry points using offline transports. Receipt proof covers
+successful complete batches, interruption, malformed response, duplicate page,
+failed download, changed bytes, missing/unaccounted artifact, output escape and
+budget exhaustion. Planned, observed, accepted, rejected, unresolved, staged
+and failed populations must reconcile explicitly; empty or partial work cannot
+appear complete.
+
+**Rollback and integration.** Stop acquisition and retain immutable receipts;
+candidate files remain unpublished. P20 must validate rights, review and source
+identity before publishing any candidate. Generated workbook reconciliation is
+deferred to integration with the user's concurrent foundation branch.
+
+### P44 scoped build and test record — 11 September 2026
+
+**Outcome: BUILT and locally tested, not published.** P44 now has a shared,
+versioned selection policy in `nm/knowledge/acquisition.py` and both acquisition
+entry points use it: `tools/fetch_judgments.py` for the sanctioned API path and
+`tools/scrape_judgments.py` for the one-time web exception path. The legacy
+`--min-cited-by` input is recorded by the web command but is no longer an
+eligibility filter. Citation count affects priority only inside an eligible
+source-year cohort; it cannot make an out-of-scope decision eligible and it
+cannot suppress a recent otherwise eligible decision merely because citations
+have not accumulated.
+
+**Quarantine and receipts.** `stage_acquisition` writes immutable run
+directories under staging, commits the receipt last, and refuses run-id reuse.
+Each receipt records the authorised scope, route, policy identity, planned and
+observed counts, accepted/rejected/unresolved decisions, artifact digests,
+source ids, failures, unexpected responses and the explicit state of every
+candidate: unknown rights, unreviewed legal status, candidate publication state
+and `published: false`. Unsupported policy identities are refused before
+staging, and tampered policy or scope metadata is refused during reconciliation.
+`tools/reconcile_acquisition.py` reads those receipts without publishing them
+and returns complete, partial, refused or not-assessed.
+
+**Evidence run.** Focused P19/P44 local evidence passed in the isolated
+worktree:
+`python -m pytest tests/test_legal_source_inventory.py tests/test_source_registry.py tests/test_judgment_acquisition.py tests/test_acquisition_receipts.py tests/test_three_states.py -q`
+reported 53 passed. Current-plan and production-reach tests reported 33 passed.
+Ruff on the touched acquisition files passed. A full-gate rerun on this final
+tree was not completed while a separate main-checkout Class-A run was already
+active; the last completed full-gate run on the branch reported **SCOPED BUILD
+PASS — FULL GATE RED** before the final policy-metadata hardening, with only
+declared/owned trace and planning-ruff failures remaining. This is
+synthetic/offline proof only: it made no paid API call, no live scrape, no
+full corpus scan, no publication and no browser claim.
+
+**Remaining limits.** BK-24 remains verification-partial until the isolated
+branch is integrated with the user's foundation branch and the combined tree is
+gated. P20 still owns publication, rights/legal review and active corpus
+cutover. BK-84 still needs qualified source/legal review for real coverage.
+
 Opened 7 September 2026, from the first real run. **The ingestion is stopped
 and is to be resumed once this is fixed.**
 

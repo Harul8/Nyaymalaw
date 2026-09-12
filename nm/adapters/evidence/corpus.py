@@ -43,7 +43,7 @@ from nm.domain.traceability import implements
 from nm.knowledge.citator import Citator
 from nm.knowledge.identity import IdentityIndex
 from nm.knowledge.jurisdiction import binding_status
-from nm.knowledge.manifest import Manifest, title_without_year
+from nm.knowledge.manifest import Manifest, PublishedCorpus, title_without_year
 from nm.knowledge.resolution import (
     CODE_TITLES,
     article_for,
@@ -102,6 +102,67 @@ class CorpusEvidenceAdapter:
                                if authority_index else "nonexistent"))
         self._citator = Citator(self._dir / "citator.json", identity=self._identity)
         self._denied: set[str] | None = None
+        self._published_snapshot: PublishedCorpus | None = None
+
+    @classmethod
+    def from_published_corpus(
+        cls,
+        publication_root: str | Path,
+        *,
+        corpus_database: str = "corpus/chunks.db",
+        coverage_manifest: str = "corpus/manifest.yaml",
+        authority_index: str = "indexes/authority.db",
+        identity_index: str = "indexes/identity.db",
+        jurisdiction: str = FORUM,
+    ) -> "CorpusEvidenceAdapter":
+        """Bind one request adapter to one fully verified active generation.
+
+        A fresh adapter observes a later atomic cutover.  An adapter already in
+        use remains on its immutable generation, so one legal answer can never
+        mix files from before and after the pointer replacement.
+        """
+        snapshot = PublishedCorpus.open(publication_root, verify_all=True)
+        return cls.from_published_snapshot(
+            snapshot,
+            corpus_database=corpus_database,
+            coverage_manifest=coverage_manifest,
+            authority_index=authority_index,
+            identity_index=identity_index,
+            jurisdiction=jurisdiction,
+        )
+
+    @classmethod
+    def from_published_snapshot(
+        cls,
+        snapshot: PublishedCorpus,
+        *,
+        corpus_database: str = "corpus/chunks.db",
+        coverage_manifest: str = "corpus/manifest.yaml",
+        authority_index: str = "indexes/authority.db",
+        identity_index: str = "indexes/identity.db",
+        jurisdiction: str = FORUM,
+    ) -> "CorpusEvidenceAdapter":
+        """Build from an already-bound snapshot shared by all retrieval ports."""
+        database = snapshot.member_path(corpus_database)
+        manifest = Manifest.load(snapshot.member_path(coverage_manifest))
+        authority = (
+            snapshot.member_path(authority_index)
+            if snapshot.has_member(authority_index) else None
+        )
+        identity = (
+            snapshot.member_path(identity_index)
+            if snapshot.has_member(identity_index) else None
+        )
+        adapter = cls(
+            database.parent,
+            manifest,
+            jurisdiction=jurisdiction,
+            authority_index=authority,
+            identity_index=identity,
+        )
+        adapter._db = database
+        adapter._published_snapshot = snapshot
+        return adapter
 
     # ----------------------------------------------------------- readiness ---
     @property
@@ -111,6 +172,13 @@ class CorpusEvidenceAdapter:
     @property
     def authority_available(self) -> bool:
         return bool(self._authority_db and self._authority_db.exists())
+
+    @property
+    def published_snapshot_id(self) -> str | None:
+        return (
+            self._published_snapshot.snapshot_id
+            if self._published_snapshot is not None else None
+        )
 
     def readiness(self) -> dict:
         """Three states per capability, reported at /api/health.

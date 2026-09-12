@@ -73,8 +73,6 @@ on its behalf. This prints what it would do and stops unless `--run` is given.
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 import re
 import sys
 import time
@@ -82,11 +80,21 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import urllib.robotparser
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
 sys.path.insert(0, str(ROOT))
+from nm.knowledge.acquisition import (  # noqa: E402
+    AcquiredArtifact,
+    AcquisitionRoute,
+    AcquisitionScope,
+    JudgmentCandidate,
+    SelectionState,
+    select_candidates,
+    stage_acquisition,
+)
 from tools._console import utf8_console  # noqa: E402
 
 utf8_console()
@@ -205,6 +213,12 @@ _DOC = re.compile(r'href="/doc/(\d+)/"')
 _CITEDBY = re.compile(r'citedby:\d+"[^>]*>\s*(\d+)')
 
 _TITLE = re.compile(r"<title>(.*?)</title>", re.S | re.I)
+_ISO_DATE = re.compile(
+    r'(?:date|published)[^>]{0,120}(\d{4}-\d{2}-\d{2})', re.I,
+)
+_PROSE_DATE = re.compile(
+    r"\bon\s+(\d{1,2}\s+[A-Za-z]+\s+\d{4})\b", re.I,
+)
 
 
 def result_ids(html: str) -> list[str]:
@@ -228,9 +242,46 @@ def title_of(html: str) -> str:
     return " ".join(m.group(1).split()) if m else ""
 
 
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
+def source_date(html: str) -> date | None:
+    """Read a stated page date; the search cohort is not an invented day."""
+    for expression, pattern in (
+        (_ISO_DATE, "%Y-%m-%d"),
+        (_PROSE_DATE, "%d %B %Y"),
+    ):
+        found = expression.search(html)
+        if found:
+            try:
+                return datetime.strptime(found.group(1), pattern).date()
+            except ValueError:
+                continue
+    return None
+
+
+def candidate(docid: str, html: str, citation_count: int | None,
+              *, readable: bool = True) -> JudgmentCandidate:
+    return JudgmentCandidate(
+        candidate_id=docid,
+        source="indiankanoon.org",
+        jurisdiction=DOCTYPE,
+        issuing_body="High Court for the State of Telangana",
+        document_type=DOCTYPE,
+        source_url=f"{SITE}/doc/{docid}/",
+        source_date=source_date(html),
+        citation_count=citation_count,
+        readable=readable,
+    )
+
+
 # --------------------------------------------------------------------- plan ---
 
-def plan(years: list[int], pages: int, min_cited: int) -> None:
+def plan(years: list[int], pages: int, legacy_min_cited: int) -> None:
     searches = len(years) * pages
     docs = searches * 10
     seconds = (searches + docs) * DELAY
@@ -241,7 +292,7 @@ def plan(years: list[int], pages: int, min_cited: int) -> None:
     print(f"    pages per year        {pages}")
     print(f"    search requests       {searches}")
     print(f"    documents to open     ~{docs}  (~10 results per page)")
-    print(f"    keep where cited by   >= {min_cited}")
+    print(f"    legacy cited-by input {legacy_min_cited} (recorded, not an eligibility gate)")
     print(f"    delay between calls   {DELAY}s")
     print(f"    total requests        ~{searches + docs}"
           f"  (cap {HARD_CAP})")
@@ -249,9 +300,8 @@ def plan(years: list[int], pages: int, min_cited: int) -> None:
     print("                          requests to someone else's server")
     print()
     print("  EVERY DOCUMENT MUST BE OPENED. 'Cited by N' is not a search")
-    print("  filter on Indian Kanoon — the count lives on the document, so the")
-    print("  filter cannot be pushed to the server. That is the cost driver,")
-    print("  and it is the same on the paid API.")
+    print("  filter on Indian Kanoon. Citation count may prioritise only inside")
+    print("  one eligible source-year cohort; it does not decide eligibility.")
     print()
     if searches + docs > HARD_CAP:
         print(f"  THIS EXCEEDS THE CAP OF {HARD_CAP} AND WOULD STOP PART WAY.")
@@ -261,7 +311,8 @@ def plan(years: list[int], pages: int, min_cited: int) -> None:
 
 # ------------------------------------------------------------------ running ---
 
-def run(years: list[int], pages: int, min_cited: int, cap: int) -> int:
+def run(years: list[int], pages: int, legacy_min_cited: int, cap: int,
+        selection_budget: int, authorization_id: str) -> int:
     allowed, why = robots_allows(SEARCH)
     print(f"  robots.txt: {why}")
     if not allowed:
@@ -296,86 +347,67 @@ def run(years: list[int], pages: int, min_cited: int, cap: int) -> int:
         print(f"  {year}: {len(seen)} candidate(s) from "
               f"{min(pages, len(seen) // 10 + 1)} page(s)")
 
-        kept: list[dict] = []
-        unreadable = 0
+        observed: list[JudgmentCandidate] = []
+        documents: dict[str, str] = {}
         for docid in seen:
             try:
                 page_html = _get(f"{SITE}/doc/{docid}/", budget)
             except Refused as exc:
                 print(f"  stopped: {exc}")
-                break
+                return 1
             except urllib.error.HTTPError as exc:
                 print(f"    doc {docid}: HTTP {exc.code}, skipped")
+                observed.append(candidate(docid, "", None, readable=False))
                 continue
             n = cited_by(page_html)
-            if n is None:
-                # SAID, NOT SWALLOWED. A page this could not read is not a
-                # page with no citations, and reporting it as one would hide a
-                # parser that had stopped working.
-                unreadable += 1
-                continue
-            if n < min_cited:
-                continue
-            kept.append({
-                "docid": docid, "year": year, "citedby": n,
-                "title": title_of(page_html), "html": page_html,
-                "source": f"{SITE}/doc/{docid}/",
-            })
+            observed.append(candidate(docid, page_html, n))
+            documents[docid] = page_html
 
-        if unreadable:
-            print(f"    {unreadable} document(s) did not state a citation "
-                  f"count — NOT counted as zero, and NOT kept. If this is "
-                  f"large the page format has changed and `_CITEDBY` needs "
-                  f"looking at.")
-        if kept:
-            where = stage(year, kept, min_cited)
-            kept_total += len(kept)
-            print(f"    kept {len(kept)} cited by >= {min_cited} -> {where}")
-        else:
-            print(f"    kept 0 cited by >= {min_cited}")
+        scope = AcquisitionScope(
+            route=AcquisitionRoute.WEB,
+            source="indiankanoon.org",
+            jurisdiction=DOCTYPE,
+            document_types=(DOCTYPE,),
+            from_date=date(year, 1, 1),
+            to_date=date(year, 8, 31) if year == 2026 else date(year, 12, 31),
+            discovery_budget=cap,
+            selection_budget=min(selection_budget, cap),
+            authorization_id=authorization_id,
+        )
+        selection = select_candidates(scope, observed)
+        by_id: dict[str, JudgmentCandidate] = {}
+        for row in observed:
+            by_id.setdefault(row.candidate_id, row)
+        artifacts = [
+            AcquiredArtifact(
+                candidate_id,
+                by_id[candidate_id].canonical_source_id,
+                by_id[candidate_id].source_url,
+                documents[candidate_id].encode("utf8"),
+            )
+            for candidate_id in selection.selected_ids
+        ]
+        run_id = (
+            f"web-{year}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}"
+        )
+        where = stage_acquisition(
+            STAGING, run_id=run_id, scope=scope, selection=selection,
+            artifacts=artifacts, observed_at=datetime.now(timezone.utc),
+        )
+        selected = selection.count(SelectionState.SELECTED)
+        unresolved = selection.count(SelectionState.UNRESOLVED)
+        rejected = selection.count(SelectionState.REJECTED)
+        kept_total += selected
+        print(f"    {selected} staged, {unresolved} unresolved, {rejected} "
+              f"rejected; legacy min-cited {legacy_min_cited} did not filter -> "
+              f"{where}")
 
     print()
     print(f"  {kept_total} judgment(s) staged, {budget['spent']} request(s) "
           f"made.")
     print("  NOTHING HAS ENTERED THE CORPUS. Promotion out of "
-          f"{STAGING.relative_to(ROOT)} is a separate, deliberate step.")
+          f"{display_path(STAGING)} is a separate, deliberate step.")
     return 0
-
-
-def stage(year: int, docs: list[dict], min_cited: int) -> Path:
-    """Quarantine with a manifest. The same shape `fetch_judgments.py` uses."""
-    out = STAGING / str(year)
-    out.mkdir(parents=True, exist_ok=True)
-    manifest = []
-    for d in docs:
-        raw = json.dumps(d, ensure_ascii=False, indent=1)
-        digest = hashlib.sha256(raw.encode("utf8")).hexdigest()[:16]
-        name = f"IKWEB_{year}_{d['docid']}_{digest}.json"
-        (out / name).write_text(raw, encoding="utf8")
-        manifest.append({
-            "file": name, "docid": d["docid"], "title": d["title"],
-            "citedby": d["citedby"], "sha256_16": digest,
-            "source": d["source"],
-        })
-    (out / "manifest.json").write_text(json.dumps({
-        "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "route": "web scrape of indiankanoon.org",
-        "user_agent": UA,
-        "delay_seconds": DELAY,
-        "doctype": DOCTYPE,
-        "year": year,
-        "min_cited_by": min_cited,
-        "documents": manifest,
-        # WHY THIS IS RECORDED IN THE ARTEFACT ITSELF: six months from now the
-        # question about any of these files will be "where did this come
-        # from", and an answer that lives only in a commit message is an
-        # answer nobody finds. S11's rule for derived artefacts.
-        "note": ("Acquired by web scrape, not the sanctioned API. This route "
-                 "was deliberately excluded by tools/fetch_judgments.py and "
-                 "reinstated on the advocate's instruction on 2026-09-07 — "
-                 "see BK-23."),
-    }, ensure_ascii=False, indent=2), encoding="utf8")
-    return out
 
 
 def main() -> int:
@@ -383,10 +415,14 @@ def main() -> int:
     ap.add_argument("--plan", action="store_true",
                     help="print the request count and cost; fetch nothing")
     ap.add_argument("--run", action="store_true", help="actually fetch")
+    ap.add_argument("--authorization-id",
+                    help="approval record for this exact web scope and run")
     ap.add_argument("--from-year", type=int, default=2018)
     ap.add_argument("--to-year", type=int, default=2026)
     ap.add_argument("--pages-per-year", type=int, default=15)
     ap.add_argument("--min-cited-by", type=int, default=2)
+    ap.add_argument("--selection-budget", type=int, default=100,
+                    help="maximum eligible candidates staged per source year")
     ap.add_argument("--cap", type=int, default=HARD_CAP,
                     help="hard ceiling on total requests")
     args = ap.parse_args()
@@ -399,7 +435,13 @@ def main() -> int:
               "started by you, not by the product.")
         return 0
 
-    return run(years, args.pages_per_year, args.min_cited_by, args.cap)
+    if not (args.authorization_id or "").strip():
+        ap.error("--run requires --authorization-id for this exact web scope")
+
+    return run(
+        years, args.pages_per_year, args.min_cited_by, args.cap,
+        args.selection_budget, args.authorization_id,
+    )
 
 
 if __name__ == "__main__":

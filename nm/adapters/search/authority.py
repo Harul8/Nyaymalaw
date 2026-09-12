@@ -26,6 +26,7 @@ import sqlite3
 from pathlib import Path
 
 from nm.knowledge.jurisdiction import stored_court
+from nm.knowledge.manifest import PublishedCorpus
 from nm.ports.evidence import Coverage
 from nm.ports.search import CorpusSearch, IndexIdentity, SearchHit
 
@@ -46,6 +47,30 @@ class AuthorityIndexSearch:
         #: ambiguity B-163 is about — three stores hold the same Act and
         #: disagree, so a result says WHICH one answered it.
         self.name = f"the authority index ({self._path.name})"
+        self._published_snapshot: PublishedCorpus | None = None
+
+    @classmethod
+    def from_published_corpus(
+        cls,
+        publication_root: str | Path,
+        *,
+        authority_index: str = "indexes/authority.db",
+    ) -> "AuthorityIndexSearch":
+        """Open the index only through a complete immutable generation."""
+        snapshot = PublishedCorpus.open(publication_root, verify_all=True)
+        return cls.from_published_snapshot(snapshot, authority_index=authority_index)
+
+    @classmethod
+    def from_published_snapshot(
+        cls,
+        snapshot: PublishedCorpus,
+        *,
+        authority_index: str = "indexes/authority.db",
+    ) -> "AuthorityIndexSearch":
+        """Build from the same bound snapshot as the evidence adapter."""
+        search = cls(snapshot.member_path(authority_index))
+        search._published_snapshot = snapshot
+        return search
 
     # ------------------------------------------------------------- identity ---
 
