@@ -1,0 +1,12 @@
+#!/bin/sh
+# After `git commit --amend` and `git rebase`.
+#
+# A rebase replays commits without running pre-commit for each one, and the
+# tree it leaves is the one the graph must describe. An amend does run
+# pre-commit, so this repeats a refresh that already happened -- which costs
+# nothing, because both steps are incremental by hash.
+#
+# `$1` is "amend" or "rebase"; stdin lists the rewritten pairs. Neither is
+# needed: the tree changed, so the index follows it. Never blocks.
+cat >/dev/null
+"$(git rev-parse --show-toplevel)/tools/hooks/refresh-graph"

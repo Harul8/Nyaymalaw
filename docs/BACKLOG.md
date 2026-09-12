@@ -4137,6 +4137,35 @@ hook and proves the reporter remains best effort while `gatestamp.py` remains
 blocking. The two different operational decisions are preserved rather than
 being weakened to make the test pass.
 
+**Reopened and closed again 12 September 2026 — the hook was right and the
+index was 600 nodes behind anyway.** Measured against `graph.db`: 3,830 of
+4,383 non-File nodes carried a vector; `manifest.py` 43 missing,
+`source_registry.py` 43, `test_immutable_corpus_publication.py` 42,
+`commission.py` 25, fifteen more files. A query about sealed corpus
+generations returned five confident results about matter-store seals and none
+of `PublishedCorpus`, `CorpusPublicationRefused` or `WithdrawalResult`. Every
+missing node had arrived by a path `pre-commit` never sees: `1399a53` as a
+fast-forward (no commit hook runs), `68927c3` and `a3d9c47` as merge commits
+(git runs `pre-merge-commit`, not `pre-commit`), and the work itself committed
+on `codex/` branches on another machine where the hook was not installed. A
+refresh correct for one of the four ways a tree changes is bypassed by the
+other three, and the symptom is a plausible wrong answer (S3).
+
+Three changes, one mechanism. (1) `tools/hooks/refresh-graph` is now the ONE
+owner of "update the graph, then embed"; `pre-commit`, the new `post-merge`
+and the new `post-rewrite` all call it and none carries its own copy, which
+`tests/test_every_way_the_tree_changes_refreshes_the_index.py` enforces by
+scanning the directory. (2) Installation is `git config core.hooksPath
+tools/hooks`, not `cp` — the `.git/hooks` copy was measured two revisions
+behind the tracked file, lacking `--require-index` and the Python-absent
+refusal, and nothing had compared them. `.gitattributes` pins the directory
+to LF because `core.autocrlf=true` would otherwise hand `sh` a `|| true\r`.
+(3) The SessionStart hook in `.claude/settings.json` now prints the lag, so
+"STALE BY N" appears where somebody is looking rather than above a commit
+that has already scrolled away. `post-merge` measured at 3.2 s on a quiet
+tree; the 624-node catch-up embed ran once by hand and pruned the 47 stale
+vectors on the way.
+
 ## BK-30 — executable login-to-logout acceptance journey — **PARTLY DONE · P1**
 
 **Phase:** the whole journey; this is the measurement harness for every row

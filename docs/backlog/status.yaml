@@ -2816,8 +2816,10 @@ items:
   verification: passing
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-76-graph-vector-hook-can-execute-the-reporter-it-invokes
-  next_action: closed on the executable-path and hook-contract controls and signed off
-    10 September 2026; retain the measured lag report as advisory operational evidence
+  next_action: reopened 12 September 2026 when the index was measured 600 nodes behind
+    with the pre-commit refresh working -- merges, fast-forwards and rewrites never ran
+    it; closed the same day with one owner script called from every tree-changing hook,
+    core.hooksPath installation and a session-start lag report
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#bk-76-graph-vector-hook-can-execute-the-reporter-it-invokes}
     build: {result: BUILT, ref: docs/BACKLOG.md#bk-76-graph-vector-hook-can-execute-the-reporter-it-invokes}
@@ -2842,6 +2844,17 @@ items:
     negative_control:
       mutation: remove the vector reporter or make the gate stamp best effort
       expected_failure: the hook contract test identifies the missing refresh or weakened release decision
+  - id: BK-76-AC3
+    requirement: every local git path that changes the tree -- commit, merge, rewrite --
+      refreshes the graph and its vectors through one owner script, and no hook carries
+      its own copy of the refresh
+    required_evidence: [domain_test]
+    evidence:
+      domain_test: {result: PASS, ref: tests/test_every_way_the_tree_changes_refreshes_the_index.py}
+    negative_control:
+      mutation: delete tools/hooks/post-merge, or paste the embed line into it directly
+      expected_failure: the per-path coverage test names the missing hook, or the
+        second-copy scan names the hook that duplicated the owner
 - id: J-1
   title: The file list cannot tell one matter from another
   kind: finding
