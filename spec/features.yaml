@@ -118,6 +118,7 @@ features:
   delivered_by: []
   declared_in:
   - nm/core/cascade.py
+  - nm/core/dependency.py
   - nm/core/gaps.py
   - nm/core/turn.py
   - nm/domain/decision.py

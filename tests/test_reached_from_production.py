@@ -85,6 +85,17 @@ UNWIRED: dict[str, str] = {
         "`assess()` before the arithmetic and `nm.core.turn` carries the "
         "premise digest onto the result -- P22's integration half, which "
         "needs P18's cascade to carry an invalidation through."),
+    "nm.core.dependency": (
+        "P18's currency ledger, landed ahead of its wiring on 12 September "
+        "2026 and declared here on the same commit rather than left to be "
+        "found. `nm.core.turn` will record a node for every value it derives "
+        "-- built from the `cascade.Derived` rows it already produces, through "
+        "`dependency.from_derived`, so the product keeps ONE statement of what "
+        "a derived value rests on -- and `nm.edge.projections` will refuse to "
+        "present a stale one as current. The mechanism is complete and "
+        "unit-proved; what does not exist yet is the turn writing the ledger "
+        "onto the matter, and that is the only thing that makes it bite on a "
+        "served turn."),
     "nm.domain.media":
         "BK-69, and deliberately ahead of its caller. `plan.json` places this "
         "boundary at W0 and media intake at W2 (BK-54), because a control "
@@ -254,6 +265,11 @@ OWNER: dict[str, tuple[str, ...]] = {
     # contract rather than a promise of its own.
     "nm.core.worker": ("I1",),
     "nm.core.premise": ("D2",),
+    # P18's currency ledger answers A3's re-orientation promise -- what moved
+    # since the advocate was last here, and what they may still rely on -- so
+    # it is named against A3 rather than given a feature of its own. The
+    # cascade it extends already carries A3's `@implements`.
+    "nm.core.dependency": ("A3",),
     # BK-69's boundary belongs to the feature that will cross it. C6 is
     # document intake and extraction -- the media path -- so when C6 moves off
     # `implementation: none`, the status check above starts asking whether

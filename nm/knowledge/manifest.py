@@ -27,7 +27,6 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -38,6 +37,7 @@ from typing import Callable, Iterable, Iterator
 
 import yaml
 
+from nm.domain.names import discard, discard_tree
 from nm.knowledge.acquisition import ReconciliationState, reconcile_acquisition
 from nm.knowledge.artefact import ArtefactLineage, ArtefactRefused
 from nm.knowledge.source_registry import PublicationState, SourceRegistry
@@ -455,8 +455,12 @@ def _write_new_json(path: Path, value: dict) -> bytes:
             )
         os.replace(temporary, path)
     finally:
-        if temporary.exists():
-            temporary.unlink()
+        # THROUGH THE ONE OWNER, and the check-then-act goes with it. A
+        # temporary that another handle still holds open raises on Windows,
+        # and raising from a `finally` here would replace the real failure
+        # with a housekeeping one -- or undo a publication that had already
+        # committed.
+        discard(temporary)
     return payload
 
 
@@ -469,8 +473,7 @@ def _replace_pointer(path: Path, value: dict) -> bytes:
         _write_bytes(temporary, payload)
         os.replace(temporary, path)
     finally:
-        if temporary.exists():
-            temporary.unlink()
+        discard(temporary)
     return payload
 
 
@@ -502,10 +505,11 @@ def _publication_lock(root: Path) -> Iterator[None]:
             os.fsync(handle.fileno())
         yield
     finally:
-        try:
-            lock.unlink()
-        except FileNotFoundError:
-            pass
+        # A LOCK THAT WILL NOT GO STAYS, AND THAT IS THE FAIL-CLOSED SIGNAL
+        # this function already documents: the next publication is refused
+        # and names operator reconciliation. What must not happen is an
+        # exception from the release replacing whatever the body raised.
+        discard(lock)
 
 
 def _layout(root: Path) -> None:
@@ -526,7 +530,7 @@ def _safe_remove_transaction(root: Path, transaction: Path) -> None:
     candidate = transaction.resolve()
     if (candidate.parent == transactions
             and candidate.name.startswith("partial-") and candidate.exists()):
-        shutil.rmtree(candidate)
+        discard_tree(candidate)
 
 
 def _pointer_for(

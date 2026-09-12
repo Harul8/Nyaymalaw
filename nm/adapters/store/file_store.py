@@ -32,13 +32,13 @@ from pathlib import Path
 from types import UnionType
 from typing import Union, get_args, get_origin, get_type_hints
 
-from nm.adapters.store.cleanup import discard
 from nm.adapters.store.sealing import MatterSealer, is_envelope
 from nm.domain.matter import (
     Fact,
     Matter,
     MatterId,
 )
+from nm.domain.names import discard
 from nm.domain.traceability import implements
 from nm.ports.store import MatterList, StaleWrite
 

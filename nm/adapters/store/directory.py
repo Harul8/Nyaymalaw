@@ -31,7 +31,6 @@ from datetime import datetime
 from io import BufferedRandom
 from pathlib import Path
 
-from nm.adapters.store.cleanup import discard
 from nm.adapters.store.file_store import _Cipher
 from nm.domain.advocate import (
     AccountSecurity,
@@ -53,6 +52,7 @@ from nm.domain.advocate import (
     recovery_code_matches,
     token_fingerprint,
 )
+from nm.domain.names import discard
 from nm.domain.traceability import implements
 from nm.ports.directory import (  # noqa: F401
     AccountBusy,

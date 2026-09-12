@@ -374,22 +374,22 @@
           "path": "tests/p03_evidence_support.py",
           "kind": "existing"
         },
-      {
-        "path": "tests/test_blueprint_approvals.py",
-        "kind": "existing"
-      },
-      {
-        "path": "tools/plan_view.py",
-        "kind": "existing"
-      },
-      {
-        "path": "spec/plan/build_current_plan.mjs",
-        "kind": "existing"
-      },
-      {
-        "path": "spec/plan/README.md",
-        "kind": "existing"
-      }
+        {
+          "path": "tests/test_blueprint_approvals.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/plan_view.py",
+          "kind": "existing"
+        },
+        {
+          "path": "spec/plan/build_current_plan.mjs",
+          "kind": "existing"
+        },
+        {
+          "path": "spec/plan/README.md",
+          "kind": "existing"
+        }
       ],
       "inputs": [
         "Declared browser/model/counsel/production method, scenario IDs and source/configuration identities",
@@ -1560,6 +1560,14 @@
         },
         {
           "path": "tests/test_correction_supersedes.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/dependency.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_a_correction_reaches_exactly_what_it_touched.py",
           "kind": "existing"
         }
       ],

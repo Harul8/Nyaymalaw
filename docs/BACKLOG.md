@@ -3805,6 +3805,155 @@ change one another. NM must record those dependencies, recompute downstream
 conclusions when a predicate changes, preserve unaffected work and keep prior
 versions auditable. This is W3 work.
 
+### P18 integration record — one owner for removing a name — 12 September 2026
+
+**Outcome: FIXED, and the placement was the defect rather than the call site.**
+Consolidating P19/P44/P20 into the shared tree at `a3d9c47` turned
+`test_only_one_module_in_the_product_removes_a_name` red on three `.unlink(`
+calls in `nm/knowledge/manifest.py` — two temporary-file removals in `finally`
+blocks guarded by a check-then-act `exists()`, and one lock release catching
+only `FileNotFoundError`. A real Class-A failure on the integration commit, not
+a declared one: `known_failures.yaml` carries no pytest row.
+
+**Measured cause.** `tools/layercheck.py` permits `nm/knowledge/` to import only
+`{knowledge, ports, domain}`. The owner, `discard`, sat in
+`nm/adapters/store/cleanup.py`, so the knowledge plane could not reach it —
+P20's author could not have used the one mechanism had they gone looking. **An
+owner reachable from only part of the product is not an owner**, and the rule
+(*removing a name is one decision, and a failed removal never undoes an
+established claim*) is about the product, not about a store adapter.
+
+**Mechanism.** The owner moved to `nm/domain/names.py`, the one layer every
+layer may import and where `pathlib`/`shutil` are the standard library rather
+than the provider clients `layercheck` keeps out of the core.
+`nm/adapters/store/directory.py` and `file_store.py` import it from there; the
+four `nm/knowledge/manifest.py` sites go through it, which removes both TOCTOU
+races and both bespoke failure policies. The lock release keeps its documented
+fail-closed behaviour — a lock that will not go stays, and the next publication
+is refused naming operator reconciliation — but can no longer replace the real
+exception with a housekeeping one.
+
+**Sweep widened, with its control.** The scanner looked for `.unlink(` and
+`os.remove(` and not for `shutil.rmtree(`. `_safe_remove_transaction` removes a
+partial publication transaction with `rmtree`, in the same shape, and sat just
+outside the population the sweep drew — the three `unlink` calls went red and
+the `rmtree` beside them did not. The scanner now also reports `shutil.rmtree(`
+and `os.rmdir(`, `discard_tree` gives that half an owner, and
+`test_the_removal_sweep_can_see_a_second_owner` plants all four forms so the
+widened half is not unfalsifiable.
+
+**Tested.** `test_a_completed_claim_survives_its_own_housekeeping` 9 passed.
+Affected regressions — `test_immutable_corpus_publication`,
+`test_a_cutover_can_be_undone_before_it_is_done`, `test_store_roundtrip`,
+`test_corpus_evidence`, `test_source_registry`, `test_legal_source_inventory`,
+`test_judgment_acquisition`, `test_acquisition_receipts`,
+`test_an_advocate_can_register`, `test_authentication` — 164 passed, 8 skipped
+(the PostgreSQL marker). `layercheck` OK across 120 modules. Ruff unchanged at
+the declared 144.
+
+### P18 Start record — 12 September 2026
+
+**Decision: READY.** P17 is present and merged — `nm/domain/authority.py`,
+`commission.py`, `emergency.py`, `media_policy.py`, `intake.py` and
+`nm/core/casefile.py` are all on `a3d9c47`, and
+`codex/p13-p17-commission-and-case-file` is an ancestor of HEAD. P20 and its
+P19/P44 ancestry are merged and its publication interfaces (`publish_corpus`,
+`get_corpus`, `get_source`, `record_corpus_dependency`, `withdraw_corpus`)
+exist in code. Verified by inspection of the source, not from a delivery report.
+
+**Existing owners, enumerated from the code.**
+
+| Owner | Owns | Does not own |
+|---|---|---|
+| `nm/core/cascade.py` | what a derived value was and is between two turns; what advice rested on it; whether anybody said what needs undoing | why it moved, anything transitive, anything that survives the turn |
+| `nm/knowledge/manifest.py` | corpus source-version dependency (`record_corpus_dependency`) and withdrawal fan-out to `work_id` | anything inside a matter |
+| `nm/domain/matter.py` | `Fact.superseded_by` / `conflicts_with` — correction lineage on the fact itself | what was computed from that fact |
+| `nm/core/proof.py` | withdrawing a position whose material is gone | dates, deadlines and premises |
+
+**Missing behaviour.** Nothing records *this conclusion was computed from these
+exact input versions*. Three consequences follow and each is a served defect: a
+value derived from another derived value is unreachable by any change, because
+`from_facts` is facts only; a conclusion nobody recomputed goes on being served
+as current indefinitely, because a snapshot comparison is a moment; and a
+restart loses even the announcement.
+
+**Boundary, and the extension registered before use.** P18's declared boundary
+is `nm/core/cascade.py`, `nm/core/turn.py`, `nm/domain/matter.py`,
+`tests/test_correction_supersedes.py`. Registered in
+`docs/blueprint/packets.json` on this commit: `nm/core/dependency.py` and
+`tests/test_a_correction_reaches_exactly_what_it_touched.py`. The served
+integration will additionally need `nm/edge/api.py` and
+`nm/edge/projections.py`, which are **not yet registered and not yet edited**.
+
+**No second proposition store and no second cascade owner.** `cascade` keeps
+MOVEMENT; the new module owns CURRENCY. They meet at exactly one function,
+`dependency.from_derived`, which reads the `cascade.Derived` rows the turn
+already builds — so the product keeps one statement of what a derived value
+rests on rather than two that can drift, and the one that drifts smaller stops
+reaching a conclusion a change touched.
+
+**Acceptance-to-test mapping (BK-65-AC1).**
+
+| Required evidence | State |
+|---|---|
+| `domain_test` | `tests/test_a_correction_reaches_exactly_what_it_touched.py` — 33 tests, passing |
+| `integration_test` | **NOT RUN.** Needs the turn writing the ledger onto the matter. |
+| `adversarial_test` | EVAL-010's planted negative is asserted at unit level (`test_a_value_from_a_superseded_source_version_cannot_be_served_as_current`); the served form is **NOT RUN**. |
+
+**Mutation-verified, 12 September 2026.** Four planted breaks, each caught: a
+non-transitive `closure` fails 6 tests; an `invalidate` that marks every node
+fails 4 including the independence assertion; exhausted rework becoming
+`CURRENT` fails 1; a `Node` with no recorded inputs reading as `CURRENT` fails
+2. The unmutated module passes all 33.
+
+**State on this commit: the mechanism exists and runs on no turn.** It is
+declared in `tests/test_reached_from_production.py::UNWIRED` with what will wire
+it, and named against A3 in `OWNER`. That declaration is a work queue, not an
+exemption: the day `nm/core/turn.py` imports it,
+`test_no_declaration_outlives_its_wiring` fails and the entry must go.
+**BK-65-AC1 remains `planned` with no evidence recorded, and this commit changes
+nothing about that.**
+
+**Rollback.** Delete `nm/core/dependency.py`, its test and the two boundary
+rows; nothing in `nm/` imports it. The name-removal owner move is not
+rollback-coupled to P18 and would be kept — reverting it re-breaks the Class-A
+sweep. For a future rollback of the wired form, affected release paths pause and
+the dependency history is preserved; unknown dependencies are **not** marked
+current on the way out.
+
+**GATE NOT RUN ON THIS COMMIT — user-authorised bypass, 12 September 2026.**
+`tools/check.py` was started against the staged tree and stopped by the user
+before it produced any output; the user then directed that the work be
+committed without waiting for it. The commit therefore uses `--no-verify` on
+that instruction. **No stamp was written and none was forged**:
+`.nm/last_green.json` does not exist in this worktree, so nothing downstream can
+mistake this commit for a gated one. This is a development-history exception on
+one commit. It is not a full-gate PASS, it does not extend to any later commit,
+and it is unrelated to — and does not reuse — P20's separate one-time
+authorisation.
+
+**What WAS measured, stage by stage, before staging.** These ran individually
+and are the honest extent of this commit's evidence:
+
+| Stage | Result |
+|---|---|
+| `layercheck` | OK — 120 modules |
+| `export_spec --write` | regenerated; `spec/features.yaml` gained one line (`nm/core/dependency.py` under A3) |
+| `trace --skip-regen` | 3 failures, all three already declared in `known_failures.yaml` (TRACE-T3B, TRACE-T3C, TRACE-C1); the T3b fact string is byte-for-byte the declared one, so the population did not move |
+| `speccheck` | OK |
+| `ruff` | 144 — exactly the declared `RUFF-PLANNING-DEBT` count, and per-file attribution confirms none of the new or edited files contributes one |
+| `pylint E0601,E0606` | clean |
+| focused pytest | 33 new P18 tests; 9 housekeeping-sweep tests; 19 registry-sweep tests (`reached_from_production`, `three_states`, `blank_values`); ~164 affected regressions across corpus publication, cutover, store round-trip, corpus evidence, source registry, acquisition and authentication — all passing, 8 skipped on the PostgreSQL marker |
+
+**What was NOT run, and is therefore not claimed.** The full
+`pytest -m class_a` population and the ordinary local population were not
+completed on this tree. A Class-A run on the untouched `a3d9c47` baseline
+reached 29% in forty minutes and found exactly one failure — the housekeeping
+sweep this commit fixes — but it was stopped before finishing, so **the
+remaining 71% of Class-A is unmeasured on both the baseline and this commit**.
+Nothing here may be read as a cumulative result, and BK-65-AC1 gains no
+evidence from it.
+
 ## BK-66 — advocate trust evaluation
 Opened 9 September 2026.
 
