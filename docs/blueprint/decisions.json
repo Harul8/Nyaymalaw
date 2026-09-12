@@ -73,9 +73,9 @@
         "BK-86-AC1",
         "BK-86-AC2"
       ],
-      "recommendation": "Retain current invitation and identity store contracts for local work. Confidential profile uses a maintained identity component/provider bridge with user-verifying WebAuthn/passkey or approved MFA and controlled factor recovery. Never implement cryptographic verification ad hoc.",
-      "rationale": "Avoids replacing proven identity attribution while making strong authentication an early prerequisite.",
-      "fallback": "Local scripted factor fixtures test orchestration only. Existing explicit login-error policy remains on controlled local endpoints; neutral confidential-profile errors require recorded adoption.",
+      "recommendation": "D-041 permits public email/password personal accounts and immediate own-workspace/new/reopen access without professional approval. Retain invitation binding as a separate operator enrolment path; neither path asserts professional verification. Attributable expiring operator approval gates only genuinely protected professional approvals/overrides. Confidential profile still uses a maintained identity component/provider bridge with user-verifying WebAuthn/passkey or approved MFA and controlled factor recovery; never implement cryptographic verification ad hoc.",
+      "rationale": "Separates account ownership, firm membership, professional approval and authentication assurance instead of inferring one from another. Public registration cannot choose an existing firm or replace credentials.",
+      "fallback": "Local scripted factor fixtures test orchestration only. Public authentication failures are neutral under D-041, superseding the private-roster diagnostic exception. No mailbox verification, professional approval or confidential-profile assurance is inferred from a password-only personal account.",
       "approver": "product owner and identity/security owner",
       "local_synthetic": "permitted_with_stated_fallback",
       "approval_required_for": [

@@ -1213,15 +1213,17 @@ def test_the_journey_manifest_matches_what_the_suite_collects():
     out = subprocess.run(
         [sys.executable, "-m", "pytest",
          "tests/test_the_journey_login_to_logout.py",
+         "tests/test_email_registration_reaches_a_private_workspace.py",
          "-m", "journey", "--collect-only", "-p", "no:randomly"],
         capture_output=True, text=True, cwd=ROOT)
 
     # `-q` prints only a count; the tree form prints the node ids, which is
-    # what this needs. The module itself matches the pattern, so drop it.
-    module = "test_the_journey_login_to_logout"
+    # what this needs. Module names match the pattern too, so drop both.
+    modules = {"test_the_journey_login_to_logout",
+               "test_email_registration_reaches_a_private_workspace"}
     collected = {n for n in re.findall(r"test_[a-z0-9_]+(?:\[[^\]]*\])?",
                                        out.stdout)
-                 if n != module}
+                 if n not in modules}
 
     assert collected, (
         "the journey suite collected nothing, so this check read an empty "

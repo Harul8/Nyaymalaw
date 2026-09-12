@@ -20,7 +20,8 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Request, Response
-from fastapi.responses import FileResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
@@ -60,6 +61,40 @@ ROOT = Path(__file__).resolve().parents[2]
 
 app = FastAPI(title="Nyaymalaw", version="0.1.0")
 _application = None
+
+
+async def invalid_request(request: Request, exc: RequestValidationError):
+    """Validation describes the rejected shape, never echoes submitted material.
+
+    Pydantic's default `input`/`ctx` may contain credentials or legal content.
+    Even an unexpected field NAME is caller-controlled. Known schema fields
+    and numeric positions are useful; arbitrary extra keys are not disclosed.
+    """
+    known = {"body", "path", "query", "header", "cookie"}
+    for model in tuple(globals().values()):
+        if isinstance(model, type) and issubclass(model, BaseModel):
+            known.update(model.model_fields)
+    route = request.scope.get("route")
+    known.update(getattr(route, "param_convertors", {}))
+    details = []
+    for error in exc.errors():
+        kind = error["type"]
+        reason = {
+            "missing": "This field is required.",
+            "extra_forbidden": "This field is not accepted.",
+            "string_too_long": "The value exceeds the supported length.",
+        }.get(kind, "The supplied value is not valid for this field.")
+        details.append({
+            "loc": [part if type(part) is int or part in known else "unrecognised_field"
+                    for part in error.get("loc", ())],
+            "type": kind, "msg": reason,
+        })
+    return JSONResponse(status_code=422, content={"detail": details})
+
+
+# Explicit framework registration makes this callback's production consumer
+# visible to the same reference sweep as ordinary called guards.
+app.add_exception_handler(RequestValidationError, invalid_request)
 
 
 def application():
@@ -252,6 +287,22 @@ def _origins(request: Request) -> set[str]:
     return {str(request.base_url).rstrip("/")}
 
 
+def _require_origin(request: Request, *, allow_absent: bool = False) -> None:
+    """One exact origin policy for credentialled writes and public signup."""
+    origin = (request.headers.get("origin") or "").rstrip("/")
+    referer = request.headers.get("referer") or ""
+    trusted = _origins(request)
+    if origin:
+        accepted = origin in trusted
+    elif referer:
+        accepted = any(referer.startswith(o + "/") or referer.rstrip("/") == o
+                       for o in trusted)
+    else:
+        accepted = allow_absent
+    if not accepted:
+        raise HTTPException(status_code=403, detail=_CSRF_REFUSED)
+
+
 def csrf_protected(request: Request,
                    nm_session: str | None = Cookie(default=None),
                    x_nm_csrf: str | None = Header(default=None)) -> None:
@@ -296,18 +347,7 @@ def csrf_protected(request: Request,
     if not nm_session:
         return
 
-    origin = (request.headers.get("origin") or "").rstrip("/")
-    referer = request.headers.get("referer") or ""
-    trusted = _origins(request)
-    if origin:
-        if origin not in trusted:
-            raise HTTPException(status_code=403, detail=_CSRF_REFUSED)
-    elif referer:
-        if not any(referer.startswith(o + "/") or referer.rstrip("/") == o
-                   for o in trusted):
-            raise HTTPException(status_code=403, detail=_CSRF_REFUSED)
-    else:
-        raise HTTPException(status_code=403, detail=_CSRF_REFUSED)
+    _require_origin(request)
 
     expected = csrf_token(nm_session or "")
     if not x_nm_csrf or not hmac.compare_digest(x_nm_csrf, expected):
@@ -821,6 +861,16 @@ def declare_emergency(matter_id: str, body: dict, advocate_id: Advocate) -> dict
             raise HTTPException(status_code=422, detail="revocation must be explicitly true")
         return _revoke_emergency(m, advocate_id, body)
 
+    # A screen exception is a professional act, unlike an ordinary capacity
+    # report, instruction or recorded danger. Revocation above remains available
+    # when approval lapses. A supplied request field cannot self-approve.
+    if application().engine.professional_access(advocate_id)["state"] != "approved":
+        raise HTTPException(
+            status_code=403,
+            detail="This screen exception needs current operator-reviewed professional approval. "
+                   "Your own workspace, matters, ordinary advice and urgency records "
+                   "remain available.")
+
     import re
 
     request_key = body.get("request_key")
@@ -903,6 +953,9 @@ def get_emergency(matter_id: str, advocate_id: Advocate) -> dict:
     governing, target_ref, _ = _emergency_target(m, now)
     history = [Declaration.from_stored(x) for x in (m.emergencies or ())]
     unreadable = sum(d is None for d in history)
+    approval = application().engine.professional_access(advocate_id)
+    permitted = (governing is not None and governing.active_at(now)
+                 and governing.actor_id == advocate_id and approval["state"] == "approved")
     return {
         "state": "incomplete" if unreadable or urgency["unreadable_records"] else "ok",
         "matter_id": m.id,
@@ -910,7 +963,13 @@ def get_emergency(matter_id: str, advocate_id: Advocate) -> dict:
         "urgency_register": urgency,
         "governing_ref": target_ref,
         "governing": governing.as_dict() if governing else None,
-        "said": (governing.said(now) if governing
+        "professional_approval": approval,
+        "permits_protective_handoff": permitted,
+        "said": ("The declaration remains on file, but no screen exception is permitted without "
+                 "current professional approval for its recorded actor. "
+                 "Ordinary own-file work remains available."
+                 if governing and governing.active_at(now) and not permitted
+                 else governing.said(now) if governing
                  else "emergency history could not be assessed; no exception is granted"
                  if unreadable
                  else "no emergency exception is live on this matter"),
@@ -1387,41 +1446,29 @@ def search(q: str, advocate_id: Advocate, court: str | None = None,
     }
 
 
+# One served new-credential input bound for signup and password replacement.
+# It is not a verification limit: an existing credential may predate it.
+_NEW_PASSWORD_MAX = 1024
+
+
 class Credentials(BaseModel):
     advocate_id: NonBlank = Field(min_length=1)
     password: str = Field(min_length=1)
 
 
 class Registration(BaseModel):
-    """An invited advocate choosing the credential for their account. A1.
+    """Public account creation, or password-only acceptance of an invitation.
 
-    THE INVITATION OWNS THE IDENTITY. Name, canonical email, enrolment,
-    practice and workspace are recorded once by the operator. Asking the
-    advocate to retype them made an innocent difference indistinguishable from
-    a forged token and then discarded the retyped values anyway.
-
-    ENROLMENT IS INVITATION-GATED. BK-31, decided 9 September 2026.
-
-    Two dated decisions contradicted each other. Self-service was permitted on
-    6 September; a CONTROLLED PRIVATE ROSTER was recorded on 8 September, and
-    the later one governs. What settled it was not the dates but a dependency:
-    `nm/core/turn.py` relaxes scope and capacity release to ONE PERSON
-    *because* "the deployment is a controlled roster of practising advocates
-    and the advocate IS the firm". With open self-service that relaxation is
-    unsound -- a stranger enrols and then releases their own professional
-    screens. A product that advises on law cannot let the front door decide
-    that.
-
-    So the form survives behind a single-use, expiring invitation. The
-    invitation fixes the complete server-owned roster identity; the body
-    cannot redirect it to another advocate or firm. The invited advocate
-    chooses their own password rather than receiving one from an operator.
+    Public email is an unverified sign-in handle, not a qualification or a
+    shared-firm assignment. The optional invitation header selects the older
+    bound-identity lane; that lane cannot accept a caller-supplied email.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    password: str = Field(min_length=1)
-    password_again: str = Field(min_length=1)
+    email: str | None = Field(default=None, max_length=320)
+    password: str = Field(min_length=1, max_length=_NEW_PASSWORD_MAX)
+    password_again: str = Field(min_length=1, max_length=_NEW_PASSWORD_MAX)
 
 
 class Recovery(BaseModel):
@@ -1431,8 +1478,8 @@ class Recovery(BaseModel):
 
     advocate_id: NonBlank = Field(min_length=1)
     recovery_code: str = Field(min_length=1)
-    password: str = Field(min_length=1)
-    password_again: str = Field(min_length=1)
+    password: str = Field(min_length=1, max_length=_NEW_PASSWORD_MAX)
+    password_again: str = Field(min_length=1, max_length=_NEW_PASSWORD_MAX)
 
 
 _RECOVERY_REFUSED = (
@@ -1450,40 +1497,36 @@ def _workspace(identity) -> dict:
     }
 
 
-#: THE ONLY THING A FAILED SIGN-IN EVER SAYS.
-#:
-#: WHY A SIGN-IN FAILED, in the advocate's words. Three states.
-#:
-#: THIS OVERRIDES A1's SINGLE MESSAGE, on the advocate's instruction and
-#: with the cost recorded. A1 collapsed every failure into one sentence so
-#: a stranger could not use the form to discover which addresses are
-#: enrolled -- the same reasoning as the timing note in `authenticate`,
-#: which pays for a password derivation on an unknown advocate so the
-#: stopwatch cannot answer either. That trade is now made the other way.
-#:
-#: WHAT IS BOUGHT is that three different problems stop reading as one.
-#: `unreadable` in particular is neither a wrong email nor a wrong
-#: password: it is a record encrypted under a key the server no longer
-#: has, it happened on 7 September 2026, and the advocate was told to
-#: check credentials that were correct.
-#:
-#: WHAT IS SPENT is that the form now confirms whether an address is
-#: enrolled -- and enumeration is cheap in proportion to how fast it can
-#: be tried, which is why this belongs WITH the login rate limit that
-#: BK-18 still carries as open. The two go together.
-#:
-#: STILL ONE OWNER PER MESSAGE. Three constants, not three strings written
-#: at call sites: the original comment's point was that copies drift, and
-#: that is as true of three messages as of one.
-_REFUSED = {
-    "unknown": ("no advocate is enrolled with that email address. Check the "
-                "spelling, or register."),
-    "wrong_password": "that password is not right for this email address.",
-    "unreadable": ("this account exists and could not be opened. It was "
-                   "sealed with a different NM_MATTER_KEY than the server is "
-                   "running with -- retyping the password will not fix it."),
-}
-_REFUSED_DEFAULT = "those credentials were not accepted"
+def _professional_status(directory, identity, now) -> dict:
+    """Expose only derived approval; unavailable approval never blocks sign-in."""
+    from nm.core.professional_access import read_professional_status
+
+    return read_professional_status(
+        lambda account_id: directory.professional_approval(account_id), identity.id, now)
+
+
+# Public authentication never diagnoses account existence; the directory's
+# operator audit retains the cause. Registration returns no existing identity.
+_REFUSED_DEFAULT = (
+    "Those credentials were not accepted. Check the email and password, or "
+    "use account recovery. If the problem continues, contact support.")
+_REGISTRATION_REFUSED = (
+    "Registration could not be completed. Try signing in or use account "
+    "recovery; otherwise contact support.")
+_REGISTRATION_UNAVAILABLE = (
+    "Registration is temporarily unavailable. Try again later; if it "
+    "continues, contact support. Your existing account can still sign in.")
+
+
+def registration_origin(request: Request,
+                        x_enrolment_invitation: str | None = Header(default=None)) -> None:
+    """Public signup needs the page origin; invitation API clients need their token.
+
+    A supplied foreign origin is refused on either lane. Header presence,
+    including an empty/invalid token, selects the invited lane and never falls
+    back to public signup. Its ordinary token controls still decide admission.
+    """
+    _require_origin(request, allow_absent=x_enrolment_invitation is not None)
 
 
 def _admit_auth_attempt(directory, advocate_id, source, now, *, action: str) -> None:
@@ -1504,7 +1547,7 @@ def _admit_auth_attempt(directory, advocate_id, source, now, *, action: str) -> 
                             headers={"Retry-After": str(retry_after)})
 
 
-@app.post("/api/register")
+@app.post("/api/register", dependencies=[Depends(registration_origin)])
 @implements("A1")
 def register(body: Registration, request: Request,
              x_enrolment_invitation: str | None = Header(default=None)) -> dict:
@@ -1524,15 +1567,44 @@ def register(body: Registration, request: Request,
     that refusal and passes the reason through rather than inventing a second
     threshold that will drift from the first.
     """
-    from nm.domain.advocate import enrol, token_fingerprint
-    from nm.ports.directory import AlreadyEnrolled, InvitationRefused
+    from nm.domain.advocate import (
+        AdvocateIdentity,
+        Enrolment,
+        enrol,
+        registration_email,
+        token_fingerprint,
+    )
+    from nm.ports.directory import (
+        AlreadyEnrolled,
+        InvitationRefused,
+        RegistrationUnavailable,
+    )
 
     now = utcnow()
     source = request.client.host if request.client else "unknown-source"
+    directory = application().directory
+    invited = x_enrolment_invitation is not None
     invitation = (x_enrolment_invitation or "").strip()
     rate_key = f"invitation:{token_fingerprint(invitation)}"
-    _admit_auth_attempt(application().directory, rate_key, source, now,
-                        action="enrolment")
+    if invited:
+        if "email" in body.model_fields_set:
+            raise HTTPException(422, "An invitation supplies its own account identity.")
+        _admit_auth_attempt(directory, rate_key, source, now, action="enrolment")
+    else:
+        try:
+            email = registration_email(body.email)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        try:
+            admitted = directory.admit_registration(email, source, now)
+        except RegistrationUnavailable as exc:
+            raise HTTPException(503, _REGISTRATION_UNAVAILABLE,
+                                headers={"Retry-After": "60"}) from exc
+        if not admitted.allowed:
+            retry_after = max(1, ceil(admitted.retry_after.total_seconds()))
+            raise HTTPException(
+                429, "Too many registration attempts. Wait and try again.",
+                headers={"Retry-After": str(retry_after)})
 
     if body.password != body.password_again:
         # BEFORE the credential is derived, so a typo costs nothing and the
@@ -1547,13 +1619,22 @@ def register(body: Registration, request: Request,
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     try:
-        identity, recovery_codes = application().directory.accept_invitation(
-            invitation, credential, now)
+        if invited:
+            identity, recovery_codes = directory.accept_invitation(
+                invitation, credential, now)
+        else:
+            identity = AdvocateIdentity(id=email, name=email, email=email)
+            recovery_codes = directory.enrol(Enrolment(
+                identity=identity, credential=credential, created_at=now))
     except InvitationRefused as exc:
-        application().directory.note_failure(rate_key, source, now)
+        directory.note_failure(rate_key, source, now)
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except AlreadyEnrolled as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise HTTPException(status_code=409, detail=(
+            str(exc) if invited else _REGISTRATION_REFUSED)) from exc
+    except OSError as exc:
+        raise HTTPException(503, _REGISTRATION_UNAVAILABLE,
+                            headers={"Retry-After": "60"}) from exc
 
     # RETURNED BECAUSE IT IS WHAT THEY SIGN IN WITH. A registration that
     # succeeds and does not say what to type next has enrolled someone who
@@ -1641,10 +1722,9 @@ def login(body: Credentials, request: Request, response: Response,
         # successful sign-in never adds to the count, and before the
         # response so the next attempt sees it.
         application().directory.note_failure(body.advocate_id, source, now)
-        why = application().directory.why_last_sign_in_failed()
         raise HTTPException(
             status_code=401,
-            detail=_REFUSED.get(why or "", _REFUSED_DEFAULT))
+            detail=_REFUSED_DEFAULT)
     identity, token, recovery_codes = opened
 
     # `secure` FROM THE CONNECTION, NOT FROM A FLAG (BK-18).
@@ -1685,7 +1765,9 @@ def login(body: Credentials, request: Request, response: Response,
     response.set_cookie("nm_csrf", csrf_token(token), httponly=False,
                         samesite="strict", secure=secure,
                         max_age=60 * 60 * 12, path="/")
-    result = {"advocate": identity.as_dict(), "workspace": _workspace(identity)}
+    result = {"advocate": identity.as_dict(), "workspace": _workspace(identity),
+              "professional_approval": _professional_status(
+                  application().directory, identity, now)}
     if recovery_codes:
         result["recovery_codes"] = list(recovery_codes)
     return result
@@ -1797,6 +1879,7 @@ def whoami(advocate_id: Advocate) -> dict:
     reader = getattr(directory, "account_security", None)
     generation = reader(advocate_id) if callable(reader) else None
     return {"advocate": identity.as_dict(), "workspace": _workspace(identity),
+            "professional_approval": _professional_status(directory, identity, utcnow()),
             # THREE STATES. `null` means this deployment's directory cannot say,
             # which a client must treat as "do not attempt a rotation" rather
             # than as generation zero.
@@ -1808,7 +1891,9 @@ def whoami(advocate_id: Advocate) -> dict:
 
 class ReauthenticateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    password: str = Field(min_length=1, max_length=512)
+    # Verify the same existing credential that login accepts, including one
+    # created before the public new-password input bound existed.
+    password: str = Field(min_length=1)
 
 
 class RotateRequest(BaseModel):

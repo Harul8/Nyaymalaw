@@ -67,7 +67,7 @@
            THIS advocate holds, and says so in its own words. A promise about
            the one check whose whole value is being trusted is the worst
            place in the product to be approximately right. -->
-      Access is by invitation from your practice. Conflict checks cover only
+      Register with your email and password. Conflict checks cover only
       the matters you hold here, not a firm-wide registry.
     </p>
   </form>
@@ -113,23 +113,18 @@
        wrong route. -->
   <form id="register" class="login" hidden autocomplete="on">
     <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
-    <p class="login-lede">Accept your invitation and choose a password.</p>
+    <p class="login-lede">Create your account and start your private workspace.</p>
 
-    <!-- BK-31. THE INVITATION OWNS THE ROSTER IDENTITY. The operator has
-         already recorded the advocate's canonical email, name, professional
-         profile and workspace. Asking for those five facts again created two
-         owners and turned an innocent mismatch into an unexplained refusal. -->
-    <label for="reg-invitation">Enrolment invitation <span class="req" aria-hidden="true">*</span></label>
-    <input id="reg-invitation" name="enrolment_invitation" type="password" required
-           autocomplete="one-time-code" autocapitalize="none" spellcheck="false"
-           aria-describedby="reg-invitation-help">
-    <p id="reg-invitation-help" class="field-help">Sent to you by whoever
-      administers this installation. It identifies your roster profile,
-      expires, and works once.</p>
+    <label for="reg-email">Email <span class="req" aria-hidden="true">*</span></label>
+    <input id="reg-email" name="email" type="email" required maxlength="254"
+           autocomplete="email" autocapitalize="none" spellcheck="false"
+           aria-describedby="reg-email-help">
+    <p id="reg-email-help" class="field-help">Use this email to sign in. No
+      invitation is needed.</p>
 
     <label for="reg-password">Password <span class="req" aria-hidden="true">*</span></label>
     <div class="pw-wrap">
-      <input id="reg-password" name="password" type="password" minlength="8"
+      <input id="reg-password" name="password" type="password" minlength="8" maxlength="1024"
              autocomplete="new-password" required>
       <!-- type=button, or it submits the form. aria-pressed carries the
            state to a screen reader; the glyph carries it to the eye. -->
@@ -141,7 +136,7 @@
 
     <label for="reg-password2">Retype password <span class="req" aria-hidden="true">*</span></label>
     <div class="pw-wrap">
-      <input id="reg-password2" name="password2" type="password" minlength="8"
+      <input id="reg-password2" name="password2" type="password" minlength="8" maxlength="1024"
              autocomplete="new-password" required>
       <!-- type=button, or it submits the form. aria-pressed carries the
            state to a screen reader; the glyph carries it to the eye. -->
@@ -157,10 +152,11 @@
     <p class="login-foot">
       <span class="req" aria-hidden="true">*</span> required. The password must be at
       least 8 characters and contain an upper-case letter, a lower-case
-      letter, a numeral and a special character &mdash; it is the only thing
-      standing between one advocate&rsquo;s client file and another&rsquo;s. Your
-      invitation supplies the identity and workspace your practice recorded.
+      letter, a numeral and a special character.
     </p>
+    <p class="login-foot">Your workspace and matters are available as soon as
+      you sign in. Professional approval is separate and is needed only for
+      privileged approvals or overrides.</p>
   </form>
 
   <!-- WHAT HAPPENED, ON ITS OWN CARD. The result of a registration used to be
@@ -251,6 +247,8 @@
          signed in, and cannot be edited into someone else. -->
     <span class="who-name" id="who-name">—</span>
     <span class="who-detail" id="who-detail"></span>
+    <span class="who-detail" id="professional-approval"
+          title="Professional approval applies to privileged approvals and overrides. Your own workspace and matters remain available."></span>
     <!-- BK-31. WHERE ELSE AM I SIGNED IN, and end those.
          The case this exists for is a device the advocate no longer
          controls, so the control has to be reachable from the one they are

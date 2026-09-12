@@ -32,6 +32,7 @@ from io import BufferedRandom
 from pathlib import Path
 
 from nm.adapters.store.file_store import _Cipher
+from nm.domain import attempts
 from nm.domain.advocate import (
     AccountSecurity,
     AdvocateIdentity,
@@ -50,8 +51,10 @@ from nm.domain.advocate import (
     new_recovery_codes,
     open_session,
     recovery_code_matches,
+    registration_email,
     token_fingerprint,
 )
+from nm.domain.professional_access import ProfessionalApproval
 from nm.domain.traceability import implements
 from nm.infrastructure.cleanup import discard
 from nm.ports.directory import (  # noqa: F401
@@ -59,7 +62,13 @@ from nm.ports.directory import (  # noqa: F401
     AlreadyEnrolled,
     InvitationRefused,
     ProofRefused,
+    RegistrationUnavailable,
 )
+
+# A public door must not grow an unbounded history even with many sources.
+# At capacity, refuse until existing records expire; never evict live limits.
+REGISTRATION_MAX_RECORDS = 10_000
+REGISTRATION_MAX_BYTES = 2 * 1024 * 1024
 
 #: ONE REFUSAL, ONE SENTENCE, AND DELIBERATELY NO ORACLE. BK-31.
 #:
@@ -119,14 +128,18 @@ class FileDirectory:
     def __init__(self, root: str | Path, key: str | None = None) -> None:
         self._root = Path(root)
         self._advocates = self._root / "advocates"
+        self._advocates_by_digest = self._advocates / "by-digest"
         self._sessions = self._root / "sessions"
         self._audit = self._root / "auth.log"
         self._attempts = self._root / "attempts.log"
+        self._registration_attempts = self._root / "registration-attempts.json"
+        self._registration_lock = self._root / "registration-attempts.lock"
         self._invitations = self._root / "invitations"
         self._used_invitations = self._invitations / "used"
         self._recovery_locks = self._root / "recovery-locks"
         self._proofs = self._root / "reauth-proofs"
         self._advocates.mkdir(parents=True, exist_ok=True)
+        self._advocates_by_digest.mkdir(parents=True, exist_ok=True)
         self._sessions.mkdir(parents=True, exist_ok=True)
         self._proofs.mkdir(parents=True, exist_ok=True)
         self._invitations.mkdir(parents=True, exist_ok=True)
@@ -270,6 +283,12 @@ class FileDirectory:
             # no untrusted value is ever allowed to become a path component.
             digest = hashlib.sha256(canonical.encode("utf8")).hexdigest()
             return self._advocates / f"invalid-{digest}.nm"
+        if len(canonical) + len(".nm") > 255:
+            # Valid email can be 254 characters, beyond one filename with its
+            # extension. A disjoint namespace cannot collide with an ordinary
+            # caller-selected ID; old usable account paths do not move.
+            digest = hashlib.sha256(canonical.encode("utf8")).hexdigest()
+            return self._advocates_by_digest / f"{digest}.nm"
         return self._advocates / f"{canonical}.nm"
 
     @staticmethod
@@ -367,6 +386,78 @@ class FileDirectory:
             raise
         return codes
 
+    # ----------------------------------------------- public signup admission ---
+
+    def admit_registration(self, email: str, source: str,
+                           now: datetime) -> attempts.Verdict:
+        """One locked rolling ledger for all workers, including successes.
+
+        Persist admission before credential derivation/account creation. A
+        crash may consume an attempt, but can never create an uncounted account.
+        This is independent of the historical failed-authentication log, whose
+        controlled-local availability policy is intentionally not suitable for
+        a public account-creation door.
+        """
+        if registration_email(email) != email or not source:
+            raise ValueError("registration admission needs a canonical email and source")
+        if now.tzinfo is None or now.utcoffset() is None:
+            raise ValueError("registration admission needs an aware clock")
+        try:
+            claim = self._claim_path(self._registration_lock)
+        except OSError as exc:
+            raise RegistrationUnavailable("registration admission unavailable") from exc
+        if claim is None:
+            raise RegistrationUnavailable("registration admission busy")
+        try:
+            records = []
+            try:
+                with self._registration_attempts.open("rb") as handle:
+                    raw = handle.read(REGISTRATION_MAX_BYTES + 1)
+            except FileNotFoundError:
+                raw = None
+            if raw is not None:
+                if len(raw) > REGISTRATION_MAX_BYTES:
+                    raise ValueError("registration admission exceeds its storage bound")
+                doc = json.loads(raw)
+                if (not isinstance(doc, dict) or set(doc) != {"schema", "attempts"}
+                        or type(doc["schema"]) is not int or doc["schema"] != 1
+                        or not isinstance(doc["attempts"], list)
+                        or len(doc["attempts"]) > REGISTRATION_MAX_RECORDS):
+                    raise ValueError("invalid registration admission envelope")
+                for row in doc["attempts"]:
+                    if (not isinstance(row, dict) or set(row) != {"at", "email", "source"}
+                            or not isinstance(row["at"], str)
+                            or any(not isinstance(row[key], str)
+                                   or len(row[key]) != 64
+                                   or any(c not in "0123456789abcdef" for c in row[key])
+                                   for key in ("email", "source"))):
+                        raise ValueError("invalid registration admission record")
+                    at = datetime.fromisoformat(row["at"])
+                    if at.tzinfo is None or at.utcoffset() is None or at > now:
+                        raise ValueError("registration admission clock is not established")
+                    if now - at < attempts.WINDOW:
+                        records.append((row, at))
+            email_key = hashlib.sha256(email.encode("utf8")).hexdigest()
+            source_key = hashlib.sha256(source.encode("utf8")).hexdigest()
+            decision = attempts.verdict(
+                tuple(at for row, at in records if row["email"] == email_key),
+                tuple(at for row, at in records if row["source"] == source_key), now)
+            if not decision.allowed:
+                return decision
+            if len(records) >= REGISTRATION_MAX_RECORDS:
+                raise ValueError("registration admission population is full")
+            rows = [row for row, _ in records]
+            rows.append({"at": now.isoformat(), "email": email_key, "source": source_key})
+            doc = {"schema": 1, "attempts": rows}
+            if len(json.dumps(doc, indent=2).encode("utf8")) > REGISTRATION_MAX_BYTES:
+                raise ValueError("registration admission storage is full")
+            self._replace_advocate(self._registration_attempts, doc)
+            return decision
+        except (OSError, ValueError, TypeError) as exc:
+            raise RegistrationUnavailable("registration admission unavailable") from exc
+        finally:
+            claim.release()
+
     # ------------------------------------------------------------- recovery ---
 
     def _recovery_lock_path(self, advocate_id: str) -> Path:
@@ -375,7 +466,11 @@ class FileDirectory:
 
     def _claim_recovery(self, advocate_id: str) -> _AccountClaim | None:
         """Own account access across workers; the OS retires crashed claims."""
-        path = self._recovery_lock_path(advocate_id)
+        return self._claim_path(self._recovery_lock_path(advocate_id))
+
+    @staticmethod
+    def _claim_path(path: Path) -> _AccountClaim | None:
+        """Shared nonblocking process claim for an explicitly owned record."""
         handle = path.open("a+b")
         try:
             if path.stat().st_size == 0:
@@ -721,20 +816,35 @@ class FileDirectory:
     UNREADABLE = "unreadable"
 
     def _read(self, advocate_id: str) -> dict | None:
-        path = self._advocate_path(advocate_id)
         self._auth_state.last_failure = self.UNKNOWN
-        if not path.exists():
+        canonical = canonical_id(advocate_id)
+        if not advocate_id_is_storage_safe(canonical):
             return None
-        raw = path.read_bytes()
         try:
+            path = self._advocate_path(canonical)
+            if not path.exists():
+                return None
+            raw = path.read_bytes()
             # PLAIN FIRST, SEALED SECOND. Records written before BK-22 are
             # encrypted, and this reads both -- so no account breaks and
             # there is no window in which sign-in is down. A record is
             # rewritten in the open the next time it is written.
+            sealed = False
             try:
                 doc = json.loads(raw.decode("utf8"))
             except (UnicodeDecodeError, json.JSONDecodeError):
                 doc = json.loads(self._cipher.decrypt(raw).decode("utf8"))
+                sealed = True
+            # The path is an account key, not permission to adopt whichever
+            # identity happens to be stored there. Malformed readable JSON is
+            # an unreadable account, just like an unusable seal.
+            if not isinstance(doc, dict):
+                raise ValueError("account record must be an object")
+            identity = AdvocateIdentity(**doc["identity"])
+            if identity.id != canonical:
+                raise ValueError("account identity does not match its storage key")
+            Credential(**doc["credential"])
+            if sealed:
                 # MIGRATED ON THE WAY PAST, and it has to be here.
                 #
                 # `enrol` is the only other writer and it REFUSES to
@@ -770,6 +880,81 @@ class FileDirectory:
     def identity(self, advocate_id: str) -> AdvocateIdentity | None:
         doc = self._read(advocate_id)
         return AdvocateIdentity(**doc["identity"]) if doc else None
+
+    # ----------------------------------------- professional approval ---
+    def _professional_records(self, doc: dict, advocate_id: str) -> list[dict]:
+        sealed = doc.get("professional_approval")
+        if sealed is None:
+            return []
+        if not isinstance(sealed, str):
+            raise ValueError("professional approval record is unreadable")
+        envelope = json.loads(self._cipher.decrypt(sealed.encode("ascii")).decode("utf8"))
+        if (not isinstance(envelope, dict) or set(envelope) != {"schema", "records"}
+                or type(envelope["schema"]) is not int or envelope["schema"] != 1
+                or not isinstance(envelope["records"], list) or not envelope["records"]):
+            raise ValueError("professional approval history is unreadable")
+        for version, row in enumerate(envelope["records"], 1):
+            approval = ProfessionalApproval.from_record(row)
+            if (approval is None or approval.account_id != canonical_id(advocate_id)
+                    or approval.version != version):
+                raise ValueError("professional approval history is inconsistent")
+        return envelope["records"]
+
+    def professional_approval(self, advocate_id: str) -> dict | None:
+        """Approval failure denies only the privileged operation, never sign-in."""
+        try:
+            doc = self._read(advocate_id)
+            rows = self._professional_records(doc, advocate_id) if isinstance(doc, dict) else []
+            return rows[-1] if rows else None
+        except Exception:  # noqa: BLE001 — damaged approval cannot grant authority
+            return None
+
+    def record_professional_approval(self, approval: ProfessionalApproval, *,
+                                     expected_version: int, now: datetime) -> dict:
+        """Operator-only CAS; there is deliberately no public HTTP writer.
+
+        Review metadata is sealed independently within the account record. Its
+        loss cannot break password authentication or turn absence into approval.
+        Existing security/recovery fields and every prior approval are retained.
+        """
+        if (not isinstance(approval, ProfessionalApproval)
+                or type(expected_version) is not int or expected_version < 0
+                or approval.version != expected_version + 1
+                or not isinstance(now, datetime) or now.tzinfo is None
+                or now.utcoffset() is None or approval.approved_at > now
+                or (approval.revoked_at is not None and approval.revoked_at > now)
+                or (approval.revoked_at is None and approval.valid_until <= now)):
+            raise ValueError("supply a current attributed approval and the observed version")
+        claim = self._claim_recovery(approval.account_id)
+        if claim is None:
+            raise AccountBusy("account is being changed; retry from its current approval")
+        try:
+            doc = self._read(approval.account_id)
+            if not isinstance(doc, dict):
+                raise ValueError("approval requires an existing readable account")
+            rows = self._professional_records(doc, approval.account_id)
+            if len(rows) != expected_version:
+                raise ValueError("professional approval moved; read its current version")
+            if approval.revoked_at is not None:
+                prior = ProfessionalApproval.from_record(rows[-1]) if rows else None
+                if (prior is None or prior.revoked_at is not None
+                        or prior.revoke(approval.revoked_by, approval.revocation_reason,
+                                        approval.revoked_at) != approval):
+                    raise ValueError("revocation must preserve the approval being revoked")
+            elif rows:
+                prior = ProfessionalApproval.from_record(rows[-1])
+                if prior is None:
+                    raise ValueError("professional approval history is unreadable")
+                prior_at = prior.revoked_at or prior.approved_at
+                if approval.approved_at < prior_at:
+                    raise ValueError("a replacement review cannot precede its predecessor")
+            envelope = {"schema": 1, "records": [*rows, approval.as_dict()]}
+            doc["professional_approval"] = self._cipher.encrypt(
+                json.dumps(envelope).encode("utf8")).decode("ascii")
+            self._replace_advocate(self._advocate_path(approval.account_id), doc)
+            return approval.as_dict()
+        finally:
+            claim.release()
 
     # ------------------------------------------------- rate limiting ---
     #
@@ -864,8 +1049,15 @@ class FileDirectory:
             self._note(advocate_id, "no such advocate")
             return None
 
-        credential = Credential(**doc["credential"])
-        if not credential.verify(password):
+        try:
+            credential = Credential(**doc["credential"])
+            verified = credential.verify(password)
+        except (TypeError, ValueError, OverflowError):
+            self._auth_state.last_failure = self.UNREADABLE
+            dummy().verify(password)
+            self._note(advocate_id, "credential record unreadable")
+            return None
+        if not verified:
             self._auth_state.last_failure = self.WRONG_PASSWORD
             self._note(advocate_id, "wrong password")
             return None

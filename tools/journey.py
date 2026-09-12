@@ -112,6 +112,12 @@ EXPECTED = (
     "test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_"
     "sideways[768px]",
     "test_the_journey_is_actually_driving_a_browser",
+    "test_email_registration_opens_own_workspace_and_matter[390]",
+    "test_email_registration_opens_own_workspace_and_matter[1280]",
+    "test_registration_mismatch_clears_both_passwords",
+    "test_pending_registration_owns_its_one_time_result",
+    "test_unconfirmed_registration_does_not_claim_no_account_was_created",
+    "test_full_length_email_stays_readable_on_a_phone",
 )
 
 
@@ -182,6 +188,7 @@ def run(extra: list[str]) -> int:
 
     pytest_argv = [
         "pytest", "tests/test_the_journey_login_to_logout.py",
+        "tests/test_email_registration_reaches_a_private_workspace.py",
         "-m", "journey", "-p", "no:randomly", "-q",
         "--tb=short", "-rA", *extra,
     ]

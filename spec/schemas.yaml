@@ -4,6 +4,66 @@
 # checked against them by tests/test_produces_contracts.py.
 
 schemas:
+- name: ProfessionalApproval
+  owner: A1
+  purpose: An attributable operator review for protected professional approvals, never an account-access
+    or matter-authority grant.
+  fields:
+  - field: account_id
+    type: string
+    required: true
+    why: Canonical account being reviewed. A record for another account cannot authorise this actor; signup
+      does not create this record.
+  - field: reviewer_id
+    type: string
+    required: true
+    why: Named operator distinct from the reviewed account. A self-asserted identity is not independent
+      professional approval.
+  - field: basis
+    type: string
+    required: true
+    why: Nonblank stated review basis. A label without reasons cannot be attributed or revisited and does
+      not establish that a qualified review actually happened.
+  - field: evidence_ref
+    type: string
+    required: true
+    why: Reference to supporting review evidence, not raw qualification material in a session response.
+      Its existence/content must not be invented by signup or a test fixture.
+  - field: evidence_sha256
+    type: SHA256
+    required: true
+    why: Lowercase 64-hex digest binding the supporting artifact. A reference alone could change after
+      the approval was recorded; a digest does not itself verify its legal adequacy.
+  - field: approved_at
+    type: timezone-aware datetime
+    required: true
+    why: Recorded review time; a future approval grants nothing before this instant. No client timestamp
+      or model assertion supplies authority.
+  - field: valid_until
+    type: timezone-aware datetime
+    required: true
+    why: Mandatory expiry strictly later than approved_at. Permission ends at this instant; a professional
+      judgment cannot be PASS forever.
+  - field: version
+    type: positive integer
+    required: true
+    why: Persisted approval revision used by the operator compare-and-set boundary; competing edits cannot
+      silently overwrite approval or revocation. Booleans and nonpositive versions are invalid.
+  - field: revoked_at
+    type: timezone-aware datetime|null
+    required: true
+    why: Null means not revoked, not that missing approval is valid. A recorded revocation cannot precede
+      the approval and refuses subsequent protected use.
+  - field: revoked_by
+    type: string
+    required: true
+    why: Empty only while unrevoked; a revocation names its operator instead of silently disappearing.
+      Account ownership and ordinary own-file use remain unchanged.
+  - field: revocation_reason
+    type: string
+    required: true
+    why: Empty only while unrevoked; a nonblank reason accompanies revocation time and actor. Safety revocation
+      remains available without current professional approval.
 - name: Fact
   owner: C1
   purpose: A single proposition from the account, with everything needed to walk it back.

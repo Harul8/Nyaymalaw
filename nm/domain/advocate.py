@@ -7,14 +7,12 @@ PRODUCES contract and there was no class, no field of it, and no credential
 anywhere in `nm/`. `advocate_id` was a non-blank query parameter, and it was
 the only thing between one advocate's client file and another's (B-082).
 
-EVERY FIELD IS REQUIRED, AND `firm_id` MOST OF ALL
----------------------------------------------------
-Tenet 4 requires the file to know who may instruct and tenet 20 requires a
-decision to record who decided; an identity missing either is a file that
-cannot answer those. And `firm_id` is what B3's conflicts registry is scoped
-by — a blank firm is a conflict screen run against nothing, which is the
-absent-input shape aimed at the one control that exists to stop the product
-acting against a client it already acts for.
+ACCOUNT IDENTITY IS NOT PROFESSIONAL APPROVAL
+-----------------------------------------------
+Public registration creates an email-named private account. Qualifications,
+shared-firm membership and professional authority cannot be self-asserted at
+that door. A blank firm stays blank: it is not evidence that an organisation's
+conflicts register has been assessed. Approval has its own attributed record.
 
 WHAT A CREDENTIAL IS, AND WHAT IT IS NOT
 ------------------------------------------
@@ -88,6 +86,35 @@ def canonical_id(value: str | None) -> str:
     return clean(value).lower()
 
 
+def registration_email(value: str | None) -> str:
+    """Canonical storage-safe email handle, not a claim of mailbox ownership.
+
+    NM accepts ASCII dot-atom mailboxes on a DNS hostname. Case is folded as
+    for existing account IDs; plus tags and dots are never provider-normalised.
+    Quoted/SMTPUTF8 addresses are not supported by this account namespace.
+    """
+    refused = "Enter a supported email address, such as name@example.com."
+    if not isinstance(value, str) or len(value) > 320:
+        raise ValueError(refused)
+    if any(ord(char) < 32 or ord(char) == 127 for char in value):
+        raise ValueError(refused)
+    email = value.strip(" ").lower()
+    if len(email) > 254 or email.count("@") != 1 or not email.isascii():
+        raise ValueError(refused)
+    local, host = email.split("@")
+    atom = r"[a-z0-9!#$%&'*+/=?^_`{|}~-]+"
+    labels = host.split(".")
+    if (not 1 <= len(local) <= 64
+            or re.fullmatch(atom + r"(?:\." + atom + r")*", local) is None
+            or len(labels) < 2
+            or any(not 1 <= len(label) <= 63 or re.fullmatch(
+                r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", label) is None
+                   for label in labels)
+            or not advocate_id_is_storage_safe(email)):
+        raise ValueError(refused)
+    return email
+
+
 def advocate_id_is_storage_safe(value: str | None) -> bool:
     """Whether an id can name one record without escaping or aliasing it."""
     candidate = canonical_id(value)
@@ -103,10 +130,10 @@ def advocate_id_is_storage_safe(value: str | None) -> bool:
 class AdvocateIdentity:
     """A1's PRODUCES contract. Referenced by every later record.
 
-    THREE FIELDS BECAME OPTIONAL ON 6 SEPTEMBER 2026, on the advocate's
-    instruction, so self-service registration asks for a name, an email and a
-    password and nothing else. `id`, `name` and `email` remain non-blank: an
-    advocate with no id has no file, and one with no email cannot sign in.
+    Public registration uses the canonical email as both id and provisional
+    display name; enrolment, practice and firm remain empty. The optional
+    operator invitation still supplies its bound roster identity. Neither
+    route infers professional approval from these descriptive fields.
 
     WHAT A BLANK `firm_id` COSTS, recorded here because it will be paid later.
     B3's conflicts registry is SCOPED BY THE FIRM: it is what detects the
@@ -114,11 +141,8 @@ class AdvocateIdentity:
     a registry of one, and a screen run against a registry of one finds
     nothing — which is not the same as there being nothing to find.
 
-    THE SCREEN IS NOT BUILT YET (`nm.core.screens` is declared UNWIRED), so
-    this weakens no live control today. When it is built, a blank firm must
-    make the conflicts screen report NOT_ASSESSED and never CLEAR. That is the
-    three-state rule this whole build turns on, and it is written down now
-    rather than discovered by whoever wires the screen.
+    No default shared firm is invented. The consumer must preserve the scope
+    and limits of whichever conflict assessment it actually performed.
     """
 
     id: str
@@ -220,18 +244,15 @@ def enrol(password: str) -> Credential:
     produce `Password1!`. Eight-plus-classes is the common standard and it is
     the advocate's product.
 
-    WHAT DOES NOT CHANGE is that this is the only thing standing between one
-    advocate's client file and another's, and the product still has no rate
-    limit. The classes are checked as CHARACTER CATEGORIES rather than against
+    Authentication and admission limits protect the served doors separately.
+    The classes are checked as CHARACTER CATEGORIES rather than against
     a list of permitted symbols: a list would refuse a keyboard this product
     has never seen.
     """
     pw = password or ""
     if len(pw) < 8:
         raise ValueError(
-            "a password under 8 characters is refused. This is the only thing "
-            "standing between one advocate's client file and another's, and "
-            "the product has no rate limit yet.")
+            "a password under 8 characters is refused.")
     missing = [name for name, ok in (
         ("an upper-case letter", any(c.isupper() for c in pw)),
         ("a lower-case letter", any(c.islower() for c in pw)),

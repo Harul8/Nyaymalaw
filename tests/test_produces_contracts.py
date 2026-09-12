@@ -17,12 +17,14 @@ same from here.
 from __future__ import annotations
 
 import dataclasses
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
 import yaml
 
 from nm.domain.matter import Fact, FactBasis, Provenance, Weight
+from nm.domain.professional_access import ProfessionalApproval
 from nm.domain.traceability import refuses
 
 pytestmark = pytest.mark.class_a
@@ -34,6 +36,7 @@ SCHEMAS = ROOT / "spec" / "schemas.yaml"
 # map is not yet built; that is reported, never assumed.
 IMPLEMENTED: dict[str, type] = {
     "Fact": Fact,
+    "ProfessionalApproval": ProfessionalApproval,
 }
 
 
@@ -111,6 +114,36 @@ def test_the_undeclared_field_sweep_can_see_a_planted_extra_field():
     assert _undeclared_fields(schemas, {"Planted": Planted}) == [
         "Planted.silently_added"
     ]
+
+
+def test_the_schema_sweep_refuses_an_omitted_professional_approval_expiry():
+    contract = next(s for s in load() if s["name"] == "ProfessionalApproval")
+    assert IMPLEMENTED[contract["name"]] is ProfessionalApproval
+    assert "valid_until" in {row["field"] for row in contract["fields"]}
+    without_expiry = {**contract, "fields": [
+        row for row in contract["fields"] if row["field"] != "valid_until"]}
+    assert _undeclared_fields([without_expiry], IMPLEMENTED) == [
+        "ProfessionalApproval.valid_until"]
+
+
+@pytest.mark.parametrize("revoked", [False, True])
+def test_professional_approval_wire_fields_match_its_declared_contract(revoked):
+    """Synthetic structure proof, not an executed operator/qualification review."""
+    contract = next(s for s in load() if s["name"] == "ProfessionalApproval")
+    now = datetime(2026, 9, 12, tzinfo=timezone.utc)
+    record = ProfessionalApproval(
+        account_id="subject@example.test", reviewer_id="synthetic-reviewer",
+        basis="Synthetic contract witness only", evidence_ref="synthetic://review",
+        evidence_sha256="a" * 64, approved_at=now,
+        valid_until=now + timedelta(days=1))
+    if revoked:
+        record = record.revoke("synthetic-revoker", "Synthetic withdrawal", now)
+    payload = record.as_dict()
+    fields = {row["field"] for row in contract["fields"]}
+    assert fields == {field.name for field in dataclasses.fields(ProfessionalApproval)}
+    assert set(payload) == fields | {"schema"}
+    assert payload["schema"] == 1
+    assert ProfessionalApproval.from_record(payload) == record
 
 
 def test_unimplemented_contracts_are_named_rather_than_passing_silently():

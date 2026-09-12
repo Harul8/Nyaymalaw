@@ -728,6 +728,10 @@
         "BK-31-AC17",
         "BK-31-AC18",
         "BK-31-AC19",
+        "BK-31-AC21",
+        "BK-31-AC22",
+        "BK-31-AC23",
+        "BK-31-AC24",
         "BK-86-AC1",
         "BK-86-AC2",
         "BK-40-AC1",
@@ -778,13 +782,14 @@
       ],
       "inputs": [
         "Approved authentication/recovery assurance model",
-        "Existing invitation/session/recovery test population"
+        "D-041 public personal-account and separate operator-invitation/session/recovery test populations"
       ],
       "outputs": [
         "Protected-entry assurance enforcement and compatible session/recovery lifecycle"
       ],
       "steps": [
-        "Retain invitation binding, replay/race controls, neutral public failures and server-owned workspace identity; first measure existing behaviour rather than rebuild it.",
+        "D-041: ordinary email/password signup creates an actor-private workspace without professional approval; sign-in, owned workspace/new/reopen and ordinary instructions remain available. Retain the separate operator invitation lane, exact identity binding, expiry/replay/race controls and server-owned membership. Neither lane verifies mailbox possession or professional qualification; reject client-chosen firm, role and approval.",
+        "Record professional approval independently with attributable operator, basis, time, expiry and revocation. Check it only at protected professional approvals/overrides alongside existing scope and effect authority; never impose it as an ordinary own-file access/advice gate. Replace private-roster public diagnostic exceptions with neutral public failures and bounded durable admission.",
         "Enforce the approved factor/passkey assurance at every protected server entry and sensitive change; local password mode cannot activate the confidential profile.",
         "Implement enrolment, replacement, loss, rate limits and recovery notifications with global revocation where required; sweep direct API, remembered session and concurrent credential changes."
       ],
@@ -801,7 +806,7 @@
       },
       "expected": [
         "A stolen password alone cannot enter the confidential profile.",
-        "Old recovery, invitation, account-generation and workspace tests remain in the cumulative population."
+        "Public signup and unapproved own-workspace/new/reopen pass without invitations; cross-account access and self-asserted or expired/revoked professional approvals fail. Old recovery, invitation, account-generation and workspace invariants remain in the cumulative population; obsolete mandatory-invitation browser assertions are replaced by explicit public payload/secret-clearing controls."
       ],
       "rollback": "Pause confidential access on assurance regression; revoke affected sessions and restore the previous compatible provider configuration without weakening factor requirements.",
       "final_criteria": [
@@ -824,6 +829,10 @@
         "BK-31-AC17",
         "BK-31-AC18",
         "BK-31-AC19",
+        "BK-31-AC21",
+        "BK-31-AC22",
+        "BK-31-AC23",
+        "BK-31-AC24",
         "BK-86-AC1",
         "BK-86-AC2"
       ],

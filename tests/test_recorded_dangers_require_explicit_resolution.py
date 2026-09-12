@@ -81,6 +81,11 @@ def test_manual_urgency_is_visible_without_granting_a_protective_permission(clie
 
 def test_nine_real_protective_turns_and_a_fresh_process_preserve_the_same_urgency(
         client, monkeypatch):
+    from tests.test_professional_approval_is_separate_from_account_access import (
+        approve_fixture_account,
+    )
+
+    approve_fixture_account(client.directory)
     matter_id = _matter(client)
     instant = utcnow()
     monkeypatch.setattr("nm.edge.api.utcnow", lambda: instant)
@@ -125,6 +130,11 @@ def test_nine_real_protective_turns_and_a_fresh_process_preserve_the_same_urgenc
 
 @pytest.mark.parametrize("end", ["expiry", "revocation"])
 def test_permission_ending_cannot_resolve_or_hide_a_live_danger(client, monkeypatch, end):
+    from tests.test_professional_approval_is_separate_from_account_access import (
+        approve_fixture_account,
+    )
+
+    approve_fixture_account(client.directory)
     matter_id = _matter(client)
     instant = utcnow()
     monkeypatch.setattr("nm.edge.api.utcnow", lambda: instant)

@@ -52,6 +52,16 @@ CONTROLS: dict[str, str] = {
         "test_the_auth_sweep_can_see_a_guarded_route_with_no_authentication",
     "test_the_script_never_writes_to_browser_storage_at_all":
         "test_the_storage_sweep_can_see_a_planted_write",
+    # D-041 / BK-31 -- the public registration surface has a closed input
+    # population and a connected, secret-clearing request. The sibling
+    # control plants seven actual page/script defects, including an id-less
+    # authority input, and requires each changed source to be refused.
+    "test_public_registration_sends_email_without_invitation_or_profile_claims":
+        "test_registration_surface_control_catches_each_failure",
+    # The real browser mismatch test then plants an invalid, secret-free
+    # request on the wire and requires its same absence assertion to fail.
+    "test_registration_mismatch_clears_both_passwords":
+        "test_registration_mismatch_clears_both_passwords",
     "test_every_write_of_account_material_states_its_generation_transition":
         "test_the_generation_sweep_can_see_a_planted_forgetful_write",
     # BK-52 -- the admitted population is now zero. These controls were read

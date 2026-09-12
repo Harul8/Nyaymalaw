@@ -258,7 +258,7 @@ def test_active_workspace_reaches_the_masthead_before_matter_rendering(client):
     root = Path(__file__).resolve().parents[1]
     page = (root / "web" / "index.html").read_text(encoding="utf8")
     script = (root / "web" / "app.js").read_text(encoding="utf8")
-    show = script.index("function showApplication(advocate, workspace)")
+    show = script.index("function showApplication(advocate, workspace, professionalApproval)")
     workspace = script.index("$('workspace-name').textContent", show)
     matters = script.index("showMatterList();", show)
     assert show < workspace < matters

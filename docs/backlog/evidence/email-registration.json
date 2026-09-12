@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "record_type": "registration_policy_change",
+  "base_commit": "24ab8656776993f1e250119150c227f11e2990d8",
+  "owners": ["BK-31", "A1", "STEP-A-01"],
+  "start": "READY: user authorises email/password registration without invitations, separate professional approval, and immediate access to own workspace and matters.",
+  "boundary": "Account creation and ordinary own-file use confer no professional approval or external-effect authority. Privileged approval is independently attributed, time bounded and checked on its protected operation.",
+  "build": "COMPLETE_FOR_THE_BOUNDED_D041_REGISTRATION_CHANGE",
+  "verification": "PASS_FOR_RECORDED_POPULATIONS_ON_ONE_CURRENT_SOURCE_IDENTITY",
+  "source_fingerprint": "abed4e14a9760cc254df526ecb52899bb55f8da8ce52c350f1113bb4d973c19c",
+  "implementation": [
+    "Public email/password/confirmation signup has no invitation or client-selected profile, firm, role or approval. Email is a canonical sign-in handle, not verified mailbox ownership.",
+    "Successful signup returns its existing one-time recovery set but no session. Password sign-in then opens the server-owned personal workspace, new matters and owned matter reopening without professional approval.",
+    "ProfessionalApproval is a separate attributable, evidence-digest-bound, expiring, revocable operator record with compare-and-set history. No actual professional approval was issued in this task.",
+    "Only current emergency screen-exception creation/use consumes professional approval, in addition to existing matter/effect authority. Ordinary instructions, intake, advice, manual urgency and safety revocation remain available.",
+    "Durable bounded signup admission counts successes and failures, survives restart and fails closed on unavailable/corrupt state. Account uniqueness is enforced across workers without replacing credentials.",
+    "Authentication failures are neutral; the registered validation handler removes supplied secrets and unrecognised field names. Long email storage and display have explicit portable bounds.",
+    "The browser clears and conceals both passwords, owns pending registration until acknowledgement, and reports an unconfirmed transport result without asserting that no account exists.",
+    "The optional invited operator lane retains its original expiry, exact identity binding, one-time spend, sealed storage and race controls. Invalid invitation proof cannot fall through to public signup."
+  ],
+  "recovery": "UNCHANGED_BY_USER_CONFIRMATION: codes remain the existing backup flow, not a second login requirement; no email-reset delivery or new MFA requirement was implemented.",
+  "class_a": {
+    "result": "PASS",
+    "report": "docs/backlog/evidence/class_a.json",
+    "actual_test_cases": 3113,
+    "passing_aggregate_records": 227,
+    "recorded_nodes": 3340,
+    "gate_stage_seconds": 766.0,
+    "all_29_named_BK31_automated_evidence_nodes": "EXACT_PASS_LOOKUPS_CONFIRMED",
+    "newly_refreshed_automated_evidence_slots": 13
+  },
+  "canonical_browser": {
+    "result": "PASS",
+    "report": "docs/backlog/evidence/email-registration-browser/report.json",
+    "run_id": "1e55cb30-beb9-4662-a41f-574030d849a6",
+    "expected": 30,
+    "passed": 30,
+    "reproduced": 0,
+    "unexplained": 0,
+    "missing": 0,
+    "unexpected": 0,
+    "method": "Real Chromium against a locally served application, synthetic accounts/model and encrypted temporary storage; exact manifest, start/end fingerprint, configuration identity and artifact inventory validated by the normal evidence reader.",
+    "coverage": "Original 24 login-to-logout cases retained plus six public-registration cases: mobile/desktop signup through own-file create/reopen/logout; mismatch; pending result ownership; uncertain acknowledgement; full-length email on a phone.",
+    "criteria_bound": ["BK-31-AC10", "BK-31-AC22"]
+  },
+  "expanded_browser": {
+    "result": "PASS",
+    "artifact": "docs/backlog/evidence/email-registration-browser/expanded.xml",
+    "sha256": "7a37b8c7e9f3fddc46a1df4a18e32eff24316ce9dc015329bb3f913bc11555e0",
+    "started_at": "2026-09-12T15:57:08.523650+00:00",
+    "finished_at": "2026-09-12T15:59:38.606526+00:00",
+    "seconds": 150.094,
+    "passed": 56,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "unchanged_source_fingerprint": true,
+    "scope": "Registration and existing legal-signal visibility, original-material upload, recorded advice, urgency, required assets, research, matter cover, responsive layout and active-context flows. Six registration cases overlap the canonical suite; these are not 86 distinct cases."
+  },
+  "engineering_gate": {
+    "command": "python -u tools/check.py",
+    "exit_code": 0,
+    "verdict": "SCOPED BUILD PASS -- FULL GATE RED",
+    "declared_failure": "TRACE-C1 / BK-54-AC3 / P24-related dependency excluded from this task",
+    "new_waivers": 0,
+    "ordinary_local_tests": "PASS (7.7 seconds)",
+    "static_checks": "layercheck, spec export, speccheck, Ruff and rename/unbound-variable scan PASS"
+  },
+  "record_checks": {
+    "backlog_lint": "0 problems; 105 rows, 44 features, 47 steps and 105 wave rows",
+    "blueprint": "0 specification problems; 13 modules, 47 packets, 50 commands, 10 choices and 34 synthetic specifications",
+    "workbook": "28 sheets, 105 items, 224 acceptance criteria; exact populations, authored sources, status and formula reconciliation have 0 problems. Updated registration views visually inspected.",
+    "prd_docx": "Regenerated and content markers verified. LAYOUT_NOT_VERIFIED: the bundled renderer lacks soffice.exe; no visual-accuracy claim is made for the Word document.",
+    "graph_review": "Incremental code-review graph refreshed after edits; current shared approval-reader callers verified in API and turn engine. Local semantic embeddings were unavailable; structural graph and scoped text inspection were used."
+  },
+  "verification_corrections": [
+    "A preliminary full gate ran before new files were indexed and before the workbook/board were refreshed. It was not promoted or used as commit evidence. The final run included all indexed source files and the current plan.",
+    "The preliminary run exposed an assert-based production guard, a framework callback invisible to the owner scan, missing UTF-8 CLI setup and an unregistered browser-observer control. Fixed with explicit refusal, visible handler registration, shared console setup and a real planted invalid browser POST; no exemptions added.",
+    "A test incorrectly used matter-list ordering to identify a newly created matter. It now checks actual response identity, persisted receipt, ownership and reopening for both files.",
+    "Initial browser checks exposed premature test waits and a real full-length-email horizontal overflow. Tests now await actual response/transcript state; general wrapping and width constraints fix the layout.",
+    "Canonical registration scenarios and durable exact evidence references were registered before the final fingerprint. Only verified result/note fields were changed after execution; the source fingerprint stayed unchanged."
+  ],
+  "remaining": [
+    "Whole BK-31 and Phase A are not declared complete: remaining recovery/workspace/rotation browser and adversarial evidence retain their existing open records.",
+    "The existing P24-related trace failure still prevents a full-gate/release claim.",
+    "No qualified professional review, production deployment, live provider, email-delivery or mailbox-verification claim was made.",
+    "Word visual QA remains unverified because the bundled renderer is unavailable."
+  ],
+  "release": "NOT_REQUESTED",
+  "parallel_work": "EXCLUDED",
+  "push": "NOT_AUTHORISED_FOR_THIS_CHANGE; no push or integration into parallel work performed"
+}

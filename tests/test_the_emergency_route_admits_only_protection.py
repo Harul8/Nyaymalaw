@@ -37,6 +37,7 @@ from nm.core.screens import (
     unscreened,
 )
 from nm.domain.emergency import DEFAULT_HOURS, Declaration, latest
+from tests.test_professional_approval_is_separate_from_account_access import approve_fixture_account
 
 pytestmark = pytest.mark.class_a
 
@@ -353,6 +354,7 @@ def test_emergency_duration_is_bounded_in_the_domain(hours):
 
 
 def test_the_real_protective_turn_uses_the_live_declaration_without_a_model(client, monkeypatch):
+    approve_fixture_account(client.directory)
     from nm.domain.advocate import utcnow
     from nm.edge.api import application
 
@@ -409,6 +411,7 @@ def test_the_real_protective_turn_uses_the_live_declaration_without_a_model(clie
 
 
 def test_declared_emergency_never_clears_ordinary_merits_admission(client):
+    approve_fixture_account(client.directory)
     from nm.core.turn import TurnInput
     from nm.domain.metrics import TurnMetrics
     from nm.edge.api import application
@@ -433,6 +436,7 @@ def test_declared_emergency_never_clears_ordinary_merits_admission(client):
 
 
 def test_a_protective_handoff_cannot_emit_a_commit_success_when_save_fails(client, monkeypatch):
+    approve_fixture_account(client.directory)
     from nm.core.turn import TurnInput
     from nm.edge.api import application
 
@@ -463,6 +467,7 @@ def test_a_protective_handoff_cannot_emit_a_commit_success_when_save_fails(clien
 
 
 def _declaration_context(client, monkeypatch):
+    approve_fixture_account(client.directory)
     from nm.domain.advocate import utcnow
     from tests.test_the_commission_is_served_and_authority_refuses import _matter
 

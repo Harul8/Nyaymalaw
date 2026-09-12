@@ -225,7 +225,8 @@ class Application:
         self.elements = CuratedElements()
         self.engine = TurnEngine(store=self.store, evidence=self.evidence,
                                  model=self.model, coverage=self.coverage,
-                                 elements=self.elements)
+                                 elements=self.elements,
+                                 professional_approval=self.directory.professional_approval)
 
     def _egress_audit(self, line: str) -> None:
         """One line per dispatch decision, beside the auth log.

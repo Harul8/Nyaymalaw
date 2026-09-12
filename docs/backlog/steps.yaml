@@ -18,21 +18,28 @@ steps:
   - BK-20
   actor: advocate
   entry_conditions:
-  - the advocate has an enrolled identity or a valid invitation to one controlled workspace
+  - the user can create a private account with email and password, sign in to an existing account,
+    or present an operator invitation to its one server-bound workspace
   - the sign-in or recovery surface is available without exposing matter content
   user_action:
-  - signs in with the invited identity, or uses one advocate-held recovery code
+  - registers with email and password without an invitation, signs in with the canonical identity,
+    or uses one account-held recovery code; invited enrolment remains a separate optional path
   expected_visible_result:
   - the advocate's name and active firm or workspace are unmistakable before any matter
     content appears
   - recovery changes the password, consumes the code and requires a fresh sign-in
+  - unapproved personal accounts can enter their own workspace and start, reopen and work their own
+    matters; professional and mailbox verification are not implied by registration
   expected_domain_effect:
   - one server-owned AdvocateIdentity is associated with the authenticated session and
     its workspace
   - successful recovery revokes every earlier session and consumes exactly one code
   failure_behaviour:
-  - wrong or used recovery code and absent invitation disclose neither account existence
-    nor matter count; sign-in messaging follows the controlled private-roster decision D-007
+  - wrong or used recovery code and invalid invitation disclose neither account existence nor
+    matter count; public sign-in failures are neutral under D-041, which supersedes D-007's
+    private-roster diagnostic exception
+  - identity, firm, role, workspace or verification injection cannot grant access; an invalid
+    invitation cannot fall through to public registration, and duplicates cannot replace credentials
   - expiry, revocation or a new unrecognised device returns to authentication without
     rendering cached matter content
   recovery_behaviour:
@@ -43,8 +50,10 @@ steps:
   exit_conditions:
   - a current server-confirmed session names the advocate and active workspace, or access
     remains closed with a neutral explanation
-  notes: Phase A is a controlled private-roster deployment. MFA remains a production
-    release gate under BK-42; this step neither claims nor silently waives it.
+  notes: D-041 separates public personal-account access from independently recorded professional
+    approval. Missing approval blocks only the particular protected approval/override, not own-workspace
+    access, ordinary instructions, new matter or reopen. Invited firm membership remains server-owned.
+    MFA remains a production release gate under BK-42; this step neither claims nor silently waives it.
 - id: STEP-A-02
   name: Land on the file list and tell the matters apart
   phase: A

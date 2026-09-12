@@ -105,9 +105,9 @@ Do not expose “RRF”, “CAS”, “token window”, “embedding”, “sche
 
 ### 5.1 Arrive and establish the working context — M01
 
-The invitation explains who issued it and which practice/workspace it joins without exposing private roster data to someone who merely possesses an invalid token. Sign-in works with password managers and accessible authentication. Recovery, MFA/passkey enrolment, device/session review and sign-out are reachable without opening a matter. A high-assurance production gate is separate from a local demo; never describe a demo exception as completed production security.
+The primary registration path asks for email, password and confirmation, with no invitation. It explains that the server creates a personal workspace and that email/professional verification is not established. After sign-in, own-workspace access, new matter and reopen are available without professional approval. Display any separate approval state without making it a workspace lock; a protected-approval refusal names the act that needs approval. The optional operator invitation path explains which practice/workspace it joins without exposing private roster data to an invalid token; it accepts no duplicate profile or workspace fields. Sign-in uses neutral public failures, password managers and accessible authentication. Recovery, MFA/passkey enrolment, device/session review and sign-out are reachable without opening a matter. A high-assurance production gate is separate from a local demo; never describe a demo exception as completed production security.
 
-After authentication, show the verified account identity, active workspace, permitted role and scope of the current product. If the identity belongs to multiple approved workspaces, switching is deliberate and clears the previous matter context. A solo advocate sees a meaningful private-practice workspace, not an unexplained tenant ID.
+After authentication, show the authenticated account identity, active workspace, permitted role and scope of the current product; do not label mailbox or professional status verified merely because sign-in succeeded. If the identity belongs to multiple approved workspaces, switching is deliberate and clears the previous matter context. A personal account sees its own meaningful private workspace, not an unexplained tenant ID or an approval lock.
 
 The first landing view answers: what needs attention today, what was left unfinished, and how to start/reopen a matter. Its counts must derive from authorised records. Loading/error/partial states must not appear as “No matters yet”. NM may offer a brief introduction once; do not repeatedly make an experienced advocate complete a tutorial.
 
@@ -245,7 +245,7 @@ All rehearsals below are specifications, initially `NOT_RUN`. Each requires a de
 | Module | User performs | Expected visible result | Required failure rehearsal |
 |---|---|---|---|
 | M00 Proof console | Open a module; inspect build, fixture and evidence; switch to an older deployed build | Current evidence becomes stale rather than staying green | Empty evidence population cannot pass |
-| M01 Access | Accept invitation, sign in, verify workspace, enrol required factor, recover, revoke another session, sign out | Correct identity/context; one-time secrets are not redisplayed; revoked session loses new access | Invalid invitation/recovery stays neutral; browser back and stale tab reveal no protected view |
+| M01 Access | Register by email/password or use an operator invitation, sign in, verify own workspace, start/reopen own matter, enrol required factor, recover, revoke another session, sign out | Correct server-owned context; professional approval separate, not an own-file access gate; one-time secrets not redisplayed | No forged firm/role/approval or cross-account access; public failures neutral; invalid invitation/recovery and stale tab/back reveal no protected view |
 | M02 Secure matter | Create a prospective matter, record objective/parties, review screening limits, accept/reopen | Explicit admission state and accurate matter cover survive refresh/restart | Conflict service unavailable cannot produce clearance; other tenant cannot open guessed ID |
 | M03 Material | Attach a supported document and voice note; inspect receipt, transcript and original locator | Per-item received/read/partial states; source and derivative distinguishable | Corrupt file, uncertain name, blocked processor and interrupted upload remain visible and recoverable |
 | M04 Case file | Confirm an account; mark a statement disputed; correct a material date | Provenance and prior version remain; affected work is flagged | Unsupported claim cannot become a documented fact by repetition |
@@ -274,12 +274,12 @@ and any required human review are separate obligations.
 
 Relevant existing work includes BK-31 and BK-63; verify their current scope and evidence before extending them.
 
-1. Inventory the currently served invitation, login, recovery, identity/workspace, sessions and sign-out flows. Map each visible state to a server state and list contradictory/missing copy.
+1. Inventory public email registration and the separate operator invitation path, login, recovery, identity/workspace, professional approval, sessions and sign-out. Map each visible state to its server owner; prove missing professional approval does not block own-workspace/new/reopen while protected approvals remain separately guarded.
 2. Add the shared unauthenticated shell with semantic forms and no protected data fetch before authentication. Handle password managers, error focus and slow/failed session resolution.
 3. Add the server-derived identity/workspace header and explicit multi-workspace switching if enabled; clear previous protected content before fetching the next workspace.
 4. Implement the required factor and recovery management screens, including one-time secret acknowledgement and replacement/rotation. Record missing backend operations before pretending a screen implements them.
 5. Add session list/revocation and an accessible sign-out route. Distinguish local clearing from confirmed server revocation when offline.
-6. Rehearse through real browser sessions for two users: normal arrival, invalid invitation, recovery, changed factor, revoked session, stale tab, browser back and reload.
+6. Rehearse through real browser sessions for two users: email signup without an invitation, sign-in, owned new/reopen with unapproved professional status, cross-account refusal, invalid invitation, recovery, changed factor, revoked session, stale tab, browser back and reload. Show no implied mailbox or professional verification.
 7. Close only when server/API tests, keyboard/zoom and live privacy checks agree. Register every remaining production assurance gap rather than waiving it in UI copy.
 
 Stop gate: protected content is visible before valid context or after revocation; recovery secrets enter storage/logs; or required production authentication is missing.

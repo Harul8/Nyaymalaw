@@ -18,19 +18,28 @@ features:
   - nm/adapters/store/directory.py
   - nm/edge/api.py
   does:
-  - 'Establish and hold a named professional identity: the advocate, enrolment, practice, and the firm
-    whose conflicts registry governs this session.'
+  - 'Establish and hold the authenticated account identity and its server-owned workspace. Public email/password
+    signup needs no invitation: canonical email is the initial display identity; unprovided enrolment,
+    practice and firm remain unestablished. A personal account immediately enters its own workspace and
+    may start, reopen and work its own matters without professional approval. Record any professional
+    profile and approval separately; an email handle or invitation does not verify mailbox possession
+    or qualification.'
   - Re-authenticate before any matter content renders on a new device or after session expiry.
   - Restore the matter list only after authentication succeeds.
   - Display the server-established advocate and active workspace before opening a file. A workspace is
     not inferred from the email domain or a client-side label.
-  - Provide invitation-controlled enrolment, explicit session expiry/revocation, and a recoverable credential
-    path with single-use recovery material shown only at authorised issuance. Recovery consumes its proof
-    and revokes prior sessions atomically; signed-in rotation invalidates the old recovery set.
-  - Keep controlled-roster conformance separate from deployment readiness. Production requires MFA; any
-    exceptional no-MFA deployment needs a separately authorised release profile, defined scope, owner,
-    compensating controls and expiry before assessment. No existing mandatory gate is waived or marked
-    PASS by that exception, and a successful local login implies neither approval nor readiness.
+  - Provide ordinary email/password enrolment into an isolated server-owned personal workspace, retaining
+    operator invitation enrolment as a separate identity-bound path. Neither path accepts a client-selected
+    firm, role, workspace or verified status. Professional approval is a separate attributable, time-bounded
+    and revocable operator act, checked only at genuinely protected approvals/overrides; ordinary own-file
+    access and instructions do not require it. Provide explicit session expiry/revocation and a recoverable
+    credential path with single-use recovery material shown only at authorised issuance. Recovery consumes
+    its proof and revokes prior sessions atomically; signed-in rotation invalidates the old recovery set.
+  - Keep personal-account and invited-enrolment conformance separate from deployment readiness. Production
+    requires MFA; any exceptional no-MFA deployment needs a separately authorised release profile, defined
+    scope, owner, compensating controls and expiry before assessment. No existing mandatory gate is waived
+    or marked PASS by that exception, and a successful local login implies neither professional approval
+    nor readiness.
   never:
   - Never restore a matter list on a shared or borrowed device without re-authentication.
   - Never disclose, on a failed or expired credential, **which matters exist** — the error must be identical
@@ -38,18 +47,31 @@ features:
   - Never allow an anonymous session to create a matter. Tenet 4 requires the file to know who may instruct
     and tenet 20 requires a decision to record who decided; an anonymous session satisfies neither.
   produces:
-  - '`AdvocateIdentity { id, name, enrolment, practice, firm_id }` — referenced by every later record,
-    every decision and every conflict screen.'
+  - '`AdvocateIdentity { id, name, enrolment, practice, firm_id }` — authenticated account attribution
+    referenced by later records; blank professional fields remain unestablished, and public name initially
+    displays the canonical email without claiming verification.'
+  - '`ProfessionalApproval { account_id, reviewer_id, basis, evidence_ref, evidence_sha256, approved_at,
+    valid_until, version, revoked_at, revoked_by, revocation_reason }` — independent attributed operator
+    approval, not firm membership or an own-file access requirement. Its current-state projection is approved
+    or unapproved; the latter includes missing, malformed, future, expired and revoked records. The protected
+    emergency screen-exception consumer checks it independently of existing matter/effect authority; ordinary
+    instructions, manual urgency and safety revocation remain available.'
   eval_prose:
   - '**Class A** — an unauthenticated session cannot construct a Matter. Asserted at the type boundary,
     not in the handler.'
-  - '**Class B** — a failed authentication response is byte-identical regardless of how many matters the
-    identity owns.'
+  - '**Class B** — a failed public authentication response is byte-identical for unknown account, wrong
+    password and unreadable account regardless of how many matters the identity owns; credentials receive
+    equivalent verification work and bounded rate controls.'
   - '**Class A** — concurrent recovery cannot reuse one proof; old credentials and sessions fail after
     recovery; rotation rejects all prior recovery codes. Failure paths disclose neither account existence
     nor secret material.'
   - '**Class B** — the served recovery, expiry, session revocation and workspace paths identify the actual
     session state; production readiness is not reported without its release criteria.'
+  - '**Class A/B** — no-invitation registration, sign-in, own-workspace access, new matter and reopen
+    work without professional approval. Forged firm/role/verification fields and cross-account access
+    fail; duplicate/concurrent signup cannot replace credentials. Invited identity, expiry, single-use
+    and race controls remain. Unapproved/expired/revoked professional status refuses only a protected
+    approval or override, never the whole personal workspace.'
   counterexample: A session that expires mid-conversation and continues to render the matter board from
     a cached projection.
   historical_status: tested

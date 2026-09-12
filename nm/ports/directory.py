@@ -24,6 +24,8 @@ from nm.domain.advocate import (
     RecoveryResult,
     Session,
 )
+from nm.domain.attempts import Verdict
+from nm.domain.professional_access import ProfessionalApproval
 
 
 class AlreadyEnrolled(RuntimeError):
@@ -51,6 +53,10 @@ class AccountBusy(RuntimeError):
     """A credential or recovery mutation currently owns this account."""
 
 
+class RegistrationUnavailable(RuntimeError):
+    """Public signup cannot establish durable bounded admission; refuse it."""
+
+
 class ProofRefused(RuntimeError):
     """A fresh-authentication proof cannot authorise this replacement.
 
@@ -71,6 +77,16 @@ class ProofRefused(RuntimeError):
 
 
 class DirectoryPort(Protocol):
+    def admit_registration(self, email: str, source: str, now: datetime) -> Verdict:
+        """Atomically count an admitted public attempt before deriving secrets.
+
+        Successful creations count too. Counters survive worker/restart and
+        are resource bounded; unreadable/unwritable state raises
+        RegistrationUnavailable, never permission. Refused retries do not
+        extend the window. The email is the validated canonical account ID.
+        """
+        ...
+
     def issue_invitation(self, identity: AdvocateIdentity, issued_by: str,
                          now: datetime) -> str:
         """Return the invitation once; retain only its fingerprint."""
@@ -182,4 +198,13 @@ class DirectoryPort(Protocol):
 
     def identity(self, advocate_id: str) -> AdvocateIdentity | None:
         """For rendering who is signed in. Requires a live session upstream."""
+        ...
+
+    def professional_approval(self, advocate_id: str) -> dict | None:
+        """Current operator-reviewed record; absence/unreadable never grants approval."""
+        ...
+
+    def record_professional_approval(self, approval: "ProfessionalApproval", *,
+                                     expected_version: int, now: datetime) -> dict:
+        """Operator-only attributed update, under the shared account mutation lock."""
         ...

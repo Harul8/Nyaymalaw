@@ -770,9 +770,13 @@ def test_a_protective_retry_discloses_saved_history_without_releasing_expired_pe
     page, journey, monkeypatch,
 ):
     from nm.domain.advocate import utcnow
+    from tests.test_professional_approval_is_separate_from_account_access import (
+        approve_fixture_account,
+    )
 
     _sign_in(page, journey)
     matter_id = _new_matter(page, "Protective receipt expiry")
+    approve_fixture_account(journey["box"].application.directory, journey["advocate"])
     declared = page.evaluate("""async id => api(`/api/matters/${id}/emergency`, {
       method: 'POST', headers: {'content-type': 'application/json'},
       body: JSON.stringify({request_key: 'browser-protective-expiry',

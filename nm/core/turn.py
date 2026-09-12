@@ -24,6 +24,7 @@ import re
 import time
 from dataclasses import asdict, dataclass, field, replace
 from datetime import date, datetime, timezone
+from typing import Callable
 
 from nm.core import accrual as accrual_reader
 from nm.core import (
@@ -50,6 +51,7 @@ from nm.core import posture as posture_reader
 from nm.core import route as route_reader
 from nm.core import screens as screens_mod
 from nm.core import theory as theory_reader
+from nm.core.professional_access import read_professional_status
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
 from nm.domain import brief as brief_mod
 from nm.domain import citation, decision, engagement, issue, reads, reservation
@@ -559,10 +561,12 @@ class TurnEngine:
 
     def __init__(self, store: StorePort, evidence: EvidencePort, model: ModelPort,
                  coverage: CoveragePort | None = None,
-                 elements: "ElementsPort | None" = None, clock=None) -> None:
+                 elements: "ElementsPort | None" = None, clock=None,
+                 professional_approval: Callable[[str], object] | None = None) -> None:
         from nm.domain.advocate import utcnow
 
         self._clock = clock or utcnow
+        self._professional_approval = professional_approval
         self._store = store
         self._evidence = evidence
         self._model = model
@@ -577,6 +581,10 @@ class TurnEngine:
         # skipping the gate, so an unwired installation discloses that it
         # cannot vouch for coverage instead of implying it can.
         self._coverage = coverage
+
+    def professional_access(self, account_id: str) -> dict:
+        """An independent, live privilege read; never consulted for ordinary work."""
+        return read_professional_status(self._professional_approval, account_id, self._clock())
 
     def run(self, turn: TurnInput) -> TurnOutput:
         metrics = TurnMetrics(turn_id=turn.turn_id, matter_id=turn.matter_id)
@@ -1523,7 +1531,10 @@ class TurnEngine:
             raise TurnRefused("open an authorised matter before requesting protective triage")
         now = self._clock()
         declaration = latest(matter.emergencies or (), now)
-        permitted = declaration is not None and declaration.permits(turn.work_product)
+        approval = self.professional_access(turn.advocate_id)
+        permitted = (declaration is not None and declaration.permits(turn.work_product)
+                     and declaration.actor_id == turn.advocate_id
+                     and approval["state"] == "approved")
         prior = self._matching_receipt(matter, turn)
         if prior is not None:
             recorded = prior.validated_answer()
@@ -1550,7 +1561,8 @@ class TurnEngine:
             "Keep the original material available. No merits position, filing "
             "or communication is authorised by this handoff."
             if permitted else
-            "A live emergency declaration is required for this protective handoff. "
+            "A live emergency declaration and current professional approval are required "
+            "for this screen-exception handoff. "
             "The recorded urgency remains on the file. Renew or review the "
             "declaration; ordinary screens still govern any substantive advice."
         )
@@ -1558,19 +1570,21 @@ class TurnEngine:
                     for line in protective_texts(matter.urgency_records)]
         elements.append(Element(kind=ElementKind.QUESTION, text=text,
                                 signal=Signal.EMERGENCY))
-        if declaration:
+        if declaration and permitted:
             elements.append(Element(kind=ElementKind.GROUND, disclosure=True,
                                     signal=Signal.EMERGENCY,
                                     text=declaration.said(now)))
         answer = Answer(route=Route.MATTER, mode=Mode.SHORT_QUESTION,
                         mode_statement="Protective handoff only; no legal merits assessed.",
                         elements=tuple(elements), blocked=not permitted,
-                        blocked_reason=None if permitted else "no live emergency declaration")
+                        blocked_reason=None if permitted else
+                        "no live emergency declaration with current professional approval")
         # Even a refusal retains its attempt, but never the unadmitted narrative.
         receipt = {"turn_id": turn.turn_id, "actor_id": turn.advocate_id,
                    "at": now.isoformat(), "permitted": permitted,
                    "work_product": turn.work_product,
                    "declaration": declaration.as_dict() if declaration else None,
+                   "professional_approval": approval,
                    "substance_admitted": False}
         updated = replace(matter,
                           emergency_triage=(*(matter.emergency_triage or ()), receipt))

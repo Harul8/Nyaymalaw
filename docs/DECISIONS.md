@@ -144,6 +144,14 @@ Nothing enforces this; it is on the unenforced list, and it is mine to keep.
 
 ## D-007 — The controlled roster wins, and enrolment is authorisation-gated
 
+**Historical decision; signup restriction superseded by D-041 on 12 September
+2026.** Ordinary email/password registration now opens an isolated personal
+workspace without an invitation. The invitation's firm-binding, expiry and
+single-use protections remain for operator enrolment. Its private-roster
+assumption no longer licenses public account enumeration or professional
+authority: see D-041 for the separate, bounded approval boundary. The original
+reasoning and observations below are preserved as history, not current policy.
+
 **The question.** Two dated decisions contradicted each other. Self-service
 enrolment was permitted 6 September; a *controlled private roster* was recorded
 8 September. The register link stayed live, so the code implemented the earlier
@@ -479,6 +487,13 @@ sealed invitation. It is shown as an explicit `Workspace` label before the
 matter list or composer. There is no selector while an identity belongs to one
 workspace; a selector with one possible answer would imply multi-workspace
 authority that does not exist.
+
+**12 September 2026 amendment (D-041).** An invitation is no longer required
+for a personal account. Public registration supplies no firm; the server's
+existing actor-private workspace is immediately available. An invited account
+retains its server-bound workspace. Neither path permits a user-supplied
+workspace selector or establishes professional approval. Recovery-code and
+session requirements above remain unchanged.
 
 **MFA is not waved through.** Phase A may become feature-conformant for the
 controlled local roster without claiming production fitness. BK-42 remains a
@@ -1145,3 +1160,63 @@ reason to proceed with an irreversible step. Two empty unreadable stores
 reconcile as NOT_ASSESSED and never as equal. The comparison is on decrypted
 content and key references, because two correct stores seal one matter to
 different bytes.
+
+## D-041 — Public personal accounts; professional approval is a separate act
+
+**Decided by the user, 12 September 2026.** An ordinary email address, password
+and confirmation create a personal account without an invitation. Signing in,
+entering one's own workspace, starting a matter and reopening or working one's
+own matters do not require professional approval. Account ownership remains
+authenticated; this does not create anonymous matter access.
+
+**Two distinct enrolment paths.** The public path accepts only email and the
+two password entries. Canonical email is the initial display identity; Bar
+enrolment, practice and firm remain unestablished, not invented. A blank firm
+uses the existing server-owned actor-private workspace; it is not a missing
+permission to work one's own file. The retained invitation-header path accepts
+the two password entries only and takes its exact identity/workspace from the
+operator's sealed invitation. Identity redirects, arbitrary firm/workspace,
+role and approval fields are refused in both paths. Invalid invitation proof
+cannot fall through into public registration. Duplicate or racing enrolment
+cannot replace an existing credential or inherit its files.
+
+**No verification is implied.** An email-shaped login handle is not proof of
+mailbox possession or a practising advocate's qualification. Registration,
+an invitation and profile text confer no professional approval. Approval is a
+separate operator act with attributable reviewer, supporting basis, recording
+time, expiry and revocation; absent, expired or revoked approval is not valid.
+No actual reviewer, credential or qualified sign-off is fabricated by this
+build. Email delivery/verification is not silently claimed or used for recovery.
+
+**Authority is checked at the protected act.** A current professional approval
+is necessary only where the particular approval/override requires it, and is
+not sufficient to grant firm membership, another matter, client instruction,
+concession or external-effect authority. Those existing boundaries continue
+to govern. Ordinary instruction, scope and capacity recording is attributed
+user input, not a professional override; it cannot be blocked wholesale merely
+because the account's professional approval is missing. Any required refusal
+names the specific protected act and leaves own-workspace/new/reopen available.
+This replaces D-007's assumption that every account is an operator-vetted
+practising advocate; one-person access alone must never clear protected gates.
+The concrete current protected consumer is an emergency screen-exception
+declaration's creation/use. Manual urgency records and safety revocation remain
+available without approval. This separation does not reclassify an ordinary
+scope/capacity answer as a verified professional finding.
+
+**Public failures and secrets.** Public sign-in failures are neutral across
+unknown account, wrong password and unreadable account, including status and
+credential-verification work; detailed causes remain content-free internal
+diagnostics. Public registration refuses duplicate/invalid/unauthorised input
+without disclosing private roster or workspace content. Apply bounded input,
+same-origin browser protections and rate controls before expensive work.
+Passwords, invitation/recovery codes and returned one-time recovery material
+never enter logs or replay caches. Recovery and session revocation retain
+their current atomic and single-use contracts; registration does not sign in.
+
+**Delivery record.** BK-31/A1/STEP-A-01 and BK-31-AC21 through AC24 own this
+change. Existing invitation expiry, binding, sealed storage and race controls
+remain a separate cumulative population. Start is READY; Build/Test are OPEN
+until actual current-source execution; full BK-31, strong authentication,
+qualified review, confidential-pilot and production sign-off are not completed
+by this decision. See `docs/backlog/evidence/email-registration.json` for the
+implementation and execution record. No production assurance exception is made.

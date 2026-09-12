@@ -150,7 +150,7 @@ Record a decision in `docs/DECISIONS.md`, its accountable approver and evidence.
 | Users and tenancy | Advocate workspaces; explicit matter membership and professional role; no shared global case memory | Sharing a matter or admitting privileged pilot data |
 | Hosting and processors | India primary and recovery region; deny unapproved processing/egress | Provisioning or sending any privileged material |
 | Storage migration | PostgreSQL private state, encrypted objects, existing legal indexes behind versioned publication | Moving live accepted writes |
-| Identity | Existing invitation boundary; strong MFA/passkey authentication and tested recovery before confidential use | Any confidential-data pilot or production deployment |
+| Identity | D-041 email/password personal account with immediate own-workspace/new/reopen; invitation-bound firm enrolment and professional approval are separate. Strong MFA/passkey authentication and tested recovery still precede confidential use | Any confidential-data pilot or production deployment; any protected professional approval/override |
 | Pilot envelope | Proposed sizing baseline: 25 named advocates, five concurrent active tasks, synthetic data until approved | Buying capacity or asserting performance; replace with measured sizing |
 | Model and language capability | Provider-neutral tiers; English first, each additional Indian language separately evaluated | Real-model runs or claiming supported speech/translation |
 | Economics | Track cost per accepted task and matter-month; finance owner sets INR limits using selected provider quotes | Pilot budget approval; no invented price or guaranteed margin |

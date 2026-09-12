@@ -5,7 +5,7 @@
   "$comment": "Structural planning contract. x-commands is the command catalogue; request/response refs resolve locally. JSON Schema validates shape, not legal judgment, permissions, hashes, state transition or implementation. Those need the named served-path AC proof.",
   "x-contract-version": 1,
   "x-implementation-state": "design_only",
-  "x-scope": "Confidential target profile. Existing /api routes remain under their current contracts until explicit compatibility cutover. The controlled-local diagnostic policy is not silently changed.",
+  "x-scope": "Confidential target profile; catalogue completion does not install routes. Existing /api routes retain their compatibility contract unless explicitly adopted. D-041 explicitly adopts public email/password plus separate invited registration and neutral public authentication failures; it does not adopt confidential factor routes or confer deployment approval.",
   "x-example-policy": "Synthetic shape witnesses only, never credentials or measured runtime results. Every command has positive and negative request and response examples. Cross-record semantic refusals are separate obligations.",
   "x-common-rules": {
     "identity": "principal_id, tenant_id, role, assurance, access epoch and timestamps come only from validated server context. Route/query IDs are untrusted resource claims. No body actor override.",
@@ -2630,6 +2630,20 @@
     },
     "register_request": {
       "type": "object",
+      "oneOf": [
+        {
+          "properties": {
+            "headers": {"not": {"required": ["X-Enrolment-Invitation"]}},
+            "body": {"required": ["email"]}
+          }
+        },
+        {
+          "properties": {
+            "headers": {"required": ["X-Enrolment-Invitation"]},
+            "body": {"not": {"required": ["email"]}}
+          }
+        }
+      ],
       "properties": {
         "path": {
           "type": "object",
@@ -2664,14 +2678,20 @@
           },
           "required": [
             "Idempotency-Key",
-            "X-CSRF-Token",
-            "X-Enrolment-Invitation"
+            "X-CSRF-Token"
           ],
           "additionalProperties": false
         },
         "body": {
           "type": "object",
           "properties": {
+            "email": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 254,
+              "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+              "description": "Public signup only; normalised by the identity owner. This is a login handle, not proof of mailbox possession or professional qualification. Forbidden when an invitation fixes identity."
+            },
             "password": {
               "type": "string",
               "minLength": 1,
@@ -9079,7 +9099,9 @@
       "owner_ac": [
         "BK-31-AC1",
         "BK-31-AC8",
-        "BK-31-AC14"
+        "BK-31-AC14",
+        "BK-31-AC21",
+        "BK-31-AC24"
       ],
       "request_schema": {
         "$ref": "#/$defs/register_request"
@@ -9128,9 +9150,11 @@
         "SECRET_ALREADY_DELIVERED"
       ],
       "current_route": "POST /api/register",
-      "authorization": "Single-use expiring invitation fixes principal, tenant and workspace. Same-origin CSRF bootstrap and rate controls before expensive work. Password equality/policy checked by credential owner. Does not sign in.",
+      "authorization": "Public email/password/confirmation creates only a server-owned actor-private account/workspace; no invitation or professional approval is required for signup or subsequent owned-workspace/new/reopen use. Optional single-use expiring invitation is a separate password-only lane fixing the exact principal and firm workspace. Neither lane accepts profile/role/approval/workspace injection or verifies mailbox possession/professional qualification. Same-origin CSRF bootstrap and bounded rate controls precede expensive work; credential owner checks password equality/policy. Does not sign in.",
       "transitions": [
-        "valid_unspent_invitation -> consumed + registered principal + hashed recovery set atomically; otherwise no enrolment"
+        "new canonical email + accepted credential offer -> one personal principal + actor-private workspace + hashed recovery set; no professional approval is created",
+        "valid_unspent_invitation + password-only offer -> consumed + exact invited principal/workspace + hashed recovery set atomically; invalid invitation cannot fall through into public registration",
+        "duplicate/concurrent canonical identity -> no credential replacement, membership change, role grant or second secret delivery"
       ],
       "authoritative_records": [
         "principal",
@@ -9141,17 +9165,17 @@
         "audit_event"
       ],
       "retry": "Secret set is delivered once, never stored in command response cache or logs. Replay returns SECRET_ALREADY_DELIVERED; use sign-in/recovery procedure, not a second enrolment.",
-      "semantic_refusal": "Body principal_id or workspace_id injection is schema-invalid; concurrent invitation claim yields only one registration.",
+      "semantic_refusal": "Body principal_id, firm/workspace, role or verification/approval injection is schema-invalid. Public email and invited identity cannot be mixed. Concurrent public/invited claims for one canonical account yield at most one registration and never replace the existing credential. Public failures disclose no private roster/workspace content.",
       "examples": {
         "valid_request": {
           "path": {},
           "query": {},
           "headers": {
             "Idempotency-Key": "11111111-1111-4111-8111-111111111111",
-            "X-CSRF-Token": "synthetic-example",
-            "X-Enrolment-Invitation": "synthetic-example"
+            "X-CSRF-Token": "synthetic-example"
           },
           "body": {
+            "email": "synthetic-registration@example.invalid",
             "password": "synthetic-example",
             "password_again": "synthetic-example"
           }
@@ -9161,10 +9185,10 @@
           "query": {},
           "headers": {
             "Idempotency-Key": "11111111-1111-4111-8111-111111111111",
-            "X-CSRF-Token": "synthetic-example",
-            "X-Enrolment-Invitation": "synthetic-example"
+            "X-CSRF-Token": "synthetic-example"
           },
           "body": {
+            "email": "synthetic-registration@example.invalid",
             "password": "synthetic-example",
             "password_again": "synthetic-example",
             "principal_id": "11111111-1111-4111-8111-111111111111"

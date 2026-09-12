@@ -228,7 +228,10 @@ def test_every_failure_counted_authentication_door_obeys_source_admission(
     now = api.utcnow()
     for number in range(attempts.PER_SOURCE):
         client.directory.note_failure(f"other-{number}", "testclient", now)
-    _assert_paused(client.post(path, json=body))
+    # Public signup counts every admitted attempt in its own durable ledger.
+    # This population is the retained failure-counted invitation lane.
+    headers = {"X-Enrolment-Invitation": "unissued"} if path == "/api/register" else {}
+    _assert_paused(client.post(path, json=body, headers=headers))
 
 
 @pytest.mark.parametrize("operation", ["reauthenticate", "rotate_recovery_codes"])

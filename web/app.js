@@ -52,6 +52,7 @@ const state = {
 };
 
 let pendingApplication = null;
+let registrationInFlight = false;
 let outcomeReturn = 'register';
 let activeDelivery = null;
 let retiringSession = null;
@@ -186,7 +187,7 @@ function clearPrivileged() {
   state.matterId = null;
   state.turns = [];
   ['thread', 'rail-body', 'rail-meta', 'search-results', 'history-body',
-   'who-detail', 'save-status', 'search-index', 'search-state', 'history-state']
+   'who-detail', 'professional-approval', 'save-status', 'search-index', 'search-state', 'history-state']
     .forEach((id) => { const el = $(id); if (el) el.textContent = ''; });
   $('matter-heading').textContent = 'My work';
   $('workspace-eyebrow').textContent = 'YOUR WORKSPACE';
@@ -1638,7 +1639,7 @@ function showGate(message) {
   $('login-id').focus();
 }
 
-function showApplication(advocate, workspace) {
+function showApplication(advocate, workspace, professionalApproval) {
   if (!workspace || !workspace.id || !workspace.label) {
     clearPrivileged();
     showGate('I could not establish the active workspace. Matter content '
@@ -1658,7 +1659,10 @@ function showApplication(advocate, workspace) {
     }
   }
   $('who-name').textContent = advocate.name;
-  $('who-detail').textContent = `${advocate.enrolment} · ${advocate.practice}`;
+  $('who-detail').textContent = [advocate.enrolment, advocate.practice]
+    .filter(Boolean).join(' · ');
+  $('professional-approval').textContent = professionalApproval?.state === 'approved'
+    ? 'Professional profile approved' : 'Professional profile not approved';
   $('workspace-name').textContent = workspace.label;
   $('gate').hidden = true;
   $('masthead').hidden = false;
@@ -1717,7 +1721,7 @@ async function boot() {
   checkBuild();
   try {
     const me = await api('/api/session');
-    showApplication(me.advocate, me.workspace);
+    showApplication(me.advocate, me.workspace, me.professional_approval);
   } catch (err) {
     // 401 IS THE ORDINARY CASE, not an error to report. Anything else is a
     // server that could not answer, and saying so beats a bare sign-in box
@@ -1750,7 +1754,7 @@ $('login').addEventListener('submit', async (ev) => {
         'This account predates self-service recovery. Save these codes before '
         + 'you continue; they will not be shown again.', r.recovery_codes, 'login');
     } else {
-      showApplication(r.advocate, r.workspace);
+      showApplication(r.advocate, r.workspace, r.professional_approval);
     }
   } catch (err) {
     $('login-password').value = '';
@@ -2057,13 +2061,11 @@ $('outcome-resume').addEventListener('click', () => {
 // TWO FORMS, NOT ONE IN TWO MODES. A single form that changes meaning by a
 // flag is one where a mis-set flag posts a password to the wrong route.
 function showForm(which) {
-  // An invitation is a credential, not form state. It must not survive a
-  // move to sign-in or the outcome card where another person could return to
-  // a pre-authorised form.
-  if (which !== 'register') {
-    const invitation = $('reg-invitation');
-    if (invitation) invitation.value = '';
-  }
+  // A pending account creation owns its one-time recovery result. Do not
+  // let public navigation hand that result to a different form/person.
+  if (registrationInFlight && which !== 'register') return;
+  // Keep the non-secret email for corrections, never a hidden credential.
+  if (which !== 'register') clearRegistrationPasswords();
   $('login').hidden = which !== 'login';
   $('register').hidden = which !== 'register';
   $('recovery').hidden = which !== 'recovery';
@@ -2080,6 +2082,20 @@ function showForm(which) {
   const reauth = $('reauth');
   if (reauth) reauth.hidden = which !== 'reauth';
   $('login-state').textContent = '';
+}
+
+function clearRegistrationPasswords() {
+  for (const id of ['reg-password', 'reg-password2']) {
+    const field = $(id);
+    field.value = '';
+    field.type = 'password';
+    const eye = document.querySelector(`[data-for="${id}"]`);
+    if (eye) {
+      eye.setAttribute('aria-pressed', 'false');
+      eye.setAttribute('aria-label', id === 'reg-password'
+        ? 'Show password' : 'Show retype password');
+    }
+  }
 }
 
 // WHAT HAPPENED, ON ITS OWN CARD, in both directions.
@@ -2135,7 +2151,7 @@ $('outcome-signin').addEventListener('click', () => {
   pendingApplication = null;
   clearRecoveryCodeDisplay();
   if (current) {
-    showApplication(current.advocate, current.workspace);
+    showApplication(current.advocate, current.workspace, current.professional_approval);
     return;
   }
   showForm('login');
@@ -2221,72 +2237,70 @@ $('recovery').addEventListener('submit', async (ev) => {
 
 $('register').addEventListener('submit', async (ev) => {
   ev.preventDefault();
+  if (registrationInFlight) return;
   const go = $('register-go');
   const password = $('reg-password').value;
   const again = $('reg-password2').value;
-  const invitation = $('reg-invitation').value.trim();
-  // Read once and remove it from the DOM before any network wait. A rejected
-  // request must not leave a live enrolment credential on the glass.
-  $('reg-invitation').value = '';
+  const email = $('reg-email').value.trim();
+  // Clear both credentials before validation or a network wait, including
+  // mismatches and transport failures. Only the local request holds them.
+  clearRegistrationPasswords();
 
   // CHECKED HERE AND ON THE SERVER. Not because the browser is trusted -- it
   // is not, and the route checks it again -- but because a typo that costs a
   // round trip and a stern sentence is a typo the advocate reads as a
   // rejection rather than as a slip.
   if (password !== again) {
-    $('reg-password2').value = '';
     showOutcome('bad', 'Registration failed',
       'The two passwords do not match. Nothing was saved.');
     return;
   }
 
+  registrationInFlight = true;
   go.disabled = true;
+  go.textContent = 'Creating account…';
+  $('register').setAttribute('aria-busy', 'true');
+  $('show-login').setAttribute('aria-disabled', 'true');
+  const stop = new AbortController();
+  const timeout = setTimeout(() => stop.abort(), 30000);
   try {
     const r = await api('/api/register', {
       method: 'POST',
-      // BK-31. A HEADER, NOT A BODY FIELD. The invitation is proof the
-      // advocate was invited onto the roster, not part of who they are, so it
-      // does not belong in the identity the registration creates.
-      //
-      // THE NAME MUST MATCH `nm/edge/api.py::register`, and for a while it
-      // did not: the route moved to `x-enrolment-invitation` and this kept
-      // sending `x-enrolment-code`, so the browser form could enrol nobody
-      // while every server-side test passed. Two files holding one name with
-      // nothing refusing the drift -- CLAUDE.md §4. It is now asserted by
-      // `test_the_page_and_the_script_agree.py`.
+      signal: stop.signal,
       headers: {
         'content-type': 'application/json',
-        'x-enrolment-invitation': invitation,
       },
       body: JSON.stringify({
+        email: email,
         password: password,
         password_again: again,
       }),
     });
-    // THE PASSWORDS LEAVE THE PAGE. They stay in the DOM otherwise, readable
-    // by anything running later on this document -- the same rule the sign-in
-    // handler already follows.
-    $('reg-password').value = '';
-    $('reg-password2').value = '';
-
     // REGISTERED, NOT SIGNED IN. A form post that created a session would mean
     // creating an account also logs in whatever machine sent it, and the
     // device binding is minted at sign-in for exactly that reason.
     //
-    // THE EMAIL IS FILLED FROM WHAT THE SERVER RETURNED. The advocate never
-    // retypes it here: the sealed invitation owns the roster identity and the
-    // canonical handle returned by the route is exactly what sign-in accepts.
+    // Sign in with the canonical handle returned by the account owner.
+    registrationInFlight = false;
     $('login-id').value = r.advocate_id;
     showOutcome('good', 'Registration successful',
-      `Enrolled as ${r.name}. Sign in with ${r.advocate_id} and the password `
+      `Your private workspace is ready. Sign in with ${r.advocate_id} and the password `
       + 'you just chose.', r.recovery_codes || [], 'register');
   } catch (err) {
-    $('reg-password').value = '';
-    $('reg-password2').value = '';
-    showOutcome('bad', 'Registration failed', err.message, [], 'register');
+    registrationInFlight = false;
+    if (err.obsolete) return;
+    $('login-id').value = email;
+    showOutcome('bad', 'Registration failed', !err.status
+      ? 'The registration result could not be confirmed. The account may have been created. Try signing in before registering again.'
+      : err.message, [], 'register');
   } finally {
-    $('reg-invitation').value = '';
+    clearTimeout(timeout);
+    registrationInFlight = false;
+    $('register').removeAttribute('aria-busy');
+    $('show-login').removeAttribute('aria-disabled');
+    clearRegistrationPasswords();
     go.disabled = false;
+    go.textContent = 'Register';
   }
 });
 

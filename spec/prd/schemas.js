@@ -29,6 +29,22 @@ const H = require('./helpers');
 // name, owner-feature, one-line purpose, [field, type, required, why]
 const SCHEMAS = [
 
+  ['ProfessionalApproval', 'A1',
+   'An attributable operator review for protected professional approvals, never an account-access or matter-authority grant.',
+   [
+     ['account_id', 'string', true, 'Canonical account being reviewed. A record for another account cannot authorise this actor; signup does not create this record.'],
+     ['reviewer_id', 'string', true, 'Named operator distinct from the reviewed account. A self-asserted identity is not independent professional approval.'],
+     ['basis', 'string', true, 'Nonblank stated review basis. A label without reasons cannot be attributed or revisited and does not establish that a qualified review actually happened.'],
+     ['evidence_ref', 'string', true, 'Reference to supporting review evidence, not raw qualification material in a session response. Its existence/content must not be invented by signup or a test fixture.'],
+     ['evidence_sha256', 'SHA256', true, 'Lowercase 64-hex digest binding the supporting artifact. A reference alone could change after the approval was recorded; a digest does not itself verify its legal adequacy.'],
+     ['approved_at', 'timezone-aware datetime', true, 'Recorded review time; a future approval grants nothing before this instant. No client timestamp or model assertion supplies authority.'],
+     ['valid_until', 'timezone-aware datetime', true, 'Mandatory expiry strictly later than approved_at. Permission ends at this instant; a professional judgment cannot be PASS forever.'],
+     ['version', 'positive integer', true, 'Persisted approval revision used by the operator compare-and-set boundary; competing edits cannot silently overwrite approval or revocation. Booleans and nonpositive versions are invalid.'],
+     ['revoked_at', 'timezone-aware datetime|null', true, 'Null means not revoked, not that missing approval is valid. A recorded revocation cannot precede the approval and refuses subsequent protected use.'],
+     ['revoked_by', 'string', true, 'Empty only while unrevoked; a revocation names its operator instead of silently disappearing. Account ownership and ordinary own-file use remain unchanged.'],
+     ['revocation_reason', 'string', true, 'Empty only while unrevoked; a nonblank reason accompanies revocation time and actor. Safety revocation remains available without current professional approval.'],
+   ]],
+
   ['Fact', 'C1',
    'A single proposition from the account, with everything needed to walk it back.',
    [

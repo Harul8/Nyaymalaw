@@ -840,8 +840,12 @@ items:
   verification: partial
   phase: A
   record: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity
-  next_action: implement D-013's authenticated recovery-code rotation and add registration,
-    recovery and workspace proof to the approval-only browser journey; confidential-pilot authentication is BK-86 and deployed assurance remains BK-42
+  next_action: complete and verify D-041 email/password personal registration, immediate owned
+    workspace/new/reopen without professional approval, neutral public authentication and separate
+    attributable expiring approval at protected acts. Preserve the optional invited identity and
+    recovery/session populations. Current execution belongs to email-registration.json; full
+    recovery/browser acceptance remains open, confidential authentication is BK-86 and deployed
+    assurance remains BK-42. No current-source PASS is inferred from historical conformance evidence.
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
     build: {result: OPEN, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
@@ -849,13 +853,17 @@ items:
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
   acceptance:
   - id: BK-31-AC1
-    requirement: enrolment is refused without an operator-issued invitation, with no
-      deployment setting whose absence can open the door
+    requirement: invited operator enrolment is refused without its valid current invitation;
+      absent email and invitation cannot enrol, and invalid invitation proof never falls through
+      into public registration. D-041 separately authorises ordinary email/password personal signup
     required_evidence: [integration_test]
     evidence:
       integration_test:
         result: PASS
         ref: tests/test_enrolment_is_authorised.py::test_it_is_refused_on_the_wire_and_not_only_in_the_function
+        note: Historical PASS tested universal invitation-only signup; D-041 narrows this
+          obligation to the invited lane. Adapted refusal and public-positive population passed
+          in the current 12 September Class-A run recorded in email-registration.json.
     negative_control:
       mutation: present a current invitation issued for the exact identity and workspace
       expected_failure: the door must OPEN; a door that never opens is not a door
@@ -867,8 +875,10 @@ items:
       integration_test:
         result: PASS
         ref: tests/test_enrolment_is_authorised.py::test_an_unauthorised_attempt_enrols_nobody
+        note: Prior universal no-invitation refusal is historical; D-041 public signup is
+          authorised. Current 12 September Class-A proves genuinely refused requests leave no account.
     negative_control:
-      mutation: register once unauthorised, then once with the authorisation
+      mutation: offer a malformed or identity-redirected enrolment, then a valid public or invited request
       expected_failure: the second attempt collides with a record that was never
         allowed to exist
   - id: BK-31-AC3
@@ -894,8 +904,8 @@ items:
       mutation: present the same token after its first successful enrolment
       expected_failure: the replay is refused rather than reaching the existing advocate record
   - id: BK-31-AC5
-    requirement: failed enrolment attempts are rate-limited and audited without recording
-      the invitation value
+    requirement: failed invited-enrolment attempts are rate-limited and audited without recording
+      the invitation value; public-account admission and secret-free failures are separately covered by AC24
     required_evidence: [integration_test]
     evidence:
       integration_test:
@@ -929,16 +939,17 @@ items:
       mutation: inspect the invitation file before it is spent
       expected_failure: the bearer token or invited email is visible in the stored bytes
   - id: BK-31-AC8
-    requirement: the invitation exclusively owns the canonical email, named advocate,
-      professional profile and server-owned workspace; registration accepts only the
-      invitation and the advocate's chosen password
+    requirement: on the invited lane the invitation exclusively owns canonical email, supplied
+      roster profile and server-owned workspace; the body accepts only password and confirmation.
+      The separate public lane accepts email but cannot redirect an invitation or assert professional approval
     required_evidence: [integration_test]
     evidence:
       integration_test:
         result: PASS
         ref: tests/test_enrolment_is_authorised.py::test_the_invitation_owns_identity_profile_and_workspace
-        note: extra identity fields are refused without spending the token; the
-          password-only retry persists the invitation's exact roster identity
+        note: Historical identity-binding PASS is preserved in prior execution. Current two-lane
+          proof passed on 12 September, retaining extra-field refusal without token spend and exact
+          password-only invited identity.
     negative_control:
       mutation: submit identity and workspace fields alongside a valid token
       expected_failure: any request value replaces the roster identity stored in the invitation
@@ -955,23 +966,25 @@ items:
       mutation: have two independently constructed directory adapters cross the claim point together
       expected_failure: both calls report enrolment or two advocate writes are attempted
   - id: BK-31-AC10
-    requirement: the browser sends the route's invitation header, conceals its value and
-      clears it from the DOM before waiting on the network
+    requirement: public browser registration sends email, password and confirmation with no invitation;
+      both passwords are concealed and cleared before a wire wait and after local validation refusal.
+      No credential or recovery secret is retained in browser persistence or logs
     required_evidence: [integration_test, browser_journey]
     evidence:
       integration_test:
         result: PASS
-        ref: tests/test_the_page_and_the_script_agree.py::test_the_browser_conceals_and_clears_the_invitation_before_the_wire_wait
-        note: the control binds the field id and name, password type, captured and
-          cleared value, and exact request-header value, with three planted failures
+        ref: tests/test_the_page_and_the_script_agree.py::test_public_registration_sends_email_without_invitation_or_profile_claims
+        note: D-041 replaces the historical mandatory-invitation UI contract; prior invitation
+          concealment evidence remains historical, not proof of the public payload or password clearing.
+          Current 12 September Class-A passes the public contract and seven planted drift controls.
       browser_journey:
-        result: NOT_RUN
-        ref: ''
-        note: registration is not yet a phase in the approved login-to-logout journey
+        result: PASS
+        ref: docs/backlog/evidence/email-registration-browser/report.json#tests/test_email_registration_reaches_a_private_workspace.py::test_registration_mismatch_clears_both_passwords
+        note: Current canonical browser run has 30 PASS, including mismatch clearing and a real
+          planted invalid POST proving the same request observer detects forbidden wire activity.
     negative_control:
-      mutation: restore a visible input, retain its value during fetch, or send the retired header name
-      expected_failure: the static integration controls report the exposure or header drift;
-        the eventual browser phase must observe the field clear on both refusal and success
+      mutation: require an invitation, retain either password during fetch or after mismatch, or send a profile field
+      expected_failure: payload/DOM controls refuse the drift and served registration observes no retained secret
   - id: BK-31-AC11
     requirement: two different valid invitations for one advocate cannot race to
       replace that advocate's credential or both report enrolment
@@ -985,16 +998,20 @@ items:
       mutation: claim two valid tokens for the same canonical identity through independent directory instances
       expected_failure: both callers report enrolment or the eventual credential is silently selected by last writer wins
   - id: BK-31-AC12
-    requirement: the browser registration form does not ask the advocate to retype
-      identity or workspace facts already fixed by the invitation
+    requirement: public browser registration asks only for email, password and confirmation;
+      it does not offer editable name, Bar enrolment, practice, firm/workspace, role or professional
+      verification fields, and does not imply the email or professional status has been verified
     required_evidence: [integration_test]
     evidence:
       integration_test:
         result: PASS
-        ref: tests/test_the_page_and_the_script_agree.py::test_the_register_form_does_not_retype_the_invited_roster_identity
+        ref: tests/test_the_page_and_the_script_agree.py::test_public_registration_sends_email_without_invitation_or_profile_claims
+        note: D-041 deliberately restores email, not client-selected professional/firm authority.
+          The previous no-email UI PASS is historical and cannot certify this changed contract.
+          The current public-only field and authority-injection controls passed on 12 September.
     negative_control:
-      mutation: restore any name, email, enrolment, practice or firm input to the registration form or script
-      expected_failure: the source-level form contract identifies the second owner of roster identity
+      mutation: add editable firm, role, enrolment or verified status to the form, or require an invitation
+      expected_failure: the closed public registration contract reports authority injection or the forbidden entry restriction
   - id: BK-31-AC13
     requirement: before matter content appears, the served application names the active server-owned
       workspace distinctly from the advocate's professional profile and offers no false selector when
@@ -1087,12 +1104,63 @@ items:
       new codes once and records the security event without recording the codes
     required_evidence: [integration_test, adversarial_test, browser_journey]
     evidence:
-      integration_test: {result: NOT_RUN, ref: 'tests/test_the_served_rotation_path.py::test_a_signed_in_advocate_replaces_their_codes_over_http', note: 'Served rotation exists and scoped access tests ran; current full-Class-A and browser acceptance remain required.'}
+      integration_test: {result: PASS, ref: 'tests/test_the_served_rotation_path.py::test_a_signed_in_advocate_replaces_their_codes_over_http', note: 'Current full Class-A passed on 12 September; this does not close the separate adversarial and browser requirements. Recovery behaviour remains unchanged.'}
       adversarial_test: {result: NOT_RUN, ref: ''}
       browser_journey: {result: NOT_RUN, ref: ''}
     negative_control:
       mutation: race code rotation with recovery or attempt to use an old code after replacement
       expected_failure: the superseded set cannot recover access and partial replacement cannot strand a valid account
+
+  - id: BK-31-AC21
+    requirement: ordinary email, password and confirmation register a new personal account without
+      an invitation or professional approval. The identity owner normalises email; email is initially
+      the display handle, not verified mailbox or qualification. Public signup selects no firm, role
+      or approval and cannot replace an existing credential under duplicate, case-variant or concurrent claims
+    required_evidence: [integration_test, adversarial_test]
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_public_email_registration.py::test_email_and_password_create_a_private_account_without_an_invitation'}
+      adversarial_test: {result: PASS, ref: 'tests/test_public_email_registration.py::test_duplicate_public_registration_never_replaces_credentials'}
+    negative_control:
+      mutation: offer profile or authority fields, or race differently cased public and invited claims for one identity
+      expected_failure: any chosen firm or approval, credential replacement, duplicate account, or second secret delivery fails
+  - id: BK-31-AC22
+    requirement: an authenticated but professionally unapproved account immediately accesses its
+      server-owned actor-private workspace, creates and reopens owned matters and records ordinary
+      instructions without a professional-approval gate. It cannot read, mutate or join another account's
+      workspace or matters by supplying a firm, path, query or body identity
+    required_evidence: [integration_test, browser_journey]
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_public_email_registration.py::test_a_new_account_can_sign_in_create_and_reopen_only_its_own_matter'}
+      browser_journey: {result: PASS, ref: 'docs/backlog/evidence/email-registration-browser/report.json#tests/test_email_registration_reaches_a_private_workspace.py::test_email_registration_opens_own_workspace_and_matter[390]', note: 'Canonical 30-scenario report also contains the passing 1280px case; both cover real public signup, own-file create/reopen, reload and logout.'}
+    negative_control:
+      mutation: omit professional approval on an ordinary own-file flow, then substitute another actor's workspace or matter
+      expected_failure: refusal of owned new/reopen or acceptance of cross-owner access both fail; an approval lock cannot satisfy isolation
+  - id: BK-31-AC23
+    requirement: professional approval is a separate attributable, dated, expiring and revocable
+      operator record, not a signup/profile/invitation assertion. The specific protected professional
+      approval or override checks current approval plus its existing scope and authority; ordinary
+      own-workspace access, new/reopen, user instructions and advice do not require that approval.
+      Current protected consumer is creation/use of an emergency screen-exception declaration;
+      manual urgency recording and safety revocation stay available without professional approval
+    required_evidence: [integration_test, adversarial_test]
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_professional_approval_is_separate_from_account_access.py::test_unapproved_account_keeps_ordinary_file_access_but_cannot_declare_exception'}
+      adversarial_test: {result: PASS, ref: 'tests/test_professional_approval_is_separate_from_account_access.py::test_untrusted_approval_records_fail_closed'}
+    negative_control:
+      mutation: self-assert approval, replay an expired/revoked approval, or grant approval without its existing matter/effect authority
+      expected_failure: protected approval remains refused while ordinary owned-file use remains available; no whole-workspace lock or fabricated reviewer is accepted
+  - id: BK-31-AC24
+    requirement: public authentication failures do not distinguish unknown, wrong-password or
+      unreadable accounts in public payload/status or verification work; internal causes remain
+      private. Public signup has bounded restart-safe admission including successful creation,
+      refuses unavailable admission and cross-origin browser submission, and logs no supplied secrets
+    required_evidence: [integration_test, adversarial_test]
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_public_email_registration.py::test_public_login_refusals_do_not_disclose_account_state'}
+      adversarial_test: {result: PASS, ref: 'tests/test_public_email_registration.py::test_public_registration_admission_counts_successes_and_survives_restart'}
+    negative_control:
+      mutation: vary account existence or unreadable state, restart the admission owner, corrupt counters or submit a foreign/missing browser origin
+      expected_failure: public diagnostics reveal account state, counters reset or fail open, cross-origin signup succeeds, or any password/token enters logs
 
 - id: BK-32
   title: responsive advocate home and matter navigation

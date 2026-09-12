@@ -276,7 +276,7 @@ later owner. Do not mark a whole module done because its foundation closed.
 | Module | Visible checkpoint | Main delivery owners; shared controls still apply |
 |---|---|---|
 | M00 Proof and security foundation | Operator can inspect a synthetic scenario, missing evidence and a deliberately failed safeguard | BK-80/81/82/85; existing proof controls |
-| M01 Access | Register by invitation, sign in, recover, inspect workspace/sessions, revoke, expire and confirm logout | BK-31/40; access regressions |
+| M01 Access | Register by email/password without invitation, or use the separate operator invitation; sign in, access own workspace/new/reopen without professional approval, recover, inspect sessions, revoke, expire and confirm logout | BK-31/40; D-041; separate professional-approval and access regressions |
 | M02 Matter and admission | Recognisable matter; scoped commission; screens before substance; safe emergency route; durable retry/re-entry | BK-33/34/36/53/62/63/78/83; BK-92 bounded delegation |
 | M03 Media | Upload or record; inspect permissions, processing stages, exact original/transcript anchors, failure and cancellation | BK-69 foundation; BK-54 consumes it; BK-79 integrates later in M08 |
 | M04 Casefile | Correct a fact; see attribution, competing accounts, issues and chronology survive reload | BK-64; existing casefile findings |

@@ -173,110 +173,58 @@ def test_late_rail_work_cannot_overwrite_newer_navigation():
     assert "$('pane-advise').dataset.matterId = matterId" in SCRIPT
 
 
-def test_the_page_sends_the_header_the_route_reads():
-    """BK-31. ONE HEADER NAME, HELD IN TWO FILES, WITH NOTHING REFUSING DRIFT.
-
-    The enrolment route moved from a shared installation code to per-advocate
-    invitations and became `x_enrolment_invitation`. `web/app.js` kept sending
-    `x-enrolment-code`, so the browser registration form could enrol nobody
-    while every server-side test passed -- the failure lived in the gap
-    between two correct components, which is CLAUDE.md §8's shape and §4's
-    question: what refuses the second copy?
-
-    Nothing did. The element-id scan above compares the page against the
-    script and has no view of the Python at all, so this reads the route's
-    OWN signature rather than a literal repeated here -- a constant in this
-    file would be a third copy of the name and would drift with the other two.
-    """
-    assert not headers_the_script_never_sends(SCRIPT)
-
-
-def headers_the_script_never_sends(script: str) -> list[str]:
-    """Every x- header the register route reads that `script` does not send.
-
-    A FUNCTION SO THE CONTROL CAN CALL IT ON A MUTATED SCRIPT. Asserted
-    inline, the check could only ever be run against the one file that is
-    already correct, and a check that cannot be shown to fail is the shape
-    this repository refuses everywhere else.
-    """
-    import inspect
-
-    from nm.edge import api
-
-    parameters = inspect.signature(api.register).parameters
-    wire = [name.replace("_", "-") for name in parameters
-            if name.startswith("x_")]
-    assert wire, (
-        "the register route takes no x- header, so either the invitation was "
-        "dropped from the door or it moved somewhere this check cannot see")
-    return [name for name in wire if name not in script]
-
-
-def test_the_header_check_catches_the_exact_drift_it_was_written_for():
-    """THE POSITIVE CONTROL, on the real bug rather than on a literal.
-
-    The script as it stood on 10 September -- sending `x-enrolment-code` at a
-    route reading `x-enrolment-invitation` -- must be reported. Without this
-    the assertion above would pass on a script that had simply stopped
-    mentioning headers at all.
-    """
-    stale = SCRIPT.replace("x-enrolment-invitation", "x-enrolment-code")
-    assert stale != SCRIPT, (
-        "the script no longer sends the invitation header literally, so this "
-        "control is mutating nothing")
-    assert headers_the_script_never_sends(stale) == ["x-enrolment-invitation"], (
-        "the drift that shipped a registration form which could enrol nobody "
-        "was not reported")
-
-
-def invitation_exposure(page: str, script: str) -> list[str]:
-    """Report a visible, retained or disconnected invitation value."""
+def registration_surface_problems(page: str, script: str) -> list[str]:
+    """D-041: a connected public account form, never a credential grant."""
     problems = []
-    found = re.search(r'<input\b[^>]*\bid="reg-invitation"[^>]*>', page)
-    if (not found or 'type="password"' not in found.group(0)
-            or 'name="enrolment_invitation"' not in found.group(0)):
-        problems.append("the invitation input is not concealed")
-    capture = script.find("const invitation = $('reg-invitation').value.trim()")
-    cleared = script.find("$('reg-invitation').value = '';", capture)
+    form = re.search(r'<form\b[^>]*\bid="register"[^>]*>(.*?)</form>', page, re.S)
+    controls = re.findall(r'<(?:input|select|textarea)\b[^>]*>',
+                          form.group(1) if form else "")
+    fields = [match.group(1) for control in controls
+              if (match := re.search(r'\bid="([^"]+)"', control))]
+    if len(controls) != 3 or sorted(fields) != ["reg-email", "reg-password", "reg-password2"]:
+        problems.append("registration does not have exactly the three account inputs")
+    email = re.search(r'<input\b[^>]*\bid="reg-email"[^>]*>', page)
+    if not email or 'type="email"' not in email.group(0):
+        problems.append("the email input is absent or mistyped")
+    start = script.find("$('register').addEventListener('submit'")
+    capture = script.find("const email = $('reg-email').value.trim()", start)
+    cleared = script.find("clearRegistrationPasswords();", capture)
     sent = script.find("await api('/api/register'", capture)
-    if min(capture, cleared, sent) < 0 or not capture < cleared < sent:
-        problems.append("the invitation remains in the DOM during submission")
-    header = script.find("'x-enrolment-invitation': invitation", sent)
-    if sent < 0 or header < sent:
-        problems.append("the captured invitation is not the request header value")
+    if min(start, capture, cleared, sent) < 0 or not start < capture < cleared < sent:
+        problems.append("registration secrets are retained or email is disconnected")
+    end = script.find("// THE REVEAL.", sent)
+    request = script[sent:end] if sent >= 0 and end > sent else ""
+    for field in ("email: email", "password: password", "password_again: again"):
+        if field not in request:
+            problems.append(f"request missing {field}")
+    if "x-enrolment-" in request or "reg-invitation" in page:
+        problems.append("the public form still requires an invitation")
+    forbidden = ("reg-name", "reg-enrolment", "reg-practice", "reg-firm")
+    if any(field in page or field in script for field in forbidden):
+        problems.append("the public form claims a professional or firm identity")
     return problems
 
 
-def test_the_browser_conceals_and_clears_the_invitation_before_the_wire_wait():
-    """BK-31-AC5. A bearer credential must not remain readable on the glass."""
-    assert not invitation_exposure(HTML, SCRIPT)
+def test_public_registration_sends_email_without_invitation_or_profile_claims():
+    assert not registration_surface_problems(HTML, SCRIPT)
 
 
-def test_the_invitation_exposure_check_catches_each_failure():
-    visible = HTML.replace('id="reg-invitation" name="enrolment_invitation" '
-                           'type="password"',
-                           'id="reg-invitation" name="enrolment_invitation" '
-                           'type="text"')
-    capture = SCRIPT.index("const invitation = $('reg-invitation').value.trim()")
-    clear = SCRIPT.index("$('reg-invitation').value = '';", capture)
-    statement = "$('reg-invitation').value = '';"
-    retained = SCRIPT[:clear] + SCRIPT[clear + len(statement):]
-    disconnected = SCRIPT.replace(
-        "'x-enrolment-invitation': invitation",
-        "'x-enrolment-invitation': password")
-    assert invitation_exposure(visible, SCRIPT) == [
-        "the invitation input is not concealed"]
-    assert invitation_exposure(HTML, retained) == [
-        "the invitation remains in the DOM during submission"]
-    assert invitation_exposure(HTML, disconnected) == [
-        "the captured invitation is not the request header value"]
-
-
-def test_the_register_form_does_not_retype_the_invited_roster_identity():
-    """BK-31-AC8. One owner for identity means one place to correct it."""
-    retired = ("reg-name", "reg-email", "reg-enrolment", "reg-practice",
-               "reg-firm")
-    assert not [field for field in retired if field in HTML or field in SCRIPT]
+def test_registration_surface_control_catches_each_failure():
+    mutations = [
+        (HTML.replace('type="email"', 'type="text"'), SCRIPT),
+        (HTML, SCRIPT.replace("email: email", "username: email")),
+        (HTML, SCRIPT.replace("clearRegistrationPasswords();", "/* retained */")),
+        (HTML, SCRIPT.replace("email: email", "'x-enrolment-code': email")),
+        (HTML + '<input id="reg-firm">', SCRIPT),
+        (HTML.replace('<label for="reg-email">',
+                      '<input id="reg-approved"><label for="reg-email">'), SCRIPT),
+        (HTML.replace('<label for="reg-email">',
+                      '<input name="professional_approval"><label for="reg-email">'), SCRIPT),
+    ]
+    assert len(mutations) == 7
+    for page, script in mutations:
+        assert (page, script) != (HTML, SCRIPT), "control mutated nothing"
+        assert registration_surface_problems(page, script)
 
 
 def recovery_surface_problems(page: str, script: str) -> list[str]:
@@ -292,9 +240,9 @@ def recovery_surface_problems(page: str, script: str) -> list[str]:
         problems.append("the recovery code remains in the DOM during submission")
     if 'id="workspace-context" aria-label="Active workspace"' not in page:
         problems.append("the masthead does not name active workspace context")
-    if "showApplication(me.advocate, me.workspace)" not in script:
+    if "showApplication(me.advocate, me.workspace, me.professional_approval)" not in script:
         problems.append("session workspace does not reach the served masthead")
-    show = script.find("function showApplication(advocate, workspace)")
+    show = script.find("function showApplication(advocate, workspace, professionalApproval)")
     guard = script.find("if (!workspace || !workspace.id || !workspace.label)", show)
     matter = script.find("showMatterList();", show)
     if min(show, guard, matter) < 0 or not show < guard < matter:
@@ -312,7 +260,7 @@ def recovery_surface_problems(page: str, script: str) -> list[str]:
 def test_recovery_is_concealed_and_workspace_is_visible_before_matter_work():
     """BK-31-AC13/14. Bind server response, gate and visible context."""
     assert not recovery_surface_problems(HTML, SCRIPT)
-    show = SCRIPT.index("function showApplication(advocate, workspace)")
+    show = SCRIPT.index("function showApplication(advocate, workspace, professionalApproval)")
     workspace = SCRIPT.index("$('workspace-name').textContent", show)
     matters = SCRIPT.index("showMatterList();", show)
     assert show < workspace < matters
@@ -325,7 +273,7 @@ def test_the_recovery_and_workspace_scan_can_see_each_planted_failure():
                            'id="recovery-code" name="recovery_code" type="text"')
     no_context = HTML.replace('id="workspace-context" aria-label="Active workspace"',
                               'id="workspace-context"')
-    no_wire = SCRIPT.replace("showApplication(me.advocate, me.workspace)",
+    no_wire = SCRIPT.replace("showApplication(me.advocate, me.workspace, me.professional_approval)",
                              "showApplication(me.advocate)")
     no_guard = SCRIPT.replace(
         "if (!workspace || !workspace.id || !workspace.label)", "if (false)")

@@ -21,7 +21,7 @@
   {
    "id": "W1",
    "name": "Admission and commission",
-   "goal": "Establish who instructs, what is being asked and whether the work may proceed.",
+   "goal": "Establish who instructs, what is being asked and whether the work may proceed. D-041 personal signup and owned-workspace/new/reopen require no professional approval; approval is independently checked only for protected professional approvals/overrides, not inferred from an account or profile.",
    "entry_conditions": [
     "Relevant W0 foundations are proven; identity and workspace boundaries are established."
    ],
@@ -219,6 +219,7 @@
     "BK-31-AC9", "BK-31-AC10", "BK-31-AC11", "BK-31-AC12",
     "BK-31-AC13", "BK-31-AC14", "BK-31-AC15", "BK-31-AC16",
     "BK-31-AC17", "BK-31-AC18", "BK-31-AC19", "BK-31-AC20",
+    "BK-31-AC21", "BK-31-AC22", "BK-31-AC23", "BK-31-AC24",
     "BK-32-AC1", "BK-33-AC1", "BK-33-AC2",
     "BK-34-AC1", "BK-34-AC2", "BK-34-AC3", "BK-34-AC4",
     "BK-38-AC1", "BK-38-AC2", "BK-40-AC1", "BK-40-AC2",
@@ -317,6 +318,7 @@
     "BK-31-AC9", "BK-31-AC10", "BK-31-AC11", "BK-31-AC12",
     "BK-31-AC13", "BK-31-AC14", "BK-31-AC15", "BK-31-AC16",
     "BK-31-AC17", "BK-31-AC18", "BK-31-AC19", "BK-31-AC20",
+    "BK-31-AC21", "BK-31-AC22", "BK-31-AC23", "BK-31-AC24",
     "BK-34-AC1", "BK-34-AC2", "BK-34-AC3", "BK-34-AC4",
     "BK-40-AC1", "BK-40-AC2", "BK-41-AC1",
     "BK-42-AC1", "BK-42-AC2", "BK-42-AC3", "BK-42-AC4",

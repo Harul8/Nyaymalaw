@@ -2,6 +2,42 @@
 
 What is known, not done, and not yet a defect row. Opened 6 September 2026.
 
+## Email registration and separate professional approval — 12 September 2026
+
+**Start: READY.** User reverses invitation-only account creation:
+ordinary email, password and confirmation must create a private account without
+an invitation. Registration, sign-in, access to one's own workspace, creation
+and reopening of one's own matters do not require professional approval.
+BK-31/A1/STEP-A-01 own this change. Existing named invitations remain a separate
+operator-controlled enrolment path; their expiry, identity binding and replay
+protections are retained, not reused as public sign-up credentials.
+
+**Authority boundary.** The user explicitly approved separating professional
+profile approval from registration. Public registration cannot select a firm,
+assert verified professional status, grant a role or approve privileged screen
+overrides. Ordinary instruction recording is not a professional override.
+Existing matter ownership, encryption, session, recovery and effect-authority
+controls remain in force. Unapproved accounts can create and use their own
+files; a refusal concerns the particular protected approval, never the whole
+workspace. Professional approval requires an attributable, bounded operator
+record; no user or test result is substituted for an actual professional review.
+
+**Proof plan.** Verify no-invitation registration, canonical email, password
+policy, duplicate/concurrent refusal without credential replacement, abuse and
+cross-origin controls, login/recovery/logout, immediate private-workspace and
+new-matter access, cross-account isolation and rejection of self-approval or
+forged authority. Drive the served registration and matter flow in a browser.
+Preserve historical evidence and mark changed-source results stale until rerun.
+No parallel work, paid model calls, real client data, deployment or push is
+authorised by this change. Current execution and close-out results belong in
+`docs/backlog/evidence/email-registration.json`.
+
+The scope includes bounded signup admission, secret-free validation errors,
+storage-safe full-length email handles, and ownership of pending registration
+results. Current Build/Test/Sign-off status is in the linked execution record
+and the generated criterion status below; this section preserves the approved
+scope rather than a second independently authored completion verdict.
+
 ## Pinned-base conformance and advocate experience — 12 September 2026
 
 **Start: READY.** The user authorised packet-by-packet validation and repairs
@@ -253,7 +289,7 @@ Derived gap state: IN_PROGRESS 11, PLANNED 3
 ### Open P0 — what is unsafe
 
 - **BK-21** [A/C/I] the matter encryption key IS the OpenAI API key — *verifying* · closed on a measured rotation and signed off 10 September 2026; the lifecycle was recorded retrospectively because the row was built before BK-74
-- **BK-31** [A] account access, recovery and workspace identity — *in_progress* · implement D-013's authenticated recovery-code rotation and add registration, recovery and workspace proof to the approval-only browser journey; confidential-pilot authentication is BK-86 and deployed assurance remains BK-42
+- **BK-31** [A] account access, recovery and workspace identity — *in_progress* · complete and verify D-041 email/password personal registration, immediate owned workspace/new/reopen without professional approval, neutral public authentication and separate attributable expiring approval at protected acts. Preserve the optional invited identity and recovery/session populations. Current execution belongs to email-registration.json; full recovery/browser acceptance remains open, confidential authentication is BK-86 and deployed assurance remains BK-42. No current-source PASS is inferred from historical conformance evidence.
 - **BK-33** [A] recognisable matter cover, truthful board and real reopen — *in_progress* · render passed_deadlines, which the projection already emits
 - **BK-34** [B] front-door legal and professional screens before substance — *in_progress* · prove ordinary-screen admission and quarantine as a closeable foundation; the integrated emergency path is BK-78 after BK-53, and checked-registry scope remains explicit
 - **BK-35** [D] cause-specific accrual and answer-consistency gate — *in_progress* · refuse to run the period from a single dated fact that does not satisfy the curated trigger; emit the statutory limb

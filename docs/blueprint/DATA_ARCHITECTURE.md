@@ -255,7 +255,7 @@ Source inspection on 10 September 2026 found the following current routes in `nm
 
 | Current surface | Target command(s) | Migration rule |
 |---|---|---|
-| `/api/register`, `/api/recover` | `register`, `recover-account` | Preserve invitation-owned identity, one-time proof consumption and global recovery revocation. Never replay returned recovery codes from an idempotency cache. |
+| `/api/register`, `/api/recover` | `register`, `recover-account` | Public email/password signup creates only the actor-private workspace; optional invitation signup keeps its exact server-owned identity. Neither grants professional approval. Preserve atomic uniqueness, one-time proof consumption and global recovery revocation; never replay recovery codes from an idempotency cache. |
 | `/api/login`, `/api/session`, `/api/sessions`, `/api/sessions/revoke`, `/api/logout` | `login`, `get-session`, `list-sessions`, `revoke-session`, `logout` | Existing controlled-local password flow remains scoped. Confidential target login requires strong assurance. Fresh-factor proof and local fresh-password proof share one proof consumer, with no confidential downgrade. |
 | No dedicated served rotation route found in the inspected API | `reauthenticate-session`, `rotate-recovery-codes` | First build the local fresh-password producer under the account claim, then the consumer. `get-session` returns `recovery_generation` separately from `session_version`; rotation must not use the session ETag. |
 | `/api/matters`, `/api/matters/{matter_id}` | `list-matters`, `get-matter` | Preserve incomplete-list reporting, neutral private-ID denial and persisted deadline state. Do not replace them with independently generated summaries. |

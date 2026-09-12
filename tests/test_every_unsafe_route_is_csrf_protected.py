@@ -47,7 +47,7 @@ UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 #: into an account the attacker already controls -- login CSRF, which is real
 #: and is BK-31's own follow-on work rather than something this packet closes.
 PRE_SESSION: dict[str, str] = {
-    "/api/register": "mints the first session; refuses without a valid invitation",
+    "/api/register": "no session minted; its own origin and bounded signup admission",
     "/api/recover": "mints no session at all; refuses without a valid one-time code",
     "/api/login": "mints the session; refuses without the credential",
 }

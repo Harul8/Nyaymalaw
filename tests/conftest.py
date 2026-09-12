@@ -41,8 +41,8 @@ from pathlib import Path
 
 import pytest
 
-#: BK-31. The roster is controlled, so `/api/register` requires an invitation
-#: the operator issued for that one advocate.
+#: BK-31. The optional invited lane uses an invitation the operator issued for
+#: that one advocate. Public email registration has separate dedicated tests.
 #:
 #: THERE IS NO FIXTURE-WIDE VALUE ANY MORE, and its absence is the point. A
 #: single `ENROLMENT_CODE` shared by the whole suite was the test-shaped

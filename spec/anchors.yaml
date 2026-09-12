@@ -52,6 +52,10 @@ anchors:
 - id: P6
   kind: principle
   title: Contracts carry obligations
+- id: ProfessionalApproval
+  kind: schema
+  title: An attributable operator review for protected professional approvals, never an account-access
+    or matter-authority grant.
 - id: Fact
   kind: schema
   title: A single proposition from the account, with everything needed to walk it back.

@@ -65,11 +65,12 @@ def _register(client, token: str | None, body: dict = REGISTRATION):
     return client.post("/api/register", json=body, headers=headers)
 
 
-def test_an_unconfigured_deployment_is_closed_and_not_open(client):
-    """No environment setting can accidentally turn missing authority into yes."""
+def test_a_public_registration_requires_an_email(client):
+    """Without an invitation, the public lane requires its own email handle."""
     response = _register(client, None)
-    assert response.status_code == 403, response.text
-    assert "ask whoever administers" in response.json()["detail"].lower()
+    assert response.status_code == 422, response.text
+    assert "email" in response.json()["detail"].lower()
+    assert client.directory.identity(GOOD["email"]) is None
 
 
 def test_an_invitation_needs_a_real_lifetime_and_one_line_issuer():
@@ -104,8 +105,8 @@ def test_the_refusal_tells_the_advocate_what_to_do_instead(client):
 
 
 def test_it_is_refused_on_the_wire_and_not_only_in_the_function(client):
-    """Drive the ASGI boundary: missing fails and an issued invitation opens."""
-    assert _register(client, None).status_code == 403
+    """Incomplete public input fails; the password-only invited lane remains."""
+    assert _register(client, None).status_code == 422
     assert _register(client, _invite(client)).status_code == 200
 
 
