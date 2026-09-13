@@ -1625,6 +1625,179 @@ def list_source_bindings(matter_id: str, advocate_id: Advocate) -> dict:
             "superseded": list(stored.get("__superseded__", []) or [])}
 
 
+class DraftClaim(BaseModel):
+    """One material assertion, with where it came from."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: NonBlank = Field(min_length=1, max_length=4000)
+    provenance: Literal["supplied_text", "extracted_text", "established_fact",
+                        "disputed_proposition", "inference", "legal_premise",
+                        "unresolved_gap"]
+    source_id: str = ""
+    locator: str = ""
+    source_version: str = ""
+    quoted: str = ""
+    why_unresolved: str = ""
+
+
+class DraftingPackageBody(BaseModel):
+    """Prepare a drafting package. BK-56-AC1/AC2. P29.
+
+    `verified` IS NOT IN THIS BODY. A caller that could post it could mark its
+    own quotations checked, which is the one field the whole packet exists to
+    earn -- verification is a pass over the sources, run server-side.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    document: NonBlank = Field(min_length=1, max_length=200)
+    audience: NonBlank = Field(min_length=1, max_length=200)
+    purpose: NonBlank = Field(min_length=1, max_length=2000)
+    posture: NonBlank = Field(min_length=1, max_length=200)
+    cause_title: dict = Field(default_factory=dict)
+    theory_sentence: str = ""
+    material_facts: list[DraftClaim] = Field(default_factory=list, max_length=200)
+    provisions: list[DraftClaim] = Field(default_factory=list, max_length=100)
+    authorities: list[DraftClaim] = Field(default_factory=list, max_length=100)
+    reliefs: list[str] = Field(default_factory=list, max_length=30)
+    proof_positions: list[str] = Field(default_factory=list, max_length=100)
+    facts_not_to_plead: list[dict] = Field(default_factory=list, max_length=100)
+    arguments_parked: list[dict] = Field(default_factory=list, max_length=100)
+    open_gaps: list[dict] = Field(default_factory=list, max_length=100)
+    limitation: dict = Field(default_factory=dict)
+    adverse: list[str] = Field(default_factory=list, max_length=100)
+    reservations: list[str] = Field(default_factory=list, max_length=100)
+    missing_instructions: list[str] = Field(default_factory=list, max_length=100)
+    advice_version: str = ""
+    blanks_permitted: bool = True
+    expected_matter_version: int
+
+
+def _draft_claims(rows) -> tuple:
+    from nm.domain.drafting import Claim, Provenance
+    return tuple(Claim(
+        text=r.text.strip(), provenance=Provenance(r.provenance),
+        source_id=r.source_id.strip(), locator=r.locator.strip(),
+        source_version=r.source_version.strip(), quoted=r.quoted.strip(),
+        why_unresolved=r.why_unresolved.strip()) for r in rows)
+
+
+@app.post("/api/drafting-packages", dependencies=[CsrfProtected],
+          status_code=201)
+def prepare_drafting_package(body: DraftingPackageBody,
+                             advocate_id: Advocate) -> dict:
+    """Assemble and VERIFY a drafting package. BK-56-AC1/AC2/AC3. P29.
+
+    Verification runs here, against the sources this matter actually holds --
+    a package whose quotations were marked checked by its own caller would be
+    a package that checked nothing. Staleness is read from P27's decisions,
+    not recomputed.
+
+    The response carries `filing_note` on every path. CHOICE-09's first-release
+    rule is that this product prepares and exports and the ADVOCATE files; the
+    sentence saying so travels with the package rather than being somewhere a
+    reader might not look.
+    """
+    import uuid as _uuid
+
+    from nm.core import drafting as dr
+    from nm.core import options as op
+    from nm.domain.clock import today as _today
+    from nm.domain.drafting import DrafterBrief
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+
+    brief = DrafterBrief(
+        package_id=f"pkg_{_uuid.uuid4().hex[:10]}", matter_id=m.id,
+        document=body.document.strip(), audience=body.audience.strip(),
+        purpose=body.purpose.strip(), posture=body.posture.strip(),
+        cause_title=dict(body.cause_title),
+        theory_sentence=body.theory_sentence.strip(),
+        material_facts=_draft_claims(body.material_facts),
+        provisions=_draft_claims(body.provisions),
+        authorities=_draft_claims(body.authorities),
+        limitation=dict(body.limitation),
+        reliefs=tuple(r.strip() for r in body.reliefs if r.strip()),
+        proof_positions=tuple(body.proof_positions),
+        facts_not_to_plead=tuple(body.facts_not_to_plead),
+        arguments_parked=tuple(body.arguments_parked),
+        open_gaps=tuple(body.open_gaps),
+        blanks_permitted=body.blanks_permitted,
+        adverse=tuple(body.adverse), reservations=tuple(body.reservations),
+        missing_instructions=tuple(body.missing_instructions),
+        advice_version=body.advice_version.strip())
+
+    # THE SOURCES THIS MATTER HOLDS, not the ones the caller says it holds.
+    sources = _matter_sources(m)
+    brief = dr.verify(brief, sources)
+    brief = replace(brief, stale_dependencies=dr.stale_against(
+        brief, op.decision_rows(m)))
+    # LOSSLESS IS EARNED. It is true only when every claim the caller sent
+    # survived into the package -- never taken from the request.
+    sent = len(body.material_facts) + len(body.provisions) + len(body.authorities)
+    brief = replace(brief, lossless=(len(brief.claims) == sent))
+
+    packages = dr.put(dr.rows(m), brief)
+    m = replace(m, drafting_packages=tuple(dr.as_dict(b) for b in packages),
+                version=m.version + 1, last_activity=_today().isoformat())
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "prepared", "matter_id": committed.id,
+            "version": committed.version,
+            "package": dr.projection(brief)}
+
+
+def _matter_sources(matter) -> dict:
+    """Locator -> the words actually held there, from this matter's research.
+
+    P21's reliances already carry the quote that was attached and the locator
+    it came from, so verification checks the draft against what the advocate
+    actually attached rather than against a source list the drafter supplied.
+    """
+    out: dict = {}
+    for row in (getattr(matter, "research", ()) or ()):
+        if not isinstance(row, dict):
+            continue
+        for rel in (row.get("reliances") or ()):
+            if isinstance(rel, dict) and rel.get("locator"):
+                out[str(rel["locator"])] = str(rel.get("quote") or "")
+    return out
+
+
+@app.get("/api/matters/{matter_id}/drafting-packages/{package_id}")
+def get_drafting_package(matter_id: str, package_id: str,
+                         advocate_id: Advocate) -> dict:
+    """Read one package back, problems included."""
+    from nm.core import drafting as dr
+
+    m = _owned(matter_id, advocate_id)
+    found = dr.find(dr.rows(m), package_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail="no such drafting package")
+    return {"matter_id": m.id, "package": dr.projection(found)}
+
+
+@app.get("/api/matters/{matter_id}/drafting-packages/{package_id}/export")
+def export_drafting_package(matter_id: str, package_id: str,
+                            advocate_id: Advocate) -> dict:
+    """The reviewable export. BK-92-AC3.
+
+    It is a READ, not a dispatch: there is no POST here, because there is
+    nothing to send. `dispatch_authority` is false in the payload and the
+    renditions say `not_built` rather than returning empty bytes that would
+    make a parity check pass over nothing.
+    """
+    from nm.core import drafting as dr
+
+    m = _owned(matter_id, advocate_id)
+    found = dr.find(dr.rows(m), package_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail="no such drafting package")
+    return {"matter_id": m.id, "export": dr.export(found)}
+
+
 class Correction(BaseModel):
     """One correction to one entry on the case file. BK-65-AC1, P18.
 

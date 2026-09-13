@@ -2784,6 +2784,14 @@
         {
           "path": "web/app.js",
           "kind": "existing"
+        },
+        {
+          "path": "nm/domain/drafting.py",
+          "kind": "planned"
+        },
+        {
+          "path": "nm/core/drafting.py",
+          "kind": "planned"
         }
       ],
       "inputs": [

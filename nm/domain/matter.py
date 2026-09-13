@@ -906,6 +906,10 @@ class Matter:
     abandoned, and it renders as such rather than as an epoch.
     """
 
+    drafting_packages: tuple[dict, ...] = ()
+    """P29 / BK-56's drafting packages. A matter written before P29 decodes to
+    the empty tuple -- *no package prepared*, which is its true state."""
+
     source_bindings: dict[str, dict] = field(default_factory=dict)
     """P25 / BK-94-AC5's source-version-to-thread bindings, keyed
     `source_id@version`, with the superseded ones kept under

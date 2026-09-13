@@ -5970,6 +5970,85 @@ core, wrong between the module and the screen:
 The 31 pre-existing journey phases (`login_to_logout`, `journey_of_a_search`)
 were re-run against the changed page and pass unchanged.
 
+### P29 Start record — prepare and verify the exact drafting package — 13 September 2026
+
+**Outcome sought.** BK-56-AC1/AC2/AC3 and BK-92-AC3. An advocate asks for a
+pleading. What they must get back is a package they can check: every material
+claim carrying where it came from, every quotation verified against the source
+it was taken from, every gap left visibly open — and, above all, a package that
+cannot present itself as ready to file.
+
+    Drafting readiness is not filing readiness. The gap between them is where
+    a draft that reads finished gets filed without the authority, the receipt
+    or the deadline anybody checked.
+
+**The contract, read rather than invented.** Appendix E already declares
+`DrafterBrief` with thirteen required fields — `cause_title`,
+`theory_sentence`, `material_facts`, `provisions`, `limitation`, `reliefs`,
+`authorities`, `proof_positions`, `facts_not_to_plead`, `arguments_parked`,
+`open_gaps`, `blanks_permitted`, `lossless`. BK-56-AC2 is that record in
+prose. It is not implemented, so P29 implements it to those names; naming it
+anything else would leave the obligation unmet while looking met.
+
+`packets.json` scopes P29 to commands `create-action-proposal`,
+`approve-action` and `get-source` under CHOICE-01, CHOICE-07 and **CHOICE-09**.
+
+**CHOICE-09 governs, and its approval field reads `None`.** *"First release
+prepares, verifies and exports approved drafts; the advocate files/sends and
+records receipts. Automated send/file/settle connectors are disabled until
+separate scoped approval and unknown-outcome reconciliation proof."* Fallback:
+*"never simulate a filed or sent status."* No approval exists, so nothing here
+files, sends or claims to.
+
+**Prerequisites, verified as consumers rather than labels.** P27
+(`nm/domain/options.py`, `nm/domain/advice_decision.py` — served through
+`/api/comparisons` and `/api/advice-decisions`), P28
+(`nm/core/reassessment.py` — reached from the correction route, which returns
+`stale_decisions`), P47 (`nm/domain/delegation.py`, `nm/core/delegation.py` —
+BK-92-AC3 is the draft specialist's own criterion and the mandate machinery is
+what bounds it). All three are in the base commit `c2b70e9`.
+
+**Owners / boundary (registered in packets.json before edit).** New:
+`nm/domain/drafting.py` — the `DrafterBrief` record, the provenance
+vocabulary and the readiness rule; `nm/core/drafting.py` — assembly from the
+current advice, options, decisions and authorities, quotation verification and
+the export. Extended: `nm/edge/api.py` (the served package and export routes),
+`nm/domain/matter.py` (the package rows).
+
+**Reused, not re-invented.** Quotation verification is
+`nm.core.research.quote_fidelity` — P21 already owns *is this the source's
+words* and owns the distinction between VERBATIM and DIFFERS. Staleness is
+`nm.core.dependency` through `nm.core.reassessment`; a second freshness answer
+here would be the §4 defect on the subject where disagreement is most
+expensive. Decisions are P27's `AdviceDecision`, and the recommendation is
+P26's typed `Recommendation`.
+
+**Seven provenance kinds, because collapsing any two is the defect.** Supplied
+text, extracted text, established fact, disputed proposition, inference, legal
+premise, unresolved gap. A draft that renders an inference the way it renders
+an established fact is the document an advocate signs and then cannot support.
+
+**Acceptance → proof.**
+
+| Criterion | Required evidence | Plan |
+|---|---|---|
+| BK-56-AC1 | integration_test, browser_journey, counsel_review | served route refuses without recorded role/scope/version/owner/deadline; browser phase; **counsel_review NOT RUN** |
+| BK-56-AC2 | integration_test, counsel_review | the thirteen declared fields, asserted from `spec/schemas.yaml` rather than a copy; **counsel_review NOT RUN** |
+| BK-56-AC3 | integration_test, model_eval, counsel_review | every assertion and authority checked against the approved brief; marked blanks preserved; version changes exposed. **model_eval, counsel_review NOT RUN** |
+| BK-92-AC3 | integration_test, adversarial_test, browser_journey, counsel_review | source/locator/version/status per claim, absent fields visibly unresolved, **no dispatch authority**; **counsel_review NOT RUN** |
+
+**Exclusions, stated.** BK-92-AC3 asks for Word and PDF *"from the same
+accepted content version with rendered-byte parity"*. The accepted-content
+version, the single render source and the parity check are built; producing
+real `.docx` and `.pdf` bytes is a rendering dependency and is recorded as
+**NOT BUILT** rather than faked with a stub that would make the parity check
+pass over nothing. BK-56-AC4 belongs to P30 and is not touched here.
+
+**Rollback.** Both modules are new and additive; `Matter.drafting_packages`
+decodes to the empty tuple on records written before P29, which reads as *no
+package prepared* — its true state. Reverting the two modules and the routes
+returns the product to advice without drafting, and nothing stored is lost.
+
 ### P44 acquisition-foundation Start record — 11 September 2026
 
 **Decision: BLOCKED on P19's scoped source-register output; contract ready.**

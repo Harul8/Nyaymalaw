@@ -62,6 +62,9 @@ REACHED_ELSEWHERE = {
     "record_comparison", "get_comparison",
     # P25's two.
     "bind_source_to_thread", "list_source_bindings",
+    # P29's three, same registration.
+    "prepare_drafting_package", "get_drafting_package",
+    "export_drafting_package",
     "health", "matters", "matter", "matter_summary", "turn", "index",
     # A1's three. `search` is absent from this list ONLY because the word
     # occurs elsewhere in the tree, which is worth noticing: this check finds
