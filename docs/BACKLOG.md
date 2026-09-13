@@ -5652,6 +5652,324 @@ cheapest possible instance of it to leave standing.
 
 ## BK-24 - the citation filter excludes exactly the years the corpus needs
 
+### P33 Start record — implement held and erased lifecycle, then wire its real consumers — 13 September 2026
+
+**Outcome sought.** BK-85-AC4 and BK-88-AC1. An advocate — or the client whose
+material it is — must be able to ask for material to be held, or erased, and get
+an answer that is true. The harm this prevents is a product that says *deleted*
+while a transcript, a page extract, a processor copy or a restorable backup of
+the same recording is still readable, and a product that erases material a
+litigation hold required it to keep. Both are told to the advocate as facts and
+both are unrecoverable once acted on.
+
+**The existing mechanism, inspected before extending it (playbook §4).**
+`nm/domain/media.py` already owns the vocabulary: `Retention`
+(`MATTER_LIFE` / `FIXED_PERIOD` / `DELETE_AFTER_DERIVATION` / `NOT_DECIDED`,
+whose third state is declared through `not_established()`), `retain_until`, and
+`derived_from` — *"a derivative that cannot name its original cannot be
+produced, checked or deleted with it."* `nm/edge/uploads.py` already refuses
+original bytes under an undecided retention, refuses a fixed period with no
+future date, and then discloses the truth about the rest:
+
+    "retention_enforcement": "not_assessed_no_automatic_deletion"
+
+**That disclosure is the whole packet.** The decision is recorded and nothing
+enforces it. P33 does not introduce retention; it makes that line able to say
+something else without lying. A second retention vocabulary beside
+`nm.domain.media.Retention` would be the §4 defect, so the lifecycle extends
+that owner rather than restating it.
+
+**Owners / boundary (registered in packets.json before edit).** New:
+`nm/domain/retention.py` — holds, erasure requests, dispositions, tombstones and
+copy lineage as explicit decisions, with the transition rule that refuses an
+inconsistent one; `nm/core/retention.py` — the decisions that act on them
+(place/release a hold, request and execute erasure, and the restore guard).
+Extended: `nm/domain/media.py` (lineage reaches the admission it describes),
+`nm/edge/uploads.py` (the served path and that disclosure), `nm/edge/api.py`
+(hold, erasure and restore routes), `nm/bootstrap/composition.py` (wiring).
+
+**Three states that are not the same state, and the packet turns on it.**
+ARCHIVED, ACCESS_WITHDRAWN and ERASED are separate dispositions. Collapsing them
+is how *"we deleted it"* comes to mean *"we hid it"*, which is the answer that
+gets given to a court. Erasure completes only when every named copy — original,
+derivative, processor and backup — is resolved; while any is unresolved the
+state is PARTIAL_UNRESOLVED **and it names which**, never COMPLETE. A hold
+refuses erasure outright rather than deferring it silently.
+
+**Acceptance → proof.**
+
+| Criterion | Required evidence | Where it is proved | Closeable here |
+|---|---|---|---|
+| BK-85-AC4 | `domain_test`, `adversarial_test` | `tests/test_held_and_erased_are_decisions.py` — the transition table, and planted inconsistent transitions | **Yes, both** |
+| BK-88-AC1 | `integration_test`, `adversarial_test`, `browser_journey`, `production_measure` | served hold/erasure/restore path, tombstone replay before restore, and a browser journey | integration, adversarial, browser **yes**; `production_measure` **NO** |
+
+**PREREQUISITE GAP, RECORDED BEFORE DEPENDENT WORK (task §4).** P33's registered
+prerequisites are P07, P11 and P17. P07 (envelope encryption, consumed by
+`file_store`) and P17 (the living file, 8 call sites in `api.py`) have real
+served consumers. **P11 does not.** `nm/core/worker.py` is imported by tests
+only, and `tests/test_reached_from_production.py` declares it UNWIRED with the
+reason: it needs P10's outbox, and P10 is unproven for want of a PostgreSQL
+server. Measured on this machine, 13 September 2026: no PostgreSQL service, port
+5432 unreachable, no `psql`, no DSN configured.
+
+The gap is narrower than it sounds and it is not routed around. The job
+lifecycle — leases, retries, cancellation, reconciliation — is exercised end to
+end against a reference store; the single unproven property is that rows survive
+process death. So erasure is built on that real mechanism, and **crash-durable
+erasure execution inherits P11's declared gap rather than being claimed here.**
+It was not "fixed" by giving the file store an outbox: `postgres.py` states why
+that is the wrong repair — *"the file store can write one file atomically; it
+cannot write three records atomically, and the gap between them is where a turn
+gets charged for twice or a job is owed for a state that does not exist."*
+Nor by promoting the postgres adapter to live writer, which needs BK-83-AC1
+evidence from a real server and an approved P12 rehearsal.
+
+**Not claimed.** `production_measure` on BK-88-AC1 — deployed restore against
+real infrastructure — is not run and nothing here runs it. BK-88-AC2 (processor,
+region, key custody under the confidential deployment configuration) and
+BK-88-AC4 (pre-recording confidential-path proof) are **not in P33's registered
+criteria** and are not touched. No real data is deleted: proof runs against
+declared synthetic policies and fixtures, and no legally approved retention
+period is invented.
+
+**Rollback.** `nm/domain/retention.py` and `nm/core/retention.py` are new and
+additive; the lifecycle fields decode to their empties on records written before
+them, so an older matter reads as *no hold, no erasure requested* — which is its
+true state rather than a fabricated one. Reverting the two modules and the
+`uploads.py` disclosure line returns the served path to
+`not_assessed_no_automatic_deletion`, and nothing stored is lost.
+
+### P33 Test record — 13 September 2026
+
+**Outcome: BUILT and VERIFIED for BK-85-AC4. BK-88-AC1 is verified for
+`integration_test` and `adversarial_test`; `browser_journey` and
+`production_measure` are NOT RUN.**
+
+**What now works through the actual application.** A client withdraws consent.
+The advocate posts a retention request; it comes back `review_requested` and
+cannot come back as anything else, because `retention.request` takes no state.
+A hold placed on it moves it `under_hold`, reports `legal_hold`, and the
+attempt to approve erasure is refused `RETENTION_HOLD`. With the hold released
+the request returns to `review_requested` — not to the work it interrupted,
+because the reason for the hold may have changed what should happen. Each copy
+is accounted for one at a time; the request reaches
+`erased_from_active_systems`, writes a tombstone per asset, and only then may
+reach `complete_for_declared_scope`. A restore proposing the erased asset is
+refused by name and an asset nobody erased is allowed through.
+
+**Measured, criterion by criterion.**
+
+| Criterion | Required | Result |
+|---|---|---|
+| BK-85-AC4 | domain_test, adversarial_test | **PASS** — `tests/test_held_and_erased_are_decisions.py`, 19 domain/adversarial |
+| BK-88-AC1 | integration_test, adversarial_test, browser_journey, production_measure | integration **PASS** (9 served), adversarial **PASS**, browser_journey **PASS** (`tests/test_the_journey_of_custody_and_decisions.py` phases 5-6); production_measure **NOT RUN** |
+
+**Populations.** 28 tests in the packet's own file. Registry guards re-run
+green: dead-owner, reached-from-production, three-states, blank-values,
+persisted-field-writer, store round-trip.
+
+**Planted violations, and one of them found a defect in the test rather than
+in the product.** Three guards were disabled in turn. Suppressing
+`completion_problems` failed three tests; neutering `refuse_restore` failed the
+restore guard. **Disabling the hold check failed nothing** — the test asserted
+the refusal from `UNDER_HOLD`, where the transition TABLE already refuses
+`APPROVED`, so it was passing for a reason it did not name. It now exercises a
+stored request reconstructed at `APPROVED` with a live hold, which is the only
+state where the hold check is load-bearing, and it asserts the table permits
+the move first so the test cannot silently stop testing the hold.
+
+**Not claimed.** `production_measure` — deployed restore against real
+infrastructure. BK-88-AC2 and BK-88-AC4 are not in P33's registered criteria
+and were not touched. No real data was deleted; every run is synthetic.
+
+**The prerequisite gap stands.** P11's worker is UNWIRED pending P10/PostgreSQL
+(measured: no service, 5432 unreachable, no `psql`, no DSN). Erasure is built on
+that real lifecycle; crash-durable execution inherits the declared gap and is
+not claimed here.
+
+---
+
+### P26 Test record — 13 September 2026
+
+**Outcome: BUILT and VERIFIED for BK-50-AC1 and for the domain half of
+BK-96-AC2. `model_eval` and `counsel_review` are NOT RUN across BK-37-AC1,
+BK-96-AC2 and BK-96-AC3; browser_journey NOT RUN.**
+
+**The UNTYPED declaration is gone because the type exists.**
+`test_reached_from_production.UNTYPED` carried *"Recommendation — E2. BUILT AS
+A STRING. `turn._recommend` composes prose; the PRD declares a record. B-074 is
+what an untyped recommendation costs — nothing could ask it what it was based
+on, so it contradicted the finding printed beneath it."* `nm/domain/advice.py`
+now defines it **to the PRD's own field names** — `position`,
+`why_alternatives_lose[]`, `next_step{action, owner, by_when}`, `fallback`,
+`changing_fact` — and the declaration was deleted rather than reworded.
+
+**What a served turn now records.** On the defending fixture the thread carries
+`maturity: provisional` (derived from the CONDITIONAL limitation, not
+declared), the position, the step with its owner, and `absent: ['why the
+alternatives lose', 'the fallback if it does not hold', 'the fact that would
+change this view']`. **It does not invent them.** That is the assertion that
+would fail first if somebody completed the template to make the record look
+finished.
+
+| Criterion | Required | Result |
+|---|---|---|
+| BK-50-AC1 | domain_test | **PASS** — asserted on `brief.ORDER`, the contract, not on a heading count |
+| BK-96-AC2 | domain, integration, adversarial, browser_journey, counsel_review | domain + integration **PASS**; browser, counsel **NOT RUN** |
+| BK-96-AC3 | integration, adversarial, browser_journey, model_eval, counsel_review | integration + adversarial **PASS** (`refuse_release` guards the renderer); browser, model, counsel **NOT RUN** |
+| BK-37-AC1 | model_eval, counsel_review | **NOT RUN** — no local evidence type can close it |
+
+**Populations.** 21 tests. `by_when_basis` is required beyond the PRD's field
+list because BK-96-AC2 asks for an *attributed* by-when: a date with no basis
+is reported absent even when it carries text.
+
+---
+
+### P27 Test record — 13 September 2026
+
+**Outcome: BUILT and VERIFIED for the integration and adversarial halves of
+BK-55-AC3 and BK-96-AC1. Every `model_eval` and `counsel_review` is NOT RUN.**
+
+**Three things called a decision, kept apart.** `nm.domain.decision.Decision`
+is a settled question (which Act, which posture). Appendix E's `DecisionRecord`
+is the client's instruction with capacity and voluntariness — seventeen
+required fields, not implemented. `nm/domain/advice_decision.AdviceDecision` is
+what BK-55-AC3 asks for and nothing else. Naming the new one `DecisionRecord`
+would have let a five-field record read as a seventeen-field obligation met.
+
+**`authorises()` always answers no, and that is the rule.** A recorded
+acceptance is served with `authorises_action: false` and a sentence naming what
+*would* authorise an act — the E4 record, which does not exist on any matter.
+The served response carries it on every path, because a consumer that had to
+ask separately is a consumer that will not.
+
+| Criterion | Required | Result |
+|---|---|---|
+| BK-55-AC3 | integration_test, browser_journey, counsel_review | integration **PASS**, browser_journey **PASS** (phase 4); counsel_review **NOT RUN** |
+| BK-96-AC1 | integration, adversarial, model_eval, counsel_review | integration + adversarial **PASS**; model, counsel **NOT RUN** |
+| BK-55-AC1, AC2, AC4 | model_eval, counsel_review | **NOT RUN** — no local evidence type can close them |
+
+**Populations.** 22 tests. Figures carry `established` / `estimate` / `unknown`;
+an established figure naming nothing it rests on is refused, and an unknown
+renders *not established* rather than as an empty cell. Proportionality is
+compared and never removes a route — E3's NEVER, the same rule
+`nm.core.relief` keeps by excluding proportionality from `_DELIVERS`.
+
+---
+
+### P28 Test record — 13 September 2026
+
+**Outcome: BUILT and VERIFIED for the integration half of BK-55-AC5.
+`browser_journey` and `model_eval` are NOT RUN.**
+
+**No second freshness system, and it is asserted structurally.**
+`nm/core/reassessment.py` puts advice and decisions into P18's ledger as nodes
+and answers one question P18 does not: a decision whose advice moved must not
+keep reading as current approval. `reopen` is a pass-through to
+`dependency.invalidate` — the first version computed the closure itself and
+then called `invalidate`, which computes the same closure internally, so it was
+both duplicated and wrong. A test asserts `closure` is not reachable from the
+module at all.
+
+**Measured.** Correcting one fact reaches `advice:t1` and, transitively through
+`InputKind.DERIVED`, `decision:d1` — while `advice:t2` is untouched, not
+re-stamped and not re-timestamped. The served correction route now returns
+`stale_decisions` alongside `affected`/`unaffected`.
+
+| Criterion | Required | Result |
+|---|---|---|
+| BK-55-AC5 | integration_test, browser_journey, model_eval | integration **PASS** (11 tests); browser, model **NOT RUN** |
+
+---
+
+### P25 Test record — 13 September 2026
+
+**Outcome: PARTIAL. BK-94-AC5's domain, integration and adversarial evidence
+is VERIFIED. The media-extraction criteria are NOT BUILT and are recorded as
+such rather than claimed.**
+
+**What was built: the source-to-thread binding, BK-94-AC5.** *An unattached
+source never defaults to the first or largest thread.* That default is
+attractive because it is usually right — on a single-thread matter it is right
+every time, so it survives every test written against a single-thread fixture,
+and it is wrong on exactly the files where being wrong costs most. A document
+filed against the wrong dispute does not look like an error; it looks like
+evidence.
+
+So there is no default, structurally: nothing in `nm/domain/binding.py` is ever
+given the list of threads, and a test asserts no function there takes
+`threads`, `matter`, `candidates` or `thread_ids`. `Basis.UNBOUND` is the
+honest state and `refuse_contribution` keeps the document's contents off the
+file until somebody answers. Re-binding supersedes rather than overwrites,
+preserves the source and its version, and REPORTS the thread whose work must
+reopen — P28 owns the invalidation, and the binding module cannot even import
+it.
+
+| Criterion | Required | Result |
+|---|---|---|
+| BK-94-AC5 | domain, integration, adversarial, browser_journey | domain + integration + adversarial **PASS** (17 tests), browser_journey **PASS** (phases 2-3) |
+| BK-54-AC1 | integration, browser_journey, adversarial | **NOT BUILT** — see below |
+| BK-79-AC1, AC2, AC3 | integration, adversarial, browser_journey | **NOT BUILT** — see below |
+| BK-88-AC1 | (shared with P33) | integration + adversarial **PASS** via P33; browser, production **NOT RUN** |
+| BK-88-AC2, BK-88-AC4 | integration, adversarial, production_measure | **NOT RUN, DELIBERATELY** — both require the confidential deployment configuration and a production measure |
+| BK-93-AC2 | integration, adversarial, browser, model_eval, counsel_review | **NOT BUILT** |
+
+**WHAT IS NOT BUILT, AND WHY IT IS SAID PLAINLY.** P25's media half — extraction
+and transcription joined to the briefing loop — is not implemented.
+`test_reached_from_production.UNWIRED` already records the state honestly:
+*"the served `nm.edge.uploads` path accepts sealed original-byte receipts
+through `MediaAdmission`, but does not invoke this helper or claim extraction.
+Full reading and correction remain unbuilt."* That is still true. Quarantine
+receipts alone are not admitted-media capability, and this record does not
+pretend otherwise.
+
+Building it needs two things this session does not have: a real provider
+request/result path (BK-79-AC3 requires *an actual request, returned text,
+source locators*, and scripted adapters are synthetic evidence, not
+real-provider validation), and the confidential-path approvals that BK-88-AC4
+makes a precondition of processing any real recording. Both were left closed.
+
+---
+
+### Browser evidence for P33, P25 and P27 — 13 September 2026
+
+`tests/test_the_journey_of_custody_and_decisions.py`, six phases, driven
+against a real server with Playwright. Each phase asserts on what the advocate
+SEES and on what the server actually stored: a phase that read its own POST
+response back would prove only that the browser can talk to itself.
+
+Demonstrated: a document attached to a named dispute and shown as *you stated
+it* rather than the product's reading; a re-attachment that names the dispute
+whose work must reopen; a decision recorded and served with the sentence saying
+it is **not authority to file, send, settle or concede**; a held erasure that
+refuses and shows `legal_hold` with every outstanding copy named; and a pane
+that never renders `complete for declared scope` over a request that has not
+reached it.
+
+**THREE PRODUCT DEFECTS THIS FOUND, none of which any unit or wire test could
+have.** Every one is the shape CLAUDE.md §8 keeps recording -- correct in the
+core, wrong between the module and the screen:
+
+1. **A re-render ate what the advocate was typing.** `showCasefile` rebuilds
+   the governance blocks whenever anything on the file moves, and it rebuilt
+   the FORMS with the lists. Half-entered input vanished, and the advocate
+   found out by pressing a submit that silently did nothing -- the browser
+   refuses a form whose `required` fields have just been emptied under it. No
+   request, no error, a pane that looks untouched. The list is derived and is
+   rebuilt; the form is the advocate's workspace and is now kept.
+2. **The correction note was wiped before it could be read.** The sentence
+   naming which dispute lost a source -- the whole point of a correction,
+   because it says which thread's work to reopen -- was appended to the form
+   and then destroyed by the re-render in the same tick.
+3. **The page did not track the committed version.** Every other handler in
+   `web/app.js` updates `state.matterVersion` after a write and these did not,
+   so the next control posted a version the server had moved past and got a
+   409. It only appeared when two controls were used in sequence, which is
+   what an advocate does.
+
+The 31 pre-existing journey phases (`login_to_logout`, `journey_of_a_search`)
+were re-run against the changed page and pass unchanged.
+
 ### P44 acquisition-foundation Start record — 11 September 2026
 
 **Decision: BLOCKED on P19's scoped source-register output; contract ready.**

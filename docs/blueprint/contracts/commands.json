@@ -2633,14 +2633,34 @@
       "oneOf": [
         {
           "properties": {
-            "headers": {"not": {"required": ["X-Enrolment-Invitation"]}},
-            "body": {"required": ["email"]}
+            "headers": {
+              "not": {
+                "required": [
+                  "X-Enrolment-Invitation"
+                ]
+              }
+            },
+            "body": {
+              "required": [
+                "email"
+              ]
+            }
           }
         },
         {
           "properties": {
-            "headers": {"required": ["X-Enrolment-Invitation"]},
-            "body": {"not": {"required": ["email"]}}
+            "headers": {
+              "required": [
+                "X-Enrolment-Invitation"
+              ]
+            },
+            "body": {
+              "not": {
+                "required": [
+                  "email"
+                ]
+              }
+            }
           }
         }
       ],
@@ -14189,7 +14209,7 @@
         "NOT_PERMITTED",
         "RETENTION_HOLD"
       ],
-      "current_route": null,
+      "current_route": "POST /api/retention-requests",
       "authorization": "Current server-derived principal, tenant, workspace and target-matter grant; resource not owned or not visible returns neutral NOT_FOUND. Recheck before output/effect.",
       "transitions": [
         "request -> review_requested; approved erasure requires separate accountable policy decision + full inventory; receipt never means erased"
@@ -14339,7 +14359,7 @@
         "RATE_LIMITED",
         "SERVICE_UNAVAILABLE"
       ],
-      "current_route": null,
+      "current_route": "GET /api/retention-requests/{retention_request_id}",
       "authorization": "Current server-derived principal, tenant, workspace and target-matter grant; resource not owned or not visible returns neutral NOT_FOUND. Recheck before output/effect.",
       "transitions": [
         "No canonical state change on read."

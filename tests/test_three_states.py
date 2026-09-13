@@ -77,6 +77,25 @@ CLOSED: dict[str, str] = {
         "reports it for every class not actually assessed. The manual "
         "foundation cannot clear applicability or manufacture an eleventh "
         "class to settle the recorded PRD taxonomy discrepancy."),
+    "RequestScope": (
+        "what a retention request COVERS, chosen by whoever asked. There is no "
+        "unknown scope: a request either names assets or asks for the matter's "
+        "lifecycle review, and `retention.request` refuses a selected-assets "
+        "scope naming nothing rather than inventing a third reading of it. The "
+        "three-state answer for the request lives in `RetentionState`."),
+    "RequestedAction": (
+        "what was ASKED FOR -- restrict access, review retention, or erase. "
+        "Somebody always chose; there is no request nobody made. Conflating "
+        "the three is the defect P33 exists to refuse, and a fourth member "
+        "meaning 'unclear' would be a fourth thing to do to the material "
+        "rather than an honest unknown. What HAPPENED is `RetentionState`."),
+    "RetainedReason": (
+        "the reasons something is still kept, derived fresh from the holds, "
+        "copies and state every time they are asked for. The 'nothing "
+        "established' case is the EMPTY TUPLE -- no reason to retain -- not a "
+        "member, and a NOT_ASSESSED code would be a reason to keep material "
+        "that reads as a reason to keep material. `completion_problems` is "
+        "where an unresolved copy is reported, and it names which."),
     "Act": (
         "a vocabulary of ATTEMPTS, not an outcome. Somebody always chose what "
         "they were trying to do -- there is no unknown act a person could be "

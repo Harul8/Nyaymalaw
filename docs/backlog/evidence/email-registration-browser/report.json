@@ -1,10 +1,10 @@
 {
   "schema": 2,
-  "run_id": "79fa39cc-8406-4736-bbd2-23207bb3cf99",
-  "ran_at": "2026-09-13T08:45:55+00:00",
-  "commit": "a88a1f68c141a5fb3a557f0b92f2798dd794adbe+dirty",
-  "fingerprint": "04047496ad3f6cf21cef15fc404dd93481dadfa084425de2e942f4657c22d5fe",
-  "finished_fingerprint": "04047496ad3f6cf21cef15fc404dd93481dadfa084425de2e942f4657c22d5fe",
+  "run_id": "a5761594-9872-4464-874b-4adade779b79",
+  "ran_at": "2026-09-13T13:56:42+00:00",
+  "commit": "1cd1707aadab8d9ed0d66cce8c5ce3e042706dfe+dirty",
+  "fingerprint": "e727ba39e5885aacb36678a7780a10f4477c356019a65afa94d32bf54bac2c38",
+  "finished_fingerprint": "e727ba39e5885aacb36678a7780a10f4477c356019a65afa94d32bf54bac2c38",
   "configuration_identity": "c537d5cfd464436fde99f9e8fee01e31164e9ae4cf03cd5ab2dd2ac8b38c1b8c",
   "argv": [
     "pytest",

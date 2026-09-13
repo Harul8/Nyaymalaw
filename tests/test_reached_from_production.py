@@ -401,11 +401,6 @@ UNTYPED: dict[str, str] = {
         "without the typed task record the PRD says it produces.",
     "SessionSeal":
         "I1. GENUINELY ABSENT — zero mentions.",
-    "Recommendation":
-        "E2. BUILT AS A STRING. `turn._recommend` composes prose; the PRD "
-        "declares a record. B-074 is what an untyped recommendation costs — "
-        "nothing could ask it what it was based on, so it contradicted the "
-        "finding printed beneath it.",
     "ThresholdMap":
         "D1. NAMING DRIFT — `nm/core/thresholds.py` defines `Threshold` and "
         "the map is a plain dict. Either the PRD names the dict or the code "

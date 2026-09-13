@@ -48,6 +48,20 @@ ROOT = Path(__file__).resolve().parents[1]
 #: Called by something no AST scan of this repo can see. Each with its reason.
 REACHED_ELSEWHERE = {
     # FastAPI routes -- the router calls them by registration, not by name.
+    #
+    # P33's two. Registered by decorator like every route here, and named
+    # in `commands.json` as the current_route for `create-retention-request`
+    # and `get-retention-request` -- so the mapping is recorded rather than
+    # inferred from a docstring.
+    "create_retention_request", "get_retention_request",
+    "place_retention_hold", "release_retention_hold",
+    "resolve_retention_copy", "advance_retention_request",
+    "check_restore",
+    # P27's four, same registration.
+    "record_advice_decision", "list_advice_decisions",
+    "record_comparison", "get_comparison",
+    # P25's two.
+    "bind_source_to_thread", "list_source_bindings",
     "health", "matters", "matter", "matter_summary", "turn", "index",
     # A1's three. `search` is absent from this list ONLY because the word
     # occurs elsewhere in the tree, which is worth noticing: this check finds

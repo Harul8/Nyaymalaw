@@ -21,6 +21,7 @@ is worse than either alone: the advocate cannot tell which is stale.
 from __future__ import annotations
 
 from nm.core import briefing as _briefing
+from nm.core import retention as _retention
 from nm.domain.clock import today as forum_today
 from nm.domain.matter import Matter, Role
 from nm.domain.traceability import implements
@@ -475,6 +476,13 @@ def cover_projection(matter: Matter, deadlines=None, today=None) -> dict:
         # restart -- readiness is not turn completion, and a paused need waits on
         # its resume trigger rather than being forgotten.
         "briefing": _briefing.block(matter),
+        # P33. WHAT IS BEING KEPT OR ERASED, and what is still outstanding.
+        # `outstanding` travels with the state rather than being left for the
+        # reader to infer from two counts that do not add up -- an advocate
+        # told "not complete" and not told WHICH copy cannot chase it.
+        "retention": [
+            {**_retention.projection(r), "outstanding": list(r.completion_problems())}
+            for r in _retention.rows(matter)],
     }
 
 

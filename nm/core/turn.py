@@ -59,8 +59,8 @@ from nm.core import screens as screens_mod
 from nm.core import theory as theory_reader
 from nm.core.professional_access import read_professional_status
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
+from nm.domain import advice, citation, decision, engagement, issue, reads, reservation
 from nm.domain import brief as brief_mod
-from nm.domain import citation, decision, engagement, issue, reads, reservation
 from nm.domain import proof as domain_proof
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
@@ -1136,6 +1136,8 @@ class TurnEngine:
                 premises=concluded.get("premises", thread.premises),
                 objective=concluded.get("objective", thread.objective),
                 reliefs=concluded.get("reliefs", thread.reliefs),
+                recommendation=concluded.get(
+                    "recommendation", thread.recommendation),
                 gaps=concluded.get("gaps", thread.gaps),
                 authorities=concluded.get(
                     "authorities", thread.authorities),
@@ -2804,7 +2806,8 @@ class TurnEngine:
         if not side_blind:
             elements.append(
                 self._recommend(thread, turn, result, metrics, memory,
-                                register, position, relief_position=relief_pos))
+                                register, position, relief_position=relief_pos,
+                                concluded=concluded))
         # A3 §5.4. WHAT THIS TURN DERIVED, and what MOVED since the last one.
         #
         # Run before the queue is drained so a changed value can raise its own
@@ -5489,6 +5492,7 @@ class TurnEngine:
                    register: "tuple[deadlines.Deadline, ...] | None" = None,
                    position: "limitation.Limitation | None" = None,
                    relief_position: "relief_mod.ReliefPosition | None" = None,
+                   concluded: "dict | None" = None,
                    ) -> Element:
         side = thread.posture.side.value
         cited = ""
@@ -5703,6 +5707,65 @@ class TurnEngine:
                       f"work it."))
 
         by_when, no_deadline = self._by_when(register, turn.today)
+
+        # P26 / BK-96-AC2. THE RECOMMENDATION BECOMES A RECORD, NOT ONLY PROSE.
+        #
+        # `Recommendation` sat in `test_reached_from_production.UNTYPED` as
+        # "E2. BUILT AS A STRING ... nothing could ask it what it was based on,
+        # so it contradicted the finding printed beneath it" (B-074). The
+        # sentence above is still the sentence; what is added is a record that
+        # can be ASKED what it rests on, what would change it, and whether its
+        # by-when is attributed to anything.
+        #
+        # Every field it cannot fill stays EMPTY and is reported by `absent()`.
+        # Filling them with a plausible owner and a plausible date to complete
+        # the shape is the fabrication the criterion forbids in as many words.
+        if concluded is not None:
+            record = advice.Recommendation(
+                position=text,
+                next_step=advice.NextStep(
+                    action=text,
+                    owner="the instructing advocate",
+                    by_when=by_when.isoformat() if by_when else "",
+                    # ATTRIBUTED, or not carried. `_by_when` reads the deadline
+                    # register, so a date that came from it can name where it
+                    # came from; a turn with no register entry has no date and
+                    # says so through `no_deadline_reason`.
+                    by_when_basis=("the deadline register on this matter"
+                                   if by_when else "")),
+                reservations=(() if not no_deadline else (no_deadline,)))
+            maturity = advice.maturity_of(
+                has_position=True,
+                inferred_support=(
+                    position is not None
+                    and position.state is limitation.LimitationState.CONDITIONAL))
+            # BK-96-AC3's LAST CLAUSE, enforced rather than assumed. A
+            # withheld, stale or truncated derivation must not reach the
+            # ordinary renderer looking like ordinary advice; the two failure
+            # exits above return questions, and this refuses the remaining way
+            # in -- a "successful" turn whose position is empty, which is
+            # background wearing a recommendation's shape.
+            refused = advice.refuse_release(record, maturity)
+            if refused:
+                return Element(
+                    kind=ElementKind.QUESTION, thread=thread.id,
+                    gate="G-MODEL", text=(
+                        f"I did not record a recommendation on this thread: "
+                        f"{refused}."))
+            concluded["recommendation"] = {
+                "position": record.position,
+                "why_alternatives_lose": list(record.why_alternatives_lose),
+                "next_step": {"action": record.next_step.action,
+                              "owner": record.next_step.owner,
+                              "by_when": record.next_step.by_when,
+                              "by_when_basis": record.next_step.by_when_basis},
+                "fallback": record.fallback,
+                "changing_fact": record.changing_fact,
+                "reservations": list(record.reservations),
+                "maturity": maturity.value,
+                "absent": list(record.absent()),
+            }
+
         return Element(
             kind=ElementKind.ACTION, thread=thread.id, text=text,
             by_when=by_when, no_deadline_reason=no_deadline)

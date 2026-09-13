@@ -1156,3 +1156,28 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .briefing-need { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.4rem; font-size: 0.85rem; }
 .briefing-need.paused { color: var(--ink-3); }
 .briefing-need button.ghost { background: transparent; border: 1px solid var(--rule); border-radius: 3px; font: inherit; font-size: 0.78rem; padding: 0.15rem 0.5rem; cursor: pointer; }
+
+
+/* P33 / P25 / P27 -- custody, attribution and decisions on the case file. */
+.governance { margin-top: 1.5rem; }
+.governance h4 { margin: 1rem 0 .35rem; font-size: .95rem; }
+.binding, .decision, .retention-row {
+  display: flex; flex-wrap: wrap; gap: .5rem; align-items: baseline;
+  padding: .45rem .6rem; border-left: 3px solid var(--rule);
+  margin-bottom: .4rem;
+}
+.binding.unbound { border-left-color: var(--signal); }
+.decision.superseded { opacity: .7; }
+.binding-text, .decision span { flex: 1 1 20rem; }
+.authority-note, .retention-outstanding {
+  flex: 1 1 100%; font-size: .85rem; color: var(--ink-soft);
+}
+.retention-outstanding::before { content: "outstanding: "; font-weight: 600; }
+.binding-form, .decision-form {
+  display: flex; flex-wrap: wrap; gap: .4rem; align-items: center;
+  margin: .4rem 0 .8rem;
+}
+.binding-form input, .decision-form input, .decision-form select {
+  padding: .3rem .45rem; min-width: 8rem;
+}
+.binding-out, .decision-out { flex: 1 1 100%; }

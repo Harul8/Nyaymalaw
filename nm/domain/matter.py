@@ -602,6 +602,12 @@ class Thread:
     imports this module. `nm.core.relief.Objective.from_stored` reads it back.
     """
     reliefs: tuple[object, ...] = ()
+    recommendation: dict = field(default_factory=dict)
+    """P26 / BK-96-AC2's typed E2 record for this thread's current advice --
+    position, why the alternatives lose, the next step with its owner and
+    attributed by-when, the fallback, the changing fact, and what is ABSENT.
+    A thread written before P26 decodes to `{}`, which reads as *no
+    recommendation recorded*, not as an empty one."""
     """THE RELIEFS THIS THREAD'S RECOMMENDATION RESTED ON, each as an
     `nm.core.relief.Relief.as_dict()` row: the remedy, its forum, the five
     coordinates (availability, value, timing, enforceability, proportionality),
@@ -899,6 +905,28 @@ class Matter:
     EMPTY IS `NEVER WORKED`, which is a real state for a matter opened and
     abandoned, and it renders as such rather than as an epoch.
     """
+
+    source_bindings: dict[str, dict] = field(default_factory=dict)
+    """P25 / BK-94-AC5's source-version-to-thread bindings, keyed
+    `source_id@version`, with the superseded ones kept under
+    `__superseded__`. A matter written before P25 decodes to `{}`: no source
+    is attached to anything, which is the state that refuses contribution
+    rather than one that permits it."""
+
+    comparisons: dict[str, dict] = field(default_factory=dict)
+    """P27 / BK-96-AC1's route comparison, keyed by thread. A matter written
+    before P27 decodes to `{}` -- *no comparison recorded*, which is its true
+    state rather than an empty one."""
+
+    advice_decisions: tuple[dict, ...] = ()
+    """P27 / BK-55-AC3's accept / reject / narrow / defer records. A matter
+    written before P27 decodes to the empty tuple, which reads as *nobody has
+    decided anything about the advice* -- its true state."""
+
+    retention: tuple[dict, ...] = ()
+    """P33's retention requests, stored as rows the way `research` is. A matter
+    written before P33 decodes to the empty tuple, which reads as *no hold and
+    no erasure requested* -- its true state, not a fabricated one."""
 
     research: tuple[dict, ...] = ()
     """EVERY RESEARCH NEED OPENED ON THIS FILE, as `nm.core.research.Research.as_dict()`

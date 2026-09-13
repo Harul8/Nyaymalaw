@@ -1999,6 +1999,9 @@ async function showCasefile(matterId) {
     renderPremises(matterId, cover.premises, file.version);
     renderRelief(matterId, cover.relief, file.version);
     renderBriefingPane(matterId, cover.briefing, file.version);
+    await renderBindings(matterId, file.version);
+    await renderDecisions(matterId, file.version);
+    await renderRetention(matterId, file.version);
   } catch (err) {
     $('premises').hidden = false;
     $('premises-state').textContent = '';
@@ -3207,3 +3210,263 @@ document.querySelectorAll('.pw-eye').forEach((eye) => {
     field.setSelectionRange(at, at);
   });
 });
+
+
+// ===================================================================== P25 ==
+// SOURCE ATTRIBUTION. BK-94-AC5: every admitted document has a visible,
+// correctable binding to ONE dispute before it contributes facts, and an
+// unattached source never defaults to the first or largest thread. The pane
+// shows the unbound ones FIRST, because a list of what is attached tells an
+// advocate nothing about the document sitting there contributing nothing.
+async function renderBindings(matterId, version) {
+  const host = $('bindings-host');
+  const stateEl = $('bindings-state');
+  host.textContent = ''; stateEl.textContent = '';
+  let data;
+  try {
+    data = await api(`/api/matters/${matterId}/source-bindings`);
+  } catch (err) {
+    stateEl.appendChild(stateBlock('loud',
+      `Source attribution could not be read: ${err.message}`));
+    return;
+  }
+  const rows = data.bindings || [];
+  if (!rows.length) {
+    host.appendChild(stateBlock('empty',
+      'No admitted source has been attached to a dispute yet.'));
+  }
+  rows.forEach((b) => {
+    const row = document.createElement('div');
+    row.className = 'binding' + (b.refused ? ' unbound' : '');
+    row.dataset.sourceId = b.source_id;
+    const pill = document.createElement('span');
+    pill.className = 'pill ' + (b.refused ? 'blocked'
+      : b.provisional ? 'unknown' : 'ok');
+    pill.textContent = b.refused ? 'contributes nothing'
+      : b.provisional ? 'my reading' : 'you stated it';
+    const text = document.createElement('span');
+    text.className = 'binding-text';
+    text.textContent = b.refused
+      ? `${b.source_id} (${b.source_version}) — ${b.refused}`
+      : `${b.source_id} (${b.source_version}) → ${b.thread_id}`;
+    row.append(pill, text, bindingForm(matterId, b, version));
+    host.appendChild(row);
+  });
+  keepForm(host, 'binding-form', () => bindingForm(matterId, null, version));
+}
+
+
+// THE FORM SURVIVES THE RE-RENDER. `host.textContent = ''` above clears the
+// derived list, which is right; it must not also clear the control somebody
+// is halfway through using. The existing node is detached before the wipe and
+// put back after, so its values, focus and listeners are untouched.
+function keepForm(host, className, make) {
+  const kept = host.__keptForm;
+  const form = (kept && kept.className.includes(className)) ? kept : make();
+  host.__keptForm = form;
+  host.appendChild(form);
+}
+
+function bindingForm(matterId, existing, version) {
+  const form = document.createElement('form');
+  form.className = 'binding-form';
+  const src = document.createElement('input');
+  src.type = 'text'; src.name = 'source_id'; src.required = true;
+  src.placeholder = 'document id';
+  src.setAttribute('aria-label', 'Document this binding is about');
+  if (existing) { src.value = existing.source_id; src.readOnly = true; }
+  const ver = document.createElement('input');
+  ver.type = 'text'; ver.name = 'source_version'; ver.required = true;
+  ver.placeholder = 'version';
+  ver.setAttribute('aria-label', 'Version of the document');
+  if (existing) { ver.value = existing.source_version; ver.readOnly = true; }
+  const thread = document.createElement('input');
+  thread.type = 'text'; thread.name = 'thread_id'; thread.required = true;
+  thread.placeholder = 'which dispute';
+  thread.setAttribute('aria-label', 'The dispute this document belongs to');
+  const go = document.createElement('button');
+  go.type = 'submit'; go.className = 'ghost';
+  go.textContent = existing ? 'Re-attach' : 'Attach';
+  const out = document.createElement('div');
+  out.className = 'binding-out';
+  form.append(src, ver, thread, go, out);
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    out.textContent = '';
+    try {
+      const said = await api('/api/source-bindings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matter_id: matterId, source_id: src.value.trim(),
+          source_version: ver.value.trim(), thread_id: thread.value.trim(),
+          basis: 'stated',
+          expected_matter_version: currentVersion(matterId, version),
+        }),
+      });
+      // AFTER the re-render, not before it. Appending here and then calling
+      // `showCasefile` wiped the note in the same tick -- the advocate was
+      // told which dispute lost the source for a few milliseconds. The
+      // sentence is the whole point of a correction: it says which thread's
+      // work has to be reopened.
+      if (state.matterId === matterId) state.matterVersion = said.version;
+      await showCasefile(matterId);
+      $('bindings-state').appendChild(stateBlock('quiet', said.reopen_note));
+    } catch (err) {
+      out.appendChild(stateBlock('loud',
+        `Not attached: ${(err.detail && err.detail.why) || err.message}`));
+    }
+  });
+  return form;
+}
+
+// ===================================================================== P27 ==
+// DECISIONS ON ADVICE. BK-55-AC3. Every row carries the sentence saying what
+// it does NOT do, because a consumer that has to ask separately will not.
+async function renderDecisions(matterId, version) {
+  const host = $('decisions-host');
+  const stateEl = $('decisions-state');
+  host.textContent = ''; stateEl.textContent = '';
+  let data;
+  try {
+    data = await api(`/api/matters/${matterId}/advice-decisions`);
+  } catch (err) {
+    stateEl.appendChild(stateBlock('loud',
+      `Decisions could not be read: ${err.message}`));
+    return;
+  }
+  const rows = data.decisions || [];
+  if (!rows.length) {
+    host.appendChild(stateBlock('empty',
+      'Nothing has been decided about the advice on this file. '
+      + 'Silence is not acceptance.'));
+  }
+  rows.forEach((d) => {
+    const row = document.createElement('div');
+    row.className = 'decision' + (d.current ? '' : ' superseded');
+    row.dataset.decisionId = d.decision_id;
+    const pill = document.createElement('span');
+    pill.className = 'pill ' + (d.current ? 'ok' : 'unknown');
+    pill.textContent = d.current ? d.disposition : `${d.disposition} (superseded)`;
+    const text = document.createElement('span');
+    text.textContent = `advice ${d.advice_version} · ${d.scope} · owner `
+      + `${d.owner} · review: ${d.review_trigger}`;
+    const note = document.createElement('div');
+    note.className = 'authority-note';
+    note.textContent = d.authority_note;
+    row.append(pill, text, note);
+    host.appendChild(row);
+  });
+  keepForm(host, 'decision-form', () => decisionForm(matterId, version));
+}
+
+function decisionForm(matterId, version) {
+  const form = document.createElement('form');
+  form.className = 'decision-form';
+  const pick = document.createElement('select');
+  pick.name = 'disposition';
+  pick.setAttribute('aria-label', 'What you decided about the advice');
+  ['accept', 'reject', 'narrow', 'defer'].forEach((v) => {
+    const o = document.createElement('option'); o.value = v; o.textContent = v;
+    pick.appendChild(o);
+  });
+  const adviceVersion = document.createElement('input');
+  adviceVersion.type = 'text'; adviceVersion.required = true;
+  adviceVersion.name = 'advice_version';
+  adviceVersion.placeholder = 'advice version';
+  adviceVersion.setAttribute('aria-label', 'Which version of the advice');
+  const scope = document.createElement('input');
+  scope.type = 'text'; scope.required = true; scope.placeholder = 'scope';
+  scope.name = 'scope';
+  scope.setAttribute('aria-label', 'What this decision covers');
+  const owner = document.createElement('input');
+  owner.type = 'text'; owner.required = true; owner.placeholder = 'owner';
+  owner.name = 'owner';
+  owner.setAttribute('aria-label', 'Who owns this decision');
+  const trigger = document.createElement('input');
+  trigger.type = 'text'; trigger.required = true;
+  trigger.name = 'review_trigger';
+  trigger.placeholder = 'what brings it back';
+  trigger.setAttribute('aria-label', 'What brings this decision back for review');
+  const go = document.createElement('button');
+  go.type = 'submit'; go.className = 'ghost'; go.textContent = 'Record decision';
+  const out = document.createElement('div'); out.className = 'decision-out';
+  form.append(pick, adviceVersion, scope, owner, trigger, go, out);
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    out.textContent = '';
+    try {
+      const said = await api('/api/advice-decisions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matter_id: matterId, disposition: pick.value,
+          advice_version: adviceVersion.value.trim(),
+          scope: scope.value.trim(), owner: owner.value.trim(),
+          review_trigger: trigger.value.trim(),
+          expected_matter_version: currentVersion(matterId, version),
+        }),
+      });
+      if (state.matterId === matterId) state.matterVersion = said.version;
+      await showCasefile(matterId);
+      $('decisions-state').appendChild(
+        stateBlock('quiet', said.decision.authority_note));
+    } catch (err) {
+      out.appendChild(stateBlock('loud',
+        `Not recorded: ${(err.detail && err.detail.why) || err.message}`));
+    }
+  });
+  return form;
+}
+
+// ===================================================================== P33 ==
+// RETENTION AND ERASURE. What is outstanding is named, never implied by a
+// count that does not add up, and a held request says so on its face.
+async function renderRetention(matterId, version) {
+  const host = $('retention-host');
+  const stateEl = $('retention-state');
+  host.textContent = ''; stateEl.textContent = '';
+  let cover;
+  try {
+    cover = await api(`/api/matters/${matterId}/cover`);
+  } catch (err) {
+    stateEl.appendChild(stateBlock('loud',
+      `Retention could not be read: ${err.message}`));
+    return;
+  }
+  const rows = (cover.retention || []);
+  if (!rows.length) {
+    host.appendChild(stateBlock('empty',
+      'No retention or erasure has been requested on this file.'));
+    return;
+  }
+  rows.forEach((r) => {
+    const row = document.createElement('div');
+    row.className = 'retention-row';
+    row.dataset.requestId = r.request_id;
+    const pill = document.createElement('span');
+    pill.className = 'pill ' + (r.state === 'complete_for_declared_scope' ? 'ok'
+      : r.state === 'under_hold' ? 'blocked' : 'unknown');
+    pill.textContent = r.state.replace(/_/g, ' ');
+    const text = document.createElement('span');
+    text.textContent = `${r.resolved_asset_count} of ${r.expected_asset_count} `
+      + `resolved · ${(r.retained_reason_codes || []).join(', ') || 'nothing retained'}`;
+    row.append(pill, text);
+    (r.outstanding || []).forEach((o) => {
+      const li = document.createElement('div');
+      li.className = 'retention-outstanding';
+      li.textContent = o;
+      row.appendChild(li);
+    });
+    host.appendChild(row);
+  });
+}
+
+// THE VERSION THE SERVER LAST CONFIRMED. A second tab that moved the matter
+// leaves this one holding a stale number, and posting it would lose the other
+// tab's write -- so the fresher of the two is used, the same fix P24's
+// briefing control needed.
+function currentVersion(matterId, fallback) {
+  return (state.matterId === matterId && state.matterVersion > fallback)
+    ? state.matterVersion : fallback;
+}

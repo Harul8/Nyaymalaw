@@ -14,11 +14,12 @@ from __future__ import annotations
 
 import hmac
 import os
+import uuid
 from dataclasses import replace
 from datetime import date
 from math import ceil
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -973,6 +974,657 @@ def resume_need(matter_id: str, body: ResumeNeed, advocate_id: Advocate) -> dict
             "version": committed.version, "need": body.need.strip()}
 
 
+class RetentionAsset(BaseModel):
+    """One asset at one version. `VersionRef` in the served contract."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: NonBlank = Field(min_length=1)
+    version: int = Field(ge=0)
+
+
+class RetentionCopy(BaseModel):
+    """One place a copy is known to live, declared by the inventory.
+
+    `kind` decides which retained-reason code an unresolved copy produces --
+    `processor` and `backup` are the two the contract names separately, because
+    "our processor still has it" and "a backup still has it" are different
+    things to tell a client.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    location: NonBlank = Field(min_length=1)
+    kind: Literal["derivative", "processor", "backup", "original"] = "derivative"
+
+
+class RetentionRequestBody(BaseModel):
+    """`create-retention-request`. The body is closed and the actor is not in it.
+
+    NO CLIENT-SUPPLIED STATE OR HOLD OVERRIDE, which the contract states as a
+    semantic refusal and `extra="forbid"` enforces structurally: a caller that
+    could post `state` could post `complete_for_declared_scope` and have the
+    product tell the next reader the material is gone.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    scope: Literal["selected_assets", "matter_lifecycle_review"]
+    asset_versions: list[RetentionAsset] = Field(default_factory=list, max_length=100)
+    requested_action: Literal["restrict_access", "review_retention", "erase"]
+    purpose: NonBlank = Field(min_length=1, max_length=4000)
+    authority_id: NonBlank = Field(min_length=1)
+    authority_version: int = Field(ge=0)
+    copies: list[RetentionCopy] = Field(default_factory=list, max_length=200)
+    expected_matter_version: int
+
+
+@app.post("/api/retention-requests", dependencies=[CsrfProtected],
+          status_code=201)
+def create_retention_request(body: RetentionRequestBody,
+                             advocate_id: Advocate) -> dict:
+    """Receive a retention request. BK-85-AC4, BK-88-AC1. P33.
+
+    IT RETURNS `review_requested` AND NOTHING ELSE, on every path. The contract
+    says a receipt never means erased, and the way that is kept true is that
+    this route has no way to say anything else: `retention.request` does not
+    take a state, and every later state is reached through the transition rule.
+
+    A request naming assets under an active hold is still RECEIVED. Refusing it
+    outright would leave the person asking with no record that they asked and
+    no statement of why the material is being kept -- the hold shows up as the
+    state and the reason code, which is the answer they are entitled to.
+    """
+    from nm.core import retention as rt
+    from nm.domain import retention as rd
+    from nm.domain.clock import today as _today
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    now = _today().isoformat()
+
+    try:
+        made = rd.request(
+            request_id=f"rr_{uuid.uuid4().hex[:12]}",
+            matter_id=m.id, requested_by=advocate_id, requested_at=now,
+            scope=rd.RequestScope(body.scope),
+            requested_action=rd.RequestedAction(body.requested_action),
+            purpose=body.purpose.strip(),
+            authority_id=body.authority_id.strip(),
+            authority_version=body.authority_version,
+            assets=tuple(rd.AssetRef(id=a.id.strip(), version=a.version)
+                         for a in body.asset_versions),
+            copies=tuple(rd.Copy(location=c.location.strip(), kind=c.kind)
+                         for c in body.copies),
+            next_review_at=now)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+    existing = rt.rows(m)
+    m = replace(m, retention=tuple(rt.as_dict(r) for r in rt.put(existing, made)),
+                version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"request_id": made.request_id, "observed_at": now,
+            "persistence": "committed", "state": made.state.value,
+            "data": rt.projection(made), "operation_id": made.request_id,
+            "matter_version": committed.version}
+
+
+@app.get("/api/retention-requests/{retention_request_id}")
+def get_retention_request(retention_request_id: str, matter_id: str,
+                          advocate_id: Advocate) -> dict:
+    """Read one retention request. BK-85-AC4, BK-88-AC1. P33.
+
+    WHAT IS STILL RETAINED IS SAID, NOT IMPLIED. The contract's semantic
+    refusal is that an incomplete processor or backup inventory cannot return
+    `complete_for_declared_scope`, and `completion_problems` is served beside
+    the state so the advocate is told WHICH copy is outstanding rather than
+    being left to infer it from a count that does not add up.
+    """
+    from nm.core import retention as rt
+
+    m = _owned(matter_id, advocate_id)
+    found = rt.find(rt.rows(m), retention_request_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail="no such retention request")
+    return {"data": rt.projection(found),
+            "outstanding": list(found.completion_problems()),
+            "holds": [{"hold_id": h.hold_id, "reason": h.reason,
+                       "active": h.is_active} for h in found.holds],
+            "tombstones": [{"asset_id": t.asset_id, "erased_at": t.erased_at}
+                           for t in found.tombstones]}
+
+
+class HoldBody(BaseModel):
+    """Place a hold. The reason is required and is shown to whoever asks why
+    material was kept -- an unexplained hold is indistinguishable from a bug."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    reason: NonBlank = Field(min_length=1, max_length=2000)
+    expected_matter_version: int
+
+
+class ReleaseHoldBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    hold_id: NonBlank = Field(min_length=1)
+    expected_matter_version: int
+
+
+class ResolveCopyBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    location: NonBlank = Field(min_length=1)
+    expected_matter_version: int
+
+
+class AdvanceBody(BaseModel):
+    """Move a request. The target is named; the route does not infer it.
+
+    A route that advanced "to the next state" would decide the lifecycle for
+    the caller, and the one place that must not happen is the step into
+    erasure.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    target: Literal["under_hold", "approved", "in_progress",
+                    "erased_from_active_systems", "backup_expiry_pending",
+                    "complete_for_declared_scope", "declined",
+                    "review_requested"]
+    expected_matter_version: int
+
+
+class RestoreCheckBody(BaseModel):
+    """What a restore proposes to bring back, before it brings any of it back."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    asset_ids: list[str] = Field(min_length=1, max_length=500)
+
+
+def _retention_or_404(m, request_id: str):
+    from nm.core import retention as rt
+    found = rt.find(rt.rows(m), request_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail="no such retention request")
+    return found
+
+
+def _save_retention(m, updated, expected_version: int) -> dict:
+    from nm.core import retention as rt
+    rows = rt.put(rt.rows(m), updated)
+    m = replace(m, retention=tuple(rt.as_dict(r) for r in rows),
+                version=m.version + 1)
+    committed = _commit_matter(m, expected_version)
+    return {"matter_id": committed.id, "version": committed.version,
+            "data": rt.projection(updated),
+            "outstanding": list(updated.completion_problems())}
+
+
+@app.post("/api/retention-requests/{retention_request_id}/holds",
+          dependencies=[CsrfProtected], status_code=201)
+def place_retention_hold(retention_request_id: str, body: HoldBody,
+                         advocate_id: Advocate) -> dict:
+    """Place a hold. BK-85-AC4, BK-88-AC1. P33.
+
+    The material stays. An erasure already approved stops here rather than
+    completing and being reported as done.
+    """
+    import uuid as _uuid
+
+    from nm.core import retention as rt
+    from nm.domain import retention as rd
+    from nm.domain.clock import today as _today
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    found = _retention_or_404(m, retention_request_id)
+    hold = rd.Hold(hold_id=f"hold_{_uuid.uuid4().hex[:8]}",
+                   reason=body.reason.strip(), placed_by=advocate_id,
+                   placed_at=_today().isoformat())
+    return _save_retention(m, rt.place_hold(found, hold),
+                           body.expected_matter_version)
+
+
+@app.post("/api/retention-requests/{retention_request_id}/hold-releases",
+          dependencies=[CsrfProtected], status_code=201)
+def release_retention_hold(retention_request_id: str, body: ReleaseHoldBody,
+                           advocate_id: Advocate) -> dict:
+    """Release one hold BY NAME. It does not resume the interrupted work."""
+    from nm.core import retention as rt
+    from nm.domain.clock import today as _today
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    found = _retention_or_404(m, retention_request_id)
+    try:
+        updated = rt.release_hold(found, body.hold_id.strip(),
+                                  by=advocate_id, at=_today().isoformat())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST", "why": str(exc),
+            "committed": "not_committed"}) from exc
+    return _save_retention(m, updated, body.expected_matter_version)
+
+
+@app.post("/api/retention-requests/{retention_request_id}/resolved-copies",
+          dependencies=[CsrfProtected], status_code=201)
+def resolve_retention_copy(retention_request_id: str, body: ResolveCopyBody,
+                           advocate_id: Advocate) -> dict:
+    """Account for ONE inventoried copy. There is deliberately no bulk form."""
+    from nm.core import retention as rt
+    from nm.domain.clock import today as _today
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    found = _retention_or_404(m, retention_request_id)
+    try:
+        updated = rt.resolve_copy(found, body.location.strip(),
+                                  at=_today().isoformat())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST", "why": str(exc),
+            "committed": "not_committed"}) from exc
+    return _save_retention(m, updated, body.expected_matter_version)
+
+
+@app.post("/api/retention-requests/{retention_request_id}/transitions",
+          dependencies=[CsrfProtected], status_code=201)
+def advance_retention_request(retention_request_id: str, body: AdvanceBody,
+                              advocate_id: Advocate) -> dict:
+    """Move a request through its lifecycle. THE TABLE DECIDES, NOT THE CALLER.
+
+    A refused move returns 409 with the reason the domain gave, and the codes
+    are the contract's: `RETENTION_HOLD` where a hold is what refuses, and
+    `INVALID_TRANSITION` where the lifecycle does. They are told apart because
+    they need different actions -- one waits for a release, the other is a
+    mistake about where the request had got to.
+    """
+    from nm.core import retention as rt
+    from nm.domain import retention as rd
+    from nm.domain.clock import today as _today
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    found = _retention_or_404(m, retention_request_id)
+    target = rd.RetentionState(body.target)
+
+    refused = rd.refuse_transition(found, target)
+    if refused:
+        raise HTTPException(status_code=409, detail={
+            "code": ("RETENTION_HOLD" if "hold" in refused.lower()
+                     else "INVALID_TRANSITION"),
+            "why": refused, "state": found.state.value,
+            "outstanding": list(found.completion_problems()),
+            "committed": "not_committed"})
+
+    if target is rd.RetentionState.ERASED_FROM_ACTIVE_SYSTEMS:
+        updated = rt.erase_from_active_systems(found, at=_today().isoformat())
+    else:
+        updated = rd.advance(found, target)
+    return _save_retention(m, updated, body.expected_matter_version)
+
+
+@app.post("/api/restore-checks", dependencies=[CsrfProtected], status_code=200)
+def check_restore(body: RestoreCheckBody, advocate_id: Advocate) -> dict:
+    """REPLAY THE TOMBSTONES BEFORE A RESTORE EXPOSES ANYTHING. BK-88-AC1.
+
+    A backup predates the erasure that followed it, so restoring it re-exposes
+    exactly the material somebody was told was gone -- and it looks like a
+    successful recovery while it does. This is asked BEFORE the restore, and it
+    answers with the assets that must not come back and why.
+    """
+    from nm.core import retention as rt
+
+    m = _owned(body.matter_id, advocate_id)
+    refused = rt.refuse_restore(rt.rows(m), tuple(body.asset_ids))
+    return {"matter_id": m.id, "proposed": list(body.asset_ids),
+            "refused": list(refused),
+            "may_restore": [a for a in body.asset_ids if a not in refused],
+            "why": ("these were erased under a completed retention request and "
+                    "a backup taken before it does not know that"
+                    if refused else "nothing proposed has been erased")}
+
+
+class AdviceDecisionBody(BaseModel):
+    """Record what was decided about a piece of advice. BK-55-AC3. P27.
+
+    `disposition` is closed to the four the criterion names plus nothing:
+    there is no "approve for filing" here, because this record does not
+    authorise an external act and a value that sounded like it did would be
+    read as one.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    disposition: Literal["accept", "reject", "narrow", "defer"]
+    advice_version: NonBlank = Field(min_length=1)
+    scope: NonBlank = Field(min_length=1, max_length=2000)
+    owner: NonBlank = Field(min_length=1)
+    review_trigger: NonBlank = Field(min_length=1, max_length=2000)
+    narrowed_to: str = ""
+    because: str = ""
+    expected_matter_version: int
+
+
+@app.post("/api/advice-decisions", dependencies=[CsrfProtected],
+          status_code=201)
+def record_advice_decision(body: AdviceDecisionBody,
+                           advocate_id: Advocate) -> dict:
+    """Record an accept / reject / narrow / defer. BK-55-AC3. P27.
+
+    THE ACTOR IS SERVER-DERIVED. `decided_by` is the signed-in advocate and is
+    not in the body: a caller that could name its own decider could record the
+    client as having accepted advice the client never saw.
+
+    The response carries `authority_note` on every path, so the thing this
+    record does NOT do arrives with it rather than being inferred from silence.
+    """
+    import uuid as _uuid
+
+    from nm.core import options as op
+    from nm.domain import advice_decision as ad
+    from nm.domain.clock import today as _today
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+
+    decision = ad.AdviceDecision(
+        decision_id=f"dec_{_uuid.uuid4().hex[:10]}",
+        disposition=ad.Disposition(body.disposition),
+        decided_by=advocate_id, decided_at=_today().isoformat(),
+        advice_version=body.advice_version.strip(),
+        scope=body.scope.strip(), owner=body.owner.strip(),
+        review_trigger=body.review_trigger.strip(),
+        narrowed_to=body.narrowed_to.strip(), because=body.because.strip())
+
+    missing = decision.absent()
+    if missing:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST",
+            "why": "the decision does not record: " + "; ".join(missing),
+            "committed": "not_committed"})
+
+    rows = op.put_decision(op.decision_rows(m), decision)
+    m = replace(m, advice_decisions=tuple(op.decision_as_dict(d) for d in rows),
+                version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "recorded", "matter_id": committed.id,
+            "version": committed.version,
+            "decision": op.decision_projection(decision)}
+
+
+@app.get("/api/matters/{matter_id}/advice-decisions")
+def list_advice_decisions(matter_id: str, advocate_id: Advocate) -> dict:
+    """Every decision on this matter, current and superseded.
+
+    SUPERSEDED ONES ARE RETURNED TOO. Authority is withdrawn by a later record
+    and never by deletion, so the history is what lets an advocate answer
+    *when did we decide that, and against which advice*.
+    """
+    from nm.core import options as op
+
+    m = _owned(matter_id, advocate_id)
+    rows = op.decision_rows(m)
+    return {"matter_id": m.id, "version": m.version,
+            "decisions": [op.decision_projection(d) for d in rows],
+            "current": [op.decision_projection(d) for d in rows if d.is_current]}
+
+
+class ComparisonFigure(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = ""
+    certainty: Literal["established", "estimate", "unknown"] = "unknown"
+    basis: str = ""
+
+
+class ComparisonOption(BaseModel):
+    """One route in the comparison. Figures carry their certainty."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    route: Literal["litigate", "arbitrate", "negotiate", "settle",
+                   "statutory_remedy", "do_nothing", "other"]
+    summary: NonBlank = Field(min_length=1, max_length=2000)
+    objective_fit: str = ""
+    useful_recovery: ComparisonFigure = Field(default_factory=ComparisonFigure)
+    cost: ComparisonFigure = Field(default_factory=ComparisonFigure)
+    time: ComparisonFigure = Field(default_factory=ComparisonFigure)
+    disruption: ComparisonFigure = Field(default_factory=ComparisonFigure)
+    enforceability: ComparisonFigure = Field(default_factory=ComparisonFigure)
+    proportionate: bool | None = None
+    adverse: list[str] = Field(default_factory=list)
+    why_it_loses: str = ""
+
+
+class ComparisonBody(BaseModel):
+    """Record a comparison of routes with the view taken. BK-96-AC1. P27."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    thread_id: NonBlank = Field(min_length=1)
+    options: list[ComparisonOption] = Field(min_length=1, max_length=20)
+    supported: str = ""
+    because: str = ""
+    no_view_because: str = ""
+    expected_matter_version: int
+
+
+@app.post("/api/comparisons", dependencies=[CsrfProtected], status_code=201)
+def record_comparison(body: ComparisonBody, advocate_id: Advocate) -> dict:
+    """Record a route comparison. BK-96-AC1. P27.
+
+    THE PROBLEMS TRAVEL WITH IT. A comparison with no view and no reason, an
+    unexplained loser, or a figure recorded as established with nothing behind
+    it is stored and served WITH those problems named -- not silently smoothed
+    into a tidy table. The reader is the person who would otherwise repeat the
+    number to a client.
+    """
+    from nm.core import options as op
+    from nm.domain import options as od
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+
+    options = tuple(
+        od.Option(
+            route=od.Route(o.route), summary=o.summary.strip(),
+            objective_fit=o.objective_fit.strip(),
+            useful_recovery=od.Figure(text=o.useful_recovery.text,
+                                      certainty=od.Certainty(o.useful_recovery.certainty),
+                                      basis=o.useful_recovery.basis),
+            cost=od.Figure(text=o.cost.text,
+                           certainty=od.Certainty(o.cost.certainty),
+                           basis=o.cost.basis),
+            time=od.Figure(text=o.time.text,
+                           certainty=od.Certainty(o.time.certainty),
+                           basis=o.time.basis),
+            disruption=od.Figure(text=o.disruption.text,
+                                 certainty=od.Certainty(o.disruption.certainty),
+                                 basis=o.disruption.basis),
+            enforceability=od.Figure(text=o.enforceability.text,
+                                     certainty=od.Certainty(o.enforceability.certainty),
+                                     basis=o.enforceability.basis),
+            proportionate=o.proportionate,
+            adverse=tuple(o.adverse), why_it_loses=o.why_it_loses.strip())
+        for o in body.options)
+
+    try:
+        comparison = od.compare(
+            options,
+            supported=od.Route(body.supported) if body.supported else None,
+            because=body.because.strip(),
+            no_view_because=body.no_view_because.strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+    rows = dict(getattr(m, "comparisons", {}) or {})
+    rows[body.thread_id.strip()] = op.comparison_as_dict(comparison)
+    m = replace(m, comparisons=rows, version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "compared", "matter_id": committed.id,
+            "version": committed.version,
+            "comparison": op.comparison_projection(comparison)}
+
+
+@app.get("/api/matters/{matter_id}/comparisons/{thread_id}")
+def get_comparison(matter_id: str, thread_id: str,
+                   advocate_id: Advocate) -> dict:
+    """Read back a recorded comparison, problems included."""
+    from nm.core import options as op
+
+    m = _owned(matter_id, advocate_id)
+    stored = (getattr(m, "comparisons", {}) or {}).get(thread_id)
+    if stored is None:
+        raise HTTPException(status_code=404, detail="no comparison on that thread")
+    return {"matter_id": m.id, "thread_id": thread_id,
+            "comparison": op.comparison_projection(
+                op.comparison_from_dict(stored))}
+
+
+class SourceBindingBody(BaseModel):
+    """Attach an admitted source to a dispute. BK-94-AC5. P25.
+
+    `thread_id` is REQUIRED here even though the binding type allows it to be
+    empty. The type must be able to express *unbound* -- that is the state an
+    admitted document sits in before anybody says. This route is the act of
+    saying, so a request that names no thread is not an unbound source, it is
+    an incomplete request.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    source_id: NonBlank = Field(min_length=1)
+    source_version: NonBlank = Field(min_length=1)
+    thread_id: NonBlank = Field(min_length=1)
+    basis: Literal["stated", "inferred"]
+    because: str = ""
+    expected_matter_version: int
+
+
+@app.post("/api/source-bindings", dependencies=[CsrfProtected],
+          status_code=201)
+def bind_source_to_thread(body: SourceBindingBody,
+                          advocate_id: Advocate) -> dict:
+    """Say which dispute an admitted source belongs to. BK-94-AC5. P25.
+
+    RE-BINDING IS A CORRECTION, NOT AN OVERWRITE. Where a binding already
+    exists for this source and version, the previous one is superseded and
+    kept, and the response names the thread whose derived work now rests on a
+    fact about a different dispute -- so the caller can reopen exactly that
+    and nothing else.
+    """
+    import uuid as _uuid
+
+    from nm.domain import binding as bd
+    from nm.domain.clock import today as _today
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    now = _today().isoformat()
+    key = f"{body.source_id.strip()}@{body.source_version.strip()}"
+
+    stored = dict(getattr(m, "source_bindings", {}) or {})
+    previous_thread = ""
+    existing = stored.get(key)
+    if existing and existing.get("thread_id") == body.thread_id.strip():
+        raise HTTPException(status_code=409, detail={
+            "code": "INVALID_TRANSITION",
+            "why": (f"{body.source_id.strip()!r} is already attached to "
+                    f"{body.thread_id.strip()!r}"),
+            "committed": "not_committed"})
+    if existing:
+        previous_thread = str(existing.get("thread_id") or "")
+
+    fresh = bd.SourceBinding(
+        source_id=body.source_id.strip(),
+        source_version=body.source_version.strip(),
+        thread_id=body.thread_id.strip(), basis=bd.Basis(body.basis),
+        bound_by=advocate_id, bound_at=now, because=body.because.strip())
+
+    history = list(stored.get("__superseded__", [])) if isinstance(
+        stored.get("__superseded__"), list) else []
+    if existing:
+        history.append({**existing,
+                        "superseded_by": f"bind_{_uuid.uuid4().hex[:8]}",
+                        "superseded_at": now})
+    stored[key] = {"source_id": fresh.source_id,
+                   "source_version": fresh.source_version,
+                   "thread_id": fresh.thread_id, "basis": fresh.basis.value,
+                   "bound_by": fresh.bound_by, "bound_at": fresh.bound_at,
+                   "because": fresh.because}
+    stored["__superseded__"] = history
+
+    m = replace(m, source_bindings=stored, version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {
+        "state": "bound", "matter_id": committed.id,
+        "version": committed.version,
+        "binding": {"source_id": fresh.source_id,
+                    "source_version": fresh.source_version,
+                    "thread_id": fresh.thread_id,
+                    "basis": fresh.basis.value,
+                    "provisional": fresh.provisional},
+        # NAMED SO THE CALLER CAN REOPEN EXACTLY THAT THREAD'S WORK. P28 owns
+        # the invalidation; this only says which dispute lost the source.
+        "was_attached_to": previous_thread,
+        "reopen_note": (
+            f"work on {previous_thread!r} rested on this source and no longer "
+            f"does" if previous_thread else "this source was not previously "
+            "attached to a dispute"),
+    }
+
+
+@app.get("/api/matters/{matter_id}/source-bindings")
+def list_source_bindings(matter_id: str, advocate_id: Advocate) -> dict:
+    """Every binding on this matter, and what each unbound source is blocking.
+
+    THE UNBOUND ONES ARE THE POINT. A list of what is attached tells an
+    advocate nothing about the document sitting in the matter contributing
+    nothing because nobody has said which dispute it belongs to.
+    """
+    from nm.domain import binding as bd
+
+    m = _owned(matter_id, advocate_id)
+    stored = getattr(m, "source_bindings", {}) or {}
+    rows = []
+    for key, row in stored.items():
+        if key == "__superseded__":
+            continue
+        made = bd.SourceBinding(
+            source_id=str(row.get("source_id") or "?"),
+            source_version=str(row.get("source_version") or "?"),
+            thread_id=str(row.get("thread_id") or ""),
+            basis=bd.Basis(row.get("basis") or "unbound"),
+            bound_by=str(row.get("bound_by") or ""),
+            bound_at=str(row.get("bound_at") or ""),
+            because=str(row.get("because") or ""))
+        rows.append({"source_id": made.source_id,
+                     "source_version": made.source_version,
+                     "thread_id": made.thread_id,
+                     "basis": made.basis.value,
+                     "provisional": made.provisional,
+                     "refused": bd.refuse_contribution(made)})
+    return {"matter_id": m.id, "version": m.version, "bindings": rows,
+            "superseded": list(stored.get("__superseded__", []) or [])}
+
+
 class Correction(BaseModel):
     """One correction to one entry on the case file. BK-65-AC1, P18.
 
@@ -1018,6 +1670,8 @@ def correct_fact(matter_id: str, fact_id: str, body: Correction,
     versions, the reason and who.
     """
     from nm.core import dependency
+    from nm.core import options as _options
+    from nm.core import reassessment as _reassessment
     from nm.domain.matter import Fact, Provenance
     from nm.edge.projections import currency_projection
 
@@ -1096,6 +1750,18 @@ def correct_fact(matter_id: str, fact_id: str, body: Correction,
         "moved": [r.as_dict() for r in moved],
         "affected": list(affected),
         "unaffected": list(untouched),
+        # P28 / BK-55-AC5. A CORRECTION MAKES DEPENDENT DECISIONS STALE TOO,
+        # and the dangerous half is not that they go out of date -- it is that
+        # they keep saying ACCEPTED beside advice the acceptance was never
+        # given for. They are reported, never deleted: the history is what
+        # answers *what did we decide, and against which advice*.
+        "stale_decisions": [
+            {"decision_id": d.decision_id,
+             "disposition": d.disposition.value,
+             "advice_version": d.advice_version,
+             "why": why}
+            for d, why in _reassessment.stale_decisions(
+                ledger, _options.decision_rows(committed))],
         "currency": currency_projection(committed),
         "by": advocate_id,
         "at": today.isoformat(),

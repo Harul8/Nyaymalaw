@@ -71,7 +71,13 @@ DERIVED = ("theory", "issues", "decisions", "proof", "deadlines", "gaps",
            # against, and the relief position itself are all WORKED OUT rather
            # than said, so a withheld turn must discard them as it discards the
            # theory.
-           "premises", "objective", "reliefs")
+           "premises", "objective", "reliefs",
+           # P26, caught the same way. The typed E2 recommendation is the most
+           # conclusion-shaped thing on the thread -- a position, a step, an
+           # owner and a date -- so a withheld turn discarding everything else
+           # while keeping THAT would leave the advocate the one sentence they
+           # would act on, drawn from an answer the gate refused to serve.
+           "recommendation")
 
 
 class _Ungrounded(ScriptedModelAdapter):
