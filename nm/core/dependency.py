@@ -822,6 +822,34 @@ def sync_inputs(ledger: Ledger, matter, findings=(), *, reason: str = "",
             tracked = ledger.input_of(InputKind.FACT, fid)
             moved.append(Rest(InputKind.FACT, fid,
                               tracked.version if tracked else 0))
+    # THE COMMISSION IS AN INPUT THE FILE HOLDS, and it was missing.
+    #
+    # It is authored, it is versioned, and a change to it reopens work --
+    # `Commission.MATERIAL` already names exactly which fields do. Without this
+    # edge no derived value could ever be marked stale by an instruction
+    # change: the closure walks `(kind, id)` pairs and nothing ever recorded
+    # the pair. That is the zero-from-the-wrong-index shape, and here it
+    # produced silence rather than a wrong number.
+    #
+    # WHAT IS HASHED IS `MATERIAL`, read from `nm.domain.commission` rather
+    # than restated, so what makes an instruction change material to the
+    # ledger and what makes it material to `material_changes` cannot drift.
+    commission = getattr(matter, "commission", None)
+    matter_id = str(getattr(matter, "id", "") or "")
+    if commission and matter_id:
+        from nm.domain.commission import MATERIAL, Commission
+
+        current = Commission.from_stored(commission)
+        if current is not None:
+            cid = f"commission:{matter_id}"
+            ledger, did = observe(
+                ledger, InputKind.FACT, cid,
+                digest_of(*(getattr(current, name, None) for name in MATERIAL)),
+                reason=reason)
+            if did:
+                tracked = ledger.input_of(InputKind.FACT, cid)
+                moved.append(Rest(InputKind.FACT, cid,
+                                  tracked.version if tracked else 0))
     for finding in findings or ():
         aid = authority_id(finding)
         if aid.strip(":") == "":

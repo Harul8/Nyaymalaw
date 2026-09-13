@@ -6125,6 +6125,69 @@ tests). `browser_journey` **NOT RUN** — P36's half.
 **Exclusions.** No real court, client, opponent, witness or provider is
 contacted, and nothing here can contact one.
 
+### P31 Start record — hearing, negotiation and witness work — 13 September 2026
+
+**Outcome sought.** BK-57-AC1 to AC5. Preparation an advocate can stand up
+with: current, sourced, and honest about what nobody has looked at.
+
+**Two Appendix E records had no implementation** — `WitnessPlan` and
+`ExpertInstruction`. They are the dangerous half of preparation, because both
+are produced by writing text about a person who has not spoken yet and the
+failure mode is not an error, it is a plausible paragraph. Neither type has a
+field an answer or a conclusion could be written into; that is the mechanism.
+`refuse_scripting` and `refuse_leading` are backstops over prose that arrived
+from a model, and `nm/core/proof.py` already argues why a text tripwire is
+never the mechanism.
+
+**The concession boundary is DERIVED and this packet declares no type for it.**
+`nm/domain/authority.py` owns `permits(actor, capacity, Act.CONCEDE)` and
+`nm/domain/commission.py` already keeps the instructing party and the deciding
+party in two fields. A `ConcessionLimit` here would be a second owner of the
+one question that must have exactly one answer — and the advocate would have
+read whichever answer was more permissive. AN UNRECORDED LIMIT IS NOT AN
+UNLIMITED ONE: where no ceiling is recorded, nothing is authorised.
+
+**Three things that never merge under time pressure** — verified material,
+uncertain analysis, proposed action. Three keys, and no function in
+`nm/core/hearing.py` concatenates them. The concession boundary travels with
+them, because a limit on another screen is a limit nobody reads at 10:29.
+
+**Unassessed is a value, not an absence.** Every section is P32's `Section`,
+so an empty adverse section that nobody examined renders differently from one
+that was examined and found empty. The second sentence is safe and the first
+is the most dangerous line in the pack.
+
+**A pack is a NODE, and that is the whole of BK-57-AC5.** `record_pack` puts it
+in P18's ledger on typed `Rest` edges, so every path that already invalidates
+reaches it. A `reopen` function here would be a second walk of one graph, and
+the day somebody adds an edge the advocate meets two screens disagreeing.
+
+**One dependency fix travelled with it.** `dependency.sync_inputs` is
+documented as observing *every input the file holds* and the commission was
+missing from that walk — so no derived value could ever be marked stale by an
+instruction change. The closure matches `(kind, id)` pairs and nothing ever
+recorded the pair: silence rather than a wrong number, which is the same
+wrong-index shape. `set_commission` now syncs the ledger when
+`material_changes` reports movement, and what is hashed is `Commission.MATERIAL`
+so the ledger and `material_changes` cannot drift.
+
+**Assumptions.** The drafting package is verified first — `assemble` refuses an
+unassessed one rather than marking the pack provisional, because provisional is
+what gets ignored at 10:29. Settlement limits are read from
+`Commission.constraints`; this packet adds no second store for them.
+
+**Acceptance → proof.** BK-57-AC5 integration **PASS**. BK-57-AC1, AC2, AC3 and
+AC4 need `model_eval` and `counsel_review`, which are **NOT RUN** and not
+locally closeable; their domain and served behaviour is proven by the tests
+named in the P31 Test record, which is evidence about the code and not about
+professional adequacy.
+
+**Rollback.** Mark affected packs stale and pause consequential support;
+preserve prior approved limits and direct to the accountable advocate.
+
+**Exclusions.** No witness, expert, opponent or court is contacted, and nothing
+here can contact one. No testimony is generated in any form.
+
 ### P44 acquisition-foundation Start record — 11 September 2026
 
 **Decision: BLOCKED on P19's scoped source-register output; contract ready.**

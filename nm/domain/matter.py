@@ -906,6 +906,11 @@ class Matter:
     abandoned, and it renders as such rather than as an epoch.
     """
 
+    hearing_packs: tuple[dict, ...] = ()
+    """P31 / BK-57's hearing and negotiation preparation. Empty means none was
+    assembled. A pack is work product: nothing in it has been filed, sent,
+    offered or conceded."""
+
     action_proposals: tuple[dict, ...] = ()
     """P30 / BK-56-AC4's consequential-action proposals. Empty means none was
     proposed. Nothing in this product dispatches one: CHOICE-09's connectors

@@ -72,6 +72,9 @@ REACHED_ELSEWHERE = {
     # P30's five.
     "create_action_proposal", "confirm_action", "execute_action",
     "record_action_outcome", "reconcile_action",
+    # P31's six.
+    "create_hearing_pack", "get_hearing_pack", "add_witness_plan",
+    "add_expert_instruction", "in_court_view", "check_concession",
     "health", "matters", "matter", "matter_summary", "turn", "index",
     # A1's three. `search` is absent from this list ONLY because the word
     # occurs elsewhere in the tree, which is worth noticing: this check finds

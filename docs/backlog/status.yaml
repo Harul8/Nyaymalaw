@@ -2092,10 +2092,10 @@ items:
   - F6
   - F7
   record: docs/BACKLOG.md#bk-57-phase-f-negotiation-witnesses-hearing-readiness-and-court
-  next_action: specify DOES / NEVER / PRODUCES / EVAL for F1, F5, F6, F7
+  next_action: close BK-57-AC1 to AC4, which need model_eval and counsel_review
   stage_records:
-    start: {result: READY, ref: docs/BACKLOG.md#bk-57-phase-f-negotiation-witnesses-hearing-readiness-and-court}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-57-phase-f-negotiation-witnesses-hearing-readiness-and-court}
+    start: {result: READY, ref: docs/BACKLOG.md#p31-start-record--hearing-negotiation-and-witness-work--13-september-2026}
+    build: {result: OPEN, ref: docs/BACKLOG.md#p31-start-record--hearing-negotiation-and-witness-work--13-september-2026}
     test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-57-phase-f-negotiation-witnesses-hearing-readiness-and-court}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-57-phase-f-negotiation-witnesses-hearing-readiness-and-court}
   acceptance:

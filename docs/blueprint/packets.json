@@ -2959,6 +2959,26 @@
         {
           "path": "web/app.js",
           "kind": "existing"
+        },
+        {
+          "path": "nm/domain/witness.py",
+          "kind": "planned"
+        },
+        {
+          "path": "nm/core/hearing.py",
+          "kind": "planned"
+        },
+        {
+          "path": "nm/domain/matter.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/dependency.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
         }
       ],
       "inputs": [

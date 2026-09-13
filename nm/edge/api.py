@@ -2309,6 +2309,321 @@ def reconcile_action(proposal_id: str, body: ReconcileBody,
             "resolved": done.state.is_settled}
 
 
+class HearingPackBody(BaseModel):
+    """Assemble preparation from a verified drafting package. BK-57-AC3. P31.
+
+    `readiness` is absent by design: P29 derives it and a caller that could
+    post it could declare a pack ready over an unverified package.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    package_id: NonBlank = Field(min_length=1)
+    hard_questions: list[dict] = Field(default_factory=list, max_length=40)
+    risk: list[str] = Field(default_factory=list, max_length=40)
+    adverse_assessed: bool = False
+    """WHETHER ANYBODY LOOKED at the countercase, which is not whether one was
+    found. An unexamined countercase and an empty one render differently and
+    only one of them is safe."""
+    risk_assessed: bool = False
+    expected_matter_version: int
+
+
+class WitnessBody(BaseModel):
+    """One witness plan. THERE IS NO FIELD FOR TESTIMONY.
+
+    `topics` are subjects to ask about. A caller cannot post an answer because
+    the record has nowhere to put one, and `refuse_scripting` reads the topics
+    as a backstop over prose that arrived from a model.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    witness: NonBlank = Field(min_length=1, max_length=200)
+    necessity: str = Field(default="", max_length=2000)
+    materiality: list[str] = Field(default_factory=list, max_length=60)
+    availability: Literal["confirmed", "expected", "doubtful", "not_assessed"] = "not_assessed"
+    interest: str = Field(default="", max_length=2000)
+    prior_statements: list[dict] = Field(default_factory=list, max_length=60)
+    contradictions: list[dict] = Field(default_factory=list, max_length=60)
+    proof_sequence: int = 0
+    summons: dict = Field(default_factory=dict)
+    interpreter: dict | None = None
+    safety: str = Field(default="", max_length=2000)
+    logistics_owner: str = Field(default="", max_length=200)
+    contact_log: list[dict] = Field(default_factory=list, max_length=100)
+    topics: list[str] = Field(default_factory=list, max_length=60)
+    credibility: dict = Field(default_factory=dict)
+    expected_matter_version: int
+
+
+class ExpertBody(BaseModel):
+    """One expert instruction. THERE IS NO FIELD FOR A CONCLUSION.
+
+    `report` is not settable here either: it arrives when a report arrives, and
+    a pack carrying an expert's conclusion before the report exists has
+    invented one.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    expert: NonBlank = Field(min_length=1, max_length=200)
+    discipline: str = Field(default="", max_length=200)
+    purpose: str = Field(default="", max_length=2000)
+    material_supplied: list[str] = Field(default_factory=list, max_length=100)
+    material_withheld: list[dict] = Field(default_factory=list, max_length=100)
+    assumptions: list[str] = Field(default_factory=list, max_length=60)
+    instruction_balanced: bool = False
+    independence_statement: str = Field(default="", max_length=2000)
+    methodology_tested: Literal["tested", "untested", "not_assessed"] = "not_assessed"
+    limitations: list[str] = Field(default_factory=list, max_length=60)
+    conflicts: dict = Field(default_factory=dict)
+    expected_matter_version: int
+
+
+class ConcessionCheckBody(BaseModel):
+    """ASK WHETHER A CONCESSION IS WITHIN AUTHORITY. It does not make one.
+
+    The act lives at `/api/matters/{id}/concede`, which refuses on the same
+    `permits` ruling this reads. Two answers to one question would be worse
+    than none, because the advocate would have relied on the permissive one.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    proposed: NonBlank = Field(min_length=1, max_length=2000)
+    acting_as: str = ""
+
+
+@app.post("/api/hearing-packs", dependencies=[CsrfProtected], status_code=201)
+def create_hearing_pack(body: HearingPackBody, advocate_id: Advocate) -> dict:
+    """Assemble preparation from a VERIFIED drafting package. BK-57-AC3.
+
+    The pack is registered in P18's dependency ledger as it is stored, so a
+    later order, correction or authority movement reaches it through the paths
+    that already exist. Nothing in P31 walks that graph itself.
+    """
+    import uuid as _uuid
+
+    from nm.core import dependency
+    from nm.core import drafting as dr
+    from nm.core import hearing as hp
+    from nm.domain.clock import today as _today
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    package = dr.find(dr.rows(m), body.package_id.strip())
+    if package is None:
+        raise HTTPException(status_code=404, detail="no such drafting package")
+    commission = Commission.from_stored(m.commission) or Commission()
+
+    try:
+        pack = hp.assemble(
+            pack_id=f"hp_{_uuid.uuid4().hex[:10]}", brief=package,
+            commission=commission, actor_id=advocate_id,
+            acting_as=_capacity_of(m, advocate_id, None),
+            hard_questions=tuple(body.hard_questions),
+            risk=tuple(body.risk),
+            adverse_assessed=body.adverse_assessed,
+            risk_assessed=body.risk_assessed)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail={
+            "code": "PRECONDITION_REQUIRED", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+    ledger = hp.record_pack(
+        dependency.Ledger.from_stored(m.dependencies), pack,
+        at=_today().isoformat(),
+        reason=f"assembled from drafting package {pack.package_id}")
+    m = replace(m,
+                hearing_packs=tuple(hp.as_dict(p) for p in
+                                    hp.put(hp.rows(m), pack)),
+                dependencies=ledger.as_dict(), version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "prepared", "matter_id": committed.id,
+            "version": committed.version,
+            "pack": hp.projection(pack, ledger)}
+
+
+@app.get("/api/hearing-packs/{pack_id}")
+def get_hearing_pack(pack_id: str, matter_id: str,
+                     advocate_id: Advocate) -> dict:
+    """Read the pack, WITH ITS CURRENCY. BK-57-AC5.
+
+    The ledger is passed so `stale` reads the recorded currency rather than
+    the read reporting a pack as current because nothing told it otherwise.
+    """
+    from nm.core import dependency
+    from nm.core import hearing as hp
+
+    m = _owned(matter_id, advocate_id)
+    pack = hp.find(hp.rows(m), pack_id)
+    if pack is None:
+        raise HTTPException(status_code=404, detail="no such hearing pack")
+    ledger = dependency.Ledger.from_stored(m.dependencies)
+    return {"matter_id": m.id, "version": m.version,
+            "pack": hp.projection(pack, ledger)}
+
+
+@app.post("/api/hearing-packs/{pack_id}/witnesses",
+          dependencies=[CsrfProtected], status_code=201)
+def add_witness_plan(pack_id: str, body: WitnessBody,
+                     advocate_id: Advocate) -> dict:
+    """Add a witness plan. REFUSED IF ANY TOPIC SUPPLIES AN ANSWER. BK-57-AC2.
+
+    A contaminated plan is not stored and then flagged: it is refused, because
+    a recollection is contaminated the moment the words reach the witness and
+    a warning beside a stored script does not un-say it.
+    """
+    from nm.core import hearing as hp
+    from nm.domain.witness import Availability, WitnessPlan, refuse_scripting
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    pack = hp.find(hp.rows(m), pack_id)
+    if pack is None:
+        raise HTTPException(status_code=404, detail="no such hearing pack")
+
+    scripted = refuse_scripting(tuple(body.topics))
+    if scripted:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST", "why": list(scripted),
+            "said": ("Preparation asks a witness what they recall. It does "
+                     "not tell them, and this plan was not saved."),
+            "committed": "not_committed"})
+
+    plan = WitnessPlan(
+        thread=pack.thread or "-", witness=body.witness.strip(),
+        necessity=body.necessity.strip(),
+        materiality=tuple(body.materiality),
+        availability=Availability(body.availability),
+        credibility=dict(body.credibility), interest=body.interest.strip(),
+        prior_statements=tuple(body.prior_statements),
+        contradictions=tuple(body.contradictions),
+        proof_sequence=body.proof_sequence, summons=dict(body.summons),
+        interpreter=body.interpreter, safety=body.safety.strip(),
+        logistics_owner=body.logistics_owner.strip(),
+        contact_log=tuple(body.contact_log), topics=tuple(body.topics))
+
+    updated = replace(pack, witnesses=pack.witnesses + (plan,),
+                       version=pack.version + 1)
+    m = replace(m, hearing_packs=tuple(
+        hp.as_dict(p) for p in hp.put(hp.rows(m), updated)),
+        version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "recorded", "matter_id": committed.id,
+            "version": committed.version,
+            "problems": list(plan.problems()),
+            "pack": hp.projection(updated)}
+
+
+@app.post("/api/hearing-packs/{pack_id}/experts",
+          dependencies=[CsrfProtected], status_code=201)
+def add_expert_instruction(pack_id: str, body: ExpertBody,
+                           advocate_id: Advocate) -> dict:
+    """Add an expert instruction. REFUSED IF IT SUPPLIES THE CONCLUSION."""
+    from nm.core import hearing as hp
+    from nm.domain.witness import (
+        ExpertInstruction,
+        Methodology,
+        refuse_leading,
+    )
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    pack = hp.find(hp.rows(m), pack_id)
+    if pack is None:
+        raise HTTPException(status_code=404, detail="no such hearing pack")
+
+    leading = refuse_leading((body.purpose,) + tuple(body.assumptions))
+    if leading:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST", "why": list(leading),
+            "said": ("An instruction states the question; the expert states "
+                     "the answer. This instruction was not saved."),
+            "committed": "not_committed"})
+
+    instruction = ExpertInstruction(
+        thread=pack.thread or "-", expert=body.expert.strip(),
+        discipline=body.discipline.strip(), purpose=body.purpose.strip(),
+        material_supplied=tuple(body.material_supplied),
+        material_withheld=tuple(body.material_withheld),
+        assumptions=tuple(body.assumptions),
+        instruction_balanced=body.instruction_balanced,
+        independence_statement=body.independence_statement.strip(),
+        methodology_tested=Methodology(body.methodology_tested),
+        limitations=tuple(body.limitations), conflicts=dict(body.conflicts),
+        report=None)
+
+    updated = replace(pack, experts=pack.experts + (instruction,),
+                       version=pack.version + 1)
+    m = replace(m, hearing_packs=tuple(
+        hp.as_dict(p) for p in hp.put(hp.rows(m), updated)),
+        version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "recorded", "matter_id": committed.id,
+            "version": committed.version,
+            "problems": list(instruction.problems()),
+            "pack": hp.projection(updated)}
+
+
+@app.get("/api/hearing-packs/{pack_id}/in-court")
+def in_court_view(pack_id: str, matter_id: str, advocate_id: Advocate) -> dict:
+    """THREE BUCKETS THAT NEVER MERGE, under time pressure. BK-57-AC4.
+
+    Verified material, uncertain analysis and proposed action come back under
+    three keys with the concession boundary beside them. A limit on another
+    screen is a limit nobody reads at 10:29.
+    """
+    from nm.core import drafting as dr
+    from nm.core import hearing as hp
+
+    m = _owned(matter_id, advocate_id)
+    pack = hp.find(hp.rows(m), pack_id)
+    if pack is None:
+        raise HTTPException(status_code=404, detail="no such hearing pack")
+    package = dr.find(dr.rows(m), pack.package_id)
+    if package is None:
+        raise HTTPException(status_code=409, detail={
+            "code": "PRECONDITION_REQUIRED",
+            "why": ("the drafting package this preparation rests on is no "
+                    "longer on the file"),
+            "committed": "not_committed"})
+    shown = hp.in_court(pack, package)
+    return {"matter_id": m.id, "version": m.version,
+            **{k: list(v) if isinstance(v, tuple) else v
+               for k, v in shown.items()}}
+
+
+@app.post("/api/matters/{matter_id}/concession-check",
+          dependencies=[CsrfProtected])
+def check_concession(matter_id: str, body: ConcessionCheckBody,
+                     advocate_id: Advocate) -> dict:
+    """Is this concession within authority? BK-57-AC1. IT MAKES NONE.
+
+    Nothing is written and nothing is given up. The ruling comes from the same
+    `permits` the `/concede` route calls, so preparation and the act cannot
+    disagree.
+    """
+    from nm.core import hearing as hp
+
+    m = _owned(matter_id, advocate_id)
+    commission = Commission.from_stored(m.commission) or Commission()
+    acting_as = _capacity_of(m, advocate_id, body.acting_as or None)
+    why = hp.refuse_concession(commission, actor_id=advocate_id,
+                               acting_as=acting_as,
+                               proposed=body.proposed.strip())
+    boundary = hp.concession_boundary(commission, advocate_id, acting_as)
+    return {"matter_id": m.id, "version": m.version,
+            "within_authority": not why, "why": why,
+            "boundary": boundary.render(),
+            "said": ("This is a check. No concession has been made and "
+                     "nothing was recorded on the file.")}
+
+
 class Correction(BaseModel):
     """One correction to one entry on the case file. BK-65-AC1, P18.
 
@@ -2578,6 +2893,24 @@ def set_commission(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
                 "fields": list(moved), "by": advocate_id,
                 "at": proposed.recorded_at, "prior_scope_answer": prior_answer,
                 "why": "material instructions changed; scope must be confirmed again"}))
+    # A MATERIAL CHANGE REACHES DERIVED WORK, NOT ONLY THE SCOPE SCREEN.
+    # BK-57-AC5.
+    #
+    # `sync_inputs` observes every input the file holds and lets `observe`
+    # decide what moved; the commission is one of them. Hearing preparation,
+    # advice and anything else resting on the instruction is invalidated by
+    # P18's own closure -- the past is kept as a `Revision` and nothing outside
+    # the closure is touched.
+    reopened_nodes: tuple[str, ...] = ()
+    if moved:
+        from nm.core import dependency as _dep
+
+        ledger, reopened_nodes, _edges = _dep.sync_inputs(
+            _dep.Ledger.from_stored(updated.dependencies), updated,
+            reason=(f"the instruction changed ({', '.join(moved)}) and this "
+                    f"rests on it"),
+            at=proposed.recorded_at)
+        updated = dataclasses.replace(updated, dependencies=ledger.as_dict())
     try:
         application().store.commit(updated, expected_version=m.version)
     except StaleWrite as moved_underneath:
@@ -2591,6 +2924,7 @@ def set_commission(matter_id: str, body: dict, advocate_id: Advocate) -> dict:
         # WHAT THIS REOPENED. Empty is a real and common answer.
         "material_changes": list(moved),
         "reopened": bool(moved),
+        "reopened_work": list(reopened_nodes),
         "unknowns": list(proposed.unknowns()),
     }
 
