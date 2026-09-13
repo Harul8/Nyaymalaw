@@ -42,6 +42,7 @@ from dataclasses import dataclass
 
 from nm.domain.matter import CAUSE_MEANS, CauseOfAction
 from nm.domain.quotable import Quotable
+from nm.domain.text import snippet
 from nm.domain.traceability import implements
 
 CAUSE_VALUES = tuple(c.value for c in CauseOfAction
@@ -171,7 +172,7 @@ def interpret(quotable: Quotable, data: dict) -> ReadCause:
 
     raw = (data.get("cause") or "cannot_tell").strip().lower()
     quoted = (data.get("quoted") or "").strip()
-    why = " ".join((data.get("why") or "").split())[:200]
+    why = snippet(data.get("why"), 200)
 
     if raw == "cannot_tell":
         return ReadCause(why=why)

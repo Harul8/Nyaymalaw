@@ -263,6 +263,26 @@ GATES: tuple[Gate, ...] = (
         built=False,
     ),
     Gate(
+        id="G-PREMISE",
+        condition="A limitation is about to be computed: are the applicable "
+                  "law, the accrual rule and the forum each ESTABLISHED, or "
+                  "did the product infer one?",
+        states=("established", "conditional", "unestablished"),
+        response=Response.DISCLOSE,
+        scope=Scope.STEP,
+        persistence=Persistence.TURN,
+        recovery=Recovery.ADVOCATE,
+        visible="BK-65-AC2: correct arithmetic cannot establish which "
+                "provision governs, what starts the period, or which forum "
+                "binds. Where a premise is INFERRED the date is shown "
+                "CONDITIONAL with its alternatives and is never entered as a "
+                "deadline; where one is UNESTABLISHED nothing is computed. A "
+                "premise the advocate STATES outranks the inference and is "
+                "recorded with who stated it and when.",
+        feature="D1",
+        built=True,
+    ),
+    Gate(
         id="G-THREAD",
         condition="An account cannot be bound to exactly one thread, or two "
                   "threads look like one without a decisive identifier.",
@@ -476,6 +496,32 @@ GATES: tuple[Gate, ...] = (
         built=True,
     ),
     Gate(
+        id="G-CURRENCY",
+        condition="A recorded conclusion rests on an input that has since "
+                  "moved -- a corrected or withdrawn fact, a republished "
+                  "provision, or another conclusion that itself moved -- and "
+                  "has not yet been recomputed.",
+        states=("current", "stale", "not_assessed"),
+        response=Response.DISCLOSE,
+        scope=Scope.STEP,
+        # ON THE MATTER, because a currency held in a process is a currency
+        # a restart converts to `current`. The ledger persists with the file,
+        # and the cover reads it before any turn runs.
+        persistence=Persistence.STICKY,
+        recovery=Recovery.SYSTEM,
+        visible="BK-65-AC1: changing a material predicate invalidates every "
+                "dependent conclusion and NO unrelated one, keeping the prior "
+                "state and the reason. G-CASCADE announces what MOVED between "
+                "two turns; this is what is STILL NOT CURRENT -- between the "
+                "correction and the recomputation, after a restart, and two "
+                "hops away where a deadline rests on a limitation that rests "
+                "on a date. A stale value is shown labelled stale, never "
+                "counted as the nearest live deadline, and a node whose "
+                "inputs nobody recorded is not_assessed rather than current.",
+        feature="A3",
+        built=True,
+    ),
+    Gate(
         id="G-GAP",
         condition="Something is missing that BLOCKS a named action, ranked "
                   "across the whole file: blocking gates, then deadline "
@@ -642,6 +688,35 @@ GATES: tuple[Gate, ...] = (
                 "computed position and a question, which is the half that "
                 "was verified.",
         feature="D3",
+        built=True,
+    ),
+    Gate(
+        id="G-REMEDY",
+        condition="The relief that would serve the objective is unavailable, "
+                  "hollow, late or unenforceable, or its cost exceeds what it "
+                  "can recover -- read against the objective with the merits "
+                  "held constant.",
+        # THREE STATES, AND THE THIRD CARRIES THE WORK. `no_useful_relief`
+        # covers both an established defeat and an inferred, unconfirmed
+        # shortfall; the disclosure names which. `not_assessed` is a value:
+        # a file nobody read for relief is not one with serviceable relief.
+        states=("serveable", "no_useful_relief", "not_assessed"),
+        response=Response.DISCLOSE,
+        scope=Scope.THREAD,
+        persistence=Persistence.TURN,
+        recovery=Recovery.ADVOCATE,
+        visible="BK-70. A LEGALLY ARGUABLE CLAIM CAN BE WORTH NOTHING: the "
+                "debtor holds no attachable assets, the only order the forum "
+                "can give arrives too late, the decree is sound and there is no "
+                "route to execute it, the suit costs more than it can recover. "
+                "The enforceability basis is DISCLOSED at the point of the "
+                "recommendation, so the advice rests on it rather than on the "
+                "merits alone -- and where relief is defeated the step may not "
+                "pursue it as though it will deliver, which is G-CONSISTENT "
+                "reading the relief claim this gate discloses. PROPORTIONALITY "
+                "IS STATED ALONGSIDE a legally available route, never used to "
+                "withhold it (E3's NEVER).",
+        feature="E2",
         built=True,
     ),
     Gate(

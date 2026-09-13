@@ -314,13 +314,13 @@ def test_restricted_infrastructure_is_reachable_only_from_concrete_io_layers(
 
 
 def test_cleanup_failure_does_not_replace_the_publication_outcome(tmp_path, monkeypatch):
-    from nm.infrastructure.cleanup import discard, discard_tree
+    from nm.domain.names import discard, discard_tree
 
     def refused(*_args, **_kwargs):
         raise PermissionError("synthetic held-open file")
 
     monkeypatch.setattr(Path, "unlink", refused)
-    monkeypatch.setattr("nm.infrastructure.cleanup.shutil.rmtree", refused)
+    monkeypatch.setattr("nm.domain.names.shutil.rmtree", refused)
     assert discard(tmp_path / "file") is False
     assert discard_tree(tmp_path / "tree") is False
 
@@ -331,7 +331,7 @@ def test_cleanup_failure_does_not_replace_the_publication_outcome(tmp_path, monk
 def test_tree_cleanup_checks_root_after_a_nested_file_disappears(
     tmp_path, monkeypatch, root_state, expected,
 ):
-    from nm.infrastructure.cleanup import discard_tree
+    from nm.domain.names import discard_tree
 
     root = tmp_path / "temporary-tree"
     if root_state != "absent":
@@ -340,7 +340,7 @@ def test_tree_cleanup_checks_root_after_a_nested_file_disappears(
     def nested_missing(_path):
         raise FileNotFoundError("synthetic concurrently removed child")
 
-    monkeypatch.setattr("nm.infrastructure.cleanup.shutil.rmtree", nested_missing)
+    monkeypatch.setattr("nm.domain.names.shutil.rmtree", nested_missing)
     if root_state == "unreadable":
         original = Path.lstat
 

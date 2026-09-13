@@ -108,6 +108,7 @@ function addTable(name, title, note, headers, rows, widths, freeze = true) {
   return sheet;
 }
 
+const executionProblems = data._execution_problems || [];
 const readme = [
   ['Purpose','Build the intended advocate journey and distinguish it from what is implemented, currently proved and authorised for release.'],
   ['How to read','Start with Overview, Modules and Execution Packets. Read that packet in Packet Guide and Acceptance, then the affected Journey Steps and professional standards. Use only the applicable Start / Build / Test / Sign-off guide.'],
@@ -116,7 +117,13 @@ const readme = [
   ['Intended behaviour','PRD and journey/professional contracts state the target. A populated contract is a specification, not an implementation or a passing browser test.'],
   ['Implemented','The implementation column is copied exactly from status.yaml. Complete means the implementation claim exists; it does not establish conformance or permission to ship.'],
   ['Currently proved','Effective evidence and derived done come from the existing backlog functions bound to the current execution artifact. Missing, failing or stale proof remains unproved. Legacy closures are identified separately.'],
-  ['Execution evidence at snapshot',(data._execution_problems||[]).length?data._execution_problems:'No execution-artifact validation problem reported by the existing binder. This does not replace counsel, browser or deployment evidence.'],
+  ['Execution evidence at snapshot',executionProblems.length
+    ? `${executionProblems.length} current execution-evidence issue(s) are listed immediately below. Each remains unproved; the workbook does not collapse them into one clipped cell or a passing summary.`
+    : 'No execution-artifact validation problem reported by the existing binder. This does not replace counsel, browser or deployment evidence.'],
+  ...executionProblems.map((problem,index)=>[
+    `Execution evidence issue ${index+1}`,
+    text(problem),
+  ]),
   ['Released','This workbook records no deployment authorisation. Item readiness is not a release decision. Use a separately recorded release-profile decision with its exact population, environment, owners and current evidence.'],
   ['Wave and release controls','BK-80 checks exact release-profile criterion membership and current bound evidence. A populated profile, complete obligation report or green registry lint still cannot approve a release.'],
   ['Core workflow','Take the Brief is an interactive loop: hear or receive material, retrieve what is permitted, assess, ask the next useful question, preserve the response, and reassess. Work the File and Advise return to the affected earlier state when facts, law, scope or readiness change.'],

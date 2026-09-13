@@ -48,7 +48,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import refuses_blank_text, snippet
 
 ACCRUAL_SCHEMA: dict = {
     "x-nm-read": "accrual",
@@ -159,8 +159,8 @@ def interpret(data: dict, offered: frozenset[str]) -> Accrual:
                        limb="not read", why="the accrual read returned nothing")
 
     fact_id = (data.get("fact_id") or "").strip()
-    limb = " ".join((data.get("limb") or "").split())[:160]
-    why = " ".join((data.get("why") or "").split())[:200]
+    limb = snippet(data.get("limb"), 160)
+    why = snippet(data.get("why"), 200)
 
     if not fact_id:
         # THE ORDINARY REFUSAL. The chronology does not hold the trigger.

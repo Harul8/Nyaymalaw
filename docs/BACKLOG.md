@@ -274,8 +274,8 @@ Gap status below is computed from the linked BK/J rows. It is never authored in 
 | GC-03 | W2 | W2 | W7 | IN_PROGRESS | BK-54, BK-67 |
 | GC-04 | W0 | W2 | W7 | IN_PROGRESS | BK-69, BK-54, BK-79, BK-42 |
 | GC-05 | W2 | W3 | W7 | IN_PROGRESS | BK-64, BK-67 |
-| GC-06 | W3 | W3 | W7 | PLANNED | BK-65, BK-67 |
-| GC-07 | W3 | W4 | W7 | PLANNED | BK-70, BK-55, BK-67 |
+| GC-06 | W3 | W3 | W7 | IN_PROGRESS | BK-65, BK-67 |
+| GC-07 | W3 | W4 | W7 | IN_PROGRESS | BK-70, BK-55, BK-67 |
 | GC-08 | W4 | W4 | W7 | IN_PROGRESS | BK-37, BK-55, BK-67 |
 | GC-09 | W4 | W5 | W7 | PLANNED | BK-55, BK-57, BK-67 |
 | GC-10 | W2 | W4 | W7 | IN_PROGRESS | BK-66, BK-37, BK-41, BK-67 |
@@ -284,7 +284,7 @@ Gap status below is computed from the linked BK/J rows. It is never authored in 
 | GC-13 | W2 | W6 | W7 | IN_PROGRESS | BK-68, BK-32, BK-37, BK-39, BK-56, BK-59, BK-42 |
 | GC-14 | W0 | W2 | W7 | IN_PROGRESS | BK-69, BK-54, BK-79, BK-42 |
 
-Derived gap state: IN_PROGRESS 11, PLANNED 3
+Derived gap state: IN_PROGRESS 13, PLANNED 1
 
 ### Open P0 — what is unsafe
 
@@ -292,7 +292,7 @@ Derived gap state: IN_PROGRESS 11, PLANNED 3
 - **BK-31** [A] account access, recovery and workspace identity — *in_progress* · complete and verify D-041 email/password personal registration, immediate owned workspace/new/reopen without professional approval, neutral public authentication and separate attributable expiring approval at protected acts. Preserve the optional invited identity and recovery/session populations. Current execution belongs to email-registration.json; full recovery/browser acceptance remains open, confidential authentication is BK-86 and deployed assurance remains BK-42. No current-source PASS is inferred from historical conformance evidence.
 - **BK-33** [A] recognisable matter cover, truthful board and real reopen — *in_progress* · render passed_deadlines, which the projection already emits
 - **BK-34** [B] front-door legal and professional screens before substance — *in_progress* · prove ordinary-screen admission and quarantine as a closeable foundation; the integrated emergency path is BK-78 after BK-53, and checked-registry scope remains explicit
-- **BK-35** [D] cause-specific accrual and answer-consistency gate — *in_progress* · refuse to run the period from a single dated fact that does not satisfy the curated trigger; emit the statutory limb
+- **BK-35** [D] cause-specific accrual and answer-consistency gate — *in_progress* · P22 added reviewable legal premises and the conditional state on 12 September 2026 -- an inferred accrual is conditional not a deadline, and a stated premise makes it definitive; AC1's model_eval and counsel_review remain NOT RUN
 - **BK-36** [C] durable, idempotent and recoverable turns — *in_progress* · idempotency must cover the OPENING turn, where matter_id is null and _load_or_create mints a new matter
 - **BK-40** [I] session expiry and confirmed logout — *in_progress* · clearPrivileged must clear state.intake and the intake form
 - **BK-43** [A/E] the overflow rule that switches off its own check — *verifying* · run the journey suite to confirm the width phase can now fail
@@ -301,10 +301,10 @@ Derived gap state: IN_PROGRESS 11, PLANNED 3
 - **BK-62** [B/C/E/F/G] commission and task authority record — *in_progress* · Preserve the existing versioned commission, distinct instructing/deciding parties, scope/objective/forum/deadline/work-product fields, history and served controls. Material instruction changes already reopen recorded scope; complete current commission and authority checks for every substantive task through the actual turn consumer. A stored commission and faithful cover do not establish complete readiness or confer authority. Retain the full missing-instruction, changed-version, integration and qualified-review population before acceptance; the current bounded foundation and remaining scope are reconciled in a3-conformance-matter-packets.json.
 - **BK-63** [A/B/C/D/E/F/G/I] professional role and authority control — *in_progress* · Preserve the central professional-role policy, trusted expiring/revocable commission-version bindings, served internal-decision receipts and attributable refusal records. A named party or authored commission grants no operational power. Complete the trusted provisioning consumer and the same current role/scope check across substantive tasks, workers and applicable external-action consumers before claiming the full contract. Prove authorised positive paths and missing, stale, revoked and out-of-scope refusal with the registered professional review; current engineering does not authorise an external act or close acceptance.
 - **BK-64** [C/D/E] typed proposition and evidence model — *in_progress* · Preserve the canonical Fact-based proposition view, typed certainty/read quality, human-confirmation state, contradictions, supersession and source metadata already persisted and served. Complete preserved attributable proposition-version history, version-conditional correction commands and authorised exact source-version/locator resolution; a version counter or recorded page field alone does not supply those consumers. Prove that every material conclusion uses the exact proposition/source and retains incompatible accounts. Extraction/admission dependencies keep their existing owners. This partial substrate does not implement C2's full interactive briefing feature, semantic dispute identity or independent admissibility review.
-- **BK-65** [D/E] legal dependency graph and selective invalidation — *planned* · model predicates, issues, rules, evidence, remedies and conclusions as a versioned dependency graph
+- **BK-65** [D/E] legal dependency graph and selective invalidation — *in_progress* · P18 wired the currency ledger (AC1) and P22 wired the legal-premise gate (AC2) on 12 September 2026; AC2's domain half passes and its model_eval and counsel_review remain NOT RUN. The cumulative gate on the final integrated candidate derives completion
 - **BK-67** [C/D/E/F] expert-advocate evaluation gate — *planned* · turn PA-01 to PA-20 into representative matter rubrics with named reviewers, thresholds, reservations and regression policy
 - **BK-69** [C/G/I] multimodal privacy and processing boundary — *in_progress* · verify and sign off only the W0 admission foundation; BK-79 owns W2 end-to-end attribution and deletion after BK-54 intake
-- **BK-70** [D/E/F] remedy and enforceability model — *planned* · model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
+- **BK-70** [D/E/F] remedy and enforceability model — *in_progress* · P23 modelled relief as first-class file objects (availability, value, timing, enforceability, proportionality) with attributed basis on 12 September 2026; the recommendation changes when relief is unavailable/hollow/late/unenforceable and proportionality is stated alongside (E3's NEVER). AC1 model_eval and counsel_review remain NOT RUN
 - **BK-78** [B/C] emergency admission integration — *in_progress* · Preserve the served actor/basis/outstanding-screen declaration, original keyed expiry, explicit revocation and exact lost-acknowledgement replay/refusal. The protective-only pre-model path and manual persisted urgency/resolution controls now exist without clearing merits gates, verifying reported danger or performing actions. Start READY applies to this already authorised bounded foundation; the former BLOCKED start remains the historical full-target prerequisite position, and BK-34/BK-53 dependencies are unchanged. Complete automatic every-turn triage, applicability/calibration, full capacity/commission/authority integration and qualified review before whole-target acceptance. The ten named urgency classes versus eleven-class counterexample discrepancy remains explicit. Bind actual final browser/integration evidence separately; no result is promoted here.
 - **BK-79** [C/G/I] multimodal attribution and deletion integration — *planned* · design and prove the scoped integration without relaxing the foundation or claiming unrun evidence
 - **BK-80** [A/B/C/D/E/F/G/H/I] evidence integrity and release claim enforcement — *verifying* · P01 and P03 control mechanisms are implemented; Test remains open and Sign-off is not run on the current candidate. Reconcile current full evidence, provision operator-owned trust before professional evidence consumption, and retain later dispatch integration obligations.
@@ -447,6 +447,8 @@ NOT_ASSESSED in the evidence, never as a pass or a silent skip.
 disposable schema removes it entirely.
 
 ## BK-84 — versioned Indian legal corpus publication and coverage governance
+
+**P21 (12 September 2026):** the research workflow that carries this row's criteria is recorded under *P21 Start record* and *P21 Test record* beside BK-65; the evidence rows in `status.yaml` bind to the tests named there.
 
 **Reason.** India-only operation does not imply nationwide verified legal coverage. Source publication, temporal applicability and coverage need a maintained foundation distinct from a search screen.
 
@@ -907,6 +909,84 @@ Rollback disables the new adaptive route while preserving source, audit and
 accepted work versions. Start is blocked on named prerequisites; remaining
 stages are NOT RUN. Any enabled release scope must explicitly account for BK-91.
 
+### P46 Start record — adaptive investigation — 12 September 2026
+
+**Outcome sought.** BK-91-AC1 (the lead chooses and revises evidence-driven next
+actions within the mandate, with no fixed cognitive sequence and no self-expanded
+authority, reaching useful completion or explicit escalation) and BK-91-AC2
+(claims keep provenance and epistemic status through adaptive reasoning;
+hypotheses are labelled; a supported premise is rechecked on source/instruction/
+permission change before reliance). AC3 (served briefing) is P24; AC4 (counsel
+comparison) is P35.
+
+**Prerequisites verified.** P47 (`nm/core/delegation.py` admission + acceptance,
+built this session), P18 (currency/version invalidation), P21 (`SupportState` --
+semantic support is assessed, never proved by citation presence), P22 (the
+premise discipline: an inferred premise is a question, not a conclusion), P23
+(the relief position that reasoning feeds). The governing contract is
+`docs/blueprint/autonomy.json` (AUTO-01, AUTO-02).
+
+**Owners / boundary.** New: `nm/domain/lead.py` (EpistemicStatus, Action, Claim,
+StepProposal, Plan) and `nm/core/lead.py` (classify, assess_support, infer,
+observe_source_change, recheck, propose, readiness, wants_specialist, dispatch,
+integrate_result). It reuses P21's SupportState concept, P18's version
+invalidation and P47's admission/acceptance -- `dispatch` and `integrate_result`
+are P47's PRODUCTION callers, so the delegation mechanism is consumed here.
+
+**Mechanism.** A claim is one of six epistemic statuses and SUPPORTED is earned
+only by an assessment against a CURRENT source version -- `classify` yields
+ALLEGATION or EXTRACTED and never SUPPORTED, so a source existing, quoted or
+located cannot become a conclusion. `propose` reads the state (open needs ->
+retrieve/ask; unassessed extract -> assess; dispute -> challenge the claim
+adverse to the side we act for; all supported -> draft/stop) rather than walking
+a fixed sequence, and changing the represented side flips the adverse claim.
+`observe_source_change` reverts every claim resting on a moved source from
+SUPPORTED back to EXTRACTED, raises a recheck need, and un-completes the plan;
+`readiness` derives completion (open / blocked / escalate / useful) rather than
+trusting a flag. Delegation goes only through `dispatch`/`integrate_result`,
+which admit and accept through P47 -- a forged, stale, revoked or cancelled
+result changes nothing, and a proposal to expand authority is refused.
+
+**Missing / not claimed.** `model_eval` (required by AC1/AC2) is not run. There
+is no served surface in P46 itself (autonomy: no agent API implied); the served
+briefing and its browser proof are P24, which is this runtime's production
+consumer and is built next -- so the whole-gate reached-from-production check for
+`lead` and `delegation` is satisfied once P24 lands.
+
+**Acceptance → test.** `tests/test_the_lead_adapts_to_evidence.py` -- AC1:
+`test_the_next_action_is_driven_by_state_not_a_fixed_sequence`,
+`test_changing_the_side_changes_the_assessment_not_the_facts`,
+`test_a_frozen_plan_cannot_report_completion_after_a_premise_moves`,
+`test_delegation_is_used_only_when_it_adds_value`; AC2:
+`test_a_source_is_never_supported_merely_by_existing`,
+`test_support_is_not_granted_on_a_superseded_version`,
+`test_a_change_invalidates_the_claims_that_rest_on_it_only`,
+`test_recheck_reverts_a_stale_supported_claim_before_reliance`; integration with
+P47: `test_the_lead_delegates_and_folds_candidates_through_the_p47_path`.
+
+**Rollback.** `lead.py` and `domain/lead.py` are additive and consumed by P24;
+reverting them removes the adaptive lead and leaves the existing turn engine
+untouched, with nothing persisted lost.
+
+### P46 Test record — 12 September 2026
+
+**Outcome: BUILT and VERIFIED for BK-91-AC1 and BK-91-AC2 (domain, integration
+and adversarial).** `model_eval` is NOT RUN; AC3 (P24) and AC4 (P35) are other
+packets.
+
+| Criterion | Required | Result |
+|---|---|---|
+| BK-91-AC1 | domain, integration, adversarial, model_eval | domain/integration/adversarial PASS; model_eval **NOT RUN** |
+| BK-91-AC2 | domain, integration, adversarial, model_eval | domain/integration/adversarial PASS; model_eval **NOT RUN** |
+
+**Populations.** `tests/test_the_lead_adapts_to_evidence.py` 14 passed.
+`test_three_states.py` passes with `Action` declared a closed vocabulary (the
+objective-met escape lives on `lead.Readiness`) and `EpistemicStatus` carrying
+UNKNOWN as its escape. `layercheck` OK; `ruff` clean on the new modules. The
+EVAL-031 transformations are driven: consistent party rename and paraphrase do
+not change the classification; changing the represented side changes the assessed
+adverse claim.
+
 ## BK-92 — scoped specialist execution and verified artifacts
 
 Opened 10 September 2026. **Planned, not implemented or tested.** W3 foundation;
@@ -931,6 +1011,85 @@ applicable contracts pass; narrower demonstrations need a declared scope and
 recorded authority. Disabling a route must retain accepted artifacts and audit
 history. Start is blocked on named prerequisites; other stages are NOT RUN.
 No child failure, omitted population or model agreement can count as clean proof.
+
+### P47 Start record — bounded specialist execution — 12 September 2026
+
+**Outcome sought.** BK-92-AC1 (a non-expanding mandate recorded on every
+delegated task, with bounded depth/concurrency/time/shared cost; ordinary work
+uses no specialist) and BK-92-AC2 (one version-checked acceptance path; source
+instructions confer no authority; conflicts contested; failed/missing work not
+clean; cancellation/revocation/retries/restart cannot publish stale or duplicate
+effects). AC3 (drafter) and AC4 (family decision) are other packets and out of
+scope here.
+
+**Prerequisites verified.** P06 (`nm/domain/egress.py` processor/egress policy —
+`refuse` fails closed on an unapproved processor), P11 (`nm/domain/operation.py`
+durable idempotent operations with the `UNKNOWN` reconcile state), P13
+(`nm/domain/commission.py`/`engagement.py` authored versioned commission with
+separate instructing/deciding parties), P17 (`nm/domain/matter.py` +
+`nm/domain/proof.py` the attributed file and canonical proposition) are present
+with real consumers. The governing design contract is
+`docs/blueprint/autonomy.json` (`proof_level: design_contract`).
+
+**Owners / boundary.** New: `nm/domain/delegation.py` (the task/result/mandate
+types) and `nm/core/delegation.py` (the admission boundary, the shared atomic
+`Ledger`, and the one acceptance path). It EXTENDS rather than duplicates: the
+mandate's version check mirrors P18's correction versioning; idempotency mirrors
+`Operation`; the canonical writer is the existing version-checked store commit;
+the processor rule is the egress subset. No competing orchestration stack and no
+second writer.
+
+**Mechanism.** `Mandate.expansions_over` reports every way a child mandate
+exceeds a ceiling, by name; `admit` refuses any expansion over parent OR server,
+any depth/concurrency over the profile (2 concurrent, depth 1, specialists may
+not delegate), and any over-cap budget reservation on the ONE shared `Ledger`
+(atomic across dimensions; spend accumulates across children and retries and is
+never reset per child). `accept` is the sole path: it refuses forged (no
+producer / mismatched task id), stale (moved mandate version), revoked/cancelled
+(epoch fencing), and mandate-expanding proposals (a source or model grants no
+tool/processor/matter); it returns findings as CANDIDATES, keeps conflicting
+candidates CONTESTED, marks any non-COMPLETED status visibly INCOMPLETE, and
+returns the prior outcome on a duplicate/retry/restart without a second effect.
+
+**Missing / not claimed.** No served agent API (autonomy.json: none implied;
+P47 commands are empty), so no browser surface — the served integration is the
+adaptive lead (P46), which is this mechanism's production consumer and is built
+next. `model_eval`/`counsel_review`/`production_measure` (AC3/AC4) are not run.
+
+**Acceptance → test.** `tests/test_bounded_specialist_delegation.py` — AC1:
+`test_a_delegated_task_records_the_whole_non_expanding_mandate`,
+`test_the_shared_budget_is_atomic_and_not_reset_per_child`,
+`test_concurrency_and_depth_are_capped_by_the_profile`,
+`test_ordinary_work_uses_no_specialist`; AC2:
+`test_findings_are_candidates_through_one_version_checked_path` and the EVAL-032
+fault set (forged, stale, cancelled/revoked, duplicate/restart, prompt-injection
+delta, contested, failed-not-clean); integration:
+`test_a_parent_orchestrates_two_specialists_on_one_shared_ledger`.
+
+**Rollback.** Both modules are additive and consumed only by P46; reverting them
+removes delegation entirely and leaves the lead doing direct work (ordinary work
+uses no specialist), with nothing persisted lost.
+
+### P47 Test record — 12 September 2026
+
+**Outcome: BUILT and VERIFIED for BK-92-AC1 and BK-92-AC2 (domain, integration
+and adversarial).** AC3/AC4 are other packets; nothing here runs model_eval,
+counsel_review or production_measure.
+
+| Criterion | Required | Result |
+|---|---|---|
+| BK-92-AC1 | domain_test, integration_test, adversarial_test | all PASS (`tests/test_bounded_specialist_delegation.py`) |
+| BK-92-AC2 | domain_test, integration_test, adversarial_test | all PASS (same file; EVAL-032 fault list driven) |
+
+**Populations.** `tests/test_bounded_specialist_delegation.py` 14 passed.
+`test_three_states.py` passes with `Role` declared a closed vocabulary (the
+delegated-attempt escape lives on `ResultStatus.NOT_ESTABLISHED`). `layercheck`
+OK; `ruff` clean on the new modules.
+
+**Reached-from-production note.** `admit`/`accept` have no production caller in
+P47 alone; the adaptive lead (P46) wires them, so the whole-gate
+reached-from-production check is satisfied once P46 lands — recorded here so it
+is a known sequence dependency and not a surprise at the gate.
 
 ## BK-89 — final pre-build review corrections
 
@@ -1956,6 +2115,8 @@ questions are not restored with the conversation.
 
 #### BK-38 — search-to-authority-to-matter research workflow — **PARTLY DONE · P1**
 
+**P21 (12 September 2026):** the research workflow that carries this row's criteria is recorded under *P21 Start record* and *P21 Test record* beside BK-65; the evidence rows in `status.yaml` bind to the tests named there.
+
 **Phase:** legal research and deliberate use of authority.
 
 **Good now:** the corpus search is fast, returns relevant paragraph-level hits,
@@ -2097,6 +2258,8 @@ sweep enumerates the suite and fails on an imperative xfail, so the fourth
 cannot be added.
 
 #### BK-45 — the search phase cannot fail — **OPEN · P1 · Phase A**
+
+**P21 (12 September 2026):** the research workflow that carries this row's criteria is recorded under *P21 Start record* and *P21 Test record* beside BK-65; the evidence rows in `status.yaml` bind to the tests named there.
 Opened 9 September 2026, verified in source.
 
 `tests/test_the_journey_login_to_logout.py:507` waits for
@@ -2679,6 +2842,81 @@ recommendation currently rests on an objective nobody stated.
 **C6 document intake and extraction** is the one that changes the corpus of a
 matter rather than the corpus of the law. It is also where the document-fact
 tripwire already guards a path that has no producer.
+
+### P24 Start record — adaptive interactive briefing — 12 September 2026
+
+**Outcome sought.** BK-54-AC3 (briefing cannot claim completion while a
+controlling gap remains, re-ask an answered question, or loop on unavailable
+material without a stop/resume decision), BK-91-AC3 (the served briefing chooses
+useful next moves and accepts unavailable material), and BK-54-AC2 (the
+interactive loop; model_eval/counsel_review only, not run here). And the task's
+named obligation: **close C1's fifth NEVER clause and remove TRACE-C1.**
+
+**Prerequisites verified.** P14 (the gap queue and question policy,
+`nm/core/gaps.py`), P17 (the attributed file), P21/P22 (source/premise
+grounding), P46 (the adaptive lead, built this session -- its production
+consumer is this briefing).
+
+**Owners / boundary.** New: `nm/core/briefing.py` (readiness, refuse_completion,
+live_gaps, next_step, block). Extended: `nm/domain/matter.py`
+(`Matter.paused_needs` + `pause_need`/`resume_need`/`paused_need_texts`),
+`nm/core/turn.py` (`_ask` drops paused needs; the served turn carries the
+briefing block), `nm/edge/api.py` (the `briefing/unavailable` and
+`briefing/resume` routes; the `_Released` briefing field),
+`nm/edge/projections.py` (briefing on the cover), `web/index.html` + `web/app.js`
+(the case-file briefing pane and the mark-unavailable/resume controls).
+
+**Mechanism.** Readiness is derived from the OPEN GAPS minus the paused needs --
+never from a turn finishing -- so `refuse_completion` returns a reason whenever a
+gap is open (turn completion is not intake completion). A need the advocate
+cannot obtain is PAUSED on the matter with a resume trigger: `_ask` drops it (not
+re-asked), readiness reports `blocked` with the decision owed, and it is not
+recorded answered (an unavailable answer is not promoted to a settled one). The
+next briefing move is the adaptive lead's (`briefing.next_step` -> `lead.propose`)
+from the live gaps, so it is not a fixed questionnaire. The pause survives on the
+cover and through restart.
+
+**C1 NEVER[4], closed.** The clause -- *never equate completing a conversation
+turn with completing intake ... or loop indefinitely on unavailable material* --
+had no `@refuses` witness (TRACE-C1). It is now built and witnessed by
+`test_a_completed_turn_does_not_complete_intake_and_unavailable_is_not_looped`
+with `@refuses("C1", 4)`; trace no longer reports it, so **TRACE-C1 was removed
+from `docs/backlog/known_failures.yaml` rather than waived.**
+
+**Missing / not claimed.** `model_eval`/`counsel_review` (BK-54-AC2/AC3,
+BK-91-AC3) are not run. A recorded journey-suite phase for BK-91-AC3's
+`browser_journey` is not yet added; a bounded synthetic browser demonstration
+of the briefing pane and controls was driven.
+
+**Rollback.** `briefing.py` and `Matter.paused_needs` are additive; the routes
+and the `_ask` filter can be reverted to leave the existing intake untouched,
+with nothing persisted lost. Removing TRACE-C1 is safe only while the witness
+stands -- reverting the behaviour would require restoring the known-failure.
+
+### P24 Test record — 12 September 2026
+
+**Outcome: BUILT and VERIFIED for BK-54-AC3 and BK-91-AC3 (integration), and C1
+NEVER[4] closed.** BK-54-AC2 is model/counsel only; model_eval and
+counsel_review across these criteria are NOT RUN.
+
+| Criterion | Required | Result |
+|---|---|---|
+| BK-54-AC2 | model_eval, counsel_review | **NOT RUN** (no engineering evidence required) |
+| BK-54-AC3 | integration_test, model_eval, counsel_review | integration PASS; model_eval, counsel_review **NOT RUN** |
+| BK-91-AC3 | integration_test, browser_journey, model_eval, counsel_review | integration PASS; browser demonstrated (no recorded phase yet); model_eval, counsel_review **NOT RUN** |
+
+**Populations.** `tests/test_briefing_readiness_is_not_completion.py` 8 passed
+(the `@refuses("C1", 4)` witness, the matter ledger, the served routes and the
+end-to-end paused-gap block). Affected sweeps -- three-states, store round-trip
+(the new `paused_needs`), reached-from-production and dead-code (the new routes
+in REACHED_ELSEWHERE), disclosure, never-clauses, CSRF-route protection,
+page/script agreement, and the P18/P21/P22/P23 served suites -- all passed.
+`layercheck` OK; `ruff` clean on the changed files; `trace` shows two declared
+trace known-failures (T3b, T3c) and **no longer reports C1**.
+
+**Rollback and the known-failure.** Removing TRACE-C1 shrank the declared
+failure set by one; the scoped gate's `actual < declared` guard is satisfied
+because the defect is demonstrably closed, not because the row was deleted.
 
 #### J-4 — One dispute was split into three, and the product then argued with itself
 
@@ -3962,6 +4200,599 @@ change one another. NM must record those dependencies, recompute downstream
 conclusions when a predicate changes, preserve unaffected work and keep prior
 versions auditable. This is W3 work.
 
+### P18 integration record — one owner for removing a name — 12 September 2026
+
+**Outcome: FIXED, and the placement was the defect rather than the call site.**
+Consolidating P19/P44/P20 into the shared tree at `a3d9c47` turned
+`test_only_one_module_in_the_product_removes_a_name` red on three `.unlink(`
+calls in `nm/knowledge/manifest.py` — two temporary-file removals in `finally`
+blocks guarded by a check-then-act `exists()`, and one lock release catching
+only `FileNotFoundError`. A real Class-A failure on the integration commit, not
+a declared one: `known_failures.yaml` carries no pytest row.
+
+**Measured cause.** `tools/layercheck.py` permits `nm/knowledge/` to import only
+`{knowledge, ports, domain}`. The owner, `discard`, sat in
+`nm/adapters/store/cleanup.py`, so the knowledge plane could not reach it —
+P20's author could not have used the one mechanism had they gone looking. **An
+owner reachable from only part of the product is not an owner**, and the rule
+(*removing a name is one decision, and a failed removal never undoes an
+established claim*) is about the product, not about a store adapter.
+
+**Mechanism.** The owner moved to `nm/domain/names.py`, the one layer every
+layer may import and where `pathlib`/`shutil` are the standard library rather
+than the provider clients `layercheck` keeps out of the core.
+`nm/adapters/store/directory.py` and `file_store.py` import it from there; the
+four `nm/knowledge/manifest.py` sites go through it, which removes both TOCTOU
+races and both bespoke failure policies. The lock release keeps its documented
+fail-closed behaviour — a lock that will not go stays, and the next publication
+is refused naming operator reconciliation — but can no longer replace the real
+exception with a housekeeping one.
+
+**Sweep widened, with its control.** The scanner looked for `.unlink(` and
+`os.remove(` and not for `shutil.rmtree(`. `_safe_remove_transaction` removes a
+partial publication transaction with `rmtree`, in the same shape, and sat just
+outside the population the sweep drew — the three `unlink` calls went red and
+the `rmtree` beside them did not. The scanner now also reports `shutil.rmtree(`
+and `os.rmdir(`, `discard_tree` gives that half an owner, and
+`test_the_removal_sweep_can_see_a_second_owner` plants all four forms so the
+widened half is not unfalsifiable.
+
+**Tested.** `test_a_completed_claim_survives_its_own_housekeeping` 9 passed.
+Affected regressions — `test_immutable_corpus_publication`,
+`test_a_cutover_can_be_undone_before_it_is_done`, `test_store_roundtrip`,
+`test_corpus_evidence`, `test_source_registry`, `test_legal_source_inventory`,
+`test_judgment_acquisition`, `test_acquisition_receipts`,
+`test_an_advocate_can_register`, `test_authentication` — 164 passed, 8 skipped
+(the PostgreSQL marker). `layercheck` OK across 120 modules. Ruff unchanged at
+the declared 144.
+
+### P18 Start record — 12 September 2026
+
+**Decision: READY.** P17 is present and merged — `nm/domain/authority.py`,
+`commission.py`, `emergency.py`, `media_policy.py`, `intake.py` and
+`nm/core/casefile.py` are all on `a3d9c47`, and
+`codex/p13-p17-commission-and-case-file` is an ancestor of HEAD. P20 and its
+P19/P44 ancestry are merged and its publication interfaces (`publish_corpus`,
+`get_corpus`, `get_source`, `record_corpus_dependency`, `withdraw_corpus`)
+exist in code. Verified by inspection of the source, not from a delivery report.
+
+**Existing owners, enumerated from the code.**
+
+| Owner | Owns | Does not own |
+|---|---|---|
+| `nm/core/cascade.py` | what a derived value was and is between two turns; what advice rested on it; whether anybody said what needs undoing | why it moved, anything transitive, anything that survives the turn |
+| `nm/knowledge/manifest.py` | corpus source-version dependency (`record_corpus_dependency`) and withdrawal fan-out to `work_id` | anything inside a matter |
+| `nm/domain/matter.py` | `Fact.superseded_by` / `conflicts_with` — correction lineage on the fact itself | what was computed from that fact |
+| `nm/core/proof.py` | withdrawing a position whose material is gone | dates, deadlines and premises |
+
+**Missing behaviour.** Nothing records *this conclusion was computed from these
+exact input versions*. Three consequences follow and each is a served defect: a
+value derived from another derived value is unreachable by any change, because
+`from_facts` is facts only; a conclusion nobody recomputed goes on being served
+as current indefinitely, because a snapshot comparison is a moment; and a
+restart loses even the announcement.
+
+**Boundary, and the extension registered before use.** P18's declared boundary
+is `nm/core/cascade.py`, `nm/core/turn.py`, `nm/domain/matter.py`,
+`tests/test_correction_supersedes.py`. Registered in
+`docs/blueprint/packets.json` on this commit: `nm/core/dependency.py` and
+`tests/test_a_correction_reaches_exactly_what_it_touched.py`. The served
+integration will additionally need `nm/edge/api.py` and
+`nm/edge/projections.py`, which are **not yet registered and not yet edited**.
+
+**No second proposition store and no second cascade owner.** `cascade` keeps
+MOVEMENT; the new module owns CURRENCY. They meet at exactly one function,
+`dependency.from_derived`, which reads the `cascade.Derived` rows the turn
+already builds — so the product keeps one statement of what a derived value
+rests on rather than two that can drift, and the one that drifts smaller stops
+reaching a conclusion a change touched.
+
+**Acceptance-to-test mapping (BK-65-AC1).**
+
+| Required evidence | State |
+|---|---|
+| `domain_test` | `tests/test_a_correction_reaches_exactly_what_it_touched.py` — 33 tests, passing |
+| `integration_test` | **NOT RUN.** Needs the turn writing the ledger onto the matter. |
+| `adversarial_test` | EVAL-010's planted negative is asserted at unit level (`test_a_value_from_a_superseded_source_version_cannot_be_served_as_current`); the served form is **NOT RUN**. |
+
+**Mutation-verified, 12 September 2026.** Four planted breaks, each caught: a
+non-transitive `closure` fails 6 tests; an `invalidate` that marks every node
+fails 4 including the independence assertion; exhausted rework becoming
+`CURRENT` fails 1; a `Node` with no recorded inputs reading as `CURRENT` fails
+2. The unmutated module passes all 33.
+
+**State on this commit: the mechanism exists and runs on no turn.** It is
+declared in `tests/test_reached_from_production.py::UNWIRED` with what will wire
+it, and named against A3 in `OWNER`. That declaration is a work queue, not an
+exemption: the day `nm/core/turn.py` imports it,
+`test_no_declaration_outlives_its_wiring` fails and the entry must go.
+**BK-65-AC1 remains `planned` with no evidence recorded, and this commit changes
+nothing about that.**
+
+**Rollback.** Delete `nm/core/dependency.py`, its test and the two boundary
+rows; nothing in `nm/` imports it. The name-removal owner move is not
+rollback-coupled to P18 and would be kept — reverting it re-breaks the Class-A
+sweep. For a future rollback of the wired form, affected release paths pause and
+the dependency history is preserved; unknown dependencies are **not** marked
+current on the way out.
+
+**GATE NOT RUN ON THIS COMMIT — user-authorised bypass, 12 September 2026.**
+`tools/check.py` was started against the staged tree and stopped by the user
+before it produced any output; the user then directed that the work be
+committed without waiting for it. The commit therefore uses `--no-verify` on
+that instruction. **No stamp was written and none was forged**:
+`.nm/last_green.json` does not exist in this worktree, so nothing downstream can
+mistake this commit for a gated one. This is a development-history exception on
+one commit. It is not a full-gate PASS, it does not extend to any later commit,
+and it is unrelated to — and does not reuse — P20's separate one-time
+authorisation.
+
+**What WAS measured, stage by stage, before staging.** These ran individually
+and are the honest extent of this commit's evidence:
+
+| Stage | Result |
+|---|---|
+| `layercheck` | OK — 120 modules |
+| `export_spec --write` | regenerated; `spec/features.yaml` gained one line (`nm/core/dependency.py` under A3) |
+| `trace --skip-regen` | 3 failures, all three already declared in `known_failures.yaml` (TRACE-T3B, TRACE-T3C, TRACE-C1); the T3b fact string is byte-for-byte the declared one, so the population did not move |
+| `speccheck` | OK |
+| `ruff` | 144 — exactly the declared `RUFF-PLANNING-DEBT` count, and per-file attribution confirms none of the new or edited files contributes one |
+| `pylint E0601,E0606` | clean |
+| focused pytest | 33 new P18 tests; 9 housekeeping-sweep tests; 19 registry-sweep tests (`reached_from_production`, `three_states`, `blank_values`); ~164 affected regressions across corpus publication, cutover, store round-trip, corpus evidence, source registry, acquisition and authentication — all passing, 8 skipped on the PostgreSQL marker |
+
+**What was NOT run, and is therefore not claimed.** The full
+`pytest -m class_a` population and the ordinary local population were not
+completed on this tree. A Class-A run on the untouched `a3d9c47` baseline
+reached 29% in forty minutes and found exactly one failure — the housekeeping
+sweep this commit fixes — but it was stopped before finishing, so **the
+remaining 71% of Class-A is unmeasured on both the baseline and this commit**.
+Nothing here may be read as a cumulative result, and BK-65-AC1 gains no
+evidence from it.
+
+**A measurement to correct on the way past.** The full gate on `a3d9c47`
+took **eleven minutes** on an otherwise idle machine on 12 September 2026
+(`class_a` 616 s, everything else under ten). The forty-minutes-for-29%
+figure above was measured while a second full run and a browser suite were
+competing for the same cores, and it is the figure that made the bypass look
+necessary. A number measured under contention is a number about the
+contention.
+
+### P18 Build record — wiring the ledger onto the served product — 12 September 2026
+
+**Starting point verified in code, not in a report.** `3586ea9` is one commit
+ahead of `a3d9c47` and its worktree is clean. `nm/core/dependency.py` exists
+with `observe`, `record`, `closure`, `invalidate`, `recomputed`, `due`, `claim`,
+`rework_failed`, `presentable`, `withheld`, `released`, `from_derived`,
+`report`, and `Ledger.as_dict`/`from_stored`. Nothing in `nm/` imports it —
+`tests/test_reached_from_production.py::UNWIRED` says so, and that entry is
+the work queue this record drains.
+
+**What the served product does today, measured.** A correction is a turn: the
+advocate says the date was different, the extraction supersedes the old fact
+(`Fact.superseded_by`), and on the turn AFTER that `_cascade` compares this
+turn's `derived` rows with the last transcript's and announces what moved. Between
+the correction and that next turn — and after any restart, and for every value
+derived from a derived value — the cover, the thread board and the deadline
+register go on serving the old figure with no mark on it. That is the served
+form of the defect the ledger was written for.
+
+**Producers of derived values, enumerated from `nm/core/turn.py`.**
+
+| Producer | Value | Rests on |
+|---|---|---|
+| `_derived_now` → `limitation on {thread}` | `expires_on` | FACT: every live chronology entry (`Derived.from_facts`); AUTHORITY: the Article `Finding` (`store:locator`, digested on its span) |
+| `_register` → the limitation deadline | `Deadline.on` | DERIVED: `limitation on {thread}` — the transitive edge |
+| `Posture.enrich` → the party role | `role` | FACT: `posture.source_fact` |
+| measurements (`Kind.MEASUREMENT`) | counts | **not recorded** — a count is the file growing, not a conclusion (§5.4's bound), and `cascade.lost` already watches it |
+
+Positions, issues and theory are model-read conclusions that `proof.still_supported`
+withdraws when their material goes; they are not ledger nodes in this packet,
+and that is recorded rather than left implicit. Their currency is the next
+producer this table gains, and gaining one is a row here first.
+
+**Consumers, enumerated.** `nm/edge/projections.py::_thread_row`, `board_projection`,
+`cover_projection`, `matter_list_projection` (the deadline status and the nearest
+deadline); `nm/edge/api.py::_register_of`; the transcript's `derived` rows; the
+turn's own EMIT where an ACTION carries a by-when. Each of these presents a
+derived value, so each is where a stale one could appear current.
+
+**Mechanism, and why it is one.** `Matter.dependencies: dict` holds
+`Ledger.as_dict()` and persists through the generic `_enc`/`_decode` codec, so a
+restart reads the same currency the correction wrote. The turn (i) observes every
+live fact and every retrieved authority at DERIVE, (ii) invalidates the closure
+of anything that moved, (iii) records this turn's nodes through `from_derived`,
+(iv) claims and recomputes stale nodes it re-derives, or records `rework_failed`
+when the re-derivation is NOT_COMPUTED. `POST /api/matters/{id}/facts/{fact_id}/corrections`
+is the compatibility form of the design-only `correct-proposition` command:
+it supersedes the fact through `Matter.recording`/`amending` (the ONE fact
+owner), then runs the same `observe`→`invalidate` the turn runs — one function,
+`dependency_step`, called from both. Every projection that presents a derived
+value asks `presentable` and carries `currency`/`stale_because`; a stale
+deadline is shown labelled stale and never counted as the nearest live obligation;
+`released` blocks the turn's EMIT from carrying a stale figure as current.
+
+**Boundary extension, registered in `docs/blueprint/packets.json` on this commit
+before any of these files was edited:** `nm/edge/api.py`, `nm/edge/projections.py`,
+`web/app.js`, `web/index.html`, `web/app.css`, `tests/test_reached_from_production.py`,
+`tests/test_store_roundtrip.py`, `tests/test_a_correction_is_served_and_survives_restart.py`
+(new), `tests/test_the_journey_of_a_correction.py` (new, browser).
+
+**Acceptance-to-test mapping (BK-65-AC1), planned and then measured below.**
+
+| Required evidence | Test | What it plants |
+|---|---|---|
+| `domain_test` | `tests/test_a_correction_reaches_exactly_what_it_touched.py` (33, existing) | non-transitive closure, over-broad invalidation, exhausted rework reading current, inputless node reading current |
+| `integration_test` | `tests/test_a_correction_is_served_and_survives_restart.py` | EVAL-010 through the ASGI app: two nodes on one matter, correct the fact one rests on, **rebuild the application on the same store**, read both; `dependent.current_without_reassessment == false`, `independent.invalidated == false`, `history.source_versions == {1, 2}`; STALE_VERSION on a stale `expected_version`; the same correction twice is one revision |
+| `adversarial_test` | same file, the planted negative | serve the version-1 figure as current after version 2 is accepted → the projection carries `source_version_stale` and the register row is not counted live; a projection built without the ledger fails the sweep |
+| browser | `tests/test_the_journey_of_a_correction.py` | the advocate corrects a date on the case file, the cover shows the deadline STALE with the reason and the old and new date, the role stays current, and a reload shows the same |
+
+**Rollback.** Revert the wiring commit; `Matter.dependencies` decodes to `{}` on
+older records, and `presentable` refuses an unrecorded node — so a rolled-back
+tree WITHHOLDS currency labels rather than certifying anything. Unknown
+dependencies are not marked current on the way out.
+
+### P18 Test and Sign-off record — 12 September 2026
+
+**Outcome: BUILT and VERIFIED on the served path and in the browser. BK-65-AC1's
+three required evidence methods carry results; the criterion is not closed by
+registry derivation until the cumulative gate on the final integrated candidate
+is green, and this record says so.**
+
+**What now works through the actual application.** A brief derives a
+limitation, its deadline and the party role, and the turn writes all three to
+`Matter.dependencies` with typed, versioned edges — the limitation on every live
+chronology fact and on the Article's locator (digested on its span), the deadline
+on the limitation, the role on the statement it was read from. `POST
+/api/matters/{id}/facts/{fact_id}/corrections` supersedes an entry through
+`Matter.superseding`, the one owner of the link the turn now uses too, and
+`dependency.sync_inputs` invalidates exactly the closure. `GET
+/api/matters/{id}/dependencies` and the cover's `currency` block serve every node,
+its currency, its source versions and every revision with `was`, `now`, the
+versions that moved, the reason and who. The thread board and the matter list
+carry `stale_deadlines` and never lead with a stale window; a not-established
+one leads with the label. The next turn reworks stale nodes through the
+derivation it already runs, closes the revision with `now`, or records a failed
+attempt against the bound. A new **Case file** tab renders the entries with
+their dates and attribution, a Correct control per live entry, and the currency
+block. G-CURRENCY is in the matrix as `disclose`/`step`/`sticky` and fires on
+every turn.
+
+**Measured, criterion by criterion (BK-65-AC1).**
+
+| Evidence | Population | Result |
+|---|---|---|
+| `domain_test` | `tests/test_a_correction_reaches_exactly_what_it_touched.py` | 33 passed |
+| `integration_test` | `tests/test_a_correction_is_served_and_survives_restart.py` — 10 tests through the ASGI app, one of which rebuilds the application on the same store before reading | 10 passed. Affected set `{limitation, deadline}` exactly; role `unaffected`; `history.source_versions ⊇ {1, 2}`; STALE_VERSION 409 on a stale `expected_version`; INVALID_TRANSITION 409 on a second correction of a withdrawn entry; 422 on a correction that changes nothing |
+| `adversarial_test` | `test_planted_serving_the_old_figure_as_current_is_refused` — the projection built WITHOUT the ledger leads with the corrected date and labels it `not_established`; the wired one refuses it, leads with nothing, and lists it under `stale_deadlines` with the reason | passed |
+| browser | `tests/test_the_journey_of_a_correction.py` — 7 phases in Chromium on the served product | 7 passed: brief → current deadline; case file current; a correction with no reason does not reach the file; correcting the dated event marks exactly the limitation and deadline stale, the role stays current, the history names `adv_ledger` and the reason, the superseded entry stays struck through; the board shows `STALE — awaiting recomputation` with `2035-03-14 — was the deadline`; a reload reads the same from the file; the next brief reworks to `2031-03-14` and closes the revision |
+| affected regressions | 26 files: turn contract, cascade, correction supersedes, deadlines, boards, cover, store round-trip (ledger populated), persisted-field writers, blank values, three states, gate matrix, disclosure reaches the advocate, reached-from-production, produces contracts, served-turn suites | all passed |
+| existing browser journey | `tests/test_the_journey_login_to_logout.py` | 24 passed on a quiet tree |
+
+**What the test suite caught in the build, in order.** (1) `Names` accepted a
+whitespace node name — `test_blank_values` — fixed with `@refuses_blank_text`.
+(2) The correction route carried `Fact.material` forward and the field was
+declared writer-less — `test_every_persisted_field_has_a_writer` — the
+declaration deleted. (3) A field literally named `date` on the pydantic body
+shadowed the type and the app failed to import — renamed `on`, aliased `date`
+on the wire. (4) The cover reported `current` for a matter whose turn had
+observed its facts and concluded nothing: `not nodes and not tracked` let an
+empty stale list read as a certificate — S1 inside the block written for S1,
+found by `test_an_unrecorded_conclusion_is_not_assessed_rather_than_current`.
+(5) Authority edges were stamped version 0 because the retrieved findings were
+observed nowhere — the node would never have noticed a republished provision;
+`_currency_settle` now observes them before recording. (6) The browser suite's
+first run corrected the ACCOUNT entry, which the role also rests on, and the
+ledger correctly reopened the role — the test had picked the wrong entry, and
+`_dated_entry` now says which and why.
+
+**Two findings that predate P18, fixed on the way because the browser suite
+could not run without them.** `tools/served.py` borrowed `NM_MODEL_PROVIDER`
+from a developer `.env` — in a worktree with none, every journey phase errored
+at composition; the harness now defaults the synthetic profile itself. And
+journey phase 6b fails on the integrated tree `3586ea9` as it stood: the client
+folded EVERY plain ground under "supporting passages", including the expired
+limitation the server files under Time (`Signal.LIMITATION_BAR` → `Section.WINDOW`),
+so "runs to 2021-03-14 … has run" was behind a triangle. The fold now takes only
+grounds the server filed as `authority`; `test_only_plain_ground_is_ever_folded`
+states the clause. A third, harness-only: `wait_for_function(expr, first, …)`
+passed the argument positionally and the installed Playwright refuses that;
+`arg=first`.
+
+**Observed and left standing, named.** In `nm/core/turn.py::_run`, the
+conclusions written to the thread (`if concluded:`) are those of the FIRST
+derivation; when B-104's late-citation round re-derives, the second
+derivation's `concluded` is never written back. The ledger is settled after the
+second derivation so it is not affected, but the thread's theory, issues and
+register are. Not P18's to fix and not fixed here; it belongs to the turn's
+owner and is recorded so it is not rediscovered.
+
+**Not claimed.** BK-65-AC1's registry state stays `in_progress` with evidence
+recorded, not `complete`: the cumulative gate on the final P18→P21→P22
+candidate is what derives it. P20's withdrawal fan-out (`withdraw_corpus` →
+`affected_work`) does not yet reach the ledger's AUTHORITY rows — that is P21's
+integration, where the matter is registered as a `work_id`. Positions, issues
+and theory carry no currency yet; the producer table above is where the next
+node is added first.
+
+### P21 Start record — separate discovery, identity and legal verification — 12 September 2026
+
+**Decision: READY, with P18 committed ahead of it.** P17 is on the tree
+(`nm/core/casefile.py`, the commission and authority policy) and P20's
+publication interfaces exist in `nm/knowledge/manifest.py` — `PublishedCorpus`,
+`get_source`, `record_corpus_dependency(root, CorpusDependency(work_id,
+snapshot_id, source_versions, observed_at))`, `withdraw_corpus(...) →
+WithdrawalResult(affected_work, active_snapshot_id)`. The composition root binds
+a published generation when `NM_CORPUS_DIR/current.json` exists and the legacy
+`.nm/authority.db` otherwise; both go through `AuthorityIndexSearch`. Verified by
+reading the code and by querying the live indexes, not from the delivery report.
+
+**Existing owners, enumerated from the code.**
+
+| Owner | Owns | Does not own |
+|---|---|---|
+| `nm/ports/search.py` | the PRODUCES contract of a corpus search: ranked paragraph hits, `Coverage`, `IndexIdentity`, `Origin.SEARCHED` on every hit | cases, identity, verification |
+| `nm/adapters/search/authority.py` | the FTS5 read over `paras` (`case_id, case_name, court, year, para_type, chunk_id, text`), court resolution through the closed `STORED_AS` vocabulary, the identity table | grouping by case, reading a paragraph back by its locator |
+| `nm/knowledge/identity.py::IdentityIndex` | `cases`, `citations(citation_key → case_id)`, `treatment(target_case_id)`, `addressable` | resolving a citation the advocate typed — no method takes raw text |
+| `tools/build_identity_index.py::citation_key` | the exact reporter key (`[^A-Z0-9]` stripped, upper-cased) | **a second copy would be** in whatever runtime module resolves a citation; `nm/domain/citation.py` is the only module permitted a citation pattern (CLAUDE.md §4) |
+| `nm/knowledge/citator.py` | the 4,894-entry citator, 0.84% of held judgments | treatment for the 99% it does not cover — `Treatment.not_checked` is the honest answer there |
+| `nm/knowledge/jurisdiction.py` | whether a court binds Telangana (`binding` is a RELATIONSHIP) | applicability to a matter's forum and governing date, which needs both |
+| `nm/edge/api.py::search` | `GET /api/search`: ranked paragraphs for a signed-in advocate, nothing matter-specific | a research record; attachment; scope |
+| `web/app.js::renderSearch` | one card per ranked paragraph with origin and rank band | grouping, expansion, attachment |
+| `nm/core/dependency.py` (P18) | AUTHORITY edges keyed `store:locator`, digested on the span | learning that a source was withdrawn — nothing calls `sync_inputs` with a withdrawal |
+
+**Measured on the live indexes, 12 September 2026.** `.nm/authority.db` holds
+451,548 of 1,015,780 paragraphs (`partial: no`, `attributable_kinds:
+ratio,reasoning,order`), 33,713 distinct `case_id`s of which **33,712 are in
+`identity.cases`** — the two indexes share the court-first id (`SC_1950_AK_GOPALAN_…`);
+203 digit-first ids in `cases` are a different naming era of the source files.
+`citations` holds 302,909 keys; `1950AIR27` resolves to `SC_1950_AK_GOPALAN_…`
+and that case has 193 paragraphs in the authority index. So exact identity
+resolution — citation → key → case → paragraphs — is a sequence of exact lookups
+with no ranking anywhere in it, and the missing piece is only that no runtime
+method performs it.
+
+**Missing behaviour, in the order the criteria name it.**
+
+1. *Case-level discovery followed by expansion (BK-25-AC1).* `search` returns
+   paragraphs; nothing groups them by case, nothing reads a case's other
+   paragraphs back with context, and a holding spread across paragraphs
+   arrives as unrelated snippets or not at all. Coverage of the expansion is
+   not stated: the index holds 44% of source paragraphs and a case's expansion
+   may therefore be incomplete, which must be said as a value.
+2. *Exact identity independent of ranking (BK-25-AC1, BK-38-AC1).* No method
+   resolves a typed citation. A summary or ranked snippet can be cited as if it
+   were the source, because nothing reads a paragraph back BY LOCATOR and
+   nothing compares a quotation to the stored text.
+3. *Separate dimensions (BK-84-AC3).* One `Finding` carries `supports`,
+   `treatment`, `binding` and a span together and the turn asserts them
+   together. Identity, quote fidelity, semantic support, treatment and
+   applicability are five questions with five failure modes and today they
+   are not five fields.
+4. *A durable research record (BK-84-AC3, BK-38-AC1).* A search leaves
+   nothing on the file: no objective, no consulted index identity, no
+   adverse search, no stopping reason. EVAL-014's restart resumes nothing.
+5. *Grouped inspection, deliberate attachment with a precise locator
+   (BK-38-AC1).* There is no attach; an authority reaches a matter only
+   through the turn's own retrieval.
+6. *Four distinct outcomes (BK-38-AC2).* `Coverage.ANSWERED` with zero hits
+   and `NOT_ASSESSED` exist; *unsupported coverage* — a court or jurisdiction
+   the corpus does not hold — is folded into a `1 = 0` filter and reads as
+   zero results.
+7. *Scope before retrieval and on readback/attachment (BK-38-AC1, BK-45).*
+   `/api/search` takes an advocate and no matter; a research request must
+   name the matter it is for, be refused for a matter the advocate does not
+   hold, and a readback or attachment must be refused across matters.
+
+**Mechanism, and why it is one.** `nm/core/research.py` owns the RECORD and the
+VERDICTS — `Research`, `Consulted`, `AdverseSearch`, `Attachment`, the four
+`Outcome`s, `classify`, `may_attach`, `clean_bill` — as pure functions over the
+port types, persisted on `Matter.research` through the same generic codec as the
+ledger. `nm/ports/search.py` gains `discover`, `expand`, `passage` and `resolve`
+so the edge asks the port and never SQLite. `nm/adapters/search/authority.py`
+implements them over the one FTS table and the one identity index it already
+opens. `nm/domain/citation.py` gains `reporter_key`, and
+`tools/build_identity_index.py` imports it — one owner of the exact key, at
+build and at read. Attachment goes through P18's ledger: the attached passage
+becomes an AUTHORITY input, so a later withdrawal reaches every conclusion that
+cites it, and `record_corpus_dependency` is written when a published generation
+is active. Nothing here ranks an Act, and nothing here turns a rank into an
+identity.
+
+**Boundary extension, registered in `docs/blueprint/packets.json` before any
+edit:** `nm/core/research.py` (new), `nm/domain/citation.py`, `nm/domain/matter.py`,
+`nm/knowledge/identity.py`, `nm/edge/api.py`, `nm/edge/projections.py`,
+`nm/core/dependency.py`, `tools/build_identity_index.py`, `tools/journey.py`,
+`web/app.js`, `web/index.html`, `web/app.css`,
+`tests/test_research_keeps_finding_apart_from_verification.py` (new),
+`tests/test_the_research_workflow_is_served.py` (new),
+`tests/test_the_journey_of_a_search.py` (new, browser),
+`tests/test_reached_from_production.py`, `tests/test_store_roundtrip.py`.
+
+**Acceptance-to-test mapping, planned.**
+
+| Criterion | Required | Test | Plants |
+|---|---|---|---|
+| BK-84-AC3 | model_eval, counsel_review | domain and integration tests here are FOUNDATION evidence only; `model_eval` and `counsel_review` are NOT RUN and stay so — no code here can satisfy them | a correct quote from an overruled decision: the attachment carries `treatment: negative` and `support: not_assessed`, and `clean_bill` is `not_assessed` |
+| BK-25-AC1 | integration_test, model_eval, counsel_review | `test_the_research_workflow_is_served.py`: a holding spread across two paragraphs of one case is found at case level and both paragraphs come back in expansion; an unresolvable citation is `unresolved`, not a hit | hide the holding across paragraphs; offer a summary identity |
+| BK-38-AC1 | integration_test, browser_journey | attach by exact locator with a verbatim quote → recorded with five dimensions; attach a ranked snippet (no locator, or text that differs) → refused with the dimension that failed | the snippet-as-source |
+| BK-38-AC2 | integration_test, browser_journey | four outcomes on the wire: results; searched-with-no-results naming the index; `unsupported_coverage` for a court the corpus does not hold; `unavailable_index` when the file is absent | an absent index; an unknown court alias |
+| BK-45-AC1 | domain_test | the browser phase asserts a post-submission state — results, no-results or unavailable — and a submission that is a no-op fails it | make submit a no-op while the labels stay |
+
+**Rollback.** Revert the commit; `Matter.research` decodes to `()` on older
+records; the search route keeps its current contract; no index is rebuilt and
+no corpus is written. A withdrawn source that had been attached stays
+withdrawn in the ledger — rollback does not mark it current.
+
+### P21 Test record — 12 September 2026
+
+**Outcome: BUILT and VERIFIED on the served path and in the browser for the
+engineering half of five criteria. `model_eval` and `counsel_review` are NOT
+RUN on BK-84-AC3, BK-25-AC1 and BK-35-AC1 and no code here can run them; those
+rows stay open and say so.**
+
+**What now works through the actual application.** A research need is opened
+on a matter (`POST /api/matters/{id}/research`) with an objective and an issue;
+one round consults the index by case-level discovery or by exact citation,
+runs the adverse search — subsequent treatment of every surfaced case, from
+the identity index, recorded by STATE — and persists all of it on
+`Matter.research`: the index's identity and version, the filters as read, the
+case ids, the outcome as one of four values, the round against its bound and
+the reason it stopped. `GET .../research/{rid}/cases/{case_id}` reads a
+consulted case back by locator with its coverage stated as a value (`False`
+for this index: attributable kinds only) and its bench; a case the research
+did not consult is the same 404. `POST .../attach` attaches ONE passage with
+its words and returns five verdicts — identity, quote fidelity, support,
+treatment, applicability — and refuses a ranked snippet, a changed word and
+an unconsulted case with the dimension that failed. The attached passage is
+tracked on the P18 ledger (`ledger_id`), and a source version the publication
+layer withdraws is marked withdrawn on the next turn through the evidence
+port's `withdrawn_sources`. The search pane offers *Record this as research*
+when a matter is open, renders cases (with matched-paragraph counts and
+origin), opens them to paragraphs, attaches with the five verdicts shown as
+five rows, and shows the research record from the file on every open of the
+pane. `nm.domain.citation.reporter_key` is the one owner of the exact
+citation key, at build and at read.
+
+**Measured, criterion by criterion.**
+
+| Criterion | Required | Result |
+|---|---|---|
+| BK-84-AC3 | model_eval, counsel_review | **NOT RUN** — foundation only. Domain: `clean_bill` is `not_assessed` for an empty or unavailable adverse search (EVAL-014's planted negative) and `adverse_found` where one ran and found; served: a verbatim quote from `SYN_2001_OVERRULED` attaches as a verified citation with `treatment: negative`, `support: not_assessed`, and the record's `clean_bill` is `adverse_found` |
+| BK-25-AC1 | integration_test, model_eval, counsel_review | integration PASS: a holding spread across two ratio paragraphs surfaces as one case with `paragraphs_matched ≥ 2` and both come back in expansion by locator, `origin: resolved`, `complete: False`; `AIR 1990 SYN 1` resolves to exactly one case and `AIR 1999 SYN 99` to nothing with no near miss offered. model_eval, counsel_review **NOT RUN** |
+| BK-38-AC1 | integration_test, browser_journey | integration PASS: attach by exact locator with verbatim words → five verdicts recorded; a snippet-shaped locator → 422 `identity: unresolved`; a changed word → 422 `quote_fidelity: differs`; an unconsulted case → 422 "did not surface". Browser PASS: phases 3–4 open a case to its paragraphs by locator and attach one, and the page shows five rows and the note *identity and words only* |
+| BK-38-AC2 | integration_test, browser_journey | integration PASS: `results`; `searched_no_results` carrying the index identity; `unsupported_coverage` for `Bombay High Court` decided before anything is searched; `unavailable_index` for an absent file. Browser PASS: phases 2, 5, 6 read `#research-outcome[data-outcome]` after submission for each of the three reachable states |
+| BK-45-AC1 | domain_test | PASS: every browser phase waits for `#research-outcome[data-outcome]`, an element that exists only after an answered submission; a no-op submit with visible labels produces no such element and fails the wait |
+
+**Populations.** `tests/test_research_keeps_finding_apart_from_verification.py`
+22 passed; `tests/test_the_research_workflow_is_served.py` 17 passed (through
+the ASGI app over the synthetic indexes in the real schema; one rebuilds the
+application on the same store); `tests/test_the_journey_of_a_search.py` 7
+passed in Chromium; affected sweeps and contracts — policed destinations,
+reached-from-production, three states, blank values, store round-trip (record
+populated), persisted-field writers, citation patterns, court filter, route
+authentication, never-clauses, disclosure, gate matrix, produces contracts,
+defect register, turn contract — all passed.
+
+**What the suite caught in the build.** `CaseExpansion` accepted a
+whitespace case id; `Application.withdrawn_sources` had no caller — the
+bridge belongs on the evidence port and the turn, where the file is re-read,
+and it moved there; the turn read `self.evidence` where the engine holds
+`self._evidence`, and the §7 rule (a broad `except` logs at ERROR) is what
+made that a one-line fix rather than a silent empty set. A test asserted one
+of two phrasings `stored_court` produces for an unheld court.
+
+**Bounds stated.** Discovery folds at most `DISCOVERY_POOL = 200` ranked
+paragraphs and reports `paragraphs_ranked`; the adverse search asks about at
+most `ADVERSE_BOUND = 8` surfaced cases and names them; a need has
+`ROUND_LIMIT = 2` rounds and a third is refused with the stopping reason.
+
+**Not claimed.** Semantic support is `not_assessed` everywhere. The
+per-source P20 dependency is recorded only when the bound generation names a
+`source_id` matching the case (`PublishedCorpus.version_for_source`);
+otherwise the attachment records the generation or the index's corpus
+version and says which. No real index was searched; the synthetic fixtures
+say in their own text that they are not law.
+
+### P22 Start record — assess legal premises before conditional arithmetic — 12 September 2026
+
+**Decision: READY.** P18 (the currency ledger) and P21 (verified sources) are
+committed. `nm/core/premise.py` existed and was declared UNWIRED; the accrual
+read (`nm/core/accrual.py`) and the cause-specific trigger (`Edge.accrues_on`)
+were built by BK-35's first half. What was missing is the step BK-65-AC2 names:
+the arithmetic ran without ever treating *which provision governs*, *what
+starts the period* and *which forum binds* as things that could be wrong.
+
+**Existing owners.** `nm/core/limitation.py` owns the arithmetic and already
+refuses to invent a PERIOD (`Period` verifies itself against the retrieved
+span). `nm/core/premise.py` owns the three premises, their four bases and the
+digest. `nm/core/turn.py::_limitation` chooses the accrual and computes.
+`nm/core/deadlines.py` owns the register. None owned the join: premises built
+from what the turn retrieved, assessed before the arithmetic, and carried onto
+the result.
+
+**Missing behaviour, and the mechanism.** `_limitation` now builds three
+premises before computing: APPLICABLE_LAW from the retrieved Article
+(ATTRIBUTED to its `store:locator`), ACCRUAL_RULE from the curated trigger
+where the read identified an entry (ATTRIBUTED) or from the product's own
+reading where the cause is uncurated (INFERRED, with every competing dated
+entry named), JURISDICTION from the deployment's measured scope (ATTRIBUTED).
+A premise the advocate has STATED outranks all of it. `premises.unestablished()`
+BLOCKS — the position is NOT_COMPUTED with the kind named; `premises.inferred()`
+makes it a new state, CONDITIONAL — the arithmetic runs, is shown with its
+alternatives, and is NEVER a deadline on the register (`Deadline.conditional_on`,
+not `on`, so `status()` can never call it near/future/passed). Stating the
+premise (`POST /api/matters/{id}/threads/{tid}/premises/{kind}`) records it with
+who and when; the next turn recomputes definitively. The register row and the
+cover carry the premise digest, so the two are checked to be one version
+(BK-35-AC2); a corrected trigger date supersedes the fact and P18 currency
+marks the deadline stale.
+
+**Boundary extension, registered before editing:** `nm/core/premise.py`,
+`nm/core/limitation.py`, `nm/core/deadlines.py`, `nm/domain/matter.py`,
+`nm/domain/gates.py`, `nm/core/turn.py`, `nm/edge/api.py`,
+`nm/edge/projections.py`, `web/app.js`, `web/index.html`, `web/app.css`, and
+the tests below.
+
+**Rollback.** `Matter.premises`/`premises_stated` and `Thread.premises` decode
+to their empties on old records; `LimitationState.CONDITIONAL` and
+`Deadline.conditional_on` are additive. Reverting the wiring returns the
+arithmetic to the pre-P22 behaviour; nothing stored is lost.
+
+### P22 Test record — 12 September 2026
+
+**Outcome: BUILT and VERIFIED for the engineering half of three criteria.
+`model_eval` (BK-65-AC2, BK-35-AC1) and `counsel_review` (BK-65-AC2, BK-35-AC1)
+are NOT RUN and no code here runs them.**
+
+**What now works through the actual application.** A brief on a cause with no
+curated accrual trigger and two dated events computes CONDITIONAL: the answer
+says so in its own words, shows the date under the chosen reading AND under
+each competing trigger, and enters no deadline on the register. G-PREMISE fires
+`conditional`. The advocate states the accrual through the premise route; the
+next turn computes definitively, the register gains a real deadline, and the
+cover shows the premise `stated · reviewed by <advocate>`. A cause with a
+curated trigger (goods, Article 19) is ATTRIBUTED and COMPUTED as before. The
+cover's premise digest and the register row's digest are the same; a corrected
+trigger date marks the deadline stale (P18). The Case file pane shows the three
+premises per thread with a Confirm control for an inferred one.
+
+**Measured, criterion by criterion.**
+
+| Criterion | Required | Result |
+|---|---|---|
+| BK-65-AC2 | domain_test, model_eval, counsel_review | domain PASS (`tests/test_premises_come_before_arithmetic.py`); model_eval, counsel_review **NOT RUN** |
+| BK-35-AC1 | integration_test, model_eval, counsel_review | integration PASS (conditional then definitive on a stated premise); model_eval, counsel_review **NOT RUN** |
+| BK-35-AC2 | integration_test, adversarial_test | integration PASS (cover and register share one digest); adversarial PASS (a corrected trigger date is not served as current) |
+
+**Populations.** `tests/test_premises_come_before_arithmetic.py` 12 passed
+(5 domain, 7 served through the ASGI app). Affected regressions —
+turn contract, gaps-and-cascade, boards, cover, deadlines, salvage, factors
+(updated for the conditional model), the P18 correction suite, the P21 research
+suite, never-clauses, three-states, blank-values, reached-from-production,
+produces-contracts, store round-trip, disclosure-reaches-the-advocate,
+gate-matrix, dead-code, defect-register, persisted-field writers, the page
+contracts and the tooling sweeps — all passed. The full class-A population was
+NOT run at the user's instruction; this is the affected-set result, not a
+cumulative one.
+
+**What the suite caught in the build.** `assess()` treats an INFERRED premise
+as a reason not to compute; my first wiring used it as the block and turned
+every conditional case into NOT_COMPUTED — the block is `unestablished()`
+alone, and `inferred()` drives the conditional branch. A premise statement
+containing an apostrophe, `repr()`'d into the assessment text, read as a
+double-quoted span and G-QUOTE withheld the turn (B-104's shape); the block
+now uses `english_of(kind)` and carries no quoted statements. `test_factors_on_a_served_turn`
+asserted a bare date-string absence that P22 legitimately changed — the
+acknowledgment date now appears as a labelled conditional ALTERNATIVE accrual,
+not an s.18 restart; the test was updated to check the invariant it protects
+(no restart without its section) rather than the incidental string.
+
+**Not claimed.** The `model_eval`/`counsel_review` methods are the substance of
+BK-65-AC2 and BK-35-AC1 and remain open. Uncertain "on or about" date RANGES
+are not modelled beyond competing dated entries; that is recorded as open on
+BK-35. Completion of any criterion derives from the cumulative gate on the
+final candidate, not from this record.
+
 ## BK-66 — advocate trust evaluation
 Opened 9 September 2026.
 
@@ -4047,6 +4878,103 @@ A legally strong claim may still have no useful or timely outcome. W3 must
 model interim and final relief, prerequisites, timing, enforcement route,
 recoverable assets and practical constraints; W4 advice must use that model
 when comparing options.
+
+### P23 Start record — reason through relief and enforceability — 12 September 2026
+
+**Outcome sought.** BK-70-AC1: the recommendation changes when identical merits
+have unavailable, hollow, late or disproportionate relief, and it explains the
+enforceability basis. The trap is CLAUDE.md's own — a right answer to a question
+nobody asked — dressed as diligence: a legally arguable claim worth nothing
+because the debtor has no assets, the order comes too late, the decree cannot be
+executed, or the suit costs more than it recovers.
+
+**Contract difference, recorded.** The build prompt named BK-70-AC1 **and
+BK-95-AC4…AC9**. BK-95 does not exist in the current control plane (the backlog
+runs BK-1…BK-92); `docs/blueprint/packets.json` scopes P23 to **BK-70-AC1** with
+EVAL-019/EVAL-020 as proof. Per the repository's governing-contracts rule, P23
+is built to the current contract (BK-70-AC1) and the difference is reported here
+rather than followed silently.
+
+**Owners / boundary (registered before edit in packets.json).** New:
+`nm/core/relief.py` — the remedy/enforceability model; the recommendation and
+its consistency check are the existing owners it extends — `nm/core/turn.py`
+(`_relief`, `_recommend`), `nm/core/consistency.py` (`claims_for` gains a relief
+claim, the ONE owner), `nm/domain/gates.py` (G-REMEDY), `nm/domain/matter.py`
+(`Thread.objective`, `Thread.reliefs`). Feature realised: **E2** (compare viable
+routes by … enforceability). E3's proportionality tenet is honoured but left to
+its owner BK-55 — this does not claim to deliver it.
+
+**Mechanism.** Relief is read on five coordinates — availability, value, timing,
+enforceability, proportionality — each a three-state enum. The **first four**
+decide whether a relief DELIVERS; proportionality never does (E3's NEVER: a
+disproportionate route is stated alongside, never withheld). Facts are
+ATTRIBUTED, not guessed: each relief carries a `premise.Basis`, and an adverse
+coordinate believed only by INFERENCE makes the relief CONTINGENT (a question),
+not DEFEATED — the same discipline P22 puts on an inferred premise. The relief
+becomes a claim in `consistency.claims_for`, so a step that pursues a defeated
+remedy is blocked by G-CONSISTENT unless it carries the express reservation the
+claim names. The served turn derives the signal deterministically where it can:
+a limitation whose window has RUN makes the relief LATE, attributed to the
+computed limitation (COMPUTED → defeated; CONDITIONAL → contingent).
+
+**Missing / not claimed.** `model_eval` and `counsel_review` — whether the
+PRODUCT reads availability and enforceability correctly off a real brief — are
+NOT run and no code here runs them. A served route and web surface for an
+advocate to STATE relief coordinates directly, and browser validation, are the
+remaining served-integration work; the engine, persistence and disclosure are
+in place.
+
+**Acceptance → test.** BK-70-AC1 domain_test →
+`tests/test_relief_changes_the_recommendation.py` (negative control:
+`test_a_step_pursuing_a_defeated_relief_contradicts_and_a_reservation_clears_it`;
+E3 control: `test_proportionality_is_never_a_reason_to_withhold_a_route`; served:
+`test_a_run_limitation_makes_the_relief_late_and_reaches_the_advocate`).
+
+**Rollback.** `Thread.objective`/`Thread.reliefs` decode to their empties on old
+records; `LimitationState` is untouched; `ReliefState`/G-REMEDY are additive.
+Reverting `_relief` and the `claims_for` relief clause returns the recommendation
+to its pre-P23 behaviour and nothing stored is lost.
+
+### P23 Test record — 12 September 2026
+
+**Outcome: BUILT and VERIFIED for the engineering half of BK-70-AC1.
+`model_eval` and `counsel_review` are NOT RUN.**
+
+**What now works through the actual application.** A goods claim whose
+three-year window ran in 2013, briefed with today in 2026, is still a legal debt
+— and its relief is LATE. The served turn discloses `Relief for … : no remedy …
+cannot be filed in time` (G-REMEDY `no_useful_relief`), persists the relief on
+the thread attributed to the computed limitation, and — with the step pursuing
+it — G-CONSISTENT blocks the step and hands the advocate the computed position
+and a question. Where the shortfall is only inferred the relief is CONTINGENT and
+the disclosure says so; where a route is merely disproportionate it is served
+with the cost stated alongside, never withheld.
+
+**Measured, criterion by criterion.**
+
+| Criterion | Required | Result |
+|---|---|---|
+| BK-70-AC1 | domain_test, model_eval, counsel_review | domain PASS (`tests/test_relief_changes_the_recommendation.py`, 8 tests); model_eval, counsel_review **NOT RUN** |
+
+**Populations.** `tests/test_relief_changes_the_recommendation.py` 8 passed (6
+domain, 2 served). Affected regressions — three-states, store round-trip,
+persisted-field writers, disclosure-reaches-the-advocate (G-REMEDY added to the
+PROVEN table), reached-from-production, dead-code, the step-consistency suite,
+turn contract, factors, premises (P22), the research suite (P21), the correction
+suite (P18), the gate matrix, produces-contracts and defect-register — all
+passed. `layercheck` OK; pylint rename sweep clean; `ruff` clean on the changed
+files; `trace` shows exactly the three declared trace known-failures (TRACE-C1,
+TRACE-T3B with E2 already in its baseline, TRACE-T3C) and the ruff-144 digest is
+unchanged — no new failure was introduced. The full class-A population is the
+commit gate and is not part of this record.
+
+**What the suite caught in the build.** The first model treated an inferred
+enforceability shortfall as a defeat; the state vocabulary now separates
+DEFEATED (established) from CONTINGENT (inferred), mirroring P22. The served
+limitation is CONDITIONAL for an uncurated accrual, not COMPUTED, so `_relief`
+reads a run window from either state and attributes the lateness to the position
+(inferred where the accrual was). An unused `from_stored_objective` wrapper was
+deleted rather than given a caller (dead-code sweep).
 
 #### BK-72 — the matter navigator cannot be driven at 390px — **OPEN · P1 · Phase A**
 Opened 9 September 2026, by the first real run of the repaired journey suite.
@@ -4293,6 +5221,35 @@ command that can refresh them. A second Class-A control reads the canonical
 hook and proves the reporter remains best effort while `gatestamp.py` remains
 blocking. The two different operational decisions are preserved rather than
 being weakened to make the test pass.
+
+**Reopened and closed again 12 September 2026 — the hook was right and the
+index was 600 nodes behind anyway.** Measured against `graph.db`: 3,830 of
+4,383 non-File nodes carried a vector; `manifest.py` 43 missing,
+`source_registry.py` 43, `test_immutable_corpus_publication.py` 42,
+`commission.py` 25, fifteen more files. A query about sealed corpus
+generations returned five confident results about matter-store seals and none
+of `PublishedCorpus`, `CorpusPublicationRefused` or `WithdrawalResult`. Every
+missing node had arrived by a path `pre-commit` never sees: `1399a53` as a
+fast-forward (no commit hook runs), `68927c3` and `a3d9c47` as merge commits
+(git runs `pre-merge-commit`, not `pre-commit`), and the work itself committed
+on `codex/` branches on another machine where the hook was not installed. A
+refresh correct for one of the four ways a tree changes is bypassed by the
+other three, and the symptom is a plausible wrong answer (S3).
+
+Three changes, one mechanism. (1) `tools/hooks/refresh-graph` is now the ONE
+owner of "update the graph, then embed"; `pre-commit`, the new `post-merge`
+and the new `post-rewrite` all call it and none carries its own copy, which
+`tests/test_every_way_the_tree_changes_refreshes_the_index.py` enforces by
+scanning the directory. (2) Installation is `git config core.hooksPath
+tools/hooks`, not `cp` — the `.git/hooks` copy was measured two revisions
+behind the tracked file, lacking `--require-index` and the Python-absent
+refusal, and nothing had compared them. `.gitattributes` pins the directory
+to LF because `core.autocrlf=true` would otherwise hand `sh` a `|| true\r`.
+(3) The SessionStart hook in `.claude/settings.json` now prints the lag, so
+"STALE BY N" appears where somebody is looking rather than above a commit
+that has already scrolled away. `post-merge` measured at 3.2 s on a quiet
+tree; the 624-node catch-up embed ran once by hand and pruned the 47 stale
+vectors on the way.
 
 ## BK-30 — executable login-to-logout acceptance journey — **PARTLY DONE · P1**
 
@@ -4591,6 +5548,8 @@ record IS). `pane-record` is now `pane-history`, `loadRecordMatters` is
 `loadHistoryMatters`, and nothing points at the old ids.
 
 ## BK-25 - the authority need finds a case by scanning a million paragraphs
+
+**P21 (12 September 2026):** the research workflow that carries this row's criteria is recorded under *P21 Start record* and *P21 Test record* beside BK-65; the evidence rows in `status.yaml` bind to the tests named there.
 Opened 7 September 2026, out of the paragraph-labelling work. **Approved: the
 case-finding step becomes a search over case SUMMARIES, and the paragraph
 index is only read for the cases that step selects.**

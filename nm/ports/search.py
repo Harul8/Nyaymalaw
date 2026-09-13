@@ -29,6 +29,7 @@ THE THREE THINGS THIS TYPE REFUSES, EACH ONE MEASURED
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Protocol
 
 from nm.domain.text import refuses_blank_text
@@ -182,3 +183,158 @@ class CorpusSearchPort(Protocol):
     def search(self, query: str, *, court: str | None = None,
                from_year: int | None = None, to_year: int | None = None,
                limit: int = 20) -> CorpusSearch: ...
+
+    # P21. Discovery groups; expansion and passage read back BY LOCATOR;
+    # resolve identifies by EXACT KEY. None of them ranks an Act, and the
+    # only one that identifies does so with no ranking anywhere in it.
+    def discover(self, query: str, *, court: str | None = None,
+                 from_year: int | None = None, to_year: int | None = None,
+                 limit: int = 20) -> "CaseDiscovery": ...
+
+    def expand(self, case_id: str, *, query: str | None = None,
+               limit: int = 200) -> "CaseExpansion": ...
+
+    def passage(self, locator: str) -> "Paragraph | None": ...
+
+    def resolve(self, citation: str) -> "CitationResolution": ...
+
+    def treatment(self, case_id: str): ...
+
+    def case_identity(self, case_id: str): ...
+
+
+
+@refuses_blank_text("why")
+@dataclass(frozen=True)
+class CaseHit:
+    """One CASE the index ranked, with how much of it matched. P21.
+
+    A case is the unit an advocate reads, cites and attaches; a paragraph is
+    the unit the index ranks. `paragraphs_matched` is the count of ranked
+    paragraphs that belong to it -- so a holding spread across three
+    paragraphs surfaces as ONE case with three, rather than three snippets an
+    advocate has to recognise as one judgment. `best_rank` orders cases and is
+    meaningless across queries, exactly like `SearchHit.rank`.
+    """
+
+    case_id: str
+    case_name: str
+    court: str
+    year: int | None
+    paragraphs_matched: int
+    best_rank: float
+    confidence: float
+    snippet: str
+    origin: Origin = Origin.SEARCHED
+    why: str = ""
+
+    def __post_init__(self) -> None:
+        if self.origin is Origin.RESOLVED:
+            raise ValueError(
+                "a discovered case may not claim RESOLVED provenance; it "
+                "arrived by ranking paragraphs, and an exact lookup is "
+                "`resolve`, not `discover`")
+        if not self.case_id.strip():
+            raise ValueError("a case hit with no case id cannot be expanded")
+
+
+@dataclass(frozen=True)
+class CaseDiscovery:
+    """Case-level discovery. BK-25-AC1's first clause.
+
+    Carries the same identity a paragraph search does and refuses the same
+    two things: a zero with no index named, and a NOT_ASSESSED with hits.
+    """
+
+    query: str
+    index: str
+    coverage: Coverage
+    identity: IndexIdentity | None = None
+    filters: dict = field(default_factory=dict)
+    cases: tuple[CaseHit, ...] = ()
+    paragraphs_ranked: int = 0
+    why: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.index.strip():
+            raise ValueError("every discovery names the index it came from")
+        if self.coverage is Coverage.NOT_ASSESSED:
+            if self.cases:
+                raise ValueError("a discovery that could not run returned cases")
+            if not (self.why or "").strip():
+                raise ValueError("NOT_ASSESSED without a reason is the "
+                                 "absent-input shape")
+        elif self.identity is None:
+            raise ValueError("a discovery that RAN must carry its identity")
+
+
+@refuses_blank_text()
+@dataclass(frozen=True)
+class Paragraph:
+    """One paragraph read back BY LOCATOR. `Origin.RESOLVED`, because nothing
+    ranked it: the locator named it exactly, and that is the only way a
+    paragraph earns resolved provenance."""
+
+    locator: str
+    case_id: str
+    case_name: str
+    court: str
+    year: int | None
+    para_type: str
+    text: str
+    origin: Origin = Origin.RESOLVED
+
+
+@refuses_blank_text("why")
+@dataclass(frozen=True)
+class CaseExpansion:
+    """A case's paragraphs, with what is known about how complete they are.
+
+    `complete` HAS THREE VALUES. The authority index holds 451,548 of
+    1,015,780 source paragraphs -- the attributable kinds only -- so a case's
+    expansion is by construction the ratio, reasoning and order paragraphs
+    and not the whole judgment. `None` says nobody measured this case's
+    coverage; `False` says the index knows it dropped some; `True` is a claim
+    the index can make only about itself.
+    """
+
+    case_id: str
+    index: str
+    coverage: Coverage
+    identity: IndexIdentity | None = None
+    paragraphs: tuple[Paragraph, ...] = ()
+    complete: bool | None = None
+    why: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.coverage is Coverage.NOT_ASSESSED and self.paragraphs:
+            raise ValueError("an expansion that could not run returned paragraphs")
+
+
+class ResolutionState(str, Enum):
+    RESOLVED = "resolved"
+    UNRESOLVED = "unresolved"
+    INDEX_UNAVAILABLE = "index_unavailable"
+
+    @classmethod
+    def not_established(cls) -> "ResolutionState":
+        return cls.INDEX_UNAVAILABLE
+
+
+@refuses_blank_text("case_id", "why")
+@dataclass(frozen=True)
+class CitationResolution:
+    """What a typed citation named. EXACT, or nothing.
+
+    `key` is the reporter key the lookup used, shown so an advocate whose
+    citation resolved to nothing can see what was looked up. There is no
+    `candidates` field on purpose: a citation that does not resolve is not
+    offered near-misses, because the near-miss is how a wrong case gets
+    cited (CLAUDE.md §5: fuzzy may rank, never identify).
+    """
+
+    raw: str
+    key: str
+    state: ResolutionState
+    case_id: str = ""
+    why: str = ""

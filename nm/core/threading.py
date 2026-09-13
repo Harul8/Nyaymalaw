@@ -44,7 +44,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from nm.domain.matter import Fact, Matter, Thread
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import refuses_blank_text, snippet
 from nm.domain.traceability import implements
 
 # Decisive identifiers as they are actually written in Indian practice. Each
@@ -311,8 +311,8 @@ def _dispute_label(d) -> str:
     """
     label = (getattr(d, "label", "") or "").strip()
     if label:
-        return label[:80]
-    return (getattr(d, "quoted", "") or "").strip()[:80] or "a dispute"
+        return snippet(label, 80)
+    return snippet(getattr(d, "quoted", ""), 80) or "a dispute"
 
 def _with_identifiers(thread: Thread, disclosed: dict[str, str]) -> Thread:
     """Identifiers accumulate; they are never overwritten.
@@ -343,5 +343,5 @@ def _label(message: str) -> str:
     first = (message or "").strip().split("\n")[0]
     ids = identifiers_in(message)
     if ids:
-        return f"{next(iter(ids.values()))} — {first[:36]}".strip()
-    return first[:48] or "Thread"
+        return f"{next(iter(ids.values()))} — {snippet(first, 36)}".strip()
+    return snippet(first, 48) or "Thread"

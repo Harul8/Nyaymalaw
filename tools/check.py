@@ -211,6 +211,23 @@ def _scoped_verdict(failed: list[str], captured: dict[str, str],
     return 0
 
 
+def _known_failure_registry_is_empty() -> bool:
+    """Whether a cheap failure is necessarily new and can stop the run.
+
+    With an empty registry, any preflight failure already makes the final
+    verdict red; spending thirteen minutes on Class-A and ordinary pytest
+    cannot change it. When failures are declared, or the registry cannot be
+    read, the later populations still have to run so the scoped comparison
+    can prove that no additional failure appeared or disappeared.
+    """
+    try:
+        from tools.known_failures import load
+
+        return not load()
+    except Exception:  # noqa: BLE001 -- an unreadable control never narrows work
+        return False
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--slice", type=int, default=None,
@@ -284,6 +301,28 @@ def main() -> int:
     captured["pylint"] = out
     results.append(("pylint", ok))
     prints.append(("pylint", verification_fingerprint()))
+
+    # FAST-FAIL ONLY WHEN THERE IS NOTHING TO RECONCILE. The previous runner
+    # found Ruff red in 0.8 seconds and nevertheless spent 805.7 seconds on a
+    # Class-A population whose result could not make the gate green. A
+    # nonempty known-failure registry is different: every declared failure
+    # must still be observed exactly, so that path deliberately continues.
+    preflight_failed = [name for name, passed in results if not passed]
+    if preflight_failed and _known_failure_registry_is_empty():
+        prints.append(("preflight end", verification_fingerprint()))
+        moved = [(a[0], b[0]) for a, b in zip(prints, prints[1:], strict=False)
+                 if a[1] != b[1]]
+        if moved:
+            print("\nCHECK VOID  -- the tree changed during preflight")
+            for was_after, before_next in moved:
+                print(f"    it moved between {was_after!r} and {before_next!r}")
+        else:
+            print(f"\nCHECK FAILED  -- {', '.join(preflight_failed)}")
+        print("  pytest Class-A and ordinary local: NOT RUN -- preflight is "
+              "already red and no declared failure requires reconciliation")
+        print("Do not claim the task is done.")
+        return 1
+
     # NOT allow_warn, AND IT WAS FOR MONTHS WITH NO REASON GIVEN.
     #
     # class_a is the every-commit tier -- the logic checks. Letting it WARN

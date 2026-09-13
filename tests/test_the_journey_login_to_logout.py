@@ -377,6 +377,10 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
     page.wait_for_function(
         "() => document.querySelector('#rail-title')"
         ".textContent.trim() === 'Issues in this matter'", timeout=15000)
+    # `arg=`, BY KEYWORD. Playwright's Python API takes the argument by
+    # keyword only, and the positional form raised TypeError on every width
+    # the moment the installed version enforced it -- a harness failure that
+    # read, in the summary line, exactly like a product one.
     page.wait_for_function(
         "expected => document.querySelector('#pane-advise').dataset.matterId "
         "=== expected", arg=first, timeout=15000)

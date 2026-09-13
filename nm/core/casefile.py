@@ -109,6 +109,12 @@ class Entry:
     conflicts_with: tuple[str, ...] = ()
     superseded_by: str = ""
     version: int = 1
+    on: str = ""
+    """The date the entry carries, ISO, or empty for UNDATED. Added for P18:
+    the case file is where an advocate corrects a date, and a file that shows
+    the words and not the date leaves them correcting a value they cannot
+    see. Empty is a real state -- `Fact.date` is None and never estimated --
+    and the projection says `undated` rather than inventing one."""
 
     @property
     def documented(self) -> bool:
@@ -122,6 +128,7 @@ class Entry:
             "conflicts_with": list(self.conflicts_with),
             "superseded_by": self.superseded_by, "version": self.version,
             "documented": self.documented,
+            "date": self.on or None,
         }
 
 
@@ -162,7 +169,8 @@ def build(matter: Matter) -> dict:
               confirmed=_confirmation(f), attribution=_attribution_of(f),
               conflicts_with=tuple(str(x) for x in (f.conflicts_with or ())),
               superseded_by=str(f.superseded_by or ""),
-              version=f.version)
+              version=int(getattr(f, "version", 1) or 1),
+              on=f.date.isoformat() if getattr(f, "date", None) else "")
         for f in (matter.facts or ())]
 
     live = [e for e in entries if not e.superseded_by]

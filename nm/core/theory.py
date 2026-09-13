@@ -40,7 +40,7 @@ from enum import Enum
 
 from nm.domain.matter import FactId, Side, ThreadId
 from nm.domain.register import PEER
-from nm.domain.text import blank, refuses_blank_text
+from nm.domain.text import blank, refuses_blank_text, snippet
 from nm.domain.traceability import implements
 
 
@@ -123,7 +123,7 @@ def for_thread(theories: tuple[Theory, ...], thread: ThreadId) -> Theory | None:
     if len(mine) > 1:
         raise ValueError(
             f"{len(mine)} theories on thread {thread!r}: "
-            f"{[t.theme[:40] for t in mine]}. Exactly one per thread — a menu "
+            f"{[snippet(t.theme, 40) for t in mine]}. Exactly one per thread — a menu "
             f"is the survey D6 rejects, and offering two is handing the work "
             f"back to the advocate.")
     return mine[0] if mine else None
@@ -202,7 +202,7 @@ def inconsistent(arguments: tuple[Argument, ...],
                 continue
             for fact, needed in a.requires.items():
                 if fact in b.requires and b.requires[fact] != needed:
-                    out.append((a.statement[:60], b.statement[:60], fact))
+                    out.append((snippet(a.statement, 60), snippet(b.statement, 60), fact))
     return tuple(out)
 
 
@@ -215,7 +215,7 @@ def undeclared(arguments: tuple[Argument, ...]) -> tuple[str, ...]:
     report a clean bill of health forever. That is the shape B-049 was, and it
     is why this is computed rather than assumed away.
     """
-    return tuple(a.statement[:60] for a in arguments if not a.requires)
+    return tuple(snippet(a.statement, 60) for a in arguments if not a.requires)
 
 
 # ============================= READING A THEORY =============================

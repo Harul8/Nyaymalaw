@@ -57,7 +57,7 @@ from dataclasses import dataclass
 
 from nm.domain.matter import Basis, Role
 from nm.domain.quotable import Quotable
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import refuses_blank_text, snippet
 
 #: The permitted answers, from the product's own type. Offered to the model so
 #: it selects rather than invents -- an out-of-vocabulary role is blanked and
@@ -390,7 +390,7 @@ def interpret(quotable: Quotable, data: dict) -> StatedPosture:
         return StatedPosture(Role.UNKNOWN, Basis.UNKNOWN, None, quoted,
                              refused=f"the quoted span describes events rather "
                                      f"than stating whom the advocate acts for: "
-                                     f"{quoted[:60]!r}")
+                                     f"{snippet(quoted, 60)!r}")
 
     described = (data.get("client_described_as") or "").strip().lower() or None
     if described and names_nobody(described):

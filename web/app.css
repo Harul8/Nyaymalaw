@@ -1004,3 +1004,155 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
  * The masthead wrapping above is the actual fix. If something else overflows
  * later, the check is still able to notice.
  */
+
+/* ===================== P17/P18 -- THE CASE FILE ===================== */
+
+.casefile-head {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 12px;
+}
+.casefile-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.casefile-head select {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 13px;
+  min-width: 260px;
+  padding: 7px 9px;
+}
+.casefile h3 {
+  font-family: var(--f-serif); font-size: 1rem; font-weight: 500;
+  margin: 1.2rem 0 0.4rem;
+}
+.casefile-lede { color: var(--ink-3); font-size: 0.82rem; margin: 0 0 0.6rem; }
+
+/* The currency block. The pill is the state; the list under it is every
+ * conclusion that may not be shown as current, with the reason. */
+.currency { border: 1px solid var(--rule); border-radius: 4px; padding: 0.8rem 1rem; }
+.currency h3 { margin-top: 0; }
+.currency-state { font-size: 0.85rem; }
+.currency-said { color: var(--ink-2); }
+.currency-stale { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+.currency-stale li {
+  border-left: 3px solid var(--amber); font-size: 0.85rem;
+  margin: 0.35rem 0; padding: 0.2rem 0 0.2rem 0.6rem;
+}
+.currency-history { margin-top: 0.6rem; font-size: 0.82rem; }
+.currency-history summary { cursor: pointer; color: var(--ink-2); }
+.node-row { border-bottom: 1px solid var(--rule); padding: 0.4rem 0; }
+.node-row[data-currency="stale"] { border-left: 3px solid var(--amber); padding-left: 0.6rem; }
+.revision { color: var(--ink-2); padding: 0.25rem 0; }
+
+/* One entry on the file. A superseded entry stays on the record, greyed and
+ * marked, so the advocate can see both the old and the corrected reading. */
+.entry {
+  border-bottom: 1px solid var(--rule);
+  padding: 0.6rem 0;
+}
+.entry.superseded { color: var(--ink-3); }
+.entry.superseded .entry-text { text-decoration: line-through; }
+.entry-text { font-size: 0.92rem; }
+.entry-meta { color: var(--ink-3); font-size: 0.72rem; margin-top: 0.15rem; }
+.entry button.correct { margin-top: 0.4rem; }
+
+/* The correction form, shaped like intake because it asks the same way. */
+.correction {
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
+  display: flex; flex-direction: column; gap: 0.3rem;
+  margin-top: 0.6rem; padding: 0.8rem 1rem;
+}
+.correction label {
+  color: var(--ink-3); font-size: 0.68rem; letter-spacing: 0.07em;
+  margin-top: 0.4rem; text-transform: uppercase;
+}
+.correction label .opt { letter-spacing: 0; text-transform: none; font-size: 0.72rem; }
+.correction input {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+  font: inherit; font-size: 0.9rem; padding: 0.45rem 0.6rem;
+}
+.correction input:focus { border-color: var(--accent); outline: none; }
+
+/* ===================== P21 -- RESEARCH ON THE MATTER ===================== */
+
+.research-bar { margin: 0.6rem 0 0.4rem; }
+.research-bar label.check {
+  align-items: center; display: flex; gap: 0.5rem;
+  font-size: 0.85rem; color: var(--ink-2);
+}
+.research-fields {
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
+  display: flex; flex-direction: column; gap: 0.3rem;
+  margin-top: 0.5rem; padding: 0.7rem 0.9rem;
+}
+.research-fields label {
+  color: var(--ink-3); font-size: 0.68rem; letter-spacing: 0.07em;
+  margin-top: 0.3rem; text-transform: uppercase;
+}
+.research-fields label .opt { letter-spacing: 0; text-transform: none; font-size: 0.72rem; }
+.research-fields input {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+  font: inherit; font-size: 0.9rem; padding: 0.45rem 0.6rem;
+}
+
+/* A case, and the paragraphs it opens to. */
+.cases { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.6rem; }
+.case { border: 1px solid var(--rule); border-radius: 4px; padding: 0.7rem 0.9rem; }
+.case header { display: flex; flex-wrap: wrap; gap: 0.5rem 0.8rem; align-items: baseline; }
+.case .hit-name { font-weight: 600; }
+.case .hit-meta { color: var(--ink-3); font-size: 0.78rem; }
+.case-cover { color: var(--ink-2); font-size: 0.82rem; margin: 0.5rem 0 0.3rem; }
+.para { border-top: 1px solid var(--rule); padding: 0.5rem 0; }
+.para-meta { color: var(--ink-3); font-size: 0.72rem; }
+.para-text { margin: 0.25rem 0 0.4rem; font-size: 0.9rem; }
+.verdict-list { margin-top: 0.4rem; }
+.verdict-note { color: var(--ink-2); font-size: 0.8rem; margin: 0.3rem 0 0; }
+
+/* The record. */
+.research-record {
+  border: 1px solid var(--rule); border-radius: 4px; margin-top: 1rem;
+  padding: 0.8rem 1rem; font-size: 0.85rem;
+}
+.research-record h3 { font-family: var(--f-serif); font-size: 1rem; font-weight: 500; margin: 0 0 0.4rem; }
+.research-record .consulted, .research-record .adverse, .research-record .attached {
+  color: var(--ink-2); padding: 0.2rem 0;
+}
+.research-record .attached { border-left: 3px solid var(--good); padding-left: 0.6rem; }
+
+/* ===================== P22 -- THE LEGAL PREMISES ===================== */
+.premises { border: 1px solid var(--rule); border-radius: 4px; padding: 0.8rem 1rem; margin-top: 1rem; }
+.premises h3 { margin-top: 0; }
+.premise-thread { border-top: 1px solid var(--rule); margin-top: 0.6rem; padding-top: 0.5rem; }
+.premise-thread h4 { font-size: 0.85rem; margin: 0 0 0.3rem; }
+.premise-row { padding: 0.35rem 0; }
+.premise-row[data-kind] .r-fields { margin: 0; }
+.premise-alt { color: var(--ink-3); font-size: 0.8rem; padding-left: 0.6rem; }
+.premise-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.4rem; }
+.premise-confirm label { color: var(--ink-3); font-size: 0.75rem; }
+.premise-confirm input {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+  font: inherit; font-size: 0.85rem; padding: 0.35rem 0.5rem; flex: 1 1 240px;
+}
+
+/* ===================== P23 -- RELIEF AND ENFORCEABILITY ===================== */
+.relief { border: 1px solid var(--rule); border-radius: 4px; padding: 0.8rem 1rem; margin-top: 1rem; }
+.relief h3 { margin-top: 0; }
+.relief-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.5rem; }
+.relief-confirm input, .relief-confirm select {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+  font: inherit; font-size: 0.82rem; padding: 0.3rem 0.45rem;
+}
+.relief-confirm input[name="remedy"] { flex: 1 1 200px; }
+.relief-confirm input[name="objective"], .relief-confirm input[name="reason"] { flex: 1 1 160px; }
+
+/* ===================== P24 -- BRIEFING READINESS ===================== */
+.briefing { border: 1px solid var(--rule); border-radius: 4px; padding: 0.6rem 0.8rem; margin: 0.6rem 0; background: var(--wash, transparent); }
+.briefing-head { display: flex; align-items: baseline; gap: 0.4rem; }
+.briefing-why { color: var(--ink-3); font-size: 0.82rem; }
+.briefing-need { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.4rem; font-size: 0.85rem; }
+.briefing-need.paused { color: var(--ink-3); }
+.briefing-need button.ghost { background: transparent; border: 1px solid var(--rule); border-radius: 3px; font: inherit; font-size: 0.78rem; padding: 0.15rem 0.5rem; cursor: pointer; }

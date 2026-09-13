@@ -101,7 +101,12 @@ def test_only_plain_ground_is_ever_folded():
         f"the bytes are served and the advocate still cannot see them.")
     assert "el.signal === 'none'" in predicate, (
         f"the fold no longer requires an explicitly unsignalled ground: {predicate}")
-    assert predicate == "el.kind === 'ground' && !el.disclosure && el.signal === 'none'"
+    assert "el.section === 'authority'" in predicate, (
+        f"the fold no longer restricts itself to authority grounds, so a "
+        f"limitation position filed under Time can be collapsed: {predicate}")
+    assert predicate == ("el.kind === 'ground' && !el.disclosure && "
+                         "el.signal === 'none' && (!el.section || "
+                         "el.section === 'authority')")
 
 
 def test_the_spoken_half_is_the_complement_and_not_a_second_list():

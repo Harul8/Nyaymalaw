@@ -1,0 +1,40 @@
+#!/bin/sh
+# THE ONE OWNER of "bring the code graph and its vectors up to the current tree".
+#
+# Called by every hook that fires when the tree changes -- pre-commit,
+# post-merge, post-rewrite -- so that the three cannot drift into three
+# different refreshes. That is §4's answer to the second copy: not a comment
+# asking each hook to stay in step, but a single script none of them may
+# duplicate. `tests/test_every_way_the_tree_changes_refreshes_the_index.py`
+# scans tools/hooks/ and fails the build on a hook that carries its own copy.
+#
+# WHY POST-MERGE AND POST-REWRITE EXIST AT ALL, measured 12 September 2026.
+# pre-commit had refreshed the vectors since 10 September and the index was
+# still 600 nodes behind: every one of them arrived by a path `git commit`
+# never takes. `1399a53` reached HEAD as a fast-forward, `68927c3` and
+# `a3d9c47` as merge commits -- and git runs pre-merge-commit for those, not
+# pre-commit, and nothing at all for a fast-forward. The work itself had been
+# committed on codex/ branches on another machine, where the hook was not.
+# A mechanism that is correct for one of the four ways a tree can change is a
+# mechanism that is bypassed by the other three, silently, and the symptom is
+# a plausible wrong answer from semantic search (S3).
+#
+# IT NEVER BLOCKS. Offline is a normal state and a search index is not a
+# release criterion. What it does instead is let `graph_vectors.py` PRINT the
+# remaining lag as a number, so a drift it could not close is visible rather
+# than assumed -- and `.claude/settings.json` prints the same number at every
+# session start, which is where somebody is actually looking.
+cd "$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+
+# Structure first: nodes, edges, FTS. `update` is incremental by file hash.
+if command -v code-review-graph >/dev/null 2>&1; then
+    code-review-graph update || true
+fi
+
+# Then the vectors, which `update` does not touch. Incremental by text hash,
+# so an unchanged node costs nothing and only new or edited ones reach the API.
+if command -v python >/dev/null 2>&1; then
+    python tools/graph_vectors.py --embed || true
+fi
+
+exit 0

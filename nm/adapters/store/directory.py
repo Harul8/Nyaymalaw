@@ -54,9 +54,9 @@ from nm.domain.advocate import (
     registration_email,
     token_fingerprint,
 )
+from nm.domain.names import discard
 from nm.domain.professional_access import ProfessionalApproval
 from nm.domain.traceability import implements
-from nm.infrastructure.cleanup import discard
 from nm.ports.directory import (  # noqa: F401
     AccountBusy,
     AlreadyEnrolled,

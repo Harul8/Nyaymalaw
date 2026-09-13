@@ -64,7 +64,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from nm.domain.text import fold
+from nm.domain.text import fold, snippet
 
 #: THE SECTION HEADINGS, as constants, because two other places need to find
 #: these sections in a rendered prompt and a literal copy there goes stale the
@@ -137,9 +137,9 @@ class Quotable:
             return "nothing quoted to support it"
         if not fold(self.words):
             return (f"there is nothing the advocate has written to check a "
-                    f"quotation against, so {quoted[:60]!r} cannot be "
+                    f"quotation against, so {snippet(quoted, 60)!r} cannot be "
                     f"accepted as their words")
-        return f"the quoted span is in nothing the advocate wrote: {quoted[:60]!r}"
+        return f"the quoted span is in nothing the advocate wrote: {snippet(quoted, 60)!r}"
 
     def plus(self, more: str) -> "Quotable":
         """The same, with one more piece of the advocate's own text quotable.

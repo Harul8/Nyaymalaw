@@ -20,6 +20,7 @@ is worse than either alone: the advocate cannot tell which is stale.
 """
 from __future__ import annotations
 
+from nm.core import briefing as _briefing
 from nm.domain.clock import today as forum_today
 from nm.domain.matter import Matter, Role
 from nm.domain.traceability import implements
@@ -77,9 +78,42 @@ def _recency(row: dict) -> int:
         return 0
 
 
-def _deadline_window(deadlines, today, *, thread_id=None) -> dict:
-    """One read-accounting rule shared by the matter list, board and cover."""
+def _currency_of(ledger, thread_id: str, deadline) -> tuple[str, str]:
+    """Whether one register row may be shown as current. THREE STATES.
+
+    `current`         the ledger holds the node and nothing it rests on moved
+    `stale`           something moved and it has not been recomputed (or was
+                      recomputed and failed, or is being recomputed now)
+    `not_established` no node is recorded for it -- a register written before
+                      the ledger existed, or a kind the ledger does not track
+
+    The third is a VALUE and it is rendered, because the two failures it
+    stands between are opposite: a stale deadline the advocate acts on, and a
+    real deadline the board hides because nobody recorded its inputs.
+    """
+    from nm.core.deadlines import DeadlineKind
+    from nm.core.dependency import Currency, names_for, presentable
+
+    if getattr(deadline, "kind", None) is not DeadlineKind.LIMITATION:
+        return "not_established", "the ledger does not track this kind of deadline"
+    name = names_for(thread_id).deadline
+    node = ledger.node(name)
+    if node is None:
+        return ("not_established",
+                "no dependency record exists for this deadline, so whether it "
+                "is still current has not been established")
+    ok, why = presentable(ledger, name)
+    if ok:
+        return "current", ""
+    state = ("stale" if node.currency in (Currency.STALE, Currency.REWORKING)
+             else "not_established")
+    return state, why
+
+
+def _deadline_window(deadlines, today, *, thread_id=None, currency=None) -> dict:
+    """One deadline and currency rule shared by list, board and cover."""
     from nm.core.deadlines import DeadlineStatus, RegisterRead, passed, register, upcoming
+    from nm.core.dependency import Ledger
 
     if isinstance(deadlines, RegisterRead):
         held = tuple(d for d in deadlines.rows if thread_id is None or d.thread == thread_id)
@@ -90,39 +124,55 @@ def _deadline_window(deadlines, today, *, thread_id=None) -> dict:
         assessed = [t for t in deadlines.assessed if thread_id is None or t == thread_id]
         complete = bool(assessed) and not unreadable and not unassessed
     else:
-        # A direct tuple is an explicitly supplied, assessed register. The
-        # served caller uses RegisterRead and cannot acquire that assumption.
         held = tuple(d for d in (deadlines or ()) if thread_id is None or d.thread == thread_id)
         unreadable, unassessed, assessed = [], [], []
         complete = deadlines is not None
-    assessment = ("assessed" if complete else "incomplete" if held or unreadable or assessed
-                  else "not_assessed")
-    ordered = register(held, today)
+
+    ledger = Ledger.from_stored(currency)
+    judged = {id(d): _currency_of(ledger, d.thread, d) for d in held}
+    current = tuple(d for d in held if judged[id(d)][0] != "stale")
+    stale = register(tuple(d for d in held if judged[id(d)][0] == "stale"), today)
+    ordered = register(current, today)
+    all_ordered = register(held, today)
     live, gone = upcoming(ordered, today), passed(ordered, today)
     unknown = tuple(d for d in ordered if d.status(today) is DeadlineStatus.NOT_COMPUTED)
+    assessment = ("assessed" if complete else "incomplete"
+                  if held or unreadable or assessed else "not_assessed")
 
     def row(d):
+        state, why = judged[id(d)]
         return {"thread": d.thread, "on": d.on.isoformat() if d.on else None,
+                "conditional_on": (d.conditional_on.isoformat()
+                                   if d.conditional_on else None),
                 "action": d.action, "owner": d.owner, "source": d.source,
-                "consequence": d.consequence, "status": d.status(today).value}
+                "consequence": d.consequence, "status": d.status(today).value,
+                "currency": state, "currency_reason": why}
 
-    status = (live[0].status(today).value if live else "passed" if gone else
-              "not_computed" if unknown else "not_assessed" if not complete else
-              "none_on_this_thread" if thread_id is not None else "none_on_this_matter")
+    status = (live[0].status(today).value if live else "stale" if stale else
+              # A known obligation whose date is not established is not a
+              # clean sheet. A separately labelled conditional calculation
+              # remains visible in `uncomputed_deadlines`, never promoted to
+              # `next_deadline`.
+              "passed" if gone else "not_computed" if unknown else
+              "not_assessed" if not complete else "none_on_this_thread"
+              if thread_id is not None else "none_on_this_matter")
     return {
         "next_deadline": live[0].on.isoformat() if live else None,
         "next_deadline_status": status,
+        "next_deadline_currency": judged[id(live[0])][0] if live else None,
+        "stale_deadline": stale[0].on.isoformat() if stale and stale[0].on else None,
+        "stale_deadlines": len(stale),
         "deadline_assessment": assessment,
         "deadline_unreadable": unreadable,
         "deadline_unassessed": unassessed,
         "passed_deadlines": ([{**row(d), "days_ago": -d.days(today)} for d in gone]
                              if held or complete else None),
         "uncomputed_deadlines": [row(d) for d in unknown],
-        "deadline_entries": [row(d) for d in ordered],
+        "deadline_entries": [row(d) for d in all_ordered],
     }
 
 
-def _thread_row(thread, deadlines, today=None) -> dict:
+def _thread_row(thread, deadlines, today=None, currency=None) -> dict:
     """Six fields. One row. No analysis.
 
     A line that is a conclusion, a reason, or a piece of reasoning does not
@@ -134,10 +184,24 @@ def _thread_row(thread, deadlines, today=None) -> dict:
     null` and an advocate reading it saw a file with no deadlines on it. That
     is defect shape S1: the absent input produced the shape of a clean result,
     and `()` could not be told from "nobody computed a register".
+
+    `currency` IS THE MATTER'S DEPENDENCY LEDGER (P18). A deadline whose
+    node is STALE is not the nearest live deadline however near its date: it
+    is listed, labelled, and kept out of `next_deadline`, because the one
+    thing the board must never do is put a date the advocate has corrected
+    at the top of their day.
+
+    A deadline whose currency is NOT_ESTABLISHED -- a register written before
+    the ledger existed -- stays in the running and carries the label. The two
+    are different facts: stale is a FINDING that an input moved, and
+    not-established is a GAP in what was recorded. Hiding a real window
+    because nobody recorded its inputs is the opposite failure, and the
+    label is what keeps the gap from reading as a clean sheet.
     """
 
     today = today or forum_today()   # BK-14: the forum's date
-    window = _deadline_window(deadlines, today, thread_id=thread.id)
+    window = _deadline_window(
+        deadlines, today, thread_id=thread.id, currency=currency)
     window.pop("deadline_entries")  # The board stays a summary, not a second register.
     posture = thread.posture
     unresolved = not posture.resolved
@@ -171,7 +235,8 @@ def board_projection(matter: Matter, deadlines, today=None) -> dict:
     """
     # D3 — THE NEAREST WINDOW LEADS, regardless of which thread is legally the
     # most interesting. The interesting one will still be there next week.
-    rows = nearest_first([_thread_row(t, deadlines, today)
+    rows = nearest_first([_thread_row(t, deadlines, today,
+                                      currency=getattr(matter, "dependencies", None))
                           for t in matter.threads])
     return {
         "state": "ok",
@@ -237,7 +302,8 @@ def matter_list_projection(matters, registers=None) -> dict:
         # row above and same answer: three states, and a register that has to
         # be supplied rather than defaulted into silence.
         register = None if registers is None else registers.get(m.id)
-        window = _deadline_window(register, today)
+        window = _deadline_window(
+            register, today, currency=getattr(m, "dependencies", None))
         window.pop("deadline_entries")
         rows.append({
             "matter_id": m.id,
@@ -390,4 +456,200 @@ def cover_projection(matter: Matter, deadlines=None, today=None) -> dict:
         "commission": commission.as_dict() if commission else None,
         "commission_state": ("recorded" if commission else "not_recorded"),
         "thread_count": len(matter.threads),
+        # WHAT ON THIS FILE IS STILL CURRENT (P18). One block, read from the
+        # ledger the turn writes; the same names the board uses.
+        "currency": currency_projection(matter),
+        # THE LEGAL PREMISES EACH THREAD'S LIMITATION RESTS ON (P22), and
+        # whether the cover, the register and the answer are about the SAME
+        # premise version. A mismatch is disclosed as `inconsistent`, never
+        # smoothed over -- BK-35-AC2's whole point is that they share one
+        # version or say precisely where they do not.
+        "premises": premises_projection(matter),
+        # WHAT THE RELIEF IS WORTH, per thread (P23/BK-70). Whether a remedy
+        # that serves the objective is available, substantial, timely and
+        # enforceable -- and its proportionality, stated alongside and never a
+        # veto. `no_useful_relief` where the merits may hold but nothing on the
+        # file delivers; `not_assessed` where nobody looked.
+        "relief": relief_projection(matter),
+        # INTAKE READINESS (P24). On the cover so it survives across turns and a
+        # restart -- readiness is not turn completion, and a paused need waits on
+        # its resume trigger rather than being forgotten.
+        "briefing": _briefing.block(matter),
+    }
+
+
+def premises_projection(matter: Matter) -> dict:
+    """Per thread: the three premises with basis, source and review state, and
+    a consistency verdict against the register.
+
+    THREE STATES for the file: `established` (every thread's premises are
+    stated or attributed), `conditional` (a thread's accrual was inferred),
+    `not_assessed` (no thread has computed a limitation). `inconsistent`
+    overrides them where a register row's premise digest does not match the
+    thread's own premises -- which is the cover and the register disagreeing
+    about the law, and it must be seen.
+    """
+    from nm.core.premise import Premises
+
+    threads = []
+    any_conditional = False
+    any_computed = False
+    inconsistent = []
+    for t in matter.threads:
+        rows = getattr(t, "premises", ()) or ()
+        if not rows:
+            threads.append({"thread_id": t.id, "thread": t.label,
+                            "state": "not_assessed", "premises": []})
+            continue
+        any_computed = True
+        digest = Premises.from_stored(rows).digest()
+        conditional = any(p.get("basis") == "inferred" for p in rows)
+        any_conditional = any_conditional or conditional
+        # THE REGISTER ROWS FOR THIS THREAD, and their premise digest.
+        reg_digests = {getattr(d, "premise_digest", "")
+                       for d in (t.deadlines or ())
+                       if getattr(d, "thread", None) == t.id
+                       and getattr(d, "premise_digest", "")}
+        mismatch = bool(reg_digests) and digest not in reg_digests
+        if mismatch:
+            inconsistent.append(t.id)
+        threads.append({
+            "thread_id": t.id, "thread": t.label,
+            "state": "conditional" if conditional else "established",
+            "digest": digest,
+            "consistent_with_register": not mismatch,
+            "premises": [{
+                "kind": p.get("kind"), "statement": p.get("statement"),
+                "basis": p.get("basis"), "source": p.get("source"),
+                "review_state": p.get("review_state", "not_assessed"),
+                "reviewed_by": p.get("reviewed_by", ""),
+                "alternatives": p.get("alternatives", [])} for p in rows]})
+    state = ("inconsistent" if inconsistent
+             else "conditional" if any_conditional
+             else "established" if any_computed
+             else "not_assessed")
+    return {"state": state, "threads": threads,
+            "inconsistent_threads": inconsistent,
+            "said": ("a thread's cover and deadline register rest on different "
+                     "premise versions" if inconsistent
+                     else "a thread's limitation rests on a premise the product "
+                          "inferred; confirm it before relying on the date"
+                     if any_conditional
+                     else "every computed limitation rests on an attributed or "
+                          "stated legal position" if any_computed
+                     else "no limitation has been computed on this file")}
+
+
+def relief_projection(matter: Matter) -> dict:
+    """Per thread: whether the relief that serves the objective can be obtained,
+    enforced and is worth the cost. BK-70 / E2.
+
+    THREE STATES for the file, and proportionality is DISCLOSED, never a veto.
+    `serveable` where a remedy delivers; `no_useful_relief` where the merits
+    may hold and nothing on the file delivers (unavailable, hollow, late or
+    unenforceable) -- the state this exists to make visible; `not_assessed`
+    where nobody has looked, which is not the same as nothing worth pursuing.
+    A disproportionate route is listed under `disproportionate` and stays in
+    `useful`: the advocate is told the cost, and left to decide (E3's NEVER).
+    """
+    from nm.core import relief as relief_mod
+
+    threads = []
+    any_serveable = False
+    any_no_useful = False
+    for t in matter.threads:
+        reliefs = relief_mod.reliefs_from_stored(getattr(t, "reliefs", ()) or ())
+        obj = relief_mod.Objective.from_stored(getattr(t, "objective", None))
+        if not reliefs and obj is None:
+            threads.append({"thread_id": t.id, "thread": t.label,
+                            "state": "not_assessed", "objective": None,
+                            "reliefs": []})
+            continue
+        pos = relief_mod.assess(obj, reliefs)
+        if pos.state is relief_mod.ReliefState.SERVEABLE:
+            any_serveable = True
+        elif pos.state in (relief_mod.ReliefState.DEFEATED,
+                           relief_mod.ReliefState.CONTINGENT):
+            any_no_useful = True
+        threads.append({
+            "thread_id": t.id, "thread": t.label,
+            "state": pos.state.value,
+            "objective": ({"statement": obj.statement, "basis": obj.basis.value}
+                          if obj is not None else None),
+            "digest": pos.digest,
+            "useful": list(pos.useful),
+            "defeated": [{"remedy": r, "coordinate": c, "why": w}
+                         for r, c, w in pos.defeated],
+            "contingent": [{"remedy": r, "coordinate": c, "why": w}
+                           for r, c, w in pos.contingent],
+            "disproportionate": [{"remedy": r, "why": w}
+                                 for r, w in pos.disproportionate],
+            "reliefs": [{
+                "remedy": r.remedy, "forum": r.forum,
+                "availability": r.availability.value, "value": r.value.value,
+                "timing": r.timing.value,
+                "enforceability": r.enforceability.value,
+                "proportionality": r.proportionality.value,
+                "basis": r.basis.value, "reason": r.reason,
+            } for r in pos.reliefs],
+        })
+    state = ("no_useful_relief" if any_no_useful
+             else "serveable" if any_serveable else "not_assessed")
+    return {"state": state, "threads": threads,
+            "said": ("a remedy that would serve the objective is not available, "
+                     "hollow, late or unenforceable on at least one thread; the "
+                     "recommendation reflects it" if any_no_useful
+                     else "a remedy that delivers the objective is available"
+                     if any_serveable
+                     else "no relief has been assessed on this file")}
+
+
+def currency_projection(matter: Matter) -> dict:
+    """Every recorded conclusion, its currency, and its history. BK-65-AC1.
+
+    THREE STATES AT THE TOP, and the third is a file with no ledger at all:
+    `not_assessed` is a record written before P18 or a matter no turn has
+    derived on, and it must not render as `current` -- which is what an
+    empty list of stale nodes would say if the state were derived from it.
+
+    THE HISTORY CARRIES `was`, `now`, the reason AND the versions that moved,
+    so the advocate sees the old date and the corrected one and who changed
+    it (EVAL-010) rather than a value that is different from the one they
+    remember with nothing saying why.
+    """
+    from nm.core.dependency import Ledger
+
+    ledger = Ledger.from_stored(getattr(matter, "dependencies", None))
+    # NO NODES IS NOT ASSESSED, whatever inputs are tracked. The first draft
+    # tested `not nodes and not tracked` and a matter whose turn had observed
+    # its facts and concluded nothing reported `current` -- an empty list of
+    # stale conclusions read as a certificate, which is the S1 shape this
+    # block exists to refuse. Found by the test written for it.
+    if not ledger.nodes:
+        return {"state": "not_assessed",
+                "said": ("no conclusion on this file has a recorded "
+                         "dependency yet; currency cannot be certified"),
+                "nodes": [], "history": [], "stale": [],
+                # Inputs exist before the first conclusion does. Omitting
+                # them here made the full dependency endpoint lose an
+                # attached authority precisely while currency was still
+                # unassessed. Qualify the conclusion state without shrinking
+                # the underlying ledger population.
+                "tracked": [t.as_dict() for t in ledger.tracked]}
+    stale = ledger.stale()
+    return {
+        "state": "stale" if stale else "current",
+        "said": (f"{len(stale)} conclusion(s) on this file are not current"
+                 if stale else
+                 "every recorded conclusion is current against the inputs "
+                 "it was computed from"),
+        "nodes": [{**n.as_dict(),
+                   "source_versions": list(ledger.source_versions(n.name))}
+                  for n in ledger.nodes],
+        "stale": [{"name": n.name, "shown": n.label, "value": n.value,
+                   "currency": n.currency.value, "because": n.stale_because,
+                   "rework_exhausted": n.rework_exhausted}
+                  for n in stale],
+        "history": [r.as_dict() for r in ledger.history],
+        "tracked": [t.as_dict() for t in ledger.tracked],
     }

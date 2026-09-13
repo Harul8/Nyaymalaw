@@ -39,6 +39,7 @@ from pathlib import Path
 from nm.domain.citation import last_wanted_section, wanted_section
 from nm.domain.clock import FORUM
 from nm.domain.matter import CauseOfAction
+from nm.domain.text import snippet
 from nm.domain.traceability import implements
 from nm.knowledge.citator import Citator
 from nm.knowledge.identity import IdentityIndex
@@ -189,6 +190,19 @@ class CorpusEvidenceAdapter:
             self._published_snapshot.snapshot_id
             if self._published_snapshot is not None else None
         )
+
+    def withdrawn_sources(self) -> frozenset[str]:
+        """The generation's withdrawals, read from its durable events. P21.
+
+        Only when a published generation is bound: the legacy layout has no
+        withdrawal record to read, and inventing an empty one would be the
+        clean bill EVAL-014 refuses.
+        """
+        if self._published_snapshot is None:
+            return frozenset()
+        from nm.knowledge.manifest import withdrawn_versions
+
+        return withdrawn_versions(self._published_snapshot.root)
 
     def readiness(self) -> dict:
         """Three states per capability, reported at /api/health.
@@ -595,7 +609,7 @@ class CorpusEvidenceAdapter:
             ident = self._identity.case(case_id)
             bench = f"; {ident.describe()}" if ident else ""
             findings.append(Finding(
-                proposition=need.question.strip()[:200],
+                proposition=snippet(need.question, 200),
                 source_kind=SourceKind.AUTHORITY,
                 ref=f"{case_name} ({court}, {year}{bench})",
                 span=" ".join((text or "").split()),

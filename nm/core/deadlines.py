@@ -31,7 +31,7 @@ still be there next week, and the one expiring on Friday will not.
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass
 from datetime import date, timedelta
 from enum import Enum
 
@@ -71,7 +71,7 @@ class DeadlineKind(str, Enum):
     OTHER = "other"
 
 
-@refuses_blank_text()
+@refuses_blank_text("premise_digest")
 @dataclass(frozen=True)
 class Deadline:
     """One dated obligation. STATUS IS NOT A FIELD.
@@ -100,6 +100,17 @@ class Deadline:
     """What happens if it passes. A passed deadline with no consequence tells
     the advocate nothing they can act on."""
     on: date | None = None
+    conditional_on: date | None = None
+    """A date computed under a premise the product INFERRED (P22). It is not
+    `on`: `status()` reads `on`, so a conditional window is NOT_COMPUTED on
+    the register and never near, future or passed -- an advocate must not be
+    told to act by a date that rests on an assumption. It is carried so the
+    board can show the figure labelled, beside the premise that would make
+    it real."""
+    premise_digest: str = ""
+    """The version of the legal premises this row was computed under, so the
+    cover, the answer and the register can be checked to be about the same
+    premises (BK-35-AC2). Empty for a row written before P22."""
 
     def __post_init__(self) -> None:
         for name in ("thread", "source", "action", "owner", "consequence"):
@@ -110,6 +121,8 @@ class Deadline:
             raise ValueError("deadline kind is not registered")
         if self.on is not None and type(self.on) is not date:
             raise ValueError("deadline on must be a date or explicitly not computed")
+        if self.conditional_on is not None and type(self.conditional_on) is not date:
+            raise ValueError("conditional deadline must be a date or absent")
 
     def status(self, today: date) -> DeadlineStatus:
         """Recomputed every time. NEVER stored.
@@ -149,22 +162,39 @@ class RegisterRead:
 
 
 def from_stored(value, *, thread: str) -> Deadline:
-    """Reconstruct exactly one saved obligation without coercing facts or status."""
+    """Reconstruct one saved obligation across additive schema versions."""
     encoded = asdict(value) if isinstance(value, Deadline) else value
-    if not isinstance(encoded, dict) or set(encoded) != {field.name for field in fields(Deadline)}:
+    required = {"thread", "kind", "source", "action", "owner", "consequence", "on"}
+    optional = {"conditional_on", "premise_digest"}
+    if (not isinstance(encoded, dict) or not required.issubset(encoded)
+            or set(encoded) - required - optional):
         raise ValueError("deadline fields do not match the saved schema")
+    # P22 added premise-aware fields. A row written before P22 remains a
+    # readable historical obligation; absence of the new fields does not
+    # invent a premise or a conditional date. Unknown fields are still
+    # refused above so schema drift cannot pass silently.
+    encoded = {**encoded,
+               "conditional_on": encoded.get("conditional_on"),
+               "premise_digest": encoded.get("premise_digest", "")}
     on = encoded["on"]
     if isinstance(on, str):
         parsed = date.fromisoformat(on)
         if parsed.isoformat() != on:
             raise ValueError("deadline date is not canonical")
         on = parsed
+    conditional_on = encoded["conditional_on"]
+    if isinstance(conditional_on, str):
+        parsed = date.fromisoformat(conditional_on)
+        if parsed.isoformat() != conditional_on:
+            raise ValueError("conditional deadline date is not canonical")
+        conditional_on = parsed
     kind = encoded["kind"]
     if not isinstance(kind, DeadlineKind):
         if type(kind) is not str:
             raise ValueError("deadline kind has invalid type")
         kind = DeadlineKind(kind)
-    row = Deadline(**{**encoded, "kind": kind, "on": on})
+    row = Deadline(**{**encoded, "kind": kind, "on": on,
+                      "conditional_on": conditional_on})
     if row.thread != thread:
         raise ValueError("deadline belongs to a different thread")
     return row

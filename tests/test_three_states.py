@@ -183,6 +183,19 @@ CLOSED: dict[str, str] = {
                  "from this enum, so an unassessed threshold appears as a "
                  "BLOCKED row rather than as a missing member — the escape is "
                  "on ThresholdState, which is where the question is answered.",
+    "Role": "the three registered delegation roles (autonomy.json). A task is "
+            "dispatched under exactly one, chosen by the lead; ORDINARY WORK "
+            "uses no specialist at all, which is the empty set of tasks rather "
+            "than a fourth role. The three-state answer for a delegated attempt "
+            "lives on ResultStatus, whose NOT_ESTABLISHED is the unrun-specialist "
+            "case, not on which role was asked.",
+    "Action": "the permitted next moves the adaptive lead may PROPOSE "
+              "(autonomy.json dynamic_actions). The lead always proposes exactly "
+              "one, chosen from the state; STOP is itself a deliberate action, so "
+              "there is no 'no action' member -- a matter with nothing left to do "
+              "stops rather than proposing an unknown. Whether the objective is "
+              "MET is the three-state question, and its escape lives on "
+              "lead.Readiness, not on which action was chosen.",
 }
 
 

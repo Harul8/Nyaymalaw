@@ -33,8 +33,16 @@ from dataclasses import dataclass
 from typing import Any
 
 from nm.domain.egress import DataClass, EgressRefused, Gatekeeper, Sink
-from nm.ports.evidence import Coverage
-from nm.ports.search import CorpusSearch, CorpusSearchPort
+from nm.ports.evidence import Coverage, Treatment
+from nm.ports.search import (
+    CaseDiscovery,
+    CaseExpansion,
+    CitationResolution,
+    CorpusSearch,
+    CorpusSearchPort,
+    Paragraph,
+    ResolutionState,
+)
 
 #: Read FROM THE PORT for the same reason `PolicedStore` does: a hand-written
 #: list is a second declaration, and the stale one would be the copy.
@@ -69,6 +77,65 @@ class PolicedSearch:
                 coverage=Coverage.NOT_ASSESSED, why=str(refused))
         return self.inner.search(query, court=court, from_year=from_year,
                                  to_year=to_year, limit=limit)
+
+    # ------------------------------------------------ the P21 surface ------
+    #
+    # EVERY PORT METHOD IS GATED HERE, BY NAME, and `__getattr__` below refuses
+    # to delegate one that is not. Each returns its type's own third state
+    # when the policy refuses -- the same rule `search` follows -- because a
+    # refused route reported as an empty result is the defect, not the report
+    # of it. A locator or a case id is smaller than a query and still says
+    # what the advocate is working on, so it leaves under the same class.
+
+    def _permit(self, size: int) -> str | None:
+        try:
+            self.gate.permit(Sink.INDEX, self.processor_id, self.data_classes,
+                             size_bytes=size)
+        except EgressRefused as refused:
+            return str(refused)
+        return None
+
+    def discover(self, query: str, *, court: str | None = None,
+                 from_year: int | None = None, to_year: int | None = None,
+                 limit: int = 20) -> CaseDiscovery:
+        refused = self._permit(len((query or "").encode("utf8")))
+        if refused:
+            return CaseDiscovery(query=query, index=f"{self.processor_id} (refused)",
+                                 coverage=Coverage.NOT_ASSESSED, why=refused)
+        return self.inner.discover(query, court=court, from_year=from_year,
+                                   to_year=to_year, limit=limit)
+
+    def expand(self, case_id: str, *, query: str | None = None,
+               limit: int = 200) -> CaseExpansion:
+        refused = self._permit(len(f"{case_id}{query or ''}".encode("utf8")))
+        if refused:
+            return CaseExpansion(case_id=case_id, index=f"{self.processor_id} (refused)",
+                                 coverage=Coverage.NOT_ASSESSED, why=refused)
+        return self.inner.expand(case_id, query=query, limit=limit)
+
+    def passage(self, locator: str) -> Paragraph | None:
+        if self._permit(len((locator or "").encode("utf8"))):
+            return None
+        return self.inner.passage(locator)
+
+    def resolve(self, citation: str) -> CitationResolution:
+        refused = self._permit(len((citation or "").encode("utf8")))
+        if refused:
+            return CitationResolution(raw=citation, key="?",
+                                      state=ResolutionState.INDEX_UNAVAILABLE,
+                                      why=refused)
+        return self.inner.resolve(citation)
+
+    def treatment(self, case_id: str) -> Treatment:
+        refused = self._permit(len((case_id or "").encode("utf8")))
+        if refused:
+            return Treatment.not_checked(refused)
+        return self.inner.treatment(case_id)
+
+    def case_identity(self, case_id: str):
+        if self._permit(len((case_id or "").encode("utf8"))):
+            return None
+        return self.inner.case_identity(case_id)
 
     def __getattr__(self, name: str) -> Any:
         """A port method never delegates ungated. See `PolicedStore`."""

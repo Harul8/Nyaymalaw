@@ -450,6 +450,44 @@ def test_the_running_gate_stamps_the_digest_it_actually_verified(
     assert "CHECK OK" in capsys.readouterr().out
 
 
+def test_a_new_preflight_failure_does_not_run_the_expensive_populations(
+        monkeypatch, capsys):
+    labels: list[str] = []
+
+    def fake_step(label, _cmd, allow_warn=False):
+        labels.append(label)
+        return label != "ruff", "planted ruff failure"
+
+    monkeypatch.setattr(check, "step", fake_step)
+    monkeypatch.setattr(check, "verification_fingerprint", lambda: "d" * 64)
+    monkeypatch.setattr(check, "_known_failure_registry_is_empty", lambda: True)
+    monkeypatch.setattr(sys, "argv", ["check.py"])
+
+    assert check.main() == 1
+    assert labels[-1] == "pylint E0601,E0606"
+    assert not any(label.startswith("pytest") for label in labels)
+    assert "NOT RUN -- preflight is already red" in capsys.readouterr().out
+
+
+def test_declared_failures_still_require_every_population(
+        monkeypatch):
+    labels: list[str] = []
+
+    def fake_step(label, _cmd, allow_warn=False):
+        labels.append(label)
+        return label != "ruff", "planted declared failure"
+
+    monkeypatch.setattr(check, "step", fake_step)
+    monkeypatch.setattr(check, "verification_fingerprint", lambda: "e" * 64)
+    monkeypatch.setattr(check, "_known_failure_registry_is_empty", lambda: False)
+    monkeypatch.setattr(check, "_scoped_verdict", lambda *_args: 0)
+    monkeypatch.setattr(sys, "argv", ["check.py"])
+
+    assert check.main() == 0
+    assert "pytest Class-A (offline every-commit)" in labels
+    assert "pytest (ordinary local)" in labels
+
+
 def _complete_class_a_result(tmp_path: pathlib.Path) -> dict:
     fingerprint = evidence.verification_fingerprint(tmp_path)
     return {

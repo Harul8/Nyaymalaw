@@ -73,6 +73,24 @@ REACHED_ELSEWHERE = {
     # The held-content route deliberately refuses original-byte release.
     "open_upload_first_intake", "begin_upload", "list_uploads", "inspect_upload",
     "receive_upload_chunk", "complete_upload", "cancel_upload", "held_upload_content",
+    # P18's two, registered the same way, and both with a BROWSER caller: the
+    # Case file pane's Correct control posts the correction and the pane reads
+    # the ledger. The sweep sees neither call because both are template
+    # literals in `web/app.js`, which is the same blindness as `sessions`.
+    "correct_fact", "get_dependencies",
+    # P21's five, registered the same way, each with a BROWSER caller on the
+    # search pane (`runResearchRound`, `expandCase`, `attachParagraph`).
+    "start_research", "list_research", "get_research", "inspect_case",
+    "attach_source",
+    # P22's route, registered the same way, with a browser caller on the case
+    # file (the Confirm-premise control).
+    "state_premise",
+    # P23's route, with a browser caller on the case file (the State-relief
+    # control on the Relief and enforceability panel).
+    "state_relief",
+    # P24's two, with browser callers on the case file's briefing controls
+    # (mark a need unavailable; resume it). Same template-literal blindness.
+    "mark_need_unavailable", "resume_need",
     # `@implements` markers: their whole purpose is to be SCANNED by
     # tools/trace.py rather than called.
     "_implements_c4",

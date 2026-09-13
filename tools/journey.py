@@ -118,6 +118,37 @@ EXPECTED = (
     "test_pending_registration_owns_its_one_time_result",
     "test_unconfirmed_registration_does_not_claim_no_account_was_created",
     "test_full_length_email_stays_readable_on_a_phone",
+    # P18 -- BK-65-AC1 in the browser: `tests/test_the_journey_of_a_correction.py`.
+    # SAME REPORT, SAME FINGERPRINT, SAME COMPLETENESS RULE. A second runner for
+    # a second suite would be a second place for a phase to go missing quietly;
+    # the population is one manifest, and a phase absent from the run is MISSING
+    # whichever file it lives in. Names are keyed on the test function, so they
+    # must stay unique across the modules this command drives.
+    "test_phase_1_a_brief_puts_a_current_deadline_on_the_board",
+    "test_phase_2_the_case_file_shows_the_entries_and_says_current",
+    "test_phase_3_a_correction_without_a_reason_does_not_submit",
+    "test_phase_3b_correcting_the_date_marks_exactly_the_dependents_stale",
+    "test_phase_4_the_board_shows_the_window_as_stale_not_as_the_deadline",
+    "test_phase_5_a_reload_reads_the_same_currency_from_the_file",
+    "test_phase_6_the_next_brief_reworks_the_stale_values",
+    # P21 -- research in the browser: `tests/test_the_journey_of_a_search.py`.
+    "test_phase_1_a_matter_is_open_and_research_is_offered_for_it",
+    "test_phase_2_a_submission_produces_cases_not_labels",
+    "test_phase_3_the_case_opens_to_its_paragraphs_by_locator",
+    "test_phase_4_attaching_a_paragraph_shows_five_verdicts_not_one",
+    "test_phase_5_no_results_is_said_as_searched_not_as_absence_of_law",
+    "test_phase_6_an_unsupported_court_is_not_a_zero",
+    "test_phase_7_a_reload_shows_the_research_record_from_the_file",
+)
+
+#: The modules one `journey` run drives. Listed here beside EXPECTED so that
+#: adding a suite is one edit in one file, and the manifest above is the
+#: population of both.
+SUITES = (
+    "tests/test_the_journey_login_to_logout.py",
+    "tests/test_email_registration_reaches_a_private_workspace.py",
+    "tests/test_the_journey_of_a_correction.py",
+    "tests/test_the_journey_of_a_search.py",
 )
 
 
@@ -187,8 +218,7 @@ def run(extra: list[str]) -> int:
     started = _fingerprint()
 
     pytest_argv = [
-        "pytest", "tests/test_the_journey_login_to_logout.py",
-        "tests/test_email_registration_reaches_a_private_workspace.py",
+        "pytest", *SUITES,
         "-m", "journey", "-p", "no:randomly", "-q",
         "--tb=short", "-rA", *extra,
     ]

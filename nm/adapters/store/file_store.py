@@ -38,9 +38,9 @@ from nm.domain.matter import (
     Matter,
     MatterId,
 )
+from nm.domain.names import discard
 from nm.domain.text import blank
 from nm.domain.traceability import implements
-from nm.infrastructure.cleanup import discard
 from nm.ports.store import MatterList, StaleWrite
 
 
@@ -467,7 +467,16 @@ class FileMatterStore:
         return MatterList(tuple(out), tuple(unreadable))
 
     def record_metrics(self, metrics: dict) -> None:
-        """Written even when the turn failed, and never containing client words."""
+        """Written even when the turn failed, and never containing client words.
+
+        THE SECOND HALF WAS A CLAIM AND IS NOW A CONTROL. It held only while no
+        gate detail quoted the matter, and P22's limitation reasoning ended
+        that: `G-PREMISE` fires naming the chronology entry the period was run
+        from, which is a sentence the advocate typed. It is `TurnMetrics
+        .as_dict` -- the REDACTED projection, and the default for exactly this
+        reason -- that makes the line true; the full record is `as_served`, and
+        it goes to the advocate over an authenticated response and never here.
+        """
         path = self._metrics / f"{metrics['turn_id']}.json"
         path.write_text(json.dumps(metrics, indent=2), encoding="utf8")
 

@@ -2,18 +2,15 @@
 #
 # WHY THIS EXISTS, 10 September 2026
 # ------------------------------------
-# This baseline recorded three trace facts: one unbuilt PRD refusal and two
-# registry/code reconciliation findings, plus an exact Ruff diagnostic set.
-# The rows below must shrink when remeasurement proves a repair. Tests of trace mechanics isolate the
-# mechanism they exercise; they do not inherit these product findings as their
-# own failures.
+# This baseline once recorded trace and style failures. The rows below must
+# shrink when remeasurement proves a repair. Tests of trace mechanics plant
+# their own independent failures; they do not need a live defect to exercise
+# the control.
 #
-# REMEASURED 12 September 2026, isolated a3d9c47 conformance candidate:
-# TRACE-T3B and TRACE-T3C no longer occur after genuine journey ownership and
-# partial-foundation reconciliation. The 144 Ruff diagnostics were repaired,
-# not re-registered. Their historical records remain in the base commit and
-# a3-conformance-packet-inventory.json. Only the unbuilt P24/C1 refusal remains;
-# any current style or test failure is NEW and blocks this scoped allowance.
+# REMEASURED 13 September 2026 on the integrated P18-P24/P46/P47 and open-email
+# registration candidate: trace reports 0 failures. P24 supplies C1's fifth
+# witness, so TRACE-C1 is repaired and removed rather than waived. The empty
+# list is deliberate: any current failure is new and blocks.
 #
 # But `tools/check.py` returns 1 on any failure, writes no stamp, and
 # `tools/hooks/pre-commit` then refuses every commit. So the repository was in
@@ -54,17 +51,4 @@ schema: 2
 
 #: Registered by BK-80-AC7. Amending this file is a delivery decision: it
 #: changes what the build is permitted to commit over.
-known_failures:
-
-- id: TRACE-C1
-  step: trace
-  fact:
-    kind: trace
-    check: T7
-    reason: "C1: 1 of 5 NEVER clauses have no test declaring @refuses"
-  owner: [BK-54-AC3]
-  because: >-
-    C1's unavailable-material refusal is unbuilt. Briefing cannot yet refuse to
-    claim completion while a material controlling gap remains, so no test can
-    declare @refuses against that clause without asserting a behaviour the
-    product does not have.
+known_failures: []

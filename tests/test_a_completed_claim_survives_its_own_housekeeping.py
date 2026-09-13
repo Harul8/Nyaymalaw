@@ -215,7 +215,21 @@ def test_the_claim_is_released_even_when_the_tidying_had_already_failed(
 
 # ===================== one owner, over the whole product =====================
 
-OWNER = "nm/infrastructure/cleanup.py"
+#: THE ONE MODULE PERMITTED TO REMOVE A NAME.
+#:
+#: MOVED OUT OF `nm/adapters/store/` ON 12 SEPTEMBER 2026, and the move is the
+#: finding rather than a tidy-up. `tools/layercheck.py` lets `nm/knowledge/`
+#: import only `{knowledge, ports, domain}`, so the owner sitting in `adapters`
+#: was unreachable from the knowledge plane -- and when P20's immutable-corpus
+#: publication landed there with three temporary-file removals and a lock
+#: release, it could not have used the one mechanism even had its author gone
+#: looking for it. The sweep went red on the commit that brought the two
+#: branches together, which is the control working and the placement failing.
+#:
+#: AN OWNER REACHABLE FROM ONLY PART OF THE PRODUCT IS NOT AN OWNER. The rule
+#: -- removing a name is one decision -- is about the product, not about a
+#: store adapter, so it belongs in the one layer every layer may import.
+OWNER = "nm/domain/names.py"
 
 
 def _removals_in(name: str, source: str) -> list[str]:
@@ -230,10 +244,12 @@ def _removals_in(name: str, source: str) -> list[str]:
         if not isinstance(node, ast.Call):
             continue
         func = node.func
-        if isinstance(func, ast.Attribute) and func.attr == "unlink":
+        if not isinstance(func, ast.Attribute):
+            continue
+        module = func.value.id if isinstance(func.value, ast.Name) else ""
+        if func.attr == "unlink":
             found.append(f"{name}:{node.lineno} .unlink(")
-        elif (isinstance(func, ast.Attribute) and func.attr == "remove"
-                and isinstance(func.value, ast.Name) and func.value.id == "os"):
+        elif func.attr == "remove" and module == "os":
             found.append(f"{name}:{node.lineno} os.remove(")
         elif (isinstance(func, ast.Attribute) and func.attr in {"rmtree", "rmdir"}
                 and isinstance(func.value, ast.Name)
@@ -267,7 +283,7 @@ def test_the_removal_sweep_can_see_a_second_owner():
     """A sweep that only ever finds nothing has not been shown to find
     anything. B-049."""
     planted = "\n".join((
-        "def release(lock, tmp):",
+        "def release(lock, tmp, staged, empty):",
         "    lock.unlink(missing_ok=True)",
         "    os.remove(tmp)",
         "    shutil.rmtree(tmp)",
@@ -277,8 +293,12 @@ def test_the_removal_sweep_can_see_a_second_owner():
     assert len(seen) == 4, seen
     assert any(".unlink(" in line for line in seen)
     assert any("os.remove(" in line for line in seen)
+    # THE TWO THE SCANNER WAS BLIND TO until 12 September 2026. A control not
+    # extended alongside the sweep leaves the widened half unfalsifiable, and
+    # an unfalsifiable half of a sweep is defect shape S11.
     assert any("shutil.rmtree(" in line for line in seen)
     assert any("os.rmdir(" in line for line in seen)
     # AND IT DOES NOT FIRE ON EVERYTHING, or the sweep above is unfalsifiable.
     assert not _removals_in(
-        "clean.py", "def release(path):\n    discard(path)\n")
+        "clean.py",
+        "def release(path, tree):\n    discard(path)\n    discard_tree(tree)\n")

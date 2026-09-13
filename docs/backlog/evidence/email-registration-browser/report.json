@@ -1,15 +1,17 @@
 {
   "schema": 2,
-  "run_id": "1e55cb30-beb9-4662-a41f-574030d849a6",
-  "ran_at": "2026-09-12T15:43:17+00:00",
-  "commit": "24ab8656776993f1e250119150c227f11e2990d8+dirty",
-  "fingerprint": "abed4e14a9760cc254df526ecb52899bb55f8da8ce52c350f1113bb4d973c19c",
-  "finished_fingerprint": "abed4e14a9760cc254df526ecb52899bb55f8da8ce52c350f1113bb4d973c19c",
-  "configuration_identity": "31521924dcd5d32331cab61b88d7145c4806de8b354ecb3a01f255c3b59550d4",
+  "run_id": "79fa39cc-8406-4736-bbd2-23207bb3cf99",
+  "ran_at": "2026-09-13T08:45:55+00:00",
+  "commit": "a88a1f68c141a5fb3a557f0b92f2798dd794adbe+dirty",
+  "fingerprint": "04047496ad3f6cf21cef15fc404dd93481dadfa084425de2e942f4657c22d5fe",
+  "finished_fingerprint": "04047496ad3f6cf21cef15fc404dd93481dadfa084425de2e942f4657c22d5fe",
+  "configuration_identity": "c537d5cfd464436fde99f9e8fee01e31164e9ae4cf03cd5ab2dd2ac8b38c1b8c",
   "argv": [
     "pytest",
     "tests/test_the_journey_login_to_logout.py",
     "tests/test_email_registration_reaches_a_private_workspace.py",
+    "tests/test_the_journey_of_a_correction.py",
+    "tests/test_the_journey_of_a_search.py",
     "-m",
     "journey",
     "-p",
@@ -58,10 +60,24 @@
     "test_registration_mismatch_clears_both_passwords",
     "test_pending_registration_owns_its_one_time_result",
     "test_unconfirmed_registration_does_not_claim_no_account_was_created",
-    "test_full_length_email_stays_readable_on_a_phone"
+    "test_full_length_email_stays_readable_on_a_phone",
+    "test_phase_1_a_brief_puts_a_current_deadline_on_the_board",
+    "test_phase_2_the_case_file_shows_the_entries_and_says_current",
+    "test_phase_3_a_correction_without_a_reason_does_not_submit",
+    "test_phase_3b_correcting_the_date_marks_exactly_the_dependents_stale",
+    "test_phase_4_the_board_shows_the_window_as_stale_not_as_the_deadline",
+    "test_phase_5_a_reload_reads_the_same_currency_from_the_file",
+    "test_phase_6_the_next_brief_reworks_the_stale_values",
+    "test_phase_1_a_matter_is_open_and_research_is_offered_for_it",
+    "test_phase_2_a_submission_produces_cases_not_labels",
+    "test_phase_3_the_case_opens_to_its_paragraphs_by_locator",
+    "test_phase_4_attaching_a_paragraph_shows_five_verdicts_not_one",
+    "test_phase_5_no_results_is_said_as_searched_not_as_absence_of_law",
+    "test_phase_6_an_unsupported_court_is_not_a_zero",
+    "test_phase_7_a_reload_shows_the_research_record_from_the_file"
   ],
   "counts": {
-    "pass": 30,
+    "pass": 44,
     "reproduced": 0,
     "unexplained": 0,
     "missing": 0,
@@ -279,6 +295,104 @@
       "note": "",
       "scenario": "test_full_length_email_stays_readable_on_a_phone",
       "nodeid": "tests/test_email_registration_reaches_a_private_workspace.py::test_full_length_email_stays_readable_on_a_phone"
+    },
+    {
+      "phase": "phase 1 a brief puts a current deadline on the board",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_1_a_brief_puts_a_current_deadline_on_the_board",
+      "nodeid": "tests/test_the_journey_of_a_correction.py::test_phase_1_a_brief_puts_a_current_deadline_on_the_board"
+    },
+    {
+      "phase": "phase 2 the case file shows the entries and says current",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_2_the_case_file_shows_the_entries_and_says_current",
+      "nodeid": "tests/test_the_journey_of_a_correction.py::test_phase_2_the_case_file_shows_the_entries_and_says_current"
+    },
+    {
+      "phase": "phase 3 a correction without a reason does not submit",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_3_a_correction_without_a_reason_does_not_submit",
+      "nodeid": "tests/test_the_journey_of_a_correction.py::test_phase_3_a_correction_without_a_reason_does_not_submit"
+    },
+    {
+      "phase": "phase 3b correcting the date marks exactly the dependents stale",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_3b_correcting_the_date_marks_exactly_the_dependents_stale",
+      "nodeid": "tests/test_the_journey_of_a_correction.py::test_phase_3b_correcting_the_date_marks_exactly_the_dependents_stale"
+    },
+    {
+      "phase": "phase 4 the board shows the window as stale not as the deadline",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_4_the_board_shows_the_window_as_stale_not_as_the_deadline",
+      "nodeid": "tests/test_the_journey_of_a_correction.py::test_phase_4_the_board_shows_the_window_as_stale_not_as_the_deadline"
+    },
+    {
+      "phase": "phase 5 a reload reads the same currency from the file",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_5_a_reload_reads_the_same_currency_from_the_file",
+      "nodeid": "tests/test_the_journey_of_a_correction.py::test_phase_5_a_reload_reads_the_same_currency_from_the_file"
+    },
+    {
+      "phase": "phase 6 the next brief reworks the stale values",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_6_the_next_brief_reworks_the_stale_values",
+      "nodeid": "tests/test_the_journey_of_a_correction.py::test_phase_6_the_next_brief_reworks_the_stale_values"
+    },
+    {
+      "phase": "phase 1 a matter is open and research is offered for it",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_1_a_matter_is_open_and_research_is_offered_for_it",
+      "nodeid": "tests/test_the_journey_of_a_search.py::test_phase_1_a_matter_is_open_and_research_is_offered_for_it"
+    },
+    {
+      "phase": "phase 2 a submission produces cases not labels",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_2_a_submission_produces_cases_not_labels",
+      "nodeid": "tests/test_the_journey_of_a_search.py::test_phase_2_a_submission_produces_cases_not_labels"
+    },
+    {
+      "phase": "phase 3 the case opens to its paragraphs by locator",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_3_the_case_opens_to_its_paragraphs_by_locator",
+      "nodeid": "tests/test_the_journey_of_a_search.py::test_phase_3_the_case_opens_to_its_paragraphs_by_locator"
+    },
+    {
+      "phase": "phase 4 attaching a paragraph shows five verdicts not one",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_4_attaching_a_paragraph_shows_five_verdicts_not_one",
+      "nodeid": "tests/test_the_journey_of_a_search.py::test_phase_4_attaching_a_paragraph_shows_five_verdicts_not_one"
+    },
+    {
+      "phase": "phase 5 no results is said as searched not as absence of law",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_5_no_results_is_said_as_searched_not_as_absence_of_law",
+      "nodeid": "tests/test_the_journey_of_a_search.py::test_phase_5_no_results_is_said_as_searched_not_as_absence_of_law"
+    },
+    {
+      "phase": "phase 6 an unsupported court is not a zero",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_6_an_unsupported_court_is_not_a_zero",
+      "nodeid": "tests/test_the_journey_of_a_search.py::test_phase_6_an_unsupported_court_is_not_a_zero"
+    },
+    {
+      "phase": "phase 7 a reload shows the research record from the file",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_phase_7_a_reload_shows_the_research_record_from_the_file",
+      "nodeid": "tests/test_the_journey_of_a_search.py::test_phase_7_a_reload_shows_the_research_record_from_the_file"
     }
   ]
 }

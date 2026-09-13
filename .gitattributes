@@ -1,0 +1,8 @@
+# Git hooks are run by sh, and sh does not strip \r. With core.autocrlf=true
+# (the default on this machine) a checkout would rewrite them CRLF, and
+# `|| true` becomes `|| true\r`: command not found. The failure is silent in
+# a post-* hook and blocks every commit in pre-commit. Measured as a warning
+# at `git add` on 12 September 2026, the day core.hooksPath began pointing at
+# the tracked copies -- the .git/hooks copy had never been through checkout.
+tools/hooks/* text eol=lf
+*.sh           text eol=lf

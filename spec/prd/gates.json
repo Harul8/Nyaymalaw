@@ -131,6 +131,22 @@
     "built": false
   },
   {
+    "id": "G-PREMISE",
+    "condition": "A limitation is about to be computed: are the applicable law, the accrual rule and the forum each ESTABLISHED, or did the product infer one?",
+    "states": [
+      "established",
+      "conditional",
+      "unestablished"
+    ],
+    "response": "disclose",
+    "scope": "step",
+    "persistence": "turn",
+    "recovery": "advocate",
+    "visible": "BK-65-AC2: correct arithmetic cannot establish which provision governs, what starts the period, or which forum binds. Where a premise is INFERRED the date is shown CONDITIONAL with its alternatives and is never entered as a deadline; where one is UNESTABLISHED nothing is computed. A premise the advocate STATES outranks the inference and is recorded with who stated it and when.",
+    "feature": "D1",
+    "built": true
+  },
+  {
     "id": "G-THREAD",
     "condition": "An account cannot be bound to exactly one thread, or two threads look like one without a decisive identifier.",
     "states": [
@@ -333,6 +349,22 @@
     "built": true
   },
   {
+    "id": "G-CURRENCY",
+    "condition": "A recorded conclusion rests on an input that has since moved -- a corrected or withdrawn fact, a republished provision, or another conclusion that itself moved -- and has not yet been recomputed.",
+    "states": [
+      "current",
+      "stale",
+      "not_assessed"
+    ],
+    "response": "disclose",
+    "scope": "step",
+    "persistence": "sticky",
+    "recovery": "system",
+    "visible": "BK-65-AC1: changing a material predicate invalidates every dependent conclusion and NO unrelated one, keeping the prior state and the reason. G-CASCADE announces what MOVED between two turns; this is what is STILL NOT CURRENT -- between the correction and the recomputation, after a restart, and two hops away where a deadline rests on a limitation that rests on a date. A stale value is shown labelled stale, never counted as the nearest live deadline, and a node whose inputs nobody recorded is not_assessed rather than current.",
+    "feature": "A3",
+    "built": true
+  },
+  {
     "id": "G-GAP",
     "condition": "Something is missing that BLOCKS a named action, ranked across the whole file: blocking gates, then deadline urgency, then information value, then consequence.",
     "states": [
@@ -443,6 +475,22 @@
     "recovery": "system",
     "visible": "B-074, TWICE. The ACTION read `file the recovery suit, ensuring it is within the limitation period` while the GROUND directly below it read `that period has run` \u2014 174 days ago. It was fixed by telling the model what had been worked out, at length and correctly, and it recurred on `6e29cf0`: `Confirm the date of service and file within the window`, beside an annotation saying every deadline had passed.\n\nA PROMPT IS NOT A GUARD, which is why this row exists and why it is not a phrase list. The answer space is built from the turn's own typed facts, so the guard is exact membership rather than matching on words \u2014 the rule CLAUDE.md \u00a75 states about Acts, applied to the one place a sentence is checked against a number.\n\nIt BLOCKS the step and not the turn: the advocate gets the computed position and a question, which is the half that was verified.",
     "feature": "D3",
+    "built": true
+  },
+  {
+    "id": "G-REMEDY",
+    "condition": "The relief that would serve the objective is unavailable, hollow, late or unenforceable, or its cost exceeds what it can recover -- read against the objective with the merits held constant.",
+    "states": [
+      "serveable",
+      "no_useful_relief",
+      "not_assessed"
+    ],
+    "response": "disclose",
+    "scope": "thread",
+    "persistence": "turn",
+    "recovery": "advocate",
+    "visible": "BK-70. A LEGALLY ARGUABLE CLAIM CAN BE WORTH NOTHING: the debtor holds no attachable assets, the only order the forum can give arrives too late, the decree is sound and there is no route to execute it, the suit costs more than it can recover. The enforceability basis is DISCLOSED at the point of the recommendation, so the advice rests on it rather than on the merits alone -- and where relief is defeated the step may not pursue it as though it will deliver, which is G-CONSISTENT reading the relief claim this gate discloses. PROPORTIONALITY IS STATED ALONGSIDE a legally available route, never used to withhold it (E3's NEVER).",
+    "feature": "E2",
     "built": true
   },
   {
