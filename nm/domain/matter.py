@@ -906,6 +906,16 @@ class Matter:
     abandoned, and it renders as such rather than as an epoch.
     """
 
+    handovers: tuple[dict, ...] = ()
+    """P32 / BK-58-AC3's handover offers. Empty means none was offered, which
+    is not the same as one that was offered and never taken -- that is a row
+    in OFFERED state."""
+
+    closure: dict = field(default_factory=dict)
+    """P32 / BK-59's closure record. Empty means the matter is OPEN: a matter
+    whose closure nobody recorded is live, and treating it as closed would
+    hide whatever is still owed inside it."""
+
     drafting_packages: tuple[dict, ...] = ()
     """P29 / BK-56's drafting packages. A matter written before P29 decodes to
     the empty tuple -- *no package prepared*, which is its true state."""

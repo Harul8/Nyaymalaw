@@ -6049,6 +6049,47 @@ decodes to the empty tuple on records written before P29, which reads as *no
 package prepared* — its true state. Reverting the two modules and the routes
 returns the product to advice without drafting, and nothing stored is lost.
 
+### P32 Start record — event re-entry and handover preserve responsibility — 13 September 2026
+
+**Outcome sought.** BK-33-AC2, BK-39-AC1/AC2, BK-58-AC3, BK-59-AC1/AC2/AC3,
+BK-63-AC1. Three sentences that are false in the same way, each describing
+something that happened to a MESSAGE or a RECORD as though it happened to the
+responsibility: *"I handed it over"* (it was offered), *"there are no
+authorities"* (nobody searched), *"the matter is closed"* (a deadline is live
+inside it). Each leaves an obligation with nobody watching, and each is
+invisible afterwards.
+
+**The records are Appendix E's.** `CaseSummary` (16 required fields, including
+`handover_complete` and `handover_blockers`) and `ClosureRecord` (11,
+including `continuing_obligations` and `retention`). Neither was implemented;
+both are implemented here to the contract's own field names and asserted
+against `spec/schemas.yaml` rather than against a copy.
+
+**Owners / boundary.** New: `nm/domain/handover.py`, `nm/domain/closure.py`,
+`nm/core/handover.py`. Extended: `nm/edge/api.py`, `nm/domain/matter.py`.
+
+**Reused.** Events go through P18's `dependency.invalidate` — which already
+keeps the prior value as a `Revision` and touches nothing outside the closure,
+so BK-59-AC1's *without rewriting past issued records* is inherited rather than
+restated. Retention is named on the closure record and decided by P33; two
+owners of what happens to material is the §4 defect.
+
+**A CORRECTION MADE WHILE BUILDING, recorded because the first reading was
+wrong.** Unassessed sections were treated as blocking a handover. BK-39-AC2
+asks for them to be EXPLICIT and BK-58-AC3's blocking condition is the
+recipient's acknowledgement — blocking on unassessed sections would refuse
+almost every real matter, and the pressure that creates is to mark sections
+assessed to get the handover through, which destroys the distinction the
+criterion is about. They now travel with the offer.
+
+**Acceptance → proof.** BK-33-AC2, BK-39-AC1/AC2, BK-58-AC3, BK-59-AC1/AC2/AC3
+integration **PASS**; BK-63-AC1 domain + adversarial **PASS**. Every
+`browser_journey` and every `counsel_review` **NOT RUN** — the browser half is
+P36's, and no UI exists for these routes yet.
+
+**Rollback.** `Matter.handovers` and `Matter.closure` decode to empty on older
+records, which reads as *nothing offered* and *matter open* — both true states.
+
 ### P44 acquisition-foundation Start record — 11 September 2026
 
 **Decision: BLOCKED on P19's scoped source-register output; contract ready.**

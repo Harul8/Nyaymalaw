@@ -3040,6 +3040,18 @@
         {
           "path": "web/app.js",
           "kind": "existing"
+        },
+        {
+          "path": "nm/domain/handover.py",
+          "kind": "planned"
+        },
+        {
+          "path": "nm/domain/closure.py",
+          "kind": "planned"
+        },
+        {
+          "path": "nm/core/handover.py",
+          "kind": "planned"
         }
       ],
       "inputs": [

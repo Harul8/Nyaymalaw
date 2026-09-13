@@ -1798,6 +1798,287 @@ def export_drafting_package(matter_id: str, package_id: str,
     return {"matter_id": m.id, "export": dr.export(found)}
 
 
+class HandoverBody(BaseModel):
+    """Offer a matter to a named recipient. BK-58-AC3. P32.
+
+    `state` is absent by design: a caller that could post one could post
+    `accepted` and move responsibility onto somebody who never agreed.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    to_actor: NonBlank = Field(min_length=1)
+    next_responsibility: NonBlank = Field(min_length=1, max_length=2000)
+    outstanding: list[str] = Field(default_factory=list, max_length=100)
+    expected_matter_version: int
+
+
+class HandoverActBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    because: str = ""
+    expected_matter_version: int
+
+
+class ClosureBody(BaseModel):
+    """Close a matter. BK-59-AC2."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    retention: str = ""
+    work_product: dict = Field(default_factory=dict)
+    continuing_obligations: list[dict] = Field(default_factory=list, max_length=100)
+    archive: bool = False
+    expected_matter_version: int
+
+
+@app.get("/api/matters/{matter_id}/re-entry")
+def matter_re_entry(matter_id: str, advocate_id: Advocate) -> dict:
+    """What the advocate needs on coming back. BK-33-AC2.
+
+    ONE MATTER, READ ONCE, through `_owned` -- which returns the same neutral
+    404 whether the matter is absent or somebody else's. There is no second
+    matter in scope, so there is nothing for another client's material to leak
+    from.
+    """
+    from nm.core import handover as ho
+
+    m = _owned(matter_id, advocate_id)
+    return ho.re_entry(m)
+
+
+@app.post("/api/handovers", dependencies=[CsrfProtected], status_code=201)
+def offer_handover(body: HandoverBody, advocate_id: Advocate) -> dict:
+    """Offer a matter. IT IS OFFERED, NOT HANDED OVER. BK-58-AC3. P32."""
+    import uuid as _uuid
+
+    from nm.core import handover as ho
+    from nm.domain.clock import today as _today
+    from nm.domain.handover import offer as make_offer
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    summary = replace(ho.summary_of(m),
+                      next_responsibility=body.next_responsibility.strip())
+    try:
+        made = make_offer(
+            handover_id=f"ho_{_uuid.uuid4().hex[:10]}", matter_id=m.id,
+            from_actor=advocate_id, to_actor=body.to_actor.strip(),
+            offered_at=_today().isoformat(), summary=summary,
+            outstanding=tuple(body.outstanding))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+    rows = ho.put_handover(ho.handover_rows(m), made)
+    m = replace(m, handovers=tuple(ho.handover_as_dict(h) for h in rows),
+                version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "offered", "matter_id": committed.id,
+            "version": committed.version,
+            "handover": ho.handover_projection(made),
+            "summary_unassessed": list(summary.unassessed())}
+
+
+@app.post("/api/handovers/{handover_id}/acceptance",
+          dependencies=[CsrfProtected], status_code=201)
+def accept_handover(handover_id: str, body: HandoverActBody,
+                    advocate_id: Advocate) -> dict:
+    """The named recipient takes it. NOBODY ELSE CAN. BK-58-AC3.
+
+    The acceptor is the signed-in advocate and is server-derived. A body that
+    could name its own acceptor could move responsibility onto a colleague who
+    has not seen the file.
+
+    NOTE ON OWNERSHIP: the matter is still the offeror's to load, so this route
+    is reached by the OFFEROR's session in the current product. The recipient
+    check is `by != to_actor`, which refuses regardless of whose session it is
+    -- the guard is on the identity, not on the route.
+    """
+    from nm.core import handover as ho
+    from nm.domain.clock import today as _today
+    from nm.domain.handover import accept as take
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    rows = ho.handover_rows(m)
+    found = next((h for h in rows if h.handover_id == handover_id), None)
+    if found is None:
+        raise HTTPException(status_code=404, detail="no such handover")
+    try:
+        taken = take(found, by=advocate_id, at=_today().isoformat())
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail={
+            "code": "NOT_PERMITTED", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+    m = replace(m, handovers=tuple(
+        ho.handover_as_dict(h) for h in ho.put_handover(rows, taken)),
+        version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "accepted", "matter_id": committed.id,
+            "version": committed.version,
+            "handover": ho.handover_projection(taken)}
+
+
+@app.post("/api/handovers/{handover_id}/declination",
+          dependencies=[CsrfProtected], status_code=201)
+def decline_handover(handover_id: str, body: HandoverActBody,
+                     advocate_id: Advocate) -> dict:
+    """Refuse it. The work stays where it was and the reason is kept."""
+    from nm.core import handover as ho
+    from nm.domain.handover import decline as refuse
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    rows = ho.handover_rows(m)
+    found = next((h for h in rows if h.handover_id == handover_id), None)
+    if found is None:
+        raise HTTPException(status_code=404, detail="no such handover")
+    try:
+        refused = refuse(found, by=advocate_id, because=body.because.strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail={
+            "code": "NOT_PERMITTED", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+    m = replace(m, handovers=tuple(
+        ho.handover_as_dict(h) for h in ho.put_handover(rows, refused)),
+        version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "declined", "matter_id": committed.id,
+            "version": committed.version,
+            "handover": ho.handover_projection(refused)}
+
+
+@app.post("/api/matters/{matter_id}/closure", dependencies=[CsrfProtected],
+          status_code=201)
+def close_matter(matter_id: str, body: ClosureBody,
+                 advocate_id: Advocate) -> dict:
+    """Close or archive a matter. BK-59-AC2, BK-59-AC3.
+
+    IT REFUSES WHILE ANYTHING IS STILL OWED, and names what. Archiving is a
+    SEPARATE lifecycle value from closing and neither is deletion -- what
+    happens to the material is P33's retention request, named here and decided
+    there.
+    """
+    from nm.core import handover as ho
+    from nm.domain.clock import today as _today
+    from nm.domain.closure import ClosureRecord, Lifecycle, Obligation
+
+    m = _owned(matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    record = ClosureRecord(
+        matter=m.id, closed_by=advocate_id, closed_at=_today().isoformat(),
+        retention=body.retention.strip(),
+        work_product=dict(body.work_product),
+        continuing_obligations=tuple(
+            Obligation(what=str(o.get("what") or "?"),
+                       until=str(o.get("until") or ""),
+                       owner=str(o.get("owner") or ""),
+                       resolved=bool(o.get("resolved")),
+                       transferred_to=str(o.get("transferred_to") or ""))
+            for o in body.continuing_obligations),
+        lifecycle=Lifecycle.ARCHIVED if body.archive else Lifecycle.CLOSED)
+
+    if record.blockers:
+        raise HTTPException(status_code=409, detail={
+            "code": "INVALID_TRANSITION",
+            "why": "this matter has work still owed",
+            "blockers": list(record.blockers),
+            "committed": "not_committed"})
+
+    committed = _commit_matter(ho.with_closure(m, record),
+                               body.expected_matter_version)
+    return {"state": record.lifecycle.value, "matter_id": committed.id,
+            "version": committed.version,
+            "closure": ho.closure_projection(record)}
+
+
+@app.post("/api/matters/{matter_id}/reopening", dependencies=[CsrfProtected],
+          status_code=201)
+def reopen_matter(matter_id: str, body: HandoverActBody,
+                  advocate_id: Advocate) -> dict:
+    """Reopen a closed matter, WITH the list of what must be re-established.
+
+    BK-59-AC3. It does not refuse: a matter reopens because something happened,
+    and refusing until the checks pass would leave the advocate unable to act
+    on the development that made them reopen it.
+    """
+    from dataclasses import replace as _replace
+
+    from nm.core import handover as ho
+    from nm.domain.closure import Lifecycle, reopen_checks
+
+    m = _owned(matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    closed = ho.closure_of(m)
+    if closed is None or closed.lifecycle.is_live:
+        raise HTTPException(status_code=409, detail={
+            "code": "INVALID_TRANSITION",
+            "why": "this matter is not closed",
+            "committed": "not_committed"})
+
+    checks = reopen_checks(closed)
+    reopened = _replace(closed, lifecycle=Lifecycle.REOPENED)
+    committed = _commit_matter(ho.with_closure(m, reopened),
+                               body.expected_matter_version)
+    return {"state": "reopened", "matter_id": committed.id,
+            "version": committed.version,
+            "recheck_before_working": list(checks),
+            "closure": ho.closure_projection(reopened)}
+
+
+class EventBody(BaseModel):
+    """A material order, hearing, payment or instruction. BK-59-AC1. P32."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    kind: Literal["order", "hearing", "payment", "instruction"]
+    event_id: NonBlank = Field(min_length=1)
+    what: NonBlank = Field(min_length=1, max_length=2000)
+    expected_matter_version: int
+
+
+@app.post("/api/matters/{matter_id}/events", dependencies=[CsrfProtected],
+          status_code=201)
+def record_matter_event(matter_id: str, body: EventBody,
+                        advocate_id: Advocate) -> dict:
+    """Record a material event and reopen exactly what it reached. BK-59-AC1.
+
+    THE PAST IS NOT REWRITTEN. That is P18's guarantee, inherited rather than
+    restated: `invalidate` keeps the prior value as a `Revision` and touches
+    nothing outside the closure a change actually reaches. The event is
+    attributed to the advocate who recorded it and versioned by the matter.
+    """
+    from nm.core import dependency
+    from nm.core import handover as ho
+    from nm.domain.clock import today as _today
+
+    m = _owned(matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    ledger = dependency.Ledger.from_stored(m.dependencies)
+    ledger, reached = ho.record_event(
+        ledger, kind=body.kind, event_id=body.event_id.strip(),
+        reason=f"{body.kind} recorded by {advocate_id}: {body.what.strip()}",
+        at=_today().isoformat())
+
+    m = replace(m, dependencies=ledger.as_dict(), version=m.version + 1,
+                last_activity=_today().isoformat())
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "recorded", "matter_id": committed.id,
+            "version": committed.version, "kind": body.kind,
+            "event_id": body.event_id.strip(), "by": advocate_id,
+            "reopened": list(reached),
+            "note": (f"{len(reached)} conclusion(s) rested on this and are "
+                     f"reopened; everything else is untouched")}
+
+
 class Correction(BaseModel):
     """One correction to one entry on the case file. BK-65-AC1, P18.
 

@@ -65,6 +65,10 @@ REACHED_ELSEWHERE = {
     # P29's three, same registration.
     "prepare_drafting_package", "get_drafting_package",
     "export_drafting_package",
+    # P32's six.
+    "matter_re_entry", "offer_handover", "accept_handover",
+    "decline_handover", "close_matter", "reopen_matter",
+    "record_matter_event",
     "health", "matters", "matter", "matter_summary", "turn", "index",
     # A1's three. `search` is absent from this list ONLY because the word
     # occurs elsewhere in the tree, which is worth noticing: this check finds
