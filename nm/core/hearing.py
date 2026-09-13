@@ -64,6 +64,7 @@ from nm.domain.authority import Act, ActingAs, permits
 from nm.domain.commission import Commission
 from nm.domain.drafting import DrafterBrief, Provenance, Readiness
 from nm.domain.handover import Assessed, Section
+from nm.domain.spoken import dispute
 from nm.domain.text import blank, clean, refuses_blank_text, snippet
 from nm.domain.witness import ExpertInstruction, WitnessPlan
 
@@ -264,7 +265,12 @@ def concession_boundary(commission: Commission, actor_id: str,
     who decides; this states both in one place so that what the advocate reads
     in preparation is what the served route will do.
     """
-    lines: list[str] = [permits(actor_id, acting_as, Act.CONCEDE).as_line()]
+    # `said()`, NOT `as_line()`. `as_line` is the AUDIT record and it
+    # names the actor by account id, which is its job; a first version
+    # of this put it straight into a section an advocate reads, which
+    # is J-5's defect arriving through a new door. Two audiences, two
+    # renderers, one ruling.
+    lines: list[str] = [permits(actor_id, acting_as, Act.CONCEDE).said()]
     if commission.deciding is None:
         lines.append(
             "no decision maker is recorded on this commission, so no "
@@ -384,7 +390,7 @@ def record_pack(ledger: Ledger, pack: HearingPack, *, at: str = "",
         name=node_name(pack),
         value=f"hearing preparation v{pack.version}",
         rests_on=rests_on(pack),
-        shown=f"Hearing preparation for {pack.thread or pack.matter_id}",
+        shown=f"hearing preparation on {dispute(pack.thread)}",
         computed_at=at,
         reason=reason or "assembled from the verified drafting package"))
 

@@ -1336,7 +1336,18 @@ function toggleMatters(force) {
   $('matters-toggle').setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
-$('matters-toggle').addEventListener('click', () => toggleMatters());
+$('matters-toggle').addEventListener('click', () => {
+  // FROM ANOTHER PANE IT IS A WAY BACK, not a no-op. Opening a rail that
+  // lives inside a hidden pane changes nothing on screen, and an advocate
+  // who pressed a visible control and saw nothing happen concludes the
+  // product is broken -- which, at that moment, it is.
+  if ($('pane-advise').hidden) {
+    showTab('advise');
+    toggleMatters(true);
+    return;
+  }
+  toggleMatters();
+});
 
 // B3-B5. INTAKE IS ASKED ONCE PER MATTER, AND ITS ANSWERS TRAVEL WITH THE
 // FIRST BRIEF.
@@ -1430,7 +1441,7 @@ boot();
  * quickest way to break that is a shared object both panes write to.
  */
 
-const PANES = ['advise', 'search', 'casefile', 'history'];
+const PANES = ['advise', 'search', 'casefile', 'history', 'prepare'];
 
 function showTab(name) {
   PANES.forEach((p) => { $(`pane-${p}`).hidden = (p !== name); });
@@ -1442,11 +1453,515 @@ function showTab(name) {
   if (name === 'search') { researchEnabled(); $('q').focus(); }
   if (name === 'history') loadHistoryMatters();
   if (name === 'casefile') loadCasefileMatters();
+  if (name === 'prepare') loadPrepareMatters();
+  // THE RAIL LIVES IN `#pane-advise`, so leaving that pane takes the matter
+  // navigator off the screen at every width. The masthead toggle is the way
+  // back, and this is what tells the stylesheet to offer it. BK-32-AC1.
+  document.body.classList.toggle('away-from-work', name !== 'advise');
 }
 
 document.querySelectorAll('#tabs .tab').forEach((b) => {
   b.addEventListener('click', () => showTab(b.dataset.tab));
 });
+
+/* ================= PREPARATION — P29 to P32 ON ONE SCREEN. P36 ===========
+ *
+ * WHY THESE FOUR ARE ONE PANE AND NOT FOUR.
+ * An advocate does not think "now I am in the action-authority feature". They
+ * think: get the document right, work out how it goes out, get ready for
+ * Tuesday, and know where this stands if somebody else picks it up. Splitting
+ * them across four screens would make each one reachable and the SEQUENCE
+ * unreachable, which is the reorientation cost BK-68 is about.
+ *
+ * NO RENDER EVER REBUILDS A FORM, AND THE BROWSER TAUGHT ME THAT HERE.
+ * A first version created the witness, outcome and handover forms inside the
+ * render. An in-flight render then landed after the advocate had typed, took
+ * the form with it, and the submit that followed was rejected for a field they
+ * had filled in — the exact defect BK-42 names and one this pane was written
+ * to prove absent. Every form now lives in `index.html`; a render fills the
+ * read-only `-host` divs and reveals a form with `hidden = false`, and nothing
+ * on this screen replaces an element that holds what somebody typed.
+ *
+ * EVERY CONTROL IS LABELLED AND EVERY ERROR IS ASSOCIATED. The error boxes
+ * carry `role="alert"` and sit inside the section they belong to, so a screen
+ * reader reaching one has already heard the heading.
+ *
+ * THE PANE NEVER SAYS SOMETHING HAPPENED THAT DID NOT. The refusal for the
+ * send/file route is printed from what the server sent, so if that route ever
+ * stopped refusing, this screen would stop saying it refuses.
+ */
+
+let prepareGeneration = 0;
+const prepared = { packageId: null, proposalId: null, packId: null,
+                   handoverId: null, digest: '' };
+
+const PREP_HOSTS = ['package-host', 'package-export', 'action-host',
+                    'hearing-host', 'witness-host', 'incourt-host',
+                    'continuity-host', 'handover-host'];
+const PREP_ERRORS = ['package-error', 'action-error', 'hearing-error',
+                     'continuity-error'];
+const PREP_ON_DEMAND = ['pk-export', 'ac-confirm', 'ac-send', 'outcome-form',
+                        'reconcile-form', 'witness-form', 'hp-incourt',
+                        'handover-form'];
+
+function prepareError(id, err) {
+  const box = $(id);
+  const detail = err && err.detail;
+  let text = (err && err.message) || 'Something went wrong.';
+  if (detail && typeof detail === 'object') {
+    const why = Array.isArray(detail.why) ? detail.why.join(' ') : detail.why;
+    text = [why, detail.said].filter(Boolean).join(' ') || text;
+  }
+  box.textContent = text;
+  box.hidden = false;
+}
+
+function clearPrepareError(id) { const b = $(id); b.textContent = ''; b.hidden = true; }
+
+function line(into, text, cls) {
+  if (!text) return null;
+  const p = document.createElement('p');
+  if (cls) p.className = cls;
+  p.textContent = text;
+  into.appendChild(p);
+  return p;
+}
+
+function bullets(into, heading, items) {
+  if (!items || !items.length) return;
+  const h = document.createElement('h3');
+  h.className = 'section';
+  h.textContent = heading;
+  const ul = document.createElement('ul');
+  ul.className = 'prep-list';
+  items.forEach((t) => {
+    const li = document.createElement('li');
+    li.textContent = t;
+    ul.appendChild(li);
+  });
+  into.append(h, ul);
+}
+
+async function loadPrepareMatters() {
+  const sel = $('prepare-matter');
+  const st = $('prepare-state');
+  const keep = sel.value;
+  let data;
+  try {
+    data = await api('/api/matters');
+  } catch (err) {
+    st.textContent = '';
+    st.appendChild(stateBlock('loud',
+      `The matter list could not be read: ${err.message}`));
+    return;
+  }
+  const rows = data.matters || [];
+  sel.textContent = '';
+  const first = document.createElement('option');
+  first.value = '';
+  first.textContent = data.state !== 'ok'
+    ? 'The matter list could not be read'
+    : (rows.length ? 'Choose a matter…' : 'No matters yet');
+  sel.appendChild(first);
+  rows.forEach((m) => {
+    const o = document.createElement('option');
+    o.value = m.matter_id;
+    // WHAT THE MATTER IS CALLED, NEVER ITS KEY. J-5. Where the list holds no
+    // name, the option says so rather than falling back to the id: a fallback
+    // is what makes a missing name invisible.
+    o.textContent = m.matter || 'a matter with no name recorded';
+    sel.appendChild(o);
+  });
+  const want = keep || state.matterId || '';
+  if (want && rows.some((m) => m.matter_id === want)) {
+    sel.value = want;
+    await showPrepare(want);
+  } else {
+    await showPrepare('');
+  }
+}
+
+async function showPrepare(matterId) {
+  const mine = ++prepareGeneration;
+  prepared.packageId = null; prepared.proposalId = null;
+  prepared.packId = null; prepared.handoverId = null; prepared.digest = '';
+  PREP_HOSTS.forEach((id) => { $(id).textContent = ''; });
+  PREP_ERRORS.forEach(clearPrepareError);
+  PREP_ON_DEMAND.forEach((id) => { $(id).hidden = true; });
+  const st = $('prepare-state');
+  st.textContent = '';
+  if (!matterId) {
+    st.appendChild(stateBlock('empty', 'Choose a matter to prepare.'));
+    return;
+  }
+  let file;
+  try {
+    file = await api(`/api/matters/${encodeURIComponent(matterId)}/casefile`);
+  } catch (err) {
+    st.appendChild(stateBlock('loud',
+      `This matter could not be read: ${err.message}`));
+    return;
+  }
+  // THE GENERATION IS CHECKED AFTER THE AWAIT. An advocate who changes the
+  // selection while a read is in flight must not have the older matter
+  // painted over the newer one -- the shape BK-72 records for the rail.
+  if (mine !== prepareGeneration) return;
+  state.matterId = matterId;
+  state.matterVersion = file.version;
+  st.appendChild(stateBlock('empty',
+    'Nothing on this screen has been filed, sent, offered or conceded.'));
+}
+
+function prepareVersion() { return state.matterVersion; }
+
+/* --------------------------------------------------------- P29, package --- */
+
+function renderPackage(pack) {
+  const host = $('package-host');
+  host.textContent = '';
+  prepared.packageId = pack.package_id;
+  const dl = document.createElement('dl');
+  dl.className = 'r-fields';
+  field(dl, 'Readiness',
+        { pill: pack.readiness === 'ready_to_review' ? 'ok' : 'blocked',
+          text: (pack.readiness || '').replace(/_/g, ' ') });
+  host.appendChild(dl);
+  // THE SENTENCE COMES FROM THE SERVER. If the product ever stopped refusing
+  // to claim filing readiness, this screen would stop saying it does.
+  line(host, pack.filing_note, 'prep-said');
+  bullets(host, 'What is missing', pack.problems);
+  bullets(host, 'Adverse material', pack.adverse);
+  bullets(host, 'Reservations', pack.reservations);
+  bullets(host, 'Instructions nobody has given', pack.missing_instructions);
+  $('pk-export').hidden = false;
+}
+
+async function makePackage(ev) {
+  ev.preventDefault();
+  clearPrepareError('package-error');
+  const matterId = $('prepare-matter').value;
+  if (!matterId) {
+    prepareError('package-error', new Error('Choose a matter first.'));
+    return;
+  }
+  try {
+    const out = await api('/api/drafting-packages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        matter_id: matterId,
+        document: $('pk-document').value.trim(),
+        audience: $('pk-audience').value.trim(),
+        purpose: $('pk-purpose').value.trim(),
+        posture: $('pk-posture').value.trim(),
+        cause_title: $('pk-court').value.trim()
+          ? { court: $('pk-court').value.trim() } : {},
+        theory_sentence: $('pk-theory').value.trim(),
+        reliefs: $('pk-relief').value.trim() ? [$('pk-relief').value.trim()] : [],
+        expected_matter_version: prepareVersion() }) });
+    state.matterVersion = out.version;
+    renderPackage(out.package);
+  } catch (err) { prepareError('package-error', err); }
+}
+
+async function exportPackage() {
+  clearPrepareError('package-error');
+  const matterId = $('prepare-matter').value;
+  try {
+    const out = await api(
+      `/api/matters/${encodeURIComponent(matterId)}/drafting-packages/`
+      + `${encodeURIComponent(prepared.packageId)}/export`);
+    const ex = out.export || {};
+    prepared.digest = ex.content_digest || '';
+    const host = $('package-export');
+    host.textContent = '';
+    line(host, ex.filing_note, 'prep-said');
+    bullets(host, 'Quotations nobody has checked', ex.unverified_quotations);
+    if (ex.renditions) line(host, ex.renditions.why, 'prep-said');
+  } catch (err) { prepareError('package-error', err); }
+}
+
+/* ---------------------------------------------------------- P30, action --- */
+
+function renderAction(proposal, extra) {
+  const host = $('action-host');
+  host.textContent = '';
+  prepared.proposalId = proposal.proposal_id;
+  if (proposal.content_digest) prepared.digest = proposal.content_digest;
+  const dl = document.createElement('dl');
+  dl.className = 'r-fields';
+  field(dl, 'Where this has got to',
+        { pill: proposal.state === 'delivered' ? 'ok' : 'unknown',
+          text: (proposal.state || '').replace(/_/g, ' ') });
+  host.appendChild(dl);
+  line(host, proposal.dispatch_note, 'prep-said');
+  line(host, extra, 'prep-said');
+  $('ac-confirm').hidden = false;
+  $('ac-send').hidden = false;
+  $('outcome-form').hidden = false;
+  // RECONCILIATION IS OFFERED ONLY WHERE THERE IS SOMETHING TO RECONCILE, and
+  // it is never hidden again once it is: an advocate who looked and found
+  // nothing must be able to look again tomorrow.
+  if (proposal.state === 'delivery_unknown') $('reconcile-form').hidden = false;
+}
+
+async function makeAction(ev) {
+  ev.preventDefault();
+  clearPrepareError('action-error');
+  if (!prepared.packageId) {
+    prepareError('action-error',
+                 new Error('Prepare a drafting package first: an action needs '
+                           + 'exact content to be about.'));
+    return;
+  }
+  try {
+    const out = await api('/api/action-proposals', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        matter_id: $('prepare-matter').value,
+        package_id: prepared.packageId,
+        authority: $('ac-authority').value.trim(),
+        object: $('ac-object').value.trim(),
+        destination: $('ac-destination').value.trim(),
+        expected_matter_version: prepareVersion() }) });
+    state.matterVersion = out.version;
+    renderAction(out.proposal);
+  } catch (err) { prepareError('action-error', err); }
+}
+
+async function confirmAction() {
+  clearPrepareError('action-error');
+  try {
+    const out = await api(
+      `/api/action-proposals/${encodeURIComponent(prepared.proposalId)}`
+      + '/confirmation', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matter_id: $('prepare-matter').value,
+          content_digest: prepared.digest,
+          expected_matter_version: prepareVersion() }) });
+    state.matterVersion = out.version;
+    renderAction(out.proposal);
+  } catch (err) { prepareError('action-error', err); }
+}
+
+async function trySend() {
+  clearPrepareError('action-error');
+  try {
+    await api(
+      `/api/action-proposals/${encodeURIComponent(prepared.proposalId)}`
+      + '/execution', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matter_id: $('prepare-matter').value, content_digest: 'x',
+          expected_matter_version: prepareVersion() }) });
+  } catch (err) {
+    // THE REFUSAL IS THE ANSWER, in the server's words rather than this
+    // file's. A local string here would go on reassuring the advocate after
+    // the day somebody wires a connector.
+    prepareError('action-error', err);
+  }
+}
+
+async function recordOutcome(ev) {
+  ev.preventDefault();
+  clearPrepareError('action-error');
+  try {
+    const out = await api(
+      `/api/action-proposals/${encodeURIComponent(prepared.proposalId)}`
+      + '/outcome', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matter_id: $('prepare-matter').value,
+          state: $('oc-state').value,
+          receipt: $('oc-receipt').value.trim(),
+          because: $('oc-because').value.trim(),
+          expected_matter_version: prepareVersion() }) });
+    state.matterVersion = out.version;
+    renderAction(out.proposal);
+  } catch (err) { prepareError('action-error', err); }
+}
+
+async function reconcileAction(ev) {
+  ev.preventDefault();
+  clearPrepareError('action-error');
+  try {
+    const out = await api(
+      `/api/action-proposals/${encodeURIComponent(prepared.proposalId)}`
+      + '/reconciliation', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matter_id: $('prepare-matter').value,
+          basis: $('rc-basis').value.trim(),
+          receipt: $('rc-receipt').value.trim(),
+          expected_matter_version: prepareVersion() }) });
+    state.matterVersion = out.version;
+    renderAction(out.proposal, out.resolved ? null
+      : 'Still not known to have arrived. Nothing was sent again.');
+  } catch (err) { prepareError('action-error', err); }
+}
+
+/* --------------------------------------------------------- P31, hearing --- */
+
+function renderPack(pack) {
+  const host = $('hearing-host');
+  host.textContent = '';
+  prepared.packId = pack.pack_id;
+  Object.entries(pack.sections || {}).forEach(([name, text]) => {
+    const h = document.createElement('h3');
+    h.className = 'section';
+    h.textContent = name.replace(/_/g, ' ');
+    const p = document.createElement('p');
+    p.textContent = text;
+    host.append(h, p);
+  });
+  bullets(host, 'Nobody has assessed', pack.unassessed);
+  bullets(host, 'Not yet fit to argue from', pack.blockers);
+  line(host, pack.said, 'prep-said');
+  $('witness-form').hidden = false;
+  $('hp-incourt').hidden = false;
+}
+
+async function makePack() {
+  clearPrepareError('hearing-error');
+  if (!prepared.packageId) {
+    prepareError('hearing-error',
+                 new Error('Prepare a drafting package first: hearing '
+                           + 'preparation is built from a verified package.'));
+    return;
+  }
+  try {
+    const out = await api('/api/hearing-packs', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        matter_id: $('prepare-matter').value,
+        package_id: prepared.packageId,
+        expected_matter_version: prepareVersion() }) });
+    state.matterVersion = out.version;
+    renderPack(out.pack);
+  } catch (err) { prepareError('hearing-error', err); }
+}
+
+async function addWitness(ev) {
+  ev.preventDefault();
+  clearPrepareError('hearing-error');
+  const topics = $('wt-topics').value.trim();
+  try {
+    const out = await api(
+      `/api/hearing-packs/${encodeURIComponent(prepared.packId)}/witnesses`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matter_id: $('prepare-matter').value,
+          witness: $('wt-witness').value.trim(),
+          topics: topics ? [topics] : [],
+          expected_matter_version: prepareVersion() }) });
+    state.matterVersion = out.version;
+    renderPack(out.pack);
+    const host = $('witness-host');
+    host.textContent = '';
+    bullets(host, 'What this plan still needs', out.problems);
+  } catch (err) { prepareError('hearing-error', err); }
+}
+
+async function inCourt() {
+  clearPrepareError('hearing-error');
+  try {
+    const out = await api(
+      `/api/hearing-packs/${encodeURIComponent(prepared.packId)}/in-court`
+      + `?matter_id=${encodeURIComponent($('prepare-matter').value)}`);
+    const host = $('incourt-host');
+    host.textContent = '';
+    // THREE HEADINGS, NEVER ONE LIST. Under time pressure an advocate reads
+    // the shortest thing in front of them, and a label inside a merged list
+    // is not read at all.
+    bullets(host, 'Verified — checked against its source', out.verified);
+    bullets(host, 'Uncertain — analysis, not established', out.uncertain);
+    bullets(host, 'Proposed — nobody has authorised this', out.proposed);
+    line(host, out.concession_boundary, 'prep-said');
+    line(host, out.said, 'prep-said');
+  } catch (err) { prepareError('hearing-error', err); }
+}
+
+/* ------------------------------------------------------ P32, continuity --- */
+
+async function reEntry() {
+  clearPrepareError('continuity-error');
+  const matterId = $('prepare-matter').value;
+  if (!matterId) {
+    prepareError('continuity-error', new Error('Choose a matter first.'));
+    return;
+  }
+  try {
+    const out = await api(
+      `/api/matters/${encodeURIComponent(matterId)}/re-entry`);
+    const host = $('continuity-host');
+    host.textContent = '';
+    line(host, `This matter is ${out.lifecycle}. The instruction on it is: `
+               + `${out.instruction}`, 'prep-said');
+    Object.entries(out.sections || {}).forEach(([name, text]) => {
+      const h = document.createElement('h3');
+      h.className = 'section';
+      h.textContent = name.replace(/_/g, ' ');
+      const p = document.createElement('p');
+      p.textContent = text;
+      host.append(h, p);
+    });
+    // UNASSESSED IS NAMED, never rendered as an empty section. BK-39-AC2: an
+    // empty section reads as "there are none", and "nobody has looked" is a
+    // different sentence the receiving advocate acts on differently.
+    bullets(host, 'Nobody has looked at these', out.unassessed_sections);
+    bullets(host, 'Check these again before working', out.reopen_checks);
+    (out.handover_pending || []).forEach((h) => {
+      line(host, `Offered to ${h.to_actor} and not yet accepted, so the `
+                 + `outstanding work is still ${h.owner_of_outstanding}'s.`,
+           'prep-said');
+    });
+    $('handover-form').hidden = false;
+  } catch (err) { prepareError('continuity-error', err); }
+}
+
+async function offerHandover(ev) {
+  ev.preventDefault();
+  clearPrepareError('continuity-error');
+  try {
+    const out = await api('/api/handovers', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        matter_id: $('prepare-matter').value,
+        to_actor: $('ho-to').value.trim(),
+        next_responsibility: $('ho-next').value.trim(),
+        expected_matter_version: prepareVersion() }) });
+    state.matterVersion = out.version;
+    prepared.handoverId = out.handover.handover_id;
+    const host = $('handover-host');
+    host.textContent = '';
+    line(host, out.handover.responsibility_moved
+      ? 'Accepted, so responsibility has moved.'
+      : 'Offered. Responsibility has NOT moved: it moves when they accept, and '
+        + `until then the outstanding work is ${out.handover.owner_of_outstanding}'s.`,
+      'prep-said');
+    bullets(host, 'Travelling with the offer, unassessed',
+            out.summary_unassessed);
+  } catch (err) { prepareError('continuity-error', err); }
+}
+
+
+/* The handlers are bound ONCE, at load, against elements written in
+ * `index.html`. Binding them inside a render would attach a second listener
+ * every repaint, and the advocate would submit one form three times -- which
+ * is the double-submit BK-42 asks about, arriving from our own side. */
+$('prepare-matter').addEventListener('change', (e) => showPrepare(e.target.value));
+$('package-form').addEventListener('submit', makePackage);
+$('action-form').addEventListener('submit', makeAction);
+$('pk-export').addEventListener('click', exportPackage);
+$('ac-confirm').addEventListener('click', confirmAction);
+$('ac-send').addEventListener('click', trySend);
+$('outcome-form').addEventListener('submit', recordOutcome);
+$('reconcile-form').addEventListener('submit', reconcileAction);
+$('hp-make').addEventListener('click', makePack);
+$('witness-form').addEventListener('submit', addWitness);
+$('hp-incourt').addEventListener('click', inCourt);
+$('re-entry').addEventListener('click', reEntry);
+$('handover-form').addEventListener('submit', offerHandover);
 
 /* ========================= A4 — SEARCH THE CORPUS =====================
  *

@@ -3389,6 +3389,26 @@
         {
           "path": "tools/journey.py",
           "kind": "existing"
+        },
+        {
+          "path": "tools/layout.py",
+          "kind": "planned"
+        },
+        {
+          "path": "nm/domain/spoken.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/authority.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/reassessment.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/hearing.py",
+          "kind": "existing"
         }
       ],
       "inputs": [

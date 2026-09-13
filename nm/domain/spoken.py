@@ -104,6 +104,27 @@ class Spoken:
                 f"work out why.")
 
 
+def dispute(label: str) -> str:
+    """How a THREAD is named to a person. Never its key. B-103, J-5.
+
+    THE KEY AND THE LABEL ARE TWO STRINGS AND ONE CANNOT BE BOTH. A derived
+    value is keyed by thread id so that two threads' limitations are different
+    values; the advocate reads the label, because nobody can answer a question
+    addressed to a database key.
+
+    WHERE NO LABEL EXISTS the answer is that the dispute is unlabelled -- NOT
+    the id. A fallback to the key is precisely how this leak reached a served
+    turn: the fallback is what makes a missing label invisible, and the line
+    then reads as though the product meant to say `thr_380e2b97f5a6`.
+
+    It lives beside `Spoken` because it is the same rule one level out: an
+    internal name reaches an advocate through a phrase somebody wrote, or it
+    does not reach them at all.
+    """
+    clean = (label or "").strip()
+    return repr(clean) if clean else "an unlabelled dispute"
+
+
 def phrase(value: Enum | None, absent: str = "not stated") -> str:
     """`said` for a value that may be missing.
 

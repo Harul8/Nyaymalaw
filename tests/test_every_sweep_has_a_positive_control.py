@@ -46,6 +46,16 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sweep test  ->  the test that proves it can fail.
 #: A sweep with no control is a sweep that has never been shown to work.
 CONTROLS: dict[str, str] = {
+    # P36 / J-5 -- the identifier sweep whose population is the CODE rather
+    # than one scripted conversation. Its control plants a leak in a branch no
+    # fixture reaches, which is the whole reason the static population exists.
+    "test_no_advocate_facing_renderer_prints_one_of_our_keys":
+        "test_the_sweep_sees_a_leak_planted_in_a_rarely_exercised_branch",
+    # And the sweep over who may render the audit line, whose violation set is
+    # empty today -- exactly the shape B-049 warns about, so its control
+    # plants a caller and requires the finder to name it.
+    "test_the_audit_line_is_never_rendered_by_the_product":
+        "test_that_check_can_see_a_caller",
     "test_every_cookie_authenticated_unsafe_route_declares_the_csrf_dependency":
         "test_the_sweep_can_see_a_route_that_forgot_the_dependency",
     "test_every_csrf_guarded_route_also_requires_authentication":

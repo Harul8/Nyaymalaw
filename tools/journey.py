@@ -139,6 +139,19 @@ EXPECTED = (
     "test_phase_5_no_results_is_said_as_searched_not_as_absence_of_law",
     "test_phase_6_an_unsupported_court_is_not_a_zero",
     "test_phase_7_a_reload_shows_the_research_record_from_the_file",
+    # P36 -- the whole product at every supported width, including the P29 to
+    # P32 preparation flows: `tests/test_the_journey_of_preparation.py`.
+    #
+    # THE THREE WIDTH ROWS ARE THE CROSS-WIDTH POPULATION CONTROL. BK-47's
+    # defect was a phase that returned early and left no row, so a runner
+    # counting green rows saw three of three; a manifest that names all three
+    # by node id turns that into MISSING, which is what this list is for.
+    "test_the_whole_product_is_navigable_at_every_width[390px]",
+    "test_the_whole_product_is_navigable_at_every_width[768px]",
+    "test_the_whole_product_is_navigable_at_every_width[1280px]",
+    "test_the_preparation_surface_is_keyboard_only",
+    "test_a_long_email_and_a_long_citation_stay_on_the_phone",
+    "test_no_engineering_vocabulary_reaches_the_preparation_screen",
 )
 
 #: The modules one `journey` run drives. Listed here beside EXPECTED so that
@@ -149,6 +162,7 @@ SUITES = (
     "tests/test_email_registration_reaches_a_private_workspace.py",
     "tests/test_the_journey_of_a_correction.py",
     "tests/test_the_journey_of_a_search.py",
+    "tests/test_the_journey_of_preparation.py",
 )
 
 

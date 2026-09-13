@@ -6188,6 +6188,59 @@ preserve prior approved limits and direct to the accountable advocate.
 **Exclusions.** No witness, expert, opponent or court is contacted, and nothing
 here can contact one. No testimony is generated in any form.
 
+### P36 Start record — every supported width, navigable and accessible — 13 September 2026
+
+**Outcome sought.** BK-68-AC1, BK-32-AC1, BK-43-AC1, BK-47-AC1, BK-72-AC1,
+J-5-AC1 and J-7-AC1, over the COMPLETE journey — registration through logout,
+with the P29 to P32 flows in it as one product rather than five screens.
+
+**P29 to P32 built four served capabilities and no way to reach any of them.**
+A capability with no surface is not shipped, and a criterion about navigability
+cannot be evidenced against screens that do not exist. So P36 adds one
+Preparation pane carrying all four, as a TAB rather than a section of the case
+file: the four steps are a sequence an advocate walks, and burying a sequence
+inside another screen is the reorientation cost BK-68 is about.
+
+**Document width was never the right question. BK-43.** Removing
+`body { overflow-x: hidden }` was the smaller half of that defect. `overflow:
+hidden` on ANY inner container is ordinary, correct layout, and a primary
+control pushed outside one is invisible and unreachable while the document
+measures exactly its viewport — nothing scrolls sideways, the control is
+simply not there. `tools/layout.py` asks the geometric question instead: is
+this control's rectangle inside every clipping rectangle between it and the
+viewport? It answers the same on a page that clips and a page that does not.
+
+**Visible is not reached. BK-47.** `Did.SEEN` exists because it is the state
+the old phase actually reached and reported as success. Without a name for it
+the population control could only tell ran from absent, and "the rail was
+visible" would go on counting as "the advocate reached the navigator". A width
+that recorded NOTHING is the loudest failure of the three, because an early
+return leaves no row rather than a red one.
+
+**The identifier sweep's population was a fixture. J-5.** That is J-5's own
+complaint, and the fix is a static sweep over every advocate-facing renderer in
+`nm/`: a leak in a rarely exercised cross-thread section is in the population
+whether or not any conversation reaches it. It found four live leaks, including
+one written earlier in this same release. `nm.domain.spoken.dispute` is the one
+owner of how a thread is named to a person, and `Ruling.said()` is what an
+advocate-facing caller reaches for instead of the audit line.
+
+**Assumptions.** 390, 768 and 1280 are the supported widths, declared in
+`tools/layout.py` and read by both the browser suite and its own control.
+Screen-reader conformance and whether the copy reads as counsel would write it
+are NOT established by this packet and cannot be: both need a person.
+
+**Acceptance → proof.** BK-43-AC1 and BK-47-AC1 domain **PASS**. J-5-AC1
+domain **PASS**. BK-32-AC1, BK-72-AC1, J-5-AC1 and J-7-AC1 `browser_journey`
+from the run recorded in `.nm/journey/report.json`. BK-68-AC1 and J-7-AC1
+`counsel_review` **NOT RUN**, and a screenshot cannot stand in for it.
+
+**Rollback.** Restore the previous compatible shared layout and retain the
+semantic and security fixes; disable the Preparation tab pending correction.
+
+**Exclusions.** No assistive-technology conformance claim, no measured
+reorientation time — both need a person with the tool in front of them.
+
 ### P44 acquisition-foundation Start record — 11 September 2026
 
 **Decision: BLOCKED on P19's scoped source-register output; contract ready.**

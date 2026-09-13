@@ -47,6 +47,7 @@ from nm.core.dependency import (
     invalidate,
 )
 from nm.domain.advice_decision import AdviceDecision
+from nm.domain.spoken import dispute
 from nm.domain.text import blank
 
 #: How an advice node is named in the ledger. ONE SPELLING, here, because a
@@ -65,7 +66,7 @@ def decision_node_name(decision_id: str) -> str:
 
 def record_advice(ledger: Ledger, *, thread_id: str, position: str,
                   rests_on: tuple[Rest, ...], at: str = "",
-                  reason: str = "") -> Ledger:
+                  reason: str = "", label: str = "") -> Ledger:
     """Put this thread's recommendation into the ledger as a derived node.
 
     `rests_on` is what the advice actually used -- the facts, premises and
@@ -79,13 +80,14 @@ def record_advice(ledger: Ledger, *, thread_id: str, position: str,
     return record(ledger, Node(
         name=advice_node_name(thread_id),
         value=position or "no position",
-        shown=f"the recommendation on thread {thread_id}",
+        shown=f"the recommendation on {dispute(label)}",
         rests_on=rests_on, computed_at=at,
         reason=reason or "the recommendation derived on this turn"))
 
 
 def record_decision(ledger: Ledger, decision: AdviceDecision, *,
-                    thread_id: str, at: str = "") -> Ledger:
+                    thread_id: str, at: str = "",
+                    label: str = "") -> Ledger:
     """Put a decision into the ledger, resting on the advice it decided.
 
     THE EDGE IS `InputKind.DERIVED` ON THE ADVICE NODE, which is what makes
@@ -98,7 +100,7 @@ def record_decision(ledger: Ledger, decision: AdviceDecision, *,
         name=decision_node_name(decision.decision_id),
         value=decision.disposition.value,
         shown=(f"the decision to {decision.disposition.value} the advice on "
-               f"thread {thread_id}"),
+               f"{dispute(label)}"),
         rests_on=(Rest(kind=InputKind.DERIVED,
                        id=advice_node_name(thread_id),
                        version=1),),

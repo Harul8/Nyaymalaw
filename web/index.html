@@ -240,6 +240,13 @@
     <button class="tab" data-tab="search">Research</button>
     <button class="tab" data-tab="casefile">Case file</button>
     <button class="tab" data-tab="history">History</button>
+    <!-- P36. THE PREPARATION SURFACE. P29 to P32 built four served
+         capabilities and no way to reach any of them; a capability
+         with no surface is not shipped. It is a TAB rather than a
+         section of the case file because the four steps are a
+         sequence an advocate walks, and burying the sequence inside
+         another screen is what BK-68 calls a reorientation cost. -->
+    <button class="tab" data-tab="prepare">Preparation</button>
   </nav>
 
   <div class="who">
@@ -527,6 +534,163 @@
       that rested on it as not current until the next brief reworks it. The
       entry you corrected stays on the record, marked superseded.</p>
     <div id="casefile-entries" aria-labelledby="entries-h"></div>
+  </section>
+</main>
+
+<main id="pane-prepare" class="single" hidden>
+  <section class="prepare">
+    <div class="page-intro">
+      <p class="eyebrow">PREPARING, NOT DOING</p>
+      <h1>Get the document and the hearing ready.</h1>
+      <p>Everything on this screen is preparation. Nothing here is filed, sent,
+        offered or conceded — you do that, and you record what happened.</p>
+    </div>
+
+    <div class="prepare-head">
+      <label class="sr-only" for="prepare-matter">Matter to prepare</label>
+      <select id="prepare-matter"><option value="">Choose a matter…</option></select>
+    </div>
+    <div id="prepare-state" class="currency-state"></div>
+
+    <!-- EVERY FORM ON THIS PANE IS WRITTEN HERE, ONCE, AND IS NEVER REBUILT.
+         A render replaces only the read-only `-host` divs. The browser journey
+         found the alternative in this very pane: a section rebuilt its own
+         form while an advocate was part-way through typing a destination, the
+         text went with it, and the submit that followed was rejected for a
+         field that had been filled in. A form that holds what somebody typed
+         is not a thing a repaint may own. -->
+
+    <section class="prep-block" id="prep-package" aria-labelledby="package-h">
+      <h2 id="package-h">The drafting package</h2>
+      <p class="casefile-lede">A package says what is being drafted, for whom,
+        and where every sentence came from. It can be ready to review. It is
+        never ready to file: that is a judgement about a court's requirements
+        which nothing here has checked.</p>
+      <form id="package-form" class="prep-form" novalidate>
+        <label for="pk-document">Document</label>
+        <input id="pk-document" autocomplete="off" required>
+
+        <label for="pk-posture">Our posture</label>
+        <input id="pk-posture" autocomplete="off" required>
+
+        <label for="pk-audience">Audience</label>
+        <input id="pk-audience" autocomplete="off" required>
+
+        <label for="pk-court">Court on the cause title</label>
+        <input id="pk-court" autocomplete="off">
+
+        <label for="pk-purpose">Purpose</label>
+        <input id="pk-purpose" autocomplete="off" required>
+
+        <label for="pk-theory">Theory, in one sentence</label>
+        <input id="pk-theory" autocomplete="off">
+
+        <label for="pk-relief">Relief sought</label>
+        <input id="pk-relief" autocomplete="off">
+
+        <button id="pk-make" type="submit">Prepare the package</button>
+      </form>
+      <div id="package-error" class="state problem" role="alert" hidden></div>
+      <div id="package-host"></div>
+      <button id="pk-export" type="button" hidden>Export it for review</button>
+      <div id="package-export" aria-live="polite"></div>
+    </section>
+
+    <section class="prep-block" id="prep-action" aria-labelledby="action-h">
+      <h2 id="action-h">Filing and sending</h2>
+      <p class="casefile-lede">I prepare, verify and export. You file or send it
+        and record the receipt. There is no connector here, and nothing on this
+        screen can reach a court, a client or an opponent.</p>
+      <form id="action-form" class="prep-form" novalidate>
+        <label for="ac-authority">Whose authority this rests on</label>
+        <input id="ac-authority" autocomplete="off" required>
+
+        <label for="ac-object">What is being sent</label>
+        <input id="ac-object" autocomplete="off" required>
+
+        <label for="ac-destination">Where it is going</label>
+        <input id="ac-destination" autocomplete="off" required>
+
+        <button id="ac-make" type="submit">Propose this action</button>
+      </form>
+      <div id="action-error" class="state problem" role="alert" hidden></div>
+      <div id="action-host" aria-live="polite"></div>
+      <button id="ac-confirm" type="button" hidden>Confirm this exact content</button>
+      <button id="ac-send" type="button" hidden>Send or file it</button>
+
+      <form id="outcome-form" class="prep-form" novalidate hidden>
+        <label for="oc-state">What happened when you filed or sent it</label>
+        <select id="oc-state">
+          <option value="delivery_unknown">I do not know whether it arrived</option>
+          <option value="delivered">It arrived, and I have the receipt</option>
+          <option value="refused">It was refused</option>
+          <option value="cancelled">I stopped before sending it</option>
+        </select>
+
+        <label for="oc-receipt">Receipt</label>
+        <input id="oc-receipt" autocomplete="off">
+
+        <label for="oc-because">What you saw</label>
+        <input id="oc-because" autocomplete="off">
+
+        <button id="oc-record" type="submit">Record the outcome</button>
+      </form>
+
+      <form id="reconcile-form" class="prep-form" novalidate hidden>
+        <label for="rc-basis">What you checked</label>
+        <input id="rc-basis" autocomplete="off">
+
+        <label for="rc-receipt">The receipt, if you found one</label>
+        <input id="rc-receipt" autocomplete="off">
+
+        <button id="rc-go" type="submit">Look again</button>
+      </form>
+    </section>
+
+    <section class="prep-block" id="prep-hearing" aria-labelledby="hearing-h">
+      <h2 id="hearing-h">Hearing and negotiation</h2>
+      <p class="casefile-lede">Preparation is built from the verified package.
+        A witness plan records what to ask about; it never records what a
+        witness will say, and an instruction to an expert states the question
+        rather than the answer.</p>
+      <button id="hp-make" type="button">Prepare for the hearing</button>
+      <div id="hearing-error" class="state problem" role="alert" hidden></div>
+      <div id="hearing-host" aria-live="polite"></div>
+
+      <form id="witness-form" class="prep-form" novalidate hidden>
+        <label for="wt-witness">Witness</label>
+        <input id="wt-witness" autocomplete="off">
+
+        <label for="wt-topics">What to ask them about — subjects, not answers</label>
+        <input id="wt-topics" autocomplete="off">
+
+        <button id="wt-add" type="submit">Add the witness plan</button>
+      </form>
+      <div id="witness-host"></div>
+      <button id="hp-incourt" type="button" hidden>What can I say in court?</button>
+      <div id="incourt-host" aria-live="polite"></div>
+    </section>
+
+    <section class="prep-block" id="prep-continuity" aria-labelledby="continuity-h">
+      <h2 id="continuity-h">Coming back, and handing over</h2>
+      <p class="casefile-lede">Where this matter stands, what changed while you
+        were away, and what is still yours. A handover moves responsibility only
+        when the person receiving it accepts.</p>
+      <button id="re-entry" type="button">Where does this stand?</button>
+      <div id="continuity-error" class="state problem" role="alert" hidden></div>
+      <div id="continuity-host" aria-live="polite"></div>
+
+      <form id="handover-form" class="prep-form" novalidate hidden>
+        <label for="ho-to">Offer this matter to</label>
+        <input id="ho-to" autocomplete="off">
+
+        <label for="ho-next">What the next responsibility is, and whose it becomes</label>
+        <input id="ho-next" autocomplete="off">
+
+        <button id="ho-offer" type="submit">Offer the handover</button>
+      </form>
+      <div id="handover-host" aria-live="polite"></div>
+    </section>
   </section>
 </main>
 

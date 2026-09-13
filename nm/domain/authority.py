@@ -181,6 +181,30 @@ class Ruling:
     def authorises(self) -> bool:
         return self.standing.authorises()
 
+    def said(self) -> str:
+        """WHAT AN ADVOCATE READS. Second person, and no account id. J-5.
+
+        `why` and `as_line` are the RECORD: an authority decision has to name
+        the person it was about, and a refusal nobody can attribute is not a
+        refusal. Neither belongs on a screen -- an advocate cannot act on a
+        sentence addressed to a database key, and the person reading is, in
+        the ordinary case, the actor themselves.
+
+        These are not a second copy of the decision. `standing`, `act` and
+        `capacity` are the decision; these are two audiences for it, which is
+        the split `Deadline.said` already makes for the same reason.
+        """
+        doing = self.act.value.replace("_", " ")
+        if self.standing is Standing.PERMITTED:
+            return (f"You are recorded as {self.capacity.value} on this "
+                    f"matter, and {self.capacity.value} may {doing}.")
+        if self.standing is Standing.NOT_ESTABLISHED:
+            return (f"No capacity is recorded for you on this matter, so "
+                    f"whether you may {doing} is not established. That is not "
+                    f"a refusal: record the capacity on the commission.")
+        return (f"You are recorded as {self.capacity.value} on this matter, "
+                f"and {self.capacity.value} may not {doing}.")
+
     def as_line(self) -> str:
         """One audit line. NAMES THE PERSON AND THE ATTEMPT, carries no
         client material -- an authority decision is about who, not about

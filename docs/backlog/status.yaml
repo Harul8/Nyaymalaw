@@ -2601,10 +2601,10 @@ items:
   verification: none
   affects_phases: [A, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-68-counsel-workspace-and-progressive-disclosure
-  next_action: design the workspace around current understanding, purpose, change, readiness, decision and next action with deeper proof inspectable on demand
+  next_action: close BK-68-AC1, which needs counsel_review as well as the browser journey
   stage_records:
-    start: {result: READY, ref: docs/BACKLOG.md#bk-68-counsel-workspace-and-progressive-disclosure}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-68-counsel-workspace-and-progressive-disclosure}
+    start: {result: READY, ref: docs/BACKLOG.md#p36-start-record--every-supported-width-navigable-and-accessible--13-september-2026}
+    build: {result: OPEN, ref: docs/BACKLOG.md#p36-start-record--every-supported-width-navigable-and-accessible--13-september-2026}
     test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-68-counsel-workspace-and-progressive-disclosure}
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-68-counsel-workspace-and-progressive-disclosure}
   acceptance:

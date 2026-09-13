@@ -313,9 +313,18 @@ button.primary:disabled { opacity: 0.5; cursor: default; }
 button.ghost { border: none; background: none; color: var(--accent); padding: 0.45rem 0.3rem; font-size: 0.78rem; }
 button.wide { margin: 0.5rem 0.6rem 0.8rem; }
 
-/* THE TOGGLE IS FOR NARROW SCREENS ONLY. At 1280px the rail is already
-   beside the conversation and a button that opens what is open is noise. */
+/* THE TOGGLE IS SHOWN WHEREVER THE RAIL IS NOT. BK-32-AC1, P36.
+   It was narrow-widths-only, on the reasoning that at 1280px the rail is
+   already beside the conversation and a button that opens what is open is
+   noise. That reasoning holds on the WORK pane and nowhere else: the rail
+   lives inside `#pane-advise`, so an advocate on Research, the case file,
+   History or Preparation at 1280px had no route to another matter at all.
+   Found by the journey the day Preparation was added, at the one width the
+   old phase used to return early at.
+   `body.away-from-work` is set by `showTab`, so the masthead -- the one strip
+   present on every surface -- always offers the way back. */
 .matters-toggle { display: none; }
+body.away-from-work .matters-toggle { display: inline-block; }
 
 @media (max-width: 820px) {
   main { grid-template-columns: 1fr; }
@@ -383,7 +392,28 @@ main > * { min-width: 0; }
 
 /* ============================ THE TABS ============================ */
 
-.tabs { display: flex; gap: 10px; grid-column: 1; grid-row: 2; margin-left: 0; }
+/* THE STRIP WRAPS. P36.
+ *
+ * A fifth tab took the row to 400px inside a 390px viewport and the whole
+ * document scrolled sideways -- found by the journey the day the Preparation
+ * tab was added, which is the point of measuring rather than assuming.
+ *
+ * WRAPPING, NOT A HORIZONTAL SCROLLER. A scroller would satisfy the
+ * measurement and still hide the last tab behind a gesture a keyboard user
+ * does not have; a wrapped row puts every tab on screen and in the tab order
+ * at every width. `min-width: 0` is what lets the flex row shrink at all --
+ * without it a flex item refuses to go below its content width, which is the
+ * usual reason a strip like this overflows instead of reflowing.
+ */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  grid-column: 1;
+  grid-row: 2;
+  margin-left: 0;
+  min-width: 0;
+}
 
 .tabs .tab {
   background: none;
@@ -1181,3 +1211,41 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
   padding: .3rem .45rem; min-width: 8rem;
 }
 .binding-out, .decision-out { flex: 1 1 100%; }
+
+/* ===================== P36 — THE PREPARATION PANE ======================
+ *
+ * NO FIXED WIDTHS AND NO HORIZONTAL SCROLLER. The pane is a single column
+ * that reflows; at 390px the labels sit above their inputs and nothing is
+ * pushed off the right edge, which is the property `tools/layout.py` measures
+ * geometrically rather than by asking the document for its scroll width.
+ *
+ * AND NO `overflow-x: hidden` ANYWHERE IN HERE. That rule is what made the
+ * old check unable to fail (BK-43), and `tests/test_no_rule_hides_the_
+ * overflow.py` refuses it at the document level. Long content -- a filename,
+ * a citation, an email address -- wraps instead.
+ */
+.prepare { display: flex; flex-direction: column; gap: 1.25rem; }
+.prepare-head { display: flex; gap: 0.5rem; align-items: center; }
+.prepare-head select { max-width: 100%; }
+.prep-block {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 1rem;
+}
+.prep-block h2 { margin: 0 0 0.35rem; font-size: 1.05rem; }
+.prep-form { display: flex; flex-direction: column; gap: 0.35rem; margin: 0.75rem 0; }
+.prep-form label { font-size: 0.82rem; font-weight: 600; }
+.prep-form input, .prep-form select { max-width: 100%; }
+.prep-form button { align-self: flex-start; margin-top: 0.5rem; }
+.prep-block > button { margin-top: 0.5rem; }
+/* LONG WORDS BREAK RATHER THAN PUSH. An email address, a filename or a
+ * neutral citation is one unbreakable token, and one of them at 390px is the
+ * whole of a horizontal scrollbar. */
+.prep-said, .prep-list li {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.prep-said { font-size: 0.86rem; color: var(--ink-2); margin: 0.4rem 0; }
+.prep-list { margin: 0.25rem 0 0.75rem; padding-left: 1.1rem; }
+.prep-list li { font-size: 0.86rem; margin-bottom: 0.25rem; }
+.state.problem { color: var(--signal); border-color: var(--signal); }
