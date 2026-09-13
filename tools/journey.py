@@ -125,6 +125,14 @@ EXPECTED = (
     "test_phase_4_the_board_shows_the_window_as_stale_not_as_the_deadline",
     "test_phase_5_a_reload_reads_the_same_currency_from_the_file",
     "test_phase_6_the_next_brief_reworks_the_stale_values",
+    # P21 -- research in the browser: `tests/test_the_journey_of_a_search.py`.
+    "test_phase_1_a_matter_is_open_and_research_is_offered_for_it",
+    "test_phase_2_a_submission_produces_cases_not_labels",
+    "test_phase_3_the_case_opens_to_its_paragraphs_by_locator",
+    "test_phase_4_attaching_a_paragraph_shows_five_verdicts_not_one",
+    "test_phase_5_no_results_is_said_as_searched_not_as_absence_of_law",
+    "test_phase_6_an_unsupported_court_is_not_a_zero",
+    "test_phase_7_a_reload_shows_the_research_record_from_the_file",
 )
 
 #: The modules one `journey` run drives. Listed here beside EXPECTED so that
@@ -133,6 +141,7 @@ EXPECTED = (
 SUITES = (
     "tests/test_the_journey_login_to_logout.py",
     "tests/test_the_journey_of_a_correction.py",
+    "tests/test_the_journey_of_a_search.py",
 )
 
 

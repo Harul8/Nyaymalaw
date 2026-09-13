@@ -256,6 +256,17 @@ def test_every_response_class_is_exercised_on_the_served_path(client, tmp_path):
     for g in r.json()["metrics"]["gates_fired"]:
         seen.add(g["response"])
 
+    # AND THE REASON REACHES THE WIRE WITH IT. The plaintext metrics file is
+    # written from a REDACTED projection, because a gate detail quotes the
+    # matter and that directory is readable; the served response is the
+    # authenticated matter-scoped one and carries the sentence the audit panel
+    # renders. Two projections is the fix, and a fix that silently served the
+    # redacted one would empty "How this answer was made" while every gate id
+    # still arrived -- a disclosure that is present and says nothing.
+    assert any(g.get("detail") for g in r.json()["metrics"]["gates_fired"]), (
+        "the served gates carry no detail, so the advocate is told THAT a gate "
+        "fired and never WHY; the redacted projection belongs on disk only")
+
     # BLOCK — posture unresolved, the block IS the answer.
     r = client.post("/api/turn", json={
         "advocate_id": "adv", "message": "the landlord issued a quit notice"})

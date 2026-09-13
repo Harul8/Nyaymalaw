@@ -751,15 +751,20 @@ MUTATIONS = [
     # The failure mode is AGREEABLE: each turn recites a little more of what is
     # established, because restating context reads as thorough, and by turn
     # eight the advocate is scrolling past their own file to find the answer.
+    # THE ANCHOR MOVED WITH ITS SOURCE, 13 September 2026. P24 put the paused
+    # -need filter between `grounds` and the ask, so the old two-line copy no
+    # longer matched and the mutation could not run -- which is the anchor check
+    # doing its job. The planted defect is unchanged: recite the file after the
+    # ask, so the answer grows with the file on every turn.
     ("an answer that recites the file back, growing every turn",
      "nm/core/turn.py",
-     "        elements.extend(grounds)\n"
-     "        elements.extend(self._ask(gaps, thread, metrics))",
-     "        elements.extend(grounds)\n"
+     "        askable = [g for g in gaps if getattr(g, \"what\", None) not in paused]\n"
+     "        elements.extend(self._ask(askable, thread, metrics))",
+     "        askable = [g for g in gaps if getattr(g, \"what\", None) not in paused]\n"
+     "        elements.extend(self._ask(askable, thread, metrics))\n"
      "        elements.extend(Element(kind=ElementKind.GROUND, thread=thread.id,\n"
      "                                text=f\"On the file: {f.statement[:60]}\")\n"
-     "                        for f in facts)\n"
-     "        return elements, tuple(relied_on), tuple(retrieved)",
+     "                        for f in facts)",
      "test_answer_length_is_a_function_of_live_threads_not_turn_number",
      "E-093"),
 
@@ -1144,7 +1149,7 @@ MUTATIONS = [
     # nothing contradicts nothing, so a file of them reports health forever.
     ("an argument with no declared factual commitments, unreported",
      "nm/core/theory.py",
-     "    return tuple(a.statement[:60] for a in arguments if not a.requires)",
+     "    return tuple(snippet(a.statement, 60) for a in arguments if not a.requires)",
      "    return ()",
      "test_an_argument_declaring_no_facts_cannot_be_silently_consistent",
      "E-081"),
@@ -1305,7 +1310,7 @@ MUTATIONS = [
     # error and an advocate missing a deadline.
     ("a conservation check that cannot name what was lost",
      "nm/domain/issue.py",
-     "    return tuple(i.statement[:80] for i in spotted if i.id not in out)",
+     "    return tuple(snippet(i.statement, 80) for i in spotted if i.id not in out)",
      "    return ()",
      "test_the_conservation_check_names_what_was_lost", "E-060"),
 

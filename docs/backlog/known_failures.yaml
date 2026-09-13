@@ -1,11 +1,18 @@
 # THE FAILURES THIS BUILD ALREADY KNOWS ABOUT, EACH WITH AN OWNER.
 #
-# WHY THIS EXISTS, 10 September 2026
+# WHY THIS EXISTS, 10 September 2026 (TRACE-C1 removed 13 September 2026;
+# the workbook block added the same day)
 # ------------------------------------
-# Four exact trace facts remain: two unbuilt PRD refusal obligations and two
-# registry/code reconciliation findings. Tests of trace mechanics isolate the
-# mechanism they exercise; they do not inherit these product findings as their
-# own failures.
+# Two registry/code reconciliation trace findings remain (T3b, T3c), one ruff
+# style debt, and twenty-one saved-reader-view rows whose own block at the
+# foot of this file says what was measured before they were written. The PRD
+# refusal obligation that was here -- TRACE-C1, C1's unavailable-material
+# clause -- was BUILT by P24 (briefing readiness is not turn completion, and a
+# paused need is not looped), witnessed by tests/test_briefing_readiness_is_not
+# _completion.py::test_a_completed_turn_does_not_complete_intake_and_unavailable
+# _is_not_looped with @refuses("C1", 4), and so was removed rather than waived.
+# Tests of trace mechanics isolate the mechanism they exercise; they do not
+# inherit these product findings as their own failures.
 #
 # But `tools/check.py` returns 1 on any failure, writes no stamp, and
 # `tools/hooks/pre-commit` then refuses every commit. So the repository was in
@@ -47,20 +54,6 @@ schema: 2
 #: Registered by BK-80-AC7. Amending this file is a delivery decision: it
 #: changes what the build is permitted to commit over.
 known_failures:
-
-- id: TRACE-C1
-  step: trace
-  fact:
-    kind: trace
-    check: T7
-    reason: "C1: 1 of 5 NEVER clauses have no test declaring @refuses"
-  owner: [BK-54-AC3]
-  because: >-
-    C1's unavailable-material refusal is unbuilt. Briefing cannot yet refuse to
-    claim completion while a material controlling gap remains, so no test can
-    declare @refuses against that clause without asserting a behaviour the
-    product does not have.
-
 
 - id: TRACE-T3B
   step: trace
@@ -135,3 +128,360 @@ known_failures:
     that baseline came from running trace and pytest directly rather than the
     whole gate, so a fourth red step went unseen. A baseline measured on part
     of a population is a baseline about that part.
+
+# ---------------------------------------------------------------------------
+# THE SAVED WORKBOOK IS BEHIND THE REGISTRY, 13 September 2026 (BK-80-AC7).
+#
+# `docs/Nyaymalaw_End_to_End_Project_Plan.xlsx` is a DERIVED reader view. This
+# branch's delivery records moved its sources -- P21/P22/P23/P47/P46/P24 events,
+# including BK-25 planned -> in_progress -- so the view no longer reconciles to
+# them and `tools/plan_view.check_view` says so, correctly, twenty-one times.
+#
+# THE SOURCES ARE CURRENT AND THE VIEW IS STALE. That is the direction that
+# matters: no registry claim rests on the workbook, and CLAUDE.md already says
+# the generated views "reconcile to these files; they do not override them".
+# Nothing about the product's behaviour is unverified by these twenty-one.
+#
+# WHY IT WAS NOT SIMPLY REGENERATED. The view's owner is
+# `spec/plan/build_current_plan.mjs`, which resolves `@oai/artifact-tool`.
+# Measured on this machine: Node is present at C:\Program Files\nodejs, and
+# the package is absent from the repository, from this worktree, from the npm
+# global root and from anywhere under the user profile. It is an internal
+# `@oai`-scoped package, so the public registry cannot supply it either.
+#
+# AND NOT PATCHED IN PLACE EITHER, which was measured rather than assumed:
+# `plan_view.load_view` reads the workbook with `data_only=True`, i.e. the
+# CACHED results of its formulas, and the saved view carries 88 of them.
+# openpyxl does not evaluate formulas, so a load-and-save writes all 88 back
+# with no cached value and every one would then read as `None`. A refresh that
+# way would break more of the view than it fixed -- and would make a second
+# writer of a derived artefact, which is the defect §4 exists to refuse.
+#
+# THE EIGHTEEN PARAMETRISED ROWS ARE NEGATIVE CONTROLS, and their failure mode
+# is worth naming. Each plants ONE mutation into a copy of the saved view and
+# asserts the checker reports exactly that mutation. The checker now reports
+# the planted mutation AND the pre-existing staleness, so the exact-match
+# assertion fails. They are not broken controls; they are correct controls
+# reading a view that is already wrong, and they will pass again the moment
+# the workbook is regenerated -- at which point this whole block must SHRINK,
+# which the registry's third outcome enforces.
+#
+# OWNED BY the three criteria that each claim the workbook reconciles to its
+# sources: BK-87-AC4, BK-89-AC4 and BK-90-AC3. All three are unproven while
+# the view is behind, and saying so is the point of naming an owner.
+# ---------------------------------------------------------------------------
+
+- id: WORKBOOK-STALE-01
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_autonomy_contract_is_checked_without_promoting_runtime'
+    outcome: FAILED
+    reason: "AssertionError: assert ['Work Items/... source', ...] == []"
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    The saved reader view no longer reconciles to the registry this branch
+    updated. The sources are current; the view is derived and stale, and its
+    generator cannot run in this environment. See the block above for what
+    was measured and why neither regeneration nor an in-place patch was
+    available.
+
+- id: WORKBOOK-STALE-02
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_current_plan_matches_authored_registry_and_snapshot_sources'
+    outcome: FAILED
+    reason: "AssertionError: assert ['Work Items/... source', ...] == []"
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    The saved reader view no longer reconciles to the registry this branch
+    updated. The sources are current; the view is derived and stale, and its
+    generator cannot run in this environment. See the block above for what
+    was measured and why neither regeneration nor an in-place patch was
+    available.
+
+- id: WORKBOOK-STALE-03
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_media_policy_is_part_of_the_checked_reader_view'
+    outcome: FAILED
+    reason: "AssertionError: assert ['Work Items/... source', ...] == []"
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    The saved reader view no longer reconciles to the registry this branch
+    updated. The sources are current; the view is derived and stale, and its
+    generator cannot run in this environment. See the block above for what
+    was measured and why neither regeneration nor an in-place patch was
+    available.
+
+- id: WORKBOOK-STALE-04
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[change_feature-Features/A1: Implementation differs from source]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-05
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[change_hash-Sources: stale or incorrect hash docs/backlog/status.yaml]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-06
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[change_instruction-Packet Guide: instruction population or content differs]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-07
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[change_status-Work Items/BK-31: Delivery status differs from source]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-08
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[change_step_basis-Journey Steps/STEP-A-01: Basis differs from source]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-09
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[change_wave-Work Items/BK-21: Wave differs from source]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-10
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[drop_acceptance-Acceptance: exact ID population/order differs]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-11
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[drop_control_row-Reconciliation: exact control-row population differs]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-12
+  step: class_a
+  fact:
+    kind: pytest
+    node: "tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[drop_original_item-Work Items: exact ID population/order differs; missing=['BK-21']]"
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-13
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[drop_source-Sources: exact authored snapshot-source population differs]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-14
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[duplicate_item-Work Items: exact ID population/order differs]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-15
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[forge_decision-Decisions/CHOICE-01: Current approval differs from source]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-16
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[forge_scenario_pass-Evaluation Specs/EVAL-001: Execution differs from source]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-17
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[forged_zero_reconciliation-Reconciliation/Items: Source count differs from source]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-18
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[formula_error-Reconciliation: saved formula error #REF!]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-19
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[missing_formula-Reconciliation!C4: formula or cached value differs]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-20
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[promote_captured_artifact-Sources: captured execution artifact must remain historical]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.
+
+- id: WORKBOOK-STALE-21
+  step: class_a
+  fact:
+    kind: pytest
+    node: 'tests/test_current_plan_view.py::test_saved_plan_checker_rejects_real_cell_mutations[wrong_formula_cache-Reconciliation!C4: formula or cached value differs]'
+    outcome: FAILED
+    reason: '<no structured reason reported>'
+  owner: [BK-87-AC4, BK-89-AC4, BK-90-AC3]
+  because: >-
+    A negative control planting one cell mutation into the saved view and
+    asserting the checker reports exactly that mutation. The checker also
+    reports the pre-existing staleness above, so the exact match fails. The
+    control is correct and the view it reads is not; regenerating the
+    workbook restores it.

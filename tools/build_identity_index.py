@@ -119,7 +119,11 @@ _REPORTER = re.compile(
 #: carries no `Equivalent citations:` line at all.
 _NEUTRAL_SELF = re.compile(r"\b(\d{4}\s*INSC\s*\d+)", re.I)
 
-_NONKEY = re.compile(r"[^A-Z0-9]")
+# THE KEY IS OWNED BY `nm.domain.citation.reporter_key` (P21). It was a
+# private regex here, and the runtime lookup would have needed a second copy
+# -- the shape CLAUDE.md §4 records against provision patterns. One owner, at
+# build and at read.
+from nm.domain.citation import reporter_key as _reporter_key  # noqa: E402
 
 # Verbs, graded. `distinguished` is NOT negative -- it limits scope, it does not
 # doubt correctness, and grading it as adverse would flag half the corpus.
@@ -166,7 +170,7 @@ create index rejects_field on rejects(field);
 
 
 def citation_key(raw: str) -> str:
-    return _NONKEY.sub("", raw.upper())
+    return _reporter_key(raw)
 
 
 def parse_bench(head: str, at: int) -> list[str]:

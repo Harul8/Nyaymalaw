@@ -895,6 +895,20 @@ class PublishedCorpus:
     def read(self, relative_path: str) -> bytes:
         return self.member_path(relative_path).read_bytes()
 
+    def version_for_source(self, source_id: str) -> str | None:
+        """The exact version this generation holds for one source, or None.
+
+        `None` is "this manifest names no such source", and the caller says
+        so; it is not "unversioned". P21 records a reliance's dependency
+        through this, so a withdrawal of that version reaches the matter.
+        """
+        matches = [row for row in self.manifest.get("sources") or ()
+                   if isinstance(row, dict) and row.get("source_id") == source_id]
+        if len(matches) != 1:
+            return None
+        version = matches[0].get("version_id")
+        return str(version) if version else None
+
     def get_source(self, version_id: str) -> bytes:
         matches = [row for row in self.manifest["sources"]
                    if row["version_id"] == version_id]
@@ -1237,6 +1251,26 @@ def publish_corpus(
 def get_corpus(root: str | Path) -> PublishedCorpus:
     """Resolve the active generation without ever enumerating candidates."""
     return PublishedCorpus.open(root)
+
+
+def withdrawn_versions(root: str | Path) -> frozenset[str]:
+    """Every source version and snapshot id any withdrawal has named. P21.
+
+    Read from the durable withdrawal events, so a matter that attached a
+    version can learn it was withdrawn without the publication code having to
+    know about matters. An unreadable event is a refusal, not an empty set:
+    `_validate_withdrawal` raises, and the caller must not read the raise as
+    "nothing withdrawn".
+    """
+    publication_root = Path(root).resolve()
+    withdrawn: set[str] = set()
+    for path in sorted((publication_root / "withdrawals").glob("*.json")):
+        event, _ = _load_json(path, "corpus withdrawal")
+        _validate_withdrawal(path, event)
+        withdrawn.update(str(v) for v in (event.get("source_versions") or ()))
+        if event.get("snapshot_id"):
+            withdrawn.add(str(event["snapshot_id"]))
+    return frozenset(withdrawn)
 
 
 def get_source(root: str | Path, version_id: str) -> bytes:

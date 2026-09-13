@@ -51,6 +51,7 @@ from dataclasses import dataclass
 from nm.domain.issue import Issue, IssueKind, facet
 from nm.domain.matter import Side, ThreadId
 from nm.domain.quotable import Quotable
+from nm.domain.text import snippet
 from nm.domain.traceability import implements
 
 #: The most this reads from one turn. An answer carrying twenty issues has not
@@ -224,7 +225,7 @@ def read(said: dict, thread: ThreadId, quotable: Quotable,
             # rendering's date stamps stopped being quotable in the same
             # move, which is the other half of the same rule -- a quotation is
             # the advocate's words, wherever they wrote them.
-            refused.append(f"{statement[:60]}: the quoted words are not in "
+            refused.append(f"{snippet(statement, 60)}: the quoted words are not in "
                            f"anything the advocate wrote")
             continue
 

@@ -24,6 +24,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
+from nm.core import briefing as _briefing
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
 from nm.domain import attempts, brief
 from nm.domain import summary as matter_memory
@@ -53,6 +54,10 @@ from nm.edge.projections import (
 )
 from nm.ports.directory import AccountBusy, ProofRefused
 from nm.ports.store import StaleWrite
+
+#: How many surfaced cases one round asks the identity index about. Bounded,
+#: and the bound is recorded on the adverse search's `target`.
+ADVERSE_BOUND = 8
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -109,6 +114,10 @@ class _Released(BaseModel):
     # error carries `turn_id` so the retry can name it.
     committed: str
     matter_version: int | None
+    # P24. INTAKE READINESS, distinct from the turn completing. The web reads
+    # this to show whether the file is ready for the task, which a finished turn
+    # does not by itself establish (C1 NEVER[4]).
+    briefing: dict = {}
 
 
 def _release(output) -> _Released:
@@ -163,10 +172,11 @@ def _release(output) -> _Released:
             }
             for e in answer.elements
         ],
-        metrics=output.metrics.as_dict(),
+        metrics=output.metrics.as_served(),
         replayed=output.replayed,
         committed="replayed" if output.replayed else "committed",
         matter_version=output.matter.version if output.matter else None,
+        briefing=_briefing.block(output.matter),
     )
 
 
@@ -628,6 +638,258 @@ def get_casefile(matter_id: str, advocate_id: Advocate) -> dict:
     # an entry the advocate was not looking at.
     casefile["version"] = m.version
     return casefile
+
+
+class PremiseStatement(BaseModel):
+    """The advocate stating or correcting one legal premise on a thread. P22.
+
+    A STATED premise outranks the product's inference on the next computation
+    and carries who stated it. The kind is one of the three the arithmetic
+    cannot establish for itself; the route rejects any other.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    statement: NonBlank = Field(min_length=1)
+    source: str = ""
+    expected_version: int
+
+
+@app.post("/api/matters/{matter_id}/threads/{thread_id}/premises/{kind}",
+          dependencies=[CsrfProtected], status_code=201)
+def state_premise(matter_id: str, thread_id: str, kind: str,
+                  body: PremiseStatement, advocate_id: Advocate) -> dict:
+    """Record a premise the advocate states. BK-65-AC2, P22.
+
+    THE NEXT TURN COMPUTES UNDER IT. This does not recompute the limitation --
+    that is the turn's job, on the turn's evidence -- it records the stated
+    premise on the thread so the next computation reads it first and, where it
+    was CONDITIONAL on an inferred accrual, becomes definitive. The record
+    carries who stated it and when, because a premise with no reviewer is the
+    `not_assessed` state the cover already distinguishes.
+    """
+    from dataclasses import replace as _replace
+
+    from nm.core.premise import Kind
+    from nm.domain.clock import today as _today
+
+    valid = {k.value for k in Kind}
+    if kind not in valid:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST",
+            "why": f"a premise is one of {sorted(valid)}, not {kind!r}",
+            "committed": "not_committed"})
+    m = _owned(matter_id, advocate_id)
+    if m.version != body.expected_version:
+        raise HTTPException(status_code=409, detail={
+            "code": "STALE_VERSION",
+            "why": (f"this matter moved while you were stating the premise: you "
+                    f"were on version {body.expected_version} and it is now at "
+                    f"{m.version}"),
+            "expected_version": body.expected_version,
+            "matter_version": m.version, "committed": "not_committed"})
+    thread = m.thread(thread_id)
+    if thread is None:
+        raise HTTPException(status_code=404, detail="no such thread on this matter")
+    today = _today().isoformat()
+    stated = dict(getattr(thread, "premises_stated", {}) or {})
+    stated[kind] = {"statement": body.statement.strip(),
+                    "source": body.source.strip(), "by": advocate_id, "at": today}
+    m = m.with_thread(_replace(thread, premises_stated=stated))
+    m = _replace(m, last_activity=today)
+    try:
+        committed = application().store.commit(m, expected_version=body.expected_version)
+    except StaleWrite as exc:
+        raise HTTPException(status_code=409, detail={
+            "code": "STALE_VERSION", "why": str(exc),
+            "committed": "not_committed"}) from exc
+    return {"state": "stated", "matter_id": committed.id,
+            "version": committed.version, "thread_id": thread_id, "kind": kind,
+            "premise": stated[kind]}
+
+
+class ReliefStatement(BaseModel):
+    """The advocate stating what a remedy is worth on a thread. BK-70 / E2.
+
+    A STATED relief is the strong basis: the advocate knows the assets, the
+    forum and the cost their client faces. The five coordinates use the
+    product's own three-state vocabulary, and an unknown value is REJECTED
+    rather than blanked -- the same rule `state_premise` keeps for a premise
+    kind. The objective is what the relief is measured against; where the
+    advocate does not restate it, the one already on the thread stands.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    remedy: NonBlank = Field(min_length=1)
+    objective: str = ""
+    forum: str = ""
+    availability: str = "not_assessed"
+    value: str = "not_assessed"
+    timing: str = "not_assessed"
+    enforceability: str = "not_assessed"
+    proportionality: str = "not_assessed"
+    reason: str = ""
+    source: str = ""
+    expected_version: int
+
+
+@app.post("/api/matters/{matter_id}/threads/{thread_id}/relief",
+          dependencies=[CsrfProtected], status_code=201)
+def state_relief(matter_id: str, thread_id: str, body: ReliefStatement,
+                 advocate_id: Advocate) -> dict:
+    """Record a relief the advocate states, and what it is worth. BK-70, E2.
+
+    THE NEXT TURN READS IT FIRST. This does not itself recompute the
+    recommendation -- that is the turn's job -- it records a STATED relief on
+    the thread so the next turn's relief read treats it as established rather
+    than inferring the coordinates. An established shortfall (unavailable,
+    hollow, late, unenforceable) then changes the recommendation; a
+    disproportionate route is stated alongside, never withheld (E3).
+    """
+    from dataclasses import replace as _replace
+
+    from nm.core import relief as relief_mod
+    from nm.core.premise import Basis
+    from nm.domain.clock import today as _today
+
+    coord_types = {
+        "availability": relief_mod.Availability, "value": relief_mod.Value,
+        "timing": relief_mod.Timing, "enforceability": relief_mod.Enforceability,
+        "proportionality": relief_mod.Proportionality,
+    }
+    coords = {}
+    for name, enum in coord_types.items():
+        raw = getattr(body, name)
+        valid = {e.value for e in enum}
+        if raw not in valid:
+            raise HTTPException(status_code=422, detail={
+                "code": "INVALID_REQUEST",
+                "why": f"{name} is one of {sorted(valid)}, not {raw!r}",
+                "committed": "not_committed"})
+        coords[name] = enum(raw)
+
+    m = _owned(matter_id, advocate_id)
+    if m.version != body.expected_version:
+        raise HTTPException(status_code=409, detail={
+            "code": "STALE_VERSION",
+            "why": (f"this matter moved while you were stating the relief: you "
+                    f"were on version {body.expected_version} and it is now at "
+                    f"{m.version}"),
+            "expected_version": body.expected_version,
+            "matter_version": m.version, "committed": "not_committed"})
+    thread = m.thread(thread_id)
+    if thread is None:
+        raise HTTPException(status_code=404, detail="no such thread on this matter")
+
+    stored_obj = relief_mod.Objective.from_stored(getattr(thread, "objective", None))
+    objective = body.objective.strip() or (stored_obj.statement if stored_obj else "")
+    if not objective:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST",
+            "why": "a relief needs an objective it is measured against; state "
+                   "one, or none is on the thread yet",
+            "committed": "not_committed"})
+
+    relief = relief_mod.Relief(
+        remedy=body.remedy.strip(), objective=objective,
+        forum=body.forum.strip(), basis=Basis.STATED,
+        source=(body.source.strip() or "the advocate"),
+        reason=(body.reason.strip() or "stated by the advocate"), **coords)
+
+    # REPLACE A PRIOR STATEMENT OF THE SAME REMEDY, keep the rest. The turn's
+    # own relief read overwrites this section each turn, so what persists is a
+    # statement the next turn reads and then re-expresses as its position.
+    kept = [r for r in relief_mod.reliefs_from_stored(getattr(thread, "reliefs", ()))
+            if r.remedy != relief.remedy]
+    kept.append(relief)
+    obj_row = (relief_mod.Objective(objective, basis=Basis.STATED,
+                                    source="the advocate").as_dict()
+               if body.objective.strip() or stored_obj is None
+               else stored_obj.as_dict())
+    today = _today().isoformat()
+    m = m.with_thread(_replace(
+        thread, reliefs=tuple(r.as_dict() for r in kept), objective=obj_row))
+    m = _replace(m, last_activity=today)
+    try:
+        committed = application().store.commit(m, expected_version=body.expected_version)
+    except StaleWrite as exc:
+        raise HTTPException(status_code=409, detail={
+            "code": "STALE_VERSION", "why": str(exc),
+            "committed": "not_committed"}) from exc
+    return {"state": "stated", "matter_id": committed.id,
+            "version": committed.version, "thread_id": thread_id,
+            "relief": relief.as_dict(), "objective": obj_row}
+
+
+class UnavailableNeed(BaseModel):
+    """The advocate marking a briefing need they cannot obtain. P24 / C1
+    NEVER[4]. The need is paused with a resume trigger -- not answered, not
+    re-asked."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    need: NonBlank = Field(min_length=1)
+    resume_when: str = ""
+    expected_version: int
+
+
+class ResumeNeed(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    need: NonBlank = Field(min_length=1)
+    expected_version: int
+
+
+def _commit_matter(m, expected_version: int):
+    try:
+        return application().store.commit(m, expected_version=expected_version)
+    except StaleWrite as exc:
+        raise HTTPException(status_code=409, detail={
+            "code": "STALE_VERSION", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+
+@app.post("/api/matters/{matter_id}/briefing/unavailable",
+          dependencies=[CsrfProtected], status_code=201)
+def mark_need_unavailable(matter_id: str, body: UnavailableNeed,
+                          advocate_id: Advocate) -> dict:
+    """Pause a need the advocate cannot obtain. BK-54-AC3 / C1 NEVER[4].
+
+    It is NOT recorded as answered -- intake stays incomplete on it -- and it is
+    NOT re-asked; it waits for its resume trigger. This is the stop half of the
+    stop-or-resume decision the criterion requires instead of an endless loop.
+    """
+    from nm.domain.clock import today as _today
+
+    m = _owned(matter_id, advocate_id)
+    if m.version != body.expected_version:
+        raise HTTPException(status_code=409, detail={
+            "code": "STALE_VERSION", "matter_version": m.version,
+            "why": "this matter moved while you marked a need unavailable",
+            "committed": "not_committed"})
+    today = _today().isoformat()
+    m = m.pause_need(body.need.strip(), body.resume_when, by=advocate_id, at=today)
+    committed = _commit_matter(m, body.expected_version)
+    return {"state": "paused", "matter_id": committed.id,
+            "version": committed.version, "need": body.need.strip(),
+            "resume_when": body.resume_when.strip() or "new material arrives"}
+
+
+@app.post("/api/matters/{matter_id}/briefing/resume",
+          dependencies=[CsrfProtected], status_code=201)
+def resume_need(matter_id: str, body: ResumeNeed, advocate_id: Advocate) -> dict:
+    """Reopen a paused need -- material or an instruction arrived. It becomes an
+    ordinary gap again, asked at the smallest useful moment."""
+    m = _owned(matter_id, advocate_id)
+    if m.version != body.expected_version:
+        raise HTTPException(status_code=409, detail={
+            "code": "STALE_VERSION", "matter_version": m.version,
+            "why": "this matter moved while you resumed a need",
+            "committed": "not_committed"})
+    m = m.resume_need(body.need.strip())
+    committed = _commit_matter(m, body.expected_version)
+    return {"state": "resumed", "matter_id": committed.id,
+            "version": committed.version, "need": body.need.strip()}
 
 
 class Correction(BaseModel):
@@ -1279,6 +1541,360 @@ def search(q: str, advocate_id: Advocate, court: str | None = None,
             "origin": h.origin.value,
         } for h in result.hits],
     }
+
+
+
+# ============================================================ P21 — research ==
+#
+# THE RESEARCH WORKFLOW ON THE MATTER. `/api/search` stays what it is -- ranked
+# paragraphs for a signed-in advocate, nothing matter-specific. These routes
+# are the compatibility form of the design-only `start-research`,
+# `get-research` and `get-source` commands: a research need is opened ON a
+# matter, every index it consults is recorded by identity, the adverse search
+# is recorded by STATE, a case is inspected through the record that consulted
+# it, and a source is attached to an issue only by an exact locator with a
+# verbatim quotation. Scope is the matter: a request for a file the advocate
+# does not hold is the same 404 as every other matter lookup, and a readback
+# or a reliance for a research need on another matter is refused.
+
+
+class ResearchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    objective: NonBlank = Field(min_length=1)
+    issue: NonBlank = Field(min_length=1)
+    query: str = ""
+    citation: str = ""
+    court: str | None = None
+    from_year: int | None = None
+    to_year: int | None = None
+    expected_version: int
+
+
+class AttachRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    locator: NonBlank = Field(min_length=1)
+    quote: NonBlank = Field(min_length=1)
+    issue: str = ""
+    expected_version: int
+
+
+def _stale(m, expected: int) -> None:
+    if m.version != expected:
+        raise HTTPException(status_code=409, detail={
+            "code": "STALE_VERSION",
+            "why": (f"this matter moved while you were working: you were on "
+                    f"version {expected} and it is now at {m.version}"),
+            "expected_version": expected, "matter_version": m.version,
+            "committed": "not_committed"})
+
+
+def _research_rows(m):
+    from nm.core import research as rs
+    return rs.all_from_stored(getattr(m, "research", ()) or ())
+
+
+def _research_or_404(m, research_id: str):
+    from nm.core import research as rs
+    found = rs.find(_research_rows(m), research_id)
+    if found is None:
+        # THE SAME 404 FOR "NOT ON THIS MATTER" AND "DOES NOT EXIST", for the
+        # reason the matter lookup gives: a research id from another file
+        # must learn nothing here.
+        raise HTTPException(status_code=404, detail="no such research on this matter")
+    return found
+
+
+def _discovery_dict(d) -> dict:
+    return {
+        "query": d.query, "index": d.index, "coverage": d.coverage.value,
+        "why": d.why, "filters": d.filters,
+        "paragraphs_ranked": d.paragraphs_ranked,
+        "identity": None if d.identity is None else {
+            "built_at": d.identity.built_at, "source": d.identity.source,
+            "corpus_version": d.identity.corpus_version,
+            "held": d.identity.held, "of_source": d.identity.of_source,
+            "scope": d.identity.scope,
+            "fraction_of_source": d.identity.fraction_of_source},
+        "cases": [{
+            "case_id": c.case_id, "case_name": c.case_name, "court": c.court,
+            "year": c.year, "paragraphs_matched": c.paragraphs_matched,
+            "snippet": c.snippet, "origin": c.origin.value,
+            "band": _rank_band(c.confidence)} for c in d.cases],
+    }
+
+
+def _rank_band(confidence: float) -> str:
+    """WHERE IT SAT IN THIS SEARCH, never a percentage. The client renders the
+    same three words; a number here would be read as calibrated confidence."""
+    if confidence >= 0.66:
+        return "top of this search"
+    if confidence >= 0.33:
+        return "middle of this search"
+    return "lower in this search"
+
+
+@app.post("/api/matters/{matter_id}/research", dependencies=[CsrfProtected],
+          status_code=201)
+def start_research(matter_id: str, body: ResearchRequest,
+                   advocate_id: Advocate) -> dict:
+    """Open or continue a research need on this matter. BK-38-AC1/AC2, BK-84-AC3.
+
+    ONE ROUND PER CALL, against the record's bound. The round consults the
+    index -- by exact citation when one is given, by case-level discovery
+    otherwise -- and then runs the ADVERSE search for every case it surfaced:
+    subsequent treatment, from the identity index, recorded by state. What
+    comes back is the durable record plus this round's discovery, so the
+    advocate sees the cases now and the file remembers what was asked of
+    which index, with what result, for the restart.
+    """
+    from nm.core import research as rs
+    from nm.domain.clock import today as _today
+
+    m = _owned(matter_id, advocate_id)
+    _stale(m, body.expected_version)
+    if not (body.query or "").strip() and not (body.citation or "").strip():
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST",
+            "why": "a research round needs a query or an exact citation",
+            "committed": "not_committed"})
+
+    today = _today().isoformat()
+    rows = _research_rows(m)
+    rid = rs.research_id(m.id, body.objective, body.issue, today)
+    record = rs.find(rows, rid) or rs.Research(
+        id=rid, objective=body.objective.strip(), issue=body.issue.strip(),
+        created_at=today, created_by=advocate_id)
+    if record.rounds >= record.round_limit:
+        raise HTTPException(status_code=409, detail={
+            "code": "INVALID_TRANSITION",
+            "why": (f"this research need has spent its {record.round_limit} "
+                    f"round(s): {record.stopped_because} Open a new need with "
+                    f"its own objective to search further."),
+            "research_id": rid, "committed": "not_committed"})
+
+    search = application().search
+    discovery = None
+    resolution = None
+    if (body.citation or "").strip():
+        resolution = search.resolve(body.citation)
+        case_ids = (resolution.case_id,) if resolution.case_id else ()
+        outcome = (rs.Outcome.RESULTS if case_ids
+                   else rs.Outcome.UNAVAILABLE_INDEX
+                   if resolution.state.value == "index_unavailable"
+                   else rs.Outcome.SEARCHED_NO_RESULTS)
+        consulted = rs.Consulted(
+            query=body.citation.strip(), index=search.name,
+            outcome=outcome, case_ids=case_ids, why=resolution.why)
+    else:
+        discovery = search.discover(
+            body.query, court=body.court, from_year=body.from_year,
+            to_year=body.to_year, limit=20)
+        outcome = rs.classify(
+            discovery.coverage, hits=len(discovery.cases), court=body.court,
+            court_read_as=str(discovery.filters.get("court_read_as") or ""))
+        ident = discovery.identity
+        consulted = rs.Consulted(
+            query=body.query.strip(), index=discovery.index, outcome=outcome,
+            built_at=ident.built_at if ident else "",
+            corpus_version=ident.corpus_version if ident else "",
+            held=ident.held if ident else None,
+            of_source=ident.of_source if ident else None,
+            court=(body.court or "").strip(),
+            court_read_as=str(discovery.filters.get("court_read_as") or ""),
+            from_year=body.from_year, to_year=body.to_year,
+            case_ids=tuple(c.case_id for c in discovery.cases),
+            why=discovery.why or "")
+
+    # THE ADVERSE SEARCH, BY STATE. For every case surfaced, subsequent
+    # treatment is asked of the identity index. An index that cannot answer is
+    # UNAVAILABLE -- never an empty success -- and no case surfaced means no
+    # adverse search RAN, which `clean_bill` reads as not_assessed.
+    adverse = None
+    if consulted.case_ids:
+        found: list[str] = []
+        unavailable = ""
+        for cid in consulted.case_ids[:ADVERSE_BOUND]:
+            treatment = search.treatment(cid)
+            if treatment.state.value == "not_checked" and "not built" in treatment.scope:
+                unavailable = treatment.scope
+                break
+            if treatment.state.value == "negative":
+                found.append(cid)
+        adverse = rs.AdverseSearch(
+            target=", ".join(consulted.case_ids[:ADVERSE_BOUND]),
+            state=(rs.AdverseState.UNAVAILABLE if unavailable else rs.AdverseState.RAN),
+            query="subsequent treatment of each surfaced case",
+            outcome=(None if unavailable else
+                     rs.Outcome.RESULTS if found else rs.Outcome.SEARCHED_NO_RESULTS),
+            found=tuple(found), why=unavailable)
+    record = rs.with_round(record, consulted, adverse)
+
+    m = replace(m, research=tuple(r.as_dict() for r in rs.put(rows, record)),
+                last_activity=today)
+    try:
+        committed = application().store.commit(m, expected_version=body.expected_version)
+    except StaleWrite as exc:
+        raise HTTPException(status_code=409, detail={
+            "code": "STALE_VERSION", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+    return {
+        "state": "recorded", "matter_id": committed.id,
+        "version": committed.version,
+        "research": record.as_dict(),
+        "outcome": consulted.outcome.value,
+        "discovery": _discovery_dict(discovery) if discovery else None,
+        "resolution": None if resolution is None else {
+            "raw": resolution.raw, "key": resolution.key,
+            "state": resolution.state.value, "case_id": resolution.case_id,
+            "why": resolution.why},
+    }
+
+
+@app.get("/api/matters/{matter_id}/research")
+def list_research(matter_id: str, advocate_id: Advocate) -> dict:
+    m = _owned(matter_id, advocate_id)
+    rows = _research_rows(m)
+    return {"state": "ok", "matter_id": m.id, "version": m.version,
+            "research": [r.as_dict() for r in rows], "count": len(rows)}
+
+
+@app.get("/api/matters/{matter_id}/research/{research_id}")
+def get_research(matter_id: str, research_id: str, advocate_id: Advocate) -> dict:
+    m = _owned(matter_id, advocate_id)
+    record = _research_or_404(m, research_id)
+    return {"state": "ok", "matter_id": m.id, "version": m.version,
+            "research": record.as_dict()}
+
+
+@app.get("/api/matters/{matter_id}/research/{research_id}/cases/{case_id}")
+def inspect_case(matter_id: str, research_id: str, case_id: str,
+                 advocate_id: Advocate, q: str | None = None) -> dict:
+    """Grouped inspection: a case's paragraphs, read back through the research
+    that surfaced it. SCOPE ON READBACK: a case this research did not consult
+    is not read through it -- the same 404, so the route cannot be used to
+    read the library through somebody else's file."""
+    m = _owned(matter_id, advocate_id)
+    record = _research_or_404(m, research_id)
+    consulted = {cid for c in record.consulted for cid in c.case_ids}
+    if case_id not in consulted:
+        raise HTTPException(status_code=404,
+                            detail="this research did not surface that case")
+    search = application().search
+    expansion = search.expand(case_id, query=q)
+    identity = search.case_identity(case_id)
+    return {
+        "state": "ok", "matter_id": m.id, "research_id": record.id,
+        "case_id": case_id, "index": expansion.index,
+        "coverage": expansion.coverage.value, "why": expansion.why,
+        # THREE VALUES. `None` is nobody measured this case's coverage.
+        "complete": expansion.complete,
+        "identity": None if expansion.identity is None else {
+            "built_at": expansion.identity.built_at,
+            "corpus_version": expansion.identity.corpus_version},
+        "case": None if identity is None else {
+            "title": identity.title, "court": identity.court,
+            "year": identity.year, "bench": identity.describe(),
+            "bench_inferred": identity.bench_inferred},
+        "paragraphs": [{
+            "locator": p.locator, "para_type": p.para_type, "text": p.text,
+            "origin": p.origin.value} for p in expansion.paragraphs],
+        "paragraph_count": len(expansion.paragraphs),
+    }
+
+
+@app.post("/api/matters/{matter_id}/research/{research_id}/attach",
+          dependencies=[CsrfProtected], status_code=201)
+def attach_source(matter_id: str, research_id: str, body: AttachRequest,
+                  advocate_id: Advocate) -> dict:
+    """Attach ONE passage to the issue, by exact locator, with its words.
+
+    FIVE VERDICTS, SEPARATELY. Identity and quote fidelity decide whether it
+    may be attached at all (`may_attach`); support is NOT_ASSESSED because
+    nothing here can read meaning; treatment is asked of the identity index
+    by state; applicability is the binding relationship for this forum. A
+    ranked snippet fails the first two and is refused with the reason.
+
+    THE ATTACHED PASSAGE BECOMES AN INPUT THE LEDGER TRACKS (P18), keyed
+    `index:locator` and digested on its text, so a republished or withdrawn
+    source reaches every conclusion that cites it.
+    """
+    from nm.core import dependency
+    from nm.core import research as rs
+    from nm.domain.clock import today as _today
+
+    m = _owned(matter_id, advocate_id)
+    _stale(m, body.expected_version)
+    record = _research_or_404(m, research_id)
+    today = _today().isoformat()
+    search = application().search
+
+    passage = search.passage(body.locator)
+    consulted = {cid for c in record.consulted for cid in c.case_ids}
+    if passage is None:
+        identity = (rs.IdentityState.INDEX_UNAVAILABLE if not search.available
+                    else rs.IdentityState.UNRESOLVED)
+        quote = rs.QuoteState.NOT_CHECKED
+        case_id = ""
+    else:
+        identity = (rs.IdentityState.RESOLVED if passage.case_id in consulted
+                    else rs.IdentityState.UNRESOLVED)
+        quote = rs.quote_fidelity(body.quote, passage.text)
+        case_id = passage.case_id
+    ok, why = rs.may_attach(identity, quote)
+    if passage is not None and identity is rs.IdentityState.UNRESOLVED:
+        why = (f"the locator names a paragraph of {passage.case_id!r}, which this "
+               f"research did not surface; attach through the research that found it")
+    if not ok:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST", "why": why,
+            "identity": identity.value, "quote_fidelity": quote.value,
+            "committed": "not_committed"})
+
+    treatment = search.treatment(case_id)
+    ruling = application().binding_for(passage.court, passage.year)
+    applicability, because = rs.applicability_of(
+        ruling.status if ruling else None,
+        forum_said=(ruling.reason if ruling else ""))
+    source_version, dependency_id, dependency_why = application().record_source_dependency(
+        work_id=m.id, case_id=case_id,
+        fallback_version=(search.identity_version() or "unversioned index"))
+
+    reliance = rs.Reliance(
+        issue=(body.issue or record.issue).strip(), case_id=case_id,
+        locator=body.locator.strip(), quote=body.quote.strip(),
+        identity=identity, quote_fidelity=quote,
+        support=rs.SupportState.NOT_ASSESSED,
+        treatment_state=treatment.state.value, treatment_scope=treatment.scope,
+        applicability=applicability, applicability_because=because,
+        attached_by=advocate_id, at=today, source_version=source_version,
+        text_digest=rs.digest_of(passage.text),
+        ledger_id=f"{search.name}:{body.locator.strip()}")
+    record = rs.with_reliance(record, reliance)
+
+    # THE LEDGER LEARNS THE INPUT. The same observer the turn uses.
+    ledger = dependency.Ledger.from_stored(m.dependencies)
+    ledger, _did = dependency.observe(
+        ledger, dependency.InputKind.AUTHORITY, reliance.ledger_id,
+        dependency.digest_of(passage.text),
+        reason=f"attached by {advocate_id} to {reliance.issue!r}")
+
+    m = replace(m, research=tuple(r.as_dict() for r in rs.put(_research_rows(m), record)),
+                dependencies=ledger.as_dict(), last_activity=today)
+    try:
+        committed = application().store.commit(m, expected_version=body.expected_version)
+    except StaleWrite as exc:
+        raise HTTPException(status_code=409, detail={
+            "code": "STALE_VERSION", "why": str(exc),
+            "committed": "not_committed"}) from exc
+    return {"state": "attached", "matter_id": committed.id,
+            "version": committed.version, "research_id": record.id,
+            "reliance": reliance.as_dict(),
+            "dependency": {"recorded": dependency_id is not None,
+                           "id": dependency_id, "why": dependency_why},
+            "research": record.as_dict()}
 
 
 class Credentials(BaseModel):

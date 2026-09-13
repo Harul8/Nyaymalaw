@@ -68,7 +68,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from nm.core import deadlines, limitation
-from nm.domain.text import fold, refuses_blank_text
+from nm.domain.text import fold, refuses_blank_text, snippet
 
 
 @refuses_blank_text()
@@ -184,7 +184,7 @@ SYSTEM = (
 
 
 def claims_for(position, register, side: str, today: date,
-               chronology: tuple = ()) -> tuple[Claim, ...]:
+               chronology: tuple = (), relief_position=None) -> tuple[Claim, ...]:
     """The computed facts of this turn, as sentences with ids. ONE OWNER.
 
     THE POPULATION IS THE TYPED FACTS, and this is the only place that turns
@@ -198,6 +198,15 @@ def claims_for(position, register, side: str, today: date,
     itself established: a step that tells the advocate to file within a window
     nothing computed is contradicting a real fact about this turn, and that is
     exactly the case BK-35 recorded.
+
+    RELIEF IS THE NEWEST SUCH FACT (BK-70). A step that recommends pursuing a
+    remedy the file has established is unavailable, hollow, late or
+    unenforceable -- with the merits unchanged -- contradicts a computed fact
+    exactly as one that files within a window that has run does. It comes in as
+    a `ReliefPosition` and becomes a claim here, in the ONE owner, rather than
+    as a second consistency check beside this one. The reservation the step is
+    allowed to make is written into the sentence, so acknowledging the
+    shortfall is not a contradiction while pursuing it silently is.
     """
     out: list[Claim] = []
 
@@ -268,6 +277,15 @@ def claims_for(position, register, side: str, today: date,
             f"We act for the {side} party. The step is advice to THEM, and "
             f"advising the other side's move is advising against our own "
             f"client."))
+
+    # RELIEF (BK-70). Built by its own owner and wrapped here so `consistency`
+    # need not import `relief` at module load (the pair would import each
+    # other). Each pair is (id, sentence) and becomes a Claim, so the relief
+    # facts sit in exactly the same closed vocabulary the read is asked about.
+    if relief_position is not None:
+        from nm.core import relief as _relief
+        for cid, sentence in _relief.consistency_claims(relief_position):
+            out.append(Claim(cid, sentence))
 
     return tuple(out)
 
@@ -368,7 +386,7 @@ def interpret(data: dict, step: str, offered: frozenset[str]) -> Verdict:
 
     claim_id = (data.get("claim_id") or "").strip()
     quoted = (data.get("quoted") or "").strip()
-    why = " ".join((data.get("why") or "").split())[:240]
+    why = snippet(data.get("why"), 240)
 
     if not claim_id:
         return Verdict(why=why or "the step contradicts none of the computed facts")
@@ -383,7 +401,7 @@ def interpret(data: dict, step: str, offered: frozenset[str]) -> Verdict:
     if not held or fold(quoted) not in held:
         return Verdict(
             why=why or "the read could not point at the contradiction",
-            refused=(f"the consistency read quoted {quoted[:60]!r}, which is "
+            refused=(f"the consistency read quoted {snippet(quoted, 60)!r}, which is "
                      f"not in the step it was shown"))
 
     return Verdict(claim_id=claim_id, quoted=quoted,

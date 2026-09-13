@@ -40,6 +40,7 @@ from nm.core import (
     proof_read,
     thresholds,
 )
+from nm.core import briefing as briefing_mod
 from nm.core import cause as cause_reader
 from nm.core import dispute as dispute_reader
 from nm.core import duty as duty_reader
@@ -48,6 +49,10 @@ from nm.core import factors as factor_reader
 from nm.core import gaps as gap_queue
 from nm.core import issues as issue_reader
 from nm.core import posture as posture_reader
+from nm.core import (
+    premise as premise_mod,
+)
+from nm.core import relief as relief_mod
 from nm.core import route as route_reader
 from nm.core import screens as screens_mod
 from nm.core import theory as theory_reader
@@ -75,7 +80,7 @@ from nm.domain.metrics import Outcome, Phase, TurnMetrics
 from nm.domain.proof import ProofStatus
 from nm.domain.quotable import Quotable
 from nm.domain.register import PEER
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import refuses_blank_text, snippet
 from nm.domain.traceability import implements
 from nm.ports.coverage import CoveragePort
 from nm.ports.elements import ElementsPort
@@ -532,11 +537,16 @@ def _matter_name(message: str, parties: dict | None) -> str:
     first = (message or "").strip().split("\n")[0].strip()
     if not first:
         return "New matter"
-    if len(first) <= 60:
-        return first
     # ON A WORD BOUNDARY. `[:60]` produced "...Goods were suppl".
-    cut = first[:60].rsplit(" ", 1)[0]
-    return (cut or first[:60]) + "\u2026"
+    #
+    # THIS WAS THE SECOND COPY, and finding it is what turned a one-line fix
+    # into a rule. Cutting on the last space that fits was worked out HERE,
+    # for the matter title, and then thirty-six other places in `nm/`
+    # shortened a sentence with a bare `[:N]` -- including the limitation
+    # premise the advocate is asked to confirm, which reached a served turn
+    # ending "and they hav". One person solving it privately is how six folds
+    # and two provision patterns happened; `nm.domain.text.snippet` owns it.
+    return snippet(first, 60)
 
 
 class TurnEngine:
@@ -942,7 +952,8 @@ class TurnEngine:
             matter = self._read_parties(turn, memory, matter, metrics, elements)
             derived, relied_on, retrieved, derived_values = self._derive(
                 thread, turn, metrics, memory, facts=matter.facts,
-                matter_id=matter.id, concluded=concluded)
+                matter_id=matter.id, concluded=concluded,
+                paused=matter.paused_need_texts)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=_with_screens(elements, screens, split_note))
@@ -1015,6 +1026,9 @@ class TurnEngine:
                 decisions=concluded.get("decisions", thread.decisions),
                 proof=concluded.get("proof", thread.proof),
                 deadlines=concluded.get("deadlines", thread.deadlines),
+                premises=concluded.get("premises", thread.premises),
+                objective=concluded.get("objective", thread.objective),
+                reliefs=concluded.get("reliefs", thread.reliefs),
                 gaps=concluded.get("gaps", thread.gaps),
                 authorities=concluded.get(
                     "authorities", thread.authorities),
@@ -1165,7 +1179,8 @@ class TurnEngine:
                 concluded.clear()
                 derived, relied_on, retrieved, derived_values = self._derive(
                     thread, turn, metrics, memory, facts=matter.facts,
-                    matter_id=matter.id, seed=late, concluded=concluded)
+                    matter_id=matter.id, seed=late, concluded=concluded,
+                    paused=matter.paused_need_texts)
                 # ONE CONSTRUCTION, THROUGH THE ASSEMBLER, like every
                 # other branch. This built an Answer from `head`, then
                 # replaced it with a longer tail, and neither call went
@@ -1312,6 +1327,12 @@ class TurnEngine:
         self._record_turn(turn, answer, matter, metrics, derived_values)
         return TurnOutput(turn.turn_id, answer, matter, metrics)
 
+    def _briefing_block(self, matter: Matter | None) -> dict:
+        """The intake readiness the advocate reads, from the one owner. P24 /
+        BK-54-AC3. Readiness is derived from the OPEN GAPS minus the needs the
+        advocate marked unavailable -- never from the turn having finished."""
+        return briefing_mod.block(matter)
+
     def _record_turn(self, turn: TurnInput, answer: Answer, matter: Matter,
                      metrics: TurnMetrics,
                      derived: tuple = (), withheld_by: tuple[str, ...] = ()
@@ -1397,6 +1418,11 @@ class TurnEngine:
                 "mode_statement": answer.mode_statement,
                 "blocked": answer.blocked,
                 "blocked_reason": answer.blocked_reason,
+                # P24. INTAKE READINESS, which is NOT the turn completing. A
+                # controlling gap open keeps the file not-ready however cleanly
+                # the turn answered; a need marked unavailable is paused, not
+                # looped. C1 NEVER[4] made a served field the advocate reads.
+                "briefing": self._briefing_block(matter),
                 "elements": [
                     {"kind": e.kind.value, "text": e.text, "thread": e.thread,
                      "signal": e.signal.value, "disclosure": e.disclosure,
@@ -1955,7 +1981,7 @@ class TurnEngine:
                     "G-CORRECTION",
                     (f"You said {phrase!r}. I have not taken anything as "
                      f"replaced, so both are still on the file: "
-                     + "; ".join(f"{f.statement[:44]} ({f.date.isoformat()})"
+                     + "; ".join(f"{snippet(f.statement, 44)} ({f.date.isoformat()})"
                                  for f in [*others, *added]
                                  if f.date is not None)
                      + ". Which one is right?"),
@@ -1981,7 +2007,7 @@ class TurnEngine:
                     metrics.violate(
                         "C3", f"role {stated.role.value!r} inferred from the "
                               f"account and the stated client, not named: "
-                              f"{stated.quoted[:60]!r}")
+                              f"{snippet(stated.quoted, 60)!r}")
             # A BETTER DESCRIPTOR REPLACES A WEAKER ONE.
             #
             # This was write-once, and the first descriptor won forever.
@@ -2035,7 +2061,7 @@ class TurnEngine:
                     metrics.violate(
                         "C3", f"role {role.value!r} inferred from the account "
                               f"and the stated client "
-                              f"({posture.client_described_as!r}): {why[:90]}")
+                              f"({posture.client_described_as!r}): {snippet(why, 90)}")
 
         thread = replace(thread, posture=posture)
         matter = matter.with_thread(thread)
@@ -2245,7 +2271,7 @@ class TurnEngine:
                 # one the advocate can supply in four words, and silence would
                 # have them believe it was never given.
                 metrics.violate("C5", f"date not taken for "
-                                      f"{row.event[:40]!r}: {row.refused}")
+                                      f"{snippet(row.event, 40)!r}: {row.refused}")
         return rows
 
     @implements("C4")
@@ -2294,8 +2320,8 @@ class TurnEngine:
             # DISCLOSED. A split is the recoverable direction, but it is
             # still a decision about the advocate's file and they can see it.
             metrics.violate(
-                "C4", f"read as a NEW dispute on {read.quoted[:50]!r}: "
-                      f"{read.why[:90]}")
+                "C4", f"read as a NEW dispute on {snippet(read.quoted, 50)!r}: "
+                      f"{snippet(read.why, 90)}")
         if len(read.described) > 1:
             metrics.violate(
                 "C4", f"this message describes {len(read.described)} disputes: "
@@ -2338,6 +2364,7 @@ class TurnEngine:
                 matter_id: str = "",
                 seed: tuple[Finding, ...] = (),
                 concluded: dict | None = None,
+                paused: frozenset[str] = frozenset(),
                 ) -> tuple[list[Element], tuple, tuple, tuple]:
         """Retrieve, then assemble. Returns (elements, relied_on, retrieved).
 
@@ -2562,10 +2589,29 @@ class TurnEngine:
                       f"were not."),
                 disclosure=True))
 
+        # BK-70. THE RELIEF POSITION, before the recommendation, because the
+        # recommendation is composed against it and checked against it. Under
+        # the posture gate for the same reason limitation is: whether the
+        # relief serves the objective is asked of a SIDE.
+        relief_pos = None
+        if not side_blind:
+            relief_pos = self._relief(turn, thread, metrics, concluded, position)
+            if relief_pos is not None:
+                metrics.fire("G-REMEDY", relief_mod.gate_state(relief_pos),
+                             relief_mod.disclosure(relief_pos) or "relief assessed")
+                disc = relief_mod.disclosure(relief_pos)
+                if disc:
+                    # ENGINE-COMPOSED FROM TYPED FACTS, so `disclosure=True`:
+                    # the enforceability basis is the product's own account of
+                    # what it worked out, never a model assertion about the law.
+                    grounds.append(Element(
+                        kind=ElementKind.GROUND, thread=thread.id,
+                        text=disc, disclosure=True))
+
         if not side_blind:
             elements.append(
                 self._recommend(thread, turn, result, metrics, memory,
-                                register, position))
+                                register, position, relief_position=relief_pos))
         # A3 §5.4. WHAT THIS TURN DERIVED, and what MOVED since the last one.
         #
         # Run before the queue is drained so a changed value can raise its own
@@ -2580,7 +2626,12 @@ class TurnEngine:
         # could raise a gap has run. Draining it earlier would rank a partial
         # queue, which is the detection order wearing a sort.
         elements.extend(grounds)
-        elements.extend(self._ask(gaps, thread, metrics))
+        # P24 / C1 NEVER[4]. A need the advocate marked UNAVAILABLE is not
+        # re-asked -- it is paused with a resume trigger and shown in the
+        # briefing block instead. Dropping it here stops the loop; it stays a
+        # gap on the file, so intake is not reported complete over it.
+        askable = [g for g in gaps if getattr(g, "what", None) not in paused]
+        elements.extend(self._ask(askable, thread, metrics))
 
         # PHASE 3 -- THE REGISTER AND THE QUEUE SURVIVE THE TURN.
         #
@@ -2598,6 +2649,11 @@ class TurnEngine:
         # other at read time is the confusion this whole phase removes.
         if register is not None:
             concluded["deadlines"] = register
+        # THE PREMISES THE COMPUTATION RAN UNDER, onto the thread, so the cover
+        # reads the same legal position the answer was built on and the two
+        # cannot disagree (BK-35-AC2). `position` is the claimant limitation.
+        if position is not None and position.premises:
+            concluded["premises"] = tuple(position.premises)
         concluded["gaps"] = tuple(gaps)
 
         # THE AUTHORITIES THE ANSWER RESTED ON. Appendix E wants them
@@ -2871,14 +2927,47 @@ class TurnEngine:
                     live)
             accrual = next(f for f in dated if f.id == read.fact_id)
             accrual_limb = read.limb
+
+        # THE THREE PREMISES, BUILT BEFORE THE ARITHMETIC. BK-65-AC2, P22.
+        #
+        # `compute()` already refuses to invent a PERIOD; what it cannot refuse
+        # is a right period applied under the wrong Article, from the wrong
+        # date, or in a forum that does not bind. Those are three premises,
+        # each separately attributed, and the arithmetic may not certify any
+        # of them. `premises.unestablished()` BLOCKS -- a computation without a
+        # premise answers a question nobody asked; `premises.inferred()` makes
+        # the result CONDITIONAL -- it may run, labelled, but it is never a
+        # deadline. The only premise this slice can infer is the accrual, and
+        # only where the cause is uncurated.
+        premises = self._premises(found, accrual, accrual_limb, trigger,
+                                  dated, turn,
+                                  stated=getattr(thread, "premises_stated", None))
+        # UNESTABLISHED BLOCKS; INFERRED does not. `assess` treats both as
+        # reasons not to compute, but this slice CAN compute under an inferred
+        # accrual and show the result conditionally -- so the block is
+        # `unestablished()` alone, and `inferred()` drives the conditional
+        # branch below. A premise nobody has established at all is the gap that
+        # must stop the arithmetic; one the product worked out is a labelled,
+        # correctable answer.
+        missing = premises.unestablished()
+        if missing:
+            reasons = "; ".join(premise_mod.english_of(k) for k in missing)
+            metrics.fire("G-PREMISE", "unestablished", reasons)
+            return limitation.not_computed(
+                for_side,
+                "the legal position is not established -- " + reasons,
+                live, premises=premises.as_rows(),
+                premise_digest=premises.digest())
         if found is None:
             return limitation.not_computed(
                 for_side, "no limitation Article was retrieved for this cause",
-                live)
+                live, premises=premises.as_rows(),
+                premise_digest=premises.digest())
         if accrual is None:
             return limitation.not_computed(
                 for_side, "no dated event on this thread to run the period from",
-                live)
+                live, premises=premises.as_rows(),
+                premise_digest=premises.digest())
 
         # THE PERIOD COMES OUT OF THE RETRIEVED TEXT. It was a constant here --
         # `years=3` on every computation, including one that had just retrieved
@@ -2931,8 +3020,8 @@ class TurnEngine:
         # disagree with in four words, which is the only way a wrong accrual
         # gets caught. Built once here because two call sites building the
         # same string is a second owner for it (§4).
-        accrual_reason = (f"{accrual.statement[:70]} — {accrual_limb}"
-                          if accrual_limb else accrual.statement[:70])
+        accrual_reason = (f"{snippet(accrual.statement, 70)} — {accrual_limb}"
+                          if accrual_limb else snippet(accrual.statement, 70))
         bare = limitation.compute(
             for_side=for_side, article=found.ref, accrual=accrual.id,
             accrual_on=accrual.date, accrual_reason=accrual_reason,
@@ -2941,11 +3030,118 @@ class TurnEngine:
         read = self._factors(turn, thread, chart, metrics, grounds,
                              bare.expires_on)
 
+        # CONDITIONAL WHERE THE ACCRUAL WAS INFERRED. The alternatives are the
+        # same arithmetic under every other dated entry, so the advocate sees
+        # each candidate date rather than the one the sort order picked -- and
+        # none of them is a deadline until a premise is stated.
+        conditional_because = ""
+        alternatives: list[dict] = []
+        if premise_mod.Kind.ACCRUAL_RULE in premises.inferred():
+            conditional_because = (
+                f"the period was run from {accrual_reason} because the cause "
+                f"carries no curated accrual trigger; confirm it or name the "
+                f"entry it should run from")
+            for other in dated:
+                if other.id == accrual.id or other.date is None:
+                    continue
+                alternatives.append({
+                    "accrual": other.id, "accrual_on": other.date.isoformat(),
+                    "expires_on": limitation.expiry_from(
+                        other.date, period, read.factors).isoformat()})
+            metrics.fire("G-PREMISE", "conditional", conditional_because)
+        else:
+            metrics.fire("G-PREMISE", "established",
+                         "the applicable law, accrual and forum are attributed")
+
         return limitation.compute(
             for_side=for_side, article=found.ref, accrual=accrual.id,
             accrual_on=accrual.date, accrual_reason=accrual_reason,
             chronology=live, period=period,
-            factors=read.factors)
+            factors=read.factors,
+            premises=premises.as_rows(), premise_digest=premises.digest(),
+            conditional_because=conditional_because,
+            alternatives=tuple(alternatives))
+
+    @implements("D1")
+    def _premises(self, found, accrual, accrual_limb: str, trigger: str,
+                  dated: list, turn: TurnInput,
+                  stated: dict | None = None) -> "premise_mod.Premises":
+        """The applicable law, the accrual rule and the forum, each attributed.
+
+        NONE OF THE THREE IS DERIVABLE FROM THE ARITHMETIC. The Article comes
+        from what was retrieved (a source that can be re-read); the accrual
+        from the curated trigger where one exists (ATTRIBUTED) or from the
+        product's own reading of the only sensible date where it does not
+        (INFERRED, with the alternatives named); the forum from the
+        deployment's measured scope. A premise the advocate has STATED
+        outranks all of this and is read from the thread first.
+        """
+        kinds, bases = premise_mod.Kind, premise_mod.Basis
+        make = premise_mod.Premise
+        stated = stated or {}
+        items = []
+
+        # APPLICABLE LAW -- the retrieved Article.
+        law = stated.get(kinds.APPLICABLE_LAW.value)
+        if law:
+            items.append(make(kind=kinds.APPLICABLE_LAW, statement=law["statement"],
+                           basis=bases.STATED, source=law.get("source") or "the advocate",
+                           reviewed_by=law.get("by", ""), reviewed_at=law.get("at", "")))
+        elif found is not None:
+            items.append(make(
+                kind=kinds.APPLICABLE_LAW, statement=found.ref, basis=bases.ATTRIBUTED,
+                source=f"{getattr(found, 'store', '')}:{getattr(found, 'locator', '')}"))
+        else:
+            items.append(make(kind=kinds.APPLICABLE_LAW,
+                           statement="no provision was retrieved for this cause",
+                           basis=bases.UNESTABLISHED))
+
+        # ACCRUAL RULE.
+        acc = stated.get(kinds.ACCRUAL_RULE.value)
+        if acc:
+            items.append(make(kind=kinds.ACCRUAL_RULE, statement=acc["statement"],
+                           basis=bases.STATED, source=acc.get("source") or "the advocate",
+                           reviewed_by=acc.get("by", ""), reviewed_at=acc.get("at", "")))
+        elif accrual is None:
+            items.append(make(kind=kinds.ACCRUAL_RULE,
+                           statement="no dated event to run the period from",
+                           basis=bases.UNESTABLISHED))
+        elif trigger and (accrual_limb or len(dated) == 1):
+            items.append(make(
+                kind=kinds.ACCRUAL_RULE,
+                statement=(f"the period runs from {trigger}"
+                           + (f" — {accrual_limb}" if accrual_limb else "")),
+                basis=bases.ATTRIBUTED, source=f"curated trigger for the cause: {trigger}"))
+        else:
+            others = tuple(f"{snippet(f.statement, 44)} ({f.date.isoformat()})"
+                           for f in dated if f.date is not None and f.id != accrual.id)
+            items.append(make(
+                kind=kinds.ACCRUAL_RULE,
+                statement="the period was run from the earliest dated entry on the thread",
+                basis=bases.INFERRED,
+                inferred_from=("the only dated entry" if len(dated) == 1
+                               else "the earliest dated entry; the cause carries "
+                                    "no curated accrual trigger"),
+                alternatives=others))
+
+        # JURISDICTION -- the deployment's measured scope. A standing product
+        # decision (BASELINE §1.1), attributed to it, not inferred per turn.
+        jur = stated.get(kinds.JURISDICTION.value)
+        if jur:
+            items.append(make(kind=kinds.JURISDICTION, statement=jur["statement"],
+                           basis=bases.STATED, source=jur.get("source") or "the advocate",
+                           reviewed_by=jur.get("by", ""), reviewed_at=jur.get("at", "")))
+        elif (turn.jurisdiction or "").strip():
+            items.append(make(
+                kind=kinds.JURISDICTION, statement=turn.jurisdiction,
+                basis=bases.ATTRIBUTED,
+                source="the deployment's measured coverage scope (BASELINE §1.1)"))
+        else:
+            items.append(make(kind=kinds.JURISDICTION,
+                           statement="no forum was established for this matter",
+                           basis=bases.UNESTABLISHED))
+
+        return premise_mod.Premises(tuple(items))
 
     @implements("D3")
     def _register(self, thread: Thread, lim: limitation.Limitation,
@@ -2957,13 +3153,21 @@ class TurnEngine:
         deadline, which is the opposite of what is known.
         """
         whose = "our" if lim.for_side is thread.posture.side else "their"
+        # A CONDITIONAL DATE IS NOT `on`. `status()` reads `on`, so a date run
+        # under an inferred premise is NOT_COMPUTED on the register and can
+        # never be near, future or passed -- the advocate is never told to act
+        # by a date that rests on an assumption. It rides in `conditional_on`,
+        # labelled, beside the premise that would make it real. P22.
+        conditional = lim.state is limitation.LimitationState.CONDITIONAL
         return (deadlines.Deadline(
             thread=thread.id, kind=deadlines.DeadlineKind.LIMITATION,
             source=lim.article or "no Article retrieved",
             action=f"commence {whose} claim within the limitation period",
             owner="the instructing advocate",
             consequence="the claim is barred and the merits are never reached",
-            on=lim.expires_on),)
+            on=None if conditional else lim.expires_on,
+            conditional_on=lim.expires_on if conditional else None,
+            premise_digest=lim.premise_digest),)
 
     def _limitation_elements(self, thread: Thread, turn: TurnInput,
                              lim: limitation.Limitation, whose: str,
@@ -2976,6 +3180,38 @@ class TurnEngine:
         DOES clause exists to refuse.
         """
         out: list[Element] = []
+        if lim.state is limitation.LimitationState.CONDITIONAL:
+            # A DATE, LABELLED CONDITIONAL, WITH ITS ALTERNATIVES. BK-65-AC2.
+            # The arithmetic ran and is shown, but it rests on a premise the
+            # product inferred, so it is not a deadline and every competing
+            # trigger's date is shown beside it. Naming what must be
+            # established is what lets the advocate settle it in one reply.
+            alts = "; ".join(
+                f"from {a['accrual_on']} it would be {a['expires_on']}"
+                for a in lim.alternatives)
+            # WHOSE PERIOD IT IS COMES FIRST, IN THE SAME WORDS AS THE
+            # COMPUTED LINE BELOW. It used to be buried mid-sentence, after a
+            # conditional clause long enough to hold a whole chronology entry,
+            # so a defending turn that HAD worked out the opponent's position
+            # read as one that never mentioned them -- and grounds is a list an
+            # advocate scans, where a line that does not say whose limitation
+            # it is may as well be about the other side.
+            #
+            # The two states share the opening deliberately. A reader looking
+            # for "Limitation for their side" finds it whether the accrual was
+            # attributed or inferred, and what differs after it is the STATE,
+            # which is the thing that actually differs.
+            return [Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                signal=Signal.NONE, gate="G-PREMISE",
+                text=(f"Limitation for {whose} side — CONDITIONAL, not a "
+                      f"deadline: on the reading that "
+                      f"{lim.conditional_because}, {whose} limitation period "
+                      f"would run to {lim.expires_on.isoformat()} on "
+                      f"{lim.article}."
+                      + (f" On other readings: {alts}." if alts else "")
+                      + " I have not entered a deadline for it: confirm the "
+                        "accrual and it becomes one."))]
         if lim.state is not limitation.LimitationState.COMPUTED:
             # ONE LINE, NOT TWO. The coverage gap is deliberately NOT reported
             # here, and that is a fix rather than an omission.
@@ -3006,7 +3242,7 @@ class TurnEngine:
             # count and withholding the list makes them ask for what is
             # already on the file.
             dated = ", ".join(
-                f"{f.statement[:44]} ({f.date.isoformat()})"
+                f"{snippet(f.statement, 44)} ({f.date.isoformat()})"
                 for f in chart if f.date is not None)
             return [Element(
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
@@ -3036,7 +3272,7 @@ class TurnEngine:
         # Naming the alternatives costs a clause and makes a wrong choice
         # visible on the face of the answer, whatever any model read did.
         others = ", ".join(
-            f"{f.statement[:44]} ({f.date.isoformat()})"
+            f"{snippet(f.statement, 44)} ({f.date.isoformat()})"
             for f in chart
             if f.date is not None and f.id != lim.accrual)
         alternatives = (
@@ -3930,7 +4166,7 @@ class TurnEngine:
         if left:
             metrics.fire("G-ADVERSE", "unaccounted", ", ".join(left))
             named = "; ".join(
-                next((f.statement[:70] for f in chart if f.id == fid), fid)
+                next((snippet(f.statement, 70) for f in chart if f.id == fid), fid)
                 for fid in left)
             out.append(Element(
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
@@ -4164,11 +4400,55 @@ class TurnEngine:
             ledger, matter,
             reason=f"corrected on turn {turn.turn_id} by {turn.advocate_id}",
             at=turn.today.isoformat())
+        # A SOURCE THE PUBLICATION LAYER WITHDREW (P20 → P21 → P18). Every
+        # passage attached to this file names the version it was read from;
+        # one the generation has since withdrawn is marked WITHDRAWN on the
+        # ledger, and the closure resting on it goes stale here -- the only
+        # place the file is re-read against the corpus as it now stands.
+        withdrawn = self._withdrawn_sources()
+        if withdrawn:
+            gone: list[dependency.Rest] = []
+            for row in getattr(matter, "research", ()) or ():
+                for a in (row.get("reliances") or ()) if isinstance(row, dict) else ():
+                    ledger_id = str(a.get("ledger_id") or "")
+                    if not ledger_id or str(a.get("source_version") or "") not in withdrawn:
+                        continue
+                    tracked = ledger.input_of(dependency.InputKind.AUTHORITY, ledger_id)
+                    if tracked is None or tracked.withdrawn:
+                        continue
+                    ledger, did = dependency.observe(
+                        ledger, dependency.InputKind.AUTHORITY, ledger_id,
+                        tracked.digest, reason="withdrawn by the publication layer",
+                        withdrawn=True)
+                    if did:
+                        after = ledger.input_of(dependency.InputKind.AUTHORITY, ledger_id)
+                        gone.append(dependency.Rest(dependency.InputKind.AUTHORITY,
+                                                    ledger_id, after.version if after else 0))
+            if gone:
+                ledger, hit = dependency.invalidate(
+                    ledger, tuple(gone), reason="the source was withdrawn",
+                    at=turn.today.isoformat())
+                affected = (*affected, *hit)
+                moved = (*moved, *gone)
         if affected:
             metrics.fire("G-CURRENCY", "stale",
                          f"{len(moved)} input(s) moved; "
                          f"{', '.join(affected)} must be recomputed")
         return replace(matter, dependencies=ledger.as_dict())
+
+    def _withdrawn_sources(self) -> frozenset[str]:
+        """What the evidence plane says has been withdrawn. A port method with
+        a default, so a double that predates it answers `frozenset()` -- an
+        installation with no generation, not a clean bill."""
+        try:
+            return frozenset(self._evidence.withdrawn_sources())
+        except Exception as exc:  # noqa: BLE001 -- an unreadable event log is
+            # a refusal to say, and it is logged; it must not read as "none".
+            import logging
+
+            logging.getLogger(__name__).error(
+                "withdrawn_sources could not be read: %s", exc, exc_info=True)
+            return frozenset()
 
     @implements("A3")
     def _currency_settle(self, matter: Matter, thread: Thread | None,
@@ -4936,10 +5216,86 @@ class TurnEngine:
         return None, ("the register holds no deadline with an established "
                       "date on this thread")
 
+    def _relief(self, turn: TurnInput, thread: Thread, metrics: TurnMetrics,
+                concluded: dict,
+                position: "limitation.Limitation | None",
+                ) -> "relief_mod.ReliefPosition | None":
+        """BK-70. Whether the relief that would serve the objective can be
+        obtained, enforced and is worth the cost -- SEPARATELY from the merits.
+
+        THE FACTS ARE ATTRIBUTED, NEVER GUESSED, which is why this does NOT add
+        a model read. Two sources feed it and each names what it rests on:
+
+          * what the ADVOCATE STATED about a relief -- assets, forum, cost --
+            carried on the thread with basis STATED. The strong case, and the
+            one the served route records.
+          * the LIMITATION POSITION already computed this turn. A claim whose
+            window has RUN cannot be filed in time, so its relief is LATE, and
+            that is ATTRIBUTED to the computed position -- a typed fact that can
+            be re-read, not a judgement about enforceability read off prose.
+
+        The objective is the advocate's where they stated one, else INFERRED
+        from the theory and labelled so: an inferred objective is a question the
+        advocate can correct, exactly as an inferred premise is (P22). Where
+        neither an objective nor any relief is on the file, this returns None
+        and G-REMEDY reads `not_assessed` -- nobody looked, which is not the
+        same as nothing being worth pursuing.
+
+        THE DETERMINISTIC SIGNAL DOES NOT OVERRIDE A STATED ONE. It is
+        synthesised only where the advocate has stated no relief at all, so
+        their account of the remedy -- which may know of a condonation or an
+        extension this does not -- is never silently contradicted. Where they
+        have stated reliefs, the run-window fact still reaches the step through
+        the limitation claim `consistency.claims_for` already builds.
+        """
+        obj = relief_mod.Objective.from_stored(thread.objective)
+        stated = list(relief_mod.reliefs_from_stored(thread.reliefs))
+        t = theory_reader.from_stored(concluded.get("theory", thread.theory))
+
+        if obj is None and t is not None and t.relief:
+            obj = relief_mod.Objective(
+                statement=f"obtain {t.relief}",
+                basis=premise_mod.Basis.INFERRED,
+                inferred_from="the case theory's stated relief")
+
+        run = (position is not None
+               and position.state in (limitation.LimitationState.COMPUTED,
+                                      limitation.LimitationState.CONDITIONAL)
+               and position.expired(turn.today))
+        if not stated and t is not None and t.relief and run:
+            # A COMPUTED expiry is an ESTABLISHED fact -> the relief is DEFEATED.
+            # A CONDITIONAL one rests on an INFERRED accrual (P22), so the
+            # lateness is a QUESTION and the relief is CONTINGENT, not defeated:
+            # the same discipline that makes a conditional date no deadline.
+            established = position.state is limitation.LimitationState.COMPUTED
+            stated.append(relief_mod.Relief(
+                remedy=t.relief,
+                objective=(obj.statement if obj is not None else "the objective"),
+                timing=relief_mod.Timing.LATE,
+                basis=(premise_mod.Basis.ATTRIBUTED if established
+                       else premise_mod.Basis.INFERRED),
+                source=(f"the limitation position computed on {position.article}"
+                        if established else ""),
+                inferred_from=("" if established else
+                               f"the limitation on {position.article} run from "
+                               f"the inferred accrual"),
+                reason=(f"the limitation period on {position.article} expired "
+                        f"on {position.expires_on.isoformat()} and has passed, "
+                        f"so the claim cannot be filed in time")))
+
+        if obj is None and not stated:
+            return None
+
+        pos = relief_mod.assess(obj, tuple(stated))
+        concluded["objective"] = obj.as_dict() if obj is not None else None
+        concluded["reliefs"] = pos.as_rows()
+        return pos
+
     def _recommend(self, thread, turn, result, metrics: TurnMetrics,
                    memory=None,
                    register: "tuple[deadlines.Deadline, ...] | None" = None,
                    position: "limitation.Limitation | None" = None,
+                   relief_position: "relief_mod.ReliefPosition | None" = None,
                    ) -> Element:
         side = thread.posture.side.value
         cited = ""
@@ -5024,6 +5380,13 @@ class TurnEngine:
                         f"them restarts, extends or fails to restart it -- "
                         f"that has not been computed, and stating it either "
                         f"way is an assertion nobody made.")
+            elif position.state is limitation.LimitationState.CONDITIONAL:
+                worked = (
+                    f"\n\nCONDITIONAL, and your step must not present it as "
+                    f"settled: a limitation of {position.expires_on.isoformat()} "
+                    f"was computed under a premise the product inferred "
+                    f"({position.conditional_because}). Do NOT tell them to "
+                    f"file by that date; the step is to confirm the premise.")
             else:
                 worked = (f"\n\nNOT worked out: {position.not_computed_because}. "
                           f"Do not assume a position either way.")
@@ -5087,7 +5450,13 @@ class TurnEngine:
         # read whose whole job is to say what to do next -- so the step had
         # nothing specific to be about and described the general case.
         held = _positions_note(thread)
-        user = f"The advocate acts for the {side} party.{cited}{worked}{held}"
+        # BK-70. WHAT THE RELIEF IS WORTH, so the step is composed knowing it --
+        # the same `ALREADY WORKED OUT` move `worked` makes for limitation. A
+        # step that recommends pursuing a defeated remedy without a reservation
+        # is then caught by the consistency check below, on the relief claim.
+        relief_note = relief_mod.recommendation_note(relief_position)
+        user = (f"The advocate acts for the {side} party."
+                f"{cited}{worked}{relief_note}{held}")
         if file_note:
             user += f"\n\n{file_note}"
         user += (f"\n\nWhat they have just asked: {turn.message.strip()[:1500]}"
@@ -5120,7 +5489,8 @@ class TurnEngine:
         # So the sentence is checked AFTER it exists, against the typed facts
         # rather than against the instruction that was meant to produce it.
         claims = consistency.claims_for(
-            position, register, side, turn.today, thread.chronology)
+            position, register, side, turn.today, thread.chronology,
+            relief_position=relief_position)
         text, verdict = self._consistent_step(text, claims, metrics, file_note)
         if verdict.contradicted:
             named = next(c for c in claims if c.id == verdict.claim_id)
@@ -5323,7 +5693,7 @@ class TurnEngine:
             metrics.violate("C4", f"the courtesy reply failed: "
                                   f"{type(exc).__name__}: {exc}")
             return ""
-        reply = " ".join((res.text or "").split())[:300]
+        reply = snippet(res.text, 300)
 
         # NO LAW ON THIS PATH, AND IT IS CHECKED RATHER THAN REQUESTED.
         #
@@ -5337,7 +5707,7 @@ class TurnEngine:
                 or citation.cases_named(reply)
                 or citation.ANY_PROVISION.search(reply)):
             metrics.violate("C4", f"the courtesy reply named law and was discarded: "
-                                  f"{reply[:90]!r}")
+                                  f"{snippet(reply, 90)!r}")
             return ""
         return reply
 
@@ -5397,7 +5767,7 @@ class TurnEngine:
         rows = [Element(
             kind=ElementKind.QUESTION,
             text=(f"I will not do that. {refusal.duty} You asked: "
-                  f"'{refusal.quoted[:160]}'."),
+                  f"'{snippet(refusal.quoted, 160)}'."),
             gate="G-DUTY", signal=Signal.CONTRADICTION)]
 
         # RETRIEVE WHAT THE READ NAMED, not what the advocate asked for.

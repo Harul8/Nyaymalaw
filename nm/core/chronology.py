@@ -50,7 +50,7 @@ from enum import Enum
 
 from nm.domain.matter import Certainty, Fact, FactId
 from nm.domain.quotable import Quotable
-from nm.domain.text import fold, refuses_blank_text
+from nm.domain.text import fold, refuses_blank_text, snippet
 
 
 class DateState(str, Enum):
@@ -262,7 +262,7 @@ def build_prompt(quotable: Quotable, reference: date, existing: tuple = ()):
         # copied out of the same table is what the guard refuses.
         rows = "\n".join(
             f"  {f.id}\t{f.date.isoformat() if f.date else 'undated'}\t"
-            f"{f.statement[:70]}" for f in existing)
+            f"{snippet(f.statement, 70)}" for f in existing)
         user += (f"{CHART_HEADING}. Name an id from here in `corrects` "
                  f"if an entry is being REPLACED. Do NOT copy a date "
                  f"expression out of it:\n{rows}\n\n")
@@ -362,7 +362,7 @@ def conflicts(facts: tuple[Fact, ...]) -> tuple[DateConflict, ...]:
             continue
         if prior.date != f.date:
             out.append(DateConflict(
-                event=f.statement[:90], left=prior.date, right=f.date,
+                event=snippet(f.statement, 90), left=prior.date, right=f.date,
                 left_fact=prior.id, right_fact=f.id))
     return tuple(out)
 

@@ -183,10 +183,26 @@ def test_the_search_surface_cannot_identify_an_act():
     from nm.ports.search import CorpusSearchPort
 
     methods = [n for n in dir(CorpusSearchPort) if not n.startswith("_")]
-    assert methods == ["search"], (
-        f"the search port grew {methods}. Every method here ranks, and a "
-        f"ranked method whose name says `act` is one refactor away from "
-        f"deciding WHICH statute is read.")
+    # P21 GREW THIS SURFACE, and the population is re-registered rather than
+    # loosened. It is no longer true that every method ranks: `resolve` and
+    # `case_identity` are EXACT-key lookups, which is the half of CLAUDE.md §5
+    # that is permitted to identify, while `search`, `discover` and `expand`
+    # rank and may not. Keeping the list exact means the next method has to be
+    # registered deliberately; the rule below is what actually refuses an
+    # Act-returning one, and it now runs over the PORT as well as the adapter.
+    assert methods == ["case_identity", "discover", "expand", "passage",
+                       "resolve", "search", "treatment"], (
+        f"the search port changed to {methods}. A method whose name says "
+        f"`act` is one refactor away from deciding WHICH statute is read, so "
+        f"a new one is registered here deliberately or not at all.")
+
+    port_act_shaped = [n for n in methods
+                       if any(w in n.lower() for w in
+                              ("act", "statute", "provision", "section"))]
+    assert not port_act_shaped, (
+        f"the search port gained {port_act_shaped}: this surface must have no "
+        f"way to return an Act at all, so the exact-match path stays the only "
+        f"path an Act can come down.")
 
     act_shaped = [n for n in dir(AuthorityIndexSearch)
                   if not n.startswith("_") and

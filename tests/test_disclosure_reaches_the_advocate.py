@@ -104,6 +104,12 @@ PROVEN: dict[str, str] = {
     "G-CURRENCY":
         "test_a_correction_is_served_and_survives_restart.py::"
         "test_a_stale_conclusion_is_labelled_stale_on_the_served_cover",
+    "G-PREMISE":
+        "test_premises_come_before_arithmetic.py::"
+        "test_correct_arithmetic_never_certifies_the_law_the_disclosure_reaches_the_advocate",
+    "G-REMEDY":
+        "test_relief_changes_the_recommendation.py::"
+        "test_a_run_limitation_makes_the_relief_late_and_reaches_the_advocate",
 }
 
 #: gate id -> WHY nothing proves the advocate sees it. Six of the thirteen,

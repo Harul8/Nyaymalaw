@@ -700,22 +700,28 @@ items:
   title: the authority need finds a case by scanning a million paragraphs
   kind: substrate
   priority: P1
-  delivery_status: planned
-  implementation: none
-  verification: none
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
   affects_phases:
   - D
   record: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs
+  next_action: P21 built case-level discovery, expansion by locator and exact citation resolution
+    on 12 September 2026 and proved them served; model_eval and counsel_review remain NOT RUN
+    and need their own bounded approval
   stage_records:
-    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs}
-    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs}
+    start: {result: READY, ref: docs/BACKLOG.md#p21-start-record--separate-discovery-identity-and-legal-verification--12-september-2026}
+    build: {result: BUILT, ref: docs/BACKLOG.md#p21-test-record--12-september-2026}
+    test: {result: OPEN, ref: docs/BACKLOG.md#p21-test-record--12-september-2026, note: 'integration verified; model_eval and counsel_review not run'}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#p21-test-record--12-september-2026}
   acceptance:
   - id: BK-25-AC1
     requirement: "Authority discovery ranks cases through a version-identified case-level discovery surface and expands their source passages with context, preserving exact identity, contrary material and declared coverage"
     required_evidence: [integration_test, model_eval, counsel_review]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_the_research_workflow_is_served.py::test_a_holding_spread_across_paragraphs_surfaces_as_one_case', note: 'served over synthetic indexes in the real schema: a holding across two ratio paragraphs surfaces as one case with paragraphs_matched >= 2 and both come back in expansion by locator with complete=False stated; the exact-citation node (test_an_exact_citation_resolves_to_one_case_and_a_wrong_one_to_nothing) resolves one key to one case and a wrong key to nothing with no near miss. 12 September 2026'}
+      model_eval: {result: NOT_RUN, ref: '', note: 'no real-model discovery run; the live index (451,548 paragraphs) was not searched by this packet'}
+      counsel_review: {result: NOT_RUN, ref: ''}
     negative_control:
       mutation: "hide a relevant holding across several paragraphs or offer an unresolvable summary identity"
       expected_failure: "case discovery does not silently lose the case and unresolved identity cannot support a legal assertion"
@@ -1212,23 +1218,29 @@ items:
   priority: P0
   delivery_status: in_progress
   implementation: partial
-  verification: failing
+  verification: partial
   phase: D
   record: docs/BACKLOG.md#bk-35-cause-specific-accrual-and-answer-consistency-gate
-  next_action: refuse to run the period from a single dated fact that does not satisfy the
-    curated trigger; emit the statutory limb
+  next_action: P22 added reviewable legal premises and the conditional state on 12 September
+    2026 -- an inferred accrual is conditional not a deadline, and a stated premise makes it
+    definitive; AC1's model_eval and counsel_review remain NOT RUN
   acceptance:
   - id: BK-35-AC1
     requirement: "Limitation computation requires the reviewed cause-specific legal trigger and attributed factual date, including uncertain ranges and applicable qualifications, before producing a deadline"
     required_evidence: [integration_test, model_eval, counsel_review]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_premises_come_before_arithmetic.py::test_an_inferred_accrual_computes_conditional_and_enters_no_deadline', note: 'served: an uncurated accrual with two dated events computes CONDITIONAL, shown with its alternatives and entered as no deadline; stating the accrual (test_stating_the_premise_makes_the_next_computation_definitive) makes the next computation a real deadline. 12 September 2026'}
+      model_eval: {result: NOT_RUN, ref: ''}
+      counsel_review: {result: NOT_RUN, ref: '', note: 'competing-premise and uncertain-range judgement is a qualified-review question; the code refuses to pick one silently'}
     negative_control:
       mutation: "use the first dated fact when the governing trigger is different or unknown"
       expected_failure: "the date is not accepted as accrual without its legal and factual basis"
   - id: BK-35-AC2
     requirement: "The served answer, matter cover and deadline register share the same versioned legal premise and calculation or disclose the precise unresolved inconsistency"
     required_evidence: [integration_test, adversarial_test]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_premises_come_before_arithmetic.py::test_the_cover_and_register_share_one_premise_version', note: 'the cover premise digest and the register row premise digest are the same, and a mismatch renders inconsistent rather than smoothing over. 12 September 2026'}
+      adversarial_test: {result: PASS, ref: 'tests/test_premises_come_before_arithmetic.py::test_a_corrected_trigger_date_is_not_served_as_current', note: 'change the trigger date after calculation: the correction supersedes the fact, P18 currency marks the deadline stale, and the board no longer leads with the old date'}
     negative_control:
       mutation: "change the trigger date after calculation but before response assembly"
       expected_failure: "stale or inconsistent deadlines cannot be emitted as current"
@@ -1287,24 +1299,30 @@ items:
   priority: P1
   delivery_status: in_progress
   implementation: partial
-  verification: failing
+  verification: partial
   phase: A
   sequenced_after:
   - BK-25
   record: docs/BACKLOG.md#bk-38-search-to-authority-to-matter-research-workflow
-  next_action: carry canonical citation and bench; attach a hit to a matter
+  next_action: P21 built grouped inspection, exact citation and attachment with five verdicts on
+    12 September 2026 and proved them served and in the browser; the bench is carried on
+    expansion; the cumulative gate on the final candidate derives completion
   acceptance:
   - id: BK-38-AC1
     requirement: "Research supports controlled court and date filters, grouped source inspection, exact citation and deliberate attachment of a verified source and locator to a matter issue"
     required_evidence: [integration_test, browser_journey]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_the_research_workflow_is_served.py::test_a_resolved_verbatim_passage_attaches_with_five_separate_verdicts', note: 'attach by exact locator with verbatim words records five separate verdicts and the P18 ledger tracks the passage; the planted negative (test_a_snippet_shaped_locator_is_refused_as_unresolved) refuses a snippet with identity=unresolved, and a changed word is refused as differs. 12 September 2026'}
+      browser_journey: {result: PASS, ref: '.nm/journey/report.json#tests/test_the_journey_of_a_search.py::test_phase_4_attaching_a_paragraph_shows_five_verdicts_not_one', note: 'bound to the journey report when `python tools/journey.py` last ran on the committed tree; phases 3-4 open a discovered case to its paragraphs by locator and attach one, and the page shows five verdict rows and the note identity-and-words-only'}
     negative_control:
       mutation: "attach a ranked snippet as if it were an exact verified source"
       expected_failure: "the unverified source cannot become established matter authority"
   - id: BK-38-AC2
     requirement: "Search distinguishes results, searched-with-no-results, unsupported coverage and unavailable index and reports meaningful limits without confidence percentages derived from rank"
     required_evidence: [integration_test, browser_journey]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_the_research_workflow_is_served.py::test_a_court_the_corpus_does_not_hold_is_unsupported_coverage', note: 'four outcomes on the wire as four values: results; searched_no_results with the index identity; unsupported_coverage for a court the corpus does not hold, decided before anything is searched; unavailable_index for an absent file (test_an_absent_index_is_unavailable_not_empty). Bands, never percentages. 12 September 2026'}
+      browser_journey: {result: PASS, ref: '.nm/journey/report.json#tests/test_the_journey_of_a_search.py::test_phase_6_an_unsupported_court_is_not_a_zero', note: 'phases 2, 5 and 6 read #research-outcome[data-outcome] after submission for results, searched_no_results and unsupported_coverage'}
     negative_control:
       mutation: "submit a search with an absent index or unknown court alias"
       expected_failure: "the state explains whether and where research ran rather than reporting absence of law"
@@ -1553,12 +1571,14 @@ items:
   depends_on:
   - BK-51
   record: docs/BACKLOG.md#bk-45-the-search-phase-cannot-fail
-  next_action: not yet executed in a browser
+  next_action: executed in a browser by P21's search journey on 12 September 2026 -- seven
+    phases, each reading a post-submission outcome value; the cumulative gate derives completion
   acceptance:
   - id: BK-45-AC1
     requirement: "The research journey requires a post-submission result, explicit no-results or unavailable state and does not pass on static form labels"
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test: {result: PASS, ref: 'tests/test_research_keeps_finding_apart_from_verification.py::test_a_search_that_ran_and_found_nothing_says_so', note: 'the four outcomes are values a phase must read; every phase of tests/test_the_journey_of_a_search.py waits for #research-outcome[data-outcome], which exists only after an answered submission, so a no-op submit with labels visible fails the wait. 12 September 2026'}
     negative_control:
       mutation: "make search submission a no-op while leaving labels visible"
       expected_failure: "the research scenario fails for no observed outcome"
@@ -1802,9 +1822,9 @@ items:
   title: 'Phase C: objectives, constraints and document intake'
   kind: journey
   priority: P1
-  delivery_status: planned
-  implementation: none
-  verification: none
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
   phase: C
   depends_on:
   - BK-64
@@ -1813,12 +1833,12 @@ items:
   - C2
   - C6
   record: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake
-  next_action: specify DOES / NEVER / PRODUCES / EVAL for C2, C6
+  next_action: P24 built the adaptive briefing on 12 September 2026 -- intake readiness is derived from the open gaps and is not turn completion, a need the advocate cannot obtain is paused with a resume trigger rather than looped, and the C1 NEVER[4] clause is now witnessed (TRACE-C1 removed). AC3 integration passes; AC2 and AC3 model_eval and counsel_review remain NOT RUN
   stage_records:
-    start: {result: READY, ref: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake}
-    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-54-phase-c-objectives-constraints-and-document-intake}
+    start: {result: READY, ref: docs/BACKLOG.md#p24-start-record--adaptive-interactive-briefing--12-september-2026}
+    build: {result: OPEN, ref: docs/BACKLOG.md#p24-start-record--adaptive-interactive-briefing--12-september-2026}
+    test: {result: OPEN, ref: docs/BACKLOG.md#p24-test-record--12-september-2026}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#p24-test-record--12-september-2026}
   acceptance:
   - id: BK-54-AC1
     negative_control:
@@ -1838,7 +1858,7 @@ items:
     requirement: briefing cannot claim completion while a material controlling gap remains, repeat a question already answered in accessible authorised material, or continue asking for unavailable material without a stop and resume decision
     required_evidence: [integration_test, model_eval, counsel_review]
     evidence:
-      integration_test: {result: NOT_RUN, ref: ''}
+      integration_test: {result: PASS, ref: 'tests/test_briefing_readiness_is_not_completion.py::test_a_paused_gap_stops_the_loop_and_blocks_completion', note: 'served: an open gap keeps intake not-ready however the turn finished; marking it unavailable pauses it (not re-asked) and readiness is blocked with the stop/resume decision owed; the served routes persist the pause and resume with a version check (test_marking_a_need_unavailable_pauses_it_and_resume_reopens_it). This is the close of C1 NEVER[4], witnessed by test_a_completed_turn_does_not_complete_intake_and_unavailable_is_not_looped with @refuses(C1,4); TRACE-C1 removed. 12 September 2026'}
       model_eval: {result: NOT_RUN, ref: ''}
       counsel_review: {result: NOT_RUN, ref: ''}
     negative_control:
@@ -2341,10 +2361,9 @@ items:
   depends_on:
   - BK-64
   record: docs/BACKLOG.md#bk-65-legal-dependency-graph-and-selective-invalidation
-  next_action: P18 wired the currency ledger onto the served product on 12 September 2026
-    and AC1 carries domain, integration, adversarial and browser results; AC2 is P22, which
-    also needs P21. The cumulative gate on the final integrated candidate derives AC1's
-    completion, not this record
+  next_action: P18 wired the currency ledger (AC1) and P22 wired the legal-premise gate
+    (AC2) on 12 September 2026; AC2's domain half passes and its model_eval and counsel_review
+    remain NOT RUN. The cumulative gate on the final integrated candidate derives completion
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#p18-start-record--12-september-2026}
     build: {result: BUILT, ref: docs/BACKLOG.md#p18-build-record--wiring-the-ledger-onto-the-served-product--12-september-2026}
@@ -2366,8 +2385,8 @@ items:
     requirement: governing legal premises are separately attributed and reviewable before dependent computations; correct arithmetic cannot establish applicable law, accrual or jurisdiction and changing a premise invalidates its results
     required_evidence: [domain_test, model_eval, counsel_review]
     evidence:
-      domain_test: {result: NOT_RUN, ref: ''}
-      model_eval: {result: NOT_RUN, ref: ''}
+      domain_test: {result: PASS, ref: 'tests/test_premises_come_before_arithmetic.py::test_the_three_premises_are_separate_and_none_derivable_from_arithmetic', note: 'the three premises are separate, an inferred accrual is conditional not blocked, the digest moves when a premise moves, and served the conditional date is never a deadline (test_an_inferred_accrual_computes_conditional_and_enters_no_deadline). 12 September 2026'}
+      model_eval: {result: NOT_RUN, ref: '', note: 'no real-model assessment of whether an inferred accrual or forum is correct; the gate refuses the arithmetic from certifying it, which is the code half'}
       counsel_review: {result: NOT_RUN, ref: ''}
     negative_control:
       mutation: keep the arithmetic correct while substituting an unsupported accrual rule or jurisdictional premise
@@ -2544,25 +2563,28 @@ items:
   title: remedy and enforceability model
   kind: substrate
   priority: P0
-  delivery_status: planned
-  implementation: none
-  verification: none
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
   affects_phases: [D, E, F]
   depends_on:
   - BK-64
   - BK-65
   record: docs/BACKLOG.md#bk-70-remedy-and-enforceability-model
-  next_action: model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
+  next_action: P23 modelled relief as first-class file objects (availability, value, timing, enforceability, proportionality) with attributed basis on 12 September 2026; the recommendation changes when relief is unavailable/hollow/late/unenforceable and proportionality is stated alongside (E3's NEVER). AC1 model_eval and counsel_review remain NOT RUN
   stage_records:
-    start: {result: READY, ref: docs/BACKLOG.md#bk-70-remedy-and-enforceability-model}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-70-remedy-and-enforceability-model}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-70-remedy-and-enforceability-model}
-    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-70-remedy-and-enforceability-model}
+    start: {result: READY, ref: docs/BACKLOG.md#p23-start-record--reason-through-relief-and-enforceability--12-september-2026}
+    build: {result: OPEN, ref: docs/BACKLOG.md#p23-start-record--reason-through-relief-and-enforceability--12-september-2026}
+    test: {result: OPEN, ref: docs/BACKLOG.md#p23-test-record--12-september-2026}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#p23-test-record--12-september-2026}
   acceptance:
   - id: BK-70-AC1
     requirement: advice changes when identical merits have unavailable, hollow, late or disproportionate relief and explains the enforceability basis for the recommendation
     required_evidence: [domain_test, model_eval, counsel_review]
-    evidence: {}
+    evidence:
+      domain_test: {result: PASS, ref: 'tests/test_relief_changes_the_recommendation.py::test_a_step_pursuing_a_defeated_relief_contradicts_and_a_reservation_clears_it', note: 'merits held constant, only the relief varied: an established shortfall defeats the remedy and a step pursuing it is contradicted on the relief claim, cleared only by an explicit reservation; proportionality never withholds a legally available route (test_proportionality_is_never_a_reason_to_withhold_a_route); served, a run limitation makes the relief late and the enforceability basis reaches the advocate (test_a_run_limitation_makes_the_relief_late_and_reaches_the_advocate). 12 September 2026'}
+      model_eval: {result: NOT_RUN, ref: '', note: 'whether the PRODUCT correctly reads availability and enforceability off a real brief is the model question; the code refuses to certify a remedy the file says cannot deliver, which is the deterministic half'}
+      counsel_review: {result: NOT_RUN, ref: ''}
     negative_control:
       mutation: keep merits constant while making the only useful relief unavailable or uneconomic
       expected_failure: the original recommendation cannot survive unchanged without an explicit justified reservation
@@ -3349,7 +3371,9 @@ items:
   - id: BK-84-AC3
     requirement: A maintained discovery and verification workflow separates finding, citation resolution, quotation fidelity, entailment, treatment and legal applicability; missing negative treatment research never becomes a clean-bill assertion
     required_evidence: [model_eval, counsel_review]
-    evidence: {}
+    evidence:
+      model_eval: {result: NOT_RUN, ref: '', note: 'P21 built the workflow -- five separate verdicts, adverse search by state, clean_bill never from an empty list -- and proved it on synthetic fixtures (tests/test_the_research_workflow_is_served.py::test_a_correct_quote_from_an_overruled_case_keeps_its_negative_treatment); a bounded real-model evaluation on the registered scenarios (EVAL-013/014) has not been run and needs its own approval'}
+      counsel_review: {result: NOT_RUN, ref: '', note: 'no qualified review has assessed semantic support or legal applicability; `support` is not_assessed on every attachment until one does'}
     negative_control:
       mutation: retrieve a correct quote from an overruled or inapplicable decision
       expected_failure: the evaluated conclusion records the limitation or is withheld, rather than inheriting authority from retrieval rank
@@ -3637,36 +3661,48 @@ items:
   title: adaptive grounded lead reasoning
   kind: substrate
   priority: P1
-  delivery_status: planned
-  implementation: none
-  verification: none
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
   affects_phases: [B, C, D, E, F, G, H]
   record: docs/BACKLOG.md#bk-91-adaptive-grounded-lead-reasoning
-  next_action: implement P46 after its scoped foundations, then integrate purposeful briefing and obtain independent professional evaluation; the plan is not runtime proof
+  next_action: P46 built one bounded lead runtime on 12 September 2026 -- state-driven step proposals over the autonomy dynamic actions (no fixed sequence), a six-value epistemic status where SUPPORTED is earned only by assessment against a current version, evidence-triggered invalidation and recheck, and delegation only where it adds value through the P47 admission/acceptance path. AC1 and AC2 carry domain, integration and adversarial evidence; model_eval is NOT RUN, and the served briefing (AC3) is P24
   stage_records:
-    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-91-adaptive-grounded-lead-reasoning}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-91-adaptive-grounded-lead-reasoning}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-91-adaptive-grounded-lead-reasoning}
-    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-91-adaptive-grounded-lead-reasoning}
+    start: {result: READY, ref: docs/BACKLOG.md#p46-start-record--adaptive-investigation--12-september-2026}
+    build: {result: OPEN, ref: docs/BACKLOG.md#p46-start-record--adaptive-investigation--12-september-2026}
+    test: {result: OPEN, ref: docs/BACKLOG.md#p46-test-record--12-september-2026}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#p46-test-record--12-september-2026}
   acceptance:
   - id: BK-91-AC1
     requirement: the lead chooses and revises permitted investigation tasks from the current commission, evidence and open needs, including useful completion or explicit escalation, without a fixed mandatory cognitive sequence or self-expanded authority
     required_evidence: [domain_test, integration_test, adversarial_test, model_eval]
-    evidence: {}
+    evidence:
+      domain_test: {result: PASS, ref: 'tests/test_the_lead_adapts_to_evidence.py::test_the_next_action_is_driven_by_state_not_a_fixed_sequence', note: 'the next action is chosen from the state, not a fixed order; changing the represented side yields a reasoned different challenge (test_changing_the_side_changes_the_assessment_not_the_facts); delegation is used only when it adds value (test_delegation_is_used_only_when_it_adds_value). 12 September 2026'}
+      integration_test: {result: PASS, ref: 'tests/test_the_lead_adapts_to_evidence.py::test_the_lead_delegates_and_folds_candidates_through_the_p47_path', note: 'the lead dispatches a specialist through the P47 admission boundary and folds accepted findings as candidates; useful completion and explicit escalation are derived by readiness, never a flag the agent set'}
+      adversarial_test: {result: PASS, ref: 'tests/test_the_lead_adapts_to_evidence.py::test_a_frozen_plan_cannot_report_completion_after_a_premise_moves', note: 'contrary evidence after planning reopens affected work and a frozen plan cannot claim done (test_a_change_invalidates_the_claims_that_rest_on_it_only)'}
+      model_eval: {result: NOT_RUN, ref: '', note: 'whether a real model chooses good next actions is the model question; the runtime enforces mandate, invalidation and no-invention, which is the deterministic half'}
     negative_control:
       mutation: introduce decisive contrary evidence after planning or remove a necessary premise while keeping the previous plan and completed flag
       expected_failure: affected work is reconsidered and missing support remains explicit; a frozen plan cannot claim completion
   - id: BK-91-AC2
     requirement: material case assertions and legal conclusions retain provenance and epistemic status through adaptive reasoning; hypotheses are labelled and supported premises are rechecked on source, instruction or permission change before acceptance and publication
     required_evidence: [domain_test, integration_test, adversarial_test, model_eval]
-    evidence: {}
+    evidence:
+      domain_test: {result: PASS, ref: 'tests/test_the_lead_adapts_to_evidence.py::test_a_source_is_never_supported_merely_by_existing', note: 'a source existing/quoted/located is never SUPPORTED; only assessment against a current version promotes it; a hypothesis is labelled INFERENCE and never a conclusion. 12 September 2026'}
+      integration_test: {result: PASS, ref: 'tests/test_the_lead_adapts_to_evidence.py::test_a_forged_or_stale_specialist_result_changes_nothing', note: 'a forged or stale specialist result is refused by the one acceptance path and folds nothing; a source proposal to expand authority is refused end to end (test_a_source_proposal_to_expand_authority_is_refused_end_to_end)'}
+      adversarial_test: {result: PASS, ref: 'tests/test_the_lead_adapts_to_evidence.py::test_support_is_not_granted_on_a_superseded_version', note: 'support is not granted on a superseded version and a stale supported claim is rechecked back before reliance (test_recheck_reverts_a_stale_supported_claim_before_reliance)'}
+      model_eval: {result: NOT_RUN, ref: ''}
     negative_control:
       mutation: invent a date or authority, promote an attributed allegation to an established fact, or accept a reasoning result based on a superseded source
       expected_failure: the affected claim or result is rejected or remains explicitly unresolved; source existence alone cannot certify semantic support
   - id: BK-91-AC3
     requirement: the served briefing interaction dynamically chooses useful retrieval, assessment or questions, accepts interruption and unavailable material, and preserves safe work without forcing every matter through the same interview
     required_evidence: [integration_test, browser_journey, model_eval, counsel_review]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_briefing_readiness_is_not_completion.py::test_the_next_move_comes_from_the_lead_and_skips_paused_needs', note: 'the next briefing move is the adaptive lead choosing from the live gaps (retrieve when open, stop when none), and paused needs are skipped; the served turn and cover carry the readiness block. 12 September 2026'}
+      browser_journey: {result: NOT_RUN, ref: '', note: 'a bounded synthetic browser demonstration of the case-file briefing pane and the mark-unavailable/resume controls was driven on 13 September 2026; a recorded journey-suite phase bound to .nm/journey/report.json is not yet added'}
+      model_eval: {result: NOT_RUN, ref: ''}
+      counsel_review: {result: NOT_RUN, ref: ''}
     negative_control:
       mutation: answer the proposed question in an existing authorised document, then change the objective or mark a different material document unavailable
       expected_failure: NM uses the held answer and adapts the next step without repetitive questioning or unsupported concluded advice
@@ -3681,29 +3717,35 @@ items:
   title: bounded specialist delegation and grounded artifacts
   kind: substrate
   priority: P1
-  delivery_status: planned
-  implementation: none
-  verification: none
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
   affects_phases: [B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-92-bounded-specialist-delegation-and-grounded-artifacts
-  next_action: implement P47 task and result boundaries, integrate through P46 and P29, then measure quality and whole-task cost; all runtime evidence remains unexecuted
+  next_action: P47 built the task/result boundaries on 12 September 2026 -- a non-expanding mandate, one shared atomic budget ledger, and one version-checked acceptance path that refuses stale, revoked, cancelled, forged and mandate-expanding results and keeps conflicts contested; the adaptive lead (P46) is the production consumer, and BK-92-AC3 (drafter) and BK-92-AC4 (family decision) remain open
   stage_records:
-    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-92-bounded-specialist-delegation-and-grounded-artifacts}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-92-bounded-specialist-delegation-and-grounded-artifacts}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-92-bounded-specialist-delegation-and-grounded-artifacts}
-    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-92-bounded-specialist-delegation-and-grounded-artifacts}
+    start: {result: READY, ref: docs/BACKLOG.md#p47-start-record--bounded-specialist-execution--12-september-2026}
+    build: {result: OPEN, ref: docs/BACKLOG.md#p47-start-record--bounded-specialist-execution--12-september-2026}
+    test: {result: OPEN, ref: docs/BACKLOG.md#p47-test-record--12-september-2026}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#p47-test-record--12-september-2026}
   acceptance:
   - id: BK-92-AC1
     requirement: every delegated task inherits a non-expanding mandate and records parent identity, current source snapshot, allowed tools and data, result contract and bounded depth, concurrency, time and shared total cost; ordinary work can use no specialist
     required_evidence: [domain_test, integration_test, adversarial_test]
-    evidence: {}
+    evidence:
+      domain_test: {result: PASS, ref: 'tests/test_bounded_specialist_delegation.py::test_a_delegated_task_records_the_whole_non_expanding_mandate', note: 'an admitted task carries parent, source snapshot, result contract and a mandate narrowed to within parent and server; ordinary work uses no specialist (test_ordinary_work_uses_no_specialist). 12 September 2026'}
+      integration_test: {result: PASS, ref: 'tests/test_bounded_specialist_delegation.py::test_a_parent_orchestrates_two_specialists_on_one_shared_ledger', note: 'a lead admits two specialists within the 2-concurrent depth-1 profile on ONE shared atomic ledger; spend accumulates and is not reset per child'}
+      adversarial_test: {result: PASS, ref: 'tests/test_bounded_specialist_delegation.py::test_the_shared_budget_is_atomic_and_not_reset_per_child', note: 'a child that adds a processor/matter/tool, exceeds depth or concurrency, or over-reserves the shared budget is refused before protected processing with the actual reason (test_a_child_cannot_add_a_processor_a_matter_or_a_tool, test_concurrency_and_depth_are_capped_by_the_profile)'}
     negative_control:
       mutation: a child adds a processor or matter, resets its budget, spawns an unbounded descendant or exceeds the parent's aggregate budget concurrently
       expected_failure: the shared admission and atomic budget boundary refuses the action before protected processing and records the actual reason
   - id: BK-92-AC2
     requirement: specialist findings merge through one version-checked acceptance path; source instructions do not confer authority, conflicts remain contested, failed or missing work is not clean, and cancellation, revocation, retries and worker restart cannot publish stale or duplicate effects
     required_evidence: [domain_test, integration_test, adversarial_test]
-    evidence: {}
+    evidence:
+      domain_test: {result: PASS, ref: 'tests/test_bounded_specialist_delegation.py::test_findings_are_candidates_through_one_version_checked_path', note: 'findings become candidates for the one canonical writer, never accepted truth; the mandate version is checked. 12 September 2026'}
+      integration_test: {result: PASS, ref: 'tests/test_bounded_specialist_delegation.py::test_a_parent_orchestrates_two_specialists_on_one_shared_ledger', note: 'both children accepted through the one path; whole task clean only because both required roles COMPLETED'}
+      adversarial_test: {result: PASS, ref: 'tests/test_bounded_specialist_delegation.py::test_no_source_or_proposal_grants_a_tool_processor_or_matter', note: 'EVAL-032 faults driven: forged (test_a_forged_result_is_refused), stale (test_a_stale_result_is_refused_before_commit), cancelled/revoked (test_cancellation_and_revocation_block_a_late_result), duplicate/restart (test_duplicate_delivery_and_restart_apply_nothing_twice), prompt-injection delta refused, conflicts contested (test_conflicting_findings_stay_contested_not_voted), failed not clean (test_a_failed_or_missing_specialist_is_not_clean)'}
     negative_control:
       mutation: inject tool instructions in a source, submit a forged or stale task result, revoke permission during a lease or retry after commit while one required specialist has failed
       expected_failure: unsafe work is refused, accepted effects are not duplicated and incomplete analysis cannot report a clean completed result
@@ -3723,6 +3765,54 @@ items:
       expected_failure: the family-level delegation decision remains unapproved until the comparable complete population and safety obligations are satisfied
 
 events:
+- item: BK-54
+  at: '2026-09-12'
+  from: planned
+  to: in_progress
+  reason: P24 built the adaptive interactive briefing -- intake readiness is derived from the open gaps and is not the turn completing, a need the advocate cannot obtain is paused with a resume trigger and not looped, and the served turn and cover carry the readiness block with mark-unavailable and resume controls. This closes C1's fifth NEVER clause (turn completion is not intake completion; no loop on unavailable), witnessed with @refuses(C1,4), so TRACE-C1 was removed from known_failures rather than waived. AC3 integration passes; AC2 and AC3 model_eval and counsel_review remain NOT RUN
+  evidence: docs/BACKLOG.md#p24-test-record--12-september-2026
+- item: BK-91
+  at: '2026-09-12'
+  from: in_progress
+  to: in_progress
+  reason: P24 connected the P46 adaptive lead to the served briefing (BK-91-AC3) -- the next briefing move is the lead's choice from the live gaps, paused needs are skipped, and readiness is served on the turn and the cover; browser demonstration driven, model_eval and counsel_review remain NOT RUN
+  evidence: docs/BACKLOG.md#p24-test-record--12-september-2026
+- item: BK-91
+  at: '2026-09-12'
+  from: planned
+  to: in_progress
+  reason: P46 built one bounded adaptive lead runtime -- state-driven proposals over the autonomy dynamic actions with no fixed cognitive sequence, a six-value epistemic status (allegation/extracted/disputed/supported/inference/unknown) where SUPPORTED is earned only by assessment against a current version, evidence-triggered invalidation and recheck-before-reliance, and delegation only where it adds value through the P47 admission and acceptance path. AC1 and AC2 carry domain, integration and adversarial evidence; model_eval is NOT RUN and the served briefing (AC3) is P24
+  evidence: docs/BACKLOG.md#p46-test-record--12-september-2026
+- item: BK-92
+  at: '2026-09-12'
+  from: planned
+  to: in_progress
+  reason: P47 built the bounded-delegation task and result boundaries -- a non-expanding mandate (child perms intersect parent and server), one shared atomic budget ledger that does not reset per child, and one version-checked acceptance path that refuses stale, revoked, cancelled, forged and mandate-expanding results, keeps conflicts contested and a failed specialist visibly incomplete. AC1 and AC2 carry domain, integration and adversarial evidence; AC3 (drafter) and AC4 (family decision) remain open and the adaptive lead (P46) is the production consumer
+  evidence: docs/BACKLOG.md#p47-test-record--12-september-2026
+- item: BK-70
+  at: '2026-09-12'
+  from: planned
+  to: in_progress
+  reason: P23 built the remedy and enforceability model -- relief is a first-class file object read on availability, value, timing, enforceability and proportionality, each with an attributed basis; the recommendation changes when the relief is unavailable, hollow, late or unenforceable, and a disproportionate route is stated alongside rather than withheld (E3's NEVER). Domain evidence passes; model_eval and counsel_review remain NOT RUN
+  evidence: docs/BACKLOG.md#p23-test-record--12-september-2026
+- item: BK-35
+  at: '2026-09-12'
+  from: in_progress
+  to: in_progress
+  reason: P22 built reviewable legal premises before the arithmetic -- an inferred accrual computes conditional and enters no deadline, a stated premise makes it definitive, and cover/register share one premise version; verification moves from failing to partial
+  evidence: docs/BACKLOG.md#p22-test-record--12-september-2026
+- item: BK-38
+  at: '2026-09-12'
+  from: in_progress
+  to: in_progress
+  reason: P21 built grouped inspection, exact citation resolution and deliberate attachment with five separate verdicts, served and driven in the browser; verification moves from failing to partial
+  evidence: docs/BACKLOG.md#p21-test-record--12-september-2026
+- item: BK-25
+  at: '2026-09-12'
+  from: planned
+  to: in_progress
+  reason: P21 built case-level discovery and expansion by locator over the authority index and proved them served on synthetic fixtures; model_eval and counsel_review remain not run
+  evidence: docs/BACKLOG.md#p21-test-record--12-september-2026
 - item: BK-65
   at: '2026-09-12'
   from: planned

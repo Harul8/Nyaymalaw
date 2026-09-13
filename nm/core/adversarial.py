@@ -46,7 +46,7 @@ from enum import Enum
 
 from nm.domain.matter import ThreadId
 from nm.domain.register import PEER
-from nm.domain.text import blank, refuses_blank_text
+from nm.domain.text import blank, refuses_blank_text, snippet
 from nm.domain.traceability import implements
 
 # ============================================================ D7 ==========
@@ -222,7 +222,7 @@ class Salvage:
         if self.route and not self.findings:
             raise ValueError(
                 f"the route on {self.coordinate.value} rests on nothing "
-                f"retrieved: {self.route[:60]!r}. D8 forbids grounding a route "
+                f"retrieved: {snippet(self.route, 60)!r}. D8 forbids grounding a route "
                 f"on a plausible recollection that such a claim exists, and a "
                 f"route with no citation is exactly a category-level "
                 f"suggestion — 'consider a different forum' with no forum "
@@ -636,7 +636,7 @@ def read_salvage(said: dict, retrieved: tuple[str, ...]) -> ReadSalvage:
             # is a way out resting on nothing.
             refused.append(
                 f"{coordinate.value}: a route citing nothing retrieved on this "
-                f"turn — {route[:60]!r}")
+                f"turn — {snippet(route, 60)!r}")
             route = ""
 
         try:

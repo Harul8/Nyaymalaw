@@ -416,6 +416,16 @@ class Thread:
     than a position.
     """
 
+    premises: tuple[dict, ...] = ()
+    """THE LEGAL PREMISES THE LATEST LIMITATION COMPUTATION RAN UNDER, as
+    `nm.core.premise.Premise.as_dict()` rows: which provision, what starts the
+    period, which forum -- each with basis, source and review state. P22.
+    Written by the turn beside `deadlines`; read by the cover. Untyped for the
+    cycle reason `deadlines` gives."""
+    premises_stated: dict[str, dict] = field(default_factory=dict)
+    """WHAT THE ADVOCATE STATED, by premise kind: `{"statement", "source",
+    "by", "at"}`. A stated premise outranks an inferred one on the next
+    computation and carries the person who stated it. P22."""
     deadlines: tuple[object, ...] = ()
     """THE DEADLINE REGISTER, as the last turn that could compute it left
     it. Phase 3.
@@ -568,6 +578,27 @@ class Thread:
     from here, so naming the type would be a cycle — and the layer rule is
     that domain holds the state while core holds the reading of it. The store
     round-trips it structurally either way.
+    """
+    objective: "object | None" = None
+    """WHAT THE CLIENT ACTUALLY WANTS on this thread, against which relief is
+    measured. BK-70. An `nm.core.relief.Objective` as `.as_dict()`, or None
+    where none has been established -- and None is a real state, read back as
+    an unestablished objective rather than as a served one.
+
+    Untyped `object` for the cycle reason `theory` carries: `nm.core.relief`
+    imports this module. `nm.core.relief.Objective.from_stored` reads it back.
+    """
+    reliefs: tuple[object, ...] = ()
+    """THE RELIEFS THIS THREAD'S RECOMMENDATION RESTED ON, each as an
+    `nm.core.relief.Relief.as_dict()` row: the remedy, its forum, the five
+    coordinates (availability, value, timing, enforceability, proportionality),
+    the attributed basis and the reason. BK-70.
+
+    Replaced whole on each deriving turn, like `deadlines` and `authorities`:
+    what the LAST recommendation weighed is the useful fact, and a turn that
+    could not assess relief writes nothing and leaves the section reading
+    `not_assessed` rather than inheriting a stale one. Untyped for the cycle
+    reason above; `nm.core.relief.reliefs_from_stored` reads it back.
     """
 
     @staticmethod
@@ -800,6 +831,13 @@ class Matter:
     Persisted, because the alternative is asking again. An advocate who is
     asked something they answered two turns ago has been told their
     instructions were not recorded, and they stop volunteering detail."""
+    paused_needs: tuple[object, ...] = ()
+    """NEEDS THE ADVOCATE CANNOT OBTAIN, each a dict {need, resume_when, by, at}.
+    P24 / C1 NEVER[4]. A paused need is not re-asked and is not answered -- it is
+    a stop-with-a-way-back, so the briefing neither loops on it nor reports
+    intake complete over it. Persisted so a pause survives restart, and cleared
+    by `resume_need` when its trigger fires. Untyped like the other persisted
+    sections for the store round-trip."""
     last_activity: str = ""
     """WHEN THIS FILE WAS LAST WORKED, as an ISO date. BK-33.
 
@@ -816,6 +854,19 @@ class Matter:
 
     EMPTY IS `NEVER WORKED`, which is a real state for a matter opened and
     abandoned, and it renders as such rather than as an epoch.
+    """
+
+    research: tuple[dict, ...] = ()
+    """EVERY RESEARCH NEED OPENED ON THIS FILE, as `nm.core.research.Research.as_dict()`
+    rows. BK-84-AC3, BK-38-AC1, P21.
+
+    A TUPLE OF DICTS, for the cycle reason `dependencies` gives directly
+    below; `research.all_from_stored` is the one reader and `as_dict` the one
+    writer. A record holds what was asked of which index, with what result,
+    what the adverse search did, and what was attached with its five
+    verdicts -- so a restart resumes the need without resetting its budget
+    (EVAL-014), and "no adverse authority was found" can only be said by a
+    record whose adverse search RAN.
     """
 
     dependencies: dict = field(default_factory=dict)
@@ -1038,6 +1089,39 @@ class Matter:
             return replace(self, asked=self.asked[:i] + (bumped,) + self.asked[i + 1:])
         return replace(self, asked=self.asked + (
             AskedQuestion(gate=gate, text=text, asked_on=turn, thread=thread),))
+
+    def pause_need(self, need: str, resume_when: str, by: str = "",
+                   at: str = "") -> "Matter":
+        """The advocate cannot obtain this NEED. Record it as paused with a
+        resume trigger. P24 / C1 NEVER[4]: a paused need is NOT re-asked and
+        does NOT count as answered -- intake stays incomplete on it -- so the
+        loop on unavailable material stops without pretending the gap is closed.
+        `need` is the gap text; re-pausing the same need updates its trigger."""
+        need = need.strip()
+        if not need:
+            return self
+        rows = tuple(p for p in self.paused_needs
+                     if not (isinstance(p, dict) and p.get("need") == need))
+        row = {"need": need,
+               "resume_when": resume_when.strip() or "new material arrives",
+               "by": by, "at": at}
+        return replace(self, paused_needs=rows + (row,),
+                       version=self.version + 1)
+
+    def resume_need(self, need: str) -> "Matter":
+        """Reopen a paused need -- relevant material or an instruction arrived.
+        It becomes an ordinary gap again, to be asked at the smallest useful
+        moment rather than never."""
+        need = need.strip()
+        rows = tuple(p for p in self.paused_needs
+                     if not (isinstance(p, dict) and p.get("need") == need))
+        return self if rows == self.paused_needs else replace(
+            self, paused_needs=rows, version=self.version + 1)
+
+    @property
+    def paused_need_texts(self) -> frozenset[str]:
+        return frozenset(p["need"] for p in self.paused_needs
+                         if isinstance(p, dict) and p.get("need"))
 
     def answered(self, gates: frozenset[str], turn: TurnId) -> "Matter":
         """Close every open question whose gate did NOT fire this turn.

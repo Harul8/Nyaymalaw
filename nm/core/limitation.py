@@ -126,6 +126,12 @@ class LimitationState(str, Enum):
     NOT_APPLICABLE = "not_applicable"
     #: There is one and it was not produced. A GAP.
     NOT_COMPUTED = "not_computed"
+    #: A date WAS produced, under a premise the product inferred rather than
+    #: established -- which entry the period runs from, most often. P22. It is
+    #: shown as conditional with its alternatives, it is never a deadline on
+    #: the register, and it blocks the directive step exactly as NOT_COMPUTED
+    #: does. Correct arithmetic under an assumed premise is an assumption.
+    CONDITIONAL = "conditional"
 
 
 class FactorKind(str, Enum):
@@ -194,6 +200,24 @@ class Limitation:
     factors: tuple[Factor, ...] = ()
     covered: tuple[Entry, ...] = ()
     not_computed_because: str = ""
+    premises: tuple[dict, ...] = ()
+    """THE LAW THIS RESTS ON, as `nm.core.premise.Premise.as_dict()` rows --
+    which provision, what starts the period, which forum -- each with its
+    basis, source and review state. Present on every state, because a
+    position that was NOT computed still has premises the advocate can fix.
+    P22 (BK-65-AC2)."""
+    premise_digest: str = ""
+    """`Premises.digest()` of the rows above: the version of the legal
+    position this arithmetic was run under. The deadline register carries the
+    same digest, so a cover and a register from different premise versions
+    are visibly inconsistent rather than quietly disagreeing (BK-35-AC2)."""
+    conditional_because: str = ""
+    """Why the state is CONDITIONAL: the inferred premise, in words."""
+    alternatives: tuple[dict, ...] = ()
+    """The same arithmetic under each competing factual trigger, as
+    `{"accrual": fact_id, "accrual_on": iso, "expires_on": iso}` rows. The
+    advocate sees every candidate date rather than the one the sort order
+    picked; none of them is a deadline until a premise is stated."""
 
     def days_remaining(self, today: date) -> int | None:
         """The count, or None where no date was produced.
@@ -328,7 +352,10 @@ def compute(for_side: Side, article: str, accrual: FactId, accrual_on: date,
             accrual_reason: str, chronology: tuple[FactId, ...],
             period: Period,
             factors: tuple[Factor, ...] = (),
-            considered: dict[FactId, str] | None = None) -> Limitation:
+            considered: dict[FactId, str] | None = None,
+            premises: tuple[dict, ...] = (), premise_digest: str = "",
+            conditional_because: str = "",
+            alternatives: tuple[dict, ...] = ()) -> Limitation:
     """Compute the position, and account for EVERY entry in the chronology.
 
     `period` IS A TYPE AND NOT THREE INTEGERS. It carries the retrieved span it
@@ -395,15 +422,53 @@ def compute(for_side: Side, article: str, accrual: FactId, accrual_on: date,
                               "this entry was not examined against the period"))
 
     return Limitation(
-        for_side=for_side, state=LimitationState.COMPUTED, article=article,
+        for_side=for_side,
+        # CONDITIONAL WHEN A PREMISE WAS INFERRED. The arithmetic is the same;
+        # what differs is what the date may be used for, and that is a STATE
+        # rather than a sentence so the register and the gates can read it.
+        state=(LimitationState.CONDITIONAL if conditional_because
+               else LimitationState.COMPUTED),
+        article=article,
         accrual=accrual, accrual_reason=accrual_reason,
         period_years=years, period_months=months, period_days=days,
-        expires_on=on, factors=factors, covered=tuple(rows))
+        expires_on=on, factors=factors, covered=tuple(rows),
+        premises=premises, premise_digest=premise_digest,
+        conditional_because=conditional_because, alternatives=alternatives)
+
+
+def expiry_from(accrual_on: date, period: Period,
+                factors: tuple[Factor, ...] = ()) -> date:
+    """The bare arithmetic, once, for the alternatives a conditional position
+    carries. THE SAME STEPS AS `compute` -- calendar years and months, then
+    restarts, then days -- so a competing trigger's date is computed the way
+    the chosen one was and not by a second, shorter copy."""
+    on = accrual_on
+    if period.years:
+        on = add_years(on, period.years)
+    if period.months:
+        on = add_months(on, period.months)
+    if period.days:
+        from datetime import timedelta
+        on = on + timedelta(days=period.days)
+    for f in factors:
+        if f.restarts_from is not None:
+            on = f.restarts_from
+            if period.years:
+                on = add_years(on, period.years)
+            if period.months:
+                on = add_months(on, period.months)
+    for f in factors:
+        if f.adds_days:
+            from datetime import timedelta
+            on = on + timedelta(days=f.adds_days)
+    return on
 
 
 
 def not_applicable(for_side: Side, because: str,
-                   chronology: tuple[FactId, ...] = ()) -> Limitation:
+                   chronology: tuple[FactId, ...] = (),
+                   premises: tuple[dict, ...] = (),
+                   premise_digest: str = "") -> Limitation:
     """There is no period to compute for this side, and that is a FINDING.
 
     Kept apart from `not_computed` at the TYPE, not in the reason string.
@@ -417,10 +482,13 @@ def not_applicable(for_side: Side, because: str,
         covered=tuple(Entry(f, Applied.NOT_ASSESSED,
                             "no period runs against this side on this "
                             "thread")
-                      for f in chronology))
+                      for f in chronology),
+        premises=premises, premise_digest=premise_digest)
 
 def not_computed(for_side: Side, because: str,
-                 chronology: tuple[FactId, ...] = ()) -> Limitation:
+                 chronology: tuple[FactId, ...] = (),
+                 premises: tuple[dict, ...] = (),
+                 premise_digest: str = "") -> Limitation:
     """No date could be produced, and the reason is carried.
 
     Not an error path. An Article that could not be retrieved, an accrual event
@@ -433,4 +501,5 @@ def not_computed(for_side: Side, because: str,
         not_computed_because=because,
         covered=tuple(Entry(f, Applied.NOT_ASSESSED,
                             "no computation was made on this thread")
-                      for f in chronology))
+                      for f in chronology),
+        premises=premises, premise_digest=premise_digest)

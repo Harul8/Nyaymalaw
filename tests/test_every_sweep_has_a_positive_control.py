@@ -55,6 +55,8 @@ CONTROLS: dict[str, str] = {
     # BK-52 -- the admitted population is now zero. These controls were read
     # against the exact accumulated value each sweep asserts empty; entries
     # that only proved a scanner had a population gained a planted offender.
+    "test_no_sentence_an_advocate_reads_is_cut_to_a_character_count":
+        "test_the_prose_sweep_can_see_a_planted_cut",
     "test_a_read_that_builds_a_prompt_and_a_guard_uses_one_value":
         "test_the_scan_catches_a_prompt_and_a_guard_that_disagree",
     "test_a_structured_prompt_does_not_carry_it":

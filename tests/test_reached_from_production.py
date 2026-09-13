@@ -80,11 +80,12 @@ UNWIRED: dict[str, str] = {
         "PostgreSQL is reachable on this machine, so the adapter is built and "
         "unproven, which `tests/test_no_database_means_no_evidence.py` keeps "
         "the registry honest about."),
-    "nm.core.premise": (
-        "P22's legal-premise gate. `nm.core.limitation.compute` calls "
-        "`assess()` before the arithmetic and `nm.core.turn` carries the "
-        "premise digest onto the result -- P22's integration half, which "
-        "needs P18's cascade to carry an invalidation through."),
+    # `nm.core.premise` WAS HERE. P22 wired it on 12 September 2026:
+    # `nm.core.turn._premises` builds the three premises before the
+    # arithmetic, `assess` blocks on an unestablished one and marks an
+    # inferred accrual CONDITIONAL, and the digest travels onto the register
+    # and the cover. The declaration went the moment the import landed, as
+    # `test_no_declaration_outlives_its_wiring` requires.
     # `nm.core.dependency` WAS HERE, from 3586ea9 until the same day. P18 wired
     # it on 12 September 2026: `nm.core.turn` observes the file after ADMIT-B,
     # settles every value it derives against its inputs, and the projections

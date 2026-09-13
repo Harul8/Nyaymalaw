@@ -59,7 +59,7 @@ from nm.domain.citation import (
     provisions_cited,
 )
 from nm.domain.gates import Response, gate
-from nm.domain.text import fold, refuses_blank_text
+from nm.domain.text import fold, refuses_blank_text, snippet
 from nm.domain.traceability import implements
 from nm.ports.evidence import Finding
 
@@ -159,7 +159,7 @@ def verify_quotes(elements: tuple[Element, ...],
                 out.append(GroundingViolation(
                     "G-QUOTE",
                     f"quoted text is not verbatim in any retrieved span: "
-                    f"{quote[:120]!r}"))
+                    f"{snippet(quote, 120)!r}"))
     return out
 
 

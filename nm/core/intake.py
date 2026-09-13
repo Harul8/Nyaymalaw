@@ -34,7 +34,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from nm.domain.text import blank, refuses_blank_text
+from nm.domain.text import blank, refuses_blank_text, snippet
 from nm.domain.text import words as text_words
 from nm.domain.traceability import implements
 
@@ -66,7 +66,7 @@ class DocumentFact:
     def __post_init__(self) -> None:
         if self.inverts and blank(self.inverts_because):
             raise ValueError(
-                f"{self.text[:50]!r} is marked as inverting the reading and "
+                f"{snippet(self.text, 50)!r} is marked as inverting the reading and "
                 f"does not say how. An advocate cannot check a reversal they "
                 f"cannot see the basis for.")
 
@@ -107,7 +107,7 @@ def unsupported_by_page(facts: tuple[DocumentFact, ...]) -> tuple[str, ...]:
     Should be empty -- the type requires both fields -- and computed anyway,
     because facts decoded from an older store predate the type.
     """
-    return tuple(f.text[:60] for f in facts
+    return tuple(snippet(f.text, 60) for f in facts
                  if blank(f.document) or blank(f.page))
 
 
@@ -144,7 +144,7 @@ def already_answered(question: str, facts: tuple[DocumentFact, ...],
     for f in facts:
         body = f.text.lower()
         if sum(1 for w in words if w in body) >= needed:
-            out.append(f"{f.document} p.{f.page}: {f.text[:80]}")
+            out.append(f"{f.document} p.{f.page}: {snippet(f.text, 80)}")
     return tuple(out)
 
 
@@ -165,6 +165,6 @@ def conflicts_with_account(facts: tuple[DocumentFact, ...],
         said = account_says.get(f.document)
         if said and said.strip().lower() != f.text.strip().lower():
             out.append(
-                f"{f.document} p.{f.page} reads {f.text[:60]!r}; the account "
-                f"says {said[:60]!r}. Both are on the file.")
+                f"{f.document} p.{f.page} reads {snippet(f.text, 60)!r}; the account "
+                f"says {snippet(said, 60)!r}. Both are on the file.")
     return tuple(out)

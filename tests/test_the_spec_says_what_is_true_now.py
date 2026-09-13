@@ -410,10 +410,32 @@ def test_every_generated_output_is_compared_before_explicit_publication(tree, ca
         assert path.read_bytes() == before, f"check mode silently repaired {path.name}"
         path.write_bytes(original)
 
+    # AND `--write` REPAIRS IT -- asked of the exporter itself, not answered by
+    # comparing against `payloads`.
+    #
+    # WHY THAT DISTINCTION IS THE POINT. `payloads` was built with
+    # `bind_execution=False`; `export_main` builds WITH binding, which is the
+    # projection this repository actually publishes. The two agree only while
+    # no delivering item carries any machine evidence at all -- the wart
+    # `export_spec.build` records in as many words -- and that stopped being
+    # hypothetical the day BK-54 gained a recorded automated result. Bound, C2
+    # and C6 read `proof: STALE`, because the recorded pass was measured
+    # against a tree that has since moved; unbound they read `NOT_RUN`,
+    # because the authored row on its own says nothing ran.
+    #
+    # BOTH ARE RIGHT: they answer different questions, and a fresh gate run
+    # does not converge them -- it turns the bound answer into PASS while the
+    # unbound one stays NOT_RUN. So comparing a bound regeneration against
+    # unbound payloads asserted that evidence binding never changes anything,
+    # which is the opposite of what binding is for. What this step is actually
+    # for is that an explicit write leaves the tree CURRENT, and check mode is
+    # the thing that decides what current means.
     regenerated = generated_paths(tree)[0]
     regenerated.write_bytes(regenerated.read_bytes() + b"\nSTALE\n")
     assert export_main(["--write"], root=tree) == 0
-    assert compare_payloads(payloads) == []
+    assert export_main([], root=tree) == 0, (
+        "check mode still reports the tree stale after an explicit write, so "
+        "`--write` did not publish what the next reader compares against")
     capsys.readouterr()
 
 

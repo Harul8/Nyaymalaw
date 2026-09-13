@@ -500,6 +500,94 @@ const SECTIONS = [
 // not asking. Present, checkable, out of the way.
 let SHOW_AUDIT = false;
 
+// P24. THE BRIEFING READINESS SURFACE. Intake is READY only when no gap is
+// open; a completed turn does not make it so. A need the advocate cannot get is
+// paused with a resume trigger and not re-asked; the controls are the stop and
+// resume decision, so the loop on unavailable material is the advocate's call.
+function renderBriefing(brief, matterId, version) {
+  const box = document.createElement('div');
+  box.className = 'briefing';
+  box.dataset.state = brief.state;
+  const head = document.createElement('div');
+  head.className = 'briefing-head';
+  const pill = document.createElement('span');
+  pill.className = 'pill ' + (brief.state === 'ready' ? 'ok'
+    : brief.state === 'blocked' ? 'blocked' : 'unknown');
+  pill.textContent = brief.state === 'ready' ? 'intake ready'
+    : brief.state === 'blocked' ? 'paused — decision owed' : 'intake open';
+  const why = document.createElement('span');
+  why.className = 'briefing-why';
+  why.textContent = ' ' + (brief.intake_complete_refused || brief.why || '');
+  head.append(pill, why);
+  box.appendChild(head);
+
+  (brief.open_needs || []).forEach((need) => {
+    const row = document.createElement('div');
+    row.className = 'briefing-need';
+    const t = document.createElement('span'); t.textContent = need;
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'ghost'; btn.textContent = "I can't get this";
+    const note = document.createElement('span'); note.className = 'hint';
+    btn.addEventListener('click', async () => {
+      note.textContent = 'Recording…';
+      try {
+        const out = await api(`/api/matters/${matterId}/briefing/unavailable`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ need, resume_when: 'new material or an instruction arrives',
+            expected_version: ((state.matterId === matterId && state.matterVersion > version) ? state.matterVersion : version) }),
+        });
+        if (state.matterId === matterId) state.matterVersion = out.version;
+        note.textContent = 'Paused. I will not ask again until it can be obtained.';
+        btn.disabled = true;
+      } catch (err) {
+        note.textContent = (err.detail && err.detail.why) || err.message;
+      }
+    });
+    row.append(t, btn, note);
+    box.appendChild(row);
+  });
+
+  (brief.paused || []).forEach((p) => {
+    const row = document.createElement('div');
+    row.className = 'briefing-need paused';
+    const t = document.createElement('span');
+    t.textContent = `paused: ${p.need} — resumes when ${p.resume_when}`;
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'ghost'; btn.textContent = 'Resume';
+    const note = document.createElement('span'); note.className = 'hint';
+    btn.addEventListener('click', async () => {
+      note.textContent = 'Resuming…';
+      try {
+        const out = await api(`/api/matters/${matterId}/briefing/resume`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ need: p.need,
+            expected_version: ((state.matterId === matterId && state.matterVersion > version) ? state.matterVersion : version) }),
+        });
+        if (state.matterId === matterId) state.matterVersion = out.version;
+        note.textContent = 'Resumed. I will raise it again at the useful moment.';
+        btn.disabled = true;
+      } catch (err) {
+        note.textContent = (err.detail && err.detail.why) || err.message;
+      }
+    });
+    row.append(t, btn, note);
+    box.appendChild(row);
+  });
+  return box;
+}
+
+// P24. The briefing readiness on the CASE FILE, from the cover, so it survives
+// across turns and a restart. Reuses the same control as the Advise pane.
+function renderBriefingPane(matterId, brief, version) {
+  const pane = $('briefing-pane');
+  const host = $('briefing-host');
+  if (!pane || !host) return;
+  host.textContent = '';
+  if (!brief || brief.state === 'not_assessed') { pane.hidden = true; return; }
+  pane.hidden = false;
+  host.appendChild(renderBriefing(brief, matterId, version));
+}
+
 function renderTurn(entry) {
   const wrap = document.createElement('div');
   wrap.className = 'turn';
@@ -757,6 +845,17 @@ function renderTurn(entry) {
       fold.appendChild(d);
     }
     wrap.appendChild(fold);
+  }
+
+  // P24. INTAKE READINESS, which the turn completing does not establish. The
+  // block names whether the file is ready, the open needs, and the needs the
+  // advocate marked unavailable with their resume trigger -- and offers the
+  // stop ("I can't get this") and resume controls, so the loop is a decision.
+  const brief = entry.answer.briefing;
+  if (brief && brief.state && brief.state !== 'not_assessed'
+      && (brief.state !== 'ready' || (brief.paused || []).length)) {
+    wrap.appendChild(renderBriefing(brief, entry.answer.matter_id,
+                                    entry.answer.matter_version));
   }
 
   // THE GATES THAT FIRED. A gate whose response is `disclose` and which the
@@ -1135,7 +1234,7 @@ function showTab(name) {
   document.querySelectorAll('#tabs .tab').forEach((b) => {
     b.classList.toggle('is-on', b.dataset.tab === name);
   });
-  if (name === 'search') $('q').focus();
+  if (name === 'search') { researchEnabled(); $('q').focus(); }
   if (name === 'history') loadHistoryMatters();
   if (name === 'casefile') loadCasefileMatters();
 }
@@ -1287,6 +1386,14 @@ function renderSearch(d) {
 
 $('search-form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
+  // P21. RESEARCH ON THE OPEN MATTER, when the advocate asked for it. The
+  // same box, the same filters; what changes is that the round is RECORDED
+  // on the file -- which index, what came back, what the adverse search did
+  // -- and the results are cases the file can then read and attach from.
+  if ($('r-on').checked) {
+    await runResearchRound();
+    return;
+  }
   const params = new URLSearchParams({
     q: $('q').value,
     limit: '25',
@@ -1316,6 +1423,286 @@ $('search-form').addEventListener('submit', async (ev) => {
       `The search did not run: ${err.message}. This says nothing about what the corpus holds.`));
   }
 });
+
+/* ===================== P21 — RESEARCH ON THE MATTER =====================
+ *
+ * Finding is not verifying. A round of research surfaces CASES; a case is
+ * opened to its paragraphs, read back by locator; a paragraph is attached to
+ * the issue with its own words and comes back with five separate verdicts --
+ * identity, quote, support, treatment, applicability -- none of which the
+ * client computes and all of which it shows. The four outcomes of a search
+ * are four different sentences, because a zero has four causes.
+ */
+
+const OUTCOME_SAID = {
+  results: 'Results',
+  searched_no_results: 'Searched — no case matched. This says what the index holds, not what the law is.',
+  unsupported_coverage: 'Not searched — the court or jurisdiction asked for is outside what this corpus holds.',
+  unavailable_index: 'Not searched — the index could not answer.',
+};
+
+function outcomeBlock(outcome, why) {
+  const kind = outcome === 'results' ? 'quiet'
+    : outcome === 'searched_no_results' ? 'quiet' : 'loud';
+  const el = stateBlock(kind, `${OUTCOME_SAID[outcome] || outcome}${why ? ` ${why}` : ''}`);
+  el.dataset.outcome = outcome;
+  el.id = 'research-outcome';
+  return el;
+}
+
+function researchEnabled() {
+  const on = !!state.matterId;
+  $('r-on').disabled = !on;
+  if (!on) $('r-on').checked = false;
+  $('research-fields').hidden = !$('r-on').checked;
+  $('r-matter').textContent = on
+    ? `on the open matter (v${state.matterVersion ?? '?'})`
+    : 'open a matter to record research on it';
+  loadResearchRecord();
+}
+
+// THE RECORD IS READ FROM THE FILE, not remembered by the page. Opening the
+// pane on a matter shows the latest research need as the file holds it --
+// rounds, adverse search, reliances -- so a reload, a second tab or a
+// second day all show the same record. No matter open: the panel is hidden,
+// which is a state and not an empty record.
+async function loadResearchRecord() {
+  const panel = $('research-record');
+  if (!state.matterId) { panel.hidden = true; panel.textContent = ''; return; }
+  let d;
+  try {
+    d = await api(`/api/matters/${state.matterId}/research`);
+  } catch (err) {
+    panel.hidden = false;
+    panel.textContent = '';
+    panel.appendChild(stateBlock('loud', `The research record could not be read: ${err.message}`));
+    return;
+  }
+  const rows = d.research || [];
+  if (!rows.length) { panel.hidden = true; panel.textContent = ''; return; }
+  renderResearchRecord(rows[rows.length - 1]);
+}
+
+async function runResearchRound() {
+  const st = $('search-state');
+  const body = $('search-results');
+  body.textContent = ''; st.textContent = '';
+  $('search-index').hidden = true;
+  const objective = $('r-objective').value.trim();
+  const issue = $('r-issue').value.trim();
+  if (!objective || !issue) {
+    st.appendChild(stateBlock('loud', 'Say what this research is for and which issue it serves.'));
+    return;
+  }
+  const payload = {
+    objective, issue,
+    query: $('q').value.trim(),
+    citation: $('r-citation').value.trim(),
+    expected_version: state.matterVersion,
+  };
+  const court = $('f-court').value.trim();
+  const from = $('f-from').value.trim();
+  const to = $('f-to').value.trim();
+  if (court) payload.court = court;
+  if (from) payload.from_year = Number(from);
+  if (to) payload.to_year = Number(to);
+  st.appendChild(stateBlock('quiet', 'Searching and recording…'));
+  let out;
+  try {
+    out = await api(`/api/matters/${state.matterId}/research`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    st.textContent = '';
+    const detail = err.detail || {};
+    st.appendChild(stateBlock('loud',
+      `The research round did not run: ${detail.why || err.message}. This says nothing about what the corpus holds.`));
+    return;
+  }
+  state.matterVersion = out.version;
+  st.textContent = '';
+  st.appendChild(outcomeBlock(out.outcome, (out.discovery && out.discovery.why) || (out.resolution && out.resolution.why) || ''));
+  if (out.discovery) {
+    renderIndexLine(out.discovery);
+    renderCases(out.research.id, out.discovery);
+  } else if (out.resolution && out.resolution.case_id) {
+    renderCases(out.research.id, { cases: [{
+      case_id: out.resolution.case_id, case_name: `resolved from ${out.resolution.raw}`,
+      court: '', year: null, paragraphs_matched: 0, snippet: '', origin: 'resolved',
+      band: 'exact citation',
+    }] });
+  }
+  renderResearchRecord(out.research);
+}
+
+function renderCases(researchId, discovery) {
+  const body = $('search-results');
+  const list = document.createElement('div');
+  list.className = 'cases';
+  list.id = 'research-cases';
+  (discovery.cases || []).forEach((c) => {
+    const card = document.createElement('article');
+    card.className = 'case';
+    card.dataset.caseId = c.case_id;
+    const head = document.createElement('header');
+    const name = document.createElement('span');
+    name.className = 'hit-name'; name.textContent = c.case_name;
+    const meta = document.createElement('span');
+    meta.className = 'hit-meta';
+    meta.textContent = `${c.court || ''}${c.year ? ` · ${c.year}` : ''}` +
+      (c.paragraphs_matched ? ` · ${c.paragraphs_matched} paragraph${c.paragraphs_matched === 1 ? '' : 's'} matched` : '');
+    const prov = document.createElement('span');
+    prov.className = `pill ${c.origin === 'searched' ? 'searched' : 'resolved'}`;
+    prov.textContent = `${c.origin} · ${c.band}`;
+    head.append(name, meta, prov);
+    const snippet = document.createElement('p');
+    snippet.className = 'hit-text'; snippet.textContent = c.snippet || '';
+    const open = document.createElement('button');
+    open.type = 'button'; open.className = 'ghost open-case';
+    open.textContent = 'Open the case';
+    open.setAttribute('aria-label', `Open the case: ${c.case_name}`);
+    const into = document.createElement('div');
+    into.className = 'expansion';
+    open.addEventListener('click', () => expandCase(researchId, c.case_id, into));
+    card.append(head, snippet, open, into);
+    list.appendChild(card);
+  });
+  body.appendChild(list);
+}
+
+async function expandCase(researchId, caseId, into) {
+  into.textContent = '';
+  into.appendChild(stateBlock('quiet', 'Reading the case back…'));
+  let d;
+  try {
+    d = await api(`/api/matters/${state.matterId}/research/${researchId}/cases/${encodeURIComponent(caseId)}`);
+  } catch (err) {
+    into.textContent = '';
+    into.appendChild(stateBlock('loud', `The case could not be read back: ${err.message}`));
+    return;
+  }
+  into.textContent = '';
+  if (d.coverage === 'not_assessed') {
+    into.appendChild(stateBlock('loud', `NOT READ — ${d.why}`));
+    return;
+  }
+  const cover = document.createElement('p');
+  cover.className = 'case-cover';
+  // THREE VALUES FOR COMPLETENESS, each its own sentence.
+  const complete = d.complete === true ? 'every paragraph the source holds'
+    : d.complete === false ? 'the attributable paragraphs only — facts and submissions are not here'
+    : 'coverage of this case not measured';
+  cover.textContent = `${d.paragraph_count} paragraph${d.paragraph_count === 1 ? '' : 's'} read back by locator · ${complete}` +
+    (d.case ? ` · ${d.case.bench}` : '');
+  into.appendChild(cover);
+  (d.paragraphs || []).forEach((para) => {
+    const row = document.createElement('div');
+    row.className = 'para';
+    row.dataset.locator = para.locator;
+    const lab = document.createElement('div');
+    lab.className = 'para-meta';
+    lab.textContent = `${para.para_type} · ${para.locator} · ${para.origin}`;
+    const text = document.createElement('p');
+    text.className = 'para-text'; text.textContent = para.text;
+    const attach = document.createElement('button');
+    attach.type = 'button'; attach.className = 'ghost attach';
+    attach.textContent = 'Attach to the issue';
+    attach.setAttribute('aria-label', `Attach paragraph ${para.locator} to the issue`);
+    const verdicts = document.createElement('div');
+    verdicts.className = 'verdicts';
+    attach.addEventListener('click', () => attachParagraph(researchId, para, verdicts));
+    row.append(lab, text, attach, verdicts);
+    into.appendChild(row);
+  });
+}
+
+async function attachParagraph(researchId, para, verdicts) {
+  verdicts.textContent = '';
+  verdicts.appendChild(stateBlock('quiet', 'Attaching…'));
+  let out;
+  try {
+    out = await api(`/api/matters/${state.matterId}/research/${researchId}/attach`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ locator: para.locator, quote: para.text,
+                             expected_version: state.matterVersion }),
+    });
+  } catch (err) {
+    verdicts.textContent = '';
+    const detail = err.detail || {};
+    verdicts.appendChild(stateBlock('loud',
+      `Not attached: ${detail.why || err.message}` +
+      (detail.identity ? ` (identity: ${detail.identity}, quote: ${detail.quote_fidelity})` : '')));
+    return;
+  }
+  state.matterVersion = out.version;
+  verdicts.textContent = '';
+  renderVerdicts(verdicts, out.reliance);
+  renderResearchRecord(out.research);
+}
+
+// FIVE VERDICTS, FIVE ROWS. Never one word for all of them.
+function renderVerdicts(into, a) {
+  const dl = document.createElement('dl');
+  dl.className = 'r-fields verdict-list';
+  const pillFor = (v, good) => ({ pill: v === good ? 'ok' : v.includes('not_') ? 'unknown' : 'blocked', text: v });
+  field(dl, 'identity', pillFor(a.identity, 'resolved'));
+  field(dl, 'quote', pillFor(a.quote_fidelity, 'verbatim'));
+  field(dl, 'support', pillFor(a.support, 'supports'));
+  field(dl, 'treatment', { pill: a.treatment_state === 'clean' ? 'ok' : a.treatment_state === 'negative' ? 'blocked' : 'unknown', text: a.treatment_state });
+  field(dl, 'applies here', pillFor(a.applicability, 'binding'));
+  const note = document.createElement('p');
+  note.className = 'verdict-note';
+  note.textContent = `${a.verified_citation ? 'Verified citation — identity and words only.' : 'Not a verified citation.'} ` +
+    `Support is ${a.support.replace(/_/g, ' ')}: nothing here reads meaning. ` +
+    (a.treatment_scope ? `Treatment: ${a.treatment_scope} ` : '') +
+    (a.applicability_because ? `Applicability: ${a.applicability_because}` : '');
+  into.append(dl, note);
+}
+
+function renderResearchRecord(r) {
+  const panel = $('research-record');
+  panel.hidden = false;
+  panel.textContent = '';
+  panel.dataset.researchId = r.id;
+  const h = document.createElement('h3');
+  h.textContent = `Research record — ${r.objective}`;
+  const dl = document.createElement('dl');
+  dl.className = 'r-fields';
+  field(dl, 'issue', r.issue);
+  field(dl, 'rounds', `${r.rounds} of ${r.round_limit}${r.stopped_because ? ` — ${r.stopped_because}` : ''}`);
+  field(dl, 'adverse search', { pill: r.clean_bill === 'clean' ? 'ok' : r.clean_bill === 'adverse_found' ? 'blocked' : 'unknown',
+    text: r.clean_bill === 'not_assessed' ? 'not assessed — no clean bill can be given' : r.clean_bill });
+  panel.append(h, dl);
+  (r.consulted || []).forEach((c) => {
+    const li = document.createElement('div');
+    li.className = 'consulted';
+    li.textContent = `${c.index} — ${c.query} → ${c.outcome}` +
+      (c.corpus_version ? ` · corpus ${c.corpus_version}` : '') +
+      (c.court_read_as ? ` · ${c.court_read_as}` : '') +
+      (c.held != null && c.of_source != null ? ` · ${c.held} of ${c.of_source} paragraphs held` : '');
+    panel.appendChild(li);
+  });
+  (r.adverse || []).forEach((a) => {
+    const li = document.createElement('div');
+    li.className = 'adverse';
+    li.textContent = `adverse search ${a.state}: ${a.target}` +
+      (a.found && a.found.length ? ` — negative treatment found for ${a.found.join(', ')}` : '') +
+      (a.why ? ` — ${a.why}` : '');
+    panel.appendChild(li);
+  });
+  (r.reliances || []).forEach((a) => {
+    const li = document.createElement('div');
+    li.className = 'attached';
+    li.dataset.locator = a.locator;
+    li.textContent = `attached to ${a.issue}: ${a.locator} — identity ${a.identity}, quote ${a.quote_fidelity}, ` +
+      `support ${a.support}, treatment ${a.treatment_state}, applies ${a.applicability}` +
+      (a.source_version ? ` · source ${a.source_version}` : '');
+    panel.appendChild(li);
+  });
+}
+
+$('r-on').addEventListener('change', researchEnabled);
 
 /* ============================ THE RECORD =============================
  *
@@ -1387,6 +1774,17 @@ async function showCasefile(matterId) {
     st.appendChild(stateBlock('loud', `The case file is ${file.state}.`));
   }
   renderCurrency(deps);
+  try {
+    const cover = await api(`/api/matters/${matterId}/cover`);
+    renderPremises(matterId, cover.premises, file.version);
+    renderRelief(matterId, cover.relief, file.version);
+    renderBriefingPane(matterId, cover.briefing, file.version);
+  } catch (err) {
+    $('premises').hidden = false;
+    $('premises-state').textContent = '';
+    $('premises-state').appendChild(stateBlock('loud',
+      `The legal premises could not be read: ${err.message}`));
+  }
 
   const live = new Set((file.live || []).map((e) => e.fact_id));
   (file.entries || []).forEach((e) => {
@@ -1395,6 +1793,221 @@ async function showCasefile(matterId) {
   if (!(file.entries || []).length) {
     entries.appendChild(stateBlock('empty', 'Nothing has been recorded on this file yet.'));
   }
+}
+
+// P22. THE LEGAL PREMISES, per thread, with a Confirm control for one the
+// product INFERRED. The state pill is `established`, `conditional`,
+// `inconsistent` or `not assessed` -- never a blank that reads as settled.
+// Confirming an inferred accrual states it and the next brief makes the date
+// a deadline; the control posts to the premise route and re-reads the file.
+function renderPremises(matterId, prem, version) {
+  const panel = $('premises');
+  const stateEl = $('premises-state');
+  const body = $('premises-threads');
+  stateEl.textContent = ''; body.textContent = '';
+  if (!prem || prem.state === 'not_assessed') { panel.hidden = true; return; }
+  panel.hidden = false;
+
+  const pill = document.createElement('span');
+  pill.className = 'pill ' + (prem.state === 'established' ? 'ok'
+    : prem.state === 'inconsistent' ? 'blocked' : 'unknown');
+  pill.textContent = prem.state === 'established' ? 'established'
+    : prem.state === 'inconsistent' ? 'INCONSISTENT'
+    : prem.state === 'conditional' ? 'conditional' : prem.state;
+  pill.dataset.premises = prem.state;
+  const said = document.createElement('span');
+  said.className = 'currency-said'; said.textContent = ' ' + (prem.said || '');
+  stateEl.append(pill, said);
+
+  (prem.threads || []).forEach((t) => {
+    const card = document.createElement('div');
+    card.className = 'premise-thread';
+    card.dataset.threadId = t.thread_id;
+    const h = document.createElement('h4'); h.textContent = t.thread;
+    card.appendChild(h);
+    (t.premises || []).forEach((p) => {
+      const row = document.createElement('div');
+      row.className = 'premise-row';
+      row.dataset.kind = p.kind;
+      const dl = document.createElement('dl'); dl.className = 'r-fields';
+      field(dl, p.kind.replace(/_/g, ' '), p.statement || '—');
+      field(dl, 'basis', {
+        pill: p.basis === 'stated' ? 'ok' : p.basis === 'inferred' ? 'unknown' : 'searched',
+        text: p.basis });
+      field(dl, 'review', p.review_state === 'reviewed'
+        ? `reviewed by ${p.reviewed_by}` : 'not assessed');
+      row.appendChild(dl);
+      if (p.basis === 'inferred') {
+        (p.alternatives || []).forEach((a) => {
+          const alt = document.createElement('div');
+          alt.className = 'premise-alt'; alt.textContent = `alternative: ${a}`;
+          row.appendChild(alt);
+        });
+        row.appendChild(premiseForm(matterId, t.thread_id, p.kind, version));
+      }
+      card.appendChild(row);
+    });
+    body.appendChild(card);
+  });
+}
+
+function premiseForm(matterId, threadId, kind, version) {
+  const form = document.createElement('form');
+  form.className = 'premise-confirm';
+  const lab = document.createElement('label');
+  lab.htmlFor = `prem-${threadId}-${kind}`;
+  lab.textContent = 'State it (and I will compute a deadline from it) ';
+  const inp = document.createElement('input');
+  inp.id = `prem-${threadId}-${kind}`; inp.name = 'statement';
+  inp.placeholder = 'e.g. time runs from the date fixed for repayment';
+  const go = document.createElement('button');
+  go.type = 'submit'; go.className = 'primary'; go.textContent = 'Confirm premise';
+  const stateEl = document.createElement('span'); stateEl.className = 'hint premise-state';
+  form.append(lab, inp, go, stateEl);
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const statement = inp.value.trim();
+    if (!statement) { stateEl.textContent = 'Say what the premise is.'; return; }
+    stateEl.textContent = 'Recording…';
+    try {
+      const out = await api(`/api/matters/${matterId}/threads/${threadId}/premises/${kind}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statement, source: 'the advocate', expected_version: version }),
+      });
+      if (state.matterId === matterId) state.matterVersion = out.version;
+      stateEl.textContent = 'Recorded. Brief me again and the date becomes a deadline.';
+      await showCasefile(matterId);
+    } catch (err) {
+      const detail = err.detail || {};
+      stateEl.textContent = detail.why || err.message;
+      if (detail.code === 'STALE_VERSION') await showCasefile(matterId);
+    }
+  });
+  return form;
+}
+
+// P23. RELIEF AND ENFORCEABILITY, per thread. The state pill is `serveable`,
+// `no useful relief` or `not assessed` -- and a disproportionate route is shown
+// ALONGSIDE, never hidden (E3). The form states a remedy's coordinates; the
+// next brief re-reads them and the recommendation changes when the relief is
+// unavailable, hollow, late or unenforceable. The panel stays visible so the
+// advocate can state relief even before anything has been assessed.
+const RELIEF_COORDS = {
+  availability: ['not_assessed', 'available', 'unavailable'],
+  value: ['not_assessed', 'substantial', 'hollow'],
+  timing: ['not_assessed', 'timely', 'late'],
+  enforceability: ['not_assessed', 'enforceable', 'unenforceable'],
+  proportionality: ['not_assessed', 'proportionate', 'disproportionate'],
+};
+
+function renderRelief(matterId, rel, version) {
+  const panel = $('relief');
+  const stateEl = $('relief-state');
+  const body = $('relief-threads');
+  stateEl.textContent = ''; body.textContent = '';
+  if (!rel || !(rel.threads || []).length) { panel.hidden = true; return; }
+  panel.hidden = false;
+
+  const pill = document.createElement('span');
+  pill.className = 'pill ' + (rel.state === 'serveable' ? 'ok'
+    : rel.state === 'no_useful_relief' ? 'blocked' : 'unknown');
+  pill.textContent = rel.state === 'no_useful_relief' ? 'no useful relief'
+    : rel.state;
+  pill.dataset.relief = rel.state;
+  const said = document.createElement('span');
+  said.className = 'currency-said'; said.textContent = ' ' + (rel.said || '');
+  stateEl.append(pill, said);
+
+  (rel.threads || []).forEach((t) => {
+    const card = document.createElement('div');
+    card.className = 'premise-thread'; card.dataset.threadId = t.thread_id;
+    const h = document.createElement('h4');
+    h.textContent = t.thread
+      + (t.objective ? ` — objective: ${t.objective.statement} (${t.objective.basis})` : '');
+    card.appendChild(h);
+
+    if (t.state === 'not_assessed') {
+      card.appendChild(stateBlock('empty',
+        'No relief has been assessed on this thread yet.'));
+    }
+    (t.reliefs || []).forEach((r) => {
+      const row = document.createElement('div');
+      row.className = 'premise-row'; row.dataset.remedy = r.remedy;
+      const dl = document.createElement('dl'); dl.className = 'r-fields';
+      field(dl, 'remedy', r.remedy);
+      ['availability', 'value', 'timing', 'enforceability', 'proportionality']
+        .forEach((c) => field(dl, c, {
+          pill: (r[c] === 'available' || r[c] === 'substantial'
+                 || r[c] === 'timely' || r[c] === 'enforceable'
+                 || r[c] === 'proportionate') ? 'ok'
+            : r[c] === 'not_assessed' ? 'searched' : 'blocked',
+          text: r[c].replace(/_/g, ' ') }));
+      field(dl, 'basis', { pill: r.basis === 'stated' ? 'ok'
+        : r.basis === 'inferred' ? 'unknown' : 'searched', text: r.basis });
+      if (r.reason) field(dl, 'reason', r.reason);
+      row.appendChild(dl);
+      card.appendChild(row);
+    });
+    (t.disproportionate || []).forEach((d) => {
+      const alt = document.createElement('div');
+      alt.className = 'premise-alt';
+      alt.textContent = `cost against recovery: ${d.remedy} — ${d.why} (stated alongside, not withheld)`;
+      card.appendChild(alt);
+    });
+    card.appendChild(reliefForm(matterId, t.thread_id, version));
+    body.appendChild(card);
+  });
+}
+
+function reliefForm(matterId, threadId, version) {
+  const form = document.createElement('form');
+  form.className = 'premise-confirm relief-confirm';
+  const remedy = document.createElement('input');
+  remedy.name = 'remedy'; remedy.placeholder = 'remedy, e.g. a money decree';
+  const objective = document.createElement('input');
+  objective.name = 'objective'; objective.placeholder = 'objective (optional)';
+  const selects = {};
+  Object.entries(RELIEF_COORDS).forEach(([name, opts]) => {
+    const sel = document.createElement('select'); sel.name = name;
+    opts.forEach((o) => {
+      const opt = document.createElement('option');
+      opt.value = o; opt.textContent = `${name}: ${o.replace(/_/g, ' ')}`;
+      sel.appendChild(opt);
+    });
+    selects[name] = sel;
+  });
+  const reason = document.createElement('input');
+  reason.name = 'reason'; reason.placeholder = 'why (optional)';
+  const go = document.createElement('button');
+  go.type = 'submit'; go.className = 'primary'; go.textContent = 'State relief';
+  const stateEl = document.createElement('span');
+  stateEl.className = 'hint premise-state';
+  form.append(remedy, objective, ...Object.values(selects), reason, go, stateEl);
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    if (!remedy.value.trim()) { stateEl.textContent = 'Name the remedy.'; return; }
+    stateEl.textContent = 'Recording…';
+    const payload = {
+      remedy: remedy.value.trim(), objective: objective.value.trim(),
+      reason: reason.value.trim(), source: 'the advocate',
+      expected_version: version,
+    };
+    Object.keys(RELIEF_COORDS).forEach((c) => { payload[c] = selects[c].value; });
+    try {
+      const out = await api(`/api/matters/${matterId}/threads/${threadId}/relief`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (state.matterId === matterId) state.matterVersion = out.version;
+      stateEl.textContent = 'Recorded. Brief me again and the recommendation weighs it.';
+      await showCasefile(matterId);
+    } catch (err) {
+      const detail = err.detail || {};
+      stateEl.textContent = detail.why || err.message;
+      if (detail.code === 'STALE_VERSION') await showCasefile(matterId);
+    }
+  });
+  return form;
 }
 
 // P18. THE CURRENCY BLOCK. Three states at the top and the third is a file

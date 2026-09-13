@@ -42,6 +42,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from nm.domain.answer import Mode, Route
+from nm.domain.text import snippet
 from nm.domain.traceability import implements
 
 #: THE THREE THINGS A ROUTE SAYS, named so nothing has to match prose.
@@ -179,7 +180,7 @@ def interpret(said: dict) -> ReadRoute:
 
     raw = str(said.get("discloses") or "").strip().lower()
     depth = str(said.get("depth") or "").strip().lower()
-    why = " ".join(str(said.get("why") or "").split())[:160]
+    why = snippet(said.get("why"), 160)
     mode = Mode.FULL_BRIEF if depth == "a_full_brief" else Mode.SHORT_QUESTION
 
     if raw == "about_the_product":

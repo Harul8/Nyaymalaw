@@ -43,14 +43,14 @@ _TRACE = (
     "  [T3b] trace-only 24 of 44: A1, A2, A3, A4, B1, B3, B4, B5, C1, "
     "C3, C4, C5, C7, D1, D2, D3, D4, D5, D6, D7, D8, D9, E2, I1\n"
     "  [T3c] authored-none/code-present 1 of 44: C6\n"
-    # D2 WAS HERE AND IS NOT. P22 built the legal-premise gate and
-    # `tests/test_arithmetic_cannot_establish_the_law.py` declares
-    # `@refuses("D2", 4)`, so `TRACE-D2` started passing and the registry
-    # shrank. This fixture is the declared red the gate commits over, so it
-    # shrinks with it -- which is the third outcome working on the control's
-    # own test data rather than only on the product's.
-    "  [T7] C1: 1 of 5 NEVER clauses have no test declaring @refuses\n"
-    "TRACE FAILED  -- 3 failure(s), 29 warning(s)\n"
+    # D2 AND C1 WERE HERE AND ARE NOT. P22 built the legal-premise gate
+    # (`@refuses("D2", 4)`) and P24 built the adaptive briefing (`@refuses("C1",
+    # 4)` in tests/test_briefing_readiness_is_not_completion.py), so `TRACE-D2`
+    # and then `TRACE-C1` started passing and the registry shrank. This fixture
+    # is the declared red the gate commits over, so it shrinks with it -- the
+    # third outcome working on the control's own test data, not only the
+    # product's.
+    "TRACE FAILED  -- 2 failure(s), 29 warning(s)\n"
 )
 
 
@@ -60,9 +60,24 @@ def _declared(step: str) -> Observed:
 
 
 def _seen(pytest_out: str = "", trace_out: str = _TRACE):
+    """The declared class-A red stands in for itself, exactly as ruff's does.
+
+    This fixture never runs pytest, so while nothing was declared for class_a
+    an empty observation was harmless. With the twenty-one saved-workbook rows
+    declared it is not: they would read as `fixed` -- the registry's third
+    outcome, *a declared failure that has started passing* -- and the negative
+    control below would then block on the fixture rather than on anything the
+    product did.
+
+    A planted `pytest_out` is UNIONED with the declared set rather than
+    replacing it, so a test that plants one new failure is adding exactly one
+    thing and not also silently removing twenty-one.
+    """
+    planted = (observed("class_a", pytest_out, failed=True).facts
+               if pytest_out else frozenset())
     return {
-        "class_a": observed("class_a", pytest_out, failed=bool(pytest_out)),
-        "pytest": observed("pytest", pytest_out, failed=bool(pytest_out)),
+        "class_a": Observed(_declared("class_a").facts | planted),
+        "pytest": Observed(_declared("pytest").facts | planted),
         "trace": observed("trace", trace_out, failed=True),
         "ruff": _declared("ruff"),
     }
@@ -87,9 +102,30 @@ def test_the_declared_red_is_recognised_as_unchanged():
     assert verdict.matched == [row.id for row in ROWS]
 
 
+def test_one_more_class_a_failure_beside_the_declared_ones_still_blocks():
+    """THE CONTROL FOR THE FIXTURE ABOVE, and it is not decoration.
+
+    `_seen` now hands the declared class-A facts back as observed, because
+    this file never runs pytest. That is the shape of a stand-in that could
+    quietly answer "everything declared is failing, nothing else is" whatever
+    the real run reported -- so the fixture is made to carry one MORE failure
+    than the registry declares, and the verdict has to block on exactly it.
+
+    Without this, the twenty-one saved-workbook rows would have been declared
+    behind a control that could no longer tell a scoped run from a broken one.
+    """
+    verdict = compare(ROWS, _seen(pytest_out=_PYTEST),
+                      {"class_a", "pytest", "trace", "ruff"})
+    assert not verdict.ok, "an undeclared class-A failure was absorbed"
+    assert any(_PRODUCES in fact for _step, fact in verdict.new), (
+        f"the planted failure is not in {verdict.new}")
+    assert verdict.fixed == [], (
+        f"the declared rows read as fixed: {verdict.fixed}")
+
+
 def test_a_trace_failure_t99_nobody_registered_blocks():
     planted = _TRACE.replace(
-        "TRACE FAILED  -- 3",
+        "TRACE FAILED  -- 2",
         "  [T99] planted trace failure\nTRACE FAILED  -- 5",
     )
     verdict = compare(ROWS, _seen(trace_out=planted), set(_seen()))
@@ -99,21 +135,21 @@ def test_a_trace_failure_t99_nobody_registered_blocks():
 
 
 def test_a_changed_trace_reason_is_a_new_fact_and_a_missing_old_fact():
-    planted = _TRACE.replace("C1: 1 of 5", "C1: 2 of 5")
+    planted = _TRACE.replace("1 of 44: C6", "2 of 44: C6")
     verdict = compare(ROWS, _seen(trace_out=planted), set(_seen()))
     assert not verdict.ok
-    assert "TRACE-C1" in verdict.fixed
-    assert any("C1: 2 of 5" in fact for _, fact in verdict.new)
+    assert "TRACE-T3C" in verdict.fixed
+    assert any("2 of 44: C6" in fact for _, fact in verdict.new)
 
 
 def test_a_missing_declared_trace_failure_blocks():
     planted = _TRACE.replace(
-        "  [T7] C1: 1 of 5 NEVER clauses have no test declaring @refuses\n",
+        "  [T3c] authored-none/code-present 1 of 44: C6\n",
         "",
-    ).replace("TRACE FAILED  -- 3", "TRACE FAILED  -- 2")
+    ).replace("TRACE FAILED  -- 2", "TRACE FAILED  -- 1")
     verdict = compare(ROWS, _seen(trace_out=planted), set(_seen()))
     assert not verdict.ok
-    assert "TRACE-C1" in verdict.fixed
+    assert "TRACE-T3C" in verdict.fixed
 
 
 @pytest.mark.parametrize(
@@ -191,7 +227,7 @@ def test_an_unparseable_nonzero_step_is_new_and_cannot_be_declared():
 def test_unexplained_now_means_any_set_difference_in_either_direction():
     assert not unexplained("trace", ROWS, observed("trace", _TRACE, failed=True))
     extra = _TRACE.replace(
-        "TRACE FAILED  -- 3",
+        "TRACE FAILED  -- 2",
         "  [T99] extra\nTRACE FAILED  -- 5",
     )
     assert unexplained("trace", ROWS, observed("trace", extra, failed=True))
@@ -212,8 +248,8 @@ def test_t3b_membership_is_exact_even_when_the_count_does_not_move():
     "mutation,expected",
     [
         ("new", "T99"),
-        ("changed", "C1: 2 of 5"),
-        ("fixed", "TRACE-C1"),
+        ("changed", "2 of 44: C6"),
+        ("fixed", "TRACE-T3C"),
         ("uncaptured", "observer-gap"),
         ("unreadable", "unsupported schema"),
     ],
@@ -229,20 +265,20 @@ def test_bk80_ac7_rejects_every_non_exact_failure_population(
     """
     if mutation == "new":
         output = _TRACE.replace(
-            "TRACE FAILED  -- 3",
+            "TRACE FAILED  -- 2",
             "  [T99] planted trace failure\nTRACE FAILED  -- 5",
         )
         verdict = compare(ROWS, _seen(trace_out=output), set(_seen()))
         observed_result = "\n".join(fact for _, fact in verdict.new)
     elif mutation == "changed":
-        output = _TRACE.replace("C1: 1 of 5", "C1: 2 of 5")
+        output = _TRACE.replace("1 of 44: C6", "2 of 44: C6")
         verdict = compare(ROWS, _seen(trace_out=output), set(_seen()))
         observed_result = "\n".join(fact for _, fact in verdict.new)
     elif mutation == "fixed":
         output = _TRACE.replace(
-            "  [T7] C1: 1 of 5 NEVER clauses have no test declaring @refuses\n",
+            "  [T3c] authored-none/code-present 1 of 44: C6\n",
             "",
-        ).replace("TRACE FAILED  -- 3", "TRACE FAILED  -- 2")
+        ).replace("TRACE FAILED  -- 2", "TRACE FAILED  -- 1")
         verdict = compare(ROWS, _seen(trace_out=output), set(_seen()))
         observed_result = "\n".join(verdict.fixed)
     elif mutation == "uncaptured":
@@ -344,4 +380,4 @@ def test_a_step_that_did_not_run_is_not_evidence_its_failure_is_fixed():
     verdict = compare(ROWS, _seen(), {"trace"})
     assert verdict.ok, (verdict.new, verdict.fixed)
     assert "RUFF-PLANNING-DEBT" not in verdict.fixed
-    assert "TRACE-C1" in verdict.matched
+    assert "TRACE-T3C" in verdict.matched
