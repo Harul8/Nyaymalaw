@@ -6241,6 +6241,71 @@ semantic and security fixes; disable the Preparation tab pending correction.
 **Exclusions.** No assistive-technology conformance claim, no measured
 reorientation time — both need a person with the tool in front of them.
 
+### P44 Start record — the court and the right become selection rules — 14 September 2026
+
+**Outcome sought.** BK-24-AC1, and the ten obligations the packet carries. Six
+were already met by the mechanism built on 11 September and are NOT rebuilt:
+eligibility is applied before priority so citation count orders only within one
+source year; accepted and rejected candidates carry stable ids and reasons;
+bytes stage under a run path and never touch the active corpus;
+`reconcile_acquisition` reconciles receipts. Both of BK-24-AC1's required
+evidence kinds already read PASS and still do.
+
+**Four gaps, found by reading the module rather than by running it.**
+
+**THE COURT WAS NOT A SELECTION RULE.** `issuing_body` was carried on every
+candidate and used only to compose a canonical source id, so an approval to
+take High Court judgments admitted anything filed anywhere in the jurisdiction.
+It is now part of the scope and is checked — and a candidate whose source
+recorded no court is UNRESOLVED rather than rejected, because "no court" and
+"the wrong court" are different findings. The API adapter's
+`issuing_body=court or doctype` fallback went with it: a jurisdiction standing
+in a court's field is the same conflation one layer down, and it made every API
+candidate claim to come from a court named "telangana".
+
+**THE RIGHT TO ACQUIRE WAS NOT A SELECTION RULE.** Rights were recorded on the
+STAGED bytes — honest about what had already been fetched, and silent on
+whether it should have been. `AcquisitionScope.source_rights` records the
+reviewed right where the authorisation is, and its constructor refuses UNKNOWN:
+an authorisation id is a REFERENCE to a decision, not the decision.
+`JudgmentCandidate.rights` may only NARROW it, so a sealed judgment is
+restricted out of a permitted source and nothing can declare itself permitted
+out of a restricted one.
+
+**SIX CLAIMS WERE THREE.** `Stage` names discovered, acquired, quarantined,
+verified, published and applicable. Acquisition reaches QUARANTINED and no
+function in the module returns APPLICABLE — asserted structurally, because
+three checks in this build have matched a docstring and passed for it.
+
+**THE SUBMISSION TO P20 LIVED IN A TEST HELPER.** `CorpusSourceInput` already
+carried `acquisition_run` and `candidate_id`, and the only code building one
+from a run was inside `tests/test_immutable_corpus_publication.py`: a correct
+module with no path from the product to it, which is the shape CLAUDE.md
+section 8 records every externally-found defect as having.
+`submit_for_publication` offers a reconciled run and refuses an unreconciled
+one outright — offering the readable half of a run nobody can account for
+would publish exactly the members whose absence was the problem. It does not
+call `publish_corpus`: acquisition that could publish is acquisition that will.
+
+**And the receipt now says what acquisition does NOT establish** — currency,
+correctness, treatment, completeness. Each is owned elsewhere, and the
+inference this refuses is the cheapest one available.
+
+**Assumptions.** Local synthetic fixtures only. Nothing was scraped,
+downloaded, or sent to any external source.
+
+**Acceptance → proof.** BK-24-AC1 integration and adversarial **PASS**, on the
+existing witnesses plus the new counterexamples. **Acquisition remains OPEN**:
+no source/right approval has been given and no bounded external acquisition has
+been executed, so `EVAL-029`'s live population is **NOT RUN** and success here
+is proof about the mechanism rather than about any acquired law.
+
+**Rollback.** Suspend acquisition, retain rights/source/selection receipts and
+quarantine candidates; the active published snapshot is untouched.
+
+**Exclusions.** No scrape, no download, no external contact, no corpus
+publication.
+
 ### P44 acquisition-foundation Start record — 11 September 2026
 
 **Decision: BLOCKED on P19's scoped source-register output; contract ready.**

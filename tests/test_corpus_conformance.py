@@ -19,6 +19,7 @@ from nm.knowledge.manifest import (
     rollback_corpus,
     withdraw_corpus,
 )
+from nm.knowledge.source_registry import RightsState
 from nm.ports.evidence import Coverage, EvidenceNeed
 from tests.test_acquisition_receipts import _stage
 from tests.test_immutable_corpus_publication import (
@@ -264,13 +265,20 @@ def test_api_plan_and_request_use_the_same_explicit_date_interval(tmp_path, monk
 
     monkeypatch.setattr(fetch_judgments, "search", search)
     monkeypatch.setattr(fetch_judgments, "document", lambda _id: {
-        "tid": "1", "publishdate": "2026-09-11", "court": "telangana",
+        # A COURT, NOT THE DOCTYPE. `telangana` is the jurisdiction, and the
+        # adapter no longer fills the bench in from it -- a candidate whose
+        # source recorded no court is unresolved rather than admitted under a
+        # court named after a state.
+        "tid": "1", "publishdate": "2026-09-11",
+        "court": "High Court for the State of Telangana",
         "citedbyList": [],
     })
     monkeypatch.setattr(fetch_judgments.time, "sleep", lambda _delay: None)
     monkeypatch.setattr(fetch_judgments, "STAGING", tmp_path)
     assert fetch_judgments.run(
         2026, "telangana", 1, 1, 0, "", "AUTH-SYNTHETIC",
+        issuing_bodies=("High Court for the State of Telangana",),
+        source_rights=RightsState.PERMITTED,
         from_date=start, to_date=end,
     ) == 1
     assert seen == [("01-09-2026", "12-09-2026")]
@@ -284,6 +292,7 @@ def test_web_selection_uses_explicit_dates_including_recent_uncited_law(tmp_path
                         '<title>Recent</title><span>published 2026-09-11</span>')
     assert scrape_judgments.run(
         [2026], 1, 999, 10, 1, "AUTH-SYNTHETIC",
+        source_rights=RightsState.PERMITTED,
         from_date=date(2026, 9, 1), to_date=date(2026, 9, 12),
     ) == 0
     [run] = list(tmp_path.iterdir())

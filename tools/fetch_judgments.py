@@ -85,6 +85,7 @@ from nm.knowledge.acquisition import (  # noqa: E402
     select_candidates,
     stage_acquisition,
 )
+from nm.knowledge.source_registry import RightsState  # noqa: E402
 from tools._console import utf8_console  # noqa: E402
 
 utf8_console()
@@ -196,7 +197,12 @@ def candidate(document_row: dict, *, doctype: str,
         candidate_id=str(docid),
         source="api.indiankanoon.org",
         jurisdiction=doctype,
-        issuing_body=str(document_row.get("court") or doctype),
+        # NO FALLBACK TO THE DOCTYPE. `doctype` is the jurisdiction, and a
+        # row with no court recorded has no issuing body -- filling one in
+        # from the jurisdiction made every API candidate claim to come
+        # from a court named "telangana", which is the conflation P44 was
+        # opened about, inside the adapter that feeds it.
+        issuing_body=str(document_row.get("court") or "").strip(),
         document_type=doctype,
         source_url=f"{API}/doc/{docid}/",
         source_date=source_date(document_row),
@@ -207,6 +213,8 @@ def candidate(document_row: dict, *, doctype: str,
 
 def run(year: int, doctype: str, want: int, cap: int, delay: float,
         query: str, authorization_id: str, *,
+        issuing_bodies: tuple[str, ...] = (),
+        source_rights: RightsState = RightsState.UNKNOWN,
         from_date: date | None = None, to_date: date | None = None) -> int:
     """Fetch one exact scope, then use the shared explainable selection rule."""
     start, end = acquisition_dates(year, from_date=from_date, to_date=to_date)
@@ -251,6 +259,12 @@ def run(year: int, doctype: str, want: int, cap: int, delay: float,
         discovery_budget=cap,
         selection_budget=min(want, cap),
         authorization_id=authorization_id,
+        # THE COURTS THIS AUTHORISATION COVERS. The API's `doctype` is the
+        # jurisdiction, and a jurisdiction is not a court; the caller states
+        # the bench it was approved for, and an approval that named none is
+        # refused rather than read as "all of them".
+        issuing_bodies=issuing_bodies,
+        source_rights=source_rights,
     )
     selection = select_candidates(scope, observed)
     by_id = {row.candidate_id: row for row in observed}
@@ -289,6 +303,14 @@ def main() -> int:
     ap.add_argument("--to-date", type=date.fromisoformat,
                     help="inclusive approved source-date upper bound, YYYY-MM-DD")
     ap.add_argument("--doctype", default=TELANGANA)
+    ap.add_argument("--source-rights", default="unknown",
+                    choices=[s.value for s in RightsState],
+                    help="the REVIEWED right to take from this source. "
+                         "`unknown` is refused with --run: an authorisation "
+                         "id is a reference to a decision, not the decision.")
+    ap.add_argument("--issuing-body", action="append", default=[],
+                    help="a court this authorisation covers; repeat "
+                         "for more than one. Required with --run.")
     ap.add_argument("--query", default="",
                     help="base search text; empty means the whole period")
     ap.add_argument("--per-year", type=int, default=100)
@@ -335,6 +357,11 @@ def main() -> int:
 
     if not (args.authorization_id or "").strip():
         ap.error("--run requires --authorization-id for this exact scope")
+    benches = tuple(b.strip() for b in (args.issuing_body or []) if b.strip())
+    if not benches:
+        ap.error("--run requires at least one --issuing-body: the doctype is "
+                 "the jurisdiction, and an approval to take one court's "
+                 "judgments is not an approval to take every court's")
     if args.from_date is None or args.to_date is None:
         ap.error("--run requires explicit --from-date and --to-date for the approved scope")
     token()
@@ -342,6 +369,8 @@ def main() -> int:
     for year in years:
         total += run(year, args.doctype, args.per_year, args.cap, args.delay,
                      args.query, args.authorization_id,
+                     issuing_bodies=benches,
+                     source_rights=RightsState(args.source_rights),
                      from_date=args.from_date, to_date=args.to_date)
     print(f"\n  {total} judgments staged in {STAGING}")
     print("  NOTHING HAS ENTERED THE CORPUS. Review the staged manifests, then "

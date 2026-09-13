@@ -20,6 +20,7 @@ from nm.knowledge.acquisition import (
     select_candidates,
     stage_acquisition,
 )
+from nm.knowledge.source_registry import RightsState
 from tools import reconcile_acquisition as reconcile_cli
 
 NOW = datetime(2026, 9, 11, tzinfo=timezone.utc)
@@ -36,6 +37,8 @@ def _scope(selection_budget: int = 2) -> AcquisitionScope:
         discovery_budget=4,
         selection_budget=selection_budget,
         authorization_id="AUTH-SYNTHETIC-RECEIPT",
+        issuing_bodies=("High Court for the State of Telangana",),
+        source_rights=RightsState.PERMITTED,
     )
 
 

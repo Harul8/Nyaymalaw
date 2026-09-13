@@ -17,6 +17,7 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import zipfile
@@ -309,6 +310,13 @@ def _backlog_contract(root: pathlib.Path) -> bytes:
     return text.encode("utf-8")
 
 
+#: The package-time attribute OOXML writes into comments, revisions and
+#: annotations. Matched on the bytes because the members it appears in are not
+#: all XML this function is willing to parse, and a partial normalisation is
+#: what produced the defect it exists to close.
+_VOLATILE_TIME = re.compile(rb'w:date="[^"]*"')
+
+
 def _docx_semantic(root: pathlib.Path) -> bytes:
     """Canonical OOXML members with volatile package metadata normalised."""
     path = root / "docs" / "Nyaymalaw_PRD.docx"
@@ -329,6 +337,24 @@ def _docx_semantic(root: pathlib.Path) -> bytes:
                         body = ElementTree.tostring(node, encoding="utf-8")
                     except ElementTree.ParseError:
                         pass
+                # AND THE SAME TIME, WHEREVER ELSE THE PACKAGE WRITES IT.
+                #
+                # Normalising `docProps/core.xml` alone left `word/comments.xml`
+                # carrying `w:date="<generated at>"` on every review comment, so
+                # regenerating the PRD from UNCHANGED source produced a different
+                # identity -- and the close-out step "regenerate the PRD" restaled
+                # every promoted result, including runs with nothing to do with
+                # it. That is a check that can never be satisfied, which is the
+                # trap the `FEATURE_SPEC` note above already records one level up.
+                #
+                # The population is EVERY MEMBER rather than the one where it was
+                # noticed: a generator that stamps a date into a header, a
+                # footnote or an endnote tomorrow is covered without anybody
+                # remembering this. A `w:date` is when the package was written,
+                # never a legal date -- those live in the document text, which is
+                # hashed in full.
+                body = _VOLATILE_TIME.sub(b'w:date="<volatile-package-time>"',
+                                          body)
                 records.append((info.filename.encode("utf-8"), body))
     except (OSError, zipfile.BadZipFile):
         return b"<invalid-docx>" + (_bytes(path) if path.exists() else b"")

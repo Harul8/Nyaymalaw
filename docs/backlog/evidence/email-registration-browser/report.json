@@ -1,17 +1,18 @@
 {
   "schema": 2,
-  "run_id": "a5761594-9872-4464-874b-4adade779b79",
-  "ran_at": "2026-09-13T13:56:42+00:00",
-  "commit": "1cd1707aadab8d9ed0d66cce8c5ce3e042706dfe+dirty",
-  "fingerprint": "e727ba39e5885aacb36678a7780a10f4477c356019a65afa94d32bf54bac2c38",
-  "finished_fingerprint": "e727ba39e5885aacb36678a7780a10f4477c356019a65afa94d32bf54bac2c38",
-  "configuration_identity": "c537d5cfd464436fde99f9e8fee01e31164e9ae4cf03cd5ab2dd2ac8b38c1b8c",
+  "run_id": "7a6ace82-d6ec-418b-98e7-e0a1803c45d1",
+  "ran_at": "2026-09-13T20:07:38+00:00",
+  "commit": "21b3a8e47470eac6fb9d0d76cc6d3f75fc7f5ab7",
+  "fingerprint": "76587a28c7e061ca0e43a72a2904b8ee94ca182af987bc0babc670db10e6da3c",
+  "finished_fingerprint": "76587a28c7e061ca0e43a72a2904b8ee94ca182af987bc0babc670db10e6da3c",
+  "configuration_identity": "a05bed67f41eef501c939414c3f02f5bd5a17294e6769517cd7ca29ab1185218",
   "argv": [
     "pytest",
     "tests/test_the_journey_login_to_logout.py",
     "tests/test_email_registration_reaches_a_private_workspace.py",
     "tests/test_the_journey_of_a_correction.py",
     "tests/test_the_journey_of_a_search.py",
+    "tests/test_the_journey_of_preparation.py",
     "-m",
     "journey",
     "-p",
@@ -74,10 +75,16 @@
     "test_phase_4_attaching_a_paragraph_shows_five_verdicts_not_one",
     "test_phase_5_no_results_is_said_as_searched_not_as_absence_of_law",
     "test_phase_6_an_unsupported_court_is_not_a_zero",
-    "test_phase_7_a_reload_shows_the_research_record_from_the_file"
+    "test_phase_7_a_reload_shows_the_research_record_from_the_file",
+    "test_the_whole_product_is_navigable_at_every_width[390px]",
+    "test_the_whole_product_is_navigable_at_every_width[768px]",
+    "test_the_whole_product_is_navigable_at_every_width[1280px]",
+    "test_the_preparation_surface_is_keyboard_only",
+    "test_a_long_email_and_a_long_citation_stay_on_the_phone",
+    "test_no_engineering_vocabulary_reaches_the_preparation_screen"
   ],
   "counts": {
-    "pass": 44,
+    "pass": 50,
     "reproduced": 0,
     "unexplained": 0,
     "missing": 0,
@@ -393,6 +400,48 @@
       "note": "",
       "scenario": "test_phase_7_a_reload_shows_the_research_record_from_the_file",
       "nodeid": "tests/test_the_journey_of_a_search.py::test_phase_7_a_reload_shows_the_research_record_from_the_file"
+    },
+    {
+      "phase": "the whole product is navigable at every width [390px]",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_the_whole_product_is_navigable_at_every_width[390px]",
+      "nodeid": "tests/test_the_journey_of_preparation.py::test_the_whole_product_is_navigable_at_every_width[390px]"
+    },
+    {
+      "phase": "the whole product is navigable at every width [768px]",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_the_whole_product_is_navigable_at_every_width[768px]",
+      "nodeid": "tests/test_the_journey_of_preparation.py::test_the_whole_product_is_navigable_at_every_width[768px]"
+    },
+    {
+      "phase": "the whole product is navigable at every width [1280px]",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_the_whole_product_is_navigable_at_every_width[1280px]",
+      "nodeid": "tests/test_the_journey_of_preparation.py::test_the_whole_product_is_navigable_at_every_width[1280px]"
+    },
+    {
+      "phase": "the preparation surface is keyboard only",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_the_preparation_surface_is_keyboard_only",
+      "nodeid": "tests/test_the_journey_of_preparation.py::test_the_preparation_surface_is_keyboard_only"
+    },
+    {
+      "phase": "a long email and a long citation stay on the phone",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_a_long_email_and_a_long_citation_stay_on_the_phone",
+      "nodeid": "tests/test_the_journey_of_preparation.py::test_a_long_email_and_a_long_citation_stay_on_the_phone"
+    },
+    {
+      "phase": "no engineering vocabulary reaches the preparation screen",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_no_engineering_vocabulary_reaches_the_preparation_screen",
+      "nodeid": "tests/test_the_journey_of_preparation.py::test_no_engineering_vocabulary_reaches_the_preparation_screen"
     }
   ]
 }

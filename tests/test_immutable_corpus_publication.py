@@ -163,6 +163,8 @@ def _staged_input(
         discovery_budget=1,
         selection_budget=1,
         authorization_id=f"auth-{uuid.uuid4().hex}",
+        issuing_bodies=(version.source.issuing_body,),
+        source_rights=RightsState.PERMITTED,
     )
     selection = select_candidates(scope, (
         JudgmentCandidate(

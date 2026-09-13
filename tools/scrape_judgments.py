@@ -96,6 +96,7 @@ from nm.knowledge.acquisition import (  # noqa: E402
     select_candidates,
     stage_acquisition,
 )
+from nm.knowledge.source_registry import RightsState  # noqa: E402
 from tools._console import utf8_console  # noqa: E402
 
 utf8_console()
@@ -115,6 +116,10 @@ UA = ("Nyaymalaw/0.1 (legal research corpus for Telangana practice; "
 HARD_CAP = 3000
 
 DOCTYPE = "telangana"
+
+#: THE BENCH THIS SCRAPE WAS APPROVED FOR. `DOCTYPE` above is the
+#: jurisdiction, and the two are not the same permission.
+ISSUING_BODY = "High Court for the State of Telangana"
 
 
 class Refused(RuntimeError):
@@ -271,7 +276,7 @@ def candidate(docid: str, html: str, citation_count: int | None,
         candidate_id=docid,
         source="indiankanoon.org",
         jurisdiction=DOCTYPE,
-        issuing_body="High Court for the State of Telangana",
+        issuing_body=ISSUING_BODY,
         document_type=DOCTYPE,
         source_url=f"{SITE}/doc/{docid}/",
         source_date=source_date(html),
@@ -320,6 +325,7 @@ def plan(years: list[int], pages: int, legacy_min_cited: int, *,
 
 def run(years: list[int], pages: int, legacy_min_cited: int, cap: int,
         selection_budget: int, authorization_id: str, *,
+        source_rights: RightsState = RightsState.UNKNOWN,
         from_date: date | None = None, to_date: date | None = None) -> int:
     if not years:
         raise ValueError("acquisition needs a non-empty year population")
@@ -387,6 +393,8 @@ def run(years: list[int], pages: int, legacy_min_cited: int, cap: int,
             discovery_budget=cap,
             selection_budget=min(selection_budget, cap),
             authorization_id=authorization_id,
+            issuing_bodies=(ISSUING_BODY,),
+            source_rights=source_rights,
         )
         selection = select_candidates(scope, observed)
         by_id: dict[str, JudgmentCandidate] = {}
@@ -431,6 +439,11 @@ def main() -> int:
     ap.add_argument("--run", action="store_true", help="actually fetch")
     ap.add_argument("--authorization-id",
                     help="approval record for this exact web scope and run")
+    ap.add_argument("--source-rights", default="unknown",
+                    choices=[s.value for s in RightsState],
+                    help="the REVIEWED right to take from this source. "
+                         "`unknown` is refused: an authorisation id is a "
+                         "reference to a decision, not the decision.")
     ap.add_argument("--from-year", type=int)
     ap.add_argument("--to-year", type=int)
     ap.add_argument("--from-date", type=date.fromisoformat,
@@ -467,6 +480,7 @@ def main() -> int:
     return run(
         years, args.pages_per_year, args.min_cited_by, args.cap,
         args.selection_budget, args.authorization_id,
+        source_rights=RightsState(args.source_rights),
         from_date=args.from_date, to_date=args.to_date,
     )
 

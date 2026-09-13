@@ -20,6 +20,7 @@ from nm.knowledge.acquisition import (
     select_candidates,
     stage_acquisition,
 )
+from nm.knowledge.source_registry import RightsState
 from tools import fetch_judgments, scrape_judgments
 from tools import reconcile_acquisition as reconcile_cli
 
@@ -35,6 +36,8 @@ def _scope(**overrides) -> AcquisitionScope:
         "discovery_budget": 10,
         "selection_budget": 2,
         "authorization_id": "AUTH-SYNTHETIC-1",
+        "issuing_bodies": ("High Court for the State of Telangana",),
+        "source_rights": RightsState.PERMITTED,
     }
     values.update(overrides)
     return AcquisitionScope(**values)
@@ -154,7 +157,7 @@ def test_api_entrypoint_uses_shared_selection_and_quarantine(
     def fake_document(docid):
         return {
             "tid": str(docid),
-            "court": fetch_judgments.TELANGANA,
+            "court": "High Court for the State of Telangana",
             "publishdate": "2026-08-01",
             "citedbyList": [] if docid == 100 else [{"tid": "x"}],
         }
@@ -165,6 +168,11 @@ def test_api_entrypoint_uses_shared_selection_and_quarantine(
     selected = fetch_judgments.run(
         2026, fetch_judgments.TELANGANA, want=2, cap=2, delay=0,
         query="", authorization_id="AUTH-API-SYNTHETIC",
+        # THE BENCH AND THE REVIEWED RIGHT ARE PART OF THE AUTHORISATION.
+        # A doctype is a jurisdiction, and an authorisation id is a reference
+        # to a decision rather than the decision itself.
+        issuing_bodies=("High Court for the State of Telangana",),
+        source_rights=RightsState.PERMITTED,
     )
 
     [run] = [path for path in tmp_path.iterdir() if path.is_dir()]
@@ -204,6 +212,7 @@ def test_web_entrypoint_records_legacy_citation_input_without_filtering(
     assert scrape_judgments.run(
         [2026], pages=1, legacy_min_cited=999, cap=10,
         selection_budget=1, authorization_id="AUTH-WEB-SYNTHETIC",
+        source_rights=RightsState.PERMITTED,
     ) == 0
 
     [run] = [path for path in tmp_path.iterdir() if path.is_dir()]
@@ -233,6 +242,7 @@ def test_web_entrypoint_refuses_request_budget_exhaustion_without_receipt(
     assert scrape_judgments.run(
         [2026], pages=1, legacy_min_cited=0, cap=1,
         selection_budget=1, authorization_id="AUTH-WEB-CAPPED",
+        source_rights=RightsState.PERMITTED,
     ) == 1
     assert list(tmp_path.iterdir()) == []
 

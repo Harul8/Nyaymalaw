@@ -4138,6 +4138,14 @@
         {
           "path": "tests/test_acquisition_receipts.py",
           "kind": "existing"
+        },
+        {
+          "path": "nm/knowledge/source_registry.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_immutable_corpus_publication.py",
+          "kind": "existing"
         }
       ],
       "inputs": [
