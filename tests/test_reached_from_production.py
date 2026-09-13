@@ -55,6 +55,28 @@ ENTRY_POINTS: dict[str, str] = {
 #: behaviour does not, and the difference is invisible to every other check in
 #: this build.
 UNWIRED: dict[str, str] = {
+    # P35's review harness, and this one may never be wired -- which is the
+    # honest statement rather than a deferral.
+    #
+    # `nm.domain.legal_review` records a QUALIFIED PERSON'S judgement about
+    # served advice. Nothing in a turn produces one, and nothing should: a
+    # served path from this product into a counsel review would be this
+    # product writing the review. What will "wire" it is a review actually
+    # being conducted -- REVIEW-LEGAL in `docs/blueprint/evaluations.json`,
+    # whose `approvals` and `evidence` are both empty -- at which point its
+    # record is read by whoever reports BK-67, not by a turn.
+    #
+    # `nm.domain.review` is NOT listed: `legal_review` imports it, so it is
+    # reached, and listing it would be a declaration covering a module that
+    # does not need one.
+    "nm.domain.legal_review": (
+        "P35's qualified-review record. It is written BY a person and read by "
+        "whoever reports BK-67-AC1 to AC4 and BK-91-AC4; no turn produces one "
+        "and none should, because a served path from the product into its own "
+        "counsel review is the product reviewing itself. It becomes reachable "
+        "when REVIEW-LEGAL in `docs/blueprint/evaluations.json` carries an "
+        "actual review -- its `approvals` and `evidence` are empty today, "
+        "which is why BK-67 and BK-91-AC4 read NOT RUN."),
     # P07/P22 built the mechanisms; wiring each is its own step, and these say
     # WHICH step rather than leaving modules that run on no turn.
     #
@@ -240,6 +262,13 @@ def test_the_scan_can_see_an_unreached_module():
 #: was actually wrong, was the one it could not see. A join that silently
 #: drops members is the same defect as a scan whose population went to zero.
 OWNER: dict[str, tuple[str, ...]] = {
+    # P35's qualified-review record reviews THE ADVICE AS SERVED, so it is
+    # named against the feature that produces it rather than given one of its
+    # own -- and against E5, because what the record keeps beyond a score is
+    # the disagreement and the reservations. BK-67-AC1's words are that no
+    # counsel-facing feature conforms without review with *material
+    # reservations kept visible*; E2 and E5 are where those live.
+    "nm.domain.legal_review": ("E2", "E5"),
     # P06/P07/P22's mechanisms, each named against the feature whose contract
     # it serves, so the status check below covers them instead of skipping
     # three modules that run on no turn.

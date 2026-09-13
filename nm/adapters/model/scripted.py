@@ -24,6 +24,7 @@ from typing import Any
 from nm.adapters.model._budget import estimate_tokens, guard_budget
 from nm.adapters.model.config import CONTEXT_BUDGET, ModelConfig, TierConfig
 from nm.core.chronology import CHART_HEADING
+from nm.domain.budget import Completion
 from nm.domain.quotable import CONTEXT_HEADING, WORDS_HEADING
 from nm.domain.text import snippet
 from nm.ports.model import (
@@ -1198,6 +1199,12 @@ class ScriptedModelAdapter:
             usage=Usage(tokens_in=t_in, tokens_out=t_out,
                         cost_usd=cfg.cost(t_in, t_out), cached_tokens=0),
             latency_ms=int((time.perf_counter() - started) * 1000),
+            # A SCRIPTED ANSWER IS WHOLE BY CONSTRUCTION -- it is returned
+            # from a table, not generated under a budget. Saying so
+            # explicitly matters because the field's default is NOT
+            # ESTABLISHED, and a double that left it there would make every
+            # offline test refuse its own fixture.
+            completion=Completion.COMPLETE,
         )
 
 

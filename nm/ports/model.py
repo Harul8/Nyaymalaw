@@ -28,6 +28,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Mapping, Protocol, runtime_checkable
 
+from nm.domain.budget import Completion
+
 
 class Tier(str, Enum):
     """What a step declares instead of a model."""
@@ -54,6 +56,17 @@ class RateLimited(ModelError):
 
 class ProviderUnavailable(ModelError):
     """The provider could not be reached. Fail the NEED, never the turn."""
+
+
+class OutputTruncated(ModelError):
+    """The provider stopped because it ran out of output room. BK-49-AC1.
+
+    A TYPED ERROR AND NEVER A SHORT ANSWER, which is the line
+    `ContextOverflow` below already draws for the other end of the same
+    problem. It is raised where the caller asked for a complete result;
+    `ModelResult.completion` carries the same fact where the caller asked for
+    whatever arrived. Two ways to learn it, one place that decides it.
+    """
 
 
 class ContextOverflow(ModelError):
@@ -142,10 +155,24 @@ class ModelResult:
     latency_ms: int
     retries: int = 0
     downgraded_from: Tier | None = None
+    completion: Completion = Completion.NOT_ESTABLISHED
+    """HOW THE PROVIDER STOPPED, and the default is not `COMPLETE`. BK-49-AC1.
+
+    A provider that stops at the token limit returns prose ending mid-sentence,
+    or JSON that happens to close its braces; both parse, and what is missing
+    left no trace. An adapter that did not look and a provider that cut the
+    answer off are indistinguishable downstream, so silence here reads as NOT
+    ESTABLISHED rather than as finished."""
 
     def __post_init__(self) -> None:
         if self.text is None and self.data is None:
             raise ValueError("ModelResult carries neither text nor data")
+
+    @property
+    def usable(self) -> bool:
+        """Whether legal work may rest on this. ONE OWNER, so no consumer
+        decides for itself what counts as a finished answer."""
+        return self.completion.usable_for_legal_work
 
     @property
     def was_downgraded(self) -> bool:

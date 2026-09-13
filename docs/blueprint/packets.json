@@ -3227,6 +3227,10 @@
         {
           "path": "tools/journey.py",
           "kind": "existing"
+        },
+        {
+          "path": "nm/domain/review.py",
+          "kind": "planned"
         }
       ],
       "inputs": [
@@ -3304,6 +3308,14 @@
         },
         {
           "path": "tools/evidence.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/legal_review.py",
+          "kind": "planned"
+        },
+        {
+          "path": "nm/domain/review.py",
           "kind": "existing"
         }
       ],
@@ -3499,6 +3511,22 @@
         },
         {
           "path": "web/app.js",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/budget.py",
+          "kind": "planned"
+        },
+        {
+          "path": "nm/ports/model.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/model/openai_adapter.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/model/scripted.py",
           "kind": "existing"
         }
       ],

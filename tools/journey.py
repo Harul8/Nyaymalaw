@@ -152,6 +152,18 @@ EXPECTED = (
     "test_the_preparation_surface_is_keyboard_only",
     "test_a_long_email_and_a_long_citation_stay_on_the_phone",
     "test_no_engineering_vocabulary_reaches_the_preparation_screen",
+    # P34 -- what the SCREEN offers, which is not whether anybody understood
+    # it: `tests/test_the_journey_of_comprehension.py`. BK-66-AC1's list as a
+    # property of the surface, so that a comprehension study is not measuring
+    # a thing that was never rendered. It closes the `browser_journey` half
+    # and nothing else; the study itself is NOT RUN.
+    "test_the_answer_says_each_thing_an_advocate_must_identify[390px]",
+    "test_the_answer_says_each_thing_an_advocate_must_identify[768px]",
+    "test_the_answer_says_each_thing_an_advocate_must_identify[1280px]",
+    "test_a_corrected_fact_changes_what_the_screen_says",
+    "test_the_source_behind_a_statement_is_reachable_from_the_screen",
+    "test_correcting_pausing_and_returning_need_no_retyping",
+    "test_no_engineering_state_is_what_the_advocate_has_to_read",
 )
 
 #: The modules one `journey` run drives. Listed here beside EXPECTED so that
@@ -163,6 +175,7 @@ SUITES = (
     "tests/test_the_journey_of_a_correction.py",
     "tests/test_the_journey_of_a_search.py",
     "tests/test_the_journey_of_preparation.py",
+    "tests/test_the_journey_of_comprehension.py",
 )
 
 

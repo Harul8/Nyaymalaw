@@ -69,6 +69,16 @@ ESCAPES = (
 #: Enums that are CLOSED VOCABULARIES, not outcomes. Each with the reason it
 #: cannot be "not assessed" — because something always chose it.
 CLOSED: dict[str, str] = {
+    "PremiseKind": (
+        "WHICH of the five governing premises this is -- applicable law, "
+        "accrual, jurisdiction, binding authority, role restriction -- and a "
+        "reviewer always chose one when they wrote the premise down. There is "
+        "no premise of an unknown kind: a sixth member meaning 'unclear' "
+        "would be a sixth thing to review rather than an honest unknown. "
+        "Whether the premise HOLDS is `Verdict`, whose `NOT_ASSESSED` is the "
+        "third state and is the default -- a premise nobody looked at and a "
+        "premise found sound are the same shape in a report and opposite "
+        "facts in a hearing."),
     "UrgencyClass": (
         "the named danger a human explicitly selects for a manual record, "
         "not an assessment outcome. `normalise_instruction` refuses an "

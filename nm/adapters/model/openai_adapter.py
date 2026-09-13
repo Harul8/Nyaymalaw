@@ -20,6 +20,7 @@ from typing import Any
 
 from nm.adapters.model._budget import guard_budget
 from nm.adapters.model.config import CONTEXT_BUDGET, ModelConfig, TierConfig
+from nm.domain.budget import Completion
 from nm.domain.text import blank
 from nm.ports.model import (
     ConfigurationError,
@@ -27,6 +28,7 @@ from nm.ports.model import (
     ContextOverflow,
     EmbeddingResult,
     ModelResult,
+    OutputTruncated,
     Prompt,
     ProviderUnavailable,
     RateLimited,
@@ -39,6 +41,31 @@ from nm.ports.model import (
 
 MAX_RETRIES = 3
 _BACKOFF_BASE = 0.5
+
+
+#: HOW A PROVIDER SAYS IT STOPPED, mapped to what that means for legal work.
+#:
+#: ONE TABLE RATHER THAN A COMPARISON AT EACH CALL SITE. The reason the length
+#: stop went unnoticed for as long as it did is that exactly one reason was
+#: ever compared, in one place, and nothing enumerated the rest.
+#:
+#: AN UNRECOGNISED REASON IS NOT ESTABLISHED, never complete. A provider that
+#: adds a stop reason tomorrow must not have it read as "finished" by a table
+#: written today.
+_FINISH_REASONS: dict[str, Completion] = {
+    "stop": Completion.COMPLETE,
+    "end_turn": Completion.COMPLETE,
+    "length": Completion.LENGTH_LIMITED,
+    "max_tokens": Completion.LENGTH_LIMITED,
+    "content_filter": Completion.FILTERED,
+}
+
+
+def _completion_of(reason) -> Completion:
+    if reason is None:
+        return Completion.NOT_ESTABLISHED
+    return _FINISH_REASONS.get(str(reason).strip().lower(),
+                               Completion.NOT_ESTABLISHED)
 
 
 class OpenAIModelAdapter:
@@ -148,10 +175,28 @@ class OpenAIModelAdapter:
             lambda: self._client.chat.completions.create(**kwargs))
 
         choice = resp.choices[0]
-        if getattr(choice, "finish_reason", None) == "content_filter":
+        completion = _completion_of(getattr(choice, "finish_reason", None))
+        if completion is Completion.FILTERED:
             raise ContentRefused(
                 "the provider refused on content grounds. This is a provider "
                 "behaviour, not a fact about the matter.")
+        # THE LENGTH STOP WAS NOT CHECKED AT ALL. BK-49-AC1.
+        #
+        # `content_filter` was, and `length` was not -- so a response cut off
+        # at the token limit came back as an ordinary answer. With a text read
+        # it ends mid-sentence; with a structured read the JSON can still
+        # close its braces and pass `require_schema`, and what is missing left
+        # no trace for any downstream check to find.
+        #
+        # It is RAISED rather than returned because this method's contract is
+        # a complete result. `ModelResult.completion` carries the same fact on
+        # every other path, so a caller that wants whatever arrived can see it
+        # without this method pretending the answer finished.
+        if completion is Completion.LENGTH_LIMITED:
+            raise OutputTruncated(
+                "the provider stopped at the output limit, so this answer "
+                "ends where the budget did rather than where the reasoning "
+                "did. It is unfinished, not short.")
         raw = choice.message.content or ""
 
         data = None
@@ -183,6 +228,7 @@ class OpenAIModelAdapter:
                         cost_usd=cfg.cost(t_in, t_out), cached_tokens=cached),
             latency_ms=int((time.perf_counter() - started) * 1000),
             retries=retries,
+            completion=completion,
         )
 
     def _retrying(self, fn):

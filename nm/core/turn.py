@@ -64,6 +64,7 @@ from nm.domain import brief as brief_mod
 from nm.domain import proof as domain_proof
 from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
+from nm.domain.budget import refuse_partial
 from nm.domain.capacity import CapacityPosition
 from nm.domain.clock import FORUM
 from nm.domain.matter import (
@@ -104,7 +105,13 @@ from nm.ports.evidence import (
     SourceKind,
     TreatmentState,
 )
-from nm.ports.model import ModelError, ModelPort, Prompt, Tier
+from nm.ports.model import (
+    ModelError,
+    ModelPort,
+    OutputTruncated,
+    Prompt,
+    Tier,
+)
 from nm.ports.store import StaleWrite, StorePort
 
 #: The most evidence rounds one turn may run. DECLARED SINCE SLICE 1 AND READ
@@ -1967,10 +1974,23 @@ class TurnEngine:
         in `nm/domain/reads.py` beside the schema's entry. Nothing here
         decides it and no call site can override it.
         """
-        return self._model.structured(
+        got = self._model.structured(
             prompt, schema, tier,
             max_tokens=ceiling.for_read(key, prompt,
                                         echoes=reads.echoes(key)))
+        # AN UNFINISHED ANSWER IS REFUSED HERE, BEFORE ANY LEGAL WORK RESTS ON
+        # IT. BK-29-AC2's words are *before dependent legal work is accepted*,
+        # and this is the one place every structured read passes through -- so
+        # a read added next month is covered without its author knowing this
+        # rule exists, which is the only kind of coverage that lasts.
+        #
+        # It is raised rather than returned so a caller cannot forget to ask.
+        # The three states are distinct on the exception's own text: finished,
+        # cut off at the budget, and nobody recorded which.
+        why = refuse_partial(got.completion, doing=f"the {key} read")
+        if why:
+            raise OutputTruncated(why)
+        return got
 
     def _load_or_create(self, turn: TurnInput, admitted_snapshot: Matter | None) -> Matter:
         # Work on exactly the version admitted before routing. Reloading here

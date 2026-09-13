@@ -6372,6 +6372,174 @@ duplicating prior notifications.
 **Exclusions.** No real notification is sent to anyone. No other client's
 matter identity or content is exposed by any path this packet adds.
 
+### P37 Start record — a truncated answer stops looking like a short one — 14 September 2026
+
+**Outcome sought.** BK-49-AC1, BK-29-AC1, BK-29-AC2, BK-41-AC1 and BK-92-AC4.
+
+**THE ADAPTER CHECKED EXACTLY ONE FINISH REASON.** `openai_adapter._call`
+handled `content_filter` and handled `length` nowhere. A provider that stops at
+the output limit returns prose ending mid-sentence, or — with a structured
+read — JSON that happens to close its braces and passes `require_schema`. Both
+came back as ordinary `ModelResult`s and reached legal work. That is
+BK-49-AC1's mutation verbatim, and it was live.
+
+`Completion` now carries how the provider stopped, `_FINISH_REASONS` maps every
+reason rather than comparing one, and an unrecognised reason is NOT ESTABLISHED
+rather than complete — a provider that adds a stop reason tomorrow must not
+have it read as finished by a table written today. **The field defaults to
+NOT_ESTABLISHED**: an adapter that did not look and a provider that cut the
+answer off are indistinguishable downstream, and the difference does not matter
+to the advocate reading the result.
+
+**THE REFUSAL IS AT THE ONE FUNNEL. BK-29-AC2.** Its words are *before
+dependent legal work is accepted*, and `TurnEngine._read` is the single place
+every structured read passes through — so a read added next month is covered
+without its author knowing the rule exists, which is the only kind of coverage
+that lasts.
+
+**BK-29-AC1's mechanism already existed and is kept.** `nm/core/ceiling.py`
+derives an echoing read's ceiling from what it was shown and states a fixed
+read's in one table; the tests here hold both ends of that and the floor and
+cap that bound it.
+
+**ONE BUDGET, SIX EXHAUSTIONS.** Time, tokens, money, retries, delegated
+children and the advocate's cancellation were each bounded at a call site or
+not at all, and `Exhausted` names which one ran out because the next step
+differs: more time will not help a token exhaustion. A limit of zero is "not
+bounded here" and `declared()` makes an unbounded operation visible rather than
+silently unlimited.
+
+**A CHILD GETS WHAT IS LEFT, NEVER A FRESH COPY.** Five children of one minute
+each under a one-minute cap is five minutes, and the delegation comparison
+would then be measuring an approach that was never bounded — which is
+BK-92-AC4's negative control. `Spend` counts failed children, retries and
+discarded results, because an approach that is fast when its failures are not
+counted is not fast.
+
+**PROGRESS IS A STAGE, NEVER A PERCENTAGE.** Nothing in this product knows how
+far through a model read it is; it knows what it finished and what it wrote
+down. `progress` reports the stage reached, whether anything was saved — read
+from the store by the caller, never inferred — and what is safe to do next,
+which is the part a spinner never answers.
+
+**Assumptions.** Bounded local and synthetic measurement only. No paid model
+run, no configured-environment measurement, no load test.
+
+**Acceptance → proof.** BK-49-AC1 integration and adversarial **PASS**.
+BK-29-AC1 domain **PASS**. BK-29-AC2 integration and adversarial **PASS**.
+BK-41-AC1 `browser_journey` **NOT RUN** and `production_measure` **NOT RUN**.
+BK-92-AC4 `model_eval`, `counsel_review` and `production_measure` **ALL NOT
+RUN** — **P37 remains operationally open**, and no latency, cost or
+degraded-service claim is made about any configured environment.
+
+**Rollback.** Reduce concurrency or disable expensive routes while preserving
+accepted jobs; state the degraded limits rather than moving a truthfulness
+threshold.
+
+**Exclusions.** No paid model comparison, no production measurement, no
+delegation enabled for any task family.
+
+### P34 Start record — the runner for a review nobody could run — 14 September 2026
+
+**Outcome sought.** BK-66-AC1, BK-66-AC2, BK-66-AC3.
+
+**`docs/blueprint/evaluations.json` ALREADY DECLARES REVIEW-USABILITY** for
+BK-66-AC3 — reviewer role, required inputs, tasks, failure conditions,
+required output fields — and nothing runs it. That is the failure this
+repository opens by describing: *a hundred good rules with no runner, so they
+became aspirations. A rule you cannot run is not a requirement.*
+
+`nm/domain/review.py` is the runner, and it decides exactly one thing: whether
+a study is ADMISSIBLE. Whether the product is comprehensible is what a
+representative advocate is for, and nothing here claims otherwise.
+
+**THE SEVEN REFUSALS**, each a different way to produce a favourable number
+from an unfavourable run, and each available at a different moment: an empty
+population; a task observed that was not frozen; a threshold moved after
+scoring; a disagreement not adjudicated; a model judge counted as an advocate;
+a demonstration fixture counted as a user; and a critical failure averaged
+away. The freeze manifest hashes tasks, strata, rubric and thresholds together,
+and the study records which manifest it was scored against — which is how
+"the bar was drawn round the result" becomes checkable rather than an
+accusation.
+
+**`Observer.MODEL_JUDGE` EXISTS SO THAT A MODEL-SCORED RESULT CAN BE RECORDED.**
+Hiding it would push it into being recorded as something else. It is simply
+never counted towards anything requiring a person, and `refuse_conclusion`
+counts the two populations rather than trusting a label.
+
+**`success_rate` RETURNS `None` AND NEVER ZERO** where no person was observed.
+A zero is arithmetically indistinguishable from everybody having failed.
+
+**Assumptions.** The frozen task list is BK-66-AC1's own list — what NM
+understood, used, assumed, changed, what is stale, what needs a decision, what
+it recommends next, correction, pause and return, and reaching the source —
+so a study cannot quietly measure something easier.
+
+**Acceptance → proof.** The machinery is proven by domain tests including a
+positive control on every refusal. **NO REPRESENTATIVE ADVOCATE STUDY HAS BEEN
+RUN.** BK-66-AC1's `browser_journey`, `model_eval` and `counsel_review`,
+BK-66-AC2's `model_eval` and `counsel_review`, and BK-66-AC3's
+`browser_journey` and `counsel_review` are all **NOT RUN**, REVIEW-USABILITY's
+`approvals` and `evidence` remain empty, and **P34 stays partially open**. No
+observation in this packet is a real one.
+
+**Rollback.** Withdraw the affected experience claim, register the findings and
+retain the scored artefacts; re-run the affected frozen population after
+correction.
+
+**Exclusions.** No advocate observation is invented, simulated or inferred.
+
+### P35 Start record — the premise, separately from the arithmetic — 14 September 2026
+
+**Outcome sought.** BK-67-AC1 to AC4 and BK-91-AC4.
+
+**BK-67-AC3's NEGATIVE CONTROL IS THE SHARPEST SENTENCE IN THE BACKLOG:**
+*supply correct date arithmetic with an unsupported accrual rule, or treat a
+historical court cohort label as proof of binding status* → *the legal-premise
+gate fails even though the deterministic calculation and source counts pass.*
+The calculation passing is the most convincing possible evidence for the wrong
+thing.
+
+So `Arithmetic.assessed_on` names the premise a calculation assumed, and where
+that premise is unsupported the calculation is **not a verdict at all** — not
+a pass at lower confidence, which is the reading that puts the wrong date in a
+cause list. `Premise.binding_basis` is prose because the reasoning is the thing
+being reviewed: a court's name is not a basis, and a historical cohort label is
+not proof of binding status. `source_version` is required, because a premise
+resting on "the Act" rests on whichever version the reviewer had.
+
+**ADMISSIBILITY IS REUSED, NOT RESTATED.** A `LegalReviewRecord` carries P34's
+`Study` and `refuse_approval` begins with `refuse_conclusion`. A second copy of
+the seven refusals would be the copy that gets relaxed.
+
+**APPROVAL IS SCOPED AND DOES NOT TRAVEL** — not to another matter family, not
+to a later corpus, and not to a later model, which is the one that gets
+assumed: a model that scores better on average can fail differently on the
+cases that matter. Withdrawal keeps the record, because a deleted review makes
+the work it approved look unreviewed.
+
+**BK-91-AC4's THREE CHEATS ARE ARITHMETIC, NOT JUDGEMENT**, so `Comparison`
+checks them rather than leaving them for a reviewer to notice: omitting a
+difficult family from one arm, grading the tested model with itself, and
+presenting a larger spend as proof of improvement. A single run each cannot
+separate an improvement from a difference between two runs.
+
+**Acceptance → proof.** The harness is proven by domain tests with a positive
+control on every refusal. **NO QUALIFIED REVIEW HAS BEEN RUN AND THIS PRODUCT
+CANNOT RUN ONE.** BK-67-AC1 to AC4 and BK-91-AC4 all require `counsel_review`
+and `model_eval`; both are **NOT RUN**, REVIEW-LEGAL's `approvals` and
+`evidence` remain empty, and **P35 stays partially open**. Every `Verdict` in
+the suite is a fixture proving what the machinery accepts and refuses; none is
+a legal opinion.
+
+**Rollback.** Withdraw the affected legal coverage or task approval and retain
+the historical review; offer only the supportable lower scope.
+
+**Exclusions.** The model built the harness, the fixtures, the schemas, the
+invalidation logic and the reports. It did not act as the qualified reviewer
+and no counsel approval is recorded anywhere in this packet.
+
 ### P44 acquisition-foundation Start record — 11 September 2026
 
 **Decision: BLOCKED on P19's scoped source-register output; contract ready.**
