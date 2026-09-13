@@ -906,6 +906,11 @@ class Matter:
     abandoned, and it renders as such rather than as an epoch.
     """
 
+    action_proposals: tuple[dict, ...] = ()
+    """P30 / BK-56-AC4's consequential-action proposals. Empty means none was
+    proposed. Nothing in this product dispatches one: CHOICE-09's connectors
+    are disabled and its approval field reads None."""
+
     handovers: tuple[dict, ...] = ()
     """P32 / BK-58-AC3's handover offers. Empty means none was offered, which
     is not the same as one that was offered and never taken -- that is a row

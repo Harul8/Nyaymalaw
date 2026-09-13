@@ -2079,6 +2079,236 @@ def record_matter_event(matter_id: str, body: EventBody,
                      f"reopened; everything else is untouched")}
 
 
+class ActionProposalBody(BaseModel):
+    """Propose a consequential act. BK-56-AC4. P30.
+
+    `state` and `receipt` are absent by design: a caller that could post
+    either could report an action delivered that nobody performed.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    package_id: NonBlank = Field(min_length=1)
+    authority: NonBlank = Field(min_length=1, max_length=500)
+    object: NonBlank = Field(min_length=1, max_length=500)
+    destination: NonBlank = Field(min_length=1, max_length=500)
+    expected_matter_version: int
+
+
+class ConfirmActionBody(BaseModel):
+    """Confirm EXACT content. The digest is the caller's statement of what
+    they read, and it is compared -- not trusted."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    content_digest: NonBlank = Field(min_length=1)
+    expected_matter_version: int
+
+
+class OutcomeBody(BaseModel):
+    """What the ADVOCATE found out after filing or sending it themselves.
+
+    `delivered` is not a boolean here. The state is named, and DELIVERED
+    without a receipt is refused by the domain.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    state: Literal["delivery_unknown", "delivered", "refused", "cancelled"]
+    receipt: str = ""
+    because: str = ""
+    expected_matter_version: int
+
+
+class ReconcileBody(BaseModel):
+    """Look again at an unknown outcome.
+
+    THERE IS NO `success` FIELD, and that is the contract's own words: *user
+    cannot submit success=true*. A receipt is evidence; a person's belief that
+    it arrived is not.
+
+    AND IT IS NOT CALLED `evidence`. `evidence` already names a PORT in this
+    product, and `tests/test_every_evidence_adapter_answers_the_whole_port.py`
+    reads every `x.evidence.y` in `nm/` as a call against that port -- which is
+    the right breadth for a guard whose absence once served a 500. A second
+    owner of the word is the thing to remove, not the check that found it, so
+    the field is `basis`: what the advocate looked at.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    basis: NonBlank = Field(min_length=1, max_length=2000)
+    receipt: str = ""
+    expected_matter_version: int
+
+
+@app.post("/api/action-proposals", dependencies=[CsrfProtected],
+          status_code=201)
+def create_action_proposal(body: ActionProposalBody,
+                           advocate_id: Advocate) -> dict:
+    """Propose a consequential act against an exported drafting package.
+
+    THE DIGEST COMES FROM THE PACKAGE, not from the caller. An approval is for
+    exact bytes, and letting the proposer state which bytes would make the
+    approval meaningless.
+    """
+    import uuid as _uuid
+
+    from nm.core import action as ac
+    from nm.core import drafting as dr
+    from nm.domain.action import ActionProposal
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    package = dr.find(dr.rows(m), body.package_id.strip())
+    if package is None:
+        raise HTTPException(status_code=404, detail="no such drafting package")
+
+    made = ActionProposal(
+        proposal_id=f"ap_{_uuid.uuid4().hex[:10]}", matter_id=m.id,
+        package_id=package.package_id, actor=advocate_id,
+        authority=body.authority.strip(), object=body.object.strip(),
+        destination=body.destination.strip(),
+        content_digest=dr.export(package)["content_digest"])
+
+    rows = ac.put(ac.rows(m), made)
+    m = replace(m, action_proposals=tuple(ac.as_dict(a) for a in rows),
+                version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "prepared", "matter_id": committed.id,
+            "version": committed.version, "proposal": ac.projection(made)}
+
+
+@app.post("/api/action-proposals/{proposal_id}/confirmation",
+          dependencies=[CsrfProtected], status_code=201)
+def confirm_action(proposal_id: str, body: ConfirmActionBody,
+                   advocate_id: Advocate) -> dict:
+    """An authorised actor approves exact content. BK-56-AC4."""
+    from nm.core import action as ac
+    from nm.domain.action import confirm
+    from nm.domain.clock import today as _today
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    rows = ac.rows(m)
+    found = next((a for a in rows if a.proposal_id == proposal_id), None)
+    if found is None:
+        raise HTTPException(status_code=404, detail="no such action proposal")
+    try:
+        done = confirm(found, by=advocate_id, at=_today().isoformat(),
+                       digest=body.content_digest.strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail={
+            "code": "PRECONDITION_REQUIRED", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+    m = replace(m, action_proposals=tuple(
+        ac.as_dict(a) for a in ac.put(rows, done)), version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "approved", "matter_id": committed.id,
+            "version": committed.version, "proposal": ac.projection(done)}
+
+
+@app.post("/api/action-proposals/{proposal_id}/execution",
+          dependencies=[CsrfProtected], status_code=409)
+def execute_action(proposal_id: str, body: ConfirmActionBody,
+                   advocate_id: Advocate) -> dict:
+    """THE DISPATCH ROUTE, AND IT ALWAYS REFUSES. CHOICE-09.
+
+    It exists so the answer is a stated refusal with a reason rather than a
+    404 somebody reads as "not built yet" -- and so the refusal is a served,
+    tested behaviour rather than an absence. `CONNECTOR_DISABLED` is the
+    contract's own error code for exactly this.
+
+    The declared status is 409: there is no path through this function that
+    succeeds while `CONNECTOR_ENABLED` is False.
+    """
+    from nm.core import action as ac
+    from nm.domain.action import refuse_dispatch
+
+    m = _owned(body.matter_id, advocate_id)
+    rows = ac.rows(m)
+    found = next((a for a in rows if a.proposal_id == proposal_id), None)
+    if found is None:
+        raise HTTPException(status_code=404, detail="no such action proposal")
+    raise HTTPException(status_code=409, detail={
+        "code": "CONNECTOR_DISABLED", "why": refuse_dispatch(found),
+        "state": found.state.value, "committed": "not_committed"})
+
+
+@app.post("/api/action-proposals/{proposal_id}/outcome",
+          dependencies=[CsrfProtected], status_code=201)
+def record_action_outcome(proposal_id: str, body: OutcomeBody,
+                          advocate_id: Advocate) -> dict:
+    """Record what the advocate found out. CHOICE-09's manual receipt capture."""
+    from nm.core import action as ac
+    from nm.domain.action import ActionState, export, record_outcome
+    from nm.domain.clock import today as _today
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    rows = ac.rows(m)
+    found = next((a for a in rows if a.proposal_id == proposal_id), None)
+    if found is None:
+        raise HTTPException(status_code=404, detail="no such action proposal")
+    if found.state is ActionState.APPROVED:
+        found = export(found)
+    try:
+        done = record_outcome(found, state=ActionState(body.state),
+                              receipt=body.receipt.strip(),
+                              because=body.because.strip(),
+                              at=_today().isoformat())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+    m = replace(m, action_proposals=tuple(
+        ac.as_dict(a) for a in ac.put(rows, done)), version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": done.state.value, "matter_id": committed.id,
+            "version": committed.version, "proposal": ac.projection(done)}
+
+
+@app.post("/api/action-proposals/{proposal_id}/reconciliation",
+          dependencies=[CsrfProtected], status_code=201)
+def reconcile_action(proposal_id: str, body: ReconcileBody,
+                     advocate_id: Advocate) -> dict:
+    """Resolve an unknown outcome on evidence. NO REDISPATCH, NO ASSERTION.
+
+    An inconclusive reconciliation leaves the state exactly where it was and
+    records that somebody looked -- *inconclusive remains outcome_unknown*.
+    """
+    from nm.core import action as ac
+    from nm.domain.action import reconcile
+    from nm.domain.clock import today as _today
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    rows = ac.rows(m)
+    found = next((a for a in rows if a.proposal_id == proposal_id), None)
+    if found is None:
+        raise HTTPException(status_code=404, detail="no such action proposal")
+    try:
+        done = reconcile(found, evidence=body.basis.strip(),
+                         receipt=body.receipt.strip(), at=_today().isoformat())
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail={
+            "code": "INVALID_TRANSITION", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+    m = replace(m, action_proposals=tuple(
+        ac.as_dict(a) for a in ac.put(rows, done)), version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": done.state.value, "matter_id": committed.id,
+            "version": committed.version, "proposal": ac.projection(done),
+            "resolved": done.state.is_settled}
+
+
 class Correction(BaseModel):
     """One correction to one entry on the case file. BK-65-AC1, P18.
 

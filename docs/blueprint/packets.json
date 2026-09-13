@@ -2870,6 +2870,14 @@
         {
           "path": "nm/edge/api.py",
           "kind": "existing"
+        },
+        {
+          "path": "nm/domain/action.py",
+          "kind": "planned"
+        },
+        {
+          "path": "nm/core/action.py",
+          "kind": "planned"
         }
       ],
       "inputs": [

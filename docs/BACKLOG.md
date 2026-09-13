@@ -6090,6 +6090,41 @@ P36's, and no UI exists for these routes yet.
 **Rollback.** `Matter.handovers` and `Matter.closure` decode to empty on older
 records, which reads as *nothing offered* and *matter open* — both true states.
 
+### P30 Start record — action authority and uncertain delivery — 13 September 2026
+
+**Outcome sought.** BK-56-AC4, under CHOICE-09 whose `approval` field reads
+`None`. The wire goes quiet on a filing and the product has two comfortable
+states, both lies: read as DELIVERED the advocate stops watching a live
+deadline; read as REFUSED they file again, and file twice.
+
+**`CONNECTOR_ENABLED` is a module constant, not configuration.** A flag a
+deployment could flip is a flag a deployment will flip, and what sits on the
+other side is an irreversible act against a court. Turning it on is a code
+change that passes review.
+
+**Seven distinct states** — prepared, approved, exported, delivery-unknown,
+delivered, refused, cancelled. The command contract's vocabulary maps onto
+them: `acknowledged`, `failed_known`, `outcome_unknown`. DELIVERY_UNKNOWN is a
+DESTINATION, not a transient, and DELIVERED requires a receipt because the
+contract says *receipt required for completed* and CHOICE-09's fallback says
+*never simulate a filed or sent status*.
+
+**Reconciliation, from the contract's own words.** *inconclusive remains
+outcome_unknown* — a reconciliation that cannot answer leaves the state alone
+and records that somebody looked. *user cannot submit success=true* — there is
+no parameter that asserts arrival. *no automatic redispatch* — asking whether
+it arrived must never be a way to send it again.
+
+**The audit row carries the digest and never the content** — the same line P26
+drew when the plaintext metrics record turned out to be quoting the advocate's
+own words.
+
+**Acceptance → proof.** BK-56-AC4 integration + adversarial **PASS** (25
+tests). `browser_journey` **NOT RUN** — P36's half.
+
+**Exclusions.** No real court, client, opponent, witness or provider is
+contacted, and nothing here can contact one.
+
 ### P44 acquisition-foundation Start record — 11 September 2026
 
 **Decision: BLOCKED on P19's scoped source-register output; contract ready.**
