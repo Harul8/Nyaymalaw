@@ -2624,6 +2624,206 @@ def check_concession(matter_id: str, body: ConcessionCheckBody,
                      "nothing was recorded on the file.")}
 
 
+class ServiceAuthorityBody(BaseModel):
+    """Authorise proactive work on a matter. BK-58-AC1. P45.
+
+    THERE IS NO `state` FIELD. A caller that could post `granted` could
+    authorise itself, and the whole record exists to say somebody else did.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    responsible_actor: NonBlank = Field(min_length=1, max_length=200)
+    purpose: NonBlank = Field(min_length=1, max_length=2000)
+    trigger: Literal["event", "cadence"]
+    cadence: str = Field(default="", max_length=200)
+    notify: Literal["in_product", "email", "none"]
+    expires_on: str = Field(default="", max_length=10)
+    expected_matter_version: int
+
+
+class CancelServiceBody(BaseModel):
+    """Withdraw it. The record is kept and the version moves."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    because: str = Field(default="", max_length=2000)
+    expected_matter_version: int
+
+
+class ServiceJobBody(BaseModel):
+    """Ask for one unit of authorised work to be scheduled.
+
+    `outcome` and `receipt` are absent by design: a caller that could post
+    either could report an advocate notified when nobody was.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    matter_id: NonBlank = Field(min_length=1)
+    kind: Literal["deadline_reminder", "conflict_recheck", "hearing_alert"]
+    due_on: NonBlank = Field(min_length=1, max_length=32)
+    expected_matter_version: int
+
+
+@app.post("/api/service-authorities", dependencies=[CsrfProtected],
+          status_code=201)
+def set_service_authority(body: ServiceAuthorityBody,
+                          advocate_id: Advocate) -> dict:
+    """Record who authorised proactive work, for what, and what makes it due.
+
+    AUTHORITY TO READ IS NOT AUTHORITY TO ACT. `_owned` establishes that this
+    advocate may open the file; `permits(..., Act.RECORD)` establishes that
+    they may write on it. Neither is an instruction to monitor it, which is why
+    this record exists at all rather than being inferred from membership.
+    """
+    import uuid as _uuid
+
+    from nm.core import service as sv
+    from nm.domain.clock import today as _today
+    from nm.domain.service import Notify, Trigger, grant
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    acting_as = _capacity_of(m, advocate_id, None)
+    ruling = permits(advocate_id, acting_as, Act.RECORD)
+    if not ruling.authorises():
+        _record_refusal(m, ruling)
+        raise HTTPException(status_code=403, detail={
+            "code": "NOT_PERMITTED", "why": ruling.said(),
+            "committed": "not_committed"})
+
+    now = _today().isoformat()
+    try:
+        made = grant(
+            authority_id=f"sa_{_uuid.uuid4().hex[:10]}", matter_id=m.id,
+            responsible_actor=body.responsible_actor,
+            purpose=body.purpose, trigger=Trigger(body.trigger),
+            notify=Notify(body.notify), granted_by=advocate_id,
+            granted_at=now, cadence=body.cadence,
+            expires_on=body.expires_on)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_REQUEST", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+    m = replace(m, service_authorities=tuple(
+        sv.authority_as_dict(a) for a in sv.put_authority(
+            sv.authorities(m), made)), version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "authorised", "matter_id": committed.id,
+            "version": committed.version,
+            "authority": sv.authority_projection(made, now)}
+
+
+@app.post("/api/service-authorities/{authority_id}/cancellation",
+          dependencies=[CsrfProtected], status_code=201)
+def cancel_service_authority(authority_id: str, body: CancelServiceBody,
+                             advocate_id: Advocate) -> dict:
+    """Withdraw the authority AND STOP WHAT IT STARTED. BK-58-AC1.
+
+    Revocation that left running jobs alone would be a cancellation the
+    advocate believes in and the queue does not, which is the worst of the
+    three possible states.
+    """
+    from nm.core import service as sv
+    from nm.domain.clock import today as _today
+    from nm.domain.service import revoke
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    rows = sv.authorities(m)
+    found = next((a for a in rows if a.authority_id == authority_id), None)
+    if found is None:
+        raise HTTPException(status_code=404,
+                            detail="no such service authority")
+    now = _today().isoformat()
+    stopped = revoke(found, by=advocate_id, at=now)
+    jobs = sv.revoke_reaches(sv.jobs(m), authority_id=authority_id, at=now)
+
+    m = replace(
+        m,
+        service_authorities=tuple(sv.authority_as_dict(a) for a in
+                                  sv.put_authority(rows, stopped)),
+        service_jobs=tuple(sv.job_as_dict(j) for j in jobs),
+        version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "withdrawn", "matter_id": committed.id,
+            "version": committed.version,
+            "authority": sv.authority_projection(stopped, now),
+            "stopped": [j.job_id for j in jobs
+                        if j.authority_id == authority_id
+                        and not j.outcome.settled()]}
+
+
+@app.post("/api/service-jobs", dependencies=[CsrfProtected], status_code=201)
+def schedule_service_job(body: ServiceJobBody, advocate_id: Advocate) -> dict:
+    """Schedule one unit of work, ONCE. BK-58-AC1.
+
+    A REPLAYED DUE EVENT RETURNS THE JOB THAT ALREADY COVERS IT. The
+    idempotency key is derived from what the work is about -- matter, kind,
+    due date, authority -- so two triggers of one cadence are one job however
+    many times the trigger fires.
+    """
+    import uuid as _uuid
+
+    from nm.core import service as sv
+    from nm.domain.clock import today as _today
+
+    m = _owned(body.matter_id, advocate_id)
+    _stale(m, body.expected_matter_version)
+    now = _today().isoformat()
+    authority = sv.current_authority(m, now)
+    existing = sv.jobs(m)
+    try:
+        job = sv.schedule(authority, job_id=f"sj_{_uuid.uuid4().hex[:10]}",
+                          kind=body.kind, due_on=body.due_on.strip(),
+                          today=now, existing=existing)
+    except sv.ServiceRefused as exc:
+        raise HTTPException(status_code=409, detail={
+            "code": "NOT_AUTHORISED", "why": str(exc),
+            "committed": "not_committed"}) from exc
+
+    duplicate = any(j.job_id == job.job_id for j in existing)
+    m = replace(m, service_jobs=tuple(
+        sv.job_as_dict(j) for j in sv.put_job(existing, job)),
+        version=m.version + 1)
+    committed = _commit_matter(m, body.expected_matter_version)
+    return {"state": "scheduled", "matter_id": committed.id,
+            "version": committed.version,
+            "job": sv.job_projection(job),
+            "already_scheduled": duplicate,
+            "said": ("This was already scheduled and has not been scheduled "
+                     "again." if duplicate else
+                     "Scheduled. It runs when the recorded trigger fires and "
+                     "this product is running; it is not continuous "
+                     "monitoring.")}
+
+
+@app.get("/api/matters/{matter_id}/service")
+def get_service(matter_id: str, advocate_id: Advocate) -> dict:
+    """The proactive work on this matter, and the continuing watch. BK-58.
+
+    THE CONFLICT FINDINGS DO NOT NAME ANOTHER FILE. `watch_report` carries
+    `leaks_another_matter`, which is empty on a correct screen and is served
+    so that a regression is visible on the page rather than only in a test.
+    """
+    from nm.core import service as sv
+    from nm.domain.clock import today as _today
+
+    m = _owned(matter_id, advocate_id)
+    now = _today().isoformat()
+    authority = sv.current_authority(m, now)
+    return {"matter_id": m.id, "version": m.version,
+            "authority": (sv.authority_projection(authority, now)
+                          if authority is not None else None),
+            "jobs": [sv.job_projection(j) for j in sv.jobs(m)],
+            "watch": sv.watch_report(sv.conflict_screen_of(m), authority,
+                                     today=now)}
+
+
 class Correction(BaseModel):
     """One correction to one entry on the case file. BK-65-AC1, P18.
 

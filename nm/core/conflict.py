@@ -24,6 +24,15 @@ produces an INCOMPLETE screen, and an incomplete screen never clears. The type
 enforces it: `Screen.__post_init__` refuses `unread` on anything but
 INCOMPLETE.
 
+WHAT A FINDING MAY SAY ABOUT THE OTHER FILE: NOT ITS NAME. BK-58-AC2
+----------------------------------------------------------------------
+Every hit used to carry the other matter's title, so establishing that a clash
+existed handed over which other client the party was acting against. By this
+release the screen is read by a delegate, by a locum working a handover, and by
+whoever the advocate has the file open in front of. The finding now says the
+party, the two sides, and that the other file is one of theirs -- which is
+everything they need to act, and nothing anyone else can use.
+
 THE THREE OUTCOMES, AND THE FOURTH THAT IS NOT AN OUTCOME
 -----------------------------------------------------------
     CLEAR         parties are known, every file was read, nothing matched
@@ -61,6 +70,20 @@ def _names_on(matter) -> dict[str, str]:
     return out
 
 
+def _as_written(parties, key: str) -> str:
+    """The party's name AS THIS MATTER RECORDS IT.
+
+    `Parties.names` lowercases for matching, which is right -- and printing
+    the match key back put "kiran steels" in front of an advocate who typed
+    "Kiran Steels". The comparison stays case-insensitive; only what is shown
+    changes.
+    """
+    for party in parties.parties:
+        if party.name.strip().lower() == key:
+            return party.name.strip()
+    return key
+
+
 def screen(parties, held, advocate_id: str) -> Screen:
     """The conflict screen for this matter, against `held`.
 
@@ -83,7 +106,6 @@ def screen(parties, held, advocate_id: str) -> Screen:
     for matter in held:
         if getattr(matter, "id", None) == getattr(parties, "matter_id", None):
             continue
-        label = getattr(matter, "title", None) or getattr(matter, "id", "")
         for name, side_there in _names_on(matter).items():
             if name not in ours:
                 continue
@@ -95,9 +117,15 @@ def screen(parties, held, advocate_id: str) -> Screen:
             if side_here == "related" or side_there == "related":
                 continue
             if side_here != side_there:
+                # THE OTHER FILE IS NOT NAMED. BK-58-AC2. Establishing that a
+                # clash exists does not require handing over which other
+                # client the party is acting against, and the screen is read
+                # by whoever has this file open -- a delegate, a locum working
+                # a handover, anyone over a shoulder. The advocate holds both
+                # files and their matter list is one click away.
                 hits.append(
-                    f"{name} is {side_here} here and {side_there} on "
-                    f"{label!r}")
+                    f"{_as_written(parties, name)} is {side_here} here and "
+                    f"{side_there} on another of your files")
 
     unread = tuple(getattr(held, "unreadable", ()) or ())
     if unread:
@@ -118,7 +146,8 @@ def screen(parties, held, advocate_id: str) -> Screen:
             state=ScreenState.BLOCKED,
             detail=("; ".join(hits)
                     + ". This is a finding about your own files, not a "
-                      "firm-wide registry check"),
+                      "firm-wide registry check. I have not named the other "
+                      "file here; open your matter list to find it"),
             covers=frozenset(ours))
 
     return Screen(

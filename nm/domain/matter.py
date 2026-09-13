@@ -906,6 +906,16 @@ class Matter:
     abandoned, and it renders as such rather than as an epoch.
     """
 
+    service_authorities: tuple[dict, ...] = ()
+    """P45 / BK-58-AC1's recorded permission to work on this matter unprompted.
+    Empty means nothing runs on it unless the advocate is here. Permission to
+    READ a matter is not permission to act on it, which is why this is its own
+    record and not a property of membership."""
+
+    service_jobs: tuple[dict, ...] = ()
+    """P45's scheduled proactive work. Deduplicated by an idempotency key
+    derived from what the work is about, so a replayed trigger is one job."""
+
     hearing_packs: tuple[dict, ...] = ()
     """P31 / BK-57's hearing and negotiation preparation. Empty means none was
     assembled. A pack is work product: nothing in it has been filed, sent,

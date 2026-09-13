@@ -6306,6 +6306,72 @@ quarantine candidates; the active published snapshot is untouched.
 **Exclusions.** No scrape, no download, no external contact, no corpus
 publication.
 
+### P45 Start record — authorised proactive work, and a watch that names no other file — 14 September 2026
+
+**Outcome sought.** BK-58-AC1 and BK-58-AC2. Proactive work is the one
+capability that acts when nobody is watching, and each of its failures is
+silent.
+
+**PERMISSION TO READ IS NOT PERMISSION TO ACT.** `nm/domain/service.py` records
+the authority separately from the workspace membership that lets an advocate
+open the file and from `nm/domain/authority.py`'s answer about who may act on a
+turn. Folding them would make opening a file an instruction to monitor it. The
+record is versioned, and revoking it makes a new version rather than deleting
+one: work done under version 2 was authorised work.
+
+**THE AUTHORITY IS CHECKED THREE TIMES AND THAT IS NOT REDUNDANT** — at
+scheduling, at dispatch and before a result is accepted. An advocate revokes at
+09:00, a job claimed at 08:59 runs at 09:01, and its result lands at 09:02;
+checking once at the front means all three happen under an authority that no
+longer exists.
+
+**THE STATE VOCABULARY IS `nm.domain.operation.Outcome` AND NOT A NEW ENUM.**
+It already carries accepted, running, cancel-requested, completed, failed and
+the UNKNOWN a lost acknowledgement produces, and `settled()` already answers
+that UNKNOWN is not settled. A second enum beside it would be two answers to
+"did this send?", which is the duplicate the packet exists to refuse. The
+durable job, its lease and its retries stay with P11's `JobRunner`; this module
+runs nothing.
+
+**THE IDEMPOTENCY KEY IS ABOUT THE WORK, NEVER THE ATTEMPT.** Two triggers of
+one cadence for one matter on one due date are one job. A key carrying the
+attempt time would make them two, and the deduplication mechanism would be the
+thing producing the duplicate. The store deduplicates by that key rather than
+by job id, so two schedulers that each minted an id still store one job.
+
+**ASKING TO CANCEL IS NOT CANCELLING**, and an UNKNOWN job cannot be cancelled
+into certainty: it may already have reached somebody, and marking it cancelled
+would say it did not.
+
+**THE CONFLICT SCREEN STOPPED NAMING THE OTHER CLIENT'S FILE. BK-58-AC2.** Every
+hit read `"{name} is {side} here and {side} on {label!r}"`, where `label` is the
+other matter's title — so establishing that a clash existed handed over which
+other client the party is acting against. By this release the screen is read by
+a delegate, by a locum working a handover, and by whoever has the file open. The
+finding now names the party, the two sides, and that the other file is one of
+theirs; `watch_report` carries `leaks_another_matter`, served, so a regression
+is visible on the page and not only in a test.
+
+**NO CONTINUOUS MONITORING IS CLAIMED, IN ANY STATE.** `said()` states what is
+true: work happens when a recorded trigger fires and this product is running,
+and a period the advocate is relying on is still theirs to watch. An advocate
+told "I will watch this" who was not watched is worse off than one told
+nothing, because they stopped watching too.
+
+**Assumptions.** Synthetic jobs and notifications only. Nothing is dispatched:
+the delivery leg is CHOICE-09's, whose connectors are disabled.
+
+**Acceptance → proof.** BK-58-AC1 integration **PASS**; `browser_journey`
+**NOT RUN** pending the served surface. BK-58-AC2 integration and adversarial
+**PASS**; `counsel_review` **NOT RUN** and not locally closeable.
+
+**Rollback.** Disable service dispatch and retain cancelled and unknown
+delivery records; restore only explicitly approved subscriptions without
+duplicating prior notifications.
+
+**Exclusions.** No real notification is sent to anyone. No other client's
+matter identity or content is exposed by any path this packet adds.
+
 ### P44 acquisition-foundation Start record — 11 September 2026
 
 **Decision: BLOCKED on P19's scoped source-register output; contract ready.**
