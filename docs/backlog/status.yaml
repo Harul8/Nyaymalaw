@@ -1415,7 +1415,7 @@ items:
     required_evidence: [integration_test, browser_journey]
     evidence:
       integration_test: {result: PASS, ref: 'tests/test_the_research_workflow_is_served.py::test_a_resolved_verbatim_passage_attaches_with_five_separate_verdicts', note: 'attach by exact locator with verbatim words records five separate verdicts and the P18 ledger tracks the passage; the planted negative (test_a_snippet_shaped_locator_is_refused_as_unresolved) refuses a snippet with identity=unresolved, and a changed word is refused as differs. 12 September 2026'}
-      browser_journey: {result: PASS, ref: '.nm/journey/report.json#tests/test_the_journey_of_a_search.py::test_phase_4_attaching_a_paragraph_shows_five_verdicts_not_one', note: 'bound to the journey report when `python tools/journey.py` last ran on the committed tree; phases 3-4 open a discovered case to its paragraphs by locator and attach one, and the page shows five verdict rows and the note identity-and-words-only'}
+      browser_journey: {result: PASS, ref: 'docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_a_search.py::test_phase_4_attaching_a_paragraph_shows_five_verdicts_not_one', note: 'bound to the journey report when `python tools/journey.py` last ran on the committed tree; phases 3-4 open a discovered case to its paragraphs by locator and attach one, and the page shows five verdict rows and the note identity-and-words-only'}
     negative_control:
       mutation: "attach a ranked snippet as if it were an exact verified source"
       expected_failure: "the unverified source cannot become established matter authority"
@@ -1424,7 +1424,7 @@ items:
     required_evidence: [integration_test, browser_journey]
     evidence:
       integration_test: {result: PASS, ref: 'tests/test_the_research_workflow_is_served.py::test_a_court_the_corpus_does_not_hold_is_unsupported_coverage', note: 'four outcomes on the wire as four values: results; searched_no_results with the index identity; unsupported_coverage for a court the corpus does not hold, decided before anything is searched; unavailable_index for an absent file (test_an_absent_index_is_unavailable_not_empty). Bands, never percentages. 12 September 2026'}
-      browser_journey: {result: PASS, ref: '.nm/journey/report.json#tests/test_the_journey_of_a_search.py::test_phase_6_an_unsupported_court_is_not_a_zero', note: 'phases 2, 5 and 6 read #research-outcome[data-outcome] after submission for results, searched_no_results and unsupported_coverage'}
+      browser_journey: {result: PASS, ref: 'docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_a_search.py::test_phase_6_an_unsupported_court_is_not_a_zero', note: 'phases 2, 5 and 6 read #research-outcome[data-outcome] after submission for results, searched_no_results and unsupported_coverage'}
     negative_control:
       mutation: "submit a search with an absent index or unknown court alias"
       expected_failure: "the state explains whether and where research ran rather than reporting absence of law"
@@ -1670,7 +1670,11 @@ items:
   - id: BK-44-AC1
     requirement: "A regression of a previously required passing journey scenario makes the journey command fail and cannot be swallowed by a reproduced or conditional expected-failure result"
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: "tests/test_the_control_plane_holds_and_restores.py::test_a_closed_scenario_that_starts_reproducing_is_a_regression"
+        note: "The journey verdict is a function over rows, so the criterion's own mutation -- a closed passing scenario turned into a conditional expected failure -- is exercised without breaking a browser suite. A declared reproduction is still permitted; a declaration that outlived its defect blocks; and `run()` is asserted not to decide again."
     negative_control:
       mutation: "turn a closed passing scenario into a conditional expected failure"
       expected_failure: "the journey verdict rejects the regression"
@@ -2439,12 +2443,9 @@ items:
     required_evidence: [domain_test]
     evidence:
       domain_test:
-        result: NOT_RUN
-        ref: ''
-        note: 3 of 47 steps carry a full contract. The rest are skeletons, and a
-          contract invented for a phase with no code would be specification --
-          which belongs in the PRD, not in a registry that claims to describe
-          what is true.
+        result: PASS
+        ref: "tests/test_the_control_plane_holds_and_restores.py::test_the_lint_refuses_a_step_given_half_a_contract"
+        note: "All 47 steps now carry the full eight-field contract, including what each must do, refuse and recover from -- the earlier note recording 3 of 47 predates the registry being filled in. The probe drives the real `_steps` lint with the real registry and asserts the unmutated step is not reported before requiring the refusal to name the removed field."
     negative_control:
       mutation: give a step half a contract
       expected_failure: lint refuses it; a partial contract is not a contract
@@ -2569,7 +2570,7 @@ items:
       domain_test: {result: PASS, ref: 'tests/test_a_correction_reaches_exactly_what_it_touched.py::test_the_independent_issue_is_left_completely_alone', note: 'one node of 33 in the file, all passing; mutation-verified on 12 September 2026 (non-transitive closure, over-broad invalidation, exhausted rework reading current, inputless node reading current)'}
       integration_test: {result: PASS, ref: 'tests/test_a_correction_is_served_and_survives_restart.py::test_a_stale_conclusion_is_labelled_stale_on_the_served_cover', note: 'EVAL-010 through the ASGI app: correct the dated event through the case-file route, rebuild the application on the same store, read cover, board, matter list and ledger; dependent stale with prior value and reason, independent current, source_versions {1, 2}. 10 tests in the file, all passing'}
       adversarial_test: {result: PASS, ref: 'tests/test_a_correction_is_served_and_survives_restart.py::test_planted_serving_the_old_figure_as_current_is_refused', note: 'EVAL-010 planted negative: a projection built without the ledger leads with the corrected date; the wired projection refuses it and lists it under stale_deadlines with the reason'}
-      browser_journey: {result: PASS, ref: '.nm/journey/report.json#tests/test_the_journey_of_a_correction.py::test_phase_3b_correcting_the_date_marks_exactly_the_dependents_stale', note: 'Not a required method for this criterion; recorded because it ran and is bound. `python tools/journey.py` drives both browser suites into one report (31 phases, 12 September 2026); this row is the correction phase. Synthetic matter, scripted model: exact closure, history with who and why, board STALE with the prior figure, reload, rework'}
+      browser_journey: {result: PASS, ref: 'docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_a_correction.py::test_phase_3b_correcting_the_date_marks_exactly_the_dependents_stale', note: 'Not a required method for this criterion; recorded because it ran and is bound. `python tools/journey.py` drives both browser suites into one report (31 phases, 12 September 2026); this row is the correction phase. Synthetic matter, scripted model: exact closure, history with who and why, board STALE with the prior figure, reload, rework'}
     negative_control:
       mutation: reverse one controlling fact after a concluded position exists
       expected_failure: stale dependent advice cannot remain current and unrelated analysis is not needlessly discarded

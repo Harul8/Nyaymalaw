@@ -3977,6 +3977,18 @@
         {
           "path": "docs/backlog/status.yaml",
           "kind": "existing"
+        },
+        {
+          "path": "tools/journey.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/journey_verdict.py",
+          "kind": "planned"
+        },
+        {
+          "path": "tests/test_every_sweep_has_a_positive_control.py",
+          "kind": "existing"
         }
       ],
       "inputs": [

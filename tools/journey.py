@@ -43,6 +43,7 @@ sys.path.insert(0, str(ROOT))
 from tools import browser_evidence as _browser_evidence  # noqa: E402
 from tools._console import utf8_console  # noqa: E402
 from tools.evidence import verification_fingerprint  # noqa: E402
+from tools.journey_verdict import regressions  # noqa: E402
 
 BROWSER_SCHEMA = _browser_evidence.SCHEMA
 artifact_inventory = _browser_evidence.artifact_inventory
@@ -279,12 +280,10 @@ def run(extra: list[str]) -> int:
         for p in art:
             print(f"    {_display_path(p)}")
 
-    failed = [r for r in rows if r["state"] in ("FAILED", "NOT RUN")]
-    reproduced = [r for r in rows if r["state"] == "REPRODUCED"]
-
-    # THE PHASES THAT DID NOT REPORT AT ALL. BK-51.
-    seen = {r["nodeid"].split("::")[-1] for r in rows}
-    absent = [p for p in EXPECTED if p not in seen]
+    verdict = regressions(rows, expected=EXPECTED, declared=REPRODUCING)
+    failed = verdict.failed
+    reproduced = verdict.reproduced
+    absent = verdict.absent
     if absent:
         print()
         print(f"  MISSING  {len(absent)} declared phase(s) produced no result:")
@@ -317,8 +316,7 @@ def run(extra: list[str]) -> int:
     # human-readable label -- so no declaration could ever match and every
     # reproduction read as undeclared. A key that never matches is a
     # permission that can never be granted.
-    undeclared = [r for r in reproduced
-                  if r["nodeid"].split("::")[-1] not in REPRODUCING]
+    undeclared = verdict.undeclared
     if undeclared:
         print(f"  REGRESSION  {len(undeclared)} scenario(s) reproduced a defect "
               f"nobody declared:")
@@ -327,9 +325,7 @@ def run(extra: list[str]) -> int:
         print("    A closed scenario that starts reproducing is a regression, "
               "not a documented defect. Declare it in REPRODUCING with the "
               "reason, or fix it.")
-    reproducing = {r["nodeid"].split("::")[-1] for r in reproduced}
-    closed = sorted(name for name in REPRODUCING
-                    if name in seen and name not in reproducing)
+    closed = verdict.closed
     if closed:
         print(f"  STALE  {len(closed)} declared reproduction(s) now pass:")
         for name in closed:
@@ -375,7 +371,7 @@ def run(extra: list[str]) -> int:
     configuration = execution_identity(
         argv=pytest_argv, expected=list(EXPECTED), python=python_runtime,
     )
-    unexpected = sorted(seen - set(EXPECTED))
+    unexpected = verdict.unexpected
     report = {
         "schema": BROWSER_SCHEMA,
         "run_id": run_id,

@@ -46,6 +46,20 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sweep test  ->  the test that proves it can fail.
 #: A sweep with no control is a sweep that has never been shown to work.
 CONTROLS: dict[str, str] = {
+    # P42 -- evidence that resolves only on the machine that produced it.
+    # Found by checking out a fresh worktree: three rows bound their browser
+    # evidence to `.nm/journey/report.json`, which is gitignored. Its control
+    # plants that exact path and requires the prefix tuple to catch it, so
+    # emptying the tuple cannot silence the sweep.
+    "test_no_evidence_ref_points_at_a_path_a_fresh_checkout_does_not_have":
+        "test_the_stranded_ref_check_can_see_a_planted_one",
+    # BK-60-AC6's sweep over the step registry. Its control plants a step with
+    # half a contract, asserts the unmutated step is NOT reported first, and
+    # then requires the real lint to name the field that was removed.
+    "test_every_journey_step_states_what_it_does_refuses_and_recovers":
+        "test_the_lint_refuses_a_step_given_half_a_contract",
+    "test_every_committed_evidence_path_exists":
+        "test_the_stranded_ref_check_can_see_a_planted_one",
     # P36 / J-5 -- the identifier sweep whose population is the CODE rather
     # than one scripted conversation. Its control plants a leak in a branch no
     # fixture reaches, which is the whole reason the static population exists.

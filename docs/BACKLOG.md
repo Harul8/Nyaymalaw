@@ -6540,6 +6540,63 @@ the historical review; offer only the supportable lower scope.
 invalidation logic and the reports. It did not act as the qualified reviewer
 and no counsel approval is recorded anywhere in this packet.
 
+### P42 Start record — keep the control plane, and prove the two that could not be proved — 14 September 2026
+
+**Outcome sought.** All twenty-eight criteria registered to P42 — the BK-60,
+BK-61, BK-44, BK-52, BK-71, BK-73, BK-74, BK-75 and BK-76 populations.
+
+**TWENTY-SIX ALREADY CARRIED PASSING EVIDENCE, and none of those suites is
+touched.** Rewriting a working control for uniformity is how a working control
+stops working; the packet's own instruction is to preserve and prove the
+existing plane, not replace it. What follows is the two that could not be
+proved, and one defect a fresh worktree exposed.
+
+**BK-44-AC1 — the mechanism existed and nothing could exercise it.**
+`tools/journey.py` already refused an undeclared reproduction and a
+declaration that had outlived its defect. The decision sat inside `run()`
+between a pytest subprocess and a print, so the only way to exercise *a closed
+scenario that starts reproducing must fail the command* was to break a browser
+suite on purpose. That is why the criterion carried no evidence: a control
+nobody can test is a control nobody has tested. The decision is now
+`tools/journey_verdict.regressions`, a function over rows, and `run()` reads it
+rather than deciding again — asserted structurally, because two answers to
+"was this a regression" is the second owner this build refuses.
+
+**It is a separate module and not a dataclass inside the runner**, because
+`tests/test_tooling_bites.py` loads `tools/journey.py` standalone through
+`spec_from_file_location` without registering it in `sys.modules`, where
+`dataclasses` cannot resolve a string annotation and raises. Editing that
+working check to accommodate a new one would have been the wrong way round.
+
+**BK-60-AC6 — the same shape.** `CONTRACT_FIELDS` was declared and the lint
+already read it; nothing planted a step with half a contract. The probe now
+drives the real `_steps` lint with the real registry, asserts the unmutated
+step is NOT reported first, and then requires the refusal to name the field
+that was removed.
+
+**AND THE DEFECT A FRESH WORKTREE FOUND.** Three criteria — BK-38-AC1,
+BK-38-AC2, BK-65-AC1 — bound their browser evidence to
+`.nm/journey/report.json`, a GITIGNORED runtime path. On the machine that last
+ran the journey they resolve; in any fresh checkout the lint reports the report
+absent, and "absent" is not "failed", so the rows read as unproven rather than
+as wrong. All three phases are in the committed report and the refs now name
+it. The generalised check is that no evidence ref may name a path outside the
+repository, over every ref rather than the three that were found.
+
+**Assumptions.** Every probe works on isolated copies or in-memory structures;
+nothing mutates a tracked file. `git status` was compared before and after the
+suite and the tree carried only the intended changes.
+
+**Acceptance → proof.** BK-44-AC1 and BK-60-AC6 domain **PASS**, with a
+positive control on each refusal. The other twenty-six re-run green on this
+tree and keep the evidence they had.
+
+**Rollback.** Revert the extraction; the runner's inline decision is preserved
+line for line in `journey_verdict` and restoring it is a move, not a rewrite.
+
+**Exclusions.** No control was relaxed, no test skipped, no population
+narrowed.
+
 ### P44 acquisition-foundation Start record — 11 September 2026
 
 **Decision: BLOCKED on P19's scoped source-register output; contract ready.**
