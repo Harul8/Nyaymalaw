@@ -56,6 +56,13 @@ def _seen(pytest_out: str = "", trace_out: str = "", *, trace_failed=False):
         "pytest": observed("pytest", pytest_out, failed=bool(pytest_out)),
         "trace": observed("trace", trace_out, failed=trace_failed),
         "ruff": _declared("ruff"),
+        # THE DECLARED POPULATION DEBT, as the step would observe it. Supplied
+        # from the registry rather than by running `tools/backlog.py`, for the
+        # reason `ruff` is: this file tests the COMPARISON. Whether the real
+        # registry still matches its declaration is the gate step's own
+        # question, and `test_every_required_level_carries_an_authored_result`
+        # proves that step's observer against the report it parses.
+        "backlog": _declared("backlog"),
     }
 
 
@@ -71,9 +78,19 @@ def _verdict_for(step: str, expected: FailureFact, output: str):
     )
 
 
-def test_the_current_empty_failure_population_is_recognised():
-    """An honest full-green baseline is a real state, not a missing registry."""
-    verdict = compare(ROWS, _seen(), {"class_a", "pytest", "trace", "ruff"})
+def test_the_current_declared_failure_population_is_recognised():
+    """The registry as it stands is recognised exactly, row for row.
+
+    RENAMED FROM `..._empty_failure_population_...` ON 14 SEPTEMBER 2026, when
+    the evidence-population debt was registered and the population stopped
+    being empty. The assertion did not weaken: every declared row must still be
+    matched by what its step observes, and none may be left over. What changed
+    is that `backlog` is one of the steps it reads, because a declared row no
+    step is asked about would drop out of `matched` and the equality below
+    would stop meaning "all of them".
+    """
+    verdict = compare(ROWS, _seen(),
+                      {"class_a", "pytest", "trace", "ruff", "backlog"})
     assert verdict.ok, (verdict.new, verdict.fixed)
     assert verdict.matched == [row.id for row in ROWS]
 

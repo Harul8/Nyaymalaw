@@ -301,6 +301,21 @@ def main() -> int:
     captured["pylint"] = out
     results.append(("pylint", ok))
     prints.append(("pylint", verification_fingerprint()))
+    # EVERY REQUIRED LEVEL CARRIES AN AUTHORED RESULT. 14 September 2026.
+    #
+    # 221 of 489 declared evidence rows had no entry at all and appeared in no
+    # count, board or workbook, because a missing key is not a row. Derivation
+    # was already safe -- absence read as NOT_RUN -- so nothing derived `done`
+    # from a gap; what nobody could see was the SIZE of the gap. This step
+    # prints it, member by member, and the comparison below holds it to the
+    # exact debt declared in `docs/backlog/known_failures.yaml`: one more gap
+    # blocks, and one gap closed makes the registration stale until it shrinks.
+    #
+    # PREFLIGHT, because it reads files and runs in about a second.
+    ok, out = step("backlog population", [py, "tools/backlog.py", "population"])
+    captured["backlog"] = out
+    results.append(("backlog", ok))
+    prints.append(("backlog", verification_fingerprint()))
 
     # FAST-FAIL ONLY WHEN THERE IS NOTHING TO RECONCILE. The previous runner
     # found Ruff red in 0.8 seconds and nevertheless spent 805.7 seconds on a

@@ -61,6 +61,15 @@ _RUFF_LOCATION = re.compile(r"^\s*-->\s+(.+?):(\d+):(\d+)\s*$")
 _RUFF_TOTAL = re.compile(r"^Found (\d+) errors?\.?$", re.M)
 _PYLINT_FACT = re.compile(
     r"^(.+?):(\d+):(\d+):\s+([A-Z]\d{4}):\s+(.+?)\s*$")
+#: `tools/backlog.py population`: `  [group] member  optional note`. The member
+#: is ONE token -- the note after it is for people and is never part of a fact.
+_BACKLOG_MEMBER = re.compile(r"^\s+\[([^\]\s]+)\]\s+(\S+)")
+_BACKLOG_TOTAL = re.compile(r"^POPULATION FAILED -- (\d+) member\(s\)", re.M)
+_BACKLOG_OK = re.compile(r"^POPULATION OK\b", re.M)
+#: A group identity is `rule` or `rule:packet`. Anything else is not a group
+#: the population check produces, and registering it would be debt nothing
+#: could ever match.
+_BACKLOG_GROUP = re.compile(r"^[a-z][a-z-]*[a-z](?::[A-Z0-9]+)?$")
 _FEATURE_DETAIL = re.compile(r"^[A-Z]\d+(?:\.\d+)?:\s+\S")
 
 
@@ -165,6 +174,29 @@ def _declared_fact(raw: object, where: str) -> FailureFact:
                 f"{where} pylint fact needs path, line, column, code and reason")
         ident = f"{path.replace(chr(92), '/')}:{line}:{column}:{code}"
         return FailureFact("pylint", ident, reason)
+    if kind == "backlog":
+        # THE MEMBERS ARE THE FACT, listed rather than digested. A ruff debt is
+        # a digest because its diagnostics carry line numbers that move with
+        # every unrelated edit; a population member is `BK-65-AC1/domain_test`
+        # and does not move. Listing them is what makes this row the work
+        # queue the sweep reads, rather than a hash somebody has to reverse.
+        _only(raw, {"kind", "rule", "members"}, where)
+        rule = _text(raw.get("rule"))
+        members = raw.get("members")
+        if not _BACKLOG_GROUP.fullmatch(rule):
+            raise RegistryError(
+                f"{where} backlog fact needs a rule such as "
+                f"'absent-required-level:P23', got {rule!r}")
+        if not isinstance(members, list) or not members \
+                or not all(_text(m) and len(_text(m).split()) == 1 for m in members):
+            raise RegistryError(
+                f"{where} backlog fact needs a non-empty list of single-token "
+                f"members")
+        clean = [_text(m) for m in members]
+        if len(set(clean)) != len(clean):
+            raise RegistryError(f"{where} backlog fact lists a member twice")
+        return FailureFact("backlog", rule, f"{len(clean)} member(s)",
+                           tuple(sorted(clean)))
     raise RegistryError(f"{where} has unsupported fact kind {kind!r}")
 
 
@@ -218,6 +250,7 @@ def load(path: pathlib.Path | None = None) -> list[Known]:
             "pylint": {"pylint"},
             "pytest-failed": {"class_a", "pytest"},
             "pytest-error": {"class_a", "pytest"},
+            "backlog": {"backlog"},
         }[fact.kind]
         wrong = sorted(set(steps) - allowed_steps)
         if wrong:
@@ -394,9 +427,47 @@ def _pytest_facts(output: str) -> set[FailureFact]:
     return facts
 
 
+def _backlog_facts(output: str) -> set[FailureFact]:
+    """One fact per population group, holding exactly its members.
+
+    THE TOTAL IS CROSS-CHECKED, as `_trace_facts` does, and the check runs in
+    BOTH directions: printed members with no total, a total that disagrees with
+    the members parsed, a member printed twice, and a report that says OK while
+    printing members are each an observer gap. An observer gap can never be
+    registered, so a truncated or garbled report blocks rather than matching a
+    smaller debt than the one that exists.
+    """
+    groups: dict[str, list[str]] = {}
+    parsed = 0
+    for line in output.splitlines():
+        if match := _BACKLOG_MEMBER.match(line):
+            group, member = match.groups()
+            groups.setdefault(group, []).append(member)
+            parsed += 1
+    facts: set[FailureFact] = set()
+    for group, members in groups.items():
+        if len(set(members)) != len(members):
+            facts.add(_observer_gap("backlog", f"{group} printed a member twice"))
+        unique = sorted(set(members))
+        facts.add(FailureFact("backlog", group, f"{len(unique)} member(s)",
+                              tuple(unique)))
+    totals = [int(m.group(1)) for m in _BACKLOG_TOTAL.finditer(output)]
+    said_ok = bool(_BACKLOG_OK.search(output))
+    if parsed and said_ok:
+        facts.add(_observer_gap("backlog", "reported OK while printing members"))
+    if parsed and not totals:
+        facts.add(_observer_gap("backlog", "member total is absent"))
+    elif totals and (len(totals) != 1 or totals[0] != parsed):
+        facts.add(_observer_gap(
+            "backlog", f"reported {totals!r} but parsed {parsed} member(s)"))
+    return facts
+
+
 def observed(step: str, output: str, *, failed: bool = False) -> Observed:
     """Parse one step's output; an unparseable red can never be waived."""
-    if step == "trace":
+    if step == "backlog":
+        facts = _backlog_facts(output)
+    elif step == "trace":
         facts = _trace_facts(output)
     elif step == "ruff":
         facts = _ruff_facts(output)

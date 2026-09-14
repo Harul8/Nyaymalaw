@@ -230,8 +230,186 @@ def load() -> dict:
         PROFESSIONAL.read_text(encoding="utf-8"))
     doc["build_rules"] = json.loads(
         BUILD_RULES.read_text(encoding="utf-8")) if BUILD_RULES.exists() else {}
+    materialise_absent_levels(doc)
     bind_execution_evidence(doc)
     return doc
+
+
+# ------------------------------------------------- the evidence population ---
+#
+# WHY THIS EXISTS, MEASURED 14 SEPTEMBER 2026
+# ----------------------------------------------
+# 489 required-evidence rows are declared across 225 criteria. 221 of them had
+# NO ENTRY AT ALL -- not NOT_RUN, not STALE, nothing. `proof_state` already read
+# each of those as NOT_RUN, so no row ever derived `done` from a gap, and that
+# half of the rule was sound. What was not sound is that 221 obligations
+# existed in no report, no board, no workbook cell and no count: a missing
+# entry is not a row, so every population that iterated `evidence.items()`
+# silently had 221 fewer members than the registry declares. Nobody could say
+# how many were unwritten book-keeping and how many were unbuilt work, because
+# nobody could see them.
+#
+# That is defect shape S3 on the control plane -- a zero that is really an
+# absence -- and the answer has two halves that must not be merged:
+#
+#   THE LOADER MATERIALISES. Every declared-but-unauthored level becomes an
+#   explicit NOT_RUN row, marked `_materialised`, so every reader downstream
+#   sees the whole declared population. Derivation does not change: it already
+#   read absence as NOT_RUN, and `test_every_required_level_carries_an_
+#   authored_result` proves every `proof_state` and `derive_done` is identical
+#   before and after.
+#
+#   THE POPULATION CHECK READS WHAT WAS AUTHORED. If it read the loaded view it
+#   would find no gap ever again -- the loader has just filled every one -- and
+#   it would pass on every registry that exists, which is defect shape S11 in
+#   the function written to find the gap. So it treats a `_materialised` row
+#   exactly as it treats a missing key.
+#
+# AND IT IS NOT `lint`. `lint` answers "is this registry structurally
+# consistent", and `spec/plan/export_current_plan.py` refuses to publish the
+# workbook while it has ANY problem. Folding a 221-row completeness debt into
+# it would forbid regenerating the plan for the whole length of the sweep that
+# pays the debt down. Completeness is a different question with its own gate
+# step (`tools/check.py` "backlog population") and its own declared, exact,
+# owned debt in `docs/backlog/known_failures.yaml`.
+
+#: Levels whose PASS asserts that behaviour exists. A PASS at one of these on
+#: an item authored `implementation: none` is the registry contradicting
+#: itself: either the code exists and the implementation claim is stale, or
+#: the evidence names something that does not do what it says. Counsel, model
+#: and production results are left out -- a review can pass against a
+#: specification before anything implements it.
+BEHAVIOURAL_EVIDENCE = frozenset(
+    {"domain_test", "integration_test", "adversarial_test", "browser_journey"})
+
+#: The two rules, named once. `tools/known_failures.py` registers facts under
+#: these identities, and a second spelling of either would be a debt nobody
+#: could match.
+POPULATION_ABSENT = "absent-required-level"
+POPULATION_IMPLEMENTATION = "implementation-none-with-passing-behaviour"
+
+#: The group for a criterion no packet claims as its final owner. A token, not
+#: prose, because it becomes part of a registered fact identity.
+UNOWNED_PACKET = "UNOWNED"
+
+PACKETS = ROOT / "docs" / "blueprint" / "packets.json"
+
+
+def _authored(entry: object) -> bool:
+    """Whether a level carries a result somebody WROTE. One definition."""
+    return isinstance(entry, dict) and not entry.get("_materialised")
+
+
+def materialise_absent_levels(doc: dict) -> int:
+    """Give every declared-but-unauthored required level an explicit NOT_RUN.
+
+    Returns how many rows were materialised, so a caller can report the size of
+    the gap rather than only fill it. Idempotent: a row already materialised is
+    not counted again, and an authored row -- whatever its result -- is never
+    touched.
+    """
+    added = 0
+    for item in doc.get("items") or []:
+        for ac in item.get("acceptance") or []:
+            required = ac.get("required_evidence") or []
+            if not required:
+                continue
+            evidence = ac.get("evidence")
+            if not isinstance(evidence, dict):
+                evidence = {}
+                ac["evidence"] = evidence
+            for level in required:
+                if level in evidence:
+                    continue
+                evidence[level] = {
+                    "result": "NOT_RUN",
+                    "_effective_result": "NOT_RUN",
+                    "_materialised": True,
+                    "note": ("no result was authored for this required level; "
+                             "materialised as NOT_RUN so it is counted"),
+                }
+                added += 1
+    return added
+
+
+def _final_packets(packets: list[dict] | None = None) -> dict[str, str]:
+    """criterion id -> the packet that owns it finally. Read, never guessed."""
+    if packets is None:
+        if not PACKETS.exists():
+            return {}
+        packets = json.loads(PACKETS.read_text(encoding="utf-8")).get("packets") or []
+    return {criterion: packet["id"] for packet in packets
+            for criterion in (packet.get("final_criteria") or [])}
+
+
+def population(doc: dict, *, packets: list[dict] | None = None
+               ) -> dict[str, list[tuple[str, str, str]]]:
+    """The evidence-population debt, grouped as it is registered.
+
+    Returns ``{group: [(member, owner, note), ...]}``, each list sorted.
+    ``group`` is the registered fact identity; ``member`` the stable key that
+    fact holds; ``owner`` the acceptance criterion whose authored evidence
+    closes that member; ``note`` is for people and is never compared.
+
+    READS AUTHORED ABSENCE ONLY -- see the block comment above. A registry
+    passed straight from `load()` and the same registry read raw give the same
+    answer, and the test for that is the control that this cannot go blind.
+
+    GROUPED BY FINAL-OWNER PACKET, and the grouping is not presentation. The
+    sweep that pays this debt down runs packet by packet on parallel branches.
+    One 221-member registration would put every one of those branches into the
+    same list and conflict on every merge; one per packet lets each branch
+    re-register only the debt it closed.
+    """
+    final = _final_packets(packets)
+    groups: dict[str, list[tuple[str, str, str]]] = {}
+    for item in doc.get("items") or []:
+        passing: dict[str, str] = {}          # behavioural level -> first owner
+        for ac in item.get("acceptance") or []:
+            acid = ac.get("id", "?")
+            evidence = ac.get("evidence") or {}
+            for level in ac.get("required_evidence") or []:
+                if not _authored(evidence.get(level)):
+                    group = f"{POPULATION_ABSENT}:{final.get(acid, UNOWNED_PACKET)}"
+                    groups.setdefault(group, []).append(
+                        (f"{acid}/{level}", acid, ""))
+            for level, entry in evidence.items():
+                if (level in BEHAVIOURAL_EVIDENCE and _authored(entry)
+                        and entry.get("result") == "PASS"):
+                    passing.setdefault(level, acid)
+        # ONE MEMBER PER ITEM, not per level: the contradiction is the item's
+        # own claim, and it is resolved once however many levels carry a PASS.
+        # The levels go in the note, where rewording cannot move the fact.
+        if passing and item.get("implementation") == "none":
+            groups.setdefault(POPULATION_IMPLEMENTATION, []).append(
+                (item.get("id", "?"), sorted(passing.values())[0],
+                 ", ".join(sorted(passing))))
+    return {group: sorted(set(members)) for group, members in sorted(groups.items())}
+
+
+def population_report(groups: dict[str, list[tuple[str, str, str]]]) -> str:
+    """The exact text the gate step prints and `tools/known_failures` parses.
+
+    One line per member, `  [group] member  note`. The member is the first
+    token after the bracket; the note is for people and the parser ignores it,
+    so rewording a note cannot move a registered fact. The closing total is
+    cross-checked by the parser: a report whose total disagrees with the lines
+    it printed is an observer gap, never a match.
+    """
+    lines = ["EVIDENCE POPULATION"]
+    total = 0
+    for group, members in groups.items():
+        for member, _owner, note in members:
+            lines.append(f"  [{group}] {member}" + (f"  {note}" if note else ""))
+            total += 1
+    if total:
+        lines.append(f"POPULATION FAILED -- {total} member(s) in "
+                     f"{len(groups)} group(s)")
+    else:
+        lines.append("POPULATION OK -- every required level of every criterion "
+                     "carries an authored result, and no item claims "
+                     "implementation none over passing behavioural evidence")
+    return "\n".join(lines)
 
 
 AUTOMATED_EVIDENCE = {"domain_test", "integration_test", "adversarial_test"}
@@ -471,8 +649,11 @@ def lint(doc: dict, *, verify_execution: bool = False) -> list[str]:
             got = ac.get("evidence") or {}
             for lvl in req:
                 e = got.get(lvl)
-                if e is None:
-                    continue                      # reported as NOT_RUN below
+                if not _authored(e):
+                    # NOT AUTHORED, so there is nothing here to be malformed.
+                    # Absence is a completeness question and `population`
+                    # owns it; a materialised NOT_RUN has no ref to validate.
+                    continue
                 if e.get("result") not in RESULT:
                     bad.append(f"{acid}/{lvl}: result {e.get('result')!r} is "
                                f"not a proof state")
@@ -1430,7 +1611,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("command", choices=["lint", "status", "graph", "render",
                                         "check", "stage", "rules",
-                                        "obligations"])
+                                        "obligations", "population"])
     ap.add_argument("item", nargs="?", help="BK-/J- id, for `stage`")
     ap.add_argument("--as-of", type=calendar_date,
                     help="India calendar date for read-only status/stage review")
@@ -1438,6 +1619,14 @@ def main() -> int:
     if args.as_of is not None and args.command not in {"status", "stage"}:
         ap.error("--as-of is only allowed for read-only status or stage")
     doc = load()
+
+    if args.command == "population":
+        # EXIT 1 WHILE ANY DEBT EXISTS. The gate does not read this exit code
+        # as a verdict: it parses the report and compares it, member for
+        # member, against `docs/backlog/known_failures.yaml`.
+        groups = population(doc)
+        print(population_report(groups))
+        return 1 if groups else 0
 
     if args.command == "obligations":
         if not args.item:

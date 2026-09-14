@@ -5192,6 +5192,99 @@ The canonical Class-A run can now start from a stale predecessor and produce
 the fresh artifact that replaces it, removing the self-dependency without
 making either evidence or the board advisory.
 
+### Evidence population made visible and held to an exact debt — 14 September 2026
+
+**Outcome: BUILT. The mechanism is complete; the debt it exposes is not paid.**
+Step 1 of the engineering-completion path, on `codex/evidence-population-lint`
+from `s0-foundations` at `a60326f` (fast-forwarded and pushed the same day).
+
+**Measured before building, on `a60326f`.** 489 required-evidence rows across 225
+criteria. **221 had no entry at all**; 186 were PASS, 80 NOT_RUN, 1 BLOCKED,
+1 STALE. Of the 221: 117 sit at levels a test in this repository can satisfy
+(integration 47, domain 31, adversarial 39) and 104 need browser (38), counsel
+(40), model (23) or production (3) authority. Seven items were authored
+`implementation: none` while carrying an authored PASS at a behavioural level:
+BK-49, BK-56, BK-57, BK-58, BK-66, BK-68 and BK-88 — not the three the plan
+named. The forwarded plan's "117" is the code-satisfiable subset, not the
+total absent population.
+
+**What was sound, and what was not.** `proof_state` already read a missing
+level as NOT_RUN, so no row has ever derived `done` from a gap. What failed was
+accounting: a missing key is not a row, so every board, report and workbook
+that iterated `evidence.items()` counted 221 fewer obligations than the
+registry declares. Defect shape S3 on the control plane.
+
+**Mechanism — two halves that must not be merged.**
+
+| Half | Where | What it does |
+|---|---|---|
+| The loader materialises | `tools/backlog.py::materialise_absent_levels`, called by `load()` | every declared-but-unauthored level becomes an explicit `NOT_RUN` row marked `_materialised`; idempotent; never touches an authored row |
+| The check reads authored absence | `tools/backlog.py::population` | treats a `_materialised` row exactly as a missing key, so the loader cannot blind it (S11) |
+
+Two rules, named once: `absent-required-level:<final packet>` (member
+`criterion/level`) and `implementation-none-with-passing-behaviour` (one member
+per item; behavioural levels only — a counsel, model or production PASS can
+legitimately precede implementation).
+
+**Not folded into `lint`, and why.** `lint` answers *is this registry
+structurally consistent*, and `spec/plan/export_current_plan.py` refuses to
+publish the workbook while `lint` reports anything. A 221-row completeness debt
+inside `lint` would forbid regenerating the plan for the whole length of the
+sweep that pays it down. Completeness has its own command
+(`python tools/backlog.py population`), its own gate step (`backlog
+population`, preflight, about a second) and its own declared debt.
+
+**The debt, frozen exactly.** `docs/backlog/known_failures.yaml` gains a
+`backlog` fact kind and 29 rows — 28 `POPULATION-ABSENT-<packet>` rows and
+`POPULATION-IMPLEMENTATION-NONE` — holding all 228 members **listed, not
+digested**, each row owned by the criteria that close its members. Generated
+from `population(load())`, not typed. Grouped by final-owner packet because the
+sweep runs packet by packet on parallel branches: one 228-member list would
+conflict on every merge, one row per packet lets each branch re-register only
+what it closed. The gate compares member for member: one more gap blocks, and
+one closed gap blocks until its row shrinks.
+
+**Largest rows.** P23 30 · P17 28 · P25 20 · P32 16 · P14 15 · P26 13 · P22 10 ·
+P04 10 · UNOWNED 8 · P09 8 · implementation-none 7.
+
+**Non-growth is enforced by review, not by code.** Nothing in the tree can
+stop someone editing a row larger; any edit moves `registry_digest`, which
+invalidates scoped stamps and bound evidence, so growth is conspicuous. It is
+not mechanically impossible, and this record does not say it is.
+
+**Tests.** `tests/test_every_required_level_carries_an_authored_result.py`:
+loader, derivation equivalence on the real registry (every `proof_state`,
+`item_result` and `derive_done` identical with and without materialised rows),
+authored-absence reading, grouping, the implementation rule, report/observer
+round-trip, four observer-gap forms, registry parsing, and exact
+compare-in-both-directions. **Mutation-verified**: population reading the
+loaded view fails 2; a materialised row reading PASS fails 1; the observer
+ignoring its total fails 1; any PASS tripping the implementation rule fails 3.
+
+**Two existing tests changed, and neither is a relaxation.**
+`test_the_current_empty_failure_population_is_recognised` became
+`test_the_current_declared_failure_population_is_recognised`: the population is
+no longer empty, so the test now also reads the `backlog` step. The equality it
+asserts — every declared row matched, none left over — is unchanged.
+`test_a_new_preflight_failure_does_not_run_the_expensive_populations` pinned
+pylint as the last preflight step; the population check is now the last one.
+It still asserts that every cheap step runs and no pytest population does, and
+now also that pylint ran.
+
+**What this does not change.** No criterion's evidence, no item's status, no
+derived `done`. The 489 / 225 populations are unchanged. BK-75-AC3's promise —
+backlog lint rejects stale or absent execution evidence — now has absence
+counted rather than skipped; its recorded evidence is not re-stated here.
+
+**Consequence to know about.** Editing `tools/backlog.py` moves the verification
+fingerprint, so the Class-A and browser evidence bound to `6692cae5…` reads
+STALE: `backlog lint` reports 19 staleness problems on this tree (verified: the
+untouched `a60326f` lints 0). Restoring lint 0 needs the Class-A result
+promoted and the browser journey re-run on the committed tree.
+
+**Rollback.** Revert the commit. The registry returns to empty, the step
+disappears, and derivation is unaffected either way.
+
 ## BK-76 — graph-vector hook can execute the reporter it invokes
 
 Opened 10 September 2026 from the real pre-commit output after `f0a869a`.

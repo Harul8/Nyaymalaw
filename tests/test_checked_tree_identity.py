@@ -464,7 +464,12 @@ def test_a_new_preflight_failure_does_not_run_the_expensive_populations(
     monkeypatch.setattr(sys, "argv", ["check.py"])
 
     assert check.main() == 1
-    assert labels[-1] == "pylint E0601,E0606"
+    # THE LAST PREFLIGHT STEP, which since 14 September 2026 is the evidence
+    # population check rather than pylint. It is preflight because it reads
+    # files and takes about a second; the property this test holds -- every
+    # cheap step still runs, and no expensive population does -- is unchanged.
+    assert labels[-1] == "backlog population"
+    assert "pylint E0601,E0606" in labels
     assert not any(label.startswith("pytest") for label in labels)
     assert "NOT RUN -- preflight is already red" in capsys.readouterr().out
 

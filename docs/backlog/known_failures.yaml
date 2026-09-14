@@ -51,4 +51,782 @@ schema: 2
 
 #: Registered by BK-80-AC7. Amending this file is a delivery decision: it
 #: changes what the build is permitted to commit over.
-known_failures: []
+known_failures:
+
+- id: POPULATION-ABSENT-P04
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P04"
+    members:
+    - "BK-28-AC1/browser_journey"
+    - "BK-28-AC1/integration_test"
+    - "BK-30-AC1/browser_journey"
+    - "BK-30-AC1/domain_test"
+    - "BK-82-AC1/browser_journey"
+    - "BK-82-AC1/integration_test"
+    - "BK-82-AC2/adversarial_test"
+    - "BK-82-AC2/domain_test"
+    - "BK-82-AC3/adversarial_test"
+    - "BK-82-AC3/domain_test"
+  owner:
+  - BK-28-AC1
+  - BK-30-AC1
+  - BK-82-AC1
+  - BK-82-AC2
+  - BK-82-AC3
+  because: >-
+    Required evidence levels with no authored result; P04 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 10
+    of them sit here.
+
+- id: POPULATION-ABSENT-P05
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P05"
+    members:
+    - "BK-85-AC3/counsel_review"
+  owner:
+  - BK-85-AC3
+  because: >-
+    Required evidence levels with no authored result; P05 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 1
+    of them sit here.
+
+- id: POPULATION-ABSENT-P08
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P08"
+    members:
+    - "BK-86-AC1/adversarial_test"
+    - "BK-86-AC1/browser_journey"
+    - "BK-86-AC1/integration_test"
+    - "BK-86-AC2/adversarial_test"
+    - "BK-86-AC2/browser_journey"
+    - "BK-86-AC2/integration_test"
+  owner:
+  - BK-86-AC1
+  - BK-86-AC2
+  because: >-
+    Required evidence levels with no authored result; P08 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 6
+    of them sit here.
+
+- id: POPULATION-ABSENT-P09
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P09"
+    members:
+    - "BK-40-AC1/browser_journey"
+    - "BK-40-AC1/integration_test"
+    - "BK-40-AC2/browser_journey"
+    - "BK-40-AC2/integration_test"
+    - "BK-46-AC1/browser_journey"
+    - "BK-46-AC1/domain_test"
+    - "BK-86-AC3/browser_journey"
+    - "BK-86-AC3/production_measure"
+  owner:
+  - BK-40-AC1
+  - BK-40-AC2
+  - BK-46-AC1
+  - BK-86-AC3
+  because: >-
+    Required evidence levels with no authored result; P09 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 8
+    of them sit here.
+
+- id: POPULATION-ABSENT-P10
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P10"
+    members:
+    - "BK-36-AC1/adversarial_test"
+    - "BK-36-AC1/integration_test"
+    - "BK-36-AC2/adversarial_test"
+    - "BK-36-AC2/integration_test"
+    - "BK-83-AC1/adversarial_test"
+    - "BK-83-AC1/integration_test"
+  owner:
+  - BK-36-AC1
+  - BK-36-AC2
+  - BK-83-AC1
+  because: >-
+    Required evidence levels with no authored result; P10 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 6
+    of them sit here.
+
+- id: POPULATION-ABSENT-P11
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P11"
+    members:
+    - "BK-83-AC2/adversarial_test"
+    - "BK-83-AC2/integration_test"
+  owner:
+  - BK-83-AC2
+  because: >-
+    Required evidence levels with no authored result; P11 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 2
+    of them sit here.
+
+- id: POPULATION-ABSENT-P13
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P13"
+    members:
+    - "BK-33-AC1/browser_journey"
+    - "BK-33-AC1/integration_test"
+    - "BK-62-AC1/counsel_review"
+    - "BK-62-AC1/domain_test"
+    - "BK-62-AC1/integration_test"
+  owner:
+  - BK-33-AC1
+  - BK-62-AC1
+  because: >-
+    Required evidence levels with no authored result; P13 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 5
+    of them sit here.
+
+- id: POPULATION-ABSENT-P14
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P14"
+    members:
+    - "BK-53-AC1/browser_journey"
+    - "BK-53-AC1/counsel_review"
+    - "BK-53-AC1/integration_test"
+    - "BK-53-AC2/counsel_review"
+    - "BK-53-AC2/integration_test"
+    - "BK-78-AC1/browser_journey"
+    - "BK-78-AC1/counsel_review"
+    - "BK-78-AC1/integration_test"
+    - "BK-78-AC2/adversarial_test"
+    - "BK-78-AC2/integration_test"
+    - "BK-93-AC1/adversarial_test"
+    - "BK-93-AC1/counsel_review"
+    - "BK-93-AC1/domain_test"
+    - "BK-93-AC1/integration_test"
+    - "BK-93-AC1/model_eval"
+  owner:
+  - BK-53-AC1
+  - BK-53-AC2
+  - BK-78-AC1
+  - BK-78-AC2
+  - BK-93-AC1
+  because: >-
+    Required evidence levels with no authored result; P14 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 15
+    of them sit here.
+
+- id: POPULATION-ABSENT-P15
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P15"
+    members:
+    - "BK-69-AC3/adversarial_test"
+    - "BK-69-AC3/domain_test"
+  owner:
+  - BK-69-AC3
+  because: >-
+    Required evidence levels with no authored result; P15 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 2
+    of them sit here.
+
+- id: POPULATION-ABSENT-P17
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P17"
+    members:
+    - "BK-64-AC1/adversarial_test"
+    - "BK-64-AC1/domain_test"
+    - "BK-64-AC1/integration_test"
+    - "BK-94-AC1/adversarial_test"
+    - "BK-94-AC1/browser_journey"
+    - "BK-94-AC1/domain_test"
+    - "BK-94-AC1/integration_test"
+    - "BK-94-AC1/model_eval"
+    - "BK-94-AC2/adversarial_test"
+    - "BK-94-AC2/browser_journey"
+    - "BK-94-AC2/domain_test"
+    - "BK-94-AC2/integration_test"
+    - "BK-94-AC2/model_eval"
+    - "BK-94-AC3/adversarial_test"
+    - "BK-94-AC3/browser_journey"
+    - "BK-94-AC3/counsel_review"
+    - "BK-94-AC3/domain_test"
+    - "BK-94-AC3/integration_test"
+    - "BK-94-AC3/model_eval"
+    - "BK-94-AC4/adversarial_test"
+    - "BK-94-AC4/browser_journey"
+    - "BK-94-AC4/counsel_review"
+    - "BK-94-AC4/domain_test"
+    - "BK-94-AC4/integration_test"
+    - "BK-94-AC4/model_eval"
+    - "J-4-AC1/counsel_review"
+    - "J-4-AC1/integration_test"
+    - "J-4-AC1/model_eval"
+  owner:
+  - BK-64-AC1
+  - BK-94-AC1
+  - BK-94-AC2
+  - BK-94-AC3
+  - BK-94-AC4
+  - J-4-AC1
+  because: >-
+    Required evidence levels with no authored result; P17 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 28
+    of them sit here.
+
+- id: POPULATION-ABSENT-P19
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P19"
+    members:
+    - "BK-84-AC1/counsel_review"
+    - "BK-84-AC1/domain_test"
+  owner:
+  - BK-84-AC1
+  because: >-
+    Required evidence levels with no authored result; P19 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 2
+    of them sit here.
+
+- id: POPULATION-ABSENT-P21
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P21"
+    members:
+    - "BK-95-AC3/adversarial_test"
+    - "BK-95-AC3/browser_journey"
+    - "BK-95-AC3/counsel_review"
+    - "BK-95-AC3/domain_test"
+    - "BK-95-AC3/integration_test"
+    - "BK-95-AC3/model_eval"
+  owner:
+  - BK-95-AC3
+  because: >-
+    Required evidence levels with no authored result; P21 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 6
+    of them sit here.
+
+- id: POPULATION-ABSENT-P22
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P22"
+    members:
+    - "BK-95-AC1/adversarial_test"
+    - "BK-95-AC1/counsel_review"
+    - "BK-95-AC1/domain_test"
+    - "BK-95-AC1/integration_test"
+    - "BK-95-AC1/model_eval"
+    - "BK-95-AC2/adversarial_test"
+    - "BK-95-AC2/browser_journey"
+    - "BK-95-AC2/counsel_review"
+    - "BK-95-AC2/domain_test"
+    - "BK-95-AC2/integration_test"
+  owner:
+  - BK-95-AC1
+  - BK-95-AC2
+  because: >-
+    Required evidence levels with no authored result; P22 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 10
+    of them sit here.
+
+- id: POPULATION-ABSENT-P23
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P23"
+    members:
+    - "BK-95-AC4/adversarial_test"
+    - "BK-95-AC4/counsel_review"
+    - "BK-95-AC4/domain_test"
+    - "BK-95-AC4/integration_test"
+    - "BK-95-AC4/model_eval"
+    - "BK-95-AC5/adversarial_test"
+    - "BK-95-AC5/counsel_review"
+    - "BK-95-AC5/domain_test"
+    - "BK-95-AC5/integration_test"
+    - "BK-95-AC5/model_eval"
+    - "BK-95-AC6/adversarial_test"
+    - "BK-95-AC6/browser_journey"
+    - "BK-95-AC6/counsel_review"
+    - "BK-95-AC6/domain_test"
+    - "BK-95-AC6/integration_test"
+    - "BK-95-AC6/model_eval"
+    - "BK-95-AC7/adversarial_test"
+    - "BK-95-AC7/counsel_review"
+    - "BK-95-AC7/domain_test"
+    - "BK-95-AC7/integration_test"
+    - "BK-95-AC7/model_eval"
+    - "BK-95-AC8/adversarial_test"
+    - "BK-95-AC8/browser_journey"
+    - "BK-95-AC8/domain_test"
+    - "BK-95-AC8/integration_test"
+    - "BK-95-AC9/adversarial_test"
+    - "BK-95-AC9/browser_journey"
+    - "BK-95-AC9/counsel_review"
+    - "BK-95-AC9/integration_test"
+    - "BK-95-AC9/model_eval"
+  owner:
+  - BK-95-AC4
+  - BK-95-AC5
+  - BK-95-AC6
+  - BK-95-AC7
+  - BK-95-AC8
+  - BK-95-AC9
+  because: >-
+    Required evidence levels with no authored result; P23 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 30
+    of them sit here.
+
+- id: POPULATION-ABSENT-P24
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P24"
+    members:
+    - "BK-54-AC2/counsel_review"
+    - "BK-54-AC2/model_eval"
+  owner:
+  - BK-54-AC2
+  because: >-
+    Required evidence levels with no authored result; P24 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 2
+    of them sit here.
+
+- id: POPULATION-ABSENT-P25
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P25"
+    members:
+    - "BK-54-AC1/adversarial_test"
+    - "BK-54-AC1/browser_journey"
+    - "BK-54-AC1/integration_test"
+    - "BK-79-AC1/browser_journey"
+    - "BK-79-AC1/integration_test"
+    - "BK-79-AC2/adversarial_test"
+    - "BK-79-AC2/browser_journey"
+    - "BK-79-AC2/integration_test"
+    - "BK-79-AC3/adversarial_test"
+    - "BK-79-AC3/browser_journey"
+    - "BK-79-AC3/integration_test"
+    - "BK-93-AC2/adversarial_test"
+    - "BK-93-AC2/browser_journey"
+    - "BK-93-AC2/counsel_review"
+    - "BK-93-AC2/integration_test"
+    - "BK-93-AC2/model_eval"
+    - "BK-94-AC5/adversarial_test"
+    - "BK-94-AC5/browser_journey"
+    - "BK-94-AC5/domain_test"
+    - "BK-94-AC5/integration_test"
+  owner:
+  - BK-54-AC1
+  - BK-79-AC1
+  - BK-79-AC2
+  - BK-79-AC3
+  - BK-93-AC2
+  - BK-94-AC5
+  because: >-
+    Required evidence levels with no authored result; P25 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 20
+    of them sit here.
+
+- id: POPULATION-ABSENT-P26
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P26"
+    members:
+    - "BK-37-AC1/counsel_review"
+    - "BK-37-AC1/model_eval"
+    - "BK-50-AC1/domain_test"
+    - "BK-96-AC2/adversarial_test"
+    - "BK-96-AC2/browser_journey"
+    - "BK-96-AC2/counsel_review"
+    - "BK-96-AC2/domain_test"
+    - "BK-96-AC2/integration_test"
+    - "BK-96-AC3/adversarial_test"
+    - "BK-96-AC3/browser_journey"
+    - "BK-96-AC3/counsel_review"
+    - "BK-96-AC3/integration_test"
+    - "BK-96-AC3/model_eval"
+  owner:
+  - BK-37-AC1
+  - BK-50-AC1
+  - BK-96-AC2
+  - BK-96-AC3
+  because: >-
+    Required evidence levels with no authored result; P26 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 13
+    of them sit here.
+
+- id: POPULATION-ABSENT-P27
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P27"
+    members:
+    - "BK-55-AC1/counsel_review"
+    - "BK-55-AC1/model_eval"
+    - "BK-96-AC1/adversarial_test"
+    - "BK-96-AC1/counsel_review"
+    - "BK-96-AC1/integration_test"
+    - "BK-96-AC1/model_eval"
+  owner:
+  - BK-55-AC1
+  - BK-96-AC1
+  because: >-
+    Required evidence levels with no authored result; P27 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 6
+    of them sit here.
+
+- id: POPULATION-ABSENT-P29
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P29"
+    members:
+    - "BK-56-AC1/browser_journey"
+    - "BK-56-AC1/counsel_review"
+    - "BK-56-AC1/integration_test"
+    - "BK-92-AC3/adversarial_test"
+    - "BK-92-AC3/counsel_review"
+  owner:
+  - BK-56-AC1
+  - BK-92-AC3
+  because: >-
+    Required evidence levels with no authored result; P29 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 5
+    of them sit here.
+
+- id: POPULATION-ABSENT-P31
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P31"
+    members:
+    - "BK-57-AC1/browser_journey"
+    - "BK-57-AC1/counsel_review"
+  owner:
+  - BK-57-AC1
+  because: >-
+    Required evidence levels with no authored result; P31 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 2
+    of them sit here.
+
+- id: POPULATION-ABSENT-P32
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P32"
+    members:
+    - "BK-39-AC1/browser_journey"
+    - "BK-39-AC1/integration_test"
+    - "BK-39-AC2/counsel_review"
+    - "BK-58-AC3/counsel_review"
+    - "BK-59-AC1/browser_journey"
+    - "BK-59-AC1/counsel_review"
+    - "BK-59-AC1/integration_test"
+    - "BK-59-AC2/browser_journey"
+    - "BK-59-AC2/counsel_review"
+    - "BK-59-AC2/integration_test"
+    - "BK-59-AC3/browser_journey"
+    - "BK-59-AC3/integration_test"
+    - "BK-63-AC1/adversarial_test"
+    - "BK-63-AC1/counsel_review"
+    - "BK-63-AC1/domain_test"
+    - "BK-63-AC1/integration_test"
+  owner:
+  - BK-39-AC1
+  - BK-39-AC2
+  - BK-58-AC3
+  - BK-59-AC1
+  - BK-59-AC2
+  - BK-59-AC3
+  - BK-63-AC1
+  because: >-
+    Required evidence levels with no authored result; P32 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 16
+    of them sit here.
+
+- id: POPULATION-ABSENT-P33
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P33"
+    members:
+    - "BK-85-AC4/adversarial_test"
+    - "BK-85-AC4/domain_test"
+  owner:
+  - BK-85-AC4
+  because: >-
+    Required evidence levels with no authored result; P33 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 2
+    of them sit here.
+
+- id: POPULATION-ABSENT-P34
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P34"
+    members:
+    - "BK-66-AC1/browser_journey"
+    - "BK-66-AC1/counsel_review"
+    - "BK-66-AC1/model_eval"
+  owner:
+  - BK-66-AC1
+  because: >-
+    Required evidence levels with no authored result; P34 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 3
+    of them sit here.
+
+- id: POPULATION-ABSENT-P35
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P35"
+    members:
+    - "BK-67-AC1/counsel_review"
+    - "BK-67-AC1/model_eval"
+    - "BK-91-AC4/counsel_review"
+    - "BK-91-AC4/model_eval"
+  owner:
+  - BK-67-AC1
+  - BK-91-AC4
+  because: >-
+    Required evidence levels with no authored result; P35 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 4
+    of them sit here.
+
+- id: POPULATION-ABSENT-P36
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P36"
+    members:
+    - "BK-68-AC1/counsel_review"
+    - "J-7-AC1/counsel_review"
+  owner:
+  - BK-68-AC1
+  - J-7-AC1
+  because: >-
+    Required evidence levels with no authored result; P36 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 2
+    of them sit here.
+
+- id: POPULATION-ABSENT-P37
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P37"
+    members:
+    - "BK-41-AC1/browser_journey"
+    - "BK-41-AC1/production_measure"
+    - "BK-92-AC4/counsel_review"
+    - "BK-92-AC4/model_eval"
+    - "BK-92-AC4/production_measure"
+  owner:
+  - BK-41-AC1
+  - BK-92-AC4
+  because: >-
+    Required evidence levels with no authored result; P37 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 5
+    of them sit here.
+
+- id: POPULATION-ABSENT-P45
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:P45"
+    members:
+    - "BK-58-AC1/browser_journey"
+    - "BK-58-AC2/counsel_review"
+  owner:
+  - BK-58-AC1
+  - BK-58-AC2
+  because: >-
+    Required evidence levels with no authored result; P45 is the final owner of
+    these criteria. Each member is `criterion/level`. Closing one means
+    authoring its result -- a PASS naming an executed node that is proven able
+    to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its reason
+    -- and then re-registering this row one member smaller. Registered 14
+    September 2026, when 221 absent rows across 489 were first made visible; 2
+    of them sit here.
+
+- id: POPULATION-ABSENT-UNOWNED
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "absent-required-level:UNOWNED"
+    members:
+    - "BK-87-AC1/adversarial_test"
+    - "BK-87-AC1/domain_test"
+    - "BK-87-AC2/adversarial_test"
+    - "BK-87-AC2/domain_test"
+    - "BK-87-AC3/adversarial_test"
+    - "BK-87-AC3/domain_test"
+    - "BK-87-AC4/domain_test"
+    - "BK-90-AC3/domain_test"
+  owner:
+  - BK-87-AC1
+  - BK-87-AC2
+  - BK-87-AC3
+  - BK-87-AC4
+  - BK-90-AC3
+  because: >-
+    Required evidence levels with no authored result; no packet claims these
+    criteria as a final owner. Each member is `criterion/level`. Closing one
+    means authoring its result -- a PASS naming an executed node that is proven
+    able to fail, or an explicit NOT_RUN, BLOCKED or NOT_APPLICABLE with its
+    reason -- and then re-registering this row one member smaller. Registered
+    14 September 2026, when 221 absent rows across 489 were first made visible;
+    8 of them sit here.
+
+- id: POPULATION-IMPLEMENTATION-NONE
+  step: backlog
+  fact:
+    kind: backlog
+    rule: "implementation-none-with-passing-behaviour"
+    members:
+    - "BK-49"
+    - "BK-56"
+    - "BK-57"
+    - "BK-58"
+    - "BK-66"
+    - "BK-68"
+    - "BK-88"
+  owner:
+  - BK-49-AC1
+  - BK-56-AC2
+  - BK-57-AC5
+  - BK-58-AC1
+  - BK-66-AC3
+  - BK-68-AC1
+  - BK-88-AC1
+  because: >-
+    These items are authored `implementation: none` while carrying an authored
+    PASS at a behavioural level (domain, integration, adversarial or browser).
+    The registry contradicts itself on each: either the code exists and the
+    implementation claim is stale, or the evidence names something that does
+    not do what the item says. Resolving one is a correction to that item,
+    checked against the source, never a change to this row alone. Registered 14
+    September 2026 when the population check was introduced; the row must
+    shrink as each item is corrected.
