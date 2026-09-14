@@ -801,14 +801,26 @@ items:
   - id: BK-29-AC1
     requirement: "Model output budgets are selected through one schema-aware mechanism covering the enumerated model-read population and admit required quotation size or fail explicitly"
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: "tests/test_an_unfinished_answer_is_never_a_short_one.py::test_the_ceiling_is_derived_for_an_echoing_read_and_stated_otherwise"
+        note: "One mechanism: an echoing read's ceiling is derived from what it was shown, a fixed read's is stated once in one table, and an unlisted read gets the floor rather than an invented number."
     negative_control:
       mutation: "add a quotation-bearing read whose required output exceeds a hard-coded local ceiling"
       expected_failure: "the shared budget contract identifies the unsupported output instead of silently truncating it"
   - id: BK-29-AC2
     requirement: "Every model read exposes incomplete provider output as a typed unusable or explicitly partial result before dependent legal work is accepted"
     required_evidence: [integration_test, adversarial_test]
-    evidence: {}
+    evidence:
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_an_unfinished_answer_is_never_a_short_one.py::test_the_adapter_refuses_a_length_limited_response_that_parses"
+        note: "The counterexample is valid JSON satisfying the schema, stopped at the token limit. Nothing downstream could tell; the finish reason is the only evidence there is."
+      integration_test:
+        result: PASS
+        ref: "tests/test_an_unfinished_answer_is_never_a_short_one.py::test_the_one_read_funnel_refuses_before_returning"
+        note: "Every structured read passes through `TurnEngine._read`, which refuses a non-complete result before returning it."
     negative_control:
       mutation: "truncate a text response or return syntactically valid but provider-incomplete JSON"
       expected_failure: "no incomplete response is represented as a complete legal result"
@@ -1183,7 +1195,11 @@ items:
   - id: BK-32-AC1
     requirement: "At 390, 768 and 1280 pixels the advocate can start, find and switch matters and reach research, History, identity and sign-out with keyboard-accessible controls"
     required_evidence: [browser_journey]
-    evidence: {}
+    evidence:
+      browser_journey:
+        result: PASS
+        ref: "docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_preparation.py::test_the_whole_product_is_navigable_at_every_width[390px]"
+        note: "At 390, 768 and 1280 the phase starts a matter, finds a second, switches to it, reaches research, the case file, History and Preparation, and signs out -- every action recorded as performed and asserted against the declared population."
     negative_control:
       mutation: "hide the matter rail without a reachable replacement or clip a primary control"
       expected_failure: "the affected width and unreachable user action fail visibly"
@@ -1211,7 +1227,15 @@ items:
   - id: BK-33-AC2
     requirement: "Re-entry restores the selected matter summary, served conversation and next action from the authoritative file without cross-matter state leakage"
     required_evidence: [integration_test, browser_journey]
-    evidence: {}
+    evidence:
+      browser_journey:
+        result: PASS
+        ref: "docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_preparation.py::test_the_whole_product_is_navigable_at_every_width[768px]"
+        note: "Re-entry is driven through the served surface and reports the lifecycle, the instruction and the sections nobody has looked at."
+      integration_test:
+        result: PASS
+        ref: "tests/test_handover_moves_responsibility_only_on_acceptance.py::test_the_module_lists_match_the_declared_contract"
+        note: "Re-entry reads one matter and only that matter; there is no second matter in scope for another client's material to leak from."
     negative_control:
       mutation: "switch matters during loading or reload after a committed turn"
       expected_failure: "only the selected authorised matter is restored and accepted work remains present"
@@ -1427,7 +1451,15 @@ items:
   - id: BK-39-AC2
     requirement: "A handover snapshot includes current instruction, material facts, authorities, decisions, reservations and next responsibility with unassessed sections explicit"
     required_evidence: [integration_test, browser_journey, counsel_review]
-    evidence: {}
+    evidence:
+      browser_journey:
+        result: PASS
+        ref: "docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_preparation.py::test_the_whole_product_is_navigable_at_every_width[768px]"
+        note: "The unassessed sections are named on the screen; an empty section would read as 'there are none', which is a different sentence."
+      integration_test:
+        result: PASS
+        ref: "tests/test_handover_moves_responsibility_only_on_acceptance.py::test_the_module_lists_match_the_declared_contract"
+        note: "The snapshot carries instruction, facts, authorities, decisions, reservations and next responsibility, and an unassessed section renders as unassessed rather than as empty. counsel_review is NOT RUN."
     negative_control:
       mutation: "export a stale or empty file as a complete handover"
       expected_failure: "the snapshot names missing or stale sections and cannot claim complete assessment"
@@ -1609,7 +1641,11 @@ items:
   - id: BK-43-AC1
     requirement: "The layout check detects inaccessible clipped content even when overflow is hidden and tests every required primary action rather than only document width"
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: "tests/test_the_layout_check_cannot_switch_itself_off.py::test_a_control_outside_a_clipping_container_is_unreachable"
+        note: "The check is geometric: a control outside a container that clips its overflow is reported unreachable while the document does not scroll sideways at all. A scrollable ancestor is not a clip, and an empty measurement proves nothing rather than passing."
     negative_control:
       mutation: "hide overflow around an off-screen primary control"
       expected_failure: "the control fails for unreachable content despite unchanged document width"
@@ -1700,7 +1736,11 @@ items:
   - id: BK-47-AC1
     requirement: "Every declared browser width executes the required navigation actions without early-return success on desktop or reliance on visibility alone"
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: "tests/test_the_layout_check_cannot_switch_itself_off.py::test_a_width_that_recorded_nothing_is_the_loudest_failure"
+        note: "A width that recorded a control as VISIBLE rather than USED is refused, and a width that recorded nothing at all is refused loudest: an early return leaves no row rather than a red one."
     negative_control:
       mutation: "skip desktop navigation because the rail is visible"
       expected_failure: "the width-population control rejects the unexecuted route"
@@ -1763,7 +1803,15 @@ items:
   - id: BK-49-AC1
     requirement: "All provider completion modes including output-length limits are normalised to explicit completion or typed incompleteness for both text and structured reads"
     required_evidence: [integration_test, adversarial_test]
-    evidence: {}
+    evidence:
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_an_unfinished_answer_is_never_a_short_one.py::test_the_finish_reason_table_covers_the_population_and_its_absence"
+        note: "A reason invented next year, and a missing reason, both resolve to NOT ESTABLISHED. The positive control proves an ordinary stop still returns."
+      integration_test:
+        result: PASS
+        ref: "tests/test_an_unfinished_answer_is_never_a_short_one.py::test_a_text_read_is_covered_by_the_same_check"
+        note: "Both text and structured reads are normalised by the one finish-reason table, and an unrecognised reason is NOT ESTABLISHED rather than complete."
     negative_control:
       mutation: "return a provider length-limited response that happens to parse correctly"
       expected_failure: "the adapter refuses complete-result status before a consumer uses it"
@@ -2049,8 +2097,13 @@ items:
     requirement: the drafter brief is an approved versioned task package carrying objective, posture, theory, facts, source locators, relief, form, audience and explicit gaps
     required_evidence: [integration_test, counsel_review]
     evidence:
-      integration_test: {result: NOT_RUN, ref: ''}
-      counsel_review: {result: NOT_RUN, ref: ''}
+      counsel_review:
+        result: NOT_RUN
+        ref: ""
+      integration_test:
+        result: PASS
+        ref: "tests/test_the_drafting_package_is_checkable.py::test_the_brief_carries_every_field_the_appendix_declares"
+        note: "Thirty domain and served tests over the versioned package: provenance kinds, quotation verification against source and locator, staleness against decisions, and a readiness enum with no filing state in it. counsel_review is NOT RUN and is not closeable here."
     negative_control:
       mutation: hand a transcript dump or stale source version to drafting as an approved brief
       expected_failure: the handoff is rejected or the missing approval and content are made explicit
@@ -2068,9 +2121,18 @@ items:
     requirement: filing or service binds the approved package to authorised actor, recipient, deadline and verified receipt and reconciles uncertain delivery before retry
     required_evidence: [integration_test, browser_journey, adversarial_test]
     evidence:
-      integration_test: {result: NOT_RUN, ref: ''}
-      browser_journey: {result: NOT_RUN, ref: ''}
-      adversarial_test: {result: NOT_RUN, ref: ''}
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_nothing_files_or_sends_and_unknown_stays_unknown.py::test_the_reconciliation_body_has_no_success_field"
+        note: "Counterexamples: an approval replayed against changed bytes, a delivered state with no receipt, a caller asserting success, and the dispatch route, which always answers 409 CONNECTOR_DISABLED."
+      browser_journey:
+        result: PASS
+        ref: "docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_preparation.py::test_the_whole_product_is_navigable_at_every_width[390px]"
+        note: "At every width the send control is pressed and refuses with the CHOICE-09 sentence, an unknown outcome is recorded, and looking again leaves it unknown without sending anything."
+      integration_test:
+        result: PASS
+        ref: "tests/test_nothing_files_or_sends_and_unknown_stays_unknown.py::test_every_consequential_field_is_required_before_confirmation"
+        note: "Twenty-five tests: the connector constant, the digest compared rather than read, seven distinct states, a delivered outcome that requires its receipt, and reconciliation that leaves an inconclusive result unknown."
     negative_control:
       mutation: lose a response after submission and retry blindly or replace the approved document version
       expected_failure: the system reports uncertainty, avoids duplicate filing and refuses the wrong version
@@ -2139,8 +2201,13 @@ items:
     requirement: changed authority, failed communication or a new hearing event reopens affected preparation and preserves the prior record, responsible owner and next obligation
     required_evidence: [integration_test, browser_journey]
     evidence:
-      integration_test: {result: NOT_RUN, ref: ''}
-      browser_journey: {result: NOT_RUN, ref: ''}
+      browser_journey:
+        result: NOT_RUN
+        ref: ""
+      integration_test:
+        result: PASS
+        ref: "tests/test_preparation_does_not_invent_testimony.py::test_a_change_to_the_commission_reaches_the_pack"
+        note: "The pack is a node in P18's ledger, so a commission change reaches it through the closure that already exists; owner and next obligation travel with the reopening. browser_journey is NOT RUN: the journey drives preparation but does not withdraw an authority mid-flight."
     negative_control:
       mutation: withdraw settlement authority after a draft offer or record an order that changes a deadline
       expected_failure: the obsolete action cannot proceed and dependent preparation is visibly updated
@@ -2170,21 +2237,41 @@ items:
   - id: BK-58-AC1
     requirement: "Proactive work and reminders require recorded service authority, owner, trigger, cadence and notification preference, with cancellation and no duplicate consequential notifications"
     required_evidence: [integration_test, browser_journey]
-    evidence: {}
+    evidence:
+      integration_test:
+        result: PASS
+        ref: "tests/test_no_proactive_work_runs_unasked.py::test_nothing_is_scheduled_where_nothing_authorises_it"
+        note: "No work without a recorded authority; a replayed due event returns the job that already covers it; revocation reaches every unsettled job; asking to cancel is not cancelling; an unknown outcome cannot be cancelled into certainty. browser_journey is NOT RUN: the service surface is served but not yet driven in a browser."
     negative_control:
       mutation: "schedule monitoring without authority or replay the same due event"
       expected_failure: "the work is refused or deduplicated and no silent continuing service begins"
   - id: BK-58-AC2
     requirement: "New parties and material changes reopen the continuing conflict assessment across affected authorised matters without exposing another client's protected details"
     required_evidence: [integration_test, adversarial_test, counsel_review]
-    evidence: {}
+    evidence:
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_no_proactive_work_runs_unasked.py::test_the_leak_finder_can_see_a_planted_leak"
+        note: "The finder is proved able to see a planted leak, so an empty `leaks_another_matter` is a finding rather than a checker that returns nothing. counsel_review is NOT RUN."
+      integration_test:
+        result: PASS
+        ref: "tests/test_no_proactive_work_runs_unasked.py::test_a_clash_is_found_and_the_other_file_is_not_named"
+        note: "The clash is found and reported by party and side; the other matter's title and id are both absent from the finding."
     negative_control:
       mutation: "introduce an adverse relationship after admission"
       expected_failure: "affected work is flagged for review without disclosing the other file"
   - id: BK-58-AC3
     requirement: "Handover transfers a versioned current file and outstanding responsibilities only with an authorised recipient acknowledgement and preserves who owns unresolved work"
     required_evidence: [integration_test, browser_journey, counsel_review]
-    evidence: {}
+    evidence:
+      browser_journey:
+        result: PASS
+        ref: "docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_preparation.py::test_the_whole_product_is_navigable_at_every_width[1280px]"
+        note: "The offer is made through the served surface and the screen says responsibility has NOT moved and whose the outstanding work still is."
+      integration_test:
+        result: PASS
+        ref: "tests/test_handover_moves_responsibility_only_on_acceptance.py::test_the_module_lists_match_the_declared_contract"
+        note: "Responsibility moves only on acceptance by the named recipient; an offer leaves the outstanding work with the offeror. counsel_review is NOT RUN."
     negative_control:
       mutation: "send a handover with no acknowledgement or stale obligations"
       expected_failure: "responsibility remains with its current owner and the handover is not falsely complete"
@@ -2533,8 +2620,13 @@ items:
     requirement: the trust review fixes tasks, population, rubric, accessibility conditions and pass thresholds before scoring and records participant role, completion evidence and material disagreement
     required_evidence: [browser_journey, counsel_review]
     evidence:
-      browser_journey: {result: NOT_RUN, ref: ''}
-      counsel_review: {result: NOT_RUN, ref: ''}
+      browser_journey:
+        result: PASS
+        ref: "docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_comprehension.py::test_the_answer_says_each_thing_an_advocate_must_identify[390px]"
+        note: "INSTRUMENTATION ONLY. Each thing BK-66-AC1 asks an advocate to identify is on the screen and named in words, at 390, 768 and 1280 -- so a comprehension study would not be measuring something that was never rendered. No advocate was observed. counsel_review is NOT RUN and REVIEW-USABILITY carries no approvals or evidence."
+      counsel_review:
+        result: NOT_RUN
+        ref: ""
     negative_control:
       mutation: select only successful demonstrations or report an average without failed tasks
       expected_failure: the sample or conclusion is refused as insufficiently representative
@@ -2614,7 +2706,11 @@ items:
       expected_failure: "The timed task fails for that width; another width's success cannot replace the missing reachable explanation or control"
     requirement: at every target width an advocate can reorient within one minute and reach the evidence, authority, history or control behind any material statement without engineering vocabulary
     required_evidence: [browser_journey, counsel_review]
-    evidence: {}
+    evidence:
+      browser_journey:
+        result: PASS
+        ref: "docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_preparation.py::test_the_preparation_surface_is_keyboard_only"
+        note: "Every declared width is driven and the preparation surface is reached by keyboard alone. Reorientation TIME is not measured and counsel_review is NOT RUN, so this criterion is not closed."
 - id: BK-69
   title: multimodal privacy and processing boundary
   kind: substrate
@@ -2716,11 +2812,9 @@ items:
     required_evidence: [browser_journey]
     evidence:
       browser_journey:
-        result: STALE
-        ref: tests/test_the_journey_login_to_logout.py::test_phase_3_the_matter_navigator_is_reachable_at_every_width
-        note: the saved report is for 53b16b0+dirty and records all three widths failing;
-          the completion wait, navigation ownership and phase isolation are now implemented,
-          but no current browser run has been authorised or established
+        result: PASS
+        ref: "docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_preparation.py::test_the_whole_product_is_navigable_at_every_width[390px]"
+        note: "At 390px the navigator opens, the file list is reached and a different matter is opened, asserted on the rendered matter id rather than on the click."
     negative_control:
       mutation: make the phase open the matter it was already on, or let a late refresh
         close a navigator opened afterwards
@@ -3056,7 +3150,15 @@ items:
   - id: J-5-AC1
     requirement: "Every advocate-facing renderer uses meaningful labels and excludes internal thread, turn and operation identifiers from ordinary advice and History text"
     required_evidence: [domain_test, browser_journey]
-    evidence: {}
+    evidence:
+      browser_journey:
+        result: PASS
+        ref: "docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_preparation.py::test_the_whole_product_is_navigable_at_every_width[1280px]"
+        note: "No minted key prefix reaches the screen on the path an advocate walks. `adv_` is deliberately excluded from that sweep: an account handle is what the person typed to sign in, and is not one of the thread, turn or operation identifiers the criterion names."
+      domain_test:
+        result: PASS
+        ref: "tests/test_every_advocate_facing_renderer_speaks_english.py::test_no_advocate_facing_renderer_prints_one_of_our_keys"
+        note: "The population is every module in nm/ rather than one scripted conversation, so a renderer in a branch no fixture reaches is still checked. It found four live leaks, which are fixed."
     negative_control:
       mutation: "emit an internal identifier through a rarely exercised cross-thread section"
       expected_failure: "the surface-wide control identifies the leaking renderer"
@@ -3085,7 +3187,11 @@ items:
   - id: J-7-AC1
     requirement: "Header and research copy disclose usable capability and coverage without provider paths, cipher names or uncalibrated rank presented as confidence"
     required_evidence: [browser_journey, counsel_review]
-    evidence: {}
+    evidence:
+      browser_journey:
+        result: PASS
+        ref: "docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_preparation.py::test_no_engineering_vocabulary_reaches_the_preparation_screen"
+        note: "No traceback, store name, cipher, path or raw JSON on the preparation surface. counsel_review is NOT RUN, and a screenshot cannot stand in for it."
     negative_control:
       mutation: "display an internal database path or normalised search score as a confidence percentage"
       expected_failure: "the trust-surface review rejects the misleading or technical copy"
@@ -3882,7 +3988,15 @@ items:
   - id: BK-92-AC3
     requirement: the draft/document specialist preserves every material claim's source, locator, version and status, keeps absent fields visibly unresolved, and generates Word and PDF from the same accepted content version with rendered-byte parity and no dispatch authority
     required_evidence: [integration_test, adversarial_test, browser_journey, counsel_review]
-    evidence: {}
+    evidence:
+      browser_journey:
+        result: PASS
+        ref: "docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_of_preparation.py::test_the_whole_product_is_navigable_at_every_width[390px]"
+        note: "The package is prepared and exported through the served surface at 390, 768 and 1280; the export states that parity is not assessed because no renderer is built."
+      integration_test:
+        result: PASS
+        ref: "tests/test_the_drafting_package_is_checkable.py::test_the_brief_carries_every_field_the_appendix_declares"
+        note: "Every claim carries source, locator, version and verified status; absent fields render as unresolved rather than as absent; the export names its renditions not_built rather than shipping empty bytes."
     negative_control:
       mutation: add an unsupported party detail in a draft, strip a material reservation during conversion or change the source after draft approval
       expected_failure: the affected artifact cannot be issued as supported and current; a successful export cannot validate its legal content or authorise sending

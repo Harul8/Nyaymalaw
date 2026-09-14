@@ -1,11 +1,11 @@
 {
   "schema": 2,
-  "run_id": "7a6ace82-d6ec-418b-98e7-e0a1803c45d1",
-  "ran_at": "2026-09-13T20:07:38+00:00",
-  "commit": "21b3a8e47470eac6fb9d0d76cc6d3f75fc7f5ab7",
-  "fingerprint": "76587a28c7e061ca0e43a72a2904b8ee94ca182af987bc0babc670db10e6da3c",
-  "finished_fingerprint": "76587a28c7e061ca0e43a72a2904b8ee94ca182af987bc0babc670db10e6da3c",
-  "configuration_identity": "a05bed67f41eef501c939414c3f02f5bd5a17294e6769517cd7ca29ab1185218",
+  "run_id": "468d3779-b7e8-45b0-83bb-58bd3e6059f9",
+  "ran_at": "2026-09-13T23:33:35+00:00",
+  "commit": "c131b79aa212dfd784caf1fbf3d966d62d627cee+dirty",
+  "fingerprint": "8be761d76dc83139d444cfbb609caef4b1dd363236c072ebf7bc79f8d87bc1f1",
+  "finished_fingerprint": "8be761d76dc83139d444cfbb609caef4b1dd363236c072ebf7bc79f8d87bc1f1",
+  "configuration_identity": "0e4a470b4bd4b4ba9f5e4b3997166b6281205b78beb0aa4a1b786a159b89bc9a",
   "argv": [
     "pytest",
     "tests/test_the_journey_login_to_logout.py",
@@ -13,6 +13,7 @@
     "tests/test_the_journey_of_a_correction.py",
     "tests/test_the_journey_of_a_search.py",
     "tests/test_the_journey_of_preparation.py",
+    "tests/test_the_journey_of_comprehension.py",
     "-m",
     "journey",
     "-p",
@@ -81,10 +82,17 @@
     "test_the_whole_product_is_navigable_at_every_width[1280px]",
     "test_the_preparation_surface_is_keyboard_only",
     "test_a_long_email_and_a_long_citation_stay_on_the_phone",
-    "test_no_engineering_vocabulary_reaches_the_preparation_screen"
+    "test_no_engineering_vocabulary_reaches_the_preparation_screen",
+    "test_the_answer_says_each_thing_an_advocate_must_identify[390px]",
+    "test_the_answer_says_each_thing_an_advocate_must_identify[768px]",
+    "test_the_answer_says_each_thing_an_advocate_must_identify[1280px]",
+    "test_a_corrected_fact_changes_what_the_screen_says",
+    "test_the_source_behind_a_statement_is_reachable_from_the_screen",
+    "test_correcting_pausing_and_returning_need_no_retyping",
+    "test_no_engineering_state_is_what_the_advocate_has_to_read"
   ],
   "counts": {
-    "pass": 50,
+    "pass": 57,
     "reproduced": 0,
     "unexplained": 0,
     "missing": 0,
@@ -442,6 +450,55 @@
       "note": "",
       "scenario": "test_no_engineering_vocabulary_reaches_the_preparation_screen",
       "nodeid": "tests/test_the_journey_of_preparation.py::test_no_engineering_vocabulary_reaches_the_preparation_screen"
+    },
+    {
+      "phase": "the answer says each thing an advocate must identify [390px]",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_the_answer_says_each_thing_an_advocate_must_identify[390px]",
+      "nodeid": "tests/test_the_journey_of_comprehension.py::test_the_answer_says_each_thing_an_advocate_must_identify[390px]"
+    },
+    {
+      "phase": "the answer says each thing an advocate must identify [768px]",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_the_answer_says_each_thing_an_advocate_must_identify[768px]",
+      "nodeid": "tests/test_the_journey_of_comprehension.py::test_the_answer_says_each_thing_an_advocate_must_identify[768px]"
+    },
+    {
+      "phase": "the answer says each thing an advocate must identify [1280px]",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_the_answer_says_each_thing_an_advocate_must_identify[1280px]",
+      "nodeid": "tests/test_the_journey_of_comprehension.py::test_the_answer_says_each_thing_an_advocate_must_identify[1280px]"
+    },
+    {
+      "phase": "a corrected fact changes what the screen says",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_a_corrected_fact_changes_what_the_screen_says",
+      "nodeid": "tests/test_the_journey_of_comprehension.py::test_a_corrected_fact_changes_what_the_screen_says"
+    },
+    {
+      "phase": "the source behind a statement is reachable from the screen",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_the_source_behind_a_statement_is_reachable_from_the_screen",
+      "nodeid": "tests/test_the_journey_of_comprehension.py::test_the_source_behind_a_statement_is_reachable_from_the_screen"
+    },
+    {
+      "phase": "correcting pausing and returning need no retyping",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_correcting_pausing_and_returning_need_no_retyping",
+      "nodeid": "tests/test_the_journey_of_comprehension.py::test_correcting_pausing_and_returning_need_no_retyping"
+    },
+    {
+      "phase": "no engineering state is what the advocate has to read",
+      "state": "PASS",
+      "note": "",
+      "scenario": "test_no_engineering_state_is_what_the_advocate_has_to_read",
+      "nodeid": "tests/test_the_journey_of_comprehension.py::test_no_engineering_state_is_what_the_advocate_has_to_read"
     }
   ]
 }
