@@ -3706,6 +3706,22 @@
         {
           "path": "tools/evidence.py",
           "kind": "existing"
+        },
+        {
+          "path": "nm/domain/deployment.py",
+          "kind": "planned"
+        },
+        {
+          "path": "nm/domain/egress.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/media_policy.py",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/processors.yaml",
+          "kind": "existing"
         }
       ],
       "inputs": [
@@ -3776,6 +3792,14 @@
         },
         {
           "path": "docs/blueprint/decisions.json",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/incident.py",
+          "kind": "planned"
+        },
+        {
+          "path": "docs/blueprint/evaluations.json",
           "kind": "existing"
         }
       ],
@@ -3861,6 +3885,14 @@
         },
         {
           "path": "docs/backlog/plan.json",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/release.py",
+          "kind": "planned"
+        },
+        {
+          "path": "nm/domain/deployment.py",
           "kind": "existing"
         }
       ],
@@ -4104,6 +4136,14 @@
         },
         {
           "path": "docs/backlog/status.yaml",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/blueprint_execution.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/plan_view.py",
           "kind": "existing"
         }
       ],

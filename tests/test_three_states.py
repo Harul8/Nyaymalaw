@@ -69,6 +69,16 @@ ESCAPES = (
 #: Enums that are CLOSED VOCABULARIES, not outcomes. Each with the reason it
 #: cannot be "not assessed" — because something always chose it.
 CLOSED: dict[str, str] = {
+    "ClaimKind": (
+        "WHAT a piece of security evidence asserts -- inventoried, scanned, "
+        "penetration tested, IAM enforced, credential rotated -- and whoever "
+        "wrote the claim down chose one. A claim that asserts nothing is not "
+        "a claim, and a sixth member meaning 'unclear' would be a sixth thing "
+        "to review rather than an honest unknown. The two third states this "
+        "packet needs are elsewhere and are both defaults: `Assessed."
+        "NOT_ASSESSED` says nobody enumerated a population, and `refuse_claim` "
+        "returns why a claim does not cover the candidate in front of you -- "
+        "which is the question a claim kind cannot answer about itself."),
     "PremiseKind": (
         "WHICH of the five governing premises this is -- applicable law, "
         "accrual, jurisdiction, binding authority, role restriction -- and a "

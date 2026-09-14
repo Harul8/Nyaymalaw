@@ -617,15 +617,9 @@ items:
     required_evidence: [domain_test]
     evidence:
       domain_test:
-        result: STALE
-        ref: tests/test_the_deployment_environment_keeps_its_seal_separate.py::test_the_real_environment_does_not_share_its_seal
-        note: >-
-          Historical observation preserved: 247 sealed files re-keyed 9
-          September 2026 and verified with the new key; the application composed
-          and opened real matters. The isolated conformance environment has no
-          actual deployment configuration: current real-environment assessment is
-          NOT ASSESSED. This optional deployment observation is not synthetic
-          Class-A evidence and needs an attributable current deployment rerun.
+        result: BLOCKED
+        ref: "tests/test_the_deployment_environment_keeps_its_seal_separate.py::test_the_real_environment_does_not_share_its_seal"
+        note: "BLOCKED, and the dependency is exact: the requirement is about THIS MACHINE, and this isolated worktree holds no NM_MATTER_KEY, so the reading skips rather than passes. An absent value cannot show a separation that was never at risk here. THE MECHANISM IS PROVEN and is not the same claim: tests/test_a_security_claim_is_about_one_exact_candidate.py::test_the_composition_root_asks_this_module_rather_than_comparing_values drives the negative control -- composition refuses to start when the seal shares its value with any credential-shaped variable -- and that comparison is now one owner answering by digest, so no plaintext is held beside itself or put into a message. Historical observation preserved: 247 sealed files were re-keyed on 9 September 2026 and verified with the new key. Closing this row needs an attributable run on a configured deployment."
     negative_control:
       mutation: restore the previous .env, where NM_MATTER_KEY equalled NM_MODEL_API_KEY
       expected_failure: composition refuses to start
@@ -1549,14 +1543,35 @@ items:
       expected_failure: "The actual deployment refuses the processor and prevents restored disclosure; the user sees the material processing or retention limit"
     requirement: production multimodal processing has explicit purpose, processor, privilege, retention, deletion and recovery controls and exposes material boundaries to the user
     required_evidence: [adversarial_test, counsel_review, production_measure]
-    evidence: {}
+    evidence:
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
+      counsel_review:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on qualified counsel reviewing the multimodal processing, purpose, privilege and retention controls. No counsel record may be created on their behalf."
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_an_unapproved_processor_fails_closed_on_the_real_inventory"
+        note: "The mutation is routing an admitted upload through an unapproved processor, driven against the real docs/blueprint/processors.yaml through nm/bootstrap/egress_policy.py rather than a synthetic policy. The restore half of the mutation is BK-42-AC4 under P38."
   - id: BK-42-AC2
     requirement: the deployed access flow provides MFA for the production population or a separately approved owned expiring exception with compensating controls; prototype or local-roster decisions cannot waive it
     required_evidence: [integration_test, adversarial_test, production_measure]
     evidence:
-      integration_test: {result: NOT_RUN, ref: ''}
-      adversarial_test: {result: NOT_RUN, ref: ''}
-      production_measure: {result: NOT_RUN, ref: ''}
+      integration_test:
+        result: PASS
+        ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_a_present_second_factor_is_admitted"
+        note: "The positive control on the access flow: a present second factor is admitted, so the refusals beside it are a gate rather than a wall."
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_a_prototype_or_local_roster_decision_cannot_waive_the_second_factor"
+        note: "The mutation is access with the second factor absent or an expired exception. Both are refused with the missing condition named, and so is the prototype-roster waiver the criterion calls out: an exception approved against a local roster waives a population that is not the deployed one. An unassessed factor refuses too -- it is the default, so a flow that forgets to record it does not read as present."
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
     negative_control:
       mutation: attempt production access with the second factor absent or an expired exception
       expected_failure: access or release approval is refused and the missing condition is visible
@@ -1592,8 +1607,14 @@ items:
     requirement: latency, load capacity, dependency outage, cancellation and degradation meet declared service objectives under a representative measured workload
     required_evidence: [browser_journey, production_measure]
     evidence:
-      browser_journey: {result: NOT_RUN, ref: ''}
-      production_measure: {result: NOT_RUN, ref: ''}
+      browser_journey:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on the load_and_degradation portfolio run against a frozen manifest at a representative measured workload, with a declared capacity saturated and a required provider removed during active work. No such workload exists here and no provider may be removed from a deployment that does not exist."
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on measured latency, capacity, dependency-outage and cancellation behaviour on an operated deployment against declared service objectives. CHOICE-08's RPO/RTO targets are PROPOSED and unapproved; there is no deployment to measure and no approved objective to measure against."
     negative_control:
       mutation: saturate the declared capacity or remove a required provider during active work
       expected_failure: bounded degraded behavior and incident visibility replace false success or silently lost work
@@ -1615,9 +1636,18 @@ items:
     requirement: representative advocates can complete enabled journeys at supported widths with keyboard and assistive access, and understand errors, uncertainty, workspace and next action
     required_evidence: [browser_journey, counsel_review, production_measure]
     evidence:
-      browser_journey: {result: NOT_RUN, ref: ''}
-      counsel_review: {result: NOT_RUN, ref: ''}
-      production_measure: {result: NOT_RUN, ref: ''}
+      browser_journey:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on the accessibility portfolio run against a frozen manifest with assistive technology. The existing browser journey covers supported widths and keyboard reachability as served behaviour; it is not an assistive-technology assessment and must not be recorded as one."
+      counsel_review:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on representative practising advocates completing enabled journeys under the REVIEW-USABILITY protocol. That is a study with people in it; no participant may be recorded as having taken part."
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on observation on an operated deployment. None exists."
     negative_control:
       mutation: hide a critical warning at a narrow width or require a pointer-only recovery control
       expected_failure: the accessibility and usability gate reports the inaccessible or misunderstood task
@@ -1625,8 +1655,14 @@ items:
     requirement: processor, support and audit access have accountable owners and tested privilege, retention, deletion and secret-handling boundaries on the deployed configuration
     required_evidence: [adversarial_test, production_measure]
     evidence:
-      adversarial_test: {result: NOT_RUN, ref: ''}
-      production_measure: {result: NOT_RUN, ref: ''}
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_a_gate_detail_quoting_the_matter_never_reaches_the_plaintext_file"
+        note: "The mutation is placing privileged content in a log or retaining an unauthorised derivative after a deletion claim. The first is driven through TurnMetrics.as_dict, the projection file_store.record_metrics actually writes; the second through retention.refuse_transition, which refuses COMPLETE_FOR_DECLARED_SCOPE while a copy is unresolved, with the completing case proved beside it."
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
     negative_control:
       mutation: place privileged content in a log or retain an unauthorised derivative after a deletion claim
       expected_failure: the deployment gate detects the disclosure or false deletion claim
@@ -1634,8 +1670,14 @@ items:
     requirement: the release manifest names enabled legal coverage, languages, media and professional roles and carries current qualified review of governing premises and all material reservations
     required_evidence: [counsel_review, production_measure]
     evidence:
-      counsel_review: {result: NOT_RUN, ref: ''}
-      production_measure: {result: NOT_RUN, ref: ''}
+      counsel_review:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on current qualified counsel review of the governing premises and every material reservation for the exact enabled legal coverage, languages, media and professional roles. No counsel record may be created on their behalf. THE MECHANISM IS PROVEN: the criterion's mutation -- releasing a new jurisdiction or professional operation on an unrelated or expired review -- is refused by refuse_release, which rejects an approval covering another manifest, an expired one, an approval whose expiry cannot be read, and any enabled scope no approval names."
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on an operated deployment carrying the named enabled scope. None exists, and the manifest for this build reads environment 'working_tree', which refuse_release rejects by name: local synthetic success is not target proof."
     negative_control:
       mutation: release a new jurisdiction or professional operation using an unrelated or expired legal review
       expected_failure: the unsupported scope cannot inherit approval from another population
@@ -3229,7 +3271,15 @@ items:
   - id: J-8-AC1
     requirement: "The frozen known-good regression portfolio preserves exact retrieval support, visible refusal gates, faithful served History and the explicitly selected authentication profile while other journeys change"
     required_evidence: [integration_test, browser_journey]
-    evidence: {}
+    evidence:
+      browser_journey:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. The cumulative regression portfolio has not been run against a frozen release manifest, because freezing one requires a corpus generation, an authority index digest and a bound provider that this isolated worktree does not have. The browser journey that exists covers served behaviour; it is not a portfolio bound to a manifest, and presenting it as one would be the substitution this gate refuses."
+      integration_test:
+        result: PASS
+        ref: "tests/test_the_release_gate_fails_closed.py::test_a_portfolio_run_against_another_build_does_not_cover_this_one"
+        note: "The frozen known-good portfolio is bound to a manifest identity, so a cumulative regression run against another build cannot stand in for this one and a run bound to no manifest is refused as a result about some build. The criterion's mutation -- a formerly supported refusal removed while another feature improves -- is a CRITICAL row in the cumulative_regression portfolio, and a critical row refuses at any aggregate pass rate including 99%."
     negative_control:
       mutation: "remove a formerly supported refusal or rewrite historical served advice while improving another feature"
       expected_failure: "the cumulative regression gate reports the specific lost behaviour"
@@ -3272,21 +3322,33 @@ items:
   - id: BK-77-AC1
     requirement: the PRD, all 47 intended journey contracts, professional workflow and current delivery plan agree on visible outcomes, role boundaries, failure, recovery and return loops without promoting unbuilt work
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: "tests/test_the_plan_reconciles_and_three_claims_stay_apart.py::test_every_journey_step_has_exactly_one_contract"
+        note: "All 47 journey step contracts resolve with unique ids and every acceptance criterion carries a requirement, a required-evidence list and a negative control, so no unbuilt work is promoted by an empty field."
     negative_control:
       mutation: drop a step contract or contradict the PRD in a delivery profile
       expected_failure: reconciliation names the missing contract or mismatch
   - id: BK-77-AC2
     requirement: current waves, foundation and integration ownership, scoped release claims and build guides have one maintained source each and generated artifacts preserve the original planning record
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: "tests/test_the_plan_reconciles_and_three_claims_stay_apart.py::test_the_generated_reader_views_are_not_inputs_to_themselves"
+        note: "One maintained source each: the generated PLAN.md and workbook are not inputs to their own snapshot, so a status cell edited in the reader view cannot feed back and make the workbook agree with itself about a fact no registry holds. Numeric packet order is separately proved not to be dependency order -- P41 depends on P44 and P45 -- and prerequisites are proved to be a different population from completed-item gates."
     negative_control:
       mutation: reintroduce a completion cycle or present a prototype profile as production approval
       expected_failure: plan review refuses the cycle or unsupported release claim
   - id: BK-77-AC3
     requirement: every review-discovered enforcement limitation and unfinished product promise is registered and remains unproven until its named work and evidence are complete
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: "tests/test_the_plan_reconciles_and_three_claims_stay_apart.py::test_a_review_finding_is_registered_rather_than_described"
+        note: "Eighty-three items remain outstanding in the register rather than being described as limitations in prose, and every criterion carries the negative control that would refuse its completion."
     negative_control:
       mutation: describe code rotation or evidence identity as complete without executable proof
       expected_failure: the record names the remaining gap and refuses completion
@@ -3482,21 +3544,37 @@ items:
   - id: BK-81-AC1
     requirement: Every current item, feature and journey step has exactly one primary module mapping; module references, prerequisites and guide paths resolve and no module carries an authored completion status
     required_evidence: [domain_test, adversarial_test]
-    evidence: {}
+    evidence:
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_the_plan_reconciles_and_three_claims_stay_apart.py::test_a_cycle_is_reported_as_a_path_and_not_as_a_boolean"
+        note: "The criterion's three mutations -- delete a mapping, duplicate an owner, introduce a cycle -- are each planted on an isolated temporary copy and the real checker names the specific missing owner, duplicate or cycle path. Every probe asserts the intended bytes actually changed before reading the result: a probe that does not passes when the edit silently did nothing, which is a green test agreeing with a check that cannot fail."
+      domain_test:
+        result: PASS
+        ref: "tests/test_the_plan_reconciles_and_three_claims_stay_apart.py::test_the_real_tree_reconciles"
+        note: "Every current item, feature and journey step resolves through the existing tools/blueprint.py check_all, driven on the real tree, with no module carrying an authored completion status. The seventeen registries are named in one tuple so a reconciliation cannot cover sixteen and read as complete."
     negative_control:
       mutation: delete a mapping, duplicate an owner or introduce a cycle
       expected_failure: the blueprint check reports the specific missing owner, duplicate or cycle
   - id: BK-81-AC2
     requirement: The blueprint specifies India-only scope, professional boundaries, legal and data architecture, security controls, operational decisions and live module acceptance without representing proposals as implemented or universally compliant
     required_evidence: [counsel_review]
-    evidence: {}
+    evidence:
+      counsel_review:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on a qualified design review of the India-only scope, professional boundaries and legal/data architecture. P43's own step says machine checks do not self-certify these, and no reviewer record may be created on their behalf. What IS proven is the adjacent negative: no adoption approval exists, every CHOICE carries approval: null, and approvals.json records nothing."
     negative_control:
       mutation: present an unsupported Indian jurisdiction, unapproved processor or synthetic demo as production-ready
       expected_failure: the recorded design review rejects the claim and identifies the missing legal, privacy or operational approval
   - id: BK-81-AC3
     requirement: The executable sequence maps new substrate and control work to registered criteria, preserves existing evidence and wave assignments, and identifies current validation failures and adoption decisions
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test:
+        result: PASS
+        ref: "tests/test_the_plan_reconciles_and_three_claims_stay_apart.py::test_a_criterion_awaiting_a_production_measure_is_not_done_either"
+        note: "New substrate work maps to registered criteria and no unrun check is labelled successful: fourteen outstanding production measures are each verified to block their item's rollup, and the positive control beside it confirms that a criterion with nothing outstanding does roll up -- a distinction that never lets anything through is a wall rather than a distinction."
     negative_control:
       mutation: introduce new unowned delivery work or label an unrun check as successful
       expected_failure: mapping validation or recorded conformance review refuses closure
@@ -3652,7 +3730,19 @@ items:
   - id: BK-85-AC1
     requirement: A reviewed India-only data-flow and processor inventory enforces region and purpose policy for originals, derivatives, indexes, models, backups, support and telemetry; unapproved egress fails closed
     required_evidence: [integration_test, adversarial_test, production_measure]
-    evidence: {}
+    evidence:
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_privileged_text_may_never_reach_diagnostic_telemetry"
+        note: "The mutation is enabling a foreign processor or sending privileged text through diagnostic telemetry. Both refuse, and the telemetry and support sinks refuse whatever the inventory says. The audit line that identifies the refusal carries the processor, purpose, classes and byte count, and no content."
+      integration_test:
+        result: PASS
+        ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_the_configured_inventory_permits_the_processor_it_recorded"
+        note: "The real inventory permits the processor it recorded, every row in it is region 'in', and approved_foreign_regions is empty."
     negative_control:
       mutation: enable a foreign processor or send privileged text through diagnostic telemetry
       expected_failure: policy rejects the processing route and a content-free audit identifies the refusal
@@ -3688,14 +3778,26 @@ items:
   - id: BK-85-AC5
     requirement: A rehearsed incident process with named on-call and legal owners captures detection time, applicable reporting clock, containment, evidence custody and recovery without routine content logging
     required_evidence: [production_measure]
-    evidence: {}
+    evidence:
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN, and the dependency is people rather than infrastructure: a timed tabletop conducted by the named incident commander, the security/legal owner and an independent recovery witness, against a configured deployment, with the primary contact deliberately unavailable. None of those people has conducted one and none may be recorded as having done so. THE MACHINE IS BUILT AND PROVEN: tests/test_a_rehearsal_is_evidence_about_people.py drives the rota escalation, the reviewed clocks read from the dated applicability review, containment authority, evidence custody and the refusal to record a completed exercise with no participants in it -- P40's own expected failure that evidence includes people and contact results, not an incident-policy document. The protocol they would follow is REVIEW-OPERATIONS in docs/blueprint/evaluations.json."
     negative_control:
       mutation: simulate a reportable incident with incomplete initial information and unavailable primary contact
       expected_failure: available-information reporting and secondary escalation execute under the reviewed clock
   - id: BK-85-AC6
     requirement: Build provenance, dependency and secret controls, least-privilege support, audited emergency access and security review are demonstrated on the target delivery pipeline
     required_evidence: [adversarial_test, production_measure]
-    evidence: {}
+    evidence:
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_a_secret_bearing_artifact_is_found_by_the_same_digest_question"
+        note: "The mutation is introducing a secret-bearing artifact or using a support account to inspect an unrelated matter. The artifact is found by digest without either value being printed or compared as text; the support access is refused through nm/edge/uploads.owned, the served entry path, and through matter-scoped key derivation in the store."
     negative_control:
       mutation: introduce a secret-bearing artifact or use a support account to inspect an unrelated matter
       expected_failure: the artifact or access is denied for the intended reason without exposing content
@@ -3816,14 +3918,30 @@ items:
   - id: BK-88-AC2
     requirement: "Processor, region, key custody and support-access policies are enforced on actual upload, extraction, retrieval, download, export and worker paths under the confidential deployment configuration"
     required_evidence: [integration_test, adversarial_test, production_measure]
-    evidence: {}
+    evidence:
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_a_worker_holding_one_matters_key_cannot_read_another"
+        note: "The mutation is bypassing the shared gateway from a worker. There is no check to forget: the matter id is an input to the key derivation, so the wrong key does not open the record."
+      integration_test:
+        result: PASS
+        ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_a_support_account_cannot_open_an_unrelated_matter"
+        note: "Driven through nm/edge/uploads.UploadService.owned on a real FileMatterStore, which is the entry path a support or export request actually takes, with the owner's own read passing beside it."
     negative_control:
       mutation: "bypass the shared gateway from a worker or inspect another matter through support or export"
       expected_failure: "the actual entry path refuses the operation and records a content-free audit"
   - id: BK-88-AC3
     requirement: "Incident, recovery and least-privilege evidence is revalidated for the enabled confidential pilot rather than inherited from a synthetic foundation"
     required_evidence: [production_measure]
-    evidence: {}
+    evidence:
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on the REVIEW-OPERATIONS rehearsal being conducted against the ENABLED CONFIDENTIAL PILOT's configuration digest. There is no pilot and no configuration to bind to. The criterion's own mutation -- reusing a foundation fixture or another processor configuration as pilot proof -- is refused by refuse_close, which rejects an exercise whose digest is not the pilot's AND one that names no configuration at all, so the substitution cannot be made by removing the evidence either."
     negative_control:
       mutation: "reuse a foundation fixture or a different processor configuration as pilot proof"
       expected_failure: "pilot approval remains blocked until the actual configured path is rehearsed"
@@ -3831,7 +3949,19 @@ items:
   - id: BK-88-AC4
     requirement: "Before any real recording is processed, confidential-path proof verifies the approved operation/configuration does not perform prohibited biometric, affect or voice/appearance credibility processing and demonstrates preflight, recursive output validation and no downstream leakage across actual workers, retries, logs, storage, reasoning and displays. Synthetic specification or foundation success cannot substitute for this proof."
     required_evidence: [integration_test, adversarial_test, production_measure]
-    evidence: {}
+    evidence:
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_a_forbidden_field_nested_in_a_response_is_found"
+        note: "The mutation is enabling a prohibited capability on the configuration or injecting a prohibited nested response field. The preflight takes the route and no payload, so it cannot be called after the send; an unavoidable background operation rejects the route rather than the request; and the nested field is found three levels down, with the rejected value never carried into the refusal."
+      integration_test:
+        result: PASS
+        ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_the_prohibited_operations_are_read_from_the_declared_contract"
+        note: "The prohibited operations are read from docs/blueprint/evaluations.json rather than copied into Python, and every one of them is refused before the call is made."
     negative_control:
       mutation: "enable a prohibited processor capability on the deployed configuration, bypass gateway from a worker or inject a prohibited nested response field into the real configured path"
       expected_failure: "the affected media route remains disabled or refuses safely before prohibited processing; no prohibited derivative reaches retained or user-visible outputs"

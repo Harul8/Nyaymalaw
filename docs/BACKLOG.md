@@ -6597,6 +6597,292 @@ line for line in `journey_verdict` and restoring it is a move, not a rewrite.
 **Exclusions.** No control was relaxed, no test skipped, no population
 narrowed.
 
+### P41 Start record — the release gate, and the verdict it returns — 14 September 2026
+
+**Outcome sought.** BK-42-AC5, BK-42-AC7, BK-42-AC9 and J-8-AC1.
+
+**ENGINEERING COMPLETION OF THIS GATE IS NOT A RELEASE APPROVAL, and the gate
+is built so that nothing can confuse the two.** There is no function in
+`nm/domain/release.py` that constructs an `Approval`. `refuse_release` reads
+signatures it was handed and creates none; a test asserts that from the
+module's own source rather than from a promise, because a gate that could sign
+its own release is the check that cannot fail holding the last decision anybody
+makes about this product.
+
+**NINETEEN IDENTITIES, FROZEN TOGETHER.** A release is not a commit. It is a
+commit AND the schema it writes AND the policy it enforces AND the corpus it
+reads AND the model it calls AND the prompts it sends AND the provider it sends
+them to AND the scope it was approved for — and every one of those can move
+while the commit stands still. `Manifest` names all nineteen, refuses a blank
+one, and checks its own field list against the declared tuple so a manifest
+that froze eighteen cannot read as frozen. The identity is the digest of all
+nineteen, which is the same mechanism as `deployment.Candidate` and
+deliberately so: evidence binds to what it is evidence about.
+
+**INDIA IS ENFORCED AT THE MANIFEST.** A second operating jurisdiction would
+first appear as a field in a release manifest, so that is where it is refused.
+
+**TWELVE CONDITIONS, EACH FAILING CLOSED, EVERY REASON RETURNED.** A critical
+failure at any pass rate; a portfolio that did not finish; a portfolio nobody
+ran; a portfolio bound to another manifest or to none; a missing signature by
+role; an approval covering another release; an expired approval, including one
+whose expiry cannot be read; a scope nobody approved; an outstanding production
+measure; no production measure at all; and an environment that is not a
+deployment. A release manager told one thing to fix will fix one thing and come
+back, and the second pass is where the tired mistake lives.
+
+**NO AGGREGATE SCORE OVERRIDES A CRITICAL FAILURE.** `Portfolio.pass_rate` is
+derived and REPORTED and never consulted: the suite reads `refuse_release`'s
+own source and fails if the rate appears in any comparison. Ninety-nine
+critical rows passing and one failing refuses, and the reason quotes the 99%
+so the reviewer sees exactly what was not traded against what. The negative
+control sits beside it: a MINOR failure does not refuse by itself, because if
+everything refused then CRITICAL would be decoration.
+
+**THE VERDICT IS A SENTENCE, NOT A BOOLEAN.** Two flags is where somebody reads
+the first one and reports it.
+
+**THIS BUILD'S ANSWER: ENGINEERING COMPLETE, RELEASE WITHHELD.** All five
+required signatures are absent, no production measure exists, no portfolio has
+been bound to a manifest, and the environment is a working tree. That is not a
+failure of the gate. The gate is finished and it is telling the truth, and an
+unsupported production-ready claim is the only worse outcome available.
+
+**Assumptions.** No manifest has been frozen for a real candidate, because
+freezing one would require a corpus generation, an authority index digest and a
+provider that this isolated worktree does not have bound to a deployment.
+
+**Acceptance → proof.** J-8-AC1 `integration_test` **PASS**. BK-42-AC5,
+BK-42-AC7 and BK-42-AC9 keep every required method **NOT RUN** with its exact
+dependency: AC5 needs a measured representative workload on a deployment; AC7
+needs representative advocates at supported widths with assistive technology,
+which is a usability study with people in it; AC9 needs current qualified
+counsel review of the governing premises. Their `browser_journey` methods
+depend on portfolios this build has not run against a frozen manifest.
+
+**Rollback.** Nothing operational changed. The gate refuses; that is its
+resting state.
+
+**Exclusions.** NO RELEASE APPROVAL RECORD WAS CREATED. No approval was
+solicited, no reviewer contacted, no scope enabled, no deployment made.
+
+### P43 Start record — seventeen registries, and three claims kept apart — 14 September 2026
+
+**Outcome sought.** BK-81-AC1, BK-81-AC2, BK-81-AC3, BK-77-AC1, BK-77-AC2 and
+BK-77-AC3.
+
+**NOTHING NEW RECONCILES THE PLAN.** `tools/blueprint.py`, `blueprint_execution`,
+`blueprint_commands`, `blueprint_evaluations`, `blueprint_autonomy` and
+`blueprint_approvals` already do it, and adding a seventh checker would be the
+second source of truth this packet exists to prevent. What had never been
+proved is that any of them CAN FAIL.
+
+    A structural checker that passes on a tree with a deleted mapping, a
+    duplicated owner or a cycle in it is worse than no checker, because it is
+    a green light nobody looks behind — S11, on the register that decides
+    what is ready to build.
+
+So each criterion's own mutation is planted and the REAL checker is driven, and
+the assertion is that it reports THAT problem rather than merely something.
+
+**EVERY MUTATION IS ON AN ISOLATED TEMPORARY COPY, AND EVERY PROBE ASSERTS THE
+BYTES MOVED FIRST.** A probe that reads the checker's output without confirming
+the edit landed passes when the edit silently did nothing — which is a
+green test agreeing with a check that cannot fail. The working tree is never
+mutated, so an interrupted run leaves no half-broken register behind for the
+next thing to read.
+
+**THE THREE CLAIMS THAT ARE NOT THE SAME CLAIM.** Locally proven is a test on
+this machine passing. Professionally approved is a qualified person signing an
+exact scope on a date. Production measured is an observation on an operated
+deployment. The last two are absent from this entire build, and the rollup is
+checked in BOTH directions: a criterion whose automated evidence all passes is
+not done while a counsel review or a production measure is outstanding, AND a
+criterion with nothing outstanding does roll up — because a distinction that
+never lets anything through is a wall, and a wall teaches the next reader to
+route around it.
+
+**NUMERIC ORDER IS NOT DEPENDENCY ORDER.** P41 depends on P44 and P45. A reader
+who assumes packets run in numeric order reads that as a cycle and starts
+deleting edges, so the property is asserted rather than left to be
+rediscovered. Prerequisites and completed-item gates are separately asserted to
+be different populations: a packet id never appears in `requires_completed_items`
+and a backlog item never appears in `prerequisites`.
+
+**Assumptions.** The seventeen registries are named in one tuple in the suite,
+for the reason P39's fourteen populations are: a reconciliation that covered
+sixteen would read as complete.
+
+**Acceptance → proof.** BK-81-AC1 `domain_test` and `adversarial_test`
+**PASS**. BK-81-AC3, BK-77-AC1, BK-77-AC2 and BK-77-AC3 `domain_test` **PASS**.
+BK-81-AC2 `counsel_review` **NOT RUN** — it needs a qualified design review of
+the India legal, privacy and role boundaries, and machine checks expressly do
+not self-certify those. **Adoption remains NOT RUN**: `approvals.json` records
+no approval, every `CHOICE` carries `approval: null`, and this build may not
+write one.
+
+**Rollback.** No registry content changed; the suite reads them and mutates
+copies.
+
+**Exclusions.** No design review conducted, no adoption record created, no
+approval written.
+
+### P40 Start record — a rehearsal is evidence about people — 14 September 2026
+
+**Outcome sought.** BK-85-AC5 and BK-88-AC3.
+
+**AND NEITHER OF THEM CLOSES HERE.** Both require `production_measure` and
+nothing else, and a production measure of an incident rehearsal means named
+accountable people conducting a timed tabletop against a configured pilot.
+There are no such people in this worktree and no such pilot. So the honest
+result of this packet is a finished machine and two rows that stay **NOT RUN**
+with their exact dependency — which is what P40's own second declared expected
+failure is about: *evidence includes people/contact results, not just an
+incident-policy document.* A green row produced from a fixture would be that
+failure with a test in front of it.
+
+**WHAT WAS BUILT, AND WHY EACH PIECE REFUSES SOMETHING.** `nm/domain/incident.py`
+carries the versioned scenario, the three separate timestamps §10 requires
+(occurrence, detection, notice — collapsing them is how a six-hour duty is
+discovered to have started four hours ago), the rota with its escalation
+refusal, the reviewed clocks, containment authority, evidence custody,
+notification decisions and findings with owners. `refuse_close` returns every
+reason a rehearsal may not be recorded as complete, never the first.
+
+**THE CLOCKS ARE READ, NOT WRITTEN.** `docs/blueprint/evaluations.json` gains an
+`incident_response` block transcribed from the dated India applicability review
+in `docs/blueprint/SECURITY_PRIVACY.md` §§1.5 and 10: the CERT-In initial
+report at six hours from NOTICE under the Directions of 28 April 2022, and the
+DPDP Rule 7 detailed Board update at 72 hours. **They are not interchangeable**
+— different duties, different triggers, different scopes — and both carry
+`applicability: not_determined`, because the review records the scope
+determination as outstanding. This build asserts no legal duty and invents no
+period; a test fails if an hours figure appears in the Python.
+
+**UNDETERMINED IS A THIRD STATE AND IT CUTS BOTH WAYS.** A clock nobody has
+determined still runs the internal escalation and may never be recorded as
+satisfied. Reading undetermined as "does not apply" is how a reportable
+incident goes unreported; reading it as "applies" would have this build assert
+a duty nobody established.
+
+**WHAT THE RECORD CANNOT HOLD.** Client content. `CustodyItem` has an id, a
+SHA-256, a holder and a time, and no member for bytes; `Finding` has a step id,
+an owner and a closed state, and no member for prose. *Never log client content
+merely to prove the exercise occurred* is a habit as a sentence and a type
+error as a schema.
+
+**WHAT A TEST MAY NEVER DO.** Send. `Decision` has no `SENT` member and the
+furthest state is `PREPARED_FOR_HUMAN_AUTHORISATION`, because an actual
+notification is an operational act by an accountable person and a suite that
+could perform one would eventually perform one by accident.
+
+**ONE PROTOCOL, NOT A SECOND ONE.** `REVIEW-OPERATIONS` already owns BK-85-AC5
+and already rehearses this tabletop. BK-88-AC3 joins it rather than getting its
+own entry: what that criterion adds is a BINDING — the same rehearsal against
+the enabled configuration digest — and not a procedure. Two protocols for one
+procedure is two owners, and the one that drifts is whichever is read less.
+
+**Assumptions.** No deployment, no pilot, no accountable people, no contacts
+paged. Every rota, participant and custody row in the suite is a fixture and
+`conducted_by_people` is derived from named participants answering a page, so
+no fixture can make it read true by accident.
+
+**Acceptance → proof.** BK-85-AC5 `production_measure` **NOT RUN**. BK-88-AC3
+`production_measure` **NOT RUN**. Both dependencies are exact and are recorded
+on their rows.
+
+**Rollback.** Nothing operational changed; the module is unreachable from a
+served turn and is declared UNWIRED with what would wire it.
+
+**Exclusions.** No notification prepared for a real recipient, no contact
+paged, no incident declared, no tabletop conducted. The human-execution portion
+of both criteria is NOT RUN.
+
+### P39 Start record — a security claim is about one exact candidate — 14 September 2026
+
+**Outcome sought.** BK-42-AC1, BK-42-AC2, BK-42-AC8, BK-85-AC1, BK-85-AC6,
+BK-21-AC3, BK-21-AC4, BK-88-AC2 and BK-88-AC4.
+
+**A CLAIM WITHOUT A CANDIDATE IS A CLAIM ABOUT WHATEVER SHIPPED LAST.**
+"Secrets are not in the artifact" is true of some build; the only thing that
+makes that the same sentence as a statement about the build being released is
+an identity on both. So every record carries the candidate, and the candidate
+is commit AND environment AND configuration digest — the same commit under a
+changed configuration is a different deployment, and reading a scan of one as
+a fact about the other is the failure this whole packet is shaped around.
+
+**FOURTEEN POPULATIONS, EACH CARRYING WHETHER ANYBODY LOOKED.** Artifacts,
+lockfiles, provenance, runtimes, secret sources, application and service
+identities, privileged and emergency roles, support paths, telemetry
+destinations, subprocessors, storage boundaries and allowed egress. A scan
+that found nothing and a scan that did not run look identical in every report
+that stores only rows, so `NOT_ASSESSED` is a blocker rather than a zero and
+`EMPTY` is a finding — "we have no subprocessors" has to remain sayable.
+
+**THREE SUBSTITUTIONS, EACH REFUSED BY NAME.** A scanner exiting zero is not a
+penetration test; a local file permission is not target IAM; an edit to an
+environment file is not a rotation at the provider, because the old value
+keeps working until somebody revokes it there. `Candidate.operated` is False
+for every environment this build can create, so all three claim kinds are
+refused from here whatever ran.
+
+**THE SECOND FACTOR (BK-42-AC2) IS NEW DOMAIN AND IT LIVES BESIDE THAT
+PREDICATE.** An exception approved against a prototype or a local roster is
+not an exception to the deployed access flow, because the population it
+reasoned about is not the population it would waive — the same distinction,
+so the same file. An exception must be owned, separately approved, carry a
+compensating control and expire; `NOT_ASSESSED` is the default factor state
+and it refuses, because an access flow nobody checked is the absent-input
+defect holding the front door.
+
+**ONE OWNER OF "DO THESE HOLD THE SAME STRING".**
+`nm/bootstrap/composition._refuse_a_shared_seal` now asks
+`deployment.shares_value_with` rather than comparing plaintext itself. That
+is not a restyle: P39 requires the separation to be verified without printing
+or comparing plaintext values, and two implementations of the question would
+be CLAUDE.md §4 at the point where the answer decides whether 247 sealed
+matters stay readable. Which names count as credentials stays in composition,
+because that is its policy about this environment rather than a fact about
+secrets.
+
+**WHAT IS DRIVEN RATHER THAN REBUILT.** `nm/domain/egress.py` against the REAL
+`docs/blueprint/processors.yaml` read through `nm/bootstrap/egress_policy.py`
+— a synthetic policy would prove only that the checker compiles.
+`nm/domain/media_policy.py` for the preflight and the recursive response
+allowlist. `nm/adapters/store/envelope.py` and `nm/edge/uploads.py` for the
+two tenancy refusals, through the served ownership check rather than a copy of
+it. `nm/domain/retention.py` for what makes a deletion claim false, and
+`nm/domain/metrics.py` for which fields reach a plaintext file.
+
+**Assumptions.** THERE IS NO DEPLOYMENT. No target IAM, no KMS, no network
+boundary, no scanner run against an operated environment and no penetration
+test. Every candidate this suite constructs reads `working_tree` or a
+synthetic deployed name used only to exercise the access rules.
+
+**Acceptance → proof.** BK-42-AC1 `adversarial_test` **PASS**. BK-42-AC2
+`integration_test` and `adversarial_test` **PASS**. BK-42-AC8
+`adversarial_test` **PASS**. BK-85-AC1 `integration_test` and
+`adversarial_test` **PASS**. BK-85-AC6 `adversarial_test` **PASS**. BK-88-AC2
+and BK-88-AC4 `integration_test` and `adversarial_test` **PASS**. BK-21-AC3
+`domain_test` **PASS** for the mechanism, with the real-environment reading
+recorded as **NOT ASSESSED** and skipped rather than passed where the process
+holds neither key. **Every `production_measure` stays NOT RUN** with its
+dependency: a configured target deployment with real IAM, KMS, network
+boundaries and an operated pipeline, which does not exist. BK-42-AC1's
+`counsel_review` stays **NOT RUN** — it needs qualified counsel, and no
+counsel record may be fabricated. BK-21-AC4's `production_measure` remains
+**STALE**: the rotation was measured on 9 September against the real provider
+and that observation is preserved, but re-binding it to this candidate would
+mean contacting a provider, which is outside what this work authorises.
+
+**Rollback.** Quarantine the candidate; nothing here changes a deployed
+configuration because there is none to change.
+
+**Exclusions.** No procurement, no vendor contacted, no credential rotated, no
+scanner run against anything operated, no penetration test. A scanner result
+is not a penetration-test certificate and synthetic local permissions do not
+prove target IAM, KMS or network isolation.
+
 ### P38 Start record — a restore that cannot revive what was taken away — 14 September 2026
 
 **Outcome sought.** BK-42-AC3, BK-42-AC4, BK-42-AC6, BK-83-AC3, BK-85-AC2 and

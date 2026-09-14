@@ -64,6 +64,28 @@ UNWIRED: dict[str, str] = {
     # What wires it is an OPERATOR command against a configured deployment --
     # `production_measure` on BK-42-AC3, AC4, AC6, BK-83-AC3, BK-85-AC2 and
     # BK-88-AC1, all NOT RUN because no such deployment exists.
+    # P41's release gate. What wires it is a RELEASE OPERATOR freezing a
+    # manifest for a candidate, which needs a corpus generation, an authority
+    # index digest and a bound provider on a deployment. None exists, and the
+    # gate's own verdict for this build is ENGINEERING COMPLETE, RELEASE
+    # WITHHELD.
+    "nm.domain.release": (
+        "P41's release manifest and release gate. Driven by "
+        "`tests/test_the_release_gate_fails_closed.py`; it is wired by a "
+        "release operator freezing a manifest against a deployment. A served "
+        "turn must never reach it, and nothing in it can create an approval."),
+    # P40's rehearsal record. What wires it is an OPERATOR running a tabletop
+    # with accountable people against a configured pilot -- `production_measure`
+    # on BK-85-AC5 and BK-88-AC3, both NOT RUN because there are no such people
+    # and no such pilot.
+    "nm.domain.incident": (
+        "P40's incident rehearsal record: scenario, rota, reviewed clocks, "
+        "containment authority, evidence custody and notification decisions. "
+        "Driven by `tests/test_a_rehearsal_is_evidence_about_people.py` "
+        "against fixtures; it is wired when named accountable people conduct "
+        "a timed tabletop, which is the production_measure that stays NOT RUN "
+        "on both its criteria. A served turn must never reach it -- an "
+        "advocate's turn has no business opening an incident record."),
     "nm.domain.restore": (
         "P38's restore, isolation and rollback rules. Driven by the rehearsal "
         "harness in `tests/test_a_restore_cannot_revive_what_was_taken_away.py` "
@@ -284,6 +306,17 @@ OWNER: dict[str, tuple[str, ...]] = {
     # being put back, which is a property of the write and not a new promise
     # to the advocate.
     "nm.domain.restore": ("I1",),
+    # P40's rehearsal is about the operation that keeps the matter available
+    # and confidential when something goes wrong, so it is named against the
+    # persistence promise rather than given a feature of its own: what it adds
+    # is that the promise survives an incident, which is a property of the
+    # operation and not a new promise to the advocate.
+    "nm.domain.incident": ("I1",),
+    # P41's gate decides whether the SERVED PRODUCT may be released at all, so
+    # it is named against the turn contract every enabled feature runs through
+    # rather than against a feature of its own. A release gate with a feature
+    # of its own would be a feature that could be marked done.
+    "nm.domain.release": ("I1",),
     # P35's qualified-review record reviews THE ADVICE AS SERVED, so it is
     # named against the feature that produces it rather than given one of its
     # own -- and against E5, because what the record keeps beyond a score is

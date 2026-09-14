@@ -115,6 +115,41 @@
       "denied_request": "observed_zero_outbound_calls"
     }
   },
+  "incident_response": {
+    "owner_criteria": [
+      "BK-85-AC5",
+      "BK-88-AC3"
+    ],
+    "source": "docs/blueprint/SECURITY_PRIVACY.md sections 1.5 and 10",
+    "note": "The clocks below are transcribed from the dated India applicability review, not decided here. They are NOT interchangeable: the CERT-In initial report and the DPDP Board update are different duties, on different triggers, with different scopes. Applicability is not_determined for both because the review records the scope determination as outstanding, and undetermined is neither a duty this build asserts nor a finding that no duty exists.",
+    "reporting_clocks": [
+      {
+        "clock_id": "cert_in_initial_report",
+        "hours": 6,
+        "starts_from": "noticed_at",
+        "instrument": "CERT-In Directions under section 70B, 28 April 2022",
+        "applicability": "not_determined",
+        "note": "Six hours of NOTICE of the incident, for covered entities on reportable incident types. The FAQ (question 30) permits an initial report on available information with later supplementation, so incomplete information is not a reason to prepare nothing. Whether this deployment is a covered entity is undetermined."
+      },
+      {
+        "clock_id": "dpdp_board_detailed_update",
+        "hours": 72,
+        "starts_from": "noticed_at",
+        "instrument": "DPDP Rules 2025 rule 7, G.S.R. 846(E)",
+        "applicability": "not_determined",
+        "note": "A detailed update to the Board within 72 hours, subject to its terms, separate from the prompt initial notification the same rule calls for. DPDP commencement is phased by the notification of 13 November 2025 and most substantive duties fall in the last tranche, so whether this provision is operative for this deployment is undetermined and counsel must confirm the operative dates."
+      }
+    ],
+    "exercise": {
+      "notification_by_a_test": "never",
+      "furthest_state": "prepared_for_human_authorisation",
+      "client_content_in_the_record": "no field accepts it",
+      "custody": "digest_identity_and_holder_only",
+      "missed_step": "registered_with_an_owner",
+      "absent_primary_contact": "escalate_to_secondary_and_record",
+      "human_execution": "NOT_RUN"
+    }
+  },
   "local_mode": {
     "name": "scripted_local",
     "default_network": "deny",
@@ -3616,7 +3651,8 @@
         "BK-85-AC5",
         "BK-42-AC4",
         "BK-42-AC5",
-        "BK-42-AC6"
+        "BK-42-AC6",
+        "BK-88-AC3"
       ],
       "reviewer_role": "operations incident commander, security/legal owner and independent recovery witness",
       "required_inputs": [
@@ -3631,19 +3667,22 @@
         "Measure RPO and RTO against acknowledged records and actual elapsed time",
         "Simulate reportable incident assessment with incomplete facts and an unavailable primary contact",
         "Measure queue saturation, cancellation, provider/key outages and fairness at the approved workload",
-        "Rehearse rollback with pending jobs and target-only writes; reject incompatible rollback"
+        "Rehearse rollback with pending jobs and target-only writes; reject incompatible rollback",
+        "Bind every result to the enabled confidential configuration digest; a foundation run is proof about the foundation"
       ],
       "failure_conditions": [
         "missed approved recovery objective without a new approved narrower scope",
         "revived erased data or stale permission",
         "unowned or missed escalation",
         "silent data loss or duplicate external effects",
-        "unbounded load/cost or wrong build identity"
+        "unbounded load/cost or wrong build identity",
+        "evidence inherited from a foundation fixture or another processor configuration"
       ],
       "required_output_fields": [
         "review_id",
         "owners",
         "environment_identity",
+        "configuration_digest",
         "run_population",
         "measured_rpo_rto",
         "incident_timeline",

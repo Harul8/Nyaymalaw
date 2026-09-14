@@ -90,6 +90,41 @@ MEDIA_ALLOWED = frozenset(
     }
 )
 MEDIA_CRITERIA = frozenset({"BK-69-AC3", "BK-79-AC3", "BK-88-AC4"})
+INCIDENT_CRITERIA = frozenset({"BK-85-AC5", "BK-88-AC3"})
+#: THE REVIEWED CLOCKS, PINNED. Transcribed from the dated India applicability
+#: review in `docs/blueprint/SECURITY_PRIVACY.md` sections 1.5 and 10, and
+#: repeated here for the reason `MEDIA_PROHIBITED` is repeated beside the
+#: document's own list: the domain may not hard-code a legal period, and the
+#: document may not be quietly edited to a different one either. They are NOT
+#: interchangeable -- different duties, different triggers, different scopes --
+#: and `applicability` is `not_determined` for both because the review records
+#: the scope determination as outstanding.
+INCIDENT_CLOCKS = {
+    "cert_in_initial_report": {
+        "hours": 6,
+        "starts_from": "noticed_at",
+        "applicability": "not_determined",
+    },
+    "dpdp_board_detailed_update": {
+        "hours": 72,
+        "starts_from": "noticed_at",
+        "applicability": "not_determined",
+    },
+}
+#: What a rehearsal may and may not do. `notification_by_a_test: never` is the
+#: one that matters: a suite that could send would eventually send.
+INCIDENT_EXERCISE = {
+    "notification_by_a_test": "never",
+    "furthest_state": "prepared_for_human_authorisation",
+    "client_content_in_the_record": "no field accepts it",
+    "custody": "digest_identity_and_holder_only",
+    "missed_step": "registered_with_an_owner",
+    "absent_primary_contact": "escalate_to_secondary_and_record",
+    "human_execution": "NOT_RUN",
+}
+CLOCK_FIELDS = frozenset(
+    {"clock_id", "hours", "starts_from", "instrument", "applicability", "note"}
+)
 AUTONOMY_CASE_OWNERS = {
     "EVAL-031": frozenset({"BK-91-AC1", "BK-91-AC2", "BK-91-AC3"}),
     "EVAL-032": frozenset({"BK-92-AC1", "BK-92-AC2"}),
@@ -175,6 +210,7 @@ TOP_FIELDS = frozenset(
         "portfolio_validation",
         "manual_review_protocols",
         "media_contract",
+        "incident_response",
     }
 )
 CASE_FIELDS = frozenset(
@@ -314,6 +350,49 @@ def _check_media_contract(catalog: Mapping, criteria: set[str], errors: list[str
     )
     for key, value in MEDIA_POLICY.items():
         _typed_policy(policy.get(key), value, f"media contract.{key}", errors)
+
+
+def _check_incident_response(catalog: Mapping, criteria: set[str], errors: list[str]) -> None:
+    """The reviewed reporting duties, as the applicability review recorded them.
+
+    An unreadable or absent block is a refusal rather than a set of zero
+    duties: a rehearsal run against no clock reports to nobody and completes.
+    """
+    policy = catalog.get("incident_response")
+    if not isinstance(policy, dict):
+        errors.append("incident response: missing or malformed")
+        return
+    _keys(
+        policy,
+        {"owner_criteria", "source", "note", "reporting_clocks", "exercise"},
+        "incident response",
+        errors,
+    )
+    _refs(policy, criteria, "incident response", errors)
+    _typed_policy(
+        policy.get("owner_criteria"), INCIDENT_CRITERIA,
+        "incident response.owner_criteria", errors,
+    )
+    _typed_policy(policy.get("exercise"), INCIDENT_EXERCISE,
+                  "incident response.exercise", errors)
+    if not _text(policy.get("source")) or not _text(policy.get("note")):
+        errors.append("incident response: source or note carries nothing")
+
+    clocks = policy.get("reporting_clocks")
+    if not _rows(clocks):
+        errors.append("incident response: reporting clocks missing or malformed")
+        return
+    seen = [row.get("clock_id") for row in clocks]
+    if sorted(x for x in seen if isinstance(x, str)) != sorted(INCIDENT_CLOCKS):
+        errors.append("incident response: reviewed clock population changed")
+        return
+    for row in clocks:
+        label = f"incident response.{row['clock_id']}"
+        _keys(row, CLOCK_FIELDS, label, errors)
+        if not _text(row.get("instrument")) or not _text(row.get("note")):
+            errors.append(f"{label}: instrument or note carries nothing")
+        for key, value in INCIDENT_CLOCKS[row["clock_id"]].items():
+            _typed_policy(row.get(key), value, f"{label}.{key}", errors)
 
 
 def _required_assertions(
@@ -766,6 +845,7 @@ def check_evaluations(catalog: object, criteria: Iterable[str]) -> list[str]:
         errors.append("evaluations: missing purpose")
     _spec_only(catalog, "evaluations", errors)
     _check_media_contract(catalog, known, errors)
+    _check_incident_response(catalog, known, errors)
     for field, expected in (("required_modules", MODULES), ("required_paths_per_module", PATHS)):
         values = catalog.get(field)
         if not _strings(values) or set(values) != expected:

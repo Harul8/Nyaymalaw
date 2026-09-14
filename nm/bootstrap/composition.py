@@ -33,6 +33,7 @@ from nm.bootstrap.egress_policy import (
 from nm.core.turn import TurnEngine
 from nm.domain.advocate import utcnow
 from nm.domain.clock import FORUM
+from nm.domain.deployment import shares_value_with
 from nm.domain.egress import DataClass, Gatekeeper, Sink
 from nm.domain.gates import GATES, withholding
 from nm.edge.uploads import UploadService
@@ -384,14 +385,22 @@ def _refuse_a_shared_seal(key: str, env: Mapping[str, str] | None = None) -> Non
     today's mistake and none of the others -- the one-site patch this
     repository has recorded forty-seven times. The rule is that the seal is
     unique, so the comparison is against everything credential-shaped.
+
+    AND THE COMPARISON ITSELF IS NOT MADE HERE. `deployment.shares_value_with`
+    is the one owner of "do these hold the same string", and it answers by
+    digest: a check that compared plaintext would hold both values beside each
+    other, and P39 has to ask the same question over a candidate's secret
+    sources without a second copy of the rule. WHICH NAMES COUNT AS
+    CREDENTIALS stays here, because that is composition's policy about this
+    environment rather than a fact about secrets.
     """
     env = os.environ if env is None else env
     if not key.strip():
         return                     # an unset key is a different defect
-    shared = sorted(
-        name for name, value in env.items()
-        if name != _SEAL and value and value.strip() == key.strip()
-        and _CREDENTIAL_NAME.search(name))
+    population = {name: value for name, value in env.items()
+                  if name != _SEAL and _CREDENTIAL_NAME.search(name)}
+    population[_SEAL] = key
+    shared = sorted(shares_value_with(_SEAL, population))
     if not shared:
         return
     raise SharedSealRefused(
