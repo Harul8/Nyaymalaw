@@ -121,6 +121,21 @@ def problems(acid: str, level: str, ref: str, *,
         record = load(ref)
     except RecordError as exc:
         return [f"{where}: {exc}"]
+    return problems_for_record(
+        acid, level, record, now=now,
+        source_fingerprint=source_fingerprint,
+        configuration_identity=configuration_identity,
+        verifier=verifier,
+    )
+
+
+def problems_for_record(acid: str, level: str, record: object, *,
+                        now: datetime | None = None,
+                        source_fingerprint: str | None = None,
+                        configuration_identity: str | None = None,
+                        verifier: EvidenceVerifier | None = None) -> list[str]:
+    """Validate an in-memory candidate before any authoritative file exists."""
+    where = f"{acid}/{level}"
     if not isinstance(record, dict):
         return [f"{where}: evidence record is not an object"]
 

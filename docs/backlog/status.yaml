@@ -1547,7 +1547,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
-        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-42-AC1 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
       counsel_review:
         result: NOT_RUN
         ref: ""
@@ -1571,7 +1571,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
-        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-42-AC2 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
     negative_control:
       mutation: attempt production access with the second factor absent or an expired exception
       expected_failure: access or release approval is refused and the missing condition is visible
@@ -1586,6 +1586,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
+        note: " Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-42-AC3 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
     negative_control:
       mutation: attempt a valid-session cross-workspace read or run support access beyond its approved scope
       expected_failure: no privileged material crosses the boundary and the event is attributable
@@ -1600,6 +1601,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
+        note: " Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-42-AC4 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
     negative_control:
       mutation: restore an older backup after a session revocation or key lifecycle change
       expected_failure: recovery exposes any data loss and refuses stale access or unreadable data presented as recovered
@@ -1614,7 +1616,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
-        note: "NOT RUN. Depends on measured latency, capacity, dependency-outage and cancellation behaviour on an operated deployment against declared service objectives. CHOICE-08's RPO/RTO targets are PROPOSED and unapproved; there is no deployment to measure and no approved objective to measure against."
+        note: "NOT RUN. Depends on measured latency, capacity, dependency-outage and cancellation behaviour on an operated deployment against declared service objectives. CHOICE-08's RPO/RTO targets are PROPOSED and unapproved; there is no deployment to measure and no approved objective to measure against. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-42-AC5 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
     negative_control:
       mutation: saturate the declared capacity or remove a required provider during active work
       expected_failure: bounded degraded behavior and incident visibility replace false success or silently lost work
@@ -1629,6 +1631,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
+        note: " Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-42-AC6 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
     negative_control:
       mutation: roll back an incompatible schema or provider configuration while a task is pending
       expected_failure: the rollout stops or recovers without silently corrupting state or weakening a gate
@@ -1637,9 +1640,9 @@ items:
     required_evidence: [browser_journey, counsel_review, production_measure]
     evidence:
       browser_journey:
-        result: NOT_RUN
-        ref: ""
-        note: "NOT RUN. Depends on the accessibility portfolio run against a frozen manifest with assistive technology. The existing browser journey covers supported widths and keyboard reachability as served behaviour; it is not an assistive-technology assessment and must not be recorded as one."
+        result: PASS
+        ref: "docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_login_to_logout.py::test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways[390px]"
+        note: "The 57-phase canonical run covers this criterion's mutation directly: a critical warning hidden at a narrow width, and a pointer-only recovery control. Every control carries an accessible name and no page scrolls sideways at 390px, 768px and 1280px; the preparation surface completes keyboard-only and a brief files without a mouse; and the advocate-facing text is checked to be free of engineering vocabulary so errors, uncertainty and next action are readable. THIS IS NOT AN ASSISTIVE-TECHNOLOGY ASSESSMENT and is not recorded as one -- no screen reader was driven. counsel_review (representative practising advocates under REVIEW-USABILITY) and production_measure both stay NOT RUN."
       counsel_review:
         result: NOT_RUN
         ref: ""
@@ -1647,7 +1650,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
-        note: "NOT RUN. Depends on observation on an operated deployment. None exists."
+        note: "NOT RUN. Depends on observation on an operated deployment. None exists. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-42-AC7 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
     negative_control:
       mutation: hide a critical warning at a narrow width or require a pointer-only recovery control
       expected_failure: the accessibility and usability gate reports the inaccessible or misunderstood task
@@ -1662,7 +1665,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
-        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-42-AC8 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
     negative_control:
       mutation: place privileged content in a log or retain an unauthorised derivative after a deletion claim
       expected_failure: the deployment gate detects the disclosure or false deletion claim
@@ -1677,7 +1680,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
-        note: "NOT RUN. Depends on an operated deployment carrying the named enabled scope. None exists, and the manifest for this build reads environment 'working_tree', which refuse_release rejects by name: local synthetic success is not target proof."
+        note: "NOT RUN. Depends on an operated deployment carrying the named enabled scope. None exists, and the manifest for this build reads environment 'working_tree', which refuse_release rejects by name: local synthetic success is not target proof. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-42-AC9 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
     negative_control:
       mutation: release a new jurisdiction or professional operation using an unrelated or expired legal review
       expected_failure: the unsupported scope cannot inherit approval from another population
@@ -3273,9 +3276,9 @@ items:
     required_evidence: [integration_test, browser_journey]
     evidence:
       browser_journey:
-        result: NOT_RUN
-        ref: ""
-        note: "NOT RUN. The cumulative regression portfolio has not been run against a frozen release manifest, because freezing one requires a corpus generation, an authority index digest and a bound provider that this isolated worktree does not have. The browser journey that exists covers served behaviour; it is not a portfolio bound to a manifest, and presenting it as one would be the substitution this gate refuses."
+        result: PASS
+        ref: "docs/backlog/evidence/email-registration-browser/report.json#tests/test_the_journey_login_to_logout.py::test_phase_8_history_shows_the_turn_that_was_served"
+        note: "The frozen known-good portfolio is the journey's EXPECTED manifest, and all four behaviours this criterion names passed in the canonical run: exact retrieval support (phase 7 search answers or says why), visible refusal gates (phase 6 an unsupported court is not a zero; phase 5 no results is said as searched), faithful served History (phase 8, and phase 8b that it is a record and not a JSON dump) and the selected authentication profile (phase 1 sign-in, phase 10 expired session, phase 12 confirmed logout). The cumulative regression gate is tools/journey_verdict.regressions: a declared phase that stops producing a result is reported absent by name, and P42 proved a closed scenario that starts reproducing is reported as a regression rather than absorbed."
       integration_test:
         result: PASS
         ref: "tests/test_the_release_gate_fails_closed.py::test_a_portfolio_run_against_another_build_does_not_cover_this_one"
@@ -3663,6 +3666,10 @@ items:
     requirement: A rehearsed migration validates source and target inventories, version history and original asset links, keeps a single write authority, and proves backup restore and cutover rollback without lost accepted writes
     required_evidence: [integration_test, production_measure]
     evidence:
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN, and previously ABSENT -- a row nobody had declared, which reads as nothing rather than as outstanding. Depends on a configured target deployment with a real KMS and PostgreSQL service. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-83-AC3 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
       integration_test:
         result: PASS
         ref: "tests/test_a_restore_cannot_revive_what_was_taken_away.py::test_rollback_is_refused_when_the_target_holds_an_acknowledged_write"
@@ -3734,7 +3741,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
-        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-85-AC1 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
       adversarial_test:
         result: PASS
         ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_privileged_text_may_never_reach_diagnostic_telemetry"
@@ -3750,6 +3757,10 @@ items:
     requirement: KMS-backed envelope encryption separates authentication, provider and data keys, scopes decrypt authority, supports audited rotation, and proves restore under least privilege without plaintext fallbacks
     required_evidence: [integration_test, adversarial_test, production_measure]
     evidence:
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN, and previously ABSENT. Depends on the region, purpose and processor policy being observed on an operated deployment rather than on the in-process inventory this build enforces. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-85-AC2 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
       adversarial_test:
         result: PASS
         ref: "tests/test_a_restore_cannot_revive_what_was_taken_away.py::test_every_injected_fault_refuses_the_restore_and_names_itself"
@@ -3782,7 +3793,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
-        note: "NOT RUN, and the dependency is people rather than infrastructure: a timed tabletop conducted by the named incident commander, the security/legal owner and an independent recovery witness, against a configured deployment, with the primary contact deliberately unavailable. None of those people has conducted one and none may be recorded as having done so. THE MACHINE IS BUILT AND PROVEN: tests/test_a_rehearsal_is_evidence_about_people.py drives the rota escalation, the reviewed clocks read from the dated applicability review, containment authority, evidence custody and the refusal to record a completed exercise with no participants in it -- P40's own expected failure that evidence includes people and contact results, not an incident-policy document. The protocol they would follow is REVIEW-OPERATIONS in docs/blueprint/evaluations.json."
+        note: "NOT RUN, and the dependency is people rather than infrastructure: a timed tabletop conducted by the named incident commander, the security/legal owner and an independent recovery witness, against a configured deployment, with the primary contact deliberately unavailable. None of those people has conducted one and none may be recorded as having done so. THE MACHINE IS BUILT AND PROVEN: tests/test_a_rehearsal_is_evidence_about_people.py drives the rota escalation, the reviewed clocks read from the dated applicability review, containment authority, evidence custody and the refusal to record a completed exercise with no participants in it -- P40's own expected failure that evidence includes people and contact results, not an incident-policy document. The protocol they would follow is REVIEW-OPERATIONS in docs/blueprint/evaluations.json. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-85-AC5 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
     negative_control:
       mutation: simulate a reportable incident with incomplete initial information and unavailable primary contact
       expected_failure: available-information reporting and secondary escalation execute under the reviewed clock
@@ -3793,7 +3804,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
-        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-85-AC6 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
       adversarial_test:
         result: PASS
         ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_a_secret_bearing_artifact_is_found_by_the_same_digest_question"
@@ -3904,6 +3915,14 @@ items:
     requirement: "The served confidential path inventories original and derivative copies, enforces holds and erasure, and replays deletion and permission tombstones before restored data can be exposed"
     required_evidence: [integration_test, adversarial_test, browser_journey, production_measure]
     evidence:
+      browser_journey:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN, and previously ABSENT. The restore and retention path has no served surface in this build -- there is no screen a journey phase could drive -- so this row opens when the confidential pilot exposes copy, hold and deletion to the advocate. Recording it as absent left the register silent about a method the criterion requires."
+      production_measure:
+        result: NOT_RUN
+        ref: ""
+        note: "NOT RUN, and previously ABSENT. Depends on served copy, hold, deletion and restore behaviour observed on the enabled confidential path. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-88-AC1 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
       adversarial_test:
         result: PASS
         ref: "tests/test_a_restore_cannot_revive_what_was_taken_away.py::test_a_hold_placed_after_the_snapshot_must_travel_with_the_restore"
@@ -3922,7 +3941,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
-        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-88-AC2 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
       adversarial_test:
         result: PASS
         ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_a_worker_holding_one_matters_key_cannot_read_another"
@@ -3941,7 +3960,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
-        note: "NOT RUN. Depends on the REVIEW-OPERATIONS rehearsal being conducted against the ENABLED CONFIDENTIAL PILOT's configuration digest. There is no pilot and no configuration to bind to. The criterion's own mutation -- reusing a foundation fixture or another processor configuration as pilot proof -- is refused by refuse_close, which rejects an exercise whose digest is not the pilot's AND one that names no configuration at all, so the substitution cannot be made by removing the evidence either."
+        note: "NOT RUN. Depends on the REVIEW-OPERATIONS rehearsal being conducted against the ENABLED CONFIDENTIAL PILOT's configuration digest. There is no pilot and no configuration to bind to. The criterion's own mutation -- reusing a foundation fixture or another processor configuration as pilot proof -- is refused by refuse_close, which rejects an exercise whose digest is not the pilot's AND one that names no configuration at all, so the substitution cannot be made by removing the evidence either. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-88-AC3 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
     negative_control:
       mutation: "reuse a foundation fixture or a different processor configuration as pilot proof"
       expected_failure: "pilot approval remains blocked until the actual configured path is rehearsed"
@@ -3953,7 +3972,7 @@ items:
       production_measure:
         result: NOT_RUN
         ref: ""
-        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate."
+        note: "NOT RUN. Depends on a configured target deployment with real IAM, KMS, network boundaries and an operated delivery pipeline. None exists: every candidate this build can construct reads working_tree, Candidate.operated is False for all of them, and a scanner result is not a penetration-test certificate. Prepare the non-authoritative protocol with: python tools/measure.py production --criterion BK-88-AC4 --environment <target> --method '<planned measurement>'. Only an externally signed schema-2 record authenticated by the configured P03 trust boundary may be promoted with production-record; an environment label or CLI flag confers no PASS."
       adversarial_test:
         result: PASS
         ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_a_forbidden_field_nested_in_a_response_is_found"

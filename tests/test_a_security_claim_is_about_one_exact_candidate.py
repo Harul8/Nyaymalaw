@@ -54,6 +54,7 @@ from nm.domain.deployment import (
     ClaimKind,
     Factor,
     Inventory,
+    OperationState,
     Population,
     Rotation,
     Waiver,
@@ -196,7 +197,17 @@ def test_an_inventory_or_scan_claim_is_fine_from_a_working_tree():
 def test_no_environment_this_build_can_create_is_operated():
     for environment in Candidate.LOCAL:
         assert _candidate(environment=environment).operated is False
-    assert _candidate(environment="ap-south-1-prod").operated is True
+    for untrusted_name in ("prod", "production", "ap-south-1-prod",
+                           " PROD ", "verified", "customer-live"):
+        assert _candidate(environment=untrusted_name).operated is False
+
+
+def test_an_authenticated_operation_state_is_separate_from_its_name():
+    verified = _candidate(environment="ap-south-1-prod",
+                          operation_state=OperationState.VERIFIED)
+    assert verified.operated is True
+    with pytest.raises(TypeError):
+        _candidate(environment="prod", operation_state="verified")
 
 
 def test_a_claim_records_who_made_it_and_why():

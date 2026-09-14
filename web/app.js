@@ -49,6 +49,10 @@ const state = {
   historyGeneration: 0,
   historyListGeneration: 0,
   sessionsGeneration: 0,
+  // A case-file response may return after the advocate has selected another
+  // file. Only the newest read may paint, and its entries and currency must
+  // become visible as one coherent primary snapshot.
+  casefileGeneration: 0,
 };
 
 let pendingApplication = null;
@@ -169,6 +173,7 @@ function clearPrivileged() {
   state.historyGeneration += 1;
   state.historyListGeneration += 1;
   state.sessionsGeneration += 1;
+  state.casefileGeneration += 1;
   $('sessions-dialog').close();
   $('sessions-body').textContent = '';
   forgetRotationSecrets();
@@ -2491,26 +2496,63 @@ async function loadCasefileMatters() {
 }
 
 async function showCasefile(matterId) {
+  const generation = ++state.casefileGeneration;
   const st = $('casefile-state');
   const entries = $('casefile-entries');
-  st.textContent = ''; entries.textContent = '';
-  renderCurrency(null);
-  if (!matterId) return;
+  if (!matterId) {
+    st.textContent = '';
+    entries.replaceChildren();
+    delete entries.dataset.matterId;
+    renderCurrency(null);
+    return;
+  }
 
   let file; let deps;
   try {
-    file = await api(`/api/matters/${matterId}/casefile`);
-    deps = await api(`/api/matters/${matterId}/dependencies`);
+    [file, deps] = await Promise.all([
+      api(`/api/matters/${matterId}/casefile`),
+      api(`/api/matters/${matterId}/dependencies`),
+    ]);
   } catch (err) {
+    if (generation !== state.casefileGeneration) return;
+    st.textContent = '';
     st.appendChild(stateBlock('loud', `The case file could not be read: ${err.message}`));
+    // Never leave a different matter under this error. When the failed read
+    // was a refresh of the same file, retain its last coherent snapshot so a
+    // transient failure does not erase the advocate's record from the glass.
+    if (entries.dataset.matterId !== matterId) {
+      entries.replaceChildren();
+      delete entries.dataset.matterId;
+      renderCurrency(null);
+    }
     return;
   }
+  if (generation !== state.casefileGeneration) return;
+
+  // Build the entry population off-DOM, then publish entries before currency.
+  // A consumer waiting on the currency pill can therefore never observe a
+  // new dependency state beside an old or temporarily empty source record.
+  const nextEntries = document.createDocumentFragment();
+  const live = new Set((file.live || []).map((e) => e.fact_id));
+  (file.entries || []).forEach((e) => {
+    nextEntries.appendChild(
+      renderEntry(matterId, e, live.has(e.fact_id), file.version));
+  });
+  if (!(file.entries || []).length) {
+    nextEntries.appendChild(
+      stateBlock('empty', 'Nothing has been recorded on this file yet.'));
+  }
+
+  st.textContent = '';
   if (file.state !== 'ok') {
     st.appendChild(stateBlock('loud', `The case file is ${file.state}.`));
   }
+  entries.replaceChildren(nextEntries);
+  entries.dataset.matterId = matterId;
   renderCurrency(deps);
   try {
     const cover = await api(`/api/matters/${matterId}/cover`);
+    if (generation !== state.casefileGeneration) return;
     renderPremises(matterId, cover.premises, file.version);
     renderRelief(matterId, cover.relief, file.version);
     renderBriefingPane(matterId, cover.briefing, file.version);
@@ -2522,14 +2564,6 @@ async function showCasefile(matterId) {
     $('premises-state').textContent = '';
     $('premises-state').appendChild(stateBlock('loud',
       `The legal premises could not be read: ${err.message}`));
-  }
-
-  const live = new Set((file.live || []).map((e) => e.fact_id));
-  (file.entries || []).forEach((e) => {
-    entries.appendChild(renderEntry(matterId, e, live.has(e.fact_id), file.version));
-  });
-  if (!(file.entries || []).length) {
-    entries.appendChild(stateBlock('empty', 'Nothing has been recorded on this file yet.'));
   }
 }
 

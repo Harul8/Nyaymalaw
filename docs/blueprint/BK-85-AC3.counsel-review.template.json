@@ -1,0 +1,48 @@
+{
+  "template_status": "NOT_EVIDENCE_FILL_AND_SIGN_BEFORE_MOVING_TO_TARGET",
+  "target": "docs/backlog/evidence/BK-85-AC3-counsel_review.json",
+  "record": {
+    "schema": 2,
+    "criterion": "BK-85-AC3",
+    "level": "counsel_review",
+    "result": null,
+    "subject": null,
+    "method": {
+      "procedure": "REVIEW-PRIVACY",
+      "steps": []
+    },
+    "actor": {
+      "person_id": null,
+      "name": null
+    },
+    "authority": {
+      "role": null,
+      "basis": null,
+      "evidence": {
+        "ref": null,
+        "sha256": null
+      }
+    },
+    "rubric": {
+      "identity": "REVIEW-PRIVACY",
+      "findings": []
+    },
+    "population": {
+      "count": null,
+      "described": null
+    },
+    "reservations": null,
+    "observed_at": null,
+    "subject_identity": {
+      "kind": "external",
+      "valid_from": null,
+      "valid_until": null
+    },
+    "configuration_identity": null,
+    "attestation": {
+      "ref": null,
+      "sha256": null
+    }
+  },
+  "instructions": "Resolve or expressly carry every material reservation; set result to PASS only if the rubric is satisfied for the counted population; record remaining reservations as an array; place the completed record at the target path and update BK-85-AC3 to reference it. A template is generated beside this packet but is deliberately invalid until completed and signed. The attestation must authenticate this exact record without the attestation field, and the configured authority issuer must authenticate the reviewer's evidence:counsel_review grant."
+}

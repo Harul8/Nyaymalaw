@@ -184,4 +184,18 @@ def running(root: Path, **kwargs):
         yield box, f"http://127.0.0.1:{port}"
     finally:
         server.should_exit = True
-        thread.join(timeout=10)
+        # A cancelled browser request cancels the CLIENT'S wait, not work the
+        # server may already have accepted. Ten seconds was shorter than a
+        # normal multi-call turn, so teardown silently left that server thread
+        # alive while the next journey module started another product. The two
+        # stores were separate but their CPU, runtime and process environment
+        # were not, producing failures in whichever later module lost the race.
+        #
+        # Teardown is therefore a boundary with a verdict: either every
+        # accepted request drains and the server stops, or the suite fails here
+        # instead of attributing the leaked work to an unrelated user journey.
+        thread.join(timeout=60)
+        if thread.is_alive():
+            raise RuntimeError(
+                "the journey server did not stop within 60s; accepted work "
+                "is still running and the next journey must not start")

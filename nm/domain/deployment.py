@@ -34,8 +34,9 @@ THE SECOND FACTOR, AND WHY IT LIVES HERE
 BK-42-AC2 turns on a distinction this module already draws: an exception to
 the second factor approved against a prototype or a local roster is not an
 exception to the deployed access flow, because the population it was reasoned
-about is not the population it would waive. `Candidate.operated` is the same
-predicate in both places, which is the point of putting them in one file.
+about is not the population it would waive. `Candidate.operated` is established
+only by an operation state supplied after the external deployment boundary has
+been authenticated. An unfamiliar environment label is never deployment proof.
 
 WHY THE CREDENTIAL COMPARISON IS A DIGEST
 -------------------------------------------
@@ -119,27 +120,70 @@ POPULATIONS: tuple[str, ...] = (
 )
 
 
+class OperationState(str, Enum):
+    """Whether an external trust boundary authenticated this deployment.
+
+    Environment names are descriptive input.  They cannot establish this
+    state: otherwise ``--environment production`` is a production attestation.
+    The default is deliberately the safe state used by every constructor in
+    this repository; an operated adapter may supply VERIFIED only after it has
+    authenticated the target and its candidate identity.
+    """
+
+    UNVERIFIED = "unverified"
+    """§9's third state, and the only one this build can ever produce.
+
+    NOT a decisive negative. It does not say the candidate is not a
+    deployment -- it says no external boundary has attested that it is, which
+    is a different fact and the only one anything here is in a position to
+    know. A member meaning "checked and refused" would have no producer:
+    nothing in this repository can authenticate the absence of a deployment,
+    and inventing the value would put a conclusion in the vocabulary that
+    nobody reaches.
+    """
+
+    VERIFIED = "verified"
+
+    @classmethod
+    def not_established(cls) -> "OperationState":
+        """The escape this vocabulary declares, read by
+        `tests/test_three_states.py` rather than guessed from member names.
+
+        UNVERIFIED carries no substring any word list would recognise, and
+        adding one would mean renaming the safe default that every
+        constructor in this repository relies on. Declaring it is the honest
+        answer to the same question -- `nm.core.dependency.InputKind` does it
+        for UNKNOWN for the same reason.
+        """
+        return cls.UNVERIFIED
+
+
 @refuses_blank_text()
 @dataclass(frozen=True)
 class Candidate:
     """EXACTLY WHAT IS BEING CLAIMED ABOUT.
 
-    `environment` is required and `operated` is derived from it rather than
-    set: a boolean somebody sets is a boolean somebody sets while looking at
-    their laptop.
+    ``environment`` names the claimed location. ``operation_state`` records
+    what the external deployment adapter established. Keeping those separate
+    prevents a plausible-sounding string from becoming evidence.
     """
 
     commit: str
     environment: str
     config_digest: str = ""
+    operation_state: OperationState = OperationState.UNVERIFIED
 
     #: Environments this build can actually produce. Anything else is a claim
     #: about somewhere else and is treated as one.
     LOCAL = ("local", "local_rehearsal", "synthetic", "working_tree")
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.operation_state, OperationState):
+            raise TypeError("operation_state must be an OperationState")
+
     @property
     def operated(self) -> bool:
-        return self.environment not in Candidate.LOCAL
+        return self.operation_state is OperationState.VERIFIED
 
     @property
     def identity(self) -> str:
@@ -433,6 +477,85 @@ def refuse_access(request: AccessRequest, *, on: str) -> tuple[str, ...]:
     elif today is not None and expires < today:
         out.append(f"the exception expired on {waiver.expires_on} and this "
                    f"attempt is on {on}")
+    return tuple(out)
+
+
+# ----------------------------------------------- writing an evidence record --
+
+#: The three evidence levels that are a RECORD somebody signs rather than a
+#: test somebody runs. `tools/backlog.py` reads them from a JSON document and
+#: refuses one that does not say PASS -- so the question this section answers
+#: is when such a document may be written at all.
+STRUCTURED_LEVELS: tuple[str, ...] = (
+    "model_eval", "counsel_review", "production_measure",
+)
+
+
+@refuses_blank_text()
+@dataclass(frozen=True)
+class EvidenceRecord:
+    """One unverified observation draft.
+
+    Every field is required. This small domain object can refuse impossible
+    drafts, but it cannot authenticate a signature and therefore cannot confer
+    PASS. ``tools.structured_evidence`` owns the authoritative schema and trust
+    boundary. ``result`` defaults to NOT_RUN because a record somebody forgot
+    to fill in must read as unmeasured rather than as met.
+    """
+
+    criterion: str
+    level: str
+    subject: str
+    method: str
+    actor: str
+    observed_at: str
+    result: str = "NOT_RUN"
+
+def refuse_record(record: EvidenceRecord, *, about: Candidate,
+                  observed: bool, operator: str = "") -> tuple[str, ...]:
+    """WHY THIS EVIDENCE RECORD MAY NOT BE WRITTEN.
+
+    THE POINT OF THE WHOLE SECTION. A tool that writes evidence records is a
+    tool that can manufacture them, so it may only ever record a measurement
+    it actually carried out or validate a document somebody else signed. It
+    may never decide that something passed.
+    """
+    out: list[str] = []
+    if record.level not in STRUCTURED_LEVELS:
+        out.append(
+            f"{record.level!r} is not a structured evidence level; "
+            f"{list(STRUCTURED_LEVELS)} are the ones written as a record, and "
+            f"the rest are tests whose result comes from running them")
+
+    if record.result == "PASS" and not observed:
+        out.append(
+            "this record says PASS and no measurement was carried out. A "
+            "record is written FROM an observation, never from an intention "
+            "to make one")
+
+    if record.result == "PASS":
+        out.append(
+            "this draft says PASS, but a domain object cannot authenticate "
+            "evidence. Only the configured structured-evidence trust boundary "
+            "may promote an exact signed payload and authority grant")
+
+    if record.level == "production_measure" and not about.operated:
+        out.append(
+            f"a production measure cannot be recorded from "
+            f"{about.environment!r}. Every environment this build can create "
+            f"is local, and local synthetic success is not target IAM, KMS, "
+            f"network, restore or operational proof")
+
+    if record.level == "counsel_review" and operator and record.actor == operator:
+        out.append(
+            f"the review names {record.actor!r} and that is the operator who "
+            f"ran the command; a review of one's own work is not an "
+            f"independent one")
+
+    if _a_date(record.observed_at.split("T")[0]) is None:
+        out.append(f"the record is dated {record.observed_at!r}, which is not "
+                   f"a date; an undated observation cannot be shown to be "
+                   f"about this candidate")
     return tuple(out)
 
 

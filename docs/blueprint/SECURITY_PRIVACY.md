@@ -49,6 +49,18 @@ Use Indian law as the regulatory baseline. International standards guide enginee
 
 ### Indian applicability decisions required before real data
 
+The dated, machine-checked counsel packet is
+[INDIA_APPLICABILITY_REVIEW.md](INDIA_APPLICABILITY_REVIEW.md), generated from
+[india_applicability_review.json](india_applicability_review.json). It owns the
+current source, role, permission, retention, incident-clock, accountability and
+reservation population for BK-85-AC3. It deliberately remains
+`COUNSEL_REVIEW_REQUIRED`: neither this guide nor the generated packet is the
+qualified review. Counsel must complete the generated template, authenticate
+the exact review and authority grant through the configured P03 trust boundary,
+and promote the signed, expiring record before the criterion can pass.
+CHOICE-01, CHOICE-07, CHOICE-08 and CHOICE-10 remain later exact-scope
+pilot/production decisions; they do not block packet construction.
+
 1. **Record the legal roles by purpose.** The firm may determine purposes for matter processing; NM may have different responsibilities for account management or its own security operations. Do not copy one “processor” label over every activity. Record lawful basis or applicable permission, purpose, categories, recipients, retention and responsible organization.
 2. **Respect phased DPDP commencement.** The notification dated 13 November 2025 provides immediate, one-year and eighteen-month tranches. Most substantive processing duties are in the last tranche; do not describe all provisions as already operative in September 2026. Have counsel confirm the exact operative dates from Gazette publication and subsequent instruments. [G.S.R. 843(E)](https://www.meity.gov.in/static/uploads/2025/11/c56ceae6c383460ca69577428d36828b.pdf).
 3. **Build for the notified Rules now.** Rule 1 also stages commencement. Future requirements include security safeguards, breach communications and retention provisions in Rules 6 and 8. Do not hard-code immediate erasure or one universal retention period. Counsel must reconcile their scope with other duties, exemptions and legal holds. [DPDP Rules 2025, G.S.R. 846(E)](https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf), and the [MeitY rules/corrigendum entry](https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa?pageTitle=Digital-Personal-Data-Protection-Rules-2025%C3%AF%C2%BF%C2%BC).
