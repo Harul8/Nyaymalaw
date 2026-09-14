@@ -1,7 +1,7 @@
 """Legal premises are established before the arithmetic, and stated by the advocate.
 BK-65-AC2, BK-35-AC1, BK-35-AC2. P22.
 
-The domain half is `nm/core/premise.py`: three kinds, four bases, the block on
+The domain half is `backend/nm/core/premise.py`: three kinds, four bases, the block on
 unestablished and the conditional on inferred. The served half drives the real
 ASGI app: a cause with no curated accrual trigger and two dated events computes
 CONDITIONAL -- a date shown with its alternatives, NOT a deadline on the
@@ -111,7 +111,7 @@ def test_the_same_dates_expire_differently_under_different_triggers():
 def _client(tmp_path):
     from fastapi.testclient import TestClient
 
-    from tools.served import PASSWORD, served
+    from assurance.journeys.served import PASSWORD, served
 
     box = served(tmp_path / "store")
     advocate = box.enrol("adv_premise")

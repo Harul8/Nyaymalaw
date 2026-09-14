@@ -3,7 +3,7 @@
 THE DECISION THIS REVERSES
 ----------------------------
 The sign-in page used to say, in as many words, that enrolment was not
-self-service and pointed at `tools/enrol.py` — a tool an advocate cannot run.
+self-service and pointed at `backend/operations/enrol.py` — a tool an advocate cannot run.
 The form is available to the advocate, but an operator-issued invitation now
 controls who may use it and fixes the identity and workspace it will create.
 
@@ -195,7 +195,7 @@ def test_the_roster_profile_comes_from_the_invitation(client):
 
 def test_enrolling_the_same_email_twice_is_refused(client):
     """Overwriting would replace a credential without anyone deciding to —
-    the same refusal `tools/enrol.py` already makes, reached through a
+    the same refusal `backend/operations/enrol.py` already makes, reached through a
     different door."""
     assert register(client).status_code == 200
     again = register(client)

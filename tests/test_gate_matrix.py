@@ -14,7 +14,6 @@ own construction rules cannot be broken by the next person to add a gate.
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.gates import (
     GATES,
     Gate,

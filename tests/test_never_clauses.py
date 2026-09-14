@@ -2,7 +2,7 @@
 
 WHY THIS FILE EXISTS
 --------------------
-`tools/trace.py` T7 reports every NEVER clause with no test declaring
+`assurance/gate/trace.py` T7 reports every NEVER clause with no test declaring
 `@refuses`. It stood at seventeen across six features, and five of those
 features are in slices already marked DONE. So "DONE" was claiming more than it
 could support — a feature is not built because its DOES clauses work; the NEVER
@@ -25,12 +25,12 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
 from nm.domain.matter import Matter, Provenance
 from nm.domain.traceability import refuses
+
 from tests.test_turn_contract import KEY, _Evidence, briefed, build
 
 pytestmark = pytest.mark.class_a
@@ -194,7 +194,7 @@ def test_no_path_admits_a_document_fact_without_binding_it_to_a_thread():
     import ast
     import pathlib
 
-    root = pathlib.Path(__file__).resolve().parents[1] / "nm"
+    root = pathlib.Path(__file__).resolve().parents[1] / "backend" / "nm"
     offenders: list[str] = []
     for path in sorted(root.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf8"))
@@ -388,7 +388,7 @@ def test_a_recorded_run_cannot_vouch_for_code_it_never_saw(tmp_path, monkeypatch
     today's code.
 
     That is defect shape S11 exactly, and it is the same argument
-    `nm/knowledge/artefact.py` makes about the dense index: the ONLY reason
+    `backend/nm/knowledge/artefact.py` makes about the dense index: the ONLY reason
     that 437MB artefact was knowably unusable is that it shipped an
     `identity.json`. A run that cannot say what it ran against is the same
     artefact wearing a different hat.
@@ -399,7 +399,7 @@ def test_a_recorded_run_cannot_vouch_for_code_it_never_saw(tmp_path, monkeypatch
     """
     import json as _json
 
-    from tools import releasegate
+    from pipeline.quality import releasegate
 
     record = tmp_path / "eval_results.json"
     record.write_text(_json.dumps({

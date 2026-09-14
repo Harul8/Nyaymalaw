@@ -12,7 +12,6 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 import pytest
-
 from nm.adapters.store.directory import FileDirectory
 from nm.domain import attempts
 from nm.domain.advocate import (
@@ -179,7 +178,8 @@ def test_only_a_fingerprint_of_the_invitation_is_stored(client):
 def test_the_operator_tool_issues_the_bound_identity_and_prints_the_token_once(
         monkeypatch, capsys):
     from nm.bootstrap import composition
-    from tools import invite as command
+
+    from backend.operations import invite as command
 
     issued = []
 

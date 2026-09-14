@@ -15,7 +15,6 @@ import json
 from types import SimpleNamespace
 
 import pytest
-
 from nm.adapters.model.config import ModelConfig, TierConfig
 from nm.adapters.model.openai_adapter import OpenAIModelAdapter
 from nm.adapters.model.scripted import ScriptedModelAdapter

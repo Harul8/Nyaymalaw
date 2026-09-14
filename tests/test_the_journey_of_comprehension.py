@@ -16,7 +16,7 @@ failure.
 
     SO THIS IS INSTRUMENTATION, NOT OBSERVATION. Every phase asks whether the
     surface supports the task. None of them records that anybody performed it,
-    and `nm/domain/review.py` refuses a study whose only observations came from
+    and `backend/nm/domain/review.py` refuses a study whose only observations came from
     a fixture -- which is what these would be if they were offered as one.
 
 BK-66-AC1's and BK-66-AC3's `counsel_review` and `model_eval` stay NOT RUN, and
@@ -47,6 +47,7 @@ playwright_api = pytest.importorskip(
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ARTIFACTS = ROOT / ".nm" / "journey"
 
+from assurance.gate.layout import WIDTHS  # noqa: E402
 from tests.test_the_journey_login_to_logout import (  # noqa: E402
     _advise,
     _intake,
@@ -55,7 +56,6 @@ from tests.test_the_journey_login_to_logout import (  # noqa: E402
     _tab,
     _visible_text,
 )
-from tools.layout import WIDTHS  # noqa: E402
 
 #: A brief with one decisive date in it, so correcting the date is a change
 #: with consequences rather than an edit.
@@ -97,7 +97,7 @@ def journey(tmp_path_factory):
     import sys
 
     sys.path.insert(0, str(ROOT))
-    from tools.served import PASSWORD, running
+    from assurance.journeys.served import PASSWORD, running
 
     root = tmp_path_factory.mktemp("journey-comprehension")
     with running(root) as (box, base):

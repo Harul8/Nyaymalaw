@@ -23,6 +23,8 @@ from pathlib import Path
 
 import pytest
 
+from assurance.common.homes import TOOLING, tooling_sources
+
 pytestmark = pytest.mark.class_a
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,9 +35,16 @@ def _copy_bytes(source: Path, destination: Path) -> None:
     shutil.copyfile(source, destination)
 
 
+def _tool(script: str) -> Path:
+    """The one file a tool name resolves to, wherever its home is."""
+    found = tooling_sources(script)
+    assert len(found) == 1, f"{script} resolves to {len(found)} tooling files: {found}"
+    return found[0]
+
+
 def run(script: str, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [sys.executable, str(ROOT / "tools" / script), *args],
+        [sys.executable, str(_tool(script)), *args],
         capture_output=True, text=True, cwd=str(cwd or ROOT), encoding="utf8",
     )
 
@@ -53,7 +62,7 @@ def test_layercheck_passes_on_the_real_tree():
 
 def test_layercheck_rejects_core_importing_an_adapter(tmp_path):
     """THE COUNTEREXAMPLE: the import that quietly destroys the class-A cadence."""
-    offender = ROOT / "nm" / "core" / "_layercheck_probe.py"
+    offender = ROOT / "backend" / "nm" / "core" / "_layercheck_probe.py"
     offender.write_text(
         "from nm.adapters import anything  # noqa: F401\n", encoding="utf8")
     try:
@@ -67,7 +76,7 @@ def test_layercheck_rejects_core_importing_an_adapter(tmp_path):
 
 def test_layercheck_rejects_a_provider_client_in_core():
     """THE COUNTEREXAMPLE: a model client reachable from the pure core."""
-    offender = ROOT / "nm" / "core" / "_provider_probe.py"
+    offender = ROOT / "backend" / "nm" / "core" / "_provider_probe.py"
     offender.write_text("import openai  # noqa: F401\n", encoding="utf8")
     try:
         r = run("layercheck.py")
@@ -80,7 +89,7 @@ def test_layercheck_rejects_a_provider_client_in_core():
 
 def test_layercheck_allows_core_importing_ports():
     """The rule must permit what it is supposed to permit."""
-    ok = ROOT / "nm" / "core" / "_allowed_probe.py"
+    ok = ROOT / "backend" / "nm" / "core" / "_allowed_probe.py"
     ok.write_text("from nm.ports import model  # noqa: F401\n", encoding="utf8")
     try:
         r = run("layercheck.py")
@@ -104,7 +113,7 @@ def test_trace_accepts_the_freshly_regenerated_spec():
     precondition first, then asks only T1. The whole trace also reports product
     obligations; an unrelated C1 or D2 finding says nothing about freshness.
     """
-    from tools.trace import Report, spec_is_current
+    from assurance.gate.trace import Report, spec_is_current
 
     regen = run("export_spec.py")
     assert regen.returncode == 0, f"export_spec failed:\n{regen.stdout}{regen.stderr}"
@@ -115,7 +124,7 @@ def test_trace_accepts_the_freshly_regenerated_spec():
 
 def test_trace_rejects_an_implements_naming_no_feature():
     """T2 COUNTEREXAMPLE: code claiming a feature id the spec does not contain."""
-    offender = ROOT / "nm" / "core" / "_trace_probe.py"
+    offender = ROOT / "backend" / "nm" / "core" / "_trace_probe.py"
     offender.write_text(textwrap.dedent("""
         from nm.domain.traceability import implements
 
@@ -138,7 +147,7 @@ def test_trace_rejects_a_built_claim_with_no_code(tmp_path):
     A feature is marked `built` while nothing anywhere declares it implemented.
     217 stories were reported done on exactly this basis.
     """
-    spec = ROOT / "spec" / "features.yaml"
+    spec = ROOT / "assurance" / "specification" / "features.yaml"
     backup = tmp_path / "features.yaml"
     _copy_bytes(spec, backup)
     try:
@@ -173,10 +182,10 @@ def test_trace_rejects_a_built_claim_with_no_code(tmp_path):
 
 def test_trace_rejects_a_tested_claim_whose_evals_never_ran(tmp_path):
     """T4 COUNTEREXAMPLE: `tested` asserted with no eval run behind it."""
-    spec = ROOT / "spec" / "features.yaml"
+    spec = ROOT / "assurance" / "specification" / "features.yaml"
     backup = tmp_path / "features.yaml"
     _copy_bytes(spec, backup)
-    probe = ROOT / "nm" / "core" / "_tested_probe.py"
+    probe = ROOT / "backend" / "nm" / "core" / "_tested_probe.py"
     try:
         text = spec.read_text(encoding="utf8")
         import json
@@ -241,7 +250,7 @@ def test_trace_rejects_a_tested_claim_whose_evals_never_ran(tmp_path):
 
 def test_trace_detects_a_stale_spec(tmp_path):
     """T1 COUNTEREXAMPLE: the generator moved and the spec was not regenerated."""
-    spec = ROOT / "spec" / "features.yaml"
+    spec = ROOT / "assurance" / "specification" / "features.yaml"
     backup = tmp_path / "features.yaml"
     _copy_bytes(spec, backup)
     try:
@@ -307,7 +316,7 @@ def _stale_anchors(mutations) -> list[str]:
 
     A control that reimplements the check proves the reimplementation works.
     """
-    import tools.mutate as mutate
+    import assurance.gate.mutate as mutate
 
     stale = []
     for label, rel, old, *_ in mutations:
@@ -329,7 +338,7 @@ def _stale_anchors(mutations) -> list[str]:
 def test_every_mutation_anchor_still_matches_the_source():
     """A MUTATION WHOSE ANCHOR NO LONGER MATCHES NEVER RUNS.
 
-    `tools/mutate.py` is right to score a missing anchor as SURVIVED — a
+    `assurance/gate/mutate.py` is right to score a missing anchor as SURVIVED — a
     mutation that did not execute must never read as one that was caught. But
     that verdict costs a fifteen-minute run to reach, and it arrives labelled
     as a weak test rather than as what it is: a rename that was not swept.
@@ -342,7 +351,7 @@ def test_every_mutation_anchor_still_matches_the_source():
 
     So the same fact is asserted here, in under a second, on every commit.
     """
-    import tools.mutate as mutate
+    import assurance.gate.mutate as mutate
 
     stale = _stale_anchors(mutate.MUTATIONS)
     assert not stale, (
@@ -357,7 +366,7 @@ def test_mutation_children_cannot_inherit_the_canonical_evidence_lease(
     tmp_path, monkeypatch, returncode,
 ):
     """Inspect the actual launch boundary; no child pytest or mutation runs."""
-    import tools.mutate as mutate
+    import assurance.gate.mutate as mutate
 
     canonical = tmp_path / "parent-class-a.json"
     canonical.write_text("parent evidence remains owned", encoding="utf8")
@@ -387,7 +396,7 @@ def test_the_anchor_check_can_see_a_stale_anchor():
     So a mutation with an anchor the source does not contain is planted, and
     the SAME function has to report it.
     """
-    planted = [("a mutation whose line no longer exists", "nm/core/turn.py",
+    planted = [("a mutation whose line no longer exists", "backend/nm/core/turn.py",
                 "    def _a_method_no_rename_ever_produced(self):",
                 "x", "some_test", "E-000")]
     reported = _stale_anchors(planted)
@@ -395,7 +404,7 @@ def test_the_anchor_check_can_see_a_stale_anchor():
 
     # AND A FILE THAT IS GONE ENTIRELY is a different failure with its own
     # message -- a rename of the module, not of the line.
-    moved = [("a mutation whose module moved", "nm/core/no_such_module.py",
+    moved = [("a mutation whose module moved", "backend/nm/core/no_such_module.py",
               "anything", "x", "some_test", "E-000")]
     assert "does not exist" in _stale_anchors(moved)[0]
 
@@ -403,7 +412,7 @@ def test_the_anchor_check_can_see_a_stale_anchor():
     # happened. Presence alone passed it: both mutations ran, mutated the
     # wrong line, and were reported as SURVIVED -- which reads as a weak test
     # and was really an anchor that had stopped being specific.
-    ambiguous = [("a mutation whose anchor is not unique", "nm/core/turn.py",
+    ambiguous = [("a mutation whose anchor is not unique", "backend/nm/core/turn.py",
                   "        return None", "x", "some_test", "E-000")]
     reported = _stale_anchors(ambiguous)
     assert reported and "matches" in reported[0], (
@@ -435,7 +444,7 @@ def test_the_served_process_reports_which_code_it_loaded():
     # HELD, NOT HELD, OR NOT ASSESSED -- and the third state is visible.
     #
     # Comparing SERVING against the tree is the check that caught B-061, and
-    # its home is `tools/run_scenario.py`, where a LIVE SERVER is asked what it
+    # its home is `assurance/journeys/run_scenario.py`, where a LIVE SERVER is asked what it
     # is running. In-process the same comparison can only fail if the tree
     # changed between this module's import and this line -- which is what an
     # editor does, not what a defect does. It fired that way three times in one
@@ -454,7 +463,7 @@ def test_the_served_process_reports_which_code_it_loaded():
         pytest.skip(f"NOT ASSESSED: the tree moved during this session "
                     f"({SESSION_TREE} -> {now}), so the comparison would "
                     f"describe the editor and not the code. The live check is "
-                    f"tools/run_scenario.py::server_fingerprint")
+                    f"assurance/journeys/run_scenario.py::server_fingerprint")
     assert api.SERVING == now, (
         "the module-level fingerprint does not match the tree it was imported "
         "from, and the tree has not moved since this session began")
@@ -469,18 +478,19 @@ def test_the_served_process_reports_which_code_it_loaded():
 
 
 def test_the_fingerprint_has_one_owner():
-    """`tools/_fingerprint.py` re-exports and defines nothing.
+    """`assurance/common/_fingerprint.py` re-exports and defines nothing.
 
     Two digests would agree until the day they did not, and the disagreement
     would look like a code change rather than like a bug in the checker.
     """
-    import tools._fingerprint as shim
     from nm.domain.identity import source_fingerprint
+
+    import assurance.common._fingerprint as shim
 
     assert shim.source_fingerprint is source_fingerprint
     src = Path(shim.__file__).read_text(encoding="utf8")
     assert "hashlib" not in src, (
-        "tools/_fingerprint.py computes a digest of its own again")
+        "assurance/common/_fingerprint.py computes a digest of its own again")
 
 
 def test_a_fingerprint_notices_a_changed_source_file(tmp_path):
@@ -488,16 +498,16 @@ def test_a_fingerprint_notices_a_changed_source_file(tmp_path):
     server pass, and it would look exactly like this one."""
     from nm.domain.identity import source_fingerprint
 
-    (tmp_path / "nm").mkdir()
+    (tmp_path / "backend" / "nm").mkdir(parents=True)
     (tmp_path / "tests").mkdir()
-    (tmp_path / "nm" / "a.py").write_text("x = 1", encoding="utf8")
+    (tmp_path / "backend" / "nm" / "a.py").write_text("x = 1", encoding="utf8")
     before = source_fingerprint(tmp_path)
 
-    (tmp_path / "nm" / "a.py").write_text("x = 2", encoding="utf8")
+    (tmp_path / "backend" / "nm" / "a.py").write_text("x = 2", encoding="utf8")
     assert source_fingerprint(tmp_path) != before, "content change not seen"
 
     # A NEW FILE COUNTS TOO — the S4 wiring was mostly new modules.
-    (tmp_path / "nm" / "b.py").write_text("x = 2", encoding="utf8")
+    (tmp_path / "backend" / "nm" / "b.py").write_text("x = 2", encoding="utf8")
     assert source_fingerprint(tmp_path) != before, "an added module not seen"
 
     # AND A MISSING TREE IS NOT SILENTLY SKIPPED. Digesting nothing would make
@@ -515,7 +525,7 @@ def test_the_runner_tells_an_unreachable_server_from_a_stale_one():
     collapsing them would tell the reader to restart a process that is not
     running.
     """
-    import tools.run_scenario as runner
+    import assurance.journeys.run_scenario as runner
 
     fp, why = runner.server_fingerprint()
     assert (fp is None) == (why != "ok")
@@ -530,7 +540,7 @@ def test_a_scenario_with_no_scripted_turns_is_refused_not_skipped():
     scripted turns, and the runner printed a note, continued, and reported
     success. A scenario that could not run must never read as one that passed.
     """
-    import tools.run_scenario as runner
+    import assurance.journeys.run_scenario as runner
 
     src = Path(runner.__file__).read_text(encoding="utf8")
     assert "no turns scripted" not in src, (
@@ -551,7 +561,7 @@ def test_a_scenario_with_no_scripted_turns_is_refused_not_skipped():
 
 def _entry_point_tools() -> list[Path]:
     """Every tool that can be run directly. The population, from the tree."""
-    return [p for p in sorted((ROOT / "tools").glob("*.py"))
+    return [p for p in tooling_sources()
             if not p.name.startswith("_")
             and "__main__" in p.read_text(encoding="utf8")]
 
@@ -576,7 +586,7 @@ def test_every_tool_makes_its_console_survive_the_prose_it_prints():
     assert not offenders, (
         "these tools can die partway through their own report on a dash:\n  "
         + "\n  ".join(offenders)
-        + "\n\nAdd `from tools._console import utf8_console` and call it. One "
+        + "\n\nAdd `from assurance.common._console import utf8_console` and call it. One "
           "definition, called everywhere — a line copied into fourteen files "
           "is fourteen chances to differ and one guarantee the fifteenth tool "
           "will not have it.")
@@ -587,7 +597,7 @@ def test_the_console_scan_can_see_a_tool_that_does_not_call_it():
 
     A scan over tools that all happen to call it proves nothing about the scan.
     """
-    probe = ROOT / "tools" / "zz_console_probe.py"
+    probe = ROOT / "assurance" / "gate" / "zz_console_probe.py"
     probe.write_text('print("no guard here")\nif __name__ == "__main__":\n'
                      '    pass\n', encoding="utf8")
     try:
@@ -603,7 +613,7 @@ def test_utf8_console_survives_a_stream_it_cannot_reconfigure():
     """It runs under pytest's capture, under a pipe, and inside a subprocess
     wrapper. None of those is a failure and none may raise — a guard that
     crashes on the ordinary case would be worse than the bug."""
-    from tools._console import utf8_console
+    from assurance.common._console import utf8_console
 
     utf8_console()
     utf8_console()  # idempotent
@@ -614,7 +624,8 @@ def test_the_graph_vector_report_starts_through_its_documented_path(tmp_path):
 
     The real pre-commit hook found that distinction: the source contained
     ``utf8_console()`` and passed the scan above, then
-    ``python tools/graph_vectors.py --embed`` died before reaching it because
+    ``python development_environment/developer_tooling/graph_vectors.py --embed`` died before
+    reaching it because
     the repository root was absent from ``sys.path``. Start outside the root
     so the test cannot inherit the missing precondition from pytest's cwd.
     """
@@ -630,7 +641,7 @@ def test_the_graph_vector_report_starts_through_its_documented_path(tmp_path):
 
 def test_a_graph_without_an_embedding_table_reports_full_lag(tmp_path):
     """A structural-only graph is stale, not a reporter crash or zero lag."""
-    from tools.graph_vectors import examples, lag
+    from development_environment.developer_tooling.graph_vectors import examples, lag
 
     database = tmp_path / "graph.db"
     connection = sqlite3.connect(database)
@@ -666,7 +677,7 @@ def test_the_gate_stamp_covers_what_the_gate_checks_not_what_the_server_runs():
 
     `source_fingerprint` covers `nm` and `tests`, because it answers "what
     code is this process running". The file that broke and reached HEAD was
-    `spec/plan/build_plan.py` -- which the gate CHECKS and the server never
+    `assurance/specification/plan/build_plan.py` -- which the gate CHECKS and the server never
     RUNS -- so that digest would not have moved, and a stamp built on it would
     have passed on the very commit that prompted it.
 
@@ -674,14 +685,15 @@ def test_the_gate_stamp_covers_what_the_gate_checks_not_what_the_server_runs():
     is about, arriving inside it.
     """
     from nm.domain.identity import FINGERPRINTED
-    from tools.evidence import IDENTITY_MANIFEST
-    from tools.gatestamp import CHECKED
+
+    from assurance.control_plane.evidence import IDENTITY_MANIFEST
+    from assurance.gate.gatestamp import CHECKED
 
     assert CHECKED[0] == ".", (
         "the gate identity is not rooted at the repository, so an effective "
         "input added outside a hand-maintained directory list can escape it")
     repository = next(part for part in IDENTITY_MANIFEST if part.path == ".")
-    for required in (*FINGERPRINTED, "spec", "tools"):
+    for required in (*FINGERPRINTED, "assurance/specification", "frontend", *TOOLING):
         assert required not in repository.exclude, (
             f"the repository identity excludes the effective {required}/ tree")
 
@@ -689,10 +701,10 @@ def test_the_gate_stamp_covers_what_the_gate_checks_not_what_the_server_runs():
 def test_the_gate_stamp_notices_a_tree_that_moved(tmp_path):
     """S11. A stamp that always agreed would be a green rubber stamp, which
     is worse than none: it would make the pre-commit hook a formality."""
-    from tools import gatestamp
+    from assurance.gate import gatestamp
 
-    (tmp_path / "nm").mkdir()
-    planted = tmp_path / "nm" / "a.py"
+    (tmp_path / "backend" / "nm").mkdir(parents=True)
+    planted = tmp_path / "backend" / "nm" / "a.py"
 
     planted.write_text("x = 1" + chr(10), encoding="utf8")
     before = gatestamp.tree_digest(tmp_path)
@@ -712,14 +724,15 @@ def test_an_absent_tree_is_not_read_as_unchanged(tmp_path):
     """A digest that skipped a missing directory would match across a change
     it never looked at -- the absent-input shape on the tool built to catch a
     result about the wrong thing."""
-    from tools import gatestamp
+    from assurance.gate import gatestamp
 
-    (tmp_path / "nm").mkdir()
-    (tmp_path / "nm" / "a.py").write_text("x = 1" + chr(10), encoding="utf8")
+    (tmp_path / "backend" / "nm").mkdir(parents=True)
+    (tmp_path / "backend" / "nm" / "a.py").write_text("x = 1" + chr(10), encoding="utf8")
     without = gatestamp.tree_digest(tmp_path)
 
-    (tmp_path / "spec").mkdir()
-    (tmp_path / "spec" / "b.py").write_text("y = 2" + chr(10), encoding="utf8")
+    (tmp_path / "assurance" / "specification").mkdir(parents=True)
+    (tmp_path / "assurance" / "specification" / "b.py").write_text(
+        "y = 2" + chr(10), encoding="utf8")
     assert gatestamp.tree_digest(tmp_path) != without, (
         "a tree that appeared did not move the digest")
 
@@ -728,7 +741,7 @@ def test_the_gate_stamp_has_a_third_state():
     """`not_assessed` when no gate has run here -- which is NOT "stale" and
     NOT "current". Reporting it as either is the absent-input defect on the
     tool built to catch a stale result."""
-    from tools.gatestamp import state
+    from assurance.gate.gatestamp import state
 
     verdict, sentence = state()
     assert verdict in ("current", "current_scoped", "stale", "not_assessed")
@@ -739,7 +752,7 @@ def test_the_hook_keeps_the_hook_that_was_there_first():
     """The graph's pre-commit hook was installed before this one. Replacing it
     would take a working tool away to add ours, which is not a trade anybody
     agreed to."""
-    hook = (ROOT / "tools" / "hooks" / "pre-commit").read_text(encoding="utf8")
+    hook = (ROOT / "assurance" / "hooks" / "pre-commit").read_text(encoding="utf8")
     assert "code-review-graph" in hook, (
         "the canonical hook dropped the graph's update, so installing ours "
         "silently disables theirs")
@@ -752,20 +765,21 @@ def test_the_hook_keeps_the_hook_that_was_there_first():
 def test_the_hook_refreshes_vectors_and_keeps_the_gate_blocking():
     """BK-76-AC2. Search freshness may warn; build identity must decide.
 
-    The refresh moved into `tools/hooks/refresh-graph` on 12 September 2026
+    The refresh moved into `assurance/hooks/refresh-graph` on 12 September 2026
     so that post-merge and post-rewrite could share it (see
     `test_every_way_the_tree_changes_refreshes_the_index.py`). The rule here
     is unchanged: pre-commit reaches the vectors, non-blocking, BEFORE the
     blocking gate.
     """
-    hook = (ROOT / "tools" / "hooks" / "pre-commit").read_text(encoding="utf8")
-    owner = (ROOT / "tools" / "hooks" / "refresh-graph").read_text(encoding="utf8")
-    vector = "tools/hooks/refresh-graph"
-    gate = "python tools/gatestamp.py --quiet --require-index || exit 1"
+    hook = (ROOT / "assurance" / "hooks" / "pre-commit").read_text(encoding="utf8")
+    owner = (ROOT / "assurance" / "hooks" / "refresh-graph").read_text(encoding="utf8")
+    vector = "assurance/hooks/refresh-graph"
+    gate = "python assurance/gate/gatestamp.py --quiet --require-index || exit 1"
 
     assert vector in hook, (
         "the hook updates the structural graph without refreshing its vectors")
-    assert "python tools/graph_vectors.py --embed || true" in owner, (
+    embed = "python development_environment/developer_tooling/graph_vectors.py --embed || true"
+    assert embed in owner, (
         "refresh-graph no longer refreshes the vectors, or lets a failed "
         "embed fail the hook")
     assert gate in hook, (
@@ -780,7 +794,7 @@ def test_the_hook_refreshes_vectors_and_keeps_the_gate_blocking():
 
 def test_the_canonical_hook_is_tracked_as_executable():
     row = subprocess.run(
-        ["git", "ls-files", "--stage", "tools/hooks/pre-commit"],
+        ["git", "ls-files", "--stage", "assurance/hooks/pre-commit"],
         cwd=ROOT, capture_output=True, text=True, check=True,
     ).stdout.strip()
     assert row.startswith("100755 "), (
@@ -808,7 +822,7 @@ def test_the_golden_suite_path_cannot_reach_a_model():
     does not NAME the things that make one, which is a weaker claim and the
     one that can be checked before the call is made rather than after.
     """
-    source = (ROOT / "tools" / "run_goldens.py").read_text(encoding="utf8")
+    source = (ROOT / "assurance" / "journeys" / "run_goldens.py").read_text(encoding="utf8")
     tree = ast.parse(source)
 
     reached = set()
@@ -821,7 +835,7 @@ def test_the_golden_suite_path_cannot_reach_a_model():
             reached.add(node.attr)
 
     assert not reached, (
-        f"`tools/run_goldens.py` now reaches {sorted(reached)}, so "
+        f"`assurance/journeys/run_goldens.py` now reaches {sorted(reached)}, so "
         f"`--suite ... --approve` can make model calls -- and "
         f"`test_an_unscored_golden_suite_is_not_reported_as_a_pass` supplies "
         f"`--approve` on EVERY GATE RUN.\n\n"
@@ -871,7 +885,7 @@ def test_an_unscored_golden_suite_is_not_reported_as_a_pass():
 
 
 def test_the_golden_authority_boundary_obeys_the_explicit_selection(monkeypatch, capsys):
-    from tools import run_goldens
+    from assurance.journeys import run_goldens
 
     class AuthorityBoundaryReached(Exception):
         pass
@@ -891,7 +905,7 @@ def test_the_golden_authority_boundary_obeys_the_explicit_selection(monkeypatch,
 def test_a_failing_step_names_what_failed():
     """A GATE WHOSE FAILURE OUTPUT CARRIES NO FAILURE IS NOT A REPORT.
 
-    Measured on 4 September 2026: `tools/check.py` printed
+    Measured on 4 September 2026: `assurance/gate/check.py` printed
     `CHECK FAILED -- pytest` and, beneath it, a urllib3 version warning. The
     failing test name was in the captured output and never reached the screen,
     because the tail of `stdout + stderr` is whatever stderr said last.
@@ -901,7 +915,8 @@ def test_a_failing_step_names_what_failed():
     what the gate already knew.
     """
     sys.path.insert(0, str(ROOT))
-    from tools.check import _why
+    sys.path.insert(0, str(ROOT / "backend"))
+    from assurance.gate.check import _why
 
     proc = subprocess.run(
         [sys.executable, "-c",
@@ -924,7 +939,7 @@ def test_a_failure_with_no_recognised_marker_says_so():
     like an explanation. An absent diagnosis must never look like a diagnosis.
     """
     sys.path.insert(0, str(ROOT))
-    from tools.check import _why
+    from assurance.gate.check import _why
 
     proc = subprocess.run(
         [sys.executable, "-c", "print('something happened and nobody named it')"],
@@ -948,7 +963,7 @@ def test_the_fallback_never_lets_a_constant_warning_stand_in_for_a_diagnosis():
     about the run to diagnose it next time.
     """
     sys.path.insert(0, str(ROOT))
-    from tools.check import _why
+    from assurance.gate.check import _why
 
     proc = subprocess.run(
         [sys.executable, "-c",
@@ -985,7 +1000,7 @@ def test_a_child_that_prints_non_ascii_still_reports_its_failure():
     was not an edge case: it was the ordinary path.
     """
     sys.path.insert(0, str(ROOT))
-    from tools.check import step
+    from assurance.gate.check import step
 
     ok, out = step("probe", [
         sys.executable, "-c",
@@ -1008,7 +1023,7 @@ def test_the_child_is_told_to_write_utf8():
     place, and the replacement is what saves a child that ignores it.
     """
     sys.path.insert(0, str(ROOT))
-    from tools.check import _child_env, step
+    from assurance.gate.check import _child_env, step
 
     assert _child_env()["PYTHONIOENCODING"] == "utf-8"
 
@@ -1023,7 +1038,7 @@ def test_the_child_is_told_to_write_utf8():
 
 def test_a_killed_mutation_run_is_restored_by_the_next_one(tmp_path):
     """B-127. A run under `timeout 420` was killed between the write and the
-    restore, and `nm/edge/projections.py` kept `"bounded_by": "thread_count"`
+    restore, and `backend/nm/edge/projections.py` kept `"bounded_by": "thread_count"`
     where the product says `"matter_count"`. Every check after it was about
     mutated code.
 
@@ -1035,16 +1050,16 @@ def test_a_killed_mutation_run_is_restored_by_the_next_one(tmp_path):
     """
     import json
 
-    from tools import mutate
+    from assurance.gate import mutate
 
-    target = ROOT / "nm" / "edge" / "projections.py"
+    target = ROOT / "backend" / "nm" / "edge" / "projections.py"
     original = target.read_text(encoding="utf8")
     was_marker = (mutate.IN_FLIGHT.read_text(encoding="utf8")
                   if mutate.IN_FLIGHT.exists() else None)
     try:
         mutate.IN_FLIGHT.parent.mkdir(parents=True, exist_ok=True)
         mutate.IN_FLIGHT.write_text(json.dumps({
-            "file": "nm/edge/projections.py", "label": "planted",
+            "file": "backend/nm/edge/projections.py", "label": "planted",
             "original": original}), encoding="utf8")
         target.write_text(
             original.replace('"matter_count"', '"thread_count"', 1),
@@ -1076,7 +1091,7 @@ def test_a_clean_start_says_nothing():
     is mid-change on. A guard that fires on ordinary work is one people
     delete, and then the mutation suite stops being run at all.
     """
-    from tools import mutate
+    from assurance.gate import mutate
 
     was = (mutate.IN_FLIGHT.read_text(encoding="utf8")
            if mutate.IN_FLIGHT.exists() else None)
@@ -1103,7 +1118,8 @@ def test_the_scenario_runner_mints_its_own_advocate(
     """
     monkeypatch.setenv("NM_MATTER_STORE", str(tmp_path))
     from nm.bootstrap.composition import Application
-    from tools.run_scenario import _mint_scenario_advocate
+
+    from assurance.journeys.run_scenario import _mint_scenario_advocate
 
     password, note = _mint_scenario_advocate("adv_probe")
     assert password, note
@@ -1123,7 +1139,7 @@ def test_it_refuses_to_re_enrol_an_advocate_that_exists(
     credential somebody may still be signing in with -- which is the refusal
     `directory.enrol` already makes, and this must not go around it."""
     monkeypatch.setenv("NM_MATTER_STORE", str(tmp_path))
-    from tools.run_scenario import _mint_scenario_advocate
+    from assurance.journeys.run_scenario import _mint_scenario_advocate
 
     first, _ = _mint_scenario_advocate("adv_probe")
     assert first
@@ -1139,9 +1155,10 @@ def test_it_refuses_to_re_enrol_an_advocate_that_exists(
 def test_the_generated_password_satisfies_the_rule_it_will_be_checked_against():
     """A generator that cannot satisfy the rule it enrols against is the
     two-owners defect with the owners one function apart -- which
-    `tools/enrol.py` already paid for once."""
+    `backend/operations/enrol.py` already paid for once."""
     from nm.domain.advocate import enrol
-    from tools.run_scenario import _generated_password
+
+    from assurance.journeys.run_scenario import _generated_password
 
     for _ in range(20):
         enrol(_generated_password())  # raises if it does not satisfy the rule
@@ -1172,7 +1189,7 @@ def test_the_gate_scan_sees_code_and_ignores_prose(body, caught):
 
     `gate_consultations` string-scans every source line, which made it
     illegal to write ABOUT a gate -- and the sentence it failed on was the
-    single most useful one in `nm/domain/engagement.py`, the one that
+    single most useful one in `backend/nm/domain/engagement.py`, the one that
     separates the section from the control.
 
     ALL THREE FORMS ARE PLANTED AND THE FIRST IS THE IMPORTANT ONE.
@@ -1180,13 +1197,13 @@ def test_the_gate_scan_sees_code_and_ignores_prose(body, caught):
     would have turned T9 into a check that cannot fail -- the defect it
     was fixing, wearing the other face.
 
-    A REAL FILE UNDER `nm/`, because the scan walks that tree. A fixture
+    A REAL FILE UNDER `backend/nm/`, because the scan walks that tree. A fixture
     anywhere else would prove the parser works, not that the scan looks.
     """
-    planted = ROOT / "nm" / "core" / "_gate_scan_probe.py"
+    planted = ROOT / "backend" / "nm" / "core" / "_gate_scan_probe.py"
     planted.write_text(chr(10).join(body) + chr(10), encoding="utf8")
     try:
-        from tools.trace import gate_consultations
+        from assurance.gate.trace import gate_consultations
 
         relative = str(planted.relative_to(ROOT))
         locations = gate_consultations().get("G-LIMITATION", [])
@@ -1204,7 +1221,7 @@ def test_the_gate_scan_sees_code_and_ignores_prose(body, caught):
 def test_the_journey_manifest_matches_what_the_suite_collects():
     """A DECLARED MANIFEST THAT DRIFTS IS WORSE THAN NONE.
 
-    `tools/journey.py` declares `EXPECTED` so that a phase which stops
+    `assurance/journeys/journey.py` declares `EXPECTED` so that a phase which stops
     reporting is a failure rather than a silence. Declared, not derived -- if
     the runner read the expected phases out of the test file, deleting a phase
     would delete its own expectation and the check would be theatre.
@@ -1218,7 +1235,7 @@ def test_the_journey_manifest_matches_what_the_suite_collects():
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(
-        "_journey_manifest", ROOT / "tools" / "journey.py")
+        "_journey_manifest", ROOT / "assurance" / "journeys" / "journey.py")
     journey = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(journey)
 
@@ -1244,7 +1261,7 @@ def test_the_journey_manifest_matches_what_the_suite_collects():
 
     declared = set(journey.EXPECTED)
     assert collected == declared, (
-        "tools/journey.py::EXPECTED has drifted from the suite.\n"
+        "assurance/journeys/journey.py::EXPECTED has drifted from the suite.\n"
         f"  collected but not declared: {sorted(collected - declared)}\n"
         f"  declared but not collected: {sorted(declared - collected)}\n\n"
         "A phase the runner does not expect can vanish without a word; one it "

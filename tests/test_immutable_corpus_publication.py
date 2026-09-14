@@ -11,7 +11,6 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
-
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
 from nm.adapters.model.config import ModelConfig, TierConfig
 from nm.adapters.model.scripted import ScriptedModelAdapter

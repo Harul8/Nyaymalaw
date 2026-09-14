@@ -33,7 +33,6 @@ import inspect
 import re
 
 import pytest
-
 from nm.adapters.store import postgres as pg
 from nm.domain.operation import (
     Operation,

@@ -25,7 +25,6 @@ told nothing, because they stopped watching too.
 from __future__ import annotations
 
 import pytest
-
 from nm.core.conflict import screen
 from nm.core.screens import ScreenState
 from nm.core.service import (
@@ -290,7 +289,7 @@ class _Party:
 
 
 class _Parties:
-    """The shape `nm/core/parties.Parties` actually has: names as the advocate
+    """The shape `backend/nm/core/parties.Parties` actually has: names as the advocate
     wrote them, lowercased only for matching."""
 
     def __init__(self, names, matter_id="m1"):

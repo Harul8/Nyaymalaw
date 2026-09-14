@@ -1,0 +1,125 @@
+"""A1 — enrol an advocate. Run by a person, never by the product.
+
+    python backend/operations/enrol.py --id adv_rahul --name "R Kumar" \\
+        --enrolment "AP/1234/2010" --practice "Hyderabad" --firm firm_rk
+
+The password is GENERATED and printed once. It is not read from a prompt, not
+taken on the command line, and not stored anywhere but the derived hash:
+
+  * a prompt cannot be driven by an agent, and this tool has to be runnable
+    from a script as well as a keyboard;
+  * a password on the command line is in the shell history and in the process
+    table, which is a worse place for it than this terminal;
+  * an agent that CHOOSES a password has chosen the thing that stands between
+    two advocates' client files.
+
+Set `NM_NEW_PASSWORD` to supply your own. It is checked against the same
+minimum as everything else, because a rule that lives at one door has a back
+one.
+
+WHAT IT REFUSES
+----------------
+An id that is already enrolled. Re-enrolling would replace a credential
+without anyone deciding to, and the advocate would discover it at a login
+that no longer works.
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import secrets
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+sys.path.insert(0, str(ROOT / "backend"))
+from assurance.common._console import utf8_console  # noqa: E402
+
+utf8_console()
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--id", required=True, help="the advocate id, e.g. adv_rahul")
+    ap.add_argument("--name", required=True)
+    ap.add_argument("--enrolment", required=True,
+                    help="Bar Council enrolment number")
+    ap.add_argument("--practice", required=True, help="where they practise")
+    ap.add_argument("--firm", required=True,
+                    help="the server-owned workspace shown before matter work")
+    args = ap.parse_args()
+
+    from nm.adapters.store.directory import AlreadyEnrolled, FileDirectory
+    from nm.bootstrap.composition import Application
+    from nm.domain.advocate import AdvocateIdentity, Enrolment, enrol
+
+    app = Application()
+    directory: FileDirectory = app.directory
+
+    supplied = os.environ.get("NM_NEW_PASSWORD")
+    password = supplied or _generated()
+
+    try:
+        identity = AdvocateIdentity(
+            id=args.id, name=args.name, enrolment=args.enrolment,
+            practice=args.practice, firm_id=args.firm)
+        recovery_codes = directory.enrol(
+            Enrolment(identity=identity, credential=enrol(password)))
+    except AlreadyEnrolled as exc:
+        print(f"REFUSED: {exc}")
+        return 1
+    except ValueError as exc:
+        print(f"REFUSED: {exc}")
+        return 1
+
+    print(f"enrolled {identity.id} — {identity.name}, {identity.enrolment}, "
+          f"{identity.practice}, firm {identity.firm_id}")
+    if supplied:
+        print("password: taken from NM_NEW_PASSWORD")
+    else:
+        print()
+        print("  password (shown ONCE, it is not recoverable):")
+        print(f"      {password}")
+        print()
+        print("  Only a derived scrypt hash is on disk. Nothing can print this")
+        print("  again, including this tool.")
+    print()
+    print("  recovery codes (shown ONCE; each works once):")
+    for code in recovery_codes:
+        print(f"      {code}")
+    print()
+    print("  Store these separately from this machine. Only salted hashes are on disk.")
+    return 0
+
+
+def _generated() -> str:
+    """Five words, a capital and a number. Long, and typable from a phone.
+
+    A generated string of symbols gets written on paper beside the machine,
+    which is a worse outcome than a passphrase somebody can remember for the
+    length of a working day.
+
+    THE CAPITAL IS HERE BECAUSE THE RULE MOVED. `advocate.enrol` requires an
+    upper-case letter, a lower-case letter, a numeral and a special character
+    as of 6 September 2026 — and this generator produced none of the first, so
+    the tool would have minted passphrases its own product refuses. A
+    generator that cannot satisfy the rule it enforces is the two-owners
+    defect with the owners one function apart.
+
+    The hyphens supply the special character and the trailing number the
+    numeral; capitalising ONE word supplies the rest without making the
+    passphrase harder to read aloud, which is what it is for.
+    """
+    words = ("harbour", "lantern", "meadow", "cinder", "gallery", "thistle",
+             "quarry", "ember", "current", "marble", "ridge", "willow",
+             "beacon", "hollow", "pigment", "trellis", "anchor", "vellum")
+    chosen = [secrets.choice(words) for _ in range(5)]
+    lift = secrets.randbelow(len(chosen))
+    chosen[lift] = chosen[lift].capitalize()
+    return "-".join(chosen) + f"-{secrets.randbelow(90) + 10}"
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

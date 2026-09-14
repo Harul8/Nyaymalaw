@@ -31,7 +31,6 @@ import json
 import pathlib
 
 import pytest
-
 from nm.adapters.store.envelope import (
     LocalKeyRing,
     WrappedKey,
@@ -39,7 +38,8 @@ from nm.adapters.store.envelope import (
 )
 from nm.adapters.store.file_store import FileMatterStore
 from nm.domain.matter import Matter
-from tools.rekey_matter_store import (
+
+from backend.operations.rekey_matter_store import (
     ENVELOPE,
     KEY_RECORD,
     OPEN,

@@ -6,8 +6,8 @@ from copy import deepcopy
 
 import pytest
 
-from tools import blueprint
-from tools.blueprint_evaluations import _check_autonomy_case
+from assurance.control_plane import blueprint
+from assurance.control_plane.blueprint_evaluations import _check_autonomy_case
 
 pytestmark = pytest.mark.class_a
 

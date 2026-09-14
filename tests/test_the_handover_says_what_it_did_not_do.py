@@ -38,10 +38,10 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.core.turn import TurnInput
 from nm.domain import summary as summary_mod
 from nm.domain.matter import Matter, Thread
+
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -179,7 +179,7 @@ def test_the_blockers_that_remain_are_the_ones_that_are_really_unbuilt():
     TWO remain after Phase 4, and each genuinely has no writer:
     `engagement` is B5/G-SCOPE, declared unbuilt in the gate matrix, and
     `reservations` is E5 -- *a disagreement the advocate overruled stays
-    visible and reactivates on a changed fact* -- which nothing in `nm/`
+    visible and reactivates on a changed fact* -- which nothing in `backend/nm/`
     produces.
 
     THE OTHER FOUR WERE NEVER UNBUILT. `deadlines` and `gaps` ran on every
@@ -216,8 +216,8 @@ def test_the_blockers_that_remain_are_the_ones_that_are_really_unbuilt():
 def test_a_computed_register_reaches_the_handover(tmp_path):
     """PHASE 3'S WHOLE CLAIM, on a served turn.
 
-    `nm/core/deadlines.py` is reached ten times from the turn engine and
-    `nm/core/gaps.py` four. Neither result survived the turn, so the handover
+    `backend/nm/core/deadlines.py` is reached ten times from the turn engine and
+    `backend/nm/core/gaps.py` four. Neither result survived the turn, so the handover
     carried no deadlines and no gaps section on a file where both had been
     computed every turn since the brief arrived. Not unbuilt -- built, run,
     and thrown away.
@@ -421,6 +421,7 @@ def test_a_screen_reloads_as_data_like_every_other_untyped_field(tmp_path):
     `Screen` back, this is the line that says where the reader goes.
     """
     from nm.adapters.store.file_store import FileMatterStore
+
     from tests.test_turn_contract import KEY
 
     engine, _ = build(tmp_path)

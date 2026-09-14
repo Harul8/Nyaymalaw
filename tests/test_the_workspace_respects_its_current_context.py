@@ -770,6 +770,7 @@ def test_a_protective_retry_discloses_saved_history_without_releasing_expired_pe
     page, journey, monkeypatch,
 ):
     from nm.domain.advocate import utcnow
+
     from tests.test_professional_approval_is_separate_from_account_access import (
         approve_fixture_account,
     )

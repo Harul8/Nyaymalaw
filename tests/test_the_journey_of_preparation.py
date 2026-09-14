@@ -16,14 +16,14 @@ said in court, come back to the file, and sign out.
 
 THE TWO CHECKS THIS SUITE EXISTS TO CARRY
 -------------------------------------------
-`tools.layout.clipped` asks whether each primary control's rectangle survives
+`assurance.gate.layout.clipped` asks whether each primary control's rectangle survives
 every clipping ancestor between it and the viewport. It answers the same on a
 page that clips its overflow and one that does not, which document scroll width
 cannot -- BK-43.
 
-`tools.layout.unexecuted` refuses a width that recorded a control as VISIBLE
+`assurance.gate.layout.unexecuted` refuses a width that recorded a control as VISIBLE
 rather than USED, and refuses one that recorded nothing. The cross-width
-population is `tools/journey.py`'s EXPECTED manifest, which is what that
+population is `assurance/journeys/journey.py`'s EXPECTED manifest, which is what that
 manifest is for: a phase that stops running is MISSING rather than absent --
 BK-47.
 
@@ -48,16 +48,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 ARTIFACTS = ROOT / ".nm" / "journey"
 
-from tests.test_the_journey_login_to_logout import (  # noqa: E402
-    BRIEF,
-    _advise,
-    _intake,
-    _reach_rail,
-    _sign_in,
-    _tab,
-    _visible_text,
-)
-from tools.layout import (  # noqa: E402
+from assurance.gate.layout import (  # noqa: E402
     MEASURE_JS,
     REQUIRED_ACTIONS,
     WIDTHS,
@@ -66,6 +57,15 @@ from tools.layout import (  # noqa: E402
     from_measurement,
     measured,
     unexecuted,
+)
+from tests.test_the_journey_login_to_logout import (  # noqa: E402
+    BRIEF,
+    _advise,
+    _intake,
+    _reach_rail,
+    _sign_in,
+    _tab,
+    _visible_text,
 )
 
 # THE HELPERS ARE IMPORTED AND THE FIXTURES ARE NOT, which is the convention
@@ -81,7 +81,7 @@ def journey(tmp_path_factory):
     import sys
 
     sys.path.insert(0, str(ROOT))
-    from tools.served import PASSWORD, running
+    from assurance.journeys.served import PASSWORD, running
 
     root = tmp_path_factory.mktemp("journey-preparation")
     with running(root) as (box, base):
@@ -129,7 +129,7 @@ def _artifact_on_failure(request, page):
             pass
 
 #: THE PRIMARY CONTROLS, by the name a person would use and the selector that
-#: finds one. Named here rather than in `tools/layout.py` because the check is
+#: finds one. Named here rather than in `assurance/gate/layout.py` because the check is
 #: about geometry and this is about THIS product's markup -- a drawer, a tab or
 #: a menu would all satisfy the same required action with different selectors.
 #:

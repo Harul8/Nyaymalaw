@@ -5,11 +5,11 @@ import copy
 from datetime import date
 
 import pytest
-
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.deadlines import read_matter
 from nm.domain.matter import Matter, Thread
 from nm.edge.api import application
+
 from tests.test_turn_contract import KEY
 
 pytestmark = pytest.mark.class_a

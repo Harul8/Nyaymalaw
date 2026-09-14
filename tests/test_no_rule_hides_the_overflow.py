@@ -14,7 +14,7 @@ which is defect shape S11.
 
 WHY A TEST AND NOT A COMMENT
 ----------------------------
-There was already a comment. `web/app.css` carried, in full, an explanation of
+There was already a comment. `frontend/app.css` carried, in full, an explanation of
 why this rule had been written and removed -- and 518 lines above it the rule
 was still live, in a second copy nobody had swept. The comment sat over a
 disabled check for a week and the journey suite reported green throughout.
@@ -43,7 +43,7 @@ import pytest
 pytestmark = pytest.mark.class_a
 
 ROOT = Path(__file__).resolve().parents[1]
-WEB = ROOT / "web"
+WEB = ROOT / "frontend"
 
 #: The selectors that ARE the document scroller. A rule whose subject is one of
 #: these can flatten `documentElement.scrollWidth`; a rule on anything nested
@@ -93,7 +93,7 @@ def test_no_stylesheet_clips_the_document_scroll_width():
     scroller, every clipping value."""
     sheets = _stylesheets()
     assert sheets, (
-        "no stylesheet was found under web/, so this sweep read an empty "
+        "no stylesheet was found under frontend/, so this sweep read an empty "
         "population and would pass on any product at all")
 
     offenders: list[str] = []
@@ -152,7 +152,7 @@ def test_the_overflow_scan_leaves_ordinary_containers_alone():
 
 
 def test_the_scan_reads_rules_and_not_the_comments_explaining_them():
-    """`web/app.css` documents this rule in prose, twice, deliberately.
+    """`frontend/app.css` documents this rule in prose, twice, deliberately.
 
     A scan that matched comment text would report those paragraphs as
     offenders, and the only way to a green build would be to DELETE THE

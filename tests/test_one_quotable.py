@@ -36,7 +36,7 @@ import pytest
 
 pytestmark = pytest.mark.class_a
 
-PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "nm"
+PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "backend" / "nm"
 HOME = PACKAGE / "domain" / "quotable.py"
 
 
@@ -51,7 +51,7 @@ def _sources():
 
 
 def _rel(path) -> str:
-    return path.relative_to(PACKAGE.parent).as_posix()
+    return path.relative_to(PACKAGE.parents[1]).as_posix()
 
 
 def containment_guards(sources) -> list[tuple[str, int]]:
@@ -115,7 +115,7 @@ def test_a_read_that_builds_a_prompt_and_a_guard_uses_one_value():
     handing the prompt one thing and the guard another has to work at it.
 
     Population from the package: any module with BOTH a prompt builder and a
-    reader. `nm/core/quarantine.py` added tomorrow is covered tomorrow.
+    reader. `backend/nm/core/quarantine.py` added tomorrow is covered tomorrow.
     """
     sources = _sources()
     builders = functions_named(sources, "build_prompt")
@@ -162,10 +162,10 @@ def test_the_six_reads_are_actually_covered():
         for mod, fns in functions_named(sources, needle).items():
             readers.setdefault(mod, []).extend(fns)
 
-    for mod in ("nm/core/cause.py", "nm/core/posture.py",
-                "nm/core/chronology.py", "nm/core/dispute.py",
-                "nm/core/issues.py", "nm/core/factors.py",
-                "nm/core/evidence_item.py"):
+    for mod in ("backend/nm/core/cause.py", "backend/nm/core/posture.py",
+                "backend/nm/core/chronology.py", "backend/nm/core/dispute.py",
+                "backend/nm/core/issues.py", "backend/nm/core/factors.py",
+                "backend/nm/core/evidence_item.py"):
         assert any("quotable" in _params(f) for f in builders.get(mod, [])), (
             f"{mod} builds a prompt that does not carry what may be quoted")
         assert any("quotable" in _params(f) for f in readers.get(mod, [])), (
@@ -181,7 +181,7 @@ def test_the_scan_catches_a_planted_hand_guard():
                         '    if fold(said) not in fold(account):\n'
                         '        return None\n')
     assert containment_guards([(PACKAGE / "planted.py", planted)]) \
-        == [("nm/planted.py", 2)]
+        == [("backend/nm/planted.py", 2)]
 
 
 def test_the_scan_leaves_a_different_question_alone():
@@ -202,8 +202,8 @@ def test_the_scan_catches_a_prompt_and_a_guard_that_disagree():
     sources = [(PACKAGE / "planted.py", tree)]
     builders = functions_named(sources, "build_prompt")
     readers = functions_named(sources, "interpret")
-    assert any("quotable" in _params(f) for f in builders["nm/planted.py"])
-    assert not any("quotable" in _params(f) for f in readers["nm/planted.py"])
+    assert any("quotable" in _params(f) for f in builders["backend/nm/planted.py"])
+    assert not any("quotable" in _params(f) for f in readers["backend/nm/planted.py"])
 
 
 # ============================== the behaviour ===============================
@@ -317,7 +317,7 @@ def test_the_issue_read_keeps_the_account_and_the_reason_is_recorded():
     difference between paying it and not noticing it is this test.
     """
     turn = (pathlib.Path(__file__).resolve().parents[1]
-            / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
+            / "backend" / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
     issues = turn[turn.index("def _issues("):]
     issues = issues[:issues.index("\n    @implements")]
     assert "context=account" in issues, (
@@ -333,7 +333,7 @@ def test_the_reads_that_take_notes_say_which_they_take():
     `memory.account` is a decision, and a decision with no reason beside it
     reads as an inconsistency to whoever finds it next."""
     turn = (pathlib.Path(__file__).resolve().parents[1]
-            / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
+            / "backend" / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
     assert turn.count("context=memory.notes if memory else \"\"") == 3, (
         "the cause, inventory and proof reads take the notes; if a fourth "
         "joined them or one left, the trade was re-made and this is where it "

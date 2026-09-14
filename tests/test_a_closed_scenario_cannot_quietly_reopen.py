@@ -1,6 +1,6 @@
 """A CLOSED JOURNEY SCENARIO THAT STARTS REPRODUCING IS A REGRESSION. BK-44-AC1.
 
-`tools/journey.py` exits non-zero on an unexplained failure, a missing phase and
+`assurance/journeys/journey.py` exits non-zero on an unexplained failure, a missing phase and
 a pytest that did not survive — and deliberately NOT on a reproduced defect.
 That choice is right at wave 0: this suite exists to document defects, and
 exiting non-zero on every one would make it unrunnable until all of them
@@ -30,7 +30,7 @@ import inspect
 
 import pytest
 
-from tools.journey import EXPECTED, REPRODUCING
+from assurance.journeys.journey import EXPECTED, REPRODUCING
 
 pytestmark = pytest.mark.class_a
 
@@ -147,11 +147,11 @@ def test_the_runner_consults_the_declaration_in_its_verdict():
     Checked structurally because the alternative is running a browser suite to
     assert an exit code, and a test that expensive is one that stops being run.
     """
-    from tools import journey
+    from assurance.journeys import journey
 
     source = inspect.getsource(journey.run)
     assert "REPRODUCING" in source, (
-        "tools/journey.py does not consult the declaration, so this file is "
+        "assurance/journeys/journey.py does not consult the declaration, so this file is "
         "testing a model of a verdict the runner does not use")
     assert "undeclared" in source and "closed" in source
     verdict = source[source.index("return 1 if"):]

@@ -1,6 +1,6 @@
 # THE PROCESSORS THIS INSTALLATION MAY SEND MATTER MATERIAL TO. BK-85-AC1.
 #
-# Read by `nm/bootstrap/egress_policy.py` and enforced by the policed
+# Read by `backend/nm/bootstrap/egress_policy.py` and enforced by the policed
 # wrappers in front of every live destination: `adapters/model/policed.py`
 # for the model, `adapters/store/policed.py` for the originals and
 # `adapters/search/policed.py` for the authority index.
@@ -12,7 +12,7 @@
 #
 # `approval_id` NAMES THE ADOPTION RECORD that admitted this processor, so a
 # reader can check it against `docs/blueprint/approvals.json` with
-# `tools/blueprint_approvals.py`. A row with no approval is refused by
+# `assurance/control_plane/blueprint_approvals.py`. A row with no approval is refused by
 # `nm.domain.egress.refuse` -- an inventory entry is not a decision.
 #
 # `region` IS WHERE THE PROCESSOR OPERATES. Anything other than `in` needs a
@@ -25,13 +25,13 @@ schema: 1
 
 #: EVERY ENTRY HERE IS IN-PROCESS. No third party has been approved, and
 #: that is a claim rather than an oversight: CHOICE-03 (processor and egress
-#: policy) and CHOICE-05 have no adoption record -- `tools/blueprint.py
+#: policy) and CHOICE-05 have no adoption record -- `assurance/control_plane/blueprint.py
 #: readiness` reports both as `not_recorded` -- so nothing outside this
 #: machine may receive matter material, and `openai` is refused today.
 #: The rows below record the destinations that DO exist, because an
 #: inventory can only refuse a route it was asked about.
 processors:
-  # IN-PROCESS, SO NOTHING LEAVES. `nm/adapters/model/scripted.py` answers from
+  # IN-PROCESS, SO NOTHING LEAVES. `backend/nm/adapters/model/scripted.py` answers from
   # a dictionary in this process: no socket is opened, no region is crossed and
   # no third party receives anything. It is recorded HERE rather than exempted
   # by a branch in `PolicedModel`, because a code path that skips the policy for
@@ -46,7 +46,7 @@ processors:
     data_classes: [operational, client_matter, restricted]
     approval_id: IN-PROCESS-NO-EGRESS
 
-  # THE DISK THIS INSTALLATION RUNS ON. `nm/adapters/store/file_store.py` and
+  # THE DISK THIS INSTALLATION RUNS ON. `backend/nm/adapters/store/file_store.py` and
   # `directory.py` write matters, transcripts and the roster to a local
   # directory. That is a processor relationship with an answer -- the operator
   # themselves -- and recording it is what lets the inventory REFUSE the day it

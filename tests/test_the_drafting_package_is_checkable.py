@@ -22,7 +22,6 @@ So three things, and the third is the one nobody expects to need:
 from __future__ import annotations
 
 import pytest
-
 from nm.core import drafting as dr
 from nm.domain.advice_decision import AdviceDecision, Disposition, supersede
 from nm.domain.drafting import (
@@ -62,7 +61,7 @@ def _brief(**kw) -> DrafterBrief:
 # ================================== 1. the record is Appendix E's ============
 
 def test_the_brief_carries_every_field_the_appendix_declares():
-    """BK-56-AC2, asserted against `spec/schemas.yaml` rather than a copy.
+    """BK-56-AC2, asserted against `assurance/specification/schemas.yaml` rather than a copy.
 
     A test that checked a list inside this repository against another list
     inside this repository would pass while both drifted from the contract.
@@ -71,7 +70,7 @@ def test_the_brief_carries_every_field_the_appendix_declares():
 
     import yaml
     schemas = yaml.safe_load(
-        open("spec/schemas.yaml", encoding="utf8"))["schemas"]
+        open("assurance/specification/schemas.yaml", encoding="utf8"))["schemas"]
     declared = next(s for s in schemas if s["name"] == "DrafterBrief")
     required = {f["field"] for f in declared["fields"] if f["required"]}
 

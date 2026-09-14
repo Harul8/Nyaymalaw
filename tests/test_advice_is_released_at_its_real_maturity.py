@@ -27,7 +27,6 @@ import pathlib
 import tempfile
 
 import pytest
-
 from nm.domain import advice
 from nm.domain.brief import ORDER, Section
 
@@ -185,6 +184,7 @@ def test_a_served_turn_records_the_typed_recommendation_on_the_thread():
     a PERSISTED and served recommendation, and the whole point of B-074 is
     that a recommendation nothing can interrogate is what went wrong."""
     from nm.core.turn import TurnInput
+
     from tests import test_slice4_closeout as slice4
 
     engine, _ = slice4.build(pathlib.Path(tempfile.mkdtemp()))
@@ -206,6 +206,7 @@ def test_the_served_record_reports_what_it_could_not_establish():
     template to make the record look finished.
     """
     from nm.core.turn import TurnInput
+
     from tests import test_slice4_closeout as slice4
 
     engine, _ = slice4.build(pathlib.Path(tempfile.mkdtemp()))
@@ -224,6 +225,7 @@ def test_an_attributed_by_when_names_where_the_date_came_from():
     """Where the register holds a dated deadline the record says so; where it
     does not, the by-when is empty and the reason travels as a reservation."""
     from nm.core.turn import TurnInput
+
     from tests import test_slice4_closeout as slice4
 
     engine, _ = slice4.build(pathlib.Path(tempfile.mkdtemp()))

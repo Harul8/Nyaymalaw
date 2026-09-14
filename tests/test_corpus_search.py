@@ -20,7 +20,6 @@ import inspect
 import sqlite3
 
 import pytest
-
 from nm.adapters.search import authority
 from nm.adapters.search.authority import AuthorityIndexSearch
 from nm.domain.traceability import refuses

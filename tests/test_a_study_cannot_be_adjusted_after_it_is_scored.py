@@ -23,7 +23,6 @@ favourable number from an unfavourable run.
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.review import (
     INVALIDATED_BY,
     Disagreement,

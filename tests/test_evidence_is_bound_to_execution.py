@@ -6,7 +6,7 @@ import pathlib
 
 import pytest
 
-from tools.evidence import CLASS_A_COMMAND
+from assurance.control_plane.evidence import CLASS_A_COMMAND
 
 pytestmark = pytest.mark.class_a
 
@@ -15,7 +15,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 def _tool():
     spec = importlib.util.spec_from_file_location(
-        "_backlog_evidence_tool", ROOT / "tools" / "backlog.py")
+        "_backlog_evidence_tool", ROOT / "assurance" / "control_plane" / "backlog.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -108,5 +108,5 @@ def test_pushes_and_pull_requests_run_the_repository_class_a_gate():
     workflow = ROOT / ".github" / "workflows" / "class-a.yml"
     text = workflow.read_text(encoding="utf-8")
     assert "push:" in text and "pull_request:" in text
-    assert "python tools/evidence.py ci" in text
+    assert "python assurance/control_plane/evidence.py ci" in text
     assert "pip install -e .[dev]" in text

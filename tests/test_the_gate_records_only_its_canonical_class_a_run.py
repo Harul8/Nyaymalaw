@@ -10,8 +10,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from tools import check, evidence
-from tools.evidence import CLASS_A_PYTEST_ARGS, ORDINARY_PYTEST_ARGS
+from assurance.control_plane import evidence
+from assurance.control_plane.evidence import CLASS_A_PYTEST_ARGS, ORDINARY_PYTEST_ARGS
+from assurance.gate import check
 
 pytestmark = pytest.mark.class_a
 

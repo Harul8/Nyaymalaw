@@ -30,7 +30,7 @@ def test_the_shipped_matter_controller_preserves_its_boundary(witness):
 
 
 def test_the_served_page_includes_the_matter_controls_after_the_shared_client():
-    page = (ROOT / "web/index.html").read_text(encoding="utf-8")
+    page = (ROOT / "frontend/index.html").read_text(encoding="utf-8")
     assert '/static/matter-workspace.css' in page
     assert '/static/matter-workspace.js' in page
     assert page.index('/static/app.js') < page.index('/static/matter-workspace.js')

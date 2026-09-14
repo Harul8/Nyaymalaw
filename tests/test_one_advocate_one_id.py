@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-
 from nm.adapters.store.directory import FileDirectory
 from nm.domain.advocate import (
     AdvocateIdentity,

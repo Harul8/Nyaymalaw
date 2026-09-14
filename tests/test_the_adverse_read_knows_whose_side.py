@@ -36,7 +36,6 @@ import inspect
 from types import SimpleNamespace
 
 import pytest
-
 from nm.core import theory as theory_reader
 from nm.core.theory import build_adverse_prompt, build_theory_prompt
 

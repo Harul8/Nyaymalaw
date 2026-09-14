@@ -24,7 +24,6 @@ the advocate's cancellation -- with each bounded at a call site or not at all.
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.budget import (
     STAGES,
     Budget,

@@ -6,7 +6,6 @@ from dataclasses import replace
 from datetime import date, datetime, timezone
 
 import pytest
-
 from nm.knowledge.acquisition import (
     POLICY_ID,
     POLICY_VERSION,
@@ -21,8 +20,9 @@ from nm.knowledge.acquisition import (
     stage_acquisition,
 )
 from nm.knowledge.source_registry import RightsState
-from tools import fetch_judgments, scrape_judgments
-from tools import reconcile_acquisition as reconcile_cli
+
+from pipeline.acquisition import fetch_judgments, scrape_judgments
+from pipeline.acquisition import reconcile_acquisition as reconcile_cli
 
 
 def _scope(**overrides) -> AcquisitionScope:
@@ -254,7 +254,7 @@ def test_p44_integration_witness_covers_both_entrypoints_and_reconcile_command(
         tmp_path / "api", monkeypatch,
     )
     test_web_entrypoint_records_legacy_citation_input_without_filtering(
-        tmp_path / "web", monkeypatch,
+        tmp_path / "frontend", monkeypatch,
     )
 
     candidate = _candidate("cli-candidate", 2026, 0)

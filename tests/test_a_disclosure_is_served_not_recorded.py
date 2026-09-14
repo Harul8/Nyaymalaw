@@ -40,11 +40,11 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.core.turn import TurnInput
 from nm.ports.evidence import Coverage, EvidenceResult
 from nm.ports.model import ModelError
+
 from tests.test_turn_contract import _Evidence, _model_config, build
 
 pytestmark = pytest.mark.class_a

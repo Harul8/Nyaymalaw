@@ -22,7 +22,6 @@ rewrite, and a rewrite scheduled after a deadline does not happen.
 from __future__ import annotations
 
 import pytest
-
 from nm.adapters.store.envelope import (
     CrossMatterAccess,
     KeyUnavailable,

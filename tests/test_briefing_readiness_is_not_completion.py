@@ -18,7 +18,6 @@ LIVE gaps, so the briefing is not a fixed questionnaire.
 from __future__ import annotations
 
 import pytest
-
 from nm.core import briefing
 from nm.domain.lead import Action
 from nm.domain.matter import Matter
@@ -101,6 +100,7 @@ def test_pause_and_resume_survive_and_do_not_answer():
 
 def test_paused_needs_round_trip_through_the_store(tmp_path):
     from nm.adapters.store.file_store import FileMatterStore
+
     from tests.test_turn_contract import KEY
 
     store = FileMatterStore(tmp_path, key=KEY)
@@ -118,7 +118,7 @@ def test_paused_needs_round_trip_through_the_store(tmp_path):
 def _client(tmp_path):
     from fastapi.testclient import TestClient
 
-    from tools.served import PASSWORD, served
+    from assurance.journeys.served import PASSWORD, served
 
     box = served(tmp_path / "store")
     advocate = box.enrol("adv_brief")

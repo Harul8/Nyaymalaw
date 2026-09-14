@@ -24,7 +24,6 @@ WHAT IS ASSERTED
 from __future__ import annotations
 
 import pytest
-
 from nm.core.casefile import (
     Attribution,
     build,

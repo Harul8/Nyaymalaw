@@ -1,6 +1,6 @@
 """NOTHING REACHES A PROVIDER THAT THE POLICY DID NOT PERMIT. BK-85-AC1. P06.
 
-`nm/domain/egress.py` decides. This is about whether the decision is actually
+`backend/nm/domain/egress.py` decides. This is about whether the decision is actually
 IN FRONT of the thing it governs — which is a different question, and the one
 CLAUDE.md §8 says every external review found the product failing: *a guard
 that is right in the core and wrong in the composition root is not a guard.*
@@ -24,7 +24,6 @@ from __future__ import annotations
 import pathlib
 
 import pytest
-
 from nm.adapters.model.policed import EgressRefused, PolicedModel
 from nm.bootstrap.egress_policy import egress_policy
 from nm.domain.egress import DataClass, Policy, Processor, Sink
@@ -193,7 +192,7 @@ def test_the_live_inventory_permits_only_what_it_records():
         assert row.approval_id == "IN-PROCESS-NO-EGRESS", (
             f"{row.processor_id} is approved under {row.approval_id!r}, which "
             f"is not the in-process approval. A third-party processor needs "
-            f"CHOICE-03 adopted, and `tools/blueprint.py readiness` still "
+            f"CHOICE-03 adopted, and `assurance/control_plane/blueprint.py readiness` still "
             f"reports it not_recorded.")
 
 

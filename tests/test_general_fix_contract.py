@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from tools import backlog
+from assurance.control_plane import backlog
 
 pytestmark = pytest.mark.class_a
 ROOT = Path(__file__).resolve().parents[1]

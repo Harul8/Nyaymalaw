@@ -34,7 +34,6 @@ from datetime import date
 from pathlib import Path
 
 import pytest
-
 from nm.domain.citation import cases_named, provisions_cited, wanted_section
 from nm.domain.traceability import refuses
 
@@ -89,14 +88,14 @@ def test_no_module_defines_its_own_provision_pattern():
 
     If nothing structurally refuses the duplicate, THAT is the defect — not the
     duplicate. This scan is the structural refusal available in Python: a new
-    `section|sec|s\\.` regex anywhere in `nm/` outside the canonical module
+    `section|sec|s\\.` regex anywhere in `backend/nm/` outside the canonical module
     fails the build, and whoever writes it is pointed at the one to import.
     """
-    canonical = ROOT / "nm" / "domain" / "citation.py"
+    canonical = ROOT / "backend" / "nm" / "domain" / "citation.py"
     pattern = re.compile(r"re\.compile\([^)]*(?:sections?|article|\bsec\b)",
                          re.I | re.S)
     offenders = []
-    for path in sorted((ROOT / "nm").rglob("*.py")):
+    for path in sorted((ROOT / "backend" / "nm").rglob("*.py")):
         if path == canonical:
             continue
         if pattern.search(path.read_text(encoding="utf8")):
@@ -142,7 +141,7 @@ def test_an_act_is_named_or_it_is_inferred_and_never_silently_matched():
 
     from nm.knowledge.manifest import ActBasis, Manifest
 
-    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     on = date(2026, 8, 30)
 
     named = m.resolve("does section 53A of the Transfer of Property Act apply", on)
@@ -169,7 +168,7 @@ def test_a_named_act_beats_every_keyword_score():
 
     from nm.knowledge.manifest import ActBasis, Manifest
 
-    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     brief = ("client was dispossessed from the property and wants possession "
              "back; does section 53A of the Transfer of Property Act protect "
              "him after the injunction and the declaration")
@@ -191,7 +190,7 @@ def test_no_act_title_is_a_substring_of_another():
     """
     from nm.knowledge.manifest import Manifest
 
-    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     titles = {e.act_name: e.act_name.split(",")[0].strip().lower()
               for e in m.entries}
     collisions = [(a, b) for a, ta in titles.items()
@@ -209,7 +208,7 @@ def test_no_keyword_is_claimed_by_two_acts():
 
     from nm.knowledge.manifest import Manifest
 
-    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     owners = collections.defaultdict(list)
     for e in m.entries:
         for k in e.keywords:
@@ -225,7 +224,7 @@ def test_an_inferred_act_names_what_else_it_could_have_been():
 
     from nm.knowledge.manifest import Manifest
 
-    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     r = m.resolve("he was dispossessed and the claim may be time-barred",
                   date(2026, 8, 30))
     assert r.must_disclose
@@ -253,7 +252,7 @@ def test_two_acts_may_share_a_title_only_if_their_windows_do_not_overlap():
     """
     from nm.knowledge.manifest import Manifest, title_without_year
 
-    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     by_title: dict[str, list] = {}
     for e in m.entries:
         by_title.setdefault(title_without_year(e.act_name).lower(), []).append(e)
@@ -288,7 +287,7 @@ def test_a_superseded_act_is_declared_rather_than_dropped():
     """
     from nm.knowledge.manifest import ActBasis, Manifest
 
-    m = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
 
     old = m.resolve("section 12 of the Consumer Protection Act",
                     on=date(2015, 6, 1))

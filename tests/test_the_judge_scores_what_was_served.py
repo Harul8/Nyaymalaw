@@ -27,11 +27,11 @@ import sys
 from datetime import date
 
 import pytest
-
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.model.traced import TracedModel
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
+
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
@@ -118,7 +118,7 @@ def test_the_judges_material_does_not_carry_a_refused_draft(tmp_path,
     correctly and the defect lived in what one of them handed the next.
     """
     matter_id, root = _withheld_matter(tmp_path)
-    sys.path.insert(0, str(ROOT / "tools"))
+    sys.path.insert(0, str(ROOT / "assurance" / "journeys"))
     import judge  # noqa: PLC0415 -- a tool, imported for its one function
 
     monkeypatch.setenv("NM_MATTER_KEY", KEY)
@@ -152,7 +152,7 @@ def test_a_served_turn_is_still_scored_in_full(tmp_path, monkeypatch):
         message=("We act for the plaintiff at Hyderabad on an agreement of "
                  "sale. The agreement is dated 15 April 2024.")))
 
-    sys.path.insert(0, str(ROOT / "tools"))
+    sys.path.insert(0, str(ROOT / "assurance" / "journeys"))
     import judge  # noqa: PLC0415
 
     monkeypatch.setenv("NM_MATTER_KEY", KEY)

@@ -5,7 +5,7 @@ import ast
 
 import pytest
 
-from tools._source import SourceSegments
+from assurance.common._source import SourceSegments
 
 pytestmark = pytest.mark.class_a
 

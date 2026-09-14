@@ -18,11 +18,11 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.core import theory as th
 from nm.core.turn import TurnInput
 from nm.domain.answer import ElementKind
 from nm.domain.matter import Fact, Provenance, Side
+
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -52,7 +52,7 @@ def _text(out):
 
 @pytest.mark.eval_id("E-080")
 def test_a_theory_reaches_the_advocate(tmp_path):
-    """`nm/core/theory.py` had a complete unit suite and no production caller
+    """`backend/nm/core/theory.py` had a complete unit suite and no production caller
     for a slice (B-079). Everything below is meaningless without this."""
     findings = [e.text for e in _run(tmp_path).answer.elements
                 if e.kind is ElementKind.FINDING and e.text.startswith("Theory:")]

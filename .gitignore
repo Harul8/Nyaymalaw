@@ -37,9 +37,12 @@ build/
 
 # Generated at run time
 .nm/
-spec/prd/node_modules/
+assurance/specification/prd/node_modules/
 # Local generated artifacts and parallel worktrees, never source inputs.
-# Existing contents are preserved on disk; tracked plan outputs live in docs/.
+# Earlier codex/ worktrees and run output, kept for future use and never tracked.
+# Moved from outputs/ on 14 September 2026; tracked plan outputs live in docs/.
+/development_environment/worktrees/
+/development_environment/runs/
 /outputs/
 
 # Stores written at runtime

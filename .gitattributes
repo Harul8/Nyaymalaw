@@ -4,5 +4,5 @@
 # a post-* hook and blocks every commit in pre-commit. Measured as a warning
 # at `git add` on 12 September 2026, the day core.hooksPath began pointing at
 # the tracked copies -- the .git/hooks copy had never been through checkout.
-tools/hooks/* text eol=lf
+assurance/hooks/* text eol=lf
 *.sh           text eol=lf

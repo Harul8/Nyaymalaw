@@ -49,7 +49,6 @@ import typing
 from dataclasses import replace
 
 import pytest
-
 from nm.domain import summary
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
 from nm.domain.intake import ReadQuality

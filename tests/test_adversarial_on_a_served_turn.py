@@ -18,10 +18,10 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.core import adversarial as adv
 from nm.core.turn import TurnInput
 from nm.domain.answer import ElementKind
+
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a

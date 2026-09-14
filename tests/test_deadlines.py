@@ -10,7 +10,6 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 import pytest
-
 from nm.core.deadlines import (
     NEAR_WITHIN,
     Deadline,

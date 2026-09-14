@@ -14,8 +14,8 @@ from copy import deepcopy
 import pytest
 import yaml
 
-from tools import blueprint
-from tools.india_applicability import (
+from assurance.control_plane import blueprint
+from assurance.control_plane.india_applicability import (
     SOURCE,
     TEMPLATE,
     VIEW,

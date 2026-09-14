@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import pytest
 
-from tools.layout import (
+from assurance.gate.layout import (
     MEASURE_JS,
     REQUIRED_ACTIONS,
     WIDTHS,

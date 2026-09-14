@@ -93,7 +93,7 @@ credential. Switching it on with the old `.env` would have stopped the
 application dead, because `NM_MATTER_KEY` and `NM_MODEL_API_KEY` held the same
 value. Fixing that means rewriting 247 sealed files.
 
-**Decided.** I built `tools/rekey_matter_store.py`, dry-ran it, ran it, and
+**Decided.** I built `backend/operations/rekey_matter_store.py`, dry-ran it, ran it, and
 pointed `.env` at the new independent key.
 
 - 784 files: **247 sealed** and re-keyed, **537 deliberately open** and left
@@ -133,7 +133,7 @@ outstanding.
 
 ## D-006 — Operating rule I broke and am recording
 
-`tools/check.py` voided a run: *"the tree changed while the gate ran"*. I was
+`assurance/gate/check.py` voided a run: *"the tree changed while the gate ran"*. I was
 editing `composition.py` while the gate was in flight, so all eight steps
 passed and none of the results was about any single tree.
 
@@ -160,7 +160,7 @@ one. BK-31 was `blocked` on this and it was blocking BK-34, a P0.
 **Decided.** The roster. Enrolment now requires an operator-issued invitation
 for one named advocate and workspace.
 
-**What settled it was not the dates.** `nm/core/turn.py:1575` relaxes scope and
+**What settled it was not the dates.** `backend/nm/core/turn.py:1575` relaxes scope and
 capacity release to ONE PERSON, and says why: *"the deployment is a controlled
 roster of practising advocates and the advocate IS the firm, so requiring a
 second person would stop every matter at intake in a solo practice."* That
@@ -262,7 +262,7 @@ already does. Building it first means BK-54 has to satisfy it rather than
 negotiate with it — and the sweep fails the day an intake parameter arrives
 unadmitted.
 
-**Why not the port.** `nm/ports/media.py` would have no implementer until W2,
+**Why not the port.** `backend/nm/ports/media.py` would have no implementer until W2,
 and the build guide refuses speculative abstraction in as many words. The typed
 admission is the contract BK-54 must meet; the port is BK-54's to add when
 something implements it.
@@ -513,8 +513,8 @@ supplement recovery codes without changing the identity or matter contracts.
 ## D-016 — The build gate became stage-aware rather than being bypassed
 
 **10 September 2026.** Three unbuilt PRD obligations report honestly through
-`tools/trace.py`, three tests that read its verdict fail with it, and
-`tools/check.py` returns 1 on any failure and writes no stamp. `tools/hooks/
+`assurance/gate/trace.py`, three tests that read its verdict fail with it, and
+`assurance/gate/check.py` returns 1 on any failure and writes no stamp. `assurance/hooks/
 pre-commit` then refused every commit in the repository — including the work
 that would eventually close those obligations.
 
@@ -523,7 +523,7 @@ weaken the failing tests, or stop committing. **The fourth is to say which
 failures are already known, who owns them, and to block on any other.**
 
 `docs/backlog/known_failures.yaml` declares each with an owning acceptance
-criterion. `tools/check.py` compares the observed red against it and has three
+criterion. `assurance/gate/check.py` compares the observed red against it and has three
 outcomes, not two: the declared set exactly is a `SCOPED BUILD PASS — FULL GATE
 RED`; a new failure blocks; **and a declared failure that has started passing
 also blocks**, because a waiver that outlives its defect silently covers the
@@ -541,7 +541,7 @@ scoped pass can never let an acceptance criterion derive `done`. Registered as
 The reported baseline was three failures. It was measured by running `trace`
 and `pytest` directly rather than the whole gate, so **`ruff` — 163 errors —
 was never seen.** Ten were auto-fixable and are fixed; 151 remain, entirely in
-`tools/blueprint_evaluations.py`, `tools/plan_view.py` and
+`assurance/control_plane/blueprint_evaluations.py`, `assurance/control_plane/plan_view.py` and
 `tests/test_blueprint_media.py`: 148 over-length lines and 3 bare `zip()`
 calls, all introduced by the execution-readiness planning pass.
 
@@ -559,7 +559,7 @@ exist.
 
 ## D-018 — The feature projection reads `delivers:`, never the step's item list
 
-**10 September 2026.** `tools/export_spec.py` took each feature's status from
+**10 September 2026.** `assurance/gate/export_spec.py` took each feature's status from
 `docs/Nyaymalaw_Project_Plan.xlsx`. Replacing that with a registry roll-up
 needs a relation from feature to backlog row, and `docs/backlog/steps.yaml`
 offers an obvious one: each step names `features:` and `items:`.
@@ -567,7 +567,7 @@ offers an obvious one: each step names `features:` and `items:`.
 **It is the wrong relation, and it was measured before it was used.** A step's
 `items:` records which rows TOUCH it. BK-63 reaches eleven features. Rolling
 implementation up through it reported B2, B6 and G3 as `built` with no
-implementing code anywhere in `nm/`, and reported D5, D6, D8 and D9 — four
+implementing code anywhere in `backend/nm/`, and reported D5, D6, D8 and D9 — four
 features with live production modules — as `decided`. Wrong in both directions
 at once, which is what a shared relation does when read as an exclusive one.
 
@@ -622,10 +622,10 @@ from warnings into failures. The rename was the mistake; a function answering
 and the plan contracts — not the PRD source, the generated specification, the
 release thresholds or the playbooks. A promise could change with no product
 code changing and every recorded PASS still read as current. It now covers
-`spec/prd/*.js`, `docs/playbooks/*.md`, `docs/BUILD_GUIDE.md`,
-`spec/release.yaml` and the four generated spec files, each probed.
+`assurance/specification/prd/*.js`, `docs/playbooks/*.md`, `docs/BUILD_GUIDE.md`,
+`assurance/specification/release.yaml` and the four generated spec files, each probed.
 
-**`spec/coverage.yaml` and the derived feature fields are deliberately
+**`assurance/specification/coverage.yaml` and the derived feature fields are deliberately
 excluded, and that is not a relaxation.** Fold a verdict into the identity of
 the thing it judges and recording a PASS moves the fingerprint, which restales
 the PASS that moved it. Nothing could ever be proven, and a check nothing can
@@ -641,7 +641,7 @@ red. That is the mechanism working, not a regression to route around.
 
 The projection surfaced two findings that had no owner.
 
-**BK-48-AC2** — twenty-five features carry `@implements` in `nm/` and no row
+**BK-48-AC2** — twenty-five features carry `@implements` in `backend/nm/` and no row
 declares `delivers:` for them. That is BK-48's title as a measurement: *Phase B
 is built and the register says it is not.* Trace T3b reports it as one line
 carrying the exact count, on RUFF-PLANNING-DEBT's rule: a new module claiming a
@@ -652,7 +652,7 @@ delivered which feature — which is a delivery decision, not a code change.
 **BK-48-AC3** — B1, B3 and B4 moved from `decided` to `built`, which brought
 their PRODUCES clauses into `test_reached_from_production`'s population for the
 first time. `TurnRoute`, `ConflictScreen` and `CompetenceAssessment` are
-declared outputs with no type in `nm/`. They are **not** added to that test's
+declared outputs with no type in `backend/nm/`. They are **not** added to that test's
 `UNTYPED` list: declaring three exceptions an hour after surfacing them would
 silence the finding, and the point of the exercise was to stop a status field
 from deciding what gets examined. Registered as a known failure owned by AC3,
@@ -672,7 +672,7 @@ set is replaced wholesale. Conflating them would make every password change
 lose a concurrent rotation and every rotation lose a concurrent recovery, and
 the advocate would be told *someone else changed this* about an event that did
 not touch what they were changing. Two questions, two counters — the same
-reason `nm/domain/identity.py` and `tools/evidence.py` keep two fingerprints.
+reason `backend/nm/domain/identity.py` and `assurance/control_plane/evidence.py` keep two fingerprints.
 
 **Consuming one code does not move `recovery_generation`.** `recover` rewrites
 the whole `recovery_codes` list to stamp `used_at` on ONE record: the same set
@@ -695,7 +695,7 @@ write site was confirmed to be caught.
 
 ## D-023 — CSRF is a route dependency with an enumerated population
 
-**11 September 2026. BK-31-AC20, P02.** `grep -rn csrf nm/` returned nothing.
+**11 September 2026. BK-31-AC20, P02.** `grep -rn csrf backend/nm/` returned nothing.
 The only thing between a signed-in advocate and a cross-site write was
 `samesite="lax"` on the session cookie — one control, owned by the browser
 rather than by this product, absent in clients that predate it, and no
@@ -722,7 +722,7 @@ it is written.
 
 **Two things this got wrong first, both found by running rather than
 reasoning.** The check ran before `signed_in`, so an anonymous POST returned
-403 where the contract says 401 — which `web/app.js` keys its
+403 where the contract says 401 — which `frontend/app.js` keys its
 sign-out-and-restore on. It now waives itself when there is no session cookie
 at all: CSRF is the risk that a browser *attaches credentials*, and with no
 cookie there is nothing to ride. That waiver is only sound while every guarded
@@ -803,8 +803,8 @@ tree that moved mid-run, and last week's screenshots listed as this run's
 artifacts. The criterion's mutation ends *while retaining a matching
 fingerprint* precisely because the fingerprint was the only check there.
 
-`tools/browser_evidence.py` holds the manifest rule, the required fields and
-the completeness rule, and **both `tools/journey.py` and `tools/backlog.py`
+`assurance/journeys/browser_evidence.py` holds the manifest rule, the required fields and
+the completeness rule, and **both `assurance/journeys/journey.py` and `assurance/control_plane/backlog.py`
 import them** — a writer that emits less than the reader demands produces
 evidence nobody can use, and splitting the two across files is how they drift.
 A test asserts the runner writes every field the reader requires.
@@ -859,7 +859,7 @@ reference to something that did not pass.
 
 ## D-029 — A closed journey scenario cannot quietly reopen
 
-**11 September 2026. BK-44-AC1, P42.** `tools/journey.py` exits non-zero on an
+**11 September 2026. BK-44-AC1, P42.** `assurance/journeys/journey.py` exits non-zero on an
 unexplained failure, a missing phase and a pytest that did not survive — and
 deliberately not on a reproduced defect. That choice is right at wave 0: this
 suite exists to document defects, and failing on every one makes it unrunnable
@@ -896,7 +896,7 @@ one of them retrieves successfully** — the defect is never that the lookup
 fails, it is that it succeeds and the answer is wrong in a way nothing
 downstream can see.
 
-`nm/knowledge/provenance.py` refuses reliance and **names the precise basis**,
+`backend/nm/knowledge/provenance.py` refuses reliance and **names the precise basis**,
 because the criterion's expected failure is that use is withheld with the exact
 unresolved reason and the four causes have four different remedies. Every field
 is required and may be explicitly unknown: `effective_from=None` is a record
@@ -946,7 +946,7 @@ its purest form: the core composes an answer correctly, and then something
 hands a copy to a model provider, a telemetry sink, a crash reporter or a
 support bundle. By the time an audit reads the logs the material has left.
 
-`nm/domain/egress.py` refuses a ROUTE and **never sees the payload**. A policy
+`backend/nm/domain/egress.py` refuses a ROUTE and **never sees the payload**. A policy
 that inspected content would need the content to decide, which is one more
 place privileged text exists — and the decision does not need it: where, who,
 what for, and of what class is enough.
@@ -1066,9 +1066,9 @@ establish it.* After a compare-and-set succeeds, every later step is either
 delivery — whose failure is a genuine rollback, because nothing was delivered —
 or housekeeping, whose failure must be recorded and tolerated.
 
-**The sweep.** Five removals exist in `nm/`, four of them call sites of this
+**The sweep.** Five removals exist in `backend/nm/`, four of them call sites of this
 pattern, and three had their own idea of what a failed removal meant.
-`nm/adapters/store/cleanup.discard` is now the only place in the product
+`backend/nm/adapters/store/cleanup.discard` is now the only place in the product
 permitted to remove a name, and
 `test_only_one_module_in_the_product_removes_a_name` fails the build on a
 second one. Two of the other three were the same shape one notch quieter: a
@@ -1102,7 +1102,7 @@ key-encrypting key two populations to update — and whichever was missed would
 have been unreadable for good. Sealed records now carry format and matter and
 no key material.
 
-**`tools/rekey_matter_store.py` had become dangerous and was fixed with the
+**`backend/operations/rekey_matter_store.py` had become dangerous and was fixed with the
 same change.** Envelope and key records are both JSON, so its classifier filed
 them under "deliberately open, leave alone" — right for the ciphertext, fatal
 for the keys, and silent. It now rewraps the key records, walks `.nm/keys`
@@ -1115,7 +1115,7 @@ Seven sinks are declared and three have a live destination. MODEL was policed;
 STORAGE and INDEX now are, through one `Gatekeeper` shared by every wrapper so
 the decision exists once. MEDIA, BACKUP, SUPPORT and TELEMETRY have no
 destination at all, and that is recorded as absence WITH THE EVIDENCE OF IT,
-measured against the filesystem — `nm/obs/` holding nothing but an empty
+measured against the filesystem — `backend/nm/obs/` holding nothing but an empty
 `__init__`, and so on — so growing a destination turns the build red instead of
 shipping unpoliced.
 

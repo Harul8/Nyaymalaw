@@ -36,7 +36,6 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.model.traced import TracedModel
 from nm.adapters.store.file_store import FileMatterStore
@@ -45,6 +44,7 @@ from nm.domain import issue as issue_domain
 from nm.domain.issue import Issue, IssueKind
 from nm.domain.matter import Side
 from nm.domain.quotable import Quotable
+
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a

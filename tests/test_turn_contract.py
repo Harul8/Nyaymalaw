@@ -13,7 +13,6 @@ import pathlib
 from datetime import date
 
 import pytest
-
 from nm.adapters.model.config import ModelConfig, TierConfig
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.store.file_store import EncryptionNotConfigured, FileMatterStore
@@ -200,7 +199,7 @@ def build(tmp_path, evidence=None, responses=None, model=None,
     # measure a measured one, which is the test passing on the opposite of
     # its own subject.
     from nm.knowledge.coverage import CoverageProfile
-    profile = (CoverageProfile.load(ROOT / "spec" / "coverage.yaml")
+    profile = (CoverageProfile.load(ROOT / "assurance" / "specification" / "coverage.yaml")
                if coverage else None)
     engine = TurnEngine(store=store, evidence=evidence or _Evidence(),
                         model=model, coverage=profile)
@@ -712,7 +711,7 @@ def test_an_unscreened_matter_says_so_rather_than_reading_as_screened(tmp_path):
 # ============ BK-2 — the screens reach the advocate =========================
 
 def test_every_screen_is_named_to_the_advocate_and_none_reads_as_clear(tmp_path):
-    """BK-2. `nm/core/screens.py` has been complete since slice 6 -- four
+    """BK-2. `backend/nm/core/screens.py` has been complete since slice 6 -- four
     states, `unscreened` drawing its population from the KINDS, an express
     emergency exception -- and nothing produced a `Screen`.
 

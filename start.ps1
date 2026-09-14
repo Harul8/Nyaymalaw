@@ -114,6 +114,10 @@ if ($env:NM_MATTER_KEY) {
 }
 
 # ---- start it -------------------------------------------------------------
+# THE BACKEND PACKAGE LIVES UNDER backend/. `nm` is not installed into the
+# interpreter, deliberately: an editable install would make every worktree
+# import the MAIN checkout's code. The path is set for this process only.
+$env:PYTHONPATH = (Join-Path $root "backend") + [IO.Path]::PathSeparator + $root
 Write-Host "  starting  python -m nm.bootstrap.main --port $Port"
 $server = Start-Process -FilePath "python" `
     -ArgumentList "-m", "nm.bootstrap.main", "--port", "$Port" `

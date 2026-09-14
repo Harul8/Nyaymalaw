@@ -38,9 +38,8 @@ import secrets
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
-import pytest
-
 import nm.domain.advocate as advocate
+import pytest
 from nm.adapters.store.directory import FileDirectory
 from nm.domain.advocate import AccountSecurity, AdvocateIdentity, Enrolment, utcnow
 from nm.ports.directory import AccountBusy, ProofRefused

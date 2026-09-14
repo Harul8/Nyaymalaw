@@ -4,7 +4,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
-
 from nm.core import screens
 from nm.domain.capacity import Capacity, CapacityPosition
 from nm.domain.traceability import refuses
@@ -119,6 +118,7 @@ def test_two_competing_capacity_representations_are_refused(client):
 def test_uncertainty_reopens_capacity_and_preserves_the_prior_assessment(client, monkeypatch):
     from nm.adapters.store.file_store import FileMatterStore
     from nm.edge.api import application
+
     from tests.test_turn_contract import KEY
 
     engine = application().engine

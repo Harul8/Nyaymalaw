@@ -2,7 +2,7 @@
 
 WHY
 ---
-`spec/plan/build_plan.py` records 53 defects, and every one of them names *the
+`assurance/specification/plan/build_plan.py` records 53 defects, and every one of them names *the
 check that now refuses it*. **Nothing verified those checks existed.** The
 column was prose, so a defect could be marked Fixed against a test that had
 been renamed, moved, or never written — and the register would still read as a
@@ -35,16 +35,20 @@ from pathlib import Path
 
 import pytest
 
+from assurance.common.homes import HOMES
+
 pytestmark = pytest.mark.class_a
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "spec" / "plan" / "build_plan.py"
+PLAN = ROOT / "assurance" / "specification" / "plan" / "build_plan.py"
 
 #: Anything that looks like a path this repo would hold. Deliberately broad —
 #: the register's prose sometimes names a doc or a tool rather than a test, and
-#: those are legitimate checks that still have to exist.
-PATH = re.compile(r"\b((?:tests|tools|nm|docs|spec|web)/[\w./-]+?\.(?:py|md|yaml|js|css|docx|xlsx))"
-                  r"(?:::(\w+))?")
+#: those are legitimate checks that still have to exist. The homes come from the
+#: layout's one owner, and a match starts where a path starts -- never inside one --
+#: so `backend/nm/x.py` is not also read as a missing `nm/x.py`.
+PATH = re.compile(r"(?<![\w./-])((?:" + "|".join(HOMES) + r")/[\w./-]+?"
+                  r"\.(?:py|md|yaml|js|css|docx|xlsx))(?:::(\w+))?")
 
 
 def _register() -> list[dict]:
@@ -197,7 +201,7 @@ def test_every_recurring_shape_has_a_mechanism_more_than_one_defect_points_at():
         if not (key.startswith("S") and key[1:2].isdigit()):
             continue                       # a one-off shape, described in prose
         # A SHARE MUST BE A FUNCTION. Two defects naming the same FILE are two
-        # fixes that happen to live together, not one mechanism -- `web/app.js`
+        # fixes that happen to live together, not one mechanism -- `frontend/app.js`
         # appeared "shared" by that reading and is nothing of the kind.
         checks = {f"{p}::{f}" for p, f in PATH.findall(row["check"]) if f}
         by_shape[key].append((row["id"], checks))

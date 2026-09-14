@@ -1,6 +1,6 @@
 """EVERY LIVE DESTINATION CONSULTS THE POLICY. BK-85-AC1. P06.
 
-`nm/domain/egress.py` decides. This is about whether the decision is actually
+`backend/nm/domain/egress.py` decides. This is about whether the decision is actually
 IN FRONT of every destination the product has -- which is a different question,
 and the one CLAUDE.md section 8 says every external review found the product
 failing: *a guard that is right in the core and wrong in the composition root
@@ -10,13 +10,13 @@ THE HARD HALF IS THE SINKS WITH NO DESTINATION
 ------------------------------------------------
 Seven sinks are declared. Measured on 11 September 2026, three have a live
 destination and four do not: MEDIA has no processing adapter, BACKUP and SUPPORT
-have no implementation, and `nm/obs/` holds nothing but an empty `__init__`.
+have no implementation, and `backend/nm/obs/` holds nothing but an empty `__init__`.
 
 A file that reported "all seven sinks policed" would be reporting an EMPTY
 POPULATION AS A PASS -- the shape this repository has paid for repeatedly, and
 the one the brief for this packet names first. So each absent sink is declared
 absent here WITH THE EVIDENCE OF ITS ABSENCE, measured against the filesystem,
-and the day somebody adds `nm/obs/telemetry.py` this file goes red and says
+and the day somebody adds `backend/nm/obs/telemetry.py` this file goes red and says
 the new destination needs policing. That is the same discipline as
 `test_the_docs_do_not_outlive_the_artefact`: a claim about an artefact is a
 claim about the filesystem and is measured there.
@@ -35,7 +35,6 @@ import inspect
 import pathlib
 
 import pytest
-
 from nm.adapters.policed_port import PolicedPort, port_methods
 from nm.adapters.search.policed import PolicedSearch
 from nm.domain.egress import (
@@ -313,9 +312,9 @@ def test_the_live_inventory_records_every_processor_the_root_names():
 
 #: Sinks with a live destination, and the module that polices it.
 POLICED: dict[Sink, str] = {
-    Sink.MODEL: "nm/adapters/model/policed.py",
-    Sink.STORAGE: "nm/adapters/policed_port.py",
-    Sink.INDEX: "nm/adapters/search/policed.py",
+    Sink.MODEL: "backend/nm/adapters/model/policed.py",
+    Sink.STORAGE: "backend/nm/adapters/policed_port.py",
+    Sink.INDEX: "backend/nm/adapters/search/policed.py",
 }
 
 #: Sinks with NO destination, each with the evidence of its absence -- a claim
@@ -323,20 +322,20 @@ POLICED: dict[Sink, str] = {
 #: stops holding, the product has grown a destination and this file says so.
 ABSENT: dict[Sink, tuple[str, str]] = {
     Sink.MEDIA: (
-        "nm/adapters/media",
+        "backend/nm/adapters/media",
         "no media processing adapter exists; the reached domain admission "
         "record keeps uploaded originals quarantined. Original-byte storage "
         "uses the separately policed UploadPort, not a media processor"),
     Sink.BACKUP: (
-        "nm/adapters/backup",
+        "backend/nm/adapters/backup",
         "no backup writer exists; `local-disk` is approved for the purpose so "
         "that the first one is admitted rather than invented"),
     Sink.SUPPORT: (
-        "nm/adapters/support",
+        "backend/nm/adapters/support",
         "no support-access path exists; BK-85-AC6 owns it and is not in this "
         "packet"),
     Sink.TELEMETRY: (
-        "nm/obs",
+        "backend/nm/obs",
         "holds an empty __init__ and nothing else, so there is no diagnostic "
         "destination to police"),
 }
@@ -383,7 +382,7 @@ def unpoliced_sinks(root: pathlib.Path) -> list[str]:
     extra = sorted(f.name for f in obs.glob("*.py") if f.name != "__init__.py")
     if extra:
         found.append(
-            f"nm/obs now holds {extra}, so telemetry has a destination and "
+            f"backend/nm/obs now holds {extra}, so telemetry has a destination and "
             f"privileged text can reach it unpoliced")
     return found
 
@@ -411,10 +410,10 @@ def test_the_absence_check_can_see_every_destination_that_could_appear(tmp_path)
     probe that can see telemetry and is blind to support does not pass as a
     working control.
     """
-    (tmp_path / "nm" / "adapters" / "media").mkdir(parents=True)
-    (tmp_path / "nm" / "adapters" / "backup").mkdir(parents=True)
-    (tmp_path / "nm" / "adapters" / "support").mkdir(parents=True)
-    obs = tmp_path / "nm" / "obs"
+    (tmp_path / "backend" / "nm" / "adapters" / "media").mkdir(parents=True)
+    (tmp_path / "backend" / "nm" / "adapters" / "backup").mkdir(parents=True)
+    (tmp_path / "backend" / "nm" / "adapters" / "support").mkdir(parents=True)
+    obs = tmp_path / "backend" / "nm" / "obs"
     obs.mkdir(parents=True)
     (obs / "__init__.py").write_text("", encoding="utf8")
     (obs / "telemetry.py").write_text("# ships crash reports", encoding="utf8")
@@ -434,8 +433,8 @@ def test_a_quarantine_domain_record_is_not_a_media_processing_destination(tmp_pa
     No UNWIRED exemption is supplied: the actual adapter's absence is checked.
     Planting that adapter immediately changes the verdict.
     """
-    (tmp_path / "nm" / "domain").mkdir(parents=True)
-    (tmp_path / "nm" / "domain" / "media.py").write_text("", encoding="utf8")
+    (tmp_path / "backend" / "nm" / "domain").mkdir(parents=True)
+    (tmp_path / "backend" / "nm" / "domain" / "media.py").write_text("", encoding="utf8")
     assert unpoliced_sinks(tmp_path) == []
-    (tmp_path / "nm" / "adapters" / "media").mkdir(parents=True)
+    (tmp_path / "backend" / "nm" / "adapters" / "media").mkdir(parents=True)
     assert len(unpoliced_sinks(tmp_path)) == 1

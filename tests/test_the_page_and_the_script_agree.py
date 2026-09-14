@@ -24,7 +24,7 @@ import pytest
 
 pytestmark = pytest.mark.class_a
 
-WEB = pathlib.Path(__file__).resolve().parents[1] / "web"
+WEB = pathlib.Path(__file__).resolve().parents[1] / "frontend"
 HTML = (WEB / "index.html").read_text(encoding="utf-8")
 SCRIPT = (WEB / "app.js").read_text(encoding="utf-8")
 

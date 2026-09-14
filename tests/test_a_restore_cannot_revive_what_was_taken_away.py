@@ -26,7 +26,6 @@ is the assertion that stops this file being read as production evidence.
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.restore import (
     EGRESS_KINDS,
     FAULT_KINDS,
@@ -316,7 +315,7 @@ def test_an_unparseable_timestamp_measures_nothing_rather_than_zero():
 def test_an_unreconcilable_pair_refuses_rollback_rather_than_permitting_it():
     """*we could not check* is the worst possible reason to proceed with an
     irreversible step, and the existing owner already answers it."""
-    from tools.migrate_store import Inventory, reconcile, refuse_rollback
+    from backend.operations.migrate_store import Inventory, reconcile, refuse_rollback
 
     unreadable = Inventory(root="tgt", assessed=False,
                            why="the target store could not be read")
@@ -331,7 +330,7 @@ def test_rollback_is_refused_when_the_target_holds_an_acknowledged_write():
     """BK-83-AC3'S NEGATIVE CONTROL: *abort a cutover or roll back after
     target-only writes*. The existing migration owner answers this; the
     rehearsal drives it rather than reimplementing it."""
-    from tools.migrate_store import (
+    from backend.operations.migrate_store import (
         Inventory,
         MatterRecord,
         reconcile,
@@ -356,7 +355,7 @@ def test_rollback_is_refused_when_the_target_holds_an_acknowledged_write():
 def test_rollback_is_permitted_when_the_target_added_nothing():
     """THE POSITIVE CONTROL. A refusal that fired on every rollback would stop
     the only safe recovery there is."""
-    from tools.migrate_store import (
+    from backend.operations.migrate_store import (
         Inventory,
         MatterRecord,
         reconcile,

@@ -4,7 +4,7 @@ BK-80-AC3, BK-80-AC5, BK-48-AC1, BK-48-AC2.
 
 WHAT WAS WRONG, MEASURED 10 SEPTEMBER 2026
 --------------------------------------------
-`tools/export_spec.py` read each feature's status out of the Feature Map sheet
+`assurance/gate/export_spec.py` read each feature's status out of the Feature Map sheet
 of `docs/Nyaymalaw_Project_Plan.xlsx` -- the August vertical-slice plan.
 Eighteen features exported as `tested`. Not one of them had a delivering row at
 `implementation: complete` with currently passing evidence; A1 exported as
@@ -38,9 +38,9 @@ import pytest
 import yaml
 from openpyxl import load_workbook
 
-from tools import evidence as ev
-from tools import releasegate
-from tools.export_spec import (
+from assurance.control_plane import evidence as ev
+from assurance.control_plane.feature_state import implements_map, project, reconcile
+from assurance.gate.export_spec import (
     ExportRefused,
     build,
     compare_payloads,
@@ -49,9 +49,8 @@ from tools.export_spec import (
     plan_tables,
     publish,
 )
-from tools.export_spec import main as export_main
-from tools.feature_state import implements_map, project, reconcile
-from tools.trace import (
+from assurance.gate.export_spec import main as export_main
+from assurance.gate.trace import (
     AssessmentState,
     AwaitingRef,
     assess_population,
@@ -60,11 +59,12 @@ from tools.trace import (
     expired_awaiting,
     implementation_discrepancies,
 )
+from pipeline.quality import releasegate
 
 pytestmark = pytest.mark.class_a
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-FEATURES = ROOT / "spec" / "features.yaml"
+FEATURES = ROOT / "assurance" / "specification" / "features.yaml"
 STATUS = ROOT / "docs" / "backlog" / "status.yaml"
 STEPS = ROOT / "docs" / "backlog" / "steps.yaml"
 
@@ -89,7 +89,7 @@ def _features(path: pathlib.Path = FEATURES) -> list[dict]:
 
 
 def _rewrite(root: pathlib.Path, mutate: Callable[[dict], None]) -> None:
-    path = root / "spec" / "features.yaml"
+    path = root / "assurance" / "specification" / "features.yaml"
     doc = yaml.safe_load(path.read_text(encoding="utf8"))
     mutate(doc)
     path.write_text(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True),
@@ -111,9 +111,11 @@ def _reconcile_sources(root: pathlib.Path = ROOT) -> dict:
         (root / "docs" / "backlog" / "steps.yaml").read_text(encoding="utf8"))["steps"]
     workbook_rows, _evals, _tasks = plan_tables(root)
     anchors = yaml.safe_load(
-        (root / "spec" / "anchors.yaml").read_text(encoding="utf8"))["anchors"]
+        (root / "assurance" / "specification" / "anchors.yaml").read_text(encoding="utf8")
+    )["anchors"]
     ids = [feature["id"] for feature in yaml.safe_load(
-        (root / "spec" / "features.yaml").read_text(encoding="utf8"))["features"]]
+        (root / "assurance" / "specification" / "features.yaml").read_text(encoding="utf8")
+    )["features"]]
     return {
         "feature_ids": ids,
         "authored_features": status["features"],
@@ -293,13 +295,13 @@ def test_a_refused_export_writes_nothing_at_all(tree, monkeypatch):
     reads as ordinary generator drift -- so T1 would send the reader to the
     generator rather than to the failure.
     """
-    targets = sorted((tree / "spec").glob("*.yaml"))
+    targets = sorted((tree / "assurance" / "specification").glob("*.yaml"))
     before = {p: p.read_bytes() for p in targets}
 
     payloads = {p: "MUTILATED\n" for p in targets}
     boom = targets[-1]
 
-    import tools.export_spec as export_spec
+    import assurance.gate.export_spec as export_spec
 
     # THE REAL RENAME IS CAPTURED BEFORE IT IS REPLACED. `export_spec.os` IS
     # the `os` module, so patching an attribute on it rebinds the name the
@@ -324,13 +326,13 @@ def test_a_refused_export_writes_nothing_at_all(tree, monkeypatch):
     for path, original in before.items():
         assert path.read_bytes() == original, (
             f"{path.name} was left rewritten after a refused publication")
-    assert not list((tree / "spec").glob("*.tmp"))
+    assert not list((tree / "assurance" / "specification").glob("*.tmp"))
 
 
 def test_the_exporter_refuses_a_feature_with_no_feature_map_row(monkeypatch):
     """An orphan used to WARN and still publish, so the spec shipped with a
     feature carrying `phase: None` and a defaulted status."""
-    import tools.export_spec as export_spec
+    import assurance.gate.export_spec as export_spec
 
     real = export_spec.features_from_prd
 
@@ -480,13 +482,13 @@ def test_zero_population_and_tested_without_evals_are_never_pass():
     assert empty.state == AssessmentState.NOT_ASSESSED
 
     feature = {"id": "A1", "status": "tested", "historical_eval_ids": []}
-    _t3, t4 = assess_status_support([feature], {"A1": ["nm/example.py"]}, set())
+    _t3, t4 = assess_status_support([feature], {"A1": ["backend/nm/example.py"]}, set())
     assert t4.state == AssessmentState.FAIL
     assert t4.issues == ("A1 is marked 'tested' but declares no eval ids",)
 
 
 def test_release_rg12_uses_the_same_not_assessed_result(monkeypatch):
-    from tools import trace
+    from assurance.gate import trace
 
     monkeypatch.setattr(trace, "load_spec", lambda: ([], []))
     monkeypatch.setattr(trace, "load_gates", lambda: [])
@@ -510,9 +512,10 @@ def test_every_awaiting_declaration_is_structured_and_resolvable():
 # ====================== the fingerprint covers the promise ===================
 
 @pytest.mark.parametrize("what,mutate", [
-    ("a PRD requirement", lambda t: _append(t / "spec" / "prd" / "part_b.js",
+    ("a PRD requirement", lambda t: _append(t / "assurance" / "specification" / "prd" / "part_b.js",
                                             "\n// a further requirement\n")),
-    ("a release gate threshold", lambda t: _append(t / "spec" / "release.yaml",
+    ("a release gate threshold",
+     lambda t: _append(t / "assurance" / "specification" / "release.yaml",
                                                    "\n# a revised threshold\n")),
     ("a playbook obligation", lambda t: _append(
         t / "docs" / "playbooks" / "TEST_A_CHANGE.md", "\nA further step.\n")),
@@ -535,7 +538,7 @@ def test_changing_a_promise_makes_prior_proof_stale(tree, what, mutate):
 @pytest.mark.parametrize("what,mutate", [
     ("the derived status of every feature", lambda t: _rewrite(t, _all_tested)),
     ("a remeasured coverage verdict", lambda t: _append(
-        t / "spec" / "coverage.yaml", "\n# remeasured today\n")),
+        t / "assurance" / "specification" / "coverage.yaml", "\n# remeasured today\n")),
 ])
 def test_recording_a_verdict_does_not_invalidate_the_evidence_recording_it(
         tree, what, mutate):

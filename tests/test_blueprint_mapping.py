@@ -5,7 +5,7 @@ from copy import deepcopy
 
 import pytest
 
-from tools import blueprint
+from assurance.control_plane import blueprint
 
 pytestmark = pytest.mark.class_a
 

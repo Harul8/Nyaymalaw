@@ -13,7 +13,6 @@ Run it on purpose:
 from __future__ import annotations
 
 import pytest
-
 from nm.adapters.model.config import load, load_dotenv
 from nm.adapters.model.openai_adapter import OpenAIModelAdapter
 from nm.ports.model import Prompt, Tier

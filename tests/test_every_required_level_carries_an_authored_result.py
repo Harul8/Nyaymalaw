@@ -34,8 +34,8 @@ import copy
 
 import pytest
 
-from tools import backlog
-from tools.known_failures import (
+from assurance.control_plane import backlog
+from assurance.gate.known_failures import (
     FailureFact,
     Known,
     Observed,

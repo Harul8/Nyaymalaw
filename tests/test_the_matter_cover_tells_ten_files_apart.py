@@ -37,7 +37,6 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.core.turn import _matter_name
 
 pytestmark = pytest.mark.class_a
@@ -173,7 +172,7 @@ def test_the_browser_renders_the_four_states_apart():
     """
     import pathlib
     script = (pathlib.Path(__file__).resolve().parents[1]
-              / "web" / "app.js").read_text(encoding="utf-8")
+              / "frontend" / "app.js").read_text(encoding="utf-8")
 
     assert "function deadlineField" in script, (
         "nothing in the page distinguishes the four deadline states")

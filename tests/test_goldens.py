@@ -2,8 +2,8 @@
 
 These three evals are what S0's exit criterion actually asks for — *the golden
 scenarios load and their authority reads back from the corpus* — and until
-`tools/run_goldens.py` existed there was no way to run any of them, so no slice
-could close. `tools/slicegate.py` reported that same blocker ten times in a row.
+`assurance/journeys/run_goldens.py` existed there was no way to run any of them, so no slice
+could close. `assurance/gate/slicegate.py` reported that same blocker ten times in a row.
 
 The structural pair are class A: no corpus, no model, every commit. The
 authority check is class C, because it reads 43 provisions out of the real
@@ -19,7 +19,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from tools.run_goldens import (  # noqa: E402
+from assurance.journeys.run_goldens import (  # noqa: E402
     SUITES,
     check_authority,
     check_structure,

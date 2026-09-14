@@ -27,7 +27,6 @@ while looking like a successful recovery. The tombstones are replayed over it.
 from __future__ import annotations
 
 import pytest
-
 from nm.core import retention as rt
 from nm.domain import retention as rd
 from nm.domain.traceability import refuses

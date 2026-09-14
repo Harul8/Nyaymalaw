@@ -17,7 +17,6 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.core import grounding
 from nm.core.turn import TurnInput, TurnRefused
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
@@ -32,6 +31,7 @@ from nm.ports.evidence import (
     Treatment,
     TreatmentState,
 )
+
 from tests.test_turn_contract import _Evidence, briefed, build, finding
 
 pytestmark = pytest.mark.class_a
@@ -325,6 +325,7 @@ def test_the_corpus_gap_is_disclosed_before_the_authority_search_not_after(tmp_p
     from nm.adapters.model.scripted import ScriptedModelAdapter
     from nm.adapters.store.file_store import FileMatterStore
     from nm.core.turn import TurnEngine
+
     from tests.test_turn_contract import KEY, _model_config
 
     engine = briefed(TurnEngine(

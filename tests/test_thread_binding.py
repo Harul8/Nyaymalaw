@@ -16,11 +16,11 @@ limitation positions, two postures, between the same two parties.
 from __future__ import annotations
 
 import pytest
-
 from nm.core.threading import BindState, bind, identifiers_in
 from nm.core.turn import TurnInput
 from nm.domain.matter import Fact, Matter, Provenance, Role, Thread
 from nm.domain.traceability import refuses
+
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -278,6 +278,7 @@ def test_a_second_dispute_does_not_inherit_the_first_thread_s_posture(tmp_path):
     GS-10, GS-22), and none of them could pass.
     """
     from nm.core.turn import TurnInput
+
     from tests.test_turn_contract import build
 
     engine, _ = build(tmp_path)

@@ -39,7 +39,7 @@ BRIEF = ("We act for Ledger Traders in a recovery suit against Kiran Steels. "
 
 @pytest.fixture(scope="module")
 def journey(tmp_path_factory):
-    from tools.served import PASSWORD, running
+    from assurance.journeys.served import PASSWORD, running
 
     root = tmp_path_factory.mktemp("journey-custody")
     with running(root / "store") as (box, base):

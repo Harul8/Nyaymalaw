@@ -14,7 +14,6 @@ None of the three is wrong on its face. All three are short.
 from __future__ import annotations
 
 import pytest
-
 from nm.core.adversarial import (
     Attack,
     Coordinate,

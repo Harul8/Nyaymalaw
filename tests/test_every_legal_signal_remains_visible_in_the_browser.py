@@ -7,8 +7,8 @@ CSS at phone, tablet and desktop widths, without sending any invented matter.
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.answer import Signal
+
 from tests.test_the_journey_login_to_logout import WIDTHS, _sign_in
 from tests.test_the_screen_never_folds_a_disclosure import renderer_signal_cases
 from tests.test_the_workspace_respects_its_current_context import journey as _journey

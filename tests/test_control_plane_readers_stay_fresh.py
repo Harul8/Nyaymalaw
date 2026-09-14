@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tools import backlog
-from tools._documents import safe_load
+from assurance.common._documents import safe_load
+from assurance.control_plane import backlog
 
 pytestmark = pytest.mark.class_a
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +23,7 @@ def _typed(value):
 
 
 @pytest.mark.parametrize("relative", [
-    "docs/backlog/status.yaml", "docs/backlog/steps.yaml", "spec/features.yaml",
+    "docs/backlog/status.yaml", "docs/backlog/steps.yaml", "assurance/specification/features.yaml",
 ])
 def test_safe_decoder_preserves_actual_registry_values_and_types(relative):
     text = (ROOT / relative).read_text(encoding="utf-8")

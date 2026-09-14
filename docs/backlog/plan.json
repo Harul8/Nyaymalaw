@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "note": "Authoritative delivery-wave assignment. Every status item appears exactly once; tools/backlog.py refuses missing, duplicate, unknown and reverse-wave dependency entries.",
+ "note": "Authoritative delivery-wave assignment. Every status item appears exactly once; assurance/control_plane/backlog.py refuses missing, duplicate, unknown and reverse-wave dependency entries.",
  "contract_note": "Wave and release-profile objects define intended outcomes. Existing lint enforces item_waves and declared dependency order, not every semantic field or profile rule below. Until BK-80 is complete, apply a recorded manual release review; these objects confer no deployment approval.",
  "wave_contracts": [
   {
@@ -860,15 +860,15 @@
      "Correct items authored implementation none that carry behavioural PASS evidence, checking each against its source.",
      "Bind every served route to a versioned command contract, or exclude it with a recorded reason; give each contract its current route.",
      "Place criteria no packet claims as a final owner.",
-     "Re-measure spec/coverage.yaml against the published corpus snapshot.",
-     "Run tools/mutate.py to completion on a frozen tree so passing controls are shown able to fail."
+     "Re-measure assurance/specification/coverage.yaml against the published corpus snapshot.",
+     "Run assurance/gate/mutate.py to completion on a frozen tree so passing controls are shown able to fail."
     ],
     "authority": [
      "engineering"
     ],
     "depends_on": [],
     "pilot_exit": [
-     "tools/backlog.py population reports only registered debt, and that debt shrinks with each stage.",
+     "assurance/control_plane/backlog.py population reports only registered debt, and that debt shrinks with each stage.",
      "trace reports no feature whose authored implementation contradicts its code.",
      "Every served route is contracted or excluded with a reason.",
      "The release scorecard's measurement is newer than the corpus publication it scores.",
@@ -1253,7 +1253,7 @@
      "RP-I"
     ],
     "pilot_exit": [
-     "tools/backlog.py obligations pilot reports complete for the published manifest."
+     "assurance/control_plane/backlog.py obligations pilot reports complete for the published manifest."
     ],
     "production_exit": [
      "Not applicable: the pilot confers no production approval."
@@ -1297,7 +1297,7 @@
      "Not applicable: production follows a completed pilot."
     ],
     "production_exit": [
-     "tools/backlog.py obligations production reports complete for the release manifest.",
+     "assurance/control_plane/backlog.py obligations production reports complete for the release manifest.",
      "Every blocking release-scorecard row is PASS on the deployed corpus.",
      "Every release portfolio meets its registered minimum membership."
     ],

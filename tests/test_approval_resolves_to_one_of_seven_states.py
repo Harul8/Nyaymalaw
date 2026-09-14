@@ -10,8 +10,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from tests.p03_evidence_support import TrustHarness
-from tools.blueprint_approvals import (
+from assurance.control_plane.blueprint_approvals import (
     EVALUATION_UNAVAILABLE,
     EXPIRED,
     NOT_RECORDED,
@@ -24,7 +23,8 @@ from tools.blueprint_approvals import (
     resolve,
     resolve_packet_approvals,
 )
-from tools.evidence_verification import canonical_json
+from assurance.control_plane.evidence_verification import canonical_json
+from tests.p03_evidence_support import TrustHarness
 
 pytestmark = pytest.mark.class_a
 

@@ -43,6 +43,7 @@ pytestmark = pytest.mark.class_a
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+sys.path.insert(0, str(ROOT / "backend"))
 from tests import synthetic_index as syn  # noqa: E402
 
 BRIEF = ("We act for the plaintiff at Hyderabad. Goods were supplied against "
@@ -54,9 +55,9 @@ BRIEF = ("We act for the plaintiff at Hyderabad. Goods were supplied against "
 def _app(tmp_path, *, index_dir=None, missing_index=False):
     """The served product over the synthetic indexes. One TestClient, signed in."""
     from fastapi.testclient import TestClient
-
     from nm.adapters.search.authority import AuthorityIndexSearch
-    from tools.served import PASSWORD, served
+
+    from assurance.journeys.served import PASSWORD, served
 
     root = tmp_path / "store"
     if missing_index:
@@ -334,9 +335,9 @@ def test_the_record_survives_a_restart_and_keeps_its_budget(tmp_path):
     """EVAL-014: *restart and recover the unfinished research need*; *retry
     within the two-round budget*; the third round is refused with the reason."""
     from fastapi.testclient import TestClient
-
     from nm.adapters.search.authority import AuthorityIndexSearch
-    from tools.served import PASSWORD, served
+
+    from assurance.journeys.served import PASSWORD, served
 
     client = _app(tmp_path)
     matter_id, version = _matter(client)
@@ -390,7 +391,7 @@ def test_another_matter_cannot_read_this_research_or_its_cases(tmp_path):
     # AND A STRANGER ON THE SAME STORE LEARNS NOTHING.
     from fastapi.testclient import TestClient
 
-    from tools.served import PASSWORD
+    from assurance.journeys.served import PASSWORD
 
     other = client.box.enrol("adv_other")
     stranger = TestClient(client.box.app)
@@ -436,10 +437,10 @@ def test_a_withdrawn_source_version_marks_the_attached_input_withdrawn(tmp_path)
     `withdrawn_sources`, which is what the corpus adapter answers from the
     generation's durable withdrawal events."""
     from fastapi.testclient import TestClient
-
     from nm.adapters.search.authority import AuthorityIndexSearch
+
+    from assurance.journeys.served import PASSWORD, served
     from tests.test_turn_contract import _Evidence
-    from tools.served import PASSWORD, served
 
     authority, identity = syn.build(tmp_path / "index")
     search = AuthorityIndexSearch(authority, identity_path=identity)
@@ -503,6 +504,7 @@ def test_an_installation_with_no_generation_reports_no_withdrawals_and_says_why(
     port's `readiness()` is where a caller learns whether a generation is
     bound; an empty set is not a clean bill and `clean_bill` never reads it."""
     from nm.ports.evidence import EvidencePort
+
     from tests.test_turn_contract import _Evidence
 
     assert EvidencePort.withdrawn_sources(_Evidence()) == frozenset()

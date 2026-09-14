@@ -1,8 +1,8 @@
 """THE GOLDEN SET IS WRITTEN DOWN TWICE AND NOTHING COMPARED THEM.
 
-`docs/GOLDEN_SET.md` is PARSED by `tools/run_goldens.py` -- it decides which
+`docs/GOLDEN_SET.md` is PARSED by `assurance/journeys/run_goldens.py` -- it decides which
 scenarios exist, which suite each is in, and the earliest slice each can run
-at. `spec/plan/build_plan.py` holds a second copy of the same table, which is
+at. `assurance/specification/plan/build_plan.py` holds a second copy of the same table, which is
 what reaches the PRD and the workbook.
 
 Two owners for one fact, and no check. CLAUDE.md §4 asks what makes a second
@@ -19,7 +19,7 @@ declared to run on EVERY COMMIT. Neither can run at all:
     GS-03  needs the jurisdiction boundary. `G-COMPETENCE` is built=False.
     GS-04  needs document intake. `nm.core.intake` is declared UNWIRED in
            `tests/test_reached_from_production.py` and there is no upload
-           endpoint in `nm/edge/api.py`.
+           endpoint in `backend/nm/edge/api.py`.
 
 So the smoke suite has claimed coverage of the jurisdiction boundary and the
 prompt-injection defence since slice 1, and had neither. That is worse than an
@@ -41,7 +41,7 @@ pytestmark = pytest.mark.class_a
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "docs" / "GOLDEN_SET.md"
-PLAN = ROOT / "spec" / "plan" / "build_plan.py"
+PLAN = ROOT / "assurance" / "specification" / "plan" / "build_plan.py"
 
 #: `| **GS-03** | scenario | S10 | 1 | must | never |`
 _ROW = re.compile(r"^\|\s*\*\*(GS-\d+)\*\*\s*\|([^|]*)\|\s*S(\d+)\s*\|", re.M)
@@ -101,7 +101,7 @@ def test_the_drift_check_can_see_a_disagreement():
 WAITS_ON: dict[str, str] = {
     "GS-03": "G-COMPETENCE is built=False -- the jurisdiction boundary has no "
              "mechanism, so the corpus limit cannot be named to the advocate",
-    "GS-04": "nm.core.intake is declared UNWIRED and nm/edge/api.py has no "
+    "GS-04": "nm.core.intake is declared UNWIRED and backend/nm/edge/api.py has no "
              "upload endpoint, so a document cannot reach the product at all",
 }
 

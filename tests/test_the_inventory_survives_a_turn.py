@@ -40,7 +40,6 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.core import evidence_item as inventory
 from nm.core.evidence_item import (
     EvidenceItem,

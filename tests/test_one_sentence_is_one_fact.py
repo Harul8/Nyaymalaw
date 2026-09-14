@@ -37,7 +37,6 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.domain.matter import (
     Certainty,
     Fact,

@@ -16,7 +16,7 @@ no-deadline reason was blank — while `Finding` had been strip-checking its spa
 and locator all along. The rule was in the codebase and applied unevenly.
 
 So this test does not assert three things. It walks EVERY dataclass reachable
-in `nm/`, finds every required string field, and asserts the type refuses a
+in `backend/nm/`, finds every required string field, and asserts the type refuses a
 value made of whitespace. A field added tomorrow is covered tomorrow.
 
 WHY THE POPULATION IS DRAWN FROM THE WHOLE PRODUCT
@@ -24,8 +24,8 @@ WHY THE POPULATION IS DRAWN FROM THE WHOLE PRODUCT
 Because scoping an enumerator to one module is how they fail. Written this
 morning, `test_every_declared_schema_is_satisfiable_when_nothing_was_established`
 drew its population from `dir(nm.core.posture)` — and was already blind to
-`nm/core/dispute.py` four hours later. This one imports every module under
-`nm/` and walks what it finds.
+`backend/nm/core/dispute.py` four hours later. This one imports every module under
+`backend/nm/` and walks what it finds.
 """
 from __future__ import annotations
 
@@ -35,7 +35,6 @@ import pkgutil
 import typing
 
 import pytest
-
 from nm.domain.text import blank, clean, present
 
 pytestmark = pytest.mark.class_a
@@ -84,7 +83,7 @@ def test_blank_is_the_one_definition_of_carrying_nothing():
 def test_no_required_string_field_accepts_a_value_made_of_whitespace():
     """THE SWEEP, as a standing check.
 
-    For every dataclass in `nm/`, every field annotated `str` with no default
+    For every dataclass in `backend/nm/`, every field annotated `str` with no default
     is REQUIRED — the type says the caller must supply it. If the type accepts
     `"   "` for one, it accepts nothing dressed as something, and every
     downstream check that asks `if not field` agrees with it.

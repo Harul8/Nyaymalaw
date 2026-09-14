@@ -19,7 +19,7 @@ It is a dated snapshot, not a live board; its Sources hashes identify its inputs
 
 | Decision | Maintained source |
 |---|---|
-| What must NM do and refuse? | `Nyaymalaw_PRD.docx`, generated from `spec/prd/` |
+| What must NM do and refuse? | `Nyaymalaw_PRD.docx`, generated from `assurance/specification/prd/` |
 | What does each user step show, persist, refuse and recover from? | `backlog/steps.yaml` |
 | What marks expert work, advice maturity and professional authority? | `backlog/professional.json` |
 | What is assigned to each wave and what may that wave claim? | `backlog/plan.json` |

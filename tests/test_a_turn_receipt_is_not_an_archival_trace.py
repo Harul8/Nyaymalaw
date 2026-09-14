@@ -7,8 +7,8 @@ from dataclasses import replace
 from datetime import timedelta
 
 import pytest
-
 from nm.edge.api import application
+
 from tests.test_a_brief_lands_exactly_once import BRIEF
 from tests.test_a_withheld_turn_commits_no_conclusion import _Ungrounded
 from tests.test_turn_contract import _model_config
@@ -159,7 +159,6 @@ def test_unassessed_legacy_archive_cannot_invent_release_evidence(client):
 
 def test_a_failed_screen_commit_does_not_claim_a_saved_instruction(client, monkeypatch):
     from fastapi.testclient import TestClient
-
     from nm.edge.api import app
 
     actor = client.get("/api/session").json()["advocate"]["id"]
@@ -192,7 +191,6 @@ def test_a_malformed_sealed_receipt_never_certifies_release_or_replay(
     client, monkeypatch, mutation,
 ):
     from fastapi.testclient import TestClient
-
     from nm.edge.api import app
 
     opened = _opened(client)

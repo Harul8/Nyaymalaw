@@ -31,7 +31,6 @@ import inspect
 import pathlib
 
 import pytest
-
 from nm.domain.incident import (
     Applicability,
     Authority,
@@ -190,7 +189,7 @@ def test_an_unreadable_contract_is_a_refusal_and_not_zero_duties(tmp_path):
 # applicability review, the document and the checker in one reviewed commit.
 
 def _criteria() -> set[str]:
-    from tools.blueprint import load
+    from assurance.control_plane.blueprint import load
 
     _, registry = load(ROOT)
     return {ac["id"] for row in registry["items"]
@@ -209,7 +208,7 @@ def _edited(**changes):
     import copy
     import json
 
-    from tools.blueprint_evaluations import check_evaluations
+    from assurance.control_plane.blueprint_evaluations import check_evaluations
 
     document = copy.deepcopy(_document())
     block = document["incident_response"]
@@ -232,7 +231,7 @@ def _edited(**changes):
 def test_the_declared_incident_contract_is_accepted_as_written():
     """THE POSITIVE CONTROL. Without it, a checker that refused every document
     would satisfy all four mutations below."""
-    from tools.blueprint_evaluations import check_evaluations
+    from assurance.control_plane.blueprint_evaluations import check_evaluations
 
     assert check_evaluations(_document(), _criteria()) == []
 

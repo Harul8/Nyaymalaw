@@ -35,7 +35,6 @@ import pathlib
 from datetime import date
 
 import pytest
-
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput
@@ -52,6 +51,7 @@ from nm.domain.matter import (
 )
 from nm.domain.quotable import Quotable
 from nm.domain.traceability import refuses
+
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
@@ -413,7 +413,7 @@ def test_an_act_named_earlier_is_carried_by_exact_title_only(tmp_path):
     from nm.knowledge.manifest import ActBasis, Manifest
 
     manifest = Manifest.load(
-        pathlib.Path(__file__).resolve().parents[1] / "spec" / "manifest.yaml")
+        pathlib.Path(__file__).resolve().parents[1] / "pipeline" / "manifest.yaml")
     on = date(2025, 1, 1)
 
     # An Act NAMED on an earlier turn is carried, and disclosed.
@@ -816,7 +816,7 @@ def test_an_inferred_act_is_disclosed_even_when_it_finds_nothing():
     from nm.knowledge.manifest import ActBasis, Manifest
 
     manifest = Manifest.load(
-        pathlib.Path(__file__).resolve().parents[1] / "spec" / "manifest.yaml")
+        pathlib.Path(__file__).resolve().parents[1] / "pipeline" / "manifest.yaml")
     resolved = manifest.resolve(
         "what is the limitation for a suit for possession of immovable property",
         on=date(2025, 1, 1))
@@ -864,6 +864,7 @@ def test_a_withheld_turn_keeps_the_advocates_words(tmp_path):
     """
     from nm.core.turn import TurnRefused
     from nm.ports.evidence import Coverage, EvidenceResult
+
     from tests.test_turn_contract import finding
 
     store = FileMatterStore(tmp_path, key=KEY)

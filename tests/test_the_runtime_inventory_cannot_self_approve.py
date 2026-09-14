@@ -8,12 +8,12 @@ from pathlib import Path
 
 import pytest
 import yaml
-
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.bootstrap import egress_policy as policy_loader
 from nm.bootstrap.composition import Application
 from nm.domain.egress import EgressRefused, Sink
 from nm.ports.model import Prompt, Tier
+
 from tests.test_turn_contract import _Evidence, _model_config
 
 pytestmark = pytest.mark.class_a
@@ -38,9 +38,9 @@ def application_root(tmp_path, monkeypatch, scripted_application_environment):
     stay inside this synthetic test root, never an inherited operator path.
     Missing coverage deliberately remains NOT_MEASURED.
     """
-    spec = tmp_path / "spec"
-    spec.mkdir()
-    shutil.copyfile(ROOT / "spec" / "manifest.yaml", spec / "manifest.yaml")
+    manifest = Path("pipeline") / "manifest.yaml"
+    (tmp_path / manifest).parent.mkdir(parents=True)
+    shutil.copyfile(ROOT / manifest, tmp_path / manifest)
     monkeypatch.setenv("NM_MATTER_STORE", str(tmp_path / ".nm"))
     monkeypatch.setenv("NM_CORPUS_DIR", str(tmp_path / "unbuilt-corpus"))
     monkeypatch.delenv("NM_AUTHORITY_INDEX", raising=False)

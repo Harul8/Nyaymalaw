@@ -51,13 +51,13 @@ import re
 from datetime import date
 
 import pytest
-
 from nm.adapters.knowledge.elements import CuratedElements
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.model.traced import TracedModel
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput
 from nm.ports.model import ModelError
+
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
@@ -257,7 +257,7 @@ def test_every_declared_read_is_driven_here():
     that reaches it — which is the work, and the alternative is a feature
     that covers fourteen fifteenths of its own population and says nothing.
     """
-    declared = {m for p in (ROOT / "nm").rglob("*.py")
+    declared = {m for p in (ROOT / "backend" / "nm").rglob("*.py")
                 if "__pycache__" not in p.parts
                 for m in re.findall(r'"x-nm-read":\s*"([a-z_]+)"',
                                     p.read_text(encoding="utf-8"))}

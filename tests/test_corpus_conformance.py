@@ -6,7 +6,6 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
-
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
 from nm.adapters.search.authority import AuthorityIndexSearch
 from nm.knowledge import source_registry
@@ -21,13 +20,15 @@ from nm.knowledge.manifest import (
 )
 from nm.knowledge.source_registry import RightsState
 from nm.ports.evidence import Coverage, EvidenceNeed
+
+from assurance.gate import layercheck
+from pipeline.acquisition import fetch_judgments, scrape_judgments
 from tests.test_acquisition_receipts import _stage
 from tests.test_immutable_corpus_publication import (
     NOW,
     _publish,
     _runtime_publication,
 )
-from tools import fetch_judgments, layercheck, scrape_judgments
 
 pytestmark = pytest.mark.class_a
 
@@ -313,7 +314,7 @@ def test_web_selection_uses_explicit_dates_including_recent_uncited_law(tmp_path
 def test_restricted_infrastructure_is_reachable_only_from_concrete_io_layers(
     tmp_path, monkeypatch, layer, statement, expected,
 ):
-    source = tmp_path / "nm"
+    source = tmp_path / "backend" / "nm"
     destination = source / layer / "probe.py"
     destination.parent.mkdir(parents=True)
     destination.write_text(statement)

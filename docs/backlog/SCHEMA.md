@@ -225,7 +225,7 @@ in `docs/backlog/evidence/class_a.json`, the machine result must record a
 successful complete Class-A selection, and its source fingerprint must still
 match the product, tests, tools, browser assets and plan contract. A test path
 is a promise to run something; it is not evidence that it ran. `python
-tools/evidence.py ci` performs the canonical run and then checks the current
+assurance/control_plane/evidence.py ci` performs the canonical run and then checks the current
 artifact and backlog; the repository workflow runs it on every push and pull
 request.
 
@@ -358,7 +358,7 @@ The corresponding `foundation_wave`, `feature_complete_wave` and
 the boundary it claims to meet.
 
 A GC row may not author `status`, `planning_status` or `delivery_status`.
-`tools/backlog.py` derives `PLANNED`, `IN_PROGRESS`, `BLOCKED` or `CLOSED` from
+`assurance/control_plane/backlog.py` derives `PLANNED`, `IN_PROGRESS`, `BLOCKED` or `CLOSED` from
 the linked work and its evidence, and the generated board and workbook display
 that result. The expected populations are themselves checked, so deleting all
 rows cannot produce a vacuous green result.
@@ -454,11 +454,11 @@ state, and either names a delivery item or records an explicit deferral.
 ## Commands
 
 ```
-python tools/backlog.py lint      validate schema, vocabulary and invariants
-python tools/backlog.py status    current phase and release readiness
-python tools/backlog.py graph     show the dependency graph and largest blockers
-python tools/backlog.py render    regenerate the board in BACKLOG.md
-python tools/backlog.py check     everything CI needs
+python assurance/control_plane/backlog.py lint      validate schema, vocabulary and invariants
+python assurance/control_plane/backlog.py status    current phase and release readiness
+python assurance/control_plane/backlog.py graph     show the dependency graph and largest blockers
+python assurance/control_plane/backlog.py render    regenerate the board in BACKLOG.md
+python assurance/control_plane/backlog.py check     everything CI needs
 ```
 
 Lint prints all control populations — items, features, steps, PA, EW, AM,
@@ -485,8 +485,8 @@ owns closed local-reference JSON schemas and positive/negative examples;
 requirements and manual review protocols. No authored status in these files
 may supply execution or deployment proof.
 
-Run `python tools/blueprint.py check` for specification integrity and
-`python tools/blueprint.py readiness` for outstanding deployment inputs. The
+Run `python assurance/control_plane/blueprint.py check` for specification integrity and
+`python assurance/control_plane/blueprint.py readiness` for outstanding deployment inputs. The
 latter intentionally cannot issue release approval from a planning catalogue.
 Their deterministic controls are selected by the existing Class-A CI suite.
 Every Markdown/JSON file under `docs/blueprint` enters the verification

@@ -39,7 +39,6 @@ eighth one did.
 from __future__ import annotations
 
 import pytest
-
 from nm.core.cause import _VOCABULARY, CAUSE_SCHEMA, CAUSE_VALUES
 from nm.domain.matter import CAUSE_MEANS, CauseOfAction
 

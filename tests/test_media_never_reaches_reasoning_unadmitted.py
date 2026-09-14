@@ -6,7 +6,7 @@ boundary exists before the pipeline that must pass through it. A control
 written after its subject is a control written around whatever the subject
 already does.
 
-THE RULE. Nothing in `nm/core` -- the layer that reasons -- may accept audio,
+THE RULE. Nothing in `backend/nm/core` -- the layer that reasons -- may accept audio,
 video, images, recordings or uploaded bytes. It may accept a
 `MediaAdmission`: a typed record of what was taken in, for what purpose, on
 whose authority, in what quarantine state, processed by whom, derived from
@@ -14,7 +14,7 @@ what. The bytes stay behind the boundary.
 
 THE POPULATION IS EMPTY TODAY AND THIS TEST IS NOT VACUOUS
 ------------------------------------------------------------
-Zero media-shaped entry points exist in `nm/core`, so a sweep asserting "none
+Zero media-shaped entry points exist in `backend/nm/core`, so a sweep asserting "none
 of them is unguarded" would pass by having nothing to check -- the exact
 failure this repository has now recorded against sweeps, journey phases, CSS
 rules and its own linter. So the scanner is proved on PLANTED source in both
@@ -45,13 +45,13 @@ MEDIA_WORDS = ("audio", "video", "image", "photo", "recording", "voice",
 #: The word that makes a name safe: it is the admission, not the material.
 ADMITTED = ("admission", "admitted")
 
-#: The layer that reasons. `nm/adapters` is where bytes legitimately live --
+#: The layer that reasons. `backend/nm/adapters` is where bytes legitimately live --
 #: an adapter that decodes an upload is doing its job. The boundary is the
 #: line between that and the code which draws legal conclusions.
-REASONING = ("nm/core", "nm/domain", "nm/knowledge")
+REASONING = ("backend/nm/core", "backend/nm/domain", "backend/nm/knowledge")
 
 #: The boundary module itself. See the assertion in the sweep.
-EXEMPT = frozenset({"nm/domain/media.py"})
+EXEMPT = frozenset({"backend/nm/domain/media.py"})
 
 
 def media_shaped_parameters(source: str) -> list[str]:

@@ -3,7 +3,7 @@
 **164 defects were reproduced in the previous build. They are not 164 different
 mistakes.** They are eleven shapes, each recurring across unrelated components,
 because the shape is a property of the problem rather than of any one author.
-The full entries are in `docs/Archives/DEFECT_REGISTER.md` and stay there.
+The full entries are in `development_environment/archives/DEFECT_REGISTER.md` and stay there.
 
 ---
 
@@ -236,9 +236,9 @@ living in the gap between them.** Every unit test passed. It was found the
 first time seven realistic turns ran end to end, which is the argument for the
 journey portfolio in `JOURNEY.md` §5 restated in one afternoon.
 
-The fix is the CHECK above and not a second hardening: `nm/domain/citation.py`
+The fix is the CHECK above and not a second hardening: `backend/nm/domain/citation.py`
 is now the only module permitted to define such a pattern, and
-`tests/test_citation_patterns.py` scans `nm/` and fails the build on a second
+`tests/test_citation_patterns.py` scans `backend/nm/` and fails the build on a second
 one. A grep is a weak enforcement mechanism and it is a great deal stronger
 than a memo.
 
@@ -298,5 +298,5 @@ If (2) is a convention rather than a structure, the control is not finished.
 
 ---
 
-*Distilled 29 August 2026 from `docs/Archives/DEFECT_REGISTER.md` — 164 entries,
+*Distilled 29 August 2026 from `development_environment/archives/DEFECT_REGISTER.md` — 164 entries,
 129 fixed, 15 open, 3 withdrawn, 17 answered.*

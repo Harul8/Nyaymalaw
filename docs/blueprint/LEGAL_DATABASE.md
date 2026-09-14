@@ -48,7 +48,7 @@ This is not a fresh total-size or file-count census. It does not verify that all
 
 ### 2.2 Recorded identities, with their limits
 
-`vector_store/VERSION` reads `legacy-2026-08-27`. `spec/manifest.yaml` begins with `corpus_version: vector_store@2026-08-29` and a reconciliation date of 29 August 2026. These are different authored identifiers. That is an identity-reconciliation task; it does not, by itself, prove an index contains different bytes. The new publisher must give source release, extraction release and retrieval release explicit linked identities instead of relying on similarly dated strings.
+`vector_store/VERSION` reads `legacy-2026-08-27`. `pipeline/manifest.yaml` begins with `corpus_version: vector_store@2026-08-29` and a reconciliation date of 29 August 2026. These are different authored identifiers. That is an identity-reconciliation task; it does not, by itself, prove an index contains different bytes. The new publisher must give source release, extraction release and retrieval release explicit linked identities instead of relying on similarly dated strings.
 
 The `.nm/authority.db` identity table records:
 
@@ -65,9 +65,9 @@ The two BM25 parameter files declare 414,710 bare-Act documents and 1,015,780 ca
 
 ### 2.3 What the running source is configured to read
 
-`nm/bootstrap/composition.py` constructs the evidence adapter using the configured corpus directory or the repository's `legal_database/vector_store`, the curated manifest, the authority index and the identity index. Environment overrides can change these paths, so deployed health must report the effective values and identities.
+`backend/nm/bootstrap/composition.py` constructs the evidence adapter using the configured corpus directory or the repository's `legal_database/vector_store`, the curated manifest, the authority index and the identity index. Environment overrides can change these paths, so deployed health must report the effective values and identities.
 
-The inspected `nm/adapters/evidence/corpus.py` reads provisions from `chunks.db`, unions configured Act identifier patterns, uses the corpus citator and `.nm/identity.db`, and reads judgment search from `.nm/authority.db`. `nm/adapters/search/authority.py` also uses that authority FTS index. Therefore the large legacy FAISS files are not evidence that these inspected runtime paths are performing dense retrieval. This is a bounded statement about the inspected composition and adapters, not an exhaustive assertion about every possible script or deployment.
+The inspected `backend/nm/adapters/evidence/corpus.py` reads provisions from `chunks.db`, unions configured Act identifier patterns, uses the corpus citator and `.nm/identity.db`, and reads judgment search from `.nm/authority.db`. `backend/nm/adapters/search/authority.py` also uses that authority FTS index. Therefore the large legacy FAISS files are not evidence that these inspected runtime paths are performing dense retrieval. This is a bounded statement about the inspected composition and adapters, not an exhaustive assertion about every possible script or deployment.
 
 The code has valuable safeguards: exact-source concepts, named searched stores, absent-versus-unavailable states, identity records, denylist handling and no silent authority fallback to a different whole-corpus scan. Preserve those contracts during migration.
 

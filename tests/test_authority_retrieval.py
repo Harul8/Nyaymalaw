@@ -19,7 +19,6 @@ import sqlite3
 from datetime import date
 
 import pytest
-
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
 from nm.bootstrap.composition import ROOT
 from nm.domain.traceability import refuses
@@ -41,13 +40,13 @@ INDEX = default_authority_index(ROOT)
 
 @pytest.fixture(scope="module")
 def adapter():
-    manifest = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    manifest = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     a = CorpusEvidenceAdapter(CORPUS, manifest, authority_index=INDEX)
     if not a.available:
         pytest.skip("the corpus is not attached")
     if not a.authority_available:
         pytest.skip("the authority index is not built — "
-                    "run python tools/build_authority_index.py")
+                    "run python pipeline/indexing/build_authority_index.py")
     return a
 
 
@@ -222,7 +221,7 @@ def identity():
     ix = IdentityIndex(IDENTITY)
     if not ix.available:
         pytest.skip("the identity index is not built — "
-                    "run python tools/build_identity_index.py")
+                    "run python pipeline/indexing/build_identity_index.py")
     return ix
 
 

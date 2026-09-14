@@ -11,7 +11,6 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.core.limitation import compute, not_computed, period_in
 from nm.core.thresholds import (
     Threshold,

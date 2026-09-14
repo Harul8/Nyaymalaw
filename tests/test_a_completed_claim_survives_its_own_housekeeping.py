@@ -43,7 +43,6 @@ import ast
 import pathlib
 
 import pytest
-
 from nm.adapters.store.directory import FileDirectory, InvitationRefused
 from nm.domain.advocate import AdvocateIdentity, enrol, utcnow
 
@@ -217,8 +216,8 @@ def test_the_claim_is_released_even_when_the_tidying_had_already_failed(
 
 #: THE ONE MODULE PERMITTED TO REMOVE A NAME.
 #:
-#: MOVED OUT OF `nm/adapters/store/` ON 12 SEPTEMBER 2026, and the move is the
-#: finding rather than a tidy-up. `tools/layercheck.py` lets `nm/knowledge/`
+#: MOVED OUT OF `backend/nm/adapters/store/` ON 12 SEPTEMBER 2026, and the move is the
+#: finding rather than a tidy-up. `assurance/gate/layercheck.py` lets `backend/nm/knowledge/`
 #: import only `{knowledge, ports, domain}`, so the owner sitting in `adapters`
 #: was unreachable from the knowledge plane -- and when P20's immutable-corpus
 #: publication landed there with three temporary-file removals and a lock
@@ -229,7 +228,7 @@ def test_the_claim_is_released_even_when_the_tidying_had_already_failed(
 #: AN OWNER REACHABLE FROM ONLY PART OF THE PRODUCT IS NOT AN OWNER. The rule
 #: -- removing a name is one decision -- is about the product, not about a
 #: store adapter, so it belongs in the one layer every layer may import.
-OWNER = "nm/domain/names.py"
+OWNER = "backend/nm/domain/names.py"
 
 
 def _removals_in(name: str, source: str) -> list[str]:
@@ -267,7 +266,7 @@ def test_only_one_module_in_the_product_removes_a_name():
     refused a legitimate enrolment.
     """
     offenders: list[str] = []
-    for path in sorted(pathlib.Path(ROOT / "nm").rglob("*.py")):
+    for path in sorted(pathlib.Path(ROOT / "backend" / "nm").rglob("*.py")):
         relative = path.relative_to(ROOT).as_posix()
         if relative == OWNER:
             continue

@@ -23,7 +23,6 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.core.evidence_item import (
     Admissibility,
     EvidenceItem,
@@ -39,6 +38,7 @@ from nm.core.evidence_item import (
 from nm.core.turn import TurnInput
 from nm.domain.answer import ElementKind
 from nm.domain.quotable import Quotable
+
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -84,7 +84,7 @@ def test_an_item_at_risk_with_no_preservation_step_becomes_a_question(tmp_path):
 @pytest.mark.eval_id("E-070")
 def test_the_inventory_reaches_the_advocate_at_all(tmp_path):
     """The wiring, asserted separately. Everything above is meaningless if
-    nothing was inventoried — and `nm/core/evidence_item.py` had a complete
+    nothing was inventoried — and `backend/nm/core/evidence_item.py` had a complete
     unit suite and no production caller for two slices (B-079)."""
     assert _of(_run(tmp_path), ElementKind.FINDING), "nothing was inventoried"
 

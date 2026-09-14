@@ -140,7 +140,7 @@ def _leaks_in(tree: ast.AST, where: str) -> list[str]:
 def _population() -> list[tuple[str, ast.AST]]:
     """EVERY MODULE OF THE PRODUCT. Not one conversation, not one package."""
     out = []
-    for path in sorted((ROOT / "nm").rglob("*.py")):
+    for path in sorted((ROOT / "backend" / "nm").rglob("*.py")):
         if "__pycache__" in path.parts:
             continue
         out.append((path.relative_to(ROOT).as_posix(),
@@ -171,8 +171,8 @@ def test_the_population_is_the_whole_product_and_is_not_empty():
     """A sweep over nothing passes. This is what says it looked."""
     population = _population()
     assert len(population) > 100, len(population)
-    assert any(where == "nm/core/turn.py" for where, _ in population)
-    assert any(where.startswith("nm/edge/") for where, _ in population)
+    assert any(where == "backend/nm/core/turn.py" for where, _ in population)
+    assert any(where.startswith("backend/nm/edge/") for where, _ in population)
 
 
 def test_the_sweep_sees_a_leak_planted_in_a_rarely_exercised_branch():
@@ -276,7 +276,7 @@ def test_the_audit_line_is_never_rendered_by_the_product():
     """AND THE EXEMPTION DOES NOT LICENSE A SCREEN.
 
     `as_line` names the actor by account id because a record must. Nothing in
-    `nm/` calls it: the refusal path persists `as_dict`, and the one caller
+    `backend/nm/` calls it: the refusal path persists `as_dict`, and the one caller
     that existed put the audit line straight into a section an advocate reads
     -- J-5's defect arriving through a new door, written in this release by
     the same person who widened this sweep.

@@ -10,7 +10,6 @@ recomputing a number that moved.
 from __future__ import annotations
 
 import pytest
-
 from nm.core.cascade import (
     Change,
     Derived,
@@ -353,6 +352,7 @@ def test_answer_length_is_a_function_of_live_threads_not_turn_number(tmp_path):
     from datetime import date as _date
 
     from nm.core.turn import TurnInput
+
     from tests.test_turn_contract import build
 
     engine, _ = build(tmp_path)

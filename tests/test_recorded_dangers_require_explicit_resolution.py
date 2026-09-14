@@ -10,7 +10,6 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
-
 from nm.domain.advocate import utcnow
 from nm.domain.urgency import (
     UrgencyClass,

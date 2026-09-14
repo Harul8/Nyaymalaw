@@ -41,13 +41,13 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.model.traced import TracedModel
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core import theory as theory_reader
 from nm.core.turn import TurnEngine, TurnInput
 from nm.domain.traceability import refuses
+
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a

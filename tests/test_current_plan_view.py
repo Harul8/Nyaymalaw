@@ -7,7 +7,7 @@ from datetime import datetime
 
 import pytest
 
-from tools import plan_view
+from assurance.control_plane import plan_view
 
 pytestmark = pytest.mark.class_a
 

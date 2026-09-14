@@ -23,7 +23,6 @@ packet and nothing here runs them.
 from __future__ import annotations
 
 import pytest
-
 from nm.core.delegation import Ledger, accept, admit, whole_task_clean
 from nm.domain.delegation import (
     Finding,

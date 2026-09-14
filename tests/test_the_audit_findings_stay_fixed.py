@@ -19,7 +19,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def _sources():
-    return [p for p in (ROOT / "nm").rglob("*.py")
+    return [p for p in (ROOT / "backend" / "nm").rglob("*.py")
             if "__pycache__" not in p.parts]
 
 
@@ -32,13 +32,14 @@ def _code(path: pathlib.Path) -> str:
     file failed on their OWN docstrings, which quote the very strings they
     refuse.
 
-    ONE OWNER. `tools/trace.py` grew `_without_prose` for B-140 and this
+    ONE OWNER. `assurance/gate/trace.py` grew `_without_prose` for B-140 and this
     imports it rather than carrying a third copy -- §4, applied to the fix for
     the thing §4 keeps catching.
     """
     import sys
     sys.path.insert(0, str(ROOT))
-    from tools.trace import _without_prose
+    sys.path.insert(0, str(ROOT / "backend"))
+    from assurance.gate.trace import _without_prose
 
     return _without_prose(path.read_text(encoding="utf-8"))
 
@@ -65,7 +66,7 @@ def test_nothing_in_the_product_asks_the_machine_what_day_it_is():
     """THE SWEEP. `date.today()` means "the date where this process happens to
     be running", which is not a fact about the matter.
 
-    `nm/domain/clock.py` is the one place allowed to read a wall clock, and it
+    `backend/nm/domain/clock.py` is the one place allowed to read a wall clock, and it
     reads it in UTC and converts."""
     offenders = []
     for path in _sources():
@@ -90,7 +91,7 @@ def test_the_clock_needs_no_timezone_database():
     database that Windows does not ship, raising on some machines and working
     on others. A clock correct on the developer's laptop and raising in
     production is worse than no clock."""
-    assert "ZoneInfo" not in _code(ROOT / "nm" / "domain" / "clock.py"), (
+    assert "ZoneInfo" not in _code(ROOT / "backend" / "nm" / "domain" / "clock.py"), (
         "the clock depends on a system timezone database")
     from nm.domain.clock import IST
     assert IST.utcoffset(None) == timedelta(hours=5, minutes=30)
@@ -130,7 +131,7 @@ def test_the_cipher_refuses_to_downgrade_without_being_told():
     Keystream XOR under a key every matter shares is trivially broken: two
     ciphertexts XORed together cancel the keystream.
     """
-    src = (ROOT / "nm" / "adapters" / "store" / "file_store.py").read_text(
+    src = (ROOT / "backend" / "nm" / "adapters" / "store" / "file_store.py").read_text(
         encoding="utf-8")
     body = src[src.index("except ImportError:"):src.index("def encrypt")]
     assert "raise EncryptionNotConfigured" in body, (
@@ -157,7 +158,7 @@ def test_a_missing_key_is_still_a_hard_failure():
 def test_no_guard_in_the_product_is_an_assert():
     """`python -O` DELETES EVERY ASSERT.
 
-    All three in `nm/` were load-bearing: that `may_admit_substance` still
+    All three in `backend/nm/` were load-bearing: that `may_admit_substance` still
     refuses an unscreened matter, and both halves of `spoken.complete()`. The
     last two were written under a docstring promising a missing phrase is an
     ImportError rather than a surprise in a served turn -- false under `-O`,
@@ -210,7 +211,7 @@ def test_the_session_cookie_is_secure_when_the_connection_is():
     development would have too. A default that needs a flag to work is one
     somebody sets permanently.
     """
-    src = (ROOT / "nm" / "edge" / "api.py").read_text(encoding="utf-8")
+    src = (ROOT / "backend" / "nm" / "edge" / "api.py").read_text(encoding="utf-8")
     assert "secure=secure" in src, "the cookie no longer sets `secure` at all"
     assert 'request.url.scheme == "https"' in src, (
         "`secure` is no longer derived from the connection")
@@ -231,7 +232,7 @@ def test_a_missing_index_count_is_none_and_not_zero():
     CLAUDE.md's worked example is this shape: `table.get(kind, 0.0)` made
     every unlisted atom type score worse than every listed one.
     """
-    src = _code(ROOT / "nm" / "adapters" / "search" / "authority.py")
+    src = _code(ROOT / "backend" / "nm" / "adapters" / "search" / "authority.py")
     assert "rows.get(key, 0)" not in src, (
         "a missing count reads as zero again")
     assert "def num(key: str) -> int | None:" in src, (
@@ -245,18 +246,18 @@ def test_a_missing_index_count_is_none_and_not_zero():
 # identically -- and one did, on every commit for weeks (B-049).
 #
 # ONE PLANTER, THREE PROBES. Three copies of write-then-unlink would be
-# three chances to leave a probe module behind in `nm/`, where every other
+# three chances to leave a probe module behind in `backend/nm/`, where every other
 # sweep in this suite would then trip over it.
 
 
 @contextlib.contextmanager
 def _planted(name: str, body: str):
-    """A real module under `nm/`, removed however the block exits.
+    """A real module under `backend/nm/`, removed however the block exits.
 
-    UNDER `nm/` BECAUSE THAT IS WHERE THE SWEEPS LOOK. A fixture anywhere
+    UNDER `backend/nm/` BECAUSE THAT IS WHERE THE SWEEPS LOOK. A fixture anywhere
     else would prove the matcher works, not that the walk reaches it.
     """
-    path = ROOT / "nm" / "core" / ("_" + name + "_probe.py")
+    path = ROOT / "backend" / "nm" / "core" / ("_" + name + "_probe.py")
     path.write_text(body + chr(10), encoding="utf8")
     try:
         yield path

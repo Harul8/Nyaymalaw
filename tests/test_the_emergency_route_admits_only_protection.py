@@ -26,7 +26,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 import pytest
-
 from nm.core.screens import Capacity as InstructingCapacity
 from nm.core.screens import Engagement as ScreenedEngagement
 from nm.core.screens import (
@@ -37,6 +36,7 @@ from nm.core.screens import (
     unscreened,
 )
 from nm.domain.emergency import DEFAULT_HOURS, Declaration, latest
+
 from tests.test_professional_approval_is_separate_from_account_access import approve_fixture_account
 
 pytestmark = pytest.mark.class_a
@@ -75,6 +75,7 @@ def test_unreadable_emergency_history_is_reported_incomplete_through_the_wire(cl
     from dataclasses import replace
 
     from nm.edge.api import application
+
     from tests.test_the_commission_is_served_and_authority_refuses import _matter
 
     matter_id = _matter(client)
@@ -469,6 +470,7 @@ def test_a_protective_handoff_cannot_emit_a_commit_success_when_save_fails(clien
 def _declaration_context(client, monkeypatch):
     approve_fixture_account(client.directory)
     from nm.domain.advocate import utcnow
+
     from tests.test_the_commission_is_served_and_authority_refuses import _matter
 
     matter_id = _matter(client)

@@ -17,7 +17,6 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.adapters.evidence.corpus import EXAMINED_CEILING
 from nm.core.cause import interpret
 from nm.domain.matter import CauseOfAction
@@ -321,7 +320,7 @@ def test_a_ceiling_that_binds_is_reported_and_never_silent(tmp_path):
     # path, which reads its own index.
     (tmp_path / "chunks.db").write_bytes(b"")
     adapter = CorpusEvidenceAdapter(
-        tmp_path, Manifest.load("spec/manifest.yaml"), authority_index=db)
+        tmp_path, Manifest.load("pipeline/manifest.yaml"), authority_index=db)
 
     need = EvidenceNeed(
         question="adverse possession animus possidendi against the true owner",
@@ -364,7 +363,7 @@ def test_a_ceiling_that_does_not_bind_claims_nothing(tmp_path):
     (tmp_path / "chunks.db").write_bytes(b"")
 
     adapter = CorpusEvidenceAdapter(
-        tmp_path, Manifest.load("spec/manifest.yaml"), authority_index=db)
+        tmp_path, Manifest.load("pipeline/manifest.yaml"), authority_index=db)
     result = adapter.fetch(EvidenceNeed(
         question="adverse possession animus possidendi against the true owner",
         governing_date=TODAY, want_authority=True))
@@ -395,7 +394,7 @@ def test_the_turn_routes_a_determinate_question_without_a_named_provision(
     from nm.knowledge.manifest import Manifest
 
     adapter = CorpusEvidenceAdapter(
-        "legal_database/vector_store", Manifest.load("spec/manifest.yaml"))
+        "legal_database/vector_store", Manifest.load("pipeline/manifest.yaml"))
     if not adapter.available:
         pytest.skip("the corpus is not attached")
 
@@ -428,7 +427,7 @@ def test_a_provision_the_advocate_named_outranks_the_graph(tmp_path):
     from nm.knowledge.manifest import Manifest
 
     adapter = CorpusEvidenceAdapter(
-        "legal_database/vector_store", Manifest.load("spec/manifest.yaml"))
+        "legal_database/vector_store", Manifest.load("pipeline/manifest.yaml"))
     if not adapter.available:
         pytest.skip("the corpus is not attached")
 
@@ -449,6 +448,7 @@ def test_the_engine_sets_the_cause_so_the_graph_can_be_consulted(tmp_path):
     the wiring absent.
     """
     from nm.core.turn import TurnInput
+
     from tests.test_turn_contract import build
 
     seen: list[str | None] = []

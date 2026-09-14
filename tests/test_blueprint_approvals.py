@@ -7,8 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from tools import blueprint
-from tools.blueprint_approvals import adoption_blockers, adoption_labels, check_approvals
+from assurance.control_plane import blueprint
+from assurance.control_plane.blueprint_approvals import (
+    adoption_blockers,
+    adoption_labels,
+    check_approvals,
+)
 
 pytestmark = pytest.mark.class_a
 

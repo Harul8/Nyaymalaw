@@ -25,7 +25,6 @@ otherwise.
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.legal_review import (
     Approval,
     Arithmetic,

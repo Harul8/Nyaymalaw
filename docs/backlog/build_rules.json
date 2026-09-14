@@ -183,7 +183,7 @@
    "card": "START_A_CHANGE.md",
    "statement": "A registered item and one delivery wave own it.",
    "enforcement": "runner",
-   "check": "tools/backlog.py lint -- active item has no delivery wave"
+   "check": "assurance/control_plane/backlog.py lint -- active item has no delivery wave"
   },
   {
    "id": "BG-020",
@@ -192,7 +192,7 @@
    "card": "START_A_CHANGE.md",
    "statement": "Dependencies are known and do not run backward.",
    "enforcement": "runner",
-   "check": "tools/backlog.py lint -- depends on a later wave"
+   "check": "assurance/control_plane/backlog.py lint -- depends on a later wave"
   },
   {
    "id": "BG-021",
@@ -264,7 +264,7 @@
    "card": "START_A_CHANGE.md",
    "statement": "Each required proof and counterexample is named.",
    "enforcement": "runner",
-   "check": "tools/backlog.py lint -- a P0 criterion with no negative control"
+   "check": "assurance/control_plane/backlog.py lint -- a P0 criterion with no negative control"
   },
   {
    "id": "BG-029",
@@ -327,7 +327,7 @@
    "card": "SIGN_OFF_A_CHANGE.md",
    "statement": "Every required test exists, collects and is current.",
    "enforcement": "runner",
-   "check": "tools/backlog.py lint -- proof names a test that does not exist",
+   "check": "assurance/control_plane/backlog.py lint -- proof names a test that does not exist",
    "coverage_scope": "The named lint check validates referenced test existence. Execution binding separately validates recorded outcomes and the current supported fingerprint.",
    "remaining_gap": "This single check does not establish collection, execution or currency for every evidence class. BK-80 owns the missing evidence-integrity controls."
   },
@@ -446,7 +446,7 @@
    "card": "START_A_CHANGE.md",
    "statement": "the work has no registered item or wave",
    "enforcement": "runner",
-   "check": "tools/backlog.py lint -- row not in the registry, or no wave"
+   "check": "assurance/control_plane/backlog.py lint -- row not in the registry, or no wave"
   },
   {
    "id": "BG-049",
@@ -455,7 +455,7 @@
    "card": "START_A_CHANGE.md",
    "statement": "a hard dependency is later than its consumer",
    "enforcement": "runner",
-   "check": "tools/backlog.py lint -- depends on a later wave"
+   "check": "assurance/control_plane/backlog.py lint -- depends on a later wave"
   },
   {
    "id": "BG-050",

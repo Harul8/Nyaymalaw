@@ -10,7 +10,6 @@ shorter.
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.issue import (
     Disposition,
     DispositionState,

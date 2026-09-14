@@ -16,7 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # The model adapters. Deliberately optional and per-provider: nothing in
-# nm/core may import any of these, and layercheck fails the build if it does.
+# backend/nm/core may import any of these, and layercheck fails the build if it does.
 openai = ["openai>=1.40"]
 anthropic = ["anthropic>=0.40"]
 knowledge = ["openpyxl>=3.1"]
@@ -44,9 +44,12 @@ dev = [
 journey = ["playwright>=1.47", "pytest-playwright>=0.5"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["nm"]
+packages = ["backend/nm"]
 
 [tool.pytest.ini_options]
+# The backend package lives under backend/; the assurance, pipeline and
+# development tooling are imported from the repository root.
+pythonpath = [".", "backend"]
 testpaths = ["tests"]
 addopts = "-q"
 markers = [
@@ -70,6 +73,12 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# THE LINT POPULATION DID NOT CHANGE WITH THE LAYOUT. Before 14 September 2026
+# the gate linted nm/, tools/ and tests/; the specification generators under
+# spec/ were never in it. They now live in assurance/specification/, beside
+# tooling that IS linted, so they are excluded here by name rather than being
+# silently added to -- or silently dropped from -- the population.
+extend-exclude = ["assurance/specification"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "B"]
@@ -82,8 +91,8 @@ ignore = ["N818"]
 [tool.ruff.lint.per-file-ignores]
 # Hand-verified regex tables. Reflowing a regex is a change that fails
 # SILENTLY, and this project has already lost time to exactly that.
-"tools/find_goldens2.py" = ["E501"]
-"tools/verify_set.py" = ["E501"]
+"development_environment/one_off_tools/find_goldens2.py" = ["E501"]
+"pipeline/quality/verify_set.py" = ["E501"]
 
 [tool.pylint.messages_control]
 # The rename sweep. pyflakes does not find these, and a stale call site after a

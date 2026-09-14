@@ -38,7 +38,6 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-
 from nm.adapters.knowledge.elements import CuratedElements
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.model.traced import TracedModel
@@ -50,6 +49,7 @@ from nm.domain.matter import Basis, CauseOfAction, Posture, Role, Side, Thread
 from nm.domain.proof import Burden, ProofPosition, ProofStatus, Standard
 from nm.domain.quotable import Quotable
 from nm.knowledge.elements import elements_for
+
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a

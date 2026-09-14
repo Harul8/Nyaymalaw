@@ -4,11 +4,11 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
-
 from nm.adapters.store.file_store import FileMatterStore
 from nm.domain.matter import Matter
 from nm.edge.api import application
 from nm.ports.store import StaleWrite
+
 from tests.test_a_turn_receipt_is_not_an_archival_trace import _opened
 from tests.test_store_roundtrip import KEY
 

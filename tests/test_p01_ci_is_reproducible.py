@@ -31,30 +31,31 @@ def test_class_a_ci_installs_the_locked_prd_renderer_before_running_export():
     assert setup is not None, "a clean Class-A worker never installs Node"
     assert setup.get("with", {}).get("node-version") == "22"
     assert setup["with"].get("cache-dependency-path") == \
-        "spec/prd/package-lock.json"
+        "assurance/specification/prd/package-lock.json"
 
     install = next((row for row in steps
                     if row.get("name") == "Install locked PRD renderer dependencies"),
                    None)
     assert install is not None
-    assert install.get("working-directory") == "spec/prd"
+    assert install.get("working-directory") == "assurance/specification/prd"
     assert install.get("run") == "npm ci --ignore-scripts"
 
-    package = json.loads((ROOT / "spec/prd/package.json").read_text(encoding="utf-8"))
-    lock = json.loads((ROOT / "spec/prd/package-lock.json").read_text(encoding="utf-8"))
+    prd = ROOT / "assurance" / "specification" / "prd"
+    package = json.loads((prd / "package.json").read_text(encoding="utf-8"))
+    lock = json.loads((prd / "package-lock.json").read_text(encoding="utf-8"))
     assert lock["packages"][""]["dependencies"] == package["dependencies"]
     renderer = lock["packages"].get("node_modules/docx")
     assert renderer and renderer.get("integrity") and renderer.get("resolved")
 
 
 def test_approval_bound_populations_are_absent_from_every_local_default():
-    from tools.evidence import CLASS_A_SELECTOR, ORDINARY_SELECTOR
+    from assurance.control_plane.evidence import CLASS_A_SELECTOR, ORDINARY_SELECTOR
 
     assert CLASS_A_SELECTOR == \
         "class_a and not class_c and not class_d and not journey"
     assert ORDINARY_SELECTOR == \
         "not class_a and not class_c and not class_d and not journey"
-    source = (ROOT / "tools/check.py").read_text(encoding="utf-8")
+    source = (ROOT / "assurance/gate/check.py").read_text(encoding="utf-8")
     recorder = (ROOT / "tests/conftest.py").read_text(encoding="utf-8")
     tier_test = (ROOT / "tests/test_reads_registry.py").read_text(encoding="utf-8")
     assert "CLASS_A_PYTEST_ARGS" in source
@@ -66,7 +67,7 @@ def test_approval_bound_populations_are_absent_from_every_local_default():
 
 def test_per_task_test_populations_are_disjoint_without_losing_unmarked_tests():
     """The fast split is coverage partitioning, not a reduced population."""
-    from tools.evidence import CLASS_A_SELECTOR, ORDINARY_SELECTOR
+    from assurance.control_plane.evidence import CLASS_A_SELECTOR, ORDINARY_SELECTOR
 
     assert "class_a" in CLASS_A_SELECTOR
     assert "not class_a" in ORDINARY_SELECTOR

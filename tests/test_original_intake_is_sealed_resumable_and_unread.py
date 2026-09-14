@@ -6,7 +6,6 @@ import hashlib
 from dataclasses import replace
 
 import pytest
-
 from nm.domain.intake import MAX_CHUNK_BYTES, MAX_UPLOAD_BYTES
 
 pytestmark = pytest.mark.class_a
@@ -74,6 +73,7 @@ def test_upload_first_is_real_without_a_placeholder_brief_or_a_model_call(client
 def test_original_resumes_after_adapter_restart_with_real_digest_and_held_locator(client, tmp_path):
     from nm.adapters.store.file_store import FileMatterStore
     from nm.edge.uploads import UploadService
+
     from tests.test_turn_contract import KEY
 
     data = b"%PDF-1.7\nSYNTHETIC-NOT-A-VALID-PDF\n"
@@ -290,6 +290,7 @@ def test_object_io_failure_and_corruption_never_publish_success(client, monkeypa
 def test_original_objects_cannot_be_overwritten_or_decrypted_under_another_matter(tmp_path):
     from nm.adapters.store.envelope import CrossMatterAccess
     from nm.adapters.store.file_store import FileMatterStore
+
     from tests.test_turn_contract import KEY
 
     store = FileMatterStore(tmp_path, key=KEY)
@@ -377,6 +378,7 @@ def test_real_concurrent_chunk_writers_cannot_overwrite_the_accepted_receipt(
     from nm.adapters.store.file_store import FileMatterStore
     from nm.edge.uploads import UploadService
     from nm.ports.store import StaleWrite
+
     from tests.test_turn_contract import KEY
 
     matter_id = _shell(client)

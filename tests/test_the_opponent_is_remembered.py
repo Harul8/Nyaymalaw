@@ -5,8 +5,8 @@ THE MEASURED DEFECT
 `Posture.opponent` was declared, typed, persisted, and written by NOTHING. Two
 consumers read it, and both had a fallback:
 
-    nm/edge/projections.py   "against": posture.opponent or "unknown"
-    nm/domain/summary.py     omits the line when it is empty
+    backend/nm/edge/projections.py   "against": posture.opponent or "unknown"
+    backend/nm/domain/summary.py     omits the line when it is empty
 
 So an advocate who wrote "we act for the plaintiff against Sharma" saw
 `against: unknown` on the record for the life of the matter, and every model
@@ -28,10 +28,10 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.core import posture
 from nm.core.turn import TurnInput
 from nm.domain.quotable import Quotable
+
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a

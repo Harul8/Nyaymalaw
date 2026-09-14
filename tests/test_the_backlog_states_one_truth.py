@@ -40,7 +40,7 @@ STATUS = ROOT / "docs" / "backlog" / "status.yaml"
 
 def _tool():
     spec = importlib.util.spec_from_file_location(
-        "_backlog_tool", ROOT / "tools" / "backlog.py")
+        "_backlog_tool", ROOT / "assurance" / "control_plane" / "backlog.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -350,7 +350,7 @@ def test_the_board_is_not_stale():
         "BACKLOG.md has lost its generated-board markers")
     assert _persisted_board_matches(tool, _doc(), text), (
         "the board in BACKLOG.md has drifted from status.yaml. Run:\n"
-        "    python tools/backlog.py render")
+        "    python assurance/control_plane/backlog.py render")
 
 
 def test_the_board_check_catches_a_hand_edited_count():
@@ -465,7 +465,7 @@ def test_every_feature_in_the_prd_is_in_the_registry():
     registry says what would implement it.
     """
     spec = yaml.safe_load(
-        (ROOT / "spec" / "features.yaml").read_text(encoding="utf-8"))
+        (ROOT / "assurance" / "specification" / "features.yaml").read_text(encoding="utf-8"))
     declared = {f["id"] for f in spec["features"]}
     registered = {f["id"] for f in _doc()["features"]}
     assert declared == registered, (

@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from tools._documents import safe_load
-from tools.blueprint_autonomy import (
+from assurance.common._documents import safe_load
+from assurance.control_plane.blueprint_autonomy import (
     BOUNDARIES,
     COMPARISON_POLICIES,
     COMPARISON_SETS,

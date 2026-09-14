@@ -1,0 +1,622 @@
+"""The evidence port. PRD §4.6 -- retrieval returns FINDINGS, never chunks.
+
+Returning chunks pushes citation, binding status and paragraph kind downstream
+to a layer that then skips them, which is precisely how counsel's argument comes
+to be quoted as a holding. An obligation not represented in the type crossing
+the boundary is an obligation that will be dropped -- so every one of them is a
+required field here.
+
+SLICE 2 MADE FOUR OF THEM NON-OPTIONAL
+---------------------------------------
+`binding`, `para_kind`, `treatment` and `locator` now have no defaults. A
+default is a decision taken by whoever wrote the type on behalf of every future
+call site that forgets, and the three defaults this type used to carry were
+each the safe-looking wrong answer:
+
+    para_kind = UNKNOWN     -> a submission reads as a holding
+    binding   = BINDING     -> another State's High Court binds Telangana
+    treatment = (absent)    -> an overruled case reads as good law
+
+Each of those is a sentence an advocate would put in front of a judge.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+from enum import Enum, nonmember
+from typing import Protocol, runtime_checkable
+
+from nm.domain.clock import FORUM
+from nm.domain.spoken import Spoken
+from nm.domain.text import blank, refuses_blank_text
+
+
+class ParaKind(str, Enum):
+    """WHETHER A JUDGMENT MAY BE QUOTED FOR A PROPOSITION. Three states.
+
+    IT HELD SEVEN AND THE PRODUCT READ ONE BIT OF THEM. `ratio`, `reasoning`,
+    `order`, `arguments`, `facts`, `headnote`, `unknown` -- and the only
+    question ever asked of a value was `.attributable`. Nothing in `backend/nm/` read
+    the difference between a ratio and a reasoning paragraph, or between a
+    submission and a headnote. Three of the seven members -- `ARGUMENTS`,
+    `FACTS`, `HEADNOTE` -- could not be produced by any production path at
+    all: the evidence adapter folded every non-attributable label to
+    `UNKNOWN` before a Finding was ever built.
+
+    WHAT THE DISTINCTIONS COST, MEASURED. On the 100 most-cited Supreme Court
+    judgments, adjudicated by the advocate: of 40 disputes between the
+    corpus's own label and a model's read, **18 disappear the moment the seven
+    collapse to this**. Every one of those eighteen was a ratio-versus-
+    reasoning argument -- a boundary two careful readers genuinely differ on,
+    which changed nothing downstream because nothing downstream read it.
+
+    The 22 that remain are the real ones: **14 HIDE a holding** (the corpus
+    says `arguments` where the court is speaking) and 8 attribute wrongly.
+    Those are not fixed by this change; they are made visible by it, because
+    they are now the only kind of error this field can carry.
+
+    THE THIRD STATE IS A VALUE -- §9. `NOT_ATTRIBUTABLE` is a paragraph that
+    WAS read and is positively not the court deciding. `UNKNOWN` is one
+    nobody classified. The two have the same retrieval consequence and are
+    not the same fact, and the old adapter folded the first into the second --
+    so the product said "unclassified" about paragraphs the corpus had
+    confidently called counsel's submission.
+
+    WHY THESE NAMES. `G-ATTRIB` declares its states as `attributable` /
+    `not_attributable`. The type now carries the gate's own two words, so the
+    matrix and the contract cannot drift into two vocabularies for one fact.
+    """
+
+    ATTRIBUTABLE = "attributable"
+    NOT_ATTRIBUTABLE = "not_attributable"
+    UNKNOWN = "unknown"
+
+    @property
+    def attributable(self) -> bool:
+        return self is ParaKind.ATTRIBUTABLE
+
+
+#: THE CORPUS'S SEVEN LABELS AND WHAT EACH MEANS HERE. THE ONLY COPY.
+#:
+#: `("ratio", "reasoning", "order")` was written out SIX TIMES -- the evidence
+#: adapter, the index builder, the release gate, the golden finder, the set
+#: verifier and the classifier eval. All six agreed on the day this was
+#: measured and nothing whatever refused a seventh that did not. Two of them
+#: are load-bearing against each other: the index builder decides what the
+#: corpus can retrieve, and `RG-04` measures whether enough of it is
+#: retrievable. Those two disagreeing is a blocking release criterion scoring
+#: an index it is not describing -- B-044's shape exactly.
+#:
+#: `facts` IS THE COURT'S OWN WRITING AND IS STILL NOT ATTRIBUTABLE. The
+#: question this field answers is not who wrote the paragraph but whether it
+#: decides anything: a recital of what happened cannot carry a proposition.
+#: A collapse along "the court wrote it" would have made `facts` quotable and
+#: widened attribution silently, which is why the mapping is written out
+#: label by label rather than derived from a speaker.
+_CORPUS_LABEL: dict[str, ParaKind] = {
+    "ratio": ParaKind.ATTRIBUTABLE,
+    "reasoning": ParaKind.ATTRIBUTABLE,
+    "order": ParaKind.ATTRIBUTABLE,
+    "arguments": ParaKind.NOT_ATTRIBUTABLE,
+    "facts": ParaKind.NOT_ATTRIBUTABLE,
+    "headnote": ParaKind.NOT_ATTRIBUTABLE,
+    "unknown": ParaKind.UNKNOWN,
+}
+
+#: EVERY LABEL THE CORPUS USES, in the order the table declares them.
+#: The corpus still carries all seven -- this product collapsed what it
+#: DOES with them, not what the corpus holds -- so a classifier eval
+#: measuring against corpus labels needs the seven, and gets them from
+#: the same table rather than retyping them.
+CORPUS_LABELS: tuple[str, ...] = tuple(_CORPUS_LABEL)
+
+#: The corpus labels a judgment may be quoted for. DERIVED AND NEVER
+#: AUTHORED: it is computed from the table above, so it cannot drift from
+#: `kind_for_corpus_label` the way six hand-written copies could.
+ATTRIBUTABLE_LABELS: tuple[str, ...] = tuple(
+    label for label, kind in _CORPUS_LABEL.items() if kind.attributable)
+
+
+def kind_for_corpus_label(label: str | None) -> ParaKind:
+    """One corpus `paragraph_type` string in, one `ParaKind` out.
+
+    AN ABSENT OR UNRECOGNISED LABEL IS `UNKNOWN`, NEVER `NOT_ATTRIBUTABLE`.
+    Both are non-attributable and the retrieval consequence is identical, so
+    the temptation is to treat them alike -- but only one of them is a
+    reading. A label this table has never seen is a paragraph nobody
+    classified, which is what `UNKNOWN` says. Defect shape S1: an absent
+    input must not read as a finding, and "positively not the court" is a
+    finding.
+    """
+    return _CORPUS_LABEL.get((label or "").strip().lower(), ParaKind.UNKNOWN)
+
+
+class Binding(Spoken, str, Enum):
+    """THREE states. `NOT_ASSESSED` is what an uncomputable status returns.
+
+    Two states would force every unknown court, undated judgment and
+    out-of-scope jurisdiction into one of the two findings -- and whichever one
+    was chosen, the product would be stating a conclusion it had not reached.
+    """
+
+    BINDING = "binding"
+    PERSUASIVE = "persuasive"
+    NOT_ASSESSED = "not_assessed"
+
+    SAID = nonmember({
+        "binding": "binding",
+        "persuasive": "persuasive",
+        "not_assessed": "of a weight nobody has assessed",
+    })
+
+    @property
+    def assessed(self) -> bool:
+        return self is not Binding.NOT_ASSESSED
+
+
+
+
+Binding.complete()
+class TreatmentState(str, Enum):
+    """Subsequent judicial treatment. THREE states, and the third is the point.
+
+    The citator holds entries for 4,894 named cases against 33,791 judgments
+    held -- so roughly one case in seven has any entry at all, and it is keyed
+    by the case NAME as written in the citing judgment rather than by id.
+
+    A miss therefore means "the citator has nothing on this", which is NOT the
+    same as "this case has not been doubted". Collapsing the two would make the
+    single most dangerous false negative in the product -- an overruled
+    authority presented as good law -- the DEFAULT behaviour.
+    """
+
+    CLEAN = "clean"              # checked, and nothing negative found
+    NEGATIVE = "negative"        # reversed, overruled, doubted, disapproved
+    NOT_CHECKED = "not_checked"  # the citator could not answer
+
+    @property
+    def usable_alone(self) -> bool:
+        return self is TreatmentState.CLEAN
+
+
+@dataclass(frozen=True)
+class Treatment:
+    """Treatment, WITH ITS SCOPE.
+
+    Scope is not a nicety. A judgment overruled on the limitation point remains
+    good law on the construction point, and a citator entry that does not say
+    which proposition was treated cannot tell you which of those you are
+    holding. Where the scope is unknown, that is said.
+    """
+
+    state: TreatmentState
+    scope: str                   # the proposition treated, or why it is unknown
+    verbs: tuple[str, ...] = ()  # FOLLOWED / OVERRULED / DOUBTED / ...
+    by: tuple[str, ...] = ()     # the citing judgments, so it can be read back
+    source: str = "citator"
+
+    def __post_init__(self) -> None:
+        if not self.scope.strip():
+            raise ValueError(
+                "a Treatment must state its scope, or state that the scope is "
+                "unknown. A bare 'clean' is a claim about the whole judgment.")
+        if self.state is TreatmentState.NEGATIVE and not self.verbs:
+            raise ValueError("negative treatment must name what was done to it")
+
+    @staticmethod
+    def not_checked(why: str) -> "Treatment":
+        return Treatment(state=TreatmentState.NOT_CHECKED, scope=why, source="none")
+
+    @staticmethod
+    def statutory() -> "Treatment":
+        """A provision is not `clean` -- it is not the kind of thing a citator
+        speaks about at all. Saying so keeps the field honest instead of
+        borrowing a case-law state for a statute."""
+        return Treatment(
+            state=TreatmentState.CLEAN,
+            scope="a statutory provision retrieved for the governing date; "
+                  "judicial treatment applies to judgments, not to the text of "
+                  "the section",
+            source="statute")
+
+
+class Coverage(Spoken, str, Enum):
+    """FOUR states, and the fourth was the one nobody had.
+
+    ANSWERED, NOT_HELD and HELD_NOT_FOUND are all claims about a search that
+    RAN. There was no way to say a search did not run at all, so a store that
+    could not be opened had to borrow one of the three -- and every one of them
+    is a lie in a different direction. NOT_HELD tells the advocate the law is
+    not in the corpus. HELD_NOT_FOUND tells them there is a retrieval defect.
+    ANSWERED needs no comment.
+
+    NOT_ASSESSED is a VALUE because §9 requires the third state to be visible
+    in the output and not only in the type: held, not held, and NOT LOOKED AT.
+    """
+
+    ANSWERED = "answered"
+    NOT_HELD = "not_held"
+    HELD_NOT_FOUND = "held_not_found"   # a DEFECT that escalates
+    NOT_ASSESSED = "not_assessed"       # the search did not happen
+
+    #: WHAT AN ADVOCATE IS TOLD. BK-13 -- `held_not_found` is jargon for
+    #: a retrieval defect, and it reached the bytes the first time this
+    #: enum was rendered rather than described.
+    #:
+    #: THE MIDDLE PAIR CARRIES THE WHOLE POINT. `not_held` says the corpus
+    #: does not have it; `held_not_found` says the corpus HAS it and the
+    #: retrieval failed. An advocate given the wrong one either abandons a
+    #: good point or hunts a defect that is not there.
+    SAID = nonmember({
+        "answered": "the corpus answered this",
+        "not_held": "the corpus does not hold this",
+        "held_not_found": ("the corpus holds this and the search did not "
+                           "find it, which is a defect on our side"),
+        "not_assessed": "nobody looked",
+    })
+
+
+
+# CHECKED AT IMPORT, like every other Spoken enum. A member added
+# without a phrase must fail here and not on a served turn, where the
+# KeyError lands in front of an advocate.
+Coverage.complete()
+
+class SourceKind(str, Enum):
+    PROVISION = "provision"
+    AUTHORITY = "authority"
+
+
+class Origin(str, Enum):
+    """HOW this Finding was arrived at. PRD H3.
+
+    IT USED TO BE A STRING DEFAULTING TO `"resolved"`, which is the strongest
+    provenance the product can claim -- an exact lookup against the graph, no
+    ranking anywhere in its derivation. Every Finding that failed to say
+    otherwise asserted it, including every one the search path built and every
+    one a test constructed. E-051's counterexample is precisely *a governing
+    Article arrived at by ranking*, and the default made that Finding
+    indistinguishable from a resolved one by construction.
+
+    So it is an enum, it is REQUIRED, and the contradiction it exists to
+    prevent is refused by `Finding.__post_init__` rather than by a convention.
+    """
+
+    RESOLVED = "resolved"
+    """Exact lookup against the legal graph. NO similarity in its derivation.
+
+    H3: *where the graph resolves, the answer is exact and carries a citation,
+    and no similarity score appears in its derivation.*"""
+
+    SEARCHED = "searched"
+    """Ranked. It MUST carry its confidence, and the answer treats it as a
+    candidate rather than as the answer."""
+
+    NOT_ESTABLISHED = "not_established"
+    """Neither. The third state, and it is a value rather than a null because
+    a Finding whose provenance nobody recorded must not read as a resolved
+    one -- which is exactly what the old default did."""
+
+
+@dataclass(frozen=True)
+class Finding:
+    proposition: str
+    source_kind: SourceKind
+    ref: str
+    span: str
+    locator: str
+    store: str
+    binding: Binding
+    binding_for: str
+    binding_reason: str
+    supports: bool
+    para_kind: ParaKind
+    treatment: Treatment
+    valid_from: date | None = None
+    valid_to: date | None = None
+    governing_date: date | None = None
+    origin: Origin = Origin.NOT_ESTABLISHED
+    """NO DEFAULT OF `RESOLVED`. See `Origin`.
+
+    The default is the weakest claim, not the strongest: a caller that forgets
+    to say gets a Finding that admits nobody recorded how it was derived, and
+    the gates can see that. It defaulted to `resolved`, so forgetting produced
+    the strongest claim the product can make."""
+
+    confidence: float | None = None
+    """THE SIMILARITY SCORE, and only a SEARCHED Finding may carry one.
+
+    It was `float = 1.0`, so a resolved Finding carried a score of exactly the
+    shape a ranker produces, and `origin` was the only thing distinguishing
+    them -- while `origin` itself defaulted to `resolved`. Between the two
+    defaults, nothing in a Finding's own data could tell an exact lookup from a
+    ranked guess.
+
+    `None` is not "confidence unknown". It is *this was not ranked*, which is
+    what H3 requires a resolved Finding to be able to say about itself."""
+
+    def __post_init__(self) -> None:
+        if not self.span.strip():
+            raise ValueError("a Finding without a verbatim span is not a Finding")
+        if not self.locator.strip():
+            raise ValueError("a Finding without a locator cannot be read back")
+        if self.source_kind is SourceKind.AUTHORITY and not self.para_kind.attributable:
+            raise ValueError(
+                f"a proposition attributed to a judgment must come from a "
+                f"paragraph in which the court decides, reasons or orders. "
+                f"This one is {self.para_kind.value!r} "
+                f"(PRD H7, gate G-ATTRIB)")
+        if self.source_kind is SourceKind.PROVISION and self.valid_from is None \
+                and self.valid_to is None:
+            # A PROVISION IS ALWAYS IN FORCE OVER SOME WINDOW, and a Finding
+            # that cannot say which one cannot answer whether it applied on the
+            # matter's date. Judgments carry no such window -- a judgment is
+            # decided once -- so this is required of provisions only.
+            raise ValueError(
+                "a provision Finding must carry its validity window: at least "
+                "one of valid_from/valid_to. Without it, `in_force` cannot "
+                "refuse the superseded text, and the 2024 codes make that the "
+                "difference between right and confidently wrong.")
+        if not (self.binding_for or "").strip():
+            # WHO it binds is half of what binding status means. "Binding" with
+            # no jurisdiction is a word, and an advocate cannot act on it.
+            raise ValueError(
+                "a Finding must name the jurisdiction its binding status is "
+                "FOR. Binding on whom is not an optional detail.")
+        if not self.binding_reason.strip():
+            raise ValueError(
+                "binding status must arrive with the rule that produced it. An "
+                "advocate who cannot see why an authority was called binding has "
+                "to take it on trust, and this is the field most likely to be "
+                "wrong in a way that changes what they file.")
+        # H3 -- RESOLUTION AND RANKING ARE DIFFERENT FACTS, and the type keeps
+        # them apart rather than trusting each call site to.
+        if self.origin is Origin.RESOLVED and self.confidence is not None:
+            raise ValueError(
+                f"a RESOLVED Finding carries a similarity score of "
+                f"{self.confidence!r}. H3 is that where the graph resolves, no "
+                f"similarity appears in the derivation — a governing Article "
+                f"arrived at by ranking is the counterexample E-051 exists to "
+                f"reject, and it looks exactly like this.")
+        if self.origin is Origin.SEARCHED and self.confidence is None:
+            raise ValueError(
+                "a SEARCHED Finding must carry the confidence it was ranked "
+                "on. Without it the answer cannot treat it as a candidate, and "
+                "a candidate presented as an answer is the whole of the "
+                "search-first design H3 replaces.")
+
+    # ---------------------------------------------------------------- gates ---
+    @property
+    def in_force(self) -> bool:
+        """Was this text in force on the governing date?
+
+        Unanswerable without a governing date, and `True` is not the safe
+        answer: the 2024 codes replaced the CrPC and the IPC, so serving the
+        superseded text for a 2025 offence is a wrong answer that reads as a
+        right one.
+        """
+        if self.governing_date is None:
+            return True   # no date asserted; `blocking_reason` refuses instead
+        if self.valid_from and self.governing_date < self.valid_from:
+            return False
+        if self.valid_to and self.governing_date > self.valid_to:
+            return False
+        return True
+
+    @property
+    def blocking_reason(self) -> str | None:
+        """The gate, stated. `None` means the Finding may carry a proposition.
+
+        Returning a REASON rather than a boolean is deliberate: `usable=False`
+        with no explanation is an absent input that reads as a quiet decision,
+        and the advocate is entitled to know which of five different things
+        went wrong.
+        """
+        if not self.supports:
+            return (f"G-GROUND: the retrieved span does not support "
+                    f"{self.proposition!r}")
+        if self.source_kind is SourceKind.AUTHORITY:
+            if not self.binding.assessed:
+                return (f"G-BINDING: binding status for {self.ref} could not be "
+                        f"computed -- {self.binding_reason}")
+            # WHETHER A TREATMENT STATE MAY CARRY A PROPOSITION IS DECIDED
+            # ONCE, by `usable_alone` on the enum. This used to enumerate
+            # NEGATIVE and NOT_CHECKED here, which is the same rule in a
+            # second place -- and the second place was the one nobody
+            # consulted, so hardening the first would have changed nothing.
+            # A fourth treatment state is now refused by default and gets
+            # the general wording, rather than passing silently.
+            if not self.treatment.state.usable_alone:
+                if self.treatment.state is TreatmentState.NEGATIVE:
+                    return (f"G-GROUND: {self.ref} has negative treatment "
+                            f"({', '.join(self.treatment.verbs)}) on "
+                            f"{self.treatment.scope}")
+                if self.treatment.state is TreatmentState.NOT_CHECKED:
+                    return (f"G-GROUND: subsequent treatment of {self.ref} "
+                            f"was not checked -- {self.treatment.scope}")
+                return (f"G-GROUND: treatment of {self.ref} is "
+                        f"{self.treatment.state.value!r}, which cannot carry "
+                        f"a proposition alone")
+        if self.governing_date is not None and not self.in_force:
+            return (f"G-INFORCE: {self.ref} was not in force on "
+                    f"{self.governing_date.isoformat()} (in force "
+                    f"{self.valid_from or 'unrecorded'} to "
+                    f"{self.valid_to or 'date'})")
+        return None
+
+    @property
+    def usable(self) -> bool:
+        """A GATE, not a score. A Finding that cannot carry a proposition
+        blocks the answer rather than being quietly ranked lower."""
+        return self.blocking_reason is None
+
+    @property
+    def quotable(self) -> bool:
+        """Some Findings may be QUOTED with their status disclosed even though
+        they may not carry a proposition alone -- an unassessed authority, or
+        one whose treatment was never checked. What may never be quoted is a
+        span that does not support what it is cited for, or text that was not
+        in force."""
+        return self.supports and self.in_force
+
+
+@refuses_blank_text()
+@dataclass(frozen=True)
+class EvidenceNeed:
+    """The query is the MATTER, not a sentence.
+
+    A need carrying only a text string would silently degrade the whole design
+    back to search-first, and nothing downstream would notice -- so the
+    governing date is required rather than defaulted to today.
+    """
+
+    question: str
+    governing_date: date
+    jurisdiction: str = FORUM
+    forum: str | None = None
+    cause_of_action: str | None = None
+    provision_hint: str | None = None
+    want_authority: bool = False
+    account: str = ""
+    """What the advocate has already said on this thread.
+
+    THE QUESTION IS NOT THE MATTER, and this field is what makes the docstring
+    above true rather than aspirational. Retrieval saw `turn.message` alone,
+    so an advocate who named the Act on turn 1 and asked "and the limitation?"
+    on turn 4 got a corpus gap for a provision the product had already
+    retrieved for them.
+
+    It is a SECOND-CHANCE input, never a first-choice one: what the advocate
+    asked on THIS turn is what they want answered, and the account is consulted
+    only where this turn leaves something unresolved. Widening the primary
+    query with it would let four turns of context outvote the current
+    question, which is the failure mode keyword resolution already has."""
+
+    def __post_init__(self) -> None:
+        if self.governing_date is None:
+            raise ValueError(
+                "a query without a governing date is REJECTED, not defaulted to "
+                "today (PRD G1/H2, gate G-DATE)")
+
+
+@dataclass(frozen=True)
+class EvidenceResult:
+    coverage: Coverage
+    findings: tuple[Finding, ...] = ()
+    missing: str | None = None
+    searched_stores: tuple[str, ...] = ()
+    assumption: str | None = None
+    """An inference the retrieval rested on, for the advocate to correct.
+
+    Set when the governing Act was INFERRED from keywords rather than named in
+    the question. A retrieval that guessed which statute it was reading and did
+    not say so is indistinguishable from one that knew — and the guess sends an
+    exact section lookup into the wrong Act."""
+
+    def __post_init__(self) -> None:
+        if self.coverage is Coverage.NOT_HELD and blank(self.missing):
+            # `blank`, not falsy: a reason of spaces is silence in NO
+            # words, and it would have satisfied the check this raises.
+            raise ValueError(
+                "a NOT_HELD result must NAME what is missing. A vague "
+                "disclaimer is silence in more words (PRD M4).")
+
+    @property
+    def usable(self) -> tuple[Finding, ...]:
+        return tuple(f for f in self.findings if f.usable)
+
+    @property
+    def blocked(self) -> tuple[Finding, ...]:
+        return tuple(f for f in self.findings if not f.usable)
+
+
+@runtime_checkable
+class EvidencePort(Protocol):
+    def fetch(self, need: EvidenceNeed) -> EvidenceResult: ...
+
+    def accrual_trigger(self, cause: str) -> str:
+        """When the period for this cause STARTS, in words, or empty.
+
+        ON THE PORT, NOT FETCHED BY `getattr`. The engine reached for
+        this by string name at first and the dead-code sweep reported
+        the adapter method as unreachable -- correctly. A call no scan
+        can see is a call nothing can verify, which is the shape that
+        let `decisive_identifier_matches` sit in C4's contract while
+        the binder did the work inline (B-050).
+
+        THE TRIGGER IS CURATED IN `backend/nm/knowledge/resolution.py` beside
+        the Article it belongs to, and `core` may not import
+        `knowledge` -- so it crosses here rather than being copied into
+        the engine, which would be a second home for a legal fact.
+
+        A DEFAULT OF EMPTY, so an adapter curating no triggers is not
+        forced to invent one. The engine reads empty as "no curated
+        trigger" and computes as it did before: a cause nobody has
+        curated is not one this product knows enough about to refuse
+        on.
+        """
+        return ""
+
+    # ------------------------------------------------- what it can answer ---
+    #
+    # THESE ARE HERE BECAUSE THE PRODUCT ALREADY ASKED FOR THEM, and asked
+    # in two different ways, neither of which anything could verify.
+    #
+    # `backend/nm/bootstrap/composition.py` read `self.evidence.available` straight
+    # off the object -- a member no Protocol declared -- and
+    # `self.evidence.readiness()` behind a `hasattr`. One raised
+    # AttributeError and 500'd `/api/health` for every adapter that lacked
+    # it; the other silently reported an empty retrieval readiness, which is
+    # S1: a capability that could not be asked about reads exactly like one
+    # with nothing to report.
+    #
+    # THIS IS THE SWEEP `accrual_trigger` OWED. That member was moved onto
+    # this Protocol earlier the same day for exactly this reason, and the
+    # rest of its population was not enumerated -- which is CLAUDE.md §1's
+    # measured failure verbatim: 47 of 52 register entries had a guard
+    # covering only the site the bug was found at. The population is every
+    # member the composition root and the engine reach on an evidence
+    # adapter, taken from the code: `fetch`, `accrual_trigger`, `available`,
+    # `readiness`.
+
+    @property
+    def available(self) -> bool:
+        """Can this adapter reach its corpus at all?
+
+        DEFAULTS TO FALSE, and that is the safe direction rather than the
+        convenient one. `health()` renders it as `NOT READABLE`, so an
+        adapter that has not been asked reports a corpus nobody has
+        confirmed -- which is true. Defaulting to True would have the
+        product announce a readable corpus on the strength of nobody
+        having implemented the check.
+        """
+        return False
+
+    def withdrawn_sources(self) -> frozenset[str]:
+        """Every source version or generation a withdrawal has named. P21.
+
+        THE TURN ASKS THIS so a matter that attached a passage from a version
+        the publication layer has since withdrawn (P20) learns it where the
+        file is re-read -- and the ledger marks the input withdrawn, which
+        reaches every conclusion resting on it (P18). An empty set from an
+        installation with no published generation is a fact about the
+        installation, not a clean bill; `readiness()` says whether one is
+        bound.
+        """
+        return frozenset()
+
+    def readiness(self) -> dict:
+        """What each retrieval capability can answer, capability by capability.
+
+        NOT ROLLED UP INTO `available`, which is why it exists: one
+        `corpus: readable` would let an unbuilt authority index hide behind
+        a readable provision store, and the advocate would meet it as an
+        empty answer rather than as a stated gap.
+
+        AN EMPTY DICT IS `NOTHING WAS ASKED`, and the caller must not render
+        it as `nothing is wrong`. It was previously reached through
+        `hasattr`, so an adapter without the method produced `{}` and the
+        health page showed an empty retrieval section -- indistinguishable
+        from an adapter that had answered and had no capabilities.
+        """
+        return {}

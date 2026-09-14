@@ -19,13 +19,12 @@ import sys
 from pathlib import Path
 
 import pytest
-
 from nm.adapters.model.config import TierConfig, load
 from nm.domain.tiers import HARD_TIER_STEPS, PERMITTED
 from nm.domain.traceability import refuses
 
 ROOT = Path(__file__).resolve().parents[1]
-CORE = ROOT / "nm" / "core"
+CORE = ROOT / "backend" / "nm" / "core"
 
 
 # ============================================== the pure core (E-001/E-004) ==
@@ -123,7 +122,7 @@ def test_layercheck_fails_the_build_on_a_core_module_that_reaches_an_adapter():
     victim.write_text("from nm.adapters.store.file_store import FileMatterStore\n",
                       encoding="utf8")
     try:
-        proc = subprocess.run([sys.executable, "tools/layercheck.py"],
+        proc = subprocess.run([sys.executable, "assurance/gate/layercheck.py"],
                               cwd=ROOT, capture_output=True, text=True)
     finally:
         victim.unlink()
@@ -206,7 +205,7 @@ def test_every_hard_tier_step_carries_a_recorded_measurement():
     """
     import re
     uses = []
-    for path in sorted((ROOT / "nm").rglob("*.py")):
+    for path in sorted((ROOT / "backend" / "nm").rglob("*.py")):
         if path.name in ("config.py", "model.py", "tiers.py", "composition.py"):
             continue          # tier plumbing, not a step requesting one
         text = path.read_text(encoding="utf8")
@@ -222,7 +221,7 @@ def test_every_hard_tier_step_carries_a_recorded_measurement():
     undeclared = [u for u in uses if u.rsplit(":", 1)[0] not in PERMITTED]
     assert not undeclared, (
         "these steps request the expensive tier and are not in "
-        "nm/domain/tiers.py with the measurement that justifies them: "
+        "backend/nm/domain/tiers.py with the measurement that justifies them: "
         + ", ".join(undeclared))
 
     for step in HARD_TIER_STEPS:
@@ -233,7 +232,7 @@ def test_every_hard_tier_step_carries_a_recorded_measurement():
 def test_a_hard_tier_promotion_without_a_measurement_cannot_be_declared():
     from nm.domain.tiers import HardTierStep
     with pytest.raises(ValueError, match="not a measurement"):
-        HardTierStep(step="nm/core/turn.py", measurement="  ",
+        HardTierStep(step="backend/nm/core/turn.py", measurement="  ",
                      measured_at="2026-08-30", delta="")
 
 
@@ -251,6 +250,7 @@ def test_every_turn_writes_metrics_with_latency_calls_tokens_and_model_mix(tmp_p
     import json
 
     from nm.core.turn import TurnInput
+
     from tests.test_turn_contract import build
 
     engine, _ = build(tmp_path)

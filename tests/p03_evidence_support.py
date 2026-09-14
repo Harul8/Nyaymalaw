@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from tools.evidence_verification import (
+from assurance.control_plane.evidence_verification import (
     SignedArtifactVerifier,
     canonical_json,
     sha256_bytes,

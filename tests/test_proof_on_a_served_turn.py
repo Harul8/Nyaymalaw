@@ -2,7 +2,7 @@
 
 WHAT WAS MISSING, AND FOR HOW LONG
 ------------------------------------
-`nm/domain/proof.py` has carried D5's whole contract since slice 7. A position
+`backend/nm/domain/proof.py` has carried D5's whole contract since slice 7. A position
 cannot be HELD without material, cannot be OBTAINABLE without saying what would
 obtain it, cannot be ABSENT without naming the dead end, and `uncovered` draws
 its population from the ELEMENTS so the coverage gate cannot certify itself.
@@ -15,8 +15,8 @@ constructs in production.
 
 THE DIVISION OF LABOUR IS THE DESIGN, AND THESE TEST IT SEPARATELY
 --------------------------------------------------------------------
-    the LAW    what a cause requires   `nm/knowledge/elements.py`, curated
-    the FILE   what is held for each   `nm/core/proof_read.py`, read + guarded
+    the LAW    what a cause requires   `backend/nm/knowledge/elements.py`, curated
+    the FILE   what is held for each   `backend/nm/core/proof_read.py`, read + guarded
 
 A model asked "what are the elements of specific performance" answers
 plausibly and differently every call. If the element list came back from the
@@ -29,7 +29,6 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-
 from nm.adapters.knowledge.elements import CuratedElements
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.model.traced import TracedModel
@@ -40,6 +39,7 @@ from nm.domain.matter import Basis, CauseOfAction, Posture, Role, Side
 from nm.domain.proof import ProofPosition, ProofStatus, Standard
 from nm.domain.quotable import Quotable
 from nm.knowledge.elements import ELEMENTS, WITHHELD, elements_for, why_not
+
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a
@@ -373,7 +373,7 @@ def _metrics():
 
 
 def test_the_positions_reach_the_answer_on_a_served_turn(tmp_path):
-    """THE WHOLE POINT. Every refusal in `nm/domain/proof.py` was correct for
+    """THE WHOLE POINT. Every refusal in `backend/nm/domain/proof.py` was correct for
     a slice and none of it ran, because nothing constructed a position."""
     engine, _ = _engine(tmp_path)
     from nm.domain.matter import Thread

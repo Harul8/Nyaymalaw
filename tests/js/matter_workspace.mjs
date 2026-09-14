@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const original = fs.readFileSync('web/matter-workspace.js', 'utf8');
+const original = fs.readFileSync('frontend/matter-workspace.js', 'utf8');
 const mode = process.argv[2];
 function walk(el) { return [el, ...el.children.flatMap(walk)]; }
 class Element {

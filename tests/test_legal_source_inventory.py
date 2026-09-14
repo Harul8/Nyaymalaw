@@ -3,14 +3,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import pytest
-
 from nm.knowledge.source_registry import (
     Assessment,
     AssetKind,
     DigestState,
     inventory_sources,
 )
-from tools.inventory_legal_sources import main
+
+from pipeline.acquisition.inventory_legal_sources import main
 
 NOW = datetime(2026, 9, 11, tzinfo=timezone.utc)
 

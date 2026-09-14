@@ -21,7 +21,6 @@ other side is an irreversible act against a court.
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.action import (
     CONNECTOR_ENABLED,
     REQUIRED_BEFORE_CONFIRMATION,

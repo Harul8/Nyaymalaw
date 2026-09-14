@@ -1,14 +1,14 @@
-"""EVERY FUNCTION IN `nm/` IS REACHED, or it is not an enforcement.
+"""EVERY FUNCTION IN `backend/nm/` IS REACHED, or it is not an enforcement.
 
 WHY
 ---
 `Thread.decisive_identifier_matches` was named by C4's docstring as the
 enforcement of thread identity — *"enforced by the constructor and by
 `decisive_identifier_matches`"* — and had NO CALLERS. The binder did the work
-inline. That is B-050, and it is the shape `tools/trace.py` T8 catches for
+inline. That is B-050, and it is the shape `assurance/gate/trace.py` T8 catches for
 gates: something declared as the enforcement that no code path consults.
 
-Gates have a checker. Functions did not. Sweeping all 214 in `nm/` found three
+Gates have a checker. Functions did not. Sweeping all 214 in `backend/nm/` found three
 more of exactly it:
 
     TreatmentState.usable_alone  "may this carry a proposition alone" — while
@@ -40,6 +40,8 @@ import collections
 from pathlib import Path
 
 import pytest
+
+from assurance.common.homes import TOOLING
 
 pytestmark = pytest.mark.class_a
 
@@ -90,7 +92,7 @@ REACHED_ELSEWHERE = {
     # first version of this row had exactly that.
     "sessions", "revoke_sessions",
     # P13's four. Registered the same way, and with a BROWSER caller too --
-    # the cover and commission panels in `web/app.js`. The note above about
+    # the cover and commission panels in `frontend/app.js`. The note above about
     # `search` applies here in reverse: these have distinctive names, so the
     # sweep sees them as dead and the declaration is what tells it otherwise.
     "matter_cover", "get_commission", "set_commission", "concede",
@@ -106,7 +108,7 @@ REACHED_ELSEWHERE = {
     # P18's two, registered the same way, and both with a BROWSER caller: the
     # Case file pane's Correct control posts the correction and the pane reads
     # the ledger. The sweep sees neither call because both are template
-    # literals in `web/app.js`, which is the same blindness as `sessions`.
+    # literals in `frontend/app.js`, which is the same blindness as `sessions`.
     "correct_fact", "get_dependencies",
     # P21's five, registered the same way, each with a BROWSER caller on the
     # search pane (`runResearchRound`, `expandCase`, `attachParagraph`).
@@ -122,7 +124,7 @@ REACHED_ELSEWHERE = {
     # (mark a need unavailable; resume it). Same template-literal blindness.
     "mark_need_unavailable", "resume_need",
     # `@implements` markers: their whole purpose is to be SCANNED by
-    # tools/trace.py rather than called.
+    # assurance/gate/trace.py rather than called.
     "_implements_c4",
     # dataclass and Protocol machinery.
     "__post_init__", "decorate",
@@ -130,10 +132,10 @@ REACHED_ELSEWHERE = {
 
 
 def _defined() -> dict[str, tuple[str, int]]:
-    """Every function and method defined under `nm/`, with where it lives."""
+    """Every function and method defined under `backend/nm/`, with where it lives."""
     out: dict[str, tuple[str, int]] = {}
     protocols: set[str] = set()
-    for f in sorted((ROOT / "nm").rglob("*.py")):
+    for f in sorted((ROOT / "backend" / "nm").rglob("*.py")):
         if "__pycache__" in f.parts:
             continue
         tree = ast.parse(f.read_text(encoding="utf8"))
@@ -155,7 +157,7 @@ def _defined() -> dict[str, tuple[str, int]]:
 def _referenced() -> collections.Counter:
     """Every name used anywhere in the repository's Python."""
     used: collections.Counter = collections.Counter()
-    for top in ("nm", "tests", "tools"):
+    for top in ("backend", "tests", *TOOLING):
         for f in (ROOT / top).rglob("*.py"):
             if "__pycache__" in f.parts:
                 continue
@@ -186,7 +188,7 @@ def test_no_function_in_the_product_is_defined_and_never_reached():
             if name not in REACHED_ELSEWHERE and used[name] == 0]
 
     assert not dead, (
-        "these are defined in nm/ and referenced nowhere:\n  "
+        "these are defined in backend/nm/ and referenced nowhere:\n  "
         + "\n  ".join(dead)
         + "\n\nEither give it a caller, delete it, or add it to "
           "REACHED_ELSEWHERE with the reason a scan cannot see the call. A "

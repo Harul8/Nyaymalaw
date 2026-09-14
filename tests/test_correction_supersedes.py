@@ -36,11 +36,11 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-
 from nm.core import chronology
 from nm.core.turn import TurnInput
 from nm.domain.matter import Fact, Provenance
 from nm.domain.quotable import Quotable
+
 from tests.test_turn_contract import briefed, build
 
 pytestmark = pytest.mark.class_a
@@ -255,6 +255,7 @@ def test_a_missed_correction_becomes_a_blocking_question(tmp_path):
     from nm.adapters.model.scripted import ScriptedModelAdapter
     from nm.adapters.store.file_store import FileMatterStore
     from nm.core.turn import TurnEngine
+
     from tests.test_turn_contract import KEY, _Evidence, _model_config
 
     class _NeverCorrects(ScriptedModelAdapter):

@@ -14,7 +14,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from nm.knowledge.artefact import ArtefactIdentity, ArtefactRefused
 
 pytestmark = pytest.mark.class_a

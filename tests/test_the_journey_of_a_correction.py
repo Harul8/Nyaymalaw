@@ -54,7 +54,9 @@ def journey(tmp_path_factory):
     import sys
 
     sys.path.insert(0, str(ROOT))
-    from tools.served import PASSWORD, running
+
+    sys.path.insert(0, str(ROOT / "backend"))
+    from assurance.journeys.served import PASSWORD, running
 
     root = tmp_path_factory.mktemp("journey-correction")
     with running(root) as (box, base):

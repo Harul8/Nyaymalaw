@@ -41,7 +41,6 @@ citation.
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.citation import cases_named, provisions_cited
 from nm.domain.gates import GATES
 from nm.domain.traceability import refuses

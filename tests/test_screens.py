@@ -9,7 +9,6 @@ found"*. One defect, five faces.
 from __future__ import annotations
 
 import pytest
-
 from nm.core.intake import (
     Confirmed,
     DocumentFact,

@@ -28,7 +28,7 @@ exactly what BK-30 was opened to produce.
 
 WHY THE SERVER RUNS IN THIS PROCESS
 -------------------------------------
-`tools/served.running` starts the real composition root on a real port in a
+`assurance/journeys/served.running` starts the real composition root on a real port in a
 thread, so the suite holds the same store the browser is writing to. A
 subprocess would leave every phase asserting on what the screen said, and a
 product that renders a correct answer and persists nothing would pass its own
@@ -77,7 +77,9 @@ def journey(tmp_path_factory):
     import sys
 
     sys.path.insert(0, str(ROOT))
-    from tools.served import PASSWORD, running
+
+    sys.path.insert(0, str(ROOT / "backend"))
+    from assurance.journeys.served import PASSWORD, running
 
     root = tmp_path_factory.mktemp("journey")
     with running(root) as (box, base):
@@ -296,7 +298,7 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
         page, journey, width, height):
     """THE COUNTEREXAMPLE BK-32 IS OPEN FOR, reproduced rather than described.
 
-    `web/app.css` line 308: `@media (max-width: 820px) { .rail {display:none} }`
+    `frontend/app.css` line 308: `@media (max-width: 820px) { .rail {display:none} }`
     The rail IS the matter navigator, and below 820px there is no other way to
     reach the list -- `#back` returns to it, but only from inside a matter.
 
@@ -876,7 +878,7 @@ def test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead(
     # is open for lives in what the page does when it presents a token the
     # server no longer honours.
     #
-    # `tools/served.py` runs the server in a THREAD and hands the harness the
+    # `assurance/journeys/served.py` runs the server in a THREAD and hands the harness the
     # same `Served`, explicitly so the suite can reach the store the browser
     # is talking to. `except_token=""` keeps nothing, so this session goes
     # too -- which the `/api/sessions/revoke` route deliberately cannot do.

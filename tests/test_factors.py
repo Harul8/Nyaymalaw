@@ -23,7 +23,6 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.core import factors
 from nm.core.limitation import FactorKind
 from nm.domain.matter import Fact, Provenance
@@ -253,7 +252,7 @@ def test_the_turn_fetches_exactly_the_sections_this_read_needs():
     """THE SECOND COPY, found by the advocate asking why two of every three
     evidence rounds went to the same two sections.
 
-    `nm/core/turn.py` carried the literal `("18", "19")` while `SECTION_FOR`
+    `backend/nm/core/turn.py` carried the literal `("18", "19")` while `SECTION_FOR`
     here held the same numbers. The failure that sets up is silent: add a
     third kind to `READS`, and the turn goes on fetching two sections,
     `provisions.get(SECTION_FOR[kind])` returns None, and the new factor is

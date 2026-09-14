@@ -20,14 +20,14 @@ Each has a named refusal here rather than a comment somewhere.
 
 WHAT IS DRIVEN RATHER THAN REBUILT
 ------------------------------------
-`nm/domain/egress.py` already owns region, purpose, processor and sink policy,
+`backend/nm/domain/egress.py` already owns region, purpose, processor and sink policy,
 and the inventory it enforces is the REAL `docs/blueprint/processors.yaml`
-read through `nm/bootstrap/egress_policy.py` -- a synthetic policy would prove
-that the checker compiles. `nm/domain/media_policy.py` owns the prohibited-
-processing contract. `nm/adapters/store/sealing.py` owns matter-scoped key
-derivation and `nm/edge/uploads.py` owns the served ownership check.
-`nm/domain/retention.py` owns what makes a deletion claim false, and
-`nm/domain/metrics.py` owns which fields reach a plaintext file. None of them
+read through `backend/nm/bootstrap/egress_policy.py` -- a synthetic policy would prove
+that the checker compiles. `backend/nm/domain/media_policy.py` owns the prohibited-
+processing contract. `backend/nm/adapters/store/sealing.py` owns matter-scoped key
+derivation and `backend/nm/edge/uploads.py` owns the served ownership check.
+`backend/nm/domain/retention.py` owns what makes a deletion claim false, and
+`backend/nm/domain/metrics.py` owns which fields reach a plaintext file. None of them
 is reimplemented, because a second copy of "may this leave the country" is one
 that will disagree.
 
@@ -44,7 +44,6 @@ import json
 import pathlib
 
 import pytest
-
 from nm.domain.deployment import (
     POPULATIONS,
     AccessRequest,

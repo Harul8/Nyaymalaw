@@ -132,7 +132,7 @@ def test_registration_does_not_promise_a_firm_wide_conflict_registry():
     """
     import pathlib
     html = (pathlib.Path(__file__).resolve().parents[1]
-            / "web" / "index.html").read_text(encoding="utf-8")
+            / "frontend" / "index.html").read_text(encoding="utf-8")
 
     for claim in ("registry governs", "conflicts registry is scoped",
                   "registry governs the session"):

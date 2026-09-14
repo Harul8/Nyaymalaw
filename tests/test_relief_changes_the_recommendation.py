@@ -34,7 +34,6 @@ import re
 from datetime import date
 
 import pytest
-
 from nm.adapters.model.scripted import SCRIPTED_READS, ScriptedModelAdapter
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core import consistency
@@ -42,6 +41,7 @@ from nm.core import relief as relief_r
 from nm.core.premise import Basis
 from nm.core.turn import TurnEngine, TurnInput
 from nm.domain.answer import ElementKind
+
 from tests.test_factors_on_a_served_turn import _Corpus
 from tests.test_turn_contract import KEY, _model_config, briefed
 
@@ -266,7 +266,7 @@ def test_a_planted_step_pursuing_the_defeated_relief_is_blocked_for_the_relief_r
 def _client(tmp_path):
     from fastapi.testclient import TestClient
 
-    from tools.served import PASSWORD, served
+    from assurance.journeys.served import PASSWORD, served
 
     box = served(tmp_path / "store")
     advocate = box.enrol("adv_relief")

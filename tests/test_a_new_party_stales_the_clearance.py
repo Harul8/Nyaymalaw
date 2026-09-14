@@ -27,7 +27,6 @@ worse than no assurance, which is what `Screen.covers` was built to prevent.
 from __future__ import annotations
 
 import pytest
-
 from nm.core.screens import Screen, ScreenKind, ScreenState
 
 pytestmark = pytest.mark.class_a

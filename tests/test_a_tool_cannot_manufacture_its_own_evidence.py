@@ -3,7 +3,7 @@ BK-21-AC3, BK-42-AC1/AC9, BK-81-AC2, BK-85-AC5, BK-88-AC3.
 
 WHAT THIS DEFENDS
 -------------------
-Twenty-two criteria carry a row no test can close, so `tools/measure.py` gives
+Twenty-two criteria carry a row no test can close, so `pipeline/quality/measure.py` gives
 each one a command. That is useful and it is also the most dangerous thing in
 the repository: the outstanding rows are exactly the ones that say this build
 is not releasable, and a command that writes them is a command that can make
@@ -30,7 +30,6 @@ import pathlib
 from datetime import datetime, timedelta, timezone
 
 import pytest
-
 from nm.domain.deployment import (
     STRUCTURED_LEVELS,
     Candidate,
@@ -151,7 +150,7 @@ def test_every_field_of_a_record_is_required():
 # ============ 3. the tool itself refuses from here =========================
 
 def _run(*argv) -> int:
-    from tools.measure import main
+    from pipeline.quality.measure import main
 
     return main(list(argv))
 
@@ -163,7 +162,7 @@ def _run(*argv) -> int:
 def test_the_command_only_prepares_a_protocol_for_any_typed_environment(
         monkeypatch, tmp_path, capsys, environment):
     """No vocabulary guess turns a command-line label into deployment proof."""
-    from tools import measure
+    from pipeline.quality import measure
 
     evidence, packs = tmp_path / "evidence", tmp_path / "packs"
     monkeypatch.setattr(measure, "EVIDENCE", evidence)
@@ -189,7 +188,7 @@ def _sealed(monkeypatch, tmp_path, **env):
     """
     import os
 
-    from tools import measure
+    from pipeline.quality import measure
 
     monkeypatch.setattr(measure, "load_dotenv", lambda *a, **k: None,
                         raising=False)
@@ -256,7 +255,7 @@ def test_the_seal_command_never_puts_a_value_in_its_record():
     """The method line names the comparison, never the thing compared."""
     import inspect
 
-    from tools import measure
+    from pipeline.quality import measure
 
     source = inspect.getsource(measure.seal)
     assert "shares_value_with" in source
@@ -282,7 +281,7 @@ def test_the_review_pack_carries_the_declared_protocol(tmp_path, capsys):
 
 
 def test_an_incomplete_review_is_refused(monkeypatch, tmp_path, capsys):
-    from tools import measure
+    from pipeline.quality import measure
 
     monkeypatch.setattr(measure, "EVIDENCE", tmp_path / "evidence")
     signed = tmp_path / "signed.json"
@@ -299,7 +298,7 @@ def test_an_incomplete_review_is_refused(monkeypatch, tmp_path, capsys):
 
 def test_a_review_that_decided_against_is_not_recorded_as_a_pass(
         monkeypatch, tmp_path, capsys):
-    from tools import measure
+    from pipeline.quality import measure
 
     monkeypatch.setattr(measure, "EVIDENCE", tmp_path / "evidence")
     protocol = next(
@@ -320,7 +319,7 @@ def test_a_review_that_decided_against_is_not_recorded_as_a_pass(
 def test_a_complete_looking_unsigned_review_cannot_be_promoted(
         monkeypatch, tmp_path, capsys):
     """Changing the actor's name is not independence and JSON is not a signature."""
-    from tools import measure
+    from pipeline.quality import measure
 
     monkeypatch.setattr(measure, "EVIDENCE", tmp_path / "evidence")
     source = tmp_path / "unsigned.json"
@@ -348,8 +347,8 @@ def test_a_complete_looking_unsigned_review_cannot_be_promoted(
 
 def test_an_authenticated_exact_review_can_be_promoted(monkeypatch, tmp_path):
     """Positive control: the trust boundary is a gate, not a permanent wall."""
+    from pipeline.quality import measure
     from tests.p03_evidence_support import TrustHarness
-    from tools import measure
 
     evidence_dir, artifacts = tmp_path / "evidence", tmp_path / "artifacts"
     monkeypatch.setattr(measure, "EVIDENCE", evidence_dir)

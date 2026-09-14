@@ -7,8 +7,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from tools import browser_evidence, journey
-from tools.browser_evidence import (
+from assurance.journeys import browser_evidence, journey
+from assurance.journeys.browser_evidence import (
     SCHEMA,
     artifact_inventory,
     execution_identity,
@@ -193,7 +193,7 @@ def test_manifest_is_nonempty_unique_and_the_real_one_is_populated():
     assert any("empty" in problem for problem in manifest_problems(()))
     assert any("names a 2 times" in problem
                for problem in manifest_problems(("a", "b", "a")))
-    from tools.journey import EXPECTED as REAL
+    from assurance.journeys.journey import EXPECTED as REAL
     assert manifest_problems(REAL) == []
     assert len(REAL) == len(set(REAL)) >= 20
 
@@ -201,7 +201,7 @@ def test_manifest_is_nonempty_unique_and_the_real_one_is_populated():
 def test_the_runner_writes_every_reader_field():
     import inspect
 
-    from tools import journey
+    from assurance.journeys import journey
     written = inspect.getsource(journey.run)
     for field in browser_evidence.REQUIRED_FIELDS:
         assert f'"{field}"' in written, field

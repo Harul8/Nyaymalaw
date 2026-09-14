@@ -24,7 +24,6 @@ failure since it was written.
 from __future__ import annotations
 
 import pytest
-
 from nm.core.premise import (
     REQUIRED,
     SUFFICIENT,

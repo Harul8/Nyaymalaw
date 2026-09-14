@@ -44,7 +44,7 @@ def adapter():
     from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
     from nm.knowledge.manifest import Manifest
 
-    manifest = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    manifest = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     return CorpusEvidenceAdapter(CORPUS, manifest), manifest
 
 

@@ -6,7 +6,6 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-
 from nm.knowledge.provenance import Standing, Treatment
 from nm.knowledge.source_registry import (
     BindingState,

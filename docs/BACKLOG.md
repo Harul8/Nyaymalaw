@@ -2,6 +2,86 @@
 
 What is known, not done, and not yet a defect row. Opened 6 September 2026.
 
+## Repository reorganised into production homes — 14 September 2026
+
+**Outcome: the root now separates production from development.** `backend/`,
+`frontend/`, `pipeline/` and `assurance/` hold everything needed to run, prove,
+release or operate the product; `development_environment/` holds everything kept
+but not shipped. User-directed, with the layout decisions delegated to the
+recommendation in the reorganisation proposal. Branch `codex/repository-layout`
+from `s0-foundations` at `edd8d02`. No behaviour changed.
+
+**The rule.** A file is production if it is needed to run, prove, release or
+operate the product; everything else went to `development_environment/`, intact.
+Unreferenced did not mean development — `pipeline/quality/probe_gaps.py` is called
+by nothing and is required by CLAUDE.md. Old did not mean development —
+`docs/Nyaymalaw_Project_Plan.xlsx` is still a live reference with a generator wired
+into the gate, so it stayed in `docs/` (a correction to the proposal, which had
+moved it).
+
+**What moved (276 tracked files, all as renames so history follows them).**
+
+| From | To |
+|---|---|
+| `nm/` (164) | `backend/nm/` — the package name stays `nm`, so no import of `nm` changed |
+| `tools/` operator commands (5) | `backend/operations/` |
+| `web/` (7) | `frontend/` |
+| `tools/` acquisition, indexing and corpus-quality jobs (14), `spec/manifest.yaml` | `pipeline/acquisition/`, `pipeline/indexing/`, `pipeline/quality/`, `pipeline/manifest.yaml` |
+| `tools/` gate, journeys and control plane (36), `tools/hooks/` (4), `spec/` (23) | `assurance/gate/`, `assurance/journeys/`, `assurance/control_plane/`, `assurance/common/`, `assurance/hooks/`, `assurance/specification/` |
+| `docs/Archives/` (17), `docs/REVIEW_PLAN.md`, `docs/EXECUTION_READINESS.md`, `tools/find_goldens2.py`, `tools/graph_vectors.py`, `tools/crg_serve.ps1` | `development_environment/archives/`, `reviews/`, `one_off_tools/`, `developer_tooling/` |
+
+`docs/` and `tests/` stayed at the root: moving them would have rewritten roughly
+500 more references, including 370 in `status.yaml`, and broken the authority chain
+CLAUDE.md is written around, for no gain in separation.
+
+**One owner for the layout.** `assurance/common/homes.py` declares
+`BACKEND_PACKAGE`, `FRONTEND` and `TOOLING`. A dozen sweeps used to scan all tooling
+with `ROOT / "tools"`; after the move that population is five directories, and
+writing those into each sweep would give the layout a dozen owners whose
+populations shrink silently the day a home is added. Every sweep now reads
+`TOOLING` or `tooling_sources()`.
+
+**References rewritten by one map**: repository-rooted file paths, directory
+prefixes, 43 `from tools import …` and 190 `tools.<module>` imports, path joins,
+the repository-root depth in 47 moved modules, the JavaScript and PowerShell roots,
+hooks, CI, `.mcp.json`, `.claude/`, packaging and pytest's path. Two defects in the
+rewrite were caught and fixed before any commit: an off-by-one root depth that
+rewrote nothing, and two development folders named with hyphens, which made the
+rewritten imports invalid Python.
+
+**Deliberately not rewritten.** Captured evidence under `docs/backlog/evidence/`
+keeps its original bytes. Its node IDs and paths describe the run that actually
+happened — some IDs embed a path as a parameter — and rewriting them would make a
+record claim that nodes which never ran under those IDs had passed. That evidence
+is stale on the moved tree and is replaced only by real runs. Path mentions inside
+earlier dated narrative in this file were rewritten to the new layout so a reader
+can follow them; the pre-move layout is recoverable at `edd8d02`.
+
+**Kept equivalent, and measured.** Collected test population: 240 files and 4,326
+tests before and after. The lint population is pinned: the specification generators
+were never linted and are excluded by name in `pyproject.toml`, so the move neither
+added nor dropped a lint subject. `layercheck` OK across 163 modules; ruff clean;
+pylint E0601/E0606 clean; structural backlog lint 0; population debt unchanged at
+228 members in 29 rows; no broken relative Markdown link; workbook regenerated —
+30 sheets, `plan_view` 0 problems.
+
+**Why `nm` is not installed.** An editable install would make every worktree import
+the main checkout's code. Tests take `backend/` from `pyproject.toml`; scripts
+insert the root and `backend/` themselves; `start.ps1` sets `PYTHONPATH` for the
+server it starts; `.claude/launch.json` runs the module with the path set.
+
+**Hooks.** `core.hooksPath` is shared by every worktree, so it was not switched
+while unmerged checkouts still hold `tools/hooks`: this branch used a worktree-scoped
+`assurance/hooks`, and the shared setting changes when the layout reaches
+`s0-foundations`.
+
+**Unmerged branches this makes stale.** `codex/p18-p21-p22-dependency-and-premise`
+and `codex/p23-p47-p46-p24`. By the 14 September measurement their content is
+already carried into `a60326f`. Every other `codex/` branch is merged.
+
+**Rollback.** Revert the commit; git restores every rename and reference together.
+Then set `core.hooksPath` back to `tools/hooks`.
+
 ## Release readiness plan — 14 September 2026
 
 **Outcome: the route from the current state to a bounded pilot and a named
@@ -10,14 +90,14 @@ Nothing is released, approved or signed off by it.** Branch
 `codex/release-readiness-plan` from `s0-foundations` at `a60326f`.
 
 **Measured before planning, on `a60326f` (backlog lint 0, so bound evidence was
-current).** `tools/backlog.py obligations pilot`: 104 obligations, 37 PASS, 65
+current).** `assurance/control_plane/backlog.py obligations pilot`: 104 obligations, 37 PASS, 65
 NOT_RUN, 1 BLOCKED (BK-21-AC3), 1 STALE (BK-21-AC4). `obligations production`:
 105, 33 PASS, 70 NOT_RUN, same two. 28 of 105 items derive `done`; 7 carry a
 `SIGNED_OFF` sign-off. 221 of 489 required evidence rows have no entry. 17
 features are authored `implementation: none`, yet 81 routes are served —
 including drafting packages, hearing packs (witnesses, experts, in court), action
 proposals, handovers, service jobs, closure, reopening and events — found through
-the code-review graph and confirmed in `nm/edge/api.py`. 50 command contracts are
+the code-review graph and confirmed in `backend/nm/edge/api.py`. 50 command contracts are
 `design_only`; 14 are bound to a served route and 67 served routes have none. The
 release scorecard was last measured on 2026-08-31 against corpus
 `legacy-2026-08-27`; RG-21 (full golden suite, blocking) is NOT MEASURED. Release
@@ -29,9 +109,9 @@ or verification route.
 | Part | Where | Owns |
 |---|---|---|
 | The plan | `docs/backlog/plan.json` → `readiness_plan` | twelve stages, their journey steps, named work, release profile, dependencies, authority, actions, pilot and production exit bars, open decisions. **Intent only — no count, status or verdict** |
-| The rules | `tools/readiness_plan.py::problems`, called by `tools/backlog.py lint` | every journey step in exactly one stage; stages in journey order; known work, steps, profiles and dependencies; no cycle or self-dependency; authority from a closed vocabulary; non-empty actions and exit bars; a missing plan is a problem, not a pass |
-| The measurement | `tools/readiness_plan.py::derive`, called by `spec/plan/export_current_plan.py` | per step and per stage: criteria, recorded PASS, currently-bound PASS, open code/browser/counsel/model/production rows, absent rows, derived done, owning packets |
-| The view | `spec/plan/build_current_plan.mjs`, `tools/plan_view.py` | two sheets, *Readiness Plan* and *Readiness Gaps*, and a reconciliation row for each; the checker verifies every authored column against `plan.json` and `steps.yaml` and does not recompute derived columns, as for every other sheet |
+| The rules | `assurance/control_plane/readiness_plan.py::problems`, called by `assurance/control_plane/backlog.py lint` | every journey step in exactly one stage; stages in journey order; known work, steps, profiles and dependencies; no cycle or self-dependency; authority from a closed vocabulary; non-empty actions and exit bars; a missing plan is a problem, not a pass |
+| The measurement | `assurance/control_plane/readiness_plan.py::derive`, called by `assurance/specification/plan/export_current_plan.py` | per step and per stage: criteria, recorded PASS, currently-bound PASS, open code/browser/counsel/model/production rows, absent rows, derived done, owning packets |
+| The view | `assurance/specification/plan/build_current_plan.mjs`, `assurance/control_plane/plan_view.py` | two sheets, *Readiness Plan* and *Readiness Gaps*, and a reconciliation row for each; the checker verifies every authored column against `plan.json` and `steps.yaml` and does not recompute derived columns, as for every other sheet |
 
 **The twelve stages, in journey order.** RP-00 a truthful baseline · RP-A Arrive
 · RP-B Open a matter · RP-C Take the brief · RP-D Work the file · RP-E Advise ·
@@ -64,7 +144,7 @@ step.
 
 **Saved workbook.** Regenerated from sources with the restored
 `@oai/artifact-tool` 2.8.59: 30 sheets, 105 items, 47 steps, 0 formula errors,
-0 exact-ID mismatches. `tools/plan_view.py`: 30 sheets, 105 items, 225 criteria,
+0 exact-ID mismatches. `assurance/control_plane/plan_view.py`: 30 sheets, 105 items, 225 criteria,
 **0 problems**. Every reconciliation row is 0 difference, including Readiness
 stages 12/12 and step coverage 47/47. Previews inspected.
 
@@ -297,7 +377,7 @@ exception decision belong to the integration report linked above. Resolve its
 remaining failures before claiming full-gate sign-off; qualified review,
 database proof and live journey/release work keep their existing owners.
 
-**The defect register is `spec/plan/build_plan.py` and it stays the record of
+**The defect register is `assurance/specification/plan/build_plan.py` and it stays the record of
 things that BROKE.** This holds the other two kinds: work deliberately deferred
 with the reason, and findings that need a decision before they can become a
 fix. A row here is either closed by a defect row or by a decision recorded
@@ -318,7 +398,7 @@ found cannot answer it.
 
 ## Part 0 — The current control board
 
-**Generated by `python tools/backlog.py render`. Do not edit by hand.** Every count below was maintained manually once and every one of them was wrong: `Open — 13`, *sixteen phases*, *18 pass* against a suite that collects 24.
+**Generated by `python assurance/control_plane/backlog.py render`. Do not edit by hand.** Every count below was maintained manually once and every one of them was wrong: `Open — 13`, *sixteen phases*, *18 pass* against a suite that collects 24.
 
 This persisted view projects the authored registry contract. `backlog check` separately refuses stale or absent execution evidence before it can report success.
 
@@ -398,7 +478,7 @@ Derived gap state: IN_PROGRESS 13, PLANNED 1
 
 ### Deferred — review is not permission to build
 
-2 deferred row(s). Dates below are recorded obligations, not cached current verdicts. Run `python tools/backlog.py status` for DUE TODAY / OVERDUE against the current India calendar date.
+2 deferred row(s). Dates below are recorded obligations, not cached current verdicts. Run `python assurance/control_plane/backlog.py status` for DUE TODAY / OVERDUE against the current India calendar date.
 
 Missing or invalid dates/reasons fail lint. A due or overdue review requires recorded reassessment before reactivation; it does not authorise work or block unrelated work. Delivery stays deferred.
 
@@ -428,7 +508,7 @@ it.
 **The counts live in Part 0 and are generated.** They were a hand-maintained
 table here for one day, which is one day longer than any hand-maintained count
 in this repository has survived being correct. `docs/backlog/status.yaml` is
-the source; `python tools/backlog.py render` writes the board; the build fails
+the source; `python assurance/control_plane/backlog.py render` writes the board; the build fails
 if the two disagree.
 
 **The shape of it.** Arrive, Take the brief and Work the file are
@@ -492,10 +572,10 @@ and foundation closure does not claim an end-to-end module is complete.
 no `psycopg`, `psycopg2` or `asyncpg`; no `psql`, `initdb`, `pg_ctl` or
 `postgres` on PATH or on disk; no Docker or Podman; and the WSL2 Ubuntu distro
 has no postgres packages installed. A disposable local cluster therefore
-cannot be started without an installation step. Separately, `nm/ports/store.py`
+cannot be started without an installation step. Separately, `backend/nm/ports/store.py`
 has no operation or outbox concept at all, so AC1 is new contract surface and
 not an adapter swap. No job, lease or worker code exists for AC2. The only
-migration-shaped tool is `tools/rekey_matter_store.py`.
+migration-shaped tool is `backend/operations/rekey_matter_store.py`.
 
 *Bounded scope.* Build the operation/outbox contract and the PostgreSQL
 adapter behind the existing `StorePort`, with the integration suite written
@@ -550,9 +630,9 @@ shared junction target, build an index, make a model/network call, install the
 designed HTTP routes, publish a corpus or infer all-India coverage.
 
 **Frozen implementation files.** Existing owners remain
-`nm/knowledge/identity.py`, `nm/knowledge/manifest.py` and
-`tools/build_identity_index.py`. Additive owners are
-`nm/knowledge/source_registry.py` and `tools/inventory_legal_sources.py`.
+`backend/nm/knowledge/identity.py`, `backend/nm/knowledge/manifest.py` and
+`pipeline/indexing/build_identity_index.py`. Additive owners are
+`backend/nm/knowledge/source_registry.py` and `pipeline/acquisition/inventory_legal_sources.py`.
 Proof lives in `tests/test_legal_source_inventory.py` and
 `tests/test_source_registry.py`. Existing consumers of the manifest and case
 identity remain regression witnesses and are not rewritten.
@@ -574,7 +654,7 @@ output and separately implement immutable publication and activation.
 ### P19 scoped Build and Test record — 11 September 2026
 
 **Build result: BUILT for the bounded engineering contribution; BK-84-AC1
-remains OPEN.** `nm/knowledge/source_registry.py` now owns bounded inventory,
+remains OPEN.** `backend/nm/knowledge/source_registry.py` now owns bounded inventory,
 canonical source identity, byte-exact version identity, explicit alias and
 legacy-locator bindings, and a non-serving readiness projection. The CLI writes
 an inventory report atomically and refuses to put its output inside the source
@@ -626,10 +706,10 @@ pointer and verify the referenced manifest and bytes before use. They will
 observe either the previous complete snapshot or the next complete snapshot,
 never a candidate directory, half-written manifest or mixed generation.
 
-Implementation is confined to `nm/knowledge/artefact.py`,
-`nm/knowledge/manifest.py`, `nm/adapters/evidence/corpus.py`,
-`nm/adapters/search/authority.py` and the retrieval wiring in
-`nm/bootstrap/composition.py`, with additive P20 tests. The composition owner
+Implementation is confined to `backend/nm/knowledge/artefact.py`,
+`backend/nm/knowledge/manifest.py`, `backend/nm/adapters/evidence/corpus.py`,
+`backend/nm/adapters/search/authority.py` and the retrieval wiring in
+`backend/nm/bootstrap/composition.py`, with additive P20 tests. The composition owner
 was added during Build because safe constructors that no production path calls
 would reproduce the repository's previously measured “built but not served”
 failure. It does not scrape,
@@ -756,12 +836,12 @@ and foundation closure does not claim an end-to-end module is complete.
 **Stage record — Start READY, 11 September 2026.** Build OPEN, Test NOT_RUN, Sign-off NOT_RUN.
 
 *Measured baseline, read from the tree rather than recalled.* Seven sinks are
-declared in `nm/domain/egress.py`. Only three have a live destination: MODEL
+declared in `backend/nm/domain/egress.py`. Only three have a live destination: MODEL
 (`adapters/model/openai_adapter.py`, `scripted.py`), STORAGE
 (`adapters/store/file_store.py`, `directory.py`) and INDEX
 (`adapters/evidence/corpus.py`, `adapters/search/authority.py`,
 `knowledge/identity.py`). MEDIA exists as `domain/media.py` but is declared
-UNWIRED; BACKUP and SUPPORT have no implementation; `nm/obs/` contains only an
+UNWIRED; BACKUP and SUPPORT have no implementation; `backend/nm/obs/` contains only an
 empty `__init__.py`, so TELEMETRY has no destination either. MODEL is policed
 at the composition root. The other two live sinks are not.
 `adapters/store/envelope.py` is complete and imported by nothing, so every
@@ -814,7 +894,7 @@ quality/latency/economics. `modules.json` maps all 95 current work items, 44
 features and 47 steps to 13 primary modules. BK-81–BK-86 are the six new rows;
 none of the existing 89 rows or their wave assignments was deleted or moved.
 
-The new `tools/blueprint.py` read-only checker and Class-A tests validate
+The new `assurance/control_plane/blueprint.py` read-only checker and Class-A tests validate
 complete unique ownership, module dependencies, guide paths and work/step
 references. Fifteen deliberately planted failures are checked against the
 intended reason and must demonstrably mutate the baseline. The existing CI
@@ -886,7 +966,7 @@ not replaced with another competing build guide.
 
 **Scope.** Existing plan/PRD sources and generated reader views, relevant
 planning tools/tests, blueprint contracts, backlog and build playbooks. No
-`nm/` or `web/` implementation, corpus operations, processor purchases, private
+`backend/nm/` or `frontend/` implementation, corpus operations, processor purchases, private
 data processing, golden/e2e/model runs, application deployment or invented
 professional approval. Revert only this bounded patch if necessary, preserving
 the user's other changes. Ordinary Class-A planning checks are in scope.
@@ -915,7 +995,7 @@ An independent graph traversal found no dependency cycle or unresolved edge.
 Every one of the 44 PRD feature-contract tables is preserved; source capture and
 YAML match across 264 complete field comparisons. Existing feature implementation
 claims are retained as baseline claims, not certification of the new autonomous
-scope. No application `nm/` or `web/` changes, corpus operation or real-model run
+scope. No application `backend/nm/` or `frontend/` changes, corpus operation or real-model run
 was made. Review artifacts are under the task's `autonomy-amendment` output folder.
 
 **Remaining verification.** Exact final test counts and source fingerprints are
@@ -994,15 +1074,15 @@ hypotheses are labelled; a supported premise is rechecked on source/instruction/
 permission change before reliance). AC3 (served briefing) is P24; AC4 (counsel
 comparison) is P35.
 
-**Prerequisites verified.** P47 (`nm/core/delegation.py` admission + acceptance,
+**Prerequisites verified.** P47 (`backend/nm/core/delegation.py` admission + acceptance,
 built this session), P18 (currency/version invalidation), P21 (`SupportState` --
 semantic support is assessed, never proved by citation presence), P22 (the
 premise discipline: an inferred premise is a question, not a conclusion), P23
 (the relief position that reasoning feeds). The governing contract is
 `docs/blueprint/autonomy.json` (AUTO-01, AUTO-02).
 
-**Owners / boundary.** New: `nm/domain/lead.py` (EpistemicStatus, Action, Claim,
-StepProposal, Plan) and `nm/core/lead.py` (classify, assess_support, infer,
+**Owners / boundary.** New: `backend/nm/domain/lead.py` (EpistemicStatus, Action, Claim,
+StepProposal, Plan) and `backend/nm/core/lead.py` (classify, assess_support, infer,
 observe_source_change, recheck, propose, readiness, wants_specialist, dispatch,
 integrate_result). It reuses P21's SupportState concept, P18's version
 invalidation and P47's admission/acceptance -- `dispatch` and `integrate_result`
@@ -1097,17 +1177,17 @@ clean; cancellation/revocation/retries/restart cannot publish stale or duplicate
 effects). AC3 (drafter) and AC4 (family decision) are other packets and out of
 scope here.
 
-**Prerequisites verified.** P06 (`nm/domain/egress.py` processor/egress policy —
-`refuse` fails closed on an unapproved processor), P11 (`nm/domain/operation.py`
+**Prerequisites verified.** P06 (`backend/nm/domain/egress.py` processor/egress policy —
+`refuse` fails closed on an unapproved processor), P11 (`backend/nm/domain/operation.py`
 durable idempotent operations with the `UNKNOWN` reconcile state), P13
-(`nm/domain/commission.py`/`engagement.py` authored versioned commission with
-separate instructing/deciding parties), P17 (`nm/domain/matter.py` +
-`nm/domain/proof.py` the attributed file and canonical proposition) are present
+(`backend/nm/domain/commission.py`/`engagement.py` authored versioned commission with
+separate instructing/deciding parties), P17 (`backend/nm/domain/matter.py` +
+`backend/nm/domain/proof.py` the attributed file and canonical proposition) are present
 with real consumers. The governing design contract is
 `docs/blueprint/autonomy.json` (`proof_level: design_contract`).
 
-**Owners / boundary.** New: `nm/domain/delegation.py` (the task/result/mandate
-types) and `nm/core/delegation.py` (the admission boundary, the shared atomic
+**Owners / boundary.** New: `backend/nm/domain/delegation.py` (the task/result/mandate
+types) and `backend/nm/core/delegation.py` (the admission boundary, the shared atomic
 `Ledger`, and the one acceptance path). It EXTENDS rather than duplicates: the
 mandate's version check mirrors P18's correction versioning; idempotency mirrors
 `Operation`; the canonical writer is the existing version-checked store commit;
@@ -1194,7 +1274,7 @@ malformed and overdue deferral dates escaping lint, while missing reasons fail.
 
 **Scope and exclusions.** Files: `docs/blueprint/`, current backlog sources,
 relevant playbooks, planning tools/tests and the generated current workbook.
-No `nm/` or `web/` implementation, corpus migration, real media/model run,
+No `backend/nm/` or `frontend/` implementation, corpus migration, real media/model run,
 procurement, deployment or fabricated approval. Future product behaviour remains
 unbuilt/unproven on its owning criteria. P01/P02 synthetic work remains permitted;
 required approvals continue to gate their actual protected operations.
@@ -1290,7 +1370,7 @@ legal/security/usability populations and independent review records.
 synthetic specifications; zero specification problems. Saved workbook: 28 sheets,
 179 criteria, zero independent content/hash/formula discrepancies. All 95 opening
 items and wave assignments are preserved. Its eight new sheets are generated
-views, not new authorities. Full details: `docs/EXECUTION_READINESS.md`.
+views, not new authorities. Full details: `development_environment/reviews/EXECUTION_READINESS.md`.
 
 The final complete Class-A selection ran 11:26:16–11:29:34 UTC: **1,370 passed,
 3 failed, 1 skipped**, excluding aggregate aliases. **161/161 planning and
@@ -1376,8 +1456,8 @@ README and the authority chain now point to the live sources rather than the
 archived specification.
 
 The current workbook is `docs/Nyaymalaw_End_to_End_Project_Plan.xlsx`, generated
-by `spec/plan/build_current_plan.mjs`; regeneration is described in
-`spec/plan/README.md`. It preserves the original workbook unchanged and moves
+by `assurance/specification/plan/build_current_plan.mjs`; regeneration is described in
+`assurance/specification/plan/README.md`. It preserves the original workbook unchanged and moves
 its retained scenario/risk context into a tracked design catalogue. Current
 status is derived from the registry, never from historical spreadsheet status.
 
@@ -1441,7 +1521,7 @@ foundation; it cannot certify W2's end-to-end processing or production privacy.
 **Start decision: READY.** P03 runs in the isolated
 `codex/p03-evidence-assurance` worktree at `4ea7c29`. That base contains P01
 and its P02 ancestor. P19/P44 and the owner's P13–P17 application work remain
-separate lanes; this packet does not touch `nm/**` or `web/**`.
+separate lanes; this packet does not touch `backend/nm/**` or `frontend/**`.
 
 **Owned outcome.** Replace five permissive document checks with reusable,
 fail-closed mechanisms: authenticated structured evidence; complete browser-run
@@ -1504,7 +1584,7 @@ truthfully contain failures; only the exact named PASS row can satisfy its own
 browser evidence requirement.
 
 **Release obligations and approvals.** Release profiles now enumerate their
-exact criterion population independently of outcomes. `python tools/backlog.py
+exact criterion population independently of outcomes. `python assurance/control_plane/backlog.py
 obligations <profile>` reports current criterion and professional rows; missing,
 skipped, stale or merely authored/test-named PASS evidence stays visible and
 blocks. The approval resolver authenticates every competing record before
@@ -1680,7 +1760,7 @@ remain the next step of BK-77.
 ### Per-task gate population optimization — 11 September 2026
 
 **Start and Build: COMPLETE under BK-80-AC7's existing gate ownership.** A
-measured `tools/check.py` run executed the explicit Class-A population and then
+measured `assurance/gate/check.py` run executed the explicit Class-A population and then
 selected `not class_c and not class_d and not journey` for its ordinary local
 population. Because that second expression did not exclude `class_a`, every
 eligible Class-A node was collected and executed a second time. This was
@@ -1925,7 +2005,7 @@ enrol forever as any identity and then reach professional screens whose
 one-person release depends on the roster being controlled.
 
 **Invitation slice built and integration-tested, 10 September 2026.** The
-shared code and its environment switch are gone. `tools/invite.py` issues a
+shared code and its environment switch are gone. `backend/operations/invite.py` issues a
 48-hour, high-entropy invitation for one canonical email and server-owned
 workspace identity. Only the token fingerprint is retained, the invitation
 record is sealed with the directory cipher, and acceptance exclusively creates
@@ -2059,7 +2139,7 @@ reader order match visual order.
 **Dependencies:** BK-30. **Why it had not been done:** the only narrow-width rule removes
 the rail rather than transforming it.
 
-**Done, 8 September 2026.** `web/app.css` had `@media (max-width: 820px) { .rail
+**Done, 8 September 2026.** `frontend/app.css` had `@media (max-width: 820px) { .rail
 { display: none } }` and nothing else reached the matter list, so an advocate on
 a phone could work the matter they were in and get to no other one. A
 `#matters-toggle` in the masthead now opens the rail over the conversation at
@@ -2271,8 +2351,8 @@ implemented.
 **CONFIRMED OPEN 9 September 2026, verified in source.** Search still ranks
 paragraph rows directly — `select case_id, case_name, court, year, para_type,
 snippet(...), rank from paras ... order by rank`
-(`nm/adapters/search/authority.py:200`) — and the response carries no canonical
-citation, no bench and no attach-to-matter (`nm/edge/api.py:613`).
+(`backend/nm/adapters/search/authority.py:200`) — and the response carries no canonical
+citation, no bench and no attach-to-matter (`backend/nm/edge/api.py:613`).
 
 Worth naming: `CLAUDE.md` records that reporter citations are an exact key
 reaching **90.9%** of held judgments against 0.83% for case names. The corpus
@@ -2281,8 +2361,8 @@ holds the key this surface does not show.
 #### BK-43 — the overflow rule that switches off its own check — **OPEN · P0 · Phase A**
 Opened 9 September 2026, by static audit of `3e9772b`, verified in source.
 
-`web/app.css:359` carries `body, main { overflow-x: hidden; }`. At
-`web/app.css:877`, 518 lines below it, sits a comment explaining that this
+`frontend/app.css:359` carries `body, main { overflow-x: hidden; }`. At
+`frontend/app.css:877`, 518 lines below it, sits a comment explaining that this
 exact rule **was removed**:
 
 > *"It looked like belt-and-braces and it was the opposite: clipping the
@@ -2305,7 +2385,7 @@ journey width phase FAIL; the masthead wrap remains the actual fix.
 #### BK-44 — three closed rows can regress and the command stays green — **OPEN · P0 · Phase A**
 Opened 9 September 2026, verified in source.
 
-`tools/journey.py:118` returns `1 if failed else 0`, where `failed` excludes
+`assurance/journeys/journey.py:118` returns `1 if failed else 0`, where `failed` excludes
 `REPRODUCED`. That is deliberate and documented — a wave-0 suite that exits
 non-zero on every documented defect is a command nobody runs. It is not the
 defect.
@@ -2387,7 +2467,7 @@ second, switches to it, and reaches Search, History, identity and sign-out.
 #### BK-51 — the journey runner cannot tell a deleted phase from a passing one — **OPEN · P1 · Phase A**
 Opened 9 September 2026, verified in source.
 
-Four separate holes in `tools/journey.py`, all the same shape — the runner
+Four separate holes in `assurance/journeys/journey.py`, all the same shape — the runner
 believes whatever it is handed:
 
 - **No expected manifest.** Only zero parsed rows is rejected (`:79`). Deleting
@@ -2538,7 +2618,7 @@ credentials that were correct. No amount of retyping fixes that and nothing
 on the screen pointed anywhere. `start.ps1` now generates a key ONCE and
 reuses it, so an account survives a restart.
 
-**And the pair is built.** `nm/domain/attempts.py` holds the policy - times
+**And the pair is built.** `backend/nm/domain/attempts.py` holds the policy - times
 in, verdict out, no clock and no I/O of its own - and the door consults it
 BEFORE the password is derived, because the point of a limiter is that the
 expensive part stops happening.
@@ -2594,7 +2674,7 @@ a row anyone tracks.
 Closed 7 September 2026 as **B-132**. An enum now reaches the advocate
 only through a phrase it owns.
 
-`nm/domain/spoken.py` holds the mechanism: the phrases live ON the enum
+`backend/nm/domain/spoken.py` holds the mechanism: the phrases live ON the enum
 and `complete()` asserts every member has one AT IMPORT. No fallback to
 `.value` - a fallback is what makes a missing phrase invisible. Seven
 enums speak: `Holder`, `Form`, `Standard`, `IssueKind`, `Effect`, `Side`,
@@ -2727,7 +2807,7 @@ firm-wide check until a verified firm membership and a working registry exist.
 run in ADMIT-A, before any fact is admitted, so the conflict screen cannot be
 run against parties read out of a brief it has not admitted — and admitting
 the brief to read them is what B3 forbids. So the advocate is asked who is
-involved when they open the file, and `nm/core/parties.py` reads any further
+involved when they open the file, and `backend/nm/core/parties.py` reads any further
 party out of each brief for the NEXT turn's screen, which is what
 `Screen.stale_for` has always needed and never had.
 
@@ -2763,14 +2843,14 @@ it the material the screens exist to hold back.
 acceptance clauses are unmet.
 
 *Adding a party does not stale the clearance.* Screens run and substance is
-admitted at `nm/core/turn.py:674`; parties newly named in that brief are
+admitted at `backend/nm/core/turn.py:674`; parties newly named in that brief are
 extracted and persisted only at `:2069`. `_parties_of` documents the
 consequence in terms: *"a party named today is screened from tomorrow"*
 (`:1668`). The acceptance requires the opposite.
 
 *The emergency route does not exist.* `may_admit_substance` takes an
-`emergency` flag (`nm/core/screens.py:245`), and the single production call
-site never passes it (`nm/core/turn.py:1451`). `matter.emergency_because` has
+`emergency` flag (`backend/nm/core/screens.py:245`), and the single production call
+site never passes it (`backend/nm/core/turn.py:1451`). `matter.emergency_because` has
 read sites only and no production writer, and where it is read the emergency
 screen BLOCKS. The narrow recorded exception the row promises is unreachable.
 
@@ -2806,15 +2886,15 @@ the declaration somewhere B2 then has to move it from.
 Opened 9 September 2026, verified in source.
 
 `@implements("B1")`, `("B3")`, `("B4")` and `("B5")` appear at **13 sites**
-across `nm/core/route.py`, `nm/core/screens.py`, `nm/core/quarantine.py` and
-`nm/core/turn.py`. All six Phase B features are registered `status: decided`,
+across `backend/nm/core/route.py`, `backend/nm/core/screens.py`, `backend/nm/core/quarantine.py` and
+`backend/nm/core/turn.py`. All six Phase B features are registered `status: decided`,
 which the PRD's own vocabulary (§0.5) defines as the pre-build state.
 
-At opening, `tools/trace.py` checked one direction only: T3 failed a feature
+At opening, `assurance/gate/trace.py` checked one direction only: T3 failed a feature
 above `decided` with no implementing code. There was no reverse check, so code
 sitting under a `decided` feature passed silently.
 
-**Why it matters beyond tidiness.** `tools/slicegate.py` reads the same record,
+**Why it matters beyond tidiness.** `assurance/gate/slicegate.py` reads the same record,
 so S10 reports NOT DONE partly on features that are implemented, and the
 project's answer to *how far have we travelled* is wrong in the direction that
 hides work. That is the S3 shape pointed inward — an absent declaration read as
@@ -2835,7 +2915,7 @@ partial, not complete.
 Closed 7 September 2026 as **B-128**, and the defect was sharper than
 "unbuilt".
 
-`nm/core/screens.py` had been complete since slice 6 - four states, an express
+`backend/nm/core/screens.py` had been complete since slice 6 - four states, an express
 emergency exception, `unscreened` drawing its population from `ScreenKind` -
 and NOTHING CONSTRUCTED A SCREEN. That is B-079's shape and B-116's shape for
 the third time: a module that is right and has no production caller.
@@ -2870,7 +2950,7 @@ blank `firm_id` must read `NOT_ASSESSED` and never `CLEAR`.
 
 #### BK-8 — the phrase lists — **CLOSED as B-126**
 Not by trimming the lists. Both are gone, with both length rules, and
-`nm/core/route.py` reads the route. "bail" is one word and a case fact; "hi"
+`backend/nm/core/route.py` reads the route. "bail" is one word and a case fact; "hi"
 is one word and a greeting; a count cannot tell them apart.
 
 
@@ -2928,17 +3008,17 @@ interactive loop; model_eval/counsel_review only, not run here). And the task's
 named obligation: **close C1's fifth NEVER clause and remove TRACE-C1.**
 
 **Prerequisites verified.** P14 (the gap queue and question policy,
-`nm/core/gaps.py`), P17 (the attributed file), P21/P22 (source/premise
+`backend/nm/core/gaps.py`), P17 (the attributed file), P21/P22 (source/premise
 grounding), P46 (the adaptive lead, built this session -- its production
 consumer is this briefing).
 
-**Owners / boundary.** New: `nm/core/briefing.py` (readiness, refuse_completion,
-live_gaps, next_step, block). Extended: `nm/domain/matter.py`
+**Owners / boundary.** New: `backend/nm/core/briefing.py` (readiness, refuse_completion,
+live_gaps, next_step, block). Extended: `backend/nm/domain/matter.py`
 (`Matter.paused_needs` + `pause_need`/`resume_need`/`paused_need_texts`),
-`nm/core/turn.py` (`_ask` drops paused needs; the served turn carries the
-briefing block), `nm/edge/api.py` (the `briefing/unavailable` and
+`backend/nm/core/turn.py` (`_ask` drops paused needs; the served turn carries the
+briefing block), `backend/nm/edge/api.py` (the `briefing/unavailable` and
 `briefing/resume` routes; the `_Released` briefing field),
-`nm/edge/projections.py` (briefing on the cover), `web/index.html` + `web/app.js`
+`backend/nm/edge/projections.py` (briefing on the cover), `frontend/index.html` + `frontend/app.js`
 (the case-file briefing pane and the mark-unavailable/resume controls).
 
 **Mechanism.** Readiness is derived from the OPEN GAPS minus the paused needs --
@@ -3133,8 +3213,8 @@ implied.
 exists for can create two matters.
 
 Before the first response the browser holds no `matterId`, so a retry sends the
-same `turn_id` with `matter_id: null` (`web/app.js:836`). `_load_or_create`
-creates a fresh matter whenever `matter_id` is absent (`nm/core/turn.py:1716`),
+same `turn_id` with `matter_id: null` (`frontend/app.js:836`). `_load_or_create`
+creates a fresh matter whenever `matter_id` is absent (`backend/nm/core/turn.py:1716`),
 and the idempotency check runs AFTER it, scoped to the matter just created
 (`:611`) — which has applied nothing. A lost response to the opening turn
 duplicates the brief into a second matter.
@@ -3167,9 +3247,9 @@ matter that found it -- **one thread for three disputes**, labelled
 
 | | |
 |---|---|
-| `nm/core/dispute.py` | the read returns a COUNT. `verdict` is this message against the FILE; `described` is this message against ITSELF, and the second question has no file in it -- which is why turn 1 was never asked. Each item is checked against the advocate's own words and a failing item is DROPPED, because a thread gets created from these |
-| `nm/core/threading.py` | rules 4 and 5 open one thread per dispute. Labels come from the read, not from `_label`'s first line. Identifiers land on the first thread only -- a case number belongs to one dispute and nothing here knows which |
-| `nm/core/turn.py` | the read runs on turn 1; every thread lands on the matter. One extra model call, skipped only where a number of record decides the binding on a matter that already has threads |
+| `backend/nm/core/dispute.py` | the read returns a COUNT. `verdict` is this message against the FILE; `described` is this message against ITSELF, and the second question has no file in it -- which is why turn 1 was never asked. Each item is checked against the advocate's own words and a failing item is DROPPED, because a thread gets created from these |
+| `backend/nm/core/threading.py` | rules 4 and 5 open one thread per dispute. Labels come from the read, not from `_label`'s first line. Identifiers land on the first thread only -- a case number belongs to one dispute and nothing here knows which |
+| `backend/nm/core/turn.py` | the read runs on turn 1; every thread lands on the matter. One extra model call, skipped only where a number of record decides the binding on a matter that already has threads |
 | `G-SPLIT` | the disputes NOT advised on are named and marked NOT ASSESSED |
 
 `tests/test_one_message_many_disputes.py` states the rule and not the
@@ -3273,11 +3353,11 @@ code -- every derivation keyed on a single resolved cause -- rather than a
 patch at the limitation call site, which is the one place it happened to show.
 
 #### BK-14 - the date came from the server's clock - **FIXED**
-**MEASURED.** `nm/edge/api.py:389` takes `today=req.today or date.today()`,
-and **`web/app.js` never sends `today`** - grep returns nothing. So every
+**MEASURED.** `backend/nm/edge/api.py:389` takes `today=req.today or date.today()`,
+and **`frontend/app.js` never sends `today`** - grep returns nothing. So every
 served turn dates itself by whatever clock the server happens to keep.
 
-**Nothing in `nm/` mentions a timezone.** No `ZoneInfo`, no `Asia/Kolkata`,
+**Nothing in `backend/nm/` mentions a timezone.** No `ZoneInfo`, no `Asia/Kolkata`,
 no `tzinfo` outside `utcnow()` for credentials. The product is scoped to
 **Telangana**, which is UTC+5:30.
 
@@ -3399,11 +3479,11 @@ counterexamples run at the pure, engine, API and browser boundaries.
 
 **Done — the accrual, in two halves.** `Edge.accrues_on` carries the trigger
 from the Schedule's own third column for all seven curated Articles, and
-`accrual_trigger_for` in `nm/knowledge/resolution.py` is its single lookup —
+`accrual_trigger_for` in `backend/nm/knowledge/resolution.py` is its single lookup —
 the evidence adapter delegates to it rather than carrying a copy, and it
 crosses to the engine on the PORT (`EvidencePort.accrual_trigger`) rather than
 through `getattr`, which the dead-code sweep had correctly reported as
-unreachable. `nm/core/accrual.py` then reads WHICH dated entry satisfies the
+unreachable. `backend/nm/core/accrual.py` then reads WHICH dated entry satisfies the
 trigger, guarded by exact membership on the thread's own fact ids — a closed
 set generated per turn, so nothing is ranked. It answers the limb too, because
 Articles 14, 19 and 54 each have two and they give different dates.
@@ -3418,7 +3498,7 @@ same empty string as one saying *no curated trigger*, which is S1.
 
 **Done — the consistency gate.** `G-CONSISTENT`, response BLOCK, scope STEP,
 states `consistent | contradicted | repaired | not_verified`. It is NOT a
-phrase list: `nm/core/consistency.py` renders each of the turn's typed facts
+phrase list: `backend/nm/core/consistency.py` renders each of the turn's typed facts
 as one sentence with a stable id and asks which of THOSE the step contradicts,
 so the answer space is the turn's own computed facts and the guard is exact
 membership plus a quotation that must be in the step. A contradiction is
@@ -3449,7 +3529,7 @@ and `test_every_limitation_state_becomes_a_claim` is the pattern the proof
 claim would extend.
 
 **REOPENED 9 September 2026, verified in source.** The period still runs from
-an unchosen date. `nm/core/turn.py:2773` sets `accrual = dated[0]` and invokes
+an unchosen date. `backend/nm/core/turn.py:2773` sets `accrual = dated[0]` and invokes
 the accrual read only `if len(dated) > 1 and trigger`. A specific-performance
 file carrying the agreement date but neither a fixed performance date nor a
 refusal therefore runs Article 54 from the agreement, confidently, and emits no
@@ -3468,14 +3548,14 @@ code must stop disagreeing.
 #### BK-49 — a truncated model answer is never detected — **OPEN · P0 · Phase D**
 Opened 9 September 2026, verified in source.
 
-`nm/ports/model.py:62` states the rule for `ContextOverflow`:
+`backend/nm/ports/model.py:62` states the rule for `ContextOverflow`:
 
 > *"A typed error, NEVER a truncation. Silent truncation produces an answer
 > that looks complete and was reasoned from a fraction of the material."*
 
-`nm/adapters/model/openai_adapter.py:151` reads `finish_reason` and compares it
+`backend/nm/adapters/model/openai_adapter.py:151` reads `finish_reason` and compares it
 to exactly one value, `"content_filter"`. **`"length"` — the value that reports
-the answer was cut off at `max_tokens` — is never checked anywhere in `nm/` or
+the answer was cut off at `max_tokens` — is never checked anywhere in `backend/nm/` or
 `tests/`.** The field is present on the object already being inspected.
 
 With `ceiling.CAP = 4000` as a hard cliff, a schema'd read that truncates
@@ -3542,7 +3622,7 @@ rather than at the edge - a guard absent from where it is exercised.
 
 #### BK-1 — E-102 still fails, and the verdict has moved — **CLOSED**
 Fixed as **B-122** and judged: **E-102 PASS** on `mat_bf1b5f744dbc`, with the
-control failing first. `nm/domain/register.py` now holds one clause and every
+control failing first. `backend/nm/domain/register.py` now holds one clause and every
 prompt whose words reach the advocate carries it.
 
 The useful part was the verdict MOVING. After B-078's two structural fixes the
@@ -3589,7 +3669,7 @@ that makes a recommendation ADVICE rather than an output does not.
 Served text: *"... on thr_634d8e9685be — This damages the defence ..."* and,
 in History, *"TURN 1 · TURN_958000CAFFF4"*.
 
-`nm/core/turn.py:3081` renders `{e.from_thread}` and `{e.to_thread}` — both
+`backend/nm/core/turn.py:3081` renders `{e.from_thread}` and `{e.to_thread}` — both
 `ThreadId`s — straight into an advocate-facing element.
 
 **Why the sweep did not catch it.** `test_no_internal_id_reaches_the_advocate`
@@ -3670,7 +3750,7 @@ document contract.
 
 **Done, 8 September 2026. J-6 and J-7 close with it.**
 
-**The answer is filed, not sorted.** `nm/domain/brief.py` assigns every element
+**The answer is filed, not sorted.** `backend/nm/domain/brief.py` assigns every element
 to the question it answers — where this stands, time, what cuts against us,
 next step, what I still need, why, what it rests on — and the browser groups.
 A *sort* would need a rank per element, and a rank is a judgement about
@@ -3726,7 +3806,7 @@ still complete when opened. **18 pass, 0 reproduced, 0 unexplained.**
 **REOPENED 9 September 2026, verified in source.** The answer shape is
 right and the evidence for it is thin: the browser phase requires two of seven
 sections (BK-50). Separately, gate ids still reach advocate mode — a withheld
-turn prints `Withheld by G-*` at `web/app.js:446` — so J-7's *"no gate name in
+turn prints `Withheld by G-*` at `frontend/app.js:446` — so J-7's *"no gate name in
 advocate mode"* does not hold on the served path.
 
 #### BK-41 — latency, progress, cancellation and degraded-service behaviour — **PARTLY DONE · P1**
@@ -3790,7 +3870,7 @@ latency run. Those are the substance of the row and they are open.
 **CONFIRMED OPEN 9 September 2026, verified in source.** One of four
 acceptance clauses is met. There is no `text/event-stream`, no `EventSource`
 and no phase progress, so the advocate does not know whether work is queued,
-deriving, checking or committed; `p90` appears nowhere in `nm/` or `tools/`, so
+deriving, checking or committed; `p90` appears nowhere in `backend/nm/` or `tools/`, so
 no target is measured in CI.
 
 **And clause three does not hold.** *"cancel/reconnect cannot duplicate a
@@ -4110,12 +4190,12 @@ now passing. The draft is in memory for the reason recorded under BK-36.
 **REOPENED 9 September 2026, verified in source.** Pending intake survives a
 sign-out and reaches the next advocate.
 
-`clearPrivileged()` (`web/app.js:76`) clears the advocate, the matter, the
+`clearPrivileged()` (`frontend/app.js:76`) clears the advocate, the matter, the
 turns, six element bodies and the composer. It does not clear `state.intake`,
 which holds client, opponent and scope. `signOut()` calls it and shows the gate
 — there is no page reload — so the object survives in the live page, and the
 next brief sends it: `parties: (state.intake && state.intake.parties)`
-(`web/app.js:840`). A second advocate signing in on that page files their first
+(`frontend/app.js:840`). A second advocate signing in on that page files their first
 brief carrying the previous advocate's parties.
 
 *And the server-side proof is vacuous.* Phase 12 builds a bare
@@ -4144,14 +4224,14 @@ while running one hundred exact-byte restoration cycles successfully. The
 focused tests pass. A current complete Class-A evidence pack remains required
 before the row is signed off.
 
-`tools/check.py` failed once on
+`assurance/gate/check.py` failed once on
 
     OSError: [Errno 22] Invalid argument:
         'C:\Users\rahul\Nyaymalaw\spec\features.yaml'
     FAILED tests/test_tooling_bites.py::test_trace_rejects_a_tested_claim_whose_evals_never_ran
 
 **What is measured.** Several tests in `test_tooling_bites.py` plant a probe
-into `spec/features.yaml`, run a tool against it, and restore the file with
+into `assurance/specification/features.yaml`, run a tool against it, and restore the file with
 `shutil.copy2(backup, spec)` in a `finally`. The error names the DESTINATION,
 so it is the restore that failed and not the plant. The test passes in
 isolation and the full selection passed on the next run: **one failure in
@@ -4175,7 +4255,7 @@ failure that has been seen once and never reproduced proves nothing, so the
 row carries the re-measurement rather than just the change.
 
 **Not attributed to the control-plane work.** The new registry test reads
-`spec/features.yaml` and closes it immediately; that is a candidate and it is
+`assurance/specification/features.yaml` and closes it immediately; that is a candidate and it is
 not evidence. The honest position is that the cause is unestablished.
 
 ## BK-60 — the backlog control plane — **IN PROGRESS · P1**
@@ -4280,24 +4360,24 @@ versions auditable. This is W3 work.
 **Outcome: FIXED, and the placement was the defect rather than the call site.**
 Consolidating P19/P44/P20 into the shared tree at `a3d9c47` turned
 `test_only_one_module_in_the_product_removes_a_name` red on three `.unlink(`
-calls in `nm/knowledge/manifest.py` — two temporary-file removals in `finally`
+calls in `backend/nm/knowledge/manifest.py` — two temporary-file removals in `finally`
 blocks guarded by a check-then-act `exists()`, and one lock release catching
 only `FileNotFoundError`. A real Class-A failure on the integration commit, not
 a declared one: `known_failures.yaml` carries no pytest row.
 
-**Measured cause.** `tools/layercheck.py` permits `nm/knowledge/` to import only
+**Measured cause.** `assurance/gate/layercheck.py` permits `backend/nm/knowledge/` to import only
 `{knowledge, ports, domain}`. The owner, `discard`, sat in
-`nm/adapters/store/cleanup.py`, so the knowledge plane could not reach it —
+`backend/nm/adapters/store/cleanup.py`, so the knowledge plane could not reach it —
 P20's author could not have used the one mechanism had they gone looking. **An
 owner reachable from only part of the product is not an owner**, and the rule
 (*removing a name is one decision, and a failed removal never undoes an
 established claim*) is about the product, not about a store adapter.
 
-**Mechanism.** The owner moved to `nm/domain/names.py`, the one layer every
+**Mechanism.** The owner moved to `backend/nm/domain/names.py`, the one layer every
 layer may import and where `pathlib`/`shutil` are the standard library rather
 than the provider clients `layercheck` keeps out of the core.
-`nm/adapters/store/directory.py` and `file_store.py` import it from there; the
-four `nm/knowledge/manifest.py` sites go through it, which removes both TOCTOU
+`backend/nm/adapters/store/directory.py` and `file_store.py` import it from there; the
+four `backend/nm/knowledge/manifest.py` sites go through it, which removes both TOCTOU
 races and both bespoke failure policies. The lock release keeps its documented
 fail-closed behaviour — a lock that will not go stays, and the next publication
 is refused naming operator reconciliation — but can no longer replace the real
@@ -4323,9 +4403,9 @@ the declared 144.
 
 ### P18 Start record — 12 September 2026
 
-**Decision: READY.** P17 is present and merged — `nm/domain/authority.py`,
+**Decision: READY.** P17 is present and merged — `backend/nm/domain/authority.py`,
 `commission.py`, `emergency.py`, `media_policy.py`, `intake.py` and
-`nm/core/casefile.py` are all on `a3d9c47`, and
+`backend/nm/core/casefile.py` are all on `a3d9c47`, and
 `codex/p13-p17-commission-and-case-file` is an ancestor of HEAD. P20 and its
 P19/P44 ancestry are merged and its publication interfaces (`publish_corpus`,
 `get_corpus`, `get_source`, `record_corpus_dependency`, `withdraw_corpus`)
@@ -4335,10 +4415,10 @@ exist in code. Verified by inspection of the source, not from a delivery report.
 
 | Owner | Owns | Does not own |
 |---|---|---|
-| `nm/core/cascade.py` | what a derived value was and is between two turns; what advice rested on it; whether anybody said what needs undoing | why it moved, anything transitive, anything that survives the turn |
-| `nm/knowledge/manifest.py` | corpus source-version dependency (`record_corpus_dependency`) and withdrawal fan-out to `work_id` | anything inside a matter |
-| `nm/domain/matter.py` | `Fact.superseded_by` / `conflicts_with` — correction lineage on the fact itself | what was computed from that fact |
-| `nm/core/proof.py` | withdrawing a position whose material is gone | dates, deadlines and premises |
+| `backend/nm/core/cascade.py` | what a derived value was and is between two turns; what advice rested on it; whether anybody said what needs undoing | why it moved, anything transitive, anything that survives the turn |
+| `backend/nm/knowledge/manifest.py` | corpus source-version dependency (`record_corpus_dependency`) and withdrawal fan-out to `work_id` | anything inside a matter |
+| `backend/nm/domain/matter.py` | `Fact.superseded_by` / `conflicts_with` — correction lineage on the fact itself | what was computed from that fact |
+| `backend/nm/core/proof.py` | withdrawing a position whose material is gone | dates, deadlines and premises |
 
 **Missing behaviour.** Nothing records *this conclusion was computed from these
 exact input versions*. Three consequences follow and each is a served defect: a
@@ -4348,12 +4428,12 @@ as current indefinitely, because a snapshot comparison is a moment; and a
 restart loses even the announcement.
 
 **Boundary, and the extension registered before use.** P18's declared boundary
-is `nm/core/cascade.py`, `nm/core/turn.py`, `nm/domain/matter.py`,
+is `backend/nm/core/cascade.py`, `backend/nm/core/turn.py`, `backend/nm/domain/matter.py`,
 `tests/test_correction_supersedes.py`. Registered in
-`docs/blueprint/packets.json` on this commit: `nm/core/dependency.py` and
+`docs/blueprint/packets.json` on this commit: `backend/nm/core/dependency.py` and
 `tests/test_a_correction_reaches_exactly_what_it_touched.py`. The served
-integration will additionally need `nm/edge/api.py` and
-`nm/edge/projections.py`, which are **not yet registered and not yet edited**.
+integration will additionally need `backend/nm/edge/api.py` and
+`backend/nm/edge/projections.py`, which are **not yet registered and not yet edited**.
 
 **No second proposition store and no second cascade owner.** `cascade` keeps
 MOVEMENT; the new module owns CURRENCY. They meet at exactly one function,
@@ -4379,20 +4459,20 @@ fails 4 including the independence assertion; exhausted rework becoming
 **State on this commit: the mechanism exists and runs on no turn.** It is
 declared in `tests/test_reached_from_production.py::UNWIRED` with what will wire
 it, and named against A3 in `OWNER`. That declaration is a work queue, not an
-exemption: the day `nm/core/turn.py` imports it,
+exemption: the day `backend/nm/core/turn.py` imports it,
 `test_no_declaration_outlives_its_wiring` fails and the entry must go.
 **BK-65-AC1 remains `planned` with no evidence recorded, and this commit changes
 nothing about that.**
 
-**Rollback.** Delete `nm/core/dependency.py`, its test and the two boundary
-rows; nothing in `nm/` imports it. The name-removal owner move is not
+**Rollback.** Delete `backend/nm/core/dependency.py`, its test and the two boundary
+rows; nothing in `backend/nm/` imports it. The name-removal owner move is not
 rollback-coupled to P18 and would be kept — reverting it re-breaks the Class-A
 sweep. For a future rollback of the wired form, affected release paths pause and
 the dependency history is preserved; unknown dependencies are **not** marked
 current on the way out.
 
 **GATE NOT RUN ON THIS COMMIT — user-authorised bypass, 12 September 2026.**
-`tools/check.py` was started against the staged tree and stopped by the user
+`assurance/gate/check.py` was started against the staged tree and stopped by the user
 before it produced any output; the user then directed that the work be
 committed without waiting for it. The commit therefore uses `--no-verify` on
 that instruction. **No stamp was written and none was forged**:
@@ -4408,7 +4488,7 @@ and are the honest extent of this commit's evidence:
 | Stage | Result |
 |---|---|
 | `layercheck` | OK — 120 modules |
-| `export_spec --write` | regenerated; `spec/features.yaml` gained one line (`nm/core/dependency.py` under A3) |
+| `export_spec --write` | regenerated; `assurance/specification/features.yaml` gained one line (`backend/nm/core/dependency.py` under A3) |
 | `trace --skip-regen` | 3 failures, all three already declared in `known_failures.yaml` (TRACE-T3B, TRACE-T3C, TRACE-C1); the T3b fact string is byte-for-byte the declared one, so the population did not move |
 | `speccheck` | OK |
 | `ruff` | 144 — exactly the declared `RUFF-PLANNING-DEBT` count, and per-file attribution confirms none of the new or edited files contributes one |
@@ -4435,10 +4515,10 @@ contention.
 ### P18 Build record — wiring the ledger onto the served product — 12 September 2026
 
 **Starting point verified in code, not in a report.** `3586ea9` is one commit
-ahead of `a3d9c47` and its worktree is clean. `nm/core/dependency.py` exists
+ahead of `a3d9c47` and its worktree is clean. `backend/nm/core/dependency.py` exists
 with `observe`, `record`, `closure`, `invalidate`, `recomputed`, `due`, `claim`,
 `rework_failed`, `presentable`, `withheld`, `released`, `from_derived`,
-`report`, and `Ledger.as_dict`/`from_stored`. Nothing in `nm/` imports it —
+`report`, and `Ledger.as_dict`/`from_stored`. Nothing in `backend/nm/` imports it —
 `tests/test_reached_from_production.py::UNWIRED` says so, and that entry is
 the work queue this record drains.
 
@@ -4451,7 +4531,7 @@ derived from a derived value — the cover, the thread board and the deadline
 register go on serving the old figure with no mark on it. That is the served
 form of the defect the ledger was written for.
 
-**Producers of derived values, enumerated from `nm/core/turn.py`.**
+**Producers of derived values, enumerated from `backend/nm/core/turn.py`.**
 
 | Producer | Value | Rests on |
 |---|---|---|
@@ -4465,9 +4545,9 @@ withdraws when their material goes; they are not ledger nodes in this packet,
 and that is recorded rather than left implicit. Their currency is the next
 producer this table gains, and gaining one is a row here first.
 
-**Consumers, enumerated.** `nm/edge/projections.py::_thread_row`, `board_projection`,
+**Consumers, enumerated.** `backend/nm/edge/projections.py::_thread_row`, `board_projection`,
 `cover_projection`, `matter_list_projection` (the deadline status and the nearest
-deadline); `nm/edge/api.py::_register_of`; the transcript's `derived` rows; the
+deadline); `backend/nm/edge/api.py::_register_of`; the transcript's `derived` rows; the
 turn's own EMIT where an ACTION carries a by-when. Each of these presents a
 derived value, so each is where a stale one could appear current.
 
@@ -4487,8 +4567,8 @@ deadline is shown labelled stale and never counted as the nearest live obligatio
 `released` blocks the turn's EMIT from carrying a stale figure as current.
 
 **Boundary extension, registered in `docs/blueprint/packets.json` on this commit
-before any of these files was edited:** `nm/edge/api.py`, `nm/edge/projections.py`,
-`web/app.js`, `web/index.html`, `web/app.css`, `tests/test_reached_from_production.py`,
+before any of these files was edited:** `backend/nm/edge/api.py`, `backend/nm/edge/projections.py`,
+`frontend/app.js`, `frontend/index.html`, `frontend/app.css`, `tests/test_reached_from_production.py`,
 `tests/test_store_roundtrip.py`, `tests/test_a_correction_is_served_and_survives_restart.py`
 (new), `tests/test_the_journey_of_a_correction.py` (new, browser).
 
@@ -4561,7 +4641,7 @@ ledger correctly reopened the role — the test had picked the wrong entry, and
 `_dated_entry` now says which and why.
 
 **Two findings that predate P18, fixed on the way because the browser suite
-could not run without them.** `tools/served.py` borrowed `NM_MODEL_PROVIDER`
+could not run without them.** `assurance/journeys/served.py` borrowed `NM_MODEL_PROVIDER`
 from a developer `.env` — in a worktree with none, every journey phase errored
 at composition; the harness now defaults the synthetic profile itself. And
 journey phase 6b fails on the integrated tree `3586ea9` as it stood: the client
@@ -4573,7 +4653,7 @@ states the clause. A third, harness-only: `wait_for_function(expr, first, …)`
 passed the argument positionally and the installed Playwright refuses that;
 `arg=first`.
 
-**Observed and left standing, named.** In `nm/core/turn.py::_run`, the
+**Observed and left standing, named.** In `backend/nm/core/turn.py::_run`, the
 conclusions written to the thread (`if concluded:`) are those of the FIRST
 derivation; when B-104's late-citation round re-derives, the second
 derivation's `concluded` is never written back. The ledger is settled after the
@@ -4592,8 +4672,8 @@ node is added first.
 ### P21 Start record — separate discovery, identity and legal verification — 12 September 2026
 
 **Decision: READY, with P18 committed ahead of it.** P17 is on the tree
-(`nm/core/casefile.py`, the commission and authority policy) and P20's
-publication interfaces exist in `nm/knowledge/manifest.py` — `PublishedCorpus`,
+(`backend/nm/core/casefile.py`, the commission and authority policy) and P20's
+publication interfaces exist in `backend/nm/knowledge/manifest.py` — `PublishedCorpus`,
 `get_source`, `record_corpus_dependency(root, CorpusDependency(work_id,
 snapshot_id, source_versions, observed_at))`, `withdraw_corpus(...) →
 WithdrawalResult(affected_work, active_snapshot_id)`. The composition root binds
@@ -4605,15 +4685,15 @@ reading the code and by querying the live indexes, not from the delivery report.
 
 | Owner | Owns | Does not own |
 |---|---|---|
-| `nm/ports/search.py` | the PRODUCES contract of a corpus search: ranked paragraph hits, `Coverage`, `IndexIdentity`, `Origin.SEARCHED` on every hit | cases, identity, verification |
-| `nm/adapters/search/authority.py` | the FTS5 read over `paras` (`case_id, case_name, court, year, para_type, chunk_id, text`), court resolution through the closed `STORED_AS` vocabulary, the identity table | grouping by case, reading a paragraph back by its locator |
-| `nm/knowledge/identity.py::IdentityIndex` | `cases`, `citations(citation_key → case_id)`, `treatment(target_case_id)`, `addressable` | resolving a citation the advocate typed — no method takes raw text |
-| `tools/build_identity_index.py::citation_key` | the exact reporter key (`[^A-Z0-9]` stripped, upper-cased) | **a second copy would be** in whatever runtime module resolves a citation; `nm/domain/citation.py` is the only module permitted a citation pattern (CLAUDE.md §4) |
-| `nm/knowledge/citator.py` | the 4,894-entry citator, 0.84% of held judgments | treatment for the 99% it does not cover — `Treatment.not_checked` is the honest answer there |
-| `nm/knowledge/jurisdiction.py` | whether a court binds Telangana (`binding` is a RELATIONSHIP) | applicability to a matter's forum and governing date, which needs both |
-| `nm/edge/api.py::search` | `GET /api/search`: ranked paragraphs for a signed-in advocate, nothing matter-specific | a research record; attachment; scope |
-| `web/app.js::renderSearch` | one card per ranked paragraph with origin and rank band | grouping, expansion, attachment |
-| `nm/core/dependency.py` (P18) | AUTHORITY edges keyed `store:locator`, digested on the span | learning that a source was withdrawn — nothing calls `sync_inputs` with a withdrawal |
+| `backend/nm/ports/search.py` | the PRODUCES contract of a corpus search: ranked paragraph hits, `Coverage`, `IndexIdentity`, `Origin.SEARCHED` on every hit | cases, identity, verification |
+| `backend/nm/adapters/search/authority.py` | the FTS5 read over `paras` (`case_id, case_name, court, year, para_type, chunk_id, text`), court resolution through the closed `STORED_AS` vocabulary, the identity table | grouping by case, reading a paragraph back by its locator |
+| `backend/nm/knowledge/identity.py::IdentityIndex` | `cases`, `citations(citation_key → case_id)`, `treatment(target_case_id)`, `addressable` | resolving a citation the advocate typed — no method takes raw text |
+| `pipeline/indexing/build_identity_index.py::citation_key` | the exact reporter key (`[^A-Z0-9]` stripped, upper-cased) | **a second copy would be** in whatever runtime module resolves a citation; `backend/nm/domain/citation.py` is the only module permitted a citation pattern (CLAUDE.md §4) |
+| `backend/nm/knowledge/citator.py` | the 4,894-entry citator, 0.84% of held judgments | treatment for the 99% it does not cover — `Treatment.not_checked` is the honest answer there |
+| `backend/nm/knowledge/jurisdiction.py` | whether a court binds Telangana (`binding` is a RELATIONSHIP) | applicability to a matter's forum and governing date, which needs both |
+| `backend/nm/edge/api.py::search` | `GET /api/search`: ranked paragraphs for a signed-in advocate, nothing matter-specific | a research record; attachment; scope |
+| `frontend/app.js::renderSearch` | one card per ranked paragraph with origin and rank band | grouping, expansion, attachment |
+| `backend/nm/core/dependency.py` (P18) | AUTHORITY edges keyed `store:locator`, digested on the span | learning that a source was withdrawn — nothing calls `sync_inputs` with a withdrawal |
 
 **Measured on the live indexes, 12 September 2026.** `.nm/authority.db` holds
 451,548 of 1,015,780 paragraphs (`partial: no`, `attributable_kinds:
@@ -4658,15 +4738,15 @@ method performs it.
    name the matter it is for, be refused for a matter the advocate does not
    hold, and a readback or attachment must be refused across matters.
 
-**Mechanism, and why it is one.** `nm/core/research.py` owns the RECORD and the
+**Mechanism, and why it is one.** `backend/nm/core/research.py` owns the RECORD and the
 VERDICTS — `Research`, `Consulted`, `AdverseSearch`, `Attachment`, the four
 `Outcome`s, `classify`, `may_attach`, `clean_bill` — as pure functions over the
 port types, persisted on `Matter.research` through the same generic codec as the
-ledger. `nm/ports/search.py` gains `discover`, `expand`, `passage` and `resolve`
-so the edge asks the port and never SQLite. `nm/adapters/search/authority.py`
+ledger. `backend/nm/ports/search.py` gains `discover`, `expand`, `passage` and `resolve`
+so the edge asks the port and never SQLite. `backend/nm/adapters/search/authority.py`
 implements them over the one FTS table and the one identity index it already
-opens. `nm/domain/citation.py` gains `reporter_key`, and
-`tools/build_identity_index.py` imports it — one owner of the exact key, at
+opens. `backend/nm/domain/citation.py` gains `reporter_key`, and
+`pipeline/indexing/build_identity_index.py` imports it — one owner of the exact key, at
 build and at read. Attachment goes through P18's ledger: the attached passage
 becomes an AUTHORITY input, so a later withdrawal reaches every conclusion that
 cites it, and `record_corpus_dependency` is written when a published generation
@@ -4674,10 +4754,10 @@ is active. Nothing here ranks an Act, and nothing here turns a rank into an
 identity.
 
 **Boundary extension, registered in `docs/blueprint/packets.json` before any
-edit:** `nm/core/research.py` (new), `nm/domain/citation.py`, `nm/domain/matter.py`,
-`nm/knowledge/identity.py`, `nm/edge/api.py`, `nm/edge/projections.py`,
-`nm/core/dependency.py`, `tools/build_identity_index.py`, `tools/journey.py`,
-`web/app.js`, `web/index.html`, `web/app.css`,
+edit:** `backend/nm/core/research.py` (new), `backend/nm/domain/citation.py`, `backend/nm/domain/matter.py`,
+`backend/nm/knowledge/identity.py`, `backend/nm/edge/api.py`, `backend/nm/edge/projections.py`,
+`backend/nm/core/dependency.py`, `pipeline/indexing/build_identity_index.py`, `assurance/journeys/journey.py`,
+`frontend/app.js`, `frontend/index.html`, `frontend/app.css`,
 `tests/test_research_keeps_finding_apart_from_verification.py` (new),
 `tests/test_the_research_workflow_is_served.py` (new),
 `tests/test_the_journey_of_a_search.py` (new, browser),
@@ -4771,17 +4851,17 @@ say in their own text that they are not law.
 ### P22 Start record — assess legal premises before conditional arithmetic — 12 September 2026
 
 **Decision: READY.** P18 (the currency ledger) and P21 (verified sources) are
-committed. `nm/core/premise.py` existed and was declared UNWIRED; the accrual
-read (`nm/core/accrual.py`) and the cause-specific trigger (`Edge.accrues_on`)
+committed. `backend/nm/core/premise.py` existed and was declared UNWIRED; the accrual
+read (`backend/nm/core/accrual.py`) and the cause-specific trigger (`Edge.accrues_on`)
 were built by BK-35's first half. What was missing is the step BK-65-AC2 names:
 the arithmetic ran without ever treating *which provision governs*, *what
 starts the period* and *which forum binds* as things that could be wrong.
 
-**Existing owners.** `nm/core/limitation.py` owns the arithmetic and already
+**Existing owners.** `backend/nm/core/limitation.py` owns the arithmetic and already
 refuses to invent a PERIOD (`Period` verifies itself against the retrieved
-span). `nm/core/premise.py` owns the three premises, their four bases and the
-digest. `nm/core/turn.py::_limitation` chooses the accrual and computes.
-`nm/core/deadlines.py` owns the register. None owned the join: premises built
+span). `backend/nm/core/premise.py` owns the three premises, their four bases and the
+digest. `backend/nm/core/turn.py::_limitation` chooses the accrual and computes.
+`backend/nm/core/deadlines.py` owns the register. None owned the join: premises built
 from what the turn retrieved, assessed before the arithmetic, and carried onto
 the result.
 
@@ -4802,10 +4882,10 @@ cover carry the premise digest, so the two are checked to be one version
 (BK-35-AC2); a corrected trigger date supersedes the fact and P18 currency
 marks the deadline stale.
 
-**Boundary extension, registered before editing:** `nm/core/premise.py`,
-`nm/core/limitation.py`, `nm/core/deadlines.py`, `nm/domain/matter.py`,
-`nm/domain/gates.py`, `nm/core/turn.py`, `nm/edge/api.py`,
-`nm/edge/projections.py`, `web/app.js`, `web/index.html`, `web/app.css`, and
+**Boundary extension, registered before editing:** `backend/nm/core/premise.py`,
+`backend/nm/core/limitation.py`, `backend/nm/core/deadlines.py`, `backend/nm/domain/matter.py`,
+`backend/nm/domain/gates.py`, `backend/nm/core/turn.py`, `backend/nm/edge/api.py`,
+`backend/nm/edge/projections.py`, `frontend/app.js`, `frontend/index.html`, `frontend/app.css`, and
 the tests below.
 
 **Rollback.** `Matter.premises`/`premises_stated` and `Thread.premises` decode
@@ -4911,7 +4991,7 @@ control written after its subject is a control written around whatever the
 subject already does.
 
 **Legal reasoning never receives media.** It receives a `MediaAdmission`
-(`nm/domain/media.py`) — what was taken in, for what purpose, on whose
+(`backend/nm/domain/media.py`) — what was taken in, for what purpose, on whose
 authority, in what quarantine state, processed by whom and whether the bytes
 left the deployment, derived from which original, retained how long. The bytes
 stay behind the boundary.
@@ -4937,7 +5017,7 @@ vacuous: it does not, because the boundary is in the population. The exemption
 is one file, named, and the test asserts its length so a second cannot join it
 quietly.
 
-**No port was built.** `nm/ports/media.py` would have no implementer until
+**No port was built.** `backend/nm/ports/media.py` would have no implementer until
 BK-54, and the build guide refuses speculative abstraction. The typed
 admission is what BK-54 has to satisfy; the port is BK-54's to add when
 something implements it.
@@ -4971,10 +5051,10 @@ is built to the current contract (BK-70-AC1) and the difference is reported here
 rather than followed silently.
 
 **Owners / boundary (registered before edit in packets.json).** New:
-`nm/core/relief.py` — the remedy/enforceability model; the recommendation and
-its consistency check are the existing owners it extends — `nm/core/turn.py`
-(`_relief`, `_recommend`), `nm/core/consistency.py` (`claims_for` gains a relief
-claim, the ONE owner), `nm/domain/gates.py` (G-REMEDY), `nm/domain/matter.py`
+`backend/nm/core/relief.py` — the remedy/enforceability model; the recommendation and
+its consistency check are the existing owners it extends — `backend/nm/core/turn.py`
+(`_relief`, `_recommend`), `backend/nm/core/consistency.py` (`claims_for` gains a relief
+claim, the ONE owner), `backend/nm/domain/gates.py` (G-REMEDY), `backend/nm/domain/matter.py`
 (`Thread.objective`, `Thread.reliefs`). Feature realised: **E2** (compare viable
 routes by … enforceability). E3's proportionality tenet is honoured but left to
 its owner BK-55 — this does not claim to deliver it.
@@ -5293,8 +5373,8 @@ registry declares. Defect shape S3 on the control plane.
 
 | Half | Where | What it does |
 |---|---|---|
-| The loader materialises | `tools/backlog.py::materialise_absent_levels`, called by `load()` | every declared-but-unauthored level becomes an explicit `NOT_RUN` row marked `_materialised`; idempotent; never touches an authored row |
-| The check reads authored absence | `tools/backlog.py::population` | treats a `_materialised` row exactly as a missing key, so the loader cannot blind it (S11) |
+| The loader materialises | `assurance/control_plane/backlog.py::materialise_absent_levels`, called by `load()` | every declared-but-unauthored level becomes an explicit `NOT_RUN` row marked `_materialised`; idempotent; never touches an authored row |
+| The check reads authored absence | `assurance/control_plane/backlog.py::population` | treats a `_materialised` row exactly as a missing key, so the loader cannot blind it (S11) |
 
 Two rules, named once: `absent-required-level:<final packet>` (member
 `criterion/level`) and `implementation-none-with-passing-behaviour` (one member
@@ -5302,11 +5382,11 @@ per item; behavioural levels only — a counsel, model or production PASS can
 legitimately precede implementation).
 
 **Not folded into `lint`, and why.** `lint` answers *is this registry
-structurally consistent*, and `spec/plan/export_current_plan.py` refuses to
+structurally consistent*, and `assurance/specification/plan/export_current_plan.py` refuses to
 publish the workbook while `lint` reports anything. A 221-row completeness debt
 inside `lint` would forbid regenerating the plan for the whole length of the
 sweep that pays it down. Completeness has its own command
-(`python tools/backlog.py population`), its own gate step (`backlog
+(`python assurance/control_plane/backlog.py population`), its own gate step (`backlog
 population`, preflight, about a second) and its own declared debt.
 
 **The debt, frozen exactly.** `docs/backlog/known_failures.yaml` gains a
@@ -5351,7 +5431,7 @@ derived `done`. The 489 / 225 populations are unchanged. BK-75-AC3's promise —
 backlog lint rejects stale or absent execution evidence — now has absence
 counted rather than skipped; its recorded evidence is not re-stated here.
 
-**Consequence to know about.** Editing `tools/backlog.py` moves the verification
+**Consequence to know about.** Editing `assurance/control_plane/backlog.py` moves the verification
 fingerprint, so the Class-A and browser evidence bound to `6692cae5…` reads
 STALE: `backlog lint` reports 19 staleness problems on this tree (verified: the
 untouched `a60326f` lints 0). Restoring lint 0 needs the Class-A result
@@ -5365,7 +5445,7 @@ disappears, and derivation is unaffected either way.
 Opened 10 September 2026 from the real pre-commit output after `f0a869a`.
 
 **Observed on the real hook.** The hook updated the structural graph and then
-ran `python tools/graph_vectors.py --embed`. The reporter raised
+ran `python development_environment/developer_tooling/graph_vectors.py --embed`. The reporter raised
 `ModuleNotFoundError: No module named 'tools'` while importing its shared
 console guard. The hook is deliberately best effort for an offline semantic
 index, so the commit correctly continued, but the promised freshness report
@@ -5404,7 +5484,7 @@ on `codex/` branches on another machine where the hook was not installed. A
 refresh correct for one of the four ways a tree changes is bypassed by the
 other three, and the symptom is a plausible wrong answer (S3).
 
-Three changes, one mechanism. (1) `tools/hooks/refresh-graph` is now the ONE
+Three changes, one mechanism. (1) `assurance/hooks/refresh-graph` is now the ONE
 owner of "update the graph, then embed"; `pre-commit`, the new `post-merge`
 and the new `post-rewrite` all call it and none carries its own copy, which
 `tests/test_every_way_the_tree_changes_refreshes_the_index.py` enforces by
@@ -5452,11 +5532,11 @@ its own counterexample to this suite.
 **Done, 8 September 2026.** One command:
 
 ```
-python tools/journey.py
+python assurance/journeys/journey.py
 ```
 
 It starts the real composition root on a real port against a temporary
-encrypted store and a scripted provider (`tools/served.py`, which is now the
+encrypted store and a scripted provider (`assurance/journeys/served.py`, which is now the
 single owner of that composition — `tests/conftest.py`'s `client` fixture had
 been the only place that knew how), drives Chromium through sixteen phases,
 and prints a table with **PASS / REPRODUCED / FAILED / NOT RUN** plus a
@@ -5475,7 +5555,7 @@ marker. A defect recorded this way can be neither quietly fixed nor quietly
 forgotten.
 
 **WHAT IT FOUND ON ITS FIRST REAL RUN, and this is the argument for the whole
-row.** `web/app.css` declared `.gate` twice — once for a gate FIRING inside an
+row.** `frontend/app.css` declared `.gate` twice — once for a gate FIRING inside an
 answer, once for the full-screen sign-in overlay (`position: fixed; inset: 0;
 z-index: 100`). The second is later in the cascade, so it won. **Every
 disclosure in an answer became a full-screen opaque overlay.** An advocate who
@@ -5504,9 +5584,9 @@ rendered yet; `_tab` slept 2000ms instead of waiting for the pane. All three
 now wait for the thing they judge.
 
 **Not covered, named rather than implied.** The journey suite is excluded from
-`tools/check.py` (`-m "not class_d and not journey"`): it needs a browser
+`assurance/gate/check.py` (`-m "not class_d and not journey"`): it needs a browser
 binary `.[dev]` does not install and adds two minutes to a seven-minute gate.
-So a regression under `web/` does not fail the per-commit gate. It failed
+So a regression under `frontend/` does not fail the per-commit gate. It failed
 nothing before either — which is how `.gate` acquired two owners — but the
 exclusion is a decision and is written into `check.py` beside the command that
 does find it.
@@ -5614,7 +5694,7 @@ Measured from the code, 7 September 2026:
 
 | | |
 |---|---|
-| `max_tokens=` literals in `nm/core/` | **16**, every one hand-picked at its call site |
+| `max_tokens=` literals in `backend/nm/core/` | **16**, every one hand-picked at its call site |
 | schemas returning a verbatim span | **7** - cause, dispute, evidence_item, factors, issues, posture, threading |
 | of those, returning a LIST of spans | **5** - issues, factors, evidence items, inventory, salvage |
 
@@ -5637,24 +5717,24 @@ with one owner. Sizing that needs the population measured, which is this row.
 **Done, 8 September 2026.** Sixteen literals became one owner.
 
 `TurnEngine._read(prompt, schema, key)` is now the only route to a structured
-read, and the call site names the READ rather than a number. `nm/core/ceiling.py`
+read, and the call site names the READ rather than a number. `backend/nm/core/ceiling.py`
 decides: a read whose answer follows the size of its input gets a ceiling
 derived from what it was shown; one whose answer is a verdict gets a stated
 number, in one table, with the reason beside it.
 
 **Whether a read echoes is the read's own property**, declared in
-`nm/domain/reads.py` beside its entry — eleven do (`dates`, `dispute`,
+`backend/nm/domain/reads.py` beside its entry — eleven do (`dates`, `dispute`,
 `factors`, `inventory`, `issues`, `proof`, `adverse`, `attacks`, `exposure`,
 `salvage`, `parties`), eight do not. Nothing in the ceiling module decides it,
 because a table there would be a second place to record a property of the read.
 
 **Three defects the sweep produced, all worth keeping.**
 
-1. `nm/core/ceiling.py` imported the token estimator from
-   `nm/adapters/model/_budget.py` and `layercheck` refused it within the
+1. `backend/nm/core/ceiling.py` imported the token estimator from
+   `backend/nm/adapters/model/_budget.py` and `layercheck` refused it within the
    minute — `core` may not import `adapters`. Copying it would have been a
    second owner for *how big is this*, so it moved to
-   `nm/ports/model.py`: measuring a prompt is a property of the model
+   `backend/nm/ports/model.py`: measuring a prompt is a property of the model
    INTERFACE, and the adapter now re-exports rather than redefines.
 2. The helper was called `_ask` — **and `TurnEngine` already had one**, for
    batching questions. The later definition shadowed mine, every structured
@@ -5679,7 +5759,7 @@ input, so truncation is far less reachable, but "less reachable" is not
 **REOPENED 9 September 2026, verified in source.** Centralising the ceilings
 was real work and it holds. The safety question this row was opened for is not
 merely unmeasured, it is unhandled: `finish_reason == "length"` is never
-checked anywhere in `nm/`. See BK-49.
+checked anywhere in `backend/nm/`. See BK-49.
 
 ## BK-28 - runs and golden sets are not in the History tab, and from now on they are
 Opened 7 September 2026. **Standing instruction, recorded so it binds: from
@@ -5708,8 +5788,8 @@ eval artefact render as though it were a served turn would break exactly that,
 so the two axes stay separate surfaces inside one tab.
 
 **Naming, done today.** The tab was "The record" and is now "History", renamed
-through `web/index.html`, `web/app.js` and `web/app.css` -- token by token and
-not by a blanket rewrite, because `web/` uses the word "record" in four
+through `frontend/index.html`, `frontend/app.js` and `frontend/app.css` -- token by token and
+not by a blanket rewrite, because `frontend/` uses the word "record" in four
 unrelated senses ("Registration records the Bar Council number", "none
 recorded", "source size not recorded", and the design comment about what a
 record IS). `pane-record` is now `pane-history`, `loadRecordMatters` is
@@ -5801,14 +5881,14 @@ verifiable at all.** An unverifiable input deciding which statute is read is
 CLAUDE.md section 5 exactly: fuzzy may RANK, never IDENTIFY, and never an Act.
 
 **The gap does not close by declining this, and must not be recorded as if it
-had.** `spec/manifest.yaml` carries **22 Acts**. Those are the only Acts
+had.** `pipeline/manifest.yaml` carries **22 Acts**. Those are the only Acts
 keyword routing can offer, so an advocate whose matter turns on any of the
 other **1,636 held Acts** gets `ActBasis.NOT_RESOLVED` - not a wrong Act, but
 no candidate at all, and nothing to correct in four words.
 
 That is a real, measured hole with no owner. It stays open here, and the
 answer to it - when there is one - is exact and curated, the way
-`spec/manifest.yaml` already is, not a ranked read of prose nobody has
+`pipeline/manifest.yaml` already is, not a ranked read of prose nobody has
 checked. `total_sections` is not evidence for any coverage figure either;
 those stay in `docs/BASELINE.md`, measured, with the store named.
 
@@ -5831,11 +5911,11 @@ litigation hold required it to keep. Both are told to the advocate as facts and
 both are unrecoverable once acted on.
 
 **The existing mechanism, inspected before extending it (playbook §4).**
-`nm/domain/media.py` already owns the vocabulary: `Retention`
+`backend/nm/domain/media.py` already owns the vocabulary: `Retention`
 (`MATTER_LIFE` / `FIXED_PERIOD` / `DELETE_AFTER_DERIVATION` / `NOT_DECIDED`,
 whose third state is declared through `not_established()`), `retain_until`, and
 `derived_from` — *"a derivative that cannot name its original cannot be
-produced, checked or deleted with it."* `nm/edge/uploads.py` already refuses
+produced, checked or deleted with it."* `backend/nm/edge/uploads.py` already refuses
 original bytes under an undecided retention, refuses a fixed period with no
 future date, and then discloses the truth about the rest:
 
@@ -5848,13 +5928,13 @@ something else without lying. A second retention vocabulary beside
 that owner rather than restating it.
 
 **Owners / boundary (registered in packets.json before edit).** New:
-`nm/domain/retention.py` — holds, erasure requests, dispositions, tombstones and
+`backend/nm/domain/retention.py` — holds, erasure requests, dispositions, tombstones and
 copy lineage as explicit decisions, with the transition rule that refuses an
-inconsistent one; `nm/core/retention.py` — the decisions that act on them
+inconsistent one; `backend/nm/core/retention.py` — the decisions that act on them
 (place/release a hold, request and execute erasure, and the restore guard).
-Extended: `nm/domain/media.py` (lineage reaches the admission it describes),
-`nm/edge/uploads.py` (the served path and that disclosure), `nm/edge/api.py`
-(hold, erasure and restore routes), `nm/bootstrap/composition.py` (wiring).
+Extended: `backend/nm/domain/media.py` (lineage reaches the admission it describes),
+`backend/nm/edge/uploads.py` (the served path and that disclosure), `backend/nm/edge/api.py`
+(hold, erasure and restore routes), `backend/nm/bootstrap/composition.py` (wiring).
 
 **Three states that are not the same state, and the packet turns on it.**
 ARCHIVED, ACCESS_WITHDRAWN and ERASED are separate dispositions. Collapsing them
@@ -5874,7 +5954,7 @@ refuses erasure outright rather than deferring it silently.
 **PREREQUISITE GAP, RECORDED BEFORE DEPENDENT WORK (task §4).** P33's registered
 prerequisites are P07, P11 and P17. P07 (envelope encryption, consumed by
 `file_store`) and P17 (the living file, 8 call sites in `api.py`) have real
-served consumers. **P11 does not.** `nm/core/worker.py` is imported by tests
+served consumers. **P11 does not.** `backend/nm/core/worker.py` is imported by tests
 only, and `tests/test_reached_from_production.py` declares it UNWIRED with the
 reason: it needs P10's outbox, and P10 is unproven for want of a PostgreSQL
 server. Measured on this machine, 13 September 2026: no PostgreSQL service, port
@@ -5900,7 +5980,7 @@ criteria** and are not touched. No real data is deleted: proof runs against
 declared synthetic policies and fixtures, and no legally approved retention
 period is invented.
 
-**Rollback.** `nm/domain/retention.py` and `nm/core/retention.py` are new and
+**Rollback.** `backend/nm/domain/retention.py` and `backend/nm/core/retention.py` are new and
 additive; the lifecycle fields decode to their empties on records written before
 them, so an older matter reads as *no hold, no erasure requested* — which is its
 true state rather than a fabricated one. Reverting the two modules and the
@@ -5967,7 +6047,7 @@ BK-96-AC2 and BK-96-AC3; browser_journey NOT RUN.**
 `test_reached_from_production.UNTYPED` carried *"Recommendation — E2. BUILT AS
 A STRING. `turn._recommend` composes prose; the PRD declares a record. B-074 is
 what an untyped recommendation costs — nothing could ask it what it was based
-on, so it contradicted the finding printed beneath it."* `nm/domain/advice.py`
+on, so it contradicted the finding printed beneath it."* `backend/nm/domain/advice.py`
 now defines it **to the PRD's own field names** — `position`,
 `why_alternatives_lose[]`, `next_step{action, owner, by_when}`, `fallback`,
 `changing_fact` — and the declaration was deleted rather than reworded.
@@ -6001,7 +6081,7 @@ BK-55-AC3 and BK-96-AC1. Every `model_eval` and `counsel_review` is NOT RUN.**
 **Three things called a decision, kept apart.** `nm.domain.decision.Decision`
 is a settled question (which Act, which posture). Appendix E's `DecisionRecord`
 is the client's instruction with capacity and voluntariness — seventeen
-required fields, not implemented. `nm/domain/advice_decision.AdviceDecision` is
+required fields, not implemented. `backend/nm/domain/advice_decision.AdviceDecision` is
 what BK-55-AC3 asks for and nothing else. Naming the new one `DecisionRecord`
 would have let a five-field record read as a seventeen-field obligation met.
 
@@ -6031,7 +6111,7 @@ compared and never removes a route — E3's NEVER, the same rule
 `browser_journey` and `model_eval` are NOT RUN.**
 
 **No second freshness system, and it is asserted structurally.**
-`nm/core/reassessment.py` puts advice and decisions into P18's ledger as nodes
+`backend/nm/core/reassessment.py` puts advice and decisions into P18's ledger as nodes
 and answers one question P18 does not: a decision whose advice moved must not
 keep reading as current approval. `reopen` is a pass-through to
 `dependency.invalidate` — the first version computed the closure itself and
@@ -6064,7 +6144,7 @@ and it is wrong on exactly the files where being wrong costs most. A document
 filed against the wrong dispute does not look like an error; it looks like
 evidence.
 
-So there is no default, structurally: nothing in `nm/domain/binding.py` is ever
+So there is no default, structurally: nothing in `backend/nm/domain/binding.py` is ever
 given the list of threads, and a test asserts no function there takes
 `threads`, `matter`, `candidates` or `thread_ids`. `Basis.UNBOUND` is the
 honest state and `refuse_contribution` keeps the document's contents off the
@@ -6130,7 +6210,7 @@ core, wrong between the module and the screen:
    because it says which thread's work to reopen -- was appended to the form
    and then destroyed by the re-render in the same tick.
 3. **The page did not track the committed version.** Every other handler in
-   `web/app.js` updates `state.matterVersion` after a write and these did not,
+   `frontend/app.js` updates `state.matterVersion` after a write and these did not,
    so the next control posted a version the server had moved past and got a
    409. It only appeared when two controls were used in sequence, which is
    what an advocate does.
@@ -6169,19 +6249,19 @@ separate scoped approval and unknown-outcome reconciliation proof."* Fallback:
 files, sends or claims to.
 
 **Prerequisites, verified as consumers rather than labels.** P27
-(`nm/domain/options.py`, `nm/domain/advice_decision.py` — served through
+(`backend/nm/domain/options.py`, `backend/nm/domain/advice_decision.py` — served through
 `/api/comparisons` and `/api/advice-decisions`), P28
-(`nm/core/reassessment.py` — reached from the correction route, which returns
-`stale_decisions`), P47 (`nm/domain/delegation.py`, `nm/core/delegation.py` —
+(`backend/nm/core/reassessment.py` — reached from the correction route, which returns
+`stale_decisions`), P47 (`backend/nm/domain/delegation.py`, `backend/nm/core/delegation.py` —
 BK-92-AC3 is the draft specialist's own criterion and the mandate machinery is
 what bounds it). All three are in the base commit `c2b70e9`.
 
 **Owners / boundary (registered in packets.json before edit).** New:
-`nm/domain/drafting.py` — the `DrafterBrief` record, the provenance
-vocabulary and the readiness rule; `nm/core/drafting.py` — assembly from the
+`backend/nm/domain/drafting.py` — the `DrafterBrief` record, the provenance
+vocabulary and the readiness rule; `backend/nm/core/drafting.py` — assembly from the
 current advice, options, decisions and authorities, quotation verification and
-the export. Extended: `nm/edge/api.py` (the served package and export routes),
-`nm/domain/matter.py` (the package rows).
+the export. Extended: `backend/nm/edge/api.py` (the served package and export routes),
+`backend/nm/domain/matter.py` (the package rows).
 
 **Reused, not re-invented.** Quotation verification is
 `nm.core.research.quote_fidelity` — P21 already owns *is this the source's
@@ -6201,7 +6281,7 @@ an established fact is the document an advocate signs and then cannot support.
 | Criterion | Required evidence | Plan |
 |---|---|---|
 | BK-56-AC1 | integration_test, browser_journey, counsel_review | served route refuses without recorded role/scope/version/owner/deadline; browser phase; **counsel_review NOT RUN** |
-| BK-56-AC2 | integration_test, counsel_review | the thirteen declared fields, asserted from `spec/schemas.yaml` rather than a copy; **counsel_review NOT RUN** |
+| BK-56-AC2 | integration_test, counsel_review | the thirteen declared fields, asserted from `assurance/specification/schemas.yaml` rather than a copy; **counsel_review NOT RUN** |
 | BK-56-AC3 | integration_test, model_eval, counsel_review | every assertion and authority checked against the approved brief; marked blanks preserved; version changes exposed. **model_eval, counsel_review NOT RUN** |
 | BK-92-AC3 | integration_test, adversarial_test, browser_journey, counsel_review | source/locator/version/status per claim, absent fields visibly unresolved, **no dispatch authority**; **counsel_review NOT RUN** |
 
@@ -6231,10 +6311,10 @@ invisible afterwards.
 `handover_complete` and `handover_blockers`) and `ClosureRecord` (11,
 including `continuing_obligations` and `retention`). Neither was implemented;
 both are implemented here to the contract's own field names and asserted
-against `spec/schemas.yaml` rather than against a copy.
+against `assurance/specification/schemas.yaml` rather than against a copy.
 
-**Owners / boundary.** New: `nm/domain/handover.py`, `nm/domain/closure.py`,
-`nm/core/handover.py`. Extended: `nm/edge/api.py`, `nm/domain/matter.py`.
+**Owners / boundary.** New: `backend/nm/domain/handover.py`, `backend/nm/domain/closure.py`,
+`backend/nm/core/handover.py`. Extended: `backend/nm/edge/api.py`, `backend/nm/domain/matter.py`.
 
 **Reused.** Events go through P18's `dependency.invalidate` — which already
 keeps the prior value as a `Revision` and touches nothing outside the closure,
@@ -6304,12 +6384,12 @@ are produced by writing text about a person who has not spoken yet and the
 failure mode is not an error, it is a plausible paragraph. Neither type has a
 field an answer or a conclusion could be written into; that is the mechanism.
 `refuse_scripting` and `refuse_leading` are backstops over prose that arrived
-from a model, and `nm/core/proof.py` already argues why a text tripwire is
+from a model, and `backend/nm/core/proof.py` already argues why a text tripwire is
 never the mechanism.
 
 **The concession boundary is DERIVED and this packet declares no type for it.**
-`nm/domain/authority.py` owns `permits(actor, capacity, Act.CONCEDE)` and
-`nm/domain/commission.py` already keeps the instructing party and the deciding
+`backend/nm/domain/authority.py` owns `permits(actor, capacity, Act.CONCEDE)` and
+`backend/nm/domain/commission.py` already keeps the instructing party and the deciding
 party in two fields. A `ConcessionLimit` here would be a second owner of the
 one question that must have exactly one answer — and the advocate would have
 read whichever answer was more permissive. AN UNRECORDED LIMIT IS NOT AN
@@ -6317,7 +6397,7 @@ UNLIMITED ONE: where no ceiling is recorded, nothing is authorised.
 
 **Three things that never merge under time pressure** — verified material,
 uncertain analysis, proposed action. Three keys, and no function in
-`nm/core/hearing.py` concatenates them. The concession boundary travels with
+`backend/nm/core/hearing.py` concatenates them. The concession boundary travels with
 them, because a limit on another screen is a limit nobody reads at 10:29.
 
 **Unassessed is a value, not an absence.** Every section is P32's `Section`,
@@ -6374,7 +6454,7 @@ inside another screen is the reorientation cost BK-68 is about.
 hidden` on ANY inner container is ordinary, correct layout, and a primary
 control pushed outside one is invisible and unreachable while the document
 measures exactly its viewport — nothing scrolls sideways, the control is
-simply not there. `tools/layout.py` asks the geometric question instead: is
+simply not there. `assurance/gate/layout.py` asks the geometric question instead: is
 this control's rectangle inside every clipping rectangle between it and the
 viewport? It answers the same on a page that clips and a page that does not.
 
@@ -6387,14 +6467,14 @@ return leaves no row rather than a red one.
 
 **The identifier sweep's population was a fixture. J-5.** That is J-5's own
 complaint, and the fix is a static sweep over every advocate-facing renderer in
-`nm/`: a leak in a rarely exercised cross-thread section is in the population
+`backend/nm/`: a leak in a rarely exercised cross-thread section is in the population
 whether or not any conversation reaches it. It found four live leaks, including
 one written earlier in this same release. `nm.domain.spoken.dispute` is the one
 owner of how a thread is named to a person, and `Ruling.said()` is what an
 advocate-facing caller reaches for instead of the audit line.
 
 **Assumptions.** 390, 768 and 1280 are the supported widths, declared in
-`tools/layout.py` and read by both the browser suite and its own control.
+`assurance/gate/layout.py` and read by both the browser suite and its own control.
 Screen-reader conformance and whether the copy reads as counsel would write it
 are NOT established by this packet and cannot be: both need a person.
 
@@ -6480,9 +6560,9 @@ publication.
 capability that acts when nobody is watching, and each of its failures is
 silent.
 
-**PERMISSION TO READ IS NOT PERMISSION TO ACT.** `nm/domain/service.py` records
+**PERMISSION TO READ IS NOT PERMISSION TO ACT.** `backend/nm/domain/service.py` records
 the authority separately from the workspace membership that lets an advocate
-open the file and from `nm/domain/authority.py`'s answer about who may act on a
+open the file and from `backend/nm/domain/authority.py`'s answer about who may act on a
 turn. Folding them would make opening a file an instruction to monitor it. The
 record is versioned, and revoking it makes a new version rather than deleting
 one: work done under version 2 was authorised work.
@@ -6565,7 +6645,7 @@ every structured read passes through — so a read added next month is covered
 without its author knowing the rule exists, which is the only kind of coverage
 that lasts.
 
-**BK-29-AC1's mechanism already existed and is kept.** `nm/core/ceiling.py`
+**BK-29-AC1's mechanism already existed and is kept.** `backend/nm/core/ceiling.py`
 derives an echoing read's ceiling from what it was shown and states a fixed
 read's in one table; the tests here hold both ends of that and the floor and
 cap that bound it.
@@ -6617,7 +6697,7 @@ required output fields — and nothing runs it. That is the failure this
 repository opens by describing: *a hundred good rules with no runner, so they
 became aspirations. A rule you cannot run is not a requirement.*
 
-`nm/domain/review.py` is the runner, and it decides exactly one thing: whether
+`backend/nm/domain/review.py` is the runner, and it decides exactly one thing: whether
 a study is ADMISSIBLE. Whether the product is comprehensible is what a
 representative advocate is for, and nothing here claims otherwise.
 
@@ -6720,7 +6800,7 @@ existing plane, not replace it. What follows is the two that could not be
 proved, and one defect a fresh worktree exposed.
 
 **BK-44-AC1 — the mechanism existed and nothing could exercise it.**
-`tools/journey.py` already refused an undeclared reproduction and a
+`assurance/journeys/journey.py` already refused an undeclared reproduction and a
 declaration that had outlived its defect. The decision sat inside `run()`
 between a pytest subprocess and a print, so the only way to exercise *a closed
 scenario that starts reproducing must fail the command* was to break a browser
@@ -6731,7 +6811,7 @@ rather than deciding again — asserted structurally, because two answers to
 "was this a regression" is the second owner this build refuses.
 
 **It is a separate module and not a dataclass inside the runner**, because
-`tests/test_tooling_bites.py` loads `tools/journey.py` standalone through
+`tests/test_tooling_bites.py` loads `assurance/journeys/journey.py` standalone through
 `spec_from_file_location` without registering it in `sys.modules`, where
 `dataclasses` cannot resolve a string annotation and raises. Editing that
 working check to accommodate a new one would have been the wrong way round.
@@ -6771,7 +6851,7 @@ narrowed.
 
 **ENGINEERING COMPLETION OF THIS GATE IS NOT A RELEASE APPROVAL, and the gate
 is built so that nothing can confuse the two.** There is no function in
-`nm/domain/release.py` that constructs an `Approval`. `refuse_release` reads
+`backend/nm/domain/release.py` that constructs an `Approval`. `refuse_release` reads
 signatures it was handed and creates none; a test asserts that from the
 module's own source rather than from a promise, because a gate that could sign
 its own release is the check that cannot fail holding the last decision anybody
@@ -6839,7 +6919,7 @@ solicited, no reviewer contacted, no scope enabled, no deployment made.
 **Outcome sought.** BK-81-AC1, BK-81-AC2, BK-81-AC3, BK-77-AC1, BK-77-AC2 and
 BK-77-AC3.
 
-**NOTHING NEW RECONCILES THE PLAN.** `tools/blueprint.py`, `blueprint_execution`,
+**NOTHING NEW RECONCILES THE PLAN.** `assurance/control_plane/blueprint.py`, `blueprint_execution`,
 `blueprint_commands`, `blueprint_evaluations`, `blueprint_autonomy` and
 `blueprint_approvals` already do it, and adding a seventh checker would be the
 second source of truth this packet exists to prevent. What had never been
@@ -6909,7 +6989,7 @@ failure is about: *evidence includes people/contact results, not just an
 incident-policy document.* A green row produced from a fixture would be that
 failure with a test in front of it.
 
-**WHAT WAS BUILT, AND WHY EACH PIECE REFUSES SOMETHING.** `nm/domain/incident.py`
+**WHAT WAS BUILT, AND WHY EACH PIECE REFUSES SOMETHING.** `backend/nm/domain/incident.py`
 carries the versioned scenario, the three separate timestamps §10 requires
 (occurrence, detection, notice — collapsing them is how a six-hour duty is
 discovered to have started four hours ago), the rota with its escalation
@@ -7004,7 +7084,7 @@ and it refuses, because an access flow nobody checked is the absent-input
 defect holding the front door.
 
 **ONE OWNER OF "DO THESE HOLD THE SAME STRING".**
-`nm/bootstrap/composition._refuse_a_shared_seal` now asks
+`backend/nm/bootstrap/composition._refuse_a_shared_seal` now asks
 `deployment.shares_value_with` rather than comparing plaintext itself. That
 is not a restyle: P39 requires the separation to be verified without printing
 or comparing plaintext values, and two implementations of the question would
@@ -7013,14 +7093,14 @@ matters stay readable. Which names count as credentials stays in composition,
 because that is its policy about this environment rather than a fact about
 secrets.
 
-**WHAT IS DRIVEN RATHER THAN REBUILT.** `nm/domain/egress.py` against the REAL
-`docs/blueprint/processors.yaml` read through `nm/bootstrap/egress_policy.py`
+**WHAT IS DRIVEN RATHER THAN REBUILT.** `backend/nm/domain/egress.py` against the REAL
+`docs/blueprint/processors.yaml` read through `backend/nm/bootstrap/egress_policy.py`
 — a synthetic policy would prove only that the checker compiles.
-`nm/domain/media_policy.py` for the preflight and the recursive response
-allowlist. `nm/adapters/store/envelope.py` and `nm/edge/uploads.py` for the
+`backend/nm/domain/media_policy.py` for the preflight and the recursive response
+allowlist. `backend/nm/adapters/store/envelope.py` and `backend/nm/edge/uploads.py` for the
 two tenancy refusals, through the served ownership check rather than a copy of
-it. `nm/domain/retention.py` for what makes a deletion claim false, and
-`nm/domain/metrics.py` for which fields reach a plaintext file.
+it. `backend/nm/domain/retention.py` for what makes a deletion claim false, and
+`backend/nm/domain/metrics.py` for which fields reach a plaintext file.
 
 **Assumptions.** THERE IS NO DEPLOYMENT. No target IAM, no KMS, no network
 boundary, no scanner run against an operated environment and no penetration
@@ -7084,11 +7164,11 @@ twelve, and each refuses by name: an operator told "the restore failed" goes
 looking for whichever of thirteen they thought of first. A `Fault` records why
 it fired and refuses a kind nobody declared.
 
-**WHAT IS REUSED RATHER THAN REBUILT.** `tools/migrate_store.py` already owns
+**WHAT IS REUSED RATHER THAN REBUILT.** `backend/operations/migrate_store.py` already owns
 inventory, reconciliation, target-only detection and the rollback refusal
 — including that an unreconcilable pair refuses rather than permits, because
 *we could not check* is the worst possible reason to proceed with an
-irreversible step. `nm/adapters/store/envelope.py` already owns envelope
+irreversible step. `backend/nm/adapters/store/envelope.py` already owns envelope
 encryption, key refs and cross-matter refusal. The rehearsal drives both; it
 does not reimplement either.
 
@@ -7130,8 +7210,8 @@ exclude a recent otherwise eligible decision. Missing citation metadata remains
 unknown rather than zero.
 
 **Frozen implementation files.** Existing entry points remain
-`tools/fetch_judgments.py` and `tools/scrape_judgments.py`. Additive owners are
-`nm/knowledge/acquisition.py` and `tools/reconcile_acquisition.py`. Proof lives
+`pipeline/acquisition/fetch_judgments.py` and `pipeline/acquisition/scrape_judgments.py`. Additive owners are
+`backend/nm/knowledge/acquisition.py` and `pipeline/acquisition/reconcile_acquisition.py`. Proof lives
 in `tests/test_judgment_acquisition.py` and
 `tests/test_acquisition_receipts.py`. No job, store, bootstrap, model, edge or
 browser owner is changed.
@@ -7153,9 +7233,9 @@ deferred to integration with the user's concurrent foundation branch.
 ### P44 scoped build and test record — 11 September 2026
 
 **Outcome: BUILT and locally tested, not published.** P44 now has a shared,
-versioned selection policy in `nm/knowledge/acquisition.py` and both acquisition
-entry points use it: `tools/fetch_judgments.py` for the sanctioned API path and
-`tools/scrape_judgments.py` for the one-time web exception path. The legacy
+versioned selection policy in `backend/nm/knowledge/acquisition.py` and both acquisition
+entry points use it: `pipeline/acquisition/fetch_judgments.py` for the sanctioned API path and
+`pipeline/acquisition/scrape_judgments.py` for the one-time web exception path. The legacy
 `--min-cited-by` input is recorded by the web command but is no longer an
 eligibility filter. Citation count affects priority only inside an eligible
 source-year cohort; it cannot make an out-of-scope decision eligible and it
@@ -7170,7 +7250,7 @@ source ids, failures, unexpected responses and the explicit state of every
 candidate: unknown rights, unreviewed legal status, candidate publication state
 and `published: false`. Unsupported policy identities are refused before
 staging, and tampered policy or scope metadata is refused during reconciliation.
-`tools/reconcile_acquisition.py` reads those receipts without publishing them
+`pipeline/acquisition/reconcile_acquisition.py` reads those receipts without publishing them
 and returns complete, partial, refused or not-assessed.
 
 **Evidence run.** Focused P19/P44 local evidence passed in the isolated
@@ -7242,14 +7322,14 @@ must not do, and it is unfixed.
 Recorded 7 September 2026, on the advocate's instruction and in their words:
 *this is a one time exception*.
 
-`tools/fetch_judgments.py` deliberately excluded the scrape path:
+`pipeline/acquisition/fetch_judgments.py` deliberately excluded the scrape path:
 
 > ONLY API MODE IS IMPLEMENTED. The scrape path is deliberately absent: the
 > sanctioned route exists, the previous build flagged the other as ToS-bound,
 > and a product that advises advocates should not acquire its corpus in a way
 > it would have to explain.
 
-**That policy still stands.** `tools/scrape_judgments.py` is a bounded
+**That policy still stands.** `pipeline/acquisition/scrape_judgments.py` is a bounded
 exception to it, not a replacement for it.
 
 | the exception | |
@@ -7331,7 +7411,7 @@ closed when the half it needed - the login rate limit - was built.
 neither: the guard without the re-key stops the product, and the re-key without
 the guard leaves nothing to stop it happening again.
 
-**The guard is at the composition root** (`nm/bootstrap/composition.py`), not
+**The guard is at the composition root** (`backend/nm/bootstrap/composition.py`), not
 in the store. A guard that is right in the core and absent where the
 application is assembled is CLAUDE.md §8's exact failure -- forty offline tests
 passing while every served turn crashed.
@@ -7342,7 +7422,7 @@ have guarded the collision already found and none of the others, which is the
 one-site patch this repository has recorded 47 times. The invariant is
 parameterised over seven variables nobody has added yet.
 
-**The store was re-keyed.** `tools/rekey_matter_store.py`: 784 files, **247
+**The store was re-keyed.** `backend/operations/rekey_matter_store.py`: 784 files, **247
 sealed and rewritten**, 537 deliberately open and untouched (BK-22 put the
 directory in the open), **0 unreadable**. Backed up first, every rewritten file
 verified against the new key before success was claimed, backup left on disk
@@ -7395,7 +7475,7 @@ The four records state what actually happened rather than backfilling a
 process. **Start** is the sequence written before any code — new seal, re-key,
 *then* rotate — which was the whole of the analysis and is why the store
 survived. **Build** is the composition-root guard and
-`tools/rekey_matter_store.py`, 9 September. **Evidence Pack** is the published
+`backend/operations/rekey_matter_store.py`, 9 September. **Evidence Pack** is the published
 Class-A result for the three automated criteria, plus the structured
 `production_measure` record for AC4. **Conformance** is the account holder's,
 on the measured rotation above: they are the only person who could perform AC4,
@@ -7427,7 +7507,7 @@ even says *"Raised loudly. Never degraded into writing plaintext"* - true
 of plaintext and not of this.
 
 ## BK-17 - three load-bearing guards vanished under `-O` - **FIXED**
-**MEASURED.** Every `assert` in `nm/` is a guard, and `-O` removes all
+**MEASURED.** Every `assert` in `backend/nm/` is a guard, and `-O` removes all
 three:
 
 | where | what stops being checked |
@@ -7446,7 +7526,7 @@ prevented. S11: a check that cannot fail because it is not there.
 Closed 7 September 2026. The premise was wrong: the password was never the
 advocate's to supply, because the scenario advocate is a FIXTURE.
 
-`tools/run_scenario.py` now mints its own - `_mint_scenario_advocate` enrols
+`assurance/journeys/run_scenario.py` now mints its own - `_mint_scenario_advocate` enrols
 `adv_scenarios` with a generated password held for the run and never written
 down, and **refuses to re-enrol an advocate that already exists** rather than
 resetting a credential it does not own. `NM_SCENARIO_PASSWORD` still wins when
@@ -7618,7 +7698,7 @@ configured provider returns that output.
 
 | wave | rows | release gate |
 |---|---|---|
-| 0 — make failure reproducible | BK-30 **DONE** | MET. `python tools/journey.py` produces a phase table and artifacts. **The pass count is a MEASUREMENT AT A COMMIT, not a property of the repository** — it needs `pip install -e .[journey]` and a quiet tree, and a run taken while `web/` is being edited reports failures that belong to the edit. Re-measure rather than quote. |
+| 0 — make failure reproducible | BK-30 **DONE** | MET. `python assurance/journeys/journey.py` produces a phase table and artifacts. **The pass count is a MEASUREMENT AT A COMMIT, not a property of the repository** — it needs `pip install -e .[journey]` and a quiet tree, and a run taken while `frontend/` is being edited reports failures that belong to the edit. Re-measure rather than quote. |
 | 1 — do not give unsafe advice | BK-35 **DONE**, BK-34 **DONE**, BK-36 **DONE**, BK-40 **DONE** | Correct trigger or explicit refusal; screens govern admission; one brief is applied once; session/logout state is truthful. |
 | 2 — make the file usable | BK-31 **PARTLY**, BK-32 **DONE**, BK-33 **PARTLY**, BK-37 **DONE** | Access is recoverable; navigation works at all widths; file reopens intact; answer reads as counsel work, not telemetry. |
 | 3 — research and handover | BK-38 **PARTLY**, BK-39 **PARTLY** | Authority moves deliberately into a matter and another advocate can understand the complete file. |
@@ -7695,7 +7775,7 @@ five `not_run` states; RUNNING the checks is B2-B6 and R-8 still binds.
 
 ## The hard-coding audit, 7 September 2026
 
-Population from the code: every module-level literal collection in `nm/`, and
+Population from the code: every module-level literal collection in `backend/nm/`, and
 every string literal appearing in more than one module. Four kinds, and only
 two were defects.
 

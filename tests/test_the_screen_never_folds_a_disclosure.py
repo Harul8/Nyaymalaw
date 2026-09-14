@@ -6,7 +6,7 @@ material collapsed behind a row that opens in one click. That last part is what
 this file exists to bound.
 
 **B-128 WAS EXACTLY THIS DEFECT, THREE DAYS OLD WHEN THE SCREEN CHANGED.**
-`nm/core/screens.py` fired `G-UNSCREENED` into the metrics and the advocate saw
+`backend/nm/core/screens.py` fired `G-UNSCREENED` into the metrics and the advocate saw
 nothing; the fix put five screen rows into the answer's bytes. A redesign that
 folds `disclosure` elements by default undoes it at the last inch -- the bytes
 are served, and the advocate still cannot see them. §9 says the third state
@@ -15,7 +15,7 @@ different word.
 
 TWO HALVES, AND THE SECOND ONE RUNS THE CODE
 ----------------------------------------------
-The checks that read `web/app.js` as TEXT are structural: they hold if the
+The checks that read `frontend/app.js` as TEXT are structural: they hold if the
 partition is right and the rendering then does something else with the result.
 They are cheap, they name the exact predicate, and they are not sufficient.
 
@@ -43,14 +43,13 @@ import pathlib
 import re
 
 import pytest
-
 from nm.domain.answer import Element, ElementKind, Signal
 from nm.domain.brief import section_of
 
 pytestmark = pytest.mark.class_a
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-WEB = ROOT / "web"
+WEB = ROOT / "frontend"
 
 
 def _app_js() -> str:
@@ -167,7 +166,7 @@ def test_the_rendered_turn_puts_no_disclosure_inside_a_fold():
     """THE STRUCTURAL CHECKS ABOVE READ THE SOURCE. This runs it.
 
     Every assertion before this one reads the partition's predicate out of
-    `web/app.js`. That is real and it is structural: it holds if the filter is
+    `frontend/app.js`. That is real and it is structural: it holds if the filter is
     correct and the rendering then does something else with the result — puts
     the disclosures in the fold by a different route, or drops them.
 

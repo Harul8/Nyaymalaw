@@ -2,7 +2,7 @@
 
 THE DEFECT, MEASURED DURING THE P29 TO P36 CLOSE-OUT
 ------------------------------------------------------
-`docs/Nyaymalaw_PRD.docx` is a generated view of `spec/prd/`. The close-out
+`docs/Nyaymalaw_PRD.docx` is a generated view of `assurance/specification/prd/`. The close-out
 step says to regenerate it. Doing so, from source that had not changed by a
 byte, moved the tree identity -- and every promoted Class-A and browser result
 went stale, including runs with nothing to do with the PRD.
@@ -19,7 +19,7 @@ generation time.
 
 WHY IT MATTERS MORE THAN IT LOOKS
 -----------------------------------
-`tools/evidence.py` already records the reasoning, two blocks above the bug,
+`assurance/control_plane/evidence.py` already records the reasoning, two blocks above the bug,
 about the feature registry: *fold in the verdict and the fingerprint moves
 every time evidence is recorded -- which restales the evidence that just moved
 it. That is not a strict check, it is a check that can never be satisfied.*
@@ -36,7 +36,7 @@ import zipfile
 
 import pytest
 
-from tools.evidence import _docx_semantic
+from assurance.control_plane.evidence import _docx_semantic
 
 pytestmark = pytest.mark.class_a
 

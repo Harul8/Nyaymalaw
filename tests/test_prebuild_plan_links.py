@@ -4,8 +4,8 @@ from copy import deepcopy
 
 import pytest
 
-from tools import blueprint
-from tools.blueprint_execution import check_packets
+from assurance.control_plane import blueprint
+from assurance.control_plane.blueprint_execution import check_packets
 
 pytestmark = pytest.mark.class_a
 

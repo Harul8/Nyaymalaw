@@ -17,7 +17,6 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
 from nm.bootstrap.composition import ROOT
 from nm.knowledge.manifest import Manifest
@@ -30,7 +29,7 @@ CORPUS = ROOT / "legal_database" / "vector_store"
 
 @pytest.fixture(scope="module")
 def adapter():
-    manifest = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    manifest = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     a = CorpusEvidenceAdapter(CORPUS, manifest)
     if not a.available:
         pytest.skip("the corpus is not attached")
@@ -85,7 +84,7 @@ def test_an_unreadable_corpus_is_not_reported_as_nothing_held(tmp_path):
     A corpus that cannot be read is HELD_NOT_FOUND -- a defect that escalates --
     and never NOT_HELD, which would tell the advocate the law does not exist.
     """
-    manifest = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    manifest = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     broken = CorpusEvidenceAdapter(tmp_path / "nothing-here", manifest)
     result = broken.fetch(need("section 6 of the specific relief act"))
     assert result.coverage is Coverage.HELD_NOT_FOUND
@@ -151,7 +150,7 @@ def test_coverage_is_a_union_and_a_single_store_figure_is_refused(adapter):
 
     from nm.knowledge.manifest import Manifest
 
-    manifest = Manifest.load(ROOT / "spec" / "manifest.yaml")
+    manifest = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
     entry = manifest.act("Specific Relief Act, 1963")
     assert entry and len(entry.act_patterns) > 1, (
         "the union rule is untestable against an Act held under one convention")

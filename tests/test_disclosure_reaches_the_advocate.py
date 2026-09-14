@@ -5,7 +5,7 @@ is `disclose` fires into the metrics, the matrix records a `visible` promise,
 and the advocate's answer carries nothing. Nothing here about screens, and
 nothing about slice 6 -- that was only the instance.
 
-**B-128 was that instance.** `nm/core/screens.py` had been complete since slice
+**B-128 was that instance.** `backend/nm/core/screens.py` had been complete since slice
 6 and nothing constructed a `Screen`; `_run_screens` fired `G-UNSCREENED` under
 a comment saying *"the output says so rather than reading as though it had
 passed"*, and the served answer held ZERO screen-related lines. Every unit test
@@ -36,9 +36,9 @@ import ast
 import pathlib
 
 import pytest
-
 from nm.domain.gates import GATES, Response
-from tools._source import SourceSegments
+
+from assurance.common._source import SourceSegments
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TESTS = ROOT / "tests"

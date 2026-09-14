@@ -28,7 +28,6 @@ from datetime import timedelta
 from threading import Barrier
 
 import pytest
-
 from nm.domain.advocate import (
     AdvocateIdentity,
     Credential,
@@ -70,7 +69,7 @@ def _directory(tmp_path, advocate_id: str = "adv_1"):
 
 @pytest.mark.eval_id("E-010")
 def test_the_identity_carries_every_field_the_contract_names():
-    """A1's PRODUCES had NO CLASS and no field of it anywhere in `nm/`, and the
+    """A1's PRODUCES had NO CLASS and no field of it anywhere in `backend/nm/`, and the
     feature stood at `tested` (B-082)."""
     i = _identity()
     assert set(i.as_dict()) == {"id", "name", "enrolment", "practice",
@@ -99,7 +98,7 @@ def test_the_identifying_fields_may_not_be_blank():
 
     # EMAIL IS REQUIRED AT THE REGISTRATION DOOR AND NOT ON THE TYPE, and the
     # difference is not an oversight. Every advocate enrolled by
-    # `tools/enrol.py` before the field existed has none, and requiring it on
+    # `backend/operations/enrol.py` before the field existed has none, and requiring it on
     # the type would make those records unreadable. The route that MINTS a new
     # advocate insists on it; the type that reads an old one cannot.
     AdvocateIdentity(**{**_identity().as_dict(), "email": ""})

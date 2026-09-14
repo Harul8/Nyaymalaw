@@ -18,7 +18,6 @@ and none of them is the client's instruction.
 from __future__ import annotations
 
 import pytest
-
 from nm.core import options as op
 from nm.domain import advice_decision as ad
 from nm.domain.options import (

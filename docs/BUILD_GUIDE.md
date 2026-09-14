@@ -113,15 +113,15 @@ remains unproved.
 
 | Question | Owner |
 |---|---|
-| What must the product do, never do, produce and evaluate? | `spec/prd/` authors the PRD; `docs/Nyaymalaw_PRD.docx` and `spec/features.yaml` are generated views |
+| What must the product do, never do, produce and evaluate? | `assurance/specification/prd/` authors the PRD; `docs/Nyaymalaw_PRD.docx` and `assurance/specification/features.yaml` are generated views |
 | What is the user journey? | `docs/backlog/steps.yaml` |
 | What is built in which order? | `docs/backlog/plan.json` |
 | What is true now and what evidence supports it? | `docs/backlog/status.yaml` |
 | Why does the work exist and what was observed? | `docs/BACKLOG.md` |
 | What defines expert advocacy, working states, advice maturity and roles? | `docs/backlog/professional.json` |
-| Which condition blocks, withholds or discloses? | `nm/domain/gates.py`, exported to `spec/gates.yaml` |
-| Which typed object must be produced? | PRD Appendix E and `spec/prd/schemas.js` |
-| Which release thresholds bind? | `spec/release.yaml`; measured results are in `spec/coverage.yaml` |
+| Which condition blocks, withholds or discloses? | `backend/nm/domain/gates.py`, exported to `assurance/specification/gates.yaml` |
+| Which typed object must be produced? | PRD Appendix E and `assurance/specification/prd/schemas.js` |
+| Which release thresholds bind? | `assurance/specification/release.yaml`; measured results are in `assurance/specification/coverage.yaml` |
 | What does the corpus actually hold? | `docs/BASELINE.md` |
 | Which recurring failure mechanisms must be considered? | `docs/DEFECT_SHAPES.md` |
 | Which representative conversations prove behaviour? | `docs/GOLDEN_SET.md` |

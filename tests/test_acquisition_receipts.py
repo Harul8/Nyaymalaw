@@ -7,7 +7,6 @@ from dataclasses import replace
 from datetime import date, datetime, timezone
 
 import pytest
-
 from nm.knowledge.acquisition import (
     AcquiredArtifact,
     AcquisitionRefused,
@@ -21,7 +20,8 @@ from nm.knowledge.acquisition import (
     stage_acquisition,
 )
 from nm.knowledge.source_registry import RightsState
-from tools import reconcile_acquisition as reconcile_cli
+
+from pipeline.acquisition import reconcile_acquisition as reconcile_cli
 
 NOW = datetime(2026, 9, 11, tzinfo=timezone.utc)
 

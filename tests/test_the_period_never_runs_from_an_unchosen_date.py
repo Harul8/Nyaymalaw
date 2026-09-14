@@ -45,11 +45,11 @@ import re
 from datetime import date
 
 import pytest
-
 from nm.adapters.model.scripted import SCRIPTED_READS
 from nm.core.deadlines import DeadlineKind
 from nm.core.turn import TurnInput
 from nm.knowledge.resolution import LIMITATION_ARTICLE, accrual_trigger_for
+
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a

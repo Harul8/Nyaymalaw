@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from tools._documents import safe_load
-from tools.blueprint_evaluations import check_evaluations, deployment_blockers
+from assurance.common._documents import safe_load
+from assurance.control_plane.blueprint_evaluations import check_evaluations, deployment_blockers
 
 pytestmark = pytest.mark.class_a
 ROOT = Path(__file__).resolve().parents[1]

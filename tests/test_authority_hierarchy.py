@@ -17,7 +17,6 @@ cleanly when the index has not been built.
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.traceability import refuses
 from nm.knowledge.identity import (
     CaseIdentity,

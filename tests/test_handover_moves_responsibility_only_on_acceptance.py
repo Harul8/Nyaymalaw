@@ -19,7 +19,6 @@ made the same separation for material. A matter archived is still held.
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.closure import (
     CLOSURE_FIELDS,
     ClosureRecord,
@@ -65,10 +64,11 @@ def _offer(**kw):
 @pytest.mark.parametrize("name,declared", [
     ("CaseSummary", SUMMARY_FIELDS), ("ClosureRecord", CLOSURE_FIELDS)])
 def test_the_module_lists_match_the_declared_contract(name, declared):
-    """Asserted against `spec/schemas.yaml`. A list in this repository checked
+    """Asserted against `assurance/specification/schemas.yaml`. A list in this repository checked
     against another list in this repository passes while both drift."""
     import yaml
-    schemas = yaml.safe_load(open("spec/schemas.yaml", encoding="utf8"))["schemas"]
+    schemas = yaml.safe_load(
+        open("assurance/specification/schemas.yaml", encoding="utf8"))["schemas"]
     required = {f["field"] for f in next(s for s in schemas if s["name"] == name)
                 ["fields"] if f["required"]}
     assert set(declared) == required, (

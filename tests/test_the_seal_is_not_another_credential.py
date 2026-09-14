@@ -24,7 +24,6 @@ failure: forty offline tests passing while every served turn crashed.
 from __future__ import annotations
 
 import pytest
-
 from nm.bootstrap.composition import SharedSealRefused, _refuse_a_shared_seal
 
 pytestmark = pytest.mark.class_a
@@ -118,7 +117,7 @@ def _rekey():
 
     from nm.bootstrap.composition import ROOT
     spec = importlib.util.spec_from_file_location(
-        "_rekey", ROOT / "tools" / "rekey_matter_store.py")
+        "_rekey", ROOT / "backend" / "operations" / "rekey_matter_store.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod

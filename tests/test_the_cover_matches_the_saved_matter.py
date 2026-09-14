@@ -5,7 +5,6 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.deadlines import Deadline, DeadlineKind, read_matter
 from nm.domain.commission import Commission
@@ -14,6 +13,7 @@ from nm.domain.engagement import Engagement
 from nm.domain.matter import Basis, Matter, Posture, PostureConflict, Role, Thread
 from nm.edge.api import application
 from nm.edge.projections import board_projection, cover_projection, matter_list_projection
+
 from tests.test_the_matter_cover_tells_ten_files_apart import BRIEF
 from tests.test_turn_contract import KEY
 

@@ -27,8 +27,8 @@ import pytest
 pytestmark = pytest.mark.class_a
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "web" / "app.js"
-PAGE = ROOT / "web" / "index.html"
+SCRIPT = ROOT / "frontend" / "app.js"
+PAGE = ROOT / "frontend" / "index.html"
 
 #: What the rotation flow handles that must never be written down.
 SECRET_NAMES = ("rotationProof", "recovery_codes", "recoveryCodes",
@@ -61,7 +61,7 @@ def test_the_script_never_writes_to_browser_storage_at_all():
     writes += [(store, "[]") for store in
                re.findall(r"(localStorage|sessionStorage)\s*\[", code)]
     assert not writes, (
-        "web/app.js touches browser storage: "
+        "frontend/app.js touches browser storage: "
         + ", ".join(f"{s}.{m}" for s, m in writes)
         + ". A recovery code or session state left there outlives the screen "
           "that showed it and is readable by every later script on this origin.")
@@ -180,7 +180,7 @@ def test_the_acknowledgement_exists_and_says_what_it_acknowledges():
 
 def test_every_id_the_rotation_script_touches_exists_on_the_page():
     """The rename trap, on the surface where it is invisible until a browser
-    hits it. `web/index.html` and `web/app.js` are two files that have to agree
+    hits it. `frontend/index.html` and `frontend/app.js` are two files that have to agree
     and nothing in a Python test suite would otherwise notice."""
     page = PAGE.read_text(encoding="utf8")
     code = _script()
@@ -189,4 +189,4 @@ def test_every_id_the_rotation_script_touches_exists_on_the_page():
                 if i.startswith(("reauth", "outcome-resume", "replace-codes"))}
     assert rotation, "the scan found no rotation ids, so it checked nothing"
     missing = sorted(i for i in rotation if f'id="{i}"' not in page)
-    assert not missing, f"web/app.js addresses ids the page does not define: {missing}"
+    assert not missing, f"frontend/app.js addresses ids the page does not define: {missing}"

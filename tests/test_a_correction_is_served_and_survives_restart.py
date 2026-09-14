@@ -75,13 +75,13 @@ def _restart(client, tmp_path):
     would return the same process; this builds another.
     """
     from fastapi.testclient import TestClient
-
     from nm.adapters.model.config import ModelConfig, TierConfig
     from nm.adapters.model.scripted import ScriptedModelAdapter
     from nm.adapters.store.file_store import FileMatterStore
     from nm.bootstrap.composition import Application
     from nm.bootstrap.main import create_app
     from nm.ports.model import Tier
+
     from tests.test_turn_contract import KEY, _Evidence, briefed
 
     config = ModelConfig(tiers={

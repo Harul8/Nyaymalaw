@@ -39,7 +39,6 @@ import os
 import uuid
 
 import pytest
-
 from nm.adapters.store.postgres import PostgresMatterStore
 from nm.adapters.store.sealing import MatterSealer
 from nm.domain.matter import Matter
@@ -291,6 +290,7 @@ def test_every_persisted_field_survives_a_round_trip(store):
 def test_worker_outcomes_and_unknown_reconciliation_survive_adapter_restart(store):
     from nm.core.worker import AmbiguousEffect, JobRunner
     from nm.domain.operation import Outcome
+
     from tests.test_owed_work_happens_once_or_says_it_cannot_tell import _Permits, _Sink
 
     matter = _matter()
@@ -322,6 +322,7 @@ def test_database_cancellation_and_fencing_are_durable(store):
     from nm.core.worker import JobRunner
     from nm.domain.operation import Outcome
     from nm.ports.transactional import LeaseLost
+
     from tests.test_owed_work_happens_once_or_says_it_cannot_tell import _Permits, _Sink
 
     matter = _matter()
@@ -364,6 +365,7 @@ def test_database_cancellation_and_fencing_are_durable(store):
 def test_database_unknown_aggregate_keeps_cancellation_visible_to_sibling_jobs(store):
     from nm.core.worker import JobRunner
     from nm.domain.operation import Outcome
+
     from tests.test_owed_work_happens_once_or_says_it_cannot_tell import _Permits, _Sink
 
     matter = _matter()

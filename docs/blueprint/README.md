@@ -18,7 +18,7 @@ must approve a legal premise, processing boundary or release.
 ## Start here
 
 For the completed readiness corrections and remaining approval boundaries,
-read the [execution-readiness review](../EXECUTION_READINESS.md).
+read the [execution-readiness review](../../development_environment/reviews/EXECUTION_READINESS.md).
 
 1. Read this page once and record the decisions below.
 2. Open [Execution](EXECUTION.md) and select the next bounded task, not a whole
@@ -212,7 +212,7 @@ hashes with the current registry/contracts after subsequent edits. It is not a
 live board. Fresh professional, browser and production evidence is still
 required before the corresponding claim can be made.
 
-`python tools/blueprint.py check` checks specification integrity, not runtime
-quality. `python tools/blueprint.py readiness` reports outstanding approvals and
+`python assurance/control_plane/blueprint.py check` checks specification integrity, not runtime
+quality. `python assurance/control_plane/blueprint.py readiness` reports outstanding approvals and
 actual evaluation populations and deliberately refuses a deployment-ready
 verdict while those are absent. Neither command grants release authority.

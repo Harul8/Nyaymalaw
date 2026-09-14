@@ -215,10 +215,10 @@ listed capability must be implemented before any later module starts.
 Existing project commands (run with the configured project Python):
 
 ```text
-python tools/backlog.py lint
-python tools/backlog.py graph
-python tools/blueprint.py check
-python tools/trace.py
+python assurance/control_plane/backlog.py lint
+python assurance/control_plane/backlog.py graph
+python assurance/control_plane/blueprint.py check
+python assurance/gate/trace.py
 ```
 
 The blueprint command checks ownership, the combined execution/completion graph,
@@ -226,7 +226,7 @@ closed command schemas and examples, decisions and evaluation specifications;
 it does not run the application or prove legal quality. `blueprint.py readiness`
 names the outstanding actual populations and approvals and cannot authorise a
 release. The canonical full local
-evidence command remains `python tools/evidence.py ci`; it is not a substitute
+evidence command remains `python assurance/control_plane/evidence.py ci`; it is not a substitute
 for approved model, corpus, browser, expert or deployed-system proof. Use the
 existing Test playbook to choose the right test class and approval boundary.
 Do not repeatedly run an expensive full suite while authoring concurrent files.

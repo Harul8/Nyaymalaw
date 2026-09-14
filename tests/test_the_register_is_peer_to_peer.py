@@ -41,7 +41,6 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
-
 from nm.core.turn import EXCERPT, _excerpt, _positions_note, _shortened
 from nm.domain.matter import Side, Thread
 from nm.domain.proof import Burden, ProofPosition, ProofStatus, Standard
@@ -105,7 +104,7 @@ def test_the_ellipsis_is_never_inside_the_quotation_marks():
     import pathlib as _p
 
     body = (_p.Path(__file__).resolve().parents[1]
-            / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
+            / "backend" / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
     assert '"{_excerpt(f.span)}"' in body, (
         "the ground no longer renders an excerpt inside quotes; if that "
         "changed deliberately, the gate interaction has to be re-reasoned")
@@ -119,6 +118,7 @@ def test_the_gate_still_verifies_the_shortened_ground():
     point is that rendering less does not verify less."""
     from nm.core.grounding import verify_quotes
     from nm.domain.answer import Element, ElementKind
+
     from tests.test_turn_contract import finding as _finding
 
     span = ARTICLE_14

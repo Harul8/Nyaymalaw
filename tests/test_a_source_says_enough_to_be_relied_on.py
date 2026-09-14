@@ -22,7 +22,6 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.knowledge.provenance import (
     SUPPORTED_JURISDICTIONS,
     SourceRecord,

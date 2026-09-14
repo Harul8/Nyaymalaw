@@ -193,7 +193,7 @@ def test_the_page_mints_the_turn_id_and_the_retry_reuses_it():
     """
     import pathlib
     script = (pathlib.Path(__file__).resolve().parents[1]
-              / "web" / "app.js").read_text(encoding="utf-8")
+              / "frontend" / "app.js").read_text(encoding="utf-8")
 
     assert "function newTurnId" in script, (
         "the page does not mint a turn id, so a retry after a lost response "

@@ -49,9 +49,9 @@ import tempfile
 from dataclasses import replace
 
 import pytest
-
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.core.turn import TurnInput, TurnRefused
+
 from tests.test_turn_contract import _model_config, build
 
 pytestmark = pytest.mark.class_a

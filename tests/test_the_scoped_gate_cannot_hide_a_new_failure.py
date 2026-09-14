@@ -5,7 +5,7 @@ import pathlib
 
 import pytest
 
-from tools.known_failures import (
+from assurance.gate.known_failures import (
     FailureFact,
     Known,
     Observed,
@@ -30,7 +30,7 @@ _PRODUCES = (
 _PYTEST = f"""
 =================================== FAILURES ===================================
 _______ test_every_produces_contract_has_a_type_or_is_declared_untyped ________
-E       AssertionError: these features declare a PRODUCES type that `nm/` does not define:
+E       AssertionError: these features declare a PRODUCES type that `backend/nm/` does not define:
 E           B1: TurnRoute
 E           B3: ConflictScreen
 E           B4: CompetenceAssessment
@@ -57,7 +57,7 @@ def _seen(pytest_out: str = "", trace_out: str = "", *, trace_failed=False):
         "trace": observed("trace", trace_out, failed=trace_failed),
         "ruff": _declared("ruff"),
         # THE DECLARED POPULATION DEBT, as the step would observe it. Supplied
-        # from the registry rather than by running `tools/backlog.py`, for the
+        # from the registry rather than by running `assurance/control_plane/backlog.py`, for the
         # reason `ruff` is: this file tests the COMPARISON. Whether the real
         # registry still matches its declaration is the gate step's own
         # question, and `test_every_required_level_carries_an_authored_result`
@@ -175,7 +175,7 @@ Found 1 error.
 
 def test_an_extra_pylint_failure_blocks():
     output = (
-        "nm/core/probe.py:7:4: E0601: Using variable 'answer' before assignment "
+        "backend/nm/core/probe.py:7:4: E0601: Using variable 'answer' before assignment "
         "(used-before-assignment)\n"
     )
     verdict = compare([], {"pylint": observed("pylint", output, failed=True)},

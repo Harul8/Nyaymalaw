@@ -23,7 +23,6 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from nm.adapters.store.file_store import FileMatterStore
 
 pytestmark = pytest.mark.class_a

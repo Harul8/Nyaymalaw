@@ -28,7 +28,6 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
-
 from nm.adapters.store.envelope import (
     CrossMatterAccess,
     KeyUnavailable,

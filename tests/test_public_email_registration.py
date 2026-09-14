@@ -12,7 +12,6 @@ from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-
 from nm.adapters.store.directory import FileDirectory
 from nm.domain import attempts
 from nm.domain.advocate import (
@@ -23,6 +22,7 @@ from nm.domain.advocate import (
     utcnow,
 )
 from nm.ports.directory import AlreadyEnrolled, RegistrationUnavailable
+
 from tests.test_turn_contract import KEY
 
 pytestmark = pytest.mark.class_a
@@ -504,7 +504,6 @@ def test_recovery_uses_the_same_new_password_bound_without_consuming_a_code(clie
 
 def test_validation_callback_is_registered_on_the_served_application(client):
     from fastapi.exceptions import RequestValidationError
-
     from nm.edge import api
 
     assert client.app.exception_handlers[RequestValidationError] is api.invalid_request
@@ -525,6 +524,7 @@ def test_an_unreadable_professional_predecessor_cannot_reach_the_update(client, 
     from dataclasses import replace
 
     from nm.domain.professional_access import ProfessionalApproval
+
     from tests.test_professional_approval_is_separate_from_account_access import (
         approve_fixture_account,
     )

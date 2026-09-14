@@ -14,7 +14,6 @@ So every test here that checks the restraint also checks the bound.
 from __future__ import annotations
 
 import pytest
-
 from nm.core.proof import (
     Burden,
     ProofPosition,
@@ -408,6 +407,7 @@ def test_the_served_turn_records_a_characterisation_of_the_client(tmp_path):
     from datetime import date as _date
 
     from nm.core.turn import TurnInput
+
     from tests.test_turn_contract import build
 
     engine, _ = build(tmp_path, responses={

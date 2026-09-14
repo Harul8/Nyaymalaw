@@ -6,11 +6,11 @@ import shutil
 from pathlib import Path
 
 import pytest
-
 from nm.bootstrap import composition
 from nm.ports.evidence import Coverage
 from nm.ports.model import ConfigurationError, Prompt, Tier
-from tools.served import KEY, served
+
+from assurance.journeys.served import KEY, served
 
 pytestmark = pytest.mark.class_a
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.fixture
 def spec_root(tmp_path):
     root = tmp_path / "spec-root"
-    for relative in ("spec/manifest.yaml", "docs/blueprint/processors.yaml"):
+    for relative in ("pipeline/manifest.yaml", "docs/blueprint/processors.yaml"):
         destination = root / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / relative, destination)

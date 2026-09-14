@@ -25,7 +25,7 @@ imports, which is the only direction that finds anything.
 A DECLARED EXEMPTION IS WORK; A SILENT ONE IS A SURPRISE
 ----------------------------------------------------------
 `UNWIRED` names each module nothing calls yet and what will call it. It is the
-same arrangement as `AWAITING` in `tools/trace.py` and `CLOSED` in
+same arrangement as `AWAITING` in `assurance/gate/trace.py` and `CLOSED` in
 `test_three_states.py`: the question gets answered for every module, including
 the next one, and an entry whose wiring has landed fails here rather than
 sitting in someone's memory.
@@ -177,13 +177,13 @@ UNWIRED: dict[str, str] = {
 def _sources() -> list[pathlib.Path]:
     """Every module file that still exists WHEN ITS BYTES ARE READ.
 
-    Other checks in this suite plant probe modules under `nm/` and remove them,
+    Other checks in this suite plant probe modules under `backend/nm/` and remove them,
     so a walk can hand back a path that is gone a moment later. Skipping it is
     right: a file that no longer exists is not an orphan, and a scan that
     crashes on a neighbour's probe is a scan people run less often.
     """
     out = []
-    for p in (ROOT / "nm").rglob("*.py"):
+    for p in (ROOT / "backend" / "nm").rglob("*.py"):
         if "__pycache__" in p.parts:
             continue
         try:
@@ -195,12 +195,12 @@ def _sources() -> list[pathlib.Path]:
 
 
 def _modules() -> set[str]:
-    return {".".join(p.relative_to(ROOT).with_suffix("").parts)
+    return {".".join(p.relative_to(ROOT / "backend").with_suffix("").parts)
             for p in _sources() if p.name != "__init__.py"}
 
 
 def _reached_from_production() -> set[str]:
-    """Modules imported by another module inside `nm/`.
+    """Modules imported by another module inside `backend/nm/`.
 
     `from nm.core import chronology` binds a SUBMODULE, not an attribute of
     `nm.core`, and the first version of this scan counted only `node.module` —
@@ -209,10 +209,10 @@ def _reached_from_production() -> set[str]:
     of alarm is one people learn to overrule.
     """
     sources = _sources()
-    mods = {".".join(p.relative_to(ROOT).with_suffix("").parts) for p in sources}
+    mods = {".".join(p.relative_to(ROOT / "backend").with_suffix("").parts) for p in sources}
     reached: set[str] = set()
     for p in sources:
-        me = ".".join(p.relative_to(ROOT).with_suffix("").parts)
+        me = ".".join(p.relative_to(ROOT / "backend").with_suffix("").parts)
         try:
             tree = ast.parse(p.read_text(encoding="utf8"))
         except OSError:
@@ -249,7 +249,7 @@ def test_every_module_is_reached_from_production_or_declared_unwired():
                   if m not in ENTRY_POINTS and m not in UNWIRED]
 
     assert not undeclared, (
-        "these modules are imported by nothing in `nm/` — they run on no "
+        "these modules are imported by nothing in `backend/nm/` — they run on no "
         "served turn, however green their tests are:\n  "
         + "\n  ".join(undeclared)
         + "\n\nWire it, or declare it in UNWIRED with what will wire it. A "
@@ -263,7 +263,7 @@ def test_no_declaration_outlives_its_wiring():
 
     The day a module is wired, its UNWIRED entry becomes a false statement
     about the build. It expires here rather than in someone's memory — the
-    same rule `tools/trace.py` applies to AWAITING.
+    same rule `assurance/gate/trace.py` applies to AWAITING.
     """
     reached = _reached_from_production()
     stale = sorted(m for m in UNWIRED if m in reached)
@@ -279,7 +279,7 @@ def test_no_declaration_outlives_its_wiring():
 def test_the_scan_can_see_an_unreached_module():
     """THE POSITIVE CONTROL. A scan over a tree whose modules all happen to be
     imported proves nothing about the scan."""
-    probe = ROOT / "nm" / "core" / "_unreached_probe.py"
+    probe = ROOT / "backend" / "nm" / "core" / "_unreached_probe.py"
     probe.write_text("VALUE = 1\n", encoding="utf8")
     try:
         orphans = _modules() - _reached_from_production()
@@ -295,7 +295,7 @@ def test_the_scan_can_see_an_unreached_module():
 #: because nothing else in the build knows it: `features.yaml` names slices and
 #: evals, and the module tree names files, and no edge connects them.
 #: ONE MODULE MAY CARRY SEVERAL FEATURES, and the first version of this map
-#: allowed only one. `nm/core/adversarial.py` holds both the adversarial pass
+#: allowed only one. `backend/nm/core/adversarial.py` holds both the adversarial pass
 #: (D7) and salvage (D8) — it named D7, and D8, the one feature whose status
 #: was actually wrong, was the one it could not see. A join that silently
 #: drops members is the same defect as a scan whose population went to zero.
@@ -356,7 +356,8 @@ OWNER: dict[str, tuple[str, ...]] = {
 
 
 def _spec(name: str) -> list[dict]:
-    d = yaml.safe_load((ROOT / "spec" / f"{name}.yaml").read_text(encoding="utf8"))
+    source = ROOT / "assurance" / "specification" / f"{name}.yaml"
+    d = yaml.safe_load(source.read_text(encoding="utf8"))
     return d if isinstance(d, list) else list(d.values())[0]
 
 
@@ -465,18 +466,18 @@ UNTYPED: dict[str, str] = {
     "TurnRoute":
         "B1. NAMING DRIFT — represented by `nm.core.route.ReadRoute`: its "
         "`route`, `mode` and `statement` fields are the contract's route, mode "
-        "and stated reading. Implementation owner: `nm/core/route.py`, wired "
-        "by `nm/core/turn.py::_read_route`.",
+        "and stated reading. Implementation owner: `backend/nm/core/route.py`, wired "
+        "by `backend/nm/core/turn.py::_read_route`.",
     "ConflictScreen":
         "B3. GENERIC REPRESENTATION — `nm.core.conflict.screen` produces "
         "`nm.core.screens.Screen(kind=CONFLICT)`, whose state, covers, unread "
         "and release fields carry the declared screen. Implementation owners: "
-        "`nm/core/conflict.py` and `nm/core/screens.py`.",
+        "`backend/nm/core/conflict.py` and `backend/nm/core/screens.py`.",
     "CompetenceAssessment":
         "B4. GENERIC REPRESENTATION — `TurnEngine._competence_screen` produces "
         "`nm.core.screens.Screen(kind=COMPETENCE)`; state/detail carry coverage "
         "and the recorded release model is `screens.Release`. Implementation "
-        "owners: `nm/core/turn.py` and `nm/core/screens.py`.",
+        "owners: `backend/nm/core/turn.py` and `backend/nm/core/screens.py`.",
     "Reorientation":
         "A3. GENUINELY ABSENT — zero mentions. Consistent with `gaps` and "
         "`cascade` being UNWIRED: nothing composes a re-orientation.",
@@ -486,12 +487,12 @@ UNTYPED: dict[str, str] = {
     "SessionSeal":
         "I1. GENUINELY ABSENT — zero mentions.",
     "ThresholdMap":
-        "D1. NAMING DRIFT — `nm/core/thresholds.py` defines `Threshold` and "
+        "D1. NAMING DRIFT — `backend/nm/core/thresholds.py` defines `Threshold` and "
         "the map is a plain dict. Either the PRD names the dict or the code "
         "names the type; today neither points at the other.",
     "LimitationComputation":
         "D2. NAMING DRIFT — implemented as `Limitation` in "
-        "`nm/core/limitation.py`. The contract is met and the name is not.",
+        "`backend/nm/core/limitation.py`. The contract is met and the name is not.",
 }
 
 
@@ -522,7 +523,7 @@ def test_every_produces_contract_has_a_type_or_is_declared_untyped():
     nothing in the build could see it, because the only check over PRODUCES
     starts from Appendix E's ten schemas rather than from the clauses.
 
-    Four of the seven had ZERO mentions in `nm/`. One of those is
+    Four of the seven had ZERO mentions in `backend/nm/`. One of those is
     `AdvocateIdentity`, so the product had no notion of who was using it beyond
     a string in a query parameter.
     """
@@ -531,7 +532,7 @@ def test_every_produces_contract_has_a_type_or_is_declared_untyped():
     undeclared = sorted(f"{fid}: {n}" for n, fid in missing.items()
                         if n not in UNTYPED)
     assert not undeclared, (
-        "these features declare a PRODUCES type that `nm/` does not define:"
+        "these features declare a PRODUCES type that `backend/nm/` does not define:"
         "\n  " + "\n  ".join(undeclared)
         + "\n\nImplement it, rename one side to match the other, or declare it "
           "in UNTYPED with which of those it needs.")
@@ -542,7 +543,7 @@ def test_no_untyped_declaration_outlives_its_type():
     known = _declared_types()
     landed = sorted(n for n in UNTYPED if n in known)
     assert not landed, (
-        f"these are declared UNTYPED and `nm/` now defines them: {landed}. "
+        f"these are declared UNTYPED and `backend/nm/` now defines them: {landed}. "
         f"Delete the declaration.")
 
     produced = _produced_types()

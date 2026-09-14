@@ -6,9 +6,9 @@ import os
 from pathlib import PurePosixPath, PureWindowsPath
 
 import pytest
-
 from nm.adapters.store import uploads
 from nm.adapters.store.file_store import FileMatterStore
+
 from tests.test_turn_contract import KEY
 
 pytestmark = pytest.mark.class_a

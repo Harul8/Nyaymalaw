@@ -31,6 +31,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 ARTIFACTS = ROOT / ".nm" / "journey"
 sys.path.insert(0, str(ROOT))
 
+sys.path.insert(0, str(ROOT / "backend"))
 BRIEF = ("We act for the plaintiff at Hyderabad. Goods were supplied against "
          "invoices on 14 March 2023 and were never paid for.")
 
@@ -38,8 +39,9 @@ BRIEF = ("We act for the plaintiff at Hyderabad. Goods were supplied against "
 @pytest.fixture(scope="module")
 def journey(tmp_path_factory):
     from nm.adapters.search.authority import AuthorityIndexSearch
+
+    from assurance.journeys.served import PASSWORD, running
     from tests import synthetic_index as syn
-    from tools.served import PASSWORD, running
 
     root = tmp_path_factory.mktemp("journey-search")
     authority, identity = syn.build(root / "index")

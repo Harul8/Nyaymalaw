@@ -25,7 +25,6 @@ from __future__ import annotations
 import inspect
 
 import pytest
-
 from nm.domain.binding import (
     Basis,
     SourceBinding,

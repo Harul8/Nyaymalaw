@@ -24,13 +24,13 @@ Read in this order. Each is bound by the one above it.
 
 | | |
 |---|---|
-| [PRD](docs/Nyaymalaw_PRD.docx), authored in `spec/prd/` | Intended features and professional behaviour; regenerate the document and machine-readable feature contracts together |
+| [PRD](docs/Nyaymalaw_PRD.docx), authored in `assurance/specification/prd/` | Intended features and professional behaviour; regenerate the document and machine-readable feature contracts together |
 | [Current plan](docs/PLAN.md) and [`docs/backlog/`](docs/backlog/) | Journey contracts, professional standards, waves, release profiles, current implementation and evidence |
 | [End-to-end workbook](docs/Nyaymalaw_End_to_End_Project_Plan.xlsx) | Generated reader view; never an independent status editor |
 | [Build guide](docs/BUILD_GUIDE.md) | Four proportionate playbooks: Start, Build, Test and Sign-off |
 | [Baseline](docs/BASELINE.md), [defect shapes](docs/DEFECT_SHAPES.md), [golden set](docs/GOLDEN_SET.md) | Measured coverage, known failure mechanisms and evaluation design; check the stated date and scope |
 
-`docs/Archives/` preserves the previous specification, journey, architecture,
+`development_environment/archives/` preserves the previous specification, journey, architecture,
 defect register and plan as historical evidence, not current authority.
 `docs/Nyaymalaw_Project_Plan.xlsx` similarly preserves the original slice
 baseline; the current W0–W7 plan is maintained in the registries.
@@ -56,6 +56,27 @@ Structural checks — layering, exception discipline, dead-guard detection — a
 on the transcript that caused this rewrite.
 
 See the [current plan](docs/PLAN.md) and [sign-off playbook](docs/playbooks/SIGN_OFF_A_CHANGE.md).
+
+---
+
+## Repository layout
+
+| Folder | Holds |
+|---|---|
+| `backend/` | The advocate service. `backend/nm/` is the Python package `nm` (domain, ports, core, adapters, knowledge, edge, bootstrap); `backend/operations/` holds commands a person runs against the live service — enrol, invite, professional approval, re-key, store migration |
+| `frontend/` | The advocate UI the backend mounts at `/` |
+| `pipeline/` | The end-to-end legal-knowledge pipeline, run as offline jobs: `acquisition/` → `indexing/` → `quality/`, and the curated Act manifest the server reads |
+| `assurance/` | How production is proven and permitted: `gate/` (the per-task gate), `journeys/` (served and browser runs), `control_plane/` (backlog, evidence, release obligations, the plan view), `hooks/`, `specification/` (PRD source and generated specs) and `common/`, which declares these homes once |
+| `docs/` | Live documents and the delivery registries |
+| `tests/` | The whole verification suite |
+| `development_environment/` | Archives, dated reviews, one-off and developer tooling, earlier worktrees — kept, not shipped. See its README |
+
+The package is not installed into the interpreter, so a worktree never imports
+another checkout's code. Tests set the path through `pyproject.toml`; scripts
+put the repository root and `backend/` on the path themselves; `start.ps1` sets
+`PYTHONPATH` for the server it starts. Run the gate from the root with
+`python assurance/gate/check.py`, and install the hooks by path with
+`git config core.hooksPath assurance/hooks`.
 
 ---
 

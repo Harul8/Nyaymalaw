@@ -21,7 +21,6 @@ the first reading as the default and the request goes.
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.egress import (
     HOME_REGION,
     NEVER_CLIENT_MATERIAL,

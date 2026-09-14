@@ -20,13 +20,13 @@ from dataclasses import replace
 from datetime import date
 
 import pytest
-
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.core import cascade
 from nm.core import evidence_item as inventory
 from nm.core import gaps as gap_queue
 from nm.core.turn import TurnInput
 from nm.domain.answer import ElementKind
+
 from tests.test_turn_contract import _model_config, build
 
 pytestmark = pytest.mark.class_a

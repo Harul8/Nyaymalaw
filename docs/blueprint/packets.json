@@ -32,15 +32,15 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "tools/export_spec.py",
+          "path": "assurance/gate/export_spec.py",
           "kind": "existing"
         },
         {
-          "path": "tools/backlog.py",
+          "path": "assurance/control_plane/backlog.py",
           "kind": "existing"
         },
         {
-          "path": "spec/prd",
+          "path": "assurance/specification/prd",
           "kind": "existing"
         },
         {
@@ -52,23 +52,23 @@
           "kind": "existing"
         },
         {
-          "path": "tools/evidence.py",
+          "path": "assurance/control_plane/evidence.py",
           "kind": "existing"
         },
         {
-          "path": "tools/trace.py",
+          "path": "assurance/gate/trace.py",
           "kind": "existing"
         },
         {
-          "path": "tools/check.py",
+          "path": "assurance/gate/check.py",
           "kind": "existing"
         },
         {
-          "path": "tools/gatestamp.py",
+          "path": "assurance/gate/gatestamp.py",
           "kind": "existing"
         },
         {
-          "path": "tools/known_failures.py",
+          "path": "assurance/gate/known_failures.py",
           "kind": "existing"
         },
         {
@@ -76,15 +76,15 @@
           "kind": "existing"
         },
         {
-          "path": "tools/feature_state.py",
+          "path": "assurance/control_plane/feature_state.py",
           "kind": "existing"
         },
         {
-          "path": "tools/releasegate.py",
+          "path": "pipeline/quality/releasegate.py",
           "kind": "existing"
         },
         {
-          "path": "tools/hooks/pre-commit",
+          "path": "assurance/hooks/pre-commit",
           "kind": "existing"
         },
         {
@@ -124,11 +124,11 @@
           "kind": "existing"
         },
         {
-          "path": "spec/features.yaml",
+          "path": "assurance/specification/features.yaml",
           "kind": "existing"
         },
         {
-          "path": "spec/historical_feature_ids.yaml",
+          "path": "assurance/specification/historical_feature_ids.yaml",
           "kind": "existing"
         },
         {
@@ -152,7 +152,7 @@
           "kind": "existing"
         },
         {
-          "path": "docs/EXECUTION_READINESS.md",
+          "path": "development_environment/reviews/EXECUTION_READINESS.md",
           "kind": "existing"
         },
         {
@@ -232,27 +232,27 @@
       ],
       "boundaries": [
         {
-          "path": "nm/ports/directory.py",
+          "path": "backend/nm/ports/directory.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/store/directory.py",
+          "path": "backend/nm/adapters/store/directory.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/advocate.py",
+          "path": "backend/nm/domain/advocate.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
-          "path": "web/index.html",
+          "path": "frontend/index.html",
           "kind": "existing"
         },
         {
@@ -315,39 +315,39 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "tools/evidence.py",
+          "path": "assurance/control_plane/evidence.py",
           "kind": "existing"
         },
         {
-          "path": "tools/_fingerprint.py",
+          "path": "assurance/common/_fingerprint.py",
           "kind": "existing"
         },
         {
-          "path": "tools/backlog.py",
+          "path": "assurance/control_plane/backlog.py",
           "kind": "existing"
         },
         {
-          "path": "tools/journey.py",
+          "path": "assurance/journeys/journey.py",
           "kind": "existing"
         },
         {
-          "path": "tools/structured_evidence.py",
+          "path": "assurance/control_plane/structured_evidence.py",
           "kind": "existing"
         },
         {
-          "path": "tools/browser_evidence.py",
+          "path": "assurance/journeys/browser_evidence.py",
           "kind": "existing"
         },
         {
-          "path": "tools/blueprint_approvals.py",
+          "path": "assurance/control_plane/blueprint_approvals.py",
           "kind": "existing"
         },
         {
-          "path": "tools/evidence_verification.py",
+          "path": "assurance/control_plane/evidence_verification.py",
           "kind": "existing"
         },
         {
-          "path": "tools/release_obligations.py",
+          "path": "assurance/control_plane/release_obligations.py",
           "kind": "existing"
         },
         {
@@ -379,15 +379,15 @@
           "kind": "existing"
         },
         {
-          "path": "tools/plan_view.py",
+          "path": "assurance/control_plane/plan_view.py",
           "kind": "existing"
         },
         {
-          "path": "spec/plan/build_current_plan.mjs",
+          "path": "assurance/specification/plan/build_current_plan.mjs",
           "kind": "existing"
         },
         {
-          "path": "spec/plan/README.md",
+          "path": "assurance/specification/plan/README.md",
           "kind": "existing"
         }
       ],
@@ -452,27 +452,27 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "tools/blueprint.py",
+          "path": "assurance/control_plane/blueprint.py",
           "kind": "existing"
         },
         {
-          "path": "tools/backlog.py",
+          "path": "assurance/control_plane/backlog.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
-          "path": "web/index.html",
+          "path": "frontend/index.html",
           "kind": "existing"
         },
         {
-          "path": "web/app.css",
+          "path": "frontend/app.css",
           "kind": "existing"
         }
       ],
@@ -604,19 +604,19 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "nm/bootstrap/composition.py",
+          "path": "backend/nm/bootstrap/composition.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/model/config.py",
+          "path": "backend/nm/adapters/model/config.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/model/traced.py",
+          "path": "backend/nm/adapters/model/traced.py",
           "kind": "existing"
         },
         {
-          "path": "nm/obs",
+          "path": "backend/nm/obs",
           "kind": "existing"
         }
       ],
@@ -670,15 +670,15 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "nm/adapters/store/file_store.py",
+          "path": "backend/nm/adapters/store/file_store.py",
           "kind": "existing"
         },
         {
-          "path": "nm/bootstrap/composition.py",
+          "path": "backend/nm/bootstrap/composition.py",
           "kind": "existing"
         },
         {
-          "path": "tools/rekey_matter_store.py",
+          "path": "backend/operations/rekey_matter_store.py",
           "kind": "existing"
         }
       ],
@@ -770,19 +770,19 @@
       ],
       "boundaries": [
         {
-          "path": "nm/ports/directory.py",
+          "path": "backend/nm/ports/directory.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/store/directory.py",
+          "path": "backend/nm/adapters/store/directory.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
@@ -880,11 +880,11 @@
       ],
       "boundaries": [
         {
-          "path": "tools/journey.py",
+          "path": "assurance/journeys/journey.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
@@ -955,23 +955,23 @@
       ],
       "boundaries": [
         {
-          "path": "nm/ports/store.py",
+          "path": "backend/nm/ports/store.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/store/file_store.py",
+          "path": "backend/nm/adapters/store/file_store.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/matter.py",
+          "path": "backend/nm/domain/matter.py",
           "kind": "existing"
         },
         {
-          "path": "nm/bootstrap/composition.py",
+          "path": "backend/nm/bootstrap/composition.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         }
       ],
@@ -1031,19 +1031,19 @@
       ],
       "boundaries": [
         {
-          "path": "nm/ports/store.py",
+          "path": "backend/nm/ports/store.py",
           "kind": "existing"
         },
         {
-          "path": "nm/bootstrap/composition.py",
+          "path": "backend/nm/bootstrap/composition.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/turn.py",
+          "path": "backend/nm/core/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         }
       ],
@@ -1103,11 +1103,11 @@
       ],
       "boundaries": [
         {
-          "path": "nm/adapters/store/file_store.py",
+          "path": "backend/nm/adapters/store/file_store.py",
           "kind": "existing"
         },
         {
-          "path": "nm/ports/store.py",
+          "path": "backend/nm/ports/store.py",
           "kind": "existing"
         },
         {
@@ -1170,23 +1170,23 @@
       ],
       "boundaries": [
         {
-          "path": "nm/domain/engagement.py",
+          "path": "backend/nm/domain/engagement.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/decision.py",
+          "path": "backend/nm/domain/decision.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/screens.py",
+          "path": "backend/nm/core/screens.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         }
       ],
@@ -1255,19 +1255,19 @@
       ],
       "boundaries": [
         {
-          "path": "nm/core/conflict.py",
+          "path": "backend/nm/core/conflict.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/screens.py",
+          "path": "backend/nm/core/screens.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/turn.py",
+          "path": "backend/nm/core/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/engagement.py",
+          "path": "backend/nm/domain/engagement.py",
           "kind": "existing"
         },
         {
@@ -1275,7 +1275,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/core/route.py",
+          "path": "backend/nm/core/route.py",
           "kind": "existing"
         }
       ],
@@ -1347,15 +1347,15 @@
       ],
       "boundaries": [
         {
-          "path": "nm/domain/media.py",
+          "path": "backend/nm/domain/media.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/quarantine.py",
+          "path": "backend/nm/core/quarantine.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/turn.py",
+          "path": "backend/nm/core/turn.py",
           "kind": "existing"
         },
         {
@@ -1426,23 +1426,23 @@
       ],
       "boundaries": [
         {
-          "path": "nm/domain/media.py",
+          "path": "backend/nm/domain/media.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
-          "path": "web/index.html",
+          "path": "frontend/index.html",
           "kind": "existing"
         },
         {
-          "path": "web/app.css",
+          "path": "frontend/app.css",
           "kind": "existing"
         }
       ],
@@ -1504,39 +1504,39 @@
       ],
       "boundaries": [
         {
-          "path": "nm/domain/matter.py",
+          "path": "backend/nm/domain/matter.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/proof.py",
+          "path": "backend/nm/domain/proof.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/chronology.py",
+          "path": "backend/nm/core/chronology.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/evidence_item.py",
+          "path": "backend/nm/core/evidence_item.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/posture.py",
+          "path": "backend/nm/core/posture.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/threading.py",
+          "path": "backend/nm/core/threading.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/turn.py",
+          "path": "backend/nm/core/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/projections.py",
+          "path": "backend/nm/edge/projections.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         }
       ],
@@ -1599,15 +1599,15 @@
       ],
       "boundaries": [
         {
-          "path": "nm/core/cascade.py",
+          "path": "backend/nm/core/cascade.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/turn.py",
+          "path": "backend/nm/core/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/matter.py",
+          "path": "backend/nm/domain/matter.py",
           "kind": "existing"
         },
         {
@@ -1615,7 +1615,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/core/dependency.py",
+          "path": "backend/nm/core/dependency.py",
           "kind": "existing"
         },
         {
@@ -1623,23 +1623,23 @@
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/projections.py",
+          "path": "backend/nm/edge/projections.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
-          "path": "web/index.html",
+          "path": "frontend/index.html",
           "kind": "existing"
         },
         {
-          "path": "web/app.css",
+          "path": "frontend/app.css",
           "kind": "existing"
         },
         {
@@ -1659,7 +1659,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/core/casefile.py",
+          "path": "backend/nm/core/casefile.py",
           "kind": "existing"
         },
         {
@@ -1721,23 +1721,23 @@
           "kind": "existing"
         },
         {
-          "path": "nm/knowledge/identity.py",
+          "path": "backend/nm/knowledge/identity.py",
           "kind": "existing"
         },
         {
-          "path": "nm/knowledge/manifest.py",
+          "path": "backend/nm/knowledge/manifest.py",
           "kind": "existing"
         },
         {
-          "path": "tools/build_identity_index.py",
+          "path": "pipeline/indexing/build_identity_index.py",
           "kind": "existing"
         },
         {
-          "path": "nm/knowledge/source_registry.py",
+          "path": "backend/nm/knowledge/source_registry.py",
           "kind": "planned"
         },
         {
-          "path": "tools/inventory_legal_sources.py",
+          "path": "pipeline/acquisition/inventory_legal_sources.py",
           "kind": "planned"
         },
         {
@@ -1805,23 +1805,23 @@
       ],
       "boundaries": [
         {
-          "path": "nm/knowledge/artefact.py",
+          "path": "backend/nm/knowledge/artefact.py",
           "kind": "existing"
         },
         {
-          "path": "nm/knowledge/manifest.py",
+          "path": "backend/nm/knowledge/manifest.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/evidence/corpus.py",
+          "path": "backend/nm/adapters/evidence/corpus.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/search/authority.py",
+          "path": "backend/nm/adapters/search/authority.py",
           "kind": "existing"
         },
         {
-          "path": "nm/bootstrap/composition.py",
+          "path": "backend/nm/bootstrap/composition.py",
           "kind": "existing"
         }
       ],
@@ -1886,91 +1886,91 @@
       ],
       "boundaries": [
         {
-          "path": "nm/ports/search.py",
+          "path": "backend/nm/ports/search.py",
           "kind": "existing"
         },
         {
-          "path": "nm/ports/evidence.py",
+          "path": "backend/nm/ports/evidence.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/search/authority.py",
+          "path": "backend/nm/adapters/search/authority.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/evidence/corpus.py",
+          "path": "backend/nm/adapters/evidence/corpus.py",
           "kind": "existing"
         },
         {
-          "path": "nm/knowledge/resolution.py",
+          "path": "backend/nm/knowledge/resolution.py",
           "kind": "existing"
         },
         {
-          "path": "nm/knowledge/citator.py",
+          "path": "backend/nm/knowledge/citator.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/turn.py",
+          "path": "backend/nm/core/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/research.py",
+          "path": "backend/nm/core/research.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/citation.py",
+          "path": "backend/nm/domain/citation.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/matter.py",
+          "path": "backend/nm/domain/matter.py",
           "kind": "existing"
         },
         {
-          "path": "nm/knowledge/identity.py",
+          "path": "backend/nm/knowledge/identity.py",
           "kind": "existing"
         },
         {
-          "path": "nm/knowledge/manifest.py",
+          "path": "backend/nm/knowledge/manifest.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/dependency.py",
+          "path": "backend/nm/core/dependency.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/search/policed.py",
+          "path": "backend/nm/adapters/search/policed.py",
           "kind": "existing"
         },
         {
-          "path": "nm/bootstrap/composition.py",
+          "path": "backend/nm/bootstrap/composition.py",
           "kind": "existing"
         },
         {
-          "path": "tools/build_identity_index.py",
+          "path": "pipeline/indexing/build_identity_index.py",
           "kind": "existing"
         },
         {
-          "path": "tools/journey.py",
+          "path": "assurance/journeys/journey.py",
           "kind": "existing"
         },
         {
-          "path": "tools/served.py",
+          "path": "assurance/journeys/served.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
-          "path": "web/index.html",
+          "path": "frontend/index.html",
           "kind": "existing"
         },
         {
-          "path": "web/app.css",
+          "path": "frontend/app.css",
           "kind": "existing"
         },
         {
@@ -2072,59 +2072,59 @@
       ],
       "boundaries": [
         {
-          "path": "nm/core/accrual.py",
+          "path": "backend/nm/core/accrual.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/limitation.py",
+          "path": "backend/nm/core/limitation.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/deadlines.py",
+          "path": "backend/nm/core/deadlines.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/thresholds.py",
+          "path": "backend/nm/core/thresholds.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/proof.py",
+          "path": "backend/nm/core/proof.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/turn.py",
+          "path": "backend/nm/core/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/premise.py",
+          "path": "backend/nm/core/premise.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/matter.py",
+          "path": "backend/nm/domain/matter.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/dependency.py",
+          "path": "backend/nm/core/dependency.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/projections.py",
+          "path": "backend/nm/edge/projections.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
-          "path": "web/index.html",
+          "path": "frontend/index.html",
           "kind": "existing"
         },
         {
-          "path": "web/app.css",
+          "path": "frontend/app.css",
           "kind": "existing"
         },
         {
@@ -2214,51 +2214,51 @@
       ],
       "boundaries": [
         {
-          "path": "nm/core/proof.py",
+          "path": "backend/nm/core/proof.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/theory.py",
+          "path": "backend/nm/core/theory.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/thresholds.py",
+          "path": "backend/nm/core/thresholds.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/answer.py",
+          "path": "backend/nm/domain/answer.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/adversarial.py",
+          "path": "backend/nm/core/adversarial.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/issues.py",
+          "path": "backend/nm/core/issues.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/issue.py",
+          "path": "backend/nm/domain/issue.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/relief.py",
+          "path": "backend/nm/core/relief.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/consistency.py",
+          "path": "backend/nm/core/consistency.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/turn.py",
+          "path": "backend/nm/core/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/gates.py",
+          "path": "backend/nm/domain/gates.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/matter.py",
+          "path": "backend/nm/domain/matter.py",
           "kind": "existing"
         },
         {
@@ -2333,43 +2333,43 @@
       ],
       "boundaries": [
         {
-          "path": "nm/core/intake.py",
+          "path": "backend/nm/core/intake.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/gaps.py",
+          "path": "backend/nm/core/gaps.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/turn.py",
+          "path": "backend/nm/core/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/brief.py",
+          "path": "backend/nm/domain/brief.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
-          "path": "nm/core/briefing.py",
+          "path": "backend/nm/core/briefing.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/matter.py",
+          "path": "backend/nm/domain/matter.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/projections.py",
+          "path": "backend/nm/edge/projections.py",
           "kind": "existing"
         },
         {
-          "path": "web/index.html",
+          "path": "frontend/index.html",
           "kind": "existing"
         },
         {
@@ -2450,23 +2450,23 @@
       ],
       "boundaries": [
         {
-          "path": "nm/core/intake.py",
+          "path": "backend/nm/core/intake.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/turn.py",
+          "path": "backend/nm/core/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/media.py",
+          "path": "backend/nm/domain/media.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         }
       ],
@@ -2536,27 +2536,27 @@
       ],
       "boundaries": [
         {
-          "path": "nm/domain/answer.py",
+          "path": "backend/nm/domain/answer.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/brief.py",
+          "path": "backend/nm/domain/brief.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/grounding.py",
+          "path": "backend/nm/core/grounding.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/turn.py",
+          "path": "backend/nm/core/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         }
       ],
@@ -2624,27 +2624,27 @@
       ],
       "boundaries": [
         {
-          "path": "nm/domain/decision.py",
+          "path": "backend/nm/domain/decision.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/answer.py",
+          "path": "backend/nm/domain/answer.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/theory.py",
+          "path": "backend/nm/core/theory.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/turn.py",
+          "path": "backend/nm/core/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         }
       ],
@@ -2708,19 +2708,19 @@
       ],
       "boundaries": [
         {
-          "path": "nm/core/cascade.py",
+          "path": "backend/nm/core/cascade.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/decision.py",
+          "path": "backend/nm/domain/decision.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/projections.py",
+          "path": "backend/nm/edge/projections.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         }
       ],
@@ -2784,27 +2784,27 @@
       ],
       "boundaries": [
         {
-          "path": "nm/drafting",
+          "path": "backend/nm/drafting",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/decision.py",
+          "path": "backend/nm/domain/decision.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/drafting.py",
+          "path": "backend/nm/domain/drafting.py",
           "kind": "planned"
         },
         {
-          "path": "nm/core/drafting.py",
+          "path": "backend/nm/core/drafting.py",
           "kind": "planned"
         }
       ],
@@ -2870,27 +2870,27 @@
       ],
       "boundaries": [
         {
-          "path": "nm/drafting",
+          "path": "backend/nm/drafting",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/decision.py",
+          "path": "backend/nm/domain/decision.py",
           "kind": "existing"
         },
         {
-          "path": "nm/ports",
+          "path": "backend/nm/ports",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/action.py",
+          "path": "backend/nm/domain/action.py",
           "kind": "planned"
         },
         {
-          "path": "nm/core/action.py",
+          "path": "backend/nm/core/action.py",
           "kind": "planned"
         }
       ],
@@ -2955,43 +2955,43 @@
       ],
       "boundaries": [
         {
-          "path": "nm/drafting",
+          "path": "backend/nm/drafting",
           "kind": "existing"
         },
         {
-          "path": "nm/core/theory.py",
+          "path": "backend/nm/core/theory.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/proof.py",
+          "path": "backend/nm/core/proof.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/engagement.py",
+          "path": "backend/nm/domain/engagement.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/witness.py",
+          "path": "backend/nm/domain/witness.py",
           "kind": "planned"
         },
         {
-          "path": "nm/core/hearing.py",
+          "path": "backend/nm/core/hearing.py",
           "kind": "planned"
         },
         {
-          "path": "nm/domain/matter.py",
+          "path": "backend/nm/domain/matter.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/dependency.py",
+          "path": "backend/nm/core/dependency.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         }
       ],
@@ -3064,35 +3064,35 @@
       ],
       "boundaries": [
         {
-          "path": "nm/domain/matter.py",
+          "path": "backend/nm/domain/matter.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/summary.py",
+          "path": "backend/nm/domain/summary.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/deadlines.py",
+          "path": "backend/nm/core/deadlines.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/projections.py",
+          "path": "backend/nm/edge/projections.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/handover.py",
+          "path": "backend/nm/domain/handover.py",
           "kind": "planned"
         },
         {
-          "path": "nm/domain/closure.py",
+          "path": "backend/nm/domain/closure.py",
           "kind": "planned"
         },
         {
-          "path": "nm/core/handover.py",
+          "path": "backend/nm/core/handover.py",
           "kind": "planned"
         }
       ],
@@ -3159,19 +3159,19 @@
       ],
       "boundaries": [
         {
-          "path": "nm/domain/media.py",
+          "path": "backend/nm/domain/media.py",
           "kind": "existing"
         },
         {
-          "path": "nm/ports/store.py",
+          "path": "backend/nm/ports/store.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/store/file_store.py",
+          "path": "backend/nm/adapters/store/file_store.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         }
       ],
@@ -3239,11 +3239,11 @@
           "kind": "existing"
         },
         {
-          "path": "tools/journey.py",
+          "path": "assurance/journeys/journey.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/review.py",
+          "path": "backend/nm/domain/review.py",
           "kind": "planned"
         }
       ],
@@ -3321,15 +3321,15 @@
           "kind": "existing"
         },
         {
-          "path": "tools/evidence.py",
+          "path": "assurance/control_plane/evidence.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/legal_review.py",
+          "path": "backend/nm/domain/legal_review.py",
           "kind": "planned"
         },
         {
-          "path": "nm/domain/review.py",
+          "path": "backend/nm/domain/review.py",
           "kind": "existing"
         }
       ],
@@ -3401,39 +3401,39 @@
       ],
       "boundaries": [
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
-          "path": "web/app.css",
+          "path": "frontend/app.css",
           "kind": "existing"
         },
         {
-          "path": "web/index.html",
+          "path": "frontend/index.html",
           "kind": "existing"
         },
         {
-          "path": "tools/journey.py",
+          "path": "assurance/journeys/journey.py",
           "kind": "existing"
         },
         {
-          "path": "tools/layout.py",
+          "path": "assurance/gate/layout.py",
           "kind": "planned"
         },
         {
-          "path": "nm/domain/spoken.py",
+          "path": "backend/nm/domain/spoken.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/authority.py",
+          "path": "backend/nm/domain/authority.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/reassessment.py",
+          "path": "backend/nm/core/reassessment.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/hearing.py",
+          "path": "backend/nm/core/hearing.py",
           "kind": "existing"
         }
       ],
@@ -3508,39 +3508,39 @@
       ],
       "boundaries": [
         {
-          "path": "nm/adapters/model/_budget.py",
+          "path": "backend/nm/adapters/model/_budget.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/model/traced.py",
+          "path": "backend/nm/adapters/model/traced.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/turn.py",
+          "path": "backend/nm/core/turn.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/budget.py",
+          "path": "backend/nm/domain/budget.py",
           "kind": "planned"
         },
         {
-          "path": "nm/ports/model.py",
+          "path": "backend/nm/ports/model.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/model/openai_adapter.py",
+          "path": "backend/nm/adapters/model/openai_adapter.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/model/scripted.py",
+          "path": "backend/nm/adapters/model/scripted.py",
           "kind": "existing"
         }
       ],
@@ -3624,19 +3624,19 @@
           "kind": "existing"
         },
         {
-          "path": "nm/bootstrap/composition.py",
+          "path": "backend/nm/bootstrap/composition.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/restore.py",
+          "path": "backend/nm/domain/restore.py",
           "kind": "planned"
         },
         {
-          "path": "tools/migrate_store.py",
+          "path": "backend/operations/migrate_store.py",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters/store/envelope.py",
+          "path": "backend/nm/adapters/store/envelope.py",
           "kind": "existing"
         }
       ],
@@ -3714,23 +3714,23 @@
           "kind": "existing"
         },
         {
-          "path": "nm/bootstrap/composition.py",
+          "path": "backend/nm/bootstrap/composition.py",
           "kind": "existing"
         },
         {
-          "path": "tools/evidence.py",
+          "path": "assurance/control_plane/evidence.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/deployment.py",
+          "path": "backend/nm/domain/deployment.py",
           "kind": "planned"
         },
         {
-          "path": "nm/domain/egress.py",
+          "path": "backend/nm/domain/egress.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/media_policy.py",
+          "path": "backend/nm/domain/media_policy.py",
           "kind": "existing"
         },
         {
@@ -3809,7 +3809,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/domain/incident.py",
+          "path": "backend/nm/domain/incident.py",
           "kind": "planned"
         },
         {
@@ -3886,11 +3886,11 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "tools/evidence.py",
+          "path": "assurance/control_plane/evidence.py",
           "kind": "existing"
         },
         {
-          "path": "tools/backlog.py",
+          "path": "assurance/control_plane/backlog.py",
           "kind": "existing"
         },
         {
@@ -3902,15 +3902,15 @@
           "kind": "existing"
         },
         {
-          "path": "nm/domain/release.py",
+          "path": "backend/nm/domain/release.py",
           "kind": "planned"
         },
         {
-          "path": "nm/domain/deployment.py",
+          "path": "backend/nm/domain/deployment.py",
           "kind": "existing"
         },
         {
-          "path": "tools/measure.py",
+          "path": "pipeline/quality/measure.py",
           "kind": "planned"
         }
       ],
@@ -4025,7 +4025,7 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "tools/backlog.py",
+          "path": "assurance/control_plane/backlog.py",
           "kind": "existing"
         },
         {
@@ -4041,11 +4041,11 @@
           "kind": "existing"
         },
         {
-          "path": "tools/journey.py",
+          "path": "assurance/journeys/journey.py",
           "kind": "existing"
         },
         {
-          "path": "tools/journey_verdict.py",
+          "path": "assurance/journeys/journey_verdict.py",
           "kind": "planned"
         },
         {
@@ -4149,7 +4149,7 @@
           "kind": "existing"
         },
         {
-          "path": "tools/blueprint.py",
+          "path": "assurance/control_plane/blueprint.py",
           "kind": "existing"
         },
         {
@@ -4157,11 +4157,11 @@
           "kind": "existing"
         },
         {
-          "path": "tools/blueprint_execution.py",
+          "path": "assurance/control_plane/blueprint_execution.py",
           "kind": "existing"
         },
         {
-          "path": "tools/plan_view.py",
+          "path": "assurance/control_plane/plan_view.py",
           "kind": "existing"
         }
       ],
@@ -4222,23 +4222,23 @@
       ],
       "boundaries": [
         {
-          "path": "tools/fetch_judgments.py",
+          "path": "pipeline/acquisition/fetch_judgments.py",
           "kind": "existing"
         },
         {
-          "path": "tools/scrape_judgments.py",
+          "path": "pipeline/acquisition/scrape_judgments.py",
           "kind": "existing"
         },
         {
-          "path": "nm/knowledge/manifest.py",
+          "path": "backend/nm/knowledge/manifest.py",
           "kind": "existing"
         },
         {
-          "path": "nm/knowledge/acquisition.py",
+          "path": "backend/nm/knowledge/acquisition.py",
           "kind": "existing"
         },
         {
-          "path": "tools/reconcile_acquisition.py",
+          "path": "pipeline/acquisition/reconcile_acquisition.py",
           "kind": "existing"
         },
         {
@@ -4250,7 +4250,7 @@
           "kind": "existing"
         },
         {
-          "path": "nm/knowledge/source_registry.py",
+          "path": "backend/nm/knowledge/source_registry.py",
           "kind": "existing"
         },
         {
@@ -4316,39 +4316,39 @@
       ],
       "boundaries": [
         {
-          "path": "nm/core/conflict.py",
+          "path": "backend/nm/core/conflict.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/deadlines.py",
+          "path": "backend/nm/core/deadlines.py",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/engagement.py",
+          "path": "backend/nm/domain/engagement.py",
           "kind": "existing"
         },
         {
-          "path": "nm/ports",
+          "path": "backend/nm/ports",
           "kind": "existing"
         },
         {
-          "path": "web/app.js",
+          "path": "frontend/app.js",
           "kind": "existing"
         },
         {
-          "path": "nm/domain/service.py",
+          "path": "backend/nm/domain/service.py",
           "kind": "planned"
         },
         {
-          "path": "nm/core/service.py",
+          "path": "backend/nm/core/service.py",
           "kind": "planned"
         },
         {
-          "path": "nm/domain/matter.py",
+          "path": "backend/nm/domain/matter.py",
           "kind": "existing"
         },
         {
-          "path": "nm/edge/api.py",
+          "path": "backend/nm/edge/api.py",
           "kind": "existing"
         }
       ],
@@ -4410,23 +4410,23 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "nm/core",
+          "path": "backend/nm/core",
           "kind": "existing"
         },
         {
-          "path": "nm/domain",
+          "path": "backend/nm/domain",
           "kind": "existing"
         },
         {
-          "path": "nm/ports",
+          "path": "backend/nm/ports",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters",
+          "path": "backend/nm/adapters",
           "kind": "existing"
         },
         {
-          "path": "nm/edge",
+          "path": "backend/nm/edge",
           "kind": "existing"
         },
         {
@@ -4434,11 +4434,11 @@
           "kind": "existing"
         },
         {
-          "path": "nm/domain/lead.py",
+          "path": "backend/nm/domain/lead.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/lead.py",
+          "path": "backend/nm/core/lead.py",
           "kind": "existing"
         },
         {
@@ -4508,23 +4508,23 @@
       "commands": [],
       "boundaries": [
         {
-          "path": "nm/core",
+          "path": "backend/nm/core",
           "kind": "existing"
         },
         {
-          "path": "nm/domain",
+          "path": "backend/nm/domain",
           "kind": "existing"
         },
         {
-          "path": "nm/ports",
+          "path": "backend/nm/ports",
           "kind": "existing"
         },
         {
-          "path": "nm/adapters",
+          "path": "backend/nm/adapters",
           "kind": "existing"
         },
         {
-          "path": "nm/edge",
+          "path": "backend/nm/edge",
           "kind": "existing"
         },
         {
@@ -4532,11 +4532,11 @@
           "kind": "existing"
         },
         {
-          "path": "nm/domain/delegation.py",
+          "path": "backend/nm/domain/delegation.py",
           "kind": "existing"
         },
         {
-          "path": "nm/core/delegation.py",
+          "path": "backend/nm/core/delegation.py",
           "kind": "existing"
         },
         {

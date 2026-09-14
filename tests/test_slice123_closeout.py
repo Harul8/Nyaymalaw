@@ -20,7 +20,6 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
@@ -35,6 +34,7 @@ from nm.ports.evidence import (
     Treatment,
 )
 from nm.ports.store import StaleWrite
+
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed, build, finding
 
 pytestmark = pytest.mark.class_a

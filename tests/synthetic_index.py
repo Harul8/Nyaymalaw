@@ -1,7 +1,7 @@
 """A SYNTHETIC authority index and identity index, in the real schema. P21.
 
-Two tiny SQLite files with exactly the tables `tools/build_authority_index.py`
-and `tools/build_identity_index.py` create, holding invented judgments about an
+Two tiny SQLite files with exactly the tables `pipeline/indexing/build_authority_index.py`
+and `pipeline/indexing/build_identity_index.py` create, holding invented judgments about an
 invented proposition. Nothing here is Indian law and nothing here is drawn from
 `legal_database/`: the case names, the citations, the paragraphs and the
 treatment are fixtures, and they say so in their text.

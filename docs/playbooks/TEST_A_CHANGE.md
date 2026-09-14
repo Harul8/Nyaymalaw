@@ -264,8 +264,8 @@ Routine repository commands are documented in `CLAUDE.md`. The ordinary gate
 is:
 
 ```text
-python tools/backlog.py check
-python tools/check.py
+python assurance/control_plane/backlog.py check
+python assurance/gate/check.py
 ```
 
 Do not add approval-only suites to an automatic path merely to make this stage

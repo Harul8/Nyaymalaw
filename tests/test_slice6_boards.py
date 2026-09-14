@@ -9,7 +9,6 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.core.deadlines import Deadline, DeadlineKind
 from nm.domain.matter import Basis, Matter, Posture, Role, Thread
 from nm.edge.projections import board_projection
@@ -67,7 +66,7 @@ def test_an_unbuilt_gate_is_never_listed_as_something_to_action():
     condition nothing is checking.
 
     The matrix is the source: a gate declared `built=False` is one nothing
-    consults, and `tools/trace.py` T9 already fails the build if something
+    consults, and `assurance/gate/trace.py` T9 already fails the build if something
     does. What this asserts is the rendering side.
     """
     from nm.domain.gates import GATES

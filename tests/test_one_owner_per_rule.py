@@ -43,7 +43,7 @@ ROOT = Path(__file__).resolve().parents[1]
 #:          why a second copy is dangerous)
 OWNED: dict[str, tuple[str, str, str]] = {
     "how an advocate writes a provision reference": (
-        "nm/domain/citation.py",
+        "backend/nm/domain/citation.py",
         r"re\.compile\([^)]*(?:sections?|article|\bsec\b)",
         "the gate's copy was hardened against `O.S. 442/2023` parsing as "
         "section 442 and the adapter's was not, so a realistic brief retrieved "
@@ -51,28 +51,28 @@ OWNED: dict[str, tuple[str, str, str]] = {
         "corpus holds (B-009)"),
 
     "the per-tier context budget": (
-        "nm/adapters/model/config.py",
+        "backend/nm/adapters/model/config.py",
         r"CONTEXT_BUDGET\b[^=]*=\s*\{",
         "a budget declared per adapter is a PROVIDER's budget, so a prompt "
         "built to fill one provider's context does not port and the switch "
         "fails at switch time, which is when it is most expensive (B-002)"),
 
     "how a court name is normalised": (
-        "nm/knowledge/jurisdiction.py",
+        "backend/nm/knowledge/jurisdiction.py",
         r"def normalise_court\b",
         "one judgment in 33,791 carries `Supreme Court` where every other "
         "carries `Supreme Court of India`; any second normaliser silently "
         "drops a different row and the two disagree about what is binding"),
 
     "which values a structured response may take": (
-        "nm/ports/model.py",
+        "backend/nm/ports/model.py",
         r"def require_schema\b",
         "the validator lived in the scripted adapter and the OpenAI adapter "
         "skipped it, so an `enum` was decoration on the path that ships and a "
         "role outside an eleven-value vocabulary reached the core (B-040)"),
 
     "what makes a value present but empty": (
-        "nm/domain/text.py",
+        "backend/nm/domain/text.py",
         r"def blank\b",
         "three defects were one sentence and each got its own guard — a "
         "`.strip()`, a regex, an enum member — so nothing caught the fourth, "
@@ -111,7 +111,7 @@ def test_no_rule_has_a_second_home():
     for rule, (owner, pattern, why) in OWNED.items():
         canonical = ROOT / owner
         rx = re.compile(pattern, re.I | re.S)
-        for path in sorted((ROOT / "nm").rglob("*.py")):
+        for path in sorted((ROOT / "backend" / "nm").rglob("*.py")):
             if path == canonical or "__pycache__" in path.parts:
                 continue
             if rx.search(path.read_text(encoding="utf8")):

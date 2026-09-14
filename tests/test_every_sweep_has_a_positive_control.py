@@ -37,7 +37,7 @@ from pathlib import Path
 
 import pytest
 
-from tools._source import SourceSegments
+from assurance.common._source import SourceSegments
 
 pytestmark = pytest.mark.class_a
 
@@ -133,8 +133,8 @@ CONTROLS: dict[str, str] = {
         "test_the_schema_scan_can_see_a_schema_with_no_responder",
     "test_every_sweep_names_a_control_that_proves_it_can_fail":
         "test_the_control_registry_can_see_an_unregistered_or_stale_claim",
-    # BK-69 -- media never reaches reasoning unadmitted, over nm/core,
-    # nm/domain and nm/knowledge. Its control plants five media-shaped
+    # BK-69 -- media never reaches reasoning unadmitted, over backend/nm/core,
+    # backend/nm/domain and backend/nm/knowledge. Its control plants five media-shaped
     # parameters and asserts each is seen; the population is not empty even
     # today, because the boundary module itself is in it.
     "test_no_reasoning_function_accepts_media":
@@ -165,12 +165,12 @@ CONTROLS: dict[str, str] = {
     "test_no_class_is_declared_twice_at_the_top_level":
         "test_the_scan_sees_a_planted_collision",
     # the attributable labels have one owner, over every literal
-    # collection in nm/ AND tools/ -- five of the six copies it
+    # collection in backend/nm/ AND tools/ -- five of the six copies it
     # replaced were in tools/
     "test_only_one_module_writes_down_the_attributable_labels":
         "test_the_checker_can_actually_fail",
     # a claim is never surrendered by a step that did not establish it --
-    # one owner for removing a name, over every module in nm/. The three
+    # one owner for removing a name, over every module in backend/nm/. The three
     # second owners each decided for themselves what a failed removal meant,
     # and one of them refused a legitimate enrolment.
     "test_only_one_module_in_the_product_removes_a_name":
@@ -185,13 +185,13 @@ CONTROLS: dict[str, str] = {
     # sweep's real job is to notice a hopeful edit, so its control forges one.
     "test_no_database_criterion_is_claimed_while_no_run_is_recorded":
         "test_the_check_can_see_a_claim_with_no_run_behind_it",
-    # BK-63-AC1 -- one module decides who may act, over every module in nm/.
+    # BK-63-AC1 -- one module decides who may act, over every module in backend/nm/.
     # Four callers ask the question and the moment two answer it there are two
     # answers; the control plants both assignment forms because the probe was
     # blind to one of them.
     "test_only_one_module_decides_who_may_act":
         "test_the_sweep_can_see_a_second_decider",
-    # BK-17 -- no guard in nm/ is an assert, over every module
+    # BK-17 -- no guard in backend/nm/ is an assert, over every module
     "test_no_guard_in_the_product_is_an_assert":
         "test_the_assert_sweep_can_see_a_guard_it_would_delete",
     # BK-14 -- nothing asks the machine what day it is
@@ -200,22 +200,22 @@ CONTROLS: dict[str, str] = {
     # BK-15 -- the forum has one owner
     "test_the_jurisdiction_has_one_owner":
         "test_the_forum_sweep_can_see_a_second_owner",
-    # BK-13 -- no enum value reaches the advocate, over every Element in nm/
+    # BK-13 -- no enum value reaches the advocate, over every Element in backend/nm/
     "test_no_enum_value_reaches_the_advocate":
         "test_the_value_scan_can_see_an_identifier_reaching_the_advocate",
     # BK-13 -- every Spoken enum checks itself at import, over every class
     "test_every_spoken_enum_called_complete":
         "test_the_complete_scan_can_see_an_enum_that_never_checks_itself",
-    # M1 -- length is not content, over every dataclass in nm/
+    # M1 -- length is not content, over every dataclass in backend/nm/
     "test_no_required_string_field_accepts_a_value_made_of_whitespace":
         "test_blank_is_the_one_definition_of_carrying_nothing",
-    # M5 -- three states, over every enum in nm/
+    # M5 -- three states, over every enum in backend/nm/
     "test_every_outcome_enum_can_say_that_nothing_was_established":
         "test_the_third_state_is_a_value_and_never_a_null",
-    # M2 -- every declared owner is reached, over every function in nm/
+    # M2 -- every declared owner is reached, over every function in backend/nm/
     "test_no_function_in_the_product_is_defined_and_never_reached":
         "test_the_scan_can_see_the_product",
-    # E-102's register, over every prompt constant in nm/core/
+    # E-102's register, over every prompt constant in backend/nm/core/
     "test_every_advocate_facing_prompt_carries_the_clause":
         "test_the_scan_can_see_a_prompt_that_lost_its_clause",
     "test_every_prompt_is_declared_one_kind_or_the_other":
@@ -228,7 +228,7 @@ CONTROLS: dict[str, str] = {
     # an enumerator owns its population, over every subsumed defect row
     "test_every_defect_an_enumerator_subsumes_names_that_enumerator":
         "test_the_enumerator_scan_can_see_a_defect_that_ignores_its_sweep",
-    # one owner for which reads are decisive, over every literal in nm/
+    # one owner for which reads are decisive, over every literal in backend/nm/
     "test_no_second_copy_of_the_decisive_set_exists":
         "test_the_second_copy_scan_can_see_a_second_copy",
     # an open row is a claim someone re-runs, over every open defect
@@ -333,7 +333,7 @@ def _asserted_empty(body: str) -> set[str]:
     """Every local name this test builds up and then asserts is empty.
 
     READ OFF THE SOURCE, NOT OFF A LIST OF NAMES WE THOUGHT OF. `OFFENDER_NAMES`
-    was that list, and a sweep written against `web/` named its list `offences`
+    was that list, and a sweep written against `frontend/` named its list `offences`
     -- one letter outside the allowlist -- so it was not recognised as a sweep,
     was never required to have a positive control, and passed this file
     silently on the day it was added.

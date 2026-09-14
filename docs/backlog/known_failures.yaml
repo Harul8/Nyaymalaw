@@ -12,8 +12,8 @@
 # witness, so TRACE-C1 is repaired and removed rather than waived. The empty
 # list is deliberate: any current failure is new and blocks.
 #
-# But `tools/check.py` returns 1 on any failure, writes no stamp, and
-# `tools/hooks/pre-commit` then refuses every commit. So the repository was in
+# But `assurance/gate/check.py` returns 1 on any failure, writes no stamp, and
+# `assurance/hooks/pre-commit` then refuses every commit. So the repository was in
 # a state where honest, owned red obligations blocked ALL further work --
 # including the work that would eventually close them. The only ways out were
 # to bypass the hook, to weaken the failing tests, or to stop committing. Each
@@ -21,7 +21,7 @@
 #
 # THE THIRD OPTION IS TO SAY WHICH FAILURES ARE ALREADY KNOWN, WHO OWNS THEM,
 # AND TO BLOCK ON ANY OTHER. That is this file. It does not make anything pass:
-# `tools/check.py` still prints FULL GATE RED, the stamp it writes is marked
+# `assurance/gate/check.py` still prints FULL GATE RED, the stamp it writes is marked
 # `scoped`, and no acceptance criterion can derive `done` from a scoped run.
 #
 # WHAT MAKES IT A CONTROL RATHER THAN A WAIVER

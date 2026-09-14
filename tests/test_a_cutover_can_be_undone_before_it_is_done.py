@@ -29,10 +29,10 @@ import json
 from pathlib import Path
 
 import pytest
-
 from nm.adapters.store.file_store import FileMatterStore
 from nm.domain.matter import Matter
-from tools.migrate_store import (
+
+from backend.operations.migrate_store import (
     MigrationRefused,
     Reconciled,
     Reconciliation,
@@ -481,7 +481,7 @@ def test_a_missing_source_refuses_before_creating_a_target(tmp_path):
 
 
 def test_cli_cannot_invent_a_quiescence_assertion(tmp_path, capsys):
-    from tools.migrate_store import main
+    from backend.operations.migrate_store import main
 
     source, target = tmp_path / "src", tmp_path / "dst"
     _populate(source, count=1)

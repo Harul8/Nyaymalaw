@@ -10,14 +10,14 @@ working, so nothing in this file replaces one.
 Two criteria carried no evidence, and in both cases the MECHANISM already
 existed while nothing could exercise it:
 
-    BK-44-AC1  `tools/journey.py` already refuses an undeclared reproduction
+    BK-44-AC1  `assurance/journeys/journey.py` already refuses an undeclared reproduction
                and a declaration that has outlived its defect. The decision
                sat inside `run()` between a pytest subprocess and a print, so
                the only way to exercise it was to break a browser suite on
                purpose. A control nobody can test is a control nobody has
                tested.
 
-    BK-60-AC6  `tools/backlog.py` already declares `CONTRACT_FIELDS` and the
+    BK-60-AC6  `assurance/control_plane/backlog.py` already declares `CONTRACT_FIELDS` and the
                lint already reads them. Nothing planted a step with half a
                contract and required the refusal.
 
@@ -35,8 +35,8 @@ import pathlib
 import pytest
 import yaml
 
-from tools.backlog import CONTRACT_FIELDS
-from tools.journey import EXPECTED, REPRODUCING, regressions
+from assurance.control_plane.backlog import CONTRACT_FIELDS
+from assurance.journeys.journey import EXPECTED, REPRODUCING, regressions
 
 pytestmark = pytest.mark.class_a
 
@@ -156,7 +156,7 @@ def test_the_runner_reads_the_verdict_rather_than_deciding_again():
     this build refuses."""
     import inspect
 
-    from tools import journey
+    from assurance.journeys import journey
 
     source = inspect.getsource(journey.run)
     assert "regressions(rows" in source
@@ -207,7 +207,7 @@ def test_the_lint_refuses_a_step_given_half_a_contract(tmp_path):
     A probe that silently edited nothing would report the check working on a
     file it never changed.
     """
-    from tools import backlog
+    from assurance.control_plane import backlog
 
     rows = _steps()
     original = json.dumps(rows[0], sort_keys=True)

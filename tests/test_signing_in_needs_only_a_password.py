@@ -24,7 +24,6 @@ import inspect
 import json
 
 import pytest
-
 from nm.adapters.store.directory import FileDirectory
 
 pytestmark = pytest.mark.class_a

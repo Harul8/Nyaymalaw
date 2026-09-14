@@ -4,7 +4,7 @@ BK-31-AC20.
 
 WHAT WAS THERE BEFORE, MEASURED 10 SEPTEMBER 2026
 ---------------------------------------------------
-Nothing. `grep -rn csrf nm/` returned no match. The only thing between a
+Nothing. `grep -rn csrf backend/nm/` returned no match. The only thing between a
 signed-in advocate and a cross-site write was `samesite="lax"` on the session
 cookie — one control, owned by the browser rather than by this product, absent
 in clients that predate it, and no protection at all against a same-site
@@ -30,7 +30,6 @@ from __future__ import annotations
 import pytest
 from fastapi import Depends
 from fastapi.routing import APIRoute
-
 from nm.domain.advocate import csrf_token
 from nm.edge.api import app, csrf_protected, signed_in
 
@@ -126,7 +125,7 @@ def test_every_csrf_guarded_route_also_requires_authentication():
 
     `csrf_protected` returns early when there is no session cookie, so the 401
     comes from `signed_in` rather than a 403 from here -- which the turn
-    route's contract test asserts and which `web/app.js` keys its
+    route's contract test asserts and which `frontend/app.js` keys its
     sign-out-and-restore on.
 
     That early return is only safe while every guarded route ALSO requires an

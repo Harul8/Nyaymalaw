@@ -1,0 +1,56 @@
+#!/bin/sh
+# The canonical pre-commit hook for this repository's staged tree.
+#
+# INSTALL:  git config core.hooksPath assurance/hooks
+# REMOVE:   git config --unset core.hooksPath
+# BYPASS:   git commit --no-verify
+#
+# NOT `cp` INTO .git/hooks. Measured 12 September 2026: the copy there was
+# two revisions behind this file -- it lacked `--require-index` and the
+# refusal when Python is absent -- and nothing compared them, so the hook the
+# repository documented and the hook that ran were different programs. A
+# copy is a second owner; `core.hooksPath` makes this directory THE hooks
+# directory, and there is then nothing to drift.
+#
+# WHY IT EXISTS. On 6 September 2026 a commit relied on a green gate that was
+# about a tree which no longer existed: run the gate, edit, commit. A
+# `assurance/specification/plan/build_plan.py` that did not parse reached HEAD, and the register
+# could not be read at all for the length of one commit.
+#
+# The gate had already caught nothing wrong, because it had not seen the
+# change. That is the rule this repository keeps arriving at from different
+# directions -- A RESULT MUST NAME THE THING IT IS ABOUT -- reaching the
+# commit: B-111 gave the gate a fingerprint, B-114 gave the served product
+# one, and this gives the commit one.
+#
+# IT BLOCKS RATHER THAN WARNS, and `--no-verify` is the deliberate override.
+# A warning printed above a successful commit is a warning nobody reads; the
+# point is that an unchecked commit becomes a decision somebody makes rather
+# than one they discover.
+
+# The graph and its vectors, refreshed together by the ONE script every
+# tree-changing hook calls. Measured 10 September 2026: `update` alone left
+# the vectors where they were -- 132 non-File nodes with no vector, every
+# function, class and test written that week, and a query naming one of them
+# returned five plausible neighbours and none of the right answers (S3).
+# Measured again on 12 September: this hook had refreshed them on every
+# `git commit` and the index was 600 behind anyway, because merges and
+# fast-forwards do not run pre-commit. Hence refresh-graph, and hence
+# post-merge and post-rewrite beside this file. It never blocks.
+"$(git rev-parse --show-toplevel)/assurance/hooks/refresh-graph"
+
+# The graph's own review guidance, kept. It was here first and it is not ours
+# to drop; it is about the staged change, so it belongs to this hook alone.
+if command -v code-review-graph >/dev/null 2>&1; then
+    code-review-graph detect-changes --brief || true
+fi
+
+# Is THE STAGED COMMIT the exact tree the gate passed on? Missing Python is a
+# failed control, not permission to skip it. The live-worktree comparison alone
+# is insufficient: an unstaged compensating change can make A+B pass while the
+# index commits only the unchecked A.
+if ! command -v python >/dev/null 2>&1; then
+    echo "GATESTAMP NOT ASSESSED -- python is unavailable; commit refused."
+    exit 1
+fi
+python assurance/gate/gatestamp.py --quiet --require-index || exit 1

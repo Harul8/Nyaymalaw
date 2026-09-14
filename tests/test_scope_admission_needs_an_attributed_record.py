@@ -5,7 +5,6 @@ from dataclasses import replace
 from datetime import datetime, timezone
 
 import pytest
-
 from nm.core import screens
 
 pytestmark = pytest.mark.class_a

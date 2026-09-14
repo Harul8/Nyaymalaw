@@ -41,7 +41,6 @@ because `nobody counted` and `one dispute` are still different facts.
 from __future__ import annotations
 
 import pytest
-
 from nm.core.dispute import Described, interpret
 from nm.core.threading import bind
 from nm.domain.matter import Fact, Matter, Provenance

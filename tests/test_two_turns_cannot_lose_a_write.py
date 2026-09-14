@@ -36,7 +36,6 @@ import threading
 from dataclasses import replace
 
 import pytest
-
 from nm.adapters.store.file_store import FileMatterStore
 from nm.domain.matter import Matter
 from nm.ports.store import StaleWrite

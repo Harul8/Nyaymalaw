@@ -1,0 +1,475 @@
+"""Generate the machine-readable spec from the document generators.
+
+    python assurance/gate/export_spec.py          # check all six outputs, write nothing
+    python assurance/gate/export_spec.py --write  # explicit transactional regeneration
+
+Builds and reconciles six generated outputs in memory. Publication is explicit.
+
+WHY THIS EXISTS
+---------------
+"Did we build what the PRD says" is only answerable if the PRD is readable by a
+program. A Word document is not. So the feature contracts are captured from the
+same generator that renders the document, and the evals from the same generator
+that renders the plan. Nothing is retyped, so nothing can drift.
+
+The invariant this file protects: regenerating must produce no diff. If it does,
+a generator changed and the spec was not refreshed -- `assurance/gate/trace.py` treats
+that as a failure, not a warning.
+
+WHERE STATUS COMES FROM, AND WHERE IT NO LONGER COMES FROM. BK-80-AC5.
+------------------------------------------------------------------------
+This file used to read each feature's status out of the Feature Map sheet of
+`docs/Nyaymalaw_Project_Plan.xlsx` -- the ORIGINAL vertical-slice plan, whose
+own header says it is the plan of record from August and not present status.
+Eighteen features exported as `tested` on that authority, and the four checks
+that gate on status inherited a spreadsheet cell.
+
+Present implementation and proof now come from `assurance/control_plane/feature_state.py`, which
+reads the current control plane. The workbook's own values are still exported,
+because losing them would lose the plan of record -- but they are exported
+under `historical_` names, so no consumer can read one while believing it read
+the other. THE RENAME IS THE POINT: a field that means something different must
+be spelled differently, or every existing call site keeps its old meaning while
+the value underneath changes.
+
+NOTHING IS WRITTEN UNTIL EVERY CHECK HAS PASSED
+-------------------------------------------------
+Six generated files describe one state. Publishing three of them and failing
+on the fourth leaves the spec internally inconsistent in a way that reads as
+ordinary drift -- and T1 would then report the surviving files as stale, which
+sends the reader to the generator rather than to the failure. Payloads are
+built in memory, reconciled, and only then published; a fault during
+publication restores every byte.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    sys.exit("pyyaml is required: pip install pyyaml")
+
+try:
+    import openpyxl
+except ImportError:
+    sys.exit("openpyxl is required: pip install openpyxl")
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+sys.path.insert(0, str(ROOT / "backend"))
+from assurance.common._console import utf8_console  # noqa: E402
+from assurance.control_plane.feature_state import implements_map, project, reconcile  # noqa: E402
+
+utf8_console()
+
+PRD_DIR = ROOT / "assurance" / "specification" / "prd"
+PLAN_XLSX = ROOT / "docs" / "Nyaymalaw_Project_Plan.xlsx"
+STATUS_YAML = ROOT / "docs" / "backlog" / "status.yaml"
+STEPS_YAML = ROOT / "docs" / "backlog" / "steps.yaml"
+HISTORY_YAML = ROOT / "assurance" / "specification" / "historical_feature_ids.yaml"
+FEATURES_OUT = ROOT / "assurance" / "specification" / "features.yaml"
+EVALS_OUT = ROOT / "assurance" / "specification" / "evals.yaml"
+ANCHORS_OUT = ROOT / "assurance" / "specification" / "anchors.yaml"
+SCHEMAS_OUT = ROOT / "assurance" / "specification" / "schemas.yaml"
+GATES_OUT = ROOT / "assurance" / "specification" / "gates.yaml"
+GATES_JSON = PRD_DIR / "gates.json"
+
+STATUSES = ("decided", "built", "tested", "verified live")
+
+
+class ExportRefused(RuntimeError):
+    """The sources do not reconcile. Nothing has been written."""
+
+
+def generated_paths(root: Path = ROOT) -> tuple[Path, ...]:
+    """The complete publication set, named once for checks and writes."""
+    return (
+        root / "assurance" / "specification" / "prd" / "gates.json",
+        root / "assurance" / "specification" / "gates.yaml",
+        root / "assurance" / "specification" / "features.yaml",
+        root / "assurance" / "specification" / "evals.yaml",
+        root / "assurance" / "specification" / "anchors.yaml",
+        root / "assurance" / "specification" / "schemas.yaml",
+    )
+
+
+def gate_payloads(root: Path = ROOT) -> tuple[list[dict], dict[Path, str]]:
+    """Dump the gate matrix for BOTH consumers, before the document renders.
+
+    `backend/nm/domain/gates.py` is the source. The PRD reads the JSON; `trace` and
+    `speccheck` read the YAML. Neither is authored, so neither can go stale.
+    """
+    from nm.domain.gates import as_rows
+
+    rows = as_rows()
+    return rows, {
+        root / "assurance" / "specification" / "prd" / "gates.json": json.dumps(rows, indent=2),
+        root / "assurance" / "specification" / "gates.yaml": (
+            "# GENERATED by assurance/gate/export_spec.py from backend/nm/domain/gates.py"
+            " -- do not edit.\n"
+            "# The gate matrix is CODE. This file exists so the checks and the PRD can\n"
+            "# read it without importing the package.\n\n"
+            + yaml.safe_dump({"gates": rows}, sort_keys=False,
+                             allow_unicode=True, width=100)),
+    }
+
+
+def features_from_prd(root: Path = ROOT, *, gates_json: str | None = None
+                      ) -> tuple[list[dict], list[dict], list[dict]]:
+    """Run the PRD capture against the in-memory candidate gate matrix.
+
+    ``part_c.js`` imports ``gates.json``. Running it in place would therefore
+    either consume a stale output or require repairing that output before the
+    six-way comparison. A temporary shadow keeps generation read-only.
+    """
+    environment = os.environ.copy()
+    # Restored-tree tests copy promises but intentionally not installed
+    # dependencies. NODE_PATH supplies the checkout's immutable dependency
+    # installation while the generator itself still runs from the restored tree.
+    dependency_root = ROOT / "assurance" / "specification" / "prd" / "node_modules"
+    if dependency_root.is_dir():
+        existing = environment.get("NODE_PATH")
+        environment["NODE_PATH"] = os.pathsep.join(
+            part for part in (str(dependency_root), existing) if part)
+    prd_source = root / "assurance" / "specification" / "prd"
+    if gates_json is None:
+        _rows, candidates = gate_payloads(root)
+        gates_json = candidates[root / "assurance" / "specification" / "prd" / "gates.json"]
+    with tempfile.TemporaryDirectory() as directory:
+        shadow = Path(directory) / "prd"
+        shadow.mkdir()
+        for source in prd_source.glob("*.js"):
+            shutil.copy2(source, shadow / source.name)
+        (shadow / "gates.json").write_text(gates_json, encoding="utf8")
+        proc = subprocess.run(
+            ["node", "export_features.js"],
+            cwd=shadow, capture_output=True, text=True, encoding="utf8",
+            check=False, env=environment,
+        )
+    if proc.returncode != 0:
+        raise ExportRefused(f"PRD generator failed:\n{proc.stderr[:2000]}")
+    doc = json.loads(proc.stdout)
+    return doc["features"], doc["anchors"], doc["schemas"]
+
+
+def _rows(ws, header_row: int) -> list[dict]:
+    headers = [c.value for c in ws[header_row]]
+    out = []
+    for row in ws.iter_rows(min_row=header_row + 1, values_only=True):
+        if all(value is None for value in row):
+            continue
+        out.append({h: v for h, v in zip(headers, row, strict=False) if h})
+    return out
+
+
+def _header_row(ws) -> int:
+    """The sheets carry a title and a note above the header; find the header."""
+    for r in range(1, 6):
+        if ws.cell(r, 1).value == "ID" or ws.cell(r, 1).value == "Feature":
+            return r
+    raise ExportRefused(f"could not locate header row in sheet {ws.title!r}")
+
+
+def plan_tables(root: Path = ROOT) -> tuple[list[dict], list[dict], list[dict]]:
+    plan = root / "docs" / "Nyaymalaw_Project_Plan.xlsx"
+    if not plan.exists():
+        raise ExportRefused(
+            f"missing {plan} -- run assurance/specification/plan/build_plan.py first")
+    workbook = openpyxl.load_workbook(plan, read_only=True, data_only=True)
+    try:
+        fmap = _rows(workbook["Feature Map"], _header_row(workbook["Feature Map"]))
+        evals = _rows(workbook["Evals"], _header_row(workbook["Evals"]))
+        tasks = _rows(workbook["Tasks"], _header_row(workbook["Tasks"]))
+    finally:
+        workbook.close()
+    return fmap, evals, tasks
+
+
+def historical_feature_ids(root: Path = ROOT) -> list[dict]:
+    """Load the explicit compatibility registry for historical source ids."""
+    path = root / "assurance" / "specification" / "historical_feature_ids.yaml"
+    if not path.exists():
+        raise ExportRefused(f"missing historical feature-id registry {path}")
+    document = yaml.safe_load(path.read_text(encoding="utf8")) or {}
+    if document.get("schema") != 1:
+        raise ExportRefused(f"{path} has unsupported schema {document.get('schema')!r}")
+    rows = document.get("historical_feature_ids")
+    if not isinstance(rows, list):
+        raise ExportRefused(f"{path} has no historical_feature_ids list")
+    return rows
+
+
+def publish(payloads: dict[Path, str]) -> None:
+    """Write every generated file, or leave every one of them untouched.
+
+    Each file is written beside itself and renamed, so a reader never observes
+    a half-written spec. If any rename fails, the files already replaced are
+    restored from the bytes they held before this call -- so a partial failure
+    leaves the tree byte-identical to where it started rather than in a state
+    that looks like ordinary generator drift.
+    """
+    before: dict[Path, bytes | None] = {
+        path: (path.read_bytes() if path.exists() else None)
+        for path in payloads}
+    replaced: list[Path] = []
+    temporaries = [path.parent / (path.name + ".tmp") for path in payloads]
+    try:
+        # Stage the whole candidate before the first visible rename. A failure
+        # while serialising the sixth payload therefore cannot publish the first.
+        for path, text in payloads.items():
+            temporary = path.parent / (path.name + ".tmp")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temporary.write_text(text, encoding="utf8")
+        for path in payloads:
+            temporary = path.parent / (path.name + ".tmp")
+            os.replace(temporary, path)
+            replaced.append(path)
+    except BaseException:
+        for path in replaced:
+            original = before[path]
+            if original is None:
+                path.unlink(missing_ok=True)
+            else:
+                path.write_bytes(original)
+        raise
+    finally:
+        # THE SCRATCH FILE IS PART OF THE TREE. Restoring five files and
+        # leaving `schemas.yaml.tmp` beside them means the next reader finds a
+        # spec directory that does not match the last successful generation --
+        # and the gate stamp's tree digest walks `assurance/specification/`, so a stray file is a
+        # tree that was never checked. Caught by the fault-injection test on
+        # its first run, which is what that test is for.
+        for temporary in temporaries:
+            temporary.unlink(missing_ok=True)
+
+
+def compare_payloads(payloads: dict[Path, str]) -> list[tuple[Path, str]]:
+    """Compare every candidate in memory, returning missing/stale outputs."""
+    stale: list[tuple[Path, str]] = []
+    for path, text in payloads.items():
+        if not path.exists():
+            stale.append((path, "missing"))
+        elif path.read_text(encoding="utf8") != text:
+            stale.append((path, "stale"))
+    return stale
+
+
+def build(*, root: Path | None = None,
+          bind_execution: bool = True) -> tuple[dict[Path, str], dict]:
+    """Compute every generated payload. Writes nothing; raises on a mismatch.
+
+    ONE KNOWN WART, RECORDED RATHER THAN LEFT TO BE DISCOVERED. `proof` is
+    resolved through the evidence fingerprint, and that fingerprint covers this
+    file's own promise half. So a run that CHANGES a promise reads the old
+    fingerprint while deciding proof, writes the new promise, and a second run
+    can therefore produce a different `proof`. T1 catches it loudly -- it
+    reports the spec as stale and says to re-run -- so it announces itself
+    rather than settling silently on the first answer.
+
+    It cannot bite today: every feature's proof is NOT_RUN and the derived
+    fields are excluded from the fingerprint, so the fixed point is reached on
+    the first pass. If a promise change ever does require two regenerations,
+    this is why, and the fix is to resolve proof against the post-write
+    fingerprint rather than to relax T1.
+    """
+    base = root or ROOT
+    gates, payloads = gate_payloads(base)
+    contracts, anchors, schemas = features_from_prd(
+        base, gates_json=payloads[base / "assurance" / "specification" / "prd" / "gates.json"])
+    fmap, evals, tasks = plan_tables(base)
+
+    steps_document = yaml.safe_load(
+        (base / "docs" / "backlog" / "steps.yaml").read_text(encoding="utf8")) or {}
+    status_document = yaml.safe_load(
+        (base / "docs" / "backlog" / "status.yaml").read_text(encoding="utf8")) or {}
+    steps = steps_document.get("steps") or []
+    items = status_document.get("items") or []
+    authored_features = status_document.get("features") or []
+    history = historical_feature_ids(base)
+    declared = implements_map(base)
+
+    feature_ids = [c["id"] for c in contracts]
+    problems = reconcile(
+        feature_ids,
+        authored_features,
+        steps,
+        items,
+        fmap,
+        declared,
+        (anchor["id"] for anchor in anchors),
+        history,
+    )
+
+    # A missing column must not read as "no evals". Resolve the header once and
+    # fail loudly if it is absent -- an absent input silently producing an empty
+    # list is defect shape S1, and it produced 43 eval-less features on the
+    # first run of this exporter.
+    eval_col = next((c for c in (fmap[0] if fmap else {})
+                     if str(c).startswith("Evals")), None)
+    if eval_col is None:
+        problems.append("Feature Map has no 'Evals...' column -- refusing to "
+                        "emit an eval-less spec. Check assurance/specification/plan/build_plan.py.")
+
+    if problems:
+        raise ExportRefused("; ".join(problems))
+
+    # Only after duplicate raw rows have been refused is it safe to index them.
+    by_id = {f["Feature"]: f for f in fmap if f.get("Feature") in set(feature_ids)}
+    state = project(feature_ids, root=base, bind_execution=bind_execution)
+
+    tasks_by_feature: dict[str, list[str]] = {}
+    for t in tasks:
+        ref = str(t.get("PRD ref") or "")
+        for fid in by_id:
+            if fid in [r.strip() for r in ref.replace(";", ",").split(",")]:
+                tasks_by_feature.setdefault(fid, []).append(t["ID"])
+
+    features = []
+    for c in contracts:
+        meta = by_id[c["id"]]
+        current = state[c["id"]]
+        raw = meta.get(eval_col)
+        historical_evals = []
+        if raw and str(raw).strip() not in ("—", "-", ""):
+            historical_evals = [e.strip() for e in str(raw).split(",") if e.strip()]
+        features.append({
+            "id": c["id"],
+            "title": c["title"],
+            "phase": meta.get("Phase"),
+            # PRESENT STATE, from docs/backlog. Never from the workbook.
+            "status": current.status,
+            "implementation": current.implementation,
+            "implementation_basis": current.implementation_basis,
+            "proof": current.proof,
+            "delivered_by": list(current.delivered_by),
+            "declared_in": list(current.declared_in),
+            "does": c["does"],
+            "never": c["never"],
+            "produces": c["produces"],
+            "eval_prose": c["evals"],
+            "counterexample": c["counterexample"],
+            # THE PLAN OF RECORD, spelled so it cannot be mistaken for present
+            # state. `historical_status` is the August spreadsheet's verdict and
+            # is retained for the slice frontier and for audit, nothing else.
+            "historical_status": meta.get("Status", "decided"),
+            "historical_slice": meta.get("Slice"),
+            "historical_eval_ids": historical_evals,
+            "tasks": sorted(tasks_by_feature.get(c["id"], [])),
+        })
+
+    eval_rows = [{
+        "id": e["ID"],
+        "slice": e.get("Slice"),
+        "class": e.get("Class"),
+        "asserts": e.get("What it asserts"),
+        "counterexample": e.get("The counterexample it MUST reject"),
+        "cadence": e.get("Cadence"),
+        "automated": e.get("Automated"),
+        "prd_ref": e.get("PRD ref"),
+    } for e in evals if e.get("ID")]
+
+    payloads[base / "assurance" / "specification" / "features.yaml"] = (
+        "# GENERATED by assurance/gate/export_spec.py -- do not edit.\n"
+        "# Source: assurance/specification/prd/*.js (the same generator that renders the"
+        " Word document),\n"
+        "# with present status, implementation and proof from docs/backlog/status.yaml.\n"
+        "# `historical_*` fields are the August plan of record, not current state.\n"
+        "# Regenerate after any change to the PRD generator, or trace.py will fail.\n\n"
+        + yaml.safe_dump({"features": features}, sort_keys=False,
+                         allow_unicode=True, width=100))
+
+    payloads[base / "assurance" / "specification" / "evals.yaml"] = (
+        "# GENERATED by assurance/gate/export_spec.py -- do not edit.\n"
+        "# Source: assurance/specification/plan/build_plan.py via "
+        "docs/Nyaymalaw_Project_Plan.xlsx.\n\n"
+        + yaml.safe_dump({"evals": eval_rows}, sort_keys=False,
+                         allow_unicode=True, width=100))
+
+    payloads[base / "assurance" / "specification" / "anchors.yaml"] = (
+        "# GENERATED by assurance/gate/export_spec.py -- do not edit.\n"
+        "# The document ids that are NOT feature contracts: the ten controls and\n"
+        "# the architecture principles. Code declares @implements against these.\n\n"
+        + yaml.safe_dump({"anchors": anchors}, sort_keys=False,
+                         allow_unicode=True, width=100))
+
+    payloads[base / "assurance" / "specification" / "schemas.yaml"] = (
+        "# GENERATED by assurance/gate/export_spec.py -- do not edit.\n"
+        "# Source: assurance/specification/prd/schemas.js (Appendix E). PRODUCES clauses"
+        " are checked\n"
+        "# against these by assurance/gate/speccheck.py, and the code's own dataclasses are\n"
+        "# checked against them by tests/test_produces_contracts.py.\n\n"
+        + yaml.safe_dump({"schemas": schemas}, sort_keys=False,
+                         allow_unicode=True, width=100))
+
+    expected_outputs = set(generated_paths(base))
+    if set(payloads) != expected_outputs:
+        missing = sorted(str(path.relative_to(base)) for path in expected_outputs - set(payloads))
+        extra = sorted(str(path.relative_to(base)) for path in set(payloads) - expected_outputs)
+        raise ExportRefused(
+            f"internal output population mismatch: missing={missing}, extra={extra}")
+
+    return payloads, {"features": features, "evals": eval_rows,
+                      "anchors": anchors, "gates": gates, "schemas": schemas}
+
+
+def main(argv: list[str] | None = None, *, root: Path = ROOT) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--write", action="store_true",
+        help="explicitly publish all six reconciled outputs transactionally",
+    )
+    args = parser.parse_args(argv)
+    try:
+        payloads, built = build(root=root)
+    except ExportRefused as refused:
+        print("EXPORT REFUSED -- nothing was written.")
+        for problem in str(refused).split("; "):
+            print(f"  {problem}")
+        return 1
+
+    stale = compare_payloads(payloads)
+    if stale and not args.write:
+        print("EXPORT STALE -- nothing was written.")
+        for path, condition in stale:
+            print(f"  {path.relative_to(root)} is {condition}")
+        print("Run `python assurance/gate/export_spec.py --write` for explicit regeneration.")
+        return 1
+    if stale:
+        publish(payloads)
+        print(f"published {len(payloads)} generated outputs transactionally")
+    else:
+        print(f"all {len(payloads)} generated outputs are current; nothing was written")
+
+    features, eval_rows = built["features"], built["evals"]
+    print(f"features : {len(features):>3}  -> assurance/specification/features.yaml")
+    print(f"evals    : {len(eval_rows):>3}  -> assurance/specification/evals.yaml")
+    print(f"anchors  : {len(built['anchors']):>3}  -> assurance/specification/anchors.yaml")
+    print(f"gates    : {len(built['gates']):>3}  -> assurance/specification/gates.yaml"
+          " + assurance/specification/prd/gates.json")
+    print(f"schemas  : {len(built['schemas']):>3}  -> "
+          "assurance/specification/schemas.yaml  "
+          f"({sum(len(s_['fields']) for s_ in built['schemas'])} fields)")
+
+    def tally(field: str) -> dict[str, int]:
+        counted: dict[str, int] = {}
+        for f in features:
+            counted[f[field]] = counted.get(f[field], 0) + 1
+        return dict(sorted(counted.items()))
+
+    print("status   :", tally("status"), " (current registry)")
+    print("basis    :", tally("implementation_basis"))
+    print("historical:", tally("historical_status"), " (August plan of record)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

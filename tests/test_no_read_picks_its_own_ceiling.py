@@ -22,12 +22,12 @@ Raising every ceiling moves the cliff without removing it and leaves sixteen
 call sites each choosing a number. CLAUDE.md §4's question is not *where is
 the other copy* but *what makes a second copy impossible*, and the answer is
 that a call site cannot name a ceiling at all: `TurnEngine._read` takes the
-read's KEY, and `nm/core/ceiling.py` decides.
+read's KEY, and `backend/nm/core/ceiling.py` decides.
 
 WHAT THIS FILE REFUSES
 ------------------------
 The seventeenth. A `max_tokens=` literal added to a structured read in
-`nm/core/` fails the build, and a read the product makes that has not
+`backend/nm/core/` fails the build, and a read the product makes that has not
 declared whether it echoes fails with it.
 """
 from __future__ import annotations
@@ -36,14 +36,13 @@ import ast
 import pathlib
 
 import pytest
-
 from nm.core import ceiling
 from nm.domain import reads
 
 pytestmark = pytest.mark.class_a
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-CORE = ROOT / "nm" / "core"
+CORE = ROOT / "backend" / "nm" / "core"
 
 #: Calls that may still name a ceiling, and why. `complete()` returns PROSE --
 #: one imperative sentence, one rewritten step, one courtesy line -- and its
@@ -54,7 +53,7 @@ PROSE_CALLS = frozenset({"complete"})
 
 
 def structured_ceilings() -> list[str]:
-    """Every `max_tokens=` on a STRUCTURED read in `nm/core/`, from the AST."""
+    """Every `max_tokens=` on a STRUCTURED read in `backend/nm/core/`, from the AST."""
     found: list[str] = []
     for path in sorted(CORE.rglob("*.py")):
         if "__pycache__" in path.parts:
@@ -87,7 +86,7 @@ def test_no_structured_read_names_its_own_ceiling():
         "quotes has an output the size of its input, and a constant there "
         "fails by TRUNCATION -- a parse error, so the read is lost rather "
         "than short. Call `TurnEngine._read(prompt, schema, key)` and let "
-        "`nm/core/ceiling.py` decide:\n  " + "\n  ".join(offenders))
+        "`backend/nm/core/ceiling.py` decide:\n  " + "\n  ".join(offenders))
 
 
 def test_every_read_declares_whether_it_echoes():

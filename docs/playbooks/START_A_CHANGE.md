@@ -33,7 +33,7 @@ Start from a `BK-` or `J-` item in `docs/backlog/status.yaml`.
 - Read its reason and observations in `docs/BACKLOG.md`.
 - Confirm its wave in `docs/backlog/plan.json`.
 - Confirm dependencies, priority, affected journey phases and current evidence.
-- Find the linked feature in `spec/features.yaml` and journey step in
+- Find the linked feature in `assurance/specification/features.yaml` and journey step in
   `docs/backlog/steps.yaml`.
 - Find applicable PA, EW, AM and ROLE objects in
   `docs/backlog/professional.json`.

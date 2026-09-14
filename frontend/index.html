@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nyaymalaw</title>
+<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/matter-workspace.css">
+<link rel="stylesheet" href="/static/intake-materials.css">
+</head>
+<body>
+<a class="skip-link" href="#workspace-focus">Skip to your work</a>
+
+<!-- ================== A1 — THE GATE ==================
+     Rendered FIRST and on top, and the application below it stays hidden
+     until a session resolves. Not a redirect and not a modal over a loaded
+     board: a board that paints for an instant before the gate covers it has
+     already shown the matter list to whoever is holding the laptop. -->
+<!-- WHAT CODE IS ANSWERING. Hidden unless the server is running something
+     other than what is on disk, or could not tell.
+
+     ABOVE THE GATE, and outside it, because the thing this catches happens
+     BEFORE anyone signs in -- a registration refused by a rule that was
+     changed three commits ago is what put this here. -->
+<div id="build-warning" class="build-warning" role="status" hidden></div>
+
+<div id="gate">
+  <aside class="arrival-story" aria-label="About this workspace">
+    <div class="arrival-wordmark"><span class="mark">NM</span> NYAYMALAW</div>
+    <p class="eyebrow">THE ADVOCATE'S WORKSPACE</p>
+    <h1>A clearer view.<br>A considered next step.</h1>
+    <p>Bring the instruction, the questions and the file.<br>Keep your professional judgment at the centre.</p>
+    <div class="arrival-note">Take the brief <span aria-hidden="true">/</span> Work the file <span aria-hidden="true">/</span> Advise</div>
+  </aside>
+  <form id="login" class="login" autocomplete="on">
+    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
+    <h2 class="login-title">Welcome back.</h2>
+    <p class="login-lede">Sign in to your practice workspace.</p>
+
+    <!-- EMAIL, because that is what registration makes the id: the route
+         lower-cases it and uses it as the handle, so an advocate cannot be
+         asked for an identifier nobody showed them.
+
+         NOT `type=email`. Advocates enrolled by `backend/operations/enrol.py` have ids
+         like `adv_demo`, and a browser-side email check would lock them out
+         of a door that works today. The server decides what a valid handle
+         is; this field only has to carry it. -->
+    <label for="login-id">Email or advocate ID</label>
+    <input id="login-id" name="username" autocomplete="username"
+           spellcheck="false" placeholder="you@chambers.in" required>
+
+    <label for="login-password">Password</label>
+    <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+
+    <button type="submit" class="primary wide" id="login-go">Sign in</button>
+    <div class="login-alt">
+      <a href="#" id="show-register">Register</a>
+      <span aria-hidden="true"> · </span>
+      <a href="#" id="show-recovery">Use a recovery code</a>
+    </div>
+    <div id="login-state" class="login-state" role="status" aria-live="polite"></div>
+
+    <p class="login-foot">
+      <!-- BK-31. NO FALSE ASSURANCE ABOUT CONFLICT SCOPE.
+           This said the firm's conflicts registry GOVERNS the session. There
+           is no firm-wide registry: the conflict screen checks the matters
+           THIS advocate holds, and says so in its own words. A promise about
+           the one check whose whole value is being trusted is the worst
+           place in the product to be approximately right. -->
+      Register with your email and password. Conflict checks cover only
+      the matters you hold here, not a firm-wide registry.
+    </p>
+  </form>
+
+  <form id="recovery" class="login" hidden autocomplete="off">
+    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
+    <p class="login-lede">Use one of the recovery codes you saved when this
+      account was enrolled.</p>
+
+    <label for="recovery-id">Email or advocate ID</label>
+    <input id="recovery-id" name="username" autocomplete="username"
+           spellcheck="false" required>
+
+    <label for="recovery-code">Unused recovery code</label>
+    <input id="recovery-code" name="recovery_code" type="password"
+           autocomplete="one-time-code" autocapitalize="characters"
+           spellcheck="false" required>
+
+    <label for="recovery-password">New password</label>
+    <div class="pw-wrap">
+      <input id="recovery-password" name="new-password" type="password"
+             minlength="8" autocomplete="new-password" required>
+      <button type="button" class="pw-eye" data-for="recovery-password"
+              aria-label="Show new password" aria-pressed="false">&#128065;</button>
+    </div>
+
+    <label for="recovery-password2">Retype new password</label>
+    <div class="pw-wrap">
+      <input id="recovery-password2" name="new-password-again" type="password"
+             minlength="8" autocomplete="new-password" required>
+      <button type="button" class="pw-eye" data-for="recovery-password2"
+              aria-label="Show retyped new password" aria-pressed="false">&#128065;</button>
+    </div>
+
+    <button type="submit" class="primary wide" id="recovery-go">Change password</button>
+    <div class="login-alt"><a href="#" id="recovery-login">Back to sign in</a></div>
+    <p class="login-foot">A successful recovery ends every existing session.
+      This code will not work again.</p>
+  </form>
+
+  <!-- SEPARATE FORM, NOT A MODE OF THE FIRST. A single form that changes
+       meaning by a flag is one where a mis-set flag posts a password to the
+       wrong route. -->
+  <form id="register" class="login" hidden autocomplete="on">
+    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
+    <p class="login-lede">Create your account and start your private workspace.</p>
+
+    <label for="reg-email">Email <span class="req" aria-hidden="true">*</span></label>
+    <input id="reg-email" name="email" type="email" required maxlength="254"
+           autocomplete="email" autocapitalize="none" spellcheck="false"
+           aria-describedby="reg-email-help">
+    <p id="reg-email-help" class="field-help">Use this email to sign in. No
+      invitation is needed.</p>
+
+    <label for="reg-password">Password <span class="req" aria-hidden="true">*</span></label>
+    <div class="pw-wrap">
+      <input id="reg-password" name="password" type="password" minlength="8" maxlength="1024"
+             autocomplete="new-password" required>
+      <!-- type=button, or it submits the form. aria-pressed carries the
+           state to a screen reader; the glyph carries it to the eye. -->
+      <button type="button" class="pw-eye" data-for="reg-password"
+              aria-label="Show password" aria-pressed="false">
+        &#128065;
+      </button>
+    </div>
+
+    <label for="reg-password2">Retype password <span class="req" aria-hidden="true">*</span></label>
+    <div class="pw-wrap">
+      <input id="reg-password2" name="password2" type="password" minlength="8" maxlength="1024"
+             autocomplete="new-password" required>
+      <!-- type=button, or it submits the form. aria-pressed carries the
+           state to a screen reader; the glyph carries it to the eye. -->
+      <button type="button" class="pw-eye" data-for="reg-password2"
+              aria-label="Show retype password" aria-pressed="false">
+        &#128065;
+      </button>
+    </div>
+
+    <button type="submit" class="primary wide" id="register-go">Register</button>
+    <div class="login-alt"><a href="#" id="show-login">Back to sign in</a></div>
+
+    <p class="login-foot">
+      <span class="req" aria-hidden="true">*</span> required. The password must be at
+      least 8 characters and contain an upper-case letter, a lower-case
+      letter, a numeral and a special character.
+    </p>
+    <p class="login-foot">Your workspace and matters are available as soon as
+      you sign in. Professional approval is separate and is needed only for
+      privileged approvals or overrides.</p>
+  </form>
+
+  <!-- WHAT HAPPENED, ON ITS OWN CARD. The result of a registration used to be
+       one line appended to the sign-in form, which is where every other
+       message on this page also appears -- so "enrolled" and "wrong password"
+       arrived in the same grey sentence in the same place, and the one that
+       means START HERE looked like the one that means you got it wrong.
+
+       Two buttons, not one that changes meaning by a flag. That is the same
+       reason the register form is separate from the sign-in form. -->
+  <section id="outcome" class="login" hidden aria-live="polite">
+    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
+    <h2 id="outcome-title" class="outcome-title"></h2>
+    <p id="outcome-body" class="outcome-body"></p>
+    <section id="recovery-codes" class="recovery-codes" hidden>
+      <h3>Save these one-time recovery codes now</h3>
+      <p>They will not be shown again. Keep them somewhere separate from this
+        device. Each code works once.</p>
+      <ol id="recovery-code-list"></ol>
+    </section>
+    <button type="button" class="primary wide" id="outcome-signin" hidden>Sign in</button>
+    <button type="button" class="primary wide" id="outcome-back" hidden>Back to the form</button>
+    <!-- BK-31-AC20. The acknowledgement for a rotation, which returns to the
+         matters the advocate was already in rather than to a sign-in screen
+         they do not need. Same one-time list, same "they will not be shown
+         again" promise, and the codes leave the document when it is pressed. -->
+    <button type="button" class="primary wide" id="outcome-resume" hidden>I saved them — back to work</button>
+  </section>
+  <!-- BK-31-AC20. FRESH AUTHENTICATION, ASKED SEPARATELY FROM THE CHANGE.
+       The proof this earns is spendable once, expires in five minutes and is
+       bound to this session; it is held in a variable and never written to
+       storage, so a closed tab loses it rather than leaving it behind. -->
+  <section id="reauth" class="login" hidden>
+    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
+    <h2>Replace your recovery codes</h2>
+    <p class="login-lede">This replaces all ten at once. The codes you hold now
+      will stop working, and the new ones are shown once. Confirm your password
+      to continue.</p>
+    <form id="reauth-form" autocomplete="off">
+      <label for="reauth-password">Your password</label>
+      <div class="pw-wrap">
+        <input id="reauth-password" name="current-password" type="password"
+               autocomplete="current-password" required>
+        <button type="button" class="pw-eye" data-for="reauth-password"
+                aria-label="Show password">Show</button>
+      </div>
+      <p class="login-error" id="reauth-error" hidden></p>
+      <button type="submit" class="primary wide" id="reauth-go">Replace my recovery codes</button>
+      <div class="login-alt"><a href="#" id="reauth-cancel">Cancel</a></div>
+    </form>
+  </section>
+</div>
+
+
+<header class="masthead" id="masthead" hidden>
+  <div class="brand">
+    <span class="mark">NM</span>
+    <span class="name">Nyaymalaw</span>
+  </div>
+
+  <div class="workspace-context" id="workspace-context" aria-label="Active workspace">
+    <span class="workspace-label">Active workspace</span>
+    <strong id="workspace-name">—</strong>
+  </div>
+
+  <!-- THE TABS. Three surfaces, and they do not share state on purpose:
+       advising is bounded by a matter, search is bounded by nothing, and the
+       record is what was already served. A search hit does not become a fact
+       on a matter by being looked at. -->
+  <!-- BK-32. THE ONLY WAY TO THE MATTER LIST BELOW 820px.
+       The rail is `display:none` at narrow widths, and `#back` returns to the
+       list only from inside a matter -- so an advocate on a phone could work
+       the matter they were in and reach no other one. This toggles it, and it
+       is in the masthead because that is the one strip present on every
+       surface. -->
+  <button id="matters-toggle" class="ghost matters-toggle" aria-expanded="false"
+          aria-controls="rail">Matters</button>
+
+  <nav class="tabs" id="tabs" aria-label="Workspace navigation">
+    <button class="tab is-on" data-tab="advise" aria-current="page">My work</button>
+    <button class="tab" data-tab="search">Research</button>
+    <button class="tab" data-tab="casefile">Case file</button>
+    <button class="tab" data-tab="history">History</button>
+    <!-- P36. THE PREPARATION SURFACE. P29 to P32 built four served
+         capabilities and no way to reach any of them; a capability
+         with no surface is not shipped. It is a TAB rather than a
+         section of the case file because the four steps are a
+         sequence an advocate walks, and burying the sequence inside
+         another screen is what BK-68 calls a reorientation cost. -->
+    <button class="tab" data-tab="prepare">Preparation</button>
+  </nav>
+
+  <div class="who">
+    <!-- NOT AN INPUT ANY MORE. A text box naming the advocate was the whole
+         of authentication (B-082); this renders who the SERVER says is
+         signed in, and cannot be edited into someone else. -->
+    <span class="who-name" id="who-name">—</span>
+    <span class="who-detail" id="who-detail"></span>
+    <span class="who-detail" id="professional-approval"
+          title="Professional approval applies to privileged approvals and overrides. Your own workspace and matters remain available."></span>
+    <!-- BK-31. WHERE ELSE AM I SIGNED IN, and end those.
+         The case this exists for is a device the advocate no longer
+         controls, so the control has to be reachable from the one they are
+         holding — and the session they press it from survives. -->
+    <button id="devices" class="ghost">Sessions</button>
+    <!-- BK-31-AC20. REPLACE THE RECOVERY CODES.
+         D-013 promised this and nothing served it, so an advocate whose
+         printed codes had been seen had exactly one route back: spend one of
+         the compromised codes to recover, leaving the other nine as exposed
+         as they were. It asks for the password again because a session cookie
+         alone would make an unlocked laptop enough to replace the last-resort
+         credential. -->
+    <button id="replace-codes" class="ghost">Recovery codes</button>
+    <button id="signout" class="ghost">Sign out</button>
+  </div>
+  <div class="health" id="health" role="status">Checking research availability…</div>
+</header>
+
+<div id="rehearsal-warning" class="rehearsal-warning" role="status" hidden>Local rehearsal · Responses are scripted test output, not legal advice. Use synthetic information only.</div>
+<main id="pane-advise" hidden>
+  <!-- ================= THE MATTER LIST / THREAD BOARD =================
+       Two surfaces, deliberately distinct. The matter list is bounded by
+       MATTER count; the thread board by THREAD count. Conflating them is how
+       a board ends up scaling on the wrong axis. -->
+  <aside class="rail" id="rail">
+    <div class="rail-head">
+      <h2 id="rail-title">Matters</h2>
+      <button id="back" class="ghost" hidden>&larr; All matters</button>
+    </div>
+    <div class="rail-meta" id="rail-meta"></div>
+    <div id="rail-body"></div>
+    <button id="new-matter" class="primary wide">Brief a new matter</button>
+  </aside>
+
+  <!-- ========================= THE ANSWER ========================= -->
+  <section class="conversation" aria-label="Matter workspace">
+    <div class="workspace-heading" id="workspace-focus" tabindex="-1">
+      <div><p class="eyebrow" id="workspace-eyebrow">YOUR WORKSPACE</p>
+        <h1 id="matter-heading">My work</h1></div>
+      <span id="save-status" class="save-status" role="status"></span>
+    </div>
+    <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+      <p class="eyebrow">A PLACE TO THINK THROUGH THE MATTER</p>
+      <h2 id="welcome-title">Begin with the instruction.</h2>
+      <p class="welcome-lede">Who do you act for, what happened, and what needs to happen next?
+        Start a matter or return to a file you've already worked on.</p>
+      <div class="welcome-actions">
+        <button type="button" id="welcome-start" class="primary">Brief a new matter <span aria-hidden="true">↗</span></button>
+        <button type="button" id="welcome-matters" class="secondary">View matters</button>
+      </div>
+      <div class="welcome-guidance">
+        <article><span class="guide-number" aria-hidden="true">01</span><h3>The instruction first</h3>
+          <p>Set out the client, the other side and the work you've been asked to do.</p></article>
+        <article><span class="guide-number" aria-hidden="true">02</span><h3>The record within reach</h3>
+          <p>Reopen a matter to review its recorded conversation and continue the brief.</p></article>
+        <article><span class="guide-number" aria-hidden="true">03</span><h3>The decision stays yours</h3>
+          <p>Review the basis and limitations. NM does not send, serve or file on your behalf.</p></article>
+      </div>
+    </section>
+    <!-- ================= B3-B5 — INTAKE, BEFORE SUBSTANCE =================
+         The screens run before any fact is admitted, and the conflict screen
+         cannot run against a party set nobody has given. So the advocate is
+         asked WHO and WHAT SCOPE when they open the file, once, and the
+         answers travel with the first brief.
+
+         It is not a modal. An advocate who has already typed a brief and is
+         then covered by a dialog has to remember what they were saying; this
+         sits above the composer and stays until it is answered. -->
+    <form id="intake" class="intake" hidden>
+      <p class="eyebrow">NEW MATTER · THE INSTRUCTION</p>
+      <h2>First, establish the brief.</h2>
+      <p class="intake-lede">
+        I check a new matter against the other files you hold, so I need the
+        names. These checks cover only your matters, not a firm-wide registry.
+      </p>
+      <label for="in-client">Who we act for</label>
+      <input id="in-client" placeholder="the client's name" required>
+
+      <label for="in-adverse">Who it is against</label>
+      <input id="in-adverse" placeholder="the other side's name" required>
+
+      <label for="in-others">Anyone else named
+        <span class="opt">— guarantor, co-defendant, a company in the group</span>
+      </label>
+      <input id="in-others" placeholder="comma separated, or leave blank">
+
+      <label for="in-scope">What you are instructed to do</label>
+      <input id="in-scope" placeholder="recover the price of goods sold" required>
+
+      <label class="check">
+        <input type="checkbox" id="in-capacity" required>
+        The client can give instructions on this matter.
+      </label>
+
+      <button type="submit" class="primary" id="in-go">Record and continue</button>
+      <p class="field-help">These details are saved with your first brief, not by opening this form.</p>
+      <div id="intake-state" role="status"></div>
+    </form>
+
+    <div id="mode-line" class="mode-line" hidden></div>
+    <div id="thread" class="thread"></div>
+
+    <form id="composer" class="composer" autocomplete="off">
+      <label class="composer-label" for="message">Your brief</label>
+      <textarea id="message" rows="3" placeholder="Brief me — who the client is, what happened, and when."></textarea>
+      <div class="composer-row">
+        <span class="hint" id="hint">Enter to send · Shift+Enter for a new line</span>
+        <button type="submit" class="primary" id="send">Send</button>
+      </div>
+    </form>
+  </section>
+</main>
+
+<!-- ===================== A4 — SEARCH THE CORPUS =====================
+     Ranked case paragraphs. It cannot identify an Act and does not try:
+     the surface has no Act lookup, so the exact-match path stays the only
+     way a statute is read. -->
+<main id="pane-search" class="single" hidden>
+  <section class="searcher">
+    <div class="page-intro"><p class="eyebrow">THE LEGAL LIBRARY</p><h1>Research with context.</h1>
+      <p>Search the available judgments. The results retain their source and searched scope;
+        they do not become facts in a matter simply by being opened.</p></div>
+    <!-- BK-42. EVERY FIELD HAS A LABEL, NOT ONLY A PLACEHOLDER.
+         A placeholder is not an accessible name: it is announced once, it
+         disappears the moment anything is typed, and a screen reader user
+         who tabs back to a filled field is told nothing about what it holds.
+         The labels are visually hidden rather than removed, because the
+         sighted advocate already has the placeholder and the field is
+         narrow. -->
+    <form id="search-form" class="search-bar" autocomplete="off">
+      <label class="sr-only" for="q">What to search for</label>
+      <input id="q" type="search" placeholder="Search judgments — a proposition, a phrase, a section as you would cite it">
+
+      <label class="sr-only" for="f-court">Court</label>
+      <input id="f-court" type="text" placeholder="Court (optional)"
+             list="court-values">
+      <!-- CONTROLLED VALUES, from what the index actually holds (BK-38). An
+           advocate typing `Supreme Court` used to get zero from 395,734
+           Supreme Court paragraphs; it resolves now, and offering the
+           spellings means fewer people have to discover that it does. -->
+      <datalist id="court-values">
+        <option value="Supreme Court of India"></option>
+        <option value="High Court of Andhra Pradesh"></option>
+        <option value="Telangana High Court"></option>
+      </datalist>
+
+      <label class="sr-only" for="f-from">Earliest year</label>
+      <input id="f-from" type="number" placeholder="From yr" min="1800" max="2100">
+
+      <label class="sr-only" for="f-to">Latest year</label>
+      <input id="f-to" type="number" placeholder="To yr" min="1800" max="2100">
+
+      <button type="submit" class="primary">Search</button>
+    </form>
+
+    <!-- P21 -- RESEARCH ON THE OPEN MATTER. The same box and filters; what
+         changes is that the round is RECORDED on the file: which index, what
+         came back, what the adverse search did, and what was attached. The
+         checkbox is disabled until a matter is open, because research with
+         no file to record on is a search. -->
+    <div class="research-bar">
+      <label class="check">
+        <input type="checkbox" id="r-on" disabled>
+        Record this as research <span id="r-matter" class="opt">open a matter to record research on it</span>
+      </label>
+      <div id="research-fields" class="research-fields" hidden>
+        <label for="r-objective">What this research is for</label>
+        <input id="r-objective" placeholder="whether the notice restarted the period">
+        <label for="r-issue">Which issue it serves</label>
+        <input id="r-issue" placeholder="limitation">
+        <label for="r-citation">Exact citation <span class="opt">— resolves by key, never by likeness; leave blank to search</span></label>
+        <input id="r-citation" placeholder="AIR 1990 SC 1">
+      </div>
+    </div>
+
+    <!-- WHAT WAS SEARCHED, ALWAYS. A result of zero is unreadable without
+         it, and unreadable in the direction that hurts: it reads as a corpus
+         that does not hold the law. -->
+    <div id="search-index" class="index-line" hidden></div>
+    <div id="search-state"></div>
+    <div id="search-results"></div>
+
+    <!-- THE RECORD: every index consulted by identity, the adverse search by
+         state, every reliance with its five verdicts. Read from the file. -->
+    <section id="research-record" class="research-record" aria-live="polite" hidden></section>
+  </section>
+</main>
+
+<!-- ======================== THE RECORD ========================
+     Every turn as it was SERVED, read back from the encrypted transcript
+     store. Nothing else keeps it: the matter holds facts, the metrics hold
+     counts and no client words, and the answer was held by neither. -->
+<!-- ===================== P17/P18 — THE CASE FILE =====================
+     Every entry on the file with where it came from, and every conclusion
+     with what it rests on and whether it still holds. The one place an
+     advocate corrects an entry by hand: the correction supersedes the entry,
+     keeps the old one on the record, and marks exactly what rested on it
+     stale -- the cover and the board say so until the next brief reworks it. -->
+<main id="pane-casefile" class="single" hidden>
+  <section class="casefile">
+    <div class="casefile-head">
+      <h2>The case file</h2>
+      <select id="casefile-matter" aria-label="Matter"><option value="">Choose a matter…</option></select>
+    </div>
+    <div id="casefile-state"></div>
+
+    <section class="currency" id="currency" aria-labelledby="currency-h">
+      <h3 id="currency-h">What still holds</h3>
+      <div id="currency-state" class="currency-state"></div>
+      <ul id="currency-stale" class="currency-stale"></ul>
+      <details class="currency-history">
+        <summary>Every conclusion, and every revision</summary>
+        <div id="currency-nodes"></div>
+        <div id="currency-history"></div>
+      </details>
+    </section>
+
+    <section class="premises" id="premises" aria-labelledby="premises-h" hidden>
+      <h3 id="premises-h">The legal premises</h3>
+      <p class="casefile-lede">A limitation rests on which provision governs,
+        what starts the period, and which forum binds. Where I inferred one I
+        say so and do not enter a deadline; confirm it and the date becomes a
+        deadline. Correct arithmetic cannot establish any of the three.</p>
+      <div id="premises-state" class="currency-state"></div>
+      <div id="premises-threads"></div>
+    </section>
+
+    <section class="relief" id="relief" aria-labelledby="relief-h" hidden>
+      <h3 id="relief-h">Relief and enforceability</h3>
+      <p class="casefile-lede">A legally strong claim can still be worth
+        nothing — the debtor has no assets, the order comes too late, the decree
+        cannot be executed, or the suit costs more than it recovers. I read
+        relief against the objective on availability, value, timing and
+        enforceability; a route that costs more than it wins is flagged, not
+        withheld. State what you know and I will not treat a remedy as
+        delivering when the file says it cannot.</p>
+      <div id="relief-state" class="currency-state"></div>
+      <div id="relief-threads"></div>
+    </section>
+
+    <section class="briefing-pane" id="briefing-pane" aria-labelledby="briefing-h" hidden>
+      <h3 id="briefing-h">Briefing readiness</h3>
+      <p class="casefile-lede">Answering a turn is not the same as finishing the
+        intake. I am ready for the task only when no controlling gap is open.
+        Where you cannot obtain something, mark it — I pause it with a resume
+        trigger instead of asking again, and say plainly that intake is not
+        complete while it is outstanding.</p>
+      <div id="briefing-host"></div>
+    </section>
+
+    <section class="governance" id="governance" aria-labelledby="governance-h">
+      <h3 id="governance-h">Custody, attribution and decisions</h3>
+      <p class="casefile-lede">Three questions this file has to be able to
+        answer: which dispute a document belongs to, what has been decided
+        about the advice, and what is being kept or erased and why. None of
+        them is answered by a default — an unattached document contributes
+        nothing until you say where it belongs, and a decision recorded here
+        is not authority to file, send, settle or concede.</p>
+
+      <h4 id="bindings-h">Source attribution</h4>
+      <div id="bindings-state" class="currency-state"></div>
+      <div id="bindings-host" aria-labelledby="bindings-h"></div>
+
+      <h4 id="decisions-h">Decisions on advice</h4>
+      <div id="decisions-state" class="currency-state"></div>
+      <div id="decisions-host" aria-labelledby="decisions-h"></div>
+
+      <h4 id="retention-h">Retention and erasure</h4>
+      <div id="retention-state" class="currency-state"></div>
+      <div id="retention-host" aria-labelledby="retention-h"></div>
+    </section>
+
+    <h3 id="entries-h">Entries</h3>
+    <p class="casefile-lede">Correct an entry here and I will mark everything
+      that rested on it as not current until the next brief reworks it. The
+      entry you corrected stays on the record, marked superseded.</p>
+    <div id="casefile-entries" aria-labelledby="entries-h"></div>
+  </section>
+</main>
+
+<main id="pane-prepare" class="single" hidden>
+  <section class="prepare">
+    <div class="page-intro">
+      <p class="eyebrow">PREPARING, NOT DOING</p>
+      <h1>Get the document and the hearing ready.</h1>
+      <p>Everything on this screen is preparation. Nothing here is filed, sent,
+        offered or conceded — you do that, and you record what happened.</p>
+    </div>
+
+    <div class="prepare-head">
+      <label class="sr-only" for="prepare-matter">Matter to prepare</label>
+      <select id="prepare-matter"><option value="">Choose a matter…</option></select>
+    </div>
+    <div id="prepare-state" class="currency-state"></div>
+
+    <!-- EVERY FORM ON THIS PANE IS WRITTEN HERE, ONCE, AND IS NEVER REBUILT.
+         A render replaces only the read-only `-host` divs. The browser journey
+         found the alternative in this very pane: a section rebuilt its own
+         form while an advocate was part-way through typing a destination, the
+         text went with it, and the submit that followed was rejected for a
+         field that had been filled in. A form that holds what somebody typed
+         is not a thing a repaint may own. -->
+
+    <section class="prep-block" id="prep-package" aria-labelledby="package-h">
+      <h2 id="package-h">The drafting package</h2>
+      <p class="casefile-lede">A package says what is being drafted, for whom,
+        and where every sentence came from. It can be ready to review. It is
+        never ready to file: that is a judgement about a court's requirements
+        which nothing here has checked.</p>
+      <form id="package-form" class="prep-form" novalidate>
+        <label for="pk-document">Document</label>
+        <input id="pk-document" autocomplete="off" required>
+
+        <label for="pk-posture">Our posture</label>
+        <input id="pk-posture" autocomplete="off" required>
+
+        <label for="pk-audience">Audience</label>
+        <input id="pk-audience" autocomplete="off" required>
+
+        <label for="pk-court">Court on the cause title</label>
+        <input id="pk-court" autocomplete="off">
+
+        <label for="pk-purpose">Purpose</label>
+        <input id="pk-purpose" autocomplete="off" required>
+
+        <label for="pk-theory">Theory, in one sentence</label>
+        <input id="pk-theory" autocomplete="off">
+
+        <label for="pk-relief">Relief sought</label>
+        <input id="pk-relief" autocomplete="off">
+
+        <button id="pk-make" type="submit">Prepare the package</button>
+      </form>
+      <div id="package-error" class="state problem" role="alert" hidden></div>
+      <div id="package-host"></div>
+      <button id="pk-export" type="button" hidden>Export it for review</button>
+      <div id="package-export" aria-live="polite"></div>
+    </section>
+
+    <section class="prep-block" id="prep-action" aria-labelledby="action-h">
+      <h2 id="action-h">Filing and sending</h2>
+      <p class="casefile-lede">I prepare, verify and export. You file or send it
+        and record the receipt. There is no connector here, and nothing on this
+        screen can reach a court, a client or an opponent.</p>
+      <form id="action-form" class="prep-form" novalidate>
+        <label for="ac-authority">Whose authority this rests on</label>
+        <input id="ac-authority" autocomplete="off" required>
+
+        <label for="ac-object">What is being sent</label>
+        <input id="ac-object" autocomplete="off" required>
+
+        <label for="ac-destination">Where it is going</label>
+        <input id="ac-destination" autocomplete="off" required>
+
+        <button id="ac-make" type="submit">Propose this action</button>
+      </form>
+      <div id="action-error" class="state problem" role="alert" hidden></div>
+      <div id="action-host" aria-live="polite"></div>
+      <button id="ac-confirm" type="button" hidden>Confirm this exact content</button>
+      <button id="ac-send" type="button" hidden>Send or file it</button>
+
+      <form id="outcome-form" class="prep-form" novalidate hidden>
+        <label for="oc-state">What happened when you filed or sent it</label>
+        <select id="oc-state">
+          <option value="delivery_unknown">I do not know whether it arrived</option>
+          <option value="delivered">It arrived, and I have the receipt</option>
+          <option value="refused">It was refused</option>
+          <option value="cancelled">I stopped before sending it</option>
+        </select>
+
+        <label for="oc-receipt">Receipt</label>
+        <input id="oc-receipt" autocomplete="off">
+
+        <label for="oc-because">What you saw</label>
+        <input id="oc-because" autocomplete="off">
+
+        <button id="oc-record" type="submit">Record the outcome</button>
+      </form>
+
+      <form id="reconcile-form" class="prep-form" novalidate hidden>
+        <label for="rc-basis">What you checked</label>
+        <input id="rc-basis" autocomplete="off">
+
+        <label for="rc-receipt">The receipt, if you found one</label>
+        <input id="rc-receipt" autocomplete="off">
+
+        <button id="rc-go" type="submit">Look again</button>
+      </form>
+    </section>
+
+    <section class="prep-block" id="prep-hearing" aria-labelledby="hearing-h">
+      <h2 id="hearing-h">Hearing and negotiation</h2>
+      <p class="casefile-lede">Preparation is built from the verified package.
+        A witness plan records what to ask about; it never records what a
+        witness will say, and an instruction to an expert states the question
+        rather than the answer.</p>
+      <button id="hp-make" type="button">Prepare for the hearing</button>
+      <div id="hearing-error" class="state problem" role="alert" hidden></div>
+      <div id="hearing-host" aria-live="polite"></div>
+
+      <form id="witness-form" class="prep-form" novalidate hidden>
+        <label for="wt-witness">Witness</label>
+        <input id="wt-witness" autocomplete="off">
+
+        <label for="wt-topics">What to ask them about — subjects, not answers</label>
+        <input id="wt-topics" autocomplete="off">
+
+        <button id="wt-add" type="submit">Add the witness plan</button>
+      </form>
+      <div id="witness-host"></div>
+      <button id="hp-incourt" type="button" hidden>What can I say in court?</button>
+      <div id="incourt-host" aria-live="polite"></div>
+    </section>
+
+    <section class="prep-block" id="prep-continuity" aria-labelledby="continuity-h">
+      <h2 id="continuity-h">Coming back, and handing over</h2>
+      <p class="casefile-lede">Where this matter stands, what changed while you
+        were away, and what is still yours. A handover moves responsibility only
+        when the person receiving it accepts.</p>
+      <button id="re-entry" type="button">Where does this stand?</button>
+      <div id="continuity-error" class="state problem" role="alert" hidden></div>
+      <div id="continuity-host" aria-live="polite"></div>
+
+      <form id="handover-form" class="prep-form" novalidate hidden>
+        <label for="ho-to">Offer this matter to</label>
+        <input id="ho-to" autocomplete="off">
+
+        <label for="ho-next">What the next responsibility is, and whose it becomes</label>
+        <input id="ho-next" autocomplete="off">
+
+        <button id="ho-offer" type="submit">Offer the handover</button>
+      </form>
+      <div id="handover-host" aria-live="polite"></div>
+    </section>
+  </section>
+</main>
+
+<main id="pane-history" class="single" hidden>
+  <section class="history">
+    <div class="page-intro"><p class="eyebrow">THE WORKING RECORD</p><h1>Return to the conversation.</h1>
+      <p>Review what was recorded for a matter. Earlier advice retains the limitations of its original file.</p></div>
+    <div class="history-head">
+      <h2>Conversations, as they were served</h2>
+      <label class="sr-only" for="history-matter">Matter to review</label>
+      <select id="history-matter"><option value="">Choose a matter…</option></select>
+    </div>
+    <div id="history-state"></div>
+    <div id="history-body"></div>
+  </section>
+</main>
+
+<dialog id="sessions-dialog" class="account-dialog" aria-labelledby="sessions-title">
+  <div class="dialog-heading"><div><p class="eyebrow">ACCOUNT SECURITY</p>
+    <h2 id="sessions-title">Your signed-in devices</h2></div>
+    <button type="button" id="sessions-close" class="ghost" aria-label="Close sessions">Close</button></div>
+  <p>Review activity on your account. Ending other sessions leaves this device signed in.</p>
+  <div id="sessions-body" aria-live="polite"></div>
+  <div id="sessions-action-state" role="status"></div>
+  <button type="button" id="sessions-revoke" class="ghost" hidden>End other sessions</button>
+</dialog>
+<script src="/static/app.js"></script>
+<script src="/static/matter-workspace.js"></script>
+<script src="/static/intake-materials.js"></script>
+</body>
+</html>

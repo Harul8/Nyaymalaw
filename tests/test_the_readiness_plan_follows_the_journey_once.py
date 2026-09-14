@@ -28,8 +28,8 @@ import copy
 
 import pytest
 
-from tools import backlog
-from tools.readiness_plan import AUTHORITY, derive, problems
+from assurance.control_plane import backlog
+from assurance.control_plane.readiness_plan import AUTHORITY, derive, problems
 
 pytestmark = pytest.mark.class_a
 

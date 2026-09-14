@@ -1,0 +1,1251 @@
+:root {
+  /* Locally available fonts and shared tokens: rendering never sends a
+     request to a font service from an advocate's workspace. */
+  --paper:      #f7f8f5;
+  --surface:    #ffffff;
+  --surface-2:  #edf1ed;
+  --ink:        #192e2b;
+  --ink-2:      #455751;
+  --ink-3:      #5e7068;
+  --rule:       #d8e0d9;
+  --accent:     #185748;
+  --accent-2:   #0d4034;
+  --accent-w:   #e4efe8;
+  --signal:     #96382f;
+  --signal-w:   #f3e3e1;
+  --good:       #2f6b4f;
+  --good-w:     #dceae2;
+  --amber:      #6a4e1f;
+  --amber-w:    #f3ebdc;
+  --f-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --f-mono: ui-monospace, Consolas, monospace;
+  --f-serif: Georgia, "Times New Roman", serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    /* The same flattening, one ground rather than three. */
+    --paper: #0e1216; --surface: #0e1216; --surface-2: #0e1216;
+    --ink: #e6ebef; --ink-2: #b3bec6; --ink-3: #7f8b94; --rule: #2c353d;
+    --accent: #6fb3c0; --accent-2: #8fc9d4; --accent-w: #16292f;
+    --signal: #d98c82; --signal-w: #2c1d1b;
+    --good: #7fbe9c; --good-w: #17261f;
+    --amber: #d8bd8a; --amber-w: #2a2318;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ------------------------------------------------------------- masthead --- */
+.masthead {
+  display: grid; align-items: center; gap: 0.6rem 1.5rem;
+  grid-template-columns: auto minmax(10rem, 1fr) auto;
+  padding: 1rem 1.75rem 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+  flex: none;
+}
+.brand { display: flex; align-items: baseline; gap: 0.6rem; }
+.mark {
+  font-family: var(--f-serif); font-size: 0.9rem; font-weight: 600;
+  letter-spacing: -0.08em; color: #fff; background: #185748;
+  padding: 0.55rem 0.5rem; border-radius: 8px;
+}
+.name { font-family: var(--f-serif); font-size: 1.2rem; letter-spacing: -0.01em; }
+.workspace-context {
+  min-width: 0;
+  max-width: 100%;
+  border-left: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  padding-left: 0.8rem;
+}
+.workspace-label {
+  color: var(--ink-3);
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+#workspace-name { font-size: 0.78rem; font-weight: 600; overflow-wrap: anywhere; }
+.who { display: flex; align-items: center; gap: 0.8rem; margin-left: auto; flex-wrap: wrap; min-width: 0; max-width: 100%; }
+.who label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); }
+.who input {
+  font-family: var(--f-mono); font-size: 0.8rem; width: 9rem;
+  padding: 0.3rem 0.5rem; border: 1px solid var(--rule);
+  border-radius: 3px; background: var(--paper); color: var(--ink);
+}
+.health {
+  grid-column: 2 / -1; grid-row: 2; justify-self: end;
+  font-size: 0.76rem; color: var(--ink-3);
+  padding: 0.5rem 0; max-width: 100%; overflow-wrap: anywhere;
+}
+.health.bad { color: var(--signal); border-color: var(--signal); }
+
+/* ---------------------------------------------------------------- layout --- */
+/* `hidden` MUST WIN OVER A LAYOUT RULE.
+ *
+ * `[hidden]` is a user-agent style with the lowest specificity there is, and
+ * `main { display: grid }` beats it -- so the three panes all rendered at
+ * once, stacked, and the tab bar did nothing. The element was hidden by every
+ * measure the code could see (`el.hidden === true`) and visible to the
+ * advocate, which is the gap between a correct component and a served page
+ * that CLAUDE.md §8 is about: verify on the bytes, not the return value. */
+[hidden] { display: none !important; }
+
+main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-height: 0; }
+
+/* ------------------------------------------------------------------ rail --- */
+.rail {
+  background: var(--surface); border-right: 1px solid var(--rule);
+  display: flex; flex-direction: column; min-height: 0;
+}
+.rail-head {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 1.5rem 1.2rem 0.6rem;
+}
+.rail-head h2 {
+  margin: 0; font-family: var(--f-serif); font-size: 1.02rem; font-weight: 500;
+}
+.rail-meta {
+  padding: 0 1.2rem 1rem; font-size: 0.76rem; color: var(--ink-3);
+}
+#rail-body { overflow-y: auto; flex: 1; padding: 0 0.6rem; }
+
+.row {
+  border: 1px solid var(--rule); border-radius: 10px; background: var(--surface);
+  padding: 0.85rem; margin-bottom: 0.65rem; cursor: pointer;
+  display: grid; gap: 0.25rem;
+}
+.row:hover { border-color: var(--accent); }
+.row.static { cursor: default; }
+.row .r-title { font-weight: 600; font-size: 0.9rem; }
+.row .r-fields {
+  display: grid; grid-template-columns: 5.4rem 1fr; gap: 0.1rem 0.5rem;
+  font-size: 0.78rem; color: var(--ink-2);
+}
+.row .r-fields dt {
+  font-family: var(--f-mono); font-size: 0.62rem; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--ink-3); padding-top: 0.12rem;
+}
+.row .r-fields dd { margin: 0; }
+
+/* A loud row is loud. It is never collapsed and never quietly styled. */
+.row.loud { border-left: 3px solid var(--signal); }
+.row.loud .r-title { color: var(--signal); }
+.pill {
+  display: inline-block; font-family: var(--f-mono); font-size: 0.6rem;
+  font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+  padding: 0.12rem 0.35rem; border-radius: 2px;
+}
+.pill.unknown { color: var(--signal); border: 1px solid var(--signal); }
+.pill.ok      { color: var(--good);   border: 1px solid var(--good); }
+.pill.blocked { color: var(--amber);  border: 1px solid var(--amber); }
+
+/* Board states. An unbuildable board is an EXPLICIT failure, never an empty
+   one -- rendering empty would tell the advocate they have no matters. */
+.state {
+  margin: 0.4rem 0.4rem 0; padding: 0.7rem 0.8rem; border-radius: 3px;
+  font-size: 0.82rem; border: 1px solid var(--rule); color: var(--ink-2);
+}
+.state.empty      { background: var(--paper); }
+.state.building   { color: var(--accent); }
+.state.unbuildable{ color: var(--signal); border-color: var(--signal); }
+
+/* ---------------------------------------------------------- conversation --- */
+.conversation { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+.mode-line {
+  padding: 0.5rem 1.5rem; font-size: 0.78rem; color: var(--ink-3);
+  font-style: italic; border-bottom: 1px solid var(--rule); flex: none;
+}
+.thread { overflow-y: auto; flex: 1; padding: 1.8rem 2.2rem 0.75rem; }
+
+.turn { max-width: 52rem; margin: 0 auto 2rem; }
+
+/* THE ADVOCATE'S OWN WORDS, set apart as theirs and set to the right.
+   Everything else on this screen is something the product wrote, and a reader
+   scanning back through a long matter needs to find what THEY said without
+   having to read it. */
+.said-row { display: flex; justify-content: flex-end; margin-bottom: 1.1rem; }
+.brief {
+  /* A HAIRLINE, NOT A FILL. On a white page the right-alignment and this
+     rule are what still say "you said this" -- and that is not decoration:
+     an advocate scanning back through a long matter has to find their own
+     words without reading them. */
+  border: 1px solid var(--rule); border-radius: 12px;
+  padding: 0.65rem 0.95rem; max-width: 80%;
+  white-space: pre-wrap; font-size: 0.94rem; line-height: 1.55;
+  color: var(--ink);
+}
+
+/* THE SUPPORT, FOLDED. Retrieved statutory text and quoted paragraphs are the
+   support for a claim stated above them, and they are what crowds the screen.
+   A DISCLOSURE NEVER COMES IN HERE -- see `renderTurn`. */
+.support { margin: 0.2rem 0 1rem; }
+.support > summary {
+  cursor: pointer; list-style: none;
+  font-family: var(--f-mono); font-size: 0.68rem; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-3);
+  padding: 0.3rem 0.5rem; border-radius: 5px;
+  display: inline-flex; align-items: center; gap: 0.45rem;
+}
+.support > summary::-webkit-details-marker { display: none; }
+.support > summary::before {
+  content: "\25b8"; font-size: 0.75rem; transition: transform 0.12s ease;
+}
+.support[open] > summary::before { transform: rotate(90deg); }
+.support > summary:hover { color: var(--ink-2); }
+.support > .el { margin-top: 0.7rem; }
+
+/* The four element kinds, and nothing else can be rendered. */
+.el { border-left: 3px solid var(--rule); padding: 0.15rem 0 0.15rem 0.85rem; margin-bottom: 0.85rem; }
+.el .k {
+  font-family: var(--f-mono); font-size: 0.6rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.1em; display: block;
+  margin-bottom: 0.2rem;
+}
+.el .body { white-space: pre-wrap; }
+.el.action   { border-left-color: var(--accent); }
+.el.action .k { color: var(--accent); }
+.el.question { border-left-color: var(--signal);
+               padding: 0.5rem 0.8rem; border-radius: 0 3px 3px 0; }
+.el.question .k { color: var(--signal); }
+.el.finding  { border-left-color: var(--amber); }
+.el.finding .k { color: var(--amber); }
+.el.ground   { border-left-color: var(--rule); color: var(--ink-2); font-size: 0.88rem; }
+.el.ground .k { color: var(--ink-3); }
+.el .when {
+  font-family: var(--f-mono); font-size: 0.68rem; color: var(--ink-3);
+  display: block; margin-top: 0.3rem;
+}
+.el .refs {
+  font-family: var(--f-mono); font-size: 0.64rem; color: var(--ink-3);
+  display: block; margin-top: 0.3rem; word-break: break-all;
+}
+
+/* A gate firing. The response class colours it: `withhold` is the only one
+   that means nothing was emitted, and it must not look like the others. */
+.gates { margin: 10px 0 2px; display: flex; flex-direction: column; gap: 4px; }
+.gate {
+  display: flex; gap: 8px; align-items: baseline;
+  font-size: 12px; line-height: 1.45;
+  padding: 5px 9px; border-radius: 5px;
+  border-left: 3px solid var(--rule);
+  background: var(--surface);
+}
+.gate .gid {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px; letter-spacing: .02em;
+  color: var(--ink-3); white-space: nowrap;
+}
+.gate .gdetail { color: var(--ink-2); }
+.gate.disclose { border-left-color: var(--accent); }
+.gate.block    { border-left-color: var(--signal); }
+.gate.withhold { border-left-color: var(--signal); }
+.gate.withhold .gid { color: var(--signal); font-weight: 600; }
+
+/* An element that reports what could NOT be established. Deliberately quieter
+   than a citation and deliberately not invisible. */
+.el.disclosure { background: transparent; border-left-style: dashed; }
+.el.disclosure .k { color: var(--ink-3); }
+
+.metrics {
+  font-family: var(--f-mono); font-size: 0.64rem; color: var(--ink-3);
+  border-top: 1px dashed var(--rule); padding-top: 0.4rem; margin-top: 0.6rem;
+  display: flex; flex-wrap: wrap; gap: 0.9rem;
+}
+.metrics .v { color: var(--ink-2); }
+.metrics .warn { color: var(--signal); }
+
+.failure {
+  border: 1px solid var(--signal); color: var(--signal);
+  padding: 0.7rem 0.9rem; border-radius: 3px; font-size: 0.88rem;
+  max-width: 46rem; margin: 0 auto 1.6rem;
+}
+
+/* -------------------------------------------------------------- composer --- */
+.composer {
+  flex: none; background: var(--paper);
+  padding: 0.8rem 1.5rem 1rem;
+}
+.composer textarea {
+  width: 100%; max-width: 46rem; margin: 0 auto; display: block;
+  font-family: var(--f-sans); font-size: 0.95rem; line-height: 1.5;
+  padding: 0.6rem 0.7rem; border: 1px solid var(--rule); border-radius: 3px;
+  background: var(--paper); color: var(--ink); resize: vertical;
+  /* THE GREY LINE. Everything else on this page is flat, so the one
+     surface the advocate types into has to declare itself. */
+  border: 1px solid var(--rule); border-radius: 8px;
+}
+.composer textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.composer-row {
+  max-width: 46rem; margin: 0.5rem auto 0; display: flex;
+  align-items: center; justify-content: space-between; gap: 1rem;
+}
+.hint { font-size: 0.72rem; color: var(--ink-3); }
+
+button {
+  font-family: var(--f-sans); font-size: 0.85rem; font-weight: 500;
+  padding: 0.62rem 1rem; border-radius: 8px; cursor: pointer; min-height: 40px;
+  border: 1px solid var(--rule); background: var(--paper); color: var(--ink);
+}
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary {
+  background: #185748; border-color: #185748;
+  color: #fff; font-weight: 600;
+}
+button.primary:hover { background: #0d4034; color: #fff; }
+button.primary:disabled { opacity: 0.5; cursor: default; }
+button.ghost { border: none; background: none; color: var(--accent); padding: 0.45rem 0.3rem; font-size: 0.78rem; }
+button.wide { margin: 0.5rem 0.6rem 0.8rem; }
+
+/* THE TOGGLE IS SHOWN WHEREVER THE RAIL IS NOT. BK-32-AC1, P36.
+   It was narrow-widths-only, on the reasoning that at 1280px the rail is
+   already beside the conversation and a button that opens what is open is
+   noise. That reasoning holds on the WORK pane and nowhere else: the rail
+   lives inside `#pane-advise`, so an advocate on Research, the case file,
+   History or Preparation at 1280px had no route to another matter at all.
+   Found by the journey the day Preparation was added, at the one width the
+   old phase used to return early at.
+   `body.away-from-work` is set by `showTab`, so the masthead -- the one strip
+   present on every surface -- always offers the way back. */
+.matters-toggle { display: none; }
+body.away-from-work .matters-toggle { display: inline-block; }
+
+@media (max-width: 820px) {
+  main { grid-template-columns: 1fr; }
+
+  /* BK-32, AND THE RULE IS `REACHABLE`, NOT `VISIBLE`.
+     The rail was `display: none` here with nothing else reaching the matter
+     list, so an advocate on a phone could work the matter they were in and
+     get to no other one. It stays out of the way by default -- 390px has no
+     room for two columns -- and `#matters-toggle` brings it in over the
+     conversation, which is the whole surface at this width. */
+  .matters-toggle { display: inline-block; }
+  .rail { display: none; }
+  #pane-advise.show-rail .rail { display: flex; }
+  #pane-advise.show-rail .conversation { display: none; }
+}
+
+/* THE GRID CHILD MUST BE ALLOWED TO SHRINK.
+   A grid (and flex) item defaults to `min-width: auto`, which means it refuses
+   to go narrower than its content's intrinsic width. The 820px rule above
+   already collapsed to one column, and the conversation still measured 799px
+   in a 514px pane — every answer clipped at the right edge, with a horizontal
+   scrollbar under it. The locators made it visible; the bug was always there
+   and would have shown on any narrow window. */
+main > * { min-width: 0; }
+.conversation, .thread, .turn { min-width: 0; max-width: 100%; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* A refusal is structured. Rendering its JSON throws away the only part an
+   advocate can act on — what could not be established. */
+.refusal-head { font-weight: 600; color: var(--signal); margin-bottom: 0.4rem; }
+.refusal-why { font-size: 0.86rem; color: var(--ink-2); margin-bottom: 0.5rem; }
+.refusal-gap {
+  font-size: 0.86rem; color: var(--ink-2); line-height: 1.5;
+  padding: 0.4rem 0.6rem; margin-top: 0.35rem;
+  border-left: 2px dashed var(--rule); background: var(--paper);
+}
+
+/* Locators are long, unbroken and unavoidable — a paragraph reference reads
+   `SC_1995_PATEL_NATWARLAL_RUPJI_VS_..._P003_C01::ratio`. Without an explicit
+   break rule they force the whole column wider than the pane and clip every
+   answer at the right edge. The locator has to be readable back; that is what
+   it is for. */
+.el .body, .el .refs, .gate .gdetail, .refusal-why, .refusal-gap {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.el .refs { display: block; }
+#thread, .turn, .el { max-width: 100%; min-width: 0; }
+
+/* NO `overflow-x: hidden` ON `body` OR `main`. BK-43.
+ *
+ * It reads as belt-and-braces and it is the opposite: clipping the overflow
+ * makes `documentElement.scrollWidth` equal `clientWidth`, so the journey
+ * phase that checks for sideways scroll can no longer fail. The page would
+ * still have content off the right edge and nothing would ever say so.
+ *
+ * The rule was written twice -- once in the masthead section and once here --
+ * and only the masthead copy was removed, so the check stayed disabled for a
+ * week under a comment recording its removal. `tests/test_no_rule_hides_the
+ * _overflow.py` now refuses the third copy, because nothing structural
+ * refused the second.
+ *
+ * The real fixes are above and they are enough: `overflow-wrap: anywhere` on
+ * the locator, and `max-width: 100%; min-width: 0` on the containers. */
+
+/* ============================ THE TABS ============================ */
+
+/* THE STRIP WRAPS. P36.
+ *
+ * A fifth tab took the row to 400px inside a 390px viewport and the whole
+ * document scrolled sideways -- found by the journey the day the Preparation
+ * tab was added, which is the point of measuring rather than assuming.
+ *
+ * WRAPPING, NOT A HORIZONTAL SCROLLER. A scroller would satisfy the
+ * measurement and still hide the last tab behind a gesture a keyboard user
+ * does not have; a wrapped row puts every tab on screen and in the tab order
+ * at every width. `min-width: 0` is what lets the flex row shrink at all --
+ * without it a flex item refuses to go below its content width, which is the
+ * usual reason a strip like this overflows instead of reflowing.
+ */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  grid-column: 1;
+  grid-row: 2;
+  margin-left: 0;
+  min-width: 0;
+}
+
+.tabs .tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: .01em;
+  padding: 8px 14px 7px;
+}
+
+.tabs .tab:hover { color: var(--ink); }
+
+.tabs .tab.is-on {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+main.single {
+  display: block;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 28px 64px;
+  width: 100%; overflow-y: auto;
+}
+
+/* ====================== A4 — SEARCH THE CORPUS ==================== */
+
+.search-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px 96px 96px auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.search-bar input {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 11px;
+}
+
+.search-bar input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* WHAT WAS SEARCHED. Never hidden behind a disclosure control: a zero is
+ * unreadable without it, and unreadable in the direction that hurts. */
+.index-line {
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 14px 0 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.index-detail { opacity: .85; }
+
+.search-diagnostic { color: var(--ink-2); margin-block: .75rem; font-size: .85rem; }
+.search-diagnostic summary { cursor: pointer; text-decoration: underline; text-underline-offset: .2em; }
+.search-diagnostic p { overflow-wrap: anywhere; line-height: 1.6; }
+
+.result-count {
+  color: var(--ink-3);
+  font-size: 12px;
+  margin: 16px 0 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.hit {
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 0;
+}
+
+.hit header {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.hit-name { font-weight: 600; font-size: 14px; }
+
+.hit-meta { color: var(--ink-3); font-size: 12px; }
+
+.hit-text {
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.66;
+  margin: 0;
+}
+
+/* PROVENANCE IS NOT DECORATION. `searched` must never be able to pass for
+ * `resolved` at a glance -- so they differ in WEIGHT and OUTLINE and not only
+ * in colour, and both are drawn from the theme's own variables so the
+ * distinction survives dark mode. A hardcoded pair here is legible in one
+ * theme and invisible in the other, which loses exactly the signal that
+ * separates a ranked guess from an exact lookup. */
+.pill.searched {
+  background: transparent;
+  border: 1px dashed var(--rule);
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+.pill.resolved {
+  border: 1px solid var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ========================== THE HISTORY =========================== */
+
+.history-head {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 12px;
+}
+
+.history-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
+
+.history-head select {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 13px;
+  min-width: 260px;
+  padding: 7px 9px;
+}
+
+.recorded-turn {
+  border-bottom: 1px solid var(--rule);
+  padding: 16px 0;
+}
+
+.recorded-turn header {
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: .06em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.recorded-asked {
+  border-left: 2px solid var(--accent);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 10px;
+  padding-left: 12px;
+}
+
+.recorded-turn summary {
+  color: var(--ink-3);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.recorded-raw {
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  margin-top: 8px;
+  max-height: 420px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 860px) {
+  .search-bar { grid-template-columns: 1fr; }
+  .tabs { margin-left: 12px; }
+}
+
+/* ========================= A1 — THE GATE =========================
+ *
+ * BY ID, AND THAT IS THE WHOLE FIX FOR A SEVERE DEFECT.
+ *
+ * This rule read `.gate`, and so does the rule at the top of this file for a
+ * GATE FIRING inside an answer — `G-COVERAGE · disclose · …`, a small inline
+ * row. Two owners, one class name, and this one is later in the cascade, so
+ * it won.
+ *
+ * The result, found by the BK-30 browser harness on its first real run:
+ * every gate firing in an answer became `position: fixed; inset: 0;
+ * background: var(--paper); z-index: 100` — a full-screen opaque overlay. An
+ * advocate who submitted a brief got a BLANK WHITE PAGE carrying one centred
+ * line, `G-EXPOSURE · none_found · 0 exposure(s)`. The advice, the citations,
+ * the limitation position and the questions were all painted over, and the
+ * tab bar underneath could not be clicked.
+ *
+ * Nothing could see it. Every offline test passed, `test_the_page_and_the
+ * _script_agree` checks names rather than layout and says so, and the served
+ * JSON was perfectly correct — the answer was right and unreadable, which is
+ * this repository's founding failure in a stylesheet.
+ *
+ * THE SIGN-IN GATE IS ONE ELEMENT AND IT HAS AN ID, so it is addressed by
+ * one. `.gate` now has a single owner: a gate firing.
+ */
+
+#gate {
+  align-items: var(--gate-align, center);
+  background: var(--paper);
+  display: flex; gap: clamp(3rem, 8vw, 9rem);
+  inset: 0;
+  top: var(--build-warning-height, 0px);
+  justify-content: center;
+  padding: var(--gate-padding, 24px);
+  position: fixed;
+  overflow-y: auto;
+  /* ABOVE EVERYTHING. If the board can ever paint over this, the gate is
+   * decoration. */
+  z-index: 100;
+}
+
+.login {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 420px;
+  padding: 36px;
+  width: 100%;
+}
+
+.login-brand {
+  align-items: center;
+  display: flex;
+  font-size: 19px;
+  gap: 10px;
+  letter-spacing: -.01em;
+  margin-bottom: 2px;
+}
+
+.login-lede {
+  color: var(--ink-3);
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+
+.login label {
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: .07em;
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+
+.login input {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 11px;
+}
+
+.login input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.login button.primary { margin-top: 18px; }
+.login button:disabled { cursor: wait; opacity: .6; }
+
+/* RIGHT-ALIGNED UNDER THE BUTTON, which is where a returning user is not
+   looking and a new one is. A register link with the same weight as the
+   primary action competes with it; one that is invisible sends a new advocate
+   to the tool they cannot run. */
+/* THE ASTERISK IS aria-hidden AND THE INPUT CARRIES `required`. A screen
+   reader announces the field as required from the attribute; the star is for
+   the eye. A star that were the ONLY signal would be invisible to half the
+   people who need it. */
+/* THE INPUT KEEPS ITS OWN PADDING and the button sits over it, so a password
+   long enough to reach the icon scrolls under it rather than being hidden by
+   it. */
+.pw-wrap { position: relative; display: flex; }
+.pw-wrap input { flex: 1; padding-right: 40px; }
+.pw-eye {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  background: none; border: 0; cursor: pointer; padding: 4px 6px;
+  font-size: 15px; line-height: 1; opacity: .55; border-radius: 4px;
+}
+.pw-eye:hover, .pw-eye:focus-visible { opacity: 1; }
+.pw-eye[aria-pressed="true"] { opacity: 1; }
+
+.req { color: #b3261e; font-weight: 600; }
+.opt { color: var(--ink-2, #5a6472); font-weight: 400; font-size: 12px; }
+
+.login-alt { margin-top: 10px; text-align: right; font-size: 13px; }
+.login-alt a { color: var(--ink-2, #5a6472); text-decoration: none; }
+.login-alt a:hover, .login-alt a:focus { text-decoration: underline; }
+
+.login-state:empty { display: none; }
+.login-state { margin-top: 14px; }
+
+/* THE OUTCOME CARD. It reuses `.login` so it is the same card in the same
+   place -- an advocate who pressed Register is looking there, and a result
+   that appears somewhere else has to be found before it can be read.
+
+   The colour is the ONLY thing that differs between the two states, and it is
+   not the only thing: the heading says which it is in words. A result carried
+   by colour alone is a result nobody reads on a projector, on a phone in
+   sunlight, or with the commonest colour-vision difference there is. */
+/* THE BUILD BANNER. Loud on purpose: it is telling someone that what they
+   are looking at is not what they think they are looking at, and every
+   conclusion drawn from the screen below it is about the wrong code. */
+.build-warning {
+  background: #7a2018;
+  color: #fff;
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 10px 16px;
+  position: relative;
+  flex: none;
+  /* ABOVE THE GATE, which is `position: fixed; inset: 0; z-index: 100` and
+     therefore covers the whole viewport. The first version of this banner sat
+     at z-index 30: present in the DOM, not hidden, correct text, and drawn
+     UNDERNEATH the sign-in screen -- invisible in the one place the thing it
+     warns about was refusing registrations.
+
+     `hidden === false` was true and meant nothing. It took looking at the
+     pixels, which is the same rule as verifying on the bytes. */
+  z-index: 200;
+}
+.build-warning.unknown { background: #6A4E1F; }
+.account-dialog { width: min(36rem, calc(100% - 2rem)); max-height: 85dvh; padding: 1.5rem;
+  color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 14px;
+  box-shadow: 0 20px 70px #102b2930; }
+.account-dialog::backdrop { background: #12242170; }
+.dialog-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.dialog-heading h2 { margin: 0; font: 500 1.6rem/1.3 var(--f-serif); }
+.session-row { border-block-start: 1px solid var(--rule); padding: 0.85rem 0; overflow-wrap: anywhere; }
+.session-row p { margin: 0.2rem 0; font-size: 0.85rem; color: var(--ink-2); }
+.build-warning code {
+  background: rgba(255, 255, 255, .16);
+  border-radius: 2px;
+  padding: 0 4px;
+}
+
+.outcome-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 14px 0 6px;
+}
+.outcome-title.good { color: #146c2e; }
+.outcome-title.bad  { color: #b3261e; }
+
+.outcome-body {
+  overflow-wrap: anywhere;
+  color: var(--ink-2, #5a6472);
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
+.recovery-codes {
+  border: 1px solid var(--rule);
+  margin: 0 0 18px;
+  padding: 12px 14px;
+}
+.recovery-codes h3 { font-size: 14px; margin: 0 0 4px; }
+.recovery-codes p { color: var(--ink-2); font-size: 12px; margin: 0 0 10px; }
+.recovery-codes ol {
+  columns: 2;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  margin: 0;
+  padding-left: 24px;
+  user-select: all;
+}
+
+.login-foot {
+  border-top: 1px solid var(--rule);
+  color: var(--ink-3);
+  font-size: 11.5px;
+  line-height: 1.6;
+  margin: 20px 0 0;
+  padding-top: 14px;
+}
+
+.login-foot code {
+  background: var(--surface-2);
+  border-radius: 2px;
+  font-size: 11px;
+  padding: 1px 4px;
+}
+
+/* ------------------------------------------------- who is signed in --- */
+
+.who-name { font-size: 13px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; max-width: 100%; }
+
+.who-detail {
+  color: var(--ink-3);
+  font-size: 11px;
+  margin-left: 8px;
+}
+
+#signout {
+  font-size: 11px;
+  margin-left: 12px;
+}
+
+
+/* ===================== B3-B5 — THE INTAKE FORM ===================== */
+
+.intake {
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1.8rem 2rem 2rem;
+  margin: 1.3rem auto; width: calc(100% - 3rem); max-width: 44rem;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 14px;
+  flex: none;
+}
+.intake h2 {
+  font-family: var(--f-serif); font-size: 1.65rem; font-weight: 400;
+  margin: 0;
+}
+.intake-lede { color: var(--ink-3); font-size: 0.82rem; margin: 0 0 0.5rem; }
+.intake label {
+  color: var(--ink-3); font-size: 0.68rem; letter-spacing: 0.07em;
+  margin-top: 0.5rem; text-transform: uppercase;
+}
+.intake label .opt {
+  letter-spacing: 0; text-transform: none; font-size: 0.72rem;
+}
+.intake input[type="text"], .intake input:not([type]) {
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 3px;
+  font: inherit; font-size: 0.9rem; padding: 0.45rem 0.6rem;
+}
+.intake input:focus { border-color: var(--accent); outline: none; }
+.intake label.check {
+  align-items: center; display: flex; gap: 0.5rem;
+  font-size: 0.85rem; letter-spacing: 0; text-transform: none;
+  color: var(--ink-2); margin-top: 0.9rem;
+}
+.intake button.primary { align-self: flex-start; margin-top: 0.9rem; }
+
+
+/* ============ BK-37 — THE BRIEF'S SECTIONS ============ */
+
+h3.section {
+  color: var(--ink-3);
+  font-family: var(--f-sans);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  margin: 1.6rem 0 0.5rem;
+  text-transform: uppercase;
+}
+h3.section:first-of-type { margin-top: 0.4rem; }
+
+/* A repeated gap keeps its count. Quiet, because the LINE is the finding and
+   the number is only how often it was said. */
+.said-times {
+  color: var(--ink-3); display: block; font-family: var(--f-mono);
+  font-size: 0.62rem; letter-spacing: 0.04em; margin-top: 0.2rem;
+}
+
+/* J-7. The working, closed by default. It is a door, not a bin: the summary
+   says what is behind it in the advocate's words, so opening it is a choice
+   they can make rather than a risk they cannot assess. */
+details.audit { margin-top: 1.6rem; }
+details.audit > summary {
+  color: var(--ink-3); cursor: pointer; font-size: 0.72rem;
+  letter-spacing: 0.04em; padding: 0.3rem 0;
+}
+details.audit > summary:hover { color: var(--ink); }
+details.audit[open] > summary { margin-bottom: 0.4rem; }
+
+
+/* BK-41. CANCEL sits beside Send while a turn is in flight. Quiet, because
+   it is an escape and not an action an advocate should be drawn to. */
+button.ghost.cancel { margin-right: 0.6rem; }
+
+
+/* BK-42. A NAME FOR A SCREEN READER AND NOTHING FOR A SCREEN.
+   `display:none` and `visibility:hidden` remove an element from the
+   accessibility tree as well as from the page, which is the opposite of what
+   a visually-hidden label is for. This is the clip-rect idiom: present,
+   announced, and occupying nothing. */
+.sr-only {
+  border: 0;
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+
+/* ============ BK-42 — THE MASTHEAD FITS A PHONE ============
+ *
+ * MEASURED at 390px: `tabs` ran to 473px, `who` to 678px and `health` to
+ * 720px on a 390px viewport -- the whole strip is one non-wrapping flex row,
+ * so a third of the masthead sat off the right edge and the document scrolled
+ * sideways. Every pane below it was already responsive; the bar above them
+ * was not, and nothing looked at it.
+ *
+ * IT WRAPS RATHER THAN HIDING. An advocate on a phone still needs to know
+ * WHO they are signed in as -- that is the whole of A1's argument for putting
+ * it there -- so the identity stays and the strip becomes two lines. What
+ * goes is the enrolment/practice/firm detail line, which is a reference they
+ * can get from the account and not something they read while working.
+ */
+@media (max-width: 820px) {
+  .masthead {
+    display: flex; flex-wrap: wrap;
+    gap: 0.5rem 0.9rem;
+    padding: 0.6rem 0.9rem;
+  }
+  .who { margin-left: 0; flex: 1 1 100%; gap: 0.5rem; }
+  .workspace-context { order: 0; margin-left: auto; }
+  /* The enrolment number, practice and firm. Reference, not working
+     information, and it is the longest run of unbreakable text up there. */
+  .who-detail { display: none; }
+  .health {
+    flex: 1 1 100%;
+    max-width: 100%;
+    order: 9;          /* below the identity, on its own line */
+  }
+  .tabs { margin-left: 0; }
+}
+
+/* Workspace surfaces share existing tokens and keep their own semantic owner. */
+.skip-link { position: fixed; top: -5rem; left: 1rem; z-index: 300; padding: 0.8rem;
+  background: var(--surface); color: var(--accent); border: 2px solid var(--accent); }
+.skip-link:focus { top: 1rem; }
+.eyebrow { color: var(--ink-3); font-size: 0.66rem; font-weight: 650; letter-spacing: 0.12em; margin: 0 0 0.65rem; }
+.arrival-story { width: min(43vw, 540px); padding: 2rem; }
+.arrival-wordmark { display: flex; align-items: center; gap: 0.8rem; font-size: 0.75rem; letter-spacing: 0.12em; margin-bottom: 5rem; }
+.arrival-story h1 { font: 400 clamp(2.4rem, 4.2vw, 4rem)/1.13 var(--f-serif); letter-spacing: -0.04em; margin: 1rem 0 1.6rem; }
+.arrival-story > p:not(.eyebrow) { color: var(--ink-2); line-height: 1.9; }
+.arrival-note { border-top: 1px solid var(--rule); margin-top: 3rem; padding-top: 1.2rem; font-size: 0.8rem; }
+.arrival-note span { margin: 0 0.6rem; color: var(--ink-3); }
+.login-title { font: 400 1.9rem/1.25 var(--f-serif); margin: 1.4rem 0 0.2rem; }
+.workspace-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 1.3rem 2.2rem; background: var(--surface); border-bottom: 1px solid var(--rule); flex: none; }
+.workspace-heading h1 { font: 500 1.05rem/1.4 var(--f-sans); margin: 0; overflow-wrap: anywhere; }
+.workspace-heading .eyebrow { font-size: 0.6rem; margin-bottom: 0.2rem; }
+.save-status { font-size: 0.74rem; color: var(--ink-3); text-align: right; max-width: 42%; }
+.rehearsal-warning { flex: none; padding: 0.4rem 1rem; font-size: 0.76rem; color: var(--amber);
+  background: var(--amber-w); border-bottom: 1px solid var(--rule); }
+.welcome { max-width: 58rem; width: 100%; padding: clamp(2rem, 5vw, 5rem); margin: auto; }
+.welcome h2 { font: 400 clamp(2rem, 3.4vw, 3.1rem)/1.16 var(--f-serif); letter-spacing: -0.035em; margin: 1rem 0; }
+.welcome-lede { max-width: 36rem; color: var(--ink-2); line-height: 1.85; }
+.welcome-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; margin: 1.8rem 0 3.5rem; }
+.welcome-actions button { min-height: 45px; }
+.welcome-actions span { margin-left: 1rem; }
+.welcome-guidance { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; border-top: 1px solid var(--rule); padding-top: 1.7rem; }
+.welcome-guidance h3 { font-size: 0.87rem; font-weight: 600; margin: 0.7rem 0 0.4rem; }
+.welcome-guidance p { font-size: 0.8rem; color: var(--ink-3); line-height: 1.75; margin: 0; }
+.guide-number { font: 0.75rem var(--f-mono); color: var(--accent); }
+.composer-label { display: block; max-width: 46rem; margin: 0 auto 0.5rem; color: var(--ink-2); font-size: 0.78rem; font-weight: 600; }
+.page-intro { margin: 1.5rem 0 2rem; max-width: 45rem; }
+.page-intro h1 { font: 400 2.4rem/1.2 var(--f-serif); letter-spacing: -0.025em; margin: 0.8rem 0; }
+.page-intro p:not(.eyebrow) { color: var(--ink-2); line-height: 1.8; }
+.row[role="button"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#thread:empty { flex: 0; padding: 0; }
+#rail-body:empty { min-height: 3rem; }
+@media (max-width: 1100px) and (min-width: 821px) {
+  .masthead { grid-template-columns: auto 1fr; }
+  .who { grid-column: 1 / -1; grid-row: 2; margin-left: 0; }
+  .tabs { grid-row: 3; }
+  .health { grid-row: 3; }
+}
+@media (max-width: 820px) {
+  .arrival-story { display: none; }
+  :root { --gate-align: flex-start; --gate-padding: 2rem 1rem; }
+  .login { margin: auto; padding: 1.8rem; }
+  .workspace-heading { padding: 1rem; }
+  .welcome { padding: 2rem 1.25rem; margin: 0; }
+  .welcome-guidance { grid-template-columns: 1fr; gap: 1.25rem; }
+  .welcome-actions { margin-bottom: 2rem; }
+  .thread { padding: 1.2rem 1rem; }
+  .intake { width: calc(100% - 1.5rem); padding: 1.3rem; }
+  .history-head { align-items: stretch; flex-direction: column; }
+  .history-head select { min-width: 0; width: 100%; }
+  .tabs .tab { min-height: 42px; }
+}
+
+/* `body { overflow-x: hidden }` WAS HERE FOR TEN MINUTES AND WAS REMOVED --
+ * and a SECOND copy in the locator section survived this comment for a week,
+ * which is why the rule now has a test and not just a paragraph. See BK-43
+ * and `tests/test_no_rule_hides_the_overflow.py`.
+ *
+ * It looked like belt-and-braces and it was the opposite: clipping the
+ * overflow makes `documentElement.scrollWidth` equal `clientWidth`, so the
+ * journey phase that checks for sideways scroll can no longer fail. The page
+ * would still have had content off the right edge and nothing would ever say
+ * so again -- a fix that disables its own test, which is S11 arriving through
+ * the front door.
+ *
+ * The masthead wrapping above is the actual fix. If something else overflows
+ * later, the check is still able to notice.
+ */
+
+/* ===================== P17/P18 -- THE CASE FILE ===================== */
+
+.casefile-head {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 12px;
+}
+.casefile-head h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.casefile-head select {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 13px;
+  min-width: 260px;
+  padding: 7px 9px;
+}
+.casefile h3 {
+  font-family: var(--f-serif); font-size: 1rem; font-weight: 500;
+  margin: 1.2rem 0 0.4rem;
+}
+.casefile-lede { color: var(--ink-3); font-size: 0.82rem; margin: 0 0 0.6rem; }
+
+/* The currency block. The pill is the state; the list under it is every
+ * conclusion that may not be shown as current, with the reason. */
+.currency { border: 1px solid var(--rule); border-radius: 4px; padding: 0.8rem 1rem; }
+.currency h3 { margin-top: 0; }
+.currency-state { font-size: 0.85rem; }
+.currency-said { color: var(--ink-2); }
+.currency-stale { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+.currency-stale li {
+  border-left: 3px solid var(--amber); font-size: 0.85rem;
+  margin: 0.35rem 0; padding: 0.2rem 0 0.2rem 0.6rem;
+}
+.currency-history { margin-top: 0.6rem; font-size: 0.82rem; }
+.currency-history summary { cursor: pointer; color: var(--ink-2); }
+.node-row { border-bottom: 1px solid var(--rule); padding: 0.4rem 0; }
+.node-row[data-currency="stale"] { border-left: 3px solid var(--amber); padding-left: 0.6rem; }
+.revision { color: var(--ink-2); padding: 0.25rem 0; }
+
+/* One entry on the file. A superseded entry stays on the record, greyed and
+ * marked, so the advocate can see both the old and the corrected reading. */
+.entry {
+  border-bottom: 1px solid var(--rule);
+  padding: 0.6rem 0;
+}
+.entry.superseded { color: var(--ink-3); }
+.entry.superseded .entry-text { text-decoration: line-through; }
+.entry-text { font-size: 0.92rem; }
+.entry-meta { color: var(--ink-3); font-size: 0.72rem; margin-top: 0.15rem; }
+.entry button.correct { margin-top: 0.4rem; }
+
+/* The correction form, shaped like intake because it asks the same way. */
+.correction {
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
+  display: flex; flex-direction: column; gap: 0.3rem;
+  margin-top: 0.6rem; padding: 0.8rem 1rem;
+}
+.correction label {
+  color: var(--ink-3); font-size: 0.68rem; letter-spacing: 0.07em;
+  margin-top: 0.4rem; text-transform: uppercase;
+}
+.correction label .opt { letter-spacing: 0; text-transform: none; font-size: 0.72rem; }
+.correction input {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+  font: inherit; font-size: 0.9rem; padding: 0.45rem 0.6rem;
+}
+.correction input:focus { border-color: var(--accent); outline: none; }
+
+/* ===================== P21 -- RESEARCH ON THE MATTER ===================== */
+
+.research-bar { margin: 0.6rem 0 0.4rem; }
+.research-bar label.check {
+  align-items: center; display: flex; gap: 0.5rem;
+  font-size: 0.85rem; color: var(--ink-2);
+}
+.research-fields {
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 4px;
+  display: flex; flex-direction: column; gap: 0.3rem;
+  margin-top: 0.5rem; padding: 0.7rem 0.9rem;
+}
+.research-fields label {
+  color: var(--ink-3); font-size: 0.68rem; letter-spacing: 0.07em;
+  margin-top: 0.3rem; text-transform: uppercase;
+}
+.research-fields label .opt { letter-spacing: 0; text-transform: none; font-size: 0.72rem; }
+.research-fields input {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+  font: inherit; font-size: 0.9rem; padding: 0.45rem 0.6rem;
+}
+
+/* A case, and the paragraphs it opens to. */
+.cases { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.6rem; }
+.case { border: 1px solid var(--rule); border-radius: 4px; padding: 0.7rem 0.9rem; }
+.case header { display: flex; flex-wrap: wrap; gap: 0.5rem 0.8rem; align-items: baseline; }
+.case .hit-name { font-weight: 600; }
+.case .hit-meta { color: var(--ink-3); font-size: 0.78rem; }
+.case-cover { color: var(--ink-2); font-size: 0.82rem; margin: 0.5rem 0 0.3rem; }
+.para { border-top: 1px solid var(--rule); padding: 0.5rem 0; }
+.para-meta { color: var(--ink-3); font-size: 0.72rem; }
+.para-text { margin: 0.25rem 0 0.4rem; font-size: 0.9rem; }
+.verdict-list { margin-top: 0.4rem; }
+.verdict-note { color: var(--ink-2); font-size: 0.8rem; margin: 0.3rem 0 0; }
+
+/* The record. */
+.research-record {
+  border: 1px solid var(--rule); border-radius: 4px; margin-top: 1rem;
+  padding: 0.8rem 1rem; font-size: 0.85rem;
+}
+.research-record h3 { font-family: var(--f-serif); font-size: 1rem; font-weight: 500; margin: 0 0 0.4rem; }
+.research-record .consulted, .research-record .adverse, .research-record .attached {
+  color: var(--ink-2); padding: 0.2rem 0;
+}
+.research-record .attached { border-left: 3px solid var(--good); padding-left: 0.6rem; }
+
+/* ===================== P22 -- THE LEGAL PREMISES ===================== */
+.premises { border: 1px solid var(--rule); border-radius: 4px; padding: 0.8rem 1rem; margin-top: 1rem; }
+.premises h3 { margin-top: 0; }
+.premise-thread { border-top: 1px solid var(--rule); margin-top: 0.6rem; padding-top: 0.5rem; }
+.premise-thread h4 { font-size: 0.85rem; margin: 0 0 0.3rem; }
+.premise-row { padding: 0.35rem 0; }
+.premise-row[data-kind] .r-fields { margin: 0; }
+.premise-alt { color: var(--ink-3); font-size: 0.8rem; padding-left: 0.6rem; }
+.premise-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.4rem; }
+.premise-confirm label { color: var(--ink-3); font-size: 0.75rem; }
+.premise-confirm input {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+  font: inherit; font-size: 0.85rem; padding: 0.35rem 0.5rem; flex: 1 1 240px;
+}
+
+/* ===================== P23 -- RELIEF AND ENFORCEABILITY ===================== */
+.relief { border: 1px solid var(--rule); border-radius: 4px; padding: 0.8rem 1rem; margin-top: 1rem; }
+.relief h3 { margin-top: 0; }
+.relief-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.5rem; }
+.relief-confirm input, .relief-confirm select {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+  font: inherit; font-size: 0.82rem; padding: 0.3rem 0.45rem;
+}
+.relief-confirm input[name="remedy"] { flex: 1 1 200px; }
+.relief-confirm input[name="objective"], .relief-confirm input[name="reason"] { flex: 1 1 160px; }
+
+/* ===================== P24 -- BRIEFING READINESS ===================== */
+.briefing { border: 1px solid var(--rule); border-radius: 4px; padding: 0.6rem 0.8rem; margin: 0.6rem 0; background: var(--wash, transparent); }
+.briefing-head { display: flex; align-items: baseline; gap: 0.4rem; }
+.briefing-why { color: var(--ink-3); font-size: 0.82rem; }
+.briefing-need { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.4rem; font-size: 0.85rem; }
+.briefing-need.paused { color: var(--ink-3); }
+.briefing-need button.ghost { background: transparent; border: 1px solid var(--rule); border-radius: 3px; font: inherit; font-size: 0.78rem; padding: 0.15rem 0.5rem; cursor: pointer; }
+
+
+/* P33 / P25 / P27 -- custody, attribution and decisions on the case file. */
+.governance { margin-top: 1.5rem; }
+.governance h4 { margin: 1rem 0 .35rem; font-size: .95rem; }
+.binding, .decision, .retention-row {
+  display: flex; flex-wrap: wrap; gap: .5rem; align-items: baseline;
+  padding: .45rem .6rem; border-left: 3px solid var(--rule);
+  margin-bottom: .4rem;
+}
+.binding.unbound { border-left-color: var(--signal); }
+.decision.superseded { opacity: .7; }
+.binding-text, .decision span { flex: 1 1 20rem; }
+.authority-note, .retention-outstanding {
+  flex: 1 1 100%; font-size: .85rem; color: var(--ink-soft);
+}
+.retention-outstanding::before { content: "outstanding: "; font-weight: 600; }
+.binding-form, .decision-form {
+  display: flex; flex-wrap: wrap; gap: .4rem; align-items: center;
+  margin: .4rem 0 .8rem;
+}
+.binding-form input, .decision-form input, .decision-form select {
+  padding: .3rem .45rem; min-width: 8rem;
+}
+.binding-out, .decision-out { flex: 1 1 100%; }
+
+/* ===================== P36 — THE PREPARATION PANE ======================
+ *
+ * NO FIXED WIDTHS AND NO HORIZONTAL SCROLLER. The pane is a single column
+ * that reflows; at 390px the labels sit above their inputs and nothing is
+ * pushed off the right edge, which is the property `assurance/gate/layout.py` measures
+ * geometrically rather than by asking the document for its scroll width.
+ *
+ * AND NO `overflow-x: hidden` ANYWHERE IN HERE. That rule is what made the
+ * old check unable to fail (BK-43), and `tests/test_no_rule_hides_the_
+ * overflow.py` refuses it at the document level. Long content -- a filename,
+ * a citation, an email address -- wraps instead.
+ */
+.prepare { display: flex; flex-direction: column; gap: 1.25rem; }
+.prepare-head { display: flex; gap: 0.5rem; align-items: center; }
+.prepare-head select { max-width: 100%; }
+.prep-block {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 1rem;
+}
+.prep-block h2 { margin: 0 0 0.35rem; font-size: 1.05rem; }
+.prep-form { display: flex; flex-direction: column; gap: 0.35rem; margin: 0.75rem 0; }
+.prep-form label { font-size: 0.82rem; font-weight: 600; }
+.prep-form input, .prep-form select { max-width: 100%; }
+.prep-form button { align-self: flex-start; margin-top: 0.5rem; }
+.prep-block > button { margin-top: 0.5rem; }
+/* LONG WORDS BREAK RATHER THAN PUSH. An email address, a filename or a
+ * neutral citation is one unbreakable token, and one of them at 390px is the
+ * whole of a horizontal scrollbar. */
+.prep-said, .prep-list li {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.prep-said { font-size: 0.86rem; color: var(--ink-2); margin: 0.4rem 0; }
+.prep-list { margin: 0.25rem 0 0.75rem; padding-left: 1.1rem; }
+.prep-list li { font-size: 0.86rem; margin-bottom: 0.25rem; }
+.state.problem { color: var(--signal); border-color: var(--signal); }

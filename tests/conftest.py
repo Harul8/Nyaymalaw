@@ -72,10 +72,21 @@ def pytest_configure(config):
     # The runner lends this session an output once. An application-environment
     # test may clear NM_* or plant another value during its call phase; that
     # must neither erase its outcome nor redirect this session's evidence.
+    # A CHILD PROCESS IMPORTS FROM THE SAME PATH AS THIS SESSION. pytest puts
+    # pyproject's `pythonpath` (the root and backend/) on sys.path, which a
+    # `python -c "import nm..."` child does not inherit. Handing the same entries
+    # to the environment keeps pyproject the one owner of where the package lives.
+    inherited = [p for p in os.environ.get("PYTHONPATH", "").split(os.pathsep) if p]
+    configured = [str(p) for p in config.getini("pythonpath")]
+    os.environ["PYTHONPATH"] = os.pathsep.join(
+        dict.fromkeys([*configured, *inherited]))
     lease = os.environ.get("NM_CLASS_A_EVIDENCE_FILE")
     _class_a_evidence_path = Path(lease) if lease else None
     if _class_a_evidence_path is not None:
-        from tools.evidence import class_a_selection_problems, verification_fingerprint
+        from assurance.control_plane.evidence import (
+            class_a_selection_problems,
+            verification_fingerprint,
+        )
 
         _class_a_start_fingerprint = verification_fingerprint()
         _class_a_selection_problems = class_a_selection_problems(config)
@@ -121,7 +132,7 @@ def pytest_runtest_makereport(item, call):
 def pytest_sessionfinish(session, exitstatus):
     evidence_path = _class_a_evidence_path
     if evidence_path is not None:
-        from tools.evidence import (
+        from assurance.control_plane.evidence import (
             CLASS_A_COMMAND,
             git_identity,
             verification_fingerprint,
@@ -231,13 +242,13 @@ def client(tmp_path, monkeypatch, scripted_application_environment):
     many guards are checked on the wire.
     """
     from fastapi.testclient import TestClient
-
     from nm.adapters.model.config import ModelConfig, TierConfig
     from nm.adapters.model.scripted import ScriptedModelAdapter
     from nm.adapters.store.file_store import FileMatterStore
     from nm.bootstrap.composition import Application
     from nm.bootstrap.main import create_app
     from nm.ports.model import Tier
+
     from tests.test_turn_contract import KEY, _Evidence
 
     # Long enough for `enrol`, which refuses under twelve characters.
@@ -319,7 +330,7 @@ def client(tmp_path, monkeypatch, scripted_application_environment):
                issued_by: str = INVITED_BY, at=None) -> str:
         """Issue one invitation and return the token, ONCE. BK-31.
 
-        THE SAME CALL THE OPERATOR MAKES. `tools/invite.py` builds an
+        THE SAME CALL THE OPERATOR MAKES. `backend/operations/invite.py` builds an
         `AdvocateIdentity` and hands it to `directory.issue_invitation`, and so
         does this -- so a test drives the real issuing path rather than a
         fixture's idea of it. The identity here must match what the

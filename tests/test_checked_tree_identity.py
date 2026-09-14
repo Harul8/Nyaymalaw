@@ -16,23 +16,24 @@ import zipfile
 import pytest
 import yaml
 
-from tools import check, evidence, gatestamp, known_failures
+from assurance.control_plane import evidence
+from assurance.gate import check, gatestamp, known_failures
 
 pytestmark = pytest.mark.class_a
 
 
 @pytest.mark.parametrize("relative", [
-    "spec/manifest.yaml",                 # non-Python generated spec
-    "spec/prd/gates.json",                # authoritative PRD, non-JavaScript
+    "pipeline/manifest.yaml",                 # non-Python generated spec
+    "assurance/specification/prd/gates.json",                # authoritative PRD, non-JavaScript
     "docs/Nyaymalaw_PRD.docx",            # authoritative rendered PRD
     "docs/backlog/known_failures.yaml",   # control registry
     "docs/backlog/steps.yaml",            # journey registry
-    "web/app.js",                         # served product
+    "frontend/app.js",                         # served product
     ".github/workflows/class-a.yml",       # CI workflow/configuration
     "pyproject.toml",                     # Python/gate configuration
     "tests/js/render_turn_partition.mjs", # Class-A JavaScript helper
-    "tools/crg_serve.ps1",                # PowerShell helper
-    "tools/hooks/pre-commit",              # extensionless gate hook
+    "development_environment/developer_tooling/crg_serve.ps1",                # PowerShell helper
+    "assurance/hooks/pre-commit",              # extensionless gate hook
     "pytest.ini",                          # root test-discovery configuration
 ], ids=lambda path: path.replace("/", "-"))
 def test_every_effective_input_class_moves_the_checked_tree_identity(
@@ -58,7 +59,7 @@ def test_a_new_suffix_does_not_fall_out_of_a_covered_tree(tmp_path):
 def _unframed_python_digest(root: pathlib.Path) -> str:
     """The replaced path+content construction, retained only as the control."""
     digest = hashlib.sha256()
-    for path in sorted((root / "nm").rglob("*.py")):
+    for path in sorted((root / "backend" / "nm").rglob("*.py")):
         digest.update(path.relative_to(root).as_posix().encode("utf-8"))
         digest.update(path.read_bytes())
     return digest.hexdigest()
@@ -68,12 +69,12 @@ def test_path_and_content_boundaries_are_collision_safe(tmp_path):
     left = tmp_path / "left"
     right = tmp_path / "right"
     for root in (left, right):
-        (root / "nm").mkdir(parents=True)
+        (root / "backend" / "nm").mkdir(parents=True)
 
-    (left / "nm" / "a.py").write_bytes(b"")
-    (left / "nm" / "b.py").write_bytes(b"nm/b.py\n")
-    (right / "nm" / "a.py").write_bytes(b"nm/b.py")
-    (right / "nm" / "b.py").write_bytes(b"\n")
+    (left / "backend" / "nm" / "a.py").write_bytes(b"")
+    (left / "backend" / "nm" / "b.py").write_bytes(b"backend/nm/b.py\n")
+    (right / "backend" / "nm" / "a.py").write_bytes(b"backend/nm/b.py")
+    (right / "backend" / "nm" / "b.py").write_bytes(b"\n")
 
     assert _unframed_python_digest(left) == _unframed_python_digest(right), (
         "the control no longer constructs the old boundary collision")
@@ -154,13 +155,13 @@ def test_recording_generated_verdicts_reaches_a_fixed_point(tmp_path):
         }],
     }
     _write_yaml(status_path, status)
-    feature_path = tmp_path / "spec" / "features.yaml"
+    feature_path = tmp_path / "assurance" / "specification" / "features.yaml"
     _write_yaml(feature_path, {"features": [{
         "id": "A1", "does": ["the claim"], "status": "decided",
         "implementation": "none", "implementation_basis": "registry",
         "proof": "NOT_RUN", "delivered_by": ["BK-1"],
     }]})
-    coverage_path = tmp_path / "spec" / "coverage.yaml"
+    coverage_path = tmp_path / "assurance" / "specification" / "coverage.yaml"
     _write_yaml(coverage_path, {"verdict": "NOT_RUN"})
     evidence_path = tmp_path / "docs" / "backlog" / "evidence" / "class_a.json"
     evidence_path.parent.mkdir(parents=True, exist_ok=True)
@@ -225,7 +226,7 @@ def test_generated_current_plan_can_record_identity_without_becoming_identity(
 
     assert evidence.verification_fingerprint(tmp_path) == before, (
         "a generated reader view made the checked-tree identity recursive")
-    generator = tmp_path / "spec" / "plan" / "build_current_plan.mjs"
+    generator = tmp_path / "assurance" / "specification" / "plan" / "build_current_plan.mjs"
     generator.parent.mkdir(parents=True)
     generator.write_text("generator version one\n", encoding="utf-8")
     generated_from = evidence.verification_fingerprint(tmp_path)
@@ -342,8 +343,8 @@ def test_two_unchanged_scoped_runs_remain_valid_but_never_become_full(
             ("BK-1-AC1",), "planted",
         )],
     )
-    (tmp_path / "nm").mkdir()
-    (tmp_path / "nm" / "a.py").write_text("x = 1\n", encoding="utf-8")
+    (tmp_path / "backend" / "nm").mkdir(parents=True)
+    (tmp_path / "backend" / "nm" / "a.py").write_text("x = 1\n", encoding="utf-8")
 
     for _ in range(2):
         gatestamp.record(kind="scoped", waived=["KF-1"], baseline=baseline)
@@ -394,7 +395,7 @@ def test_scoped_stamp_waivers_must_equal_the_registered_population(
             ("BK-1-AC1",), "different",
         )],
     )
-    (tmp_path / "nm").mkdir()
+    (tmp_path / "backend" / "nm").mkdir(parents=True)
     gatestamp.record(
         evidence.verification_fingerprint(tmp_path), kind="scoped",
         waived=["KF-1"], baseline="a" * 64,
@@ -413,7 +414,7 @@ def test_stamp_reader_cannot_self_certify_from_its_cli(tmp_path, monkeypatch):
 
 def test_the_running_gate_voids_a_non_python_input_mutation(
         tmp_path, monkeypatch, capsys):
-    planted = tmp_path / "web" / "app.js"
+    planted = tmp_path / "frontend" / "app.js"
     planted.parent.mkdir(parents=True)
     planted.write_text("before\n", encoding="utf-8")
     calls = 0

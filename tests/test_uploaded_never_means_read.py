@@ -25,7 +25,6 @@ WHAT IS ASSERTED
 from __future__ import annotations
 
 import pytest
-
 from nm.domain.intake import (
     Asset,
     AssetState,

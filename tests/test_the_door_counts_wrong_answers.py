@@ -21,7 +21,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
-
 from nm.domain import attempts
 
 pytestmark = pytest.mark.class_a

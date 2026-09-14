@@ -32,10 +32,9 @@ project has already paid for once (B-110).
 """
 from __future__ import annotations
 
+import nm.edge.api as api
 import pytest
 from fastapi.testclient import TestClient
-
-import nm.edge.api as api
 
 pytestmark = pytest.mark.class_a
 
@@ -143,7 +142,7 @@ def test_the_page_checks_before_the_session_resolves():
     import pathlib
 
     script = (pathlib.Path(__file__).resolve().parents[1]
-              / "web" / "app.js").read_text(encoding="utf-8")
+              / "frontend" / "app.js").read_text(encoding="utf-8")
     boot = script[script.index("async function boot()"):]
     boot = boot[:boot.index("\n}")]
     assert "checkBuild()" in boot, (

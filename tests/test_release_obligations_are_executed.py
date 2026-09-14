@@ -5,8 +5,8 @@ import copy
 
 import pytest
 
-from tools import backlog
-from tools.release_obligations import mapping_problems, obligations
+from assurance.control_plane import backlog
+from assurance.control_plane.release_obligations import mapping_problems, obligations
 
 pytestmark = pytest.mark.class_a
 

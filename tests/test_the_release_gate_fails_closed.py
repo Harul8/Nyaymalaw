@@ -9,7 +9,7 @@ against one critical row would release this product over a legal defect, and
 the arithmetic would look responsible while it did.
 
 And the one that comes before it: a gate that could sign its own approval.
-There is no function in `nm/domain/release.py` that creates an `Approval`
+There is no function in `backend/nm/domain/release.py` that creates an `Approval`
 without being handed one, and this suite asserts that from the source rather
 than from a promise.
 
@@ -25,7 +25,6 @@ from __future__ import annotations
 import inspect
 
 import pytest
-
 from nm.domain.release import (
     IDENTITIES,
     REQUIRED_APPROVALS,

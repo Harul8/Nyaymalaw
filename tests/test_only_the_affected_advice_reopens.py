@@ -20,7 +20,6 @@ true*, and the advocate would act on whichever the screen happened to show.
 from __future__ import annotations
 
 import pytest
-
 from nm.core import reassessment as ra
 from nm.core.dependency import Currency, InputKind, Ledger, Node, Rest
 from nm.domain.advice_decision import AdviceDecision, Disposition, supersede

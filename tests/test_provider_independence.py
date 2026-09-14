@@ -12,7 +12,7 @@ TWO HALVES, AND ONLY ONE COSTS ANYTHING
 ----------------------------------------
 The STRUCTURAL half is free and runs every commit: the composition root selects
 on the provider string alone, no source file mentions a provider outside
-`nm/adapters`, and the same `TurnInput` runs end to end under the scripted
+`backend/nm/adapters`, and the same `TurnInput` runs end to end under the scripted
 adapter with only an environment variable changed.
 
 The PAID half — the same turn against the live provider, to record the cost and
@@ -29,13 +29,13 @@ import os
 from pathlib import Path
 
 import pytest
-
 from nm.adapters.model.config import ModelConfig, TierConfig
 from nm.adapters.model.scripted import ScriptedModelAdapter
 from nm.adapters.store.file_store import FileMatterStore
 from nm.bootstrap.composition import build_model
 from nm.core.turn import TurnEngine, TurnInput
 from nm.ports.model import Tier
+
 from tests.test_turn_contract import KEY, _Evidence, briefed
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -102,7 +102,7 @@ def test_no_module_outside_the_adapters_names_a_provider():
     providers = {"openai", "anthropic", "azure", "bedrock", "vertex"}
     offences = []
     for layer in ("core", "ports", "domain", "edge", "knowledge"):
-        for path in sorted((ROOT / "nm" / layer).rglob("*.py")):
+        for path in sorted((ROOT / "backend" / "nm" / layer).rglob("*.py")):
             text = path.read_text(encoding="utf8").lower()
             for p in providers:
                 if f'"{p}"' in text or f"'{p}'" in text or f"import {p}" in text:
@@ -112,7 +112,7 @@ def test_no_module_outside_the_adapters_names_a_provider():
 
 def test_the_provider_name_sweep_can_see_a_leak_outside_adapters():
     """BK-52. Plant a provider name in the exact package tree swept."""
-    probe = ROOT / "nm" / "edge" / "_provider_name_probe.py"
+    probe = ROOT / "backend" / "nm" / "edge" / "_provider_name_probe.py"
     probe.write_text("PROVIDER = 'anthropic'\n", encoding="utf8")
     try:
         with pytest.raises(AssertionError, match="names 'anthropic'"):
@@ -127,7 +127,7 @@ def test_the_same_turn_runs_under_a_flipped_provider_with_no_source_change(tmp_p
     """THE SWITCH, THROWN.
 
     The engine is built twice from two different provider configurations and
-    the same brief run through both. Nothing in `nm/` differs between the two
+    the same brief run through both. Nothing in `backend/nm/` differs between the two
     runs — only the config object, which is what an environment variable
     produces.
 
@@ -136,7 +136,7 @@ def test_the_same_turn_runs_under_a_flipped_provider_with_no_source_change(tmp_p
     provider served it. What it cannot establish is the cost and latency delta
     against a live provider; that is the paid half below.
     """
-    before = {p: p.read_bytes() for p in sorted((ROOT / "nm").rglob("*.py"))}
+    before = {p: p.read_bytes() for p in sorted((ROOT / "backend" / "nm").rglob("*.py"))}
 
     outputs = {}
     for name, responses in (
@@ -152,7 +152,7 @@ def test_the_same_turn_runs_under_a_flipped_provider_with_no_source_change(tmp_p
         assert out.answer.elements, f"{name}: no answer"
         assert out.metrics.model_mix, f"{name}: the provider was not recorded"
 
-    after = {p: p.read_bytes() for p in sorted((ROOT / "nm").rglob("*.py"))}
+    after = {p: p.read_bytes() for p in sorted((ROOT / "backend" / "nm").rglob("*.py"))}
     assert before == after, (
         "a source file changed between provider runs -- the switch is not a "
         "configuration change")
@@ -374,7 +374,7 @@ def test_the_adapter_that_ships_is_the_one_that_strips():
     """B-040's lesson, on a new field: the validator lived in the test double
     and the adapter that ships skipped it, so an `enum` was decoration on the
     production path. The strip has to be where the request is built."""
-    src = (ROOT / "nm" / "adapters" / "model" / "openai_adapter.py").read_text(
+    src = (ROOT / "backend" / "nm" / "adapters" / "model" / "openai_adapter.py").read_text(
         encoding="utf8")
     assert "on_the_wire(schema)" in src, (
         "the OpenAI adapter sends the schema verbatim, so any metadata we add "

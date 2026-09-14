@@ -16,12 +16,12 @@ import re
 from datetime import date
 
 import pytest
-
 from nm.core.turn import TurnInput
 from nm.domain.answer import ElementKind
 from nm.domain.issue import Disposition, DispositionState, Effect, Issue, IssueKind
 from nm.domain.matter import Side
 from nm.domain.quotable import Quotable
+
 from tests.test_turn_contract import build
 
 pytestmark = pytest.mark.class_a
@@ -70,7 +70,7 @@ def test_a_served_turn_puts_issues_in_front_of_the_advocate(tmp_path):
     reached the answer, and none of it means anything if none did."""
     findings = _findings(_run(tmp_path, FOR_PLAINTIFF))
     assert findings, (
-        "no issue reached the answer. `nm/domain/issue.py` had a complete "
+        "no issue reached the answer. `backend/nm/domain/issue.py` had a complete "
         "unit suite and no production caller for three slices.")
 
 

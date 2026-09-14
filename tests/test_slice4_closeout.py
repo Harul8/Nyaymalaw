@@ -23,10 +23,10 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-
 from nm.core.turn import TurnInput
 from nm.domain.answer import ElementKind, Signal
 from nm.ports.evidence import Coverage, EvidenceResult
+
 from tests.test_turn_contract import _Evidence, build, finding
 
 pytestmark = pytest.mark.class_a

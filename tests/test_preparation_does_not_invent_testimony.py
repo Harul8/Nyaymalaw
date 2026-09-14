@@ -27,7 +27,6 @@ import pathlib
 
 import pytest
 import yaml
-
 from nm.core.dependency import Currency, InputKind, Ledger, Rest, invalidate
 from nm.core.hearing import (
     NO_LOCATOR,
@@ -119,7 +118,8 @@ def _pack(**kw) -> HearingPack:
 
 def _schema(name: str) -> dict:
     rows = yaml.safe_load(
-        (ROOT / "spec" / "schemas.yaml").read_text(encoding="utf-8"))["schemas"]
+        (ROOT / "assurance" / "specification" / "schemas.yaml").read_text(encoding="utf-8")
+    )["schemas"]
     return next(r for r in rows if r["name"] == name)
 
 

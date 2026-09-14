@@ -25,7 +25,6 @@ import dataclasses
 from datetime import date
 
 import pytest
-
 from nm.adapters.store.file_store import FileMatterStore
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route
 from nm.domain.matter import (
@@ -382,6 +381,7 @@ def test_a_transcript_that_cannot_be_written_never_costs_the_advocate_the_turn(
     from datetime import date as _date
 
     from nm.core.turn import TurnInput
+
     from tests.test_turn_contract import build
 
     engine, store = build(tmp_path)

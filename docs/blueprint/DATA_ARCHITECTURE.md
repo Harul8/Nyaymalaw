@@ -8,7 +8,7 @@ Build a Python modular monolith, retaining the current FastAPI edge, pure domain
 
 India is the operating scope. The proposed default is an India-region primary database, object store, backups, keys, logs and processing. This is a product hosting policy subject to provider capability and procurement, not an assertion that Indian law imposes blanket localisation. Foreign processing, including remote support, telemetry, model inference and disaster recovery, is not enabled silently. If an essential provider cannot satisfy the approved boundary, the capability remains unavailable until the named decision-maker approves a reviewed alternative. Legal coverage is a different boundary: initial reliance remains within measured Telangana and Union coverage; India-wide hosting does not establish India-wide legal competence.
 
-The present code already supplies useful contracts: `nm/ports/store.py` defines version-conditional commits and incomplete-list reporting; `nm/adapters/store/file_store.py` implements a sealed file adapter; `nm/domain/matter.py` carries sourced facts and explicit uncertainty; `nm/domain/media.py` defines media-admission concepts; `nm/edge/api.py` centralises the release boundary. Preserve the behaviour and tests that earn their place. These observations do not certify their current security, concurrency or browser behaviour. The code graph inspected on 10 September 2026 was stale relative to HEAD, so source inspection, not its architecture summary, supports these observations.
+The present code already supplies useful contracts: `backend/nm/ports/store.py` defines version-conditional commits and incomplete-list reporting; `backend/nm/adapters/store/file_store.py` implements a sealed file adapter; `backend/nm/domain/matter.py` carries sourced facts and explicit uncertainty; `backend/nm/domain/media.py` defines media-admission concepts; `backend/nm/edge/api.py` centralises the release boundary. Preserve the behaviour and tests that earn their place. These observations do not certify their current security, concurrency or browser behaviour. The code graph inspected on 10 September 2026 was stale relative to HEAD, so source inspection, not its architecture summary, supports these observations.
 
 ### Deployment shape
 
@@ -251,7 +251,7 @@ The file uses JSON Schema Draft 2020-12. For each command validate the `request_
 
 ### 9.2 Compatibility and one owner
 
-Source inspection on 10 September 2026 found the following current routes in `nm/edge/api.py`. Route presence does not prove behaviour. Preserve them until their explicit adapter/consumer cutover passes; do not leave old and new writers with different rules.
+Source inspection on 10 September 2026 found the following current routes in `backend/nm/edge/api.py`. Route presence does not prove behaviour. Preserve them until their explicit adapter/consumer cutover passes; do not leave old and new writers with different rules.
 
 | Current surface | Target command(s) | Migration rule |
 |---|---|---|

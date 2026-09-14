@@ -4,7 +4,7 @@
     {
       "name": "nm",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "nm.bootstrap.main", "--port", "8071"],
+      "runtimeArgs": ["-c", "import runpy, sys; sys.path[:0] = ['backend', '.']; sys.argv = ['nm.bootstrap.main', '--port', '8071']; runpy.run_module('nm.bootstrap.main', run_name='__main__')"],
       "port": 8071
     }
   ]

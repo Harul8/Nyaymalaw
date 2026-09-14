@@ -3,7 +3,7 @@ BK-81-AC1, BK-81-AC3, BK-77-AC1, BK-77-AC2, BK-77-AC3.
 
 WHAT THESE DEFEND
 -------------------
-`tools/blueprint.py` and its five checkers already reconcile the execution
+`assurance/control_plane/blueprint.py` and its five checkers already reconcile the execution
 graph. What was never proved is that they CAN FAIL. A structural checker that
 passes on a tree with a deleted mapping, a duplicated owner or a cycle in it
 is worse than none, because it is a green light nobody will look behind --
@@ -75,8 +75,8 @@ REGISTRIES: tuple[str, ...] = (
     "docs/blueprint/approvals.schema.json",
     "docs/blueprint/contracts/commands.json",
     "docs/blueprint/processors.yaml",
-    "spec/features.yaml",
-    "spec/gates.yaml",
+    "assurance/specification/features.yaml",
+    "assurance/specification/gates.yaml",
 )
 
 
@@ -120,7 +120,7 @@ def tree(tmp_path) -> pathlib.Path:
 
 
 def _errors(root: pathlib.Path) -> list[str]:
-    from tools.blueprint import check_all, load, load_contracts
+    from assurance.control_plane.blueprint import check_all, load, load_contracts
 
     manifest, registry = load(root)
     return check_all(manifest, registry, load_contracts(root), root)
@@ -330,7 +330,7 @@ def test_the_release_packet_is_last_by_dependency_and_not_by_number():
 # ======= 4. three claims, kept apart -- BK-77-AC3 and BK-81-AC3 ===========
 
 def _registry() -> dict:
-    from tools.backlog import load
+    from assurance.control_plane.backlog import load
 
     return load()
 
@@ -339,7 +339,7 @@ def test_a_criterion_awaiting_counsel_is_not_done_however_green_the_tests():
     """*locally proven* is not *professionally approved.* BK-81-AC2 is the
     live instance: its structural siblings pass and it needs a design review
     nobody has performed."""
-    from tools.backlog import bind_execution_evidence, item_result
+    from assurance.control_plane.backlog import bind_execution_evidence, item_result
 
     doc = _registry()
     bind_execution_evidence(doc)
@@ -354,7 +354,7 @@ def test_a_criterion_awaiting_counsel_is_not_done_however_green_the_tests():
 def test_a_criterion_awaiting_a_production_measure_is_not_done_either():
     """*locally proven* is not *production measured.* Every P38/P39 criterion
     is one of these and none may roll up."""
-    from tools.backlog import bind_execution_evidence, item_result
+    from assurance.control_plane.backlog import bind_execution_evidence, item_result
 
     doc = _registry()
     bind_execution_evidence(doc)
@@ -374,7 +374,7 @@ def test_a_criterion_with_nothing_outstanding_does_roll_up():
     """THE POSITIVE CONTROL, and it is the one that matters: a distinction
     that never lets anything through is a wall, and a wall teaches the next
     reader to route around it."""
-    from tools.backlog import item_result
+    from assurance.control_plane.backlog import item_result
 
     done = [row["id"] for row in _registry()["items"]
             if item_result(row, bind_execution=False) == "PASS"]
@@ -410,19 +410,19 @@ def test_the_generated_reader_views_are_not_inputs_to_themselves():
     completion registry arriving by the back door: edit a status cell, the
     snapshot changes, and the workbook now agrees with itself about a fact no
     registry holds."""
-    from tools.plan_view import SNAPSHOT_BASE
+    from assurance.control_plane.plan_view import SNAPSHOT_BASE
 
     for generated in ("docs/PLAN.md",
                       "docs/Nyaymalaw_End_to_End_Project_Plan.xlsx"):
         assert generated not in SNAPSHOT_BASE, generated
-    for authored in ("docs/backlog/status.yaml", "spec/features.yaml"):
+    for authored in ("docs/backlog/status.yaml", "assurance/specification/features.yaml"):
         assert authored in SNAPSHOT_BASE, authored
 
 
 def test_a_review_finding_is_registered_rather_than_described():
     """BK-77-AC3: every enforcement limitation is a registered row that stays
     unproven until its named work is complete."""
-    from tools.backlog import item_result
+    from assurance.control_plane.backlog import item_result
 
     doc = _registry()
     unfinished = [row["id"] for row in doc["items"]

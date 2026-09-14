@@ -7,11 +7,11 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from cryptography.hazmat.primitives import serialization
 
+from assurance.control_plane.backlog import _structured_record, _structured_record_legacy
+from assurance.control_plane.evidence import verification_fingerprint
+from assurance.control_plane.evidence_verification import configured_verifier
+from assurance.control_plane.structured_evidence import RECORDS, SCHEMA, problems
 from tests.p03_evidence_support import TrustHarness
-from tools.backlog import _structured_record, _structured_record_legacy
-from tools.evidence import verification_fingerprint
-from tools.evidence_verification import configured_verifier
-from tools.structured_evidence import RECORDS, SCHEMA, problems
 
 pytestmark = pytest.mark.class_a
 
@@ -38,7 +38,7 @@ def _record(**overrides) -> dict:
             "evidence": None,
         },
         "rubric": {
-            "identity": "docs/Archives/JOURNEY.md §5 stage rubric",
+            "identity": "development_environment/archives/JOURNEY.md §5 stage rubric",
             "findings": [{
                 "id": "usable-withholding", "result": "PASS",
                 "basis": "all twelve turns named the reason and next action",

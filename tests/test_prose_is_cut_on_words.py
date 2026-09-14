@@ -13,7 +13,7 @@ ends mid-word, and confirming the premise is the entire mechanism by which a
 wrong accrual is meant to be caught. Correcting it in four words is impossible
 if it cannot be read.
 
-WHY THIS IS A SCAN AND NOT A FIX AT THAT LINE. Forty-two sites in `nm/` cut
+WHY THIS IS A SCAN AND NOT A FIX AT THAT LINE. Forty-two sites in `backend/nm/` cut
 prose to a character count when this was written, and thirty-six of them fed a
 sentence somebody reads. Not one of them was written by a person ignoring a
 rule; they were written by people who each needed to shorten a statement and
@@ -75,17 +75,17 @@ PROSE = frozenset({
 #: above it -- an exemption that drifts onto a different line is worse than no
 #: exemption, because it silently permits whatever lands there next.
 EXEMPT: dict[tuple[str, str], str] = {
-    ("nm/core/posture.py", "account.strip()[:2500]"):
+    ("backend/nm/core/posture.py", "account.strip()[:2500]"):
         "the account into a model prompt: a budget, and nobody reads the seam",
-    ("nm/core/route.py", "message.strip()[:1200]"):
+    ("backend/nm/core/route.py", "message.strip()[:1200]"):
         "the message into a model prompt: a budget",
-    ("nm/core/turn.py", "turn.message.strip()[:1500]"):
+    ("backend/nm/core/turn.py", "turn.message.strip()[:1500]"):
         "the message into a model prompt: a budget",
-    ("nm/core/turn.py", "turn.message.strip()[:300]"):
+    ("backend/nm/core/turn.py", "turn.message.strip()[:300]"):
         "the message into a model prompt: a budget",
-    ("nm/core/turn.py", "element.text[:400]"):
+    ("backend/nm/core/turn.py", "element.text[:400]"):
         "a fragment kept to seed a retrieval, never rendered",
-    ("nm/core/turn.py", "read.described[:6]"):
+    ("backend/nm/core/turn.py", "read.described[:6]"):
         "a tuple of descriptors, not text; caught only by what it is called",
 }
 
@@ -217,7 +217,7 @@ def sweep(root: pathlib.Path) -> tuple[list[str], set[tuple[str, str]], int]:
     -- and the sweep is where an exemption keyed wrongly, or a population that
     silently walks nothing, would swallow every offender there is.
     """
-    files = [p for p in (root / "nm").rglob("*.py")
+    files = [p for p in (root / "backend" / "nm").rglob("*.py")
              if "__pycache__" not in p.parts]
     offenders: list[str] = []
     seen_exempt: set[tuple[str, str]] = set()
@@ -244,7 +244,7 @@ def test_the_prose_sweep_can_see_a_planted_cut(tmp_path):
       degraded to the expression alone, six of them would quietly excuse every
       module in the product.
     """
-    core = tmp_path / "nm" / "core"
+    core = tmp_path / "backend" / "nm" / "core"
     core.mkdir(parents=True)
     (core / "clean.py").write_text(
         "x = snippet(fact.statement, 70)\n", encoding="utf-8")
@@ -254,7 +254,7 @@ def test_the_prose_sweep_can_see_a_planted_cut(tmp_path):
 
     (core / "planted.py").write_text("y = fact.statement[:70]\n", encoding="utf-8")
     offenders, _seen, _count = sweep(tmp_path)
-    assert offenders == ["nm/core/planted.py:1  fact.statement[:70]"], (
+    assert offenders == ["backend/nm/core/planted.py:1  fact.statement[:70]"], (
         f"the sweep did not report the planted cut; it reported {offenders}")
 
     borrowed = next(expr for _path, expr in EXEMPT)
@@ -268,7 +268,7 @@ def test_the_prose_sweep_can_see_a_planted_cut(tmp_path):
 def test_no_sentence_an_advocate_reads_is_cut_to_a_character_count():
     """THE SWEEP, over the whole package.
 
-    The population is drawn from `nm/` rather than from the modules that were
+    The population is drawn from `backend/nm/` rather than from the modules that were
     known to be wrong, because the site added tomorrow is in a sibling module
     -- which is precisely how the fold count went from three to six.
     """
@@ -300,10 +300,10 @@ def test_the_owner_is_actually_used():
     were deleted rather than moved, and it would pass identically if `snippet`
     were never called at all -- which is how a rule becomes an aspiration."""
     callers = {p.relative_to(ROOT).as_posix()
-               for p in (ROOT / "nm").rglob("*.py")
+               for p in (ROOT / "backend" / "nm").rglob("*.py")
                if "__pycache__" not in p.parts
                and "snippet(" in p.read_text(encoding="utf-8")}
-    callers.discard("nm/domain/text.py")
+    callers.discard("backend/nm/domain/text.py")
     assert len(callers) >= 12, (
         f"only {sorted(callers)} shorten prose through the owner. Thirty-six "
         f"cuts across fourteen modules were moved onto it; if that has "

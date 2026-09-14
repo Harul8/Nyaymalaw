@@ -38,12 +38,12 @@ import re
 from datetime import date
 
 import pytest
-
 from nm.adapters.model.scripted import SCRIPTED_READS, ScriptedModelAdapter
 from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput
 from nm.domain.answer import ElementKind
 from nm.ports.model import ModelError
+
 from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
 
 pytestmark = pytest.mark.class_a

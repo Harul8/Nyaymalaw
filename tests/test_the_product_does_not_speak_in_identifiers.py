@@ -25,7 +25,7 @@ establish. That is the failure mode of dissolving structure into prose.
 It IS: better sentences inside that structure, and one mechanism that makes
 the identifier version impossible rather than merely absent today.
 
-`nm/domain/spoken.py` holds it. The phrases live ON the enum, and `complete()`
+`backend/nm/domain/spoken.py` holds it. The phrases live ON the enum, and `complete()`
 asserts every member has one at import -- so a member added without a phrase
 is an ImportError, not a surprise in a served turn. There is no fallback to
 `.value`: a fallback is what makes a missing phrase invisible.
@@ -48,11 +48,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 #: is not computed now" is already English. Rewriting it would be changing a
 #: line because a scan matched it, which is the opposite of drawing the
 #: population from the code.
-ALLOWED = {("nm/core/turn.py", "d.value")}
+ALLOWED = {("backend/nm/core/turn.py", "d.value")}
 
 
 def _sources():
-    return [p for p in (ROOT / "nm").rglob("*.py")
+    return [p for p in (ROOT / "backend" / "nm").rglob("*.py")
             if "__pycache__" not in p.parts]
 
 
@@ -235,13 +235,13 @@ def test_the_phrases_are_not_the_identifiers_with_the_underscores_removed():
 # the moment they landed. A checker that always returns [] passes a sweep
 # identically -- and one of them did, on every commit for weeks (B-049).
 #
-# The offender is planted in a REAL file under `nm/`, because both scanners
+# The offender is planted in a REAL file under `backend/nm/`, because both scanners
 # walk the tree. A synthetic fixture would prove the scanner compiles, not
 # that it can see.
 
 def test_the_value_scan_can_see_an_identifier_reaching_the_advocate():
     """Plant an Element whose text renders a raw enum value."""
-    planted = ROOT / "nm" / "core" / "_speaks_in_identifiers.py"
+    planted = ROOT / "backend" / "nm" / "core" / "_speaks_in_identifiers.py"
     planted.write_text(block_of((
         "from nm.domain.answer import Element, ElementKind",
         "from nm.domain.matter import Side",
@@ -274,7 +274,7 @@ def test_the_phrase_sweep_can_see_underscores_merely_removed():
 
 def test_the_complete_scan_can_see_an_enum_that_never_checks_itself():
     """Plant a `Spoken` enum with no `complete()` call."""
-    planted = ROOT / "nm" / "domain" / "_never_completes.py"
+    planted = ROOT / "backend" / "nm" / "domain" / "_never_completes.py"
     planted.write_text(block_of((
         "from enum import Enum, nonmember",
         "",

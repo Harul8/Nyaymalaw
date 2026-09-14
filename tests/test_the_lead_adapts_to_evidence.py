@@ -22,7 +22,6 @@ model's investigation.
 from __future__ import annotations
 
 import pytest
-
 from nm.core import lead
 from nm.core.delegation import Ledger
 from nm.domain.delegation import (

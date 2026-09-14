@@ -36,7 +36,6 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-
 from nm.core.adversarial import build_exposure_prompt
 from nm.core.turn import _label_of
 

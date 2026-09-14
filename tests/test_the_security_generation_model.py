@@ -30,7 +30,6 @@ import textwrap
 from datetime import timedelta
 
 import pytest
-
 from nm.domain.advocate import (
     AccountSecurity,
     ReauthenticationProof,
@@ -42,7 +41,7 @@ from nm.ports.directory import ProofRefused
 pytestmark = pytest.mark.class_a
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-ADAPTER = ROOT / "nm" / "adapters" / "store" / "directory.py"
+ADAPTER = ROOT / "backend" / "nm" / "adapters" / "store" / "directory.py"
 
 #: The keys whose write is an account-security event.
 MATERIAL = ("credential", "recovery_codes")

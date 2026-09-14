@@ -38,7 +38,6 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
-
 from nm.domain import summary
 from nm.domain.matter import Basis, Fact, Matter, Posture, Provenance, Role, Thread
 

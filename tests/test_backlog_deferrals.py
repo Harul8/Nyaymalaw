@@ -12,7 +12,7 @@ from datetime import date, datetime, timezone
 import pytest
 import yaml
 
-from tools import backlog
+from assurance.control_plane import backlog
 
 pytestmark = pytest.mark.class_a
 

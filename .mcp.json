@@ -7,7 +7,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "tools/crg_serve.ps1"
+        "development_environment/developer_tooling/crg_serve.ps1"
       ],
       "cwd": "C:\\Users\\rahul\\Nyaymalaw",
       "type": "stdio"

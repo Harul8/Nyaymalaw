@@ -5,7 +5,7 @@
 // a structural one: it holds if the filter is right and the rendering does
 // something else with the result.
 //
-// This runs the ACTUAL `renderTurn` from `web/app.js` against a stub DOM and
+// This runs the ACTUAL `renderTurn` from `frontend/app.js` against a stub DOM and
 // asks the question the advocate cares about — is a disclosure ever inside a
 // collapsed <details>? — which no amount of reading the source can answer.
 //
@@ -26,7 +26,7 @@ import { dirname, join } from "node:path";
 import vm from "node:vm";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const app = readFileSync(join(here, "..", "..", "web", "app.js"), "utf8");
+const app = readFileSync(join(here, "..", "..", "frontend", "app.js"), "utf8");
 
 // ---------------------------------------------------------- the stub DOM ---
 function el(tag) {
@@ -98,7 +98,7 @@ const context = {
 };
 context.globalThis = context;
 vm.createContext(context);
-vm.runInContext(app, context, { filename: "web/app.js" });
+vm.runInContext(app, context, { filename: "frontend/app.js" });
 
 // ------------------------------------------------------------- the facts ---
 // Python supplies EVERY actual Signal member via the domain enum. No copied
