@@ -3612,6 +3612,18 @@
         {
           "path": "nm/bootstrap/composition.py",
           "kind": "existing"
+        },
+        {
+          "path": "nm/domain/restore.py",
+          "kind": "planned"
+        },
+        {
+          "path": "tools/migrate_store.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/store/envelope.py",
+          "kind": "existing"
         }
       ],
       "inputs": [

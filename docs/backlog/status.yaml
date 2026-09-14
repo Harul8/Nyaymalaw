@@ -1564,8 +1564,13 @@ items:
     requirement: deployed tenant, workspace, matter and role boundaries hold across API, storage, search, exports, background work and support access
     required_evidence: [adversarial_test, production_measure]
     evidence:
-      adversarial_test: {result: NOT_RUN, ref: ''}
-      production_measure: {result: NOT_RUN, ref: ''}
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_a_restore_cannot_revive_what_was_taken_away.py::test_the_reading_role_cannot_write"
+        note: "Least privilege is driven rather than assumed: each declared phase is attempted as every role and the reader cannot write. Cross-tenant is one of the thirteen declared injections and refuses by name. Proved against synthetic infrastructure in an isolated rehearsal. There is no deployment, no KMS and no PostgreSQL service, so production_measure stays NOT RUN with that exact dependency."
+      production_measure:
+        result: NOT_RUN
+        ref: ""
     negative_control:
       mutation: attempt a valid-session cross-workspace read or run support access beyond its approved scope
       expected_failure: no privileged material crosses the boundary and the event is attributable
@@ -1573,8 +1578,13 @@ items:
     requirement: backup and restore on the deployment shape recover the authoritative encrypted matter and identity state within approved recovery objectives without reviving revoked access
     required_evidence: [adversarial_test, production_measure]
     evidence:
-      adversarial_test: {result: NOT_RUN, ref: ''}
-      production_measure: {result: NOT_RUN, ref: ''}
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_a_restore_cannot_revive_what_was_taken_away.py::test_an_erased_asset_cannot_reappear"
+        note: "A snapshot predating an erasure or a revocation refuses to open until the tombstone and the revocation are replayed; a hold placed after the snapshot must travel with the restore. Proved against synthetic infrastructure in an isolated rehearsal. There is no deployment, no KMS and no PostgreSQL service, so production_measure stays NOT RUN with that exact dependency."
+      production_measure:
+        result: NOT_RUN
+        ref: ""
     negative_control:
       mutation: restore an older backup after a session revocation or key lifecycle change
       expected_failure: recovery exposes any data loss and refuses stale access or unreadable data presented as recovered
@@ -1591,8 +1601,13 @@ items:
     requirement: a versioned release manifest and rollback rehearsal preserve compatible data, configuration and authority boundaries and name the incident owner and stop conditions
     required_evidence: [adversarial_test, production_measure]
     evidence:
-      adversarial_test: {result: NOT_RUN, ref: ''}
-      production_measure: {result: NOT_RUN, ref: ''}
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_a_restore_cannot_revive_what_was_taken_away.py::test_a_forward_incompatible_snapshot_is_refused_rather_than_read"
+        note: "A forward-incompatible snapshot is refused rather than read as corruption, and an unreconciled job blocks because UNKNOWN is still unknown. Proved against synthetic infrastructure in an isolated rehearsal. There is no deployment, no KMS and no PostgreSQL service, so production_measure stays NOT RUN with that exact dependency."
+      production_measure:
+        result: NOT_RUN
+        ref: ""
     negative_control:
       mutation: roll back an incompatible schema or provider configuration while a task is pending
       expected_failure: the rollout stops or recovers without silently corrupting state or weakening a gate
@@ -3569,7 +3584,11 @@ items:
   - id: BK-83-AC3
     requirement: A rehearsed migration validates source and target inventories, version history and original asset links, keeps a single write authority, and proves backup restore and cutover rollback without lost accepted writes
     required_evidence: [integration_test, production_measure]
-    evidence: {}
+    evidence:
+      integration_test:
+        result: PASS
+        ref: "tests/test_a_restore_cannot_revive_what_was_taken_away.py::test_rollback_is_refused_when_the_target_holds_an_acknowledged_write"
+        note: "The existing migration owner is driven, not reimplemented: rollback after target-only writes is refused and names which matters would be lost, an unreconcilable pair refuses rather than permits, and a target that added nothing rolls back. Proved against synthetic infrastructure in an isolated rehearsal. There is no deployment, no KMS and no PostgreSQL service, so production_measure stays NOT RUN with that exact dependency."
     negative_control:
       mutation: abort a cutover or roll back after target-only writes
       expected_failure: reconciliation preserves accepted writes or prevents unsafe rollback; counts and content checks expose mismatch
@@ -3640,7 +3659,15 @@ items:
   - id: BK-85-AC2
     requirement: KMS-backed envelope encryption separates authentication, provider and data keys, scopes decrypt authority, supports audited rotation, and proves restore under least privilege without plaintext fallbacks
     required_evidence: [integration_test, adversarial_test, production_measure]
-    evidence: {}
+    evidence:
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_a_restore_cannot_revive_what_was_taken_away.py::test_every_injected_fault_refuses_the_restore_and_names_itself"
+        note: "Thirteen declared injections including a missing data key, a wrong data key and a cross-tenant attempt; each refuses by name and a fault with no reason cannot be constructed. Proved against synthetic infrastructure in an isolated rehearsal. There is no deployment, no KMS and no PostgreSQL service, so production_measure stays NOT RUN with that exact dependency."
+      integration_test:
+        result: PASS
+        ref: "tests/test_a_restore_cannot_revive_what_was_taken_away.py::test_all_four_egresses_must_be_off_and_three_is_not_enough"
+        note: "Restore runs sealed: external egress, notifications, model calls and job dispatch all off, derived from what is actually disabled rather than from a flag. Proved against synthetic infrastructure in an isolated rehearsal. There is no deployment, no KMS and no PostgreSQL service, so production_measure stays NOT RUN with that exact dependency."
     negative_control:
       mutation: deny KMS access, rotate a key during a write or attempt cross-matter decryption
       expected_failure: the request safely fails or recovers without plaintext persistence, data loss or cross-matter access
@@ -3774,7 +3801,15 @@ items:
   - id: BK-88-AC1
     requirement: "The served confidential path inventories original and derivative copies, enforces holds and erasure, and replays deletion and permission tombstones before restored data can be exposed"
     required_evidence: [integration_test, adversarial_test, browser_journey, production_measure]
-    evidence: {}
+    evidence:
+      adversarial_test:
+        result: PASS
+        ref: "tests/test_a_restore_cannot_revive_what_was_taken_away.py::test_a_hold_placed_after_the_snapshot_must_travel_with_the_restore"
+        note: "Erased material cannot reappear and a held asset cannot arrive unheld; a released hold does not block, so the rule is not a blanket refusal. browser_journey is NOT RUN: the restore path has no served surface. Proved against synthetic infrastructure in an isolated rehearsal. There is no deployment, no KMS and no PostgreSQL service, so production_measure stays NOT RUN with that exact dependency."
+      integration_test:
+        result: PASS
+        ref: "tests/test_a_restore_cannot_revive_what_was_taken_away.py::test_replaying_the_erasure_lets_it_open"
+        note: "Tombstones, holds and revocations recorded after the snapshot are replayed before the restored state may be served. Proved against synthetic infrastructure in an isolated rehearsal. There is no deployment, no KMS and no PostgreSQL service, so production_measure stays NOT RUN with that exact dependency."
     negative_control:
       mutation: "delete a held original or restore a snapshot predating erasure and revocation"
       expected_failure: "retained exceptions are truthful and erased or unauthorised material cannot reappear"

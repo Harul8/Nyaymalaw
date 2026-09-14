@@ -55,6 +55,22 @@ ENTRY_POINTS: dict[str, str] = {
 #: behaviour does not, and the difference is invisible to every other check in
 #: this build.
 UNWIRED: dict[str, str] = {
+    # P38's restore rehearsal. It is NOT reached from a served turn and must
+    # not be: a restore runs with every egress off, against a store that is
+    # not the active one, under roles the application does not hold while
+    # serving. A path from a turn into it would be the product restoring
+    # itself over its own file.
+    #
+    # What wires it is an OPERATOR command against a configured deployment --
+    # `production_measure` on BK-42-AC3, AC4, AC6, BK-83-AC3, BK-85-AC2 and
+    # BK-88-AC1, all NOT RUN because no such deployment exists.
+    "nm.domain.restore": (
+        "P38's restore, isolation and rollback rules. Driven by the rehearsal "
+        "harness in `tests/test_a_restore_cannot_revive_what_was_taken_away.py` "
+        "against synthetic infrastructure; it is wired by an operator command "
+        "on a configured deployment, which is the production_measure evidence "
+        "that stays NOT RUN on all six of its criteria. A served turn must "
+        "never reach it."),
     # P35's review harness, and this one may never be wired -- which is the
     # honest statement rather than a deferral.
     #
@@ -262,6 +278,12 @@ def test_the_scan_can_see_an_unreached_module():
 #: was actually wrong, was the one it could not see. A join that silently
 #: drops members is the same defect as a scan whose population went to zero.
 OWNER: dict[str, tuple[str, ...]] = {
+    # P38's restore serves the persistence promise the store makes -- one
+    # matter, versioned and sealed -- so it is named against I1 rather than
+    # given a feature of its own. What it adds is that the promise survives
+    # being put back, which is a property of the write and not a new promise
+    # to the advocate.
+    "nm.domain.restore": ("I1",),
     # P35's qualified-review record reviews THE ADVICE AS SERVED, so it is
     # named against the feature that produces it rather than given one of its
     # own -- and against E5, because what the record keeps beyond a score is

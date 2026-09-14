@@ -6597,6 +6597,68 @@ line for line in `journey_verdict` and restoring it is a move, not a rewrite.
 **Exclusions.** No control was relaxed, no test skipped, no population
 narrowed.
 
+### P38 Start record — a restore that cannot revive what was taken away — 14 September 2026
+
+**Outcome sought.** BK-42-AC3, BK-42-AC4, BK-42-AC6, BK-83-AC3, BK-85-AC2 and
+BK-88-AC1.
+
+**A RESTORE IS NOT A COPY.** Four things must not come back with one, and each
+looks exactly like ordinary restored state once it has: a revoked session, live
+again because the snapshot predates the revocation; an erased asset, back
+because the snapshot predates the erasure; a held asset, available because the
+hold was placed afterwards; and a job that was UNKNOWN, retryable again —
+where the retry is a duplicate of something that may already have happened.
+Nothing downstream notices any of them, which is why `refuse_open` is at the
+point the restored state is served rather than anywhere later.
+
+**NOTHING LEAVES THE BUILDING DURING ONE, and isolation is DERIVED.** A restore
+that can send is a restore that will: the queue it just rebuilt is full of work
+that was already owed, and the first thing a worker does with a restored outbox
+is deliver it. All four egresses must be off; three is `PARTIAL`, which is the
+state an operator reaches by turning three things off and believing they turned
+off four. A boolean an operator sets is a boolean they set while looking at a
+different environment, so `sealed_from` reads what is actually off.
+
+**LEAST PRIVILEGE IS THE POINT OF THE REHEARSAL.** A restore run as an
+all-powerful identity proves a restore is possible, not that this deployment's
+roles can perform one. The reading role cannot write, and replaying a tombstone
+is the retention officer's authority rather than the writer's — collapsing
+them is how a restore releases a hold on its way past.
+
+**Thirteen injections, declared** so the harness cannot quietly exercise
+twelve, and each refuses by name: an operator told "the restore failed" goes
+looking for whichever of thirteen they thought of first. A `Fault` records why
+it fired and refuses a kind nobody declared.
+
+**WHAT IS REUSED RATHER THAN REBUILT.** `tools/migrate_store.py` already owns
+inventory, reconciliation, target-only detection and the rollback refusal
+— including that an unreconcilable pair refuses rather than permits, because
+*we could not check* is the worst possible reason to proceed with an
+irreversible step. `nm/adapters/store/envelope.py` already owns envelope
+encryption, key refs and cross-matter refusal. The rehearsal drives both; it
+does not reimplement either.
+
+**Assumptions.** THERE IS NO DEPLOYMENT, no PostgreSQL service and no KMS.
+Every fixture is synthetic, `Measured.environment` reads `local_rehearsal`, and
+`is_a_deployment` is False for every environment this build can create. RTO and
+RPO are computed from observed timestamps and are real measurements OF A
+REHEARSAL.
+
+**Acceptance → proof.** BK-42-AC3, BK-42-AC4, BK-42-AC6 `adversarial_test`
+**PASS**. BK-83-AC3 and BK-85-AC2 `integration_test` **PASS**; BK-85-AC2
+`adversarial_test` **PASS**. BK-88-AC1 `integration_test` and
+`adversarial_test` **PASS**; its `browser_journey` is **NOT RUN** — the
+restore path has no served surface. **Every `production_measure` is NOT RUN**
+and its dependency is exact: a configured target deployment with a real KMS,
+IAM and PostgreSQL service, which does not exist.
+
+**Rollback.** The rehearsal writes nothing outside its own temporary tree; the
+active store is never a restore target.
+
+**Exclusions.** No deployment, no procurement, no real key, no real backup, no
+provider contacted. A successful backup command is not restore proof and none
+was run.
+
 ### P44 acquisition-foundation Start record — 11 September 2026
 
 **Decision: BLOCKED on P19's scoped source-register output; contract ready.**
