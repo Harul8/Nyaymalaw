@@ -35,10 +35,11 @@ import uuid
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 
-# THE REPO ROOT ON THE PATH FIRST. `python assurance/journeys/journey.py` puts `tools/` on
-# `sys.path`, not the root, so `from assurance.common._console import ...` raises
-# `ModuleNotFoundError` -- which is how this tool crashed on its first run
-# after the console fix. `trace.py` does the same thing for the same reason.
+# THE REPO ROOT ON THE PATH FIRST. `python assurance/journeys/journey.py` puts
+# `assurance/journeys/` on `sys.path`, not the root, so
+# `from assurance.common._console import ...` raises `ModuleNotFoundError` --
+# which is how this tool crashed on its first run after the console fix.
+# `trace.py` does the same thing for the same reason.
 sys.path.insert(0, str(ROOT))
 from assurance.common._console import utf8_console  # noqa: E402
 from assurance.control_plane.evidence import verification_fingerprint  # noqa: E402

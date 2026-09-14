@@ -72,8 +72,24 @@ server it starts; `.claude/launch.json` runs the module with the path set.
 
 **Hooks.** `core.hooksPath` is shared by every worktree, so it was not switched
 while unmerged checkouts still hold `tools/hooks`: this branch used a worktree-scoped
-`assurance/hooks`, and the shared setting changes when the layout reaches
-`s0-foundations`.
+`assurance/hooks`, and the shared setting changed to `assurance/hooks` when the
+layout reached `s0-foundations` at `7a97cc1`. The post-merge refresh then ran from
+the new home: graph updated, 7,129 of 7,129 nodes carrying a vector.
+
+**Found after the move, by sweeping for what the map could not match.** The map
+matched paths with a trailing slash or a file suffix, so six references without
+either survived: the verification fingerprint's exclusion of `docs/Archives`, the
+hook install instruction in CLAUDE.md and this file, a regression-function
+reference in `status.yaml` and this file, and three comments. The fingerprint one
+was a real defect: after the move the exclusion excluded nothing, the archives
+silently entered the checked identity, and every test stayed green.
+**What refuses the next one:**
+`tests/test_every_named_path_in_configuration_resolves.py` draws every repository
+path named in `pyproject.toml` (packages, pytest paths, lint exclusions and
+per-file ignores) and in the identity manifest (inputs and exclusions), and fails
+on one the TRACKED tree does not hold. Tracked, not disk: the move left an empty
+`docs/Archives/` behind in the checkout that made it, which a disk check accepts.
+Its counterexample is the exclusion that was actually left behind.
 
 **Unmerged branches this makes stale.** `codex/p18-p21-p22-dependency-and-premise`
 and `codex/p23-p47-p46-p24`. By the 14 September measurement their content is
@@ -5489,7 +5505,7 @@ owner of "update the graph, then embed"; `pre-commit`, the new `post-merge`
 and the new `post-rewrite` all call it and none carries its own copy, which
 `tests/test_every_way_the_tree_changes_refreshes_the_index.py` enforces by
 scanning the directory. (2) Installation is `git config core.hooksPath
-tools/hooks`, not `cp` — the `.git/hooks` copy was measured two revisions
+assurance/hooks`, not `cp` — the `.git/hooks` copy was measured two revisions
 behind the tracked file, lacking `--require-index` and the Python-absent
 refusal, and nothing had compared them. `.gitattributes` pins the directory
 to LF because `core.autocrlf=true` would otherwise hand `sh` a `|| true\r`.
@@ -6806,7 +6822,7 @@ between a pytest subprocess and a print, so the only way to exercise *a closed
 scenario that starts reproducing must fail the command* was to break a browser
 suite on purpose. That is why the criterion carried no evidence: a control
 nobody can test is a control nobody has tested. The decision is now
-`tools/journey_verdict.regressions`, a function over rows, and `run()` reads it
+`assurance/journeys/journey_verdict.regressions`, a function over rows, and `run()` reads it
 rather than deciding again — asserted structurally, because two answers to
 "was this a regression" is the second owner this build refuses.
 

@@ -492,7 +492,7 @@ refreshes vectors; and the pre-commit hook that ran both was **bypassed by
 every merge, fast-forward and rebase**, which is how the 600 arrived.
 `assurance/hooks/refresh-graph` is now the one owner of both steps, called from
 `pre-commit`, `post-merge` and `post-rewrite`; hooks install by `git config
-core.hooksPath tools/hooks`, never by `cp`; and the SessionStart hook prints
+core.hooksPath assurance/hooks`, never by `cp`; and the SessionStart hook prints
 `semantic index current: N/N` or `SEMANTIC INDEX STALE BY N` — **read that
 line before trusting a semantic miss**, and `python development_environment/developer_tooling/graph_vectors.py
 --check` reprints it on demand.

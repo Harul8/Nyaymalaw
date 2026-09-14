@@ -138,7 +138,7 @@ class IdentityInput:
 #: create a recursive identity that no regeneration could ever satisfy.
 IDENTITY_MANIFEST = (
     IdentityInput(".", exclude=(
-        "docs/Archives",
+        "development_environment/archives",
         "docs/BACKLOG.md",
         "docs/Nyaymalaw_End_to_End_Project_Plan.xlsx",
         "docs/Nyaymalaw_PRD.docx",
@@ -504,7 +504,9 @@ def _frame(digest: Any, *parts: bytes) -> None:
 def verification_fingerprint(root: pathlib.Path | None = None) -> str:
     """Identity of the product, its tests, its runners AND ITS PROMISES.
 
-    Covers, in one digest: `nm`, `tests`, `tools` and `web`; the plan
+    Covers, in one digest: every tracked file -- backend, frontend, pipeline,
+    assurance and tests among them -- except the exclusions named in
+    IDENTITY_MANIFEST; the plan
     contracts; the authoritative PRD source and the playbooks; the generated
     specification's promise half; and the backlog's claim without its verdict.
 

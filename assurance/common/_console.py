@@ -28,8 +28,8 @@ entries had a guard covering only the site the bug was found at. A line copied
 into fourteen files is fourteen chances to differ and one guarantee that the
 fifteenth tool will not have it.
 
-`tools/__init__.py` cannot carry it: these are run as scripts
-(`python tools/x.py`), so the package `__init__` is never imported. Each tool
+A package `__init__.py` cannot carry it: these are run as scripts
+(`python assurance/gate/x.py`), so the package `__init__` is never imported. Each tool
 calls this instead, and `tests/test_tooling_bites.py` fails the build when one
 does not.
 """
