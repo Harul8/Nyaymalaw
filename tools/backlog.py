@@ -700,6 +700,10 @@ def lint(doc: dict, *, verify_execution: bool = False) -> list[str]:
                          {s.get("id") for s in doc.get("steps") or []}, waves)
     from tools.release_obligations import mapping_problems
     bad += mapping_problems(doc)
+    # THE ROUTE TO RELEASE IS STRUCTURE TOO. A journey step in no readiness stage,
+    # or in two, is a step nobody makes ready or two owners who drift apart.
+    from tools.readiness_plan import problems as readiness_problems
+    bad += readiness_problems(doc)
 
     for ev in doc.get("events") or []:
         if ev.get("item") not in known:

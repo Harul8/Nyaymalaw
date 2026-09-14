@@ -34,6 +34,22 @@ final packet owners; 11 belong to the three current planning deliveries above.
 These are source populations, not passed-test counts or a new permanent quota.
 Recount after later changes and preserve earlier counts as historical evidence.
 
+The readiness plan (14 September 2026) adds two sheets, making **30**, and a
+reconciliation row for each. *Readiness Plan* projects `plan.json`
+`readiness_plan` — twelve authored stages that follow the advocate's journey from
+a truthful baseline through Arrive, Open a matter, Take the brief, Work the file,
+Advise, Act, Carry, Close and Leave to a bounded pilot and a named production
+release — beside the gap measured for each stage. *Readiness Gaps* measures every
+journey step. The authored stages carry intent only: goals, actions, the authority
+each needs, dependencies and exit bars. Every count is derived by
+`tools/readiness_plan.py::derive` at export. "Recorded" counts results written in
+`status.yaml`; "currently bound" counts only results bound to the snapshot tree's
+execution evidence, so the two agree only on a tree whose evidence is current.
+`tools/backlog.py lint` refuses a journey step in no stage or two, stages out of
+journey order, unknown work, steps, profiles or dependencies, a dependency cycle
+and an authority outside the closed vocabulary. No stage exit is claimed by the
+workbook.
+
 `blueprint/autonomy.json` adds the adaptive task/result/claim contract and eight
 obligation mappings. Its details project into the existing evaluation detail
 view; P46/P47 and BK-91/BK-92 project through the normal packet, acceptance and

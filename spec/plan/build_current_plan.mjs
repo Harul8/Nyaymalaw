@@ -208,6 +208,44 @@ profileRows.forEach((row,i)=>{
   const lines=Math.max(...row.map((value,c)=>text(value).split('\n').reduce((n,line)=>n+Math.max(1,Math.ceil(line.length/([23,25,142][c]-4))),0)));
   profiles.getRange(`A${i+4}:C${i+4}`).format.rowHeight=Math.max(30,lines*17+12);
 });
+// THE ROUTE TO RELEASE. Authored intent from plan.json readiness_plan beside the gap
+// the exporter measured. Nothing measured is authored; nothing authored is recomputed.
+const readinessPlan = data.plan.readiness_plan;
+if (!readinessPlan?.stages?.length) throw new Error('The readiness plan must be registered before export.');
+const readinessStages = readinessPlan.stages;
+const readinessMeasured = new Map(data._readiness.stages.map(r => [r.id, r]));
+const readinessSteps = new Map(data._readiness.steps.map(r => [r.id, r]));
+if (readinessMeasured.size !== readinessStages.length) throw new Error('Readiness measurement does not cover every authored stage.');
+if (readinessSteps.size !== data.steps.length) throw new Error('Readiness measurement does not cover every journey step.');
+const stageRows = readinessStages.map(r => {
+  const m = readinessMeasured.get(r.id); if (!m) throw new Error(`${r.id}: no measured state`);
+  return [
+    r.id, r.name, r.goal, list(r.journey_steps), list(r.items), r.release_profile || 'None',
+    list(r.depends_on), list(r.authority), r.actions, r.pilot_exit, r.production_exit,
+    (r.decisions || []).length ? r.decisions : 'None recorded',
+    list(m.work), m.criteria, m.criteria_recorded_pass, m.criteria_bound_pass,
+    m.open.code, m.open.browser, m.open.counsel, m.open.model, m.open.production,
+    m.absent, m.done, list(m.packets),
+  ];
+});
+addTable('Readiness Plan','The route to release, stage by stage through the journey',
+  `${readinessPlan.note} Measured columns are this snapshot's derivation: "recorded" counts results written in status.yaml; "currently bound" counts only those bound to this tree's execution evidence. No stage exit is claimed by this sheet.`,
+  ['Stage','Stage name','Goal','Journey steps','Named work','Release profile','Depends on','Authority needed','Actions','Pilot exit','Production exit','Open decisions','All linked work','Criteria','Criteria recorded PASS','Criteria currently bound PASS','Open code rows','Open browser rows','Open counsel rows','Open model rows','Open production rows','Absent evidence rows','Derived done work','Owning packets'],
+  stageRows,[11,34,60,34,26,15,26,32,80,62,50,55,40,11,15,15,12,12,12,12,12,13,12,34]);
+const gapRows = data.steps.map((s, i) => {
+  const m = readinessSteps.get(s.id); if (!m) throw new Error(`${s.id}: no measured state`);
+  return [
+    i + 1, s.phase, s.id, s.name, m.stage || 'No stage', list(m.features), list(s.items),
+    list(m.pilot_required), list(m.production_required),
+    m.criteria, m.criteria_recorded_pass, m.criteria_bound_pass,
+    m.open.code, m.open.browser, m.open.counsel, m.open.model, m.open.production,
+    m.absent, m.done, list(m.packets),
+  ];
+});
+addTable('Readiness Gaps','What stands between each journey step and release',
+  'One row per journey step, measured at export. Open rows are required evidence levels not recorded PASS; absent rows have no authored result at all. Work shared by several steps appears on each of them, so rows are never summed.',
+  ['Seq','Phase','Step ID','Journey step','Readiness stage','Features (registry implementation)','Registered work','Pilot-required work','Production-required work','Criteria','Criteria recorded PASS','Criteria currently bound PASS','Open code rows','Open browser rows','Open counsel rows','Open model rows','Open production rows','Absent evidence rows','Derived done work','Owning packets'],
+  gapRows,[7,8,14,38,14,30,30,22,22,11,15,15,12,12,12,12,12,13,12,34]);
 addTable('Journey Scenarios','Risk-selected journey scenarios','Specification catalogue, not an execution report. Every scenario links to registered work; a passing unit or scripted test does not supply browser or legal-quality proof.',['Scenario','User / matter','Phases','Journey','Required outcome','Failure injection','Suggested cadence','Registered work','Evidence meaning'],context.scenarios.map(r=>[r.id,r.user,r.phases,r.journey,r.outcome,r.failure_injection,r.cadence,list(r.work_items),'No execution verdict inferred; bind actual scenarios and evidence to registered acceptance.']),[13,34,14,75,80,58,28,42,55]);
 addTable('Risks','Programme risk catalogue','Triggers and mitigations describe what to watch. They do not assert a fresh risk assessment or certify controls. Registered work carries actual delivery status.',['Risk','Failure risk','Initial likelihood','Impact','Observable trigger','Mitigation','Owner role','Registered work'],context.risks.map(r=>[r.id,r.risk,r.likelihood,r.impact,r.trigger,r.mitigation,r.owner,list(r.work_items)]),[12,68,19,17,68,74,30,45]);
 
@@ -300,6 +338,8 @@ const reconGroups = [
   ['Choices',blueprint.decisions.choices,'Decisions','A'],
   ['Command contracts',blueprint.commands['x-commands'],'Command Contracts','A'],
   ['Synthetic specifications',blueprint.evaluations.synthetic_cases,'Evaluation Specs','A'],
+  ['Readiness stages',readinessStages,'Readiness Plan','A'],
+  ['Readiness step coverage',data.steps,'Readiness Gaps','C'],
 ];
 const reconRows=reconGroups.map(([label,rows,sheet,column])=>[label,rows.length,0,0,`'${sheet}'!${column}4:${column}${rows.length+3}`,'Exact IDs checked in generator; formula counts exported populated rows.']);
 reconRows.push(['Release profiles',data.plan.release_profiles.length,0,0,`'Release Profiles'!B4:B${profileRows.length+3}`,'One Scope aspect per profile; exact unique profile IDs and all aspect rows checked in generator.']);
@@ -354,6 +394,11 @@ data.items.forEach((item,i)=>{if(statusWritten[i][5]!==item.delivery_status||sta
 const featuresWritten=tables.get('Features').sheet.getRange(`A4:K${data.features.length+3}`).values;
 data.features.forEach((feature,i)=>{if(featuresWritten[i][4]!==feature.implementation||featuresWritten[i][5]!==feature.disposition) throw new Error(`${feature.id}: feature projection mismatch`);});
 data.steps.forEach((step,i)=>{if(tables.get('Journey Steps').sheet.getRange(`E${i+4}`).values[0][0]!==step.basis) throw new Error(`${step.id}: basis mismatch`);});
+const stageOfStep=new Map(readinessStages.flatMap(r=>r.journey_steps.map(s=>[s,r.id])));
+const gapStages=tables.get('Readiness Gaps').sheet.getRange(`E4:E${data.steps.length+3}`).values.map(r=>r[0]);
+data.steps.forEach((step,i)=>{if(gapStages[i]!==(stageOfStep.get(step.id)||'No stage')) throw new Error(`${step.id}: readiness stage projection mismatch`);});
+const placed=readinessStages.flatMap(r=>r.journey_steps);
+if(placed.length!==data.steps.length||new Set(placed).size!==data.steps.length) throw new Error('Every journey step must sit in exactly one readiness stage.');
 console.log((await wb.inspect({kind:'table',range:'Reconciliation!A3:F18',include:'values,formulas',tableMaxRows:16,tableMaxCols:6,maxChars:7000})).ndjson);
 const errors=await wb.inspect({kind:'match',searchTerm:'#REF!|#DIV/0!|#VALUE!|#NAME\\?|#N/A|#NUM!|#NULL!|#SPILL!|#CALC!',options:{useRegex:true,maxResults:100},summary:'Final formula error scan',maxChars:3000});
 console.log(errors.ndjson);

@@ -2,6 +2,81 @@
 
 What is known, not done, and not yet a defect row. Opened 6 September 2026.
 
+## Release readiness plan — 14 September 2026
+
+**Outcome: the route from the current state to a bounded pilot and a named
+production release is registered, validated and projected into the plan workbook.
+Nothing is released, approved or signed off by it.** Branch
+`codex/release-readiness-plan` from `s0-foundations` at `a60326f`.
+
+**Measured before planning, on `a60326f` (backlog lint 0, so bound evidence was
+current).** `tools/backlog.py obligations pilot`: 104 obligations, 37 PASS, 65
+NOT_RUN, 1 BLOCKED (BK-21-AC3), 1 STALE (BK-21-AC4). `obligations production`:
+105, 33 PASS, 70 NOT_RUN, same two. 28 of 105 items derive `done`; 7 carry a
+`SIGNED_OFF` sign-off. 221 of 489 required evidence rows have no entry. 17
+features are authored `implementation: none`, yet 81 routes are served —
+including drafting packages, hearing packs (witnesses, experts, in court), action
+proposals, handovers, service jobs, closure, reopening and events — found through
+the code-review graph and confirmed in `nm/edge/api.py`. 50 command contracts are
+`design_only`; 14 are bound to a served route and 67 served routes have none. The
+release scorecard was last measured on 2026-08-31 against corpus
+`legacy-2026-08-27`; RG-21 (full golden suite, blocking) is NOT MEASURED. Release
+portfolios hold 0 of 868 members. Strong authentication (BK-86) has no enrolment
+or verification route.
+
+**What was added.**
+
+| Part | Where | Owns |
+|---|---|---|
+| The plan | `docs/backlog/plan.json` → `readiness_plan` | twelve stages, their journey steps, named work, release profile, dependencies, authority, actions, pilot and production exit bars, open decisions. **Intent only — no count, status or verdict** |
+| The rules | `tools/readiness_plan.py::problems`, called by `tools/backlog.py lint` | every journey step in exactly one stage; stages in journey order; known work, steps, profiles and dependencies; no cycle or self-dependency; authority from a closed vocabulary; non-empty actions and exit bars; a missing plan is a problem, not a pass |
+| The measurement | `tools/readiness_plan.py::derive`, called by `spec/plan/export_current_plan.py` | per step and per stage: criteria, recorded PASS, currently-bound PASS, open code/browser/counsel/model/production rows, absent rows, derived done, owning packets |
+| The view | `spec/plan/build_current_plan.mjs`, `tools/plan_view.py` | two sheets, *Readiness Plan* and *Readiness Gaps*, and a reconciliation row for each; the checker verifies every authored column against `plan.json` and `steps.yaml` and does not recompute derived columns, as for every other sheet |
+
+**The twelve stages, in journey order.** RP-00 a truthful baseline · RP-A Arrive
+· RP-B Open a matter · RP-C Take the brief · RP-D Work the file · RP-E Advise ·
+RP-F Act · RP-G Carry · RP-H Close · RP-I Leave · RP-PILOT bounded advocate pilot
+· RP-PROD named production release. The two release stages name their profile
+rather than copying its required work, so the plan cannot drift from the profile
+it rolls up.
+
+**Recorded and currently bound are separate columns, and that is load-bearing.**
+The plan works against the evidence population, which an unrelated edit does not
+change; whether a recorded PASS is current depends on the tree's execution
+binding. On this uncommitted tree every bound count is 0 and every recorded count
+matches the release checker (pilot 37 of 72, STEP-A-01 21 of 24). The two agree
+only on a tree whose Class-A and browser evidence has been refreshed.
+
+**A defect found by the planted tests.** An unknown journey step crashed the
+journey-order check (`None in "ABCDEFGHI"`), hiding every other problem behind
+the exception. It now reports the unknown step and checks membership in the phase
+set, so a multi-letter value cannot pass as a substring.
+
+**Tests.** `tests/test_the_readiness_plan_follows_the_journey_once.py` — 26:
+the registered plan is clean and places all 47 steps; fifteen planted violations
+each refused for its own reason; a missing plan is a problem; derivation covers
+every step and stage once; recorded and bound results diverge on a stale binding;
+an absent level stays absent after the loader fills it; a profile stage measures
+its profile's required work; owning packets come from final criteria.
+`tests/test_current_plan_view.py` pins move from 28 to 30 sheets and 20 to 22
+reconciliation rows, and now also assert *Readiness Gaps* has a row per journey
+step.
+
+**Saved workbook.** Regenerated from sources with the restored
+`@oai/artifact-tool` 2.8.59: 30 sheets, 105 items, 47 steps, 0 formula errors,
+0 exact-ID mismatches. `tools/plan_view.py`: 30 sheets, 105 items, 225 criteria,
+**0 problems**. Every reconciliation row is 0 difference, including Readiness
+stages 12/12 and step coverage 47/47. Previews inspected.
+
+**Decisions the plan records as open, for the accountable owner.** Pilot scope
+(recommended: Arrive through Advise and Leave, text and documents, considered
+advice on; Act and proactive service off; handover on); multimodal in the pilot;
+counsel engagement now, as the critical path through Work the file and Advise; a
+model budget for bounded named runs; who labels the release portfolios.
+
+**Rollback.** Revert the commit: `readiness_plan`, its lint, its derivation and
+the two sheets go together, and the workbook returns to 28 sheets on regeneration.
+
 ## Email registration and separate professional approval — 12 September 2026
 
 **Start: READY.** User reverses invitation-only account creation:

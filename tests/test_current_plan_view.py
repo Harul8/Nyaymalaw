@@ -26,14 +26,19 @@ def _row(tables, sheet, column, value):
 
 
 def test_saved_current_plan_matches_authored_registry_and_snapshot_sources(saved_tables):
-    assert len(plan_view.SHEETS) == 28
+    # 30 SHEETS AND 22 RECONCILIATION ROWS SINCE 14 SEPTEMBER 2026: the readiness plan
+    # added "Readiness Plan" and "Readiness Gaps", and a reconciliation row for each.
+    # These pins move with a deliberate layout change and with nothing else.
+    assert len(plan_view.SHEETS) == 30
     assert len(saved_tables["Work Items"]) >= 97
     assert len(saved_tables["Features"]) == 44
     assert len(saved_tables["Journey Steps"]) == 47
+    assert len(saved_tables["Readiness Gaps"]) == len(saved_tables["Journey Steps"])
+    assert len(saved_tables["Readiness Plan"]) >= 12
     assert len(saved_tables["Acceptance"]) >= 179
     assert len(saved_tables["Execution Packets"]) >= 45
     assert len(saved_tables["Command Contracts"]) >= 50
-    assert len(saved_tables["Reconciliation"]) == 20
+    assert len(saved_tables["Reconciliation"]) == 22
     assert plan_view.check_view(saved_tables) == []
 
 

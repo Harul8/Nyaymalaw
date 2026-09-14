@@ -35,6 +35,8 @@ SHEETS = {
     "Build Assurance",
     "Release Gates",
     "Release Profiles",
+    "Readiness Plan",
+    "Readiness Gaps",
     "Journey Scenarios",
     "Risks",
     "Advocate Standard",
@@ -247,6 +249,9 @@ def check_view(tables: dict[str, list[dict]], root: Path = ROOT) -> list[str]:
     decisions = _read(root, "docs/blueprint/decisions.json")["choices"]
     commands = _read(root, "docs/blueprint/contracts/commands.json")["x-commands"]
     evaluation_catalog = _read(root, "docs/blueprint/evaluations.json")
+    # THE AUTHORED ROUTE TO RELEASE. Its measured columns are a dated derivation and
+    # are not recomputed here, for the reason given in this function's docstring.
+    stages = (plan.get("readiness_plan") or {}).get("stages") or []
     scenarios = evaluation_catalog["synthetic_cases"]
     items, features = status["items"], status["features"]
     wave = {row["id"]: row["wave"] or "Unscheduled" for row in plan["item_waves"]}
@@ -293,6 +298,8 @@ def check_view(tables: dict[str, list[dict]], root: Path = ROOT) -> list[str]:
         ("Choices", "Decisions", "Choice", decisions, "A"),
         ("Command contracts", "Command Contracts", "Command", commands, "A"),
         ("Synthetic specifications", "Evaluation Specs", "Scenario", scenarios, "A"),
+        ("Readiness stages", "Readiness Plan", "Stage", stages, "A"),
+        ("Readiness step coverage", "Readiness Gaps", "Step ID", steps, "C"),
     ]
     for _, sheet, key, source, _ in groups:
         if not source:
@@ -486,6 +493,40 @@ def check_view(tables: dict[str, list[dict]], root: Path = ROOT) -> list[str]:
                 "Assigned work": _list(
                     [w["id"] for w in plan["item_waves"] if w["wave"] == row["id"]]
                 ),
+            },
+        )
+    for row in stages:
+        compare(
+            "Readiness Plan",
+            "Stage",
+            row["id"],
+            {
+                "Stage name": row["name"],
+                "Goal": row["goal"],
+                "Journey steps": _list(row.get("journey_steps")),
+                "Named work": _list(row.get("items")),
+                "Release profile": row.get("release_profile") or "None",
+                "Depends on": _list(row.get("depends_on")),
+                "Authority needed": _list(row.get("authority")),
+                "Actions": _text(row["actions"]),
+                "Pilot exit": _text(row["pilot_exit"]),
+                "Production exit": _text(row["production_exit"]),
+                "Open decisions": (
+                    _text(row["decisions"]) if row.get("decisions") else "None recorded"
+                ),
+            },
+        )
+    stage_of_step = {s: row["id"] for row in stages for s in row.get("journey_steps") or []}
+    for row in steps:
+        compare(
+            "Readiness Gaps",
+            "Step ID",
+            row["id"],
+            {
+                "Phase": row["phase"],
+                "Journey step": row["name"],
+                "Readiness stage": stage_of_step.get(row["id"], "No stage"),
+                "Registered work": _list(row.get("items")),
             },
         )
     for row in professional["advocate_standards"]:

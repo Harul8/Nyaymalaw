@@ -836,5 +836,475 @@
    "id": "BK-96",
    "wave": "W4"
   }
- ]
+ ],
+ "readiness_plan": {
+  "note": "Authored sequence from the current state to a bounded pilot and a named production release, following the advocate's journey. Stages advance in journey order; a stage's exit is claimed only after the stages it depends on meet theirs. Every measured gap is derived at export from the registries -- this object carries intent, never a status, verdict or approval.",
+  "authored_on": "2026-09-14",
+  "stages": [
+   {
+    "id": "RP-00",
+    "name": "A truthful baseline",
+    "journey_steps": [],
+    "items": [
+     "BK-52",
+     "BK-80",
+     "BK-87",
+     "BK-89",
+     "BK-90"
+    ],
+    "release_profile": null,
+    "goal": "Make every later claim measurable: the registry says what the code does, every required evidence level is counted, every served route has a contract, and the release scorecard describes the corpus the product actually reads.",
+    "actions": [
+     "Land the evidence-population check and hold its exact, owned debt in known_failures.yaml.",
+     "Reconcile each feature's authored implementation state against its served code, feature by feature, with @implements and a named test -- never from a search result alone.",
+     "Correct items authored implementation none that carry behavioural PASS evidence, checking each against its source.",
+     "Bind every served route to a versioned command contract, or exclude it with a recorded reason; give each contract its current route.",
+     "Place criteria no packet claims as a final owner.",
+     "Re-measure spec/coverage.yaml against the published corpus snapshot.",
+     "Run tools/mutate.py to completion on a frozen tree so passing controls are shown able to fail."
+    ],
+    "authority": [
+     "engineering"
+    ],
+    "depends_on": [],
+    "pilot_exit": [
+     "tools/backlog.py population reports only registered debt, and that debt shrinks with each stage.",
+     "trace reports no feature whose authored implementation contradicts its code.",
+     "Every served route is contracted or excluded with a reason.",
+     "The release scorecard's measurement is newer than the corpus publication it scores.",
+     "RG-11 is measured on the current tree."
+    ],
+    "production_exit": [
+     "Pilot exit, held current on the production candidate."
+    ],
+    "decisions": []
+   },
+   {
+    "id": "RP-A",
+    "name": "Arrive: sign in, see the files, re-enter, search",
+    "journey_steps": [
+     "STEP-A-01",
+     "STEP-A-02",
+     "STEP-A-03",
+     "STEP-A-04"
+    ],
+    "items": [
+     "BK-86",
+     "BK-88",
+     "BK-21",
+     "BK-85"
+    ],
+    "release_profile": null,
+    "goal": "An advocate reaches their own workspace securely, recognises every file, re-enters where they left off and searches the corpus with honest coverage -- before any confidential material is handled.",
+    "actions": [
+     "Build strong authentication end to end -- enrolment, challenge, recovery interplay and session binding -- against the begin-factor and complete-factor contracts.",
+     "Resolve the failing matter cover, board and reopen behaviour and bind its browser journey.",
+     "Bind the existing login and navigation journey phases to Arrive's browser criteria.",
+     "Clear the BLOCKED and STALE key-separation rows.",
+     "Prove the confidential path and key-processor engineering criteria.",
+     "Obtain counsel review of how search reports results, no results, unsupported coverage and an unavailable index."
+    ],
+    "authority": [
+     "engineering",
+     "counsel",
+     "security_review"
+    ],
+    "depends_on": [
+     "RP-00"
+    ],
+    "pilot_exit": [
+     "Every criterion of Arrive's pilot-required work is PASS on the current tree.",
+     "Strong authentication is PASS at every required level; no MFA exception is assumed.",
+     "Key separation carries no BLOCKED or STALE result."
+    ],
+    "production_exit": [
+     "Confidential-path and key-processor production measures are PASS on the deployment shape."
+    ],
+    "decisions": []
+   },
+   {
+    "id": "RP-B",
+    "name": "Open a matter: route, triage, screen conflict, admit substance",
+    "journey_steps": [
+     "STEP-B-01",
+     "STEP-B-02",
+     "STEP-B-03",
+     "STEP-B-04"
+    ],
+    "items": [],
+    "release_profile": null,
+    "goal": "A new matter is routed correctly, an emergency admits only protective triage, conflicts are screened and quarantined, and substance is admitted only after competence, engagement and capacity are recorded.",
+    "actions": [
+     "Wire the conflict-screen quarantine into the served path.",
+     "Complete integration and adversarial proof for the front-door screens, commission, role authority and emergency admission.",
+     "Bind browser journeys for routing, emergency triage and admission.",
+     "Run an approved bounded model evaluation of opening-message routing.",
+     "Obtain counsel review of admission, competence, engagement, capacity and emergency behaviour."
+    ],
+    "authority": [
+     "engineering",
+     "counsel",
+     "model_budget"
+    ],
+    "depends_on": [
+     "RP-A"
+    ],
+    "pilot_exit": [
+     "Every criterion of Open a matter's pilot-required work is PASS, including counsel review."
+    ],
+    "production_exit": [
+     "Pilot exit, signed off through the Conformance Record."
+    ],
+    "decisions": []
+   },
+   {
+    "id": "RP-C",
+    "name": "Take the brief: account, objectives, parties, threads, chronology, material, evidence",
+    "journey_steps": [
+     "STEP-C-01",
+     "STEP-C-02",
+     "STEP-C-03",
+     "STEP-C-04",
+     "STEP-C-05",
+     "STEP-C-06",
+     "STEP-C-07"
+    ],
+    "items": [],
+    "release_profile": null,
+    "goal": "The advocate's account is heard, held and reflected back; objectives and constraints are recorded; parties, threads and chronology are settled; material is admitted without establishing facts it has not; and evidence is inventoried.",
+    "actions": [
+     "Build objectives and constraints as a recorded, correctable part of the commission.",
+     "Wire document extraction into the served intake path.",
+     "Sweep the case-file and intake proof debt packet by packet.",
+     "Bind browser journeys for chronology, material intake and evidence inventory.",
+     "Run a representative-matter model evaluation of listening, chronology and attribution.",
+     "Obtain counsel review of how facts, allegations, documents and transcripts are kept distinct."
+    ],
+    "authority": [
+     "engineering",
+     "counsel",
+     "model_budget"
+    ],
+    "depends_on": [
+     "RP-B"
+    ],
+    "pilot_exit": [
+     "Every criterion of Take the brief's pilot-required work is PASS for the media the pilot manifest enables."
+    ],
+    "production_exit": [
+     "Pilot exit, and multimodal criteria PASS for every medium the release manifest enables."
+    ],
+    "decisions": [
+     "Is spoken, uploaded or mixed media enabled in the pilot? If yes, multimodal privacy, attribution and deletion work becomes pilot-blocking."
+    ]
+   },
+   {
+    "id": "RP-D",
+    "name": "Work the file: cause, limitation, forum, jurisdiction, deadlines, research, proof, theory",
+    "journey_steps": [
+     "STEP-D-01",
+     "STEP-D-02",
+     "STEP-D-03",
+     "STEP-D-04",
+     "STEP-D-05",
+     "STEP-D-06",
+     "STEP-D-07",
+     "STEP-D-08",
+     "STEP-D-09",
+     "STEP-D-10",
+     "STEP-D-11",
+     "STEP-D-12",
+     "STEP-D-13",
+     "STEP-D-14"
+    ],
+    "items": [
+     "BK-84",
+     "BK-91"
+    ],
+    "release_profile": null,
+    "goal": "Legal analysis rests on attributed, reviewable premises and verified authority: limitation and deadlines are conditional on reviewed premises, research separates discovery from verification, and a correction reaches exactly what depended on it.",
+    "actions": [
+     "Sweep the proof debt of the dependency, research, premise, advice-shape and remedy packets in order of size.",
+     "Run the approved full golden suite and record RG-21.",
+     "Run a representative-matter model evaluation across cause, limitation, forum and research.",
+     "Obtain counsel review of legal premises, computed deadlines and research conclusions.",
+     "Raise subsequent-treatment coverage and provision-to-authority linking, or serve their limits as explicit disclosures."
+    ],
+    "authority": [
+     "engineering",
+     "counsel",
+     "model_budget"
+    ],
+    "depends_on": [
+     "RP-C"
+    ],
+    "pilot_exit": [
+     "Every criterion of Work the file's pilot-required work is PASS for the declared corpus and jurisdiction.",
+     "RG-21 is PASS."
+    ],
+    "production_exit": [
+     "A current qualified review of relied-on governing premises is recorded."
+    ],
+    "decisions": [
+     "Engage qualified counsel now: this stage carries the largest counsel-review population and is the critical path.",
+     "Approve the model budget for representative-matter evaluation and the full golden run, as bounded named runs."
+    ]
+   },
+   {
+    "id": "RP-E",
+    "name": "Advise: scenarios, recommendation, proportionality, decision, disagreement",
+    "journey_steps": [
+     "STEP-E-01",
+     "STEP-E-02",
+     "STEP-E-03",
+     "STEP-E-04",
+     "STEP-E-05"
+    ],
+    "items": [
+     "BK-92"
+    ],
+    "release_profile": null,
+    "goal": "Advice is given at the maturity the file permits, with scenarios and proportionality tested, the advocate's decision recorded and disagreement stated candidly.",
+    "actions": [
+     "Reconcile scenarios, proportionality, decision record and disagreement against the served decision and comparison code, then build what is genuinely missing.",
+     "Build and run the expert-advocate evaluation gate with named reviewers.",
+     "Run the advocate trust evaluation with representative advocates.",
+     "Obtain counsel review of advice maturity, candour and reservations."
+    ],
+    "authority": [
+     "engineering",
+     "counsel",
+     "model_budget",
+     "representative_advocates"
+    ],
+    "depends_on": [
+     "RP-D"
+    ],
+    "pilot_exit": [
+     "The expert-advocate evaluation gate and the advocate trust evaluation are PASS.",
+     "Every criterion of Advise's pilot-required work is PASS at the advice maturity the pilot permits."
+    ],
+    "production_exit": [
+     "A current representative professional-quality review is recorded."
+    ],
+    "decisions": []
+   },
+   {
+    "id": "RP-F",
+    "name": "Act: negotiate, brief the drafter, draft, file, witnesses, hearing, court",
+    "journey_steps": [
+     "STEP-F-01",
+     "STEP-F-02",
+     "STEP-F-03",
+     "STEP-F-04",
+     "STEP-F-05",
+     "STEP-F-06",
+     "STEP-F-07"
+    ],
+    "items": [],
+    "release_profile": null,
+    "goal": "Drafting, filing, negotiation and hearing work act only within recorded authority, never file or act externally without it, and never invent testimony.",
+    "actions": [
+     "Reconcile drafting, filing control, witnesses, hearing readiness and in-court work against the served routes.",
+     "Build negotiation within recorded settlement authority beyond the existing concession guard.",
+     "Prove the drafting, filing, hearing and action-authority packets.",
+     "Bind browser journeys for the drafting package, action proposal and hearing pack.",
+     "Obtain counsel review of drafting verification, filing control and witness preparation."
+    ],
+    "authority": [
+     "engineering",
+     "counsel",
+     "model_budget"
+    ],
+    "depends_on": [
+     "RP-E"
+    ],
+    "pilot_exit": [
+     "Only if the pilot manifest enables Act: every criterion of its enabled work is PASS."
+    ],
+    "production_exit": [
+     "Every criterion of Act's work that the release manifest enables is PASS."
+    ],
+    "decisions": [
+     "Is Act enabled in the pilot? Recommended: no -- exclude it from the pilot manifest and deliver it for production."
+    ]
+   },
+   {
+    "id": "RP-G",
+    "name": "Carry: proactive service, conflict watch, handover",
+    "journey_steps": [
+     "STEP-G-01",
+     "STEP-G-02",
+     "STEP-G-03"
+    ],
+    "items": [],
+    "release_profile": null,
+    "goal": "Continuing work runs only when authorised, conflict screening continues as parties change, and responsibility moves only on acceptance.",
+    "actions": [
+     "Reconcile proactive service, conflict watch and handover against the served service-job and handover code.",
+     "Prove the handover and proactive-service packets.",
+     "Bind browser journeys for handover offer, acceptance and declination.",
+     "Obtain counsel review of handover responsibility and proactive authorisation."
+    ],
+    "authority": [
+     "engineering",
+     "counsel"
+    ],
+    "depends_on": [
+     "RP-E"
+    ],
+    "pilot_exit": [
+     "Only for what the pilot manifest enables: every criterion of that work is PASS."
+    ],
+    "production_exit": [
+     "Every criterion of Carry's enabled work is PASS."
+    ],
+    "decisions": [
+     "Which of Carry is in the pilot? Recommended: handover yes, proactive service no."
+    ]
+   },
+   {
+    "id": "RP-H",
+    "name": "Close: capture events, close and reopen",
+    "journey_steps": [
+     "STEP-H-01",
+     "STEP-H-02"
+    ],
+    "items": [],
+    "release_profile": null,
+    "goal": "Outcomes are captured, a matter closes truthfully, retention obligations hold, and reopening restores only what moved.",
+    "actions": [
+     "Reconcile event capture, closure, reopening and retention against the served routes.",
+     "Prove the closure criteria.",
+     "Bind browser journeys for close and reopen.",
+     "Obtain counsel review of closure and retention behaviour."
+    ],
+    "authority": [
+     "engineering",
+     "counsel"
+    ],
+    "depends_on": [
+     "RP-E"
+    ],
+    "pilot_exit": [
+     "Only for what the pilot manifest enables: every criterion of that work is PASS."
+    ],
+    "production_exit": [
+     "Every criterion of Close's enabled work is PASS."
+    ],
+    "decisions": []
+   },
+   {
+    "id": "RP-I",
+    "name": "Leave: end the session and leave nothing behind",
+    "journey_steps": [
+     "STEP-I-01"
+    ],
+    "items": [
+     "BK-30"
+    ],
+    "release_profile": null,
+    "goal": "A session expires and logs out with confirmation, and nothing confidential remains reachable afterwards.",
+    "actions": [
+     "Resolve the failing session-expiry and confirmed-logout behaviour.",
+     "Re-run the complete login-to-logout browser journey and bind its report."
+    ],
+    "authority": [
+     "engineering"
+    ],
+    "depends_on": [
+     "RP-A"
+    ],
+    "pilot_exit": [
+     "Every criterion of Leave's pilot-required work is PASS on a current complete journey report."
+    ],
+    "production_exit": [
+     "Pilot exit, held on the deployment shape."
+    ],
+    "decisions": []
+   },
+   {
+    "id": "RP-PILOT",
+    "name": "Bounded advocate pilot",
+    "journey_steps": [],
+    "items": [],
+    "release_profile": "pilot",
+    "goal": "A named, invited advocate population uses the enabled journeys under supervision, with published limitations, named reviewers and stop conditions.",
+    "actions": [
+     "Publish the pilot manifest: enabled journeys, media, languages, corpus, jurisdiction and limitations.",
+     "Name qualified reviewers, stop conditions, the incident owner and the approval expiry.",
+     "Run the environment-specific security, privacy and recovery review.",
+     "Run the representative-matter model evaluation and qualified counsel review for the enabled scope.",
+     "Obtain explicit, bounded, accountable pilot approval naming material risks and compensating controls."
+    ],
+    "authority": [
+     "accountable_approval",
+     "counsel",
+     "security_review",
+     "model_budget"
+    ],
+    "depends_on": [
+     "RP-00",
+     "RP-A",
+     "RP-B",
+     "RP-C",
+     "RP-D",
+     "RP-E",
+     "RP-I"
+    ],
+    "pilot_exit": [
+     "tools/backlog.py obligations pilot reports complete for the published manifest."
+    ],
+    "production_exit": [
+     "Not applicable: the pilot confers no production approval."
+    ],
+    "decisions": [
+     "Fix the pilot scope. Recommended: Arrive through Advise and Leave, typed text and documents, considered advice enabled; Act and proactive service excluded; handover included."
+    ]
+   },
+   {
+    "id": "RP-PROD",
+    "name": "Named production release",
+    "journey_steps": [],
+    "items": [
+     "BK-83"
+    ],
+    "release_profile": "production",
+    "goal": "A specific deployment and release manifest is proven on its own shape: users, tenancy, legal coverage, enabled features, processing, service levels and operating responsibilities.",
+    "actions": [
+     "Fix the deployment shape, making the transactional store the live writer only after its integration evidence and an approved migration rehearsal.",
+     "Measure security, restore, rollback, accessibility, capacity and service outcomes on that shape.",
+     "Measure latency, progress, cancellation and degraded-service behaviour on that shape.",
+     "Label the six release portfolios to their registered minimum membership.",
+     "Re-measure the release scorecard and the golden suite on the deployed corpus.",
+     "Obtain a current qualified legal review of relied-on governing premises and professional-role restrictions.",
+     "Obtain accountable production sign-off with any material exception separately approved, owned, expiring and visible."
+    ],
+    "authority": [
+     "deployment",
+     "labelling",
+     "counsel",
+     "security_review",
+     "accountable_approval"
+    ],
+    "depends_on": [
+     "RP-PILOT",
+     "RP-F",
+     "RP-G",
+     "RP-H"
+    ],
+    "pilot_exit": [
+     "Not applicable: production follows a completed pilot."
+    ],
+    "production_exit": [
+     "tools/backlog.py obligations production reports complete for the release manifest.",
+     "Every blocking release-scorecard row is PASS on the deployed corpus.",
+     "Every release portfolio meets its registered minimum membership."
+    ],
+    "decisions": [
+     "Who labels the release portfolios, and by when."
+    ]
+   }
+  ]
+ }
 }

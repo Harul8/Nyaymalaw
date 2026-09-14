@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT))
 
 from tools import backlog, blueprint, evidence  # noqa: E402
 from tools.blueprint_approvals import adoption_labels  # noqa: E402
+from tools.readiness_plan import derive as derive_readiness  # noqa: E402
 
 
 def main() -> int:
@@ -74,6 +75,10 @@ def main() -> int:
             )
     for gap in doc["professional"]["gap_closures"]:
         gap["_linked_work_state"] = backlog.gap_state(gap, items)
+    # THE MEASURED SIDE OF THE READINESS PLAN. Derived here, from the same bound
+    # evidence as every other effective column, and never written back: the plan in
+    # plan.json carries intent only.
+    doc["_readiness"] = derive_readiness(doc, contracts["packets"]["packets"])
     after = hashes()
     if before != after:
         raise ValueError("Plan sources changed during snapshot. Retry after edits settle.")
