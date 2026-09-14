@@ -11,7 +11,7 @@ features:
   status: built
   implementation: partial
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-31
   declared_in:
@@ -86,7 +86,7 @@ features:
   status: built
   implementation: complete
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-32
   - BK-33
@@ -139,7 +139,7 @@ features:
   status: built
   implementation: complete
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-33
   declared_in:
@@ -179,7 +179,7 @@ features:
   status: built
   implementation: partial
   implementation_basis: registry
-  proof: STALE
+  proof: PASS
   delivered_by:
   - BK-38
   declared_in:
@@ -332,7 +332,7 @@ features:
   status: built
   implementation: partial
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-34
   declared_in:
@@ -374,7 +374,7 @@ features:
   status: built
   implementation: partial
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-34
   declared_in:
@@ -415,7 +415,7 @@ features:
   status: built
   implementation: partial
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-34
   declared_in:
@@ -494,7 +494,7 @@ features:
   status: built
   implementation: partial
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-54
   declared_in:
@@ -551,7 +551,7 @@ features:
   status: decided
   implementation: none
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-54
   declared_in: []
@@ -716,7 +716,7 @@ features:
   status: built
   implementation: partial
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-54
   declared_in:
@@ -861,7 +861,7 @@ features:
   status: built
   implementation: complete
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-35
   declared_in:
@@ -1431,7 +1431,7 @@ features:
   status: decided
   implementation: none
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-57
   declared_in: []
@@ -1462,7 +1462,7 @@ features:
   status: decided
   implementation: none
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-56
   declared_in: []
@@ -1498,7 +1498,7 @@ features:
   status: decided
   implementation: none
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-56
   declared_in: []
@@ -1534,7 +1534,7 @@ features:
   status: decided
   implementation: none
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-56
   declared_in: []
@@ -1567,7 +1567,7 @@ features:
   status: decided
   implementation: none
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-57
   declared_in: []
@@ -1599,7 +1599,7 @@ features:
   status: decided
   implementation: none
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-57
   declared_in: []
@@ -1628,7 +1628,7 @@ features:
   status: decided
   implementation: none
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-57
   declared_in: []
@@ -1658,7 +1658,7 @@ features:
   status: decided
   implementation: none
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-58
   declared_in: []
@@ -1688,7 +1688,7 @@ features:
   status: decided
   implementation: none
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-58
   declared_in: []
@@ -1717,7 +1717,7 @@ features:
   status: decided
   implementation: none
   implementation_basis: registry
-  proof: STALE
+  proof: NOT_RUN
   delivered_by:
   - BK-58
   declared_in: []
