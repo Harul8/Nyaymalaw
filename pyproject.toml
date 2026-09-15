@@ -56,7 +56,10 @@ journey = ["playwright>=1.47", "pytest-playwright>=0.5"]
 # Inspect's OpenAI provider requires openai>=3.1 while Ragas's langchain-openai
 # requires openai<3. Ragas 0.4.3 also imports a module langchain-community 0.4
 # removed, so its langchain set is pinned below 1.0.
-#   python -m venv --system-site-packages %USERPROFILE%\.venvs\nyaymalaw-inspect
+# Inspect's environment must NOT inherit system packages: openai 3 brings
+# `truststore`, and together with the system's `pip-system-certs` every HTTPS
+# call recursed until it failed ("Connection error"), measured on install.
+#   python -m venv %USERPROFILE%\.venvs\nyaymalaw-inspect
 #   python -m venv --system-site-packages %USERPROFILE%\.venvs\nyaymalaw-ragas
 #   python -m venv %USERPROFILE%\.venvs\label-studio
 bdd = ["pytest-bdd>=8.1,<9"]
