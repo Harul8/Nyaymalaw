@@ -1,7 +1,8 @@
 """Did the gate pass on THIS tree, or on one that no longer exists?
 
     python tools/gatestamp.py            # is the tree the one the gate passed on?
-    python tools/gatestamp.py --write    # record a pass (tools/check.py calls this)
+`tools/check.py` is the only command that records a pass. This reader cannot
+turn its own invocation into evidence.
 
 WHAT HAPPENED, 6 September 2026
 --------------------------------
@@ -19,7 +20,7 @@ product one so nobody could draw a conclusion about code that is not running.
 This gives the COMMIT one, so nobody can rely on a green that is about
 something else. Same rule each time: A RESULT MUST NAME THE THING IT IS ABOUT.
 
-WHY THIS DIGEST IS NOT `source_fingerprint`
+WHY THIS DIGEST IS THE CHECKED-TREE IDENTITY
 ---------------------------------------------
 `nm.domain.identity.source_fingerprint` covers `nm` and `tests`, because it
 answers "what code is this process running". The file that broke was in
@@ -27,57 +28,63 @@ answers "what code is this process running". The file that broke was in
 would not have moved, and this check would have passed on the very commit that
 prompted it.
 
-Two different questions need two different digests, and conflating them is the
-defect this whole file is about. This one covers WHAT THE GATE CHECKS.
+Class-A evidence, the running gate and this stamp all use the one explicit
+checked-tree manifest. A stamp cannot therefore stay current for an input the
+gate or its evidence identity omitted.
 """
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
+import os
+import re
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from tools._console import utf8_console  # noqa: E402
+from tools.evidence import (  # noqa: E402
+    IDENTITY_MANIFEST,
+    verification_fingerprint,
+)
 
 utf8_console()
 
-#: Everything `tools/check.py` reads. Wider than `source_fingerprint`'s two
-#: trees, and deliberately: layercheck, export_spec, trace and speccheck all
-#: read `spec/`, and the tools themselves are what run the checks.
-CHECKED = ("nm", "tests", "tools", "spec")
+#: Kept as a readable view for diagnostics and older callers; the digest owner
+#: is IDENTITY_MANIFEST in tools.evidence, not a second list in this module.
+CHECKED = tuple(source.path for source in IDENTITY_MANIFEST)
 
 #: Not versioned. `.nm/` is gitignored, which is right -- a stamp is a fact
 #: about ONE machine's last run, and a shared one would tell every other
 #: machine its tree was green when nothing there had been checked.
 STAMP = ROOT / ".nm" / "last_green.json"
+STAMP_POPULATION = "local-engineering:no-class-c,no-class-d,no-journey"
 
 
 def tree_digest(root: Path | None = None) -> str:
-    """Path-and-content over everything the gate reads.
+    """The same canonical checked-tree identity Class-A evidence uses."""
+    return verification_fingerprint(root or ROOT)
 
-    Sorted, so it is reproducible; content rather than mtime, so a checkout
-    that restores a file does not read as a change. `spec/prd/node_modules`
-    is skipped -- it is a dependency tree nobody edits and walking it costs
-    more than the rest of the repository put together.
-    """
+
+def staged_tree_digest(root: Path | None = None) -> str:
+    """Materialise and identify exactly what the Git index would commit."""
     root = root or ROOT
-    h = hashlib.sha256()
-    for top in CHECKED:
-        base = root / top
-        if not base.exists():
-            # NOT ASSESSED, and it must not read as "nothing has changed".
-            h.update(f"<absent:{top}>".encode())
-            continue
-        for p in sorted(base.rglob("*.py")):
-            if "__pycache__" in p.parts or "node_modules" in p.parts:
-                continue
-            h.update(str(p.relative_to(root)).replace("\\", "/").encode("utf8"))
-            h.update(p.read_bytes())
-    return h.hexdigest()[:16]
+    with tempfile.TemporaryDirectory(prefix="nm-staged-tree-") as scratch:
+        candidate = Path(scratch) / "tree"
+        candidate.mkdir()
+        proc = subprocess.run(
+            ["git", "-C", str(root), "checkout-index", "--all", "--force",
+             f"--prefix={candidate}{os.sep}"],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+        if proc.returncode:
+            detail = (proc.stderr or proc.stdout).strip()
+            raise RuntimeError(f"cannot materialise staged tree: {detail}")
+        return tree_digest(candidate)
 
 
 def record(digest: str | None = None, *, kind: str = "full",
@@ -97,9 +104,24 @@ def record(digest: str | None = None, *, kind: str = "full",
     """
     if kind not in ("full", "scoped"):
         raise ValueError(f"a gate stamp is full or scoped, not {kind!r}")
+    waived = waived or []
+    if kind == "full" and (baseline or waived):
+        raise ValueError("a full gate stamp cannot carry a waiver or baseline")
+    if kind == "scoped" and (
+            not re.fullmatch(r"[0-9a-f]{64}", baseline)
+            or not waived
+            or len(waived) != len(set(waived))
+            or not all(isinstance(item, str) and item for item in waived)):
+        raise ValueError(
+            "a scoped gate stamp needs a full baseline and unique waiver ids")
     STAMP.parent.mkdir(parents=True, exist_ok=True)
     digest = digest or tree_digest()
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise ValueError("a gate stamp tree must be a full sha256 identity")
     STAMP.write_text(json.dumps({
+        "schema": 2,
+        "profile": "checked-tree-v2",
+        "population": STAMP_POPULATION,
         "tree": digest,
         "kind": kind,
         "waived": sorted(waived or []),
@@ -108,7 +130,7 @@ def record(digest: str | None = None, *, kind: str = "full",
     return digest
 
 
-def state() -> tuple[str, str]:
+def state(*, require_index: bool = False) -> tuple[str, str]:
     """(verdict, sentence). THREE STATES, and the third is the common one.
 
     `not_assessed` when no gate has ever passed on this machine -- which is
@@ -116,42 +138,94 @@ def state() -> tuple[str, str]:
     absent-input defect on the check built to catch a stale result.
     """
     now = tree_digest()
+    staged = ""
+    if require_index:
+        try:
+            staged = staged_tree_digest()
+        except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+            return (
+                "not_assessed",
+                "the staged commit candidate could not be identified "
+                f"({type(exc).__name__}: {exc}), so the hook cannot certify it.",
+            )
     if not STAMP.exists():
         return ("not_assessed",
                 "no gate run has been recorded on this machine, so nothing "
                 "can be said about whether this tree was checked. Run "
                 "`python tools/check.py`.")
     try:
-        was = json.loads(STAMP.read_text(encoding="utf8")).get("tree") or ""
+        stamp = json.loads(STAMP.read_text(encoding="utf8"))
     except (OSError, json.JSONDecodeError) as exc:
         return ("not_assessed",
                 f"the recorded gate stamp could not be read ({type(exc).__name__}), "
                 f"so nothing can be said about this tree.")
+    if (not isinstance(stamp, dict) or stamp.get("schema") != 2
+            or stamp.get("profile") != "checked-tree-v2"
+            or stamp.get("population") != STAMP_POPULATION
+            or stamp.get("kind") not in ("full", "scoped")
+            or not isinstance(stamp.get("tree"), str)):
+        return ("not_assessed",
+                "the recorded gate stamp has no supported schema, profile, "
+                "population, tree and kind, so it cannot certify this tree.")
+    if stamp["kind"] == "full" and (
+            stamp.get("waived") != [] or stamp.get("baseline") != ""):
+        return (
+            "not_assessed",
+            "the full local gate stamp carries waiver data, so its payload is "
+            "internally contradictory and cannot certify this tree.",
+        )
+    was = stamp["tree"]
+    if require_index and was != staged:
+        return (
+            "stale",
+            f"the gate passed on {was}, but the staged commit candidate is "
+            f"{staged}. The commit is not the tree that was checked.",
+        )
     if was == now:
-        # WHICH KIND OF PASS. A stamp written before this field existed has no
-        # `kind`, and it is read as `full` -- which is what it was: those
-        # stamps were only ever written when every step passed. Defaulting the
-        # other way would report every historical green as scoped.
-        try:
-            stamp = json.loads(STAMP.read_text(encoding="utf8"))
-        except (OSError, json.JSONDecodeError):
-            stamp = {}
-        kind = stamp.get("kind", "full")
+        kind = stamp["kind"]
         if kind == "scoped":
-            from tools.known_failures import registry_digest
+            from tools.known_failures import load, registry_digest
 
-            waived = stamp.get("waived") or []
-            if stamp.get("baseline") and stamp["baseline"] != registry_digest():
+            waived = stamp.get("waived")
+            baseline = stamp.get("baseline")
+            if (not isinstance(waived, list) or not waived
+                    or len(waived) != len(set(waived))
+                    or not all(isinstance(item, str) and item for item in waived)
+                    or not isinstance(baseline, str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", baseline)):
+                return ("not_assessed",
+                        "the scoped gate stamp does not name a valid failure "
+                        "baseline and waiver set, so it cannot certify this tree.")
+            if baseline != registry_digest():
                 return ("stale",
                         "the scoped gate passed against a different declared "
                         "failure set than the one now in "
                         "docs/backlog/known_failures.yaml, so what it waived "
-                        "is not what this tree declares.")
+                         "is not what this tree declares.")
+            try:
+                expected_waivers = {row.id for row in load()}
+            except Exception as exc:  # noqa: BLE001 -- an unreadable red is not a pass
+                return (
+                    "not_assessed",
+                    "the declared failure set could not be read "
+                    f"({type(exc).__name__}), so the scoped stamp cannot certify it.",
+                )
+            if set(waived) != expected_waivers:
+                return (
+                    "not_assessed",
+                    "the scoped stamp's waiver ids are not exactly the current "
+                    "declared failure population.",
+                )
             return ("current_scoped",
                     f"a SCOPED build gate passed on this tree ({now}); the "
                     f"FULL gate is RED over {len(waived)} declared, owned "
                     f"failure(s): {', '.join(waived)}.")
-        return ("current", f"the gate passed on this tree ({now}).")
+        return (
+            "current",
+            f"the unscoped local engineering gate passed on this tree ({now}). "
+            "Its population excludes Class C, Class D and served journeys; it "
+            "is not release or professional sign-off evidence.",
+        )
     return ("stale",
             f"the gate last passed on {was} and this tree is {now}. Something "
             f"changed after the gate ran, so the green you are relying on is "
@@ -160,20 +234,17 @@ def state() -> tuple[str, str]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--write", action="store_true",
-                    help="record that the gate passed on this tree")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--require-index", action="store_true",
+                    help="also require the staged Git snapshot to be the exact "
+                         "tree that passed; used by the pre-commit hook")
     ap.add_argument("--require-full", action="store_true",
-                    help="refuse a scoped build pass. For anything asking "
-                         "whether the FULL gate is green -- release checks, "
-                         "sign-off -- never for a commit.")
+                    help="require the unscoped form of this local engineering "
+                         "population. This still does not establish corpus, "
+                         "model, browser, professional or release evidence.")
     args = ap.parse_args()
 
-    if args.write:
-        print(f"gate stamp recorded: {record()}")
-        return 0
-
-    verdict, sentence = state()
+    verdict, sentence = state(require_index=args.require_index)
     if verdict == "current":
         if not args.quiet:
             print(f"GATESTAMP OK  -- {sentence}")

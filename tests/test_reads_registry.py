@@ -352,6 +352,7 @@ def test_the_reads_table_still_owns_what_is_decisive():
         "the traced adapter no longer agrees with the table it delegates to")
 
 
+@pytest.mark.class_d
 def test_the_judge_is_not_the_model_under_test():
     """TENET P4, now that the hard tier is configured and not before.
 

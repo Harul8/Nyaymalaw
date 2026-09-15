@@ -10,9 +10,12 @@ features:
   phase: A
   status: built
   implementation: partial
-  implementation_basis: trace
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/adapters/store/directory.py
+  - nm/edge/api.py
   does:
   - 'Establish and hold a named professional identity: the advocate, enrolment, practice, and the firm
     whose conflicts registry governs this session.'
@@ -58,10 +61,12 @@ features:
   title: The matter list, and the thread board
   phase: A
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/edge/projections.py
   does:
   - 'With no matters: one invitation to brief, in an advocate''s register.'
   - '**The MATTER LIST** — one row per matter: matter · client · **nearest deadline across all its threads**
@@ -107,10 +112,15 @@ features:
   title: Re-entry and re-orientation
   phase: A
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/cascade.py
+  - nm/core/gaps.py
+  - nm/core/turn.py
+  - nm/domain/decision.py
   does:
   - On resumption, recompute **every deadline status first**, before anything else, and compare against
     the stored category.
@@ -141,9 +151,11 @@ features:
   phase: A
   status: built
   implementation: partial
-  implementation_basis: trace
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/edge/api.py
   does:
   - Permit authenticated research without an active matter. Placing a result requires a deliberate choice
     of an authorised target matter; browsing never silently creates or modifies one.
@@ -198,9 +210,12 @@ features:
   phase: B
   status: built
   implementation: partial
-  implementation_basis: trace
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/route.py
+  - nm/core/turn.py
   does:
   - Classify the opening message on **what it discloses**, and state the reading in one line so the advocate
     can correct it.
@@ -244,6 +259,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-53
+  declared_in: []
   does:
   - 'Screen every applicable urgency class, **every turn**: limitation and filing dates; hearings and
     orders; arrest or liberty risk; personal safety; child safety; injunction or status-quo need; asset
@@ -284,9 +300,12 @@ features:
   phase: B
   status: built
   implementation: partial
-  implementation_basis: trace
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/screens.py
+  - nm/core/turn.py
   does:
   - Take **names only** and screen against the firm-wide registry before any substance is retained.
   - 'Where substance arrives before clearance: think, answer within the permitted pre-clearance scope,
@@ -322,9 +341,11 @@ features:
   phase: B
   status: built
   implementation: partial
-  implementation_basis: trace
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/quarantine.py
   does:
   - 'Record a competence assessment on the matter: jurisdiction, practice area, language, and known corpus
     coverage for what the matter needs.'
@@ -360,9 +381,11 @@ features:
   phase: B
   status: built
   implementation: partial
-  implementation_basis: trace
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/screens.py
   does:
   - Record who the client is, who may instruct, who decides, the scope and its exclusions, confidentiality,
     communications, fees and likely disbursements, document custody, termination rights and the complaints
@@ -403,6 +426,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-53
+  declared_in: []
   does:
   - 'Record a capacity position on any decision that becomes authority: assessed, not assessed, or in
     doubt.'
@@ -432,10 +456,12 @@ features:
   title: The account
   phase: C
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/turn.py
   does:
   - Let the advocate give an uninterrupted account in text, files or optional voice, subject to necessary
     emergency and confidentiality interventions. Do not require every field before listening.
@@ -491,6 +517,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-54
+  declared_in: []
   does:
   - Record the legal result sought **and the real practical objective behind it**.
   - Record each stated constraint — cost, time, cash flow, publicity, relationships, safety, risk appetite,
@@ -520,10 +547,12 @@ features:
   title: Parties and posture
   phase: C
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/turn.py
   does:
   - For every thread establish who the parties are and which side the client is on, **before resolving
     any provision**.
@@ -562,10 +591,14 @@ features:
   title: Thread identity
   phase: C
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/threading.py
+  - nm/core/turn.py
+  - nm/domain/matter.py
   does:
   - Give every thread a **stable id, generated once and never derived from its label**. The label is a
     display name and may change freely.
@@ -601,10 +634,12 @@ features:
   title: The chronology
   phase: C
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/turn.py
   does:
   - Build a date chart **per thread before any opinion on that thread**. Every entry carries the date,
     the event, its source, and whether it is documented or asserted.
@@ -638,12 +673,14 @@ features:
 - id: C6
   title: Multimodal intake and extraction
   phase: C
-  status: built
-  implementation: partial
-  implementation_basis: contradicted
+  status: decided
+  implementation: none
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by:
   - BK-54
+  declared_in:
+  - nm/core/intake.py
   does:
   - '**Read the material.** Intake includes documents, PDFs, images/scans, supported structured files,
     uploaded audio/video and optional live voice. Publish a tested capability matrix of format, language,
@@ -700,10 +737,13 @@ features:
   title: Evidence inventory and preservation
   phase: C
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/evidence_item.py
+  - nm/core/turn.py
   does:
   - Inventory what exists, who holds it, original or copy, authenticity, completeness, metadata, custody
     and admissibility.
@@ -738,10 +778,13 @@ features:
   title: The threshold map
   phase: D
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/thresholds.py
+  - nm/core/turn.py
   does:
   - 'Check, per thread: jurisdiction, forum, standing, maintainability, **limitation**, statutory notice
     and preconditions, valuation, court fees, arbitration or ADR clauses, territorial and pecuniary competence,
@@ -774,10 +817,14 @@ features:
   title: Limitation as a computed date
   phase: D
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/factors.py
+  - nm/core/limitation.py
+  - nm/core/turn.py
   does:
   - 'Produce, per thread: the **Article** relied on, cited to retrieved text; the accrual event and why;
     the period; each factor that extends, restarts or excludes time, **expressly applied or expressly
@@ -833,10 +880,13 @@ features:
   title: The deadline register  ⟨tenet 29⟩
   phase: D
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/deadlines.py
+  - nm/core/turn.py
   does:
   - 'Hold every deadline on the file in one register: limitation, statutory notice windows, appeal and
     revision periods, objection periods, listed court dates, and **factual urgency that no statute creates**
@@ -870,10 +920,15 @@ features:
   title: Research plan and execution
   phase: D
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/adapters/evidence/corpus.py
+  - nm/core/cause.py
+  - nm/core/turn.py
+  - nm/knowledge/resolution.py
   does:
   - Translate the matter into propositions and issues, ranked by consequence and uncertainty. **Research
     what changes the advice first.**
@@ -907,10 +962,16 @@ features:
   title: Elements, burden and proof
   phase: D
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/adapters/knowledge/elements.py
+  - nm/core/proof.py
+  - nm/core/proof_read.py
+  - nm/core/turn.py
+  - nm/knowledge/elements.py
   does:
   - 'Decompose each cause, defence and remedy into elements. **Every element carries three things: who
     must prove it, to what standard, and with what material.**'
@@ -946,10 +1007,13 @@ features:
   title: Case theory
   phase: D
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/theory.py
+  - nm/core/turn.py
   does:
   - State **exactly one case theory per thread, in one sentence** — what happened and why we win. A theme
     a judge could repeat back, a factual account consistent with the record, the legal theory that converts
@@ -996,9 +1060,12 @@ features:
   phase: D
   status: built
   implementation: partial
-  implementation_basis: trace
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/adversarial.py
+  - nm/core/turn.py
   does:
   - Run **across the whole file, after per-thread analysis is complete** — not as a step inside each thread.
   - 'For each thread: the case the other side will run, **on the grounds they will run it**, and our answer
@@ -1035,10 +1102,13 @@ features:
   title: Salvage — the weak case
   phase: D
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/adversarial.py
+  - nm/core/turn.py
   does:
   - Treat a claim as a set of coordinates — **party, cause, relief, forum, timing, procedure, burden**
     — and ask which coordinate can move. Almost every "you lose" is the failure of one of them, not of
@@ -1080,10 +1150,14 @@ features:
   title: Issue facets and disposition
   phase: D
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/issues.py
+  - nm/core/turn.py
+  - nm/domain/issue.py
   does:
   - 'Give every issue **facets, not a single track**: `kind` (threshold, substantive, procedural); `effect`
     (supports, opposes, neutral) **derived from posture**; `proof` (the D5 position); `disposition`; `urgency`
@@ -1131,6 +1205,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-55
+  declared_in: []
   does:
   - Model best, expected and worst outcomes — legal and practical — including interim orders, procedural
     failure, settlement, trial, appeal, enforcement, cost and delay.
@@ -1154,10 +1229,12 @@ features:
   title: The recommendation
   phase: E
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/core/turn.py
   does:
   - Compare viable routes by objective, legality, evidence, cost, timing, risk, leverage and enforceability.
   - '**Choose a position, and explain why the alternatives lose.**'
@@ -1196,6 +1273,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-55
+  declared_in: []
   does:
   - Weigh every recommendation against the value at stake, the cost and delay of the step, the recoverability
     of what it wins, and the constraints the client actually stated.
@@ -1226,6 +1304,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-55
+  declared_in: []
   does:
   - Explain the recommendation, material alternatives, uncertainty, consequences, cost and irreversibility
     **in plain language**, and check understanding.
@@ -1261,6 +1340,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-55
+  declared_in: []
   does:
   - Say what is **good** in what the advocate put forward, what is **bad**, **why** it is bad — grounded,
     not asserted — and **how it can be made stronger**.
@@ -1302,6 +1382,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-57
+  declared_in: []
   does:
   - Establish authority, interests, priorities, BATNA, worst alternative and reservation range.
   - Plan offers, concessions, sequencing and evidence-backed leverage.
@@ -1332,6 +1413,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-56
+  declared_in: []
   does:
   - 'Hand the drafting agent a **structured brief, never prose**: cause-title facts; the theory in one
     sentence; material facts in date order with provenance; provisions relied on with verbatim spans and
@@ -1367,6 +1449,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-56
+  declared_in: []
   does:
   - Draft **only from approved case state**.
   - Trace every averment to a fact in the brief, with provenance.
@@ -1402,6 +1485,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-56
+  declared_in: []
   does:
   - Control filing, fees, service, receipts and the deadlines that follow from filing.
   - Re-check every authority relied on **immediately before filing** (tenet 31).
@@ -1434,6 +1518,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-57
+  declared_in: []
   does:
   - Identify necessity, materiality, availability, credibility, interest, prior statements, contradictions
     and proof sequence.
@@ -1465,6 +1550,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-57
+  declared_in: []
   does:
   - Define the order sought and the issues for decision.
   - Prepare the record, bundle, authorities, chronology, written and oral submissions, witness order,
@@ -1493,6 +1579,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-57
+  declared_in: []
   does:
   - 'Provide a conduct and order-capture checklist: comply with orders, answer the judge directly, state
     the record accurately, **disclose binding adverse authority**, correct accidental misstatements, concede
@@ -1522,6 +1609,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-58
+  declared_in: []
   does:
   - Keep the advocate informed of material events, **inactivity**, deadlines, changed risk, approvals
     and cost against estimate.
@@ -1551,6 +1639,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-58
+  declared_in: []
   does:
   - Re-run the conflict screen whenever a party, related entity or **legal position** changes — a party
     added by amendment, a company revealed as a subsidiary of an existing client, a positional conflict
@@ -1579,6 +1668,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-58
+  declared_in: []
   does:
   - Survive a change of instructing advocate, of counsel, or of the person at the client who gives instructions,
     with the worked position intact.
@@ -1607,6 +1697,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-59
+  declared_in: []
   does:
   - 'After each event: an attendance note capturing outcome, order, reasons, undertakings and deadlines.'
   - Update facts, evidence, strategy and advice from it, and decide appeal, review, compliance and enforcement.
@@ -1631,6 +1722,7 @@ features:
   proof: NOT_RUN
   delivered_by:
   - BK-59
+  declared_in: []
   does:
   - Account for money, costs, originals and work product.
   - Export the usable file; explain continuing obligations; apply retention and destruction rules; send
@@ -1658,10 +1750,12 @@ features:
   title: Session end and confidentiality
   phase: I
   status: built
-  implementation: partial
-  implementation_basis: trace
+  implementation: complete
+  implementation_basis: registry
   proof: NOT_RUN
   delivered_by: []
+  declared_in:
+  - nm/adapters/store/file_store.py
   does:
   - End the session leaving nothing confidential outside the sealed store.
   - Hold matter state encrypted at rest, keyed outside the repository.

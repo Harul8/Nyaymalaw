@@ -2,13 +2,14 @@
 #
 # WHY THIS EXISTS, 10 September 2026
 # ------------------------------------
-# Three obligations in the PRD are unbuilt. `tools/trace.py` reports them, and
-# three tests that read trace's verdict fail with it. That is correct: they are
-# real gaps in the product and they must stay visible.
+# Four exact trace facts remain: two unbuilt PRD refusal obligations and two
+# registry/code reconciliation findings. Tests of trace mechanics isolate the
+# mechanism they exercise; they do not inherit these product findings as their
+# own failures.
 #
 # But `tools/check.py` returns 1 on any failure, writes no stamp, and
 # `tools/hooks/pre-commit` then refuses every commit. So the repository was in
-# a state where three honest red obligations blocked ALL further work --
+# a state where honest, owned red obligations blocked ALL further work --
 # including the work that would eventually close them. The only ways out were
 # to bypass the hook, to weaken the failing tests, or to stop committing. Each
 # of those is worse than the problem.
@@ -37,12 +38,11 @@
 # EVERY ROW NAMES AN ACCEPTANCE CRITERION. A failure with no owner is not
 # known, it is forgotten, and the linter refuses a row without one.
 #
-# SIGNATURES ARE EXACT, NOT PREFIXES. `[T7] C1: 1 of 5 NEVER clauses...` will
-# stop matching if the count changes -- and it SHOULD, because a fourth
-# uncovered clause under C1 is a different fact from the one recorded here.
-# The gate blocks and somebody re-registers it deliberately.
+# FACTS ARE STRUCTURED AND EXACT, NOT PREFIXES. A pytest node is inseparable
+# from its outcome, reason and aggregate subfailures; a tool diagnostic set is
+# inseparable from its exact digest. The gate blocks on any change.
 
-schema: 1
+schema: 2
 
 #: Registered by BK-80-AC7. Amending this file is a delivery decision: it
 #: changes what the build is permitted to commit over.
@@ -50,8 +50,10 @@ known_failures:
 
 - id: TRACE-C1
   step: trace
-  match: line
-  signature: "[T7] C1: 1 of 5 NEVER clauses have no test declaring @refuses"
+  fact:
+    kind: trace
+    check: T7
+    reason: "C1: 1 of 5 NEVER clauses have no test declaring @refuses"
   owner: [BK-54-AC3]
   because: >-
     C1's unavailable-material refusal is unbuilt. Briefing cannot yet refuse to
@@ -61,88 +63,60 @@ known_failures:
 
 - id: TRACE-D2
   step: trace
-  match: line
-  signature: "[T7] D2: 1 of 5 NEVER clauses have no test declaring @refuses"
+  fact:
+    kind: trace
+    check: T7
+    reason: "D2: 1 of 5 NEVER clauses have no test declaring @refuses"
   owner: [BK-65-AC2, BK-67-AC3]
   because: >-
     D2 requires governing legal premises to be attributed and reviewable
     separately from the arithmetic that depends on them. Correct arithmetic
     over an unestablished premise is the defect; separating them is unbuilt.
 
-- id: PYTEST-TRACE-SPEC
-  step: [class_a, pytest]
-  match: node
-  signature: "tests/test_tooling_bites.py::test_trace_passes_on_the_real_spec"
-  owner: [BK-54-AC3]
-  because: >-
-    This test asserts trace exits 0 on the real specification. It is failing
-    for exactly one reason -- TRACE-C1 and TRACE-D2 -- and it is the control
-    that makes those two visible in the test suite rather than only in a tool's
-    output. It must stay red until they close.
-
-- id: PYTEST-GATE-SCAN-BODY1
-  step: [class_a, pytest]
-  match: node
-  signature: "tests/test_tooling_bites.py::test_the_gate_scan_sees_code_and_ignores_prose[body1-False]"
-  owner: [BK-65-AC2]
-  because: >-
-    A dependent control over the same uncovered obligation. It is parameterised
-    and only these two cases fail; the rest of the parameter set passes and
-    must keep passing.
-
-- id: PYTEST-GATE-SCAN-BODY2
-  step: [class_a, pytest]
-  match: node
-  signature: "tests/test_tooling_bites.py::test_the_gate_scan_sees_code_and_ignores_prose[body2-False]"
-  owner: [BK-67-AC3]
-  because: >-
-    The second parameter case of the same control, owned by the review
-    obligation rather than the attribution one.
-
 - id: TRACE-T3B
   step: trace
-  match: line
-  signature: "[T3b] 25 of 44 features are implemented in code and not recorded as delivered by any row in docs/backlog/status.yaml"
+  fact:
+    kind: trace
+    check: T3b
+    reason: "trace-only 24 of 44: A1, A2, A3, A4, B1, B3, B4, B5, C1, C3, C4, C5, C7, D1, D2, D3, D4, D5, D6, D7, D8, D9, E2, I1"
   owner: [BK-48-AC2]
   because: >-
     BK-48's title is this finding: *Phase B is built and the register says it
     is not*. Until BK-80-AC5 the register was a spreadsheet column and nothing
     could see the mismatch; T3b now reports it in the direction T3 cannot look.
 
-    Twenty-five features carry @implements in nm/ and no row in status.yaml
+    Twenty-four features carry @implements in nm/ and no row in status.yaml
     declares `delivers:` for them. `delivers:` exists on seven planning rows
     covering nineteen unbuilt features, so the relation is real and simply has
     not been recorded for the work already done. Closing this is registry
     authoring -- deciding which row delivered which feature -- and that is a
     delivery decision, not a code change.
 
-    THE SIGNATURE IS THE EXACT COUNT, on the same rule as RUFF-PLANNING-DEBT: a
-    new module claiming a feature, or a row gaining `delivers:`, moves the
-    number and blocks until somebody re-registers it. A prefix match would let
-    the count drift in either direction unnoticed, which is the whole failure
-    mode of a waiver.
+    THE STRUCTURED REASON CARRIES THE EXACT COUNT, on the same rule as
+    RUFF-PLANNING-DEBT: a new module claiming a feature, or a row gaining
+    `delivers:`, moves the number and blocks until somebody re-registers it.
 
-- id: PYTEST-PRODUCES-B
-  step: [class_a, pytest]
-  match: node
-  signature: "tests/test_reached_from_production.py::test_every_produces_contract_has_a_type_or_is_declared_untyped"
-  owner: [BK-48-AC3]
+- id: TRACE-T3C
+  step: trace
+  fact:
+    kind: trace
+    check: T3c
+    reason: "authored-none/code-present 1 of 44: C6"
+  owner: [BK-48-AC1]
   because: >-
-    B1, B3 and B4 moved from `decided` to `built` when status became
-    registry-derived, which brought their PRODUCES clauses into this check's
-    population for the first time. `TurnRoute`, `ConflictScreen` and
-    `CompetenceAssessment` are declared outputs with no type in nm/.
-
-    This is the projection working: a contract nobody implemented was invisible
-    while the feature carried a stale `decided` label. It is NOT declared in
-    that test's UNTYPED list, deliberately -- adding three entries there would
-    silence a finding an hour after surfacing it, and the point of the exercise
-    was to stop a status field from deciding what gets examined.
+    C6 is not an unrecorded delivery relation like T3b. Its authoritative
+    current row explicitly says `implementation: none`, while
+    nm/core/intake.py declares @implements(C6). Silence and denial are different
+    facts: the decorator cannot promote the registry, and the registry cannot
+    erase contrary production evidence. BK-48-AC1 owns reconciling the two
+    sources without importing the historical workbook's tested verdict.
 
 - id: RUFF-PLANNING-DEBT
   step: ruff
-  match: line
-  signature: "Found 151 errors."
+  fact:
+    kind: ruff
+    count: 151
+    digest: b5ada2b9bb4d3224b91b4198e09a1a0d15f81d4b44440fe3e80bb589b9b47df3
   owner: [BK-87-AC1]
   because: >-
     Style debt introduced by the execution-readiness planning pass, entirely in
@@ -151,11 +125,10 @@ known_failures:
     explicit strict=. No product code is affected and no rule was relaxed to
     accommodate them -- ruff still runs with the same configuration.
 
-    THE SIGNATURE IS THE EXACT COUNT, deliberately. Fixing one, or adding one,
-    changes it and BLOCKS the build until somebody re-registers the number.
-    That is the only property that stops a style waiver from quietly absorbing
-    the next real finding ruff makes. It is debt with an owner and a falling
-    number, not an exemption.
+    The fact binds both the count and the digest of every path, position, rule
+    and reason in the 151-diagnostic set measured at d0fa3f3. Fixing, adding or
+    replacing even one diagnostic changes it and blocks; the declaration cannot
+    absorb a new finding merely because another was fixed at the same time.
 
     Discovered on 10 September 2026 while wiring the scoped gate, and it is
     worth recording that it was NOT in the reported baseline of three failures:

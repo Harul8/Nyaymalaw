@@ -36,10 +36,30 @@ from collections.abc import Callable, Iterator
 
 import pytest
 import yaml
+from openpyxl import load_workbook
 
 from tools import evidence as ev
-from tools.export_spec import ExportRefused, build, publish
-from tools.feature_state import project, reconcile
+from tools import releasegate
+from tools.export_spec import (
+    ExportRefused,
+    build,
+    compare_payloads,
+    generated_paths,
+    historical_feature_ids,
+    plan_tables,
+    publish,
+)
+from tools.export_spec import main as export_main
+from tools.feature_state import implements_map, project, reconcile
+from tools.trace import (
+    AssessmentState,
+    AwaitingRef,
+    assess_population,
+    assess_status_support,
+    awaiting_problems,
+    expired_awaiting,
+    implementation_discrepancies,
+)
 
 pytestmark = pytest.mark.class_a
 
@@ -53,7 +73,7 @@ STEPS = ROOT / "docs" / "backlog" / "steps.yaml"
 #: and the failure would surface somewhere else entirely.
 _SKIP = shutil.ignore_patterns(
     "legal_database", ".git", "node_modules", "__pycache__", "outputs",
-    ".nm", ".code-review-graph", "*.xlsx", ".venv", "venv")
+    ".nm", ".code-review-graph", ".venv", "venv")
 
 
 @pytest.fixture
@@ -74,6 +94,36 @@ def _rewrite(root: pathlib.Path, mutate: Callable[[dict], None]) -> None:
     mutate(doc)
     path.write_text(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True),
                     encoding="utf8")
+
+
+def _rewrite_status(root: pathlib.Path, mutate: Callable[[dict], None]) -> None:
+    path = root / "docs" / "backlog" / "status.yaml"
+    document = yaml.safe_load(path.read_text(encoding="utf8"))
+    mutate(document)
+    path.write_text(yaml.safe_dump(document, sort_keys=False, allow_unicode=True),
+                    encoding="utf8")
+
+
+def _reconcile_sources(root: pathlib.Path = ROOT) -> dict:
+    status = yaml.safe_load(
+        (root / "docs" / "backlog" / "status.yaml").read_text(encoding="utf8"))
+    steps = yaml.safe_load(
+        (root / "docs" / "backlog" / "steps.yaml").read_text(encoding="utf8"))["steps"]
+    workbook_rows, _evals, _tasks = plan_tables(root)
+    anchors = yaml.safe_load(
+        (root / "spec" / "anchors.yaml").read_text(encoding="utf8"))["anchors"]
+    ids = [feature["id"] for feature in yaml.safe_load(
+        (root / "spec" / "features.yaml").read_text(encoding="utf8"))["features"]]
+    return {
+        "feature_ids": ids,
+        "authored_features": status["features"],
+        "steps": steps,
+        "items": status["items"],
+        "workbook_rows": workbook_rows,
+        "declared_ids": implements_map(root),
+        "anchor_ids": [anchor["id"] for anchor in anchors],
+        "historical_ids": historical_feature_ids(root),
+    }
 
 
 # =================== the workbook is history, not present state ==============
@@ -123,45 +173,54 @@ def test_a_currently_reopened_feature_is_not_overwritten_by_a_tested_history():
 # ========================= where the answer came from ========================
 
 def test_every_feature_says_which_source_answered_for_it():
-    """A registry answer and a decorator answer are different facts. Collapsing
-    them into one word is the three-stores defect in a fourth place."""
-    for f in _features():
-        basis, rows = f["implementation_basis"], f["delivered_by"]
-        assert basis in ("registry", "trace", "contradicted", "absent")
-        if basis == "registry":
-            assert rows, f"{f['id']} claims a registry basis with no delivering row"
-        if basis == "trace":
-            assert not rows, (
-                f"{f['id']} has a delivering row and reports a trace basis -- "
-                f"a row that says `none` while code claims the feature is a "
-                f"contradiction, and saying `trace` would hide which it is")
-        if basis == "contradicted":
-            assert rows, f"{f['id']} contradicts a row it does not have"
-        if basis == "absent":
-            assert not rows and f["implementation"] == "not_recorded"
+    """The registry answers implementation; observations retain their own keys."""
+    authored = {row["id"]: row for row in yaml.safe_load(
+        STATUS.read_text(encoding="utf8"))["features"]}
+    for feature in _features():
+        assert feature["implementation_basis"] == "registry"
+        assert feature["implementation"] == authored[feature["id"]]["implementation"]
+        assert isinstance(feature["delivered_by"], list)
+        assert isinstance(feature["declared_in"], list)
 
 
-def test_a_decorator_alone_can_reach_built_and_never_tested():
-    """BK-48-AC1, stated as a rule rather than as today's counts."""
-    ids = [f["id"] for f in _features()]
-    state = project(ids)
-    by_trace = [s for s in state.values() if s.implementation_basis == "trace"]
-    assert by_trace, "no feature rests on the trace basis, so this proves nothing"
-    for s in by_trace:
-        assert s.status == "built", (
-            f"{s.feature} reached {s.status!r} on a decorator alone")
+def test_code_and_delivery_cannot_overwrite_authored_implementation():
+    """C6 supplies both observations and is still the authored ``none`` fact."""
+    state = project(["C6"])["C6"]
+    assert state.declared_in and state.delivered_by, "the negative control is vacuous"
+    assert state.implementation == "none"
+    assert state.implementation_basis == "registry"
+    assert state.status == "decided"
+    assert state.implementation_contradicted
+
+
+def test_a_reconciliation_control_row_cannot_supply_feature_proof(tree):
+    """A control may inspect delivery reconciliation; it cannot prove A2 itself."""
+    def make_control_deliver(document: dict) -> None:
+        control = next(item for item in document["items"] if item["id"] == "BK-48")
+        control["delivers"] = ["A2"]
+        for criterion in control["acceptance"]:
+            criterion["required_evidence"] = []
+
+    _rewrite_status(tree, make_control_deliver)
+    state = project(["A2"], root=tree, bind_execution=False)["A2"]
+    assert state.implementation == "complete"
+    assert state.delivered_by == () and state.proof == "NOT_RUN"
+    assert state.status == "built"
 
 
 def test_the_registry_and_the_code_are_reconciled_in_both_directions():
-    """BK-48-AC2. `recorded_only_in_code` is the direction T3 cannot look."""
+    """Delivery gaps and implementation contradictions remain separate sets."""
     ids = [f["id"] for f in _features()]
     state = project(ids)
-    unrecorded = {f for f, s in state.items() if s.recorded_only_in_code}
-    declared = {f["id"] for f in _features()
-                if f["implementation_basis"] in ("trace", "contradicted")}
-    assert unrecorded == declared, (
-        "the exported spec and the projection disagree about which features "
-        "the registry does not record")
+    exported = _features()
+    observed = {fid: list(value.declared_in) for fid, value in state.items()}
+    assert {feature["id"]: feature["declared_in"] for feature in exported} == observed
+    trace_only, contradicted = implementation_discrepancies(
+        exported, {fid: sites for fid, sites in observed.items() if sites})
+    assert set(trace_only) == {fid for fid, value in state.items() if value.delivery_gap}
+    assert set(contradicted) == {
+        fid for fid, value in state.items() if value.implementation_contradicted}
+    assert "C6" in contradicted and "C6" not in trace_only
 
 
 # ============================ what the export refuses ========================
@@ -175,23 +234,27 @@ def test_the_registry_and_the_code_are_reconciled_in_both_directions():
 def test_reconcile_refuses_a_population_that_does_not_line_up(mutation, expected):
     """Compared over all 44 features rather than a sample, because the failure
     shape is not a wrong value -- it is a row that silently is not there."""
-    ids = [f["id"] for f in _features()]
-    steps = yaml.safe_load(STEPS.read_text(encoding="utf8"))["steps"]
-    items = yaml.safe_load(STATUS.read_text(encoding="utf8"))["items"]
-
-    assert reconcile(ids, steps, items) == [], "the real sources already disagree"
+    sources = _reconcile_sources()
+    assert reconcile(**sources) == [], "the real sources already disagree"
 
     if mutation == "unknown_step_feature":
-        steps = [*steps, {"id": "STEP-X", "features": ["ZZ9"], "items": []}]
+        sources["steps"] = [*sources["steps"],
+                            {"id": "STEP-X", "features": ["ZZ9"], "items": []}]
     elif mutation == "unknown_delivers":
-        items = [*items, {"id": "BK-999", "delivers": ["ZZ9"]}]
+        sources["items"] = [*sources["items"],
+                            {"id": "BK-999", "kind": "journey", "delivers": ["ZZ9"]}]
     elif mutation == "duplicate_feature":
-        ids = [*ids, ids[0]]
+        sources["feature_ids"] = [*sources["feature_ids"], sources["feature_ids"][0]]
     elif mutation == "unreached_feature":
-        ids = [*ids, "ZZ9"]
-        items = [*items, {"id": "BK-999", "delivers": ["ZZ9"]}]
+        sources["feature_ids"] = [*sources["feature_ids"], "ZZ9"]
+        sources["authored_features"] = [
+            *sources["authored_features"],
+            {"id": "ZZ9", "phase": "Z", "implementation": "none"},
+        ]
+        sources["workbook_rows"] = [
+            *sources["workbook_rows"], {"Feature": "ZZ9", "Phase": "Z"}]
 
-    problems = reconcile(ids, steps, items)
+    problems = reconcile(**sources)
     assert any(expected in p for p in problems), problems
 
 
@@ -244,8 +307,8 @@ def test_the_exporter_refuses_a_feature_with_no_feature_map_row(monkeypatch):
 
     real = export_spec.features_from_prd
 
-    def with_orphan():
-        contracts, anchors, schemas = real()
+    def with_orphan(root=ROOT, *, gates_json=None):
+        contracts, anchors, schemas = real(root, gates_json=gates_json)
         ghost = dict(contracts[0])
         ghost["id"] = "ZZ9"
         return [*contracts, ghost], anchors, schemas
@@ -254,6 +317,136 @@ def test_the_exporter_refuses_a_feature_with_no_feature_map_row(monkeypatch):
     with pytest.raises(ExportRefused) as refused:
         build(bind_execution=False)
     assert "ZZ9" in str(refused.value)
+
+
+def _mutate_feature_map(root: pathlib.Path, mutation: str) -> str:
+    """Make one raw-row identity defect without passing through a dictionary."""
+    path = root / "docs" / "Nyaymalaw_Project_Plan.xlsx"
+    workbook = load_workbook(path)
+    sheet = workbook["Feature Map"]
+    header = next(row for row in range(1, 6) if sheet.cell(row, 1).value == "Feature")
+    first = header + 1
+    feature_id = str(sheet.cell(first, 1).value)
+    if mutation == "duplicate":
+        sheet.append([sheet.cell(first, column).value
+                      for column in range(1, sheet.max_column + 1)])
+    elif mutation == "unknown":
+        values = [sheet.cell(first, column).value
+                  for column in range(1, sheet.max_column + 1)]
+        values[0], values[1] = "ZZ9", "Z"
+        sheet.append(values)
+    elif mutation == "missing":
+        sheet.delete_rows(first)
+    elif mutation == "blank_id":
+        sheet.cell(first, 1).value = None
+    else:  # pragma: no cover - test helper guard
+        raise AssertionError(mutation)
+    workbook.save(path)
+    workbook.close()
+    return feature_id
+
+
+@pytest.mark.parametrize("mutation,expected", [
+    ("duplicate", "Feature Map id"),
+    ("unknown", "Feature Map names unknown feature 'ZZ9'"),
+    ("missing", "is a PRD feature with no Feature Map row"),
+    ("blank_id", "Feature Map data row 1 has no feature id"),
+])
+def test_raw_workbook_identity_defects_refuse_prepublication(tree, mutation, expected):
+    """The restored workbook is mutated before the real exporter reads it."""
+    _mutate_feature_map(tree, mutation)
+    with pytest.raises(ExportRefused) as refused:
+        build(root=tree, bind_execution=False)
+    assert expected in str(refused.value)
+
+
+def test_historical_workbook_state_cannot_overwrite_current_authored_state(tree):
+    """Change current A2 only; its August tested verdict remains audit history."""
+    def reopen_a2(document: dict) -> None:
+        feature = next(row for row in document["features"] if row["id"] == "A2")
+        feature["implementation"] = "none"
+
+    _rewrite_status(tree, reopen_a2)
+    _payloads, built = build(root=tree, bind_execution=False)
+    a2 = next(row for row in built["features"] if row["id"] == "A2")
+    assert a2["implementation"] == "none" and a2["status"] == "decided"
+    assert a2["historical_status"] == "tested"
+
+
+def test_delivery_and_contradiction_signatures_move_independently(tree):
+    """Removing C6's delivery link cannot make its authored denial disappear."""
+    _payloads, baseline = build(root=tree, bind_execution=False)
+    before_features = baseline["features"]
+    implementation_sites = {
+        row["id"]: row["declared_in"] for row in before_features if row["declared_in"]}
+    before_trace, before_contradicted = implementation_discrepancies(
+        before_features, implementation_sites)
+    assert "C6" not in before_trace and "C6" in before_contradicted
+
+    def remove_delivery(document: dict) -> None:
+        row = next(item for item in document["items"] if item["id"] == "BK-54")
+        row["delivers"].remove("C6")
+
+    _rewrite_status(tree, remove_delivery)
+    _payloads, changed = build(root=tree, bind_execution=False)
+    after_trace, after_contradicted = implementation_discrepancies(
+        changed["features"], implementation_sites)
+    assert set(after_trace) == set(before_trace) | {"C6"}
+    assert after_contradicted == before_contradicted
+
+
+def test_every_generated_output_is_compared_before_explicit_publication(tree, capsys):
+    payloads, _built = build(root=tree, bind_execution=False)
+    assert set(payloads) == set(generated_paths(tree))
+    publish(payloads)
+    assert compare_payloads(payloads) == []
+
+    for path in generated_paths(tree):
+        original = path.read_bytes()
+        path.write_bytes(original + b"\nSTALE\n")
+        assert compare_payloads(payloads) == [(path, "stale")]
+        before = path.read_bytes()
+        assert export_main([], root=tree) == 1
+        assert path.read_bytes() == before, f"check mode silently repaired {path.name}"
+        path.write_bytes(original)
+
+    regenerated = generated_paths(tree)[0]
+    regenerated.write_bytes(regenerated.read_bytes() + b"\nSTALE\n")
+    assert export_main(["--write"], root=tree) == 0
+    assert compare_payloads(payloads) == []
+    capsys.readouterr()
+
+
+def test_zero_population_and_tested_without_evals_are_never_pass():
+    empty = assess_population("T4", 0, "tested features")
+    assert empty.state == AssessmentState.NOT_ASSESSED
+
+    feature = {"id": "A1", "status": "tested", "historical_eval_ids": []}
+    _t3, t4 = assess_status_support([feature], {"A1": ["nm/example.py"]}, set())
+    assert t4.state == AssessmentState.FAIL
+    assert t4.issues == ("A1 is marked 'tested' but declares no eval ids",)
+
+
+def test_release_rg12_uses_the_same_not_assessed_result(monkeypatch):
+    from tools import trace
+
+    monkeypatch.setattr(trace, "load_spec", lambda: ([], []))
+    monkeypatch.setattr(trace, "load_gates", lambda: [])
+    monkeypatch.setattr(trace, "gate_consultations", lambda: {})
+    monkeypatch.setattr(trace, "scan_tree", lambda *_args, **_kwargs: {})
+    measured = releasegate.measure_trace()
+    assert measured["tested_population"] == 0
+    assert measured["status_assessment"].state == AssessmentState.NOT_ASSESSED
+
+
+def test_every_awaiting_declaration_is_structured_and_resolvable():
+    features = _features()
+    items = yaml.safe_load(STATUS.read_text(encoding="utf8"))["items"]
+    assert awaiting_problems(features, items) == []
+    assert expired_awaiting(features, items) == ()
+    unresolved = {
+        ("A3", 0): AwaitingRef("feature", "ZZ9", "a missing blocker")}
+    assert "does not resolve" in awaiting_problems(features, items, unresolved)[0]
 
 
 # ====================== the fingerprint covers the promise ===================

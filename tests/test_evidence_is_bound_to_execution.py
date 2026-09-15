@@ -6,6 +6,8 @@ import pathlib
 
 import pytest
 
+from tools.evidence import CLASS_A_COMMAND
+
 pytestmark = pytest.mark.class_a
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -36,7 +38,7 @@ def _passing_run(tool, doc: dict) -> dict:
         "started_at": "2026-09-10T00:00:00+00:00",
         "finished_at": "2026-09-10T00:01:00+00:00",
         "runner": "pytest test fixture",
-        "command": "python -m pytest -m class_a -q",
+        "command": CLASS_A_COMMAND,
         "exit_code": 0,
         "selection": "full_class_a",
         "complete": True,

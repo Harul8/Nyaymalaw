@@ -49,7 +49,12 @@ if command -v python >/dev/null 2>&1; then
     python tools/graph_vectors.py --embed || true
 fi
 
-# Is the tree the one the gate passed on?
-if command -v python >/dev/null 2>&1; then
-    python tools/gatestamp.py --quiet || exit 1
+# Is THE STAGED COMMIT the exact tree the gate passed on? Missing Python is a
+# failed control, not permission to skip it. The live-worktree comparison alone
+# is insufficient: an unstaged compensating change can make A+B pass while the
+# index commits only the unchecked A.
+if ! command -v python >/dev/null 2>&1; then
+    echo "GATESTAMP NOT ASSESSED -- python is unavailable; commit refused."
+    exit 1
 fi
+python tools/gatestamp.py --quiet --require-index || exit 1

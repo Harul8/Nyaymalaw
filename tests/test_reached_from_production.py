@@ -331,6 +331,21 @@ def test_every_unwired_module_names_a_feature_that_exists():
 #: The absence itself is B-082, open, and the register test keeps it open.
 #: A declaration whose reason has gone is deleted; the defect it named is not.
 UNTYPED: dict[str, str] = {
+    "TurnRoute":
+        "B1. NAMING DRIFT — represented by `nm.core.route.ReadRoute`: its "
+        "`route`, `mode` and `statement` fields are the contract's route, mode "
+        "and stated reading. Implementation owner: `nm/core/route.py`, wired "
+        "by `nm/core/turn.py::_read_route`.",
+    "ConflictScreen":
+        "B3. GENERIC REPRESENTATION — `nm.core.conflict.screen` produces "
+        "`nm.core.screens.Screen(kind=CONFLICT)`, whose state, covers, unread "
+        "and release fields carry the declared screen. Implementation owners: "
+        "`nm/core/conflict.py` and `nm/core/screens.py`.",
+    "CompetenceAssessment":
+        "B4. GENERIC REPRESENTATION — `TurnEngine._competence_screen` produces "
+        "`nm.core.screens.Screen(kind=COMPETENCE)`; state/detail carry coverage "
+        "and the recorded release model is `screens.Release`. Implementation "
+        "owners: `nm/core/turn.py` and `nm/core/screens.py`.",
     "Reorientation":
         "A3. GENUINELY ABSENT — zero mentions. Consistent with `gaps` and "
         "`cascade` being UNWIRED: nothing composes a re-orientation.",
