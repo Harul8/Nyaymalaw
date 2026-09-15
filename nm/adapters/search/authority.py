@@ -25,10 +25,22 @@ import re
 import sqlite3
 from pathlib import Path
 
+from nm.domain.citation import reporter_key
+from nm.knowledge.identity import IdentityIndex
 from nm.knowledge.jurisdiction import stored_court
 from nm.knowledge.manifest import CorpusPublicationRefused, PublishedCorpus
-from nm.ports.evidence import Coverage
-from nm.ports.search import CorpusSearch, IndexIdentity, SearchHit
+from nm.ports.evidence import Coverage, Treatment
+from nm.ports.search import (
+    CaseDiscovery,
+    CaseExpansion,
+    CaseHit,
+    CitationResolution,
+    CorpusSearch,
+    IndexIdentity,
+    Paragraph,
+    ResolutionState,
+    SearchHit,
+)
 
 #: How many characters of a paragraph the advocate is shown per hit.
 SNIPPET = 320
@@ -37,17 +49,54 @@ SNIPPET = 320
 #: paragraphs has not answered anything.
 MAX_LIMIT = 100
 
+#: How many ranked paragraphs case-level discovery folds. Bounded so a common
+#: term does not read the whole index to answer "which cases"; the bound is
+#: reported through `paragraphs_ranked`, so a discovery that hit it says so.
+DISCOVERY_POOL = 200
+
 
 class AuthorityIndexSearch:
     """Reads the FTS index. Ranks paragraphs; identifies nothing."""
 
-    def __init__(self, index_path: str | Path) -> None:
+    def __init__(self, index_path: str | Path,
+                 identity_path: str | Path | None = None) -> None:
         self._path = Path(index_path)
         #: NAMED SO A ZERO CAN BE READ. "the corpus" would be the very
         #: ambiguity B-163 is about — three stores hold the same Act and
         #: disagree, so a result says WHICH one answered it.
         self.name = f"the authority index ({self._path.name})"
         self._published_snapshot: PublishedCorpus | None = None
+        #: THE IDENTITY INDEX, beside the authority index by default -- the
+        #: same default the evidence adapter uses, so the two read one file.
+        #: Absent, `resolve` says INDEX_UNAVAILABLE and `treatment` says
+        #: NOT_CHECKED; neither becomes a clearance.
+        self._identity_index = IdentityIndex(
+            Path(identity_path) if identity_path is not None
+            else self._path.parent / "identity.db")
+
+    @property
+    def available(self) -> bool:
+        return self._path.exists()
+
+    def identity_version(self) -> str:
+        """The corpus version the index says it was built from, or ''."""
+        if not self._path.exists():
+            return ""
+        try:
+            con = sqlite3.connect(f"file:{self._path}?mode=ro", uri=True)
+        except sqlite3.Error:
+            return ""
+        try:
+            ident = self._identity(con)
+        finally:
+            con.close()
+        return ident.corpus_version if ident is not None else ""
+
+    def treatment(self, case_id: str) -> Treatment:
+        return self._identity_index.treatment(case_id)
+
+    def case_identity(self, case_id: str):
+        return self._identity_index.case(case_id)
 
     @classmethod
     def from_published_corpus(
@@ -68,7 +117,10 @@ class AuthorityIndexSearch:
         authority_index: str = "indexes/authority.db",
     ) -> "AuthorityIndexSearch":
         """Build from the same bound snapshot as the evidence adapter."""
-        search = cls(snapshot.member_path(authority_index))
+        identity = "indexes/identity.db"
+        search = cls(snapshot.member_path(authority_index),
+                     identity_path=(snapshot.member_path(identity)
+                                    if snapshot.has_member(identity) else None))
         search._published_snapshot = snapshot
         return search
 
@@ -268,6 +320,182 @@ class AuthorityIndexSearch:
             why=None if hits else _why_empty(filters))
 
 
+    # ------------------------------------------------ discovery (P21) ------
+
+    def discover(self, query: str, *, court: str | None = None,
+                 from_year: int | None = None, to_year: int | None = None,
+                 limit: int = 20) -> CaseDiscovery:
+        """Cases, ranked by their best paragraph. BK-25-AC1.
+
+        ONE FTS QUERY, GROUPED, and not a second ranking. The paragraph
+        search is the only thing that ranks; this folds its rows by case so a
+        holding spread across several paragraphs surfaces as one case with a
+        count, rather than as several snippets an advocate has to recognise
+        as one judgment. The pool is bounded (`DISCOVERY_POOL`) so a common
+        term does not read the whole index to answer "which cases".
+        """
+        # SCOPE BEFORE RETRIEVAL. A court this index does not hold is decided
+        # here, from the closed vocabulary, and NOTHING IS SEARCHED -- the
+        # paragraph search would have applied `1 = 0` and read nothing, but
+        # the query would still have travelled. The filters carry what the
+        # court was read as, so the caller classifies it as unsupported
+        # coverage rather than as zero results.
+        resolved_court, court_said = stored_court(court)
+        if court and not resolved_court:
+            filters = {"court": court, "court_read_as": court_said}
+            if from_year is not None:
+                filters["from_year"] = from_year
+            if to_year is not None:
+                filters["to_year"] = to_year
+            identity = self._identity_or_none()
+            if identity is None:
+                return CaseDiscovery(query=query, index=self.name,
+                                     coverage=Coverage.NOT_ASSESSED, filters=filters,
+                                     why="the authority index is not present or carries "
+                                         "no identity")
+            return CaseDiscovery(query=query, index=self.name, coverage=Coverage.ANSWERED,
+                                 identity=identity, filters=filters, cases=(),
+                                 why=court_said)
+        pooled = self.search(query, court=court, from_year=from_year,
+                             to_year=to_year, limit=DISCOVERY_POOL)
+        if pooled.coverage is Coverage.NOT_ASSESSED:
+            return CaseDiscovery(query=query, index=self.name,
+                                 coverage=Coverage.NOT_ASSESSED,
+                                 filters=pooled.filters, why=pooled.why)
+        by_case: dict[str, list[SearchHit]] = {}
+        for hit in pooled.hits:
+            by_case.setdefault(hit.case_id, []).append(hit)
+        cases = []
+        for case_id, hits in by_case.items():
+            best = min(hits, key=lambda h: h.rank)
+            cases.append(CaseHit(
+                case_id=case_id, case_name=best.case_name, court=best.court,
+                year=best.year, paragraphs_matched=len(hits),
+                best_rank=best.rank, confidence=best.confidence,
+                snippet=best.snippet))
+        cases.sort(key=lambda c: c.best_rank)
+        cases = cases[:max(1, min(int(limit), MAX_LIMIT))]
+        return CaseDiscovery(
+            query=query, index=self.name, coverage=Coverage.ANSWERED,
+            identity=pooled.identity, filters=pooled.filters,
+            cases=tuple(cases), paragraphs_ranked=len(pooled.hits),
+            why=None if cases else pooled.why)
+
+    def _identity_or_none(self) -> IndexIdentity | None:
+        if not self._path.exists():
+            return None
+        try:
+            con = sqlite3.connect(f"file:{self._path}?mode=ro", uri=True)
+        except sqlite3.Error:
+            return None
+        try:
+            return self._identity(con)
+        finally:
+            con.close()
+
+    def expand(self, case_id: str, *, query: str | None = None,
+               limit: int = 200) -> CaseExpansion:
+        """Every indexed paragraph of one case, BY LOCATOR, in source order.
+
+        `complete` IS `False` BY CONSTRUCTION for this index: it holds the
+        attributable kinds only (`attributable_kinds` in its identity), so a
+        judgment's facts and submissions are not here to be read back. That
+        is said as a value, because an expansion that looked whole and was
+        not is how a holding gets cited out of the context that qualified it.
+        """
+        if not self._path.exists():
+            return CaseExpansion(case_id=case_id, index=self.name,
+                                 coverage=Coverage.NOT_ASSESSED,
+                                 why=f"the authority index is not present at {self._path}")
+        try:
+            con = sqlite3.connect(f"file:{self._path}?mode=ro", uri=True)
+        except sqlite3.Error as exc:
+            return CaseExpansion(case_id=case_id, index=self.name,
+                                 coverage=Coverage.NOT_ASSESSED,
+                                 why=f"the authority index could not be opened: {exc}")
+        try:
+            identity = self._identity(con)
+            if identity is None:
+                return CaseExpansion(case_id=case_id, index=self.name,
+                                     coverage=Coverage.NOT_ASSESSED,
+                                     why="the index carries no identity")
+            kinds = dict(con.execute("select key, value from identity")).get(
+                "attributable_kinds", "")
+            match = _fts_query(query) if query else None
+            if match:
+                where, args = "paras match ?", [f'case_id:"{case_id}" AND ({match})']
+            else:
+                where, args = "case_id = ?", [case_id]
+            rows = con.execute(
+                "select chunk_id, case_id, case_name, court, year, para_type, text "
+                f"from paras where {where} order by chunk_id limit ?",
+                [*args, max(1, min(int(limit), 500))]).fetchall()
+        except sqlite3.Error as exc:
+            return CaseExpansion(case_id=case_id, index=self.name,
+                                 coverage=Coverage.NOT_ASSESSED,
+                                 why=f"the index rejected the read: {exc}")
+        finally:
+            con.close()
+        paragraphs = tuple(_paragraph(r) for r in rows)
+        return CaseExpansion(
+            case_id=case_id, index=self.name, coverage=Coverage.ANSWERED,
+            identity=identity, paragraphs=paragraphs,
+            # KNOWN INCOMPLETE when the index says it kept only some kinds.
+            complete=False if kinds else None,
+            why=(None if paragraphs else
+                 f"the index holds no paragraph for case {case_id!r}; it may "
+                 f"hold the case under another id, or not at all"))
+
+    def passage(self, locator: str) -> Paragraph | None:
+        """ONE paragraph, by its exact chunk id. `None` means not held --
+        which the caller must not read as absence of the law; the index says
+        which kinds it holds."""
+        if not self._path.exists() or not (locator or "").strip():
+            return None
+        try:
+            con = sqlite3.connect(f"file:{self._path}?mode=ro", uri=True)
+        except sqlite3.Error:
+            return None
+        try:
+            row = con.execute(
+                "select chunk_id, case_id, case_name, court, year, para_type, text "
+                "from paras where chunk_id = ? limit 1", (locator.strip(),)).fetchone()
+        except sqlite3.Error:
+            return None
+        finally:
+            con.close()
+        return _paragraph(row) if row else None
+
+    def resolve(self, citation: str) -> CitationResolution:
+        """A typed citation, to exactly one case or to nothing. BK-38-AC1.
+
+        Through the identity index's `citations` table on the reporter KEY --
+        the same key the index was built with, from `nm.domain.citation`, so
+        build and read cannot disagree about what a citation is. Exact match
+        reached 90.9% of held judgments where name matching reached 0.83%
+        (CLAUDE.md §5); there is no fallback to a name.
+        """
+        key = reporter_key(citation)
+        if not key:
+            return CitationResolution(raw=citation, key=key or "?",
+                                      state=ResolutionState.UNRESOLVED,
+                                      why="the citation held no reporter key")
+        if not self._identity_index.available:
+            return CitationResolution(
+                raw=citation, key=key, state=ResolutionState.INDEX_UNAVAILABLE,
+                why="the identity index is not built, so no citation can be "
+                    "resolved. Run `python tools/build_identity_index.py`")
+        case_id = self._identity_index.case_for_citation(key)
+        if not case_id:
+            return CitationResolution(
+                raw=citation, key=key, state=ResolutionState.UNRESOLVED,
+                why=f"no held judgment carries the citation {citation.strip()!r} "
+                    f"(key {key}). Nothing near it is offered: a near-miss is "
+                    f"how the wrong case gets cited")
+        return CitationResolution(raw=citation, key=key,
+                                  state=ResolutionState.RESOLVED, case_id=case_id)
+
+
 # ------------------------------------------------------------------ helpers ---
 
 #: FTS5 treats these as syntax. A user typing `s. 53A "part performance"` is
@@ -317,6 +545,20 @@ def _hit(row: tuple) -> SearchHit:
         rank=float(rank or 0.0),
         confidence=_confidence(float(rank or 0.0)),
     )
+
+
+def _paragraph(row: tuple) -> Paragraph:
+    chunk_id, case_id, case_name, court, year, para_type, text = row
+    try:
+        yr = int(year)
+    except (TypeError, ValueError):
+        yr = None
+    return Paragraph(
+        locator=str(chunk_id), case_id=str(case_id or "").strip() or "unknown",
+        case_name=str(case_name or "").strip() or "(party names not held)",
+        court=str(court or "").strip() or "(court not held)", year=yr,
+        para_type=str(para_type or "").strip() or "unknown",
+        text=str(text or "").strip() or "(the index returned no text for this paragraph)")
 
 
 def _confidence(rank: float) -> float:

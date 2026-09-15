@@ -108,6 +108,80 @@ def fold(text: str | None) -> str:
     return " ".join(words(text))
 
 
+def fold_spacing(text: str | None) -> str:
+    """The OTHER folding question, owned HERE so nobody defines it again.
+
+    `fold` above answers *are these the same words*: it lowercases and treats
+    every non-alphanumeric character as separation. That is right for matching
+    a proposition against a paragraph, and WRONG for a quotation.
+
+    A quotation differing from its source only in line breaks is the same
+    words; one differing in punctuation or case is not. Fold a quote with the
+    word-based `fold` and *"the price, and delivery."* matches *"the price and
+    delivery"* -- a paraphrase reported as VERBATIM, which is exactly what C1's
+    third NEVER forbids and what `nm.core.research.quote_fidelity` exists to
+    refuse. So the quote comparison collapses WHITESPACE ONLY and keeps case
+    and punctuation.
+
+    It lives here rather than beside its one caller for the reason this whole
+    module exists: `nm/core/research.py` defined it privately and
+    `tests/test_one_fold.py` caught it as a second base. TWO FOLDING NOTIONS IS
+    FINE; two owners of one notion is the defect.
+    """
+    return " ".join((text or "").split())
+
+
+def snippet(text: str | None, limit: int) -> str:
+    """One definition of "shorten this sentence so it can be quoted inside
+    another one". ONE COPY, and this is it.
+
+    THE MEASURED DEFECT. A defending turn told an advocate:
+
+        CONDITIONAL, not a deadline: on the reading that the period was run
+        from the plaintiff says our client trespassed on 15 April 2019 and
+        they hav because the cause carries no curated accrual trigger...
+
+    `accrual.statement[:70]` cut the chronology entry mid-word. The sentence
+    the advocate reads immediately before deciding whether to trust the
+    arithmetic beside it ended "and they hav", and forty-one other sites in
+    `nm/` cut prose the same way.
+
+    TWO THINGS A BARE SLICE GETS WRONG, and both are this project's own
+    recurring shapes rather than typography:
+
+    * IT CUTS MID-WORD. `[:70]` counts characters, and a sentence is made of
+      words. What comes out is not English, and an advocate who cannot read
+      the premise cannot correct it -- which is the entire mechanism by which
+      a wrong accrual is meant to be caught.
+    * IT DOES NOT SAY IT CUT. A shortened statement rendered without a mark
+      reads as the WHOLE statement, so "the plaintiff says our client
+      trespassed on" looks like the complete entry rather than its first
+      fifty characters. An absent remainder reading as no remainder is
+      CLAUDE.md §9 wearing a smaller hat.
+
+    So: fold the spacing (a statement carrying a newline breaks the line it is
+    quoted into), cut at the last word boundary that fits, and mark the
+    elision. Text that already fits comes back untouched and unmarked -- a
+    mark on a complete sentence would be the opposite lie.
+
+    A word longer than the limit is cut inside itself, because there is no
+    better answer and reporting the whole of it would defeat the bound.
+
+    `tests/test_prose_is_cut_on_words.py` scans `nm/` and fails the build on a
+    constant-length slice of anything the vocabulary says is prose, for the
+    same reason `test_one_fold.py` scans for a second fold: the forty-two
+    sites were not written by people ignoring a rule, they were written by
+    people who each needed to shorten a sentence and had nowhere to find it.
+    """
+    folded = fold_spacing(text)
+    if limit <= 0:
+        return ""
+    if len(folded) <= limit:
+        return folded
+    cut = folded[:limit].rsplit(" ", 1)[0].rstrip(" ,;:.-")
+    return f"{cut or folded[:limit]}…"
+
+
 def words(text: str | None) -> tuple[str, ...]:
     """The words `fold` folds on, unjoined.
 

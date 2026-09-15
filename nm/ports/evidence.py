@@ -592,6 +592,19 @@ class EvidencePort(Protocol):
         """
         return False
 
+    def withdrawn_sources(self) -> frozenset[str]:
+        """Every source version or generation a withdrawal has named. P21.
+
+        THE TURN ASKS THIS so a matter that attached a passage from a version
+        the publication layer has since withdrawn (P20) learns it where the
+        file is re-read -- and the ledger marks the input withdrawn, which
+        reaches every conclusion resting on it (P18). An empty set from an
+        installation with no published generation is a fact about the
+        installation, not a clean bill; `readiness()` says whether one is
+        bound.
+        """
+        return frozenset()
+
     def readiness(self) -> dict:
         """What each retrieval capability can answer, capability by capability.
 

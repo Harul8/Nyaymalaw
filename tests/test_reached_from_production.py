@@ -80,11 +80,28 @@ UNWIRED: dict[str, str] = {
         "PostgreSQL is reachable on this machine, so the adapter is built and "
         "unproven, which `tests/test_no_database_means_no_evidence.py` keeps "
         "the registry honest about."),
-    "nm.core.premise": (
-        "P22's legal-premise gate. `nm.core.limitation.compute` calls "
-        "`assess()` before the arithmetic and `nm.core.turn` carries the "
-        "premise digest onto the result -- P22's integration half, which "
-        "needs P18's cascade to carry an invalidation through."),
+    # `nm.core.premise` WAS HERE. P22 wired it on 12 September 2026:
+    # `nm.core.turn._premises` builds the three premises before the
+    # arithmetic, `assess` blocks on an unestablished one and marks an
+    # inferred accrual CONDITIONAL, and the digest travels onto the register
+    # and the cover. The declaration went the moment the import landed, as
+    # `test_no_declaration_outlives_its_wiring` requires.
+    # `nm.core.dependency` WAS HERE, from 3586ea9 until the same day. P18 wired
+    # it on 12 September 2026: `nm.core.turn` observes the file after ADMIT-B,
+    # settles every value it derives against its inputs, and the projections
+    # refuse to present a stale one as current. The declaration went the
+    # moment the import landed, as `test_no_declaration_outlives_its_wiring`
+    # requires -- a declaration that outlives its wiring is the next unwired
+    # module's hiding place.
+    "nm.domain.media":
+        "BK-69, and deliberately ahead of its caller. `plan.json` places this "
+        "boundary at W0 and media intake at W2 (BK-54), because a control "
+        "written after its subject is a control written around whatever the "
+        "subject already does. BK-54 wires it: the intake adapter builds a "
+        "`MediaAdmission` and nothing in `nm/core` ever sees the bytes. Until "
+        "then `tests/test_media_never_reaches_reasoning_unadmitted.py` sweeps "
+        "the reasoning layers and fails the day an unadmitted parameter "
+        "appears, so the boundary is enforced before it is called.",
     # `nm.domain.reads` WAS HERE. It is wired as of 5 September 2026 -- not by
     # the tier escalation it was built for, which still needs a hard-tier
     # model, but by the general form of B-088: a DECISIVE read that answers

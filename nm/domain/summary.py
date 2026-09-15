@@ -37,7 +37,7 @@ from dataclasses import dataclass, field
 
 from nm.domain.intake import ReadQuality
 from nm.domain.matter import AskedQuestion, Certainty, FactBasis, Matter, Role, Thread
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import refuses_blank_text, snippet
 
 #: How much of the account a prompt is given.
 #:
@@ -322,13 +322,13 @@ class MatterSummary:
         if self.answered:
             blocks.append(
                 "ALREADY ASKED AND ANSWERED — these are settled:\n"
-                + "\n".join(f"  - {q.text[:160]}" for q in self.answered))
+                + "\n".join(f"  - {snippet(q.text, 160)}" for q in self.answered))
         if self.open_questions:
             lines = []
             for q in self.open_questions:
                 seen = (f" (asked {q.times_asked} times already, still not "
                         f"answered)" if q.ignored else "")
-                lines.append(f"  - {q.text[:160]}{seen}")
+                lines.append(f"  - {snippet(q.text, 160)}{seen}")
             blocks.append("ASKED AND STILL OPEN:\n" + "\n".join(lines))
         return "\n\n".join(blocks)
 
@@ -500,7 +500,7 @@ def build(matter: Matter, thread_id: str | None = None,
                  if in_scope is None or f.id in in_scope]
     for f in on_thread:
         if f.date:
-            established.append(f"{f.date.isoformat()}: {f.statement.strip()[:120]}")
+            established.append(f"{f.date.isoformat()}: {snippet(f.statement, 120)}")
 
     account, left_out, words, notes = _account(
         on_thread, thread, about, load_bearing)

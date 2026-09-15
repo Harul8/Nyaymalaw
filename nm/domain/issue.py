@@ -43,7 +43,7 @@ from enum import Enum, nonmember
 
 from nm.domain.matter import Posture, Side, ThreadId, new_id
 from nm.domain.spoken import Spoken
-from nm.domain.text import blank, fold, refuses_blank_text
+from nm.domain.text import blank, fold, refuses_blank_text, snippet
 from nm.domain.traceability import implements
 
 
@@ -233,7 +233,7 @@ def accounted_for(spotted: tuple[Issue, ...],
     # every commit on this branch and the hook may not be bypassed; it is
     # flagged as a shared-file consideration for the offline branch.
     out = {i.id for i in classified}
-    return tuple(i.statement[:80] for i in spotted if i.id not in out)
+    return tuple(snippet(i.statement, 80) for i in spotted if i.id not in out)
 
 
 @implements("D9")
@@ -245,7 +245,7 @@ def considered_not_pursued(issues: tuple[Issue, ...]) -> tuple[str, ...]:
     place it counts -- what the advocate actually reads.
     """
     return tuple(
-        f"{i.statement[:90]} — not pursued: {i.disposition.reason}"
+        f"{snippet(i.statement, 90)} — not pursued: {i.disposition.reason}"
         for i in issues if i.disposition.state is DispositionState.PARKED)
 
 

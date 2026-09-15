@@ -205,7 +205,21 @@ class TurnMetrics:
     def gating_violations(self) -> list[Violation]:
         return [v for v in self.violations if v.gating]
 
-    def as_dict(self) -> dict:
+    def as_served(self) -> dict:
+        """THE FULL RECORD, INCLUDING WHY EACH GATE FIRED. Ask for it by name.
+
+        A gate detail is a sentence written for the advocate -- "the period was
+        run from the agreement is dated 15 April 1984 because the cause carries
+        no curated accrual trigger" -- so it necessarily quotes the matter back.
+        That is right in front of the person whose matter it is, over an
+        authenticated matter-scoped response, and it is exactly what the audit
+        panel shows. It is not right in a file.
+
+        `as_dict` is the redacted projection and it is the DEFAULT for that
+        reason: the mistake this splits apart is writing the audit trail to the
+        plaintext metrics directory, and a mistake is only prevented if the
+        safe shape is the one you get by not thinking about it.
+        """
         return {
             "turn_id": self.turn_id,
             "matter_id": self.matter_id,
@@ -240,3 +254,48 @@ class TurnMetrics:
                 for v in self.violations
             ],
         }
+
+    #: The fields of `as_served` that carry a sentence ABOUT THE MATTER rather
+    #: than an identifier, a state or a number. Named ONCE, here, so the
+    #: redaction below and any future reader of it do not each decide.
+    #:
+    #: `failure` is deliberately NOT in this tuple. It is our own exception
+    #: text, written for whoever reads the crash, and rule 1 at the top of this
+    #: module is that a turn which crashed must still be diagnosable -- blanking
+    #: it would leave the most valuable records saying nothing. That rests on
+    #: exception messages naming the CODE and not the matter, which is a rule
+    #: about raise sites; an exception that interpolates a client sentence is a
+    #: defect there, and redacting it here would hide it rather than fix it.
+    _FREE_TEXT = ("detail",)
+
+    def as_dict(self) -> dict:
+        """THE PLAINTEXT-SAFE PROJECTION. Everything except the sentences.
+
+        `file_store.record_metrics` writes this to a directory whose whole
+        convention is that its contents are safe to read, and that convention
+        was a COMMENT rather than a control until a limitation turn put the
+        advocate's own words in `turn_<id>.json`: the accrual reason quotes the
+        chronology entry, the chronology entry is what the advocate typed, and
+        `fire` carried it straight through.
+
+        WHY REDACT HERE AND NOT AT EACH CALL SITE. There are thirty-seven gates
+        and every one of them may one day want to say WHICH thing failed, which
+        is the useful half of a detail. A rule that each `fire` must sanitise
+        its own string is a rule that holds until the thirty-eighth gate is
+        added by someone who has not read this file. Subtracting the free text
+        at the one projection that reaches disk holds for gates nobody has
+        written yet -- and it subtracts from `as_served` rather than restating
+        its field list, so the two cannot drift apart.
+
+        The sentence is not lost. It is served to the advocate live, and a
+        withheld turn keeps its reason in the transcript, which is ciphered
+        with the matter key because it is privileged material.
+        """
+        record = self.as_served()
+        record["gates_fired"] = [
+            {k: v for k, v in g.items() if k not in self._FREE_TEXT}
+            for g in record["gates_fired"]]
+        record["violations"] = [
+            {k: v for k, v in x.items() if k not in self._FREE_TEXT}
+            for x in record["violations"]]
+        return record

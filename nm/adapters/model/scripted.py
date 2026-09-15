@@ -25,6 +25,7 @@ from nm.adapters.model._budget import estimate_tokens, guard_budget
 from nm.adapters.model.config import CONTEXT_BUDGET, ModelConfig, TierConfig
 from nm.core.chronology import CHART_HEADING
 from nm.domain.quotable import CONTEXT_HEADING, WORDS_HEADING
+from nm.domain.text import snippet
 from nm.ports.model import (
     EmbeddingResult,
     ModelResult,
@@ -153,7 +154,7 @@ def _sentence_around(text: str, index: int) -> str:
     """The sentence containing `index`, which is what a model would return."""
     start = max(text.rfind(".", 0, index), text.rfind("\n", 0, index)) + 1
     end = text.find(".", index)
-    return (text[start:end if end > index else len(text)].strip()[:70]
+    return (snippet(text[start:end if end > index else len(text)], 70)
             or "an event")
 
 
@@ -190,7 +191,7 @@ def scripted_dates(user: str) -> str:
     if not events and "yesterday" in said.lower() and ref:
         import datetime
         on = datetime.date.fromisoformat(ref.group(1)) - datetime.timedelta(days=1)
-        events.append({"event": said.strip().split(".")[0][:70] or "an event",
+        events.append({"event": snippet(said.split(".")[0], 70) or "an event",
                        "date_expression": "yesterday",
                        "resolved": on.isoformat(), "documented": False})
     return json.dumps({"events": events})
@@ -255,7 +256,7 @@ def _described_spans(said: str) -> list[dict]:
         span = said[start:end].strip().rstrip(".,;")
         if len(span) < 12:
             continue
-        out.append({"quoted": span, "label": span[:60]})
+        out.append({"quoted": span, "label": snippet(span, 60)})
     return out
 
 
@@ -1008,7 +1009,7 @@ def scripted_accrual(user: str) -> str:
             "why": "no entry on this chronology answers the trigger"})
     return json.dumps({
         "fact_id": best[0],
-        "limb": " ".join(trigger.replace("THE PERIOD RUNS FROM:", "").split())[:120],
+        "limb": snippet(trigger.replace("THE PERIOD RUNS FROM:", ""), 120),
         "why": f"this entry answers the trigger: {best[1][:80]}"})
 
 

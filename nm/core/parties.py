@@ -37,7 +37,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import refuses_blank_text, snippet
 
 
 @refuses_blank_text("why")
@@ -192,7 +192,7 @@ def interpret(quotable, data: dict) -> Parties:
             continue
         name = " ".join((row.get("name") or "").split())
         side = (row.get("side") or "related").strip().lower()
-        why = " ".join((row.get("why") or "").split())[:160]
+        why = snippet(row.get("why"), 160)
         if not name:
             continue
         if side not in SIDES:
@@ -207,7 +207,7 @@ def interpret(quotable, data: dict) -> Parties:
         kept.append(Party(name=name, side=side,
                           why=why or "named in the brief"))
 
-    why = " ".join((data.get("why") or "").split())[:200]
+    why = snippet(data.get("why"), 200)
     return Parties(
         parties=tuple(kept),
         why=why or ("no party is named in the brief yet" if not kept

@@ -64,7 +64,14 @@ BRIEF = ("We act for the plaintiff, a supplier at Hyderabad. Goods were "
 #: `turn.py` -- if a tenth conclusion is added there and not here, the
 #: population check below fails rather than this test quietly narrowing.
 DERIVED = ("theory", "issues", "decisions", "proof", "deadlines", "gaps",
-           "authorities", "evidence", "thresholds_told")
+           "authorities", "evidence", "thresholds_told",
+           # P22/P23, added when the population check below caught them
+           # missing -- which is that check doing exactly its job. The legal
+           # premises a limitation ran under, the objective relief is measured
+           # against, and the relief position itself are all WORKED OUT rather
+           # than said, so a withheld turn must discard them as it discards the
+           # theory.
+           "premises", "objective", "reliefs")
 
 
 class _Ungrounded(ScriptedModelAdapter):

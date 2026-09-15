@@ -49,7 +49,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from nm.domain.quotable import Quotable
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import refuses_blank_text, snippet
 
 
 class Ground(str, Enum):
@@ -233,7 +233,7 @@ def interpret(quotable: Quotable, data: dict) -> Refusal:
         return Refusal(Ground.CLEAR)
 
     quoted = (data.get("quoted") or "").strip()
-    why = " ".join((data.get("why") or "").split())[:200]
+    why = snippet(data.get("why"), 200)
 
     # THE SPAN IS THE ADVOCATE'S OWN WORDS OR THERE IS NO REFUSAL.
     #

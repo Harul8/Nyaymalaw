@@ -71,7 +71,7 @@ class DeadlineKind(str, Enum):
     OTHER = "other"
 
 
-@refuses_blank_text()
+@refuses_blank_text("premise_digest")
 @dataclass(frozen=True)
 class Deadline:
     """One dated obligation. STATUS IS NOT A FIELD.
@@ -100,6 +100,17 @@ class Deadline:
     """What happens if it passes. A passed deadline with no consequence tells
     the advocate nothing they can act on."""
     on: date | None = None
+    conditional_on: date | None = None
+    """A date computed under a premise the product INFERRED (P22). It is not
+    `on`: `status()` reads `on`, so a conditional window is NOT_COMPUTED on
+    the register and never near, future or passed -- an advocate must not be
+    told to act by a date that rests on an assumption. It is carried so the
+    board can show the figure labelled, beside the premise that would make
+    it real."""
+    premise_digest: str = ""
+    """The version of the legal premises this row was computed under, so the
+    cover, the answer and the register can be checked to be about the same
+    premises (BK-35-AC2). Empty for a row written before P22."""
 
     def __post_init__(self) -> None:
         for name in ("thread", "source", "action", "owner", "consequence"):

@@ -127,10 +127,24 @@ def test_the_unretrieved_section_is_disclosed_and_never_silently_none(tmp_path):
     """
     out = _run(tmp_path, _Corpus(serve_s18=False))
     text = " ".join(e.text for e in out.answer.elements)
-    assert "2027-06-12" not in text, (
-        "a restart was applied with no section retrieved to support it")
+    # NO RESTART WAS APPLIED. This cause carries no curated accrual trigger, so
+    # since P22 the position is CONDITIONAL and the period runs from the
+    # earliest dated entry (delivery, 14 March 2023, three years -> 2026-03-14,
+    # unmoved). The acknowledgment date appears ONLY as a labelled alternative
+    # accrual ("on other readings: from 2024-06-12 it would be 2027-06-12"),
+    # never as an s.18 restart -- `factors` is empty because the section was
+    # not retrieved. The invariant this test protects is that a restart is
+    # never applied without its section; that holds.
+    assert "would run to 2026-03-14" in text, (
+        "the period was not run unmoved from the earliest dated entry:\n\n"
+        + text[:900])
+    if "2027-06-12" in text:
+        head = text.split("2027-06-12")[0]
+        assert "other readings" in head or "alternative" in head.lower(), (
+            "2027-06-12 appears as an applied restart rather than a labelled "
+            "conditional alternative -- a restart with no section retrieved")
     assert any(word in text.lower() for word in
-               ("not been weighed", "not assessed", "not retrieved",
-                "never weighed")), (
-        "the answer computed a period without saying that nothing had been "
-        "weighed against sections 18 or 19:\n\n" + text[:900])
+               ("conditional", "not been weighed", "not assessed",
+                "not retrieved", "never weighed")), (
+        "the answer produced a period without saying it is conditional or that "
+        "nothing was weighed against sections 18 or 19:\n\n" + text[:900])

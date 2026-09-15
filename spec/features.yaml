@@ -182,6 +182,7 @@ features:
   delivered_by:
   - BK-38
   declared_in:
+  - nm/core/research.py
   - nm/edge/api.py
   does:
   - Permit authenticated research without an active matter. Placing a result requires a deliberate choice
@@ -549,7 +550,7 @@ features:
   status: decided
   implementation: none
   implementation_basis: registry
-  proof: NOT_RUN
+  proof: STALE
   delivered_by:
   - BK-54
   declared_in: []
@@ -714,7 +715,7 @@ features:
   status: built
   implementation: partial
   implementation_basis: registry
-  proof: NOT_RUN
+  proof: STALE
   delivered_by:
   - BK-54
   declared_in:
@@ -1283,6 +1284,7 @@ features:
   delivered_by:
   - BK-96
   declared_in:
+  - nm/core/relief.py
   - nm/core/turn.py
   does:
   - Compare viable routes by objective, legality, evidence, cost, timing, risk, leverage and enforceability.

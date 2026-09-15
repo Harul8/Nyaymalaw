@@ -105,7 +105,7 @@ SUFFICIENT = (Basis.STATED, Basis.ATTRIBUTED)
 REQUIRED = (Kind.APPLICABLE_LAW, Kind.ACCRUAL_RULE, Kind.JURISDICTION)
 
 
-@refuses_blank_text("source", "inferred_from")
+@refuses_blank_text("source", "inferred_from", "reviewed_by", "reviewed_at")
 @dataclass(frozen=True)
 class Premise:
     """One legal proposition a computation rests on, and where it came from."""
@@ -124,12 +124,48 @@ class Premise:
     """What ELSE matched. CLAUDE.md §5: the note names what it inferred from
     AND what else matched, because a silent guess sends an exact section
     lookup into the wrong statute."""
+    reviewed_by: str = ""
+    """WHO stated or confirmed this premise, when a person did. Empty is the
+    third review state -- `not_assessed` -- and `review_state` says so rather
+    than leaving a blank to read as reviewed. P22."""
+    reviewed_at: str = ""
+
+    @property
+    def review_state(self) -> str:
+        """`reviewed` when a named person stated or confirmed it, else
+        `not_assessed`. A premise the product attributed to a retrieved text
+        has a source and no reviewer, and those are different facts."""
+        return "reviewed" if self.reviewed_by.strip() else "not_assessed"
 
     def as_dict(self) -> dict:
         return {"kind": self.kind.value, "statement": self.statement,
                 "basis": self.basis.value, "source": self.source,
                 "inferred_from": self.inferred_from,
-                "alternatives": list(self.alternatives)}
+                "alternatives": list(self.alternatives),
+                "reviewed_by": self.reviewed_by, "reviewed_at": self.reviewed_at,
+                "review_state": self.review_state}
+
+    @staticmethod
+    def from_stored(row: object) -> "Premise | None":
+        """Rebuild from a persisted row. AN UNREADABLE BASIS IS UNESTABLISHED,
+        not dropped and not STATED -- dropping it would let a computation
+        proceed on two premises, and the third would be assumed."""
+        if not isinstance(row, dict):
+            return None
+        try:
+            kind = Kind(str(row.get("kind") or ""))
+        except ValueError:
+            return None
+        try:
+            basis = Basis(str(row.get("basis") or ""))
+        except ValueError:
+            basis = Basis.UNESTABLISHED
+        return Premise(kind=kind, statement=str(row.get("statement") or "?"),
+                       basis=basis, source=str(row.get("source") or ""),
+                       inferred_from=str(row.get("inferred_from") or ""),
+                       alternatives=tuple(str(x) for x in (row.get("alternatives") or ())),
+                       reviewed_by=str(row.get("reviewed_by") or ""),
+                       reviewed_at=str(row.get("reviewed_at") or ""))
 
 
 @dataclass(frozen=True)
@@ -143,6 +179,35 @@ class Premises:
             if row.kind is kind:
                 return row
         return None
+
+    def as_rows(self) -> tuple[dict, ...]:
+        return tuple(p.as_dict() for p in self.items)
+
+    @staticmethod
+    def from_stored(rows: object) -> "Premises":
+        items = []
+        for row in rows or ():
+            p = Premise.from_stored(row)
+            if p is not None:
+                items.append(p)
+        return Premises(tuple(items))
+
+    def unestablished(self) -> tuple[Kind, ...]:
+        """The required premises nobody has established at all. These BLOCK:
+        a computation without them answers a question nobody asked."""
+        out = []
+        for kind in REQUIRED:
+            p = self.of(kind)
+            if p is None or p.basis is Basis.UNESTABLISHED or not p.statement.strip():
+                out.append(kind)
+        return tuple(out)
+
+    def inferred(self) -> tuple[Kind, ...]:
+        """The premises the product worked out for itself. These make the
+        arithmetic CONDITIONAL: it may run, labelled, with the alternatives
+        beside it, and its result is never a deadline."""
+        return tuple(k for k in REQUIRED
+                     if self.of(k) is not None and self.of(k).basis is Basis.INFERRED)
 
     def digest(self) -> str:
         """The identity of this premise set. BK-65-AC2's last clause.
@@ -215,6 +280,12 @@ def invalidated(stamped: str, now: Premises) -> str | None:
                 "established, so this cannot be recomputed until it is")
     return ("the legal position this rested on has changed, so this no longer "
             "carries its earlier approval and has been recomputed")
+
+
+def english_of(kind: Kind) -> str:
+    """The advocate-facing name of a premise kind. Public so a caller naming an
+    unestablished premise reads the same words the assessment does."""
+    return _english(kind)
 
 
 def _english(kind: Kind) -> str:

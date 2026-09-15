@@ -254,6 +254,22 @@ class IdentityIndex:
             (case_id,)).fetchone()
         return CaseIdentity(*row) if row else None
 
+    def case_for_citation(self, key: str) -> str | None:
+        """The one case a reporter KEY names, or None. EXACT. P21.
+
+        The key is `nm.domain.citation.reporter_key`'s output -- the same
+        function the index was built with. There is no `LIKE`, no prefix and
+        no candidates list: a citation that does not resolve is not offered
+        a neighbour, because the neighbour is how the wrong case gets cited.
+        """
+        con = self._connect()
+        if con is None or not (key or "").strip():
+            return None
+        row = con.execute(
+            "select case_id from citations where citation_key = ? limit 1",
+            (key.strip(),)).fetchone()
+        return str(row[0]) if row and row[0] else None
+
     def addressable(self, case_id: str) -> bool:
         """Does this judgment carry a reporter citation?
 

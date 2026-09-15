@@ -404,12 +404,36 @@
       <button type="submit" class="primary">Search</button>
     </form>
 
+    <!-- P21 -- RESEARCH ON THE OPEN MATTER. The same box and filters; what
+         changes is that the round is RECORDED on the file: which index, what
+         came back, what the adverse search did, and what was attached. The
+         checkbox is disabled until a matter is open, because research with
+         no file to record on is a search. -->
+    <div class="research-bar">
+      <label class="check">
+        <input type="checkbox" id="r-on" disabled>
+        Record this as research <span id="r-matter" class="opt">open a matter to record research on it</span>
+      </label>
+      <div id="research-fields" class="research-fields" hidden>
+        <label for="r-objective">What this research is for</label>
+        <input id="r-objective" placeholder="whether the notice restarted the period">
+        <label for="r-issue">Which issue it serves</label>
+        <input id="r-issue" placeholder="limitation">
+        <label for="r-citation">Exact citation <span class="opt">— resolves by key, never by likeness; leave blank to search</span></label>
+        <input id="r-citation" placeholder="AIR 1990 SC 1">
+      </div>
+    </div>
+
     <!-- WHAT WAS SEARCHED, ALWAYS. A result of zero is unreadable without
          it, and unreadable in the direction that hurts: it reads as a corpus
          that does not hold the law. -->
     <div id="search-index" class="index-line" hidden></div>
     <div id="search-state"></div>
     <div id="search-results"></div>
+
+    <!-- THE RECORD: every index consulted by identity, the adverse search by
+         state, every reliance with its five verdicts. Read from the file. -->
+    <section id="research-record" class="research-record" aria-live="polite" hidden></section>
   </section>
 </main>
 
@@ -417,6 +441,72 @@
      Every turn as it was SERVED, read back from the encrypted transcript
      store. Nothing else keeps it: the matter holds facts, the metrics hold
      counts and no client words, and the answer was held by neither. -->
+<!-- ===================== P17/P18 — THE CASE FILE =====================
+     Every entry on the file with where it came from, and every conclusion
+     with what it rests on and whether it still holds. The one place an
+     advocate corrects an entry by hand: the correction supersedes the entry,
+     keeps the old one on the record, and marks exactly what rested on it
+     stale -- the cover and the board say so until the next brief reworks it. -->
+<main id="pane-casefile" class="single" hidden>
+  <section class="casefile">
+    <div class="casefile-head">
+      <h2>The case file</h2>
+      <select id="casefile-matter" aria-label="Matter"><option value="">Choose a matter…</option></select>
+    </div>
+    <div id="casefile-state"></div>
+
+    <section class="currency" id="currency" aria-labelledby="currency-h">
+      <h3 id="currency-h">What still holds</h3>
+      <div id="currency-state" class="currency-state"></div>
+      <ul id="currency-stale" class="currency-stale"></ul>
+      <details class="currency-history">
+        <summary>Every conclusion, and every revision</summary>
+        <div id="currency-nodes"></div>
+        <div id="currency-history"></div>
+      </details>
+    </section>
+
+    <section class="premises" id="premises" aria-labelledby="premises-h" hidden>
+      <h3 id="premises-h">The legal premises</h3>
+      <p class="casefile-lede">A limitation rests on which provision governs,
+        what starts the period, and which forum binds. Where I inferred one I
+        say so and do not enter a deadline; confirm it and the date becomes a
+        deadline. Correct arithmetic cannot establish any of the three.</p>
+      <div id="premises-state" class="currency-state"></div>
+      <div id="premises-threads"></div>
+    </section>
+
+    <section class="relief" id="relief" aria-labelledby="relief-h" hidden>
+      <h3 id="relief-h">Relief and enforceability</h3>
+      <p class="casefile-lede">A legally strong claim can still be worth
+        nothing — the debtor has no assets, the order comes too late, the decree
+        cannot be executed, or the suit costs more than it recovers. I read
+        relief against the objective on availability, value, timing and
+        enforceability; a route that costs more than it wins is flagged, not
+        withheld. State what you know and I will not treat a remedy as
+        delivering when the file says it cannot.</p>
+      <div id="relief-state" class="currency-state"></div>
+      <div id="relief-threads"></div>
+    </section>
+
+    <section class="briefing-pane" id="briefing-pane" aria-labelledby="briefing-h" hidden>
+      <h3 id="briefing-h">Briefing readiness</h3>
+      <p class="casefile-lede">Answering a turn is not the same as finishing the
+        intake. I am ready for the task only when no controlling gap is open.
+        Where you cannot obtain something, mark it — I pause it with a resume
+        trigger instead of asking again, and say plainly that intake is not
+        complete while it is outstanding.</p>
+      <div id="briefing-host"></div>
+    </section>
+
+    <h3 id="entries-h">Entries</h3>
+    <p class="casefile-lede">Correct an entry here and I will mark everything
+      that rested on it as not current until the next brief reworks it. The
+      entry you corrected stays on the record, marked superseded.</p>
+    <div id="casefile-entries" aria-labelledby="entries-h"></div>
+  </section>
+</main>
+
 <main id="pane-history" class="single" hidden>
   <section class="history">
     <div class="page-intro"><p class="eyebrow">THE WORKING RECORD</p><h1>Return to the conversation.</h1>

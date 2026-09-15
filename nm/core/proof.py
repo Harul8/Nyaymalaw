@@ -57,7 +57,7 @@ from nm.domain.proof import (
     ProofStatus,
     Standard,
 )
-from nm.domain.text import blank
+from nm.domain.text import blank, snippet
 from nm.domain.traceability import implements
 
 #: RE-EXPORTED, not redefined. The four PRODUCES types moved to
@@ -157,5 +157,5 @@ def characterises_the_client(text: str) -> tuple[str, ...]:
     out: list[str] = []
     for sentence in re.split(r"(?<=[.!?])\s+", text or ""):
         if _CHARACTER.search(sentence) and _OURS.search(sentence):
-            out.append(" ".join(sentence.split())[:160])
+            out.append(snippet(sentence, 160))
     return tuple(out)
