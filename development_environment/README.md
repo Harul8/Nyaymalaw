@@ -14,8 +14,8 @@ wholesale (CLAUDE.md, "Archived — reference, not authority").
 | `reviews/` | Dated one-off reviews: the line-by-line review order and the 10 September execution-readiness review. Moved from `docs/` | yes |
 | `one_off_tools/` | Tools written for a single task — the expanded golden-set candidate search | yes |
 | `developer_tooling/` | Tooling for developing in this repository rather than for the product — the code-review-graph semantic index and its MCP launcher. The commit and merge hooks call `graph_vectors.py` | yes |
-| `worktrees/` | Earlier `codex/` branch worktrees, moved from `outputs/`. Every one of their branches is merged into `s0-foundations`; they are kept, not pruned. Move them with `git worktree move`, never a plain file move | no — ignored |
-| `runs/` | Earlier plan-preview and review run output, moved from `outputs/` | no — ignored |
+| `worktrees/` | Empty since 15 September 2026. The repository now keeps one working branch, `s0-foundations`, plus a `backup` branch; every earlier `codex/` branch, each worktree's uncommitted work and the last stash were merged into `s0-foundations`' history (commit `01f927d`) and the worktrees removed | no — ignored |
+| `runs/` | Earlier plan-preview and review run output, moved from `outputs/`; and `worktree-local-data-20260915/`, the local `.nm` runtime data copied out of the worktrees before they were removed | no — ignored |
 
 ## The rule that decided what came here
 
