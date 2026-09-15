@@ -3322,7 +3322,7 @@ items:
   verification: none
   affects_phases: [A, B, C, D, E, F, G, H, I]
   record: docs/BACKLOG.md#bk-85-india-scoped-key-processor-and-security-operations-foundation
-  next_action: complete the Start record and implement the bounded foundation with current negative and served-path proof
+  next_action: P05 draft accepted and sign-off particulars deferred by user on 11 September 2026; continue permitted local synthetic preparation without repeating the paperwork request, retain NOT_RUN for BK-85-AC3 and all packet and deployment gates, and reconcile P06/P07 integration before dependent sign-off or activation
   stage_records:
     start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-85-india-scoped-key-processor-and-security-operations-foundation}
     build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-85-india-scoped-key-processor-and-security-operations-foundation}
@@ -3346,7 +3346,8 @@ items:
   - id: BK-85-AC3
     requirement: A qualified dated India applicability review names legal roles, operative instruments and dates, permissions, retention duties, incident clocks and accountability; a framework checklist alone is not compliance
     required_evidence: [counsel_review]
-    evidence: {}
+    evidence:
+      counsel_review: {result: NOT_RUN, ref: ''}
     negative_control:
       mutation: label every DPDP provision operative now or infer blanket localisation from India-only customers
       expected_failure: qualified review rejects the claim and records the applicable instrument and processing policy separately

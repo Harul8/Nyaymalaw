@@ -161,6 +161,8 @@ def main() -> int:
         f"{len(contracts['packets']['packets'])} packets",
         f"{len(contracts['commands']['x-commands'])} commands",
         f"{len(contracts['decisions']['choices'])} choices",
+        (f"{len(contracts['applicability']['legal_sources'])} India legal sources / "
+         f"{len(contracts['applicability']['approval_packets'])} prepared approval packets"),
         f"{len(contracts['evaluations']['synthetic_cases'])} synthetic specifications",
     ]))
     print(f"Specification problems: {len(errors)}. Not implementation or release proof.")
@@ -187,6 +189,7 @@ def load_contracts(root: Path = ROOT) -> dict:
     contracts = {}
     for name, path in {"packets": "packets.json", "decisions": "decisions.json",
                        "evaluations": "evaluations.json", "autonomy": "autonomy.json",
+                       "applicability": "india_applicability_review.json",
                        "approvals": "approvals.json",
                        "approval_schema": "approvals.schema.json",
                        "commands": "contracts/commands.json"}.items():
@@ -211,17 +214,20 @@ def check_all(manifest: dict, registry: dict, contracts: dict,
     from tools.blueprint_commands import check_commands
     from tools.blueprint_evaluations import check_evaluations
     from tools.blueprint_execution import check_decisions, check_packets
+    from tools.india_applicability import check as check_india_applicability
 
     errors = check(manifest, registry, root)
     if errors:
         return errors
     criteria = {ac["id"] for row in registry["items"] for ac in row.get("acceptance") or []}
     if set(contracts) != {"packets", "decisions", "evaluations", "commands",
-                          "approvals", "approval_schema", "autonomy"}:
+                          "approvals", "approval_schema", "autonomy", "applicability"}:
         return ["execution contracts: unknown or missing population"]
     errors.extend(check_commands(contracts["commands"], criteria))
     errors.extend(check_evaluations(contracts["evaluations"], criteria))
     errors.extend(check_decisions(contracts["decisions"], criteria))
+    errors.extend(check_india_applicability(
+        contracts["applicability"], contracts["decisions"], contracts["approvals"]))
     errors.extend(check_contract(
         contracts["autonomy"], known_items={r["id"] for r in registry["items"]},
         known_criteria=criteria,

@@ -3530,6 +3530,7 @@
       ],
       "reviewer_role": "qualified India privacy/legal owner with responsible product and security owners",
       "required_inputs": [
+        "current machine-checked india_applicability_review.json and its dated official-source register",
         "actual processing and processor inventory",
         "dated operative instruments and commencement analysis",
         "purposes, legal roles, client permissions and third-party data boundaries",
@@ -3537,6 +3538,7 @@
         "retention, holds, rights and incident plans"
       ],
       "tasks": [
+        "Verify every recorded legal proposition against the current official instrument and resolve or expressly carry every reservation",
         "Map each processing purpose to the responsible legal role and applicable permission or obligation",
         "Determine which notified provisions are operative on the planned release date",
         "Review storage, processing, backups, logs, support locations and fallback endpoints separately",
@@ -3544,6 +3546,7 @@
         "Approve or reject category-specific retention, deletion and reporting clocks with reasons"
       ],
       "failure_conditions": [
+        "reviewer authority stated without a verifiable authority artifact and original-byte digest",
         "unapproved processor or unexplained data flow",
         "global-compliance claim without a scoped determination",
         "blanket immediate-erasure promise inconsistent with holds or backups",
@@ -3552,6 +3555,8 @@
       "required_output_fields": [
         "review_id",
         "reviewer",
+        "reviewer_authority_basis",
+        "reviewer_authority_evidence",
         "review_date",
         "launch_date",
         "legal_roles",
@@ -3560,8 +3565,10 @@
         "processor_decisions",
         "retention_decisions",
         "reporting_clocks",
+        "accountable_owners",
         "reservations",
-        "validity_period"
+        "validity_period",
+        "reassessment_triggers"
       ],
       "approvals": [],
       "evidence": []

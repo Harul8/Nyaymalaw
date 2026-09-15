@@ -1,0 +1,32 @@
+{
+  "template_status": "NOT_EVIDENCE_FILL_AND_SIGN_BEFORE_MOVING_TO_TARGET",
+  "target": "docs/backlog/evidence/BK-85-AC3.json",
+  "record": {
+    "schema": 1,
+    "criterion": "BK-85-AC3",
+    "level": "counsel_review",
+    "result": null,
+    "subject": null,
+    "method": null,
+    "actor": null,
+    "authority": {
+      "basis": null,
+      "evidence": {
+        "ref": null,
+        "sha256": null
+      }
+    },
+    "rubric": null,
+    "population": {
+      "count": null,
+      "described": null
+    },
+    "reservations": null,
+    "observed_at": null,
+    "subject_identity": {
+      "kind": "external",
+      "valid_until": null
+    }
+  },
+  "instructions": "Resolve or expressly carry every material reservation; set result to PASS only if the rubric is satisfied for the counted population; record remaining reservations as an array; place the completed record at the target path and update BK-85-AC3 to reference it. A template is generated beside this packet but is deliberately invalid until completed and signed."
+}

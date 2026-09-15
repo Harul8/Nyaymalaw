@@ -41,6 +41,7 @@ read the [execution-readiness review](../EXECUTION_READINESS.md).
 | How does NM retrieve, assess, reason, question and advise? | [Legal brain](LEGAL_BRAIN.md) |
 | What may the adaptive lead and its specialists decide, and what must remain controlled? | [Autonomy task, result and grounding contract](autonomy.json); behaviour is specified in the legal brain and data architecture chapters |
 | How will we protect privilege, personal data and service operations? | [Security and privacy](SECURITY_PRIVACY.md) |
+| What must Indian counsel verify now, and which live-data approvals follow later? | [Dated India applicability review packet](INDIA_APPLICABILITY_REVIEW.md); its [canonical source](india_applicability_review.json) remains unsigned until qualified counsel supplies verifiable authority |
 | How will we measure quality, speed, cost and reliability? | [Quality and performance](QUALITY_PERFORMANCE.md) |
 | Which existing plan promises belong to each module? | [Machine-readable mapping](modules.json) |
 | What exactly is the next bounded change? | [Packets and scoped prerequisites](packets.json) |

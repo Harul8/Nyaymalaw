@@ -481,6 +481,18 @@
         {
           "path": "docs/blueprint/decisions.json",
           "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/india_applicability_review.json",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/INDIA_APPLICABILITY_REVIEW.md",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/blueprint/BK-85-AC3.counsel-review.template.json",
+          "kind": "existing"
         }
       ],
       "inputs": [
@@ -488,12 +500,14 @@
         "Named accountable product/security and qualified legal reviewers"
       ],
       "outputs": [
-        "Qualified applicability record: duties, operative dates, roles, incidents, retention and reservations"
+        "Machine-checked counsel-ready packet: duties, operative dates, purpose-specific roles, permissions, retention, incident clocks, accountability and reservations",
+        "Qualified signed applicability record at docs/backlog/evidence/BK-85-AC3.json with stated and evidenced authority, counted population, reservations and finite validity"
       ],
       "steps": [
-        "Review the actual India-only service, users and data flows against operative provisions; distinguish statutory duties from stricter product policy.",
-        "Name legal/operational owners, review date and triggering changes; leave unanswered applicability questions explicit.",
-        "Check a deliberately incorrect all-DPDP-effective-now claim and blanket-localisation claim; reject each using the reviewed instrument rather than a framework badge."
+        "Regenerate and machine-check the counsel-ready packet from its canonical JSON; review the actual India-only service, entities, contracts, users and data flows against the dated official-source register.",
+        "Qualified Indian counsel resolves or expressly carries every reservation, distinguishes present law, notified future duties and stricter product policy, and records purpose-specific roles, permissions, retention, clocks and accountable owners.",
+        "Verify the reviewer's legal authority from a restricted artifact, hash the original bytes, set a finite valid_until and place the completed structured PASS record at the exact BK-85-AC3 evidence path without overwriting the unsigned source packet.",
+        "Check deliberately incorrect all-DPDP-effective-now, blanket-localisation, blanket-processor, shortened-incident-clock and self-certified-authority claims; each must turn the control plane red."
       ],
       "proof": {
         "positive": [

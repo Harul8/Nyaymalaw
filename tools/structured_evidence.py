@@ -48,6 +48,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -71,6 +72,7 @@ BY_LEVEL: dict[str, tuple[str, ...]] = {
 }
 
 KINDS = ("source", "external")
+DIGEST = re.compile(r"^[a-f0-9]{64}$")
 
 
 class RecordError(RuntimeError):
@@ -152,6 +154,8 @@ def problems(acid: str, level: str, ref: str, *,
     if record.get("result") != "PASS":
         bad.append(f"{where}: evidence record does not record PASS")
 
+    bad += _authority_problems(where, level, record.get("authority"))
+
     for field in BY_LEVEL.get(level, ()):
         if not record.get(field):
             bad.append(f"{where}: a {level} that does not name its {field} "
@@ -176,6 +180,36 @@ def problems(acid: str, level: str, ref: str, *,
 
     bad += _identity_problems(where, record, now=now,
                               source_fingerprint=source_fingerprint)
+    return bad
+
+
+def _authority_problems(where: str, level: str, authority: object) -> list[str]:
+    """A counsel role label is not evidence that the signer could decide.
+
+    Other evidence levels retain their existing authority field because their
+    qualification mechanisms differ.  Counsel review has one exact portable
+    shape, shared with adoption records: a stated basis plus a restricted
+    artifact reference and the digest of its original bytes.  The repository
+    need not contain the personal artifact, but it may not replace it with a
+    name, title or authored ``verified`` flag.
+    """
+    if level != "counsel_review":
+        return []
+    if not isinstance(authority, dict) or set(authority) != {"basis", "evidence"}:
+        return [f"{where}: counsel authority must be an object containing only "
+                "basis and evidence; a name or role label is not qualification"]
+    bad: list[str] = []
+    if not str(authority.get("basis") or "").strip():
+        bad.append(f"{where}: counsel authority has no stated basis")
+    evidence = authority.get("evidence")
+    if not isinstance(evidence, dict) or set(evidence) != {"ref", "sha256"}:
+        bad.append(f"{where}: counsel authority evidence must contain only ref and sha256")
+        return bad
+    if not str(evidence.get("ref") or "").strip():
+        bad.append(f"{where}: counsel authority evidence has no restricted artifact reference")
+    digest = evidence.get("sha256")
+    if not isinstance(digest, str) or DIGEST.fullmatch(digest) is None:
+        bad.append(f"{where}: counsel authority evidence has no original-byte SHA-256 digest")
     return bad
 
 

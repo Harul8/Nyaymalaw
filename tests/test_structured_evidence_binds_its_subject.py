@@ -21,6 +21,7 @@ which is the shape this repository has now paid for three times. It fails, and
 `BK-21-AC4` moves from PASS to NOT_RUN until somebody who observed that
 credential rotation records what it was about.
 """
+
 from __future__ import annotations
 
 import json
@@ -47,7 +48,13 @@ def _record(**overrides) -> dict:
         "subject": "Whether the withheld-turn wording is usable by an advocate",
         "method": "Read twelve withheld turns against the rubric and scored each",
         "actor": "A. Reviewer",
-        "authority": "Advocate, enrolled AP/1234/2005, 18 years practice",
+        "authority": {
+            "basis": "Advocate, enrolled AP/1234/2005, 18 years practice",
+            "evidence": {
+                "ref": "restricted://authority/AP-1234-2005",
+                "sha256": "a" * 64,
+            },
+        },
         "rubric": "docs/Archives/JOURNEY.md §5 stage rubric, all six dimensions",
         "population": {"count": 12, "described": "every withheld turn in slice 4"},
         "reservations": [],
@@ -81,11 +88,11 @@ def written(tmp_path, monkeypatch):
 
 
 def _check(ref: str, level: str = "counsel_review", **kwargs) -> list[str]:
-    return problems("BK-99-AC1", level, ref, now=NOW,
-                    source_fingerprint=TREE, **kwargs)
+    return problems("BK-99-AC1", level, ref, now=NOW, source_fingerprint=TREE, **kwargs)
 
 
 # ============================ the negative control ==========================
+
 
 def test_a_record_whose_subject_moved_can_no_longer_confer_a_pass(written):
     """*Reuse a PASS record after changing its subject.* THE HALF THE OLD
@@ -93,8 +100,9 @@ def test_a_record_whose_subject_moved_can_no_longer_confer_a_pass(written):
     ref = written(_record())
     assert _check(ref) == [], "the baseline record is not valid"
 
-    moved = problems("BK-99-AC1", "counsel_review", ref, now=NOW,
-                     source_fingerprint="ffffffffffffffffffff")
+    moved = problems(
+        "BK-99-AC1", "counsel_review", ref, now=NOW, source_fingerprint="ffffffffffffffffffff"
+    )
     assert moved, "a judgement about code that is no longer running still passed"
     assert any("no longer running" in p for p in moved), moved
 
@@ -114,12 +122,59 @@ def test_an_unattributable_assertion_is_not_a_qualified_review(written):
     assert _structured_record_legacy("BK-99-AC1", "counsel_review", ref) == []
 
 
+@pytest.mark.parametrize(
+    "authority,expected",
+    [
+        ("Advocate, enrolled AP/1234/2005", "name or role label"),
+        (
+            {"basis": "", "evidence": {"ref": "restricted://authority/a", "sha256": "a" * 64}},
+            "no stated basis",
+        ),
+        (
+            {"basis": "enrolled advocate", "evidence": {"ref": "", "sha256": "a" * 64}},
+            "no restricted artifact reference",
+        ),
+        (
+            {
+                "basis": "enrolled advocate",
+                "evidence": {"ref": "restricted://authority/a", "sha256": "typed-PASS"},
+            },
+            "original-byte SHA-256",
+        ),
+        (
+            {
+                "basis": "enrolled advocate",
+                "evidence": {"ref": "restricted://authority/a", "sha256": "a" * 64},
+                "verified": True,
+            },
+            "containing only",
+        ),
+    ],
+)
+def test_counsel_authority_is_stated_and_evidenced_not_self_certified(written, authority, expected):
+    """D-025. A name, role or authored verification flag cannot make the
+    signer qualified.  The personal artifact may remain outside the repository,
+    but its exact reference and original-byte digest are mandatory."""
+    found = _check(written(_record(authority=authority)))
+    assert any(expected in problem for problem in found), (authority, found)
+
+
 # =========================== what it now requires ===========================
 
-@pytest.mark.parametrize("field", [
-    "subject", "method", "actor", "authority", "rubric", "population",
-    "observed_at", "subject_identity",
-])
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "subject",
+        "method",
+        "actor",
+        "authority",
+        "rubric",
+        "population",
+        "observed_at",
+        "subject_identity",
+    ],
+)
 def test_every_binding_field_is_required(written, field):
     ref = written(_record(**{field: ""}))
     found = _check(ref)
@@ -137,29 +192,34 @@ def test_reservations_may_be_empty_and_may_not_be_absent(written):
     assert any("reservations" in p for p in found), found
 
 
-@pytest.mark.parametrize("population,expected", [
-    ({"count": 0, "described": "nothing"}, "positive count"),
-    ({"count": 12}, "not described"),
-    ({"described": "twelve turns"}, "positive count"),
-    ({"count": True, "described": "a boolean"}, "positive count"),
-    ("twelve turns", "must be an object"),
-])
+@pytest.mark.parametrize(
+    "population,expected",
+    [
+        ({"count": 0, "described": "nothing"}, "positive count"),
+        ({"count": 12}, "not described"),
+        ({"described": "twelve turns"}, "positive count"),
+        ({"count": True, "described": "a boolean"}, "positive count"),
+        ("twelve turns", "must be an object"),
+    ],
+)
 def test_the_population_is_a_counted_and_described_set(written, population, expected):
     """*It worked* about an unstated number of cases is not a measurement."""
     found = _check(written(_record(population=population)))
     assert any(expected in p for p in found), (population, found)
 
 
-@pytest.mark.parametrize("level,missing", [
-    ("model_eval", "model"),
-    ("model_eval", "prompt_identity"),
-    ("model_eval", "corpus_identity"),
-    ("production_measure", "configuration"),
-])
+@pytest.mark.parametrize(
+    "level,missing",
+    [
+        ("model_eval", "model"),
+        ("model_eval", "prompt_identity"),
+        ("model_eval", "corpus_identity"),
+        ("production_measure", "configuration"),
+    ],
+)
 def test_a_level_must_bind_what_makes_it_reproducible(written, level, missing):
     """The same prompt against a different model is a different fact."""
-    full = {"model": "m", "prompt_identity": "p", "corpus_identity": "c",
-            "configuration": "cfg"}
+    full = {"model": "m", "prompt_identity": "p", "corpus_identity": "c", "configuration": "cfg"}
     full.pop(missing)
     ref = written(_record(level=level, **full))
     found = problems("BK-99-AC1", level, ref, now=NOW, source_fingerprint=TREE)
@@ -167,6 +227,7 @@ def test_a_level_must_bind_what_makes_it_reproducible(written, level, missing):
 
 
 # ====================== either it moves or it expires =======================
+
 
 def test_an_external_subject_must_carry_a_validity_period(written):
     """A provider's behaviour cannot be recomputed here, so nothing but time
@@ -177,16 +238,26 @@ def test_an_external_subject_must_carry_a_validity_period(written):
 
 
 def test_an_expired_external_record_stops_conferring_a_pass(written):
-    ref = written(_record(subject_identity={
-        "kind": "external",
-        "valid_until": (NOW - timedelta(days=1)).isoformat()}))
+    ref = written(
+        _record(
+            subject_identity={
+                "kind": "external",
+                "valid_until": (NOW - timedelta(days=1)).isoformat(),
+            }
+        )
+    )
     found = _check(ref)
     assert any("validity ended" in p for p in found), found
 
-    still = written(_record(subject_identity={
-        "kind": "external",
-        "valid_until": (NOW + timedelta(days=30)).isoformat()}),
-        "PROBE-AC1-C.json")
+    still = written(
+        _record(
+            subject_identity={
+                "kind": "external",
+                "valid_until": (NOW + timedelta(days=30)).isoformat(),
+            }
+        ),
+        "PROBE-AC1-C.json",
+    )
     assert _check(still) == []
 
 
@@ -198,22 +269,32 @@ def test_there_is_no_kind_that_is_neither_checkable_nor_bounded(written):
 
 
 def test_a_record_observed_before_its_own_validity_began_is_refused(written):
-    ref = written(_record(
-        observed_at="2026-01-01T00:00:00+00:00",
-        subject_identity={"kind": "source", "value": TREE,
-                          "valid_from": "2026-09-01T00:00:00+00:00"}))
+    ref = written(
+        _record(
+            observed_at="2026-01-01T00:00:00+00:00",
+            subject_identity={
+                "kind": "source",
+                "value": TREE,
+                "valid_from": "2026-09-01T00:00:00+00:00",
+            },
+        )
+    )
     found = _check(ref)
     assert any("before its own validity" in p for p in found), found
 
 
 # ============================ the reader refuses ============================
 
-@pytest.mark.parametrize("ref,expected", [
-    ("", "no structured evidence record"),
-    ("docs/backlog/evidence/report.json#a-row", "no structured evidence record"),
-    ("../../etc/passwd", "outside docs/backlog/evidence"),
-    ("docs/backlog/evidence/not-there.json", "cannot be read"),
-])
+
+@pytest.mark.parametrize(
+    "ref,expected",
+    [
+        ("", "no structured evidence record"),
+        ("docs/backlog/evidence/report.json#a-row", "no structured evidence record"),
+        ("../../etc/passwd", "outside docs/backlog/evidence"),
+        ("docs/backlog/evidence/not-there.json", "cannot be read"),
+    ],
+)
 def test_an_unreadable_reference_is_refused_and_never_read_as_absent(ref, expected):
     found = problems("BK-99-AC1", "counsel_review", ref, now=NOW)
     assert any(expected in p for p in found), (ref, found)
@@ -224,7 +305,7 @@ def test_a_record_from_before_this_schema_is_refused_rather_than_grandfathered()
     avoided: BK-21-AC4 moves from PASS to NOT_RUN until whoever observed that
     credential rotation records what it was about."""
     found = _structured_record(
-        "BK-21-AC4", "production_measure",
-        "docs/backlog/evidence/BK-21-AC4.json")
+        "BK-21-AC4", "production_measure", "docs/backlog/evidence/BK-21-AC4.json"
+    )
     assert found, "the legacy record still confers a PASS"
     assert any("unsupported schema" in p for p in found), found

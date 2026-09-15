@@ -203,6 +203,81 @@ and foundation closure does not claim an end-to-end module is complete.
 
 **Reason.** Privacy, processor boundaries, key custody and incident readiness must exist before privileged intake; the W7 production sign-off is not the owner of their W0 implementation.
 
+### P05 draft acceptance — 11 September 2026
+
+**Request and bounded action.** The user, who states they are an advocate,
+accepted the linked India applicability draft and asked to proceed: "I am good
+with this, go ahead complete next step". Record that acceptance and prepare
+formal attribution; do not infer missing counsel evidence or release authority.
+
+**Reviewed document reference.** `docs/blueprint/INDIA_APPLICABILITY_REVIEW.md`
+in the isolated `codex/bk85-applicability` working copy. Its original-byte
+SHA-256 at acceptance is
+`58cab3896435b6e1769de42f6a457e0db2a9c5fa063bf2f3feb83ea7d1fad6cc`.
+The owning `india_applicability_review.json` has original-byte SHA-256
+`45ca2ff01d6f0890108872b830559eaa7413a2ebfa689471450d32c59ed38609`.
+These identify the draft; neither digest attests to legal correctness.
+
+**Status and next step.** Draft acceptance recorded; formal counsel evidence
+pending. Obtain the reviewer's professional name, State Bar/enrolment and
+current authority basis, restricted qualification-artifact reference, signed
+dated review with the actual reviewed scope and disposition of reservations,
+and reviewer-chosen `valid_until`. No such particulars were supplied in the
+acceptance message. Do not turn it into a signed review, empty reservations or
+a PASS. The packet's outstanding questions remain open until expressly resolved
+or bounded in the counsel review. BK-85-AC3 remains NOT_RUN; no CHOICE approval,
+confidential-data permission or packet-completion claim is created.
+
+**Verification boundary.** This is a documentation-only acknowledgement in the
+isolated working copy. The evidence record has not been created and no full
+Class-A run or professional sign-off is claimed.
+
+### P05 administrative deferral and next build batch — 11 September 2026
+
+**User direction.** "consider this completed for time being and lets move to
+the next set of modules to build". Stop repeatedly requesting the same missing
+sign-off particulars during development. Preserve acceptance of the draft and
+record the particulars as deferred, not as supplied or verified. BK-85-AC3 has
+no signed evidence record and remains NOT_RUN. No reviewer identity, credential
+artifact, reservation disposition, expiry or CHOICE approval is invented.
+
+**Scope of continuation.** Local synthetic preparation and isolated mechanism
+work may continue under the existing fallback boundaries. This record does not
+remove P05 from the packet prerequisites, claim those dependencies satisfied,
+activate real processors or confidential data, migrate the live store, or grant
+pilot/production permission. Dependent packet sign-off remains subject to the
+original proof and approval requirements. Revisit the deferred review before
+such a claim or activation; do not silently carry it into release.
+
+**Next batch, informed by the current code rather than historical completion
+prose.** Read-only checks of main HEAD `4ea7c29` plus the user's staged changes
+find P06's `PolicedModel` connected in composition, while P07's envelope helpers
+have no production caller outside `envelope.py`; the file store still uses
+`_Cipher`. No PostgreSQL adapter or driver declaration was found in the checked
+source, and local command/service discovery found no `psql`, `docker` or
+PostgreSQL service. Those checks do not exclude a separately provisioned remote
+database and are not execution evidence for any packet.
+
+1. P06: reconcile and test the user's staged egress integration; enumerate all
+   configured sinks and prove refusal before dispatch, including retries and
+   content-free diagnostics. Do not rebuild or overwrite the staged changes.
+2. P07: complete the key-service boundary and actual store integration using
+   synthetic fixtures; preserve per-matter scope, restart, version races and
+   interrupted rotation. Local-key proof must never claim cloud-KMS proof.
+3. P10: implement transactional matter storage against an isolated actual
+   PostgreSQL instance after its environment and prerequisite outputs are
+   available; prove atomic matter/operation/outbox writes, tenant isolation,
+   stale-write rejection and replay. Keep the current store authoritative.
+4. P11, then P12: durable cancellable jobs and idempotent effects, followed by
+   migration/rollback rehearsal. No live cutover is included in this batch.
+5. P04: the isolated operator proof console makes module results inspectable
+   as P03's evidence-bound outputs become available. It does not invent a
+   second completion registry or substitute a demonstration for required proof.
+
+**Status.** Next-batch preparation recorded, not implemented or tested by this
+entry. The previously requested gate-cadence optimisation is also still open;
+no reduced-run mechanism or timing improvement is claimed here.
+
 **Plan and acceptance.** The three atomic criteria, required proof and planted
 counterexamples are in `backlog/status.yaml`. Assigned W0 as foundations;
 no existing wave was moved. Module integration may occur in later waves,
