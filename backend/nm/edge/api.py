@@ -13,6 +13,7 @@ invariant-check, and commit.
 from __future__ import annotations
 
 import hmac
+import logging
 import os
 import uuid
 from dataclasses import replace
@@ -21,7 +22,16 @@ from math import ceil
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi import (
+    BackgroundTasks,
+    Cookie,
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Request,
+    Response,
+)
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -32,7 +42,7 @@ from nm.core.turn import TurnEngine, TurnInput, TurnRefused
 from nm.domain import attempts, brief
 from nm.domain import summary as matter_memory
 from nm.domain.advocate import (
-    REAUTHENTICATION_MINUTES,
+    PASSWORD_RESET_MINUTES,
     csrf_token,
     utcnow,
 )
@@ -57,7 +67,7 @@ from nm.edge.projections import (
     matter_list_projection,
 )
 from nm.edge.uploads import UploadRefused
-from nm.ports.directory import AccountBusy, ProofRefused
+from nm.ports.directory import AccountBusy
 from nm.ports.store import StaleWrite
 
 #: How many surfaced cases one round asks the identity index about. Bounded,
@@ -4120,20 +4130,36 @@ class Registration(BaseModel):
     password_again: str = Field(min_length=1, max_length=_NEW_PASSWORD_MAX)
 
 
-class Recovery(BaseModel):
-    """A public recovery request. Identity and code failures stay identical."""
+class ForgotPassword(BaseModel):
+    """Ask for a reset link. Implementation Plan F-A-03."""
 
     model_config = ConfigDict(extra="forbid")
 
-    advocate_id: NonBlank = Field(min_length=1)
-    recovery_code: str = Field(min_length=1)
+    email: str = Field(min_length=1, max_length=320)
+
+
+class PasswordResetRequest(BaseModel):
+    """Spend one emailed reset link on a new password."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1, max_length=512)
     password: str = Field(min_length=1, max_length=_NEW_PASSWORD_MAX)
     password_again: str = Field(min_length=1, max_length=_NEW_PASSWORD_MAX)
 
 
-_RECOVERY_REFUSED = (
-    "That recovery attempt was not accepted. Check the email and unused "
-    "recovery code, then try again. Nothing was changed.")
+#: THE ONE ANSWER TO "SEND ME A RESET LINK", whether or not an account exists.
+#: It promises what is true in both cases and nothing more: it does not say a
+#: message was sent, because for an unknown address none was.
+_RESET_REQUESTED = (
+    "If an account exists for that email, a link to set a new password is on "
+    f"its way. The link works once and expires in {PASSWORD_RESET_MINUTES} minutes.")
+#: Unknown, used, expired and superseded links all say exactly this.
+_RESET_REFUSED = (
+    "That reset link is not valid or has expired. Nothing was changed. Ask for "
+    "a new link from Forgot password.")
+
+_mail_log = logging.getLogger("nm.account_mail")
 
 
 def _workspace(identity) -> dict:
@@ -4158,10 +4184,10 @@ def _professional_status(directory, identity, now) -> dict:
 # operator audit retains the cause. Registration returns no existing identity.
 _REFUSED_DEFAULT = (
     "Those credentials were not accepted. Check the email and password, or "
-    "use account recovery. If the problem continues, contact support.")
+    "use Forgot password. If the problem continues, contact support.")
 _REGISTRATION_REFUSED = (
-    "Registration could not be completed. Try signing in or use account "
-    "recovery; otherwise contact support.")
+    "Registration could not be completed. Try signing in or use Forgot "
+    "password; otherwise contact support.")
 _REGISTRATION_UNAVAILABLE = (
     "Registration is temporarily unavailable. Try again later; if it "
     "continues, contact support. Your existing account can still sign in.")
@@ -4269,11 +4295,10 @@ def register(body: Registration, request: Request,
 
     try:
         if invited:
-            identity, recovery_codes = directory.accept_invitation(
-                invitation, credential, now)
+            identity = directory.accept_invitation(invitation, credential, now)
         else:
             identity = AdvocateIdentity(id=email, name=email, email=email)
-            recovery_codes = directory.enrol(Enrolment(
+            directory.enrol(Enrolment(
                 identity=identity, credential=credential, created_at=now))
     except InvitationRefused as exc:
         directory.note_failure(rate_key, source, now)
@@ -4291,22 +4316,125 @@ def register(body: Registration, request: Request,
     return {
         "advocate_id": identity.id,
         "name": identity.name,
-        "recovery_codes": list(recovery_codes),
     }
 
 
-@app.post("/api/recover")
+# ------------------------------------------------------- password reset ---
+#
+# Implementation Plan F-A-03: a forgotten password is replaced through a link
+# sent to the account's email address. There are no recovery codes (F-A-04).
+
+
+def public_origin(request: Request) -> None:
+    """A public account door the page itself submits. Its origin is required.
+
+    No session exists yet, so there is no CSRF value to double-submit; an exact
+    same-origin check is what stops another site from driving these forms --
+    for instance, from flooding strangers' inboxes with reset links.
+    """
+    _require_origin(request)
+
+
+def _public_base(request: Request) -> tuple[str, str]:
+    """(the configured public URL or "", this request's own base URL).
+
+    A RESET LINK IS NEVER BUILT FROM A REQUEST HEADER ALONE when it can reach a
+    real mailbox. The Host header is the caller's to choose, and a link built
+    from it lets an attacker ask for a reset of someone else's account and
+    receive a link pointing at their own server -- carrying the victim's token.
+    `NM_PUBLIC_URL` is the operator's statement of where this product lives;
+    `_send_reset_link` refuses to mail a link without it unless the channel is
+    the local outbox, which no attacker's inbox can read.
+    """
+    configured = (application().environment.get("NM_PUBLIC_URL") or "").strip()
+    return configured.rstrip("/"), str(request.base_url).rstrip("/")
+
+
+def _send_reset_link(email: str, configured: str, fallback: str, now) -> None:
+    """Issue and queue one reset link. Runs AFTER the neutral answer is sent.
+
+    WHY AFTER. Issuing a link and writing a message takes time that looking up
+    an unknown address does not; doing it inside the request would make the
+    answer's timing say whether the account exists. As a background task the
+    response is identical in content and in timing either way.
+
+    NEVER SILENT, NEVER RAISED INTO THE SERVER. The person who asked cannot be
+    told a delivery failed -- that would say the account exists -- so a failure
+    is logged at ERROR with its cause and never the link, and `/api/health`
+    states what the mail channel is. A programming error is logged with its
+    traceback, separately, so it cannot pass for a delivery problem.
+    """
+    from nm.domain.egress import EgressRefused
+    from nm.domain.mail import password_reset_mail
+
+    mail = application().mail
+    base = configured or (
+        "" if getattr(mail, "delivers_to_mailbox", True) else fallback)
+    try:
+        token = application().directory.issue_password_reset(email, now)
+        if token is None:
+            return
+        if not base:
+            _mail_log.error("password reset link not sent: NM_PUBLIC_URL is not "
+                            "configured for a mailbox-delivering channel")
+            return
+        mail.send(password_reset_mail(email, f"{base}/#reset={token}"))
+    except (OSError, EgressRefused) as exc:
+        _mail_log.error("password reset link not delivered: %s", type(exc).__name__)
+    except Exception:  # noqa: BLE001 -- a programming error, reported as one
+        _mail_log.exception("password reset link failed with a programming error")
+
+
+@app.post("/api/password/forgot", dependencies=[Depends(public_origin)],
+          status_code=202)
 @implements("A1")
-def recover(body: Recovery, request: Request) -> dict:
-    """Use one advocate-held code; reveal nothing about account existence."""
-    from nm.domain.advocate import canonical_id, enrol
+def forgot_password(body: ForgotPassword, request: Request,
+                    background: BackgroundTasks) -> dict:
+    """Send a reset link to an account's email. The same answer either way.
+
+    EVERY REQUEST IS COUNTED, whether or not an account exists, against the
+    address and against the source. A counter that moved only for real accounts
+    would itself say which addresses are registered, and the limit is what
+    stops this door being used to fill a stranger's inbox.
+    """
+    from nm.domain.advocate import registration_email
 
     now = utcnow()
     source = request.client.host if request.client else "unknown-source"
-    rate_key = f"recovery:{canonical_id(body.advocate_id)}"
-    _admit_auth_attempt(application().directory, rate_key, source, now,
-                        action="recovery")
+    directory = application().directory
+    try:
+        email = registration_email(body.email)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    rate_key = f"password-reset:{email}"
+    _admit_auth_attempt(directory, rate_key, source, now,
+                        action="password reset request")
+    directory.note_failure(rate_key, source, now)
+    configured, fallback = _public_base(request)
+    background.add_task(_send_reset_link, email, configured, fallback, now)
+    return {"detail": _RESET_REQUESTED}
 
+
+@app.post("/api/password/reset", dependencies=[Depends(public_origin)])
+@implements("A1")
+def reset_password(body: PasswordResetRequest, request: Request) -> dict:
+    """Spend one reset link on a new password, and end every session.
+
+    THE PASSWORDS ARE CHECKED BEFORE THE LINK IS TOUCHED. A mismatch or a
+    password the rules refuse costs nothing and leaves the link usable; only a
+    change that is about to happen spends it.
+    """
+    from nm.domain.advocate import enrol
+
+    now = utcnow()
+    source = request.client.host if request.client else "unknown-source"
+    directory = application().directory
+    # PER SOURCE. A key shared by everyone would let one caller's failures pause
+    # every advocate's reset; the token itself is 256 random bits, so there is
+    # no account to aim a guess at.
+    rate_key = f"password-reset-link:{source}"
+    _admit_auth_attempt(directory, rate_key, source, now,
+                        action="password reset link")
     if body.password != body.password_again:
         raise HTTPException(
             status_code=400,
@@ -4315,13 +4443,16 @@ def recover(body: Recovery, request: Request) -> dict:
         credential = enrol(body.password)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    result = application().directory.recover(
-        body.advocate_id, body.recovery_code, credential, now)
+    try:
+        result = directory.reset_password(body.token, credential, now)
+    except AccountBusy as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Account access is changing. Try again in a moment.") from exc
     if not result.success:
-        application().directory.note_failure(rate_key, source, now)
-        raise HTTPException(status_code=403, detail=_RECOVERY_REFUSED)
-    return {"recovered": True, "sessions_ended": result.sessions_ended}
+        directory.note_failure(rate_key, source, now)
+        raise HTTPException(status_code=400, detail=_RESET_REFUSED)
+    return {"reset": True, "sessions_ended": result.sessions_ended}
 
 
 @app.post("/api/login")
@@ -4374,7 +4505,7 @@ def login(body: Credentials, request: Request, response: Response,
         raise HTTPException(
             status_code=401,
             detail=_REFUSED_DEFAULT)
-    identity, token, recovery_codes = opened
+    identity, token = opened
 
     # `secure` FROM THE CONNECTION, NOT FROM A FLAG (BK-18).
     #
@@ -4414,12 +4545,9 @@ def login(body: Credentials, request: Request, response: Response,
     response.set_cookie("nm_csrf", csrf_token(token), httponly=False,
                         samesite="strict", secure=secure,
                         max_age=60 * 60 * 12, path="/")
-    result = {"advocate": identity.as_dict(), "workspace": _workspace(identity),
-              "professional_approval": _professional_status(
-                  application().directory, identity, now)}
-    if recovery_codes:
-        result["recovery_codes"] = list(recovery_codes)
-    return result
+    return {"advocate": identity.as_dict(), "workspace": _workspace(identity),
+            "professional_approval": _professional_status(
+                application().directory, identity, now)}
 
 
 @app.post("/api/logout", dependencies=[CsrfProtected])
@@ -4517,125 +4645,9 @@ def whoami(advocate_id: Advocate) -> dict:
         # deleted or will not open; either way this session must stop working
         # now rather than at expiry.
         raise HTTPException(status_code=401, detail="not signed in")
-    # THE CURRENT RECOVERY GENERATION, so a page can state what it was looking
-    # at when it asks to replace the set. BK-31-AC20.
-    #
-    # A COUNTER, NOT A SECRET: it says how many times this advocate's own codes
-    # have been replaced and nothing about their value. Without it the client
-    # would have to echo whatever the proof told it, which makes the
-    # compare-and-set agree with itself instead of with what the advocate saw.
     directory = application().directory
-    reader = getattr(directory, "account_security", None)
-    generation = reader(advocate_id) if callable(reader) else None
     return {"advocate": identity.as_dict(), "workspace": _workspace(identity),
-            "professional_approval": _professional_status(directory, identity, utcnow()),
-            # THREE STATES. `null` means this deployment's directory cannot say,
-            # which a client must treat as "do not attempt a rotation" rather
-            # than as generation zero.
-            "recovery_generation": generation}
-
-
-# ------------------------------------------- replacing the recovery codes ---
-
-
-class ReauthenticateRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    # Verify the same existing credential that login accepts, including one
-    # created before the public new-password input bound existed.
-    password: str = Field(min_length=1)
-
-
-class RotateRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    proof: str = Field(min_length=1, max_length=512)
-    #: THE GENERATION THE PAGE WAS LOOKING AT. Required, not optional: a
-    #: default would let a client that never read the current state replace a
-    #: set it has not seen, and "the caller did not say" would then be
-    #: indistinguishable from "the caller checked and it matched".
-    expected_recovery_generation: int = Field(ge=0)
-
-
-@app.post("/api/reauthenticate", dependencies=[CsrfProtected])
-def reauthenticate(body: ReauthenticateRequest, request: Request,
-                   advocate_id: Advocate,
-                   nm_session: str | None = Cookie(default=None),
-                   nm_device: str | None = Cookie(default=None),
-                   user_agent: str | None = Header(default=None)) -> dict:
-    """Prove the current password again, inside this session. BK-31-AC20.
-
-    A SEPARATE STEP FROM THE ROTATION ON PURPOSE. Replacing the last-resort
-    credential on the strength of a session cookie alone means an unlocked
-    laptop is enough; requiring the password at the moment of the change is
-    what makes it a decision the advocate made.
-
-    401 FOR EVERY FAILURE, and the response says nothing about which. A signed
-    in advocate who could distinguish "wrong password" from "your session is
-    not valid here" has an oracle the rest of this file is built to deny them.
-    """
-    directory = application().directory
-    if not hasattr(directory, "reauthenticate"):
-        raise HTTPException(
-            status_code=501,
-            detail="this deployment's directory cannot re-authenticate")
-    now = utcnow()
-    source = request.client.host if request.client else "unknown-source"
-    _admit_auth_attempt(directory, advocate_id, source, now,
-                        action="re-authentication")
-    proof = directory.reauthenticate(
-        advocate_id, body.password, nm_session or "",
-        _device(nm_device, user_agent), now, source=source)
-    if not proof:
-        raise HTTPException(status_code=401, detail="that did not match")
-    # THE PROOF TRAVELS IN THE BODY, NOT A COOKIE. A cookie would ride along
-    # with every later request for its whole life; this is handed to the page,
-    # held in a variable, spent once and dropped.
-    return {"proof": proof, "expires_in_seconds": REAUTHENTICATION_MINUTES * 60}
-
-
-@app.post("/api/recovery-codes/rotate", dependencies=[CsrfProtected])
-def rotate_recovery_codes(body: RotateRequest, request: Request,
-                          advocate_id: Advocate,
-                          nm_session: str | None = Cookie(default=None),
-                          nm_device: str | None = Cookie(default=None),
-                          user_agent: str | None = Header(default=None)) -> dict:
-    """Replace every recovery code at once. THE CODES ARE RETURNED ONCE.
-
-    D-013 promised this and nothing served it, so an advocate whose printed
-    codes had been seen had one route back: spend one of the compromised codes
-    to recover, leaving the other nine exactly as exposed.
-
-    THERE IS NO READ-BACK ENDPOINT AND THERE MUST NEVER BE ONE. These codes
-    exist in this response and nowhere else -- not on disk, not in the audit
-    line, not in a later `GET`. An advocate who loses this response
-    re-authenticates and replaces the set again, which is a minor inconvenience
-    and the only design in which a stolen store is not a stolen account.
-    """
-    directory = application().directory
-    if not hasattr(directory, "rotate_recovery_codes"):
-        raise HTTPException(
-            status_code=501,
-            detail="this deployment's directory cannot replace recovery codes")
-    now = utcnow()
-    source = request.client.host if request.client else "unknown-source"
-    _admit_auth_attempt(directory, advocate_id, source, now,
-                        action="recovery-code replacement")
-    try:
-        codes = directory.rotate_recovery_codes(
-            advocate_id, body.proof, nm_session or "",
-            _device(nm_device, user_agent),
-            body.expected_recovery_generation, now, source=source)
-    except ProofRefused as refused:
-        # 409, NOT 403. The caller is authenticated and permitted; what failed
-        # is that the state they were acting on has moved or their proof is
-        # spent. A 403 here would read as "you may not do this", which sends
-        # the advocate to an administrator instead of to the retry that works.
-        raise HTTPException(status_code=409, detail=str(refused)) from None
-    except AccountBusy:
-        raise HTTPException(
-            status_code=409,
-            detail="another change to this account is in progress. "
-                   "Wait a moment and try again.") from None
-    return {"recovery_codes": list(codes), "replaced": len(codes)}
+            "professional_approval": _professional_status(directory, identity, utcnow())}
 
 
 # ------------------------------------------------------------------- static ---

@@ -256,7 +256,7 @@
           "kind": "existing"
         },
         {
-          "path": "tests/test_account_recovery.py",
+          "path": "tests/test_account_access_and_workspace.py",
           "kind": "existing"
         }
       ],
@@ -786,7 +786,7 @@
           "kind": "existing"
         },
         {
-          "path": "tests/test_account_recovery.py",
+          "path": "tests/test_password_reset_by_email.py",
           "kind": "existing"
         },
         {

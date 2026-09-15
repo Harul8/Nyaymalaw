@@ -146,7 +146,7 @@ def test_an_untrusted_login_id_cannot_escape_the_advocate_directory(tmp_path):
     assert d.authenticate_and_open_session(
         "../outside", PASSWORD, "device", utcnow()) is None
     assert outside.exists()
-    assert not tuple(d._recovery_locks.iterdir())
+    assert not tuple(d._account_locks.iterdir())
 
 
 # ============================== end to end ==================================

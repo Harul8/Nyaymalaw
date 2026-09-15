@@ -71,6 +71,18 @@ processors:
     data_classes: [operational, client_matter, restricted]
     approval_id: IN-PROCESS-NO-EGRESS
 
+  # THE LOCAL OUTBOX FOR ACCOUNT MAIL. Implementation Plan F-A-03. `backend/nm/adapters/mail/outbox.py`
+  # seals each password-reset message onto this installation's disk; it reaches
+  # no mailbox, so nothing leaves the machine. Recorded so the day a real mail
+  # provider is wired, the inventory refuses it until somebody approves it.
+  # Account mail carries an email address and a reset link -- operational and
+  # restricted -- and never client matter material, so that class is not listed.
+  - processor_id: local-outbox
+    region: in
+    purposes: [mail]
+    data_classes: [operational, restricted]
+    approval_id: IN-PROCESS-NO-EGRESS
+
 #: Regions outside `in`, each with the legal review that admitted it. Empty is
 #: the correct default: a foreign processor is refused until a review names the
 #: region, and a boolean flag would be a switch somebody sets during an

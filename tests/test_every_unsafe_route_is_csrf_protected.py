@@ -20,10 +20,11 @@ covered the day it is written or it fails here with its own path in the message.
 
 THE EXEMPTIONS ARE NAMED, WITH THE REASON
 -------------------------------------------
-`register`, `recover` and `login` carry no session cookie: they are what mints
-one. A CSRF token cannot be required from a caller who does not have a session
-yet. They are declared below with what protects them instead, because an
-admitted gap is work and a silent one is a surprise.
+`register`, `login` and the two password-reset doors carry no session cookie:
+they mint one, or act before one exists. A CSRF token cannot be required from a
+caller who does not have a session yet. They are declared below with what
+protects them instead, because an admitted gap is work and a silent one is a
+surprise.
 """
 from __future__ import annotations
 
@@ -47,7 +48,13 @@ UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 #: and is BK-31's own follow-on work rather than something this packet closes.
 PRE_SESSION: dict[str, str] = {
     "/api/register": "no session minted; its own origin and bounded signup admission",
-    "/api/recover": "mints no session at all; refuses without a valid one-time code",
+    "/api/password/forgot": (
+        "mints no session; exact same-origin check, per-address and per-source "
+        "request limits, and one answer for every address"),
+    "/api/password/reset": (
+        "mints no session and ends every session; exact same-origin check, a "
+        "single-use 256-bit link bound to the credential generation, and a "
+        "per-source failure limit"),
     "/api/login": "mints the session; refuses without the credential",
 }
 

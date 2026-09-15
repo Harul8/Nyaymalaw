@@ -1,7 +1,9 @@
 """Public accounts are private account access, never professional approval.
 
 These use actual directory persistence and the served routes. Email validation
-is syntactic: there is deliberately no fake delivery or mailbox verification.
+is syntactic: registration does not verify the mailbox. A forgotten password is
+replaced through an emailed link (Implementation Plan F-A-03), which these
+tests read from the fixture's local outbox.
 """
 from __future__ import annotations
 
@@ -23,6 +25,7 @@ from nm.domain.advocate import (
 )
 from nm.ports.directory import AlreadyEnrolled, RegistrationUnavailable
 
+from tests.test_password_reset_by_email import reset_link_for
 from tests.test_turn_contract import KEY
 
 pytestmark = pytest.mark.class_a
@@ -40,14 +43,21 @@ def _login(client, email=EMAIL, password=PASSWORD):
     return client.post("/api/login", json={"advocate_id": email, "password": password})
 
 
+def _reset_by_email(client, email, password):
+    """Ask for a link, read it from the outbox and spend it on `password`."""
+    assert client.post("/api/password/forgot", json={"email": email}).status_code == 202
+    _, token = reset_link_for(client, email)
+    return client.post("/api/password/reset", json={
+        "token": token, "password": password, "password_again": password})
+
+
 def test_email_and_password_create_a_private_account_without_an_invitation(client):
     client.cookies.clear()
     result = _register(client, " Reader+Private@Example.com ")
     assert result.status_code == 200, result.text
     assert result.json()["advocate_id"] == EMAIL
     assert result.json()["name"] == EMAIL
-    codes = result.json()["recovery_codes"]
-    assert len(codes) == len(set(codes)) == 10
+    assert set(result.json()) == {"advocate_id", "name"}, "registration issued a secret"
     assert not result.headers.get("set-cookie"), "registration minted credentials"
     assert client.get("/api/session").status_code == 401
     identity = client.directory.identity(EMAIL)
@@ -56,10 +66,10 @@ def test_email_and_password_create_a_private_account_without_an_invitation(clien
     assert signed.status_code == 200, signed.text
     assert signed.json()["workspace"]["id"] == f"advocate:{EMAIL}"
     assert signed.json()["professional_approval"]["state"] == "unapproved"
-    assert "recovery_codes" not in signed.json(), "initial codes were disclosed twice"
+    assert "recovery_codes" not in signed.json(), "sign-in issued a recovery code"
     stored = client.directory._advocate_path(EMAIL).read_text(encoding="utf8")
     assert PASSWORD not in stored
-    assert all(code not in stored for code in codes)
+    assert "recovery_codes" not in json.loads(stored)
 
 
 @pytest.mark.parametrize("field", [
@@ -130,11 +140,8 @@ def test_the_longest_public_email_roundtrips_through_its_real_account_store(clie
     restarted = FileDirectory(client.directory._root, key=KEY)
     assert restarted.authenticate(longest.upper(), PASSWORD).id == longest
     assert _login(client, longest).status_code == 200
-    recovered = client.post("/api/recover", json={
-        "advocate_id": longest.upper(), "recovery_code": created.json()["recovery_codes"][0],
-        "password": OTHER_PASSWORD, "password_again": OTHER_PASSWORD,
-    })
-    assert recovered.status_code == 200, recovered.text
+    reset = _reset_by_email(client, longest.upper(), OTHER_PASSWORD)
+    assert reset.status_code == 200, reset.text
     assert _login(client, longest, OTHER_PASSWORD).status_code == 200
     assert _register(client, longest.upper()).status_code == 409
     before = path.read_bytes()
@@ -187,17 +194,14 @@ def test_duplicate_public_registration_never_replaces_credentials(client):
     assert duplicate.status_code == 409, duplicate.text
     assert EMAIL not in duplicate.text.lower()
     assert "already" not in duplicate.text.lower()
-    assert "recovery" in duplicate.text.lower()
-    assert "recovery_codes" not in duplicate.json()
+    assert "forgot password" in duplicate.text.lower()
+    assert set(duplicate.json()) == {"detail"}
     assert path.read_bytes() == original
     assert _login(client, password=OTHER_PASSWORD).status_code == 401
     assert _login(client).status_code == 200
-    # The initially delivered recovery set still works after the refused retry.
-    recovery = client.post("/api/recover", json={
-        "advocate_id": EMAIL, "recovery_code": first.json()["recovery_codes"][0],
-        "password": OTHER_PASSWORD, "password_again": OTHER_PASSWORD,
-    })
-    assert recovery.status_code == 200, recovery.text
+    # The owner can still replace the password after the refused retry.
+    reset = _reset_by_email(client, EMAIL, OTHER_PASSWORD)
+    assert reset.status_code == 200, reset.text
     assert _login(client, password=OTHER_PASSWORD).status_code == 200
 
 
@@ -445,60 +449,45 @@ def test_the_largest_registration_password_still_signs_in_and_is_not_disclosed(c
     assert created.status_code == 200, created.text
     assert password not in created.text
     assert _login(client, password=password).status_code == 200
-    generation = client.get("/api/session").json()["recovery_generation"]
-    proof = client.post("/api/reauthenticate", json={"password": password})
-    assert proof.status_code == 200, proof.text
-    assert password not in proof.text
-    rotated = client.post("/api/recovery-codes/rotate", json={
-        "proof": proof.json()["proof"], "expected_recovery_generation": generation,
-    })
-    assert rotated.status_code == 200, rotated.text
-    assert len(rotated.json()["recovery_codes"]) == 10
-    assert set(rotated.json()["recovery_codes"]).isdisjoint(created.json()["recovery_codes"])
     replacement = "Replacement-long-password-94-".ljust(1024, "y")
-    recovered = client.post("/api/recover", json={
-        "advocate_id": EMAIL, "recovery_code": rotated.json()["recovery_codes"][0],
-        "password": replacement, "password_again": replacement,
-    })
-    assert recovered.status_code == 200, recovered.text
-    assert replacement not in recovered.text
+    reset = _reset_by_email(client, EMAIL, replacement)
+    assert reset.status_code == 200, reset.text
+    assert replacement not in reset.text
     assert _login(client, password=password).status_code == 401
     assert _login(client, password=replacement).status_code == 200
-    assert client.post("/api/reauthenticate", json={"password": replacement}).status_code == 200
 
 
-def test_existing_long_credentials_still_sign_in_and_reauthenticate(client):
+def test_existing_long_credentials_still_sign_in(client):
     # Operator/legacy records are not rewritten by a public request-shape bound.
     password = "Legacy-password-83-".ljust(2048, "z")
     account = "legacy-long@example.com"
     client.directory.enrol(Enrolment(
         identity=AdvocateIdentity(id=account, name=account, email=account),
         credential=enrol(password)))
-    assert _login(client, account, password).status_code == 200
-    confirmed = client.post("/api/reauthenticate", json={"password": password})
-    assert confirmed.status_code == 200, confirmed.text
-    assert password not in confirmed.text
+    signed = _login(client, account, password)
+    assert signed.status_code == 200, signed.text
+    assert password not in signed.text
 
 
 @pytest.mark.parametrize("field", ["password", "password_again"])
-def test_recovery_uses_the_same_new_password_bound_without_consuming_a_code(client, field):
+def test_password_reset_uses_the_same_new_password_bound_without_spending_the_link(
+        client, field):
     created = _register(client)
     assert created.status_code == 200
+    assert client.post("/api/password/forgot", json={"email": EMAIL}).status_code == 202
+    _, token = reset_link_for(client, EMAIL)
     path = client.directory._advocate_path(EMAIL)
     before = path.read_bytes()
-    body = {
-        "advocate_id": EMAIL, "recovery_code": created.json()["recovery_codes"][0],
-        "password": OTHER_PASSWORD, "password_again": OTHER_PASSWORD,
-    }
+    body = {"token": token, "password": OTHER_PASSWORD, "password_again": OTHER_PASSWORD}
     secret = "Oversized-new-password-84-".ljust(1025, "x")
     body[field] = secret
-    refused = client.post("/api/recover", json=body)
+    refused = client.post("/api/password/reset", json=body)
     assert refused.status_code == 422, refused.text
     assert secret not in refused.text
-    assert body["recovery_code"] not in refused.text
+    assert token not in refused.text
     assert path.read_bytes() == before
     body[field] = OTHER_PASSWORD
-    assert client.post("/api/recover", json=body).status_code == 200
+    assert client.post("/api/password/reset", json=body).status_code == 200
     assert _login(client, password=OTHER_PASSWORD).status_code == 200
 
 

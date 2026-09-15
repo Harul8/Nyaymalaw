@@ -227,17 +227,43 @@ def test_registration_surface_control_catches_each_failure():
         assert registration_surface_problems(page, script)
 
 
-def recovery_surface_problems(page: str, script: str) -> list[str]:
-    """Return recovery-code exposure or disconnected-workspace defects."""
+def _between(text: str, start: str, end: str) -> str:
+    begin = text.find(start)
+    if begin < 0:
+        return ""
+    finish = text.find(end, begin)
+    return text[begin:finish] if finish > begin else text[begin:]
+
+
+def sign_in_surface_problems(page: str, script: str) -> list[str]:
+    """Implementation Plan F-A-01, F-A-02, F-A-05 and the workspace boundary.
+
+    The sign-in card, the register card and the one-logo rule, read from the
+    bytes of both files, plus the workspace context every sign-in must reach.
+    """
     problems: list[str] = []
-    code = re.search(r'<input\b[^>]*\bid="recovery-code"[^>]*>', page)
-    if not code or 'type="password"' not in code.group(0):
-        problems.append("the recovery code is not concealed")
-    capture = script.find("const code = $('recovery-code').value.trim()")
-    cleared = script.find("$('recovery-code').value = '';", capture)
-    sent = script.find("await api('/api/recover'", capture)
-    if min(capture, cleared, sent) < 0 or not capture < cleared < sent:
-        problems.append("the recovery code remains in the DOM during submission")
+    gate = _between(page, '<div id="gate">', '<header class="masthead"')
+    if gate.count('class="mark"') != 1 or '<aside class="arrival-story"' not in gate[
+            :gate.find('class="mark"')]:
+        problems.append("the sign-in page does not show exactly one logo, on the left")
+    if "login-brand" in page:
+        problems.append("a card on the right repeats the logo")
+    login = _between(page, '<form id="login"', "</form>")
+    row = _between(login, 'id="login-go"', "</div>")
+    forgot, register = row.find('id="show-forgot"'), row.find('id="show-register"')
+    if 'class="login-alt login-alt-split"' not in row or min(forgot, register) < 0 \
+            or not forgot < register:
+        problems.append("Forgot password and Register are not one row under Sign in, "
+                        "Forgot on the left")
+    if "login-foot" in login:
+        problems.append("the sign-in card carries text below its links")
+    registration = _between(page, '<form id="register"', "</form>")
+    if "at least 8 characters" not in " ".join(registration.split()):
+        problems.append("the register card does not state the password rules")
+    if "login-lede" in registration or "field-help" in registration:
+        problems.append("the register card carries text beyond the registration details")
+    if "show-forgot" not in script or "/api/password/forgot" not in script:
+        problems.append("Forgot password is not wired to the reset-link request")
     if 'id="workspace-context" aria-label="Active workspace"' not in page:
         problems.append("the masthead does not name active workspace context")
     if "showApplication(me.advocate, me.workspace, me.professional_approval)" not in script:
@@ -247,43 +273,48 @@ def recovery_surface_problems(page: str, script: str) -> list[str]:
     matter = script.find("showMatterList();", show)
     if min(show, guard, matter) < 0 or not show < guard < matter:
         problems.append("matter rendering does not fail closed without a workspace")
-    leave = script.find("$('outcome-signin').addEventListener")
-    clear = script.find("clearRecoveryCodeDisplay();", leave)
-    next_form = script.find("showForm('login');", leave)
-    if min(leave, clear, next_form) < 0 or not leave < clear < next_form:
-        problems.append("one-time recovery codes remain in the document after leaving")
     if re.search(r'<select\b[^>]*(?:workspace|firm)', page, re.I):
         problems.append("a single server-owned workspace is rendered as a selector")
     return problems
 
 
-def test_recovery_is_concealed_and_workspace_is_visible_before_matter_work():
-    """BK-31-AC13/14. Bind server response, gate and visible context."""
-    assert not recovery_surface_problems(HTML, SCRIPT)
+def test_the_sign_in_page_matches_the_plan_and_workspace_is_visible_before_matter_work():
+    """F-A-01/02/05 and BK-31-AC13. Bind the cards, the gate and visible context."""
+    assert not sign_in_surface_problems(HTML, SCRIPT)
     show = SCRIPT.index("function showApplication(advocate, workspace, professionalApproval)")
     workspace = SCRIPT.index("$('workspace-name').textContent", show)
     matters = SCRIPT.index("showMatterList();", show)
     assert show < workspace < matters
-    assert "r.recovery_codes || []" in SCRIPT
 
 
-def test_the_recovery_and_workspace_scan_can_see_each_planted_failure():
+def test_the_sign_in_and_workspace_scan_can_see_each_planted_failure():
     """Positive control for the combined front-door source contract."""
-    visible = HTML.replace('id="recovery-code" name="recovery_code" type="password"',
-                           'id="recovery-code" name="recovery_code" type="text"')
+    card = HTML.find('<form id="login"')
+    second_logo = HTML[:card] + '<div class="login-brand"><span class="mark">NM</span></div>' \
+        + HTML[card:]
+    swapped = HTML.replace(
+        '<a href="#" id="show-forgot">Forgot password</a>\n      '
+        '<a href="#" id="show-register">Register</a>',
+        '<a href="#" id="show-register">Register</a>\n      '
+        '<a href="#" id="show-forgot">Forgot password</a>')
+    register_at = HTML.find('<form id="register"')
+    no_rules = HTML[:register_at] + HTML[register_at:].replace(
+        "least 8 characters", "least eight characters", 1)
     no_context = HTML.replace('id="workspace-context" aria-label="Active workspace"',
                               'id="workspace-context"')
     no_wire = SCRIPT.replace("showApplication(me.advocate, me.workspace, me.professional_approval)",
                              "showApplication(me.advocate)")
     no_guard = SCRIPT.replace(
         "if (!workspace || !workspace.id || !workspace.label)", "if (false)")
-    no_clear = SCRIPT.replace("clearRecoveryCodeDisplay();", "")
-    assert "the recovery code is not concealed" in recovery_surface_problems(visible, SCRIPT)
-    assert "the masthead does not name active workspace context" in (
-        recovery_surface_problems(no_context, SCRIPT))
-    assert "session workspace does not reach the served masthead" in (
-        recovery_surface_problems(HTML, no_wire))
-    assert "matter rendering does not fail closed without a workspace" in (
-        recovery_surface_problems(HTML, no_guard))
-    assert "one-time recovery codes remain in the document after leaving" in (
-        recovery_surface_problems(HTML, no_clear))
+    planted = {
+        "the sign-in page does not show exactly one logo, on the left": (second_logo, SCRIPT),
+        "Forgot password and Register are not one row under Sign in, Forgot on the left":
+            (swapped, SCRIPT),
+        "the register card does not state the password rules": (no_rules, SCRIPT),
+        "the masthead does not name active workspace context": (no_context, SCRIPT),
+        "session workspace does not reach the served masthead": (HTML, no_wire),
+        "matter rendering does not fail closed without a workspace": (HTML, no_guard),
+    }
+    for expected, (page, script) in planted.items():
+        assert (page, script) != (HTML, SCRIPT), f"the plant for {expected!r} did not apply"
+        assert expected in sign_in_surface_problems(page, script), expected

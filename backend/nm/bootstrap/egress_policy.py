@@ -40,8 +40,13 @@ INVENTORY = pathlib.Path("docs") / "blueprint" / "processors.yaml"
 SCRIPTED_PROCESSOR = "scripted"
 STORAGE_PROCESSOR = "local-disk"
 INDEX_PROCESSOR = "local-index"
+#: The sealed local outbox account mail is written to (F-A-03). In-process, like
+#: the others: a message lands on this installation's disk and reaches no
+#: mailbox. A real mail provider is an external recipient, and this build admits
+#: none until the authenticated approval integration exists.
+OUTBOX_PROCESSOR = "local-outbox"
 CONTROLLED_LOCAL_PROCESSORS = frozenset({
-    SCRIPTED_PROCESSOR, STORAGE_PROCESSOR, INDEX_PROCESSOR,
+    SCRIPTED_PROCESSOR, STORAGE_PROCESSOR, INDEX_PROCESSOR, OUTBOX_PROCESSOR,
 })
 LOCAL_BASIS = "IN-PROCESS-NO-EGRESS"
 

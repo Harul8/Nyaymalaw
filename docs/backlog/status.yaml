@@ -855,8 +855,9 @@ items:
   next_action: complete and verify D-041 email/password personal registration, immediate owned
     workspace/new/reopen without professional approval, neutral public authentication and separate
     attributable expiring approval at protected acts. Preserve the optional invited identity and
-    recovery/session populations. Current execution belongs to email-registration.json; full
-    recovery/browser acceptance remains open, confidential authentication is BK-86 and deployed
+    password-reset/session populations. Recovery codes were removed (Implementation Plan F-A-04)
+    and a forgotten password is reset by emailed link (F-A-03); real mail delivery is not connected
+    and browser acceptance remains open, confidential authentication is BK-86 and deployed
     assurance remains BK-42. No current-source PASS is inferred from historical conformance evidence.
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#bk-31-account-access-recovery-and-workspace-identity}
@@ -894,17 +895,19 @@ items:
       expected_failure: the second attempt collides with a record that was never
         allowed to exist
   - id: BK-31-AC3
-    requirement: an advocate can recover without an operator using a one-time code that
-      changes the password, consumes exactly that code and revokes every existing session
+    requirement: an advocate who forgot their password can set a new one without an operator through
+      a link sent to the account email (Implementation Plan F-A-03); the link changes the password
+      once and ends every existing session
     required_evidence: [integration_test, browser_journey]
     evidence:
       integration_test:
         result: PASS
-        ref: tests/test_account_recovery.py::test_successful_recovery_changes_password_consumes_code_and_revokes_sessions
+        ref: tests/test_password_reset_by_email.py::test_a_link_resets_the_password_once_and_ends_every_session
+        note: Class-A run 15 September 2026 on codex/arrive-sign-in. Mail goes to the sealed local outbox; no mailbox delivery is claimed.
       browser_journey: {result: NOT_RUN, ref: '', note: approval-only journey not yet run}
     negative_control:
-      mutation: reuse one recovery code or present an existing session after successful recovery
-      expected_failure: the code works twice or a pre-recovery session still reaches matter content
+      mutation: spend one reset link twice or present an existing session after a successful reset
+      expected_failure: the link works twice or a pre-reset session still reaches matter content
   - id: BK-31-AC4
     requirement: an invitation is consumed exactly once and cannot be replayed
     required_evidence: [integration_test]
@@ -980,7 +983,7 @@ items:
   - id: BK-31-AC10
     requirement: public browser registration sends email, password and confirmation with no invitation;
       both passwords are concealed and cleared before a wire wait and after local validation refusal.
-      No credential or recovery secret is retained in browser persistence or logs
+      No credential or reset secret is retained in browser persistence or logs
     required_evidence: [integration_test, browser_journey]
     evidence:
       integration_test:
@@ -1032,63 +1035,71 @@ items:
     evidence:
       integration_test:
         result: PASS
-        ref: tests/test_account_recovery.py::test_active_workspace_reaches_the_masthead_before_matter_rendering
+        ref: tests/test_account_access_and_workspace.py::test_active_workspace_reaches_the_masthead_before_matter_rendering
       browser_journey: {result: NOT_RUN, ref: '', note: approval-only journey not yet run}
     negative_control:
       mutation: omit workspace from the session response, render only the raw identity detail or add
         a one-option editable workspace control
       expected_failure: the workspace contract reports that matter work can begin without unmistakable context
   - id: BK-31-AC14
-    requirement: every advocate receives at least eight high-entropy typeable one-time recovery
-      codes while the server stores only distinct salted hashes and returns complete codes only once
+    requirement: a reset link carries a 256-bit token that is stored only as a sealed fingerprint,
+      expires after 30 minutes, works once and is bound to the account's credential generation; the
+      token and the new password are on no file in the clear
     required_evidence: [domain_test, integration_test]
     evidence:
       domain_test:
         result: PASS
-        ref: tests/test_account_recovery.py::test_domain_recovery_codes_are_typeable_unique_and_single_use
+        ref: tests/test_password_reset_by_email.py::test_a_link_is_single_use_expiring_and_bound_to_one_credential_generation
+        note: Class-A run 15 September 2026 on codex/arrive-sign-in.
       integration_test:
         result: PASS
-        ref: tests/test_account_recovery.py::test_registration_returns_recovery_codes_once_and_stores_only_salted_hashes
+        ref: tests/test_password_reset_by_email.py::test_no_token_or_new_password_is_written_anywhere_in_the_clear
+        note: Class-A run 15 September 2026 on codex/arrive-sign-in.
     negative_control:
-      mutation: inspect the advocate record and the next authenticated session after registration
-      expected_failure: a recoverable code is present at rest or the complete set is returned again
+      mutation: read every file the directory and outbox wrote after a reset, and replay an expired link
+      expected_failure: the token or new password is readable at rest, or an expired link changes the password
   - id: BK-31-AC15
-    requirement: unknown, wrong and used recovery codes receive one neutral response while failed
-      attempts are rate-limited and audited without recording any presented code
+    requirement: a reset request for a known, unknown or email-less account receives one neutral
+      response; requests per address and failed links per source are rate-limited; used, expired,
+      superseded and unknown links receive one refusal
     required_evidence: [integration_test, adversarial_test]
     evidence:
       integration_test:
         result: PASS
-        ref: tests/test_account_recovery.py::test_unknown_wrong_and_used_recovery_codes_have_one_response_and_no_secret_in_audit
+        ref: tests/test_password_reset_by_email.py::test_known_unknown_and_undeliverable_accounts_get_one_answer
+        note: Class-A run 15 September 2026 on codex/arrive-sign-in.
       adversarial_test:
         result: PASS
-        ref: tests/test_account_recovery.py::test_failed_recovery_attempts_reach_the_shared_rate_limit
+        ref: tests/test_password_reset_by_email.py::test_reset_requests_are_limited_per_address_whether_or_not_it_exists
+        note: Class-A run 15 September 2026 on codex/arrive-sign-in.
     negative_control:
-      mutation: compare unknown, wrong and replay responses, exceed the attempt bound and inspect both logs
-      expected_failure: responses differ, no 429 occurs or a presented code appears in a log
+      mutation: compare known, unknown and email-less responses and pauses, then exceed the request bound
+      expected_failure: responses or pauses differ by account state, or no 429 occurs
   - id: BK-31-AC16
-    requirement: two workers cannot consume the same recovery code successfully
+    requirement: two workers cannot both spend the same password-reset link
     required_evidence: [adversarial_test]
     evidence:
       adversarial_test:
         result: PASS
-        ref: tests/test_account_recovery.py::test_two_directory_instances_cannot_consume_the_same_recovery_code
+        ref: tests/test_password_reset_by_email.py::test_two_workers_cannot_both_spend_one_link
+        note: Class-A run 15 September 2026 on codex/arrive-sign-in.
     negative_control:
-      mutation: race two directory instances against one unused code
-      expected_failure: both attempts succeed or more than one code is marked used
+      mutation: race two directory instances against one unused reset link
+      expected_failure: both attempts succeed or both new passwords authenticate
   - id: BK-31-AC17
-    requirement: sign-in authentication and session issue cannot cross a concurrent recovery generation,
+    requirement: sign-in authentication and session issue cannot cross a concurrent credential change,
       and an abandoned worker claim cannot leave the account permanently locked
     required_evidence: [adversarial_test]
     evidence:
       adversarial_test:
         result: PASS
-        ref: tests/test_account_recovery.py::test_sign_in_cannot_cross_a_recovery_account_claim
+        ref: tests/test_account_access_and_workspace.py::test_sign_in_cannot_cross_an_account_claim
+        note: Class-A run 15 September 2026 on codex/arrive-sign-in.
     negative_control:
-      mutation: hold the recovery account claim while a valid old-password sign-in tries to mint a session
+      mutation: hold the account claim while a valid old-password sign-in tries to mint a session
       expected_failure: the old generation opens a session, or access remains unavailable after the claim closes
   - id: BK-31-AC18
-    requirement: an untrusted sign-in or recovery identifier cannot escape the advocate-record directory,
+    requirement: an untrusted sign-in or reset identifier cannot escape the advocate-record directory,
       alias a platform-reserved filename or create an enrolled identity that cannot be addressed portably
     required_evidence: [adversarial_test]
     evidence:
@@ -1111,17 +1122,17 @@ items:
       expected_failure: both requests observe whichever shared failure reason was written last
 
   - id: BK-31-AC20
-    requirement: an authenticated advocate can replace the recovery-code set after fresh
-      authentication; replacement invalidates all prior unused codes atomically, returns
-      new codes once and records the security event without recording the codes
+    requirement: no screen, route, response or stored record offers, issues or accepts a recovery code
+      (Implementation Plan F-A-04); an account still holding retired recovery-code material has it
+      removed at its next sign-in without changing its credential
     required_evidence: [integration_test, adversarial_test, browser_journey]
     evidence:
-      integration_test: {result: PASS, ref: 'tests/test_the_served_rotation_path.py::test_a_signed_in_advocate_replaces_their_codes_over_http', note: 'Current full Class-A passed on 12 September; this does not close the separate adversarial and browser requirements. Recovery behaviour remains unchanged.'}
+      integration_test: {result: PASS, ref: 'tests/test_account_access_and_workspace.py::test_no_route_screen_or_code_path_offers_a_recovery_code', note: 'Class-A run 15 September 2026 on codex/arrive-sign-in; the sweep reads served routes, backend code, the page and the script, with a planted-return control.'}
       adversarial_test: {result: NOT_RUN, ref: ''}
       browser_journey: {result: NOT_RUN, ref: ''}
     negative_control:
-      mutation: race code rotation with recovery or attempt to use an old code after replacement
-      expected_failure: the superseded set cannot recover access and partial replacement cannot strand a valid account
+      mutation: reintroduce a recovery-code identifier, route, response key or page control
+      expected_failure: the whole-product sweep names the site
 
   - id: BK-31-AC21
     requirement: ordinary email, password and confirmation register a new personal account without

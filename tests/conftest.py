@@ -276,13 +276,18 @@ def client(tmp_path, monkeypatch, scripted_application_environment):
     # without authenticating would mean the suite drives a path no advocate
     # can, which is the "correct in the core, wrong on the wire" gap CLAUDE.md
     # §8 is about -- and it is exactly where B-082 lived.
+    from nm.adapters.mail.outbox import FileOutbox
     from nm.adapters.store.directory import FileDirectory
     from nm.domain.advocate import AdvocateIdentity, Enrolment, enrol
 
     directory = FileDirectory(tmp_path, key=KEY)
+    # THE FIXTURE'S OWN OUTBOX. Without it the application would compose its
+    # default outbox under the repository's `.nm/`, and a reset link from a test
+    # would land beside the operator's real data.
+    outbox = FileOutbox(tmp_path, key=KEY)
     application = Application(
         store=FileMatterStore(tmp_path, key=KEY), evidence=_Evidence(),
-        directory=directory,
+        directory=directory, mail=outbox,
         model=ScriptedModelAdapter(config, responses={
             "__default__": "Issue the statutory notice and diarise the window."}))
 
@@ -348,6 +353,7 @@ def client(tmp_path, monkeypatch, scripted_application_environment):
 
     c.invite = invite
     c.directory = directory
+    c.outbox = outbox
 
     def sign_in(advocate_id: str = "adv_demo", *, password: str = password,
                 fresh: bool = False):

@@ -91,9 +91,10 @@ def test_the_invitation_is_spent_and_tidied_when_nothing_fails(tmp_path):
     active = tmp_path / "invitations"
     used = active / "used"
 
-    identity, codes = directory.accept_invitation(token, CREDENTIAL, utcnow())
+    identity = directory.accept_invitation(token, CREDENTIAL, utcnow())
 
-    assert identity.id == IDENTITY.id and codes
+    assert identity.id == IDENTITY.id
+    assert directory.identity(IDENTITY.id) is not None, "nothing was enrolled"
     assert list(used.glob("*.nm")), "the claim was not recorded"
     assert not list(active.glob("*.nm")), "the active record was not tidied"
 
@@ -107,10 +108,9 @@ def test_a_claimed_invitation_still_enrols_when_the_active_name_will_not_go(
     token = directory.issue_invitation(IDENTITY, "operator", utcnow())
     _refuse_the_active_removal(monkeypatch)
 
-    identity, codes = directory.accept_invitation(token, CREDENTIAL, utcnow())
+    identity = directory.accept_invitation(token, CREDENTIAL, utcnow())
 
     assert identity.id == IDENTITY.id
-    assert codes, "no recovery codes were issued, so nothing was delivered"
     assert directory.identity(IDENTITY.id) is not None, (
         "the advocate was not enrolled, so the housekeeping failure defeated "
         "the claim it had no part in making")
@@ -187,9 +187,10 @@ def test_a_failed_enrolment_releases_the_claim_rather_than_holding_it(tmp_path):
     assert len(list((tmp_path / "invitations").glob("*.nm"))) == 1
     assert not list((tmp_path / "invitations" / "used").glob("*.nm"))
     # AND IT IS STILL USABLE, which is the whole point of restoring it.
-    identity, codes = _directory(tmp_path).accept_invitation(
-        token, CREDENTIAL, utcnow())
-    assert identity.id == IDENTITY.id and codes
+    restored = _directory(tmp_path)
+    identity = restored.accept_invitation(token, CREDENTIAL, utcnow())
+    assert identity.id == IDENTITY.id
+    assert restored.identity(IDENTITY.id) is not None, "nothing was enrolled"
 
 
 def test_the_claim_is_released_even_when_the_tidying_had_already_failed(

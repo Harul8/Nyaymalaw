@@ -65,8 +65,7 @@ def main() -> int:
         identity = AdvocateIdentity(
             id=args.id, name=args.name, enrolment=args.enrolment,
             practice=args.practice, firm_id=args.firm)
-        recovery_codes = directory.enrol(
-            Enrolment(identity=identity, credential=enrol(password)))
+        directory.enrol(Enrolment(identity=identity, credential=enrol(password)))
     except AlreadyEnrolled as exc:
         print(f"REFUSED: {exc}")
         return 1
@@ -85,12 +84,6 @@ def main() -> int:
         print()
         print("  Only a derived scrypt hash is on disk. Nothing can print this")
         print("  again, including this tool.")
-    print()
-    print("  recovery codes (shown ONCE; each works once):")
-    for code in recovery_codes:
-        print(f"      {code}")
-    print()
-    print("  Store these separately from this machine. Only salted hashes are on disk.")
     return 0
 
 

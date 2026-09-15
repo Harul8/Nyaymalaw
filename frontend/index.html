@@ -32,8 +32,9 @@
     <p>Bring the instruction, the questions and the file.<br>Keep your professional judgment at the centre.</p>
     <div class="arrival-note">Take the brief <span aria-hidden="true">/</span> Work the file <span aria-hidden="true">/</span> Advise</div>
   </aside>
+  <!-- ONE LOGO ON THE PAGE AT A TIME. Implementation Plan F-A-05. The
+       wordmark lives on the left panel; no card on this side repeats it. -->
   <form id="login" class="login" autocomplete="on">
-    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
     <h2 class="login-title">Welcome back.</h2>
     <p class="login-lede">Sign in to your practice workspace.</p>
 
@@ -53,74 +54,74 @@
     <input id="login-password" name="password" type="password" autocomplete="current-password" required>
 
     <button type="submit" class="primary wide" id="login-go">Sign in</button>
-    <div class="login-alt">
+    <!-- ONE ROW, THE WIDTH OF THE BUTTON. Implementation Plan F-A-01:
+         Forgot password on the left, Register on the right. -->
+    <div class="login-alt login-alt-split">
+      <a href="#" id="show-forgot">Forgot password</a>
       <a href="#" id="show-register">Register</a>
-      <span aria-hidden="true"> · </span>
-      <a href="#" id="show-recovery">Use a recovery code</a>
     </div>
     <div id="login-state" class="login-state" role="status" aria-live="polite"></div>
-
-    <p class="login-foot">
-      <!-- BK-31. NO FALSE ASSURANCE ABOUT CONFLICT SCOPE.
-           This said the firm's conflicts registry GOVERNS the session. There
-           is no firm-wide registry: the conflict screen checks the matters
-           THIS advocate holds, and says so in its own words. A promise about
-           the one check whose whole value is being trusted is the worst
-           place in the product to be approximately right. -->
-      Register with your email and password. Conflict checks cover only
-      the matters you hold here, not a firm-wide registry.
-    </p>
   </form>
 
-  <form id="recovery" class="login" hidden autocomplete="off">
-    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
-    <p class="login-lede">Use one of the recovery codes you saved when this
-      account was enrolled.</p>
+  <!-- FORGOT PASSWORD. Implementation Plan F-A-03. The answer is the same
+       whether or not an account exists, so this form cannot be used to find
+       out who is registered. -->
+  <form id="forgot" class="login" hidden autocomplete="on">
+    <h2 class="login-title">Forgot password</h2>
+    <p class="login-lede">Enter your account email. We will send a link to set a
+      new password.</p>
 
-    <label for="recovery-id">Email or advocate ID</label>
-    <input id="recovery-id" name="username" autocomplete="username"
-           spellcheck="false" required>
+    <label for="forgot-email">Email</label>
+    <input id="forgot-email" name="email" type="email" required maxlength="254"
+           autocomplete="email" autocapitalize="none" spellcheck="false">
 
-    <label for="recovery-code">Unused recovery code</label>
-    <input id="recovery-code" name="recovery_code" type="password"
-           autocomplete="one-time-code" autocapitalize="characters"
-           spellcheck="false" required>
+    <button type="submit" class="primary wide" id="forgot-go">Send reset link</button>
+    <div class="login-alt"><a href="#" id="forgot-login">Back to sign in</a></div>
+  </form>
 
-    <label for="recovery-password">New password</label>
+  <!-- SET A NEW PASSWORD, reached only from the emailed link. The link's
+       token is read from the address fragment, which a browser never sends
+       to the server, and it is removed from the address bar immediately. -->
+  <form id="reset" class="login" hidden autocomplete="off">
+    <h2 class="login-title">Set a new password</h2>
+
+    <label for="reset-password">New password <span class="req" aria-hidden="true">*</span></label>
     <div class="pw-wrap">
-      <input id="recovery-password" name="new-password" type="password"
-             minlength="8" autocomplete="new-password" required>
-      <button type="button" class="pw-eye" data-for="recovery-password"
+      <input id="reset-password" name="new-password" type="password"
+             minlength="8" maxlength="1024" autocomplete="new-password" required>
+      <button type="button" class="pw-eye" data-for="reset-password"
               aria-label="Show new password" aria-pressed="false">&#128065;</button>
     </div>
 
-    <label for="recovery-password2">Retype new password</label>
+    <label for="reset-password2">Retype new password <span class="req" aria-hidden="true">*</span></label>
     <div class="pw-wrap">
-      <input id="recovery-password2" name="new-password-again" type="password"
-             minlength="8" autocomplete="new-password" required>
-      <button type="button" class="pw-eye" data-for="recovery-password2"
+      <input id="reset-password2" name="new-password-again" type="password"
+             minlength="8" maxlength="1024" autocomplete="new-password" required>
+      <button type="button" class="pw-eye" data-for="reset-password2"
               aria-label="Show retyped new password" aria-pressed="false">&#128065;</button>
     </div>
 
-    <button type="submit" class="primary wide" id="recovery-go">Change password</button>
-    <div class="login-alt"><a href="#" id="recovery-login">Back to sign in</a></div>
-    <p class="login-foot">A successful recovery ends every existing session.
-      This code will not work again.</p>
+    <button type="submit" class="primary wide" id="reset-go">Set new password</button>
+    <div class="login-alt"><a href="#" id="reset-login">Back to sign in</a></div>
+
+    <p class="login-foot">
+      <span class="req" aria-hidden="true">*</span> required. The password must be at
+      least 8 characters and contain an upper-case letter, a lower-case
+      letter, a numeral and a special character. Setting it signs this account
+      out on every device.
+    </p>
   </form>
 
   <!-- SEPARATE FORM, NOT A MODE OF THE FIRST. A single form that changes
        meaning by a flag is one where a mis-set flag posts a password to the
        wrong route. -->
+  <!-- REGISTRATION DETAILS ONLY. Implementation Plan F-A-02: email, password,
+       retype password, Register -- and the password rules, so nobody is
+       refused without knowing why. -->
   <form id="register" class="login" hidden autocomplete="on">
-    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
-    <p class="login-lede">Create your account and start your private workspace.</p>
-
     <label for="reg-email">Email <span class="req" aria-hidden="true">*</span></label>
     <input id="reg-email" name="email" type="email" required maxlength="254"
-           autocomplete="email" autocapitalize="none" spellcheck="false"
-           aria-describedby="reg-email-help">
-    <p id="reg-email-help" class="field-help">Use this email to sign in. No
-      invitation is needed.</p>
+           autocomplete="email" autocapitalize="none" spellcheck="false">
 
     <label for="reg-password">Password <span class="req" aria-hidden="true">*</span></label>
     <div class="pw-wrap">
@@ -154,9 +155,6 @@
       least 8 characters and contain an upper-case letter, a lower-case
       letter, a numeral and a special character.
     </p>
-    <p class="login-foot">Your workspace and matters are available as soon as
-      you sign in. Professional approval is separate and is needed only for
-      privileged approvals or overrides.</p>
   </form>
 
   <!-- WHAT HAPPENED, ON ITS OWN CARD. The result of a registration used to be
@@ -168,45 +166,10 @@
        Two buttons, not one that changes meaning by a flag. That is the same
        reason the register form is separate from the sign-in form. -->
   <section id="outcome" class="login" hidden aria-live="polite">
-    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
     <h2 id="outcome-title" class="outcome-title"></h2>
     <p id="outcome-body" class="outcome-body"></p>
-    <section id="recovery-codes" class="recovery-codes" hidden>
-      <h3>Save these one-time recovery codes now</h3>
-      <p>They will not be shown again. Keep them somewhere separate from this
-        device. Each code works once.</p>
-      <ol id="recovery-code-list"></ol>
-    </section>
     <button type="button" class="primary wide" id="outcome-signin" hidden>Sign in</button>
     <button type="button" class="primary wide" id="outcome-back" hidden>Back to the form</button>
-    <!-- BK-31-AC20. The acknowledgement for a rotation, which returns to the
-         matters the advocate was already in rather than to a sign-in screen
-         they do not need. Same one-time list, same "they will not be shown
-         again" promise, and the codes leave the document when it is pressed. -->
-    <button type="button" class="primary wide" id="outcome-resume" hidden>I saved them — back to work</button>
-  </section>
-  <!-- BK-31-AC20. FRESH AUTHENTICATION, ASKED SEPARATELY FROM THE CHANGE.
-       The proof this earns is spendable once, expires in five minutes and is
-       bound to this session; it is held in a variable and never written to
-       storage, so a closed tab loses it rather than leaving it behind. -->
-  <section id="reauth" class="login" hidden>
-    <div class="login-brand"><span class="mark">NM</span> Nyaymalaw</div>
-    <h2>Replace your recovery codes</h2>
-    <p class="login-lede">This replaces all ten at once. The codes you hold now
-      will stop working, and the new ones are shown once. Confirm your password
-      to continue.</p>
-    <form id="reauth-form" autocomplete="off">
-      <label for="reauth-password">Your password</label>
-      <div class="pw-wrap">
-        <input id="reauth-password" name="current-password" type="password"
-               autocomplete="current-password" required>
-        <button type="button" class="pw-eye" data-for="reauth-password"
-                aria-label="Show password">Show</button>
-      </div>
-      <p class="login-error" id="reauth-error" hidden></p>
-      <button type="submit" class="primary wide" id="reauth-go">Replace my recovery codes</button>
-      <div class="login-alt"><a href="#" id="reauth-cancel">Cancel</a></div>
-    </form>
   </section>
 </div>
 
@@ -262,14 +225,6 @@
          controls, so the control has to be reachable from the one they are
          holding — and the session they press it from survives. -->
     <button id="devices" class="ghost">Sessions</button>
-    <!-- BK-31-AC20. REPLACE THE RECOVERY CODES.
-         D-013 promised this and nothing served it, so an advocate whose
-         printed codes had been seen had exactly one route back: spend one of
-         the compromised codes to recover, leaving the other nine as exposed
-         as they were. It asks for the password again because a session cookie
-         alone would make an unlocked laptop enough to replace the last-resort
-         credential. -->
-    <button id="replace-codes" class="ghost">Recovery codes</button>
     <button id="signout" class="ghost">Sign out</button>
   </div>
   <div class="health" id="health" role="status">Checking research availability…</div>

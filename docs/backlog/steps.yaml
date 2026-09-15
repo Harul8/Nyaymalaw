@@ -20,22 +20,25 @@ steps:
   entry_conditions:
   - the user can create a private account with email and password, sign in to an existing account,
     or present an operator invitation to its one server-bound workspace
-  - the sign-in or recovery surface is available without exposing matter content
+  - the sign-in, register, forgot-password and set-new-password cards are available without exposing
+    matter content
   user_action:
   - registers with email and password without an invitation, signs in with the canonical identity,
-    or uses one account-held recovery code; invited enrolment remains a separate optional path
+    or asks for a password-reset link by email and sets a new password from it; invited enrolment
+    remains a separate optional path
   expected_visible_result:
   - the advocate's name and active firm or workspace are unmistakable before any matter
     content appears
-  - recovery changes the password, consumes the code and requires a fresh sign-in
+  - a reset link changes the password once and requires a fresh sign-in
   - unapproved personal accounts can enter their own workspace and start, reopen and work their own
     matters; professional and mailbox verification are not implied by registration
   expected_domain_effect:
   - one server-owned AdvocateIdentity is associated with the authenticated session and
     its workspace
-  - successful recovery revokes every earlier session and consumes exactly one code
+  - a successful reset revokes every earlier session and spends exactly one link
   failure_behaviour:
-  - wrong or used recovery code and invalid invitation disclose neither account existence nor
+  - a reset request, a used, expired or unknown link and an invalid invitation disclose neither
+    account existence nor
     matter count; public sign-in failures are neutral under D-041, which supersedes D-007's
     private-roster diagnostic exception
   - identity, firm, role, workspace or verification injection cannot grant access; an invalid
@@ -43,8 +46,8 @@ steps:
   - expiry, revocation or a new unrecognised device returns to authentication without
     rendering cached matter content
   recovery_behaviour:
-  - an unused recovery code can restore access without an operator; a consumed code can
-    never be used again
+  - an unused reset link from the account email can restore access without an operator; a spent,
+    expired or superseded link can never be used again
   - after expiry or revocation, a fresh valid sign-in restores the matter list, not the
     last privileged browser pixels
   exit_conditions:

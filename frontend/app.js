@@ -55,9 +55,13 @@ const state = {
   casefileGeneration: 0,
 };
 
-let pendingApplication = null;
 let registrationInFlight = false;
 let outcomeReturn = 'register';
+// THE EMAILED RESET LINK'S TOKEN. Implementation Plan F-A-03. Read once from the
+// address fragment -- which a browser never sends to the server -- and removed
+// from the address bar at once, so it is not left in history or on a shared
+// screen. A variable, never storage, and dropped when it is spent or abandoned.
+let resetToken = null;
 let activeDelivery = null;
 let retiringSession = null;
 
@@ -176,9 +180,6 @@ function clearPrivileged() {
   state.casefileGeneration += 1;
   $('sessions-dialog').close();
   $('sessions-body').textContent = '';
-  forgetRotationSecrets();
-  clearRecoveryCodeDisplay();
-  pendingApplication = null;
   if (activeDelivery) {
     activeDelivery.entry.state = 'unknown';
     activeDelivery.entry.error = 'The session ended before this request was confirmed.';
@@ -232,7 +233,7 @@ function cookie(name) {
 const UNSAFE = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 async function api(path, options, { sessionBound = true } = {}) {
-  if (['/api/login', '/api/register', '/api/recover'].includes(path)) {
+  if (['/api/login', '/api/register', '/api/password/reset'].includes(path)) {
     await settleRetirementForLogin();
   }
   const sessionGeneration = state.sessionGeneration;
@@ -3151,8 +3152,32 @@ async function checkBuild() {
   }
 }
 
+// THE RESET LINK OPENS THIS PAGE with `#reset=<token>`. Taken once, then
+// removed from the address, before anything else on the page can read it.
+function takeResetToken() {
+  const match = window.location.hash.match(/^#reset=([A-Za-z0-9_-]+)$/);
+  if (!match) return false;
+  resetToken = match[1];
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+  return true;
+}
+
+function openReset() {
+  showGate(null);
+  showForm('reset');
+  $('reset-password').focus();
+}
+
+window.addEventListener('hashchange', () => {
+  if (takeResetToken()) openReset();
+});
+
 async function boot() {
   checkBuild();
+  if (takeResetToken()) {
+    openReset();
+    return;
+  }
   try {
     const me = await api('/api/session');
     showApplication(me.advocate, me.workspace, me.professional_approval);
@@ -3182,14 +3207,7 @@ $('login').addEventListener('submit', async (ev) => {
     // THE PASSWORD LEAVES THE PAGE. It stays in the DOM otherwise, readable
     // by anything running later on this document.
     $('login-password').value = '';
-    if (r.recovery_codes && r.recovery_codes.length) {
-      pendingApplication = r;
-      showOutcome('good', 'Save your recovery codes',
-        'This account predates self-service recovery. Save these codes before '
-        + 'you continue; they will not be shown again.', r.recovery_codes, 'login');
-    } else {
-      showApplication(r.advocate, r.workspace, r.professional_approval);
-    }
+    showApplication(r.advocate, r.workspace, r.professional_approval);
   } catch (err) {
     $('login-password').value = '';
     showGate(err.message);
@@ -3389,104 +3407,6 @@ $('sessions-revoke').addEventListener('click', async () => {
 
 $('devices').addEventListener('click', showSessions);
 
-// ------------------------------------------------ replacing recovery codes
-//
-// BK-31-AC20. Two steps, and the separation is the control: the password is
-// proved at the moment of the change, so an unlocked laptop is not enough to
-// replace the last-resort credential.
-//
-// THE PROOF NEVER LEAVES THIS CLOSURE. Not localStorage, not sessionStorage,
-// not a data attribute -- a variable, spent once, dropped in `finally`. A
-// closed tab loses it, which is the correct outcome: the advocate
-// authenticates again. There is no read-back of either the proof or the codes,
-// because a second place a secret lives is a second place it leaks from.
-let rotationProof = null;
-
-function forgetRotationSecrets() {
-  rotationProof = null;
-  const field = $('reauth-password');
-  if (field) field.value = '';
-}
-
-$('replace-codes').addEventListener('click', () => {
-  forgetRotationSecrets();
-  $('gate').hidden = false;
-  $('masthead').hidden = true;
-  showForm('reauth');
-  $('reauth-password').focus();
-});
-
-$('reauth-cancel').addEventListener('click', (ev) => {
-  ev.preventDefault();
-  forgetRotationSecrets();
-  $('gate').hidden = true;
-  $('masthead').hidden = false;
-});
-
-$('reauth-form').addEventListener('submit', async (ev) => {
-  ev.preventDefault();
-  const go = $('reauth-go');
-  const problem = $('reauth-error');
-  problem.hidden = true;
-  go.disabled = true;
-  try {
-    // THE CURRENT GENERATION IS READ IMMEDIATELY BEFORE THE CHANGE, and sent
-    // with it. If another device replaced the set between this page loading
-    // and this button, the server refuses rather than silently replacing a set
-    // this page never showed anybody.
-    const who = await api('/api/session');
-    // NULL IS NOT ZERO. A directory that cannot say which generation this
-    // account is on must stop the rotation, not let the page guess a number
-    // that a legacy account would happen to accept.
-    if (who.recovery_generation === null || who.recovery_generation === undefined) {
-      throw new Error('This installation cannot confirm which recovery codes '
-        + 'are current, so nothing was changed. Your existing codes still work.');
-    }
-    const earned = await api('/api/reauthenticate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: $('reauth-password').value }),
-    });
-    rotationProof = earned.proof;
-    $('reauth-password').value = '';
-
-    const replaced = await api('/api/recovery-codes/rotate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        proof: rotationProof,
-        expected_recovery_generation: who.recovery_generation,
-      }),
-    });
-    showOutcome('good', 'Your new recovery codes',
-      'The ten codes you held before are now dead. Save these before you '
-      + 'continue; they will not be shown again.',
-      replaced.recovery_codes, 'resume');
-  } catch (err) {
-    // ONE LINE, WHATEVER FAILED. The server already refuses to say which, and
-    // a page that guessed a friendlier reason would reintroduce the oracle the
-    // server just closed.
-    problem.textContent = err.message
-      || 'That did not work. Your existing recovery codes still work.';
-    problem.hidden = false;
-    $('reauth-password').value = '';
-  } finally {
-    // SPENT OR NOT, THE PROOF IS GONE. A failed rotation must not leave a
-    // usable authorisation sitting in this tab.
-    rotationProof = null;
-    go.disabled = false;
-  }
-});
-
-$('outcome-resume').addEventListener('click', () => {
-  // The acknowledgement. The codes leave the document here -- hiding the card
-  // would leave them readable to anything running later on this page.
-  clearRecoveryCodeDisplay();
-  forgetRotationSecrets();
-  $('gate').hidden = true;
-  $('masthead').hidden = false;
-});
-
 // ------------------------------------------------------------- registration
 //
 // SELF-SERVICE, as of 6 September 2026. The sign-in page used to say enrolment
@@ -3495,26 +3415,19 @@ $('outcome-resume').addEventListener('click', () => {
 // TWO FORMS, NOT ONE IN TWO MODES. A single form that changes meaning by a
 // flag is one where a mis-set flag posts a password to the wrong route.
 function showForm(which) {
-  // A pending account creation owns its one-time recovery result. Do not
-  // let public navigation hand that result to a different form/person.
+  // A pending account creation owns its result. Do not let public
+  // navigation hand that result to a different form/person.
   if (registrationInFlight && which !== 'register') return;
-  // Keep the non-secret email for corrections, never a hidden credential.
+  // Keep the non-secret email for corrections, never a hidden credential. A
+  // PASSWORD IS NOT FORM STATE: a card that is merely hidden keeps its values,
+  // and the next person on this machine would return to a filled form.
   if (which !== 'register') clearRegistrationPasswords();
+  if (which !== 'reset') clearResetPasswords();
   $('login').hidden = which !== 'login';
   $('register').hidden = which !== 'register';
-  $('recovery').hidden = which !== 'recovery';
+  $('forgot').hidden = which !== 'forgot';
+  $('reset').hidden = which !== 'reset';
   $('outcome').hidden = which !== 'outcome';
-  // A PASSWORD IS NOT FORM STATE EITHER. Leaving the reauthentication field
-  // filled while the card is merely hidden would let the next person on this
-  // machine return to a form already carrying the credential.
-  if (which !== 'reauth') {
-    const field = $('reauth-password');
-    if (field) field.value = '';
-    const problem = $('reauth-error');
-    if (problem) { problem.hidden = true; problem.textContent = ''; }
-  }
-  const reauth = $('reauth');
-  if (reauth) reauth.hidden = which !== 'reauth';
   $('login-state').textContent = '';
 }
 
@@ -3532,6 +3445,20 @@ function clearRegistrationPasswords() {
   }
 }
 
+function clearResetPasswords() {
+  for (const id of ['reset-password', 'reset-password2']) {
+    const field = $(id);
+    field.value = '';
+    field.type = 'password';
+    const eye = document.querySelector(`[data-for="${id}"]`);
+    if (eye) {
+      eye.setAttribute('aria-pressed', 'false');
+      eye.setAttribute('aria-label', id === 'reset-password'
+        ? 'Show new password' : 'Show retyped new password');
+    }
+  }
+}
+
 // WHAT HAPPENED, ON ITS OWN CARD, in both directions.
 //
 // The result of a registration used to be one line appended to the sign-in
@@ -3545,49 +3472,18 @@ function clearRegistrationPasswords() {
 // hidden, not reset -- so Back returns them to a filled form. The passwords
 // are the exception and they are cleared, which is the rule the sign-in
 // handler already follows.
-function showOutcome(kind, title, body, recoveryCodes = [], returnTo = 'register') {
+function showOutcome(kind, title, body, returnTo = 'register') {
   $('outcome-title').textContent = title;
   $('outcome-body').textContent = body;
   $('outcome-title').className = `outcome-title ${kind}`;
-  // THREE EXITS, NOT TWO. A rotation returns the advocate to the matters they
-  // were already in; sending them to a sign-in screen they do not need would
-  // make the control cost a login every time it is used.
-  const resuming = returnTo === 'resume';
-  $('outcome-signin').hidden = kind !== 'good' || resuming;
+  $('outcome-signin').hidden = kind !== 'good';
   $('outcome-back').hidden = kind === 'good';
-  $('outcome-resume').hidden = !resuming;
   outcomeReturn = returnTo;
-  const codes = $('recovery-codes');
-  const list = $('recovery-code-list');
-  list.replaceChildren(...recoveryCodes.map((code) => {
-    const item = document.createElement('li');
-    item.textContent = code;
-    return item;
-  }));
-  codes.hidden = recoveryCodes.length === 0;
-  $('outcome-signin').textContent = pendingApplication
-    ? 'I saved them — continue to matters'
-    : (recoveryCodes.length ? 'I saved them — sign in' : 'Sign in');
   showForm('outcome');
   (kind === 'good' ? $('outcome-signin') : $('outcome-back')).focus();
 }
 
-function clearRecoveryCodeDisplay() {
-  $('recovery-code-list').replaceChildren();
-  $('recovery-codes').hidden = true;
-}
-
 $('outcome-signin').addEventListener('click', () => {
-  // Once the advocate leaves the one-time screen, the usable codes leave the
-  // document too. Hiding the outcome would still leave them readable to any
-  // script running later on this page.
-  const current = pendingApplication;
-  pendingApplication = null;
-  clearRecoveryCodeDisplay();
-  if (current) {
-    showApplication(current.advocate, current.workspace, current.professional_approval);
-    return;
-  }
   showForm('login');
   // THE PASSWORD FIELD, NOT THE EMAIL. The email is already filled from the
   // registration, and landing on a filled field means the first thing typed
@@ -3597,7 +3493,9 @@ $('outcome-signin').addEventListener('click', () => {
 
 $('outcome-back').addEventListener('click', () => {
   showForm(outcomeReturn);
-  $(outcomeReturn === 'recovery' ? 'recovery-password' : 'reg-password').focus();
+  const first = { register: 'reg-password', forgot: 'forgot-email',
+    reset: 'reset-password', login: 'login-id' };
+  $(first[outcomeReturn] || 'login-id').focus();
 });
 
 $('show-register').addEventListener('click', (ev) => {
@@ -3610,61 +3508,89 @@ $('show-login').addEventListener('click', (ev) => {
   showForm('login');
 });
 
-$('show-recovery').addEventListener('click', (ev) => {
+// --------------------------------------------------------- forgot password
+//
+// Implementation Plan F-A-03. One email field, one answer whatever the address:
+// the server says the same sentence for an account that exists and one that
+// does not, and this page repeats it rather than guessing.
+$('show-forgot').addEventListener('click', (ev) => {
   ev.preventDefault();
-  $('recovery-id').value = $('login-id').value.trim();
-  showForm('recovery');
-  ($('recovery-id').value ? $('recovery-code') : $('recovery-id')).focus();
+  const typed = $('login-id').value.trim();
+  $('forgot-email').value = typed.includes('@') ? typed : '';
+  showForm('forgot');
+  $('forgot-email').focus();
 });
 
-$('recovery-login').addEventListener('click', (ev) => {
+$('forgot-login').addEventListener('click', (ev) => {
   ev.preventDefault();
   showForm('login');
   $('login-id').focus();
 });
 
-$('recovery').addEventListener('submit', async (ev) => {
+$('reset-login').addEventListener('click', (ev) => {
   ev.preventDefault();
-  const go = $('recovery-go');
-  const advocate = $('recovery-id').value.trim();
-  const code = $('recovery-code').value.trim();
-  const password = $('recovery-password').value;
-  const again = $('recovery-password2').value;
+  resetToken = null;
+  showForm('login');
+  $('login-id').focus();
+});
 
-  // The bearer code leaves the DOM before the network wait, exactly like an
-  // enrolment invitation. A refusal must not leave a usable code on a shared
-  // screen or make it part of a later error report.
-  $('recovery-code').value = '';
-  if (password !== again) {
-    $('recovery-password').value = '';
-    $('recovery-password2').value = '';
-    showOutcome('bad', 'Recovery failed',
-      'The two passwords do not match. Nothing was changed.', [], 'recovery');
-    return;
-  }
-
+$('forgot').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const go = $('forgot-go');
+  const email = $('forgot-email').value.trim();
   go.disabled = true;
   try {
-    const result = await api('/api/recover', {
+    const r = await api('/api/password/forgot', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        advocate_id: advocate,
-        recovery_code: code,
-        password: password,
-        password_again: again,
-      }),
+      body: JSON.stringify({ email: email }),
     });
-    $('login-id').value = advocate;
-    showOutcome('good', 'Password changed',
-      `Your password was changed and ${result.sessions_ended} existing `
-      + 'session(s) were ended. Sign in with the new password.', [], 'login');
+    $('login-id').value = email;
+    showOutcome('good', 'Check your email', r.detail, 'login');
   } catch (err) {
-    showOutcome('bad', 'Recovery failed', err.message, [], 'recovery');
+    showOutcome('bad', 'Reset link not requested', err.message, 'forgot');
   } finally {
-    $('recovery-code').value = '';
-    $('recovery-password').value = '';
-    $('recovery-password2').value = '';
+    go.disabled = false;
+  }
+});
+
+$('reset').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const go = $('reset-go');
+  const password = $('reset-password').value;
+  const again = $('reset-password2').value;
+  const token = resetToken;
+  // Both passwords leave the DOM before any check or network wait.
+  clearResetPasswords();
+  if (!token) {
+    showOutcome('bad', 'Password not changed',
+      'This page has no reset link. Ask for a new one from Forgot password.', 'forgot');
+    return;
+  }
+  if (password !== again) {
+    showOutcome('bad', 'Password not changed',
+      'The two passwords do not match. Nothing was changed.', 'reset');
+    return;
+  }
+  go.disabled = true;
+  try {
+    const r = await api('/api/password/reset', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token: token, password: password, password_again: again }),
+    });
+    resetToken = null;
+    showOutcome('good', 'Password changed',
+      `Your new password is set and ${r.sessions_ended} earlier session(s) were `
+      + 'signed out. Sign in with the new password.', 'login');
+  } catch (err) {
+    // A refused LINK cannot be retried -- ask for a new one. A password the
+    // rules refused can: the link was not spent.
+    const linkRefused = /reset link/i.test(err.message || '');
+    if (linkRefused) resetToken = null;
+    showOutcome('bad', 'Password not changed', err.message,
+      linkRefused ? 'forgot' : 'reset');
+  } finally {
     go.disabled = false;
   }
 });
@@ -3719,14 +3645,14 @@ $('register').addEventListener('submit', async (ev) => {
     $('login-id').value = r.advocate_id;
     showOutcome('good', 'Registration successful',
       `Your private workspace is ready. Sign in with ${r.advocate_id} and the password `
-      + 'you just chose.', r.recovery_codes || [], 'register');
+      + 'you just chose.', 'register');
   } catch (err) {
     registrationInFlight = false;
     if (err.obsolete) return;
     $('login-id').value = email;
     showOutcome('bad', 'Registration failed', !err.status
       ? 'The registration result could not be confirmed. The account may have been created. Try signing in before registering again.'
-      : err.message, [], 'register');
+      : err.message, 'register');
   } finally {
     clearTimeout(timeout);
     registrationInFlight = false;

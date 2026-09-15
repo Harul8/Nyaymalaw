@@ -15,6 +15,7 @@ from types import MappingProxyType
 
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
 from nm.adapters.knowledge.elements import CuratedElements
+from nm.adapters.mail.outbox import FileOutbox
 from nm.adapters.model.config import ModelConfig, load, load_dotenv
 from nm.adapters.model.openai_adapter import OpenAIModelAdapter
 from nm.adapters.model.policed import PolicedModel
@@ -27,6 +28,7 @@ from nm.adapters.store.directory import FileDirectory
 from nm.adapters.store.file_store import FileMatterStore
 from nm.bootstrap.egress_policy import (
     INDEX_PROCESSOR,
+    OUTBOX_PROCESSOR,
     STORAGE_PROCESSOR,
     egress_policy,
 )
@@ -40,6 +42,7 @@ from nm.edge.uploads import UploadService
 from nm.knowledge.coverage import CoverageProfile
 from nm.knowledge.manifest import Manifest, PublishedCorpus
 from nm.ports.directory import DirectoryPort
+from nm.ports.mail import MailPort
 from nm.ports.model import ModelPort, Tier
 from nm.ports.store import StorePort
 from nm.ports.upload import UploadPort
@@ -65,7 +68,7 @@ def build_model(config: ModelConfig) -> ModelPort:
 class Application:
     def __init__(self, *, root: Path | None = None, model: ModelPort | None = None,
                  store=None, evidence=None, search=None,
-                 directory=None, uploads=None,
+                 directory=None, uploads=None, mail=None,
                  environment: Mapping[str, str] | None = None,
                  audit_root: Path | None = None) -> None:
         # Explicit composition must never read or temporarily replace process
@@ -135,6 +138,19 @@ class Application:
             # THE ROSTER IS NOT A MATTER. It holds advocate identities and
             # credential material, which is restricted rather than client
             # matter, and saying so keeps the two separable in the audit.
+            data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
+        # ACCOUNT MAIL, POLICED LIKE EVERY OTHER DESTINATION. Implementation
+        # Plan F-A-03. The only message today is the password-reset link, which
+        # carries an address and a bearer secret and never matter material.
+        # This build admits the sealed local outbox and nothing else: a real
+        # mail provider is an external recipient, and the inventory refuses it
+        # until an approval exists. The outbox shares the matter key and root.
+        self.mail: MailPort = PolicedPort(
+            inner=mail or FileOutbox(
+                settings.get("NM_MATTER_STORE") or (self.root / ".nm"),
+                key=key),
+            gate=self._gate, port=MailPort, sink=Sink.MAIL,
+            processor_id=OUTBOX_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
         corpus_path = Path(
             settings.get("NM_CORPUS_DIR")
@@ -322,6 +338,14 @@ class Application:
             "rate_limiting": ("running"
                               if self.directory.limiter_available()
                               else "NOT RUNNING -- the attempt log cannot be written"),
+            # WHERE A PASSWORD-RESET LINK ACTUALLY GOES. A queued message is not
+            # a delivered one, and an installation that writes reset links to a
+            # local outbox must say so here rather than let a locked-out
+            # advocate wait for an email that no mailbox will receive.
+            "account_mail": ("delivered to mailboxes"
+                             if getattr(self.mail, "delivers_to_mailbox", False)
+                             else "LOCAL OUTBOX ONLY -- reset links are not "
+                                  "delivered to a mailbox"),
             "corpus": "readable" if self.evidence.available else "NOT READABLE",
             # Each retrieval capability reports its OWN readiness. One rolled-up
             # "corpus: readable" would let an unbuilt authority index hide

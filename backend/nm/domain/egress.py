@@ -52,6 +52,9 @@ class Sink(str, Enum):
     BACKUP = "backup"
     SUPPORT = "support"
     TELEMETRY = "telemetry"
+    #: Account mail -- today only the password-reset link (F-A-03). It carries an
+    #: email address and a bearer secret, never client matter material.
+    MAIL = "mail"
 
 
 class DataClass(str, Enum):

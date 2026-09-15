@@ -9431,7 +9431,7 @@
         "INVALID_TRANSITION",
         "NOT_PERMITTED"
       ],
-      "current_route": "POST /api/recover",
+      "current_route": "POST /api/password/reset",
       "authorization": "Public rate-limited recovery; matching active one-time proof consumed atomically; neutral failure. Confidential access remains blocked until approved strong-assurance recovery completes; password reset alone never removes MFA.",
       "transitions": [
         "unused_recovery_proof -> consumed + new credential_generation + all sessions revoked; factor recovery remains independently gated"

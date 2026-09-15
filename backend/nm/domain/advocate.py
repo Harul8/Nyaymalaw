@@ -47,13 +47,12 @@ DK_LEN = 32
 #: borrowed laptop is not a standing grant.
 SESSION_HOURS = 12
 INVITATION_HOURS = 48
-RECOVERY_CODE_COUNT = 10
 
-#: How long a fresh-authentication proof stays usable. Five minutes: long
-#: enough to read a warning and press a button, short enough that a proof left
-#: on a walked-away-from screen is not a standing licence to replace the
-#: account's last-resort credential.
-REAUTHENTICATION_MINUTES = 5
+#: How long an emailed password-reset link stays usable. Thirty minutes: long
+#: enough for the mail to arrive and be opened, short enough that a link left
+#: sitting in a mailbox is not a standing way into the account.
+#: Implementation Plan F-A-03.
+PASSWORD_RESET_MINUTES = 30
 
 _UNSAFE_FILE_ID = re.compile(r'[<>:"/\\|?*]|[\x00-\x1f]')
 _WINDOWS_DEVICE_IDS = frozenset(
@@ -287,64 +286,44 @@ def dummy() -> Credential:
 
 # ------------------------------------------------- the generation model ---
 #
-# BK-31-AC20. FROZEN BEFORE ANY ROTATION PATH WAS WRITTEN, deliberately.
+# ONE COUNTER: WHICH CREDENTIAL THIS ACCOUNT HAS. F-A-03.
 #
-# Replacing a recovery-code set is a compare-and-set on state two other
-# operations also move: `recover` changes the credential, and first-login
-# provisioning creates a set. Without a counter, "has anything changed under
-# me" can only be answered by comparing the material itself -- which means
-# reading hashes at the edge to decide a race, and the one rule this file
-# exists to keep is that credential material does not travel.
+# `credential_generation` moves whenever the password hash changes. An emailed
+# reset link records the generation it was issued against, so a password
+# change by ANY route -- another reset link, or whatever changes a password
+# next -- makes every link issued before it unusable rather than merely old.
+# Comparing the credential material itself would answer the same question by
+# carrying hashes to the edge, and the rule this file keeps is that credential
+# material does not travel.
 #
-# TWO COUNTERS, NOT ONE, AND THAT IS THE WHOLE DESIGN DECISION.
-#
-#   credential_generation   moves when the password hash changes.
-#   recovery_generation     moves when the code SET is replaced wholesale.
-#
-# Conflating them would make every password change lose a concurrent rotation
-# and every rotation lose a concurrent recovery, and the advocate would be told
-# "someone else changed this" for an event that did not touch what they were
-# changing. Two different questions, two counters -- the same reason
-# `backend/nm/domain/identity.py` and `assurance/control_plane/evidence.py` keep two fingerprints.
-#
-# CONSUMING ONE CODE DOES NOT MOVE `recovery_generation`. The set is the same
-# set with one member spent; a rotation racing a recovery is not stale, it is
-# replacing exactly the set it meant to. What a recovery DOES move is the
-# credential, which is why the reauthentication proof carries both.
+# THERE WAS A SECOND COUNTER, for replacing recovery-code sets. The product
+# owner removed recovery codes from the whole application on 15 September 2026
+# (Implementation Plan F-A-04). An account record that still carries `recovery_generation` or
+# recovery-code digests has them removed at its next sign-in, and nothing reads
+# them before then.
 #
 # ABSENT READS AS 0, AND 0 IS A VALUE RATHER THAN AN UNKNOWN. An account
-# enrolled before this model existed carries neither field. Zero is honest for
-# a comparison whose only question is DID IT MOVE: such an account's first
-# generation-bearing mutation writes 1, and a proof issued before that
-# mutation recorded 0 and is correctly refused.
+# enrolled before this model existed carries no counter. Zero is honest for a
+# comparison whose only question is DID IT MOVE: the account's first credential
+# change writes 1, and a link issued against 0 is correctly refused after it.
 
 @dataclass(frozen=True)
 class AccountSecurity:
-    """Which credential and which recovery set this account currently has."""
+    """Which credential this account currently has."""
 
     credential_generation: int = 0
-    recovery_generation: int = 0
 
     @classmethod
     def read(cls, doc: dict | None) -> AccountSecurity:
-        def counter(name: str) -> int:
-            value = (doc or {}).get(name)
-            return value if isinstance(value, int) and value >= 0 else 0
-
-        return cls(credential_generation=counter("credential_generation"),
-                   recovery_generation=counter("recovery_generation"))
+        value = (doc or {}).get("credential_generation")
+        return cls(credential_generation=(
+            value if isinstance(value, int) and value >= 0 else 0))
 
     def as_dict(self) -> dict:
-        return {"credential_generation": self.credential_generation,
-                "recovery_generation": self.recovery_generation}
+        return {"credential_generation": self.credential_generation}
 
     def with_new_credential(self) -> AccountSecurity:
-        return AccountSecurity(self.credential_generation + 1,
-                               self.recovery_generation)
-
-    def with_new_recovery_set(self) -> AccountSecurity:
-        return AccountSecurity(self.credential_generation,
-                               self.recovery_generation + 1)
+        return AccountSecurity(self.credential_generation + 1)
 
 
 def csrf_token(session_token: str) -> str:
@@ -370,147 +349,103 @@ def csrf_token(session_token: str) -> str:
         f"nm-csrf:{session_token or ''}".encode("utf8")).hexdigest()
 
 
-#: THE REFUSAL IS NOT DECLARED HERE. `ProofRefused` lives in
-#: `backend/nm/ports/directory.py`, beside `AccountBusy` and `InvitationRefused`,
-#: because an exception is part of a contract as much as a return type is and
-#: the edge must catch it without knowing which adapter is live. This module
-#: answers WHY in a sentence; turning that sentence into a refusal that says
-#: nothing is the adapter's job, exactly as `Session.why_not` becomes a bare
-#: `None` from `session()`.
-
+# ------------------------------------------------------- password reset ---
+#
+# Implementation Plan F-A-03 and F-A-04, 15 September 2026, as the product owner
+# described phase A: there are no
+# recovery codes anywhere in the product, and a forgotten password is replaced
+# through a link sent to the account's email address.
+#
+# THE LINK IS A BEARER SECRET WITH THREE LIMITS, and each one closes a way a
+# link could outlive the moment it was meant for:
+#
+#   expiry        PASSWORD_RESET_MINUTES after it was issued
+#   single use    `consumed_at` is written BEFORE the credential changes, so a
+#                 failure between the two leaves a spent link, never a live one
+#   generation    issued against one `credential_generation`; a password change
+#                 by any route retires every link issued before it
+#
+# Only the token's FINGERPRINT is stored, exactly as with sessions and
+# invitations, so a stolen store is not a set of working reset links.
+#
+# THE REFUSAL SAYS NOTHING TO THE CALLER. `why_not` returns a sentence for the
+# operator log; the adapter turns it into an unsuccessful `PasswordResetResult`,
+# exactly as `Session.why_not` becomes a bare `None` from `session()`.
 
 @dataclass(frozen=True)
-class ReauthenticationProof:
-    """Fresh authentication, bound to one session and spendable once.
-
-    Holds a FINGERPRINT of its token and never the token, exactly as `Session`
-    and `Invitation` do. The advocate's copy exists only in the response that
-    minted it; a lost response is replaced by authenticating again, never by
-    reading one back out of the store.
-    """
+class PasswordReset:
+    """One issued reset link. Holds a fingerprint of its token, never the token."""
 
     token_fingerprint: str
     advocate_id: str
-    session_fingerprint: str
-    security: AccountSecurity
+    credential_generation: int
     issued_at: datetime
     expires_at: datetime
     consumed_at: datetime | None = None
 
     def __post_init__(self) -> None:
-        for name in ("token_fingerprint", "advocate_id", "session_fingerprint"):
+        for name in ("token_fingerprint", "advocate_id"):
             if blank(getattr(self, name)):
-                raise ValueError(f"a reauthentication proof with no {name} "
-                                 f"cannot be checked")
+                raise ValueError(f"a password reset with no {name} cannot be checked")
         if self.expires_at <= self.issued_at:
-            raise ValueError("a proof that expires when it is issued is not a proof")
+            raise ValueError("a reset link that expires when it is issued is not a link")
 
-    def why_not(self, *, advocate_id: str, session_fingerprint: str,
-                security: AccountSecurity, now: datetime) -> str | None:
-        """The REASON it cannot be spent, for the log — never for the caller.
-
-        Every clause here is a refusal the packet names: expiry, replay,
-        session binding, and the two generations moving underneath. It returns
-        a sentence rather than a bool so the operator log can say which, while
-        `ProofRefused` says the same nothing to everyone.
-        """
+    def why_not(self, *, security: AccountSecurity, now: datetime) -> str | None:
+        """The REASON it cannot be used, for the operator log -- never for the caller."""
         if self.consumed_at is not None:
-            return f"already spent at {self.consumed_at.isoformat()}"
+            return f"already used at {self.consumed_at.isoformat()}"
         if now >= self.expires_at:
             return f"expired at {self.expires_at.isoformat()}"
-        if canonical_id(self.advocate_id) != canonical_id(advocate_id):
-            return "issued to a different advocate"
-        if not hmac.compare_digest(self.session_fingerprint, session_fingerprint):
-            return "issued to a different session"
-        if self.security.credential_generation != security.credential_generation:
-            return (f"the credential moved from generation "
-                    f"{self.security.credential_generation} to "
-                    f"{security.credential_generation}")
-        if self.security.recovery_generation != security.recovery_generation:
-            return (f"the recovery set moved from generation "
-                    f"{self.security.recovery_generation} to "
-                    f"{security.recovery_generation}")
+        if self.credential_generation != security.credential_generation:
+            return (f"the password changed after this link was issued (generation "
+                    f"{self.credential_generation} -> {security.credential_generation})")
         return None
 
+    def as_dict(self) -> dict:
+        return {
+            "token_fingerprint": self.token_fingerprint,
+            "advocate_id": self.advocate_id,
+            "credential_generation": self.credential_generation,
+            "issued_at": self.issued_at.isoformat(),
+            "expires_at": self.expires_at.isoformat(),
+            "consumed_at": self.consumed_at.isoformat() if self.consumed_at else None,
+        }
 
-def new_reauthentication_proof(
-        advocate_id: str, session_fingerprint: str, security: AccountSecurity,
-        now: datetime, minutes: int = REAUTHENTICATION_MINUTES,
-        ) -> tuple[str, ReauthenticationProof]:
-    """Returns the token ONCE, and a proof that cannot reproduce it."""
+    @classmethod
+    def from_dict(cls, data: dict) -> PasswordReset:
+        consumed = data.get("consumed_at")
+        return cls(
+            token_fingerprint=data["token_fingerprint"],
+            advocate_id=data["advocate_id"],
+            credential_generation=AccountSecurity.read(data).credential_generation,
+            issued_at=datetime.fromisoformat(data["issued_at"]),
+            expires_at=datetime.fromisoformat(data["expires_at"]),
+            consumed_at=datetime.fromisoformat(consumed) if consumed else None,
+        )
+
+
+def new_password_reset(advocate_id: str, security: AccountSecurity, now: datetime,
+                       minutes: int = PASSWORD_RESET_MINUTES,
+                       ) -> tuple[str, PasswordReset]:
+    """Returns the token ONCE, and a record that cannot reproduce it."""
+    if minutes <= 0:
+        raise ValueError("a reset link lifetime must be positive")
     token = new_token()
-    return token, ReauthenticationProof(
+    return token, PasswordReset(
         token_fingerprint=token_fingerprint(token),
-        advocate_id=advocate_id,
-        session_fingerprint=session_fingerprint,
-        security=security,
+        advocate_id=canonical_id(advocate_id),
+        credential_generation=security.credential_generation,
         issued_at=now,
         expires_at=now + timedelta(minutes=minutes),
     )
 
 
-# -------------------------------------------------------- recovery codes ---
-
 @dataclass(frozen=True)
-class RecoveryCodeRecord:
-    """One salted code digest. The usable code is never reconstructable."""
+class PasswordResetResult:
+    """Whether a reset link changed the password, and how many sessions it ended."""
 
-    id: str
-    salt: str
-    hash: str
-    used_at: str | None = None
-
-    def __post_init__(self) -> None:
-        for name in ("id", "salt", "hash"):
-            if blank(getattr(self, name)):
-                raise ValueError(f"a recovery-code record with no {name} is unusable")
-
-    def as_dict(self) -> dict:
-        return {"id": self.id, "salt": self.salt, "hash": self.hash,
-                "used_at": self.used_at}
-
-
-@dataclass(frozen=True)
-class RecoveryResult:
     success: bool
     sessions_ended: int = 0
-
-
-def _normalise_recovery_code(code: str | None) -> str:
-    """Ignore grouping and case; preserve no user-entered representation."""
-    return "".join(ch for ch in (code or "") if ch.isalnum()).upper()
-
-
-def recovery_code_hash(code: str | None, salt: str) -> str:
-    """A salted verifier for a high-entropy one-time code."""
-    material = f"{salt}:{_normalise_recovery_code(code)}".encode("utf8")
-    return hashlib.sha256(material).hexdigest()
-
-
-def new_recovery_codes(
-        count: int = RECOVERY_CODE_COUNT,
-        ) -> tuple[tuple[str, ...], tuple[RecoveryCodeRecord, ...]]:
-    """Return each advocate-held code once and only salted records thereafter."""
-    if count < 8:
-        raise ValueError("a recovery set must contain at least eight one-time codes")
-    codes: list[str] = []
-    records: list[RecoveryCodeRecord] = []
-    for _ in range(count):
-        raw = secrets.token_hex(10).upper()  # 80 random bits, made typeable
-        code = "-".join(raw[index:index + 4] for index in range(0, len(raw), 4))
-        salt = secrets.token_hex(16)
-        codes.append(code)
-        records.append(RecoveryCodeRecord(
-            id=secrets.token_hex(8), salt=salt,
-            hash=recovery_code_hash(code, salt)))
-    return tuple(codes), tuple(records)
-
-
-def recovery_code_matches(record: RecoveryCodeRecord, code: str | None) -> bool:
-    """Constant-time comparison; a used code never matches again."""
-    candidate = recovery_code_hash(code, record.salt)
-    matches = hmac.compare_digest(record.hash, candidate)
-    return matches and record.used_at is None
 
 
 def _derive(password: str, salt: str, n: int, r: int, p: int) -> str:
