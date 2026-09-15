@@ -2,6 +2,37 @@
 
 What is known, not done, and not yet a defect row. Opened 6 September 2026.
 
+## Live-control verification and Class-A isolation — 12 September 2026
+
+**Start: READY under BK-80-AC7; existing controls are not reopened.** The
+reported screen, coverage, quotation and issue-conservation stubs belonged to
+`43f62e4`. GitHub's consolidated `a3d9c47` already contains their restoration
+from `1399a53`. Verify the unchanged regressions, then replay the four exact
+existing mutation witnesses and require their named failures before restoring
+the files. Do not reapply historical fixes over newer emergency or intake work.
+
+The remaining corpus-cleanup ownership failure belongs to BK-84-AC2 and is
+already being repaired on the user's parallel P18 branch (`3586ea9`). It is
+not duplicated, cherry-picked or waived here. Work occurs in a separate
+repair worktree; the main checkout and the P18/P21/P22 worktree stay untouched.
+
+**Build boundary:** isolate the unscored-golden-report Class-A test from real
+corpus I/O through the runner's existing `--skip-authority` option. Retain its
+nonzero exit, all 25 NOT ASSESSED rows and NOT MEASURED/not-a-pass assertions.
+Add a counterexample proving the isolation itself bites and that the normal
+authority path remains reachable when not skipped. The real Class-C authority
+test, model-call guard, suite selectors and failure registry remain unchanged.
+This removes incidental corpus work; it does not cache, omit or reclassify a
+required test, or claim professional/legal evaluation was performed.
+
+**Test and sign-off:** exact populations, mutation failures, restoration hashes,
+timings and unresolved gate results are recorded in
+`docs/backlog/evidence/live-control-verification-20260912.json`. That is a
+diagnostic/build record, not acceptance evidence or a gate stamp. Full PASS
+requires every current gate stage to pass; a scoped result, historical green
+or a repair on an unmerged branch cannot establish it. No release, corpus,
+model, counsel or browser claim is promoted by this work.
+
 ## Development-tree consolidation — 12 September 2026
 
 **Implementation reconciled; engineering integration, not release sign-off.** User-authorised

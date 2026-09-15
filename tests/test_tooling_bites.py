@@ -815,17 +815,53 @@ def test_an_unscored_golden_suite_is_not_reported_as_a_pass():
     release criterion. A criterion nobody computed is the one that gets
     assumed.
     """
-    r = run("run_goldens.py", "--suite", "full", "--approve")
+    # This exercises an unscored report, not corpus fidelity. The separate
+    # Class-C authority test retains the real corpus lookup and its population.
+    r = run("run_goldens.py", "--suite", "full", "--approve", "--skip-authority")
     assert r.returncode != 0, (
         "an all-unscored judged suite reported success:\n" + r.stdout[-2000:])
     assert "NOT MEASURED" in r.stdout
     assert "not a pass" in r.stdout
+    assert "AUTHORITY [E-002]" not in r.stdout
 
     # AND EVERY SCENARIO IS LISTED. The report was being truncated by the
     # encoding crash at fifteen of twenty-five, with nothing saying so.
     assert r.stdout.count("NOT ASSESSED") == 25, (
         f"only {r.stdout.count('NOT ASSESSED')} of 25 scenarios reached the "
         f"report")
+
+
+def test_the_report_only_golden_run_bypasses_only_the_authority_boundary(
+        monkeypatch, capsys):
+    """Skipping authority must avoid I/O; removing that flag must reach it."""
+    from tools import run_goldens
+
+    calls = []
+    sentinel = RuntimeError("the authority boundary was reached")
+
+    def authority_boundary():
+        calls.append("authority")
+        raise sentinel
+
+    monkeypatch.setattr(run_goldens, "check_authority", authority_boundary)
+    arguments = ["run_goldens.py", "--suite", "full", "--approve", "--skip-authority"]
+    monkeypatch.setattr(sys, "argv", arguments)
+
+    assert run_goldens.main() == 1
+    output = capsys.readouterr().out
+    assert calls == []
+    assert "AUTHORITY [E-002]" not in output
+    assert "NOT MEASURED" in output and "not a pass" in output
+    assert output.count("NOT ASSESSED") == 25
+
+    # Change the real option that controls this boundary, then require the
+    # exact sentinel rather than accepting any unrelated execution failure.
+    assert arguments[-1] == "--skip-authority"
+    monkeypatch.setattr(sys, "argv", arguments[:-1])
+    with pytest.raises(RuntimeError) as caught:
+        run_goldens.main()
+    assert caught.value is sentinel
+    assert calls == ["authority"]
 
 
 def test_a_failing_step_names_what_failed():
