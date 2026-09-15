@@ -369,12 +369,36 @@
       <button type="submit" class="primary">Search</button>
     </form>
 
+    <!-- P21 -- RESEARCH ON THE OPEN MATTER. The same box and filters; what
+         changes is that the round is RECORDED on the file: which index, what
+         came back, what the adverse search did, and what was attached. The
+         checkbox is disabled until a matter is open, because research with
+         no file to record on is a search. -->
+    <div class="research-bar">
+      <label class="check">
+        <input type="checkbox" id="r-on" disabled>
+        Record this as research <span id="r-matter" class="opt">open a matter to record research on it</span>
+      </label>
+      <div id="research-fields" class="research-fields" hidden>
+        <label for="r-objective">What this research is for</label>
+        <input id="r-objective" placeholder="whether the notice restarted the period">
+        <label for="r-issue">Which issue it serves</label>
+        <input id="r-issue" placeholder="limitation">
+        <label for="r-citation">Exact citation <span class="opt">— resolves by key, never by likeness; leave blank to search</span></label>
+        <input id="r-citation" placeholder="AIR 1990 SC 1">
+      </div>
+    </div>
+
     <!-- WHAT WAS SEARCHED, ALWAYS. A result of zero is unreadable without
          it, and unreadable in the direction that hurts: it reads as a corpus
          that does not hold the law. -->
     <div id="search-index" class="index-line" hidden></div>
     <div id="search-state"></div>
     <div id="search-results"></div>
+
+    <!-- THE RECORD: every index consulted by identity, the adverse search by
+         state, every attachment with its five verdicts. Read from the file. -->
+    <section id="research-record" class="research-record" aria-live="polite" hidden></section>
   </section>
 </main>
 
@@ -405,6 +429,16 @@
         <div id="currency-nodes"></div>
         <div id="currency-history"></div>
       </details>
+    </section>
+
+    <section class="premises" id="premises" aria-labelledby="premises-h" hidden>
+      <h3 id="premises-h">The legal premises</h3>
+      <p class="casefile-lede">A limitation rests on which provision governs,
+        what starts the period, and which forum binds. Where I inferred one I
+        say so and do not enter a deadline; confirm it and the date becomes a
+        deadline. Correct arithmetic cannot establish any of the three.</p>
+      <div id="premises-state" class="currency-state"></div>
+      <div id="premises-threads"></div>
     </section>
 
     <h3 id="entries-h">Entries</h3>

@@ -416,6 +416,16 @@ class Thread:
     than a position.
     """
 
+    premises: tuple[dict, ...] = ()
+    """THE LEGAL PREMISES THE LATEST LIMITATION COMPUTATION RAN UNDER, as
+    `nm.core.premise.Premise.as_dict()` rows: which provision, what starts the
+    period, which forum -- each with basis, source and review state. P22.
+    Written by the turn beside `deadlines`; read by the cover. Untyped for the
+    cycle reason `deadlines` gives."""
+    premises_stated: dict[str, dict] = field(default_factory=dict)
+    """WHAT THE ADVOCATE STATED, by premise kind: `{"statement", "source",
+    "by", "at"}`. A stated premise outranks an inferred one on the next
+    computation and carries the person who stated it. P22."""
     deadlines: tuple[object, ...] = ()
     """THE DEADLINE REGISTER, as the last turn that could compute it left
     it. Phase 3.
@@ -816,6 +826,19 @@ class Matter:
 
     EMPTY IS `NEVER WORKED`, which is a real state for a matter opened and
     abandoned, and it renders as such rather than as an epoch.
+    """
+
+    research: tuple[dict, ...] = ()
+    """EVERY RESEARCH NEED OPENED ON THIS FILE, as `nm.core.research.Research.as_dict()`
+    rows. BK-84-AC3, BK-38-AC1, P21.
+
+    A TUPLE OF DICTS, for the cycle reason `dependencies` gives directly
+    below; `research.all_from_stored` is the one reader and `as_dict` the one
+    writer. A record holds what was asked of which index, with what result,
+    what the adverse search did, and what was attached with its five
+    verdicts -- so a restart resumes the need without resetting its budget
+    (EVAL-014), and "no adverse authority was found" can only be said by a
+    record whose adverse search RAN.
     """
 
     dependencies: dict = field(default_factory=dict)

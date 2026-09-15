@@ -73,6 +73,13 @@ REACHED_ELSEWHERE = {
     # the ledger. The sweep sees neither call because both are template
     # literals in `web/app.js`, which is the same blindness as `sessions`.
     "correct_fact", "get_dependencies",
+    # P21's five, registered the same way, each with a BROWSER caller on the
+    # search pane (`runResearchRound`, `expandCase`, `attachParagraph`).
+    "start_research", "list_research", "get_research", "inspect_case",
+    "attach_source",
+    # P22's route, registered the same way, with a browser caller on the case
+    # file (the Confirm-premise control).
+    "state_premise",
     # `@implements` markers: their whole purpose is to be SCANNED by
     # tools/trace.py rather than called.
     "_implements_c4",

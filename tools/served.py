@@ -77,7 +77,7 @@ class Served:
 
 
 def served(root: Path, *, responses: dict | None = None,
-           evidence=None, model=None) -> Served:
+           evidence=None, model=None, search=None) -> Served:
     """The real composition root, wired to a temporary encrypted store."""
     from nm.adapters.model.config import ModelConfig, TierConfig
     from nm.adapters.model.scripted import ScriptedModelAdapter
@@ -120,6 +120,10 @@ def served(root: Path, *, responses: dict | None = None,
         directory=directory,
         model=model or ScriptedModelAdapter(config, responses=responses or {
             "__default__": "Issue the statutory notice and diarise the window."}),
+        # P21. A SEARCH PORT THE CALLER SUPPLIES -- the synthetic indexes in the
+        # research suites. Absent, the composition root's default applies and
+        # says `unavailable_index` on a machine with no `.nm/authority.db`.
+        search=search,
     )
     return Served(app=create_app(application), application=application,
                   directory=directory, root=root)

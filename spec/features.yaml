@@ -156,6 +156,7 @@ features:
   proof: NOT_RUN
   delivered_by: []
   declared_in:
+  - nm/core/research.py
   - nm/edge/api.py
   does:
   - Permit authenticated research without an active matter. Placing a result requires a deliberate choice

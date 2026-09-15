@@ -91,6 +91,10 @@ def _fully_populated() -> Matter:
         # comparison and not `{} == {}`. Built through the type so the shape
         # written here is the shape the product writes.
         dependencies=_ledger(),
+        # P21. A RESEARCH RECORD, populated through the type for the same
+        # reason the ledger is: the shape written here is the shape the
+        # product writes, and `{} == {}` proves nothing.
+        research=(_research(),),
         asked=(
             AskedQuestion(gate="G-POSTURE", text="Whose side are we on?",
                           asked_on="turn_1", thread="thr_1",
@@ -119,6 +123,30 @@ def _ledger() -> dict:
     return ledger.as_dict()
 
 
+def _research() -> dict:
+    from nm.core import research as rs
+
+    r = rs.Research(id="res_1", objective="whether the marker was blue",
+                   issue="colour at delivery", created_at="2026-09-12",
+                   created_by="adv_1")
+    r = rs.with_round(r, rs.Consulted(
+        query="marker blue", index="the authority index (authority.db)",
+        outcome=rs.Outcome.RESULTS, built_at="2026-09-12T00:00:00",
+        corpus_version="synthetic-2026-09-12", held=7, of_source=12,
+        case_ids=("SYN_1990_MARKER",)),
+        rs.AdverseSearch(target="SYN_1990_MARKER", state=rs.AdverseState.RAN,
+                        query="subsequent treatment", outcome=rs.Outcome.SEARCHED_NO_RESULTS))
+    r = rs.with_attachment(r, rs.Attachment(
+        issue="colour at delivery", case_id="SYN_1990_MARKER",
+        locator="SYN_1990_MARKER_P002_C01", quote="the marker was blue",
+        identity=rs.IdentityState.RESOLVED, quote_fidelity=rs.QuoteState.VERBATIM,
+        treatment_state="clean", applicability=rs.Applicability.BINDING,
+        applicability_because="the Supreme Court binds every court in India",
+        attached_by="adv_1", at="2026-09-12", source_version="synthetic-2026-09-12",
+        text_digest="abc", ledger_id="the authority index (authority.db):SYN_1990_MARKER_P002_C01"))
+    return r.as_dict()
+
+
 def test_every_field_of_a_matter_survives_a_save_and_load(tmp_path):
     """THE COUNTEREXAMPLE: a field encoded faithfully and dropped on read."""
     store = FileMatterStore(tmp_path, key=KEY)
@@ -143,6 +171,14 @@ def test_every_field_of_a_matter_survives_a_save_and_load(tmp_path):
     assert reloaded.dependencies == original.dependencies
     from nm.core.dependency import Ledger
     assert [n.currency.value for n in Ledger.from_stored(reloaded.dependencies).nodes] == ["stale"]
+    # THE RESEARCH RECORD, rebuilt through its own reader: rounds, the
+    # adverse search's state and the attachment's five verdicts all survive.
+    assert reloaded.research == original.research
+    from nm.core.research import all_from_stored
+    (back,) = all_from_stored(reloaded.research)
+    assert back.rounds == 1 and back.adverse[0].state.value == "ran"
+    assert back.attachments[0].verified_citation is True
+    assert back.as_dict()["clean_bill"] == "clean"
 
 
 @pytest.mark.parametrize("cls", [Matter, Fact, Thread, Posture, Provenance,

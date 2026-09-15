@@ -119,6 +119,9 @@ class Application:
         )
         published_corpus = (corpus_path / "current.json").is_file()
         published_snapshot = None
+        #: KEPT, for P21: the research routes record an attachment's source
+        #: dependency against the bound generation and read its withdrawals.
+        self._corpus_path = corpus_path
         if published_corpus and evidence is None and any(
             os.environ.get(name) for name in (
                 "NM_AUTHORITY_INDEX", "NM_IDENTITY_INDEX",
@@ -171,6 +174,7 @@ class Application:
         self.search = PolicedSearch(
             inner=search_adapter,
             gate=self._gate, processor_id=INDEX_PROCESSOR)
+        self._published_snapshot = published_snapshot
         # EVERY MODEL CALL IS KEPT, and the wrapping happens HERE.
         #
         # `TurnMetrics` already counts the calls; it does not say which read
@@ -204,6 +208,58 @@ class Application:
         self.engine = TurnEngine(store=self.store, evidence=self.evidence,
                                  model=self.model, coverage=self.coverage,
                                  elements=self.elements)
+
+    # ------------------------------------------------------------ P21 ------
+
+    def binding_for(self, court: str | None, year: object):
+        """Whether an authority's court binds THIS forum. THE EDGE ASKS HERE.
+
+        `nm.edge` may not import `nm.knowledge` (layercheck), and the rule is
+        a knowledge-plane fact -- binding is a relationship between the
+        deciding court and the forum, measured in `jurisdiction.py`. Exposing
+        it through the composition root keeps one owner of the rule and no
+        provider knowledge on the serving path.
+        """
+        from nm.knowledge.jurisdiction import binding_status
+
+        return binding_status(court, year, FORUM)
+
+    def record_source_dependency(self, *, work_id: str, case_id: str,
+                                 fallback_version: str) -> tuple[str, str | None, str]:
+        """Link a matter to the exact law version it attached. P20 → P21.
+
+        Returns `(source_version, dependency_id, why)`. THREE OUTCOMES:
+
+          * a published generation is bound AND names a source version for
+            this case -> the dependency is written through
+            `record_corpus_dependency` and its id returned;
+          * a published generation is bound and names no version for this
+            case -> the attachment records the SNAPSHOT id, no dependency is
+            written, and `why` says the manifest could not name the source;
+          * no published generation (the legacy index) -> the attachment
+            records the index's corpus version and `why` says no generation
+            is bound. Nothing is invented in either gap.
+        """
+        snapshot = self._published_snapshot
+        if snapshot is None:
+            return (fallback_version, None,
+                    "no immutable published generation is bound; the index's "
+                    "corpus version is recorded instead")
+        version_id = snapshot.version_for_source(case_id)
+        if not version_id:
+            return (snapshot.snapshot_id, None,
+                    f"generation {snapshot.snapshot_id} names no source version "
+                    f"for {case_id!r}, so the generation itself is recorded")
+        from datetime import datetime, timezone
+
+        from nm.knowledge.manifest import CorpusDependency, record_corpus_dependency
+
+        dependency_id = record_corpus_dependency(
+            self._corpus_path,
+            CorpusDependency(work_id=work_id, snapshot_id=snapshot.snapshot_id,
+                             source_versions=(version_id,),
+                             observed_at=datetime.now(timezone.utc)))
+        return version_id, dependency_id, ""
 
     def _egress_audit(self, line: str) -> None:
         """One line per dispatch decision, beside the auth log.

@@ -700,22 +700,28 @@ items:
   title: the authority need finds a case by scanning a million paragraphs
   kind: substrate
   priority: P1
-  delivery_status: planned
-  implementation: none
-  verification: none
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
   affects_phases:
   - D
   record: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs
+  next_action: P21 built case-level discovery, expansion by locator and exact citation resolution
+    on 12 September 2026 and proved them served; model_eval and counsel_review remain NOT RUN
+    and need their own bounded approval
   stage_records:
-    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs}
-    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs}
-    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs}
-    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-25-the-authority-need-finds-a-case-by-scanning-a-million-paragraphs}
+    start: {result: READY, ref: docs/BACKLOG.md#p21-start-record--separate-discovery-identity-and-legal-verification--12-september-2026}
+    build: {result: BUILT, ref: docs/BACKLOG.md#p21-test-record--12-september-2026}
+    test: {result: OPEN, ref: docs/BACKLOG.md#p21-test-record--12-september-2026, note: 'integration verified; model_eval and counsel_review not run'}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#p21-test-record--12-september-2026}
   acceptance:
   - id: BK-25-AC1
     requirement: "Authority discovery ranks cases through a version-identified case-level discovery surface and expands their source passages with context, preserving exact identity, contrary material and declared coverage"
     required_evidence: [integration_test, model_eval, counsel_review]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_the_research_workflow_is_served.py::test_a_holding_spread_across_paragraphs_surfaces_as_one_case', note: 'served over synthetic indexes in the real schema: a holding across two ratio paragraphs surfaces as one case with paragraphs_matched >= 2 and both come back in expansion by locator with complete=False stated; the exact-citation node (test_an_exact_citation_resolves_to_one_case_and_a_wrong_one_to_nothing) resolves one key to one case and a wrong key to nothing with no near miss. 12 September 2026'}
+      model_eval: {result: NOT_RUN, ref: '', note: 'no real-model discovery run; the live index (451,548 paragraphs) was not searched by this packet'}
+      counsel_review: {result: NOT_RUN, ref: ''}
     negative_control:
       mutation: "hide a relevant holding across several paragraphs or offer an unresolvable summary identity"
       expected_failure: "case discovery does not silently lose the case and unresolved identity cannot support a legal assertion"
@@ -1212,23 +1218,29 @@ items:
   priority: P0
   delivery_status: in_progress
   implementation: partial
-  verification: failing
+  verification: partial
   phase: D
   record: docs/BACKLOG.md#bk-35-cause-specific-accrual-and-answer-consistency-gate
-  next_action: refuse to run the period from a single dated fact that does not satisfy the
-    curated trigger; emit the statutory limb
+  next_action: P22 added reviewable legal premises and the conditional state on 12 September
+    2026 -- an inferred accrual is conditional not a deadline, and a stated premise makes it
+    definitive; AC1's model_eval and counsel_review remain NOT RUN
   acceptance:
   - id: BK-35-AC1
     requirement: "Limitation computation requires the reviewed cause-specific legal trigger and attributed factual date, including uncertain ranges and applicable qualifications, before producing a deadline"
     required_evidence: [integration_test, model_eval, counsel_review]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_premises_come_before_arithmetic.py::test_an_inferred_accrual_computes_conditional_and_enters_no_deadline', note: 'served: an uncurated accrual with two dated events computes CONDITIONAL, shown with its alternatives and entered as no deadline; stating the accrual (test_stating_the_premise_makes_the_next_computation_definitive) makes the next computation a real deadline. 12 September 2026'}
+      model_eval: {result: NOT_RUN, ref: ''}
+      counsel_review: {result: NOT_RUN, ref: '', note: 'competing-premise and uncertain-range judgement is a qualified-review question; the code refuses to pick one silently'}
     negative_control:
       mutation: "use the first dated fact when the governing trigger is different or unknown"
       expected_failure: "the date is not accepted as accrual without its legal and factual basis"
   - id: BK-35-AC2
     requirement: "The served answer, matter cover and deadline register share the same versioned legal premise and calculation or disclose the precise unresolved inconsistency"
     required_evidence: [integration_test, adversarial_test]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_premises_come_before_arithmetic.py::test_the_cover_and_register_share_one_premise_version', note: 'the cover premise digest and the register row premise digest are the same, and a mismatch renders inconsistent rather than smoothing over. 12 September 2026'}
+      adversarial_test: {result: PASS, ref: 'tests/test_premises_come_before_arithmetic.py::test_a_corrected_trigger_date_is_not_served_as_current', note: 'change the trigger date after calculation: the correction supersedes the fact, P18 currency marks the deadline stale, and the board no longer leads with the old date'}
     negative_control:
       mutation: "change the trigger date after calculation but before response assembly"
       expected_failure: "stale or inconsistent deadlines cannot be emitted as current"
@@ -1287,24 +1299,30 @@ items:
   priority: P1
   delivery_status: in_progress
   implementation: partial
-  verification: failing
+  verification: partial
   phase: A
   sequenced_after:
   - BK-25
   record: docs/BACKLOG.md#bk-38-search-to-authority-to-matter-research-workflow
-  next_action: carry canonical citation and bench; attach a hit to a matter
+  next_action: P21 built grouped inspection, exact citation and attachment with five verdicts on
+    12 September 2026 and proved them served and in the browser; the bench is carried on
+    expansion; the cumulative gate on the final candidate derives completion
   acceptance:
   - id: BK-38-AC1
     requirement: "Research supports controlled court and date filters, grouped source inspection, exact citation and deliberate attachment of a verified source and locator to a matter issue"
     required_evidence: [integration_test, browser_journey]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_the_research_workflow_is_served.py::test_a_resolved_verbatim_passage_attaches_with_five_separate_verdicts', note: 'attach by exact locator with verbatim words records five separate verdicts and the P18 ledger tracks the passage; the planted negative (test_a_snippet_shaped_locator_is_refused_as_unresolved) refuses a snippet with identity=unresolved, and a changed word is refused as differs. 12 September 2026'}
+      browser_journey: {result: PASS, ref: '.nm/journey/report.json#tests/test_the_journey_of_a_search.py::test_phase_4_attaching_a_paragraph_shows_five_verdicts_not_one', note: 'bound to the journey report when `python tools/journey.py` last ran on the committed tree; phases 3-4 open a discovered case to its paragraphs by locator and attach one, and the page shows five verdict rows and the note identity-and-words-only'}
     negative_control:
       mutation: "attach a ranked snippet as if it were an exact verified source"
       expected_failure: "the unverified source cannot become established matter authority"
   - id: BK-38-AC2
     requirement: "Search distinguishes results, searched-with-no-results, unsupported coverage and unavailable index and reports meaningful limits without confidence percentages derived from rank"
     required_evidence: [integration_test, browser_journey]
-    evidence: {}
+    evidence:
+      integration_test: {result: PASS, ref: 'tests/test_the_research_workflow_is_served.py::test_a_court_the_corpus_does_not_hold_is_unsupported_coverage', note: 'four outcomes on the wire as four values: results; searched_no_results with the index identity; unsupported_coverage for a court the corpus does not hold, decided before anything is searched; unavailable_index for an absent file (test_an_absent_index_is_unavailable_not_empty). Bands, never percentages. 12 September 2026'}
+      browser_journey: {result: PASS, ref: '.nm/journey/report.json#tests/test_the_journey_of_a_search.py::test_phase_6_an_unsupported_court_is_not_a_zero', note: 'phases 2, 5 and 6 read #research-outcome[data-outcome] after submission for results, searched_no_results and unsupported_coverage'}
     negative_control:
       mutation: "submit a search with an absent index or unknown court alias"
       expected_failure: "the state explains whether and where research ran rather than reporting absence of law"
@@ -1553,12 +1571,14 @@ items:
   depends_on:
   - BK-51
   record: docs/BACKLOG.md#bk-45-the-search-phase-cannot-fail
-  next_action: not yet executed in a browser
+  next_action: executed in a browser by P21's search journey on 12 September 2026 -- seven
+    phases, each reading a post-submission outcome value; the cumulative gate derives completion
   acceptance:
   - id: BK-45-AC1
     requirement: "The research journey requires a post-submission result, explicit no-results or unavailable state and does not pass on static form labels"
     required_evidence: [domain_test]
-    evidence: {}
+    evidence:
+      domain_test: {result: PASS, ref: 'tests/test_research_keeps_finding_apart_from_verification.py::test_a_search_that_ran_and_found_nothing_says_so', note: 'the four outcomes are values a phase must read; every phase of tests/test_the_journey_of_a_search.py waits for #research-outcome[data-outcome], which exists only after an answered submission, so a no-op submit with labels visible fails the wait. 12 September 2026'}
     negative_control:
       mutation: "make search submission a no-op while leaving labels visible"
       expected_failure: "the research scenario fails for no observed outcome"
@@ -2341,10 +2361,9 @@ items:
   depends_on:
   - BK-64
   record: docs/BACKLOG.md#bk-65-legal-dependency-graph-and-selective-invalidation
-  next_action: P18 wired the currency ledger onto the served product on 12 September 2026
-    and AC1 carries domain, integration, adversarial and browser results; AC2 is P22, which
-    also needs P21. The cumulative gate on the final integrated candidate derives AC1's
-    completion, not this record
+  next_action: P18 wired the currency ledger (AC1) and P22 wired the legal-premise gate
+    (AC2) on 12 September 2026; AC2's domain half passes and its model_eval and counsel_review
+    remain NOT RUN. The cumulative gate on the final integrated candidate derives completion
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#p18-start-record--12-september-2026}
     build: {result: BUILT, ref: docs/BACKLOG.md#p18-build-record--wiring-the-ledger-onto-the-served-product--12-september-2026}
@@ -2366,8 +2385,8 @@ items:
     requirement: governing legal premises are separately attributed and reviewable before dependent computations; correct arithmetic cannot establish applicable law, accrual or jurisdiction and changing a premise invalidates its results
     required_evidence: [domain_test, model_eval, counsel_review]
     evidence:
-      domain_test: {result: NOT_RUN, ref: ''}
-      model_eval: {result: NOT_RUN, ref: ''}
+      domain_test: {result: PASS, ref: 'tests/test_premises_come_before_arithmetic.py::test_the_three_premises_are_separate_and_none_derivable_from_arithmetic', note: 'the three premises are separate, an inferred accrual is conditional not blocked, the digest moves when a premise moves, and served the conditional date is never a deadline (test_an_inferred_accrual_computes_conditional_and_enters_no_deadline). 12 September 2026'}
+      model_eval: {result: NOT_RUN, ref: '', note: 'no real-model assessment of whether an inferred accrual or forum is correct; the gate refuses the arithmetic from certifying it, which is the code half'}
       counsel_review: {result: NOT_RUN, ref: ''}
     negative_control:
       mutation: keep the arithmetic correct while substituting an unsupported accrual rule or jurisdictional premise
@@ -3349,7 +3368,9 @@ items:
   - id: BK-84-AC3
     requirement: A maintained discovery and verification workflow separates finding, citation resolution, quotation fidelity, entailment, treatment and legal applicability; missing negative treatment research never becomes a clean-bill assertion
     required_evidence: [model_eval, counsel_review]
-    evidence: {}
+    evidence:
+      model_eval: {result: NOT_RUN, ref: '', note: 'P21 built the workflow -- five separate verdicts, adverse search by state, clean_bill never from an empty list -- and proved it on synthetic fixtures (tests/test_the_research_workflow_is_served.py::test_a_correct_quote_from_an_overruled_case_keeps_its_negative_treatment); a bounded real-model evaluation on the registered scenarios (EVAL-013/014) has not been run and needs its own approval'}
+      counsel_review: {result: NOT_RUN, ref: '', note: 'no qualified review has assessed semantic support or legal applicability; `support` is not_assessed on every attachment until one does'}
     negative_control:
       mutation: retrieve a correct quote from an overruled or inapplicable decision
       expected_failure: the evaluated conclusion records the limitation or is withheld, rather than inheriting authority from retrieval rank
@@ -3723,6 +3744,24 @@ items:
       expected_failure: the family-level delegation decision remains unapproved until the comparable complete population and safety obligations are satisfied
 
 events:
+- item: BK-35
+  at: '2026-09-12'
+  from: in_progress
+  to: in_progress
+  reason: P22 built reviewable legal premises before the arithmetic -- an inferred accrual computes conditional and enters no deadline, a stated premise makes it definitive, and cover/register share one premise version; verification moves from failing to partial
+  evidence: docs/BACKLOG.md#p22-test-record--12-september-2026
+- item: BK-38
+  at: '2026-09-12'
+  from: in_progress
+  to: in_progress
+  reason: P21 built grouped inspection, exact citation resolution and deliberate attachment with five separate verdicts, served and driven in the browser; verification moves from failing to partial
+  evidence: docs/BACKLOG.md#p21-test-record--12-september-2026
+- item: BK-25
+  at: '2026-09-12'
+  from: planned
+  to: in_progress
+  reason: P21 built case-level discovery and expansion by locator over the authority index and proved them served on synthetic fixtures; model_eval and counsel_review remain not run
+  evidence: docs/BACKLOG.md#p21-test-record--12-september-2026
 - item: BK-65
   at: '2026-09-12'
   from: planned

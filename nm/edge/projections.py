@@ -438,7 +438,75 @@ def cover_projection(matter: Matter, deadlines=None, today=None) -> dict:
         # WHAT ON THIS FILE IS STILL CURRENT (P18). One block, read from the
         # ledger the turn writes; the same names the board uses.
         "currency": currency_projection(matter),
+        # THE LEGAL PREMISES EACH THREAD'S LIMITATION RESTS ON (P22), and
+        # whether the cover, the register and the answer are about the SAME
+        # premise version. A mismatch is disclosed as `inconsistent`, never
+        # smoothed over -- BK-35-AC2's whole point is that they share one
+        # version or say precisely where they do not.
+        "premises": premises_projection(matter),
     }
+
+
+def premises_projection(matter: Matter) -> dict:
+    """Per thread: the three premises with basis, source and review state, and
+    a consistency verdict against the register.
+
+    THREE STATES for the file: `established` (every thread's premises are
+    stated or attributed), `conditional` (a thread's accrual was inferred),
+    `not_assessed` (no thread has computed a limitation). `inconsistent`
+    overrides them where a register row's premise digest does not match the
+    thread's own premises -- which is the cover and the register disagreeing
+    about the law, and it must be seen.
+    """
+    from nm.core.premise import Premises
+
+    threads = []
+    any_conditional = False
+    any_computed = False
+    inconsistent = []
+    for t in matter.threads:
+        rows = getattr(t, "premises", ()) or ()
+        if not rows:
+            threads.append({"thread_id": t.id, "thread": t.label,
+                            "state": "not_assessed", "premises": []})
+            continue
+        any_computed = True
+        digest = Premises.from_stored(rows).digest()
+        conditional = any(p.get("basis") == "inferred" for p in rows)
+        any_conditional = any_conditional or conditional
+        # THE REGISTER ROWS FOR THIS THREAD, and their premise digest.
+        reg_digests = {getattr(d, "premise_digest", "")
+                       for d in (t.deadlines or ())
+                       if getattr(d, "thread", None) == t.id
+                       and getattr(d, "premise_digest", "")}
+        mismatch = bool(reg_digests) and digest not in reg_digests
+        if mismatch:
+            inconsistent.append(t.id)
+        threads.append({
+            "thread_id": t.id, "thread": t.label,
+            "state": "conditional" if conditional else "established",
+            "digest": digest,
+            "consistent_with_register": not mismatch,
+            "premises": [{
+                "kind": p.get("kind"), "statement": p.get("statement"),
+                "basis": p.get("basis"), "source": p.get("source"),
+                "review_state": p.get("review_state", "not_assessed"),
+                "reviewed_by": p.get("reviewed_by", ""),
+                "alternatives": p.get("alternatives", [])} for p in rows]})
+    state = ("inconsistent" if inconsistent
+             else "conditional" if any_conditional
+             else "established" if any_computed
+             else "not_assessed")
+    return {"state": state, "threads": threads,
+            "inconsistent_threads": inconsistent,
+            "said": ("a thread's cover and deadline register rest on different "
+                     "premise versions" if inconsistent
+                     else "a thread's limitation rests on a premise the product "
+                          "inferred; confirm it before relying on the date"
+                     if any_conditional
+                     else "every computed limitation rests on an attributed or "
+                          "stated legal position" if any_computed
+                     else "no limitation has been computed on this file")}
 
 
 def currency_projection(matter: Matter) -> dict:

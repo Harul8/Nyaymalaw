@@ -180,6 +180,19 @@ class CorpusEvidenceAdapter:
             if self._published_snapshot is not None else None
         )
 
+    def withdrawn_sources(self) -> frozenset[str]:
+        """The generation's withdrawals, read from its durable events. P21.
+
+        Only when a published generation is bound: the legacy layout has no
+        withdrawal record to read, and inventing an empty one would be the
+        clean bill EVAL-014 refuses.
+        """
+        if self._published_snapshot is None:
+            return frozenset()
+        from nm.knowledge.manifest import withdrawn_versions
+
+        return withdrawn_versions(self._published_snapshot.root)
+
     def readiness(self) -> dict:
         """Three states per capability, reported at /api/health.
 

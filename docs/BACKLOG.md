@@ -139,7 +139,7 @@ Derived gap state: IN_PROGRESS 7, PLANNED 7
 - **BK-31** [A] account access, recovery and workspace identity — *in_progress* · implement D-013's authenticated recovery-code rotation and add registration, recovery and workspace proof to the approval-only browser journey; confidential-pilot authentication is BK-86 and deployed assurance remains BK-42
 - **BK-33** [A] recognisable matter cover, truthful board and real reopen — *in_progress* · render passed_deadlines, which the projection already emits
 - **BK-34** [B] front-door legal and professional screens before substance — *in_progress* · prove ordinary-screen admission and quarantine as a closeable foundation; the integrated emergency path is BK-78 after BK-53, and checked-registry scope remains explicit
-- **BK-35** [D] cause-specific accrual and answer-consistency gate — *in_progress* · refuse to run the period from a single dated fact that does not satisfy the curated trigger; emit the statutory limb
+- **BK-35** [D] cause-specific accrual and answer-consistency gate — *in_progress* · P22 added reviewable legal premises and the conditional state on 12 September 2026 -- an inferred accrual is conditional not a deadline, and a stated premise makes it definitive; AC1's model_eval and counsel_review remain NOT RUN
 - **BK-36** [C] durable, idempotent and recoverable turns — *in_progress* · idempotency must cover the OPENING turn, where matter_id is null and _load_or_create mints a new matter
 - **BK-40** [I] session expiry and confirmed logout — *in_progress* · clearPrivileged must clear state.intake and the intake form
 - **BK-43** [A/E] the overflow rule that switches off its own check — *verifying* · run the journey suite to confirm the width phase can now fail
@@ -148,7 +148,7 @@ Derived gap state: IN_PROGRESS 7, PLANNED 7
 - **BK-62** [B/C/E/F/G] commission and task authority record — *planned* · specify and build the versioned commission, scope, objective, deadline, output and decision-authority record
 - **BK-63** [A/B/C/D/E/F/G/I] professional role and authority control — *planned* · bind instruction, decision, drafting, filing, negotiation, administration and support operations to explicit professional roles and recorded authority
 - **BK-64** [C/D/E] typed proposition and evidence model — *planned* · define immutable sources, locators and proposition types for instructions, allegations, admissions, documents, testimony, inference and assumptions
-- **BK-65** [D/E] legal dependency graph and selective invalidation — *in_progress* · P18 wired the currency ledger onto the served product on 12 September 2026 and AC1 carries domain, integration, adversarial and browser results; AC2 is P22, which also needs P21. The cumulative gate on the final integrated candidate derives AC1's completion, not this record
+- **BK-65** [D/E] legal dependency graph and selective invalidation — *in_progress* · P18 wired the currency ledger (AC1) and P22 wired the legal-premise gate (AC2) on 12 September 2026; AC2's domain half passes and its model_eval and counsel_review remain NOT RUN. The cumulative gate on the final integrated candidate derives completion
 - **BK-67** [C/D/E/F] expert-advocate evaluation gate — *planned* · turn PA-01 to PA-20 into representative matter rubrics with named reviewers, thresholds, reservations and regression policy
 - **BK-69** [C/G/I] multimodal privacy and processing boundary — *in_progress* · verify and sign off only the W0 admission foundation; BK-79 owns W2 end-to-end attribution and deletion after BK-54 intake
 - **BK-70** [D/E/F] remedy and enforceability model — *planned* · model available relief, prerequisites, forum, timing, assets, execution route, practical recovery and proportionality as first-class legal-file objects
@@ -290,6 +290,8 @@ NOT_ASSESSED in the evidence, never as a pass or a silent skip.
 disposable schema removes it entirely.
 
 ## BK-84 — versioned Indian legal corpus publication and coverage governance
+
+**P21 (12 September 2026):** the research workflow that carries this row's criteria is recorded under *P21 Start record* and *P21 Test record* beside BK-65; the evidence rows in `status.yaml` bind to the tests named there.
 
 **Reason.** India-only operation does not imply nationwide verified legal coverage. Source publication, temporal applicability and coverage need a maintained foundation distinct from a search screen.
 
@@ -1799,6 +1801,8 @@ questions are not restored with the conversation.
 
 #### BK-38 — search-to-authority-to-matter research workflow — **PARTLY DONE · P1**
 
+**P21 (12 September 2026):** the research workflow that carries this row's criteria is recorded under *P21 Start record* and *P21 Test record* beside BK-65; the evidence rows in `status.yaml` bind to the tests named there.
+
 **Phase:** legal research and deliberate use of authority.
 
 **Good now:** the corpus search is fast, returns relevant paragraph-level hits,
@@ -1940,6 +1944,8 @@ sweep enumerates the suite and fails on an imperative xfail, so the fourth
 cannot be added.
 
 #### BK-45 — the search phase cannot fail — **OPEN · P1 · Phase A**
+
+**P21 (12 September 2026):** the research workflow that carries this row's criteria is recorded under *P21 Start record* and *P21 Test record* beside BK-65; the evidence rows in `status.yaml` bind to the tests named there.
 Opened 9 September 2026, verified in source.
 
 `tests/test_the_journey_login_to_logout.py:507` waits for
@@ -4119,6 +4125,285 @@ integration, where the matter is registered as a `work_id`. Positions, issues
 and theory carry no currency yet; the producer table above is where the next
 node is added first.
 
+### P21 Start record — separate discovery, identity and legal verification — 12 September 2026
+
+**Decision: READY, with P18 committed ahead of it.** P17 is on the tree
+(`nm/core/casefile.py`, the commission and authority policy) and P20's
+publication interfaces exist in `nm/knowledge/manifest.py` — `PublishedCorpus`,
+`get_source`, `record_corpus_dependency(root, CorpusDependency(work_id,
+snapshot_id, source_versions, observed_at))`, `withdraw_corpus(...) →
+WithdrawalResult(affected_work, active_snapshot_id)`. The composition root binds
+a published generation when `NM_CORPUS_DIR/current.json` exists and the legacy
+`.nm/authority.db` otherwise; both go through `AuthorityIndexSearch`. Verified by
+reading the code and by querying the live indexes, not from the delivery report.
+
+**Existing owners, enumerated from the code.**
+
+| Owner | Owns | Does not own |
+|---|---|---|
+| `nm/ports/search.py` | the PRODUCES contract of a corpus search: ranked paragraph hits, `Coverage`, `IndexIdentity`, `Origin.SEARCHED` on every hit | cases, identity, verification |
+| `nm/adapters/search/authority.py` | the FTS5 read over `paras` (`case_id, case_name, court, year, para_type, chunk_id, text`), court resolution through the closed `STORED_AS` vocabulary, the identity table | grouping by case, reading a paragraph back by its locator |
+| `nm/knowledge/identity.py::IdentityIndex` | `cases`, `citations(citation_key → case_id)`, `treatment(target_case_id)`, `addressable` | resolving a citation the advocate typed — no method takes raw text |
+| `tools/build_identity_index.py::citation_key` | the exact reporter key (`[^A-Z0-9]` stripped, upper-cased) | **a second copy would be** in whatever runtime module resolves a citation; `nm/domain/citation.py` is the only module permitted a citation pattern (CLAUDE.md §4) |
+| `nm/knowledge/citator.py` | the 4,894-entry citator, 0.84% of held judgments | treatment for the 99% it does not cover — `Treatment.not_checked` is the honest answer there |
+| `nm/knowledge/jurisdiction.py` | whether a court binds Telangana (`binding` is a RELATIONSHIP) | applicability to a matter's forum and governing date, which needs both |
+| `nm/edge/api.py::search` | `GET /api/search`: ranked paragraphs for a signed-in advocate, nothing matter-specific | a research record; attachment; scope |
+| `web/app.js::renderSearch` | one card per ranked paragraph with origin and rank band | grouping, expansion, attachment |
+| `nm/core/dependency.py` (P18) | AUTHORITY edges keyed `store:locator`, digested on the span | learning that a source was withdrawn — nothing calls `sync_inputs` with a withdrawal |
+
+**Measured on the live indexes, 12 September 2026.** `.nm/authority.db` holds
+451,548 of 1,015,780 paragraphs (`partial: no`, `attributable_kinds:
+ratio,reasoning,order`), 33,713 distinct `case_id`s of which **33,712 are in
+`identity.cases`** — the two indexes share the court-first id (`SC_1950_AK_GOPALAN_…`);
+203 digit-first ids in `cases` are a different naming era of the source files.
+`citations` holds 302,909 keys; `1950AIR27` resolves to `SC_1950_AK_GOPALAN_…`
+and that case has 193 paragraphs in the authority index. So exact identity
+resolution — citation → key → case → paragraphs — is a sequence of exact lookups
+with no ranking anywhere in it, and the missing piece is only that no runtime
+method performs it.
+
+**Missing behaviour, in the order the criteria name it.**
+
+1. *Case-level discovery followed by expansion (BK-25-AC1).* `search` returns
+   paragraphs; nothing groups them by case, nothing reads a case's other
+   paragraphs back with context, and a holding spread across paragraphs
+   arrives as unrelated snippets or not at all. Coverage of the expansion is
+   not stated: the index holds 44% of source paragraphs and a case's expansion
+   may therefore be incomplete, which must be said as a value.
+2. *Exact identity independent of ranking (BK-25-AC1, BK-38-AC1).* No method
+   resolves a typed citation. A summary or ranked snippet can be cited as if it
+   were the source, because nothing reads a paragraph back BY LOCATOR and
+   nothing compares a quotation to the stored text.
+3. *Separate dimensions (BK-84-AC3).* One `Finding` carries `supports`,
+   `treatment`, `binding` and a span together and the turn asserts them
+   together. Identity, quote fidelity, semantic support, treatment and
+   applicability are five questions with five failure modes and today they
+   are not five fields.
+4. *A durable research record (BK-84-AC3, BK-38-AC1).* A search leaves
+   nothing on the file: no objective, no consulted index identity, no
+   adverse search, no stopping reason. EVAL-014's restart resumes nothing.
+5. *Grouped inspection, deliberate attachment with a precise locator
+   (BK-38-AC1).* There is no attach; an authority reaches a matter only
+   through the turn's own retrieval.
+6. *Four distinct outcomes (BK-38-AC2).* `Coverage.ANSWERED` with zero hits
+   and `NOT_ASSESSED` exist; *unsupported coverage* — a court or jurisdiction
+   the corpus does not hold — is folded into a `1 = 0` filter and reads as
+   zero results.
+7. *Scope before retrieval and on readback/attachment (BK-38-AC1, BK-45).*
+   `/api/search` takes an advocate and no matter; a research request must
+   name the matter it is for, be refused for a matter the advocate does not
+   hold, and a readback or attachment must be refused across matters.
+
+**Mechanism, and why it is one.** `nm/core/research.py` owns the RECORD and the
+VERDICTS — `Research`, `Consulted`, `AdverseSearch`, `Attachment`, the four
+`Outcome`s, `classify`, `may_attach`, `clean_bill` — as pure functions over the
+port types, persisted on `Matter.research` through the same generic codec as the
+ledger. `nm/ports/search.py` gains `discover`, `expand`, `passage` and `resolve`
+so the edge asks the port and never SQLite. `nm/adapters/search/authority.py`
+implements them over the one FTS table and the one identity index it already
+opens. `nm/domain/citation.py` gains `reporter_key`, and
+`tools/build_identity_index.py` imports it — one owner of the exact key, at
+build and at read. Attachment goes through P18's ledger: the attached passage
+becomes an AUTHORITY input, so a later withdrawal reaches every conclusion that
+cites it, and `record_corpus_dependency` is written when a published generation
+is active. Nothing here ranks an Act, and nothing here turns a rank into an
+identity.
+
+**Boundary extension, registered in `docs/blueprint/packets.json` before any
+edit:** `nm/core/research.py` (new), `nm/domain/citation.py`, `nm/domain/matter.py`,
+`nm/knowledge/identity.py`, `nm/edge/api.py`, `nm/edge/projections.py`,
+`nm/core/dependency.py`, `tools/build_identity_index.py`, `tools/journey.py`,
+`web/app.js`, `web/index.html`, `web/app.css`,
+`tests/test_research_keeps_finding_apart_from_verification.py` (new),
+`tests/test_the_research_workflow_is_served.py` (new),
+`tests/test_the_journey_of_a_search.py` (new, browser),
+`tests/test_reached_from_production.py`, `tests/test_store_roundtrip.py`.
+
+**Acceptance-to-test mapping, planned.**
+
+| Criterion | Required | Test | Plants |
+|---|---|---|---|
+| BK-84-AC3 | model_eval, counsel_review | domain and integration tests here are FOUNDATION evidence only; `model_eval` and `counsel_review` are NOT RUN and stay so — no code here can satisfy them | a correct quote from an overruled decision: the attachment carries `treatment: negative` and `support: not_assessed`, and `clean_bill` is `not_assessed` |
+| BK-25-AC1 | integration_test, model_eval, counsel_review | `test_the_research_workflow_is_served.py`: a holding spread across two paragraphs of one case is found at case level and both paragraphs come back in expansion; an unresolvable citation is `unresolved`, not a hit | hide the holding across paragraphs; offer a summary identity |
+| BK-38-AC1 | integration_test, browser_journey | attach by exact locator with a verbatim quote → recorded with five dimensions; attach a ranked snippet (no locator, or text that differs) → refused with the dimension that failed | the snippet-as-source |
+| BK-38-AC2 | integration_test, browser_journey | four outcomes on the wire: results; searched-with-no-results naming the index; `unsupported_coverage` for a court the corpus does not hold; `unavailable_index` when the file is absent | an absent index; an unknown court alias |
+| BK-45-AC1 | domain_test | the browser phase asserts a post-submission state — results, no-results or unavailable — and a submission that is a no-op fails it | make submit a no-op while the labels stay |
+
+**Rollback.** Revert the commit; `Matter.research` decodes to `()` on older
+records; the search route keeps its current contract; no index is rebuilt and
+no corpus is written. A withdrawn source that had been attached stays
+withdrawn in the ledger — rollback does not mark it current.
+
+### P21 Test record — 12 September 2026
+
+**Outcome: BUILT and VERIFIED on the served path and in the browser for the
+engineering half of five criteria. `model_eval` and `counsel_review` are NOT
+RUN on BK-84-AC3, BK-25-AC1 and BK-35-AC1 and no code here can run them; those
+rows stay open and say so.**
+
+**What now works through the actual application.** A research need is opened
+on a matter (`POST /api/matters/{id}/research`) with an objective and an issue;
+one round consults the index by case-level discovery or by exact citation,
+runs the adverse search — subsequent treatment of every surfaced case, from
+the identity index, recorded by STATE — and persists all of it on
+`Matter.research`: the index's identity and version, the filters as read, the
+case ids, the outcome as one of four values, the round against its bound and
+the reason it stopped. `GET .../research/{rid}/cases/{case_id}` reads a
+consulted case back by locator with its coverage stated as a value (`False`
+for this index: attributable kinds only) and its bench; a case the research
+did not consult is the same 404. `POST .../attach` attaches ONE passage with
+its words and returns five verdicts — identity, quote fidelity, support,
+treatment, applicability — and refuses a ranked snippet, a changed word and
+an unconsulted case with the dimension that failed. The attached passage is
+tracked on the P18 ledger (`ledger_id`), and a source version the publication
+layer withdraws is marked withdrawn on the next turn through the evidence
+port's `withdrawn_sources`. The search pane offers *Record this as research*
+when a matter is open, renders cases (with matched-paragraph counts and
+origin), opens them to paragraphs, attaches with the five verdicts shown as
+five rows, and shows the research record from the file on every open of the
+pane. `nm.domain.citation.reporter_key` is the one owner of the exact
+citation key, at build and at read.
+
+**Measured, criterion by criterion.**
+
+| Criterion | Required | Result |
+|---|---|---|
+| BK-84-AC3 | model_eval, counsel_review | **NOT RUN** — foundation only. Domain: `clean_bill` is `not_assessed` for an empty or unavailable adverse search (EVAL-014's planted negative) and `adverse_found` where one ran and found; served: a verbatim quote from `SYN_2001_OVERRULED` attaches as a verified citation with `treatment: negative`, `support: not_assessed`, and the record's `clean_bill` is `adverse_found` |
+| BK-25-AC1 | integration_test, model_eval, counsel_review | integration PASS: a holding spread across two ratio paragraphs surfaces as one case with `paragraphs_matched ≥ 2` and both come back in expansion by locator, `origin: resolved`, `complete: False`; `AIR 1990 SYN 1` resolves to exactly one case and `AIR 1999 SYN 99` to nothing with no near miss offered. model_eval, counsel_review **NOT RUN** |
+| BK-38-AC1 | integration_test, browser_journey | integration PASS: attach by exact locator with verbatim words → five verdicts recorded; a snippet-shaped locator → 422 `identity: unresolved`; a changed word → 422 `quote_fidelity: differs`; an unconsulted case → 422 "did not surface". Browser PASS: phases 3–4 open a case to its paragraphs by locator and attach one, and the page shows five rows and the note *identity and words only* |
+| BK-38-AC2 | integration_test, browser_journey | integration PASS: `results`; `searched_no_results` carrying the index identity; `unsupported_coverage` for `Bombay High Court` decided before anything is searched; `unavailable_index` for an absent file. Browser PASS: phases 2, 5, 6 read `#research-outcome[data-outcome]` after submission for each of the three reachable states |
+| BK-45-AC1 | domain_test | PASS: every browser phase waits for `#research-outcome[data-outcome]`, an element that exists only after an answered submission; a no-op submit with visible labels produces no such element and fails the wait |
+
+**Populations.** `tests/test_research_keeps_finding_apart_from_verification.py`
+22 passed; `tests/test_the_research_workflow_is_served.py` 17 passed (through
+the ASGI app over the synthetic indexes in the real schema; one rebuilds the
+application on the same store); `tests/test_the_journey_of_a_search.py` 7
+passed in Chromium; affected sweeps and contracts — policed destinations,
+reached-from-production, three states, blank values, store round-trip (record
+populated), persisted-field writers, citation patterns, court filter, route
+authentication, never-clauses, disclosure, gate matrix, produces contracts,
+defect register, turn contract — all passed.
+
+**What the suite caught in the build.** `CaseExpansion` accepted a
+whitespace case id; `Application.withdrawn_sources` had no caller — the
+bridge belongs on the evidence port and the turn, where the file is re-read,
+and it moved there; the turn read `self.evidence` where the engine holds
+`self._evidence`, and the §7 rule (a broad `except` logs at ERROR) is what
+made that a one-line fix rather than a silent empty set. A test asserted one
+of two phrasings `stored_court` produces for an unheld court.
+
+**Bounds stated.** Discovery folds at most `DISCOVERY_POOL = 200` ranked
+paragraphs and reports `paragraphs_ranked`; the adverse search asks about at
+most `ADVERSE_BOUND = 8` surfaced cases and names them; a need has
+`ROUND_LIMIT = 2` rounds and a third is refused with the stopping reason.
+
+**Not claimed.** Semantic support is `not_assessed` everywhere. The
+per-source P20 dependency is recorded only when the bound generation names a
+`source_id` matching the case (`PublishedCorpus.version_for_source`);
+otherwise the attachment records the generation or the index's corpus
+version and says which. No real index was searched; the synthetic fixtures
+say in their own text that they are not law.
+
+### P22 Start record — assess legal premises before conditional arithmetic — 12 September 2026
+
+**Decision: READY.** P18 (the currency ledger) and P21 (verified sources) are
+committed. `nm/core/premise.py` existed and was declared UNWIRED; the accrual
+read (`nm/core/accrual.py`) and the cause-specific trigger (`Edge.accrues_on`)
+were built by BK-35's first half. What was missing is the step BK-65-AC2 names:
+the arithmetic ran without ever treating *which provision governs*, *what
+starts the period* and *which forum binds* as things that could be wrong.
+
+**Existing owners.** `nm/core/limitation.py` owns the arithmetic and already
+refuses to invent a PERIOD (`Period` verifies itself against the retrieved
+span). `nm/core/premise.py` owns the three premises, their four bases and the
+digest. `nm/core/turn.py::_limitation` chooses the accrual and computes.
+`nm/core/deadlines.py` owns the register. None owned the join: premises built
+from what the turn retrieved, assessed before the arithmetic, and carried onto
+the result.
+
+**Missing behaviour, and the mechanism.** `_limitation` now builds three
+premises before computing: APPLICABLE_LAW from the retrieved Article
+(ATTRIBUTED to its `store:locator`), ACCRUAL_RULE from the curated trigger
+where the read identified an entry (ATTRIBUTED) or from the product's own
+reading where the cause is uncurated (INFERRED, with every competing dated
+entry named), JURISDICTION from the deployment's measured scope (ATTRIBUTED).
+A premise the advocate has STATED outranks all of it. `premises.unestablished()`
+BLOCKS — the position is NOT_COMPUTED with the kind named; `premises.inferred()`
+makes it a new state, CONDITIONAL — the arithmetic runs, is shown with its
+alternatives, and is NEVER a deadline on the register (`Deadline.conditional_on`,
+not `on`, so `status()` can never call it near/future/passed). Stating the
+premise (`POST /api/matters/{id}/threads/{tid}/premises/{kind}`) records it with
+who and when; the next turn recomputes definitively. The register row and the
+cover carry the premise digest, so the two are checked to be one version
+(BK-35-AC2); a corrected trigger date supersedes the fact and P18 currency
+marks the deadline stale.
+
+**Boundary extension, registered before editing:** `nm/core/premise.py`,
+`nm/core/limitation.py`, `nm/core/deadlines.py`, `nm/domain/matter.py`,
+`nm/domain/gates.py`, `nm/core/turn.py`, `nm/edge/api.py`,
+`nm/edge/projections.py`, `web/app.js`, `web/index.html`, `web/app.css`, and
+the tests below.
+
+**Rollback.** `Matter.premises`/`premises_stated` and `Thread.premises` decode
+to their empties on old records; `LimitationState.CONDITIONAL` and
+`Deadline.conditional_on` are additive. Reverting the wiring returns the
+arithmetic to the pre-P22 behaviour; nothing stored is lost.
+
+### P22 Test record — 12 September 2026
+
+**Outcome: BUILT and VERIFIED for the engineering half of three criteria.
+`model_eval` (BK-65-AC2, BK-35-AC1) and `counsel_review` (BK-65-AC2, BK-35-AC1)
+are NOT RUN and no code here runs them.**
+
+**What now works through the actual application.** A brief on a cause with no
+curated accrual trigger and two dated events computes CONDITIONAL: the answer
+says so in its own words, shows the date under the chosen reading AND under
+each competing trigger, and enters no deadline on the register. G-PREMISE fires
+`conditional`. The advocate states the accrual through the premise route; the
+next turn computes definitively, the register gains a real deadline, and the
+cover shows the premise `stated · reviewed by <advocate>`. A cause with a
+curated trigger (goods, Article 19) is ATTRIBUTED and COMPUTED as before. The
+cover's premise digest and the register row's digest are the same; a corrected
+trigger date marks the deadline stale (P18). The Case file pane shows the three
+premises per thread with a Confirm control for an inferred one.
+
+**Measured, criterion by criterion.**
+
+| Criterion | Required | Result |
+|---|---|---|
+| BK-65-AC2 | domain_test, model_eval, counsel_review | domain PASS (`tests/test_premises_come_before_arithmetic.py`); model_eval, counsel_review **NOT RUN** |
+| BK-35-AC1 | integration_test, model_eval, counsel_review | integration PASS (conditional then definitive on a stated premise); model_eval, counsel_review **NOT RUN** |
+| BK-35-AC2 | integration_test, adversarial_test | integration PASS (cover and register share one digest); adversarial PASS (a corrected trigger date is not served as current) |
+
+**Populations.** `tests/test_premises_come_before_arithmetic.py` 12 passed
+(5 domain, 7 served through the ASGI app). Affected regressions —
+turn contract, gaps-and-cascade, boards, cover, deadlines, salvage, factors
+(updated for the conditional model), the P18 correction suite, the P21 research
+suite, never-clauses, three-states, blank-values, reached-from-production,
+produces-contracts, store round-trip, disclosure-reaches-the-advocate,
+gate-matrix, dead-code, defect-register, persisted-field writers, the page
+contracts and the tooling sweeps — all passed. The full class-A population was
+NOT run at the user's instruction; this is the affected-set result, not a
+cumulative one.
+
+**What the suite caught in the build.** `assess()` treats an INFERRED premise
+as a reason not to compute; my first wiring used it as the block and turned
+every conditional case into NOT_COMPUTED — the block is `unestablished()`
+alone, and `inferred()` drives the conditional branch. A premise statement
+containing an apostrophe, `repr()`'d into the assessment text, read as a
+double-quoted span and G-QUOTE withheld the turn (B-104's shape); the block
+now uses `english_of(kind)` and carries no quoted statements. `test_factors_on_a_served_turn`
+asserted a bare date-string absence that P22 legitimately changed — the
+acknowledgment date now appears as a labelled conditional ALTERNATIVE accrual,
+not an s.18 restart; the test was updated to check the invariant it protects
+(no restart without its section) rather than the incidental string.
+
+**Not claimed.** The `model_eval`/`counsel_review` methods are the substance of
+BK-65-AC2 and BK-35-AC1 and remain open. Uncertain "on or about" date RANGES
+are not modelled beyond competing dated entries; that is recorded as open on
+BK-35. Completion of any criterion derives from the cumulative gate on the
+final candidate, not from this record.
+
 ## BK-66 — advocate trust evaluation
 Opened 9 September 2026.
 
@@ -4777,6 +5062,8 @@ record IS). `pane-record` is now `pane-history`, `loadRecordMatters` is
 `loadHistoryMatters`, and nothing points at the old ids.
 
 ## BK-25 - the authority need finds a case by scanning a million paragraphs
+
+**P21 (12 September 2026):** the research workflow that carries this row's criteria is recorded under *P21 Start record* and *P21 Test record* beside BK-65; the evidence rows in `status.yaml` bind to the tests named there.
 Opened 7 September 2026, out of the paragraph-labelling work. **Approved: the
 case-finding step becomes a search over case SUMMARIES, and the paragraph
 index is only read for the cases that step selects.**

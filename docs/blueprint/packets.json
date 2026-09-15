@@ -1855,6 +1855,98 @@
         {
           "path": "nm/knowledge/citator.py",
           "kind": "existing"
+        },
+        {
+          "path": "nm/core/research.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/citation.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/matter.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/knowledge/identity.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/knowledge/manifest.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/dependency.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/adapters/search/policed.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/bootstrap/composition.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/build_identity_index.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/journey.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tools/served.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        },
+        {
+          "path": "web/index.html",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.css",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/synthetic_index.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_research_keeps_finding_apart_from_verification.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_the_research_workflow_is_served.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_the_journey_of_a_search.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_reached_from_production.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_store_roundtrip.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_no_declared_owner_is_dead.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_tooling_bites.py",
+          "kind": "existing"
         }
       ],
       "inputs": [
@@ -1940,6 +2032,58 @@
         },
         {
           "path": "nm/core/turn.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/premise.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/domain/matter.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/core/dependency.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "nm/edge/projections.py",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.js",
+          "kind": "existing"
+        },
+        {
+          "path": "web/index.html",
+          "kind": "existing"
+        },
+        {
+          "path": "web/app.css",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_premises_come_before_arithmetic.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_reached_from_production.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_never_clauses.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_store_roundtrip.py",
+          "kind": "existing"
+        },
+        {
+          "path": "tests/test_no_declared_owner_is_dead.py",
           "kind": "existing"
         }
       ],

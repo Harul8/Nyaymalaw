@@ -123,3 +123,23 @@ def provisions_cited(text: str) -> set[str]:
 def cases_named(text: str) -> set[str]:
     """Every case name in a piece of text."""
     return {f"{a.strip()} v {b.strip()}" for a, b in CASE.findall(text or "")}
+
+
+#: Everything that is not a letter or a digit. THE EXACT KEY a reporter
+#: citation is stored and looked up under: `AIR 1990 SC 1`, `AIR1990SC1` and
+#: `A.I.R. 1990 S.C. 1` are one citation and one key. Upper-cased first, so
+#: the class is written once.
+_NOT_KEY = re.compile(r"[^A-Z0-9]")
+
+
+def reporter_key(raw: str) -> str:
+    """The exact key for a reporter citation. ONE OWNER, at build and at read.
+
+    `tools/build_identity_index.py` writes `citations.citation_key` with this
+    and `AuthorityIndexSearch.resolve` looks a typed citation up with it, so
+    the two cannot disagree about what a citation is -- which is CLAUDE.md
+    §4's question answered structurally. Exact match on this key reached
+    90.9% of held judgments where name matching reached 0.83% (CLAUDE.md §5);
+    nothing here ranks, and nothing here tolerates a near miss.
+    """
+    return _NOT_KEY.sub("", (raw or "").upper())

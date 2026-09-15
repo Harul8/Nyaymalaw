@@ -263,6 +263,26 @@ GATES: tuple[Gate, ...] = (
         built=False,
     ),
     Gate(
+        id="G-PREMISE",
+        condition="A limitation is about to be computed: are the applicable "
+                  "law, the accrual rule and the forum each ESTABLISHED, or "
+                  "did the product infer one?",
+        states=("established", "conditional", "unestablished"),
+        response=Response.DISCLOSE,
+        scope=Scope.STEP,
+        persistence=Persistence.TURN,
+        recovery=Recovery.ADVOCATE,
+        visible="BK-65-AC2: correct arithmetic cannot establish which "
+                "provision governs, what starts the period, or which forum "
+                "binds. Where a premise is INFERRED the date is shown "
+                "CONDITIONAL with its alternatives and is never entered as a "
+                "deadline; where one is UNESTABLISHED nothing is computed. A "
+                "premise the advocate STATES outranks the inference and is "
+                "recorded with who stated it and when.",
+        feature="D1",
+        built=True,
+    ),
+    Gate(
         id="G-THREAD",
         condition="An account cannot be bound to exactly one thread, or two "
                   "threads look like one without a decisive identifier.",
