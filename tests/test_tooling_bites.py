@@ -756,25 +756,21 @@ def test_the_hook_keeps_the_hook_that_was_there_first():
     assert "code-review-graph" in hook, (
         "the canonical hook dropped the graph's update, so installing ours "
         "silently disables theirs")
-    assert "gatestamp.py" in hook
-    assert "--no-verify" in hook, (
-        "a blocking hook that does not say how to override it is one people "
-        "uninstall rather than bypass")
 
 
-def test_the_hook_refreshes_vectors_and_keeps_the_gate_blocking():
-    """BK-76-AC2. Search freshness may warn; build identity must decide.
+def test_the_hook_refreshes_vectors_and_never_blocks_a_commit():
+    """BK-76-AC2, as changed on 15 September 2026.
 
-    The refresh moved into `assurance/hooks/refresh-graph` on 12 September 2026
-    so that post-merge and post-rewrite could share it (see
-    `test_every_way_the_tree_changes_refreshes_the_index.py`). The rule here
-    is unchanged: pre-commit reaches the vectors, non-blocking, BEFORE the
-    blocking gate.
+    The product owner removed the gate from the commit path: checks are run by
+    hand and the commit decision is a person's. What remains is the graph: the
+    refresh moved into `assurance/hooks/refresh-graph` on 12 September 2026 so
+    post-merge and post-rewrite could share it, and pre-commit still reaches it.
+    A hook that could still refuse a commit would be the removed gate coming
+    back without anyone deciding it should.
     """
     hook = (ROOT / "assurance" / "hooks" / "pre-commit").read_text(encoding="utf8")
     owner = (ROOT / "assurance" / "hooks" / "refresh-graph").read_text(encoding="utf8")
     vector = "assurance/hooks/refresh-graph"
-    gate = "python assurance/gate/gatestamp.py --quiet --require-index || exit 1"
 
     assert vector in hook, (
         "the hook updates the structural graph without refreshing its vectors")
@@ -782,14 +778,13 @@ def test_the_hook_refreshes_vectors_and_keeps_the_gate_blocking():
     assert embed in owner, (
         "refresh-graph no longer refreshes the vectors, or lets a failed "
         "embed fail the hook")
-    assert gate in hook, (
-        "the hook made the exact-build gate best effort, so an unverified tree "
-        "can be committed")
-    assert hook.index(vector) < hook.index(gate), (
-        "the semantic report no longer accompanies the graph update before the "
-        "blocking build-identity decision")
-    assert "if ! command -v python" in hook, (
-        "the hook silently skips its blocking control when Python is absent")
+    code = [line.strip() for line in hook.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")]
+    assert "gatestamp.py" not in hook.replace("# ", ""), (
+        "the commit hook checks the gate stamp again")
+    assert not any("exit 1" in line for line in code), (
+        "the commit hook can refuse a commit")
+    assert code[-1] == "exit 0", "the commit hook does not end by allowing the commit"
 
 
 def test_the_canonical_hook_is_tracked_as_executable():

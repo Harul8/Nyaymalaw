@@ -3,7 +3,12 @@
 #
 # INSTALL:  git config core.hooksPath assurance/hooks
 # REMOVE:   git config --unset core.hooksPath
-# BYPASS:   git commit --no-verify
+#
+# IT NO LONGER BLOCKS A COMMIT. On 15 September 2026 the product owner removed
+# the gate from the commit path: checks are run by hand and the commit decision
+# is taken by a person. This hook only keeps the code graph current and prints
+# the graph's review summary. `python assurance/gate/check.py` still exists and
+# is run when someone decides to run it.
 #
 # NOT `cp` INTO .git/hooks. Measured 12 September 2026: the copy there was
 # two revisions behind this file -- it lacked `--require-index` and the
@@ -23,10 +28,8 @@
 # commit: B-111 gave the gate a fingerprint, B-114 gave the served product
 # one, and this gives the commit one.
 #
-# IT BLOCKS RATHER THAN WARNS, and `--no-verify` is the deliberate override.
-# A warning printed above a successful commit is a warning nobody reads; the
-# point is that an unchecked commit becomes a decision somebody makes rather
-# than one they discover.
+# That history is why the gate stamp existed. It is kept here as a record; the
+# stamp check below it was removed on the product owner's instruction.
 
 # The graph and its vectors, refreshed together by the ONE script every
 # tree-changing hook calls. Measured 10 September 2026: `update` alone left
@@ -44,13 +47,4 @@
 if command -v code-review-graph >/dev/null 2>&1; then
     code-review-graph detect-changes --brief || true
 fi
-
-# Is THE STAGED COMMIT the exact tree the gate passed on? Missing Python is a
-# failed control, not permission to skip it. The live-worktree comparison alone
-# is insufficient: an unstaged compensating change can make A+B pass while the
-# index commits only the unchecked A.
-if ! command -v python >/dev/null 2>&1; then
-    echo "GATESTAMP NOT ASSESSED -- python is unavailable; commit refused."
-    exit 1
-fi
-python assurance/gate/gatestamp.py --quiet --require-index || exit 1
+exit 0

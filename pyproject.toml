@@ -42,6 +42,35 @@ dev = [
 # journey suite asks for it, and the suite says so by name when the import
 # is missing rather than skipping quietly.
 journey = ["playwright>=1.47", "pytest-playwright>=0.5"]
+# THE EVAL TOOLS, chosen 15 September 2026 (Implementation Plan, Eval columns).
+#
+# `bdd` turns a plan row's Must do / Must never into Given-When-Then tests and
+# installs into the project environment: it adds four small packages and moves
+# nothing the product depends on.
+#
+# `inspect` (scored conversations with a full per-sample log), `ragas`
+# (retrieval) and `annotation` (Label Studio for advocates grading answers) are
+# INSTALLED INTO THEIR OWN ENVIRONMENTS, never the product's: beside the product
+# they upgrade pydantic, anyio, requests and others the served application
+# relies on. And not into ONE shared environment either, measured on install:
+# Inspect's OpenAI provider requires openai>=3.1 while Ragas's langchain-openai
+# requires openai<3. Ragas 0.4.3 also imports a module langchain-community 0.4
+# removed, so its langchain set is pinned below 1.0.
+#   python -m venv --system-site-packages %USERPROFILE%\.venvs\nyaymalaw-inspect
+#   python -m venv --system-site-packages %USERPROFILE%\.venvs\nyaymalaw-ragas
+#   python -m venv %USERPROFILE%\.venvs\label-studio
+bdd = ["pytest-bdd>=8.1,<9"]
+inspect = ["inspect-ai==0.3.263", "openai>=3.1,<4"]
+ragas = [
+    "ragas==0.4.3",
+    "langchain<1",
+    "langchain-core<1",
+    "langchain-community<0.4",
+    "langchain-openai<1",
+    "openai>=1.104,<3",
+    "jiter<0.15",
+]
+annotation = ["label-studio==1.23.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["backend/nm"]

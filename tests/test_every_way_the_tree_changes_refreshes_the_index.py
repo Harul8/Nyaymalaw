@@ -105,7 +105,8 @@ def test_the_owner_performs_both_halves_of_the_refresh():
 def test_the_owner_never_blocks():
     """A post-* hook cannot block and pre-commit must not block on this:
     offline is a normal state and a search index is not a release criterion.
-    The gate that DOES block lives in pre-commit, after the refresh."""
+    Since 15 September 2026 nothing in pre-commit blocks: the gate is run by
+    hand and the commit decision is a person's."""
     code = _code_lines(_hook(OWNER))
     for ln in code:
         for pattern in REFRESH_COMMANDS:
