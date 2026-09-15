@@ -35,8 +35,11 @@ EMAIL = "reader+private@example.com"
 
 
 def _register(client, email=EMAIL, **extra):
+    from tests.registration import CONSENT
+
     return client.post("/api/register", json={
-        "email": email, "password": PASSWORD, "password_again": PASSWORD, **extra})
+        "email": email, "password": PASSWORD, "password_again": PASSWORD,
+        "consent": CONSENT, **extra})
 
 
 def _login(client, email=EMAIL, password=PASSWORD):

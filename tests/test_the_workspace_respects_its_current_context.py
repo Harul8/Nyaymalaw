@@ -20,8 +20,10 @@ from tests.test_the_journey_login_to_logout import (
     WIDTHS,
     _advise,
     _intake,
+    _open_account_menu,
     _reach_rail,
     _sign_in,
+    _sign_out,
     _tab,
     playwright_api,
 )
@@ -415,11 +417,21 @@ def test_the_live_workspace_is_local_and_keyboard_navigable_at_each_width(
         _assert_fits(page, "#message")
         _assert_fits(page, "#send")
         _assert_no_overflow(page)
-    for tab in ("search", "history", "advise"):
-        _assert_fits(page, f"button[data-tab='{tab}']")
+    for tab in ("home", "search", "prepare", "advise"):
+        _assert_fits(page, f"#tabs button[data-tab='{tab}']")
         _tab(page, tab)
         _assert_no_overflow(page)
-    for selector in ("#who-name", "#workspace-name", "#devices", "#signout"):
+    # F-A-17. Case file and History are offered inside My work, for the open matter.
+    for surface in ("casefile", "history"):
+        _assert_fits(page, f"#work-links button[data-tab='{surface}']")
+        _tab(page, surface)
+        _assert_no_overflow(page)
+        _tab(page, "advise")
+    if width > 820:
+        for selector in ("#who-name", "#workspace-name"):
+            _assert_fits(page, selector)
+    _open_account_menu(page)
+    for selector in ("#profile-name", "#profile-workspace", "#devices", "#signout"):
         _assert_fits(page, selector)
     linked_assets = page.locator("link[href], script[src]").evaluate_all("""nodes =>
         nodes.map(el => el.href || el.src).filter(url =>
@@ -545,10 +557,11 @@ def test_late_authenticated_responses_cannot_repopulate_dom_after_logout(
         assert held.wait()["coverage"], "the server must have assessed a search state"
     else:
         held = _HeldReply(page, "**/api/sessions")
+        _open_account_menu(page)
         page.click("#devices")
         assert held.wait()["sessions"], "the live session population cannot be empty"
         page.click("#sessions-close")
-    page.click("#signout")
+    _sign_out(page)
     page.wait_for_selector("#gate:not([hidden])")
     _assert_protected_dom_cleared(page)
     held.release()
@@ -715,7 +728,7 @@ def test_a_retired_logout_cannot_end_a_new_login(page, journey, retry_in_flight)
         route.fulfill(status=200, json={"signed_out": False, "outcome": "unknown"})
 
     page.route("**/api/logout", unconfirmed)
-    page.click("#signout")
+    _sign_out(page)
     page.wait_for_selector("#login-state .loud")
     assert page.request.get(journey["base"] + "/api/session").status == 200
     page.unroute("**/api/logout", unconfirmed)
@@ -752,7 +765,7 @@ def test_http_success_without_revocation_confirmation_stays_unconfirmed(page, jo
         route.fulfill(status=200, json={"signed_out": False, "outcome": "unknown"})
 
     page.route("**/api/logout", unconfirmed)
-    page.click("#signout")
+    _sign_out(page)
     page.wait_for_selector("#login-state .loud")
     assert requests == ["POST"]
     assert "may still be signed in" in page.inner_text("#login-state").lower()

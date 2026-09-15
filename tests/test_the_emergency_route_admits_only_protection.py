@@ -516,6 +516,9 @@ def test_expired_declaration_retry_never_renews_but_a_new_explicit_key_can(clien
     assert first.status_code == 200
     saved = application().store.load(matter_id)
     clock[0] += timedelta(hours=2)
+    # F-A-12: two untouched hours end the session too, so the advocate signs
+    # in again at the later time before retrying.
+    client.sign_in()
     replay = client.post(path, json=offer)
     assert replay.status_code == 200
     assert replay.json()["emergency"] == first.json()["emergency"]
@@ -592,6 +595,8 @@ def test_revocation_cannot_end_a_declaration_other_than_the_observed_one(
         payload["governing_ref"] = "0" * 64
     else:
         clock[0] += timedelta(hours=2)
+        # F-A-12: the session ended with the idle hours; sign in again.
+        client.sign_in()
     before = store.load(matter_id)
     response = client.post(path, json=payload)
     assert response.status_code == 409, response.text

@@ -35,7 +35,7 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool
 
 from nm.core import briefing as _briefing
 from nm.core.turn import TurnEngine, TurnInput, TurnRefused
@@ -43,6 +43,7 @@ from nm.domain import attempts, brief
 from nm.domain import summary as matter_memory
 from nm.domain.advocate import (
     PASSWORD_RESET_MINUTES,
+    SESSION_IDLE_MINUTES,
     csrf_token,
     utcnow,
 )
@@ -4115,12 +4116,29 @@ class Credentials(BaseModel):
     password: str = Field(min_length=1)
 
 
+class RegistrationConsent(BaseModel):
+    """The two boxes on the register card and the notice they were ticked under.
+
+    Implementation Plan F-A-09. STRICT booleans: `"true"` or `1` is not a person
+    ticking a box, and a lax model would turn either into one.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    notice_version: str = Field(min_length=1, max_length=64)
+    agreed: StrictBool
+    adult: StrictBool
+
+
 class Registration(BaseModel):
     """Public account creation, or password-only acceptance of an invitation.
 
     Public email is an unverified sign-in handle, not a qualification or a
     shared-firm assignment. The optional invitation header selects the older
     bound-identity lane; that lane cannot accept a caller-supplied email.
+
+    `consent` is REQUIRED on the public lane, whose page shows the privacy
+    notice; on the invitation lane it is recorded when given.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -4128,6 +4146,19 @@ class Registration(BaseModel):
     email: str | None = Field(default=None, max_length=320)
     password: str = Field(min_length=1, max_length=_NEW_PASSWORD_MAX)
     password_again: str = Field(min_length=1, max_length=_NEW_PASSWORD_MAX)
+    consent: RegistrationConsent | None = None
+
+
+def _consent(given: RegistrationConsent | None, now):
+    """The consent record a registration carries, or 422 saying what is missing."""
+    from nm.domain.advocate import CONSENT_REQUIRED, registration_consent
+
+    if given is None:
+        raise HTTPException(422, CONSENT_REQUIRED)
+    try:
+        return registration_consent(given.notice_version, given.agreed, given.adult, now)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 class ForgotPassword(BaseModel):
@@ -4264,12 +4295,18 @@ def register(body: Registration, request: Request,
     if invited:
         if "email" in body.model_fields_set:
             raise HTTPException(422, "An invitation supplies its own account identity.")
+        consent = _consent(body.consent, now) if body.consent is not None else None
         _admit_auth_attempt(directory, rate_key, source, now, action="enrolment")
     else:
         try:
             email = registration_email(body.email)
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from exc
+        # CONSENT BEFORE ADMISSION. Implementation Plan F-A-09: this is the door the
+        # register card uses, and the card shows the privacy notice, so an
+        # account made here without its consent is refused -- before the
+        # attempt is counted and before a password is derived.
+        consent = _consent(body.consent, now)
         try:
             admitted = directory.admit_registration(email, source, now)
         except RegistrationUnavailable as exc:
@@ -4295,11 +4332,13 @@ def register(body: Registration, request: Request,
 
     try:
         if invited:
-            identity = directory.accept_invitation(invitation, credential, now)
+            identity = directory.accept_invitation(invitation, credential, now,
+                                                   consent=consent)
         else:
             identity = AdvocateIdentity(id=email, name=email, email=email)
             directory.enrol(Enrolment(
-                identity=identity, credential=credential, created_at=now))
+                identity=identity, credential=credential, created_at=now,
+                consent=consent))
     except InvitationRefused as exc:
         directory.note_failure(rate_key, source, now)
         raise HTTPException(status_code=403, detail=str(exc)) from exc
@@ -4545,9 +4584,12 @@ def login(body: Credentials, request: Request, response: Response,
     response.set_cookie("nm_csrf", csrf_token(token), httponly=False,
                         samesite="strict", secure=secure,
                         max_age=60 * 60 * 12, path="/")
+    # THE IDLE LIMIT TRAVELS WITH THE SESSION, so the page counts down the
+    # server's number and does not keep a second copy of it (F-A-12).
     return {"advocate": identity.as_dict(), "workspace": _workspace(identity),
             "professional_approval": _professional_status(
-                application().directory, identity, now)}
+                application().directory, identity, now),
+            "session_idle_minutes": SESSION_IDLE_MINUTES}
 
 
 @app.post("/api/logout", dependencies=[CsrfProtected])
@@ -4647,7 +4689,8 @@ def whoami(advocate_id: Advocate) -> dict:
         raise HTTPException(status_code=401, detail="not signed in")
     directory = application().directory
     return {"advocate": identity.as_dict(), "workspace": _workspace(identity),
-            "professional_approval": _professional_status(directory, identity, utcnow())}
+            "professional_approval": _professional_status(directory, identity, utcnow()),
+            "session_idle_minutes": SESSION_IDLE_MINUTES}
 
 
 # ------------------------------------------------------------------- static ---

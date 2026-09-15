@@ -20,6 +20,7 @@ from typing import Protocol
 
 from nm.domain.advocate import (
     AdvocateIdentity,
+    Consent,
     Credential,
     Enrolment,
     PasswordResetResult,
@@ -75,8 +76,12 @@ class DirectoryPort(Protocol):
         ...
 
     def accept_invitation(self, token: str, credential: Credential,
-                          now: datetime) -> AdvocateIdentity:
-        """Consume one invitation and enrol the identity it carries."""
+                          now: datetime, consent: Consent | None = None,
+                          ) -> AdvocateIdentity:
+        """Consume one invitation and enrol the identity it carries.
+
+        `consent`, when given, is recorded with the account (F-A-09).
+        """
         ...
 
     def enrol(self, enrolment: Enrolment) -> None:
@@ -129,10 +134,14 @@ class DirectoryPort(Protocol):
                 now: datetime) -> Session | None:
         """The live session this token names, or `None`.
 
-        `None` covers unknown, expired, ended and WRONG DEVICE alike — A1's
-        first NEVER is that a matter list is not restored on a borrowed device
-        without re-authentication, and a session that travels between devices
-        is exactly that restoration.
+        `None` covers unknown, expired, ended, IDLE and WRONG DEVICE alike —
+        A1's first NEVER is that a matter list is not restored on a borrowed
+        device without re-authentication, and a session that travels between
+        devices is exactly that restoration.
+
+        A live answer RECORDS ACTIVITY at `now`: the idle limit
+        (`SESSION_IDLE_MINUTES`, F-A-12) restarts from every request the session
+        is allowed to make, and never from one it is refused.
         """
         ...
 

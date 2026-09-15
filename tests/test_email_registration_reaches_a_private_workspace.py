@@ -8,6 +8,7 @@ from __future__ import annotations
 import pytest
 
 from tests import test_the_journey_login_to_logout as support
+from tests.registration import CONSENT
 
 pytestmark = pytest.mark.journey
 journey = support.journey
@@ -21,6 +22,10 @@ def _registration(page, journey, email):
     page.fill("#reg-email", email)
     page.fill("#reg-password", journey["password"])
     page.fill("#reg-password2", journey["password"])
+    # Implementation Plan F-A-09: Register waits for both privacy boxes.
+    assert page.locator("#register-go").is_disabled()
+    page.check("#reg-consent")
+    page.check("#reg-adult")
 
 
 @pytest.mark.parametrize("width", [390, 1280])
@@ -35,13 +40,15 @@ def test_email_registration_opens_own_workspace_and_matter(page, journey, width)
     assert response.status == 200
     assert response.request.post_data_json == {
         "email": email, "password": journey["password"],
-        "password_again": journey["password"],
+        "password_again": journey["password"], "consent": CONSENT,
     }
     assert "x-enrolment-invitation" not in response.request.headers
     page.wait_for_selector("#outcome:not([hidden])")
     assert page.inner_text("#outcome-title") == "Registration successful"
-    assert page.locator("#recovery-code-list li").count() == 10
+    # F-A-04: no recovery codes anywhere.
+    assert page.locator("#recovery-code-list li").count() == 0
     assert page.input_value("#reg-password") == page.input_value("#reg-password2") == ""
+    assert not page.is_checked("#reg-consent") and not page.is_checked("#reg-adult")
     assert page.request.get(journey["base"] + "/api/session").status == 401
     page.click("#outcome-signin")
     assert page.locator("#recovery-code-list li").count() == 0
@@ -75,7 +82,7 @@ def test_email_registration_opens_own_workspace_and_matter(page, journey, width)
     page.wait_for_function("brief => document.querySelector('#thread').textContent.includes(brief)",
                            arg=support.BRIEF)
     assert support.BRIEF in page.inner_text("#thread")
-    page.click("#signout")
+    support._sign_out(page)
     page.wait_for_selector("#gate:not([hidden])")
     page.reload()
     page.wait_for_selector("#login:not([hidden])")
@@ -149,7 +156,7 @@ def test_pending_registration_owns_its_one_time_result(page, journey):
     assert response.status == 200, response.text()
     route.fulfill(response=response)
     page.wait_for_selector("#outcome:not([hidden])")
-    assert page.locator("#recovery-code-list li").count() == 10
+    assert page.inner_text("#outcome-title") == "Registration successful"
     assert page.get_attribute("#register", "aria-busy") is None
     assert not page.errors
 

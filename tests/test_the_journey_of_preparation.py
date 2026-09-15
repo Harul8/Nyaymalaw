@@ -62,8 +62,10 @@ from tests.test_the_journey_login_to_logout import (  # noqa: E402
     BRIEF,
     _advise,
     _intake,
+    _open_account_menu,
     _reach_rail,
     _sign_in,
+    _sign_out,
     _tab,
     _visible_text,
 )
@@ -143,14 +145,15 @@ def _artifact_on_failure(request, page):
 #: disclosure at all, and `BEHIND_A_DISCLOSURE` is measured AFTER the control
 #: that discloses it has been used -- which the phase does, and records as
 #: having done.
+#: F-A-17. The ribbon: four tabs and the person menu. The matter navigator,
+#: the case file and History are inside My work, reached through its tab; who
+#: is signed in and Sign out are inside the person menu.
 MASTHEAD = (
-    ("the matter navigator", "#matters-toggle, #rail"),
-    ("research", "button[data-tab='search']"),
-    ("the case file", "button[data-tab='casefile']"),
-    ("history", "button[data-tab='history']"),
-    ("preparation", "button[data-tab='prepare']"),
-    ("who is signed in", "#who-name"),
-    ("sign out", "#signout"),
+    ("home", "#tabs button[data-tab='home']"),
+    ("my work, where the matter navigator is", "#tabs button[data-tab='advise']"),
+    ("the legal library", "#tabs button[data-tab='search']"),
+    ("preparation", "#tabs button[data-tab='prepare']"),
+    ("the person menu, with who is signed in and sign out", "#account-toggle"),
 )
 
 BEHIND_A_DISCLOSURE = (
@@ -280,8 +283,9 @@ def test_the_whole_product_is_navigable_at_every_width(page, journey, width,
     _come_back_to_the_file(page, width)
 
     # ---- identity and the way out ---------------------------------------
-    who = page.locator("#who-name")
-    assert who.count() == 1 and who.inner_text().strip() not in ("", "—"), (
+    _open_account_menu(page)
+    who = page.locator("#profile-name")
+    assert who.is_visible() and who.inner_text().strip() not in ("", "—"), (
         f"at {width}px the advocate cannot see whose session this is")
     did["reach identity"] = Did.RAN
 
@@ -291,7 +295,7 @@ def test_the_whole_product_is_navigable_at_every_width(page, journey, width,
         f"the page scrolls sideways at {width}px, so content is off the right "
         f"edge of the screen")
 
-    page.click("#signout")
+    _sign_out(page)
     page.wait_for_selector("#gate:not([hidden])", timeout=15000)
     did["sign out"] = Did.RAN
 

@@ -29,6 +29,7 @@ from threading import Barrier
 
 import pytest
 from nm.domain.advocate import (
+    SESSION_IDLE_MINUTES,
     AdvocateIdentity,
     Credential,
     Enrolment,
@@ -204,12 +205,91 @@ def test_a_session_does_not_work_from_another_device(tmp_path):
 @refuses("A1", 0)
 @pytest.mark.eval_id("E-010")
 def test_a_session_expires(tmp_path):
+    """TWELVE HOURS, HOWEVER BUSY. Used every 29 minutes, so the idle limit never
+    ends it, the session still stops at its absolute expiry."""
     d = _directory(tmp_path)
     now = utcnow()
     token = d.open_session("adv_1", "dev", now)
 
-    assert d.session(token, "dev", now + timedelta(hours=11)) is not None
-    assert d.session(token, "dev", now + timedelta(hours=13)) is None
+    at = now
+    while at + timedelta(minutes=29) < now + timedelta(hours=12):
+        at += timedelta(minutes=29)
+        assert d.session(token, "dev", at) is not None, at - now
+    assert now + timedelta(hours=12) - at < timedelta(minutes=SESSION_IDLE_MINUTES), (
+        "the last use is too old: this would prove the idle limit, not the expiry")
+    assert d.session(token, "dev", now + timedelta(hours=12)) is None
+
+
+@refuses("A1", 0)
+@pytest.mark.eval_id("E-010")
+def test_a_session_left_untouched_for_the_idle_limit_stops_working(tmp_path):
+    """F-A-12. Thirty minutes with nothing using the session and it is refused,
+    though its twelve hours have hardly begun."""
+    d = _directory(tmp_path)
+    now = utcnow()
+    token = d.open_session("adv_1", "dev", now)
+    limit = timedelta(minutes=SESSION_IDLE_MINUTES)
+
+    assert d.session(token, "dev", now + limit - timedelta(seconds=1)) is not None
+    used = now + limit - timedelta(seconds=1)
+    assert d.session(token, "dev", used + limit - timedelta(seconds=1)) is not None
+    used += limit - timedelta(seconds=1)
+    assert d.session(token, "dev", used + limit) is None
+
+
+@refuses("A1", 0)
+@pytest.mark.eval_id("E-010")
+def test_using_the_session_starts_the_idle_limit_again(tmp_path):
+    d = _directory(tmp_path)
+    now = utcnow()
+    token = d.open_session("adv_1", "dev", now)
+    step = timedelta(minutes=SESSION_IDLE_MINUTES - 1)
+
+    for n in range(1, 6):
+        assert d.session(token, "dev", now + step * n) is not None, n
+    assert d.session(token, "dev",
+                     now + step * 5 + timedelta(minutes=SESSION_IDLE_MINUTES)) is None
+
+
+@refuses("A1", 0)
+@pytest.mark.eval_id("E-010")
+def test_a_refused_presentation_is_not_activity(tmp_path):
+    """A token presented from another device is refused, and that refusal must
+    not keep the session alive for the device it belongs to."""
+    d = _directory(tmp_path)
+    now = utcnow()
+    token = d.open_session("adv_1", "dev", now)
+    limit = timedelta(minutes=SESSION_IDLE_MINUTES)
+
+    assert d.session(token, "a-borrowed-laptop", now + limit - timedelta(minutes=1)) is None
+    assert d.session(token, "dev", now + limit) is None
+
+
+@pytest.mark.eval_id("E-010")
+def test_recording_activity_never_revives_an_ended_session(tmp_path, monkeypatch):
+    """THE RACE THIS SHAPE INVITES. A request that read the session a moment
+    before a sign-out, and then wrote it back with a fresh activity time, would
+    put `ended_because` back to None. Activity is kept beside the session record
+    and never written into it."""
+    d = _directory(tmp_path)
+    now = utcnow()
+    token = d.open_session("adv_1", "dev", now)
+    live = d.session(token, "dev", now)
+    assert live is not None
+    d.close_session(token, "signed out")
+
+    # The late writer: activity from a request already past its checks.
+    d._record_activity(live, now + timedelta(seconds=1))
+    assert d.session(token, "dev", now + timedelta(seconds=2)) is None
+
+    # And recording activity does not touch a session record at all.
+    other = d.open_session("adv_1", "dev", now)
+
+    def rewrite(*args, **kwargs):
+        raise AssertionError("recording activity rewrote the session record")
+
+    monkeypatch.setattr(d, "_write_session", rewrite)
+    assert d.session(other, "dev", now + timedelta(minutes=1)) is not None
 
 
 @pytest.mark.eval_id("E-010")

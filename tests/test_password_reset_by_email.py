@@ -56,8 +56,11 @@ LINK = re.compile(r"(https?://\S+?/#reset=([A-Za-z0-9_-]+))")
 
 
 def _register(client, email=EMAIL, password=PASSWORD):
+    from tests.registration import CONSENT
+
     response = client.post("/api/register", json={
-        "email": email, "password": password, "password_again": password})
+        "email": email, "password": password, "password_again": password,
+        "consent": CONSENT})
     assert response.status_code == 200, response.text
 
 

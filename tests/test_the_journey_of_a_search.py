@@ -32,6 +32,10 @@ ARTIFACTS = ROOT / ".nm" / "journey"
 sys.path.insert(0, str(ROOT))
 
 sys.path.insert(0, str(ROOT / "backend"))
+
+from tests.test_the_journey_login_to_logout import _reach_rail  # noqa: E402
+from tests.test_the_journey_login_to_logout import _tab as _open_surface  # noqa: E402
+
 BRIEF = ("We act for the plaintiff at Hyderabad. Goods were supplied against "
          "invoices on 14 March 2023 and were never paid for.")
 
@@ -110,8 +114,7 @@ def _advise(page, message: str):
 
 
 def _tab(page, name: str):
-    page.click(f"button[data-tab='{name}']")
-    page.wait_for_selector(f"#pane-{name}:not([hidden])", timeout=15000)
+    _open_surface(page, name)
 
 
 def _submit_research(page, query: str, *, court: str = "", objective="whether the marker was blue",
@@ -138,6 +141,7 @@ def _submit_research(page, query: str, *, court: str = "", objective="whether th
 
 def test_phase_1_a_matter_is_open_and_research_is_offered_for_it(page, journey):
     _sign_in(page, journey)
+    _reach_rail(page, 1280)
     page.click("#new-matter")
     _intake(page)
     _advise(page, BRIEF)

@@ -29,6 +29,9 @@ import pathlib
 
 import pytest
 
+from tests.test_the_journey_login_to_logout import _reach_rail
+from tests.test_the_journey_login_to_logout import _tab as _open_surface
+
 pytestmark = pytest.mark.journey
 
 playwright_api = pytest.importorskip(
@@ -133,8 +136,7 @@ def _advise(page, message: str):
 
 
 def _tab(page, name: str):
-    page.click(f"button[data-tab='{name}']")
-    page.wait_for_selector(f"#pane-{name}:not([hidden])", timeout=15000)
+    _open_surface(page, name)
 
 
 def _board_text(page) -> str:
@@ -172,6 +174,7 @@ def _the_matter(journey):
 
 def test_phase_1_a_brief_puts_a_current_deadline_on_the_board(page, journey):
     _sign_in(page, journey)
+    _reach_rail(page, 1280)
     page.click("#new-matter")
     _intake(page)
     _advise(page, BRIEF)

@@ -304,6 +304,8 @@ def test_a_protective_receipt_cannot_replay_lapsed_permission(client, monkeypatc
     assert first.status_code == 200 and first.json()["blocked"] is False
     if change == "expiry":
         clock[0] += timedelta(hours=2)
+        # F-A-12: two untouched hours end the session too; sign in again.
+        client.sign_in()
     else:
         observed = client.get(path).json()
         revoked = client.post(path, json={"revoke": True, "expected_version": observed["version"],

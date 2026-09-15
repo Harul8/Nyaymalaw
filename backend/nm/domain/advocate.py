@@ -43,10 +43,24 @@ SCRYPT_P = 1
 DK_LEN = 32
 
 #: How long a session lives before A1's "re-authenticate after session expiry"
-#: applies. Twelve hours: long enough for a working day, short enough that a
-#: borrowed laptop is not a standing grant.
+#: applies, however busy it is. Twelve hours: long enough for a working day,
+#: short enough that a borrowed laptop is not a standing grant.
 SESSION_HOURS = 12
+
+#: How long a session survives with NOTHING HAPPENING. Implementation Plan F-A-12,
+#: the product owner's rule: thirty minutes in which the page was not touched at
+#: all -- no typing, no pointer, no switching back to the tab -- and the advocate
+#: is signed out. Any activity starts the thirty minutes again. The page reports
+#: activity to the server, so the server enforces the same rule on its own and a
+#: closed laptop is not a live session waiting for the next person to open it.
+SESSION_IDLE_MINUTES = 30
 INVITATION_HOURS = 48
+
+#: The privacy notice on the register card. Implementation Plan F-A-09. The page
+#: carries the same value on the notice element and sends it back with the
+#: consent, so the record says which words were shown. CHANGE IT WHEN THE WORDS
+#: CHANGE: a consent is to a notice, and a new notice is not the one agreed to.
+PRIVACY_NOTICE_VERSION = "2026-09-15"
 
 #: How long an emailed password-reset link stays usable. Thirty minutes: long
 #: enough for the mail to arrive and be opened, short enough that a link left
@@ -527,6 +541,9 @@ class Session:
     #: because "expired" and "signed out" and "still live" are three states and
     #: a boolean can hold two.
     ended_because: str | None = None
+    #: The last time this session was used, or `None` when it has not been used
+    #: since it was issued. F-A-12: the idle limit runs from here.
+    last_active_at: datetime | None = None
 
     def __post_init__(self) -> None:
         for name in ("token_fingerprint", "advocate_id", "device"):
@@ -536,8 +553,14 @@ class Session:
             raise ValueError(
                 "a session that expires when it is issued is not a session")
 
+    @property
+    def idle_expires_at(self) -> datetime:
+        """When it stops working if nothing uses it again."""
+        return ((self.last_active_at or self.issued_at)
+                + timedelta(minutes=SESSION_IDLE_MINUTES))
+
     def live_at(self, now: datetime) -> bool:
-        return self.ended_because is None and now < self.expires_at
+        return self.why_not(now) is None
 
     def why_not(self, now: datetime) -> str | None:
         """The REASON it cannot be used, for the log — never for the caller.
@@ -545,11 +568,17 @@ class Session:
         A1's second NEVER: the response to a failed or expired credential must
         be identical. This exists so the reason is recorded where an operator
         can see it, and the edge returns the same words either way.
+
+        ONE OWNER FOR "IS IT LIVE". `live_at` asks this, so a fourth way for a
+        session to end cannot be added to one of the two and not the other.
         """
         if self.ended_because:
             return self.ended_because
         if now >= self.expires_at:
             return f"expired at {self.expires_at.isoformat()}"
+        if now >= self.idle_expires_at:
+            return (f"no activity for {SESSION_IDLE_MINUTES} minutes; idle since "
+                    f"{(self.last_active_at or self.issued_at).isoformat()}")
         return None
 
 
@@ -570,6 +599,57 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+#: The one refusal for a registration without full consent. F-A-09.
+CONSENT_REQUIRED = (
+    "Registration needs your agreement to the privacy notice and your "
+    "confirmation that you are 18 or older. Nothing was saved.")
+#: The notice changed after the page was loaded, so what was agreed to is not
+#: what is in force.
+CONSENT_TO_AN_OLD_NOTICE = (
+    "The privacy notice has changed since this page was opened. Reload the "
+    "page, read the notice and register again. Nothing was saved.")
+
+
+@dataclass(frozen=True)
+class Consent:
+    """What an advocate agreed to, and when. Implementation Plan F-A-09.
+
+    DPDP Act 2023 s.6(10) puts the burden of proving consent on the one who
+    collected it, so the record names the exact notice version shown and the
+    age confirmation, not merely that a box was ticked somewhere.
+    """
+
+    notice_version: str
+    given_at: datetime
+    adult_confirmed: bool
+
+    def __post_init__(self) -> None:
+        if blank(self.notice_version):
+            raise ValueError("a consent that names no notice proves nothing")
+        if not self.adult_confirmed:
+            raise ValueError("a consent without the 18-or-older confirmation is not one")
+
+    def as_dict(self) -> dict:
+        return {"notice_version": self.notice_version,
+                "given_at": self.given_at.isoformat(),
+                "adult_confirmed": self.adult_confirmed}
+
+
+def registration_consent(notice_version: str | None, agreed: bool, adult: bool,
+                         now: datetime) -> Consent:
+    """The consent a registration carries, or `ValueError` naming what is missing.
+
+    `is True`, not truthiness: a JSON `"false"` string or a `1` is not somebody
+    ticking a box.
+    """
+    if agreed is not True or adult is not True:
+        raise ValueError(CONSENT_REQUIRED)
+    if (notice_version or "").strip() != PRIVACY_NOTICE_VERSION:
+        raise ValueError(CONSENT_TO_AN_OLD_NOTICE)
+    return Consent(notice_version=PRIVACY_NOTICE_VERSION, given_at=now,
+                   adult_confirmed=True)
+
+
 @dataclass(frozen=True)
 class Enrolment:
     """An advocate and their credential, as one record on the way to the store."""
@@ -577,3 +657,7 @@ class Enrolment:
     identity: AdvocateIdentity
     credential: Credential
     created_at: datetime = field(default_factory=utcnow)
+    #: The privacy consent given at registration. `None` for an account made
+    #: without the register card -- an operator enrolment or an invitation --
+    #: which is recorded as having no consent rather than as having one.
+    consent: Consent | None = None

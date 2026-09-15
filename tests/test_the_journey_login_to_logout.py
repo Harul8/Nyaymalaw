@@ -220,6 +220,11 @@ def _reach_rail(page, width):
     phase that returned early when it WAS visible asserted nothing at desktop
     -- which is what BK-47 was.
     """
+    # F-A-17/F-A-18. THE RAIL LIVES IN MY WORK, and a sign-in lands on Home, so
+    # the navigator is reached through the ribbon's My work tab first.
+    if page.is_hidden("#pane-advise"):
+        page.click("#tabs button[data-tab='advise']")
+        page.wait_for_selector("#pane-advise:not([hidden])", timeout=15000)
     # ASK THE TOGGLE, NOT THE RAIL. `is_visible("#rail")` is TRUE at every
     # width, because below 820px the drawer is moved off-screen rather than
     # removed -- so this returned early at 390px and 768px and never opened
@@ -257,9 +262,38 @@ def _tab(page, name: str):
     fails on a slower one -- and worse, it makes a real defect and a slow
     render indistinguishable, which is the whole failure mode this repository
     keeps recording.
+
+    F-A-17. Home, My work, Legal library and Preparation are the ribbon's tabs.
+    Case file and History are offered inside My work for the matter that is
+    open, so they are reached there -- opening the first matter on the list
+    when none is open, as an advocate would have to.
     """
-    page.click(f"button[data-tab='{name}']")
+    if name in ("casefile", "history"):
+        if page.is_hidden("#pane-advise"):
+            page.click("#tabs button[data-tab='advise']")
+            page.wait_for_selector("#pane-advise:not([hidden])", timeout=15000)
+        link = page.locator(f"#work-links button[data-tab='{name}']")
+        if not link.is_visible():
+            _reach_rail(page, page.viewport_size["width"])
+            page.locator("#rail-body .row[data-matter-id]").first.click()
+            link.wait_for(state="visible", timeout=15000)
+        link.click()
+    else:
+        page.click(f"#tabs button[data-tab='{name}']")
     page.wait_for_selector(f"#pane-{name}:not([hidden])", timeout=15000)
+
+
+def _open_account_menu(page):
+    """The person menu (F-A-17): the profile, signed-in devices and Sign out."""
+    if page.is_hidden("#account-panel"):
+        page.click("#account-toggle")
+        page.wait_for_selector("#account-panel:not([hidden])", timeout=10000)
+
+
+def _sign_out(page):
+    """Sign out from the person menu, where the control lives (F-A-17)."""
+    _open_account_menu(page)
+    page.click("#signout")
 
 
 # ==================================================== 1. the door ============
@@ -286,8 +320,9 @@ def test_phase_2_the_landing_is_not_blank_but_authenticated(page, journey):
     shown = _visible_text(page).strip()
 
     assert len(shown) > 40, f"the landing shows almost nothing: {shown!r}"
-    assert page.is_visible("#new-matter") or page.is_visible("#message"), (
-        "nothing on the landing lets the advocate begin")
+    # F-A-18: the landing is Home, and its one button starts a matter.
+    assert page.is_visible("#home-start") or page.is_visible("#new-matter") \
+        or page.is_visible("#message"), "nothing on the landing lets the advocate begin"
 
 
 # ============================================ 3. the navigator, three widths ==
@@ -400,8 +435,10 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
             f"at {width}px the page threw switching to {tab}: {page.errors}")
 
     # ---- 5. identity and the way out are both REACHABLE ------------------
-    who = page.locator("#who-name")
-    assert who.count() == 1 and who.inner_text().strip() not in ("", "—"), (
+    # F-A-17: in the person menu at every width (and beside it above 820px).
+    _open_account_menu(page)
+    who = page.locator("#profile-name")
+    assert who.is_visible() and who.inner_text().strip() not in ("", "—"), (
         f"at {width}px the advocate cannot see whose session this is, so a "
         f"shared machine gives them nothing to check before they type")
     assert page.locator("#signout").is_visible(), (
@@ -416,21 +453,22 @@ def test_phase_4_a_brief_can_be_filed_without_a_mouse(page, journey):
     is not an accessibility edge case -- it is the ordinary way a long brief
     gets typed."""
     _sign_in(page, journey)
-    page.wait_for_selector("#welcome:not([hidden])", timeout=15000)
-    assert page.is_hidden("#composer"), "this phase must begin at the actual Welcome page"
+    # F-A-18. A SIGN-IN LANDS ON HOME, and Home's one button starts the matter.
+    page.wait_for_selector("#pane-home:not([hidden])", timeout=15000)
+    assert page.is_hidden("#pane-advise"), "this phase must begin at the actual Home page"
 
     def active_id():
         return page.evaluate("() => document.activeElement.id")
 
     # Real Tab navigation proves reachability; focus() would bypass a broken
-    # tab order. Authentication above is setup; every action from Welcome on
+    # tab order. Authentication above is setup; every action from Home on
     # uses keys, including activating the new-matter and intake controls.
     for _ in range(64):
-        if active_id() == "welcome-start":
+        if active_id() == "home-start":
             break
         page.keyboard.press("Tab")
-    assert active_id() == "welcome-start", "Welcome's new-matter control is not keyboard reachable"
-    assert page.is_visible("#welcome-start")
+    assert active_id() == "home-start", "Home's Start a matter control is not keyboard reachable"
+    assert page.is_visible("#home-start")
     page.keyboard.press("Enter")
     page.wait_for_selector("#intake:not([hidden])", timeout=15000)
     assert active_id() == "in-client"
@@ -649,8 +687,14 @@ def test_phase_5d_the_masthead_is_not_a_configuration_dump(page, journey):
                   "manifest:"):
         assert token not in masthead, (
             f"{token!r} is in the masthead on every screen")
-    assert expected in masthead, (
-        "the masthead says nothing about whether the corpus can be read, "
+    # F-A-17. THE LINE LIVES ON THE LEGAL LIBRARY PAGE, the page it is about.
+    _tab(page, "search")
+    library = page.inner_text("#pane-search")
+    for token in ("fernet", "gpt-", "scripted-1", "not configured",
+                  "manifest:"):
+        assert token not in library, f"{token!r} is on the Legal library page"
+    assert expected in library, (
+        "the Legal library says nothing about whether the corpus can be read, "
         "which is the one thing on that line an advocate needs")
     assert page.get_attribute("#health", "title") == (
         "Library availability does not establish legal coverage or currency.")
@@ -888,7 +932,7 @@ def test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead(
         "no session was ended, so this phase would go on to assert against a "
         "product that is still correctly signed in")
 
-    page.click("button[data-tab='history']")
+    page.click("#tabs button[data-tab='prepare']")
     # WAIT FOR THE THING UNDER TEST, which is the masthead.
     #
     # This waited for the history pane to have TEXT, and that stopped being
@@ -1044,7 +1088,7 @@ def test_phase_11_a_logout_the_server_refuses_is_not_shown_as_done(
     _sign_in(page, journey)
     # THE SERVER REFUSES THE LOGOUT, and the session stays live.
     page.route("**/api/logout", lambda route: route.abort())
-    page.click("#signout")
+    _sign_out(page)
     # The gate is cleared before the asynchronous refusal settles. Wait for
     # the actual retry control, not its pre-existing empty parent container.
     page.get_by_role("button", name="Try to end the session again", exact=True).wait_for(
@@ -1073,7 +1117,7 @@ def test_phase_11_a_logout_the_server_refuses_is_not_shown_as_done(
 def test_phase_12_a_confirmed_logout_cannot_be_undone_by_reload(page, journey):
     """The half that works today, and must keep working."""
     _sign_in(page, journey)
-    page.click("#signout")
+    _sign_out(page)
     page.wait_for_selector("#gate:not([hidden])", timeout=15000)
 
     page.reload()

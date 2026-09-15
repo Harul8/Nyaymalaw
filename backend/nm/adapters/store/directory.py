@@ -37,6 +37,7 @@ from nm.domain import attempts
 from nm.domain.advocate import (
     AccountSecurity,
     AdvocateIdentity,
+    Consent,
     Credential,
     Enrolment,
     Invitation,
@@ -166,7 +167,8 @@ class FileDirectory:
         return token
 
     def accept_invitation(self, token: str, credential: Credential,
-                          now: datetime) -> AdvocateIdentity:
+                          now: datetime, consent: Consent | None = None,
+                          ) -> AdvocateIdentity:
         """Claim on disk and enrol; every other instance sees the claim."""
         fingerprint = token_fingerprint((token or "").strip())
         active = self._invitation_path(fingerprint)
@@ -227,7 +229,8 @@ class FileDirectory:
         try:
             # The FILE, not the request, owns the identity that is saved.
             self.enrol(Enrolment(identity=invitation.identity,
-                                 credential=credential, created_at=now))
+                                 credential=credential, created_at=now,
+                                 consent=consent))
         except AlreadyEnrolled:
             self._note(invitation.identity.id,
                        "invitation consumed: advocate already enrolled")
@@ -340,6 +343,11 @@ class FileDirectory:
             # to 1 is exactly the change that link must be refused for.
             **AccountSecurity(credential_generation=1).as_dict(),
         }
+        # WITH THE ACCOUNT IT PERMITS, written in the same exclusive create, so
+        # there is no instant at which the account exists and its consent does
+        # not. Implementation Plan F-A-09; DPDP Act 2023 s.6(10).
+        if enrolment.consent is not None:
+            blob["consent"] = enrolment.consent.as_dict()
         # IN THE OPEN, DELIBERATELY (BK-22). The credential is an scrypt
         # hash with its salt and cost -- scrypt exists so that such a hash
         # can be stored where it can be read. Sealing it AS WELL made
@@ -906,6 +914,52 @@ class FileDirectory:
     def _session_path(self, fingerprint: str) -> Path:
         return self._sessions / f"{fingerprint}.nm"
 
+    def _activity_path(self, fingerprint: str) -> Path:
+        """When the session was last used. F-A-12.
+
+        A FILE OF ITS OWN, NOT A FIELD REWRITTEN INTO THE SESSION RECORD. Every
+        signed-in request records activity, and requests run concurrently: one
+        that read the session a moment before a sign-out and then wrote it back
+        with a fresh time would put the sign-out's `ended_because` back to
+        `None` and revive the session. Activity is written here and the
+        session record is written only by opening and ending it, so recording
+        use cannot undo an end.
+        """
+        return self._sessions / f"{fingerprint}.active"
+
+    def _last_activity(self, fingerprint: str) -> datetime | None:
+        try:
+            return datetime.fromisoformat(
+                self._activity_path(fingerprint).read_text(encoding="utf8").strip())
+        except FileNotFoundError:
+            return None
+        except (OSError, ValueError):
+            # UNREADABLE IS NOT RECENT. The idle limit then runs from the last
+            # time that could be read -- the issue time -- which can end a live
+            # session early and cannot keep an idle one alive.
+            return None
+
+    def _record_activity(self, session: Session, now: datetime) -> None:
+        """Replace the activity time; never move it backwards."""
+        fingerprint = session.token_fingerprint
+        if session.last_active_at is not None and session.last_active_at >= now:
+            return
+        path = self._activity_path(fingerprint)
+        temporary = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
+        try:
+            with temporary.open("x", encoding="utf8") as handle:
+                handle.write(now.isoformat())
+            os.replace(temporary, path)
+        except OSError as exc:
+            # A LOST ACTIVITY WRITE SHORTENS A SESSION; IT NEVER LENGTHENS ONE,
+            # so it must not fail the request that was entitled to run. On
+            # Windows a replace refuses while another request is reading the
+            # same file; the next request records it.
+            self._note(session.advocate_id,
+                       f"session activity not recorded: {type(exc).__name__}")
+        finally:
+            discard(temporary)
+
     def open_session(self, advocate_id: str, device: str,
                      now: datetime) -> str:
         token, session = open_session(advocate_id, device, now)
@@ -945,6 +999,7 @@ class FileDirectory:
             issued_at=datetime.fromisoformat(d["issued_at"]),
             expires_at=datetime.fromisoformat(d["expires_at"]),
             ended_because=d.get("ended_because"),
+            last_active_at=self._last_activity(fingerprint),
         )
 
     def session(self, token: str, device: str,
@@ -968,7 +1023,13 @@ class FileDirectory:
             self._note(session.advocate_id,
                        "session refused: presented from a different device")
             return None
-        return session
+
+        # A SESSION THAT ANSWERED A REQUEST WAS USED. F-A-12: the idle limit
+        # restarts here, and only after every check above has passed, so a
+        # refused presentation -- another device, an ended or idle session --
+        # cannot keep anything alive.
+        self._record_activity(session, now)
+        return replace(session, last_active_at=max(now, session.last_active_at or now))
 
     def sessions_for(self, advocate_id: str) -> tuple[Session, ...]:
         """Every session issued to this advocate, live or ended. BK-31.

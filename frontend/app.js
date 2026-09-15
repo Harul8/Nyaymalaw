@@ -172,6 +172,8 @@ function keepDraft() {
 // surface added later cannot be the one that keeps painting a matter after
 // the session behind it is gone.
 function clearPrivileged() {
+  stopIdleWatch();
+  setAccountMenu(false);
   state.sessionGeneration += 1;
   state.searchGeneration += 1;
   state.historyGeneration += 1;
@@ -203,10 +205,10 @@ function clearPrivileged() {
   ['in-client', 'in-adverse', 'in-others', 'in-scope', 'q', 'f-court', 'f-from', 'f-to']
     .forEach((id) => { $(id).value = ''; });
   $('in-capacity').checked = false;
-  const who = $('who-name');
-  if (who) who.textContent = '—';
-  const workspace = $('workspace-name');
-  if (workspace) workspace.textContent = '—';
+  // THE RIBBON AND THE PERSON MENU FORGET WHO WAS HERE (F-A-17).
+  ['who-name', 'workspace-name', 'profile-name', 'profile-email', 'profile-workspace']
+    .forEach((id) => { const el = $(id); if (el) el.textContent = '—'; });
+  $('work-links').hidden = true;
   const composer = $('message');
   if (composer) composer.value = '';
   const chooser = $('history-matter');
@@ -218,6 +220,169 @@ function clearPrivileged() {
     const el = $(id); if (el) el.textContent = '';
   });
   window.dispatchEvent(new Event('nm:session-ended'));
+}
+
+/* ------------------------------------------------------- idle sign-out --- */
+
+// F-A-12. SIGNED OUT AFTER THIRTY MINUTES IN WHICH THE PAGE WAS NOT TOUCHED.
+//
+// The product owner's rule: no typing, no moving the pointer, no coming back to
+// the tab -- the window not touched at all for thirty minutes -- and the
+// advocate is signed out. Any activity starts the thirty minutes again.
+//
+// THE NUMBER IS THE SERVER'S. It arrives with the session as
+// `session_idle_minutes` and is not written in this file, so the page and the
+// server cannot hold two different limits.
+//
+// THE SERVER KEEPS THE SAME CLOCK. Every signed-in request restarts it there,
+// and activity that makes no request is reported at most once a minute, with a
+// trailing report -- so the server's last activity is never earlier than this
+// page's, and the server never ends a session the page still counts as in use.
+// A laptop shut mid-matter is refused by the server even if this page never
+// runs again.
+//
+// EVERY OPEN TAB SHARES ONE CLOCK. They are one session and one person, so
+// activity in any of them is broadcast to the rest.
+const IDLE_WARNING_MS = 2 * 60 * 1000;
+const IDLE_REPORT_MS = 60 * 1000;
+const ACTIVITY_EVENTS = ['keydown', 'pointerdown', 'pointermove', 'wheel', 'touchstart',
+  'scroll', 'input'];
+const idle = { limitMs: 0, lastActivity: 0, lastReport: 0, timer: null, trailing: null };
+const sessionChannel = typeof BroadcastChannel === 'function'
+  ? new BroadcastChannel('nm-session') : null;
+
+function idleWatching() {
+  return idle.limitMs > 0 && Boolean(state.advocate) && !state.ended;
+}
+
+function startIdleWatch(minutes) {
+  stopIdleWatch();
+  if (!state.advocate || !(minutes > 0)) return;
+  idle.limitMs = minutes * 60 * 1000;
+  // The request that just opened or resolved the session already told the
+  // server; opening this tab is activity the other tabs should hear about.
+  idle.lastReport = Date.now();
+  noteActivity(Date.now(), { report: false });
+}
+
+function stopIdleWatch() {
+  clearTimeout(idle.timer);
+  clearTimeout(idle.trailing);
+  idle.timer = null;
+  idle.trailing = null;
+  idle.limitMs = 0;
+  idle.lastActivity = 0;
+  $('idle-warning').hidden = true;
+}
+
+// ACTIVITY AFTER THE LIMIT DOES NOT COUNT. Opening a laptop that has been shut
+// for two hours makes the tab visible, and that must sign out -- not restart the
+// clock for whoever lifted the lid while the last matter is still on the glass.
+function noteActivity(at, { share = true, report = true } = {}) {
+  if (!idleWatching()) return;
+  if (idle.lastActivity && at - idle.lastActivity >= idle.limitMs) {
+    idleSignOut();
+    return;
+  }
+  // A pointer moving fires dozens of events a second; one a second is enough
+  // to know the page is in use.
+  if (at - idle.lastActivity < 1000) return;
+  idle.lastActivity = at;
+  $('idle-warning').hidden = true;
+  if (share && sessionChannel) {
+    sessionChannel.postMessage({ type: 'activity', at: at, advocate: state.advocate });
+  }
+  if (report) reportActivity();
+  checkIdle();
+}
+
+function reportActivity() {
+  const since = Date.now() - idle.lastReport;
+  if (since >= IDLE_REPORT_MS) {
+    sendActivityReport();
+    return;
+  }
+  if (!idle.trailing) {
+    idle.trailing = setTimeout(() => {
+      idle.trailing = null;
+      sendActivityReport();
+    }, IDLE_REPORT_MS - since);
+  }
+}
+
+async function sendActivityReport() {
+  if (!idleWatching()) return;
+  idle.lastReport = Date.now();
+  try {
+    // ANY SIGNED-IN REQUEST RESTARTS THE SERVER'S CLOCK; this one asks nothing
+    // else. A 401 has already ended the session inside `api()`.
+    await api('/api/session');
+  } catch { /* this page's own clock still ends the session on time */ }
+}
+
+function checkIdle() {
+  clearTimeout(idle.timer);
+  if (!idleWatching()) return;
+  const now = Date.now();
+  const endAt = idle.lastActivity + idle.limitMs;
+  if (now >= endAt) {
+    idleSignOut();
+    return;
+  }
+  const warnAt = endAt - IDLE_WARNING_MS;
+  if (now >= warnAt) showIdleWarning(endAt);
+  idle.timer = setTimeout(checkIdle, Math.max(1000, (now < warnAt ? warnAt : endAt) - now));
+}
+
+function showIdleWarning(endAt) {
+  const el = $('idle-warning');
+  if (!el.hidden) return;
+  const when = new Date(endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const quiet = Math.round((idle.limitMs - IDLE_WARNING_MS) / 60000);
+  el.textContent = `Nothing has happened on this page for ${quiet} minutes. You will be `
+    + `signed out at ${when} unless you use it: move the mouse, touch the screen or `
+    + 'press a key.';
+  el.hidden = false;
+}
+
+// THE DRAFT IS KEPT. `sessionEnded` freezes what was typed and puts it back
+// after the advocate signs in again, exactly as for any other ended session.
+async function idleSignOut({ fromAnotherTab = false } = {}) {
+  const minutes = Math.round(idle.limitMs / 60000);
+  stopIdleWatch();
+  if (!state.advocate || state.ended) return;
+  if (!fromAnotherTab && sessionChannel) {
+    sessionChannel.postMessage({ type: 'idle-signed-out', minutes: minutes,
+      advocate: state.advocate });
+  }
+  sessionEnded(`Nothing happened on Nyaymalaw for ${minutes} minutes, so you were `
+    + 'signed out. Sign in again and I will put your unsent draft back where it was.');
+  if (fromAnotherTab) return;
+  // THE SERVER'S COPY ENDS NOW TOO. Its own idle clock would refuse this session
+  // within a minute; ending it here closes that minute. If this request fails,
+  // that clock still ends the session -- nothing here depends on it arriving.
+  try {
+    await api('/api/logout', { method: 'POST' }, { sessionBound: false });
+  } catch { /* the server's idle limit ends the session regardless */ }
+}
+
+ACTIVITY_EVENTS.forEach((type) => {
+  window.addEventListener(type, () => noteActivity(Date.now()), { capture: true, passive: true });
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') noteActivity(Date.now());
+});
+window.addEventListener('focus', () => noteActivity(Date.now()));
+if (sessionChannel) {
+  sessionChannel.addEventListener('message', (event) => {
+    const data = event.data || {};
+    if (!state.advocate || data.advocate !== state.advocate) return;
+    if (data.type === 'activity') noteActivity(data.at, { share: false, report: false });
+    if (data.type === 'idle-signed-out') {
+      idle.limitMs = (data.minutes || 0) * 60000 || idle.limitMs;
+      idleSignOut({ fromAnotherTab: true });
+    }
+  });
 }
 
 // BK-31-AC20. The value the server hands this page so it can prove a request
@@ -1163,6 +1328,8 @@ function updateWorkspace() {
   const welcome = !state.matterId && !state.turns.length && !state.intake && !intakeOpen;
   $('welcome').hidden = !welcome;
   $('composer').hidden = welcome || intakeOpen;
+  // F-A-17. Case file and History are offered for a matter that is open.
+  $('work-links').hidden = !state.matterId;
 }
 
 /* ------------------------------------------------------------------ send --- */
@@ -1342,18 +1509,9 @@ function toggleMatters(force) {
   $('matters-toggle').setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
-$('matters-toggle').addEventListener('click', () => {
-  // FROM ANOTHER PANE IT IS A WAY BACK, not a no-op. Opening a rail that
-  // lives inside a hidden pane changes nothing on screen, and an advocate
-  // who pressed a visible control and saw nothing happen concludes the
-  // product is broken -- which, at that moment, it is.
-  if ($('pane-advise').hidden) {
-    showTab('advise');
-    toggleMatters(true);
-    return;
-  }
-  toggleMatters();
-});
+// INSIDE MY WORK, NOT THE RIBBON (F-A-17). From any other page the way back to
+// the matter list is the My work tab, which is on every page.
+$('matters-toggle').addEventListener('click', () => toggleMatters());
 
 // B3-B5. INTAKE IS ASKED ONCE PER MATTER, AND ITS ANSWERS TRAVEL WITH THE
 // FIRST BRIEF.
@@ -1427,6 +1585,8 @@ function startMatter() {
 
 $('new-matter').addEventListener('click', startMatter);
 $('welcome-start').addEventListener('click', startMatter);
+// F-A-18. Home's one button opens a new matter in My work.
+$('home-start').addEventListener('click', startMatter);
 $('welcome-matters').addEventListener('click', () => {
   toggleMatters(true);
   const first = $('rail-body').querySelector('[role="button"]');
@@ -1447,27 +1607,37 @@ boot();
  * quickest way to break that is a shared object both panes write to.
  */
 
-const PANES = ['advise', 'search', 'casefile', 'history', 'prepare'];
+const PANES = ['home', 'advise', 'search', 'casefile', 'history', 'prepare'];
+
+// F-A-17. THE RIBBON HAS FOUR TABS AND SIX PAGES. Case file and History are
+// opened from inside My work, so My work is the tab that stays marked while
+// either is open.
+const TAB_FOR_PANE = { casefile: 'advise', history: 'advise' };
 
 function showTab(name) {
   PANES.forEach((p) => { $(`pane-${p}`).hidden = (p !== name); });
+  const tab = TAB_FOR_PANE[name] || name;
   document.querySelectorAll('#tabs .tab').forEach((b) => {
-    b.classList.toggle('is-on', b.dataset.tab === name);
-    if (b.dataset.tab === name) b.setAttribute('aria-current', 'page');
+    b.classList.toggle('is-on', b.dataset.tab === tab);
+    if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
   if (name === 'search') { researchEnabled(); $('q').focus(); }
   if (name === 'history') loadHistoryMatters();
   if (name === 'casefile') loadCasefileMatters();
   if (name === 'prepare') loadPrepareMatters();
-  // THE RAIL LIVES IN `#pane-advise`, so leaving that pane takes the matter
-  // navigator off the screen at every width. The masthead toggle is the way
-  // back, and this is what tells the stylesheet to offer it. BK-32-AC1.
-  document.body.classList.toggle('away-from-work', name !== 'advise');
 }
 
 document.querySelectorAll('#tabs .tab').forEach((b) => {
   b.addEventListener('click', () => showTab(b.dataset.tab));
+});
+
+$('work-links').addEventListener('click', (ev) => {
+  const link = ev.target.closest('button[data-tab]');
+  if (!link) return;
+  // THE MATTER THAT IS OPEN, not whichever one the case file showed last.
+  if (link.dataset.tab === 'casefile') $('casefile-matter').value = '';
+  showTab(link.dataset.tab);
 });
 
 /* ================= PREPARATION — P29 to P32 ON ONE SCREEN. P36 ===========
@@ -2972,6 +3142,12 @@ async function loadHistoryMatters() {
       o.textContent = m.matter || m.matter_id;
       sel.appendChild(o);
     });
+    // OPENED FROM A MATTER, IT OPENS ON THAT MATTER (F-A-17). History is
+    // reached from inside My work, for the matter that is open there.
+    if (state.matterId && rows.some((m) => m.matter_id === state.matterId)) {
+      sel.value = state.matterId;
+      showHistory(state.matterId);
+    }
   } catch (err) {
     if (err.obsolete || generation !== state.historyListGeneration) return;
     $('history-state').textContent = '';
@@ -3093,24 +3269,33 @@ function showApplication(advocate, workspace, professionalApproval) {
       intentContexts.delete(key);
     }
   }
-  $('who-name').textContent = advocate.name;
+  // F-A-17. THE NAME THE ACCOUNT HOLDS, or its email while it has none: never
+  // blank, and never anything this page made up.
+  const shownName = advocate.name || advocate.email || advocate.id;
+  $('who-name').textContent = shownName;
+  $('profile-name').textContent = shownName;
+  $('profile-email').textContent = advocate.email || 'Not recorded';
   $('who-detail').textContent = [advocate.enrolment, advocate.practice]
-    .filter(Boolean).join(' · ');
+    .filter(Boolean).join(' · ') || 'Not recorded yet';
   $('professional-approval').textContent = professionalApproval?.state === 'approved'
     ? 'Professional profile approved' : 'Professional profile not approved';
   $('workspace-name').textContent = workspace.label;
+  $('profile-workspace').textContent = workspace.label;
   $('gate').hidden = true;
   $('masthead').hidden = false;
   state.ended = false;
-  showTab('advise');
+  // F-A-18. A SIGN-IN LANDS ON HOME -- unless it follows a session that ended
+  // part-way through a brief, which goes straight back to that brief.
+  const draftWaiting = Boolean(state.draft && state.draft.advocate === advocate.id
+    && state.draft.workspace === workspace.id);
+  showTab(draftWaiting ? 'advise' : 'home');
   loadHealth();
   showMatterList();
 
   // Restore the entire original intent, not a new instruction made from its
   // text. Transcript reconciliation may confirm a turn whose acknowledgement
   // was lost; unavailable read-back retains its exact retry envelope.
-  if (state.draft && state.draft.advocate === advocate.id
-      && state.draft.workspace === workspace.id) {
+  if (draftWaiting) {
     const draft = state.draft;
     if (draft.matterId) showThreadBoard(draft.matterId);
     else startMatter();
@@ -3181,6 +3366,7 @@ async function boot() {
   try {
     const me = await api('/api/session');
     showApplication(me.advocate, me.workspace, me.professional_approval);
+    startIdleWatch(me.session_idle_minutes);
   } catch (err) {
     // 401 IS THE ORDINARY CASE, not an error to report. Anything else is a
     // server that could not answer, and saying so beats a bare sign-in box
@@ -3204,12 +3390,13 @@ $('login').addEventListener('submit', async (ev) => {
         password: $('login-password').value,
       }),
     });
-    // THE PASSWORD LEAVES THE PAGE. It stays in the DOM otherwise, readable
-    // by anything running later on this document.
-    $('login-password').value = '';
+    // THE PASSWORD LEAVES THE PAGE, masked again. It stays in the DOM
+    // otherwise, readable by anything running later on this document.
+    concealPasswords(['login-password']);
     showApplication(r.advocate, r.workspace, r.professional_approval);
+    startIdleWatch(r.session_idle_minutes);
   } catch (err) {
-    $('login-password').value = '';
+    concealPasswords(['login-password']);
     showGate(err.message);
   } finally {
     go.disabled = false;
@@ -3407,6 +3594,30 @@ $('sessions-revoke').addEventListener('click', async () => {
 
 $('devices').addEventListener('click', showSessions);
 
+// F-A-17. THE PERSON MENU. Opens and closes from its button; closes on Escape,
+// on a click anywhere else, when a control inside it is used, and when the
+// session ends (`clearPrivileged`).
+function setAccountMenu(open) {
+  $('account-panel').hidden = !open;
+  $('account-toggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+$('account-toggle').addEventListener('click', () => {
+  setAccountMenu($('account-panel').hidden);
+});
+document.addEventListener('click', (ev) => {
+  if (!$('account-panel').hidden && !$('account-menu').contains(ev.target)) {
+    setAccountMenu(false);
+  }
+});
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && !$('account-panel').hidden) {
+    setAccountMenu(false);
+    $('account-toggle').focus();
+  }
+});
+$('devices').addEventListener('click', () => setAccountMenu(false));
+
 // ------------------------------------------------------------- registration
 //
 // SELF-SERVICE, as of 6 September 2026. The sign-in page used to say enrolment
@@ -3423,6 +3634,8 @@ function showForm(which) {
   // and the next person on this machine would return to a filled form.
   if (which !== 'register') clearRegistrationPasswords();
   if (which !== 'reset') clearResetPasswords();
+  // LEAVING THE SIGN-IN CARD PUTS ITS PASSWORD AWAY (F-A-10), shown or not.
+  if (which !== 'login') concealPasswords(['login-password']);
   $('login').hidden = which !== 'login';
   $('register').hidden = which !== 'register';
   $('forgot').hidden = which !== 'forgot';
@@ -3431,33 +3644,47 @@ function showForm(which) {
   $('login-state').textContent = '';
 }
 
-function clearRegistrationPasswords() {
-  for (const id of ['reg-password', 'reg-password2']) {
+// ONE WAY A PASSWORD IS PUT AWAY, for every card that has one (F-A-10). The
+// value goes, the field is masked again and its eye says so -- so no card can
+// be left showing a password to whoever uses this screen next. It was written
+// twice, once per card, and the sign-in card would have been the third copy.
+function concealPasswords(ids) {
+  for (const id of ids) {
     const field = $(id);
     field.value = '';
     field.type = 'password';
-    const eye = document.querySelector(`[data-for="${id}"]`);
-    if (eye) {
-      eye.setAttribute('aria-pressed', 'false');
-      eye.setAttribute('aria-label', id === 'reg-password'
-        ? 'Show password' : 'Show retype password');
-    }
+    const eye = document.querySelector(`.pw-eye[data-for="${id}"]`);
+    if (eye) eye.setAttribute('aria-pressed', 'false');
   }
 }
 
-function clearResetPasswords() {
-  for (const id of ['reset-password', 'reset-password2']) {
-    const field = $(id);
-    field.value = '';
-    field.type = 'password';
-    const eye = document.querySelector(`[data-for="${id}"]`);
-    if (eye) {
-      eye.setAttribute('aria-pressed', 'false');
-      eye.setAttribute('aria-label', id === 'reset-password'
-        ? 'Show new password' : 'Show retyped new password');
-    }
-  }
+function clearRegistrationPasswords() {
+  concealPasswords(['reg-password', 'reg-password2']);
 }
+
+function clearResetPasswords() {
+  concealPasswords(['reset-password', 'reset-password2']);
+}
+
+// THE TWO BOXES ARE READ AT THE MOMENT OF SENDING, with the version of the
+// notice this page is showing. Implementation Plan F-A-09.
+function consentGiven() {
+  return {
+    notice_version: $('privacy-notice').dataset.noticeVersion,
+    agreed: $('reg-consent').checked,
+    adult: $('reg-adult').checked,
+  };
+}
+
+// REGISTER WAITS FOR BOTH BOXES. The server refuses without them too; this is
+// so nobody presses a button that can only be refused.
+function syncRegisterReady() {
+  if (registrationInFlight) return;
+  $('register-go').disabled = !($('reg-consent').checked && $('reg-adult').checked);
+}
+
+['reg-consent', 'reg-adult'].forEach((id) => $(id).addEventListener('change', syncRegisterReady));
+syncRegisterReady();
 
 // WHAT HAPPENED, ON ITS OWN CARD, in both directions.
 //
@@ -3634,8 +3861,13 @@ $('register').addEventListener('submit', async (ev) => {
         email: email,
         password: password,
         password_again: again,
+        consent: consentGiven(),
       }),
     });
+    // THE BOXES BELONG TO THE PERSON WHO JUST REGISTERED. The next registration
+    // on this screen ticks its own.
+    $('reg-consent').checked = false;
+    $('reg-adult').checked = false;
     // REGISTERED, NOT SIGNED IN. A form post that created a session would mean
     // creating an account also logs in whatever machine sent it, and the
     // device binding is minted at sign-in for exactly that reason.
@@ -3659,7 +3891,7 @@ $('register').addEventListener('submit', async (ev) => {
     $('register').removeAttribute('aria-busy');
     $('show-login').removeAttribute('aria-disabled');
     clearRegistrationPasswords();
-    go.disabled = false;
+    syncRegisterReady();
     go.textContent = 'Register';
   }
 });

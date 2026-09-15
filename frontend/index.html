@@ -51,7 +51,13 @@
            spellcheck="false" placeholder="you@chambers.in" required>
 
     <label for="login-password">Password</label>
-    <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+    <!-- SHOW PASSWORD. Implementation Plan F-A-10: the same eye as Register and
+         Set a new password. type=button, or it submits the form. -->
+    <div class="pw-wrap">
+      <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+      <button type="button" class="pw-eye" data-for="login-password"
+              aria-label="Show password" aria-pressed="false">&#128065;</button>
+    </div>
 
     <button type="submit" class="primary wide" id="login-go">Sign in</button>
     <!-- ONE ROW, THE WIDTH OF THE BUTTON. Implementation Plan F-A-01:
@@ -147,6 +153,46 @@
       </button>
     </div>
 
+    <!-- THE PRIVACY NOTICE, ON THE CARD AND NOT BEHIND A LINK. Implementation Plan
+         F-A-09; DPDP Rules 2025, Rule 3: each detail named with what it is for,
+         how to withdraw, the advocate's rights, and how to complain to the
+         Board. `data-notice-version` is sent back with the consent and must
+         equal PRIVACY_NOTICE_VERSION in backend/nm/domain/advocate.py. -->
+    <section class="privacy-notice" id="privacy-notice" data-notice-version="2026-09-15"
+             aria-labelledby="privacy-notice-title">
+      <h3 id="privacy-notice-title" class="privacy-notice-title">Privacy notice</h3>
+      <p>Nyaymalaw keeps these details to create your account, sign you in and keep
+        the account secure, and for nothing else:</p>
+      <ul>
+        <li><strong>Your email address</strong>: your sign-in name, and where
+          password-reset links are sent.</li>
+        <li><strong>Your password</strong>: kept only in a scrambled form that cannot
+          be read back.</li>
+        <li><strong>Your sign-ins</strong>: when you signed in, an identifier for the
+          browser you used, and the network address of sign-in, registration and
+          password-reset attempts.</li>
+      </ul>
+      <p>You can withdraw this consent at any time, and your account is then closed.
+        You can also ask to see, correct or erase your details, or raise a
+        grievance, by writing to <a href="mailto:haaruln@gmail.com">haaruln@gmail.com</a>.
+        If it is not resolved, you may complain to the Data Protection Board of India.</p>
+      <p>Nyaymalaw is responsible for these details, through Rahul Lambade, Founder
+        &amp; CEO.</p>
+    </section>
+
+    <!-- UNTICKED UNTIL THE ADVOCATE TICKS THEM. Register stays unavailable
+         until both are ticked, and the server refuses a registration without
+         them as well. -->
+    <label class="consent" for="reg-consent">
+      <input type="checkbox" id="reg-consent" name="consent" required>
+      <span>I have read the privacy notice and agree to Nyaymalaw using my details
+        as it describes.</span>
+    </label>
+    <label class="consent" for="reg-adult">
+      <input type="checkbox" id="reg-adult" name="adult" required>
+      <span>I am 18 or older.</span>
+    </label>
+
     <button type="submit" class="primary wide" id="register-go">Register</button>
     <div class="login-alt"><a href="#" id="show-login">Back to sign in</a></div>
 
@@ -174,64 +220,103 @@
 </div>
 
 
+<!-- ================== F-A-17 — THE RIBBON ==================
+     THE SAME ON EVERY PAGE after sign-in, and OUTSIDE every page, so no page
+     can scroll it away or be shown without it. Row 1 says who is signed in and
+     in which workspace; row 2 is the four places to go. -->
 <header class="masthead" id="masthead" hidden>
-  <div class="brand">
-    <span class="mark">NM</span>
-    <span class="name">Nyaymalaw</span>
+  <div class="ribbon-row">
+    <div class="brand">
+      <span class="mark">NM</span>
+      <span class="name">Nyaymalaw</span>
+    </div>
+
+    <div class="ribbon-account">
+      <!-- NOT AN INPUT. A text box naming the advocate was the whole of
+           authentication (B-082); this renders who the SERVER says is signed
+           in, and cannot be edited into someone else. -->
+      <span class="who-name" id="who-name">—</span>
+      <div class="workspace-context" id="workspace-context" aria-label="Active workspace">
+        <span class="workspace-label">Active workspace</span>
+        <strong id="workspace-name">—</strong>
+      </div>
+
+      <!-- THE PERSON MENU: the profile, the signed-in devices and Sign out.
+           On a phone the name and workspace above step aside and are read
+           here instead. -->
+      <div class="account-menu" id="account-menu">
+        <button type="button" id="account-toggle" class="account-toggle"
+                aria-haspopup="true" aria-expanded="false" aria-controls="account-panel">
+          <svg class="person-icon" viewBox="0 0 24 24" width="20" height="20"
+               aria-hidden="true" focusable="false">
+            <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M4 20c1.4-3.6 4.4-5.5 8-5.5s6.6 1.9 8 5.5" fill="none"
+                  stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <svg class="menu-arrow" viewBox="0 0 12 12" width="10" height="10"
+               aria-hidden="true" focusable="false">
+            <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor"
+                  stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="sr-only">Profile and sign out</span>
+        </button>
+        <div id="account-panel" class="account-panel" hidden>
+          <p class="account-panel-title">Profile</p>
+          <dl class="profile-details">
+            <div><dt>Name</dt><dd id="profile-name">—</dd></div>
+            <div><dt>Email</dt><dd id="profile-email">—</dd></div>
+            <div><dt>Active workspace</dt><dd id="profile-workspace">—</dd></div>
+            <div><dt>Enrolment and practice</dt><dd id="who-detail"></dd></div>
+            <div><dt>Professional approval</dt><dd id="professional-approval"
+              title="Professional approval applies to privileged approvals and overrides. Your own workspace and matters remain available."></dd></div>
+          </dl>
+          <!-- BK-31. WHERE ELSE AM I SIGNED IN, and end those. The case this
+               exists for is a device the advocate no longer controls, so the
+               control has to be reachable from the one they are holding. -->
+          <button id="devices" type="button" class="ghost">Signed-in devices</button>
+          <button id="signout" type="button" class="ghost">Sign out</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="workspace-context" id="workspace-context" aria-label="Active workspace">
-    <span class="workspace-label">Active workspace</span>
-    <strong id="workspace-name">—</strong>
-  </div>
-
-  <!-- THE TABS. Three surfaces, and they do not share state on purpose:
-       advising is bounded by a matter, search is bounded by nothing, and the
-       record is what was already served. A search hit does not become a fact
-       on a matter by being looked at. -->
-  <!-- BK-32. THE ONLY WAY TO THE MATTER LIST BELOW 820px.
-       The rail is `display:none` at narrow widths, and `#back` returns to the
-       list only from inside a matter -- so an advocate on a phone could work
-       the matter they were in and reach no other one. This toggles it, and it
-       is in the masthead because that is the one strip present on every
-       surface. -->
-  <button id="matters-toggle" class="ghost matters-toggle" aria-expanded="false"
-          aria-controls="rail">Matters</button>
-
+  <!-- FOUR PLACES, AND ONLY FOUR. Case file and History belong to a matter and
+       are opened from inside My work for the matter that is open. -->
   <nav class="tabs" id="tabs" aria-label="Workspace navigation">
-    <button class="tab is-on" data-tab="advise" aria-current="page">My work</button>
-    <button class="tab" data-tab="search">Research</button>
-    <button class="tab" data-tab="casefile">Case file</button>
-    <button class="tab" data-tab="history">History</button>
-    <!-- P36. THE PREPARATION SURFACE. P29 to P32 built four served
-         capabilities and no way to reach any of them; a capability
-         with no surface is not shipped. It is a TAB rather than a
-         section of the case file because the four steps are a
-         sequence an advocate walks, and burying the sequence inside
-         another screen is what BK-68 calls a reorientation cost. -->
+    <button class="tab is-on" data-tab="home" aria-current="page">Home</button>
+    <button class="tab" data-tab="advise">My work</button>
+    <button class="tab" data-tab="search">Legal library</button>
+    <!-- P36. THE PREPARATION SURFACE. A capability with no surface is not
+         shipped, and the four steps are a sequence an advocate walks. -->
     <button class="tab" data-tab="prepare">Preparation</button>
   </nav>
-
-  <div class="who">
-    <!-- NOT AN INPUT ANY MORE. A text box naming the advocate was the whole
-         of authentication (B-082); this renders who the SERVER says is
-         signed in, and cannot be edited into someone else. -->
-    <span class="who-name" id="who-name">—</span>
-    <span class="who-detail" id="who-detail"></span>
-    <span class="who-detail" id="professional-approval"
-          title="Professional approval applies to privileged approvals and overrides. Your own workspace and matters remain available."></span>
-    <!-- BK-31. WHERE ELSE AM I SIGNED IN, and end those.
-         The case this exists for is a device the advocate no longer
-         controls, so the control has to be reachable from the one they are
-         holding — and the session they press it from survives. -->
-    <button id="devices" class="ghost">Sessions</button>
-    <button id="signout" class="ghost">Sign out</button>
-  </div>
-  <div class="health" id="health" role="status">Checking research availability…</div>
 </header>
 
+<!-- F-A-12. THE WARNING BEFORE AN IDLE SIGN-OUT, two minutes ahead. Any use of
+     the page hides it and starts the thirty minutes again. -->
+<div id="idle-warning" class="idle-warning" role="alert" hidden></div>
 <div id="rehearsal-warning" class="rehearsal-warning" role="status" hidden>Local rehearsal · Responses are scripted test output, not legal advice. Use synthetic information only.</div>
+
+<!-- ================== F-A-18 — HOME ==================
+     Where a sign-in lands: what Nyaymalaw is, in two lines, and the one thing
+     to do first. The coverage is in the first line so nobody reads it as
+     all-India law. -->
+<main id="pane-home" class="home" hidden>
+  <section class="home-intro" aria-labelledby="home-title">
+    <h1 id="home-title">Nyaymalaw is a legal research and matter workspace for advocates practising Telangana and Union of India law.</h1>
+    <p class="home-lede">Every answer shows the Act, section or judgment it rests on.</p>
+    <button type="button" id="home-start" class="primary">Start a matter</button>
+  </section>
+</main>
+
 <main id="pane-advise" hidden>
+  <!-- BK-32. THE WAY TO THE MATTER LIST BELOW 820px. The rail is a drawer at
+       narrow widths and `#back` returns to the list only from inside a matter,
+       so an advocate on a phone could work the matter they were in and reach
+       no other one. In My work, above the drawer and the conversation both,
+       so it is on screen whichever of the two is showing. -->
+  <button id="matters-toggle" type="button" class="ghost matters-toggle" aria-expanded="false"
+          aria-controls="rail">Matters</button>
   <!-- ================= THE MATTER LIST / THREAD BOARD =================
        Two surfaces, deliberately distinct. The matter list is bounded by
        MATTER count; the thread board by THREAD count. Conflating them is how
@@ -251,7 +336,15 @@
     <div class="workspace-heading" id="workspace-focus" tabindex="-1">
       <div><p class="eyebrow" id="workspace-eyebrow">YOUR WORKSPACE</p>
         <h1 id="matter-heading">My work</h1></div>
-      <span id="save-status" class="save-status" role="status"></span>
+      <div class="workspace-actions">
+        <!-- F-A-17. CASE FILE AND HISTORY BELONG TO A MATTER, so they are
+             offered here, for the matter that is open, and not as tabs. -->
+        <nav class="work-links" id="work-links" aria-label="This matter" hidden>
+          <button type="button" class="ghost" data-tab="casefile">Case file</button>
+          <button type="button" class="ghost" data-tab="history">History</button>
+        </nav>
+        <span id="save-status" class="save-status" role="status"></span>
+      </div>
     </div>
     <section id="welcome" class="welcome" aria-labelledby="welcome-title">
       <p class="eyebrow">A PLACE TO THINK THROUGH THE MATTER</p>
@@ -333,7 +426,11 @@
   <section class="searcher">
     <div class="page-intro"><p class="eyebrow">THE LEGAL LIBRARY</p><h1>Research with context.</h1>
       <p>Search the available judgments. The results retain their source and searched scope;
-        they do not become facts in a matter simply by being opened.</p></div>
+        they do not become facts in a matter simply by being opened.</p>
+      <!-- WHETHER THE LIBRARY CAN BE READ, on the library's own page (F-A-17).
+           It is the one thing that changes what research can tell the
+           advocate, and it is about this page and no other. -->
+      <div class="health" id="health" role="status">Checking library availability…</div></div>
     <!-- BK-42. EVERY FIELD HAS A LABEL, NOT ONLY A PLACEHOLDER.
          A placeholder is not an accessible name: it is announced once, it
          disappears the moment anything is typed, and a screen reader user

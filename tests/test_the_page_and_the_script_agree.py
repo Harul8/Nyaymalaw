@@ -21,6 +21,7 @@ import pathlib
 import re
 
 import pytest
+from nm.domain.advocate import PRIVACY_NOTICE_VERSION
 
 pytestmark = pytest.mark.class_a
 
@@ -181,11 +182,24 @@ def registration_surface_problems(page: str, script: str) -> list[str]:
                           form.group(1) if form else "")
     fields = [match.group(1) for control in controls
               if (match := re.search(r'\bid="([^"]+)"', control))]
-    if len(controls) != 3 or sorted(fields) != ["reg-email", "reg-password", "reg-password2"]:
-        problems.append("registration does not have exactly the three account inputs")
+    if len(controls) != 5 or sorted(fields) != [
+            "reg-adult", "reg-consent", "reg-email", "reg-password", "reg-password2"]:
+        problems.append("registration does not have exactly the three account inputs "
+                        "and the two privacy boxes")
     email = re.search(r'<input\b[^>]*\bid="reg-email"[^>]*>', page)
     if not email or 'type="email"' not in email.group(0):
         problems.append("the email input is absent or mistyped")
+    # F-A-09: both boxes start unticked, and the notice the card shows is the
+    # version the server records the consent against.
+    for box in ("reg-consent", "reg-adult"):
+        tag = re.search(rf'<input\b[^>]*\bid="{box}"[^>]*>', page)
+        if not tag or 'type="checkbox"' not in tag.group(0) \
+                or re.search(r"\schecked\b", tag.group(0)):
+            problems.append(f"{box} is not an unticked box")
+    notice = re.search(r'<section\b[^>]*\bid="privacy-notice"[^>]*'
+                       r'\bdata-notice-version="([^"]+)"', page)
+    if not notice or notice.group(1) != PRIVACY_NOTICE_VERSION:
+        problems.append("the register card's privacy notice is not the version the server records")
     start = script.find("$('register').addEventListener('submit'")
     capture = script.find("const email = $('reg-email').value.trim()", start)
     cleared = script.find("clearRegistrationPasswords();", capture)
@@ -194,7 +208,8 @@ def registration_surface_problems(page: str, script: str) -> list[str]:
         problems.append("registration secrets are retained or email is disconnected")
     end = script.find("// THE REVEAL.", sent)
     request = script[sent:end] if sent >= 0 and end > sent else ""
-    for field in ("email: email", "password: password", "password_again: again"):
+    for field in ("email: email", "password: password", "password_again: again",
+                  "consent: consentGiven()"):
         if field not in request:
             problems.append(f"request missing {field}")
     if "x-enrolment-" in request or "reg-invitation" in page:
@@ -220,8 +235,13 @@ def test_registration_surface_control_catches_each_failure():
                       '<input id="reg-approved"><label for="reg-email">'), SCRIPT),
         (HTML.replace('<label for="reg-email">',
                       '<input name="professional_approval"><label for="reg-email">'), SCRIPT),
+        (HTML.replace('id="reg-consent" name="consent" required',
+                      'id="reg-consent" name="consent" required checked'), SCRIPT),
+        (HTML.replace(f'data-notice-version="{PRIVACY_NOTICE_VERSION}"',
+                      'data-notice-version="2020-01-01"'), SCRIPT),
+        (HTML, SCRIPT.replace("consent: consentGiven(),", "")),
     ]
-    assert len(mutations) == 7
+    assert len(mutations) == 10
     for page, script in mutations:
         assert (page, script) != (HTML, SCRIPT), "control mutated nothing"
         assert registration_surface_problems(page, script)

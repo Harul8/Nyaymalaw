@@ -144,6 +144,9 @@ def test_permission_ending_cannot_resolve_or_hide_a_live_danger(client, monkeypa
     view = client.get(f"/api/matters/{matter_id}/emergency").json()
     if end == "expiry":
         monkeypatch.setattr("nm.edge.api.utcnow", lambda: instant + timedelta(hours=2))
+        # F-A-12: two untouched hours end the session too, so the advocate
+        # signs in again at the later time before looking.
+        client.sign_in()
     else:
         ended = _post(client, matter_id, {"revoke": True, "expected_version": view["version"],
                                          "governing_ref": view["governing_ref"]})

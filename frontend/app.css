@@ -51,15 +51,19 @@ body {
 }
 
 /* ------------------------------------------------------------- masthead --- */
+/* F-A-17. THE RIBBON. It is outside every page: `body` is a column, the ribbon
+   does not grow, and each page scrolls inside its own `main` -- so it stays at
+   the top of every page without a `position: fixed` bar covering anything. */
 .masthead {
-  display: grid; align-items: center; gap: 0.6rem 1.5rem;
-  grid-template-columns: auto minmax(10rem, 1fr) auto;
-  padding: 1rem 1.75rem 0;
+  display: flex; flex-direction: column; gap: 0.35rem;
+  padding: 0.8rem 1.75rem 0;
   background: var(--surface);
   border-bottom: 1px solid var(--rule);
   flex: none;
 }
-.brand { display: flex; align-items: baseline; gap: 0.6rem; }
+.ribbon-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-width: 0; }
+.ribbon-account { display: flex; align-items: center; gap: 1rem; min-width: 0; }
+.brand { display: flex; align-items: center; gap: 0.6rem; flex: none; }
 .mark {
   font-family: var(--f-serif); font-size: 0.9rem; font-weight: 600;
   letter-spacing: -0.08em; color: #fff; background: #185748;
@@ -82,19 +86,34 @@ body {
   text-transform: uppercase;
 }
 #workspace-name { font-size: 0.78rem; font-weight: 600; overflow-wrap: anywhere; }
-.who { display: flex; align-items: center; gap: 0.8rem; margin-left: auto; flex-wrap: wrap; min-width: 0; max-width: 100%; }
-.who label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); }
-.who input {
-  font-family: var(--f-mono); font-size: 0.8rem; width: 9rem;
-  padding: 0.3rem 0.5rem; border: 1px solid var(--rule);
-  border-radius: 3px; background: var(--paper); color: var(--ink);
+
+/* THE PERSON MENU (F-A-17): the profile, signed-in devices and Sign out. */
+.account-menu { position: relative; flex: none; }
+.account-toggle {
+  align-items: center; background: var(--paper); border: 1px solid var(--rule);
+  border-radius: 999px; color: var(--ink); display: inline-flex; gap: 0.3rem;
+  min-height: 38px; padding: 0.3rem 0.6rem;
 }
-.health {
-  grid-column: 2 / -1; grid-row: 2; justify-self: end;
-  font-size: 0.76rem; color: var(--ink-3);
-  padding: 0.5rem 0; max-width: 100%; overflow-wrap: anywhere;
+.account-toggle:hover, .account-toggle[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+.account-toggle[aria-expanded="true"] .menu-arrow { transform: rotate(180deg); }
+.account-panel {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14); display: flex; flex-direction: column;
+  gap: 0.6rem; padding: 0.9rem 1rem 0.8rem; position: absolute; right: 0;
+  top: calc(100% + 0.5rem); width: min(20rem, calc(100vw - 2rem)); z-index: 60;
 }
-.health.bad { color: var(--signal); border-color: var(--signal); }
+.account-panel-title {
+  color: var(--ink-3); font-size: 0.66rem; font-weight: 650; letter-spacing: 0.12em;
+  margin: 0; text-transform: uppercase;
+}
+.profile-details { display: grid; gap: 0.5rem; margin: 0; }
+.profile-details dt { color: var(--ink-3); font-size: 0.7rem; }
+.profile-details dd { font-size: 0.84rem; margin: 0; overflow-wrap: anywhere; }
+.account-panel button.ghost { align-self: flex-start; }
+
+/* WHETHER THE LIBRARY CAN BE READ, on the Legal library page it is about. */
+.health { color: var(--ink-3); font-size: 0.8rem; margin-top: 0.6rem; overflow-wrap: anywhere; }
+.health.bad { color: var(--signal); }
 
 /* ---------------------------------------------------------------- layout --- */
 /* `hidden` MUST WIN OVER A LAYOUT RULE.
@@ -313,18 +332,13 @@ button.primary:disabled { opacity: 0.5; cursor: default; }
 button.ghost { border: none; background: none; color: var(--accent); padding: 0.45rem 0.3rem; font-size: 0.78rem; }
 button.wide { margin: 0.5rem 0.6rem 0.8rem; }
 
-/* THE TOGGLE IS SHOWN WHEREVER THE RAIL IS NOT. BK-32-AC1, P36.
-   It was narrow-widths-only, on the reasoning that at 1280px the rail is
-   already beside the conversation and a button that opens what is open is
-   noise. That reasoning holds on the WORK pane and nowhere else: the rail
-   lives inside `#pane-advise`, so an advocate on Research, the case file,
-   History or Preparation at 1280px had no route to another matter at all.
-   Found by the journey the day Preparation was added, at the one width the
-   old phase used to return early at.
-   `body.away-from-work` is set by `showTab`, so the masthead -- the one strip
-   present on every surface -- always offers the way back. */
+/* THE MATTERS TOGGLE, AT NARROW WIDTHS. BK-32-AC1, P36, F-A-17.
+   At 1280px the rail is already beside the conversation. Below 820px the rail
+   is a drawer and this opens it. It used to sit in the masthead and show on
+   every other page too, because an advocate on Research, the case file,
+   History or Preparation had no other route back to the matter list; the
+   ribbon's My work tab, on every page, is that route now. */
 .matters-toggle { display: none; }
-body.away-from-work .matters-toggle { display: inline-block; }
 
 @media (max-width: 820px) {
   main { grid-template-columns: 1fr; }
@@ -335,7 +349,8 @@ body.away-from-work .matters-toggle { display: inline-block; }
      get to no other one. It stays out of the way by default -- 390px has no
      room for two columns -- and `#matters-toggle` brings it in over the
      conversation, which is the whole surface at this width. */
-  .matters-toggle { display: inline-block; }
+  .matters-toggle { display: inline-block; grid-column: 1 / -1; justify-self: start; margin: 0.4rem 0.9rem 0; }
+  #pane-advise { grid-template-rows: auto minmax(0, 1fr); }
   .rail { display: none; }
   #pane-advise.show-rail .rail { display: flex; }
   #pane-advise.show-rail .conversation { display: none; }
@@ -392,25 +407,20 @@ main > * { min-width: 0; }
 
 /* ============================ THE TABS ============================ */
 
-/* THE STRIP WRAPS. P36.
+/* THE STRIP. P36, F-A-17.
  *
- * A fifth tab took the row to 400px inside a 390px viewport and the whole
- * document scrolled sideways -- found by the journey the day the Preparation
- * tab was added, which is the point of measuring rather than assuming.
- *
- * WRAPPING, NOT A HORIZONTAL SCROLLER. A scroller would satisfy the
- * measurement and still hide the last tab behind a gesture a keyboard user
- * does not have; a wrapped row puts every tab on screen and in the tab order
- * at every width. `min-width: 0` is what lets the flex row shrink at all --
- * without it a flex item refuses to go below its content width, which is the
- * usual reason a strip like this overflows instead of reflowing.
+ * A fifth tab once took the row to 400px inside a 390px viewport and the whole
+ * document scrolled sideways. There are four tabs now. On a phone they stay on
+ * ONE ROW THAT SCROLLS INSIDE ITSELF (the phone rules below), as the product
+ * owner chose; the old objection to a scroller -- a last tab a keyboard user
+ * cannot reach -- does not hold, because a focused button scrolls its own
+ * container into view, and the document itself still never scrolls sideways.
+ * `min-width: 0` is what lets the flex row shrink at all.
  */
 .tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  grid-column: 1;
-  grid-row: 2;
   margin-left: 0;
   min-width: 0;
 }
@@ -601,7 +611,6 @@ main.single {
 
 @media (max-width: 860px) {
   .search-bar { grid-template-columns: 1fr; }
-  .tabs { margin-left: 12px; }
 }
 
 /* ========================= A1 — THE GATE =========================
@@ -631,7 +640,11 @@ main.single {
  */
 
 #gate {
-  align-items: var(--gate-align, center);
+  /* SAFE CENTRING (F-A-13). `align-items: center` on a scrolling container puts
+   * the top of a card taller than the screen above the scroll origin, where it
+   * cannot be reached -- and the register card now carries the privacy notice.
+   * Auto margins on the children centre the same way and stop at the edge. */
+  align-items: flex-start;
   background: var(--paper);
   display: flex; gap: clamp(3rem, 8vw, 9rem);
   inset: 0;
@@ -644,6 +657,8 @@ main.single {
    * decoration. */
   z-index: 100;
 }
+
+#gate > * { margin-block: auto; }
 
 .login {
   background: var(--surface);
@@ -709,6 +724,37 @@ main.single {
 }
 .pw-eye:hover, .pw-eye:focus-visible { opacity: 1; }
 .pw-eye[aria-pressed="true"] { opacity: 1; }
+
+/* THE PRIVACY NOTICE AND ITS TWO BOXES (F-A-09). Sentence case at reading size:
+   the small uppercase field-label style is for one-word labels, and a consent
+   set in small capitals is a consent nobody reads. */
+.privacy-notice {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+  margin-top: 14px;
+  padding: 10px 12px;
+}
+.privacy-notice-title { color: var(--ink); font-size: 13px; font-weight: 600; margin: 0 0 4px; }
+.privacy-notice p { margin: 6px 0; }
+.privacy-notice ul { display: grid; gap: 3px; margin: 4px 0; padding-left: 18px; }
+.privacy-notice a { color: var(--accent); overflow-wrap: anywhere; }
+.login label.consent {
+  align-items: start;
+  color: var(--ink-2);
+  display: grid;
+  font-size: 13px;
+  gap: 10px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  letter-spacing: 0;
+  line-height: 1.5;
+  margin-top: 10px;
+  text-transform: none;
+}
+.login .consent input { accent-color: var(--accent); height: 16px; margin: 2px 0 0; padding: 0; width: 16px; }
 
 .req { color: #b3261e; font-weight: 600; }
 .opt { color: var(--ink-2, #5a6472); font-weight: 400; font-size: 12px; }
@@ -803,18 +849,7 @@ main.single {
 
 /* ------------------------------------------------- who is signed in --- */
 
-.who-name { font-size: 13px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; max-width: 100%; }
-
-.who-detail {
-  color: var(--ink-3);
-  font-size: 11px;
-  margin-left: 8px;
-}
-
-#signout {
-  font-size: 11px;
-  margin-left: 12px;
-}
+.who-name { font-size: 13px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; max-width: 16rem; }
 
 
 /* ===================== B3-B5 — THE INTAKE FORM ===================== */
@@ -908,37 +943,22 @@ button.ghost.cancel { margin-right: 0.6rem; }
 }
 
 
-/* ============ BK-42 — THE MASTHEAD FITS A PHONE ============
+/* ============ BK-42, F-A-17 — THE RIBBON ON A PHONE ============
  *
- * MEASURED at 390px: `tabs` ran to 473px, `who` to 678px and `health` to
- * 720px on a 390px viewport -- the whole strip is one non-wrapping flex row,
- * so a third of the masthead sat off the right edge and the document scrolled
- * sideways. Every pane below it was already responsive; the bar above them
- * was not, and nothing looked at it.
+ * MEASURED at 390px (BK-42): a masthead laid out as one row ran a third of its
+ * width off the right edge and the document scrolled sideways.
  *
- * IT WRAPS RATHER THAN HIDING. An advocate on a phone still needs to know
- * WHO they are signed in as -- that is the whole of A1's argument for putting
- * it there -- so the identity stays and the strip becomes two lines. What
- * goes is the enrolment/practice/firm detail line, which is a reference they
- * can get from the account and not something they read while working.
+ * THE FIRST ROW KEEPS THE LOGO AND THE PERSON MENU. An advocate on a phone
+ * still needs to know WHO is signed in -- A1's argument for the name being
+ * there at all -- so the name and the workspace move into the person menu,
+ * one tap away and read in full rather than cut. The four tabs stay on one
+ * row that scrolls inside itself.
  */
 @media (max-width: 820px) {
-  .masthead {
-    display: flex; flex-wrap: wrap;
-    gap: 0.5rem 0.9rem;
-    padding: 0.6rem 0.9rem;
-  }
-  .who { margin-left: 0; flex: 1 1 100%; gap: 0.5rem; }
-  .workspace-context { order: 0; margin-left: auto; }
-  /* The enrolment number, practice and firm. Reference, not working
-     information, and it is the longest run of unbreakable text up there. */
-  .who-detail { display: none; }
-  .health {
-    flex: 1 1 100%;
-    max-width: 100%;
-    order: 9;          /* below the identity, on its own line */
-  }
-  .tabs { margin-left: 0; }
+  .masthead { padding: 0.6rem 0.9rem 0; }
+  .ribbon-account > .who-name, .ribbon-account > .workspace-context { display: none; }
+  .tabs { flex-wrap: nowrap; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+  .tabs .tab { flex: none; padding: 8px 10px 7px; }
 }
 
 /* Workspace surfaces share existing tokens and keep their own semantic owner. */
@@ -960,6 +980,12 @@ button.ghost.cancel { margin-right: 0.6rem; }
 .save-status { font-size: 0.74rem; color: var(--ink-3); text-align: right; max-width: 42%; }
 .rehearsal-warning { flex: none; padding: 0.4rem 1rem; font-size: 0.76rem; color: var(--amber);
   background: var(--amber-w); border-bottom: 1px solid var(--rule); }
+/* F-A-12. THE IDLE WARNING floats over whichever pane is open, because the
+   advocate may be anywhere on the page when the last two minutes start. */
+.idle-warning { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 90;
+  width: max-content; max-width: min(34rem, calc(100% - 2rem)); padding: 0.75rem 1rem;
+  font-size: 0.85rem; line-height: 1.5; color: var(--ink); background: var(--amber-w);
+  border: 1px solid var(--amber); border-radius: 8px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); }
 .welcome { max-width: 58rem; width: 100%; padding: clamp(2rem, 5vw, 5rem); margin: auto; }
 .welcome h2 { font: 400 clamp(2rem, 3.4vw, 3.1rem)/1.16 var(--f-serif); letter-spacing: -0.035em; margin: 1rem 0; }
 .welcome-lede { max-width: 36rem; color: var(--ink-2); line-height: 1.85; }
@@ -970,6 +996,16 @@ button.ghost.cancel { margin-right: 0.6rem; }
 .welcome-guidance h3 { font-size: 0.87rem; font-weight: 600; margin: 0.7rem 0 0.4rem; }
 .welcome-guidance p { font-size: 0.8rem; color: var(--ink-3); line-height: 1.75; margin: 0; }
 .guide-number { font: 0.75rem var(--f-mono); color: var(--accent); }
+/* F-A-18. HOME: two lines and one button. Centred with auto margins, so a short
+   window scrolls to the top of it rather than cutting it off. */
+main.home { display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 2rem 1.75rem; }
+.home-intro { align-items: flex-start; display: flex; flex-direction: column; gap: 1rem; margin-block: auto; max-width: 44rem; }
+.home-intro h1 { font: 400 clamp(1.7rem, 3.2vw, 2.6rem)/1.22 var(--f-serif); letter-spacing: -0.025em; margin: 0; text-wrap: balance; }
+.home-lede { color: var(--ink-2); font-size: 1.05rem; line-height: 1.7; margin: 0; }
+.home-intro .primary { margin-top: 0.8rem; min-height: 45px; padding-inline: 1.4rem; }
+/* F-A-17. Case file and History, beside the open matter's heading. */
+.workspace-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem; justify-content: flex-end; min-width: 0; }
+.work-links { display: flex; gap: 0.2rem; }
 .composer-label { display: block; max-width: 46rem; margin: 0 auto 0.5rem; color: var(--ink-2); font-size: 0.78rem; font-weight: 600; }
 .page-intro { margin: 1.5rem 0 2rem; max-width: 45rem; }
 .page-intro h1 { font: 400 2.4rem/1.2 var(--f-serif); letter-spacing: -0.025em; margin: 0.8rem 0; }
@@ -978,16 +1014,27 @@ button.ghost.cancel { margin-right: 0.6rem; }
 input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 #thread:empty { flex: 0; padding: 0; }
 #rail-body:empty { min-height: 3rem; }
-@media (max-width: 1100px) and (min-width: 821px) {
-  .masthead { grid-template-columns: auto 1fr; }
-  .who { grid-column: 1 / -1; grid-row: 2; margin-left: 0; }
-  .tabs { grid-row: 3; }
-  .health { grid-row: 3; }
+/* F-A-13. LANDSCAPE TABLETS: two columns still, and the story panel and the gap
+   give way before the card does. The ribbon's name gives way the same way. */
+@media (max-width: 1024px) and (min-width: 821px) {
+  .ribbon-account > .who-name { max-width: 10rem; }
+  #gate { gap: 2.5rem; }
+  .arrival-story { padding: 1rem; width: min(38vw, 400px); }
+  .arrival-wordmark { margin-bottom: 2.5rem; }
+  .arrival-story h1 { font-size: 2.3rem; }
 }
+/* F-A-13. PHONES AND PORTRAIT TABLETS: one column, the logo above the card. The
+   left panel's story steps aside so the card is on the first screen; its
+   wordmark stays, because the rule is one logo on the page, and one is not
+   none. */
 @media (max-width: 820px) {
-  .arrival-story { display: none; }
-  :root { --gate-align: flex-start; --gate-padding: 2rem 1rem; }
-  .login { margin: auto; padding: 1.8rem; }
+  #gate { flex-direction: column; gap: 1.25rem; justify-content: flex-start; }
+  #gate > * { margin: 0 auto; }
+  .arrival-story { padding: 0; width: min(100%, 420px); }
+  .arrival-story > :not(.arrival-wordmark) { display: none; }
+  .arrival-wordmark { margin-bottom: 0; }
+  :root { --gate-padding: 1.5rem 1rem; }
+  .login { padding: 1.8rem; }
   .workspace-heading { padding: 1rem; }
   .welcome { padding: 2rem 1.25rem; margin: 0; }
   .welcome-guidance { grid-template-columns: 1fr; gap: 1.25rem; }

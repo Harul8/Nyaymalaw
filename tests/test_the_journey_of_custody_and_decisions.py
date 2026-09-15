@@ -30,6 +30,9 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 ARTIFACTS = ROOT / ".nm" / "journey"
 sys.path.insert(0, str(ROOT))
 
+from tests.test_the_journey_login_to_logout import _reach_rail  # noqa: E402
+from tests.test_the_journey_login_to_logout import _tab as _open_surface  # noqa: E402
+
 pytestmark = [pytest.mark.journey, pytest.mark.class_d]
 
 BRIEF = ("We act for Ledger Traders in a recovery suit against Kiran Steels. "
@@ -106,8 +109,8 @@ def _tab(page, name: str) -> None:
     case file does not click "Case file" again either.
     """
     if page.is_hidden(f"#pane-{name}"):
-        page.click(f'.tab[data-tab="{name}"]')
-        page.wait_for_selector(f"#pane-{name}:not([hidden])", timeout=15000)
+        # F-A-17: the ribbon's tabs, or Case file and History inside My work.
+        _open_surface(page, name)
     if name == "casefile":
         _settle_casefile(page)
 
@@ -168,7 +171,9 @@ def _open_matter(page) -> None:
     `#message` present but invisible, which is the failure mode a selector
     that "exists" produces: the locator resolves and the action never lands.
     The viewport is 1280px, where the rail is open rather than a drawer.
+    A sign-in lands on Home (F-A-18), so My work is reached first.
     """
+    _reach_rail(page, 1280)
     page.click("#new-matter")
     page.wait_for_selector("#intake:not([hidden])", timeout=15000)
     if page.is_hidden("#intake"):
@@ -410,8 +415,7 @@ def test_phase_5_a_held_erasure_refuses_and_the_screen_says_why(
 
     page.reload(wait_until="networkidle")
     page.wait_for_selector("#masthead:not([hidden])", timeout=20000)
-    page.click('.tab[data-tab="casefile"]')
-    page.wait_for_selector("#pane-casefile:not([hidden])", timeout=15000)
+    _tab(page, "casefile")
     _choose_matter(page, matter_id)
     page.wait_for_selector("#retention-host .retention-row", timeout=15000)
     shown = page.inner_text("#retention-host")
