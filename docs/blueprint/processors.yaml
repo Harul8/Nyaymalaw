@@ -83,6 +83,18 @@ processors:
     data_classes: [operational, restricted]
     approval_id: IN-PROCESS-NO-EGRESS
 
+  # THE SPEECH MODEL FOR DICTATION. Implementation Plan F-C-02.
+  # `backend/nm/adapters/speech/local_whisper.py` runs an open-source Whisper model
+  # in this process, on this machine's GPU or processor; the recording is decoded
+  # from memory and not kept, and nothing leaves the machine. A dictated brief is
+  # client matter material, so that class is listed. Recorded so an outside speech
+  # service is refused until somebody approves it.
+  - processor_id: local-speech
+    region: in
+    purposes: [transcription]
+    data_classes: [operational, client_matter, restricted]
+    approval_id: IN-PROCESS-NO-EGRESS
+
 #: Regions outside `in`, each with the legal review that admitted it. Empty is
 #: the correct default: a foreign processor is refused until a review names the
 #: region, and a boolean flag would be a switch somebody sets during an

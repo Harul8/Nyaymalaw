@@ -482,6 +482,22 @@ Class (274) is embedded. **Do not read the 246 as a gap to close** — and do no
 read it as full coverage either, because a File node will never match a
 semantic query no matter how the index is rebuilt.
 
+**THE GRAPH HOLDS TRACKED FILES ONLY, so a file you have just written is not
+in it.** Measured 18 September 2026 against the built graph: **487 of 487**
+tracked `.py`/`.js` files were indexed and **0 of 9 untracked ones** — the whole
+speech stack written that week, `backend/nm/adapters/optional.py`,
+`backend/nm/adapters/speech/*`, `backend/nm/domain/dictation.py`,
+`backend/nm/ports/transcription.py`, `frontend/dictation-worklet.js`. Neither
+`update` nor a full `build` reaches them; `update --base` is a git diff, and the
+build enumerates the same way.
+
+*So a graph search for code added since the last commit returns zero, and zero
+reads exactly like "not in the codebase" — S3, with a new cause.* `git add -N
+<path>` (intent to add, content not staged) makes the file visible to the next
+`update`, which put 7 nodes in for `optional.py` and is the cheapest fix while
+the work is uncommitted; committing does it permanently. **Until then, a new
+file is answered by Grep, and a zero from the graph about one proves nothing.**
+
 **`head_matches_build: true` says nothing about the vectors.** Measured 12
 September 2026: the graph was built at HEAD, the tree was clean, semantic
 search answered in `search_mode: semantic` — and 600 of 4,383 non-File nodes

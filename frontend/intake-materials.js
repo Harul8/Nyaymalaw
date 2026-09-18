@@ -68,12 +68,24 @@
   `;
   document.body.append(dialog);
   const el = id => dialog.querySelector(`#materials-${id}`);
-  const entry = node('div', '', 'materials-entry');
-  const launch = node('button', 'Add files or record a voice note', 'ghost materials-launch');
-  launch.type = 'button'; launch.id = 'materials-open';
-  entry.append(launch);
-  $('workspace-focus').after(entry);
-  launch.addEventListener('click', open);
+  // F-C-01. OPENED FROM THE PLUS MENU UNDER THE BRIEF; there is no files bar
+  // above the chat. Documents and media each open the file chooser for their
+  // kind, and a voice note to keep goes to the recorder below.
+  const KINDS = {
+    documents: '.pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.csv,.eml,.msg',
+    media: 'image/*,audio/*,video/*',
+  };
+  function openFor(kind) {
+    setPlusMenu(false);
+    el('files').accept = KINDS[kind] || '';
+    const opening = open();
+    if (dialog.open && kind in KINDS) el('files').click();
+    if (dialog.open && kind === 'voice') el('record').focus();
+    return opening;
+  }
+  $('plus-documents').addEventListener('click', () => openFor('documents'));
+  $('plus-media').addEventListener('click', () => openFor('media'));
+  $('plus-voice').addEventListener('click', () => openFor('voice'));
 
   let generation = 0, receiptReadGeneration = 0, token = null, busy = false, active = null;
   let files = [], receipts = [], resumeId = null, adopting = null;

@@ -66,6 +66,7 @@ from tests.test_the_journey_login_to_logout import (  # noqa: E402
     _reach_rail,
     _sign_in,
     _sign_out,
+    _start_matter,
     _tab,
     _visible_text,
 )
@@ -156,8 +157,9 @@ MASTHEAD = (
     ("the person menu, with who is signed in and sign out", "#account-toggle"),
 )
 
+#: F-B-01. A matter is started from Home, where a sign-in lands.
 BEHIND_A_DISCLOSURE = (
-    ("start a matter", "#new-matter"),
+    ("start a matter", "#home-start"),
 )
 
 PRIMARY = MASTHEAD + BEHIND_A_DISCLOSURE
@@ -219,11 +221,9 @@ def test_the_whole_product_is_navigable_at_every_width(page, journey, width,
     _no_control_is_clipped(page, width)
 
     # ---- start a matter -------------------------------------------------
-    _reach_rail(page, width)
-    # MEASURED WHERE IT IS DISCLOSED. The drawer is open; if the control is
-    # clipped now, an advocate who did the right thing still cannot reach it.
+    # MEASURED WHERE IT IS OFFERED: on Home, where the sign-in has just landed.
     _no_control_is_clipped(page, width, BEHIND_A_DISCLOSURE)
-    page.click("#new-matter")
+    _start_matter(page)
     _intake(page, client=f"Prep {width} First Traders")
     _advise(page, BRIEF)
     first = page.get_attribute("#pane-advise", "data-matter-id")
@@ -231,11 +231,7 @@ def test_the_whole_product_is_navigable_at_every_width(page, journey, width,
     did["start a matter"] = Did.RAN
 
     # ---- a second matter, so switching is a real switch -----------------
-    _reach_rail(page, width)
-    if page.is_visible("#back"):
-        page.click("#back")
-    page.wait_for_selector("#new-matter", state="visible", timeout=15000)
-    page.click("#new-matter")
+    _start_matter(page)
     _intake(page, client=f"Prep {width} Second Traders")
     _advise(page, BRIEF)
     second = page.get_attribute("#pane-advise", "data-matter-id")

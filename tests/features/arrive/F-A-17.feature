@@ -25,12 +25,12 @@ Feature: F-A-17 The top ribbon, the same on every page
     And the person menu has Signed-in devices and Sign out
     And the menu opens from its button and closes on Escape, on a click elsewhere, and when the session ends
 
-  Scenario: Case file and History open from inside My work for the matter that is open
+  Scenario: Case file and History open from inside an open matter
     Given the page
     And the page script
     Then Case file and History are not tabs
-    And My work offers Case file and History only while a matter is open
-    And they open on that matter, with My work still the marked tab
+    And an open matter offers Case file and History while it is open
+    And they open on that matter, with the matter's own tab still marked
 
   Scenario: The Legal library page says whether the library can be read
     Given the page

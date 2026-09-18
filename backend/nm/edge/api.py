@@ -31,6 +31,8 @@ from fastapi import (
     HTTPException,
     Request,
     Response,
+    WebSocket,
+    WebSocketDisconnect,
 )
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
@@ -578,6 +580,138 @@ def serving_state() -> dict:
 @app.get("/api/health")
 def health() -> dict:
     return {**application().health(), **serving_state()}
+
+
+@app.post("/api/dictation", dependencies=[CsrfProtected])
+async def transcribe_dictation(request: Request, advocate_id: Advocate) -> dict:
+    """SPEECH IN, WORDS OUT, NOTHING KEPT. Implementation Plan F-C-02.
+
+    The advocate's recording is transcribed by this installation's own speech
+    model and the words are returned for the brief box, where they are read and
+    corrected before anything is sent. The recording is written nowhere: it
+    exists in this request and in the model's working memory, and not after.
+
+    REFUSED BEFORE IT IS READ when it is not audio or is too large, and a 503
+    that says why when the speech model is not set up -- never empty text, which
+    would read as "you said nothing".
+    """
+    from fastapi.concurrency import run_in_threadpool
+
+    from nm.domain.dictation import DICTATION_MEDIA, MAX_DICTATION_BYTES
+    from nm.ports.transcription import DictationUnavailable
+
+    media_type = (request.headers.get("content-type") or "").split(";")[0].strip().lower()
+    if media_type not in DICTATION_MEDIA:
+        raise HTTPException(415, "Dictation takes an audio recording. Nothing was transcribed.")
+    audio = bytearray()
+    async for chunk in request.stream():
+        if len(audio) + len(chunk) > MAX_DICTATION_BYTES:
+            raise HTTPException(
+                413, "That recording is too long to transcribe at once. Record a shorter part.")
+        audio.extend(chunk)
+    if not audio:
+        raise HTTPException(422, "No audio was received. Nothing was transcribed.")
+    try:
+        heard = await run_in_threadpool(
+            application().transcriber.transcribe, bytes(audio), media_type)
+    except DictationUnavailable as exc:
+        raise HTTPException(503, str(exc)) from exc
+    return {"text": heard.text, "language": heard.language, "seconds": heard.seconds,
+            "device": heard.device, "stored": False}
+
+
+def _socket_from_this_page(socket: WebSocket) -> bool:
+    """The exact-origin rule of `_require_origin`, for a socket.
+
+    `_origins` OWNS THE RULE and is asked here too; only the scheme is
+    normalised, because a socket's own base URL is `ws://` or `wss://` while the
+    page's `Origin` header is `http://` or `https://`.
+
+    AN ABSENT ORIGIN IS REFUSED. A browser sends it on every WebSocket
+    handshake, so its absence means this is not the page (§9: an absent input
+    must never read as permission).
+    """
+    origin = (socket.headers.get("origin") or "").rstrip("/")
+    if not origin:
+        return False
+    trusted = {o.replace("wss://", "https://", 1).replace("ws://", "http://", 1)
+               for o in _origins(socket)}
+    return origin in trusted
+
+
+@app.websocket("/ws/dictation")
+async def dictation_socket(socket: WebSocket,
+                           nm_session: str | None = Cookie(default=None),
+                           nm_device: str | None = Cookie(default=None),
+                           user_agent: str | None = Header(default=None)) -> None:
+    """THE WORDS WHILE THE ADVOCATE IS STILL SPEAKING. Implementation Plan F-C-03.
+
+    Audio arrives as 16 kHz mono frames and the words heard so far go back after
+    each one. They are PROVISIONAL: the text the advocate keeps is transcribed
+    once, at the end, by `/api/dictation`, and the page replaces these with it.
+
+    IT AUTHENTICATES ITSELF. A socket is not covered by the route-table sweeps
+    that prove every `/api` route is authenticated and CSRF-protected, so the
+    session cookie is checked here, bound to the device as everywhere else, and
+    the handshake's origin is checked by the same rule as an unsafe write --
+    which is what a socket has instead of a CSRF header.
+
+    NOTHING IS KEPT. Each frame is fed to the recogniser and dropped; no audio
+    is written, and the transcript is not saved by this route.
+    """
+    from fastapi.concurrency import run_in_threadpool
+
+    from nm.domain.dictation import (
+        LIVE_SAMPLE_RATE,
+        MAX_LIVE_BYTES,
+        MAX_LIVE_FRAME_BYTES,
+    )
+    from nm.ports.transcription import DictationUnavailable
+
+    session = application().directory.session(
+        nm_session or "", _device(nm_device, user_agent), utcnow())
+    if session is None or not _socket_from_this_page(socket):
+        # REFUSED BEFORE IT IS ACCEPTED, so no audio is ever read from a socket
+        # this product has not authenticated.
+        await socket.close(code=1008)
+        return
+    await socket.accept()
+    try:
+        listening = application().live_dictation.listen(LIVE_SAMPLE_RATE)
+    except DictationUnavailable as exc:
+        # SAID, NOT SILENT. The page keeps recording for the final transcription
+        # and tells the advocate the live words are off.
+        await socket.send_json({"live": False, "why": str(exc)})
+        await socket.close(code=1011)
+        return
+    await socket.send_json({"live": True})
+    heard = 0
+    try:
+        while True:
+            frame = await socket.receive()
+            if frame.get("type") == "websocket.disconnect":
+                return
+            if frame.get("text") is not None:
+                words = await run_in_threadpool(listening.close)
+                await socket.send_json({"words": words, "done": True})
+                await socket.close()
+                return
+            audio = frame.get("bytes") or b""
+            heard += len(audio)
+            if len(audio) > MAX_LIVE_FRAME_BYTES or heard > MAX_LIVE_BYTES:
+                await socket.send_json(
+                    {"live": False,
+                     "why": "That is longer than one dictation may run. What you said is "
+                            "still recorded; stop to have it transcribed."})
+                await socket.close(code=1009)
+                return
+            words = await run_in_threadpool(listening.hear, audio)
+            await socket.send_json({"words": words})
+    except WebSocketDisconnect:
+        return
+    except DictationUnavailable as exc:
+        await socket.send_json({"live": False, "why": str(exc)})
+        await socket.close(code=1011)
 
 
 @app.get("/api/matters/{matter_id}/transcript")

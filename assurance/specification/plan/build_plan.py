@@ -4751,6 +4751,76 @@ d("B-141", "2026-09-07", "docs",
   "NOT have caught this one, and says so in its docstring rather than "
   "implying otherwise.")
 
+d("B-143", "2026-09-18", "adapters",
+  "HEALTH REPORTED A SPEECH LIBRARY AS READY THAT COULD NOT BE IMPORTED. "
+  "`/api/health` said `dictation_live : installed; "
+  "vosk-model-small-en-in-0.4 loads on first use` while the first frame of "
+  "speech raised `ModuleNotFoundError: No module named 'srt'` from inside "
+  "`vosk/__init__.py`.",
+  "Building F-C-03 the day before. The live library was installed with "
+  "`--no-deps` because its `srt` dependency would not build here, on my "
+  "own wrong claim that `srt` was used only by vosk's command-line tool "
+  "-- it is imported by `vosk/__init__.py` itself. The readiness check "
+  "asked `importlib.util.find_spec(\"vosk\")`, which answers a different "
+  "question: is there a package DIRECTORY of that name.",
+  "S1 -- an absent input reading as success",
+  "A real clip fed through the adapter frame by frame, after the model "
+  "downloaded. Nothing in the suite would have caught it: the unit tests "
+  "inject a stand-in engine, and health was truthful about everything it "
+  "could see.",
+  "backend/nm/adapters/optional.py decides availability by IMPORTING the "
+  "library once and remembering the answer, and reports four states -- "
+  "absent, installed and unimportable WITH THE REASON VERBATIM, "
+  "importable, and (the caller's own question) importable with no model "
+  "on disk. Both speech adapters now read it; the `torch` lookup that "
+  "only needs a directory became `library_path`, so no second caller of "
+  "`find_spec` remains to drift.",
+  "Yes -- three sites in two adapters decided this from the import path "
+  "and all three were swept onto the one mechanism. The population was "
+  "enumerated from the code, not from memory, and the check scans the "
+  "whole of `backend/nm/` rather than the speech package, so a fourth "
+  "site in a sibling module fails the build.",
+  "tests/test_a_library_is_available_only_when_it_imports.py::"
+  "test_only_one_module_may_ask_the_import_path refuses a second caller "
+  "of `find_spec` anywhere in the product. "
+  "tests/test_a_library_is_available_only_when_it_imports.py::"
+  "test_no_speech_adapter_reports_a_library_it_cannot_use_as_ready draws "
+  "its population by importing every speech adapter that answers health, "
+  "and fails any whose readiness reads as usable while its library is "
+  "not. "
+  "tests/test_a_library_is_available_only_when_it_imports.py::"
+  "test_a_library_that_is_installed_and_will_not_import_is_not_usable is "
+  "the defect itself as a rule, against a module written to raise on "
+  "import.")
+
+d("B-144", "2026-09-18", "tooling",
+  "A SCENARIO'S STAND-IN WAS INSTALLED ON A PREVIOUS TEST'S APPLICATION. "
+  "F-C-03's socket step patched `application().live_dictation.inner` with a "
+  "stand-in engine; the socket then ran the REAL speech model and the words "
+  "came back `['', '']`. Run alone, the same step raised `no application "
+  "wired`.",
+  "Writing the F-C-03 steps. `application()` is a module global the "
+  "composition root injects, the `client` fixture is what injects it, and "
+  "the step did not ask for `client` -- so it ran first and patched "
+  "whatever the preceding test had left wired.",
+  "S1 -- an absent input reading as success",
+  "Running the scenarios after the live model was installed. Before that "
+  "the stand-in and the real adapter both returned nothing, so the defect "
+  "was invisible: it needed a working model to show itself.",
+  "`conftest.wired` returns the application THIS test's client serves, and "
+  "every step that patches or reads a port now takes it instead of "
+  "importing `nm.edge.api.application`.",
+  "Yes -- the population is every function pytest invokes (step, fixture "
+  "or test), scanned across the whole suite rather than the one file where "
+  "it bit. Private helpers called from a test body are excluded with the "
+  "reason: they cannot run before their caller, which holds the fixture.",
+  "tests/test_a_step_serves_the_application_it_patched.py::"
+  "test_no_step_reaches_an_application_it_did_not_ask_for fails the build "
+  "on any step, fixture or test that CALLS `application()` without a "
+  "wiring fixture in its signature -- matched on the call in the AST, not "
+  "on the text, so a docstring naming the mistake is not the mistake.")
+
+
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",
                   "How it was found", "The fix", "General?",

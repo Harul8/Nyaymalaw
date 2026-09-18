@@ -45,8 +45,13 @@ INDEX_PROCESSOR = "local-index"
 #: mailbox. A real mail provider is an external recipient, and this build admits
 #: none until the authenticated approval integration exists.
 OUTBOX_PROCESSOR = "local-outbox"
+#: The speech model dictation is transcribed by (F-C-02), running in this
+#: process. An outside speech service is an external recipient of client material,
+#: and this build admits none until the authenticated approval integration exists.
+TRANSCRIPTION_PROCESSOR = "local-speech"
 CONTROLLED_LOCAL_PROCESSORS = frozenset({
     SCRIPTED_PROCESSOR, STORAGE_PROCESSOR, INDEX_PROCESSOR, OUTBOX_PROCESSOR,
+    TRANSCRIPTION_PROCESSOR,
 })
 LOCAL_BASIS = "IN-PROCESS-NO-EGRESS"
 

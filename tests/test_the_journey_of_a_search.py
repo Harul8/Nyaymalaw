@@ -33,7 +33,7 @@ sys.path.insert(0, str(ROOT))
 
 sys.path.insert(0, str(ROOT / "backend"))
 
-from tests.test_the_journey_login_to_logout import _reach_rail  # noqa: E402
+from tests.test_the_journey_login_to_logout import _start_matter  # noqa: E402
 from tests.test_the_journey_login_to_logout import _tab as _open_surface  # noqa: E402
 
 BRIEF = ("We act for the plaintiff at Hyderabad. Goods were supplied against "
@@ -141,8 +141,7 @@ def _submit_research(page, query: str, *, court: str = "", objective="whether th
 
 def test_phase_1_a_matter_is_open_and_research_is_offered_for_it(page, journey):
     _sign_in(page, journey)
-    _reach_rail(page, 1280)
-    page.click("#new-matter")
+    _start_matter(page)
     _intake(page)
     _advise(page, BRIEF)
     _tab(page, "search")
@@ -224,6 +223,8 @@ def test_phase_6_an_unsupported_court_is_not_a_zero(page, journey):
 def test_phase_7_a_reload_shows_the_research_record_from_the_file(page, journey):
     page.reload()
     page.wait_for_selector("#masthead:not([hidden])", timeout=15000)
+    # A sign-in lands on Home (F-A-18); My work is the list of matters (F-B-03).
+    _tab(page, "advise")
     page.wait_for_selector("#rail-body .row", timeout=15000)
     if page.is_hidden("#back"):
         page.locator("#rail-body .row").first.click()

@@ -93,13 +93,22 @@ class UploadService:
 
     def create_intake(self, actor_id: str, body: dict) -> dict:
         key = _text(body.get("request_key"), "request_key", 100)
-        title = _text(body.get("title"), "title", 200)
         parties = body.get("parties", {})
         if not isinstance(parties, dict) or len(parties) > 50:
             raise UploadRefused(422, "parties must be a bounded name-to-side map")
         parties = {
             _text(k, "party name", 200): _text(v, "party side", 100) for k, v in parties.items()
         }
+        # A MATTER OPENED FROM THE INTAKE FORM IS NAMED BY ITS PARTIES (F-B-01).
+        # The form gives who we act for and who it is against, and the one rule
+        # for naming a file from them is the turn engine's -- not a second copy
+        # in the page. A title that is given still wins, as it always did.
+        title = body.get("title")
+        if title is None:
+            from nm.core.turn import _matter_name
+
+            title = _matter_name("", parties) if parties else None
+        title = _text(title, "title", 200)
         digest = hashlib.sha256((actor_id + "\x00" + key).encode()).hexdigest()
         matter_id = MatterId("m_" + digest[:32])
         offer = {"title": title, "parties": parties}

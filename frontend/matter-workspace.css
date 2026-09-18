@@ -1,7 +1,9 @@
-.matter-tools { display: flex; flex-wrap: wrap; gap: .5rem; padding: .65rem 2.25rem; background: var(--surface); border-bottom: 1px solid var(--rule); }
+/* F-B-04. The matter's own tools sit in its header beside Case file and History,
+   styled like them, rather than in a bar of their own above the chat. */
+.matter-tools { display: flex; flex-wrap: wrap; gap: .2rem; }
 .matter-tools[hidden], .matter-dialog [hidden] { display: none; }
-.matter-tools button { font-size: .8rem; min-height: 42px; padding: .5rem .85rem; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
-.matter-tools button:hover { border-color: var(--accent); background: var(--surface); }
+.matter-tools button { font-size: .78rem; }
+.matter-tools button:hover { text-decoration: underline; }
 .matter-dialog { width: min(52rem, calc(100% - 2rem)); }
 .matter-dialog-body { line-height: 1.55; overflow-wrap: anywhere; }
 .matter-section { padding-block: 1rem; border-bottom: 1px solid var(--rule); }

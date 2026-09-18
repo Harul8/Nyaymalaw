@@ -53,6 +53,9 @@ const state = {
   // file. Only the newest read may paint, and its entries and currency must
   // become visible as one coherent primary snapshot.
   casefileGeneration: 0,
+  // F-B-01/F-B-03. WHICH RIBBON TAB THE MATTER WORKSPACE BELONGS TO right now:
+  // `home` for a matter started there, `advise` for one opened from My work.
+  workTab: 'advise',
 };
 
 let registrationInFlight = false;
@@ -174,6 +177,12 @@ function keepDraft() {
 function clearPrivileged() {
   stopIdleWatch();
   setAccountMenu(false);
+  // A RECORDING IN PROGRESS BELONGS TO THE SESSION THAT STARTED IT (F-C-02),
+  // and so does the socket carrying its live words (F-C-03).
+  stopDictation({ discard: true });
+  closeLiveWords();
+  setPlusMenu(false);
+  $('dictation-state').textContent = '';
   state.sessionGeneration += 1;
   state.searchGeneration += 1;
   state.historyGeneration += 1;
@@ -570,20 +579,52 @@ function staleDeadlineFields(dl, t) {
   });
 }
 
-async function showMatterList({ preserveIntent = false } = {}) {
-  if (!preserveIntent) selectIntent(null);
-  const generation = ++state.railGeneration;
+// F-B. THE THREE VIEWS OF THE MATTER WORKSPACE, and the stylesheet draws each:
+//   list     My work's matters, and nothing else
+//   opening  a new matter's intake form, and nothing else -- no list, no board
+//   matter   the matter board on the left, the chat on the right
+function setWorkView(view) {
+  $('pane-advise').dataset.view = view;
+}
+
+// ONE WAY OUT OF AN OPEN MATTER, whether to My work's list or to a new
+// opening. Any render still in flight for the old matter loses the right to
+// paint, because the generation it holds is no longer current.
+function closeOpenMatter() {
+  state.railGeneration += 1;
   state.matterId = null;
   state.matterVersion = null;
   state.matterReady = false;
   state.turns = [];
   $('thread').textContent = '';
   $('pane-advise').dataset.matterId = '';
-  $('rail-title').textContent = 'Matters';
   $('back').hidden = true;
+  $('matter-board').hidden = true;
+  $('save-status').textContent = '';
+}
+
+// WHO THE FILE IS FOR AND WHO IT IS AGAINST. BK-33's acceptance is that ten
+// similar matters stay distinguishable, and `threads: 1` on every row
+// distinguishes nothing. ONE OWNER for My work's rows and the matter board
+// (F-B-02), so a field added to one is on the other.
+function matterFields(dl, m) {
+  field(dl, 'client', m.client || 'not recorded');
+  field(dl, 'against', m.opponent || 'not recorded');
+  field(dl, 'deadline', deadlineField(m));
+  field(dl, 'last worked', m.last_touched || 'never worked');
+  field(dl, 'posture', m.blocked
+    ? { pill: 'blocked', text: m.blocked }
+    : { pill: 'unknown', text: 'no unresolved posture recorded' });
+}
+
+async function showMatterList({ preserveIntent = false } = {}) {
+  if (!preserveIntent) selectIntent(null);
+  closeOpenMatter();
+  const generation = state.railGeneration;
+  setWorkView('list');
+  $('rail-title').textContent = 'Matters';
   $('matter-heading').textContent = 'My work';
   $('workspace-eyebrow').textContent = 'YOUR WORKSPACE';
-  $('save-status').textContent = '';
   updateWorkspace();
   window.dispatchEvent(new Event('nm:matter-changed'));
   const body = $('rail-body');
@@ -624,16 +665,7 @@ async function showMatterList({ preserveIntent = false } = {}) {
     const t = document.createElement('div');
     t.className = 'r-title'; t.textContent = m.matter;
     const dl = document.createElement('dl'); dl.className = 'r-fields';
-    // WHO THE FILE IS FOR AND WHO IT IS AGAINST. BK-33's acceptance is that
-    // ten similar matters stay distinguishable, and `threads: 1` on every row
-    // distinguishes nothing.
-    field(dl, 'client', m.client || 'not recorded');
-    field(dl, 'against', m.opponent || 'not recorded');
-    field(dl, 'deadline', deadlineField(m));
-    field(dl, 'last worked', m.last_touched || 'never worked');
-    field(dl, 'posture', m.blocked
-      ? { pill: 'blocked', text: m.blocked }
-      : { pill: 'unknown', text: 'no unresolved posture recorded' });
+    matterFields(dl, m);
     row.append(t, dl);
     row.onclick = () => showThreadBoard(m.matter_id);
     row.addEventListener('keydown', (event) => {
@@ -667,6 +699,9 @@ async function showThreadBoard(
   // put the advocate on the answer they asked for with the index still over
   // it, which is the same unreachability wearing the other face.
   if (closeNavigator) toggleMatters(false);
+  // F-B-02. AN OPEN MATTER IS ITS BOARD ON THE LEFT AND ITS CHAT ON THE RIGHT,
+  // whether it was started from Home or opened from My work.
+  setWorkView('matter');
   state.matterId = matterId;
   state.matterVersion = null;
   state.matterReady = false;
@@ -678,8 +713,13 @@ async function showThreadBoard(
   }
   window.dispatchEvent(new Event('nm:matter-changed'));
   $('pane-advise').dataset.matterId = matterId;
-  $('rail-title').textContent = 'Issues in this matter';
+  $('rail-title').textContent = 'Matter board';
   $('back').hidden = false;
+  $('matter-board').hidden = false;
+  $('board-state').replaceChildren(stateBlock('building', 'Reading the matter board…'));
+  // THE BOARD IS READ ON ITS OWN, so a thread board that fails to load does
+  // not leave the matter's details saying they are still being read.
+  renderMatterBoard(matterId, generation);
   const body = $('rail-body');
   body.replaceChildren(stateBlock('building', 'Loading threads…'));
 
@@ -751,6 +791,39 @@ async function showThreadBoard(
     row.append(title, dl);
     return row;
   }));
+}
+
+// F-B-02. THE MATTER BOARD IS MY WORK'S ROW FOR THIS MATTER. It is read from
+// the same `/api/matters` My work lists and drawn by the same `matterFields`,
+// so the board and the list cannot say two different things about one file.
+// It is read whenever the thread board is -- which includes after every
+// message -- so what later messages add reaches it.
+async function renderMatterBoard(matterId, generation) {
+  const fields = $('board-fields');
+  const st = $('board-state');
+  let d;
+  try {
+    d = await api('/api/matters');
+  } catch (e) {
+    if (e.obsolete || generation !== state.railGeneration) return;
+    fields.replaceChildren();
+    st.replaceChildren(stateBlock('unbuildable',
+      `The matter board could not be read: ${e.message}. This is a failure to read, `
+      + 'not an empty file.'));
+    return;
+  }
+  if (generation !== state.railGeneration) return;
+  const m = (d.matters || []).find((row) => row.matter_id === matterId);
+  fields.replaceChildren();
+  if (!m) {
+    st.replaceChildren(stateBlock('unbuildable',
+      'This matter is not in the matter list, so its board cannot be shown. It has not '
+      + 'been deleted; reload before relying on the board.'));
+    return;
+  }
+  st.textContent = '';
+  $('board-title').textContent = m.matter;
+  matterFields(fields, m);
 }
 
 // BK-33. THE SERVED CONVERSATION, READ BACK.
@@ -1325,9 +1398,8 @@ function repaint() {
 
 function updateWorkspace() {
   const intakeOpen = !$('intake').hidden;
-  const welcome = !state.matterId && !state.turns.length && !state.intake && !intakeOpen;
-  $('welcome').hidden = !welcome;
-  $('composer').hidden = welcome || intakeOpen;
+  const nothingYet = !state.matterId && !state.turns.length && !state.intake && !intakeOpen;
+  $('composer').hidden = nothingYet || intakeOpen;
   // F-A-17. Case file and History are offered for a matter that is open.
   $('work-links').hidden = !state.matterId;
 }
@@ -1495,7 +1567,280 @@ $('message').addEventListener('keydown', (ev) => {
 });
 
 
-$('back').addEventListener('click', showMatterList);
+/* ------------------------------------------------------- plus and mic --- */
+
+// F-C-01. THE PLUS UNDER THE BRIEF. Its three items open the original-material
+// window (`intake-materials.js`), which seals what it receives and reads none
+// of it; this owns only the menu opening and closing.
+function setPlusMenu(open) {
+  $('plus-panel').hidden = !open;
+  $('plus-toggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+$('plus-toggle').addEventListener('click', () => setPlusMenu($('plus-panel').hidden));
+document.addEventListener('click', (ev) => {
+  if (!$('plus-panel').hidden && !$('plus-menu').contains(ev.target)) setPlusMenu(false);
+});
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && !$('plus-panel').hidden) {
+    setPlusMenu(false);
+    $('plus-toggle').focus();
+  }
+});
+
+// F-C-02. THE MIC BESIDE THE PLUS: say the brief instead of typing it.
+//
+// Press to start, press again to stop. The recording goes to this
+// installation's own speech model (`/api/dictation`) -- no outside service --
+// and the words come back INTO THE BRIEF BOX, where the advocate reads and
+// corrects them before sending. Nothing is sent by itself, and the recording is
+// not kept: a voice note meant to be kept goes through the plus menu instead.
+const DICTATION_LIMIT_MS = 5 * 60 * 1000;
+//: F-C-03. The rate the live speech model is built for. The audio context is
+//: opened at it, so nothing is resampled on the way to the model.
+const LIVE_SAMPLE_RATE = 16000;
+const dictation = {
+  recorder: null, stream: null, chunks: [], timer: null, busy: false,
+  // THE LIVE HALF (F-C-03): the socket and audio graph feeding it, where the
+  // provisional words sit in the brief box, and whether they are still ours to
+  // replace -- they stop being ours the moment the advocate edits them.
+  live: null, anchor: 0, provisional: '', ours: false,
+};
+
+function sayDictation(text) {
+  $('dictation-state').textContent = text;
+}
+
+function releaseMicrophone() {
+  clearTimeout(dictation.timer);
+  dictation.timer = null;
+  if (dictation.stream) dictation.stream.getTracks().forEach((track) => track.stop());
+  dictation.stream = null;
+}
+
+// F-C-03. WHERE THE LIVE WORDS GO, and how they stop being ours.
+//
+// They are written into the brief box at the caret, and each update replaces
+// exactly the span the last one wrote. If that span is no longer what we wrote,
+// the advocate has edited it -- so the live words let go rather than overwrite
+// their editing, and say so. What they said is still recorded either way: the
+// final transcription arrives when they stop.
+function beginProvisional() {
+  const box = $('message');
+  dictation.anchor = box.selectionStart ?? box.value.length;
+  dictation.provisional = '';
+  dictation.ours = true;
+}
+
+function replaceProvisional(words) {
+  if (!dictation.ours) return false;
+  const box = $('message');
+  const held = box.value.slice(dictation.anchor, dictation.anchor + dictation.provisional.length);
+  if (held !== dictation.provisional) {
+    dictation.ours = false;
+    return false;
+  }
+  const before = box.value.slice(0, dictation.anchor);
+  const after = box.value.slice(dictation.anchor + dictation.provisional.length);
+  const lead = before && !/\s$/.test(before) ? ' ' : '';
+  const text = words ? lead + words : '';
+  box.value = before + text + after;
+  dictation.provisional = text;
+  const caret = (before + text).length;
+  box.setSelectionRange(caret, caret);
+  box.dispatchEvent(new Event('input', { bubbles: true }));
+  return true;
+}
+
+function showLiveWords(words) {
+  if (!replaceProvisional((words || '').trim())) {
+    sayDictation('You edited the brief, so the live words stopped there. What you are '
+      + 'saying is still recorded and will be added when you stop.');
+  }
+}
+
+function closeLiveWords({ finish = false } = {}) {
+  const live = dictation.live;
+  dictation.live = null;
+  if (!live) return;
+  try {
+    if (live.node) live.node.port.onmessage = null;
+    if (live.node) live.node.disconnect();
+    if (live.source) live.source.disconnect();
+    if (live.silence) live.silence.disconnect();
+    // `finish` asks the server for the last words; an abandoned dictation just
+    // closes, and the server keeps nothing either way.
+    if (live.socket.readyState === WebSocket.OPEN) {
+      if (finish) live.socket.send('done');
+      else live.socket.close();
+    }
+    if (live.context.state !== 'closed') live.context.close();
+  } catch { /* a socket or graph already gone needs no closing */ }
+}
+
+// THE MICROPHONE, STRAIGHT TO THE LIVE MODEL. The audio graph is NOT connected
+// to the speakers -- it feeds a silent gain node -- because a processor that
+// has no output is not pulled, and connecting it to the speakers would play the
+// advocate's own voice back at them.
+async function openLiveWords(stream, session) {
+  if (!window.AudioContext || !window.AudioWorkletNode || !window.WebSocket) return;
+  let context;
+  try {
+    context = new AudioContext({ sampleRate: LIVE_SAMPLE_RATE });
+    await context.audioWorklet.addModule('/static/dictation-worklet.js');
+  } catch {
+    sayDictation('Listening. The words will appear when you stop.');
+    return;
+  }
+  if (session !== state.sessionGeneration || !dictation.recorder) {
+    context.close();
+    return;
+  }
+  const socket = new WebSocket(`${window.location.origin.replace(/^http/, 'ws')}/ws/dictation`);
+  socket.binaryType = 'arraybuffer';
+  const source = context.createMediaStreamSource(stream);
+  const node = new AudioWorkletNode(context, 'dictation');
+  const silence = context.createGain();
+  silence.gain.value = 0;
+  node.port.onmessage = (ev) => {
+    if (socket.readyState === WebSocket.OPEN) socket.send(ev.data);
+  };
+  source.connect(node);
+  node.connect(silence);
+  silence.connect(context.destination);
+  dictation.live = { context, socket, node, source, silence };
+  socket.addEventListener('message', (ev) => {
+    let heard;
+    try { heard = JSON.parse(ev.data); } catch { return; }
+    if (heard.live === false) {
+      sayDictation(`${heard.why} Listening.`);
+      return;
+    }
+    if (typeof heard.words === 'string') showLiveWords(heard.words);
+  });
+  socket.addEventListener('error', () => {
+    sayDictation('Listening. The live words stopped, so they will appear when you stop.');
+  });
+}
+
+function stopDictation({ discard = false } = {}) {
+  const recorder = dictation.recorder;
+  if (!recorder) return;
+  recorder.discard = discard;
+  if (recorder.state !== 'inactive') recorder.stop();
+  else releaseMicrophone();
+}
+
+async function startDictation() {
+  if (dictation.recorder || dictation.busy || !state.advocate) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+    sayDictation('Dictation needs a browser that can record audio. Type the brief instead.');
+    return;
+  }
+  sayDictation('Waiting for permission to use the microphone…');
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch {
+    sayDictation('The microphone is unavailable or permission was declined. Nothing was recorded.');
+    return;
+  }
+  const session = state.sessionGeneration;
+  const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
+    .find((type) => MediaRecorder.isTypeSupported(type));
+  const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
+  dictation.recorder = recorder;
+  dictation.stream = stream;
+  dictation.chunks = [];
+  recorder.addEventListener('dataavailable', (ev) => {
+    if (ev.data.size) dictation.chunks.push(ev.data);
+  });
+  recorder.addEventListener('stop', () => {
+    const blob = new Blob(dictation.chunks, { type: recorder.mimeType || 'audio/webm' });
+    dictation.chunks = [];
+    dictation.recorder = null;
+    closeLiveWords({ finish: !recorder.discard });
+    releaseMicrophone();
+    $('dictate').setAttribute('aria-pressed', 'false');
+    $('dictate').classList.remove('recording');
+    if (recorder.discard || session !== state.sessionGeneration) return;
+    if (!blob.size) {
+      sayDictation('No audio was captured. Nothing was transcribed.');
+      return;
+    }
+    transcribeDictation(blob, session);
+  });
+  recorder.start(1000);
+  dictation.timer = setTimeout(() => {
+    sayDictation('Five minutes is the limit for one dictation; stopping to transcribe it.');
+    stopDictation();
+  }, DICTATION_LIMIT_MS);
+  $('dictate').setAttribute('aria-pressed', 'true');
+  $('dictate').classList.add('recording');
+  sayDictation('Listening. Press the mic again to stop.');
+  // F-C-03. The words appear as they are spoken, from the live model, into the
+  // brief box at the caret; the accurate transcription replaces them at the end.
+  beginProvisional();
+  await openLiveWords(stream, session);
+}
+
+async function transcribeDictation(blob, session) {
+  dictation.busy = true;
+  $('dictate').disabled = true;
+  sayDictation('Turning your words into text…');
+  try {
+    const heard = await api('/api/dictation', {
+      method: 'POST',
+      headers: { 'content-type': blob.type.split(';')[0] || 'audio/webm' },
+      body: blob,
+    });
+    if (session !== state.sessionGeneration) return;
+    const words = (heard.text || '').trim();
+    if (!words) {
+      sayDictation('No words were recognised. Nothing was added; try again closer to the microphone.');
+      replaceProvisional('');
+      return;
+    }
+    // THE ACCURATE TEXT REPLACES THE LIVE WORDS it was standing in for, and is
+    // inserted at the caret when those are no longer ours to replace.
+    if (!replaceProvisional(words)) insertIntoBrief(words);
+    dictation.ours = false;
+    sayDictation(heard.device === 'cpu'
+      ? 'Added to your brief; check it before sending. (Transcribed without the graphics card, so it was slower.)'
+      : 'Added to your brief; check it before sending.');
+  } catch (e) {
+    if (e.obsolete || session !== state.sessionGeneration) return;
+    sayDictation(`Your words were not added: ${e.message}`);
+  } finally {
+    dictation.busy = false;
+    $('dictate').disabled = false;
+  }
+}
+
+// AT THE CURSOR, with a space either side where one is missing, so dictation
+// can fill a gap in a typed brief as well as start one.
+function insertIntoBrief(words) {
+  const box = $('message');
+  const start = box.selectionStart ?? box.value.length;
+  const end = box.selectionEnd ?? box.value.length;
+  const before = box.value.slice(0, start);
+  const after = box.value.slice(end);
+  const lead = before && !/\s$/.test(before) ? ' ' : '';
+  const trail = after && !/^\s/.test(after) ? ' ' : '';
+  box.value = before + lead + words + trail + after;
+  const caret = (before + lead + words).length;
+  box.focus();
+  box.setSelectionRange(caret, caret);
+  box.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+$('dictate').addEventListener('click', () => {
+  if (dictation.recorder) stopDictation();
+  else startDictation();
+});
+
+// My matters: back to My work's list, under My work.
+$('back').addEventListener('click', () => openTab('advise'));
 
 // BK-32. THE MATTER LIST, AT EVERY WIDTH.
 //
@@ -1550,48 +1895,84 @@ function intakeFields() {
   };
 }
 
-$('intake').addEventListener('submit', (ev) => {
+let openingInFlight = false;
+
+$('intake').addEventListener('submit', async (ev) => {
   ev.preventDefault();
-  // RECORDED, THEN THE COMPOSER. The answers are held until the first brief
-  // carries them, because a matter does not exist until there is one -- and
-  // opening an empty file to hold an intake answer would put a matter on the
-  // advocate's list that has nothing on it.
+  if (openingInFlight) return;
+  // THE ANSWERS STILL TRAVEL WITH THE FIRST BRIEF. The scope, capacity and
+  // conflict screens run on that turn, before any fact is admitted (BK-34).
   state.intake = intakeFields();
-  showIntake(false);
-  $('intake-state').textContent = '';
-  $('message').focus();
+  if (state.matterId) {
+    // Intake asked again on a matter that already exists: nothing to open.
+    showIntake(false);
+    $('intake-state').textContent = '';
+    $('message').focus();
+    return;
+  }
+  // F-B-01. THE MATTER IS SAVED WHEN ITS CHAT OPENS, not at the first brief:
+  // the product owner's rule is that a new matter is in My work from the
+  // moment its chat and board appear, so it can be closed and resumed. The
+  // server opens it with the parties the form gave and names it from them;
+  // only once the server confirms it is saved do the chat and board open.
+  const intent = activeIntent;
+  const go = $('in-go');
+  const offer = JSON.stringify(state.intake.parties);
+  if (!intent.opening || intent.opening.offer !== offer) {
+    // ONE REQUEST KEY PER SET OF ANSWERS, so a retry after a lost response
+    // reopens the same file rather than a second one.
+    intent.opening = { offer: offer, key: newTurnId() };
+  }
+  openingInFlight = true;
+  go.disabled = true;
+  $('intake-state').replaceChildren(stateBlock('building', 'Opening the matter…'));
+  try {
+    const opened = await api('/api/matters/intake', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ request_key: intent.opening.key, parties: state.intake.parties }),
+    });
+    if (!ownsIntent(intent)) return;
+    if (!opened.matter_id || opened.state !== 'intake_opened') {
+      throw new Error('the server did not confirm that the matter was saved');
+    }
+    showIntake(false);
+    $('intake-state').textContent = '';
+    const board = showThreadBoard(opened.matter_id, { adoptOpening: true, restore: false });
+    $('message').focus();
+    await board;
+  } catch (e) {
+    if (e.obsolete || !ownsIntent(intent)) return;
+    $('intake-state').replaceChildren(stateBlock('loud',
+      `The matter was not opened: ${e.message}. Your answers are still here; try again.`));
+  } finally {
+    openingInFlight = false;
+    go.disabled = false;
+  }
 });
 
+// F-B-01. A NEW MATTER BELONGS TO HOME, and it opens on the intake form alone:
+// no list of other matters and no board, because there is no matter yet.
 function startMatter() {
+  state.workTab = 'home';
   showTab('advise');
+  setWorkView('opening');
   selectIntent(null, { opening: true });
-  state.matterVersion = null;
   toggleMatters(false);
-  state.matterId = null;
-  $('pane-advise').dataset.matterId = '';
+  closeOpenMatter();
   state.turns = [...activeIntent.pending];
   repaint();
   $('mode-line').hidden = true;
-  showMatterList({ preserveIntent: true });
-  // The list refresh clears its transcript surface, not the opening's intent.
-  state.turns = [...activeIntent.pending];
-  repaint();
+  $('rail-title').textContent = 'Matters';
   $('matter-heading').textContent = 'New matter';
   $('workspace-eyebrow').textContent = 'THE INSTRUCTION';
   $('save-status').textContent = 'Not yet saved';
+  window.dispatchEvent(new Event('nm:matter-changed'));
   if (!$('intake').hidden) $('in-client').focus();
   else $('message').focus();
 }
 
-$('new-matter').addEventListener('click', startMatter);
-$('welcome-start').addEventListener('click', startMatter);
-// F-A-18. Home's one button opens a new matter in My work.
+// F-A-18, F-B-01. Home's one button starts a new matter, under Home.
 $('home-start').addEventListener('click', startMatter);
-$('welcome-matters').addEventListener('click', () => {
-  toggleMatters(true);
-  const first = $('rail-body').querySelector('[role="button"]');
-  (first || $('new-matter')).focus();
-});
 
 /* THE GATE RUNS FIRST.
  *
@@ -1609,14 +1990,29 @@ boot();
 
 const PANES = ['home', 'advise', 'search', 'casefile', 'history', 'prepare'];
 
-// F-A-17. THE RIBBON HAS FOUR TABS AND SIX PAGES. Case file and History are
-// opened from inside My work, so My work is the tab that stays marked while
-// either is open.
-const TAB_FOR_PANE = { casefile: 'advise', history: 'advise' };
+// F-A-17, F-B. THE RIBBON HAS FOUR TABS AND SIX PAGES. The matter workspace,
+// and the Case file and History opened from a matter, belong to whichever tab
+// the matter was reached from: Home for a new matter, My work for one opened
+// from its list.
+function tabFor(pane) {
+  if (['advise', 'casefile', 'history'].includes(pane)) return state.workTab;
+  return pane;
+}
+
+// F-B-03. THE MY WORK TAB IS THE LIST OF MATTERS, every time it is chosen.
+function openTab(name) {
+  if (name === 'advise') {
+    state.workTab = 'advise';
+    showTab('advise');
+    showMatterList();
+    return;
+  }
+  showTab(name);
+}
 
 function showTab(name) {
   PANES.forEach((p) => { $(`pane-${p}`).hidden = (p !== name); });
-  const tab = TAB_FOR_PANE[name] || name;
+  const tab = tabFor(name);
   document.querySelectorAll('#tabs .tab').forEach((b) => {
     b.classList.toggle('is-on', b.dataset.tab === tab);
     if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page');
@@ -1629,7 +2025,7 @@ function showTab(name) {
 }
 
 document.querySelectorAll('#tabs .tab').forEach((b) => {
-  b.addEventListener('click', () => showTab(b.dataset.tab));
+  b.addEventListener('click', () => openTab(b.dataset.tab));
 });
 
 $('work-links').addEventListener('click', (ev) => {
@@ -3288,6 +3684,9 @@ function showApplication(advocate, workspace, professionalApproval) {
   // part-way through a brief, which goes straight back to that brief.
   const draftWaiting = Boolean(state.draft && state.draft.advocate === advocate.id
     && state.draft.workspace === workspace.id);
+  // A brief interrupted in a saved matter returns under My work; one
+  // interrupted before its matter was saved returns under Home (F-B).
+  if (draftWaiting) state.workTab = state.draft.matterId ? 'advise' : 'home';
   showTab(draftWaiting ? 'advise' : 'home');
   loadHealth();
   showMatterList();

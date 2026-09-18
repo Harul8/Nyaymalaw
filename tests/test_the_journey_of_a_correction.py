@@ -29,7 +29,7 @@ import pathlib
 
 import pytest
 
-from tests.test_the_journey_login_to_logout import _reach_rail
+from tests.test_the_journey_login_to_logout import _start_matter
 from tests.test_the_journey_login_to_logout import _tab as _open_surface
 
 pytestmark = pytest.mark.journey
@@ -174,8 +174,7 @@ def _the_matter(journey):
 
 def test_phase_1_a_brief_puts_a_current_deadline_on_the_board(page, journey):
     _sign_in(page, journey)
-    _reach_rail(page, 1280)
-    page.click("#new-matter")
+    _start_matter(page)
     _intake(page)
     _advise(page, BRIEF)
 
@@ -301,6 +300,8 @@ def test_phase_5_a_reload_reads_the_same_currency_from_the_file(page, journey):
     is shown afterwards is what the file says."""
     page.reload()
     page.wait_for_selector("#masthead:not([hidden])", timeout=15000)
+    # A sign-in lands on Home (F-A-18); My work is the list of matters (F-B-03).
+    _tab(page, "advise")
     page.wait_for_selector("#rail-body .row", timeout=15000)
     # The rail lands on the matter LIST. It already says stale -- the same
     # rule one board up -- and the file is then opened for the figure.

@@ -281,10 +281,12 @@ def test_the_composition_root_polices_every_live_destination():
     source = inspect.getsource(composition.Application.__init__)
     for wrapper in ("PolicedPort(", "PolicedSearch(", "PolicedModel("):
         assert wrapper in source, f"the composition root does not use {wrapper}"
-    assert source.count("PolicedPort(") == 4, (
-        "matter metadata, the roster directory, original-byte upload storage "
-        "and account mail are distinct destinations and each must be wrapped")
-    for port in ("StorePort", "DirectoryPort", "UploadPort", "MailPort"):
+    assert source.count("PolicedPort(") == 6, (
+        "matter metadata, the roster directory, original-byte upload storage, "
+        "account mail, dictation and its live words are distinct destinations "
+        "and each must be wrapped")
+    for port in ("StorePort", "DirectoryPort", "UploadPort", "MailPort", "TranscriptionPort",
+                 "LiveTranscriptionPort"):
         assert f"port={port}" in source, f"the {port} destination is not policed"
     assert "Gatekeeper(" in source, (
         "each wrapper builds its own decision point, so refusals land in "
@@ -297,12 +299,14 @@ def test_the_live_inventory_records_every_processor_the_root_names():
         INDEX_PROCESSOR,
         OUTBOX_PROCESSOR,
         STORAGE_PROCESSOR,
+        TRANSCRIPTION_PROCESSOR,
     )
     from nm.bootstrap.egress_policy import egress_policy
 
     policy = egress_policy(ROOT)
     recorded = {p.processor_id for p in policy.processors}
-    for named in (STORAGE_PROCESSOR, INDEX_PROCESSOR, OUTBOX_PROCESSOR):
+    for named in (STORAGE_PROCESSOR, INDEX_PROCESSOR, OUTBOX_PROCESSOR,
+                  TRANSCRIPTION_PROCESSOR):
         assert named in recorded, (
             f"the composition root sends material to {named!r} and the "
             f"reviewed inventory does not record it, so the application "
@@ -322,6 +326,8 @@ POLICED: dict[Sink, str] = {
     # Account mail is wired through the generic `PolicedPort`, so the module
     # that names its sink is the composition root that admits it.
     Sink.MAIL: "backend/nm/bootstrap/composition.py",
+    # Dictation (F-C-02) is wired through the generic `PolicedPort` the same way.
+    Sink.TRANSCRIPTION: "backend/nm/bootstrap/composition.py",
 }
 
 #: Sinks with NO destination, each with the evidence of its absence -- a claim

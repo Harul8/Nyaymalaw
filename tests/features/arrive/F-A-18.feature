@@ -8,9 +8,9 @@ Feature: F-A-18 A clean home page with a short introduction and Start a matter
     And the home page says "Every answer shows the Act, section or judgment it rests on."
     And the home page has one button, "Start a matter", and nothing else
 
-  Scenario: Start a matter opens a new matter in My work
+  Scenario: Start a matter starts a new matter under Home
     Given the page script
-    Then the Start a matter button starts a new matter in My work
+    Then the Start a matter button starts a new matter under Home
 
   Scenario: A sign-in lands on Home unless a brief was interrupted
     Given the page script

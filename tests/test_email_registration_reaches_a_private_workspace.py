@@ -61,7 +61,7 @@ def test_email_registration_opens_own_workspace_and_matter(page, journey, width)
     assert page.inner_text("#professional-approval") == "Professional profile not approved"
     support._reach_rail(page, width)
     assert page.locator("#rail-body .row[data-matter-id]").count() == 0
-    page.click("#new-matter")
+    support._start_matter(page)
     support._intake(page, client=f"Synthetic Self Registration {width}")
     with page.expect_response(lambda response: response.url.endswith("/api/turn")
                               and response.request.method == "POST") as pending:

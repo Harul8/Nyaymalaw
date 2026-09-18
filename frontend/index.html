@@ -316,19 +316,28 @@
        no other one. In My work, above the drawer and the conversation both,
        so it is on screen whichever of the two is showing. -->
   <button id="matters-toggle" type="button" class="ghost matters-toggle" aria-expanded="false"
-          aria-controls="rail">Matters</button>
-  <!-- ================= THE MATTER LIST / THREAD BOARD =================
-       Two surfaces, deliberately distinct. The matter list is bounded by
-       MATTER count; the thread board by THREAD count. Conflating them is how
-       a board ends up scaling on the wrong axis. -->
+          aria-controls="rail">Matter board</button>
+  <!-- ================= MY WORK'S LIST / THE MATTER BOARD =================
+       One pane, two surfaces, deliberately distinct. In My work it is the list
+       of matters, bounded by MATTER count. In an open matter it is the MATTER
+       BOARD (F-B-02): this matter's details, then its issues, bounded by
+       THREAD count. Conflating them is how a board ends up scaling on the
+       wrong axis. There is no way to start a matter here; that is Home's. -->
   <aside class="rail" id="rail">
     <div class="rail-head">
       <h2 id="rail-title">Matters</h2>
-      <button id="back" class="ghost" hidden>&larr; All matters</button>
+      <button id="back" class="ghost" hidden>&larr; My matters</button>
     </div>
+    <!-- F-B-02. THIS MATTER ONLY, read from the same record My work lists. -->
+    <section id="matter-board" class="matter-board" aria-labelledby="board-title" hidden>
+      <div class="row static">
+        <h3 id="board-title" class="r-title"></h3>
+        <dl id="board-fields" class="r-fields"></dl>
+      </div>
+      <div id="board-state"></div>
+    </section>
     <div class="rail-meta" id="rail-meta"></div>
     <div id="rail-body"></div>
-    <button id="new-matter" class="primary wide">Brief a new matter</button>
   </aside>
 
   <!-- ========================= THE ANSWER ========================= -->
@@ -346,24 +355,6 @@
         <span id="save-status" class="save-status" role="status"></span>
       </div>
     </div>
-    <section id="welcome" class="welcome" aria-labelledby="welcome-title">
-      <p class="eyebrow">A PLACE TO THINK THROUGH THE MATTER</p>
-      <h2 id="welcome-title">Begin with the instruction.</h2>
-      <p class="welcome-lede">Who do you act for, what happened, and what needs to happen next?
-        Start a matter or return to a file you've already worked on.</p>
-      <div class="welcome-actions">
-        <button type="button" id="welcome-start" class="primary">Brief a new matter <span aria-hidden="true">↗</span></button>
-        <button type="button" id="welcome-matters" class="secondary">View matters</button>
-      </div>
-      <div class="welcome-guidance">
-        <article><span class="guide-number" aria-hidden="true">01</span><h3>The instruction first</h3>
-          <p>Set out the client, the other side and the work you've been asked to do.</p></article>
-        <article><span class="guide-number" aria-hidden="true">02</span><h3>The record within reach</h3>
-          <p>Reopen a matter to review its recorded conversation and continue the brief.</p></article>
-        <article><span class="guide-number" aria-hidden="true">03</span><h3>The decision stays yours</h3>
-          <p>Review the basis and limitations. NM does not send, serve or file on your behalf.</p></article>
-      </div>
-    </section>
     <!-- ================= B3-B5 — INTAKE, BEFORE SUBSTANCE =================
          The screens run before any fact is admitted, and the conflict screen
          cannot run against a party set nobody has given. So the advocate is
@@ -400,7 +391,6 @@
       </label>
 
       <button type="submit" class="primary" id="in-go">Record and continue</button>
-      <p class="field-help">These details are saved with your first brief, not by opening this form.</p>
       <div id="intake-state" role="status"></div>
     </form>
 
@@ -411,9 +401,42 @@
       <label class="composer-label" for="message">Your brief</label>
       <textarea id="message" rows="3" placeholder="Brief me — who the client is, what happened, and when."></textarea>
       <div class="composer-row">
-        <span class="hint" id="hint">Enter to send · Shift+Enter for a new line</span>
+        <div class="composer-tools">
+          <!-- F-C-01. THE PLUS: documents, photos, audio or video, or a voice note
+               to keep. Each opens the original-material window, which seals
+               what it receives and reads none of it. -->
+          <div class="plus-menu" id="plus-menu">
+            <button type="button" id="plus-toggle" class="tool-button" aria-haspopup="true"
+                    aria-expanded="false" aria-controls="plus-panel">
+              <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
+                <path d="M10 4v12M4 10h12" fill="none" stroke="currentColor" stroke-width="1.8"
+                      stroke-linecap="round"/>
+              </svg>
+              <span class="sr-only">Add documents, photos, audio, video or a voice note</span>
+            </button>
+            <div id="plus-panel" class="plus-panel" role="menu" hidden>
+              <button type="button" role="menuitem" id="plus-documents">Upload documents</button>
+              <button type="button" role="menuitem" id="plus-media">Upload photos, audio or video</button>
+              <button type="button" role="menuitem" id="plus-voice">Record a voice note to keep</button>
+            </div>
+          </div>
+          <!-- F-C-02. THE MIC: say the brief instead of typing it. The words are
+               transcribed by this installation's own speech model and come back
+               into the box above to be checked; the recording is not kept. -->
+          <button type="button" id="dictate" class="tool-button" aria-pressed="false">
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
+              <rect x="7" y="2.5" width="6" height="10" rx="3" fill="none" stroke="currentColor"
+                    stroke-width="1.6"/>
+              <path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" fill="none" stroke="currentColor"
+                    stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            <span class="sr-only">Dictate the brief</span>
+          </button>
+          <span class="hint" id="hint">Enter to send · Shift+Enter for a new line</span>
+        </div>
         <button type="submit" class="primary" id="send">Send</button>
       </div>
+      <p id="dictation-state" class="dictation-state" role="status" aria-live="polite"></p>
     </form>
   </section>
 </main>

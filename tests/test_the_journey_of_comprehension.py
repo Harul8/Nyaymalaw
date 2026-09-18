@@ -51,8 +51,8 @@ from assurance.gate.layout import WIDTHS  # noqa: E402
 from tests.test_the_journey_login_to_logout import (  # noqa: E402
     _advise,
     _intake,
-    _reach_rail,
     _sign_in,
+    _start_matter,
     _tab,
     _visible_text,
 )
@@ -139,8 +139,7 @@ def _artifact_on_failure(request, page):
 
 def _open(page, journey, client: str, width: int = 1280, height: int = 900):
     _sign_in(page, journey, width, height)
-    _reach_rail(page, width)
-    page.click("#new-matter")
+    _start_matter(page)
     _intake(page, client=client)
     _advise(page, BRIEF)
     return page
@@ -233,8 +232,7 @@ def test_correcting_pausing_and_returning_need_no_retyping(page, journey):
     the reload.
     """
     _sign_in(page, journey)
-    _reach_rail(page, 1280)
-    page.click("#new-matter")
+    _start_matter(page)
     _intake(page, client="Reader Draft Traders")
     page.fill("#message", "a half-written brief that must survive")
     page.reload()

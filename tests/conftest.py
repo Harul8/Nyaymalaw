@@ -233,6 +233,28 @@ def scripted_application_environment(monkeypatch):
 
 
 @pytest.fixture
+def wired(client):
+    """THE APPLICATION THIS TEST'S CLIENT SERVES. Ask for it; never import it.
+
+    A step that does `from nm.edge.api import application` itself gets whatever
+    was wired LAST -- which inside a suite is A PREVIOUS TEST'S application.
+    Patching that changes nothing about the app under test, and the patch is
+    not lost loudly: the route goes on using the real adapter.
+
+    MEASURED 18 September 2026 on F-C-03. The live-dictation step patched
+    `application().live_dictation.inner` with a stand-in, the socket then ran
+    the REAL speech model, and the words came back empty -- `['', '']` instead
+    of the stand-in's words. Run alone, the same step raised "no application
+    wired", which is the same defect being honest. `client` is what wires one,
+    so depending on this fixture makes the order structural instead of
+    incidental.
+    """
+    from nm.edge.api import application
+
+    return application()
+
+
+@pytest.fixture
 def client(tmp_path, monkeypatch, scripted_application_environment):
     """Drives the real ASGI app.
 

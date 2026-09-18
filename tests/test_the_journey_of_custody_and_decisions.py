@@ -30,7 +30,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 ARTIFACTS = ROOT / ".nm" / "journey"
 sys.path.insert(0, str(ROOT))
 
-from tests.test_the_journey_login_to_logout import _reach_rail  # noqa: E402
+from tests.test_the_journey_login_to_logout import _start_matter  # noqa: E402
 from tests.test_the_journey_login_to_logout import _tab as _open_surface  # noqa: E402
 
 pytestmark = [pytest.mark.journey, pytest.mark.class_d]
@@ -171,10 +171,9 @@ def _open_matter(page) -> None:
     `#message` present but invisible, which is the failure mode a selector
     that "exists" produces: the locator resolves and the action never lands.
     The viewport is 1280px, where the rail is open rather than a drawer.
-    A sign-in lands on Home (F-A-18), so My work is reached first.
+    A new matter is started from Home (F-B-01).
     """
-    _reach_rail(page, 1280)
-    page.click("#new-matter")
+    _start_matter(page)
     page.wait_for_selector("#intake:not([hidden])", timeout=15000)
     if page.is_hidden("#intake"):
         return

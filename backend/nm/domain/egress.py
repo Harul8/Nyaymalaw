@@ -55,6 +55,10 @@ class Sink(str, Enum):
     #: Account mail -- today only the password-reset link (F-A-03). It carries an
     #: email address and a bearer secret, never client matter material.
     MAIL = "mail"
+    #: Dictation (F-C-02): a recording of the advocate speaking the brief, turned
+    #: into text. It is the client's instructions in the advocate's voice, so it
+    #: is client matter material wherever it is sent.
+    TRANSCRIPTION = "transcription"
 
 
 class DataClass(str, Enum):

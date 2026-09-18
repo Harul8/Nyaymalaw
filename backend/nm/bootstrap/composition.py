@@ -24,12 +24,15 @@ from nm.adapters.model.traced import TracedModel
 from nm.adapters.policed_port import PolicedPort
 from nm.adapters.search.authority import AuthorityIndexSearch
 from nm.adapters.search.policed import PolicedSearch
+from nm.adapters.speech.local_whisper import LocalWhisper
+from nm.adapters.speech.vosk_live import VoskLive
 from nm.adapters.store.directory import FileDirectory
 from nm.adapters.store.file_store import FileMatterStore
 from nm.bootstrap.egress_policy import (
     INDEX_PROCESSOR,
     OUTBOX_PROCESSOR,
     STORAGE_PROCESSOR,
+    TRANSCRIPTION_PROCESSOR,
     egress_policy,
 )
 from nm.core.turn import TurnEngine
@@ -45,6 +48,7 @@ from nm.ports.directory import DirectoryPort
 from nm.ports.mail import MailPort
 from nm.ports.model import ModelPort, Tier
 from nm.ports.store import StorePort
+from nm.ports.transcription import LiveTranscriptionPort, TranscriptionPort
 from nm.ports.upload import UploadPort
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -68,7 +72,8 @@ def build_model(config: ModelConfig) -> ModelPort:
 class Application:
     def __init__(self, *, root: Path | None = None, model: ModelPort | None = None,
                  store=None, evidence=None, search=None,
-                 directory=None, uploads=None, mail=None,
+                 directory=None, uploads=None, mail=None, transcriber=None,
+                 live_dictation=None,
                  environment: Mapping[str, str] | None = None,
                  audit_root: Path | None = None) -> None:
         # Explicit composition must never read or temporarily replace process
@@ -152,6 +157,35 @@ class Application:
             gate=self._gate, port=MailPort, sink=Sink.MAIL,
             processor_id=OUTBOX_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
+        # DICTATION, POLICED LIKE EVERY OTHER DESTINATION. Implementation Plan
+        # F-C-02. A dictated brief is the client's instructions in the
+        # advocate's voice -- client matter material -- so this build
+        # transcribes it in this process, and the inventory refuses any outside
+        # speech service until one is approved. The model loads on first use.
+        self.transcriber: TranscriptionPort = PolicedPort(
+            inner=transcriber or LocalWhisper(
+                model=settings.get("NM_DICTATION_MODEL") or "large-v3",
+                device=settings.get("NM_DICTATION_DEVICE") or "auto",
+                compute_type=settings.get("NM_DICTATION_COMPUTE") or "",
+                download_root=self.root / ".nm" / "models",
+                # ENGLISH UNLESS TOLD OTHERWISE: `auto` detects the language,
+                # and detection on a short Indian-accented clip is a guess.
+                language=settings.get("NM_DICTATION_LANGUAGE") or "en",
+                translate=(settings.get("NM_DICTATION_TRANSLATE") or "") == "1"),
+            gate=self._gate, port=TranscriptionPort, sink=Sink.TRANSCRIPTION,
+            processor_id=TRANSCRIPTION_PROCESSOR,
+            weigh=lambda args, kwargs: len(kwargs.get("audio", args[0] if args else b"")))
+        # THE LIVE WORDS ARE A SECOND SPEECH DESTINATION, and admitted as one
+        # (F-C-03). Same processor -- both models run in this process, on this
+        # machine -- and a separate wrapper, because a port that is admitted
+        # through another port's wrapper is a route nobody asked the inventory
+        # about.
+        self.live_dictation: LiveTranscriptionPort = PolicedPort(
+            inner=live_dictation or VoskLive(
+                model_dir=self.root / ".nm" / "models" / (
+                    settings.get("NM_DICTATION_LIVE_MODEL") or "vosk-model-small-en-in-0.4")),
+            gate=self._gate, port=LiveTranscriptionPort, sink=Sink.TRANSCRIPTION,
+            processor_id=TRANSCRIPTION_PROCESSOR)
         corpus_path = Path(
             settings.get("NM_CORPUS_DIR")
             or (self.root / "legal_database" / "vector_store")
@@ -346,6 +380,17 @@ class Application:
                              if getattr(self.mail, "delivers_to_mailbox", False)
                              else "LOCAL OUTBOX ONLY -- reset links are not "
                                   "delivered to a mailbox"),
+            # WHETHER THE MIC CAN WORK, before an advocate presses it and finds
+            # out (F-C-02). Read from the adapter; the model is never loaded to
+            # answer.
+            "dictation": (self.transcriber.inner.readiness()
+                          if hasattr(self.transcriber.inner, "readiness")
+                          else "not assessed -- this speech adapter reports no readiness"),
+            # AND WHETHER THE WORDS CAN APPEAR WHILE THEY SPEAK (F-C-03),
+            # separately: live words can be off while dictation itself works.
+            "dictation_live": (self.live_dictation.inner.readiness()
+                               if hasattr(self.live_dictation.inner, "readiness")
+                               else "not assessed -- this live adapter reports no readiness"),
             "corpus": "readable" if self.evidence.available else "NOT READABLE",
             # Each retrieval capability reports its OWN readiness. One rolled-up
             # "corpus: readable" would let an unbuilt authority index hide

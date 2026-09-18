@@ -60,6 +60,10 @@ MISMATCH = "Different-pass-99!"
 EYE = "\U0001F441"
 
 scenarios("features/arrive")
+# B. Open a matter and C. Take the brief share this module's steps for the page,
+# script and stylesheet.
+scenarios("features/open_a_matter")
+scenarios("features/take_the_brief")
 
 
 @pytest.fixture
@@ -1047,7 +1051,7 @@ def case_file_and_history_are_not_tabs(app_page):
         assert f'data-tab="{name}"' not in ribbon, name
 
 
-@then("My work offers Case file and History only while a matter is open")
+@then("an open matter offers Case file and History while it is open")
 def work_links_for_the_open_matter(app_page, page_script):
     links = re.search(r'<nav class="work-links" id="work-links"[^>]*\bhidden>(.*?)</nav>',
                       pane_html(app_page, "advise"), re.S)
@@ -1057,10 +1061,11 @@ def work_links_for_the_open_matter(app_page, page_script):
     assert "$('work-links').hidden = !state.matterId;" in _function(page_script, "updateWorkspace")
 
 
-@then("they open on that matter, with My work still the marked tab")
+@then("they open on that matter, with the matter's own tab still marked")
 def work_links_open_on_the_matter(page_script):
-    assert "const TAB_FOR_PANE = { casefile: 'advise', history: 'advise' };" in page_script
-    assert "const tab = TAB_FOR_PANE[name] || name;" in _function(page_script, "showTab")
+    assert "if (['advise', 'casefile', 'history'].includes(pane)) return state.workTab;" \
+        in _function(page_script, "tabFor")
+    assert "const tab = tabFor(name);" in _function(page_script, "showTab")
     assert "if (link.dataset.tab === 'casefile') $('casefile-matter').value = '';" in page_script
     assert "const want = held || state.matterId || '';" in _function(
         page_script, "loadCasefileMatters")
@@ -1137,10 +1142,11 @@ def home_has_one_button(app_page, label):
     assert not text.split(), f"the home page says more: {text}"
 
 
-@then("the Start a matter button starts a new matter in My work")
+@then("the Start a matter button starts a new matter under Home")
 def home_starts_a_matter(page_script):
     assert "$('home-start').addEventListener('click', startMatter);" in page_script
-    assert "showTab('advise');" in _function(page_script, "startMatter")
+    start = _function(page_script, "startMatter")
+    assert "state.workTab = 'home';" in start and "showTab('advise');" in start
 
 
 @then("a sign-in shows the Home page")
@@ -1160,3 +1166,472 @@ def sign_in_returns_to_the_draft(page_script):
     assert waiting < show.index("showTab(draftWaiting ? 'advise' : 'home');") \
         < show.index("if (draftWaiting) {")
     assert "keepDraft();" in _function(page_script, "sessionEnded")
+
+
+# ================================ B. Open a matter ============================
+
+OPENING = '#pane-advise[data-view="opening"]'
+LISTING = '#pane-advise[data-view="list"]'
+
+
+def _intake_submit(script: str) -> str:
+    submit = script[script.index("$('intake').addEventListener('submit'"):]
+    return submit[:submit.index("\n});")]
+
+
+# ---------------------------------------------------------------- F-B-01 ---
+
+@then("Start a matter opens the intake form alone, with Home still the marked tab")
+def start_opens_the_intake_alone(page_script, stylesheet):
+    start = _function(page_script, "startMatter")
+    for part in ("state.workTab = 'home';", "showTab('advise');", "setWorkView('opening');",
+                 "selectIntent(null, { opening: true });"):
+        assert part in start, part
+    assert "showMatterList" not in start, "a new matter must not load the list of other matters"
+    for hidden in (".rail", ".matters-toggle", ".workspace-heading"):
+        assert "display: none" in declarations(stylesheet, f"{OPENING} {hidden}"), hidden
+
+
+@then("recording the intake saves the matter on the server with the form's parties before "
+      "the chat opens")
+def intake_saves_the_matter_first(page_script):
+    submit = _intake_submit(page_script)
+    saved = submit.index("await api('/api/matters/intake'")
+    assert "parties: state.intake.parties" in submit[saved:]
+    closed = submit.index("showIntake(false);", saved)
+    board = submit.index(
+        "showThreadBoard(opened.matter_id, { adoptOpening: true, restore: false })")
+    assert saved < closed < board, "the chat opens before the server confirms the matter"
+    assert "opened.state !== 'intake_opened'" in submit
+
+
+@then("if the matter cannot be opened the form keeps its answers and says so")
+def failed_opening_keeps_the_form(page_script):
+    submit = _intake_submit(page_script)
+    failure = submit[submit.index("} catch (e) {"):]
+    assert "showIntake(false)" not in failure
+    assert "The matter was not opened" in failure and "Your answers are still here" in failure
+
+
+@when(parsers.parse('an advocate opens a matter for "{client_name}" against "{adverse}" '
+                    'without a title'))
+def open_a_matter_without_a_title(client, context, client_name, adverse):
+    context["parties"] = {client_name: "client", adverse: "adverse"}
+    context["response"] = client.post("/api/matters/intake", json={
+        "request_key": "scenario-opening", "parties": context["parties"]})
+
+
+@then(parsers.parse('the matter is saved as "{title}" with both parties recorded'))
+def matter_saved_as(wired, context, title):
+    response = context["response"]
+    assert response.status_code == 200, response.text
+    opened = response.json()
+    assert opened["state"] == "intake_opened" and opened["title"] == title, opened
+    context["matter_id"] = opened["matter_id"]
+    saved = wired.store.load(opened["matter_id"])
+    assert saved.title == title and saved.intake_parties == context["parties"]
+
+
+@then("it is in My work's list straight away")
+def in_my_work_straight_away(client, context):
+    rows = client.get("/api/matters").json()["matters"]
+    row = next((r for r in rows if r["matter_id"] == context["matter_id"]), None)
+    assert row, rows
+    client_name, adverse = list(context["parties"])
+    assert (row["client"], row["opponent"]) == (client_name, adverse), row
+
+
+# ---------------------------------------------------------------- F-B-02 ---
+
+@then("in an open matter the board is the left pane and the chat the right")
+def board_left_chat_right(app_page, stylesheet):
+    advise = pane_html(app_page, "advise")
+    rail = advise.index('<aside class="rail" id="rail">')
+    board = advise.index('id="matter-board"')
+    assert rail < board < advise.index("</aside>") < advise.index('<section class="conversation"')
+    assert "grid-template-columns: 19rem minmax(0, 1fr)" in declarations(stylesheet, "main")
+
+
+@then("the board is filled from My work's row for this matter, with the same fields as the "
+      "list")
+def board_is_my_works_row(page_script):
+    board = _function(page_script, "renderMatterBoard")
+    assert "await api('/api/matters')" in board
+    assert "row.matter_id === matterId" in board and "matterFields(fields, m);" in board
+    assert "matterFields(dl, m);" in _function(page_script, "showMatterList")
+    fields = _function(page_script, "matterFields")
+    for label in ("'client'", "'against'", "'deadline'", "'last worked'", "'posture'"):
+        assert label in fields, label
+
+
+@then("the board is read again after every message")
+def board_after_every_message(page_script):
+    assert "renderMatterBoard(matterId, generation);" in _function(page_script, "showThreadBoard")
+    assert "await showThreadBoard(state.matterId, {" in _function(page_script, "deliver")
+
+
+@then("a board that cannot be read says so rather than showing an empty one")
+def unreadable_board_says_so(page_script):
+    assert _function(page_script, "renderMatterBoard").count("stateBlock('unbuildable'") == 2
+
+
+@then("the issues recorded on the matter are listed on the board under its details")
+def issues_on_the_board(app_page, page_script):
+    rail = app_page[app_page.index('<aside class="rail" id="rail">'):]
+    rail = rail[:rail.index("</aside>")]
+    assert rail.index('id="matter-board"') < rail.index('id="rail-meta"') \
+        < rail.index('id="rail-body"')
+    show = _function(page_script, "showThreadBoard")
+    assert "$('rail-title').textContent = 'Matter board';" in show
+    assert "body.replaceChildren(...data.threads.map(" in show
+
+
+# ---------------------------------------------------------------- F-B-03 ---
+
+@then("My work has no new-matter button and no welcome page")
+def my_work_is_only_the_list(app_page, page_script):
+    advise = pane_html(app_page, "advise")
+    for gone in ('id="new-matter"', 'id="welcome"', 'id="welcome-start"'):
+        assert gone not in advise, gone
+    assert "$('new-matter')" not in page_script and "$('welcome" not in page_script
+
+
+@then("choosing the My work tab always shows the list of matters")
+def my_work_tab_lists(page_script, stylesheet):
+    chosen = _function(page_script, "openTab")
+    assert "state.workTab = 'advise';" in chosen and "showMatterList();" in chosen
+    assert "b.addEventListener('click', () => openTab(b.dataset.tab));" in page_script
+    assert "setWorkView('list');" in _function(page_script, "showMatterList")
+    assert "display: none" in declarations(stylesheet, f"{LISTING} .conversation")
+
+
+@then("opening a matter shows its board and restores its conversation, with My work still "
+      "the marked tab")
+def opening_a_matter_resumes_it(page_script):
+    assert "row.onclick = () => showThreadBoard(m.matter_id);" in _function(
+        page_script, "showMatterList")
+    show = _function(page_script, "showThreadBoard")
+    assert "setWorkView('matter');" in show
+    assert "if (restore && !(await restoreConversation(matterId, generation))) return;" in show
+    assert "workTab" not in show, "opening a matter must not move it to another tab"
+
+
+def _frontend_file(name: str) -> str:
+    return (ROOT / "frontend" / name).read_text(encoding="utf8")
+
+
+def _backend_file(relative: str) -> str:
+    return (ROOT / "backend" / "nm" / relative).read_text(encoding="utf8")
+
+
+def _composer(page: str) -> str:
+    composer = page[page.index('<form id="composer"'):]
+    return composer[:composer.index("</form>")]
+
+
+# ---------------------------------------------------------------- F-B-04 ---
+
+@then("Matter cover & instructions, Attributed file and Protective handoff sit in the matter's "
+      "header beside Case file and History")
+def matter_tools_in_the_header():
+    tools = _frontend_file("matter-workspace.js")
+    assert "document.querySelector('#workspace-focus .workspace-actions').prepend(toolbar);" \
+        in tools
+    assert ".after(toolbar)" not in tools, "the tools are still a bar of their own"
+    for label in ("'Matter cover & instructions'", "'Attributed file'", "'Protective handoff'"):
+        assert label in tools, label
+
+
+# ================================ C. Take the brief ===========================
+
+# ---------------------------------------------------------------- F-C-01 ---
+
+@then("under the brief a plus button opens Upload documents, Upload photos, audio or video, "
+      "and Record a voice note to keep")
+def plus_button_under_the_brief(app_page, page_script):
+    composer = _composer(app_page)
+    assert composer.index('id="message"') < composer.index('id="plus-toggle"')
+    items = re.findall(
+        r'<button type="button" role="menuitem" id="(plus-[a-z]+)">([^<]+)</button>', composer)
+    assert items == [("plus-documents", "Upload documents"),
+                     ("plus-media", "Upload photos, audio or video"),
+                     ("plus-voice", "Record a voice note to keep")], items
+    assert "$('plus-panel').hidden = !open;" in _function(page_script, "setPlusMenu")
+
+
+@then("each opens the original-material window, which keeps what it receives sealed and unread")
+def plus_items_open_the_materials_window():
+    materials = _frontend_file("intake-materials.js")
+    for kind in ("documents", "media", "voice"):
+        assert f"$('plus-{kind}').addEventListener('click', () => openFor('{kind}'));" \
+            in materials, kind
+    assert "They are not scanned" in materials
+
+
+@then("there is no files bar above the chat")
+def no_files_bar():
+    materials = _frontend_file("intake-materials.js")
+    assert "materials-entry" not in materials and "$('workspace-focus').after(" not in materials
+
+
+# ---------------------------------------------------------------- F-C-02 ---
+
+AUDIO = b"OggS\x00synthetic-opus-recording"
+
+
+class _Transcriber:
+    """Stands in for the speech model, and remembers what it was given."""
+
+    def __init__(self):
+        self.heard = []
+
+    def transcribe(self, audio, media_type):
+        from nm.domain.dictation import Transcript
+
+        self.heard.append((audio, media_type))
+        return Transcript(text="We act for the plaintiff.", language="en", seconds=2.0,
+                          device="cuda")
+
+
+@then("beside the plus button there is a mic button that starts recording and stops on a "
+      "second press")
+def mic_beside_the_plus(app_page, page_script):
+    composer = _composer(app_page)
+    assert composer.index('id="plus-menu"') < composer.index('id="dictate"')
+    assert ("$('dictate').addEventListener('click', () => {\n  if (dictation.recorder) "
+            "stopDictation();\n  else startDictation();\n});") in page_script
+
+
+@then("the words come back into the brief box to be checked, and nothing is sent by itself")
+def words_into_the_brief(page_script):
+    transcribe = _function(page_script, "transcribeDictation")
+    assert "insertIntoBrief(words);" in transcribe
+    assert "send(" not in transcribe and "requestSubmit" not in transcribe
+    assert "stopDictation({ discard: true });" in _function(page_script, "clearPrivileged")
+
+
+@given("the dictation service", target_fixture="speech")
+def the_dictation_service(wired, monkeypatch):
+    # `wired`, NEVER an imported `application()`: a step that resolves the
+    # application itself patches whichever one was wired last -- a previous
+    # test's -- and the route then runs the real model. See the fixture.
+    fake = _Transcriber()
+    monkeypatch.setattr(wired.transcriber, "inner", fake)
+    return fake
+
+
+@when("an advocate sends a short recording to be transcribed")
+def send_a_recording(client, context):
+    context["response"] = client.post("/api/dictation", content=AUDIO,
+                                      headers={"content-type": "audio/webm"})
+
+
+@then("the words come back and the recording is not stored anywhere")
+def words_back_and_nothing_kept(client, context, speech):
+    response = context["response"]
+    assert response.status_code == 200, response.text
+    assert response.json() == {"text": "We act for the plaintiff.", "language": "en",
+                               "seconds": 2.0, "device": "cuda", "stored": False}
+    assert speech.heard == [(AUDIO, "audio/webm")]
+    for path in client.directory._root.rglob("*"):
+        if path.is_file():
+            assert AUDIO not in path.read_bytes(), path
+
+
+@then("it went through the recorded local speech processor")
+def through_the_local_speech_processor(wired):
+    from nm.bootstrap.egress_policy import TRANSCRIPTION_PROCESSOR, egress_policy
+    from nm.domain.egress import Sink
+
+    policed = wired.transcriber
+    assert policed.sink is Sink.TRANSCRIPTION
+    assert policed.processor_id == TRANSCRIPTION_PROCESSOR
+    recorded = egress_policy(ROOT).find(TRANSCRIPTION_PROCESSOR)
+    assert recorded is not None and recorded.region == "in"
+    assert Sink.TRANSCRIPTION in recorded.purposes
+
+
+@when("the local speech model is not installed and an advocate dictates")
+def dictate_without_the_model(client, wired, context, monkeypatch):
+    import sys
+
+    from nm.adapters.speech.local_whisper import LocalWhisper
+
+    monkeypatch.setitem(sys.modules, "faster_whisper", None)
+    monkeypatch.setattr(wired.transcriber, "inner", LocalWhisper(model="tiny"))
+    context["response"] = client.post("/api/dictation", content=AUDIO,
+                                      headers={"content-type": "audio/webm"})
+
+
+@then("dictation asks the speech model for English unless the installation sets another language")
+def dictation_asks_for_english():
+    """MEASURED 15 September 2026: left to detect, a few seconds of
+    Indian-accented English came back in Urdu script, and an advocate cannot
+    correct a brief they cannot read."""
+    adapter = _backend_file("adapters/speech/local_whisper.py")
+    assert 'language: str = "en"' in adapter
+    assert 'language=None if wanted in ("", "auto") else wanted,' in adapter
+    assert '"translate" if self.translate else "transcribe"' in adapter
+    wiring = _backend_file("bootstrap/composition.py")
+    assert 'language=settings.get("NM_DICTATION_LANGUAGE") or "en",' in wiring
+
+
+@then("dictation is refused, saying the local speech model is not installed")
+def dictation_refused_not_installed(context):
+    response = context["response"]
+    assert response.status_code == 503, response.text
+    assert "the local speech model is not installed" in response.json()["detail"]
+
+
+# ---------------------------------------------------------------- F-C-03 ---
+
+class _LiveEngine:
+    """Stands in for the live speech model, and remembers what it was fed."""
+
+    def __init__(self, fail=None):
+        self.fed = []
+        self.rate = None
+        self.fail = fail
+
+    def listen(self, sample_rate):
+        if self.fail:
+            raise self.fail
+        self.rate = sample_rate
+        return self
+
+    def hear(self, pcm):
+        self.fed.append(pcm)
+        return " ".join(f"word{number}" for number in range(1, len(self.fed) + 1))
+
+    def close(self):
+        return "word1 word2 and the last one"
+
+
+@then("the live words come from a socket and are written into the brief box as they arrive")
+def live_words_into_the_brief(app_page, page_script):
+    assert "/ws/dictation" in page_script
+    live = _function(page_script, "openLiveWords")
+    assert "new WebSocket(" in live and "showLiveWords(heard.words)" in live
+    assert "replaceProvisional((words || '').trim())" in _function(page_script, "showLiveWords")
+    assert 'id="message"' in _composer(app_page)
+
+
+@then("the live words stop being written the moment the advocate edits them")
+def live_words_let_go_on_an_edit(page_script):
+    replace = _function(page_script, "replaceProvisional")
+    assert "if (held !== dictation.provisional) {" in replace
+    assert "dictation.ours = false;" in replace
+    assert "You edited the brief" in _function(page_script, "showLiveWords")
+
+
+@then("the final transcription replaces the live words it stood in for")
+def final_replaces_the_live_words(page_script):
+    transcribe = _function(page_script, "transcribeDictation")
+    assert "if (!replaceProvisional(words)) insertIntoBrief(words);" in transcribe
+
+
+@then("the audio is sent as 16 kHz mono frames of about a tenth of a second")
+def audio_as_the_model_wants_it(page_script):
+    worklet = _frontend_file("dictation-worklet.js")
+    assert "const FRAME_SAMPLES = 1600;" in worklet
+    assert "new Int16Array(FRAME_SAMPLES)" in worklet
+    assert "const LIVE_SAMPLE_RATE = 16000;" in page_script
+    assert "new AudioContext({ sampleRate: LIVE_SAMPLE_RATE })" in page_script
+    rate = _backend_file("domain/dictation.py")
+    assert "LIVE_SAMPLE_RATE = 16_000" in rate
+
+
+@then("the page does not play the advocate's own voice back")
+def no_playback(page_script):
+    live = _function(page_script, "openLiveWords")
+    assert "silence.gain.value = 0;" in live
+    assert "node.connect(silence);" in live and "silence.connect(context.destination);" in live
+
+
+@when("a stranger opens the live dictation socket")
+def stranger_opens_the_socket(client, context):
+    context["stranger"] = TestClient(client.app)
+
+
+@then("the socket is refused before any audio is read")
+def socket_refused_for_a_stranger(context):
+    from starlette.websockets import WebSocketDisconnect
+
+    with pytest.raises(WebSocketDisconnect):
+        with context["stranger"].websocket_connect(
+                "/ws/dictation", headers={"origin": "http://testserver"}) as socket:
+            socket.receive_json()
+
+
+@then("a socket opened from another page is refused the same way")
+def socket_refused_from_another_page(client):
+    from starlette.websockets import WebSocketDisconnect
+
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect(
+                "/ws/dictation", headers={"origin": "https://foreign.example"}) as socket:
+            socket.receive_json()
+
+
+@given("the live dictation service", target_fixture="live_speech")
+def the_live_dictation_service(wired, monkeypatch):
+    engine = _LiveEngine()
+    monkeypatch.setattr(wired.live_dictation, "inner", engine)
+    return engine
+
+
+@when("the page sends two frames of speech and then stops")
+def send_two_frames(client, context):
+    with client.websocket_connect(
+            "/ws/dictation", headers={"origin": "http://testserver"}) as socket:
+        context["opened"] = socket.receive_json()
+        context["heard"] = []
+        for frame in (b"\x01\x02" * 800, b"\x03\x04" * 800):
+            socket.send_bytes(frame)
+            context["heard"].append(socket.receive_json())
+        socket.send_text("done")
+        context["final"] = socket.receive_json()
+
+
+@then("the words heard so far come back after each frame")
+def words_after_each_frame(context, live_speech):
+    from nm.domain.dictation import LIVE_SAMPLE_RATE
+
+    assert context["opened"] == {"live": True}
+    assert [row["words"] for row in context["heard"]] == ["word1", "word1 word2"]
+    assert live_speech.rate == LIVE_SAMPLE_RATE
+    assert len(live_speech.fed) == 2
+
+
+@then("the final words come back when it stops")
+def final_words_on_stop(context):
+    assert context["final"] == {"words": "word1 word2 and the last one", "done": True}
+
+
+@then("no audio is stored anywhere")
+def no_live_audio_stored(client, live_speech):
+    for frame in live_speech.fed:
+        for path in client.directory._root.rglob("*"):
+            if path.is_file():
+                assert frame not in path.read_bytes(), path
+
+
+@when("the live speech model is not downloaded and an advocate dictates")
+def live_model_missing(client, wired, context, monkeypatch, tmp_path):
+    from nm.adapters.speech.vosk_live import VoskLive
+
+    monkeypatch.setattr(wired.live_dictation, "inner",
+                        VoskLive(model_dir=tmp_path / "no-model-here"))
+    with client.websocket_connect(
+            "/ws/dictation", headers={"origin": "http://testserver"}) as socket:
+        context["opened"] = socket.receive_json()
+
+
+@then("the socket says the live words are off and the recording goes on")
+def live_words_off_but_recording_goes_on(context, page_script):
+    opened = context["opened"]
+    assert opened["live"] is False
+    assert "not downloaded" in opened["why"] or "not installed" in opened["why"]
+    assert "will appear when you stop" in opened["why"]
+    # The page keeps recording for the final transcription and says so.
+    assert "sayDictation(`${heard.why} Listening.`)" in _function(page_script, "openLiveWords")

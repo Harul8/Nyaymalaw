@@ -24,6 +24,7 @@ from tests.test_the_journey_login_to_logout import (
     _reach_rail,
     _sign_in,
     _sign_out,
+    _start_matter,
     _tab,
     playwright_api,
 )
@@ -315,9 +316,7 @@ def _rendered(page):
 
 
 def _new_matter(page, client, width=1280):
-    _tab(page, "advise")
-    _reach_rail(page, width)
-    page.click("#new-matter")
+    _start_matter(page)
     _intake(page, client=client, adverse=f"Respondent for {client}")
     _advise(page, BRIEF)
     matter_id = page.get_attribute("#pane-advise", "data-matter-id")
@@ -622,8 +621,7 @@ def test_drafts_and_unsubmitted_intake_belong_to_the_selected_file(page, journey
     _open_by_keyboard(page, second)
     assert page.input_value("#message") == second_text
 
-    _all_matters(page)
-    page.click("#new-matter")
+    _start_matter(page)
     opening = {
         "in-client": "A distinct unsubmitted client",
         "in-adverse": "A distinct unsubmitted opponent",
@@ -638,8 +636,7 @@ def test_drafts_and_unsubmitted_intake_belong_to_the_selected_file(page, journey
     _open_by_keyboard(page, first)
     assert page.input_value("#message") == first_text
     assert page.input_value("#in-client") != opening["in-client"]
-    _all_matters(page)
-    page.click("#new-matter")
+    _start_matter(page)
     assert page.input_value("#message") == ""
     for field, value in opening.items():
         assert page.input_value(f"#{field}") == value

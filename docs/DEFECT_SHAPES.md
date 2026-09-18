@@ -39,7 +39,7 @@ same as one that found nothing. A posture that was never established defaulted
 to *our client is the aggrieved party*, and the whole analysis inverted while
 staying internally consistent.
 
-*Instances: B-06, B-131, B-137, B-150, B-155, B-161, B-112.*
+*Instances: B-06, B-131, B-137, B-150, B-155, B-161, B-112, B-143.*
 
 > **CHECK S1.** Every screen, gate and derived value has **three** states —
 > held, not held, and **not assessed** — and the third is visible in the output,
@@ -49,6 +49,37 @@ staying internally consistent.
 
 **Counterexample it must reject:** a matter where the conflict registry was
 unreadable, and the output says the screen is clear.
+
+### It happened again on 18 September 2026, one layer out — B-143
+
+Not a screen this time but a READINESS line, which is the same thing wearing
+different clothes: `/api/health` said
+
+    dictation_live : installed; vosk-model-small-en-in-0.4 loads on first use
+
+and the first frame of speech raised `ModuleNotFoundError: No module named
+'srt'` from inside `vosk/__init__.py`. The library had been installed with
+`--no-deps`, and the check asked `importlib.util.find_spec("vosk")` — which
+answers *is there a package directory of that name*, not *does this library
+run*.
+
+**The lesson is about PROXIES, and it generalises past libraries.** The
+readiness check had three honest states already; what broke was the question it
+asked. A proxy that is cheap and nearly always agrees is worse than a missing
+check, because it agrees loudly on the day it is wrong. The same trap has now
+been measured three times in this project with three different proxies: a court
+LABEL standing in for a binding relationship (B-044), a document's sentence
+standing in for a file on disk (B-141), and a package directory standing in for
+an importable library (B-143).
+
+> **CHECK, added with S1.** A capability is reported as available only by DOING
+> the smallest real version of it — importing the library, opening the file,
+> running the query — never by observing something that usually accompanies it.
+> `backend/nm/adapters/optional.py` is the only module permitted to ask the import
+> path anything, and
+> `tests/test_a_library_is_available_only_when_it_imports.py` fails the build on a
+> second caller anywhere in `backend/nm/`, and on any speech adapter whose
+> readiness reads as usable while its library is not.
 
 ---
 

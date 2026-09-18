@@ -123,6 +123,12 @@ REACHED_ELSEWHERE = {
     # P24's two, with browser callers on the case file's briefing controls
     # (mark a need unavailable; resume it). Same template-literal blindness.
     "mark_need_unavailable", "resume_need",
+    # F-C-02's route, registered the same way, with a browser caller: the mic
+    # under the brief posts the recording from `transcribeDictation`.
+    "transcribe_dictation",
+    # F-C-03's socket, registered the same way, with a browser caller:
+    # `openLiveWords` connects to it while the advocate is speaking.
+    "dictation_socket",
     # `@implements` markers: their whole purpose is to be SCANNED by
     # assurance/gate/trace.py rather than called.
     "_implements_c4",

@@ -19,7 +19,9 @@
   toolbar.id = 'matter-tools';
   toolbar.setAttribute('aria-label', 'Matter records and instructions');
   toolbar.hidden = true;
-  document.getElementById('workspace-focus').after(toolbar);
+  // F-B-04. IN THE MATTER'S HEADER, beside Case file and History -- not a bar of
+  // its own above the chat.
+  document.querySelector('#workspace-focus .workspace-actions').prepend(toolbar);
   const dialog = node('dialog', undefined, 'account-dialog matter-dialog');
   dialog.id = 'matter-workspace-dialog';
   dialog.setAttribute('aria-labelledby', 'matter-workspace-title');

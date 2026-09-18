@@ -151,14 +151,8 @@ def _open_matter(page, journey, client=None, **kw):
     that as the restore being broken when it was the click.
     """
     _sign_in(page, journey, **kw)
-    # REACH THE NAVIGATOR FIRST. `#new-matter` lives in the rail, and below
-    # 820px the rail is a drawer that starts closed -- so this clicked an
-    # invisible button at every narrow width and only ever worked because
-    # every caller but one used the 1280px default. Fixed in the helper
-    # rather than at the call site: the next phase to pass a width would
-    # have hit exactly this.
-    _reach_rail(page, kw.get("width", 1280))
-    page.click("#new-matter")
+    # F-B-01. A NEW MATTER STARTS FROM HOME, on the intake form alone.
+    _start_matter(page)
     _intake(page, client=client or "Ramesh Traders")
     return page
 
@@ -185,6 +179,17 @@ def _intake(page, client="Ramesh Traders", adverse="Kiran Steels",
     # element selected BY being hidden never will -- so the wait timed
     # out on a form that had closed correctly.
     page.wait_for_selector("#intake", state="hidden", timeout=10000)
+    # F-B-01: the chat opens once the server has saved the matter.
+    page.wait_for_selector("#composer:not([hidden])", timeout=15000)
+
+
+def _start_matter(page):
+    """Start a new matter the only way there is: Home's Start a matter (F-B-01)."""
+    if page.is_hidden("#pane-home"):
+        page.click("#tabs button[data-tab='home']")
+        page.wait_for_selector("#pane-home:not([hidden])", timeout=15000)
+    page.click("#home-start")
+    page.wait_for_selector("#intake:not([hidden])", timeout=15000)
 
 
 def _advise(page, message: str):
@@ -321,8 +326,8 @@ def test_phase_2_the_landing_is_not_blank_but_authenticated(page, journey):
 
     assert len(shown) > 40, f"the landing shows almost nothing: {shown!r}"
     # F-A-18: the landing is Home, and its one button starts a matter.
-    assert page.is_visible("#home-start") or page.is_visible("#new-matter") \
-        or page.is_visible("#message"), "nothing on the landing lets the advocate begin"
+    assert page.is_visible("#home-start") or page.is_visible("#message"), (
+        "nothing on the landing lets the advocate begin")
 
 
 # ============================================ 3. the navigator, three widths ==
@@ -371,11 +376,7 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
     first = page.get_attribute("#pane-advise", "data-matter-id")
     assert first, f"at {width}px the first matter has no rendered identity"
 
-    _reach_rail(page, width)
-    if page.is_visible("#back"):
-        page.click("#back")
-    page.wait_for_selector("#new-matter", state="visible", timeout=15000)
-    page.click("#new-matter")
+    _start_matter(page)
     _intake(page, client=f"Width {width} Second Traders")
     _advise(page, BRIEF)
     second = page.get_attribute("#pane-advise", "data-matter-id")
@@ -413,7 +414,7 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
     target.click()
     page.wait_for_function(
         "() => document.querySelector('#rail-title')"
-        ".textContent.trim() === 'Issues in this matter'", timeout=15000)
+        ".textContent.trim() === 'Matter board'", timeout=15000)
     # `arg=`, BY KEYWORD. Playwright's Python API takes the argument by
     # keyword only, and the positional form raised TypeError on every width
     # the moment the installed version enforced it -- a harness failure that
