@@ -422,19 +422,19 @@ This persisted view projects the authored registry contract. `backlog check` sep
 |---|---|---:|---:|---:|---:|---:|---|
 | A | Arrive | 2/4 | 4 | 4/4 | 11/46 | 15 | not releasable |
 | B | Open a matter | 0/6 | 4 | 4/4 | 8/33 | 13 | not releasable |
-| C | Take the brief | 4/7 | 7 | 7/7 | 10/45 | 20 | not releasable |
-| D | Work the file | 8/9 | 14 | 14/14 | 13/50 | 18 | not releasable |
+| C | Take the brief | 4/7 | 7 | 7/7 | 10/46 | 20 | not releasable |
+| D | Work the file | 8/9 | 14 | 14/14 | 13/51 | 18 | not releasable |
 | E | Advise | 1/5 | 5 | 5/5 | 9/50 | 19 | not releasable |
 | F | Act | 0/7 | 7 | 7/7 | 5/28 | 13 | not releasable |
 | G | Carry | 0/3 | 3 | 3/3 | 6/31 | 13 | not releasable |
 | H | Close | 0/2 | 2 | 2/2 | 5/22 | 8 | not releasable |
 | I | Leave | 1/1 | 1 | 1/1 | 6/33 | 14 | not releasable |
 
-**105 rows · 32 open P0 · 0 blocked · 16/44 features implemented**
+**106 rows · 32 open P0 · 0 blocked · 16/44 features implemented**
 
 ### Professional plan — registered and derived
 
-**20 advocate standards · 13 expert-workflow states · 5 advice levels · 7 roles · 14 gap closures · 105 wave rows**
+**20 advocate standards · 13 expert-workflow states · 5 advice levels · 7 roles · 14 gap closures · 106 wave rows**
 
 Gap status below is computed from the linked BK/J rows. It is never authored in `professional.json` or maintained in the workbook.
 
@@ -460,7 +460,7 @@ Derived gap state: IN_PROGRESS 13, PLANNED 1
 ### Open P0 — what is unsafe
 
 - **BK-21** [A/C/I] the matter encryption key IS the OpenAI API key — *verifying* · closed on a measured rotation and signed off 10 September 2026; the lifecycle was recorded retrospectively because the row was built before BK-74
-- **BK-31** [A] account access, recovery and workspace identity — *in_progress* · complete and verify D-041 email/password personal registration, immediate owned workspace/new/reopen without professional approval, neutral public authentication and separate attributable expiring approval at protected acts. Preserve the optional invited identity and recovery/session populations. Current execution belongs to email-registration.json; full recovery/browser acceptance remains open, confidential authentication is BK-86 and deployed assurance remains BK-42. No current-source PASS is inferred from historical conformance evidence.
+- **BK-31** [A] account access, recovery and workspace identity — *in_progress* · complete and verify D-041 email/password personal registration, immediate owned workspace/new/reopen without professional approval, neutral public authentication and separate attributable expiring approval at protected acts. Preserve the optional invited identity and password-reset/session populations. Recovery codes were removed (Implementation Plan F-A-04) and a forgotten password is reset by emailed link (F-A-03); real mail delivery is not connected and browser acceptance remains open, confidential authentication is BK-86 and deployed assurance remains BK-42. No current-source PASS is inferred from historical conformance evidence.
 - **BK-33** [A] recognisable matter cover, truthful board and real reopen — *in_progress* · render passed_deadlines, which the projection already emits
 - **BK-34** [B] front-door legal and professional screens before substance — *in_progress* · prove ordinary-screen admission and quarantine as a closeable foundation; the integrated emergency path is BK-78 after BK-53, and checked-registry scope remains explicit
 - **BK-35** [D] cause-specific accrual and answer-consistency gate — *in_progress* · P22 added reviewable legal premises and the conditional state on 12 September 2026 -- an inferred accrual is conditional not a deadline, and a stated premise makes it definitive; AC1's model_eval and counsel_review remain NOT RUN
@@ -7855,3 +7855,87 @@ fallback, changing fact, action owner/time and qualified substantive proof stay
 open. See `docs/backlog/status.yaml` and the detailed adoption record in
 `docs/backlog/evidence/a3-conformance-packet-inventory.json`.
 
+
+## BK-97 — an abbreviation surface for Act identification
+
+Registered 20 September 2026 from a defect the evaluation-set labeller
+surfaced on real documents. `Manifest._named_in` identifies an Act by its full
+title without the year appearing in the text, and Indian registry orders and
+Indian advocates do not write that. Measured across 1,285 prayer windows drawn
+from Telangana and Andhra Pradesh High Court orders: `CPC` in 579 documents,
+`CrPC` in 114, `BNSS` in 45, and the reversed title `Criminal Procedure Code`
+in 11.
+
+**533 of the 865 documents that name their Act by abbreviation fall through to
+keyword scoring**, and 369 of them land on the Transfer of Property Act, 1882 —
+scored from the words around *"Petition under Section 151 CPC praying that in
+the circumstances stated in the affidavit…"*. This is CLAUDE.md §5's wrong-Act
+trap, and it is not confined to the evaluation pipeline: the same
+`Manifest.resolve` runs at turn time and an advocate writes `s.151 CPC` exactly
+as the registry does.
+
+`ActBasis.INFERRED` means the guess is disclosed, so no advocate is silently
+misled today. The cost is that the correct Act is never NAMED for the commonest
+citation form in Indian practice, and an exact section lookup is therefore
+never issued against it.
+
+The Start Record, the measured evidence, the three guards and the decision the
+change forces are in `docs/blueprint/ACT_ALIAS_SURFACE.md`. The registered
+scope is the additive option recorded there: a full title continues to outrank
+every alias, so nothing that resolves NAMED today changes.
+
+### BK-97 build record — 20 September 2026
+
+Built as specified. `ManifestEntry.aliases` carries the forms measured in the
+documents; `Manifest._aliased_at_provision` reads them ONLY in the slot
+immediately after a `citation.SECTION` match, longest match at the position,
+and only where `_named_in` found no title. No pattern for a provision
+reference, an Act title or a court name was added anywhere — the alias is
+positional, and `nm.domain.citation` keeps sole ownership of how a citation is
+spelled.
+
+Five guards in `tests/test_citation_patterns.py`, all passing:
+
+- `test_no_alias_sits_inside_an_act_title`
+- `test_no_alias_is_claimed_by_two_acts` — compared on the flattened form, so
+  `CPC` and `C.P.C.` are one alias of one Act rather than two claimants
+- `test_an_alias_that_contains_another_is_still_distinguished` — the one the
+  vocabulary needs. `BNS` is a substring of `BNSS`, both are in force from
+  1 July 2024, so neither the substring guard nor `in_force_on` separates
+  them. Written behaviourally, because the property is that the RESOLVER tells
+  them apart and a string comparison would pass while the matcher was broken
+- `test_an_alias_is_read_only_after_a_provision_reference`
+- `test_a_full_title_still_outranks_every_alias`
+
+**Measured on the 1,000-document evaluation set**, relabelled after the change:
+
+| | before | after |
+|---|---:|---:|
+| Act `NAMED` | 65 | **514** |
+| gold-eligible | 64 | **513** |
+| `INFERRED` | 544 | 158 |
+| `NOT_RESOLVED` | 391 | 328 |
+| keyword false-positives onto the Transfer of Property Act | 369 | 87 |
+
+**The additive property was proved rather than asserted.** The same manifest
+with every alias stripped is the behaviour before this change; both were run
+over all 865 prayer windows:
+
+```
+NAMED before and after, unchanged Act   66
+NAMED only after (gained)              454
+NAMED before, CHANGED or lost after      0
+```
+
+The 328 still unresolved are Acts the manifest does not hold — the Motor
+Vehicles Act, the Land Acquisition Act, Workmen's Compensation — which is
+correct behaviour and a separate scope item.
+
+**Verification is PARTIAL, not passing.** The tests nearest the change pass
+(`test_citation_patterns`, `test_manifest_covers_what_it_declares`,
+`test_resolution`, `test_the_court_filter_resolves`,
+`test_authority_retrieval`). The full Class-A suite could not be run to a
+verdict in the development container: it exceeds a 900-second budget, and it
+does so **at HEAD~1 as well**, in a worktree that never held the evaluation
+documents — so the cause is the container, not this change and not the drawn
+set. A suite that could not run is NOT ASSESSED and is recorded as such.

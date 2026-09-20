@@ -37,6 +37,7 @@ from typing import Callable, Iterable, Iterator
 
 import yaml
 
+from nm.domain.citation import SECTION
 from nm.domain.names import discard, discard_tree
 from nm.knowledge.acquisition import ReconciliationState, reconcile_acquisition
 from nm.knowledge.artefact import ArtefactLineage, ArtefactRefused
@@ -71,6 +72,11 @@ class ManifestEntry:
     act_patterns: tuple[str, ...]
     intended_sections: tuple[str, ...]
     keywords: tuple[str, ...] = ()
+    #: How Indian practice actually writes this Act -- `CPC`, `Cr.P.C.`,
+    #: `Criminal Procedure Code`. Read ONLY in the slot after a provision
+    #: reference; see `Manifest._aliased_at_provision` for why the position
+    #: is the safety argument rather than the vocabulary.
+    aliases: tuple[str, ...] = ()
     in_force_from: date | None = None
     in_force_to: date | None = None
     jurisdiction: str = "Union of India"
@@ -118,6 +124,23 @@ class ActBasis(str, Enum):
 #: Anchored, so a year inside a title -- `Rules, 1957 (Amendment)` --
 #: is left alone.
 _TRAILING_YEAR = re.compile(r",\s*\d{4}\s*$")
+
+
+#: Connector words between a provision reference and the Act it belongs to.
+#: REPEATED, not optional-once: "of the BNS" needs both stripped before the
+#: alias sits at the position.
+_CONNECTOR = re.compile(
+    r"^(?:[\s,]*(?:of|the|r/?w|read\s+with|under)\b)*[\s,]*", re.I)
+
+
+def _flatten(value: str) -> str:
+    """An alias with its punctuation and case removed. ONE COPY, and this is it.
+
+    `CPC`, `C.P.C.` and `c. p. c.` are one form of one Act, not three
+    claimants. The single-owner guard compares flattened forms for that reason:
+    without it, two spellings of the same alias read as two Acts claiming it.
+    """
+    return re.sub(r"[^A-Z0-9]", "", (value or "").upper())
 
 
 def title_without_year(act_name: str) -> str:
@@ -209,6 +232,7 @@ class Manifest:
                 act_patterns=tuple(e["act_patterns"]),
                 intended_sections=_expand(e["intended_sections"]),
                 keywords=tuple(e.get("keywords", ())),
+                aliases=tuple(e.get("aliases", ())),
                 in_force_from=(date.fromisoformat(e["in_force_from"])
                                if e.get("in_force_from") else None),
                 in_force_to=(date.fromisoformat(e["in_force_to"])
@@ -262,6 +286,15 @@ class Manifest:
         named = self._named_in(low, on)
         if named is not None:
             return Resolution(named, ActBasis.NAMED)
+
+        # THE ACT WRITTEN THE WAY INDIAN PRACTICE WRITES IT. BK-97.
+        #
+        # A full title still wins above, and this only runs when none matched,
+        # so no input that resolved NAMED before this existed resolves to a
+        # different Act because of it.
+        aliased, form = self._aliased_at_provision(question, on)
+        if aliased is not None:
+            return Resolution(aliased, ActBasis.NAMED, matched_on=(form,))
 
         # THE ACT THE ADVOCATE NAMED EARLIER ON THIS THREAD.
         #
@@ -327,6 +360,54 @@ class Manifest:
                     continue
                 best, best_len = e, len(title)
         return best
+
+    def _aliased_at_provision(
+            self, question: str, on: date | None
+    ) -> tuple["ManifestEntry | None", str]:
+        """The Act named by an abbreviation, READ ONLY AFTER A PROVISION. BK-97.
+
+        WHY THE POSITION IS THE WHOLE SAFETY ARGUMENT.
+
+        Measured over 1,285 prayer windows from real Telangana and Andhra
+        Pradesh High Court orders: the abbreviation namespace in Indian court
+        documents is SHARED between Acts and case types. `OS` appears in 86,
+        `CC` in 48, `WP` in 43, `IA` in 14 -- Original Suit, Contempt Case,
+        Writ Petition, Interlocutory Application. An alias matched anywhere in
+        the text would read a case-number prefix as an Act, which is exactly
+        the defect `nm.domain.citation` exists to refuse, one level up: its
+        `_NOT_ABBREV` guard was written because `O.S. 442` contains `S. 442`.
+
+        In the slot immediately after a provision reference, those same
+        prefixes appear FOUR times in 1,187 windows. That is the measurement
+        this method rests on, and it is why the alias is never read anywhere
+        else.
+
+        LONGEST MATCH AT THE POSITION, which is the tie-break `_named_in`
+        already applies to titles rather than a second rule. It is load-bearing
+        here for one pair the manifest genuinely holds: `BNS` is a substring of
+        `BNSS`, the Bharatiya Nyaya Sanhita and the Bharatiya Nagarik Suraksha
+        Sanhita are different codes, and both are in force from 1 July 2024 --
+        so neither the substring guard nor `in_force_on` separates them.
+        """
+        match = SECTION.search(question or "")
+        if match is None:
+            return None, ""
+        # The connector is a REPEATED optional sequence, not one word. Stripping
+        # a single `of` leaves `the BNS...`, the alias is no longer at the
+        # position, and the match silently vanishes -- which is what the
+        # prototype for this did until it was measured.
+        tail = _CONNECTOR.sub("", question[match.end():match.end() + 60])
+        flat = _flatten(tail)
+        best: ManifestEntry | None = None
+        best_form = ""
+        for entry in self.entries:
+            if on is not None and not entry.in_force_on(on):
+                continue
+            for alias in entry.aliases:
+                key = _flatten(alias)
+                if key and flat.startswith(key) and len(key) > len(best_form):
+                    best, best_form = entry, key
+        return best, best_form
 
     def intends(self, entry: ManifestEntry, section: str) -> bool:
         return entry.covers(section)
