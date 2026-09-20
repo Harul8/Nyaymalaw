@@ -65,3 +65,4 @@ Thumbs.db
 golden/docs/
 golden/manifest.json
 golden/_metadata_cache/
+golden/labels.json
