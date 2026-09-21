@@ -119,6 +119,7 @@ def served(root: Path, *, responses: dict | None = None,
     # harness explicitly supplies their fixture artefacts.
     environment = {
         "NM_MODEL_PROVIDER": "scripted",
+        'NM_PUBLIC_REGISTRATION': 'local-test',
         "NM_MODEL_ROUTINE": "scripted-1",
         "NM_EMBED_MODEL": "text-embedding-3-large",
         "NM_MATTER_KEY": KEY,

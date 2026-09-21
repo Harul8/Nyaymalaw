@@ -7,7 +7,7 @@ Feature: F-A-02 Register a private account with email and password
     Then the register card has exactly an email field, a password field, a retype-password field and two privacy boxes
     And the register card has a Register button and a Back to sign in link
     And the register card states the password rules
-    And the register card carries no logo and no other text than the privacy notice and its boxes
+    And the register card carries only account details, delivery status and confirmation navigation
 
   Scenario: Email and password create an account without an invitation
     When a visitor registers "new@example.com" with a valid password typed twice
@@ -28,5 +28,5 @@ Feature: F-A-02 Register a private account with email and password
   Scenario: Registering an email twice never replaces the first password
     Given a registered advocate "reader@example.com"
     When a visitor registers "READER@example.com" again with a different password
-    Then registration is refused without saying the account exists
+    Then the response does not say whether the account exists
     And the original password still signs in

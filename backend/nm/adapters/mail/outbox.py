@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -35,6 +36,7 @@ from nm.domain.traceability import implements
 class FileOutbox:
     #: Read by `/api/health`. A queued message is not a delivered one.
     delivers_to_mailbox = False
+    delivery_mode = 'local_outbox_only'
 
     def __init__(self, root: str | Path, key: str | None = None) -> None:
         # Created at the first send, not here: composing an application that
@@ -48,17 +50,24 @@ class FileOutbox:
         if not isinstance(message, MailMessage):
             raise TypeError("the outbox accepts only MailMessage")
         queued_at = datetime.now(timezone.utc)
+        # Some hosts return the same wall time for distinct successive sends.
+        # A process-shared monotonic counter orders those ties; a random name
+        # cannot identify the newest code/link. Persist it through restart.
+        queued_order = time.perf_counter_ns()
         payload = json.dumps({
             "to": message.to,
             "subject": message.subject,
             "text": message.text,
             "purpose": message.purpose,
             "queued_at": queued_at.isoformat(),
+            "queued_order": queued_order,
         }).encode("utf8")
         name = f"{queued_at.strftime('%Y%m%dT%H%M%S%f')}-{secrets.token_hex(8)}.nm"
         self._outbox.mkdir(parents=True, exist_ok=True)
         with (self._outbox / name).open("xb") as handle:
             handle.write(self._cipher.encrypt(payload))
+            handle.flush()
+            os.fsync(handle.fileno())
 
     def messages_for(self, address: str) -> tuple[dict, ...]:
         """Every readable queued message for one address, oldest first.
@@ -72,7 +81,8 @@ class FileOutbox:
             message = self._open(path)
             if message is not None and canonical_id(message.get("to")) == wanted:
                 found.append(message)
-        return tuple(found)
+        return tuple(sorted(found, key=lambda item: (
+            item.get('queued_at', ''), item.get('queued_order', 0))))
 
     def unreadable(self) -> int:
         return sum(1 for path in self._outbox.glob("*.nm") if self._open(path) is None)

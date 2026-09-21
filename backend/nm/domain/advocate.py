@@ -544,6 +544,8 @@ class Session:
     #: The last time this session was used, or `None` when it has not been used
     #: since it was issued. F-A-12: the idle limit runs from here.
     last_active_at: datetime | None = None
+    client_label: str = ''
+    source: str = ''
 
     def __post_init__(self) -> None:
         for name in ("token_fingerprint", "advocate_id", "device"):
@@ -558,6 +560,11 @@ class Session:
         """When it stops working if nothing uses it again."""
         return ((self.last_active_at or self.issued_at)
                 + timedelta(minutes=SESSION_IDLE_MINUTES))
+
+    @property
+    def reference(self) -> str:
+        """Public management handle, distinct from the authentication fingerprint."""
+        return token_fingerprint(f"session-control:{self.token_fingerprint}")
 
     def live_at(self, now: datetime) -> bool:
         return self.why_not(now) is None
@@ -583,7 +590,8 @@ class Session:
 
 
 def open_session(advocate_id: str, device: str, now: datetime,
-                 hours: int = SESSION_HOURS) -> tuple[str, Session]:
+                 hours: int = SESSION_HOURS, *, client_label: str = '',
+                 source: str = '') -> tuple[str, Session]:
     """Returns the token ONCE, and a session that cannot reproduce it."""
     token = new_token()
     return token, Session(
@@ -592,6 +600,8 @@ def open_session(advocate_id: str, device: str, now: datetime,
         device=device or "unknown-device",
         issued_at=now,
         expires_at=now + timedelta(hours=hours),
+        client_label=client_label,
+        source=source,
     )
 
 
@@ -661,3 +671,5 @@ class Enrolment:
     #: without the register card -- an operator enrolment or an invitation --
     #: which is recorded as having no consent rather than as having one.
     consent: Consent | None = None
+    mailbox_confirmed_at: datetime | None = None
+    activation_id: str | None = None

@@ -48,6 +48,9 @@ UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 #: and is BK-31's own follow-on work rather than something this packet closes.
 PRE_SESSION: dict[str, str] = {
     "/api/register": "no session minted; its own origin and bounded signup admission",
+    '/api/register/confirm': 'exact origin; bounded single-use code and flow; mints no session',
+    '/api/register/resend': 'exact origin; neutral reply and durable address/source admission',
+    '/api/register/cancel': 'exact origin; pending-flow secret; no active account change',
     "/api/password/forgot": (
         "mints no session; exact same-origin check, per-address and per-source "
         "request limits, and one answer for every address"),

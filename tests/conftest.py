@@ -225,6 +225,9 @@ def scripted_application_environment(monkeypatch):
 
     monkeypatch.setenv("NM_MATTER_KEY", KEY)
     monkeypatch.setenv("NM_MODEL_PROVIDER", "scripted")
+    # Synthetic profile explicitly rehearses mailbox proof in a sealed local
+    # outbox. Production registration remains disabled without real delivery.
+    monkeypatch.setenv('NM_PUBLIC_REGISTRATION', 'local-test')
     monkeypatch.setenv("NM_MODEL_ROUTINE", "scripted-1")
     monkeypatch.setenv("NM_EMBED_MODEL", "text-embedding-3-large")
     monkeypatch.delenv("NM_MODEL_API_KEY", raising=False)

@@ -743,6 +743,20 @@ main.single {
   outline: none;
 }
 
+.login fieldset {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  margin: 8px 0;
+  padding: 16px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.login fieldset input { width: 100%; min-width: 0; box-sizing: border-box; }
+.login fieldset legend { padding: 0 6px; font-weight: 600; }
+#confirm-code { font-size: 1.3rem; letter-spacing: .3em; }
+#confirm-resend { margin-top: 12px; }
+
 .login button.primary { margin-top: 18px; }
 .login button:disabled { cursor: wait; opacity: .6; }
 
@@ -1305,3 +1319,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .prep-list { margin: 0.25rem 0 0.75rem; padding-left: 1.1rem; }
 .prep-list li { font-size: 0.86rem; margin-bottom: 0.25rem; }
 .state.problem { color: var(--signal); border-color: var(--signal); }
+/* Protected local drafts use the same restrained account-state vocabulary. */
+.draft-recovery:empty, .draft-status:empty { display: none; }
+.draft-recovery { max-width: 72rem; margin: 1rem auto; padding: 0 1.25rem; }
+.draft-recovery button { margin: .25rem .5rem .25rem 0; }
+.draft-status { font-size: .82rem; line-height: 1.5; color: #52645e; margin: .5rem 0; }

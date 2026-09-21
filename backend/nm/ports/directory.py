@@ -59,7 +59,40 @@ class RegistrationUnavailable(RuntimeError):
     """Public signup cannot establish durable bounded admission; refuse it."""
 
 
+class SessionsUnavailable(RuntimeError):
+    """The complete session inventory could not be established."""
+
+
+class AuthenticationUnavailable(RuntimeError):
+    """Authentication controls could not be durably read or written."""
+
+
 class DirectoryPort(Protocol):
+    def begin_pending_registration(self, enrolment: Enrolment, now: datetime) -> dict:
+        """Hold a bounded inactive signup and return the internal mail challenge."""
+        ...
+
+    def resend_registration(self, email: str, now: datetime) -> str | None:
+        """An eligible challenge or no mail, without resetting its guess budget."""
+        ...
+
+    def cancel_pending_registration(self, email: str, flow: str, now: datetime) -> bool:
+        """Invalidate only the unconfirmed registration owned by this browser's flow."""
+        ...
+
+    def confirm_registration(self, email: str, code: str, flow: str,
+                             credential: Credential | None, now: datetime) -> AdvocateIdentity:
+        """Activate once after mailbox proof, refusing takeover/replay/expiry."""
+        ...
+
+    def device_draft_key(self, advocate_id: str, device: str) -> dict:
+        """Return a sealed-at-rest draft key for this authenticated account/device.
+
+        The edge validates the current session first. The key is not a login
+        credential and must never be persisted by the browser.
+        """
+        ...
+
     def admit_registration(self, email: str, source: str, now: datetime) -> Verdict:
         """Atomically count an admitted public attempt before deriving secrets.
 
@@ -100,6 +133,7 @@ class DirectoryPort(Protocol):
 
     def authenticate_and_open_session(
             self, advocate_id: str, password: str, device: str, now: datetime,
+            *, client_label: str = '', source: str = '',
             ) -> tuple[AdvocateIdentity, str] | None:
         """Authenticate and mint a session under the account mutation lock."""
         ...
@@ -126,7 +160,7 @@ class DirectoryPort(Protocol):
         ...
 
     def open_session(self, advocate_id: str, device: str,
-                     now: datetime) -> str:
+                     now: datetime, *, client_label: str = '', source: str = '') -> str:
         """Returns the token, once. It is never retrievable afterwards."""
         ...
 
@@ -139,13 +173,25 @@ class DirectoryPort(Protocol):
         device without re-authentication, and a session that travels between
         devices is exactly that restoration.
 
-        A live answer RECORDS ACTIVITY at `now`: the idle limit
-        (`SESSION_IDLE_MINUTES`, F-A-12) restarts from every request the session
-        is allowed to make, and never from one it is refused.
+        A read does not extend authority. Only explicitly reported user
+        activity renews the idle clock; polling and retries do not.
         """
         ...
 
-    def close_session(self, token: str, why: str) -> None:
+    def close_session(self, token: str, why: str) -> str:
+        ...
+
+    def sessions_for(self, advocate_id: str) -> tuple[Session, ...]:
+        """Own issued sessions, or SessionsUnavailable; never an incomplete success."""
+        ...
+
+    def close_selected_session(self, advocate_id: str, reference: str, why: str,
+                               *, except_token: str) -> str:
+        """Close only an owned non-current session; unknown/foreign references agree."""
+        ...
+
+    def touch_session(self, token: str, device: str, now: datetime) -> Session | None:
+        """Renew a still-live session following explicit user activity."""
         ...
 
     def identity(self, advocate_id: str) -> AdvocateIdentity | None:

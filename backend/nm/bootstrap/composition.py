@@ -69,6 +69,32 @@ def build_model(config: ModelConfig) -> ModelPort:
     raise RuntimeError(f"no adapter registered for provider {provider!r}")
 
 
+def build_mail(settings, root, key, gate):
+    """Disabled unless both delivery and NM's processor policy admit Gmail.
+
+    This runtime currently admits local processors only. Enabling a flag alone
+    must not approve Google or transfer any account data to it.
+    """
+    from nm.adapters.mail.gmail import GMAIL_PROCESSOR, MAIL_CLASSES, DisabledMail, GmailMail
+
+    provider = settings.get('NM_MAIL_PROVIDER', 'local-outbox')
+    delivery = settings.get('NM_MAIL_DELIVERY', 'disabled')
+    if delivery not in {'disabled', 'enabled'}:
+        raise ValueError('Unknown account-mail delivery setting.')
+    if provider == 'local-outbox':
+        if delivery == 'enabled':
+            raise ValueError('A local outbox cannot enable real email delivery.')
+        return FileOutbox(root, key=key), OUTBOX_PROCESSOR
+    if provider != 'gmail':
+        raise ValueError('Unknown account-mail provider.')
+    if delivery == 'disabled':
+        return DisabledMail(), OUTBOX_PROCESSOR
+    gate.permit(Sink.MAIL, GMAIL_PROCESSOR, MAIL_CLASSES)
+    adapter = GmailMail(settings.get('NM_MAIL_SENDER', ''),
+                        Path(settings.get('NM_GMAIL_TOKEN_FILE', '')), gate, enabled=True)
+    return adapter, GMAIL_PROCESSOR
+
+
 class Application:
     def __init__(self, *, root: Path | None = None, model: ModelPort | None = None,
                  store=None, evidence=None, search=None,
@@ -150,12 +176,13 @@ class Application:
         # This build admits the sealed local outbox and nothing else: a real
         # mail provider is an external recipient, and the inventory refuses it
         # until an approval exists. The outbox shares the matter key and root.
+        mail_adapter, mail_processor = ((mail, OUTBOX_PROCESSOR) if mail is not None else
+                                       build_mail(settings, settings.get('NM_MATTER_STORE')
+                                                  or self.root / '.nm', key, self._gate))
         self.mail: MailPort = PolicedPort(
-            inner=mail or FileOutbox(
-                settings.get("NM_MATTER_STORE") or (self.root / ".nm"),
-                key=key),
+            inner=mail_adapter,
             gate=self._gate, port=MailPort, sink=Sink.MAIL,
-            processor_id=OUTBOX_PROCESSOR,
+            processor_id=mail_processor,
             data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
         # DICTATION, POLICED LIKE EVERY OTHER DESTINATION. Implementation Plan
         # F-C-02. A dictated brief is the client's instructions in the
@@ -376,10 +403,12 @@ class Application:
             # a delivered one, and an installation that writes reset links to a
             # local outbox must say so here rather than let a locked-out
             # advocate wait for an email that no mailbox will receive.
-            "account_mail": ("delivered to mailboxes"
+            "account_mail": ("mailbox transport enabled -- receipt not verified"
                              if getattr(self.mail, "delivers_to_mailbox", False)
-                             else "LOCAL OUTBOX ONLY -- reset links are not "
-                                  "delivered to a mailbox"),
+                             else ('LOCAL OUTBOX ONLY -- account messages are not '
+                                   'delivered to a mailbox'
+                                   if getattr(self.mail, 'delivery_mode', '') == 'local_outbox_only'
+                                   else 'DISABLED -- no account messages are sent')),
             # WHETHER THE MIC CAN WORK, before an advocate presses it and finds
             # out (F-C-02). Read from the adapter; the model is never loaded to
             # answer.

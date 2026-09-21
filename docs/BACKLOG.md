@@ -7806,6 +7806,150 @@ missing silently (**B-125**), the duplicated section list (**BK-6**).
 | every `_SCRIPTED_*` in `adapters/model/scripted.py` | the test double. Being scenario-shaped is what a double IS. |
 | feature ids (`D5`, `C7`…), enum values, format fragments | vocabulary owned by the enums and checked by `trace`. |
 
+## Arrive implementation record — 21 September 2026
+
+Owner: BK-31 (account access), with BK-40 (session/draft separation) and
+BK-86 (authentication assurance). Requirements: the product owner's
+`Nyaymalaw_Implementation_Plan.xlsx`, Before Build A5:J70. Column A is
+preserved; B–J make the current journey executable without changing other phases.
+The current request adopts this workbook's Arrive outcome over older conflicting
+registration/recovery descriptions. Historical evidence is not current proof.
+
+Start: implementation authorised by the product owner on 21 September.
+Ordinary account/matter access remains independent of professional approval.
+Build the six-digit confirmation, recovery, profile, session, protected draft,
+account-control and exit paths through the server and real page. Use one owned
+mechanism per failure family, including replay, concurrent updates and late UI
+responses. Preserve saved matters and unrelated ongoing work.
+
+Planned verification: targeted domain/served-API negatives, browser exploration
+with synthetic advocates and material, restart/re-entry, wrong-account access,
+offline/error handling and regression/gate checks. Browser/API exploration must
+supplement predefined scripts. Record actual tested versions and unrun checks.
+No paid model/legal evaluation is needed to test account mechanics.
+
+Boundaries: owner explicitly instructed on 21 September to build email integration
+but keep real delivery disabled. Local outbox proof is not mailbox receipt; public
+signup stays gated until real delivery is ready. Later SMS/MFA and lost-channel
+policy, qualified notice/retention/rights decisions, production operation and
+actual device-restart proof remain distinct obligations. No compliance or release
+sign-off is implied by engineering completion.
+
+Initial measured gaps: registration directly enrolls an active account without
+mailbox confirmation; draft state lives in page memory. Code-review-graph was
+rebuilt (520 files), but semantic queries returned `search_mode: none`; lexical
+graph queries and direct source search are the documented fallback. A missing
+graph result is not a finding of missing code.
+
+Build/Test/Sign-off: open. This record does not promote prior evidence to PASS.
+
+Owner clarification, 21 September: the agreement is accepted **at registration
+only**. Do not introduce another agreement prompt or acceptance gate when an
+advocate creates, opens or resumes a matter. This clarifies the first-use wording
+in Before Build row 25; it does not supply or approve missing agreement text.
+
+Implementation checkpoint (not phase completion): six-digit pending-account
+confirmation, expiry/replay/guess limits, sealed pending records, bounded resend,
+owned pending cancellation for email correction, atomic account publication and
+interrupted-activation reconciliation are implemented. Gmail's TLS/OAuth transport
+has offline contract tests; real delivery remains disabled and external processor
+approval cannot be substituted with a configuration flag. Public signup requires
+real delivery or the explicitly synthetic local-outbox rehearsal profile.
+
+Protected same-device drafts now use authenticated browser encryption with a
+server-held account/device key; variants from concurrent tabs remain separate.
+The saved retry envelope includes the matter-opening request identity. A failed
+checkpoint prevents dispatch; a confirmed submission retires only its writer's
+draft. Expiry remains 72 hours from the last edit, not from recovery. Ten storage
+counterexamples execute through Class A (Node required, never a vacuous skip).
+
+Live exploratory observations: the pending synthetic account received 401 on
+login and matter access; confirmation returned 200 once, then 400 on replay, and
+did not sign the account in. Browser sign-in reached the new account's labelled
+private workspace. A separate browser reload restored all three typed intake
+fields. Layout review found and fixed cramped confirmation password fields and
+a draft-save message hidden during intake. These are observations on the local
+rehearsal, **not** a current whole-phase browser certificate or mailbox proof.
+
+Session work in progress: passive reads no longer refresh idle authority;
+explicit activity returns a durable server-confirmed window capped by absolute
+expiry. Deleted accounts cannot continue through existing session cookies.
+Unreadable guessing controls now refuse admission. Sign-out records a non-secret
+pending-retirement marker so reload cannot silently reopen an unconfirmed logout.
+Regression selection, broader profile/account controls, final browser validation
+and full-gate reconciliation remain open. No evidence or delivery status promoted.
+
+Further implementation and verification, 21 September:
+
+- Session inventory now refuses an incomplete read. Individual revocation uses an
+  owned management reference distinct from authentication credentials, leaves the
+  current/other unselected sessions alone, and supports an idempotent retry.
+  Session records are atomically replaced and flushed; interrupted revocation
+  reports uncertainty instead of destroying the old record or claiming closure.
+  New sessions carry coarse client-reported browser/platform labels and the actual
+  connection source, explicitly not verified identity or location. Legacy missing
+  descriptions remain labelled not recorded. Dates use the same local presentation.
+- The old fail-open limiter test was changed to the stronger A.4.3 requirement:
+  unavailable/unwritable/corrupt guessing controls refuse new authentication with
+  503 and Retry-After, while existing sessions remain usable. Failure writes are
+  flushed and expose a safe refusal on failure. This is a documented policy
+  migration, not removal of the negative control. Concurrent source-wide admission
+  remains a separate assurance obligation; these changes do not prove a complete
+  distributed abuse-control design.
+- A regression run exposed equal wall-clock timestamps in two queued reset emails.
+  Random filename order selected the wrong newest message. A deterministic frozen-
+  clock/reversed-suffix test failed before the fix. The sealed outbox now retains a
+  high-resolution monotonic tie-breaker, and the same test passes after restart.
+  This orders equal recorded wall times; it does not claim to recover lost legacy
+  ordering or establish causal order across different hosts.
+- Browser exploration against the isolated local rehearsal restored the latest
+  synthetic intake after service restart and after closing/reopening its tab.
+  Recovery now displays the original checkpoint and expiry without extending it.
+  A late key import belongs to its own session generation and cannot lock a newer
+  account's vault. A real device reboot remains unrun.
+- A self-registered synthetic advocate, with professional approval still unapproved,
+  opened one owned matter, saw it in My work and reopened it without any additional
+  agreement. Another live client for that account was ended using the browser's
+  individual-session action; that same client's next session request returned 401
+  while the current browser continued to work. No real client material was used.
+
+Offline delivery setup: `NM_MAIL_PROVIDER=gmail` with `NM_MAIL_DELIVERY=disabled`
+constructs a disabled transport and does not read credentials or contact Google.
+Future enablement additionally needs adopted processor authority, a configured
+HTTPS origin/sender and an owner-managed absolute `NM_GMAIL_TOKEN_FILE` outside
+the repository. The adapter reads a short-lived OAuth access token on each send;
+token acquisition/refresh, secret-file permissions and mailbox receipt are not
+established by mocked transport tests. No credentials or enablement flags were set.
+
+Verification record: focused suites and live observations are supplemental, not
+canonical whole-phase evidence. The pre-close regression selection passed 293
+tests; follow-up security-impact and final authentication selections passed 112
+and 78 respectively (overlapping populations, not additive totals). Ruff, JavaScript
+syntax and layer checks passed. The final combined selection passed **415 tests in
+171.51 seconds**, with zero failures. It is a selected Arrive/impact population,
+not the full Class-A population. Its local execution report is
+`development_environment/runs/arrive-live/combined-results.xml`. Runtime sources
+were unchanged across that run: 186 Python/JS/HTML/CSS files under `backend/nm`
+and `frontend`, runtime-only SHA-256
+`6575bf5943e90735be951337f7903d759be57284a9459257900d2b57eea75e1e`
+(ordered repository-relative path bytes followed by each file's SHA-256 bytes).
+Verification ran on the working tree based on `474f917`. The owner subsequently
+requested this partial checkpoint be committed and pushed before work on Open a
+matter; that request does not close the outstanding acceptance obligations below.
+The backlog YAML indentation introduced during this work was caught and
+repaired before close-out. Lint still refuses 20 issues: stale Class-A and 18 stale
+browser references, plus the already-at-HEAD BK-76-AC2 reference to a removed hook
+test. No reference was silently changed to an unrelated passing test, and no stale
+certificate was promoted.
+
+Still open before Arrive can be called complete: profile editing and concurrent
+updates; verified address/password change and lost-mailbox support; account rights,
+security history and qualified closure/retention handling; invited/legacy mailbox
+and registration-acceptance treatment; approved bilingual legal wording; registration
+of the expanded acceptance population; whole-journey negative/resilience/accessibility
+coverage and canonical gate/evidence refresh. Later SMS/MFA and real delivery remain
+separately deferred. This checkpoint is **partial implementation**, not release sign-off.
+
 ## BK-93 — opening-route journey and safe risk handoff
 
 Registered 12 September 2026 after the a3d9c47 conformance review found real

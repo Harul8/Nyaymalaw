@@ -214,7 +214,7 @@ def test_a_session_expires(tmp_path):
     at = now
     while at + timedelta(minutes=29) < now + timedelta(hours=12):
         at += timedelta(minutes=29)
-        assert d.session(token, "dev", at) is not None, at - now
+        assert d.touch_session(token, "dev", at) is not None, at - now
     assert now + timedelta(hours=12) - at < timedelta(minutes=SESSION_IDLE_MINUTES), (
         "the last use is too old: this would prove the idle limit, not the expiry")
     assert d.session(token, "dev", now + timedelta(hours=12)) is None
@@ -230,9 +230,9 @@ def test_a_session_left_untouched_for_the_idle_limit_stops_working(tmp_path):
     token = d.open_session("adv_1", "dev", now)
     limit = timedelta(minutes=SESSION_IDLE_MINUTES)
 
-    assert d.session(token, "dev", now + limit - timedelta(seconds=1)) is not None
+    assert d.touch_session(token, "dev", now + limit - timedelta(seconds=1)) is not None
     used = now + limit - timedelta(seconds=1)
-    assert d.session(token, "dev", used + limit - timedelta(seconds=1)) is not None
+    assert d.touch_session(token, "dev", used + limit - timedelta(seconds=1)) is not None
     used += limit - timedelta(seconds=1)
     assert d.session(token, "dev", used + limit) is None
 
@@ -246,7 +246,7 @@ def test_using_the_session_starts_the_idle_limit_again(tmp_path):
     step = timedelta(minutes=SESSION_IDLE_MINUTES - 1)
 
     for n in range(1, 6):
-        assert d.session(token, "dev", now + step * n) is not None, n
+        assert d.touch_session(token, "dev", now + step * n) is not None, n
     assert d.session(token, "dev",
                      now + step * 5 + timedelta(minutes=SESSION_IDLE_MINUTES)) is None
 

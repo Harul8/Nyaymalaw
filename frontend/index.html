@@ -125,6 +125,7 @@
        retype password, Register -- and the password rules, so nobody is
        refused without knowing why. -->
   <form id="register" class="login" hidden autocomplete="on">
+    <p id="registration-availability" role="status" aria-live="polite">Checking registration availability…</p>
     <label for="reg-email">Email <span class="req" aria-hidden="true">*</span></label>
     <input id="reg-email" name="email" type="email" required maxlength="254"
            autocomplete="email" autocapitalize="none" spellcheck="false">
@@ -195,12 +196,52 @@
 
     <button type="submit" class="primary wide" id="register-go">Register</button>
     <div class="login-alt"><a href="#" id="show-login">Back to sign in</a></div>
+    <div class="login-alt"><a href="#" id="show-confirm">Already have a confirmation code?</a></div>
 
     <p class="login-foot">
       <span class="req" aria-hidden="true">*</span> required. The password must be at
       least 8 characters and contain an upper-case letter, a lower-case
       letter, a numeral and a special character.
     </p>
+  </form>
+
+  <form id="confirm-email" class="login" hidden autocomplete="on">
+    <h2>Confirm your email</h2>
+    <p id="confirmation-detail" role="status" aria-live="polite">
+      Enter the six-digit code sent to your email. Your account is not active yet.
+    </p>
+    <label for="confirm-address">Email</label>
+    <input id="confirm-address" name="email" type="email" required maxlength="254"
+           autocomplete="email" autocapitalize="none" spellcheck="false">
+    <label for="confirm-code">Six-digit code</label>
+    <input id="confirm-code" name="code" type="text" inputmode="numeric"
+           autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required>
+    <p>The code expires after 15 minutes and allows five attempts.
+      Check spam if it has not arrived. Resending does not extend an active code.</p>
+    <fieldset id="confirmation-passwords" hidden>
+      <legend>Choose your password</legend>
+      <p>After reopening this page or switching browsers, choose your own password to finish safely.
+        At least 8 characters, including an upper-case letter, a lower-case letter, a number
+        and a special character.</p>
+      <label for="confirm-password">New password</label>
+      <div class="pw-wrap">
+        <input id="confirm-password" type="password" autocomplete="new-password"
+               minlength="8" maxlength="1024">
+        <button type="button" class="pw-eye" data-for="confirm-password"
+                aria-label="Show new password" aria-pressed="false">&#128065;</button>
+      </div>
+      <label for="confirm-password2">Retype new password</label>
+      <div class="pw-wrap">
+        <input id="confirm-password2" type="password" autocomplete="new-password"
+               minlength="8" maxlength="1024">
+        <button type="button" class="pw-eye" data-for="confirm-password2"
+                aria-label="Show retyped new password" aria-pressed="false">&#128065;</button>
+      </div>
+    </fieldset>
+    <button id="confirm-go" type="submit" class="primary wide">Confirm email</button>
+    <button id="confirm-resend" type="button" class="wide">Request the code again</button>
+    <div class="login-alt"><a href="#" id="confirm-correct">Correct email / start again</a></div>
+    <div class="login-alt"><a href="#" id="confirm-signin">Back to sign in</a></div>
   </form>
 
   <!-- WHAT HAPPENED, ON ITS OWN CARD. The result of a registration used to be
@@ -294,7 +335,8 @@
 
 <!-- F-A-12. THE WARNING BEFORE AN IDLE SIGN-OUT, two minutes ahead. Any use of
      the page hides it and starts the thirty minutes again. -->
-<div id="idle-warning" class="idle-warning" role="alert" hidden></div>
+  <div id="idle-warning" class="idle-warning" role="alert" hidden></div>
+  <div id="draft-recovery" class="draft-recovery" aria-live="polite"></div>
 <div id="rehearsal-warning" class="rehearsal-warning" role="status" hidden>Local rehearsal · Responses are scripted test output, not legal advice. Use synthetic information only.</div>
 
 <!-- ================== F-A-18 — HOME ==================
@@ -310,6 +352,7 @@
 </main>
 
 <main id="pane-advise" hidden>
+  <p id="draft-status" class="draft-status" role="status"></p>
   <!-- BK-32. THE WAY TO THE MATTER LIST BELOW 820px. The rail is a drawer at
        narrow widths and `#back` returns to the list only from inside a matter,
        so an advocate on a phone could work the matter they were in and reach
@@ -788,10 +831,13 @@
     <h2 id="sessions-title">Your signed-in devices</h2></div>
     <button type="button" id="sessions-close" class="ghost" aria-label="Close sessions">Close</button></div>
   <p>Review activity on your account. Ending other sessions leaves this device signed in.</p>
+  <p class="quiet">Browser labels are reported by the client, not proof of identity.
+    The connection source is a network address, not a verified location.</p>
   <div id="sessions-body" aria-live="polite"></div>
   <div id="sessions-action-state" role="status"></div>
   <button type="button" id="sessions-revoke" class="ghost" hidden>End other sessions</button>
 </dialog>
+<script src="/static/draft-vault.js"></script>
 <script src="/static/app.js"></script>
 <script src="/static/matter-workspace.js"></script>
 <script src="/static/intake-materials.js"></script>

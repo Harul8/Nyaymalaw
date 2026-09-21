@@ -70,7 +70,7 @@ from nm.edge.projections import (
     matter_list_projection,
 )
 from nm.edge.uploads import UploadRefused
-from nm.ports.directory import AccountBusy
+from nm.ports.directory import AccountBusy, AuthenticationUnavailable
 from nm.ports.store import StaleWrite
 
 #: How many surfaced cases one round asks the identity index about. Bounded,
@@ -115,6 +115,14 @@ async def invalid_request(request: Request, exc: RequestValidationError):
 # Explicit framework registration makes this callback's production consumer
 # visible to the same reference sweep as ordinary called guards.
 app.add_exception_handler(RequestValidationError, invalid_request)
+
+
+async def unavailable_authentication(_request: Request, _exc: AuthenticationUnavailable):
+    return JSONResponse(status_code=503, headers={'Retry-After': '60'}, content={
+        'detail': 'Account access is temporarily unavailable. Try again later.'})
+
+
+app.add_exception_handler(AuthenticationUnavailable, unavailable_authentication)
 
 
 def application():
@@ -271,7 +279,23 @@ def _device(device_cookie: str | None, user_agent: str | None) -> str:
         f"{device_cookie or ''}|{user_agent or ''}".encode("utf8")).hexdigest()
 
 
-def signed_in(nm_session: str | None = Cookie(default=None),
+def _client_label(user_agent: str | None) -> str:
+    """Coarse client-reported description for recognition, never access authority.
+
+    Do not retain the full header or infer location from it.
+    """
+    agent = (user_agent or '')[:1024]
+    browser = next((name for marker, name in (
+        ('Edg/', 'Edge'), ('Firefox/', 'Firefox'), ('Chrome/', 'Chrome'),
+        ('Safari/', 'Safari')) if marker in agent), 'Other browser or client')
+    platform = next((name for marker, name in (
+        ('Android', 'Android'), ('iPhone', 'iPhone'), ('iPad', 'iPad'),
+        ('Windows', 'Windows'), ('Macintosh', 'macOS'), ('Linux', 'Linux'))
+        if marker in agent), '')
+    return f'{browser} on {platform}' if platform else browser
+
+
+def signed_in(request: Request, nm_session: str | None = Cookie(default=None),
               nm_device: str | None = Cookie(default=None),
               user_agent: str | None = Header(default=None)) -> str:
     """The advocate id, or 401. NEVER a default and never a fallback.
@@ -284,8 +308,9 @@ def signed_in(nm_session: str | None = Cookie(default=None),
     """
     session = application().directory.session(
         nm_session or "", _device(nm_device, user_agent), utcnow())
-    if session is None:
+    if session is None or application().directory.identity(session.advocate_id) is None:
         raise HTTPException(status_code=401, detail="not signed in")
+    request.state.account_session = session
     return session.advocate_id
 
 
@@ -4373,13 +4398,13 @@ def _admit_auth_attempt(directory, advocate_id, source, now, *, action: str) -> 
     """One admission boundary for every failure-counted authentication door.
 
     Counters and thresholds remain owned by the directory and attempts policy.
-    The existing controlled-local availability policy remains explicit: an
-    unreadable counter cannot enforce and health reports it as not running.
+    An unreadable counter cannot enforce guessing limits and refuses admission.
     No refused retry is itself a failure, so knocking cannot extend a pause.
     """
     counts = directory.failures_since(advocate_id, source, now - attempts.WINDOW)
-    if counts is None:
-        return
+    if counts is None or not directory.limiter_available():
+        raise HTTPException(503, 'Account access is temporarily unavailable. Try again later.',
+                            headers={'Retry-After': '60'})
     seen = attempts.verdict(counts[0], counts[1], now)
     if not seen.allowed:
         retry_after = max(1, ceil(seen.retry_after.total_seconds()))
@@ -4424,6 +4449,9 @@ def register(body: Registration, request: Request,
     source = request.client.host if request.client else "unknown-source"
     directory = application().directory
     invited = x_enrolment_invitation is not None
+    if not invited and not _public_registration_available():
+        raise HTTPException(503, 'Public registration is not available while email delivery '
+                            'is disabled. Existing accounts can still sign in.')
     invitation = (x_enrolment_invitation or "").strip()
     rate_key = f"invitation:{token_fingerprint(invitation)}"
     if invited:
@@ -4470,16 +4498,22 @@ def register(body: Registration, request: Request,
                                                    consent=consent)
         else:
             identity = AdvocateIdentity(id=email, name=email, email=email)
-            directory.enrol(Enrolment(
+            pending = directory.begin_pending_registration(Enrolment(
                 identity=identity, credential=credential, created_at=now,
-                consent=consent))
+                consent=consent), now)
+            _send_confirmation(email, pending['code'])
+            return JSONResponse(status_code=202, content={
+                'state': 'confirmation_required', 'email': email,
+                'flow': pending['flow'], 'detail': _CONFIRMATION_REQUESTED,
+                'delivery': 'mailbox' if getattr(application().mail, 'delivers_to_mailbox', False)
+                else 'local_outbox_only'})
     except InvitationRefused as exc:
         directory.note_failure(rate_key, source, now)
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except AlreadyEnrolled as exc:
         raise HTTPException(status_code=409, detail=(
             str(exc) if invited else _REGISTRATION_REFUSED)) from exc
-    except OSError as exc:
+    except (OSError, RegistrationUnavailable) as exc:
         raise HTTPException(503, _REGISTRATION_UNAVAILABLE,
                             headers={"Retry-After": "60"}) from exc
 
@@ -4490,6 +4524,129 @@ def register(body: Registration, request: Request,
         "advocate_id": identity.id,
         "name": identity.name,
     }
+
+
+_CONFIRMATION_REQUESTED = (
+    'If this address is eligible, a confirmation code has been requested. '
+    'Enter the six-digit code within 15 minutes. You have five attempts. '
+    'Already registered? Return to Sign in or Forgot password.')
+
+
+def _public_registration_available() -> bool:
+    settings = application().environment
+    mode = settings.get('NM_PUBLIC_REGISTRATION', 'disabled')
+    if mode == 'local-test':
+        return (settings.get('NM_MODEL_PROVIDER') == 'scripted'
+                and getattr(application().mail, 'delivery_mode', '') == 'local_outbox_only')
+    return (mode == 'enabled' and bool(getattr(application().mail, 'delivers_to_mailbox', False))
+            and bool(settings.get('NM_PUBLIC_URL', '').startswith('https://')))
+
+
+@app.get('/api/account-capabilities')
+def account_capabilities() -> dict:
+    from nm.domain.account_confirmation import CODE_ATTEMPTS, CODE_MINUTES, RESEND_SECONDS
+    return {'public_registration': _public_registration_available(),
+            'mail_delivery': 'mailbox' if getattr(application().mail, 'delivers_to_mailbox', False)
+            else getattr(application().mail, 'delivery_mode', 'disabled'), 'confirmation_digits': 6,
+            'confirmation_minutes': CODE_MINUTES, 'confirmation_attempts': CODE_ATTEMPTS,
+            'resend_seconds': RESEND_SECONDS}
+
+
+def _send_confirmation(email: str, code: str | None) -> None:
+    if code is None:
+        return
+    from nm.domain.mail import confirmation_mail
+    try:
+        application().mail.send(confirmation_mail(email, code))
+    except (OSError, RuntimeError) as exc:
+        _mail_log.error('confirmation not queued: %s', type(exc).__name__)
+        raise HTTPException(503, 'Confirmation delivery could not be confirmed. '
+                            'Wait before requesting another code.') from None
+
+
+class ConfirmEmail(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    email: str = Field(min_length=1, max_length=320)
+    code: str = Field(pattern=r'^[0-9]{6}$')
+    flow: str = Field(default='', max_length=128)
+    password: str | None = Field(default=None, max_length=_NEW_PASSWORD_MAX)
+    password_again: str | None = Field(default=None, max_length=_NEW_PASSWORD_MAX)
+
+
+class PendingCancellation(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    email: str = Field(min_length=1, max_length=320)
+    flow: str = Field(min_length=1, max_length=128)
+
+
+@app.post('/api/register/cancel', dependencies=[Depends(registration_origin)])
+def cancel_registration(body: PendingCancellation, request: Request) -> dict:
+    from nm.domain.advocate import registration_email
+    from nm.ports.directory import RegistrationUnavailable
+    try:
+        email = registration_email(body.email)
+        directory = application().directory
+        source = request.client.host if request.client else 'unknown-source'
+        admitted = directory.admit_registration(email, source, utcnow())
+        if not admitted.allowed:
+            raise HTTPException(429, 'Too many requests. Wait before trying again.')
+        return {'cancelled': application().directory.cancel_pending_registration(
+            email, body.flow, utcnow())}
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
+    except (OSError, RegistrationUnavailable) as exc:
+        raise HTTPException(503, 'The pending registration could not be changed.') from exc
+
+
+@app.post('/api/register/confirm', dependencies=[Depends(registration_origin)])
+def confirm_email(body: ConfirmEmail, request: Request) -> dict:
+    from nm.domain.account_confirmation import ConfirmationRefused
+    from nm.domain.advocate import enrol, registration_email
+    from nm.ports.directory import RegistrationUnavailable
+    try:
+        email = registration_email(body.email)
+        directory = application().directory
+        source = request.client.host if request.client else 'unknown-source'
+        _admit_auth_attempt(directory, 'confirm:' + email, source, utcnow(), action='confirmation')
+        credential = None
+        if body.password is not None:
+            if body.password != body.password_again:
+                raise ValueError('The two passwords do not match. Nothing was changed.')
+            credential = enrol(body.password)
+        try:
+            identity = directory.confirm_registration(
+                email, body.code, body.flow, credential, utcnow())
+        except ConfirmationRefused:
+            directory.note_failure('confirm:' + email, source, utcnow())
+            raise
+    except (ValueError, ConfirmationRefused) as exc:
+        raise HTTPException(400, str(exc)) from None
+    except (OSError, RegistrationUnavailable) as exc:
+        raise HTTPException(503, 'Confirmation is unavailable. Wait and try again.') from exc
+    return {'state': 'confirmed', 'advocate_id': identity.id,
+            'detail': 'Email confirmed. Sign in with your password.'}
+
+
+@app.post('/api/register/resend', dependencies=[Depends(registration_origin)], status_code=202)
+def resend_confirmation(body: ForgotPassword, request: Request) -> dict:
+    from nm.domain.advocate import registration_email
+    from nm.ports.directory import RegistrationUnavailable
+    try:
+        email = registration_email(body.email)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
+    directory = application().directory
+    source = request.client.host if request.client else 'unknown-source'
+    try:
+        admitted = directory.admit_registration(email, source, utcnow())
+        if not admitted.allowed:
+            raise HTTPException(429, 'Too many requests. Wait before trying again.',
+                                headers={'Retry-After': str(max(
+                                    1, ceil(admitted.retry_after.total_seconds())))})
+        _send_confirmation(email, directory.resend_registration(email, utcnow()))
+    except (OSError, RegistrationUnavailable) as exc:
+        raise HTTPException(503, 'Confirmation is unavailable. Wait and try again.') from exc
+    return {'detail': _CONFIRMATION_REQUESTED}
 
 
 # ------------------------------------------------------- password reset ---
@@ -4506,6 +4663,11 @@ def public_origin(request: Request) -> None:
     for instance, from flooding strangers' inboxes with reset links.
     """
     _require_origin(request)
+
+
+def login_origin(request: Request) -> None:
+    """Refuse browser cross-origin login; credential-bearing API clients still work."""
+    _require_origin(request, allow_absent=True)
 
 
 def _public_base(request: Request) -> tuple[str, str]:
@@ -4628,7 +4790,7 @@ def reset_password(body: PasswordResetRequest, request: Request) -> dict:
     return {"reset": True, "sessions_ended": result.sessions_ended}
 
 
-@app.post("/api/login")
+@app.post("/api/login", dependencies=[Depends(login_origin)])
 @implements("A1")
 def login(body: Credentials, request: Request, response: Response,
           nm_device: str | None = Cookie(default=None),
@@ -4663,11 +4825,14 @@ def login(body: Credentials, request: Request, response: Response,
     device = _device(device_id, user_agent)
     try:
         opened = application().directory.authenticate_and_open_session(
-            body.advocate_id, body.password, device, now)
+            body.advocate_id, body.password, device, now,
+            client_label=_client_label(user_agent), source=source)
     except AccountBusy as exc:
         raise HTTPException(
             status_code=503,
             detail="Account access is changing. Try sign-in again in a moment.") from exc
+    except OSError as exc:
+        raise HTTPException(503, 'Sign-in could not be saved. Try again later.') from exc
     if opened is None:
         # 401 AND NOTHING ELSE. Not 404 for an unknown advocate and 401 for a
         # wrong password -- the status code is a message too.
@@ -4706,7 +4871,10 @@ def login(body: Credentials, request: Request, response: Response,
         # secure: it does not travel over an unencrypted hop at all.
         response.set_cookie(name, value, httponly=True, samesite="lax",
                             secure=secure,
-                            max_age=60 * 60 * 12, path="/")
+                            # Device identity survives the draft lifetime; it
+                            # grants no access without a separately live session.
+                            max_age=60 * 60 * (24 * 30 if name == "nm_device" else 12),
+                            path="/")
     # THE CSRF HALF, AND IT IS THE ONE COOKIE THAT MUST BE READABLE.
     #
     # `samesite=lax` already blocks a cross-site POST from carrying the session
@@ -4723,7 +4891,9 @@ def login(body: Credentials, request: Request, response: Response,
     return {"advocate": identity.as_dict(), "workspace": _workspace(identity),
             "professional_approval": _professional_status(
                 application().directory, identity, now),
-            "session_idle_minutes": SESSION_IDLE_MINUTES}
+            "session_idle_minutes": SESSION_IDLE_MINUTES,
+            'access_window': _access_window(application().directory.session(
+                token, _device(device_id, request.headers.get('user-agent')), now), now)}
 
 
 @app.post("/api/logout", dependencies=[CsrfProtected])
@@ -4765,6 +4935,7 @@ def sessions(advocate_id: Advocate,
     which device it is, and whether it is this one.
     """
     from nm.domain.advocate import token_fingerprint as _fp
+    from nm.ports.directory import SessionsUnavailable
 
     directory = application().directory
     if not hasattr(directory, "sessions_for"):
@@ -4777,13 +4948,23 @@ def sessions(advocate_id: Advocate,
 
     mine = _fp(nm_session or "")
     rows = []
-    for session in directory.sessions_for(advocate_id):
+    now = utcnow()
+    try:
+        listed = directory.sessions_for(advocate_id)
+    except (OSError, SessionsUnavailable) as exc:
+        raise HTTPException(503, 'Your complete session list could not be read. '
+                            'Try again; no sessions were changed.') from exc
+    for session in listed:
         rows.append({
+            'reference': session.reference,
+            'client_label': session.client_label or 'Client details not recorded',
+            'source': session.source or 'Not recorded',
             "device": session.device[:12],
             "issued_at": session.issued_at.isoformat(),
             "expires_at": session.expires_at.isoformat(),
-            "ended_because": session.ended_because,
-            "live": session.ended_because is None,
+            "ended_because": session.why_not(now),
+            "live": session.live_at(now),
+            'last_active_at': (session.last_active_at or session.issued_at).isoformat(),
             "this_one": session.token_fingerprint == mine,
         })
     return {"sessions": rows, "count": len(rows)}
@@ -4807,13 +4988,41 @@ def revoke_sessions(advocate_id: Advocate,
         raise HTTPException(
             status_code=501,
             detail="this deployment's directory cannot revoke sessions")
-    ended = directory.close_all_sessions(
-        advocate_id, "revoked by the advocate", except_token=nm_session or "")
+    from nm.ports.directory import SessionsUnavailable
+    try:
+        ended = directory.close_all_sessions(
+            advocate_id, "revoked by the advocate", except_token=nm_session or "")
+    except (OSError, SessionsUnavailable) as exc:
+        raise HTTPException(503, 'Revocation could not be confirmed. '
+                            'Some sessions may still be signed in; retry is safe.') from exc
     return {"ended": ended}
 
 
+class SelectedSession(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    reference: str = Field(pattern=r'^[0-9a-f]{64}$')
+
+
+@app.post('/api/sessions/revoke-one', dependencies=[CsrfProtected])
+def revoke_selected_session(body: SelectedSession, advocate_id: Advocate,
+                            nm_session: str | None = Cookie(default=None)) -> dict:
+    from nm.ports.directory import SessionsUnavailable
+    try:
+        outcome = application().directory.close_selected_session(
+            advocate_id, body.reference, 'revoked by the advocate',
+            except_token=nm_session or '')
+    except (OSError, SessionsUnavailable) as exc:
+        raise HTTPException(503, 'Session closure could not be confirmed. '
+                            'It may still be signed in; retry is safe.') from exc
+    if outcome == 'unknown':
+        raise HTTPException(404, 'That session is not available.')
+    if outcome == 'current':
+        raise HTTPException(409, 'Use Sign out to end your current session.')
+    return {'outcome': outcome}
+
+
 @app.get("/api/session")
-def whoami(advocate_id: Advocate) -> dict:
+def whoami(advocate_id: Advocate, request: Request) -> dict:
     """Who is signed in. 401 through the same dependency as everything else."""
     identity = application().directory.identity(advocate_id)
     if identity is None:
@@ -4824,7 +5033,39 @@ def whoami(advocate_id: Advocate) -> dict:
     directory = application().directory
     return {"advocate": identity.as_dict(), "workspace": _workspace(identity),
             "professional_approval": _professional_status(directory, identity, utcnow()),
-            "session_idle_minutes": SESSION_IDLE_MINUTES}
+            "session_idle_minutes": SESSION_IDLE_MINUTES,
+            'access_window': _access_window(request.state.account_session, utcnow())}
+
+
+def _access_window(session, now) -> dict:
+    if session is None:
+        raise HTTPException(401, 'not signed in')
+    until = min(session.idle_expires_at, session.expires_at)
+    return {'confirmed_at': now.isoformat(), 'valid_until': until.isoformat(),
+            'remaining_seconds': max(0, (until - now).total_seconds()),
+            'absolute_expires_at': session.expires_at.isoformat()}
+
+
+@app.post('/api/session/activity', dependencies=[CsrfProtected])
+def session_activity(advocate_id: Advocate, request: Request,
+                     nm_session: str | None = Cookie(default=None),
+                     nm_device: str | None = Cookie(default=None)) -> dict:
+    now = utcnow()
+    session = application().directory.touch_session(
+        nm_session or '', _device(nm_device, request.headers.get('user-agent')), now)
+    return {'access_window': _access_window(session, now)}
+
+
+@app.get("/api/drafts/key")
+def draft_key(advocate_id: Advocate, response: Response,
+              nm_device: str | None = Cookie(default=None)) -> dict:
+    """Unlock only this authenticated account's protected same-device drafts."""
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return application().directory.device_draft_key(advocate_id, nm_device or "")
+    except (OSError, ValueError, AccountBusy) as exc:
+        raise HTTPException(503, "Draft protection could not be opened. "
+                            "Unsent changes may not survive closing this page.") from exc
 
 
 # ------------------------------------------------------------------- static ---

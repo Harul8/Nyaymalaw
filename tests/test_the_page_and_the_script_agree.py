@@ -108,17 +108,27 @@ STYLE = re.sub(r"/\*.*?\*/", "", (WEB / "app.css").read_text(encoding="utf-8"),
                flags=re.S)
 
 
-def _z_index(selector: str) -> int:
-    """The `z-index` declared in the LAST rule for this selector.
+def _z_index(selector: str, style: str = STYLE) -> int:
+    """The LAST explicit z-index declaration for this exact selector.
 
     Read from the text rather than from a browser, so it runs in the class-A
     cadence. That is a real limit -- a cascade this cannot see could still
     bury the banner -- and it catches the case that actually happened.
     """
-    block = STYLE.rsplit(selector + " {", 1)[1].split("}", 1)[0]
-    found = re.search(r"z-index:\s*(\d+)", block)
-    assert found, f"{selector} declares no z-index"
-    return int(found.group(1))
+    blocks = re.findall(r'(?:^|[{}])\s*' + re.escape(selector) + r'\s*\{([^{}]*)\}',
+                        style, flags=re.M)
+    declarations = [found.group(1) for block in blocks
+                    if (found := re.search(r'z-index:\s*(-?\d+)', block))]
+    assert declarations, f"{selector} declares no z-index"
+    return int(declarations[-1])
+
+
+def test_stacking_check_preserves_inherited_value_and_catches_real_overrides():
+    base = '#gate {z-index:100;} @media(max-width:600px) { #gate {gap:1rem;} }'
+    assert _z_index('#gate', base) == 100
+    assert _z_index('#gate', base + '#gate {z-index:300;}') == 300
+    with pytest.raises(AssertionError):
+        _z_index('#gate', '#gate {gap:1rem;}')
 
 
 def test_the_build_banner_draws_above_the_gate():

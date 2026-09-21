@@ -22,6 +22,7 @@ the caller must not learn and exactly what an operator needs.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
@@ -59,8 +60,10 @@ from nm.domain.traceability import implements
 from nm.ports.directory import (  # noqa: F401
     AccountBusy,
     AlreadyEnrolled,
+    AuthenticationUnavailable,
     InvitationRefused,
     RegistrationUnavailable,
+    SessionsUnavailable,
 )
 
 # A public door must not grow an unbounded history even with many sources.
@@ -115,6 +118,60 @@ class _AccountClaim:
 
 @implements("A1")
 class FileDirectory:
+    def begin_pending_registration(self, enrolment: Enrolment, now: datetime) -> dict:
+        from nm.adapters.store.pending_accounts import PendingAccounts
+        return PendingAccounts(self).begin(enrolment, now)
+
+    def resend_registration(self, email: str, now: datetime) -> str | None:
+        from nm.adapters.store.pending_accounts import PendingAccounts
+        return PendingAccounts(self).resend(email, now)
+
+    def cancel_pending_registration(self, email: str, flow: str, now: datetime) -> bool:
+        from nm.adapters.store.pending_accounts import PendingAccounts
+        return PendingAccounts(self).cancel(email, flow, now)
+
+    def confirm_registration(self, email: str, code: str, flow: str,
+                             credential: Credential | None, now: datetime) -> AdvocateIdentity:
+        from nm.adapters.store.pending_accounts import PendingAccounts
+        return PendingAccounts(self).confirm(email, code, flow, credential, now)
+
+    def device_draft_key(self, advocate_id: str, device: str) -> dict:
+        """One stable, protected key per account/device; no client material here."""
+        from cryptography.fernet import InvalidToken
+
+        if self.identity(advocate_id) is None or not device:
+            raise ValueError("a current account and device are required")
+        if self._cipher.scheme != "fernet":
+            raise ValueError("authenticated draft protection is unavailable")
+        namespace = hashlib.sha256(
+            json.dumps([canonical_id(advocate_id), device]).encode("utf8")).hexdigest()
+        folder = self._root / "draft-keys"
+        folder.mkdir(exist_ok=True)
+        path = folder / f"{namespace}.nm"
+        claim = self._claim_account(advocate_id)
+        if claim is None:
+            raise AccountBusy("account access is already changing")
+        try:
+            if not path.exists():
+                # The key is never stored beside browser ciphertext. An expired
+                # session cannot retrieve it, even when that ciphertext remains.
+                sealed = self._cipher.encrypt(secrets.token_bytes(32))
+                with path.open("xb") as handle:
+                    handle.write(sealed)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+            try:
+                key = self._cipher.decrypt(path.read_bytes())
+            except InvalidToken as exc:
+                raise ValueError("draft protection is unreadable") from exc
+            if len(key) != 32:
+                raise ValueError("draft protection is unavailable")
+            return {"namespace": namespace,
+                    "key": base64.b64encode(key).decode("ascii"),
+                    "lifetime_hours": 72}
+        finally:
+            claim.release()
+
     def __init__(self, root: str | Path, key: str | None = None) -> None:
         self._root = Path(root)
         self._advocates = self._root / "advocates"
@@ -316,7 +373,7 @@ class FileDirectory:
         self._replace_advocate(path, blob)
 
     def _replace_advocate(self, path: Path, blob: dict) -> None:
-        """Replace one account record without exposing a partial JSON write."""
+        """Replace an account-control record without exposing a partial JSON write."""
         temporary = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
         try:
             with temporary.open("x", encoding="utf8") as handle:
@@ -348,6 +405,10 @@ class FileDirectory:
         # not. Implementation Plan F-A-09; DPDP Act 2023 s.6(10).
         if enrolment.consent is not None:
             blob["consent"] = enrolment.consent.as_dict()
+        if enrolment.mailbox_confirmed_at is not None:
+            blob['mailbox_confirmed_at'] = enrolment.mailbox_confirmed_at.isoformat()
+        if enrolment.activation_id is not None:
+            blob['activation_id'] = enrolment.activation_id
         # IN THE OPEN, DELIBERATELY (BK-22). The credential is an scrypt
         # hash with its salt and cost -- scrypt exists so that such a hash
         # can be stored where it can be read. Sealing it AS WELL made
@@ -356,29 +417,21 @@ class FileDirectory:
         #
         # Client material is not here and is not affected: matters,
         # transcripts and metrics keep the matter key.
-        created = False
+        temporary = path.with_name(f'.{path.name}.{secrets.token_hex(8)}.tmp')
         try:
-            # Exclusive creation owns the one-identity decision on disk. A
-            # prior `exists()` check left a last-writer-wins interval between
-            # the check and this write when two valid invitations arrived at
-            # different worker processes.
-            with path.open("x", encoding="utf8") as handle:
-                created = True
+            # Publish a complete, flushed record exclusively. Opening the
+            # final path for writing exposed partial accounts after a crash.
+            with temporary.open('x', encoding='utf8') as handle:
                 handle.write(json.dumps(blob, indent=2))
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.link(temporary, path)
         except FileExistsError as exc:
             raise AlreadyEnrolled(
                 f"{enrolment.identity.id} is already enrolled. Overwriting "
                 f"would replace a credential without anyone deciding to.") from exc
-        except Exception:
-            # A failed first write must not leave a corrupt record that reads
-            # as an enrolled advocate and locks out a corrected retry.
-            if created:
-                # A ROLLBACK, not housekeeping: the write is what failed, so
-                # nothing was delivered and the name must go. It still routes
-                # through `discard` so a failure here cannot replace the
-                # exception that says what actually went wrong.
-                discard(path)
-            raise
+        finally:
+            discard(temporary)
 
     # ----------------------------------------------- public signup admission ---
 
@@ -490,6 +543,7 @@ class FileDirectory:
 
     def authenticate_and_open_session(
             self, advocate_id: str, password: str, device: str, now: datetime,
+            *, client_label: str = '', source: str = '',
             ) -> tuple[AdvocateIdentity, str] | None:
         """Keep successful authentication and session issue on one generation."""
         if not self._advocate_path(advocate_id).exists():
@@ -523,7 +577,8 @@ class FileDirectory:
                     # removal is retried at the next sign-in.
                     self._note(identity.id,
                                "retired recovery-code material could not be removed")
-            token = self.open_session(identity.id, device, now)
+            token = self.open_session(identity.id, device, now,
+                                      client_label=client_label, source=source)
             return identity, token
         finally:
             claim.release()
@@ -812,17 +867,14 @@ class FileDirectory:
                        since: datetime) -> tuple[tuple, tuple] | None:
         """(this address's failures, this source's failures), or None.
 
-        NONE MEANS THE LIMITER COULD NOT RUN -- not that there were no
-        failures. The caller opens the door and reports it, because
-        refusing every sign-in would be a self-inflicted outage; what it
-        must not do is treat unreadable as clean, which is S1.
+        None means the limiter could not run, not that there were no failures.
+        New credential attempts must refuse admission until it is restored.
         """
         if not self._attempts.exists():
             return ((), ())
         try:
-            raw = self._attempts.read_text(encoding="utf8",
-                                           errors="replace")
-        except OSError:
+            raw = self._attempts.read_text(encoding="utf8")
+        except (OSError, UnicodeError):
             return None
 
         wanted = canonical_id(advocate_id)
@@ -831,12 +883,14 @@ class FileDirectory:
         for line in raw.splitlines():
             parts = line.split("\t")
             if len(parts) != 3:
-                continue
+                return None
             stamp, who, where = parts
             try:
                 when = datetime.fromisoformat(stamp)
             except ValueError:
-                continue
+                return None
+            if when.utcoffset() is None:
+                return None
             if when < since:
                 continue
             if who == wanted:
@@ -847,8 +901,7 @@ class FileDirectory:
 
     def note_failure(self, advocate_id: str, source: str,
                      now: datetime) -> None:
-        """One line per failed attempt. Never raises: a limiter that can
-        break a sign-in is worse than one that misses a count.
+        """One durable line per failed attempt; unavailable is an explicit refusal.
 
         NO CLIENT MATERIAL. A timestamp, a folded id and a source -- the
         same shape the auth log beside it has held since slice 1.
@@ -858,16 +911,19 @@ class FileDirectory:
                 who = _one_log_field(canonical_id(advocate_id))
                 where = _one_log_field(source)
                 fh.write(f"{now.isoformat()}\t{who}\t{where}\n")
-        except OSError:
-            pass
+                fh.flush()
+                os.fsync(fh.fileno())
+        except OSError as exc:
+            raise AuthenticationUnavailable('Attempt could not be recorded.') from exc
 
     def limiter_available(self) -> bool:
         """Whether the attempt log can be written. Reported at /api/health
         so a limiter that is not running is visible BEFORE an incident.
         """
         try:
-            self._attempts.touch(exist_ok=True)
-            return True
+            with self._attempts.open('a', encoding='utf8'):
+                pass
+            return self.failures_since('', '', datetime.now().astimezone()) is not None
         except OSError:
             return False
 
@@ -917,8 +973,8 @@ class FileDirectory:
     def _activity_path(self, fingerprint: str) -> Path:
         """When the session was last used. F-A-12.
 
-        A FILE OF ITS OWN, NOT A FIELD REWRITTEN INTO THE SESSION RECORD. Every
-        signed-in request records activity, and requests run concurrently: one
+        A FILE OF ITS OWN, NOT A FIELD REWRITTEN INTO THE SESSION RECORD. Explicit
+        user activity records a checkpoint, and requests run concurrently: one
         that read the session a moment before a sign-out and then wrote it back
         with a fresh time would put the sign-out's `ended_because` back to
         `None` and revive the session. Activity is written here and the
@@ -929,8 +985,9 @@ class FileDirectory:
 
     def _last_activity(self, fingerprint: str) -> datetime | None:
         try:
-            return datetime.fromisoformat(
+            activity = datetime.fromisoformat(
                 self._activity_path(fingerprint).read_text(encoding="utf8").strip())
+            return activity if activity.utcoffset() is not None else None
         except FileNotFoundError:
             return None
         except (OSError, ValueError):
@@ -940,7 +997,7 @@ class FileDirectory:
             return None
 
     def _record_activity(self, session: Session, now: datetime) -> None:
-        """Replace the activity time; never move it backwards."""
+        """Record activity; a lost or concurrent older write can only shorten access."""
         fingerprint = session.token_fingerprint
         if session.last_active_at is not None and session.last_active_at >= now:
             return
@@ -949,6 +1006,8 @@ class FileDirectory:
         try:
             with temporary.open("x", encoding="utf8") as handle:
                 handle.write(now.isoformat())
+                handle.flush()
+                os.fsync(handle.fileno())
             os.replace(temporary, path)
         except OSError as exc:
             # A LOST ACTIVITY WRITE SHORTENS A SESSION; IT NEVER LENGTHENS ONE,
@@ -961,21 +1020,23 @@ class FileDirectory:
             discard(temporary)
 
     def open_session(self, advocate_id: str, device: str,
-                     now: datetime) -> str:
-        token, session = open_session(advocate_id, device, now)
+                     now: datetime, *, client_label: str = '', source: str = '') -> str:
+        token, session = open_session(advocate_id, device, now,
+                                      client_label=client_label, source=source)
         self._write_session(session)
         return token
 
     def _write_session(self, session: Session) -> None:
-        self._session_path(session.token_fingerprint).write_bytes(
-            json.dumps({
+        self._replace_advocate(self._session_path(session.token_fingerprint), {
                 "token_fingerprint": session.token_fingerprint,
                 "advocate_id": session.advocate_id,
                 "device": session.device,
                 "issued_at": session.issued_at.isoformat(),
                 "expires_at": session.expires_at.isoformat(),
                 "ended_because": session.ended_because,
-            }, indent=2).encode("utf8"))
+                'client_label': session.client_label,
+                'source': session.source,
+            })
 
     def _read_session(self, fingerprint: str) -> Session | None:
         path = self._session_path(fingerprint)
@@ -990,17 +1051,25 @@ class FileDirectory:
                 d = json.loads(raw.decode("utf8"))
             except (UnicodeDecodeError, json.JSONDecodeError):
                 d = json.loads(self._cipher.decrypt(raw).decode("utf8"))
+            if d['token_fingerprint'] != fingerprint:
+                return None
+            issued = datetime.fromisoformat(d['issued_at'])
+            expires = datetime.fromisoformat(d['expires_at'])
+            if issued.utcoffset() is None or expires.utcoffset() is None:
+                return None
+            return Session(
+                token_fingerprint=d["token_fingerprint"],
+                advocate_id=d["advocate_id"],
+                device=d["device"],
+                issued_at=issued,
+                expires_at=expires,
+                ended_because=d.get("ended_because"),
+                last_active_at=self._last_activity(fingerprint),
+                client_label=d.get('client_label', ''),
+                source=d.get('source', ''),
+            )
         except Exception:  # noqa: BLE001 -- an unopenable session is not a session
             return None
-        return Session(
-            token_fingerprint=d["token_fingerprint"],
-            advocate_id=d["advocate_id"],
-            device=d["device"],
-            issued_at=datetime.fromisoformat(d["issued_at"]),
-            expires_at=datetime.fromisoformat(d["expires_at"]),
-            ended_because=d.get("ended_because"),
-            last_active_at=self._last_activity(fingerprint),
-        )
 
     def session(self, token: str, device: str,
                 now: datetime) -> Session | None:
@@ -1024,12 +1093,15 @@ class FileDirectory:
                        "session refused: presented from a different device")
             return None
 
-        # A SESSION THAT ANSWERED A REQUEST WAS USED. F-A-12: the idle limit
-        # restarts here, and only after every check above has passed, so a
-        # refused presentation -- another device, an ended or idle session --
-        # cannot keep anything alive.
+        return session
+
+    def touch_session(self, token: str, device: str, now: datetime) -> Session | None:
+        session = self.session(token, device, now)
+        if session is None:
+            return None
         self._record_activity(session, now)
-        return replace(session, last_active_at=max(now, session.last_active_at or now))
+        # A failed activity write must not promise a longer offline window.
+        return self.session(token, device, now)
 
     def sessions_for(self, advocate_id: str) -> tuple[Session, ...]:
         """Every session issued to this advocate, live or ended. BK-31.
@@ -1040,18 +1112,33 @@ class FileDirectory:
         an hour ago on a device they do not recognise. Filtering here would
         make the interesting half unreachable.
 
-        A SESSION THAT WILL NOT DECODE IS NOT DROPPED SILENTLY -- it is
-        counted by the caller through `unreadable`, because a device list
-        missing a row is the one thing worse than no device list.
+        A session that cannot be decoded has unknown ownership. Refuse the
+        inventory rather than hiding a potentially active device from its owner.
         """
         out: list[Session] = []
         if not self._sessions.exists():
             return ()
         for path in sorted(self._sessions.glob("*.nm")):
             session = self._read_session(path.stem)
-            if session is not None and session.advocate_id == advocate_id:
+            if session is None:
+                raise SessionsUnavailable('The complete session list could not be read.')
+            if session.advocate_id == advocate_id:
                 out.append(session)
         return tuple(out)
+
+    def close_selected_session(self, advocate_id: str, reference: str, why: str,
+                               *, except_token: str) -> str:
+        keep = token_fingerprint(except_token)
+        for session in self.sessions_for(advocate_id):
+            if session.reference != reference:
+                continue
+            if session.token_fingerprint == keep:
+                return 'current'
+            if session.ended_because:
+                return 'already_ended'
+            self._write_session(replace(session, ended_because=why))
+            return 'closed'
+        return 'unknown'
 
     def close_all_sessions(self, advocate_id: str, why: str,
                            except_token: str = "") -> int:

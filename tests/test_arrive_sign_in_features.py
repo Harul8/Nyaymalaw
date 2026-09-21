@@ -191,7 +191,8 @@ def _register(client, email, password=PASSWORD, again=None, consent=CONSENT):
             "password_again": password if again is None else again}
     if consent is not None:
         body["consent"] = consent
-    return client.post("/api/register", json=body)
+    from tests.registration import confirm_registered
+    return confirm_registered(client, client.post("/api/register", json=body))
 
 
 def _login(client, email, password):
@@ -277,8 +278,7 @@ def register_card_rules(sign_in_page):
     assert RULES in visible_text(card_html(sign_in_page, "register"))
 
 
-@then("the register card carries no logo and no other text than the privacy notice and "
-      "its boxes")
+@then("the register card carries only account details, delivery status and confirmation navigation")
 def register_card_is_bare(sign_in_page):
     register = card_html(sign_in_page, "register")
     for forbidden in ('class="mark"', "login-brand", "login-lede", "field-help"):
@@ -287,7 +287,9 @@ def register_card_is_bare(sign_in_page):
     register = re.sub(r'<section class="privacy-notice".*?</section>', " ", register, flags=re.S)
     register = re.sub(r'<label class="consent".*?</label>', " ", register, flags=re.S)
     remainder = visible_text(register)
-    for piece in (RULES, "required.", "Retype password", "Back to sign in", "Register",
+    for piece in (RULES, "Checking registration availability…",
+                  "Already have a confirmation code?", "required.", "Retype password",
+                  "Back to sign in", "Register",
                   "Password", "Email"):
         assert piece in remainder, f"{piece!r} is missing from the register card"
         remainder = remainder.replace(piece, " ", 1)
@@ -313,7 +315,9 @@ def register_weak(client, context, email, password):
 
 @when(parsers.parse('a visitor registers "{email}" again with a different password'))
 def register_again(client, context, email):
-    context["response"] = _register(client, email, OTHER_PASSWORD)
+    context['response'] = client.post('/api/register', json={
+        'email': email, 'password': OTHER_PASSWORD, 'password_again': OTHER_PASSWORD,
+        'consent': CONSENT})
 
 
 @then("the account is created")
@@ -324,7 +328,8 @@ def account_created(context):
 @then("the response carries no recovery code or any other secret")
 def response_has_no_secret(context):
     response = context["response"]
-    assert set(response.json()) == {"advocate_id", "name"}, response.json()
+    assert set(response.json()) == {'state', 'advocate_id', 'detail'}, response.json()
+    assert response.json()['state'] == 'confirmed'
     assert PASSWORD not in response.text
 
 
@@ -351,12 +356,12 @@ def no_account(client, email):
     assert client.directory.identity(email) is None
 
 
-@then("registration is refused without saying the account exists")
+@then("the response does not say whether the account exists")
 def duplicate_refused_neutrally(context):
     response = context["response"]
-    assert response.status_code == 409, response.text
+    assert response.status_code == 202, response.text
     detail = response.json()["detail"].lower()
-    assert context["email"] not in detail and "already" not in detail, detail
+    assert context['email'] not in detail and 'if this address is eligible' in detail
 
 
 @then("the original password still signs in")
@@ -397,7 +402,9 @@ def same_answer(context):
 def email_only_for_registered(client, context):
     for address in context["asked"]:
         expected = 1 if address == context["email"] else 0
-        assert len(client.outbox.messages_for(address)) == expected, address
+        messages = [m for m in client.outbox.messages_for(address)
+                    if m['purpose'] == 'password-reset']
+        assert len(messages) == expected, address
 
 
 @when("the link is used to set a new valid password")
@@ -636,8 +643,9 @@ def boxes_start_unticked(sign_in_page):
 @then("the Register button stays unavailable until both boxes are ticked")
 def register_waits_for_boxes():
     script = _script()
-    assert "$('register-go').disabled = !($('reg-consent').checked && " \
-        "$('reg-adult').checked);" in _function(script, "syncRegisterReady")
+    ready = _function(script, 'syncRegisterReady')
+    assert "$('register-go').disabled = !(registrationCapabilities?.public_registration" in ready
+    assert "&& $('reg-consent').checked && $('reg-adult').checked);" in ready
     assert "['reg-consent', 'reg-adult'].forEach((id) => $(id).addEventListener('change', " \
         "syncRegisterReady));" in script
     assert "\nsyncRegisterReady();\n" in script, "Register is not set before a box is ticked"
@@ -763,7 +771,7 @@ def clock(monkeypatch):
 
 def _use_at(client, clock, after):
     clock["now"][0] = clock["start"] + after
-    return client.get("/api/session")
+    return client.post('/api/session/activity')
 
 
 @given("an advocate who is signed in")
@@ -826,8 +834,9 @@ def activity_events(page_script):
 def idle_limit_from_server(page_script):
     assert not re.search(r"\b30\b", _idle_section(page_script)), (
         "the page keeps its own copy of the idle limit")
-    for source in ("r.session_idle_minutes", "me.session_idle_minutes"):
-        assert f"startIdleWatch({source});" in page_script, source
+    for source in ('r', 'me'):
+        call = f'startIdleWatch({source}.session_idle_minutes, {source}.access_window);'
+        assert call in page_script
 
 
 @then("activity in one open tab counts for every open tab")

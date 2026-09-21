@@ -5,8 +5,8 @@ Implementation Plan F-A-03.
 
 ONE OWNER FOR THE WORDS
 -------------------------
-The only account mail today is the password-reset link. Its subject and text
-are composed here, once, and the edge hands the result to the mail port. A
+Account confirmation and password-reset messages have their subject and text
+composed here, once, and the edge hands the result to the mail port. A
 route that wrote its own sentence would be a second owner of the promise the
 message makes -- how long the link lasts and what using it does -- and the two
 would drift the first time the lifetime changed.
@@ -47,6 +47,18 @@ class MailMessage:
 
 
 PASSWORD_RESET_PURPOSE = "password-reset"
+
+
+def confirmation_mail(to: str, code: str) -> MailMessage:
+    from nm.domain.account_confirmation import CODE_MINUTES
+    if len(code) != 6 or not code.isascii() or not code.isdigit():
+        raise ValueError('confirmation needs six digits')
+    return MailMessage(to=to, subject='Confirm your Nyaymalaw email',
+                       text=f'Your Nyaymalaw confirmation code is {code}. '
+                            f'It expires after {CODE_MINUTES} minutes and works once. '
+                            'If you did not begin registration, do not share this code. '
+                            'Confirm only after choosing your own password.',
+                       purpose='email-confirmation')
 
 
 def password_reset_mail(to: str, link: str,

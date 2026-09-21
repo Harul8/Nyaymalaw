@@ -143,16 +143,12 @@ def test_a_refused_attempt_is_429_and_not_401(client):
     assert int(response.headers["retry-after"]) > 0
 
 
-def test_a_limiter_that_cannot_run_opens_the_door_and_says_so(client, monkeypatch):
-    """FAILING OPEN IS THE RIGHT DIRECTION AND MUST BE VISIBLE.
+def test_a_limiter_that_cannot_run_refuses_admission_and_says_so(client, monkeypatch):
+    """Before Build A.4.3 supersedes the old fail-open admission policy.
 
-    Refusing every sign-in because a log file is unwritable would be a
-    self-inflicted outage on a product used under time pressure. Allowing them
-    SILENTLY is the S1 shape -- a control that could not run returning the
-    shape of a clean result.
-
-    So `failures_since` returns None for "could not tell", the door opens, and
-    `/api/health` reports rate limiting as NOT RUNNING.
+    Unavailable controls are not permission for unlimited password guessing.
+    Existing sessions stay usable; new credential attempts receive an honest
+    temporary refusal. Health must still expose the unavailable limiter.
     """
     import inspect
 
@@ -165,7 +161,9 @@ def test_a_limiter_that_cannot_run_opens_the_door_and_says_so(client, monkeypatc
     monkeypatch.setattr(client.directory, "limiter_available", lambda: False)
     response = client.post("/api/login", json={
         "advocate_id": "adv_demo", "password": "Fixture-password-not-a-secret-1"})
-    assert response.status_code == 200, response.text
+    assert response.status_code == 503, response.text
+    assert response.headers['retry-after'] == '60'
+    assert 'set-cookie' not in response.headers
     health = client.get("/api/health")
     assert health.status_code == 200, health.text
     assert "NOT RUNNING" in health.json()["rate_limiting"], (

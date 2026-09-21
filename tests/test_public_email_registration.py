@@ -1,7 +1,7 @@
 """Public accounts are private account access, never professional approval.
 
-These use actual directory persistence and the served routes. Email validation
-is syntactic: registration does not verify the mailbox. A forgotten password is
+These use actual directory persistence and the served routes, including mailbox
+confirmation before an account can be used. A forgotten password is
 replaced through an emailed link (Implementation Plan F-A-03), which these
 tests read from the fixture's local outbox.
 """
@@ -34,12 +34,13 @@ OTHER_PASSWORD = "Another-lantern-73"
 EMAIL = "reader+private@example.com"
 
 
-def _register(client, email=EMAIL, **extra):
-    from tests.registration import CONSENT
+def _register(client, email=EMAIL, *, confirm=True, **extra):
+    from tests.registration import CONSENT, confirm_registered
 
-    return client.post("/api/register", json={
+    response = client.post("/api/register", json={
         "email": email, "password": PASSWORD, "password_again": PASSWORD,
         "consent": CONSENT, **extra})
+    return confirm_registered(client, response) if confirm else response
 
 
 def _login(client, email=EMAIL, password=PASSWORD):
@@ -59,8 +60,8 @@ def test_email_and_password_create_a_private_account_without_an_invitation(clien
     result = _register(client, " Reader+Private@Example.com ")
     assert result.status_code == 200, result.text
     assert result.json()["advocate_id"] == EMAIL
-    assert result.json()["name"] == EMAIL
-    assert set(result.json()) == {"advocate_id", "name"}, "registration issued a secret"
+    assert result.json()['state'] == 'confirmed'
+    assert set(result.json()) == {'state', 'advocate_id', 'detail'}, 'activation issued a secret'
     assert not result.headers.get("set-cookie"), "registration minted credentials"
     assert client.get("/api/session").status_code == 401
     identity = client.directory.identity(EMAIL)
@@ -146,7 +147,7 @@ def test_the_longest_public_email_roundtrips_through_its_real_account_store(clie
     reset = _reset_by_email(client, longest.upper(), OTHER_PASSWORD)
     assert reset.status_code == 200, reset.text
     assert _login(client, longest, OTHER_PASSWORD).status_code == 200
-    assert _register(client, longest.upper()).status_code == 409
+    assert _register(client, longest.upper(), confirm=False).status_code == 202
     before = path.read_bytes()
     assert _register(client, longest + "e").status_code == 422
     assert path.read_bytes() == before
@@ -192,13 +193,12 @@ def test_duplicate_public_registration_never_replaces_credentials(client):
     assert first.status_code == 200
     path = client.directory._advocate_path(EMAIL)
     original = path.read_bytes()
-    duplicate = _register(client, EMAIL.upper(), password=OTHER_PASSWORD,
+    duplicate = _register(client, EMAIL.upper(), confirm=False, password=OTHER_PASSWORD,
                           password_again=OTHER_PASSWORD)
-    assert duplicate.status_code == 409, duplicate.text
-    assert EMAIL not in duplicate.text.lower()
-    assert "already" not in duplicate.text.lower()
+    assert duplicate.status_code == 202, duplicate.text
+    assert duplicate.json()['state'] == 'confirmation_required'
     assert "forgot password" in duplicate.text.lower()
-    assert set(duplicate.json()) == {"detail"}
+    assert set(duplicate.json()) == {'state', 'email', 'flow', 'detail', 'delivery'}
     assert path.read_bytes() == original
     assert _login(client, password=OTHER_PASSWORD).status_code == 401
     assert _login(client).status_code == 200

@@ -5,6 +5,8 @@ identity and no professional approval fixture for the new account.
 """
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from tests import test_the_journey_login_to_logout as support
@@ -37,14 +39,20 @@ def test_email_registration_opens_own_workspace_and_matter(page, journey, width)
     with page.expect_response(lambda response: response.url.endswith("/api/register")) as pending:
         page.click("#register-go")
     response = pending.value
-    assert response.status == 200
+    assert response.status == 202
     assert response.request.post_data_json == {
         "email": email, "password": journey["password"],
         "password_again": journey["password"], "consent": CONSENT,
     }
     assert "x-enrolment-invitation" not in response.request.headers
-    page.wait_for_selector("#outcome:not([hidden])")
-    assert page.inner_text("#outcome-title") == "Registration successful"
+    page.wait_for_selector('#confirm-email:not([hidden])')
+    assert journey['box'].directory.identity(email) is None
+    messages = journey['box'].application.mail.messages_for(email)
+    code = re.search(r'\b[0-9]{6}\b', messages[-1]['text']).group()
+    page.fill('#confirm-code', code)
+    page.click('#confirm-go')
+    page.wait_for_selector('#outcome:not([hidden])')
+    assert page.inner_text('#outcome-title') == 'Email confirmed'
     # F-A-04: no recovery codes anywhere.
     assert page.locator("#recovery-code-list li").count() == 0
     assert page.input_value("#reg-password") == page.input_value("#reg-password2") == ""
@@ -153,10 +161,11 @@ def test_pending_registration_owns_its_one_time_result(page, journey):
     page.wait_for_function("() => window.registrationResponseHeld === true")
     assert len(held) == 1
     route, response = held[0]
-    assert response.status == 200, response.text()
+    assert response.status == 202, response.text()
     route.fulfill(response=response)
-    page.wait_for_selector("#outcome:not([hidden])")
-    assert page.inner_text("#outcome-title") == "Registration successful"
+    page.wait_for_selector('#confirm-email:not([hidden])')
+    assert 'confirmation' in page.inner_text('#confirmation-detail')
+    assert journey['box'].directory.identity('delayed-registration@example.test') is None
     assert page.get_attribute("#register", "aria-busy") is None
     assert not page.errors
 
@@ -166,7 +175,7 @@ def test_unconfirmed_registration_does_not_claim_no_account_was_created(page, jo
     _registration(page, journey, "unconfirmed-registration@example.test")
     page.click("#register-go")
     page.wait_for_selector("#outcome:not([hidden])")
-    assert "account may have been created" in page.inner_text("#outcome-body")
+    assert 'could not be confirmed' in page.inner_text('#outcome-body')
     assert page.input_value("#reg-password") == page.input_value("#reg-password2") == ""
     assert page.get_attribute("#register", "aria-busy") is None
     page.click("#outcome-back")
@@ -181,8 +190,13 @@ def test_full_length_email_stays_readable_on_a_phone(page, journey):
     page.set_viewport_size({"width": 390, "height": 844})
     _registration(page, journey, email)
     page.click("#register-go")
+    page.wait_for_selector('#confirm-email:not([hidden])')
+    messages = journey['box'].application.mail.messages_for(email)
+    code = re.search(r'\b[0-9]{6}\b', messages[-1]['text']).group()
+    page.fill('#confirm-code', code)
+    page.click('#confirm-go')
     page.wait_for_selector("#outcome:not([hidden])")
-    assert page.inner_text("#outcome-title") == "Registration successful"
+    assert page.inner_text("#outcome-title") == "Email confirmed"
     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
     page.click("#outcome-signin")
     page.fill("#login-password", journey["password"])

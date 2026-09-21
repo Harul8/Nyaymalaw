@@ -29,9 +29,8 @@ const state = {
   turns: [],
   // BK-40. WHAT THE ADVOCATE WAS PART-WAY THROUGH WRITING, kept across a
   // session that ended under them, and SCOPED TO THE ADVOCATE IT BELONGS TO.
-  // It is held in memory and deliberately not in `localStorage`: a draft that
-  // survives the tab survives the next person to use the machine, and a
-  // brief names a client.
+  // Working text stays in memory. Only authenticated ciphertext may survive
+  // the tab, through the account/device-bound draft vault below.
   draft: null,
   // `none` | `signing_out` | `unconfirmed`. A logout the server did not
   // confirm is its own state, because the alternative is showing an ordinary
@@ -59,6 +58,10 @@ const state = {
 };
 
 let registrationInFlight = false;
+let registrationCapabilities = null;
+let confirmationFlow = null;
+let confirmationInFlight = false;
+let resendTimer = null;
 let outcomeReturn = 'register';
 // THE EMAILED RESET LINK'S TOKEN. Implementation Plan F-A-03. Read once from the
 // address fragment -- which a browser never sends to the server -- and removed
@@ -74,6 +77,138 @@ let retiringSession = null;
 const intentContexts = new Map();
 const INTAKE_INPUTS = ['in-client', 'in-adverse', 'in-others', 'in-scope'];
 let activeIntent = null;
+let draftVault = null;
+let draftWrite = 0;
+let draftUnlock = Promise.resolve();
+let storedDraftCount = 0;
+try { draftVault = new NMDraftVault(window.localStorage, window.crypto); }
+catch { /* Unavailable storage is reported before any durable-save claim. */ }
+
+function draftHasWork(intent) {
+  return Boolean(intent && (intent.text.trim() || intent.pending.length
+    || intent.intake || (intent.intakeOpen
+      && Object.values(intent.fields || {}).some(value => String(value).trim()))));
+}
+
+async function saveProtectedDraft({previousKey = null} = {}) {
+  if (!ownsIntent(activeIntent)) return;
+  const generation = state.sessionGeneration;
+  const revision = ++draftWrite;
+  const status = $('draft-status');
+  status.textContent = 'Saving draft…';
+  try {
+    if (!draftVault?.key) throw new Error('Draft protection is not available.');
+    // Pending entries carry a runtime back-reference to their intent. Persist
+    // only the immutable retry envelope, never that circular object graph.
+    const held = activeIntent;
+    if (!draftHasWork(held)) {
+      await draftVault.removeOwn(held.key);
+      if (previousKey) await draftVault.removeOwn(previousKey);
+      if (generation === state.sessionGeneration && revision === draftWrite) status.textContent = '';
+      return true;
+    }
+    const snapshot = {
+      key:held.key, advocate:held.advocate, workspace:held.workspace,
+      matterId:held.matterId, text:held.text, intake:held.intake,
+      intakeOpen:held.intakeOpen, fields:held.fields, capacity:held.capacity,
+      opening:held.opening || null,
+      editedAt:held.editedAt || Date.now(),
+      pending:held.pending.map(entry=>({turnId:entry.turnId, brief:entry.brief,
+        request:entry.request, envelope:entry.envelope, state:'unknown',
+        error:'A prior request needs reconciliation before retry.'})),
+    };
+    const savedAt = await draftVault.save(snapshot);
+    if (previousKey && previousKey !== held.key) await draftVault.removeOwn(previousKey);
+    if (generation !== state.sessionGeneration || revision !== draftWrite) return;
+    showDraftCheckpoint(savedAt);
+    return true;
+  } catch (error) {
+    if (generation !== state.sessionGeneration || revision !== draftWrite) return;
+    status.textContent = 'Could not save this draft. Changes may not survive closing the page. '
+      + error.message;
+    return false;
+  }
+}
+
+function showDraftCheckpoint(savedAt) {
+  $('draft-status').textContent = `Saved on this device at ${new Date(savedAt).toLocaleString()}. `
+    + `Expires ${new Date(savedAt + 72 * 60 * 60 * 1000).toLocaleString()}. `
+    + 'Choosing Sign out discards unsent drafts.';
+}
+
+async function unlockDrafts() {
+  const generation = state.sessionGeneration;
+  const account = state.advocate;
+  const workspace = state.workspace;
+  const panel = $('draft-recovery');
+  panel.replaceChildren();
+  try {
+    // An older sign-in's delayed key import must never replace or lock the
+    // current account's vault. Construct privately, then publish under its generation.
+    const vault = new NMDraftVault(window.localStorage, window.crypto);
+    const protection = await api('/api/drafts/key');
+    if (generation !== state.sessionGeneration) return;
+    await vault.unlock(protection);
+    if (generation !== state.sessionGeneration) { vault.lock(); return; }
+    draftVault = vault;
+    const drafts = await vault.list();
+    if (generation !== state.sessionGeneration) return;
+    const seen = new Set();
+    storedDraftCount = drafts.filter(saved => draftHasWork(saved.intent)).length;
+    for (const saved of drafts) {
+      const intent = saved.intent;
+      if (intent.advocate !== account || intent.workspace !== workspace || !draftHasWork(intent)) continue;
+      const signature = JSON.stringify(intent);
+      if (seen.has(signature)) continue;
+      seen.add(signature);
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'ghost';
+      button.textContent = `Recover unsent draft saved ${new Date(saved.savedAt).toLocaleString()} · expires ${new Date(saved.expiresAt).toLocaleString()}`;
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        try {
+          if (generation !== state.sessionGeneration) return;
+          if (intent.matterId) await api(`/api/matters/${encodeURIComponent(intent.matterId)}`);
+          if (generation !== state.sessionGeneration) return;
+          snapshotIntent();
+          await vault.adopt(saved);
+          if (generation !== state.sessionGeneration) return;
+          intent.editedAt = saved.savedAt;
+          intent.pending.forEach(entry=>{entry.context=intent;});
+          // Recover explicitly, keeping other tab versions in protected storage.
+          intentContexts.set(intent.key, intent);
+          activeIntent = null;
+          if (intent.matterId) { showTab('advise'); await showThreadBoard(intent.matterId); }
+          else startMatter();
+          if (generation !== state.sessionGeneration) return;
+          panel.replaceChildren();
+          showDraftCheckpoint(saved.savedAt);
+          $('message').focus();
+        } catch (error) {
+          if (generation === state.sessionGeneration) {
+            panel.appendChild(stateBlock('loud', `Draft was not opened: ${error.message}`));
+          }
+        } finally { button.disabled = false; }
+      });
+      panel.appendChild(button);
+    }
+    if (seen.size > 1) panel.prepend(stateBlock('quiet',
+      'More than one unsent version is held. Choose the version to continue; none was silently overwritten.'));
+  } catch (error) {
+    if (generation === state.sessionGeneration) {
+      panel.appendChild(stateBlock('loud', 'Draft recovery is unavailable. ' + error.message));
+    }
+  }
+}
+
+window.addEventListener('storage', (event) => {
+  if (draftVault && event.key === draftVault.epochKey && draftVault.key) {
+    draftVault.lock();
+    intentContexts.clear(); state.draft = null;
+    clearPrivileged();
+    showGate('This account signed out or discarded its drafts in another tab. Sign in again.');
+  }
+});
 
 function intentKey(matterId) {
   return JSON.stringify([state.advocate, state.workspace, matterId || 'unsaved-opening']);
@@ -90,13 +225,14 @@ function matchesIntake(entry, intake) {
     && JSON.stringify(entry.request.capacity || null) === JSON.stringify((intake && intake.capacity) || null);
 }
 
-function snapshotIntent() {
+function snapshotIntent({ edited = false } = {}) {
   if (!ownsIntent(activeIntent)) return;
   activeIntent.text = $('message').value;
   activeIntent.intake = state.intake;
   activeIntent.intakeOpen = !$('intake').hidden;
   activeIntent.fields = Object.fromEntries(INTAKE_INPUTS.map((id) => [id, $(id).value]));
   activeIntent.capacity = $('in-capacity').checked;
+  if (edited) { activeIntent.editedAt = Date.now(); saveProtectedDraft(); }
 }
 
 function restoreIntent() {
@@ -140,6 +276,7 @@ function reconcileIntent(transcript) {
   });
   restoreIntent();
   state.turns.push(...activeIntent.pending);
+  saveProtectedDraft();
 }
 
 /* --------------------------------------------------------------- fetch --- */
@@ -175,6 +312,9 @@ function keepDraft() {
 // surface added later cannot be the one that keeps painting a matter after
 // the session behind it is gone.
 function clearPrivileged() {
+  if (draftVault) draftVault.lock();
+  $('draft-recovery').replaceChildren();
+  $('draft-status').textContent = '';
   stopIdleWatch();
   setAccountMenu(false);
   // A RECORDING IN PROGRESS BELONGS TO THE SESSION THAT STARTED IT (F-C-02),
@@ -256,7 +396,8 @@ const IDLE_WARNING_MS = 2 * 60 * 1000;
 const IDLE_REPORT_MS = 60 * 1000;
 const ACTIVITY_EVENTS = ['keydown', 'pointerdown', 'pointermove', 'wheel', 'touchstart',
   'scroll', 'input'];
-const idle = { limitMs: 0, lastActivity: 0, lastReport: 0, timer: null, trailing: null };
+const idle = { limitMs: 0, lastActivity: 0, lastReport: 0, timer: null, trailing: null,
+  serverUntil: 0, serverMonotonicUntil: 0 };
 const sessionChannel = typeof BroadcastChannel === 'function'
   ? new BroadcastChannel('nm-session') : null;
 
@@ -264,14 +405,27 @@ function idleWatching() {
   return idle.limitMs > 0 && Boolean(state.advocate) && !state.ended;
 }
 
-function startIdleWatch(minutes) {
+function startIdleWatch(minutes, accessWindow) {
   stopIdleWatch();
   if (!state.advocate || !(minutes > 0)) return;
   idle.limitMs = minutes * 60 * 1000;
+  acceptAccessWindow(accessWindow);
   // The request that just opened or resolved the session already told the
   // server; opening this tab is activity the other tabs should hear about.
   idle.lastReport = Date.now();
   noteActivity(Date.now(), { report: false });
+  sendActivityReport();
+}
+
+function acceptAccessWindow(window) {
+  const remaining = Number(window?.remaining_seconds);
+  const allowed = Number.isFinite(remaining) && remaining > 0 ? remaining * 1000 : 0;
+  idle.serverUntil = Date.now() + allowed;
+  idle.serverMonotonicUntil = performance.now() + allowed;
+}
+
+function accessWindowEnded() {
+  return Date.now() >= idle.serverUntil || performance.now() >= idle.serverMonotonicUntil;
 }
 
 function stopIdleWatch() {
@@ -289,6 +443,10 @@ function stopIdleWatch() {
 // clock for whoever lifted the lid while the last matter is still on the glass.
 function noteActivity(at, { share = true, report = true } = {}) {
   if (!idleWatching()) return;
+  if (accessWindowEnded()) {
+    sessionEnded('Your last confirmed access window ended. Sign in again to recover your protected draft.');
+    return;
+  }
   if (idle.lastActivity && at - idle.lastActivity >= idle.limitMs) {
     idleSignOut();
     return;
@@ -323,9 +481,12 @@ async function sendActivityReport() {
   if (!idleWatching()) return;
   idle.lastReport = Date.now();
   try {
-    // ANY SIGNED-IN REQUEST RESTARTS THE SERVER'S CLOCK; this one asks nothing
-    // else. A 401 has already ended the session inside `api()`.
-    await api('/api/session');
+    // Only a user event sends this request. Background reads cannot renew it.
+    const result = await api('/api/session/activity', {method:'POST'});
+    acceptAccessWindow(result.access_window);
+    if (sessionChannel) sessionChannel.postMessage({type:'access-window',
+      advocate:state.advocate, until:idle.serverUntil});
+    checkIdle();
   } catch { /* this page's own clock still ends the session on time */ }
 }
 
@@ -333,7 +494,11 @@ function checkIdle() {
   clearTimeout(idle.timer);
   if (!idleWatching()) return;
   const now = Date.now();
-  const endAt = idle.lastActivity + idle.limitMs;
+  const endAt = Math.min(idle.lastActivity + idle.limitMs, idle.serverUntil);
+  if (accessWindowEnded()) {
+    sessionEnded('Your last confirmed access window ended. Sign in again to recover your protected draft.');
+    return;
+  }
   if (now >= endAt) {
     idleSignOut();
     return;
@@ -347,10 +512,9 @@ function showIdleWarning(endAt) {
   const el = $('idle-warning');
   if (!el.hidden) return;
   const when = new Date(endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const quiet = Math.round((idle.limitMs - IDLE_WARNING_MS) / 60000);
-  el.textContent = `Nothing has happened on this page for ${quiet} minutes. You will be `
-    + `signed out at ${when} unless you use it: move the mouse, touch the screen or `
-    + 'press a key.';
+  el.textContent = `Your current session is due to end at ${when}. If you are still working, `
+    + 'continue here to refresh an idle session. At the maximum session lifetime, '
+    + 'you will need to sign in again. Your protected unsent draft can be recovered.';
   el.hidden = false;
 }
 
@@ -387,6 +551,10 @@ if (sessionChannel) {
     const data = event.data || {};
     if (!state.advocate || data.advocate !== state.advocate) return;
     if (data.type === 'activity') noteActivity(data.at, { share: false, report: false });
+    if (data.type === 'access-window' && Number.isFinite(data.until)) {
+      acceptAccessWindow({remaining_seconds:Math.max(0, data.until - Date.now()) / 1000});
+      checkIdle();
+    }
     if (data.type === 'idle-signed-out') {
       idle.limitMs = (data.minutes || 0) * 60000 || idle.limitMs;
       idleSignOut({ fromAnotherTab: true });
@@ -423,9 +591,15 @@ async function api(path, options, { sessionBound = true } = {}) {
       options.headers = { ...(options.headers || {}), 'X-NM-CSRF': token };
     }
   }
+  const sentAt = performance.now();
   const res = await fetch(path, options);
   let body = null;
   try { body = await res.json(); } catch { /* non-JSON error page */ }
+  if (body?.access_window) {
+    // A delayed response cannot lend its network transit time to authority.
+    body.access_window.remaining_seconds = Math.max(0,
+      Number(body.access_window.remaining_seconds) - (performance.now() - sentAt) / 1000);
+  }
   if (sessionBound && sessionGeneration !== state.sessionGeneration) {
     const err = new Error('The session changed before this response arrived.');
     err.obsolete = true;
@@ -686,12 +860,14 @@ async function showThreadBoard(
   if (adoptOpening && ownsIntent(activeIntent) && !activeIntent.matterId
       && !activeIntent.pending.length) {
     snapshotIntent();
+    const previousKey = activeIntent.key;
     intentContexts.delete(activeIntent.key);
     activeIntent.matterId = matterId;
     activeIntent.key = intentKey(matterId);
     activeIntent.intakeOpen = false;
     intentContexts.set(activeIntent.key, activeIntent);
     restoreIntent();
+    await saveProtectedDraft({previousKey});
   }
   selectIntent(matterId);
   const generation = ++state.railGeneration;
@@ -1482,6 +1658,9 @@ async function deliver(entry) {
   entry.cancelled = false;
   repaint();
   try {
+    if (!await saveProtectedDraft()) {
+      throw new Error('The retry details could not be saved on this device. No request was sent.');
+    }
     const answer = await api('/api/turn', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       signal: stop.signal, body: entry.envelope,
@@ -1498,6 +1677,7 @@ async function deliver(entry) {
       answer.blocked_reason || ''));
     // A saved opening acquires a file identity, but its original turn envelope
     // keeps matter_id:null for idempotent replay if this acknowledgement is lost.
+    const previousKey = intent.key;
     if (answer.matter_id && !intent.matterId) {
       intentContexts.delete(intent.key);
       intent.matterId = answer.matter_id;
@@ -1506,6 +1686,7 @@ async function deliver(entry) {
     }
     if (!current()) return;
     restoreIntent();
+    await saveProtectedDraft({previousKey});
     state.matterId = intent.matterId;
     if (Number.isInteger(answer.matter_version)) state.matterVersion = answer.matter_version;
     repaint();
@@ -1927,6 +2108,10 @@ $('intake').addEventListener('submit', async (ev) => {
   go.disabled = true;
   $('intake-state').replaceChildren(stateBlock('building', 'Opening the matter…'));
   try {
+    snapshotIntent();
+    if (!await saveProtectedDraft()) {
+      throw new Error('the retry details could not be saved on this device; no request was sent');
+    }
     const opened = await api('/api/matters/intake', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ request_key: intent.opening.key, parties: state.intake.parties }),
@@ -3654,6 +3839,7 @@ function showApplication(advocate, workspace, professionalApproval) {
     return;
   }
   forgetRetirement();
+  document.cookie = 'nm_retirement=; Path=/; Max-Age=0; SameSite=Strict';
   state.advocate = advocate.id;
   state.sessionGeneration += 1;
   $('send').disabled = false;
@@ -3700,6 +3886,7 @@ function showApplication(advocate, workspace, professionalApproval) {
     else startMatter();
   }
   state.draft = null;
+  draftUnlock = unlockDrafts();
 }
 
 // IS THE SERVER RUNNING THE CODE THAT IS ON DISK?
@@ -3762,10 +3949,17 @@ async function boot() {
     openReset();
     return;
   }
+  if (cookie('nm_retirement') === 'pending') {
+    state.signOut = 'unconfirmed';
+    const token = {session:state.sessionGeneration, accepting:true, task:null, online:null};
+    retiringSession = token;
+    unconfirmedRetirement(token);
+    return;
+  }
   try {
     const me = await api('/api/session');
     showApplication(me.advocate, me.workspace, me.professional_approval);
-    startIdleWatch(me.session_idle_minutes);
+    startIdleWatch(me.session_idle_minutes, me.access_window);
   } catch (err) {
     // 401 IS THE ORDINARY CASE, not an error to report. Anything else is a
     // server that could not answer, and saying so beats a bare sign-in box
@@ -3793,7 +3987,7 @@ $('login').addEventListener('submit', async (ev) => {
     // otherwise, readable by anything running later on this document.
     concealPasswords(['login-password']);
     showApplication(r.advocate, r.workspace, r.professional_approval);
-    startIdleWatch(r.session_idle_minutes);
+    startIdleWatch(r.session_idle_minutes, r.access_window);
   } catch (err) {
     concealPasswords(['login-password']);
     showGate(err.message);
@@ -3879,11 +4073,13 @@ async function retire(token) {
       try { await revoke(); }
       catch (err) { if (err.status !== 401) throw err; }
       if (!retirementCurrent(token)) return;
+      document.cookie = 'nm_retirement=; Path=/; Max-Age=0; SameSite=Strict';
       forgetRetirement();
       state.ended = false;
       showGate(null);
       $('login-state').appendChild(stateBlock('quiet',
         'The session is now closed on the server.'));
+      if (token.localWarning) $('login-state').appendChild(stateBlock('loud', token.localWarning));
     } catch {
       unconfirmedRetirement(token);
     }
@@ -3893,13 +4089,32 @@ async function retire(token) {
 }
 
 async function signOut() {
+  const generation = state.sessionGeneration;
+  await draftUnlock;
+  if (generation !== state.sessionGeneration || !state.advocate) return;
+  snapshotIntent();
+  if ((storedDraftCount || [...intentContexts.values()].some(draftHasWork))
+      && !window.confirm('Sign out and discard this account’s unsent drafts on this device? Saved matters are not deleted.')) return;
   const btn = $('signout');
   btn.disabled = true;
-  keepDraft();
+  // A non-secret refusal marker survives reload and browser closure. It can
+  // only restrict this device; it is never authentication or proof of logout.
+  document.cookie = 'nm_retirement=pending; Path=/; Max-Age=43200; SameSite=Strict';
+  let localWarning = '';
+  try {
+    if (!draftVault?.key) throw new Error('Draft protection was not opened.');
+    draftVault.discard();
+    storedDraftCount = 0;
+  } catch {
+    localWarning = 'Draft removal could not be confirmed. Clear this site’s browser data before leaving a shared device.';
+  }
+  state.draft = null;
+  intentContexts.clear();
   clearPrivileged();
   forgetRetirement();
   state.signOut = 'signing_out';
-  const token = { session: state.sessionGeneration, accepting: true, task: null, online: null };
+  const token = { session: state.sessionGeneration, accepting: true, task: null, online: null,
+    localWarning };
   retiringSession = token;
   $('login-id').value = '';
   try { await retire(token); }
@@ -3912,6 +4127,9 @@ async function retryRevoke(token = retiringSession) {
 }
 
 $('signout').addEventListener('click', signOut);
+['message', ...INTAKE_INPUTS, 'in-capacity'].forEach(id => {
+  $(id).addEventListener('input', () => snapshotIntent({edited:true}));
+});
 
 // BK-31. THE SESSIONS AN ADVOCATE HOLDS, AND THE WAY TO END THEM.
 //
@@ -3941,14 +4159,34 @@ async function showSessions() {
   }
   if (generation !== state.sessionsGeneration || !dialog.open) return;
   body.replaceChildren(...d.sessions.map((s) => {
-    const when = String(s.issued_at).slice(0, 16).replace('T', ' ');
+    const when = new Date(s.issued_at).toLocaleString();
     const label = s.this_one ? 'This device'
-      : (s.live ? 'signed in' : `ended — ${s.ended_because || 'no reason recorded'}`);
+      : (s.live ? 'Another signed-in session' : `Ended — ${s.ended_because || 'reason unavailable'}`);
     const row = document.createElement('article');
     row.className = 'session-row';
     const title = document.createElement('strong'); title.textContent = label;
-    const detail = document.createElement('p'); detail.textContent = `${when} · Device ${s.device}`;
+    const detail = document.createElement('p');
+    detail.textContent = `${s.client_label}. Started ${when}. `
+      + `Last active ${new Date(s.last_active_at).toLocaleString()}. Connection source: ${s.source}.`;
     row.append(title, detail);
+    if (s.live && !s.this_one) {
+      const end = document.createElement('button');
+      end.type = 'button'; end.className = 'ghost'; end.textContent = 'End this session';
+      end.addEventListener('click', async () => {
+        end.disabled = true;
+        try {
+          await api('/api/sessions/revoke-one', {method:'POST',
+            headers:{'Content-Type':'application/json'}, body:JSON.stringify({reference:s.reference})});
+          if (generation !== state.sessionsGeneration || !dialog.open) return;
+          await showSessions();
+        } catch (error) {
+          if (!error.obsolete && generation === state.sessionsGeneration) {
+            $('sessions-action-state').textContent = `Closure was not confirmed: ${error.message}`;
+          }
+        } finally { end.disabled = false; }
+      });
+      row.appendChild(end);
+    }
     return row;
   }));
   const live = d.sessions.filter((s) => s.live && !s.this_one).length;
@@ -4028,6 +4266,7 @@ function showForm(which) {
   // A pending account creation owns its result. Do not let public
   // navigation hand that result to a different form/person.
   if (registrationInFlight && which !== 'register') return;
+  if (confirmationInFlight && which !== 'confirm-email') return;
   // Keep the non-secret email for corrections, never a hidden credential. A
   // PASSWORD IS NOT FORM STATE: a card that is merely hidden keeps its values,
   // and the next person on this machine would return to a filled form.
@@ -4035,12 +4274,18 @@ function showForm(which) {
   if (which !== 'reset') clearResetPasswords();
   // LEAVING THE SIGN-IN CARD PUTS ITS PASSWORD AWAY (F-A-10), shown or not.
   if (which !== 'login') concealPasswords(['login-password']);
+  if (which !== 'confirm-email') {
+    concealPasswords(['confirm-password', 'confirm-password2']);
+    $('confirm-code').value = '';
+  }
   $('login').hidden = which !== 'login';
   $('register').hidden = which !== 'register';
   $('forgot').hidden = which !== 'forgot';
   $('reset').hidden = which !== 'reset';
   $('outcome').hidden = which !== 'outcome';
+  $('confirm-email').hidden = which !== 'confirm-email';
   $('login-state').textContent = '';
+  if (which === 'register') loadAccountCapabilities();
 }
 
 // ONE WAY A PASSWORD IS PUT AWAY, for every card that has one (F-A-10). The
@@ -4079,8 +4324,123 @@ function consentGiven() {
 // so nobody presses a button that can only be refused.
 function syncRegisterReady() {
   if (registrationInFlight) return;
-  $('register-go').disabled = !($('reg-consent').checked && $('reg-adult').checked);
+  $('register-go').disabled = !(registrationCapabilities?.public_registration
+    && $('reg-consent').checked && $('reg-adult').checked);
 }
+
+async function loadAccountCapabilities() {
+  registrationCapabilities = null;
+  syncRegisterReady();
+  try {
+    registrationCapabilities = await api('/api/account-capabilities');
+    $('registration-availability').textContent = !registrationCapabilities.public_registration
+      ? 'New registration is unavailable while email delivery is disabled. Existing accounts can still sign in.'
+      : registrationCapabilities.mail_delivery === 'local_outbox_only'
+        ? 'Local rehearsal only: messages stay in the protected test outbox. No email will be sent.'
+        : 'Register, confirm your email with a six-digit code, then sign in.';
+  } catch (_) {
+    $('registration-availability').textContent = 'Registration availability could not be checked. Try again later.';
+  }
+  syncRegisterReady();
+}
+
+function showConfirmation(email, flow = null, detail = '') {
+  confirmationFlow = flow ? { email, flow } : null;
+  $('confirm-address').value = email;
+  $('confirmation-passwords').hidden = !!flow;
+  for (const id of ['confirm-password', 'confirm-password2']) $(id).required = !flow;
+  $('confirmation-detail').textContent = detail || 'Enter your code and choose your password. No account is activated until confirmation succeeds.';
+  showForm('confirm-email');
+  $('confirm-code').focus();
+}
+
+function pauseResend(seconds = 60) {
+  clearTimeout(resendTimer);
+  const button = $('confirm-resend');
+  button.disabled = true;
+  button.textContent = `Wait ${seconds} seconds before requesting another code`;
+  resendTimer = setTimeout(() => {
+    button.disabled = false;
+    button.textContent = 'Request the code again';
+  }, seconds * 1000);
+}
+
+$('show-confirm').addEventListener('click', (event) => {
+  event.preventDefault();
+  showConfirmation($('reg-email').value.trim());
+});
+$('confirm-address').addEventListener('input', () => {
+  $('confirmation-passwords').hidden = false;
+  $('confirm-password').required = $('confirm-password2').required = true;
+});
+$('confirm-correct').addEventListener('click', async (event) => {
+  event.preventDefault();
+  if (confirmationInFlight) return;
+  if (confirmationFlow) {
+    confirmationInFlight = true;
+    try {
+      const result = await api('/api/register/cancel', {method:'POST',
+        headers:{'content-type':'application/json'}, body:JSON.stringify(confirmationFlow)});
+      if (!result.cancelled) throw new Error('The earlier pending registration could not be changed. Return to sign in or use its existing confirmation code.');
+    } catch (error) {
+      $('confirmation-detail').textContent = error.message;
+      return;
+    } finally { confirmationInFlight = false; }
+  }
+  $('reg-email').value = $('confirm-address').value;
+  confirmationFlow = null;
+  showForm('register');
+  $('reg-email').focus();
+});
+$('confirm-signin').addEventListener('click', (event) => {
+  event.preventDefault();
+  if (confirmationInFlight) return;
+  $('login-id').value = $('confirm-address').value;
+  confirmationFlow = null;
+  showForm('login');
+});
+$('confirm-email').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (confirmationInFlight) return;
+  const email = $('confirm-address').value.trim().toLowerCase();
+  const body = { email, code: $('confirm-code').value,
+    flow: confirmationFlow?.email === email ? confirmationFlow.flow : '' };
+  if (!$('confirmation-passwords').hidden) {
+    body.password = $('confirm-password').value;
+    body.password_again = $('confirm-password2').value;
+  }
+  concealPasswords(['confirm-password', 'confirm-password2']);
+  $('confirm-code').value = '';
+  confirmationInFlight = true;
+  $('confirm-go').disabled = true;
+  $('confirmation-detail').textContent = 'Confirming…';
+  try {
+    const result = await api('/api/register/confirm', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    confirmationInFlight = false;
+    confirmationFlow = null;
+    $('login-id').value = result.advocate_id;
+    showOutcome('good', 'Email confirmed', result.detail, 'login');
+  } catch (error) {
+    $('confirmation-detail').textContent = error.status ? error.message
+      : 'Confirmation could not be checked. Try signing in; if needed, confirm again. No automatic retry was sent.';
+  } finally {
+    confirmationInFlight = false;
+    $('confirm-go').disabled = false;
+  }
+});
+$('confirm-resend').addEventListener('click', async () => {
+  if (!$('confirm-address').reportValidity()) return;
+  pauseResend(registrationCapabilities?.resend_seconds || 60);
+  try {
+    const result = await api('/api/register/resend', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: $('confirm-address').value.trim() }) });
+    $('confirmation-detail').textContent = result.detail;
+  } catch (error) {
+    $('confirmation-detail').textContent = error.message;
+  }
+});
 
 ['reg-consent', 'reg-adult'].forEach((id) => $(id).addEventListener('change', syncRegisterReady));
 syncRegisterReady();
@@ -4273,16 +4633,15 @@ $('register').addEventListener('submit', async (ev) => {
     //
     // Sign in with the canonical handle returned by the account owner.
     registrationInFlight = false;
-    $('login-id').value = r.advocate_id;
-    showOutcome('good', 'Registration successful',
-      `Your private workspace is ready. Sign in with ${r.advocate_id} and the password `
-      + 'you just chose.', 'register');
+    showConfirmation(r.email, r.flow, r.detail + (r.delivery === 'local_outbox_only'
+      ? ' Local rehearsal: the code is in the protected test outbox, not your mailbox.' : ''));
+    pauseResend(registrationCapabilities?.resend_seconds || 60);
   } catch (err) {
     registrationInFlight = false;
     if (err.obsolete) return;
     $('login-id').value = email;
     showOutcome('bad', 'Registration failed', !err.status
-      ? 'The registration result could not be confirmed. The account may have been created. Try signing in before registering again.'
+      ? 'Registration could not be confirmed. Check for a code before trying again. No automatic retry was sent.'
       : err.message, 'register');
   } finally {
     clearTimeout(timeout);

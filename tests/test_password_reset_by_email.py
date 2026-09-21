@@ -56,11 +56,12 @@ LINK = re.compile(r"(https?://\S+?/#reset=([A-Za-z0-9_-]+))")
 
 
 def _register(client, email=EMAIL, password=PASSWORD):
-    from tests.registration import CONSENT
+    from tests.registration import CONSENT, confirm_registered
 
     response = client.post("/api/register", json={
         "email": email, "password": password, "password_again": password,
         "consent": CONSENT})
+    response = confirm_registered(client, response)
     assert response.status_code == 200, response.text
 
 
@@ -81,11 +82,16 @@ def _login(client, email=EMAIL, password=PASSWORD):
 
 def reset_link_for(client, email=EMAIL) -> tuple[str, str]:
     """(link, token) from the newest reset message queued for this address."""
-    messages = client.outbox.messages_for(email)
+    messages = reset_messages_for(client, email)
     assert messages, f"no reset message was queued for {email}"
     found = LINK.search(messages[-1]["text"])
     assert found, "the queued message carries no reset link"
     return found.group(1), found.group(2)
+
+
+def reset_messages_for(client, email=EMAIL):
+    return tuple(message for message in client.outbox.messages_for(email)
+                 if message['purpose'] == 'password-reset')
 
 
 # ================================ the domain =================================
@@ -136,7 +142,7 @@ def test_known_unknown_and_undeliverable_accounts_get_one_answer(client):
     assert [answer.status_code for answer in answers] == [202] * 3
     assert answers[0].json() == answers[1].json() == answers[2].json()
     assert answers[0].json()["detail"].startswith("If an account exists")
-    assert len(client.outbox.messages_for(EMAIL)) == 1
+    assert len(reset_messages_for(client, EMAIL)) == 1
     assert client.outbox.messages_for("nobody@example.com") == ()
     assert client.outbox.messages_for("noemail@example.com") == ()
 
@@ -288,7 +294,7 @@ def test_the_reset_doors_refuse_a_foreign_or_missing_origin(client):
             assert raw.post("/api/password/reset", json={
                 "token": "x", "password": NEW_PASSWORD, "password_again": NEW_PASSWORD,
             }, headers=headers).status_code == 403
-    assert client.outbox.messages_for(EMAIL) == ()
+    assert reset_messages_for(client, EMAIL) == ()
 
 
 def test_the_health_report_says_where_reset_links_actually_go(client):
@@ -355,5 +361,26 @@ def test_the_outbox_is_sealed_and_names_no_address(tmp_path):
     stranger = FileOutbox(tmp_path, key="a-different-installation-key")
     assert stranger.messages_for(EMAIL) == ()
     assert stranger.unreadable() == 1, "an unreadable message was dropped silently"
+
+
+def test_messages_with_the_same_wall_clock_instant_keep_send_order(tmp_path, monkeypatch):
+    from nm.adapters.mail import outbox as module
+
+    instant = utcnow()
+    class FrozenClock:
+        @staticmethod
+        def now(tz):
+            return instant
+    monkeypatch.setattr(module, 'datetime', FrozenClock)
+    # Reversed random suffixes make the old ordering fail deterministically.
+    suffixes = iter(('f' * 16, '0' * 16))
+    monkeypatch.setattr(module.secrets, 'token_hex', lambda size: next(suffixes))
+    outbox = FileOutbox(tmp_path, key=KEY)
+    outbox.send(password_reset_mail(EMAIL, 'http://localhost/#reset=first'))
+    outbox.send(password_reset_mail(EMAIL, 'http://localhost/#reset=second'))
+    messages = FileOutbox(tmp_path, key=KEY).messages_for(EMAIL)
+    assert len(messages) == 2
+    assert '#reset=first' in messages[0]['text']
+    assert '#reset=second' in messages[1]['text']
     with pytest.raises(TypeError):
         outbox.send({"to": EMAIL})
