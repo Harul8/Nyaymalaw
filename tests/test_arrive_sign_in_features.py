@@ -1206,7 +1206,10 @@ def start_opens_the_intake_alone(page_script, stylesheet):
 def intake_saves_the_matter_first(page_script):
     submit = _intake_submit(page_script)
     saved = submit.index("await api('/api/matters/intake'")
-    assert "parties: state.intake.parties" in submit[saved:]
+    assert "parties: state.intake.parties" in submit[:saved]
+    assert "brief: state.intake.brief" in submit[:saved]
+    assert "JSON.stringify(payload)" in submit[:saved]
+    assert "request_key: intent.opening.key, ...payload" in submit[saved:]
     closed = submit.index("showIntake(false);", saved)
     board = submit.index(
         "showThreadBoard(opened.matter_id, { adoptOpening: true, restore: false })")
@@ -1219,7 +1222,10 @@ def failed_opening_keeps_the_form(page_script):
     submit = _intake_submit(page_script)
     failure = submit[submit.index("} catch (e) {"):]
     assert "showIntake(false)" not in failure
-    assert "The matter was not opened" in failure and "Your answers are still here" in failure
+    # A missing acknowledgement is not evidence that the commit did not happen.
+    assert "Opening was not confirmed" in failure
+    assert "server may have saved" in failure
+    assert "original answers and retry identity are kept" in failure
 
 
 @when(parsers.parse('an advocate opens a matter for "{client_name}" against "{adverse}" '

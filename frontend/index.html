@@ -352,7 +352,6 @@
 </main>
 
 <main id="pane-advise" hidden>
-  <p id="draft-status" class="draft-status" role="status"></p>
   <!-- BK-32. THE WAY TO THE MATTER LIST BELOW 820px. The rail is a drawer at
        narrow widths and `#back` returns to the list only from inside a matter,
        so an advocate on a phone could work the matter they were in and reach
@@ -378,6 +377,11 @@
         <dl id="board-fields" class="r-fields"></dl>
       </div>
       <div id="board-state"></div>
+      <details id="opening-record" class="opening-details" hidden>
+        <summary>Recorded opening brief</summary>
+        <p class="help">These are recorded instructions, not verified facts or legal clearance.</p>
+        <dl id="opening-fields" class="r-fields"></dl>
+      </details>
     </section>
     <div class="rail-meta" id="rail-meta"></div>
     <div id="rail-body"></div>
@@ -408,30 +412,60 @@
          then covered by a dialog has to remember what they were saying; this
          sits above the composer and stays until it is answered. -->
     <form id="intake" class="intake" hidden>
-      <p class="eyebrow">NEW MATTER · THE INSTRUCTION</p>
+      <p class="eyebrow">NEW MATTER</p>
       <h2>First, establish the brief.</h2>
       <p class="intake-lede">
-        I check a new matter against the other files you hold, so I need the
-        names. These checks cover only your matters, not a firm-wide registry.
+        Record what you know now. Unknown details can follow in the conversation.
+        Opening does not clear conflicts, verify authority or establish a deadline.
       </p>
-      <label for="in-client">Who we act for</label>
-      <input id="in-client" placeholder="the client's name" required>
-
-      <label for="in-adverse">Who it is against</label>
-      <input id="in-adverse" placeholder="the other side's name" required>
-
-      <label for="in-others">Anyone else named
-        <span class="opt">— guarantor, co-defendant, a company in the group</span>
-      </label>
-      <input id="in-others" placeholder="comma separated, or leave blank">
-
-      <label for="in-scope">What you are instructed to do</label>
-      <input id="in-scope" placeholder="recover the price of goods sold" required>
-
-      <label class="check">
-        <input type="checkbox" id="in-capacity" required>
-        The client can give instructions on this matter.
-      </label>
+      <label for="in-title">Matter name <span class="opt">— optional working title</span></label>
+      <input id="in-title" maxlength="200" placeholder="Leave blank for a temporary name">
+      <label for="in-client">Who are you acting for?</label>
+      <textarea id="in-client" rows="2" maxlength="4000" placeholder="One client per line; leave blank if not known yet"></textarea>
+      <label for="in-client-type">Client type</label>
+      <select id="in-client-type"><option value="not_known">Not known yet</option><option value="individual">Individual</option><option value="organisation">Organisation</option><option value="mixed">Individuals and organisations</option></select>
+      <label for="in-scope">What would you like NM to help with?</label>
+      <textarea id="in-scope" rows="3" maxlength="4000" placeholder="A short instruction, or tell NM after opening"></textarea>
+      <p class="materials-muted">Your instruction to NM is separate from the client's underlying authority. You can provide the full account and material after opening.</p>
+      <details class="opening-details"><summary>Who is giving instructions?</summary>
+        <label for="in-instructing">Instruction source</label>
+        <select id="in-instructing"><option value="not_known">Not known yet</option><option value="client">The client directly</option><option value="representative">Another person for the client</option></select>
+        <div id="in-representative" hidden>
+          <label for="in-instructor">Their name</label><input id="in-instructor" maxlength="200">
+          <label for="in-instructor-role">Their role</label><input id="in-instructor-role" maxlength="200">
+          <label for="in-authority">Authority, if known</label><textarea id="in-authority" rows="2" maxlength="2000"></textarea>
+        </div>
+        <label class="check"><input type="checkbox" id="in-capacity">I have assessed that the client can give these instructions.</label>
+        <p class="materials-muted">Leave unchecked when not assessed. This records your assessment, not an independent verification or authority for NM to act.</p>
+      </details>
+      <details class="opening-details"><summary>Other parties</summary>
+        <label for="in-other-state">What is known?</label>
+        <select id="in-other-state"><option value="not_known">Not known yet</option><option value="identified">Other parties identified</option><option value="none_identified">No other party identified</option></select>
+        <label for="in-adverse">Opposing parties, if any</label>
+        <textarea id="in-adverse" rows="2" maxlength="4000" placeholder="One name per line; do not invent an opponent"></textarea>
+        <label for="in-others">Counterparties or other relevant people and organisations</label>
+        <textarea id="in-others" rows="2" maxlength="4000" placeholder="One name per line"></textarea>
+        <p class="materials-muted">Conflict checks cover only the authorised registry. Missing information is not clearance.</p>
+      </details>
+      <details class="opening-details"><summary>Current position</summary>
+        <label for="in-proceedings">Are proceedings under way?</label>
+        <select id="in-proceedings"><option value="not_known">Not known yet</option><option value="none">No proceedings</option><option value="exists">Proceedings exist</option></select>
+        <div id="in-proceeding-details">
+          <label for="in-forum">Court or forum, if known</label><input id="in-forum" maxlength="300">
+          <label for="in-reference">Case reference, if known</label><input id="in-reference" maxlength="200">
+          <label for="in-stage">Present stage, if known</label><input id="in-stage" maxlength="500">
+        </div>
+      </details>
+      <details class="opening-details"><summary>Anything time-sensitive?</summary>
+        <label for="in-urgency">Urgency</label>
+        <select id="in-urgency"><option value="not_known">Not known yet</option><option value="none_reported">None reported at present</option><option value="stated">A time-sensitive concern</option></select>
+        <div id="in-urgency-details" hidden>
+          <label for="in-urgency-note">What needs attention?</label><textarea id="in-urgency-note" rows="2" maxlength="2000"></textarea>
+          <label for="in-date">Reported date, if known</label><input id="in-date" type="date">
+          <label for="in-date-source">Where does that date come from?</label><input id="in-date-source" maxlength="500">
+          <p class="materials-muted">A reported date is not a computed or verified legal deadline.</p>
+        </div>
+      </details>
 
       <button type="submit" class="primary" id="in-go">Record and continue</button>
       <div id="intake-state" role="status"></div>
@@ -440,9 +474,14 @@
     <div id="mode-line" class="mode-line" hidden></div>
     <div id="thread" class="thread"></div>
 
+    <!-- The protected draft's own state, beside the brief it describes. NOT a
+         child of `main`: that is a two-column grid, and a third child takes a
+         cell -- which put the board in the chat's column and the chat below it. -->
+    <p id="draft-status" class="draft-status" role="status"></p>
+
     <form id="composer" class="composer" autocomplete="off">
-      <label class="composer-label" for="message">Your brief</label>
-      <textarea id="message" rows="3" placeholder="Brief me — who the client is, what happened, and when."></textarea>
+      <label class="composer-label" for="message">Your instruction or brief</label>
+      <textarea id="message" rows="3" placeholder="Tell NM what you need, ask a question, or add material."></textarea>
       <div class="composer-row">
         <div class="composer-tools">
           <!-- F-C-01. THE PLUS: documents, photos, audio or video, or a voice note

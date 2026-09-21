@@ -183,9 +183,13 @@ def test_the_clause_says_what_may_not_be_explained_not_how_to_sound():
     counsel" and every one still failed. What is checkable by a writer against
     their own sentence is what they may not DO.
     """
-    assert "Do not explain what a legal term means" in PEER
-    assert "Do not state the general rule" in PEER
-    assert "Do not reassure" in PEER
+    # OM-P01/13 supersedes the blanket prohibition: professional peers may
+    # explicitly request explanation. This checks the written policy only,
+    # not model judgment or counsel-quality acceptance.
+    assert "Do not lecture on basics already understood" in PEER
+    assert "do explain a term, rule or distinction when asked or materially needed" in PEER
+    assert "Do not assume seniority or specialist knowledge" in PEER
+    assert "Connect applicable law to the held file" in PEER
 
 
 def test_the_clause_forbids_reassurance_in_both_directions():
@@ -196,8 +200,9 @@ def test_the_clause_forbids_reassurance_in_both_directions():
     path of least resistance, and confidence offered in place of a finding is
     softening wearing a confident face.
     """
-    assert "not analysis" in PEER
-    assert "softening" in PEER
+    assert "Do not flatter, reassure without a basis or sell the case" in PEER
+    assert "independent view and its support" in PEER
+    assert "material adverse considerations" in PEER
 
 
 def test_the_clause_is_one_string_and_not_six():

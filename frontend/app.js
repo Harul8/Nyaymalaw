@@ -75,7 +75,12 @@ let retiringSession = null;
 // opening), not to the composer DOM. The immutable pending request belongs to
 // that same context, even if its acknowledgement or session is lost.
 const intentContexts = new Map();
-const INTAKE_INPUTS = ['in-client', 'in-adverse', 'in-others', 'in-scope'];
+const INTAKE_INPUTS = [
+  'in-title', 'in-client', 'in-client-type', 'in-adverse', 'in-others', 'in-scope',
+  'in-instructing', 'in-instructor', 'in-instructor-role', 'in-authority',
+  'in-other-state', 'in-proceedings', 'in-forum', 'in-reference', 'in-stage',
+  'in-urgency', 'in-urgency-note', 'in-date', 'in-date-source',
+];
 let activeIntent = null;
 let draftVault = null;
 let draftWrite = 0;
@@ -92,15 +97,20 @@ function draftHasWork(intent) {
 
 async function saveProtectedDraft({previousKey = null} = {}) {
   if (!ownsIntent(activeIntent)) return;
+  const held = activeIntent;
   const generation = state.sessionGeneration;
   const revision = ++draftWrite;
   const status = $('draft-status');
   status.textContent = 'Saving draft…';
   try {
+    // Sign-in reveals the workspace before its device-bound draft key finishes
+    // importing. Early typing/opening must wait for that same account's unlock,
+    // not report a false storage failure or borrow a later account's key.
+    await draftUnlock;
+    if (generation !== state.sessionGeneration || !ownsIntent(held)) return false;
     if (!draftVault?.key) throw new Error('Draft protection is not available.');
     // Pending entries carry a runtime back-reference to their intent. Persist
     // only the immutable retry envelope, never that circular object graph.
-    const held = activeIntent;
     if (!draftHasWork(held)) {
       await draftVault.removeOwn(held.key);
       if (previousKey) await draftVault.removeOwn(previousKey);
@@ -239,7 +249,10 @@ function restoreIntent() {
   const intent = activeIntent;
   $('message').value = intent ? intent.text : '';
   state.intake = intent ? intent.intake : null;
-  INTAKE_INPUTS.forEach((id) => { $(id).value = (intent && intent.fields[id]) || ''; });
+  INTAKE_INPUTS.forEach((id) => {
+    $(id).value = (intent && intent.fields[id]) || ($(id).tagName === 'SELECT' ? 'not_known' : '');
+  });
+  openingSections();
   $('in-capacity').checked = Boolean(intent && intent.capacity);
   $('intake-state').textContent = '';
   showIntake(Boolean(intent && intent.intakeOpen));
@@ -351,8 +364,10 @@ function clearPrivileged() {
   state.matterVersion = null;
   state.matterReady = false;
   state.intake = null;
-  ['in-client', 'in-adverse', 'in-others', 'in-scope', 'q', 'f-court', 'f-from', 'f-to']
+  [...INTAKE_INPUTS, 'q', 'f-court', 'f-from', 'f-to']
     .forEach((id) => { $(id).value = ''; });
+  $('opening-fields').replaceChildren();
+  $('opening-record').hidden = true;
   $('in-capacity').checked = false;
   // THE RIBBON AND THE PERSON MENU FORGET WHO WAS HERE (F-A-17).
   ['who-name', 'workspace-name', 'profile-name', 'profile-email', 'profile-workspace']
@@ -774,6 +789,8 @@ function closeOpenMatter() {
   $('pane-advise').dataset.matterId = '';
   $('back').hidden = true;
   $('matter-board').hidden = true;
+  $('opening-fields').replaceChildren();
+  $('opening-record').hidden = true;
   $('save-status').textContent = '';
 }
 
@@ -881,6 +898,7 @@ async function showThreadBoard(
   state.matterId = matterId;
   state.matterVersion = null;
   state.matterReady = false;
+  updateWorkspace();
   $('matter-heading').textContent = 'Loading matter…';
   $('save-status').textContent = '';
   if (restore) {
@@ -923,6 +941,7 @@ async function showThreadBoard(
   $('matter-heading').textContent = data.title || 'Untitled matter';
   $('workspace-eyebrow').textContent = 'MATTER WORKSPACE';
   $('save-status').textContent = 'Recorded file';
+  renderOpeningBrief(data.opening_brief);
   updateWorkspace();
   window.dispatchEvent(new Event('nm:matter-changed'));
 
@@ -967,6 +986,34 @@ async function showThreadBoard(
     row.append(title, dl);
     return row;
   }));
+}
+
+function renderOpeningBrief(record) {
+  const dl = $('opening-fields');
+  dl.replaceChildren();
+  $('opening-record').hidden = record?.state !== 'recorded';
+  if (record?.state !== 'recorded') return;
+  const brief = record.brief;
+  for (const [name, role] of Object.entries(record.parties || {})) {
+    field(dl, role === 'client' ? 'acting for' : role === 'adverse' ? 'opposing party' : 'other party', name);
+  }
+  const labels = { not_known: 'Not yet known', none_identified: 'None identified',
+    none_reported: 'None reported', none: 'No proceedings reported',
+    exists: 'Proceedings reported', stated: 'Urgency reported',
+    representative: 'Through a representative', client: 'Client directly',
+    identified: 'Parties recorded', individual: 'Individual', organisation: 'Organisation', mixed: 'Multiple types' };
+  for (const [key, label] of [
+    ['objective', 'immediate task'], ['client_type', 'client type'], ['instructing', 'instructions from'],
+    ['instructor_name', 'instructor'], ['instructor_role', 'role'], ['authority_basis', 'stated authority'],
+    ['other_party_state', 'other parties'], ['proceedings', 'current position'], ['forum', 'forum'],
+    ['case_reference', 'reference'], ['stage', 'stage'], ['urgency', 'urgency'],
+    ['urgency_details', 'reported urgency'], ['reported_date', 'reported date — not calculated'],
+    ['date_source', 'date source'],
+  ]) {
+    const value = brief[key];
+    if (value || key === 'objective') field(dl, label, labels[value] || value || 'To be discussed');
+  }
+  field(dl, 'capacity', (brief.capacity?.state || 'not_assessed').replaceAll('_', ' '));
 }
 
 // F-B-02. THE MATTER BOARD IS MY WORK'S ROW FOR THIS MATTER. It is read from
@@ -1578,6 +1625,9 @@ function updateWorkspace() {
   $('composer').hidden = nothingYet || intakeOpen;
   // F-A-17. Case file and History are offered for a matter that is open.
   $('work-links').hidden = !state.matterId;
+  $('send').disabled = Boolean(activeDelivery || (state.matterId && !state.matterReady));
+  if (!activeDelivery) $('send').textContent = state.matterId && !state.matterReady
+    ? 'Loading file…' : 'Send';
 }
 
 /* ------------------------------------------------------------------ send --- */
@@ -1720,6 +1770,7 @@ async function deliver(entry) {
       activeDelivery = null;
       btn.disabled = false;
       btn.textContent = 'Send';
+      updateWorkspace();
     }
   }
 }
@@ -2054,27 +2105,55 @@ function showIntake(show) {
 
 function intakeFields() {
   const parties = {};
-  const client = $('in-client').value.trim();
-  const adverse = $('in-adverse').value.trim();
-  if (client) parties[client] = 'client';
-  if (adverse) parties[adverse] = 'adverse';
-  for (const other of $('in-others').value.split(',')) {
-    const name = other.trim();
-    if (name) parties[name] = 'related';
+  const seen = new Set();
+  for (const [id, role] of [['in-client', 'client'], ['in-adverse', 'adverse'], ['in-others', 'related']]) {
+    for (const entry of $(id).value.split('\n')) {
+      const name = entry.trim();
+      if (!name) continue;
+      const identity = name.toLocaleLowerCase();
+      if (seen.has(identity)) throw new Error('A party is listed more than once. Give each party one role.');
+      seen.add(identity);
+      Object.defineProperty(parties, name, { value: role, enumerable: true });
+    }
   }
-  return {
-    parties,
-    release: {
-      scope: $('in-scope').value.trim(),
-    },
-    capacity: {
-      state: $('in-capacity').checked ? 'not_in_doubt' : 'not_assessed',
-      basis: $('in-capacity').checked
-        ? 'The advocate explicitly confirms that the client can give these instructions.'
-        : 'The advocate has not assessed capacity to give these instructions.',
-    },
+  const capacity = {
+    state: $('in-capacity').checked ? 'not_in_doubt' : 'not_assessed',
+    basis: $('in-capacity').checked
+      ? 'The advocate explicitly confirms that the client can give these instructions.'
+      : 'The advocate has not assessed capacity to give these instructions.',
   };
+  const text = (id) => $(id).value.trim();
+  const representative = text('in-instructing') === 'representative';
+  const proceedings = text('in-proceedings');
+  const urgency = text('in-urgency');
+  let otherState = text('in-other-state');
+  if (otherState === 'not_known' && Object.values(parties).some(role => role !== 'client')) {
+    otherState = 'identified';
+  }
+  const brief = {
+    client_type: text('in-client-type'), instructing: text('in-instructing'),
+    instructor_name: representative ? text('in-instructor') : '',
+    instructor_role: representative ? text('in-instructor-role') : '',
+    authority_basis: representative ? text('in-authority') : '',
+    objective: text('in-scope'), other_party_state: otherState, proceedings,
+    forum: proceedings !== 'none' ? text('in-forum') : '',
+    case_reference: proceedings !== 'none' ? text('in-reference') : '',
+    stage: proceedings !== 'none' ? text('in-stage') : '', urgency,
+    urgency_details: urgency === 'stated' ? text('in-urgency-note') : '',
+    reported_date: urgency === 'stated' ? text('in-date') : '',
+    date_source: urgency === 'stated' ? text('in-date-source') : '', capacity,
+  };
+  return { parties, capacity, title: text('in-title'), brief,
+    release: brief.objective ? { scope: brief.objective } : {} };
 }
+
+function openingSections() {
+  $('in-representative').hidden = $('in-instructing').value !== 'representative';
+  $('in-proceeding-details').hidden = $('in-proceedings').value === 'none';
+  $('in-urgency-details').hidden = $('in-urgency').value !== 'stated';
+}
+['in-instructing', 'in-proceedings', 'in-urgency'].forEach(id =>
+  $(id).addEventListener('change', openingSections));
 
 let openingInFlight = false;
 
@@ -2083,7 +2162,11 @@ $('intake').addEventListener('submit', async (ev) => {
   if (openingInFlight) return;
   // THE ANSWERS STILL TRAVEL WITH THE FIRST BRIEF. The scope, capacity and
   // conflict screens run on that turn, before any fact is admitted (BK-34).
-  state.intake = intakeFields();
+  try { state.intake = intakeFields(); }
+  catch (error) {
+    $('intake-state').replaceChildren(stateBlock('loud', error.message));
+    return;
+  }
   if (state.matterId) {
     // Intake asked again on a matter that already exists: nothing to open.
     showIntake(false);
@@ -2098,40 +2181,83 @@ $('intake').addEventListener('submit', async (ev) => {
   // only once the server confirms it is saved do the chat and board open.
   const intent = activeIntent;
   const go = $('in-go');
-  const offer = JSON.stringify(state.intake.parties);
+  const payload = { title: state.intake.title, parties: state.intake.parties, brief: state.intake.brief };
+  const offer = JSON.stringify(payload);
+  if (intent.opening && intent.opening.offer !== offer && intent.opening.uncertain) {
+    $('intake-state').replaceChildren(stateBlock('loud',
+      'The earlier opening is awaiting confirmation. A changed brief cannot be submitted as a second matter until that opening is resolved.'));
+    if (intent.opening.fields) {
+      const restore = document.createElement('button');
+      restore.type = 'button';
+      restore.textContent = 'Restore original answers and retry';
+      restore.addEventListener('click', () => {
+        if (!ownsIntent(intent)) return;
+        intent.fields = { ...intent.opening.fields };
+        intent.capacity = intent.opening.capacity;
+        restoreIntent();
+        $('intake').requestSubmit();
+      });
+      $('intake-state').append(restore);
+    }
+    return;
+  }
   if (!intent.opening || intent.opening.offer !== offer) {
     // ONE REQUEST KEY PER SET OF ANSWERS, so a retry after a lost response
     // reopens the same file rather than a second one.
-    intent.opening = { offer: offer, key: newTurnId() };
+    intent.opening = { offer, key: newTurnId(),
+      fields: Object.fromEntries(INTAKE_INPUTS.map(id => [id, $(id).value])),
+      capacity: $('in-capacity').checked };
   }
   openingInFlight = true;
   go.disabled = true;
+  [...INTAKE_INPUTS, 'in-capacity'].forEach(id => { $(id).disabled = true; });
   $('intake-state').replaceChildren(stateBlock('building', 'Opening the matter…'));
   try {
     snapshotIntent();
     if (!await saveProtectedDraft()) {
       throw new Error('the retry details could not be saved on this device; no request was sent');
     }
+    intent.opening.uncertain = true;
+    if (!await saveProtectedDraft()) {
+      intent.opening.uncertain = false;
+      throw new Error('the retry state could not be saved on this device; no request was sent');
+    }
     const opened = await api('/api/matters/intake', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ request_key: intent.opening.key, parties: state.intake.parties }),
+      body: JSON.stringify({ request_key: intent.opening.key, ...payload }),
     });
     if (!ownsIntent(intent)) return;
     if (!opened.matter_id || opened.state !== 'intake_opened') {
       throw new Error('the server did not confirm that the matter was saved');
     }
+    intent.opening.uncertain = false;
+    // These instructions are now on the server, not an unsent first-turn draft.
+    // The turn engine reads their attributed record when the advocate returns.
+    state.intake = null;
+    intent.intake = null;
     showIntake(false);
     $('intake-state').textContent = '';
-    const board = showThreadBoard(opened.matter_id, { adoptOpening: true, restore: false });
-    $('message').focus();
-    await board;
+    await showThreadBoard(opened.matter_id, { adoptOpening: true, restore: false });
+    // Adoption saves the protected draft before revealing the composer. Focus
+    // only after that transition, and never steal it from a different context.
+    if (ownsIntent(intent) && state.matterId === opened.matter_id && state.matterReady) {
+      $('message').focus();
+    }
   } catch (e) {
     if (e.obsolete || !ownsIntent(intent)) return;
+    if ([400, 403, 413, 422].includes(e.status)) {
+      intent.opening.uncertain = false;
+      await saveProtectedDraft();
+    }
+    const recovery = intent.opening?.uncertain
+      ? 'The server may have saved the matter. Your original answers and retry identity are kept; retry without changing them.'
+      : 'Your answers remain here. Resolve the reported problem before retrying.';
     $('intake-state').replaceChildren(stateBlock('loud',
-      `The matter was not opened: ${e.message}. Your answers are still here; try again.`));
+      `Opening was not confirmed: ${e.message}. ${recovery}`));
   } finally {
     openingInFlight = false;
     go.disabled = false;
+    [...INTAKE_INPUTS, 'in-capacity'].forEach(id => { $(id).disabled = false; });
   }
 });
 

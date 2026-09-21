@@ -7950,7 +7950,154 @@ of the expanded acceptance population; whole-journey negative/resilience/accessi
 coverage and canonical gate/evidence refresh. Later SMS/MFA and real delivery remain
 separately deferred. This checkpoint is **partial implementation**, not release sign-off.
 
+## Open a matter planning amendment — 21 September 2026
+
+Owner request: add the approved advocate-facing interaction principles to the
+`Before Build` sheet of `docs/Nyaymalaw_Implementation_Plan.xlsx`, then identify
+remaining design gaps. This is a requirements-only amendment, not a product build.
+
+Planned scope: retain the original descriptions and Arrive content; add fourteen
+cross-turn principles, the agreed input/purpose distinctions and independent
+enforcement/evaluation boundary; reconcile the directly affected opening and
+briefing rows; label unanswered design questions separately from approved work.
+Use principle-based guidance rather than example dialogues or scenario routers.
+The full Implementation Plan tab and delivery registries are outside this edit.
+
+Execution status: planning amendment completed. Fourteen approved principles
+(OM-P01–14), three agreed input/enforcement boundaries (OM-I01–03) and six
+explicitly undecided design questions (OM-Q01–06) now occupy rows 133–155.
+Seven existing rows carry current B–J clarifications: F-B-01/05/16 and
+F-C-01/02/04/06. They remove implied upload-to-analysis consent and scripted
+response routing, keep the mandatory form, and distinguish confirmed extraction
+from independent proof. The original descriptions remain intact.
+
+Verification: 297 cells amended; all 126 original description rows preserved;
+all 13 workbook package parts outside Before Build byte-identical, including
+the full Implementation Plan and shared styles. Arrive rows 5–70 are unchanged.
+The existing ten columns and frozen headings are preserved; filtering extends
+through row 155. Read-back checks found no error-valued cells on Before Build.
+Representative changed views were visually checked, including source URL wrapping.
+The configured artifact-tool package was absent; the permitted fallback applied
+a targeted worksheet-XML edit, with openpyxl read-back and font-measured visual
+checks. Publication refused concurrent source changes. Saved workbook SHA-256:
+`5af5c5183b954e8b2501898db52bbda1b5a05a2053e982fdc87a5b6cb7066b0f`.
+
+Workbook-only OM-P/OM-I/OM-Q identifiers are local
+planning references, not registered delivery items or evidence of implementation.
+Reconciliation with delivery criteria remains required before the corresponding
+build can be signed off. No application tests, model evaluations or legal
+approvals are claimed by this planning update.
+
 ## BK-93 — opening-route journey and safe risk handoff
+
+### Open a matter build — 21 September 2026
+
+Start: owner authorises end-to-end implementation and real browser validation
+of the approved Before Build principles. Subsequent approvals settle the seven
+opening areas (title, client, instructor, other parties, objective, present
+position, urgency), unknown states, selective restrictions, honest media
+capabilities, interruption/retry controls, and opening completion independent
+of a full brief. Kept recordings follow the matter policy, not a blanket
+30-day timer; temporary dictation is separate. Exact legal retention periods
+and external processor permissions are not supplied by those approvals.
+
+Measured opening defect: the UI requires an adverse party and positive capacity
+checkbox, and posts only parties. Scope/capacity remain browser-only until the
+first message. The server rejects an untitled unknown-party opening. A new
+session therefore cannot reconstruct the opening instructions from the file.
+Fix the general durable-opening contract, not a special first-message case.
+
+Build sequence: persist and project the complete attributed brief with immutable
+retry identity; adapt the seven-area form and protected drafts; apply the shared
+conversation principles and context; complete scoped input/processing/recovery
+controls; check domain, served API, independent browser operation and affected
+Arrive regressions. Code-graph scope is verified against source. Preserve the
+pre-existing draft-status layout edits in frontend/index.html and app.css.
+
+Proof plan: unknown/partial/multiple-party and non-contentious opening, replay
+and changed-offer refusal, actual store restart, two-user isolation, no false
+clearance, context after reopening, accessible narrow layout, interruption and
+correctable first contributions. Media receipt is not extraction evidence.
+Live paid model batch approval has been requested separately. No legal review,
+production permission or full-phase PASS follows from a focused test run.
+
+Start READY for the approved opening contract; Build OPEN; Test NOT_RUN;
+Sign-off NOT_RUN. Numeric limits and unavailable capabilities must be measured
+and disclosed, not invented or marked complete.
+
+#### Implemented and locally exercised — 21 September 2026
+
+The seven-area brief now saves durably before the first message, including
+unknowns and multiple clients without requiring an invented opponent. An
+immutable opening offer governs replay; a lost acknowledgement cannot silently
+change the offer or create a second matter. Protected drafts include every new
+field and wait for the current account's encryption-key setup before allowing
+an opening request. Read-back exposes the complete attributed original brief.
+
+The turn reader receives this context as unverified instructions, not case
+facts or quotable evidence. Shared peer-conversation principles replace forced
+brief invitations and rank assumptions. BK-93-AC1 is explicitly refined to
+permit a released conversational receipt within an explicitly opened owned
+file; it still forbids implicit matter creation and invented/admitted facts.
+
+Hands-on synthetic browser use covered unknown-details opening, a multi-client
+non-contentious brief, protected draft recovery, saved conversation after
+re-entry, a store-only original upload and resumption of the same receipt,
+phone layout and sign-out/reload. It found real issues with complete party
+display, stale upload-limit references and premature composer readiness.
+Browser regression testing also found small touch targets, lost focus when a
+dialog closed or a matter opened, and an opening request racing draft-key
+initialisation. These were corrected at their shared owners and guarded with
+transfer/boundary tests, not first-message keyword patches.
+
+The implementation workbook's approved requirement/acceptance cells were
+updated and visually checked using the spreadsheet-preservation workflow;
+historical descriptions and the full Implementation Plan were preserved.
+Code-review graph impact analysis scoped the affected security/authority tests.
+
+Evidence and exact run populations: [scoped build report](backlog/evidence/open-matter-20260921/REPORT.md)
+and its source manifest/XML reports. The focused results do **not** refresh
+Class-A or historical browser evidence. Backlog lint still reports the stale
+cumulative evidence and the existing BK-76-AC2 named-test reference problem.
+
+Whole-item state remains **Build OPEN / Test OPEN / Sign-off NOT_RUN**. Actual
+admitted-media extraction, complete action-boundary reconciliation, authorised
+live-model evaluation, real microphone/transcription proof and qualified review
+remain open. Retention instructions are recorded, not proof of an automated
+deletion service or approved legal retention periods. No commit, push or release
+is claimed by this update.
+
+#### Owner parks remaining opening work — 21 September 2026
+
+The owner explicitly asks to keep the remaining work in the plan as
+pending/open and pick it up later. This changes scheduling, not the approved
+requirements, acceptance criteria or permission boundaries. No new application
+code, paid evaluation, review approval, commit or release is authorised by this
+record. BK-93 stays partial / in progress with Build OPEN and Test OPEN; it is
+not relabelled complete or moved wholesale to a deferred delivery state.
+
+| Retained work | State and resume condition | Existing plan location |
+|---|---|---|
+| Media extraction and understanding | OPEN; resume against declared formats/languages, actual extraction, source locators, correction, unreadable portions, injection and document-only/mixed-material proof | Before Build OM-I02 / OM-Q03; BK-93-AC2 / P25 |
+| Remaining action-permission checks | OPEN; reconcile each requested action with its authority/purpose/screen state and test both permitted and refused outcomes | Before Build OM-Q02; existing screen/authority owners |
+| Real voice/transcription validation | OPEN; obtain required microphone/processing permissions and verify actual capture, transcription, corrections, interruptions and privacy | Before Build OM-I01 / OM-Q03; F-C-02/03/08 |
+| Approved live-model evaluation | OPEN / NOT_RUN; separate per-run paid approval, representative synthetic population, substantive assessment and resulting fixes | Before Build OM-I03 / OM-Q06; BK-93-AC1/AC2 |
+| Professional review | OPEN / NOT_RUN; qualified assessment of substantive behaviour, stated reservations and applicable retention policy; no agent-supplied sign-off | Before Build OM-Q05/06; BK-93-AC1/AC2 |
+| Integration and cumulative verification | OPEN; rerun affected journeys and gates, resolve failures and bind current evidence before any whole-phase/release claim | Before Build OM-Q06; existing gate/evidence owners |
+
+The seven relevant readiness cells in Before Build now carry the dated owner
+decision and specific remaining work. Original descriptions, requirements and
+the full Implementation Plan are unchanged. The earlier build report remains a
+historical record of its tested candidate; its workbook hash is not rewritten
+to pretend these later planning edits existed during the tests.
+
+Recommended next activity, **not started or approved for implementation here**:
+review C. Take the brief in Before Build. Define the typed-input listening and
+assessment loop, attributable facts versus allegations/inferences, evolving
+chronology and issues, targeted questions, corrections and the point at which
+enough is known for the immediate task. Preserve future media entry points and
+existing restrictions. Save the current implementation at a truthful checkpoint
+before starting the next build; no checkpoint commit is made by this note.
 
 Registered 12 September 2026 after the a3d9c47 conformance review found real
 route code with no genuine B1 delivery owner. The route reader and no-file

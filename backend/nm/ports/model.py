@@ -122,6 +122,8 @@ class Prompt:
 
     user: str
     system: str | None = None
+    operation: str = ""
+    """Internal task identity; never inferred from prompt words or user text."""
 
     def __post_init__(self) -> None:
         if not self.user or not self.user.strip():

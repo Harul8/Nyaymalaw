@@ -37,6 +37,7 @@ from dataclasses import dataclass, field
 
 from nm.domain.intake import ReadQuality
 from nm.domain.matter import AskedQuestion, Certainty, FactBasis, Matter, Role, Thread
+from nm.domain.opening import instruction_context
 from nm.domain.text import refuses_blank_text, snippet
 
 #: How much of the account a prompt is given.
@@ -184,6 +185,8 @@ class MatterSummary:
     reader to think five threads had been screened five times.
     """
 
+    opening_instructions: str = ""
+
     @property
     def handover_blockers(self) -> tuple[str, ...]:
         """What stops this standing alone as a handover. NEVER an empty list.
@@ -293,7 +296,8 @@ class MatterSummary:
 
     @property
     def empty(self) -> bool:
-        return not (self.established or self.account or self.asked_anything)
+        return not (self.established or self.account or self.asked_anything
+                    or self.opening_instructions)
 
     @property
     def asked_anything(self) -> bool:
@@ -307,6 +311,8 @@ class MatterSummary:
         be said twice by the person who already said it.
         """
         blocks: list[str] = []
+        if self.opening_instructions:
+            blocks.append(self.opening_instructions)
         if self.account:
             # THE HEADING NAMES A SOURCE, so it must be true of every line
             # under it. It said "WHAT THE ADVOCATE HAS ALREADY TOLD ME" while
@@ -520,6 +526,7 @@ def build(matter: Matter, thread_id: str | None = None,
         turns=len(matter.turns_applied),
         # WHAT THE FILE ITSELF HOLDS, as opposed to any one dispute.
         sections=_states(matter, MATTER_SECTIONS),
+        opening_instructions=instruction_context(matter),
     )
 
 

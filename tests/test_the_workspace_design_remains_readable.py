@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.test_the_journey_login_to_logout import WIDTHS, _sign_in
+from tests.test_the_journey_login_to_logout import WIDTHS, _sign_in, _start_matter
 from tests.test_the_workspace_respects_its_current_context import journey as _journey
 from tests.test_the_workspace_respects_its_current_context import page as _page
 
@@ -43,13 +43,24 @@ def test_intake_and_workspace_keep_readable_controls_in_each_theme(
 ):
     page.emulate_media(color_scheme=colour_scheme)
     _sign_in(page, journey, width, height)
-    launch = page.locator("#materials-open")
+    # Originals belong to a durably opened file. Unknown brief details must
+    # not prevent opening it; the upload control is not on the blank intake.
+    _start_matter(page)
+    page.click("#in-go")
+    page.wait_for_selector("#composer:not([hidden])")
+    launch = page.locator("#plus-toggle")
     assert launch.is_visible() and launch.is_enabled()
     box = launch.bounding_box()
     assert box and box["height"] >= 42
     assert box["x"] >= 0 and box["x"] + box["width"] <= width
     # Keyboard-only operation through the shipped control, not a scripted click handler.
     launch.focus()
+    page.keyboard.press("Enter")
+    # Traverse the visible menu to its recorder entry without granting mic access.
+    page.keyboard.press("Tab")
+    page.keyboard.press("Tab")
+    page.keyboard.press("Tab")
+    assert page.locator("#plus-voice").evaluate("el => el === document.activeElement")
     page.keyboard.press("Enter")
     dialog = page.locator("#materials-dialog")
     dialog.wait_for(state="visible")

@@ -319,6 +319,9 @@ def _new_matter(page, client, width=1280):
     _start_matter(page)
     _intake(page, client=client, adverse=f"Respondent for {client}")
     _advise(page, BRIEF)
+    # Complete the existing board read before a later test captures a new
+    # request to the same route. Otherwise it measures an unrelated reply.
+    page.wait_for_function("() => document.querySelector('#board-state').textContent === ''")
     matter_id = page.get_attribute("#pane-advise", "data-matter-id")
     assert matter_id, "the served opening did not give the file an identity"
     return matter_id
@@ -422,6 +425,9 @@ def test_the_live_workspace_is_local_and_keyboard_navigable_at_each_width(
         _assert_no_overflow(page)
     # F-A-17. Case file and History are offered inside My work, for the open matter.
     for surface in ("casefile", "history"):
+        # My work deliberately returns to its list (F-A-18); choose the file
+        # before asserting the file-scoped controls are reachable.
+        _open_by_keyboard(page, second, width)
         _assert_fits(page, f"#work-links button[data-tab='{surface}']")
         _tab(page, surface)
         _assert_no_overflow(page)
@@ -545,6 +551,9 @@ def test_late_authenticated_responses_cannot_repopulate_dom_after_logout(
     elif surface == "history":
         _tab(page, "history")
         page.wait_for_selector(f"#history-matter option[value='{matter_id}']", state="attached")
+        # Entering History also loads the selected file. Finish that initial
+        # render before isolating the next response across logout.
+        page.wait_for_selector("#history-body .recorded-turn")
         held = _HeldReply(page, f"**/api/matters/{matter_id}/transcript")
         page.select_option("#history-matter", value=matter_id)
         assert held.wait()["turn_count"] > 0
@@ -603,6 +612,40 @@ def _sign_in_without_reloading(page, journey):
     page.fill("#login-password", journey["password"])
     page.click("#login-go")
     page.wait_for_selector("#masthead:not([hidden])", timeout=15000)
+
+
+def test_opening_waits_for_its_device_draft_key_before_sending(page, journey):
+    page.goto(journey["base"])
+    page.wait_for_selector("#login-go")
+    held = _HeldReply(page, "**/api/drafts/key")
+    _sign_in_without_reloading(page, journey)
+    held.wait()
+    _start_matter(page)
+    page.click("#in-go")
+    page.wait_for_selector("#in-go[disabled]")
+    _rendered(page)
+    assert not any(row["path"] == "/api/matters/intake" for row in page.request_identities)
+    assert "Draft protection is not available" not in page.locator("#intake-state").inner_text()
+    held.release()
+    page.wait_for_function("document.activeElement.id === 'message'")
+    openings = [row for row in page.request_identities if row["path"] == "/api/matters/intake"]
+    assert len(openings) == 1
+    mid = page.get_attribute("#pane-advise", "data-matter-id")
+    record = page.request.get(journey["base"] + f"/api/matters/{mid}").json()
+    assert record["opening_brief"]["state"] == "recorded"
+    assert not page.errors, page.errors
+
+
+def test_failed_draft_protection_never_sends_an_unrecoverable_opening(page, journey):
+    page.route("**/api/drafts/key", lambda route: route.fulfill(
+        status=503, json={"detail": "Synthetic draft-key service unavailable"}))
+    _sign_in(page, journey)
+    _start_matter(page)
+    page.click("#in-go")
+    page.get_by_text("no request was sent", exact=False).wait_for()
+    assert not any(row["path"] == "/api/matters/intake" for row in page.request_identities)
+    assert "server may have saved" not in page.locator("#intake-state").inner_text()
+    assert not page.errors, page.errors
 
 
 def test_drafts_and_unsubmitted_intake_belong_to_the_selected_file(page, journey):
@@ -700,6 +743,7 @@ def test_lost_acknowledgement_and_expired_session_keep_the_exact_turn_envelope(
         assert "archived answer was withheld" in page.inner_text("#history-body")
         assert "UNRELEASED ADVICE" not in page.inner_text("#history-body")
         _tab(page, "advise")
+        _open_by_keyboard(page, matter_id)
     assert "file itself is intact" not in disclosure
     held.release()
     assert retry.is_visible()

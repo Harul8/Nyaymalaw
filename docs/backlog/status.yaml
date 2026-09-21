@@ -4218,20 +4218,20 @@ items:
   verification: none
   delivers: [B1]
   record: docs/BACKLOG.md#bk-93-opening-route-journey-and-safe-risk-handoff
-  next_action: adopt the existing route reader and non-matter no-write path; finish the complete text opening matrix and risk handoff under P14, then document-only and hostile-material routing under P25; source declarations and synthetic examples do not close semantic or browser proof
+  next_action: owner parked the remaining opening work on 2026-09-21 for later explicit pickup; media extraction/understanding, action-permission reconciliation, real voice/transcription validation, per-run-approved live-model evaluation and qualified professional/retention review remain OPEN, with integration and cumulative gate refresh still required; current foundation stays partial, not a full B1 acceptance claim; next proposed planning discussion is C Take the brief, not authorisation to build or bypass these dependencies
   stage_records:
     start: {result: READY, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
-    build: {result: OPEN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
-    test: {result: NOT_RUN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
+    build: {result: OPEN, ref: docs/backlog/evidence/open-matter-20260921/REPORT.md}
+    test: {result: OPEN, ref: docs/backlog/evidence/open-matter-20260921/REPORT.md}
     signoff: {result: NOT_RUN, ref: docs/backlog/evidence/a3-conformance-packet-inventory.json}
   acceptance:
   - id: BK-93-AC1
-    requirement: the served text opening routes by disclosed matter content rather than length, states its correctable reading, distinguishes non-matter without file writes from real disputes, and hands short emergencies to bounded protective admission without skipping ordinary substantive screens; unsupported scope and improper instructions receive the applicable refusal rather than an advancing interview
+    requirement: the served text opening routes by disclosed matter content rather than length, states its correctable reading, distinguishes non-matter without implicitly creating a file or establishing facts from substantive matters, and hands short emergencies to bounded protective admission without skipping ordinary substantive screens; an explicitly opened owned file may retain the released conversation receipt without treating it as evidence or clearance; unsupported scope and improper instructions receive the applicable refusal rather than an advancing interview
     required_evidence: [domain_test, integration_test, adversarial_test, model_eval, counsel_review]
     evidence: {}
     negative_control:
       mutation: preserve the disclosed dispute while changing length or pleasantries, swap a short emergency with a long non-matter question, and request improper action through the same route
-      expected_failure: the intended route remains content-based, non-matter never writes a file, and emergency or improper wording cannot admit unpermitted substantive work
+      expected_failure: the intended route remains content-based, non-matter cannot implicitly create a file or establish case facts, only a released conversation receipt may be saved to an explicitly opened owned file, and emergency or improper wording cannot admit unpermitted substantive work
   - id: BK-93-AC2
     requirement: the complete B1 opening matrix including a document without accompanying words and several matters is exercised through served admitted-material intake; source instructions remain data, each real dispute is identified without silently attaching to another file, the stated reading is visible and the advocate can correct it without losing source provenance
     required_evidence: [integration_test, adversarial_test, browser_journey, model_eval, counsel_review]
@@ -4239,6 +4239,13 @@ items:
     negative_control:
       mutation: place an instruction to clear the matter inside an uploaded document, omit all accompanying text, or mix two distinct disputes while retaining similar labels
       expected_failure: no embedded instruction gains authority, unread material is not claimed read, and the original sources and distinct disputes remain visible and correctable
+  - id: BK-93-AC3
+    requirement: the seven-area Establish the brief form records one owned resumable matter before any message, accepts explicit unknown states without invented parties or authority, durably preserves the entire attributed opening instruction, rejects altered retries and supplies the recorded brief when the matter is reopened
+    required_evidence: [domain_test, integration_test, adversarial_test, browser_journey]
+    evidence: {}
+    negative_control:
+      mutation: interrupt the opening acknowledgement, restart storage before the first message, change one instruction under the same request key, or read the matter from another account
+      expected_failure: no duplicate or silently changed opening, no lost brief or fabricated clearance, and no cross-account disclosure
 
 - id: BK-94
   title: living-file parties threads chronology and evidence journey

@@ -170,8 +170,14 @@ def _intake(page, client="Ramesh Traders", adverse="Kiran Steels",
     if page.is_hidden("#intake"):
         return
     page.fill("#in-client", client)
+    # The approved opening form uses progressive disclosure, not mandatory
+    # opponent/capacity fields. This journey deliberately supplies both.
+    if page.is_hidden("#in-adverse"):
+        page.get_by_text("Other parties", exact=True).click()
     page.fill("#in-adverse", adverse)
     page.fill("#in-scope", scope)
+    if page.is_hidden("#in-capacity"):
+        page.get_by_text("Who is giving instructions?", exact=True).click()
     page.check("#in-capacity")
     page.click("#in-go")
     # `state="hidden"`, NOT the default. `wait_for_selector("#intake
@@ -478,21 +484,40 @@ def test_phase_4_a_brief_can_be_filed_without_a_mouse(page, journey):
     scope = "Review the supplied invoice and advise on recovery"
     page.keyboard.type(client_name)
     page.keyboard.press("Tab")
-    assert active_id() == "in-adverse"
-    page.keyboard.type(adverse_name)
-    page.keyboard.press("Tab")
-    assert active_id() == "in-others"
+    assert active_id() == "in-client-type"
     page.keyboard.press("Tab")
     assert active_id() == "in-scope"
     page.keyboard.type(scope)
+    page.keyboard.press("Tab")
+    assert page.evaluate("document.activeElement.textContent") == "Who is giving instructions?"
+    page.keyboard.press("Enter")
+    page.keyboard.press("Tab")
+    assert active_id() == "in-instructing"
     page.keyboard.press("Tab")
     assert active_id() == "in-capacity"
     page.keyboard.press("Space")
     assert page.is_checked("#in-capacity")
     page.keyboard.press("Tab")
+    assert page.evaluate("document.activeElement.textContent") == "Other parties"
+    page.keyboard.press("Enter")
+    page.keyboard.press("Tab")
+    assert active_id() == "in-other-state"
+    page.keyboard.press("ArrowDown")
+    assert page.input_value("#in-other-state") == "identified"
+    page.keyboard.press("Tab")
+    assert active_id() == "in-adverse"
+    page.keyboard.type(adverse_name)
+    page.keyboard.press("Tab")
+    assert active_id() == "in-others"
+    page.keyboard.press("Tab")
+    assert page.evaluate("document.activeElement.textContent") == "Current position"
+    page.keyboard.press("Tab")
+    assert page.evaluate("document.activeElement.textContent") == "Anything time-sensitive?"
+    page.keyboard.press("Tab")
     assert active_id() == "in-go"
     page.keyboard.press("Enter")
     page.wait_for_selector("#intake", state="hidden", timeout=15000)
+    page.wait_for_function("document.activeElement.id === 'message'")
     assert active_id() == "message"
     page.keyboard.type(BRIEF)
     # The composer is a form: Enter submits from a focused control. If it does
@@ -860,7 +885,8 @@ def test_phase_9_reload_restores_the_matter(page, journey):
 
     page.reload()
     page.wait_for_selector("#masthead:not([hidden])", timeout=15000)
-    page.wait_for_selector(".rail .row", timeout=15000)
+    page.get_by_role("button", name="My work", exact=True).click()
+    page.wait_for_selector("#rail-body .row[data-matter-id]", timeout=15000)
 
     # THE CONVERSATION, NOT MERELY A NON-EMPTY PAGE. The first version of
     # this phase asserted `len(after) > 40`, which the matter rail alone
@@ -869,7 +895,7 @@ def test_phase_9_reload_restores_the_matter(page, journey):
     # assertion that a page is not empty is not an assertion that the
     # advocate's work came back.
     # THIS PHASE'S OWN MATTER, by the name it gave at intake.
-    page.click(f".rail .row:has-text('{mine}')")
+    page.click(f"#rail-body .row:has-text('{mine}')")
     # WAIT FOR WHAT THIS PHASE JUDGES, which is the restored ANSWER and not
     # the card around it. `.turn` appears on the first repaint; the sections
     # arrive with the elements, and reading between the two gave a page that

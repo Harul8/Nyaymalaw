@@ -1,0 +1,216 @@
+{
+  "nodeid": "tests/test_the_workspace_design_remains_readable.py::test_intake_and_workspace_keep_readable_controls_in_each_theme[768-1024-light]",
+  "outcome": "passed",
+  "viewport": {
+    "width": 768,
+    "height": 1024
+  },
+  "requests": [
+    {
+      "path": "/",
+      "method": "GET",
+      "resource_type": "document"
+    },
+    {
+      "path": "/static/app.css",
+      "method": "GET",
+      "resource_type": "stylesheet"
+    },
+    {
+      "path": "/static/matter-workspace.css",
+      "method": "GET",
+      "resource_type": "stylesheet"
+    },
+    {
+      "path": "/static/intake-materials.css",
+      "method": "GET",
+      "resource_type": "stylesheet"
+    },
+    {
+      "path": "/static/draft-vault.js",
+      "method": "GET",
+      "resource_type": "script"
+    },
+    {
+      "path": "/static/app.js",
+      "method": "GET",
+      "resource_type": "script"
+    },
+    {
+      "path": "/static/matter-workspace.js",
+      "method": "GET",
+      "resource_type": "script"
+    },
+    {
+      "path": "/static/intake-materials.js",
+      "method": "GET",
+      "resource_type": "script"
+    },
+    {
+      "path": "/api/health",
+      "method": "GET",
+      "resource_type": "fetch"
+    },
+    {
+      "path": "/api/session",
+      "method": "GET",
+      "resource_type": "fetch"
+    },
+    {
+      "path": "/api/login",
+      "method": "POST",
+      "resource_type": "fetch"
+    },
+    {
+      "path": "/api/health",
+      "method": "GET",
+      "resource_type": "fetch"
+    },
+    {
+      "path": "/api/matters",
+      "method": "GET",
+      "resource_type": "fetch"
+    },
+    {
+      "path": "/api/drafts/key",
+      "method": "GET",
+      "resource_type": "fetch"
+    },
+    {
+      "path": "/api/session/activity",
+      "method": "POST",
+      "resource_type": "fetch"
+    },
+    {
+      "path": "/api/matters/intake",
+      "method": "POST",
+      "resource_type": "fetch"
+    },
+    {
+      "path": "/api/matters",
+      "method": "GET",
+      "resource_type": "fetch"
+    },
+    {
+      "path": "/api/matters/m_05a99bf6d5ac61f82398d8575320381c",
+      "method": "GET",
+      "resource_type": "fetch"
+    },
+    {
+      "path": "/api/matters/m_05a99bf6d5ac61f82398d8575320381c/uploads",
+      "method": "GET",
+      "resource_type": "fetch"
+    }
+  ],
+  "static_assets": [
+    {
+      "path": "/static/app.css",
+      "status": 200,
+      "resource_type": "stylesheet",
+      "body_length": 56483,
+      "sha256": "9e1bc60e4bf587c85a8dd4070f67eac027147e29800b4093bb12903668f2e3ae",
+      "content_type": "text/css; charset=utf-8"
+    },
+    {
+      "path": "/static/matter-workspace.css",
+      "status": 200,
+      "resource_type": "stylesheet",
+      "body_length": 2787,
+      "sha256": "6b90594e858c3d8cc8e70413393878ed918c319b5c0df82cb68c9c47881105bf",
+      "content_type": "text/css; charset=utf-8"
+    },
+    {
+      "path": "/static/intake-materials.css",
+      "status": 200,
+      "resource_type": "stylesheet",
+      "body_length": 2375,
+      "sha256": "ab505169288c84a0bbae251a8ee2d6757008245c4a642953e9c3c1b7f03fd563",
+      "content_type": "text/css; charset=utf-8"
+    },
+    {
+      "path": "/static/draft-vault.js",
+      "status": 200,
+      "resource_type": "script",
+      "body_length": 5800,
+      "sha256": "6b46af63d9fc41dc1c6a8d0d771ed6dffe61f7b7e65f97110338259a21a0ae2a",
+      "content_type": "text/javascript; charset=utf-8"
+    },
+    {
+      "path": "/static/intake-materials.js",
+      "status": 200,
+      "resource_type": "script",
+      "body_length": 28797,
+      "sha256": "8a1a6ef4a999fcd071727b032bbad1990a4616a3b4d4bf8c691a2566cba95dde",
+      "content_type": "text/javascript; charset=utf-8"
+    },
+    {
+      "path": "/static/matter-workspace.js",
+      "status": 200,
+      "resource_type": "script",
+      "body_length": 35642,
+      "sha256": "09056b32598ac2bccccc9838f18fba926ead27c18272bab7b4c493987d285284",
+      "content_type": "text/javascript; charset=utf-8"
+    },
+    {
+      "path": "/static/app.js",
+      "status": 200,
+      "resource_type": "script",
+      "body_length": 219147,
+      "sha256": "c691baa3f8c82f54df1a5fd8c2891ff00dd180eaa018aefa73971165bd8944b4",
+      "content_type": "text/javascript; charset=utf-8"
+    }
+  ],
+  "asset_navigations": [
+    {
+      "path": "/",
+      "required": [
+        {
+          "path": "/static/app.css",
+          "kind": "stylesheet"
+        },
+        {
+          "path": "/static/matter-workspace.css",
+          "kind": "stylesheet"
+        },
+        {
+          "path": "/static/intake-materials.css",
+          "kind": "stylesheet"
+        },
+        {
+          "path": "/static/draft-vault.js",
+          "kind": "script"
+        },
+        {
+          "path": "/static/app.js",
+          "kind": "script"
+        },
+        {
+          "path": "/static/matter-workspace.js",
+          "kind": "script"
+        },
+        {
+          "path": "/static/intake-materials.js",
+          "kind": "script"
+        }
+      ],
+      "problems": []
+    }
+  ],
+  "request_failures": [],
+  "console_errors": [
+    {
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "location": {
+        "url": "http://127.0.0.1:60129/api/session",
+        "line": 0,
+        "column": 0,
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    }
+  ],
+  "held_reply_count": 0,
+  "page_errors": [],
+  "external_assets_refused": [],
+  "capture_errors": []
+}

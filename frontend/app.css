@@ -319,7 +319,7 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .composer-tools { align-items: center; display: flex; flex-wrap: wrap; gap: 0.4rem; min-width: 0; }
 .tool-button {
   align-items: center; border-radius: 999px; display: inline-flex; justify-content: center;
-  min-height: 38px; padding: 0; width: 38px;
+  min-height: 44px; padding: 0; width: 44px;
 }
 .tool-button:hover, .tool-button[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
 .tool-button.recording { background: var(--surface); border-color: var(--signal); color: var(--signal); }
@@ -331,7 +331,7 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
   position: absolute; width: max-content; z-index: 60;
 }
 .plus-panel button {
-  background: none; border: 0; border-radius: 6px; min-height: 38px; padding: 0.45rem 0.7rem;
+  background: none; border: 0; border-radius: 6px; min-height: 44px; padding: 0.45rem 0.7rem;
   text-align: left;
 }
 .plus-panel button:hover, .plus-panel button:focus-visible { background: var(--paper); color: var(--accent); }
@@ -1323,4 +1323,21 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .draft-recovery:empty, .draft-status:empty { display: none; }
 .draft-recovery { max-width: 72rem; margin: 1rem auto; padding: 0 1.25rem; }
 .draft-recovery button { margin: .25rem .5rem .25rem 0; }
-.draft-status { font-size: .82rem; line-height: 1.5; color: #52645e; margin: .5rem 0; }
+.draft-status {
+  font-size: .82rem; line-height: 1.5; color: #52645e;
+  margin: 0; padding: .6rem 1.5rem 0;
+  max-width: 49rem;
+}
+.opening-details { border-top: 1px solid #dce5df; padding: .8rem 0; margin-top: .65rem; }
+.opening-details summary { cursor: pointer; font-weight: 600; color: #234a40; padding: .25rem 0; }
+.opening-details summary:focus-visible { outline: 2px solid #1a6252; outline-offset: 4px; }
+#intake textarea, #intake select {
+  width: 100%; box-sizing: border-box; border: 1px solid var(--rule);
+  border-radius: 7px; background: var(--paper); color: var(--ink);
+  font: inherit; padding: .7rem .8rem; min-height: 44px;
+}
+#intake textarea { resize: vertical; line-height: 1.5; }
+#intake textarea:focus-visible, #intake select:focus-visible {
+  outline: 2px solid #1a6252; outline-offset: 2px;
+}
+#opening-fields dd { overflow-wrap: anywhere; white-space: pre-wrap; }

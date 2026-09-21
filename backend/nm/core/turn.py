@@ -57,6 +57,7 @@ from nm.core import relief as relief_mod
 from nm.core import route as route_reader
 from nm.core import screens as screens_mod
 from nm.core import theory as theory_reader
+from nm.core.conversation import guided
 from nm.core.professional_access import read_professional_status
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
 from nm.domain import advice, citation, decision, engagement, issue, reads, reservation
@@ -725,13 +726,20 @@ class TurnEngine:
         route, mode, mode_statement = self._read_route(turn, metrics)
 
         if route is Route.NON_MATTER:
-            # NOTHING is written to any file on this route.
             answer = self._non_matter_answer(turn, mode, mode_statement, metrics)
+            # No implicit matter creation for a courtesy or an abstract question.
+            # Inside an explicitly opened file, retain the released conversation
+            # as a receipt, never as an admitted case fact or cleared screen.
+            recorded = None
+            if admitted_snapshot is not None:
+                recorded = self._commit_released(
+                    admitted_snapshot, turn, answer, admitted_snapshot.version)
+                metrics.matter_id = recorded.id
             metrics.outcome = Outcome.OK
             metrics.stages["admit_ms"] = int((time.perf_counter() - t0) * 1000)
             metrics.latency_ms = int((time.perf_counter() - started) * 1000)
             self._store.record_metrics(metrics.as_dict())
-            return TurnOutput(turn.turn_id, answer, None, metrics)
+            return TurnOutput(turn.turn_id, answer, recorded, metrics)
 
         matter = self._load_or_create(turn, admitted_snapshot)
         metrics.matter_id = matter.id
@@ -1974,6 +1982,7 @@ class TurnEngine:
         in `backend/nm/domain/reads.py` beside the schema's entry. Nothing here
         decides it and no call site can override it.
         """
+        prompt = guided(prompt)
         got = self._model.structured(
             prompt, schema, tier,
             max_tokens=ceiling.for_read(key, prompt,
@@ -2040,8 +2049,7 @@ class TurnEngine:
             except Exception:  # noqa: BLE001 -- a route must not fail on this
                 existing = None
             if existing is not None and existing.advocate_id == turn.advocate_id:
-                on_file = "\n".join(
-                    f.statement.strip() for f in existing.facts[-6:])
+                on_file = matter_memory.build(existing, about=turn.message).as_context()
 
         try:
             res = self._read(
@@ -5610,12 +5618,13 @@ class TurnEngine:
 
         system = (
             "You are senior counsel advising an instructing advocate in India. "
-            "Reply with ONE imperative next step in at most 40 words. "
-            "No preamble, no options, no caveats. State the step, not the law.\n"
+            "Recommend one focused next step in at most 40 words, proportionate "
+            "to the immediate request. Keep any material condition or uncertainty. "
+            "If the request needs no further action, say so instead of inventing work. "
+            "This is a recommendation, not an act taken or permission to act.\n"
             "NEVER restate a calculation already made for them, and never "
-            "recommend a step the worked position rules out. They are a "
-            "professional peer: 'file within the limitation period' tells them "
-            "nothing they did not know before they called.\n"
+            "recommend a step the worked position rules out. Be specific to the "
+            "held material and the task, not a generic procedural instruction.\n"
             # THE PEER REGISTER, AS A RULE ABOUT SUBJECT MATTER (B-078).
             #
             # E-102's judge read "Ensure the letter explicitly acknowledges the
@@ -5676,11 +5685,11 @@ class TurnEngine:
                 f"{cited}{worked}{relief_note}{held}")
         if file_note:
             user += f"\n\n{file_note}"
-        user += (f"\n\nWhat they have just asked: {turn.message.strip()[:1500]}"
+        user += (f"\n\nWhat they have just asked: {turn.message.strip()}"
                  f"\n\nThe single next step:")
         prompt = Prompt(system=system, user=user)
         try:
-            res = self._model.complete(prompt, Tier.ROUTINE, max_tokens=120)
+            res = self._model.complete(guided(prompt), Tier.ROUTINE, max_tokens=120)
             metrics.record_call(res)
             text = (res.text or "").strip()
         except ModelError as exc:
@@ -5877,8 +5886,8 @@ class TurnEngine:
         """One rewrite of a contradicting step, or empty if it could not run."""
         try:
             res = self._model.complete(
-                consistency.repair_prompt(text, claim, verdict.why,
-                                          file_note),
+                guided(consistency.repair_prompt(text, claim, verdict.why,
+                                                 file_note)),
                 Tier.ROUTINE, max_tokens=120)
             metrics.record_call(res)
             return (res.text or "").strip()
@@ -5904,8 +5913,7 @@ class TurnEngine:
         if mode_statement == route_reader.A_QUESTION_OF_LAW:
             return self._law_answer(turn, mode, mode_statement, metrics)
 
-        text = ("Brief me and I will take it from there — who the client is, "
-                "what happened, and when.")
+        text = "I could not prepare a conversational reply. Your matter remains available."
         if mode_statement == route_reader.NOTHING_YET:
             text = self._courtesy(turn, metrics) or text
         # THE READ ALREADY DECIDED THIS. Re-running a keyword list here
@@ -5914,15 +5922,13 @@ class TurnEngine:
         # two could disagree, and on "what can you do about this suit?"
         # they did.
         if mode_statement == route_reader.ABOUT_THE_PRODUCT:
-            text = ("I advise practising advocates on matters in Telangana and "
-                    "the Union of India, working from the statutes and judgments "
-                    "in my corpus. Brief me on a matter and I will give you a view.")
+            text = self._courtesy(turn, metrics, about_product=True) or text
         return Answer(route=Route.NON_MATTER, mode=mode, mode_statement=mode_statement,
                       elements=(Element(kind=ElementKind.GROUND, text=text),))
 
 
 
-    def _courtesy(self, turn, metrics) -> str:
+    def _courtesy(self, turn, metrics, *, about_product: bool = False) -> str:
 
         """One line back to a person who said something human.
 
@@ -5940,29 +5946,31 @@ class TurnEngine:
         """
         from nm.ports.model import ModelError, Prompt, Tier
 
+        context = ""
+        if turn.matter_id:
+            matter = self._store.load(turn.matter_id)
+            if matter is not None and matter.advocate_id == turn.advocate_id:
+                context = matter_memory.build(matter, about=turn.message).as_context()
+        task = (
+            "Explain only the relevant capability or limitation requested. NM is an advisory "
+            "workspace for Indian advocates. It records instructions and holds originals; "
+            "held originals are not automatically examined. Legal work requires accessible "
+            "sources and the applicable checks. It does not itself file, serve or represent "
+            "the client. Do not promise unavailable processors, coverage or outcomes."
+            if about_product else
+            "Respond naturally and briefly to the conversational contribution. Do not force "
+            "an invitation for a brief, repeat held questions or presume the advocate's rank."
+        )
         try:
             res = self._model.complete(
-                Prompt(
-                    system=(
-                        "You are a senior Indian advocate. A JUNIOR COLLEAGUE "
-                        "at the bar has just said something conversational — "
-                        "a greeting, a thanks, a pleasantry.\n\n"
-                        "Reply in ONE short sentence that does TWO things: "
-                        "answer what they actually said, AND ask for the "
-                        "matter. Both halves, every time — a greeting that "
-                        "does not invite the brief leaves them waiting, and "
-                        "an invitation that ignores what they said is a form "
-                        "letter.\n\n"
-                        "THE REGISTER IS COUNSEL TO COUNSEL, not a service "
-                        "desk. Never offer to help, to assist or to be of "
-                        "service, and never call them a user or a customer. "
-                        "Speak as a senior does across a desk.\n\n"
-                        "Say NOTHING about law, procedure or any case. You "
-                        "have not been given a matter and there is nothing "
-                        "to advise on. Do not ask them to fill anything in."),
-                    user=turn.message.strip()[:300]),
-                Tier.ROUTINE, max_tokens=60)
+                guided(Prompt(
+                    system=task + " Give no legal conclusions or case advice on this path.",
+                    user=f"{context}\n\nCurrent contribution:\n{turn.message.strip()}",
+                    operation="conversation")),
+                Tier.ROUTINE, max_tokens=160)
             metrics.record_call(res)
+            if refuse_partial(res.completion, doing="the conversational reply"):
+                return ""
         except ModelError:
             return ""
         except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning

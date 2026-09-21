@@ -1,8 +1,7 @@
 /* Original receipt is not permission to read, and never establishes a fact. */
 (() => {
   'use strict';
-  const MAX_FILE = 32 * 1024 * 1024;
-  const MAX_CHUNK = 1024 * 1024;
+  let limits = null;
   const MAX_RECORDING_MS = 5 * 60 * 1000;
   const node = (tag, text, className) => {
     const element = document.createElement(tag);
@@ -26,7 +25,7 @@
       <input id="materials-matter-title" maxlength="200" autocomplete="off">
       <label for="materials-files">Choose original files — documents, images, audio or video</label>
       <input id="materials-files" type="file" multiple aria-describedby="materials-bounds">
-      <p id="materials-bounds" class="materials-muted">Up to 32 MiB per file. Sent one file at a time in bounded chunks. An upload does not replace the legal admission checks.</p>
+      <p id="materials-bounds" class="materials-muted">Reading this installation's upload limits. No transfer until they are confirmed. An upload does not replace the legal admission checks.</p>
       <section class="materials-recorder" aria-labelledby="materials-record-title">
         <h3 id="materials-record-title">Record a voice note</h3>
         <p class="materials-muted">Microphone access starts only when you choose Record. Capture and playback stay in this tab until you choose Upload. Five-minute limit, including pauses.</p>
@@ -106,11 +105,11 @@
     if (!valid(held)) { const error = new Error('The active context changed.'); error.obsolete = true; throw error; }
   }
   function controls() {
-    el('upload').disabled = busy || !!capture || !!recorder;
+    el('upload').disabled = busy || !!capture || !!recorder || !limits;
     el('pause').disabled = !busy;
     el('files').disabled = busy || !!capture || !!recorder;
     el('refresh').disabled = busy;
-    el('record').disabled = busy || !!recorder || !!capture;
+    el('record').disabled = busy || !!recorder || !!capture || !limits;
     el('record-pause').disabled = !recorder;
     el('record-stop').disabled = !recorder;
   }
@@ -132,13 +131,14 @@
     stream = null;
   }
   function dismiss() {
+    const returnToComposer = valid(token) && !$('composer').hidden;
     generation += 1;
     receiptReadGeneration += 1;
     if (active) active.abort();
     active = null; busy = false;
     stopCapture(true); recorder = null; capture = null;
     clearPreview();
-    files = []; receipts = []; resumeId = null; token = null;
+    files = []; receipts = []; resumeId = null; token = null; limits = null;
     el('form').reset(); el('resume-file').value = '';
     el('until-wrap').hidden = true; el('until').required = false;
     el('selected').replaceChildren(); el('receipts').replaceChildren();
@@ -147,6 +147,9 @@
     el('record-pause').textContent = 'Pause recording';
     if (dialog.open) dialog.close();
     controls();
+    // The menu entry that opened us is now hidden. Restore a visible trigger,
+    // but never move focus into an obsolete matter or a signed-out workspace.
+    if (returnToComposer) $('plus-toggle').focus();
   }
   window.addEventListener('nm:session-ended', () => {
     attempts.clear(); opening = null; adopting = null; dismiss();
@@ -160,6 +163,11 @@
 
   async function open() {
     if (!state.advocate || state.ended) return;
+    if (!state.matterId) {
+      showIntake(true);
+      $('intake-state').textContent = 'Record the opening brief before adding material. Unknown answers are allowed.';
+      return;
+    }
     if (activeDelivery) { return; }
     if (dialog.open) return;
     generation += 1; dialog.showModal(); token = context();
@@ -176,7 +184,7 @@
     if (!r || row.matter_id !== held.matter || r.matter_id !== held.matter
         || row.asset_id !== r.upload_id || (assetId && row.asset_id !== assetId)
         || !Number.isInteger(r.declared_size)
-        || r.declared_size < 1 || r.declared_size > MAX_FILE
+        || r.declared_size < 1 || !limits || r.declared_size > limits.original_bytes
         || !Number.isInteger(r.observed_size) || r.observed_size < 0
         || r.observed_size > r.declared_size || !Number.isInteger(row.version) || row.version < 0
         || !['not_started', 'receiving', 'received', 'failed_integrity', 'cancelled'].includes(r.state)
@@ -236,8 +244,17 @@
       requireCurrent(held);
       if (requestGeneration !== receiptReadGeneration) return;
       if (reply.matter_id !== held.matter || !Array.isArray(reply.uploads)) throw new Error('The receipt list could not be verified.');
+      const reported = reply.limits;
+      if (!reported || !['original_bytes', 'chunk_bytes', 'receipts_per_matter'].every(
+        name => Number.isSafeInteger(reported[name]) && reported[name] > 0)) {
+        throw new Error('The server upload limits could not be established.');
+      }
+      limits = reported;
+      el('bounds').textContent = `Up to ${bytes(limits.original_bytes)} per file, sent in chunks of up to ${bytes(limits.chunk_bytes)}. `
+        + `${limits.receipts_per_matter} receipts per matter, including incomplete receipts. Receipt is not admission or understanding.`;
       receipts = reply.uploads.map(row => checked(row, held));
       renderReceipts();
+      controls();
     } catch (error) {
       if (valid(held) && requestGeneration === receiptReadGeneration) el('receipts').textContent = 'The receipt list could not be read. This does not mean that no material is held. Refresh before relying on it.';
     }
@@ -250,14 +267,17 @@
   });
   el('files').addEventListener('change', () => {
     const incoming = Array.from(el('files').files);
-    if (incoming.some(file => !file.size || file.size > MAX_FILE) || incoming.length > 64) {
-      say('Choose nonempty files of at most 32 MiB each, with no more than 64 originals at a time. Nothing was uploaded.');
+    if (!limits || incoming.some(file => !file.size || file.size > limits.original_bytes)
+        || incoming.length > limits.receipts_per_matter) {
+      say('Choose nonempty files within the confirmed server limits. If limits are unavailable, refresh receipts first. Nothing was uploaded.');
       files = []; selected(); el('files').value = ''; return;
     }
     files = incoming; selected(); say('Selected locally. Supply the purpose, authority and retention instruction before uploading.');
   });
   async function digest(file, held) {
-    if (!file.size || file.size > MAX_FILE) throw new Error('The original must contain 1 byte to 32 MiB.');
+    if (!limits || !file.size || file.size > limits.original_bytes) {
+      throw new Error('The original must fit the confirmed server limits.');
+    }
     if (!crypto.subtle) throw new Error('This browser cannot verify the original digest. Upload is held.');
     const buffer = await file.arrayBuffer(); requireCurrent(held);
     const value = await crypto.subtle.digest('SHA-256', buffer); requireCurrent(held);
@@ -274,7 +294,7 @@
       requireCurrent(held);
       if (active.signal.aborted) throw new DOMException('Paused', 'AbortError');
       const offset = row.receipt.observed_size;
-      const data = await file.slice(offset, offset + MAX_CHUNK).arrayBuffer();
+      const data = await file.slice(offset, offset + limits.chunk_bytes).arrayBuffer();
       requireCurrent(held);
       row = await api(route(held, `/${encodeURIComponent(assetId)}/chunks/${offset}`), {
         method: 'PUT', headers: {'content-type': 'application/octet-stream'}, body: data, signal: active.signal,
@@ -407,9 +427,9 @@
       recording.addEventListener('dataavailable', event => {
         if (capture !== local || recorder !== recording || local.discard || !valid(held) || !event.data.size) return;
         local.size += event.data.size;
-        if (local.size > MAX_FILE) {
+        if (!limits || local.size > limits.original_bytes) {
           local.discard = true; local.chunks = []; stopCapture(true);
-          el('record-state').textContent = 'Recording exceeded 32 MiB and was discarded locally. Nothing was uploaded.';
+          el('record-state').textContent = 'Recording exceeded the confirmed file limit and was discarded locally. Nothing was uploaded.';
         } else local.chunks.push(event.data);
       });
       recording.addEventListener('stop', () => {
@@ -417,7 +437,8 @@
         if (stream === obtained) { obtained.getTracks().forEach(track => track.stop()); stream = null; }
         if (recorder === recording) recorder = null;
         if (capture === local) capture = null;
-        if (!local.discard && valid(held) && local.size && local.size <= MAX_FILE) {
+        if (!local.discard && valid(held) && limits && local.size
+            && local.size <= limits.original_bytes) {
           const blob = new Blob(local.chunks, {type: recording.mimeType || 'audio/webm'});
           const extension = blob.type.includes('mp4') ? 'm4a' : 'webm';
           const file = new File([blob], `Voice note ${new Date().toISOString().replaceAll(':', '-')}.${extension}`, {type: blob.type});

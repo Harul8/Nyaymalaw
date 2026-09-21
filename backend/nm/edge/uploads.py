@@ -15,6 +15,7 @@ from dataclasses import replace
 from datetime import date
 
 from nm.domain.advocate import utcnow
+from nm.domain.capacity import CapacityPosition
 from nm.domain.intake import (
     MAX_CHUNK_BYTES,
     MAX_MATTER_UPLOADS,
@@ -27,6 +28,7 @@ from nm.domain.intake import (
 )
 from nm.domain.matter import Matter, MatterId, new_id
 from nm.domain.media import MediaAdmission, MediaKind, Quarantine, Retention
+from nm.domain.opening import normalise_brief, recorded_brief
 from nm.ports.store import StorePort
 from nm.ports.upload import UploadPort
 
@@ -96,22 +98,37 @@ class UploadService:
         parties = body.get("parties", {})
         if not isinstance(parties, dict) or len(parties) > 50:
             raise UploadRefused(422, "parties must be a bounded name-to-side map")
-        parties = {
-            _text(k, "party name", 200): _text(v, "party side", 100) for k, v in parties.items()
-        }
+        names = [_text(name, "party name", 200) for name in parties]
+        if len({name.casefold() for name in names}) != len(names):
+            raise UploadRefused(
+                422, "duplicate party names need distinct identities, not overwritten roles")
+        parties = {name: _text(side, "party side", 100)
+                   for name, side in zip(names, parties.values(), strict=True)}
+        try:
+            brief = normalise_brief(body["brief"]) if "brief" in body else None
+        except ValueError as exc:
+            raise UploadRefused(422, str(exc)) from exc
+        if brief is not None:
+            if any(side not in {"client", "adverse", "related"} for side in parties.values()):
+                raise UploadRefused(422, "opening parties need a supported explicit role")
+            others = any(side != "client" for side in parties.values())
+            if others != (brief["other_party_state"] == "identified"):
+                raise UploadRefused(422, "other-party names and their recorded state disagree")
         # A MATTER OPENED FROM THE INTAKE FORM IS NAMED BY ITS PARTIES (F-B-01).
         # The form gives who we act for and who it is against, and the one rule
         # for naming a file from them is the turn engine's -- not a second copy
         # in the page. A title that is given still wins, as it always did.
         title = body.get("title")
-        if title is None:
+        if title is None or title == "":
             from nm.core.turn import _matter_name
 
-            title = _matter_name("", parties) if parties else None
+            title = _matter_name("", parties)
         title = _text(title, "title", 200)
         digest = hashlib.sha256((actor_id + "\x00" + key).encode()).hexdigest()
         matter_id = MatterId("m_" + digest[:32])
         offer = {"title": title, "parties": parties}
+        if brief is not None:
+            offer["brief"] = brief
         prior = self.store.load(matter_id)
         if prior is not None:
             if prior.advocate_id != actor_id or prior.intake_request_key != key:
@@ -124,6 +141,18 @@ class UploadService:
                 raise UploadRefused(409, "intake request key already names different instructions")
             saved = prior
         else:
+            answers = {}
+            stamp = utcnow()
+            if brief is not None:
+                try:
+                    capacity = CapacityPosition.record(brief["capacity"], actor=actor_id, now=stamp)
+                except ValueError as exc:
+                    raise UploadRefused(422, str(exc)) from exc
+                answers["opening"] = {"by": actor_id, "at": stamp.isoformat(), "answer": brief}
+                answers["capacity"] = capacity.as_dict()
+                if brief["objective"]:
+                    answers["scope"] = {"by": actor_id, "at": stamp.isoformat(),
+                                        "answer": brief["objective"]}
             saved = self.store.commit(
                 Matter(
                     id=matter_id,
@@ -132,6 +161,8 @@ class UploadService:
                     intake_parties=parties,
                     intake_request_key=key,
                     intake_opening_offer=offer,
+                    intake_answers=answers,
+                    last_activity=stamp.date().isoformat(),
                     version=1,
                 ),
                 expected_version=0,
@@ -143,6 +174,7 @@ class UploadService:
             "version": saved.version,
             "screens": "not_assessed",
             "facts_established": False,
+            "opening_brief": recorded_brief(saved),
         }
 
     def begin(self, matter_id: str, actor_id: str, body: dict) -> dict:

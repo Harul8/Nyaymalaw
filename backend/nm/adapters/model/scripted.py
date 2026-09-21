@@ -1174,16 +1174,10 @@ class ScriptedModelAdapter:
             return self._responder(prompt, tier)
         # A COURTESY IS ANSWERED AS A COURTESY.
         #
-        # Selected on the SYSTEM prompt, which is this product's own text and
-        # not the advocate's -- the user half of a greeting is "hi", which
-        # matches nothing and would fall through. Without this the double
-        # answered `hi` with "File the summary possession suit within six
-        # months": scripted legal advice, on no matter, from no retrieval.
-        #
-        # A double that cannot answer a prompt the product makes is a double
-        # that makes every test using it pass or fail for the wrong reason.
-        if "conversational" in (prompt.system or "").lower():
-            return "Good to hear from you. What is the matter?"
+        # Dispatch on the operation, not wording in a shared system prefix.
+        # This is a test double, not a production intent classifier.
+        if prompt.operation == "conversation":
+            return "Good to hear from you."
         for needle, reply in self._responses.items():
             if needle.lower() in prompt.user.lower():
                 return reply

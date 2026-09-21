@@ -848,7 +848,9 @@ def matter(matter_id: str, advocate_id: Advocate) -> dict:
     # than recomputing it. Passing `None` said "nobody has assessed the
     # deadlines on this matter", which was false on every matter that had
     # ever been advised on.
-    return board_projection(m, _register_of(m))
+    from nm.domain.opening import recorded_brief
+
+    return {**board_projection(m, _register_of(m)), "opening_brief": recorded_brief(m)}
 
 
 @app.get("/api/matters/{matter_id}/cover")

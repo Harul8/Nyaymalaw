@@ -68,15 +68,12 @@ ROUTE_SCHEMA: dict = {
             "enum": ["matter", "question_of_law", "about_the_product",
                      "neither", "cannot_tell"],
             "description": (
-                "`matter` if the message says ANYTHING about a real dispute, "
-                "client, document, deadline or step -- however few words. "
-                "'bail', 'he absconded' and 'ex parte decree' are all "
-                "matters. `question_of_law` if it asks what the law IS, "
-                "with no client and no dispute behind it -- 'what is the "
-                "limitation for a suit for possession'. `about_the_product` "
-                "if it asks what YOU can do. `neither` ONLY for a greeting "
-                "or an acknowledgement with no content: 'hi', 'thanks', "
-                "'ok'. `cannot_tell` if you genuinely cannot tell."),
+                "`matter` for work about a particular matter, including non-contentious "
+                "work. `question_of_law` for a genuinely abstract legal enquiry, not "
+                "a contextual continuation of this file. `about_the_product` for "
+                "capability questions. `neither` for purely conversational content "
+                "without a substantive request. `cannot_tell` preserves uncertainty. "
+                "Read meaning and context; length and keywords do not decide."),
         },
         "depth": {
             "type": "string",
@@ -97,28 +94,17 @@ ROUTE_SCHEMA: dict = {
 }
 
 SYSTEM = (
-    "You read the first line an Indian advocate types and decide ONE thing: "
-    "does it disclose a matter?\n\n"
-    "A MATTER IS ANYTHING ABOUT A REAL DISPUTE -- a client, a document, a "
-    "date, a court, a step taken or needed. LENGTH IS NOT EVIDENCE. 'bail' is "
-    "a matter. 'he absconded' is a matter. 'ex parte decree' is a matter. A "
-    "long paragraph about what you can do is not.\n\n"
-    "`neither` IS ONLY FOR AN EMPTY COURTESY: 'hi', 'thanks', 'ok'. If the "
-    "words carry any fact about a case, it is a matter.\n\n"
-    "A QUESTION OF LAW IS ITS OWN ANSWER, and it is not a matter. 'What is "
-    "the limitation for a suit for possession of immovable property' names "
-    "no client, no opponent and no dates -- it asks what the law says. An "
-    "advocate asking that wants the provision and the citation, not to be "
-    "asked whose side they are on. If the same sentence carries a client or "
-    "a fact, it is a MATTER.\n\n"
-    "BUT AN OPEN FILE WINS. If anything is already on the file, a question "
-    "about the law is a question about THAT MATTER and the answer is "
-    "`matter` -- an advocate four turns into a possession suit who asks 'what "
-    "is the limitation' is asking about their suit, not about the law in "
-    "the abstract. `question_of_law` is for a question that arrives with no "
-    "file behind it.\n\n"
-    "IF YOU CANNOT TELL, SAY SO. Do not guess `neither` -- a matter read as a "
-    "greeting is discarded, and nothing is written to the file."
+    "Interpret the advocate's current contribution together with the recorded brief "
+    "and available file context. Select the applicable work boundary, not a canned "
+    "response or a fixed intake sequence. Matters include advisory and transactional "
+    "work; a dispute or opponent is not required. Distinguish a narrow question from "
+    "a request for a full workup by objective, not by message length.\n\n"
+    "A contextual legal question belongs to its matter. A genuinely unrelated "
+    "abstract question remains abstract even when a file is open; the presence of "
+    "a file alone does not settle intent. Pure courtesy need not trigger substantive "
+    "work. Mixed contributions containing substantive matter work must not lose it "
+    "through the conversational-only boundary. Preserve uncertainty with cannot_tell. "
+    "This decision grants no authority, establishes no facts and clears no screen."
 )
 
 
@@ -160,10 +146,10 @@ def build_prompt(message: str, on_file: str = ""):
     from nm.ports.model import Prompt
 
     context = (f"ALREADY ON THIS FILE. A message that continues any of this is "
-               f"part of the matter, however short:\n{on_file.strip()[:1200]}"
+               f"part of the matter, however short:\n{on_file.strip()}"
                f"\n\n" if on_file.strip() else "")
     return Prompt(system=SYSTEM,
-                  user=f"{context}The advocate typed:\n{message.strip()[:1200]}")
+                  user=f"{context}The advocate typed:\n{message.strip()}")
 
 
 @implements("B1")
