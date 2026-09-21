@@ -21,11 +21,11 @@ THE INVENTORY RESTRICTS; IT CANNOT SIGN ITS OWN APPROVAL
 ------------------------------------------------------
 `docs/blueprint/processors.yaml` owns permitted purposes and data classes. A
 nonempty approval ID in that file is not authenticated authority. This build
-supports the controlled-local profile only: the concrete recipients wired here
-have no external service. External dispatch requires the future authenticated
-scoped approval integration; neither an authored ID nor a foreign-region note
-can switch it on. Direct Policy fixtures remain policy-unit tests, not runtime
-configuration or evidence of any real approval.
+loads controlled-local recipients only. The separately authenticated,
+request-bound OpenAI text route is built in `model_permission.py`, under the
+owner's explicitly recorded policy exception plus the account's live choice.
+Neither an authored ID nor a foreign-region note in this inventory can switch
+it on. Direct Policy fixtures remain policy-unit tests, not evidence of approval.
 """
 from __future__ import annotations
 

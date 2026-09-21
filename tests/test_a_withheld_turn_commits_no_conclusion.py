@@ -91,10 +91,10 @@ class _Ungrounded(ScriptedModelAdapter):
     def complete(self, prompt, tier, **kw):
         res = super().complete(prompt, tier, **kw)
         if "single next step" in (prompt.user or "").lower():
-            return type(res)(
-                text="File under section 999 of the Imaginary Act, 1999.",
-                data=None, tier=res.tier, provider=res.provider,
-                model=res.model, usage=res.usage, latency_ms=res.latency_ms)
+            # Keep the completed fixture response's metadata. The mutation is
+            # ungrounded law, not an unknown/truncated completion: otherwise
+            # the earlier completion guard stops this before grounding runs.
+            return replace(res, text="File under section 999 of the Imaginary Act, 1999.")
         return res
 
 

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="16" time="31.096" timestamp="2026-09-21T21:12:26.631065+05:30" hostname="Haarul_LOQ"><testcase classname="tests.test_opening_journey" name="test_first_blocked_chat_stays_with_its_saved_matter" time="4.430" /><testcase classname="tests.test_opening_journey" name="test_open_unknowns_then_reopen_before_sending[390-844]" time="2.151" /><testcase classname="tests.test_opening_journey" name="test_open_unknowns_then_reopen_before_sending[768-1024]" time="2.502" /><testcase classname="tests.test_opening_journey" name="test_open_unknowns_then_reopen_before_sending[1280-900]" time="2.319" /><testcase classname="tests.test_opening_journey" name="test_lost_opening_acknowledgement_recovers_original_not_changed_offer" time="2.639" /><testcase classname="tests.test_opening_journey" name="test_all_new_fields_are_protected_and_restored_before_opening" time="2.919" /><testcase classname="tests.test_opening_journey" name="test_store_only_upload_is_received_not_read_and_survives_reentry" time="3.190" /><testcase classname="tests.test_every_legal_signal_remains_visible_in_the_browser" name="test_all_domain_signals_cross_the_real_renderer_without_a_fold[390-844]" time="3.549" /><testcase classname="tests.test_every_legal_signal_remains_visible_in_the_browser" name="test_all_domain_signals_cross_the_real_renderer_without_a_fold[768-1024]" time="3.371" /><testcase classname="tests.test_every_legal_signal_remains_visible_in_the_browser" name="test_all_domain_signals_cross_the_real_renderer_without_a_fold[1280-900]" time="3.172" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_only_plain_ground_is_ever_folded" time="0.004" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_spoken_half_is_the_complement_and_not_a_second_list" time="0.004" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_fold_says_how_much_is_inside_it" time="0.003" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_advocates_own_words_are_still_marked_as_theirs" time="0.003" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_a_disclosure_still_looks_different_from_an_assertion" time="0.002" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_rendered_turn_puts_no_disclosure_inside_a_fold" time="0.429"><failure message="AssertionError: the rendered turn breaks the disclosure rule:&#10;  OK  2 disclosures, all in the open; 6 domain signals and 3 uncertain signals visible; 15 exact bodies; 2 folds, closed&#10;  frontend/app.js:645&#10;    const match = document.cookie.match(&#10;                                  ^&#10;  &#10;  TypeError: Cannot read properties of undefined (reading 'match')&#10;      at cookie (frontend/app.js:645:33)&#10;      at boot (frontend/app.js:4153:7)&#10;      at frontend/app.js:2368:1&#10;      at Script.runInContext (node:vm:149:12)&#10;      at Object.runInContext (node:vm:301:6)&#10;      at file:///C:/Users/rahul/Nyaymalaw/tests/js/render_turn_partition.mjs:101:4&#10;      at ModuleJob.run (node:internal/modules/esm/module_job:325:25)&#10;      at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)&#10;      at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)&#10;  &#10;  Node.js v20.20.0&#10;  &#10;assert 1 == 0&#10; +  where 1 = CompletedProcess(args=['C:\\Program Files\\nodejs\\node.EXE', 'C:\\Users\\rahul\\Nyaymalaw\\tests\\js\\render_turn_par...er:606:24)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n\nNode.js v20.20.0\n&quot;).returncode">def test_the_rendered_turn_puts_no_disclosure_inside_a_fold():
+        """THE STRUCTURAL CHECKS ABOVE READ THE SOURCE. This runs it.
+    
+        Every assertion before this one reads the partition's predicate out of
+        `frontend/app.js`. That is real and it is structural: it holds if the filter is
+        correct and the rendering then does something else with the result — puts
+        the disclosures in the fold by a different route, or drops them.
+    
+        `tests/js/render_turn_partition.mjs` executes the ACTUAL `renderTurn`
+        against a forty-line stub DOM and walks the tree it builds, asking the
+        question the advocate cares about: is a disclosure ever inside a
+        collapsed `&lt;details&gt;`?
+    
+        NO npm INSTALL. jsdom to hold one rule is R-6 apparatus — a check that
+        needs a toolchain nobody maintains is a check that stops running.
+    
+        THREE STATES, because node may not be here. A missing runtime is NOT
+        ASSESSED, said in those words and skipped; it is not a pass. §9 is about
+        exactly this, and a test that quietly returns when its tooling is absent
+        is the shape of every silent gap in this register.
+        """
+        import shutil
+        import subprocess
+    
+        node = shutil.which("node")
+        if node is None:
+            pytest.skip(
+                "NOT ASSESSED: node is not on PATH, so the behavioural half of "
+                "this rule did not run. The structural checks above still hold. "
+                "This is a third state, not a pass.")
+    
+        script = ROOT / "tests" / "js" / "render_turn_partition.mjs"
+        cases = renderer_signal_cases()
+        assert {row["signal"] for row in cases} == {s.value for s in Signal if s.is_loud}
+        result = subprocess.run([node, str(script), json.dumps(cases)], capture_output=True,
+                                text=True, cwd=ROOT)
+&gt;       assert result.returncode == 0, (
+            "the rendered turn breaks the disclosure rule:\n"
+            + result.stdout + result.stderr)
+E       AssertionError: the rendered turn breaks the disclosure rule:
+E         OK  2 disclosures, all in the open; 6 domain signals and 3 uncertain signals visible; 15 exact bodies; 2 folds, closed
+E         frontend/app.js:645
+E           const match = document.cookie.match(
+E                                         ^
+E         
+E         TypeError: Cannot read properties of undefined (reading 'match')
+E             at cookie (frontend/app.js:645:33)
+E             at boot (frontend/app.js:4153:7)
+E             at frontend/app.js:2368:1
+E             at Script.runInContext (node:vm:149:12)
+E             at Object.runInContext (node:vm:301:6)
+E             at file:///C:/Users/rahul/Nyaymalaw/tests/js/render_turn_partition.mjs:101:4
+E             at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+E             at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+E             at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+E         
+E         Node.js v20.20.0
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['C:\\Program Files\\nodejs\\node.EXE', 'C:\\Users\\rahul\\Nyaymalaw\\tests\\js\\render_turn_par...er:606:24)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n\nNode.js v20.20.0\n").returncode
+
+tests\test_the_screen_never_folds_a_disclosure.py:201: AssertionError</failure></testcase></testsuite></testsuites>

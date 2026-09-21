@@ -23,6 +23,31 @@ def saved(page):
     return mid, response.json()
 
 
+def test_first_blocked_chat_stays_with_its_saved_matter(page, journey):
+    """A genuine incomplete opening yields questions, not another opening form."""
+    _sign_in(page, journey)
+    _start_matter(page)
+    page.click('#in-go')
+    mid, before = saved(page)
+    message = 'Our client disputes delivery of goods and needs advice on recovering the price.'
+    page.fill('#message', message)
+    with page.expect_response(lambda r: r.url.endswith('/api/turn')
+                              and r.request.method == 'POST') as returned:
+        page.click('#send')
+    response = returned.value
+    assert response.status == 200
+    answer = response.json()
+    assert answer['blocked'] is True, 'the witness must exercise a real opening screen'
+    page.wait_for_function("() => document.getElementById('send').textContent === 'Send'")
+    assert page.is_hidden('#intake'), 'a reply sent an existing matter back to its opening form'
+    assert page.is_visible('#composer') and page.is_visible('#thread')
+    assert page.get_attribute('#pane-advise', 'data-matter-id') == mid
+    assert page.get_by_text(message, exact=True).count() >= 1
+    current = page.request.get(urljoin(page.url, '/api/matters/' + mid)).json()
+    assert current['opening_brief'] == before['opening_brief']
+    assert not page.errors
+
+
 @pytest.mark.parametrize('width,height', WIDTHS)
 def test_open_unknowns_then_reopen_before_sending(page, journey, width, height):
     _sign_in(page, journey, width, height)

@@ -20,7 +20,6 @@ This module is PURE. It takes ports in and returns a result; it opens nothing.
 """
 from __future__ import annotations
 
-import re
 import time
 from dataclasses import asdict, dataclass, field, replace
 from datetime import date, datetime, timezone
@@ -36,6 +35,7 @@ from nm.core import (
     deadlines,
     dependency,
     grounding,
+    investigation,
     limitation,
     proof,
     proof_read,
@@ -57,7 +57,7 @@ from nm.core import relief as relief_mod
 from nm.core import route as route_reader
 from nm.core import screens as screens_mod
 from nm.core import theory as theory_reader
-from nm.core.conversation import guided
+from nm.core.conversation import guided, with_evidence
 from nm.core.professional_access import read_professional_status
 from nm.core.threading import BindResult, BindState, bind, identifiers_in
 from nm.domain import advice, citation, decision, engagement, issue, reads, reservation
@@ -137,43 +137,6 @@ _GROUNDING_STATE = {
     "G-BINDING": "not_assessed",
     "G-INFORCE": "not_in_force",
 }
-
-def _subject_of(question: str, provisions: tuple[Finding, ...]) -> str:
-    """The question, widened by the subject of the provision it resolved to.
-
-    A provision span opens with the Act name and the marginal note -- for
-    Specific Relief Act s.6 that is *"Suit by person dispossessed of immovable
-    property"*. The marginal note is the subject; the question usually is not.
-
-    The original question is KEPT rather than replaced. Widening recall is the
-    intent; discarding what the advocate actually asked would be a different
-    and worse change, and H4 is explicit that nothing which might be right is
-    dropped before it can be considered.
-    """
-    if not provisions:
-        return question
-    span = " ".join(provisions[0].span.split())
-    # The span opens with the store's own identifier prefix -- "Union Of India
-    # 1963 1 The Specific Relief Act, 1963, - s.6:" - before the marginal note.
-    # Left in, `union` and `india` occupy two of eight term slots and deflate
-    # every confidence score, because they match nothing in a judgment.
-    marker = re.search(r"s\.\s*\d+[A-Za-z]*\s*:", span)
-    head = span[marker.end():].strip() if marker else span
-    head = head[:220]
-    # THE SUBJECT LEADS. The term budget is small and spent in order, so
-    # putting the question first spends every slot on "is there any judgment we
-    # can rely on" and none on "dispossessed of immovable property".
-    return f"{head} {question}"
-
-
-# An advocate asking for authority is asking a different question from one
-# asking what a section says, and the two need different retrieval. Read from
-# what the message ASKS FOR -- never from its length.
-_WANTS_AUTHORITY = (
-    "authority", "authorities", "judgment", "judgement", "judgments",
-    "precedent", "case law", "caselaw", "ruling", "citation", "cited",
-)
-
 
 class TurnRefused(Exception):
     """No new answer is emitted; input persistence depends on admission.
@@ -2672,53 +2635,9 @@ class TurnEngine:
         self._read_coverage(result, thread, metrics, grounds, relied_on,
                             turn, concluded)
 
-        wants_authority = self._wants_authority(turn.message)
-        if not wants_authority and not side_blind and result.findings:
-            # THE SEARCH THAT DID NOT RUN, SAID OUT LOUD.
-            #
-            # `_wants_authority` is a keyword list and it missed four of
-            # six realistic phrasings when measured -- "has any court
-            # decided this point?", "any decisions I can rely on?". A
-            # miss meant no search, and an answer carrying provisions and
-            # no authorities reads as "there are none".
-            #
-            # A longer list leaves out the next phrasing (B-031: ten exact
-            # posture phrases, and `we act for the workman` was not among
-            # them). The list RANKS -- it decides whether to spend a round
-            # -- and this stops its miss from looking like a finding.
-            grounds.append(Element(
-                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
-                text=("I did not search for authority on this turn: I read "
-                      "the question as asking what the law says rather than "
-                      "what has been decided. Say so and I will look.")))
-
-        if wants_authority and not side_blind:
-            # G-COVERAGE, and it fires BEFORE the search rather than after it.
-            # Told afterwards, the advocate reads it as a note on a result they
-            # have already started trusting; told first, it is a fact about
-            # what this corpus can answer.
-            # RESTORED BY P14. The call was commented out in the
-            # foundation handoff, which left `_disclose_coverage`
-            # defined and reached by nothing -- so the coverage gate
-            # never fired and `test_no_declared_owner_is_dead` said
-            # the function was dead. A disclosure nobody makes is the
-            # absent-input defect on the control built to prevent it.
-            self._disclose_coverage(turn, thread, metrics, grounds)
-
-            # A SECOND, DIFFERENT need. Authority retrieval is not a variation
-            # on provision retrieval: different store, different attribution
-            # rules, different binding computation.
-            #
-            # RESOLUTION BEFORE SEARCH (H3), in the only form available before
-            # slice 5: seed the query from the provision this turn already
-            # resolved. An advocate asks "any judgment on section 6?" and the
-            # subject words are in the SECTION, not in the question.
-            authority = self._fetch(replace(
-                need, want_authority=True,
-                question=_subject_of(need.question, result.findings)), metrics)
-            retrieved.extend(authority.findings)
-            self._read_coverage(authority, thread, metrics, grounds,
-                                relied_on, turn, concluded)
+        if not side_blind:
+            self._investigate(turn, thread, need, result, metrics, grounds,
+                              relied_on, retrieved, concluded)
 
         # D1. THE THRESHOLD MAP, BEFORE THE MERITS. A threshold disposes of a
         # claim without reaching them, so an hour on the theory of a suit that
@@ -2779,7 +2698,7 @@ class TurnEngine:
             # evidence hang off. S8's whole point: stop producing a list of
             # issues and produce a spine with the issues hanging off it.
             theory_out = self._theory(turn, thread, memory, metrics, facts,
-                                      concluded)
+                                      concluded, sources=tuple(retrieved))
             grounds.extend(theory_out)
             # THE HELD THEORY, for the same reason. It happens to be
             # rendered on every turn today, so this changes nothing now --
@@ -2792,7 +2711,8 @@ class TurnEngine:
             # D7 -- THE OTHER SIDE'S CASE, at its strongest. After the theory,
             # because an attack is read against a spine: "they will say X" is
             # only useful once there is something for X to be against.
-            attacks_out = self._attacks(turn, thread, memory, metrics)
+            attacks_out = self._attacks(turn, thread, memory, metrics,
+                                       sources=tuple(retrieved))
             grounds.extend(attacks_out)
             _record(derived, "the opponent's case", thread, thread.chronology,
                     sum(1 for e in attacks_out
@@ -2835,7 +2755,7 @@ class TurnEngine:
             elements.append(
                 self._recommend(thread, turn, result, metrics, memory,
                                 register, position, relief_position=relief_pos,
-                                concluded=concluded))
+                                concluded=concluded, sources=tuple(retrieved)))
         # A3 §5.4. WHAT THIS TURN DERIVED, and what MOVED since the last one.
         #
         # Run before the queue is drained so a changed value can raise its own
@@ -3711,10 +3631,44 @@ class TurnEngine:
         metrics.evidence_rounds += 1
         return self._evidence.fetch(need)
 
-    @staticmethod
-    def _wants_authority(message: str) -> bool:
-        low = (message or "").lower()
-        return any(p in low for p in _WANTS_AUTHORITY)
+    def _investigate(self, turn, thread, need, result, metrics, grounds,
+                     relied_on, retrieved, concluded) -> None:
+        """One bounded model-driven research lane after primary resolution.
+
+        The caller has already admitted the turn and resolved its side. The
+        executor cannot invoke other tools, expand the matter, write canonical
+        state, replenish its budget or convert its rationale into legal advice.
+        Every returned finding crosses the existing coverage/grounding boundary.
+        """
+        disclosed = False
+
+        def read(prompt, schema):
+            reply = self._read(prompt, schema, "investigation", Tier.ROUTINE)
+            metrics.record_call(reply)
+            return reply.data
+
+        def fetch(query):
+            nonlocal disclosed
+            if not disclosed:
+                self._disclose_coverage(turn, thread, metrics, grounds)
+                disclosed = True
+            authority = self._fetch(replace(
+                need, want_authority=True, question=query), metrics)
+            retrieved.extend(authority.findings)
+            self._read_coverage(authority, thread, metrics, grounds,
+                                relied_on, turn, concluded)
+            return authority
+
+        run = investigation.run(
+            message=turn.message, account=need.account,
+            initial=tuple(result.findings), thread_id=str(thread.id),
+            version=turn.expected_version if turn.expected_version is not None else 0,
+            round_budget=max(0, MAX_EVIDENCE_ROUNDS - metrics.evidence_rounds),
+            read=read, fetch=fetch)
+        if run.stop == "budget":
+            metrics.evidence_bound_hit = True
+        grounds.append(Element(kind=ElementKind.GROUND, thread=thread.id,
+                               disclosure=True, text=run.disclosure()))
 
     def _read_coverage(self, result, thread: Thread, metrics: TurnMetrics,
                        grounds: list[Element], relied_on: list[Finding],
@@ -4022,7 +3976,7 @@ class TurnEngine:
 
     @implements("D7")
     def _attacks(self, turn: TurnInput, thread: Thread, memory,
-                 metrics: TurnMetrics) -> list[Element]:
+                 metrics: TurnMetrics, *, sources: tuple[Finding, ...] = ()) -> list[Element]:
         """D7. The case the other side will run, on the grounds they will run it.
 
         A SOFTENED VERSION OF THEIR CASE IS WORTH NOTHING to prepare against,
@@ -4039,8 +3993,8 @@ class TurnEngine:
 
         try:
             res = self._read(
-                      adversarial.build_attack_prompt(
-                    account, thread.posture.side.value),
+                      with_evidence(adversarial.build_attack_prompt(
+                    account, thread.posture.side.value), sources),
                       adversarial.ATTACK_SCHEMA, "attacks", Tier.ROUTINE)
             metrics.record_call(res)
             read = adversarial.read_attacks(res.data or {}, thread.id)
@@ -4295,7 +4249,7 @@ class TurnEngine:
     @implements("D6")
     def _theory(self, turn: TurnInput, thread: Thread, memory,
                 metrics: TurnMetrics, facts: tuple[Fact, ...],
-                concluded: dict) -> list[Element]:
+                concluded: dict, *, sources: tuple[Finding, ...] = ()) -> list[Element]:
         """D6. One theory per thread, and every adverse fact accounted for.
 
         TWO READS, AND THE ORDER IS THE MECHANISM. The adverse facts are read
@@ -4320,8 +4274,8 @@ class TurnEngine:
                 # THE POSTURE, because `adverse to the client` is
                 # unanswerable without it. It is already resolved on the
                 # thread by the time this runs.
-                theory_reader.build_adverse_prompt(
-                    account, chart, thread.posture.side.value),
+                with_evidence(theory_reader.build_adverse_prompt(
+                    account, chart, thread.posture.side.value), sources),
                 theory_reader.ADVERSE_SCHEMA, "adverse", Tier.ROUTINE)
             metrics.record_call(adverse_said)
             adverse, why = theory_reader.read_adverse(
@@ -4330,9 +4284,9 @@ class TurnEngine:
             lines = tuple(f"{fid}: {next(f.statement for f in chart if f.id == fid)}"
                           f" — {why.get(fid, '')}" for fid in adverse)
             said = self._read(
-                       theory_reader.build_theory_prompt(
+                       with_evidence(theory_reader.build_theory_prompt(
                     account, lines, thread.posture.side.value,
-                    standing=theory_reader.from_stored(thread.theory)),
+                    standing=theory_reader.from_stored(thread.theory)), sources),
                        theory_reader.THEORY_SCHEMA, "theory", Tier.ROUTINE)
             metrics.record_call(said)
             read = theory_reader.read_theory(
@@ -5521,11 +5475,12 @@ class TurnEngine:
                    position: "limitation.Limitation | None" = None,
                    relief_position: "relief_mod.ReliefPosition | None" = None,
                    concluded: "dict | None" = None,
+                   sources: tuple[Finding, ...] = (),
                    ) -> Element:
         side = thread.posture.side.value
         cited = ""
-        if result.findings:
-            cited = f" The provision to work from is {result.findings[0].ref}."
+        if result.usable:
+            cited = f" A retrieved provision is {result.usable[0].ref}."
 
         # WHAT THE ANSWER BENEATH THIS ONE SAYS. Measured on a served turn,
         # 31 August 2026: the ACTION read "file the recovery suit, ensuring it
@@ -5687,10 +5642,13 @@ class TurnEngine:
             user += f"\n\n{file_note}"
         user += (f"\n\nWhat they have just asked: {turn.message.strip()}"
                  f"\n\nThe single next step:")
-        prompt = Prompt(system=system, user=user)
+        prompt = with_evidence(Prompt(system=system, user=user), sources or result.findings)
         try:
             res = self._model.complete(guided(prompt), Tier.ROUTINE, max_tokens=120)
             metrics.record_call(res)
+            partial = refuse_partial(res.completion, doing="the recommendation")
+            if partial:
+                raise OutputTruncated(partial)
             text = (res.text or "").strip()
         except ModelError as exc:
             # Fail the NEED, not the turn. The gap becomes visible.
@@ -5700,8 +5658,8 @@ class TurnEngine:
         if not text:
             return Element(
                 kind=ElementKind.QUESTION, thread=thread.id, gate="G-MODEL",
-                text=("I could not reach the model to form a recommendation on "
-                      "this turn. Nothing has been recorded as advice. Resend, "
+                text=("I could not form a complete, usable recommendation on "
+                      "this turn. No new recommendation has been recorded. Resend, "
                       "or tell me what you would like me to work on first."))
         # G-CONSISTENT — THE STEP AGAINST THE FIGURES PRINTED BESIDE IT.
         #

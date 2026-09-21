@@ -3803,8 +3803,9 @@ def matter_summary(matter_id: str, advocate_id: Advocate) -> dict:
 
 
 @app.post("/api/turn", dependencies=[CsrfProtected])
-def turn(req: TurnRequest, advocate_id: Advocate) -> _Released:
-    engine: TurnEngine = application().engine
+def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released:
+    from nm.domain.external_ai import ModelPermissionRefused
+
     payload = TurnInput(
         advocate_id=advocate_id,
         message=req.message,
@@ -3832,8 +3833,23 @@ def turn(req: TurnRequest, advocate_id: Advocate) -> _Released:
     # admission, and both happen before any model read. Changing the caller's
     # expected version on retry would change its original instructions.
 
+    wired = application()
+    def session_current():
+        session = wired.directory.session(
+            request.cookies.get('nm_session', ''),
+            _device(request.cookies.get('nm_device'), request.headers.get('user-agent')), utcnow())
+        return bool(session and session.advocate_id == advocate_id)
+
     try:
+        engine: TurnEngine = wired.engine_for(advocate_id, session_current=session_current)
         output = engine.run(payload)
+    except ModelPermissionRefused as exc:
+        # Do not assert that an interrupted/replayed turn could never have
+        # committed. The durable receipt remains the authority for retries.
+        raise HTTPException(403, detail={
+            "code": "model_permission_required", "why": str(exc),
+            "turn_id": req.turn_id, "committed": "unknown",
+        }) from exc
     except TurnRefused as exc:
         # 422 with the REASON, not just the refusal. The disclosures assert no
         # law -- they say what could not be established -- so passing them
@@ -4277,8 +4293,47 @@ class Credentials(BaseModel):
     password: str = Field(min_length=1)
 
 
+class ModelPermissionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    accepted: StrictBool
+    notice_version: str = Field(min_length=1, max_length=64)
+    expected_version: int = Field(strict=True, ge=0)
+
+
+@app.get("/api/account/model-permission")
+def model_permission(advocate_id: Advocate) -> dict:
+    from nm.domain.external_ai import NOTICE_VERSION
+
+    try:
+        record = application().directory.model_permission(advocate_id)
+    except AuthenticationUnavailable as exc:
+        raise HTTPException(503, "AI permission is unavailable. Nothing has been enabled.") from exc
+    return {"notice_version": NOTICE_VERSION, "version": record.version if record else 0,
+            "accepted": bool(record and record.permits(advocate_id, utcnow())),
+            "recorded_at": record.recorded_at.isoformat() if record else None}
+
+
+@app.post("/api/account/model-permission", dependencies=[CsrfProtected])
+def set_model_permission(req: ModelPermissionRequest, advocate_id: Advocate) -> dict:
+    from nm.domain.external_ai import NOTICE_VERSION, ModelPermission
+
+    if req.notice_version != NOTICE_VERSION:
+        raise HTTPException(422, "The AI sharing notice changed. Reload and read it again.")
+    record = ModelPermission(advocate_id, req.notice_version, req.accepted,
+                             utcnow(), req.expected_version + 1)
+    try:
+        application().directory.record_model_permission(
+            record, expected_version=req.expected_version)
+    except (ValueError, AccountBusy) as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except AuthenticationUnavailable as exc:
+        raise HTTPException(
+            503, "AI permission could not be recorded. Nothing has been enabled.") from exc
+    return model_permission(advocate_id)
+
+
 class RegistrationConsent(BaseModel):
-    """The two boxes on the register card and the notice they were ticked under.
+    """Two required acknowledgements and a separate optional OpenAI choice.
 
     Implementation Plan F-A-09. STRICT booleans: `"true"` or `1` is not a person
     ticking a box, and a lax model would turn either into one.
@@ -4289,6 +4344,8 @@ class RegistrationConsent(BaseModel):
     notice_version: str = Field(min_length=1, max_length=64)
     agreed: StrictBool
     adult: StrictBool
+    external_ai: StrictBool = False
+    external_ai_notice_version: str | None = Field(default=None, max_length=64)
 
 
 class Registration(BaseModel):
@@ -4317,7 +4374,9 @@ def _consent(given: RegistrationConsent | None, now):
     if given is None:
         raise HTTPException(422, CONSENT_REQUIRED)
     try:
-        return registration_consent(given.notice_version, given.agreed, given.adult, now)
+        return registration_consent(given.notice_version, given.agreed, given.adult, now,
+                                    external_ai=given.external_ai,
+                                    external_ai_notice_version=given.external_ai_notice_version)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
 

@@ -73,6 +73,7 @@ class PolicedModel:
     #: Left out, this builds its own from `policy` and `audit`, so a test can
     #: construct a policed model without assembling an application.
     gate: Gatekeeper | None = None
+    authorize: Callable[[], None] | None = None
 
     # -------------------------------------------------- pass-through -------
 
@@ -86,6 +87,16 @@ class PolicedModel:
     def context_budget(self, tier: Tier) -> int:
         return self.inner.context_budget(tier)
 
+    def take(self) -> dict:
+        """Preserve the tracer's sealed turn evidence across the policy wrapper."""
+        return self.inner.take()
+
+    def empty_decisive(self) -> tuple[str, ...]:
+        return self.inner.empty_decisive()
+
+    def refused_reads(self) -> tuple[str, ...]:
+        return self.inner.refused_reads()
+
     # ------------------------------------------------------ policed --------
 
     def __post_init__(self) -> None:
@@ -94,6 +105,16 @@ class PolicedModel:
                                    refused=self.refused)
 
     def _permit(self, size: int) -> None:
+        if self.authorize is not None:
+            try:
+                self.authorize()
+            except EgressRefused:
+                line = (f"egress REFUSED sink=model processor={self.inner.provider} "
+                        "because=account_permission")
+                self.refused.append(line)
+                if self.audit is not None:
+                    self.audit(line)
+                raise
         self.gate.permit(Sink.MODEL, self.inner.provider, self.data_classes,
                          size_bytes=size)
 

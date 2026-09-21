@@ -1410,6 +1410,13 @@ items:
     requirement: every counsel-facing answer declares its advice maturity and exposes the conclusion, support, uncertainty and next action appropriate to that level
     required_evidence: [model_eval, counsel_review]
     evidence: {}
+  - id: BK-37-AC2
+    requirement: supporting passages supplied in an answer are visible by default and remain deliberately collapsible; material signals, uncertainties and disclosures never disappear into that collapsible group
+    required_evidence: [integration_test, browser_journey]
+    evidence: {}
+    negative_control:
+      mutation: close the supporting-passages group on initial rendering or put a warning inside it
+      expected_failure: browser checks fail for initially hidden support or a material warning hidden by manual collapse
 - id: BK-38
   title: search-to-authority-to-matter research workflow
   kind: journey
@@ -3764,7 +3771,7 @@ items:
     signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-85-india-scoped-key-processor-and-security-operations-foundation}
   acceptance:
   - id: BK-85-AC1
-    requirement: A reviewed India-only data-flow and processor inventory enforces region and purpose policy for originals, derivatives, indexes, models, backups, support and telemetry; unapproved egress fails closed
+    requirement: An India-default data-flow and processor policy enforces region and purpose restrictions for originals, derivatives, indexes, models, backups, support and telemetry; unapproved egress fails closed. The explicit 21 September 2026 owner exception permits only global direct OpenAI matter-text processing with current authenticated account acceptance and a live session, rechecked on dispatch and retry; raw media, embeddings and other destinations remain excluded. This exception is not qualified legal review or production acceptance.
     required_evidence: [integration_test, adversarial_test, production_measure]
     evidence:
       production_measure:
@@ -3778,7 +3785,7 @@ items:
       integration_test:
         result: PASS
         ref: "tests/test_a_security_claim_is_about_one_exact_candidate.py::test_the_configured_inventory_permits_the_processor_it_recorded"
-        note: "The real inventory permits the processor it recorded, every row in it is region 'in', and approved_foreign_regions is empty."
+        note: "Controlled-local inventory proof only: every authored inventory row remains region in and approved_foreign_regions is empty. The separate owner-approved global OpenAI text route has account/session/endpoint/withdrawal coverage in tests/test_openai_text_permission.py and dated legal-brain evidence. This is not production measurement or BK-85-AC3 counsel acceptance."
     negative_control:
       mutation: enable a foreign processor or send privileged text through diagnostic telemetry
       expected_failure: policy rejects the processing route and a content-free audit identifies the refusal
@@ -4116,7 +4123,7 @@ items:
   verification: partial
   affects_phases: [B, C, D, E, F, G, H]
   record: docs/BACKLOG.md#bk-91-adaptive-grounded-lead-reasoning
-  next_action: P46 built one bounded lead runtime on 12 September 2026 -- state-driven step proposals over the autonomy dynamic actions (no fixed sequence), a six-value epistemic status where SUPPORTED is earned only by assessment against a current version, evidence-triggered invalidation and recheck, and delegation only where it adds value through the P47 admission/acceptance path. AC1 and AC2 carry domain, integration and adversarial evidence; model_eval is NOT RUN, and the served briefing (AC3) is P24
+  next_action: bounded judgment-research proposals and current retrieved-text transfer are implemented on 21 September 2026; verify the complete adaptive conversation, full-turn budget and cancellation, source linkage and independent legal quality before claiming the legal brain complete. GPT-4o mini evaluation is owner-approved for at most eight synthetic matters, forty turns and USD25, but the authenticated external-processor path is not yet built and no paid call has run. Normal client processing also needs that path and confirmed provider data-handling settings; counsel and deployment sign-off remain separate and unrecorded.
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#p46-start-record--adaptive-investigation--12-september-2026}
     build: {result: OPEN, ref: docs/BACKLOG.md#p46-start-record--adaptive-investigation--12-september-2026}
@@ -4163,6 +4170,36 @@ items:
     negative_control:
       mutation: grade the tested model with itself, omit difficult matter families or present a larger spend as proof of architectural improvement
       expected_failure: the comparison cannot support an improvement or release claim; incomplete or invalid evidence remains visible
+  - id: BK-91-AC5
+    requirement: LB-60/61/64 judgment investigation uses bounded model proposals over the current thread's supplied and retrieved material, never a phrase-list trigger; stale or unsupported proposals, repeated searches, no new evidence and exhaustion stop visibly without claiming legal completeness or expanding permissions
+    required_evidence: [integration_test, adversarial_test, browser_journey, model_eval]
+    evidence:
+      integration_test:
+        result: PASS
+        ref: tests/test_bounded_judgment_investigation.py::test_the_served_engine_executes_a_proposal_and_persists_its_limit
+        note: "Passed in the 215-test research-regression run (214 pass, one unrelated tier-configuration skip); actual engine and persistence with controlled model/evidence, not live-model quality. Report in docs/backlog/evidence/legal-brain-20260921/."
+      adversarial_test:
+        result: PASS
+        ref: tests/test_bounded_judgment_investigation.py::test_invalid_model_proposal_does_not_bypass_the_served_turn
+        note: "Invalid proposed law cannot execute a search or bypass the served turn; stale, foreign, malformed, duplicate and non-progress controls are in the same suite. Real-model and complete browser evidence remain open."
+    negative_control:
+      mutation: propose a foreign source id, invented quotation, stale snapshot, new tool, repeated query or endlessly changing purpose without new retrieved material
+      expected_failure: no ungrounded or out-of-mandate search executes; the bounded stop and incomplete coverage remain visible and no model rationale becomes a legal finding
+  - id: BK-91-AC6
+    requirement: LB-57/60 current-turn retrieved passages with their support and treatment limits reach the theory, adversarial and recommendation model calls as untrusted source context; a bare citation name or a prior-turn account is not substituted for the retrieved text
+    required_evidence: [integration_test, adversarial_test, model_eval]
+    evidence:
+      integration_test:
+        result: PASS
+        ref: tests/test_current_evidence_reaches_reasoning.py::test_new_authority_reaches_all_three_dependent_reasoning_tasks
+        note: "Current retrieved passages reach adverse-fact/theory, opposition and recommendation prompts. Context transfer is proved, not semantic support or professional quality."
+      adversarial_test:
+        result: PASS
+        ref: tests/test_current_evidence_reaches_reasoning.py::test_source_text_never_becomes_system_instructions_or_unqualified_law
+        note: "Retrieved text stays in untrusted user context with support/treatment limits; incomplete recommendations are separately refused for every non-usable completion state."
+    negative_control:
+      mutation: retrieve a new adverse passage after the initial search, remove its text or status from a dependent model prompt, or treat source instructions as system instructions
+      expected_failure: the context-transfer test fails; unresolved source limits remain explicit and downstream publication still requires grounding
 - id: BK-92
   title: bounded specialist delegation and grounded artifacts
   kind: substrate

@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="4" skipped="0" tests="57" time="190.271" timestamp="2026-09-21T21:05:14.473706+05:30" hostname="Haarul_LOQ"><testcase classname="tests.test_every_legal_signal_remains_visible_in_the_browser" name="test_all_domain_signals_cross_the_real_renderer_without_a_fold[390-844]" time="5.895"><failure message="AssertionError: {'kind': 'question', 'text': 'Renderer fixture only; do not rely on this.', 'signal': 'none', 'disclosure': False, ...}&#10;assert False&#10; +  where False = is_visible()&#10; +    where is_visible = &lt;Locator frame=&lt;Frame name= url='http://127.0.0.1:54961/'&gt; selector='#signal-renderer-probe &gt;&gt; internal:text=&quot;Renderer fixture only; do not rely on this.&quot;s'&gt;.is_visible">page = &lt;Page url='http://127.0.0.1:54961/'&gt;
+journey = {'box': Served(app=&lt;fastapi.applications.FastAPI object at 0x000001C509F2E900&gt;, application=&lt;nm.bootstrap.composition....ourney0')), 'base': 'http://127.0.0.1:54961', 'advocate': 'adv_journey', 'password': 'Journey-password-not-a-secret-1'}
+width = 390, height = 844
+
+    @pytest.mark.parametrize("width,height", WIDTHS)
+    def test_all_domain_signals_cross_the_real_renderer_without_a_fold(
+        page, journey, width, height,
+    ):
+        _sign_in(page, journey, width, height)
+        signals = renderer_signal_cases()
+        assert {row["signal"] for row in signals} == {s.value for s in Signal if s.is_loud}
+        assert len(signals) &gt; 0
+        ordinary = [{"kind": "ground", "text": f"Renderer-only support {index}.",
+                     "signal": "none", "disclosure": False, "section": "authority", "refs": []}
+                    for index in range(2)]
+        disclosures = [{"kind": "ground", "text": f"Renderer-only unestablished item {index}.",
+                        "signal": "none", "disclosure": True, "section": "needed", "refs": []}
+                       for index in range(2)]
+        uncertain = [{"kind": "ground", "text": f"Renderer-only uncertain signal {index}.",
+                      "disclosure": False, "section": "risk", "refs": [], **fields}
+                     for index, fields in enumerate(({}, {"signal": None},
+                                                      {"signal": "future_signal"}))]
+        question = {"kind": "question", "text": "Renderer fixture only; do not rely on this.",
+                    "signal": "none", "disclosure": False, "section": "needed", "refs": []}
+        elements = [question, *ordinary, *disclosures, *signals, *uncertain]
+        entry = {"brief": "Synthetic renderer-only visibility check, not a matter instruction.",
+                 "answer": {"elements": elements, "metrics": None}}
+        # Deliberate renderer injection only. No request interception, turn/model
+        # invocation, saved receipt, or claim that the server produced this advice.
+        page.evaluate("""entry =&gt; {
+          const rendered = renderTurn(entry);
+          rendered.id = 'signal-renderer-probe';
+          document.getElementById('thread').replaceChildren(rendered);
+        }""", entry)
+        probe = page.locator("#signal-renderer-probe")
+        assert probe.locator(".el").count() == len(elements)
+        assert probe.locator("details.support").count() == 1
+        assert probe.locator("details.support").evaluate("el =&gt; el.open")
+        assert probe.locator("details.support .el").count() == len(ordinary)
+        assert probe.locator("details .el.disclosure").count() == 0
+        for row in (question, *signals, *uncertain, *disclosures):
+            body = probe.get_by_text(row["text"], exact=True)
+            assert body.count() == 1, row
+&gt;           assert body.is_visible(), row
+E           AssertionError: {'kind': 'question', 'text': 'Renderer fixture only; do not rely on this.', 'signal': 'none', 'disclosure': False, ...}
+E           assert False
+E            +  where False = is_visible()
+E            +    where is_visible = &lt;Locator frame=&lt;Frame name= url='http://127.0.0.1:54961/'&gt; selector='#signal-renderer-probe &gt;&gt; internal:text="Renderer fixture only; do not rely on this."s'&gt;.is_visible
+
+tests\test_every_legal_signal_remains_visible_in_the_browser.py:60: AssertionError</failure></testcase><testcase classname="tests.test_every_legal_signal_remains_visible_in_the_browser" name="test_all_domain_signals_cross_the_real_renderer_without_a_fold[768-1024]" time="3.788"><failure message="AssertionError: {'kind': 'question', 'text': 'Renderer fixture only; do not rely on this.', 'signal': 'none', 'disclosure': False, ...}&#10;assert False&#10; +  where False = is_visible()&#10; +    where is_visible = &lt;Locator frame=&lt;Frame name= url='http://127.0.0.1:54961/'&gt; selector='#signal-renderer-probe &gt;&gt; internal:text=&quot;Renderer fixture only; do not rely on this.&quot;s'&gt;.is_visible">page = &lt;Page url='http://127.0.0.1:54961/'&gt;
+journey = {'box': Served(app=&lt;fastapi.applications.FastAPI object at 0x000001C509F2E900&gt;, application=&lt;nm.bootstrap.composition....ourney0')), 'base': 'http://127.0.0.1:54961', 'advocate': 'adv_journey', 'password': 'Journey-password-not-a-secret-1'}
+width = 768, height = 1024
+
+    @pytest.mark.parametrize("width,height", WIDTHS)
+    def test_all_domain_signals_cross_the_real_renderer_without_a_fold(
+        page, journey, width, height,
+    ):
+        _sign_in(page, journey, width, height)
+        signals = renderer_signal_cases()
+        assert {row["signal"] for row in signals} == {s.value for s in Signal if s.is_loud}
+        assert len(signals) &gt; 0
+        ordinary = [{"kind": "ground", "text": f"Renderer-only support {index}.",
+                     "signal": "none", "disclosure": False, "section": "authority", "refs": []}
+                    for index in range(2)]
+        disclosures = [{"kind": "ground", "text": f"Renderer-only unestablished item {index}.",
+                        "signal": "none", "disclosure": True, "section": "needed", "refs": []}
+                       for index in range(2)]
+        uncertain = [{"kind": "ground", "text": f"Renderer-only uncertain signal {index}.",
+                      "disclosure": False, "section": "risk", "refs": [], **fields}
+                     for index, fields in enumerate(({}, {"signal": None},
+                                                      {"signal": "future_signal"}))]
+        question = {"kind": "question", "text": "Renderer fixture only; do not rely on this.",
+                    "signal": "none", "disclosure": False, "section": "needed", "refs": []}
+        elements = [question, *ordinary, *disclosures, *signals, *uncertain]
+        entry = {"brief": "Synthetic renderer-only visibility check, not a matter instruction.",
+                 "answer": {"elements": elements, "metrics": None}}
+        # Deliberate renderer injection only. No request interception, turn/model
+        # invocation, saved receipt, or claim that the server produced this advice.
+        page.evaluate("""entry =&gt; {
+          const rendered = renderTurn(entry);
+          rendered.id = 'signal-renderer-probe';
+          document.getElementById('thread').replaceChildren(rendered);
+        }""", entry)
+        probe = page.locator("#signal-renderer-probe")
+        assert probe.locator(".el").count() == len(elements)
+        assert probe.locator("details.support").count() == 1
+        assert probe.locator("details.support").evaluate("el =&gt; el.open")
+        assert probe.locator("details.support .el").count() == len(ordinary)
+        assert probe.locator("details .el.disclosure").count() == 0
+        for row in (question, *signals, *uncertain, *disclosures):
+            body = probe.get_by_text(row["text"], exact=True)
+            assert body.count() == 1, row
+&gt;           assert body.is_visible(), row
+E           AssertionError: {'kind': 'question', 'text': 'Renderer fixture only; do not rely on this.', 'signal': 'none', 'disclosure': False, ...}
+E           assert False
+E            +  where False = is_visible()
+E            +    where is_visible = &lt;Locator frame=&lt;Frame name= url='http://127.0.0.1:54961/'&gt; selector='#signal-renderer-probe &gt;&gt; internal:text="Renderer fixture only; do not rely on this."s'&gt;.is_visible
+
+tests\test_every_legal_signal_remains_visible_in_the_browser.py:60: AssertionError</failure></testcase><testcase classname="tests.test_every_legal_signal_remains_visible_in_the_browser" name="test_all_domain_signals_cross_the_real_renderer_without_a_fold[1280-900]" time="4.186"><failure message="AssertionError: {'kind': 'question', 'text': 'Renderer fixture only; do not rely on this.', 'signal': 'none', 'disclosure': False, ...}&#10;assert False&#10; +  where False = is_visible()&#10; +    where is_visible = &lt;Locator frame=&lt;Frame name= url='http://127.0.0.1:54961/'&gt; selector='#signal-renderer-probe &gt;&gt; internal:text=&quot;Renderer fixture only; do not rely on this.&quot;s'&gt;.is_visible">page = &lt;Page url='http://127.0.0.1:54961/'&gt;
+journey = {'box': Served(app=&lt;fastapi.applications.FastAPI object at 0x000001C509F2E900&gt;, application=&lt;nm.bootstrap.composition....ourney0')), 'base': 'http://127.0.0.1:54961', 'advocate': 'adv_journey', 'password': 'Journey-password-not-a-secret-1'}
+width = 1280, height = 900
+
+    @pytest.mark.parametrize("width,height", WIDTHS)
+    def test_all_domain_signals_cross_the_real_renderer_without_a_fold(
+        page, journey, width, height,
+    ):
+        _sign_in(page, journey, width, height)
+        signals = renderer_signal_cases()
+        assert {row["signal"] for row in signals} == {s.value for s in Signal if s.is_loud}
+        assert len(signals) &gt; 0
+        ordinary = [{"kind": "ground", "text": f"Renderer-only support {index}.",
+                     "signal": "none", "disclosure": False, "section": "authority", "refs": []}
+                    for index in range(2)]
+        disclosures = [{"kind": "ground", "text": f"Renderer-only unestablished item {index}.",
+                        "signal": "none", "disclosure": True, "section": "needed", "refs": []}
+                       for index in range(2)]
+        uncertain = [{"kind": "ground", "text": f"Renderer-only uncertain signal {index}.",
+                      "disclosure": False, "section": "risk", "refs": [], **fields}
+                     for index, fields in enumerate(({}, {"signal": None},
+                                                      {"signal": "future_signal"}))]
+        question = {"kind": "question", "text": "Renderer fixture only; do not rely on this.",
+                    "signal": "none", "disclosure": False, "section": "needed", "refs": []}
+        elements = [question, *ordinary, *disclosures, *signals, *uncertain]
+        entry = {"brief": "Synthetic renderer-only visibility check, not a matter instruction.",
+                 "answer": {"elements": elements, "metrics": None}}
+        # Deliberate renderer injection only. No request interception, turn/model
+        # invocation, saved receipt, or claim that the server produced this advice.
+        page.evaluate("""entry =&gt; {
+          const rendered = renderTurn(entry);
+          rendered.id = 'signal-renderer-probe';
+          document.getElementById('thread').replaceChildren(rendered);
+        }""", entry)
+        probe = page.locator("#signal-renderer-probe")
+        assert probe.locator(".el").count() == len(elements)
+        assert probe.locator("details.support").count() == 1
+        assert probe.locator("details.support").evaluate("el =&gt; el.open")
+        assert probe.locator("details.support .el").count() == len(ordinary)
+        assert probe.locator("details .el.disclosure").count() == 0
+        for row in (question, *signals, *uncertain, *disclosures):
+            body = probe.get_by_text(row["text"], exact=True)
+            assert body.count() == 1, row
+&gt;           assert body.is_visible(), row
+E           AssertionError: {'kind': 'question', 'text': 'Renderer fixture only; do not rely on this.', 'signal': 'none', 'disclosure': False, ...}
+E           assert False
+E            +  where False = is_visible()
+E            +    where is_visible = &lt;Locator frame=&lt;Frame name= url='http://127.0.0.1:54961/'&gt; selector='#signal-renderer-probe &gt;&gt; internal:text="Renderer fixture only; do not rely on this."s'&gt;.is_visible
+
+tests\test_every_legal_signal_remains_visible_in_the_browser.py:60: AssertionError</failure></testcase><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_1_an_advocate_signs_in_and_the_gate_gives_way" time="4.479" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_2_the_landing_is_not_blank_but_authenticated" time="3.378" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_3_the_matter_navigator_is_reachable_at_every_width[390px]" time="8.511" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_3_the_matter_navigator_is_reachable_at_every_width[768px]" time="9.798" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_3_the_matter_navigator_is_reachable_at_every_width[1280px]" time="10.341" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_4_a_brief_can_be_filed_without_a_mouse" time="6.787" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_5_no_internal_identifier_or_raw_trace_reaches_the_screen" time="5.503" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_5b_the_answer_does_not_speak_engineering" time="5.864" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_5c_the_answer_reads_as_a_brief_and_not_a_log" time="6.202" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_5d_the_masthead_is_not_a_configuration_dump" time="4.412" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_6b_an_expired_period_is_never_a_window_to_act_within" time="6.438" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_7_search_answers_or_says_why" time="3.785" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_8_history_shows_the_turn_that_was_served" time="7.464" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_8b_history_is_a_record_and_not_a_json_dump" time="5.696" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_9_reload_restores_the_matter" time="4.035" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead" time="2.560" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_13_a_send_that_fails_keeps_the_brief_and_offers_one_retry" time="2.641" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_13b_a_cancelled_turn_does_not_claim_it_was_not_saved" time="2.934" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways[390px]" time="2.043" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways[768px]" time="1.918" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways[1280px]" time="1.982" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_11_a_logout_the_server_refuses_is_not_shown_as_done" time="2.197" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_12_a_confirmed_logout_cannot_be_undone_by_reload" time="2.306" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_the_journey_is_actually_driving_a_browser" time="61.636"><error message="failed on teardown with &quot;RuntimeError: the journey server did not stop within 60s; accepted work is still running and the next journey must not start&quot;">tmp_path_factory = TempPathFactory(_given_basetemp=None, _trace=&lt;pluggy._tracing.TagTracerSub object at 0x000001C5085409B0&gt;, _basetemp=WindowsPath('C:/Users/rahul/AppData/Local/Temp/pytest-of-rahul/pytest-1919'), _retention_count=3, _retention_policy='all')
+
+    @pytest.fixture(scope="module")
+    def journey(tmp_path_factory):
+        """The product on a real port, with one enrolled advocate."""
+        import sys
+    
+        sys.path.insert(0, str(ROOT))
+    
+        sys.path.insert(0, str(ROOT / "backend"))
+        from assurance.journeys.served import PASSWORD, running
+    
+        root = tmp_path_factory.mktemp("journey")
+&gt;       with running(root) as (box, base):
+             ^^^^^^^^^^^^^
+
+tests\test_the_journey_login_to_logout.py:85: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\contextlib.py:144: in __exit__
+    next(self.gen)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+root = WindowsPath('C:/Users/rahul/AppData/Local/Temp/pytest-of-rahul/pytest-1919/journey1')
+kwargs = {}
+
+    @contextlib.contextmanager
+    def running(root: Path, **kwargs):
+        """The product on a real HTTP port, for a real browser to talk to.
+    
+        A THREAD AND NOT A SUBPROCESS, so the harness holds the same `Served` the
+        browser is driving and can reach into the store to check what was
+        actually written. A subprocess would leave the suite asserting on
+        responses alone, which is how a product that serves a correct answer and
+        persists nothing passes its own journey.
+        """
+        import uvicorn
+    
+        box = served(root, **kwargs)
+        port = _free_port()
+        config = uvicorn.Config(box.app, host="127.0.0.1", port=port,
+                                log_level="warning")
+        server = uvicorn.Server(config)
+        thread = threading.Thread(target=server.run, daemon=True)
+        thread.start()
+    
+        # WAIT FOR THE PORT, not for a fixed sleep. A sleep that is long enough
+        # on this machine is the flake that fails on a slower one.
+        deadline = time.monotonic() + 30
+        while time.monotonic() &lt; deadline:
+            if getattr(server, "started", False):
+                break
+            time.sleep(0.05)
+        else:
+            raise RuntimeError("the journey server did not start within 30s")
+    
+        try:
+            yield box, f"http://127.0.0.1:{port}"
+        finally:
+            server.should_exit = True
+            # A cancelled browser request cancels the CLIENT'S wait, not work the
+            # server may already have accepted. Ten seconds was shorter than a
+            # normal multi-call turn, so teardown silently left that server thread
+            # alive while the next journey module started another product. The two
+            # stores were separate but their CPU, runtime and process environment
+            # were not, producing failures in whichever later module lost the race.
+            #
+            # Teardown is therefore a boundary with a verdict: either every
+            # accepted request drains and the server stops, or the suite fails here
+            # instead of attributing the leaked work to an unrelated user journey.
+            thread.join(timeout=60)
+            if thread.is_alive():
+&gt;               raise RuntimeError(
+                    "the journey server did not stop within 60s; accepted work "
+                    "is still running and the next journey must not start")
+E               RuntimeError: the journey server did not stop within 60s; accepted work is still running and the next journey must not start
+
+assurance\journeys\served.py:200: RuntimeError</error></testcase><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_recorded_local_composition_remains_usable" time="0.038" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_authored_approval_cannot_admit_an_external_recipient[complete-invented-approval]" time="0.030" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_authored_approval_cannot_admit_an_external_recipient[complete-IN-PROCESS-NO-EGRESS]" time="0.029" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_authored_approval_cannot_admit_an_external_recipient[structured-invented-approval]" time="0.031" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_authored_approval_cannot_admit_an_external_recipient[structured-IN-PROCESS-NO-EGRESS]" time="0.029" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_authored_approval_cannot_admit_an_external_recipient[embed-invented-approval]" time="0.029" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_authored_approval_cannot_admit_an_external_recipient[embed-IN-PROCESS-NO-EGRESS]" time="0.028" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_a_foreign_region_string_cannot_approve_even_a_local_named_recipient" time="0.011" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[root-list]" time="0.011" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[root-string]" time="0.011" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[boolean-schema]" time="0.013" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[processors-string]" time="0.011" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[processors-object]" time="0.011" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[processors-null]" time="0.011" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[regions-list]" time="0.015" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[row-string]" time="0.015" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[purposes-string]" time="0.014" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[classes-string]" time="0.014" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[unknown-purpose]" time="0.013" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[duplicate-id]" time="0.014" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[numeric-approval]" time="0.013" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_inventory_restrictions_still_bind_local_recipients" time="0.011" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_absent_inventory_and_unreadable_inventory_are_not_empty_success" time="0.003" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_the_external_dispatch_witness_rejects_bypassed_profile_admission" time="0.050" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_only_plain_ground_is_ever_folded" time="0.002" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_spoken_half_is_the_complement_and_not_a_second_list" time="0.001" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_fold_says_how_much_is_inside_it" time="0.001" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_advocates_own_words_are_still_marked_as_theirs" time="0.002" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_a_disclosure_still_looks_different_from_an_assertion" time="0.001" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_rendered_turn_puts_no_disclosure_inside_a_fold" time="0.630"><failure message="AssertionError: the rendered turn breaks the disclosure rule:&#10;  FAIL&#10;    a support fold is open by default&#10;  &#10;assert 1 == 0&#10; +  where 1 = CompletedProcess(args=['C:\\Program Files\\nodejs\\node.EXE', 'C:\\Users\\rahul\\Nyaymalaw\\tests\\js\\render_turn_par...alse, &quot;refs&quot;: [], &quot;section&quot;: &quot;risk&quot;}]'], returncode=1, stdout='', stderr='FAIL\n  a support fold is open by default\n').returncode">def test_the_rendered_turn_puts_no_disclosure_inside_a_fold():
+        """THE STRUCTURAL CHECKS ABOVE READ THE SOURCE. This runs it.
+    
+        Every assertion before this one reads the partition's predicate out of
+        `frontend/app.js`. That is real and it is structural: it holds if the filter is
+        correct and the rendering then does something else with the result — puts
+        the disclosures in the fold by a different route, or drops them.
+    
+        `tests/js/render_turn_partition.mjs` executes the ACTUAL `renderTurn`
+        against a forty-line stub DOM and walks the tree it builds, asking the
+        question the advocate cares about: is a disclosure ever inside a
+        collapsed `&lt;details&gt;`?
+    
+        NO npm INSTALL. jsdom to hold one rule is R-6 apparatus — a check that
+        needs a toolchain nobody maintains is a check that stops running.
+    
+        THREE STATES, because node may not be here. A missing runtime is NOT
+        ASSESSED, said in those words and skipped; it is not a pass. §9 is about
+        exactly this, and a test that quietly returns when its tooling is absent
+        is the shape of every silent gap in this register.
+        """
+        import shutil
+        import subprocess
+    
+        node = shutil.which("node")
+        if node is None:
+            pytest.skip(
+                "NOT ASSESSED: node is not on PATH, so the behavioural half of "
+                "this rule did not run. The structural checks above still hold. "
+                "This is a third state, not a pass.")
+    
+        script = ROOT / "tests" / "js" / "render_turn_partition.mjs"
+        cases = renderer_signal_cases()
+        assert {row["signal"] for row in cases} == {s.value for s in Signal if s.is_loud}
+        result = subprocess.run([node, str(script), json.dumps(cases)], capture_output=True,
+                                text=True, cwd=ROOT)
+&gt;       assert result.returncode == 0, (
+            "the rendered turn breaks the disclosure rule:\n"
+            + result.stdout + result.stderr)
+E       AssertionError: the rendered turn breaks the disclosure rule:
+E         FAIL
+E           a support fold is open by default
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['C:\\Program Files\\nodejs\\node.EXE', 'C:\\Users\\rahul\\Nyaymalaw\\tests\\js\\render_turn_par...alse, "refs": [], "section": "risk"}]'], returncode=1, stdout='', stderr='FAIL\n  a support fold is open by default\n').returncode
+
+tests\test_the_screen_never_folds_a_disclosure.py:201: AssertionError</failure></testcase></testsuite></testsuites>

@@ -192,20 +192,25 @@ def registration_surface_problems(page: str, script: str) -> list[str]:
                           form.group(1) if form else "")
     fields = [match.group(1) for control in controls
               if (match := re.search(r'\bid="([^"]+)"', control))]
-    if len(controls) != 5 or sorted(fields) != [
-            "reg-adult", "reg-consent", "reg-email", "reg-password", "reg-password2"]:
+    if len(controls) != 6 or sorted(fields) != [
+            "reg-adult", "reg-consent", "reg-email", "reg-external-ai",
+            "reg-password", "reg-password2"]:
         problems.append("registration does not have exactly the three account inputs "
-                        "and the two privacy boxes")
+                        "and two required notices plus separate optional AI permission")
     email = re.search(r'<input\b[^>]*\bid="reg-email"[^>]*>', page)
     if not email or 'type="email"' not in email.group(0):
         problems.append("the email input is absent or mistyped")
     # F-A-09: both boxes start unticked, and the notice the card shows is the
     # version the server records the consent against.
-    for box in ("reg-consent", "reg-adult"):
+    for box in ("reg-consent", "reg-adult", "reg-external-ai"):
         tag = re.search(rf'<input\b[^>]*\bid="{box}"[^>]*>', page)
         if not tag or 'type="checkbox"' not in tag.group(0) \
                 or re.search(r"\schecked\b", tag.group(0)):
             problems.append(f"{box} is not an unticked box")
+        if tag:
+            required = bool(re.search(r"\srequired\b", tag.group(0)))
+            if required != (box != "reg-external-ai"):
+                problems.append(f"{box} has the wrong required/optional boundary")
     notice = re.search(r'<section\b[^>]*\bid="privacy-notice"[^>]*'
                        r'\bdata-notice-version="([^"]+)"', page)
     if not notice or notice.group(1) != PRIVACY_NOTICE_VERSION:
@@ -250,8 +255,16 @@ def test_registration_surface_control_catches_each_failure():
         (HTML.replace(f'data-notice-version="{PRIVACY_NOTICE_VERSION}"',
                       'data-notice-version="2020-01-01"'), SCRIPT),
         (HTML, SCRIPT.replace("consent: consentGiven(),", "")),
+        (HTML.replace('id="reg-external-ai" name="external_ai"',
+                      'id="reg-external-ai" name="external_ai" checked'), SCRIPT),
+        (HTML.replace('id="reg-external-ai" name="external_ai"',
+                      'id="reg-external-ai" name="external_ai" required'), SCRIPT),
+        (HTML.replace('id="reg-consent" name="consent" required',
+                      'id="reg-consent" name="consent"'), SCRIPT),
+        (HTML.replace('id="reg-adult" name="adult" required',
+                      'id="reg-adult" name="adult"'), SCRIPT),
     ]
-    assert len(mutations) == 10
+    assert len(mutations) == 14
     for page, script in mutations:
         assert (page, script) != (HTML, SCRIPT), "control mutated nothing"
         assert registration_surface_problems(page, script)

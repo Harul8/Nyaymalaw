@@ -2,6 +2,64 @@
 
 What is known, not done, and not yet a defect row. Opened 6 September 2026.
 
+## Active change — authenticated OpenAI text permission, 21 September 2026
+
+Owner explicitly approved disclosure and use of global direct OpenAI API
+processing of client-matter text and relevant text excerpts, not raw media.
+Implement under BK-85-AC1 / BK-88-AC2: unticked registration permission,
+sealed attributable history, existing-account accept/withdraw controls, versioned
+updates, and rechecking permission before every external dispatch/retry. Keep
+own-workspace access independent. Do not silently opt existing users in, admit
+other providers/endpoints, or treat this owner decision as qualified legal review.
+BK-85-AC3 stays NOT_RUN. Default abuse-monitoring retention is disclosed as up
+to 30 days with exceptions; India-only processing and zero retention are not
+promised. Verify positive and negative permission paths without paid calls first.
+
+Also reproduce and fix the first-chat navigation defect: response prose must
+not reopen the initial brief form. Keep the saved matter/conversation in place.
+Completion and measured results are recorded in the dated legal-brain evidence
+folder; this active plan is not a completion claim.
+
+### Current result and remaining work
+
+**Implemented and locally verified:** first-chat replies keep the saved matter
+and conversation open; separate optional OpenAI consent survives registration
+and email confirmation; existing accounts can accept or withdraw in Profile.
+Dispatch requires the current sealed account permission and a current
+device-bound session, checked again for every retry. Optimistic version checks
+prevent an old tab from undoing a withdrawal. The text adapter is restricted to
+the direct OpenAI endpoint, disables redirects and environment proxies, sends
+`store=false`, and refuses embeddings and non-text prompt members. Generic
+tooling and all other external destinations remain deny-by-default.
+
+**Requirement amendment for F-A-02/F-A-09 and Before Build A.2.1/A.2.6/A.2.7:**
+the register form now has three account inputs, two required privacy/adult
+acknowledgements, and a third, separate optional OpenAI text permission. All
+three checkboxes start unticked. Declining AI permission never prevents
+registration, owned-workspace access, or creating/reopening one's own matters.
+Existing accounts are not opted in. The disclosure names global processing,
+the retention limitations and excluded media, and makes no legal-clearance
+claim. No repeated agreement is added when opening a matter.
+
+**Measured:** `permission-controls-verified.xml` records 251 tests, zero
+failures/errors/skips. `browser-closeout.xml` records 38 controlled-browser
+passes across first-chat navigation, visible disclosures, permission and
+login/logout. Runs overlap, so these are not additive unique-test counts.
+The final permission-specific browser report and manual observations are in
+`docs/backlog/evidence/legal-brain-20260921/README.md`.
+
+**Still open:** no paid live-model quality batch has run (USD0). Qualified
+review BK-85-AC3 and production evidence are not supplied by this permission.
+The overall legal-brain scope is not complete. The implementation workbook is
+unchanged: the bundled spreadsheet authoring library is unavailable, and the
+existing scenario generator reads the active Before Build sheet using an older
+schema. Its two checks reproduce that failure. Migrate the generator and apply
+the requirement amendment to the workbook without overwriting original prose
+or historical scenarios; do not regenerate all feature files from today's
+non-executable scenario descriptions. The changed F-A-02 executable fixture is
+explicitly labelled as the owner amendment, not falsely as a fresh generation.
+Full Class-A evidence remains stale; no whole-project PASS or release is claimed.
+
 ## Repository reorganised into production homes — 14 September 2026
 
 **Outcome: the root now separates production from development.** `backend/`,
@@ -8422,7 +8480,7 @@ browser rehearsal proves mechanics only, never reasoning quality.
 
 **First increment, measured:** recovery and composer changes are implemented.
 The latest affected browser run passes 22 tests. A 129-test integration run
-passes, and the updated arrival source contract passes 63 tests. Populations
+passes, and the updated arrival source contract passes 73 tests. Populations
 overlap; these are not a claimed unique total or a full Class-A result. Manual
 isolated browser review confirmed reload/reopen, explicit same-matter recovery,
 the transient notice beside restored text, retained unsent input and compact
@@ -8431,6 +8489,21 @@ narrow-screen controls. Failed earlier runs and their corrections remain in
 independent-review or whole-item completion claim is made. Further brain/UI
 work remains OPEN. Real-model evaluation awaits the requested bounded-run
 approval; the current browser server uses a visibly labelled scripted adapter.
+
+**Next bounded increment, Start READY:** BK-91-AC5 covers the judgment-research
+portion of LB-60/61/64. Inspection found `_wants_authority` still deciding on
+eleven substrings. P46's `lead.propose` remains a rule-based state projection,
+not a model-driven investigation executor. Add a bounded research executor
+reusing the lead's proposal vocabulary, existing model/evidence ports, budgets,
+screen boundary and single candidate writer. Search focus must quote current
+thread input or retrieved text exactly; the model cannot supply a URL, tool,
+other matter, legal conclusion or permission. Repeated queries and unchanged
+retrieval stop. Invalid or unavailable planning is explicit, not a fallback
+phrase list. Keep ordinary provision resolution and side-blind restrictions.
+This increment does not close all 92 legal-brain requirements or establish
+semantic/legal quality. Proof: malformed/stale/foreign/injected proposals,
+changed retrieval, non-progress, model failure, budgets, served persistence and
+regression. Live quality awaits approval and qualified review.
 
 Registered 12 September 2026 after the a3d9c47 conformance review found real
 route code with no genuine B1 delivery owner. The route reader and no-file

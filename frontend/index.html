@@ -159,7 +159,7 @@
          how to withdraw, the advocate's rights, and how to complain to the
          Board. `data-notice-version` is sent back with the consent and must
          equal PRIVACY_NOTICE_VERSION in backend/nm/domain/advocate.py. -->
-    <section class="privacy-notice" id="privacy-notice" data-notice-version="2026-09-15"
+    <section class="privacy-notice" id="privacy-notice" data-notice-version="2026-09-21"
              aria-labelledby="privacy-notice-title">
       <h3 id="privacy-notice-title" class="privacy-notice-title">Privacy notice</h3>
       <p>Nyaymalaw keeps these details to create your account, sign you in and keep
@@ -193,6 +193,17 @@
       <input type="checkbox" id="reg-adult" name="adult" required>
       <span>I am 18 or older.</span>
     </label>
+
+    <section class="privacy-notice" aria-label="OpenAI data sharing">
+      <div data-ai-notice></div>
+      <label class="consent" for="reg-external-ai">
+        <input type="checkbox" id="reg-external-ai" name="external_ai">
+        <span>I have read this notice and permit the described OpenAI text processing.
+          I am authorised to provide the matter information I choose to submit.</span>
+      </label>
+      <p>You can register, open and access your own matters without accepting this.
+        External AI responses require acceptance. Change your choice in Profile → AI data sharing.</p>
+    </section>
 
     <button type="submit" class="primary wide" id="register-go">Register</button>
     <div class="login-alt"><a href="#" id="show-login">Back to sign in</a></div>
@@ -315,6 +326,7 @@
                exists for is a device the advocate no longer controls, so the
                control has to be reachable from the one they are holding. -->
           <button id="devices" type="button" class="ghost">Signed-in devices</button>
+          <button id="ai-sharing" type="button" class="ghost">AI data sharing</button>
           <button id="signout" type="button" class="ghost">Sign out</button>
         </div>
       </div>
@@ -890,6 +902,40 @@
   <div id="sessions-body" aria-live="polite"></div>
   <div id="sessions-action-state" role="status"></div>
   <button type="button" id="sessions-revoke" class="ghost" hidden>End other sessions</button>
+</dialog>
+<template id="openai-text-notice" data-notice-version="openai-text-2026-09-21">
+  <h3>OpenAI processing of matter text</h3>
+  <p>To interpret your instructions, research and prepare responses, Nyaymalaw sends
+    relevant matter text, conversation context and retrieved text excerpts to OpenAI's API.
+    This can include personal and confidential client information. Do not submit material
+    you are not authorised to share, or information subject to a prohibition on disclosure.</p>
+  <p>Processing is global and may occur outside India. India-only processing and zero
+    retention are not promised. OpenAI states that API data is not used for model training
+    by default, unless the API organisation opts in. Default abuse-monitoring logs may be
+    retained for up to 30 days, with exceptions such as legal obligations. Nyaymalaw sends
+    these text requests with response storage disabled; this does not remove abuse-monitoring retention.
+    Account-specific retention arrangements have not been independently verified.</p>
+  <p>This permission excludes raw uploaded files, photos, audio and video, external
+    transcription, embeddings and other providers. Any future expansion needs a new notice
+    and permission. You remain responsible for checking client authority and confidentiality obligations.</p>
+  <p>Withdraw in Profile → AI data sharing. Withdrawal blocks subsequent dispatches,
+    including retries, but cannot recall a request already sent or itself delete data
+    retained by a provider. Your account and matters remain accessible.</p>
+  <p><a href="https://developers.openai.com/api/docs/guides/your-data" target="_blank"
+    rel="noopener noreferrer">OpenAI API data controls</a> · Notice dated 21 September 2026.
+    This acceptance is not a professional or legal-compliance certification.</p>
+</template>
+<dialog id="ai-sharing-dialog" class="account-dialog" aria-labelledby="ai-sharing-title">
+  <div class="dialog-heading"><h2 id="ai-sharing-title">AI data sharing</h2>
+    <button type="button" id="ai-sharing-close" class="ghost">Close</button></div>
+  <div data-ai-notice></div>
+  <p id="ai-sharing-status" role="status" aria-live="polite"></p>
+  <label class="consent" for="ai-sharing-accept">
+    <input type="checkbox" id="ai-sharing-accept">
+    <span>I permit the described OpenAI text processing and am authorised to share the information I submit.</span>
+  </label>
+  <button type="button" id="ai-sharing-save" class="primary" disabled>Enable OpenAI text processing</button>
+  <button type="button" id="ai-sharing-withdraw" class="ghost" disabled>Withdraw permission</button>
 </dialog>
 <script src="/static/draft-vault.js"></script>
 <script src="/static/app.js"></script>

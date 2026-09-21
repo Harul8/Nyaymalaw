@@ -54,6 +54,7 @@ from nm.domain.advocate import (
     registration_email,
     token_fingerprint,
 )
+from nm.domain.external_ai import NOTICE_VERSION, ModelPermission
 from nm.domain.names import discard
 from nm.domain.professional_access import ProfessionalApproval
 from nm.domain.traceability import implements
@@ -405,6 +406,10 @@ class FileDirectory:
         # not. Implementation Plan F-A-09; DPDP Act 2023 s.6(10).
         if enrolment.consent is not None:
             blob["consent"] = enrolment.consent.as_dict()
+            if enrolment.consent.external_ai_notice_version == NOTICE_VERSION:
+                permission = ModelPermission(enrolment.identity.id, NOTICE_VERSION, True,
+                                             enrolment.consent.given_at, 1)
+                blob["model_permission"] = self._seal_model_permissions([permission.as_dict()])
         if enrolment.mailbox_confirmed_at is not None:
             blob['mailbox_confirmed_at'] = enrolment.mailbox_confirmed_at.isoformat()
         if enrolment.activation_id is not None:
@@ -779,6 +784,68 @@ class FileDirectory:
     def identity(self, advocate_id: str) -> AdvocateIdentity | None:
         doc = self._read(advocate_id)
         return AdvocateIdentity(**doc["identity"]) if doc else None
+
+    def _seal_model_permissions(self, rows: list[dict]) -> str:
+        return self._cipher.encrypt(json.dumps(
+            {"schema": 1, "records": rows}).encode("utf8")).decode("ascii")
+
+    def _model_permissions(self, doc: dict, advocate_id: str) -> list[ModelPermission]:
+        if "model_permission" not in doc:
+            return []
+        envelope = json.loads(self._cipher.decrypt(
+            doc["model_permission"].encode("ascii")).decode("utf8"))
+        if (not isinstance(envelope, dict) or set(envelope) != {"schema", "records"}
+                or type(envelope["schema"]) is not int or envelope["schema"] != 1
+                or not isinstance(envelope["records"], list) or not envelope["records"]):
+            raise ValueError("model permission history is unreadable")
+        rows = [ModelPermission.from_record(row) for row in envelope["records"]]
+        for version, row in enumerate(rows, 1):
+            if (row.account_id != canonical_id(advocate_id) or row.version != version
+                    or (version > 1 and row.recorded_at < rows[version - 2].recorded_at)):
+                raise ValueError("model permission history is inconsistent")
+        return rows
+
+    def model_permission(self, advocate_id: str) -> ModelPermission | None:
+        try:
+            doc = self._read(advocate_id)
+            if not isinstance(doc, dict):
+                raise ValueError("account is unreadable")
+            rows = self._model_permissions(doc, advocate_id)
+            return rows[-1] if rows else None
+        except Exception as exc:  # noqa: BLE001 -- damaged authority never grants dispatch
+            raise AuthenticationUnavailable("AI permission could not be verified.") from exc
+
+    def record_model_permission(self, permission: ModelPermission, *,
+                                expected_version: int) -> ModelPermission:
+        if (not isinstance(permission, ModelPermission)
+                or permission.notice_version != NOTICE_VERSION
+                or type(expected_version) is not int or expected_version < 0
+                or permission.version != expected_version + 1):
+            raise ValueError("current notice and observed permission version required")
+        claim = self._claim_account(permission.account_id)
+        if claim is None:
+            raise AccountBusy("Account is being updated. Reopen AI data sharing and retry.")
+        try:
+            doc = self._read(permission.account_id)
+            if not isinstance(doc, dict):
+                raise AuthenticationUnavailable("AI permission could not be verified.")
+            try:
+                rows = self._model_permissions(doc, permission.account_id)
+            except Exception as exc:  # noqa: BLE001 -- a writer may not repair its own authority
+                raise AuthenticationUnavailable("AI permission could not be verified.") from exc
+            if len(rows) != expected_version:
+                raise ValueError("AI permission changed. Reopen AI data sharing and retry.")
+            if rows and permission.recorded_at < rows[-1].recorded_at:
+                raise ValueError("Permission cannot precede its previous version.")
+            doc["model_permission"] = self._seal_model_permissions(
+                [*[row.as_dict() for row in rows], permission.as_dict()])
+            try:
+                self._replace_advocate(self._advocate_path(permission.account_id), doc)
+            except OSError as exc:
+                raise AuthenticationUnavailable("AI permission write was not confirmed.") from exc
+            return permission
+        finally:
+            claim.release()
 
     # ----------------------------------------- professional approval ---
     def _professional_records(self, doc: dict, advocate_id: str) -> list[dict]:

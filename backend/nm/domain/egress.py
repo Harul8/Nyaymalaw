@@ -105,6 +105,22 @@ class Route:
 
 
 @dataclass(frozen=True)
+class ProcessingException:
+    """A scoped owner policy decision, explicitly NOT qualified legal clearance."""
+
+    processor_id: str
+    region: str
+    purpose: Sink
+    data_classes: tuple[DataClass, ...]
+    basis: str
+
+    def admits(self, route: Route, processor: Processor) -> bool:
+        return bool(self.basis and self.processor_id == processor.processor_id
+                    and self.region == processor.region and self.purpose == route.purpose
+                    and set(route.data_classes) <= set(self.data_classes))
+
+
+@dataclass(frozen=True)
 class Policy:
     """The reviewed inventory. Absent entries are refusals, never defaults."""
 
@@ -115,6 +131,9 @@ class Policy:
     #: Loader failures are not an unexplained empty inventory. These messages
     #: describe shape/availability only and never contain configuration values.
     problems: tuple[str, ...] = ()
+    #: Separately attributed owner policy exceptions. The runtime inventory
+    #: loader cannot author these. They never close a legal-review criterion.
+    processing_exceptions: tuple[ProcessingException, ...] = ()
 
     def find(self, processor_id: str) -> Processor | None:
         for row in self.processors:
@@ -153,7 +172,8 @@ def refuse(route: Route, policy: Policy) -> list[str]:
 
     if processor.region != HOME_REGION:
         why = policy.approved_foreign_regions.get(processor.region)
-        if not why:
+        exception = any(row.admits(route, processor) for row in policy.processing_exceptions)
+        if not why and not exception:
             bad.append(f"processor {route.processor_id!r} operates in "
                        f"{processor.region!r} and no legal review admits that "
                        f"region")

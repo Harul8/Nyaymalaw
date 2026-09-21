@@ -134,23 +134,23 @@ def test_the_route_is_read_and_never_counted():
     "what have the courts said about section 18?",
     "any decisions I can rely on?",
 ])
-def test_these_ways_of_asking_for_authority_are_not_recognised(message):
-    """THE MEASUREMENT, PINNED — and it is deliberately asserting the MISS.
-
-    The keyword list does not catch these. That is not the defect being fixed
-    here and a longer list is not the fix: every list leaves out the next
-    phrasing. This pins what the list actually does, so the disclosure below
-    is known to be doing real work rather than covering a case that never
-    arises.
-    """
-    assert not TurnEngine._wants_authority(message)
+def test_former_phrase_list_misses_reach_the_investigation_model(message):
+    """BK-91-AC5 replaces the measured miss, not with a longer phrase list."""
+    from tests.test_bounded_judgment_investigation import offer, run
+    observed = []
+    def read(prompt, schema):
+        import json
+        observed.append(json.loads(prompt.user)['basis']['instruction']['text'])
+        return offer(prompt, schema)
+    result = run(read=read, message=message)
+    assert observed == [message] and len(result.results) == 1
 
 
 def test_a_recognised_request_still_searches():
-    """THE BOUND on the pinning above: the list must still catch what it was
-    written for, or the disclosure would fire on every turn."""
-    assert TurnEngine._wants_authority("is there any judgment on this?")
-    assert TurnEngine._wants_authority("show me some case law")
+    """Existing wording can still produce an admitted search."""
+    from tests.test_bounded_judgment_investigation import run
+    for message in ("is there any judgment on this?", "show me some case law"):
+        assert len(run(message=message).results) == 1
 
 
 def test_a_turn_that_did_not_search_for_authority_says_so():
@@ -161,18 +161,19 @@ def test_a_turn_that_did_not_search_for_authority_says_so():
     """
     import inspect
 
-    body = inspect.getsource(TurnEngine._derive)
-    assert "I did not search for authority on this turn" in body
-    assert "if not wants_authority" in body, (
-        "the disclosure is not on the miss branch, so it either never fires "
-        "or fires when the search DID run")
+    body = inspect.getsource(TurnEngine._investigate)
+    assert "text=run.disclosure()" in body
+    from tests.test_bounded_judgment_investigation import run
+    result = run(round_budget=0)
+    assert "0 retrieval round(s) returned" in result.disclosure()
+    assert "does not establish complete legal coverage" in result.disclosure()
 
 
-def test_the_disclosure_is_bounded_to_a_turn_that_retrieved_something():
-    """E-093 is about length growing, and a line on every turn is how that
-    starts. A turn that retrieved nothing has a bigger problem and already
-    says so; a side-blind turn may not present an authority set at all."""
+def test_side_blind_turns_cannot_enter_the_investigation_lane():
+    """Lack of provisions is no longer a reason to hide an unsearched need;
+    the posture restriction remains a real boundary."""
     import inspect
 
     body = inspect.getsource(TurnEngine._derive)
-    assert "not wants_authority and not side_blind and result.findings" in body
+    assert "if not side_blind:\n            self._investigate(" in body
+    assert "_wants_authority" not in body

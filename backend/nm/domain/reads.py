@@ -83,6 +83,10 @@ class Read:
 #: on a schema in `backend/nm/` that is not here, so a twelfth read cannot be added
 #: without someone deciding which kind it is.
 READS: tuple[Read, ...] = (
+    Read("investigation", False,
+         "Proposes a judgment search over exact current source spans. It cannot "
+         "settle a legal identifier, deadline, fact or permission; returned "
+         "findings still cross the evidence and grounding boundaries.", echoes=True),
     # ---- decisive: the output IS a date, an amount, or which law is read ----
     Read("dates", True,
          "Every date on the chronology comes from here, and the accrual is one "

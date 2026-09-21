@@ -255,11 +255,16 @@ def refusals_identical(context):
 # ---------------------------------------------------------------- F-A-02 ---
 
 @then("the register card has exactly an email field, a password field, a retype-password "
-      "field and two privacy boxes")
+      "field, two required privacy boxes and one optional OpenAI permission box")
 def register_card_inputs(sign_in_page):
     inputs = re.findall(r'<input\b[^>]*\bid="([^"]+)"', card_html(sign_in_page, "register"))
     assert inputs == ["reg-email", "reg-password", "reg-password2",
-                      "reg-consent", "reg-adult"], inputs
+                      "reg-consent", "reg-adult", "reg-external-ai"], inputs
+    card = card_html(sign_in_page, "register")
+    for name in ("reg-consent", "reg-adult", "reg-external-ai"):
+        tag = re.search(rf'<input\b[^>]*\bid="{name}"[^>]*>', card).group(0)
+        assert not re.search(r"\schecked\b", tag)
+        assert bool(re.search(r"\srequired\b", tag)) == (name != "reg-external-ai")
 
 
 @then("the register card has a Register button and a Back to sign in link")

@@ -27,6 +27,12 @@ import vm from "node:vm";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const app = readFileSync(join(here, "..", "..", "frontend", "app.js"), "utf8");
+// Renderer-only harness: real browser tests own application boot and sessions.
+// Refuse a changed entry point rather than silently evaluating no population.
+if ((app.match(/^boot\(\);$/gm) || []).length !== 1) {
+  throw new Error("expected one application boot entry point");
+}
+const rendererSource = app.replace(/^boot\(\);$/m, "");
 
 // ---------------------------------------------------------- the stub DOM ---
 function el(tag) {
@@ -84,7 +90,7 @@ const document = {
 
 const context = {
   document,
-  window: { location: { reload() {} }, addEventListener() {} },
+  window: { location: { hash: '', reload() {} }, addEventListener() {} },
   localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
   fetch: async () => ({ ok: true, status: 200, json: async () => ({}) }),
   console,
@@ -98,7 +104,7 @@ const context = {
 };
 context.globalThis = context;
 vm.createContext(context);
-vm.runInContext(app, context, { filename: "frontend/app.js" });
+vm.runInContext(rendererSource, context, { filename: "frontend/app.js" });
 
 // ------------------------------------------------------------- the facts ---
 // Python supplies EVERY actual Signal member via the domain enum. No copied
@@ -167,7 +173,7 @@ for (const d of disclosures) {
   }
 }
 
-// The support fold exists, is closed, and holds exactly the plain grounds.
+// The support fold starts open and holds exactly the plain grounds.
 const folds = [];
 (function findFolds(node) {
   if (node.tagName === "DETAILS") folds.push(node);
@@ -192,8 +198,8 @@ if (audit.length > 1) {
   fails.push(`expected at most 1 audit fold, rendered ${audit.length}`);
 }
 for (const fold of folds) {
-  if (fold.open) {
-    fails.push(`a ${fold.className} fold is open by default`);
+  if (Boolean(fold.open) !== support.includes(fold)) {
+    fails.push(`wrong default visibility for the ${fold.className} fold`);
   }
   const inside = [];
   walk(fold, true, inside);
@@ -247,4 +253,4 @@ if (fails.length) {
 }
 console.log(`OK  ${disclosures.length} disclosures, all in the open; `
   + `${signalCases.length} domain signals and ${uncertainSignals.length} uncertain signals visible; `
-  + `${rendered.length} exact bodies; ${folds.length} folds, closed`);
+  + `${rendered.length} exact bodies; support open, audit closed`);

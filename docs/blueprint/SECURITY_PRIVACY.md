@@ -66,7 +66,37 @@ pilot/production decisions; they do not block packet construction.
 3. **Build for the notified Rules now.** Rule 1 also stages commencement. Future requirements include security safeguards, breach communications and retention provisions in Rules 6 and 8. Do not hard-code immediate erasure or one universal retention period. Counsel must reconcile their scope with other duties, exemptions and legal holds. [DPDP Rules 2025, G.S.R. 846(E)](https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf), and the [MeitY rules/corrigendum entry](https://www.meity.gov.in/documents/act-and-policies/digital-personal-data-protection-rules-2025-gDOxUjMtQWa?pageTitle=Digital-Personal-Data-Protection-Rules-2025%C3%AF%C2%BF%C2%BC).
 4. **Do not ignore transitional Indian obligations.** Obtain a current determination on the IT Act, SPDI Rules, professional confidentiality, client instructions, recording restrictions, evidence preservation, children’s data and applicable sector-specific requirements. The Government has separately described the existing SPDI protection regime; DPDP staging is not a security holiday. [MeitY parliamentary response, July 2025](https://www.pib.gov.in/PressReleaseIframePage.aspx?LID=1&PRID=2148944&RegID=3&lang=2&reg=48).
 5. **Determine CERT-In coverage.** The 28 April 2022 Directions specify covered entities, incident reporting within six hours of notice, a designated contact, clock synchronization and secure rolling 180-day ICT logs. Scope the exact duties and reportable incidents; do not import separate cloud/VPS/VPN subscriber-record duties merely because NM uses a cloud provider. [Directions](https://www.cert-in.org.in/PDF/CERT-In_Directions_70B_28.04.2022.pdf?trk=public_post_comment-text). The FAQ permits initial reporting using available information with later supplementation. [CERT-In FAQ, question 30](https://www.cert-in.org.in/PDF/FAQs_on_CyberSecurityDirections_May2022.pdf).
-6. **Choose India-region storage as the default product policy.** Include primary data, backups, search, telemetry and processing locations in that policy. This is a proposed confidentiality/residency choice, not a claim that DPDP universally localizes all data. No unapproved cross-border processor or failover. A new foreign nexus requires a specific legal review, not a global-compliance expansion of this build.
+6. **Choose India-region storage as the default product policy.** Include primary data, backups, search, telemetry and processing locations in that policy. This is a proposed confidentiality/residency choice, not a claim that DPDP universally localizes all data. No unapproved cross-border processor or failover. A new foreign nexus requires a specific legal review, not a global-compliance expansion of this build. The owner's bounded OpenAI exception below changes processing permission, not storage location or the outstanding review obligation.
+
+### Owner-authorised OpenAI text exception — 21 September 2026
+
+The owner explicitly permits global direct OpenAI API processing of matter text,
+conversation context and relevant retrieved text excerpts. This supersedes the
+former blanket runtime refusal for that route only; it does not approve an
+India-only-processing claim. The global endpoint is `https://api.openai.com/v1`.
+No alternate host, redirect, provider, embeddings, raw file, photo, audio, video,
+external transcription, telemetry or support route is admitted by this decision.
+
+Each advocate must independently accept the versioned registration notice or
+the same notice under Profile → AI data sharing. The box starts unticked; existing
+accounts are not migrated to acceptance. A sealed, account-bound, versioned history
+records acceptance and withdrawal. Authenticated, CSRF-protected updates compare
+the observed version. Each dispatch/retry checks the current permission and live
+device-bound session; account and own-matter access remain independent. Withdrawal
+cannot recall bytes already sent or by itself delete a provider's retained copy.
+
+The notice discloses global processing and default abuse-monitoring retention of
+up to 30 days with exceptions. Requests use `store=false`; this is not a promise
+of zero retention. OpenAI says API data is not used for training by default unless
+the API organisation opts in. NM has not independently verified account-specific
+data controls. [OpenAI API data controls](https://developers.openai.com/api/docs/guides/your-data).
+
+This is an owner processing-policy decision, not a qualified legal review, client
+authority verification, unrestricted disclosure permission or production release.
+BK-85-AC3 remains NOT_RUN. Restricted material, professional duties, source access,
+case ownership, grounding and all other release gates retain their force. The
+separate synthetic evaluation approval remains capped at eight matters, forty
+turns and USD25, using GPT-4o mini only; account acceptance does not waive that cap.
 
 ## 3. Ordered execution: build security into each module
 

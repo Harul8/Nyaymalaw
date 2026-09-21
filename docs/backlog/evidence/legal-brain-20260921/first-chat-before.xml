@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="5.034" timestamp="2026-09-21T21:12:04.105211+05:30" hostname="Haarul_LOQ"><testcase classname="tests.test_opening_journey" name="test_first_blocked_chat_stays_with_its_saved_matter" time="4.775"><failure message="AssertionError: a reply sent an existing matter back to its opening form&#10;assert False&#10; +  where False = is_hidden('#intake')&#10; +    where is_hidden = &lt;Page url='http://127.0.0.1:61813/'&gt;.is_hidden">page = &lt;Page url='http://127.0.0.1:61813/'&gt;
+journey = {'box': Served(app=&lt;fastapi.applications.FastAPI object at 0x0000015241887CE0&gt;, application=&lt;nm.bootstrap.composition....ourney0')), 'base': 'http://127.0.0.1:61813', 'advocate': 'adv_journey', 'password': 'Journey-password-not-a-secret-1'}
+
+    def test_first_blocked_chat_stays_with_its_saved_matter(page, journey):
+        """A genuine incomplete opening yields questions, not another opening form."""
+        _sign_in(page, journey)
+        _start_matter(page)
+        page.click('#in-go')
+        mid, before = saved(page)
+        message = 'Our client disputes delivery of goods and needs advice on recovering the price.'
+        page.fill('#message', message)
+        with page.expect_response(lambda r: r.url.endswith('/api/turn')
+                                  and r.request.method == 'POST') as returned:
+            page.click('#send')
+        response = returned.value
+        assert response.status == 200
+        answer = response.json()
+        assert answer['blocked'] is True, 'the witness must exercise a real opening screen'
+        page.wait_for_function("() =&gt; document.getElementById('send').textContent === 'Send'")
+&gt;       assert page.is_hidden('#intake'), 'a reply sent an existing matter back to its opening form'
+E       AssertionError: a reply sent an existing matter back to its opening form
+E       assert False
+E        +  where False = is_hidden('#intake')
+E        +    where is_hidden = &lt;Page url='http://127.0.0.1:61813/'&gt;.is_hidden
+
+tests\test_opening_journey.py:42: AssertionError</failure></testcase></testsuite></testsuites>

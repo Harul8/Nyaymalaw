@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="35" time="18.207" timestamp="2026-09-21T21:09:22.314290+05:30" hostname="Haarul_LOQ"><testcase classname="tests.test_every_legal_signal_remains_visible_in_the_browser" name="test_all_domain_signals_cross_the_real_renderer_without_a_fold[390-844]" time="4.387" /><testcase classname="tests.test_every_legal_signal_remains_visible_in_the_browser" name="test_all_domain_signals_cross_the_real_renderer_without_a_fold[768-1024]" time="3.035" /><testcase classname="tests.test_every_legal_signal_remains_visible_in_the_browser" name="test_all_domain_signals_cross_the_real_renderer_without_a_fold[1280-900]" time="3.194" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_only_plain_ground_is_ever_folded" time="0.003" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_spoken_half_is_the_complement_and_not_a_second_list" time="0.002" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_fold_says_how_much_is_inside_it" time="0.002" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_advocates_own_words_are_still_marked_as_theirs" time="0.003" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_a_disclosure_still_looks_different_from_an_assertion" time="0.002" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_rendered_turn_puts_no_disclosure_inside_a_fold" time="0.435"><failure message="AssertionError: the rendered turn breaks the disclosure rule:&#10;  OK  2 disclosures, all in the open; 6 domain signals and 3 uncertain signals visible; 15 exact bodies; 2 folds, closed&#10;  frontend/app.js:4127&#10;    const match = window.location.hash.match(/^#reset=([A-Za-z0-9_-]+)$/);&#10;                                       ^&#10;  &#10;  TypeError: Cannot read properties of undefined (reading 'match')&#10;      at takeResetToken (frontend/app.js:4127:38)&#10;      at boot (frontend/app.js:4146:7)&#10;      at frontend/app.js:2365:1&#10;      at Script.runInContext (node:vm:149:12)&#10;      at Object.runInContext (node:vm:301:6)&#10;      at file:///C:/Users/rahul/Nyaymalaw/tests/js/render_turn_partition.mjs:101:4&#10;      at ModuleJob.run (node:internal/modules/esm/module_job:325:25)&#10;      at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)&#10;      at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)&#10;  &#10;  Node.js v20.20.0&#10;  &#10;assert 1 == 0&#10; +  where 1 = CompletedProcess(args=['C:\\Program Files\\nodejs\\node.EXE', 'C:\\Users\\rahul\\Nyaymalaw\\tests\\js\\render_turn_par...er:606:24)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n\nNode.js v20.20.0\n&quot;).returncode">def test_the_rendered_turn_puts_no_disclosure_inside_a_fold():
+        """THE STRUCTURAL CHECKS ABOVE READ THE SOURCE. This runs it.
+    
+        Every assertion before this one reads the partition's predicate out of
+        `frontend/app.js`. That is real and it is structural: it holds if the filter is
+        correct and the rendering then does something else with the result — puts
+        the disclosures in the fold by a different route, or drops them.
+    
+        `tests/js/render_turn_partition.mjs` executes the ACTUAL `renderTurn`
+        against a forty-line stub DOM and walks the tree it builds, asking the
+        question the advocate cares about: is a disclosure ever inside a
+        collapsed `&lt;details&gt;`?
+    
+        NO npm INSTALL. jsdom to hold one rule is R-6 apparatus — a check that
+        needs a toolchain nobody maintains is a check that stops running.
+    
+        THREE STATES, because node may not be here. A missing runtime is NOT
+        ASSESSED, said in those words and skipped; it is not a pass. §9 is about
+        exactly this, and a test that quietly returns when its tooling is absent
+        is the shape of every silent gap in this register.
+        """
+        import shutil
+        import subprocess
+    
+        node = shutil.which("node")
+        if node is None:
+            pytest.skip(
+                "NOT ASSESSED: node is not on PATH, so the behavioural half of "
+                "this rule did not run. The structural checks above still hold. "
+                "This is a third state, not a pass.")
+    
+        script = ROOT / "tests" / "js" / "render_turn_partition.mjs"
+        cases = renderer_signal_cases()
+        assert {row["signal"] for row in cases} == {s.value for s in Signal if s.is_loud}
+        result = subprocess.run([node, str(script), json.dumps(cases)], capture_output=True,
+                                text=True, cwd=ROOT)
+&gt;       assert result.returncode == 0, (
+            "the rendered turn breaks the disclosure rule:\n"
+            + result.stdout + result.stderr)
+E       AssertionError: the rendered turn breaks the disclosure rule:
+E         OK  2 disclosures, all in the open; 6 domain signals and 3 uncertain signals visible; 15 exact bodies; 2 folds, closed
+E         frontend/app.js:4127
+E           const match = window.location.hash.match(/^#reset=([A-Za-z0-9_-]+)$/);
+E                                              ^
+E         
+E         TypeError: Cannot read properties of undefined (reading 'match')
+E             at takeResetToken (frontend/app.js:4127:38)
+E             at boot (frontend/app.js:4146:7)
+E             at frontend/app.js:2365:1
+E             at Script.runInContext (node:vm:149:12)
+E             at Object.runInContext (node:vm:301:6)
+E             at file:///C:/Users/rahul/Nyaymalaw/tests/js/render_turn_partition.mjs:101:4
+E             at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+E             at async ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+E             at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+E         
+E         Node.js v20.20.0
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['C:\\Program Files\\nodejs\\node.EXE', 'C:\\Users\\rahul\\Nyaymalaw\\tests\\js\\render_turn_par...er:606:24)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)\n\nNode.js v20.20.0\n").returncode
+
+tests\test_the_screen_never_folds_a_disclosure.py:201: AssertionError</failure></testcase><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_recorded_local_composition_remains_usable" time="0.030" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_authored_approval_cannot_admit_an_external_recipient[complete-invented-approval]" time="0.030" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_authored_approval_cannot_admit_an_external_recipient[complete-IN-PROCESS-NO-EGRESS]" time="0.030" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_authored_approval_cannot_admit_an_external_recipient[structured-invented-approval]" time="0.029" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_authored_approval_cannot_admit_an_external_recipient[structured-IN-PROCESS-NO-EGRESS]" time="0.031" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_authored_approval_cannot_admit_an_external_recipient[embed-invented-approval]" time="0.030" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_authored_approval_cannot_admit_an_external_recipient[embed-IN-PROCESS-NO-EGRESS]" time="0.067" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_a_foreign_region_string_cannot_approve_even_a_local_named_recipient" time="0.010" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[root-list]" time="0.011" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[root-string]" time="0.011" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[boolean-schema]" time="0.013" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[processors-string]" time="0.011" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[processors-object]" time="0.010" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[processors-null]" time="0.011" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[regions-list]" time="0.013" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[row-string]" time="0.013" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[purposes-string]" time="0.013" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[classes-string]" time="0.013" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[unknown-purpose]" time="0.014" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[duplicate-id]" time="0.015" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_malformed_or_ambiguous_inventory_fails_closed[numeric-approval]" time="0.014" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_inventory_restrictions_still_bind_local_recipients" time="0.010" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_absent_inventory_and_unreadable_inventory_are_not_empty_success" time="0.003" /><testcase classname="tests.test_the_runtime_inventory_cannot_self_approve" name="test_the_external_dispatch_witness_rejects_bypassed_profile_admission" time="0.046" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_13_a_send_that_fails_keeps_the_brief_and_offers_one_retry" time="2.704" /><testcase classname="tests.test_the_journey_login_to_logout" name="test_phase_13b_a_cancelled_turn_does_not_claim_it_was_not_saved" time="2.756" /></testsuite></testsuites>

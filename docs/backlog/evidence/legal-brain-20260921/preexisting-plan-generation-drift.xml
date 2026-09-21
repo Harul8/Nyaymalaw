@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.387" timestamp="2026-09-21T21:44:24.102552+05:30" hostname="Haarul_LOQ"><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_every_feature_file_is_exactly_what_the_sheet_says" time="0.181"><failure message="ValueError: the plan sheet has no &quot;Scenarios (Given / When / Then)&quot; column">def test_every_feature_file_is_exactly_what_the_sheet_says():
+&gt;       expected = plan_scenarios.expected_files(plan_scenarios.sheet_rows())
+                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_the_scenarios_come_from_the_plan.py:21: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+sheet = WindowsPath('C:/Users/rahul/Nyaymalaw/docs/Nyaymalaw_Implementation_Plan.xlsx')
+
+    def sheet_rows(sheet: Path = SHEET) -&gt; list[dict]:
+        """Every feature row that carries scenarios, with its cells by header."""
+        from openpyxl import load_workbook
+    
+        worksheet = load_workbook(sheet, read_only=True, data_only=True).active
+        rows = worksheet.iter_rows(values_only=True)
+        headers = [str(cell or "").strip() for cell in next(rows)]
+        if COLUMN not in headers:
+&gt;           raise ValueError(f'the plan sheet has no "{COLUMN}" column')
+E           ValueError: the plan sheet has no "Scenarios (Given / When / Then)" column
+
+assurance\control_plane\plan_scenarios.py:51: ValueError</failure></testcase><testcase classname="tests.test_the_scenarios_come_from_the_plan" name="test_the_check_sees_an_edited_a_missing_and_an_orphan_file" time="0.011"><failure message="ValueError: the plan sheet has no &quot;Scenarios (Given / When / Then)&quot; column">tmp_path = WindowsPath('C:/Users/rahul/AppData/Local/Temp/pytest-of-rahul/pytest-1936/test_the_check_sees_an_edited_0')
+
+    def test_the_check_sees_an_edited_a_missing_and_an_orphan_file(tmp_path):
+        """POSITIVE CONTROL: each way the files can drift from the sheet is reported."""
+&gt;       expected = plan_scenarios.expected_files(plan_scenarios.sheet_rows())
+                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_the_scenarios_come_from_the_plan.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+sheet = WindowsPath('C:/Users/rahul/Nyaymalaw/docs/Nyaymalaw_Implementation_Plan.xlsx')
+
+    def sheet_rows(sheet: Path = SHEET) -&gt; list[dict]:
+        """Every feature row that carries scenarios, with its cells by header."""
+        from openpyxl import load_workbook
+    
+        worksheet = load_workbook(sheet, read_only=True, data_only=True).active
+        rows = worksheet.iter_rows(values_only=True)
+        headers = [str(cell or "").strip() for cell in next(rows)]
+        if COLUMN not in headers:
+&gt;           raise ValueError(f'the plan sheet has no "{COLUMN}" column')
+E           ValueError: the plan sheet has no "Scenarios (Given / When / Then)" column
+
+assurance\control_plane\plan_scenarios.py:51: ValueError</failure></testcase></testsuite></testsuites>

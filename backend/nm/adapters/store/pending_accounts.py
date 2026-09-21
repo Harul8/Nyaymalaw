@@ -189,6 +189,7 @@ class PendingAccounts:
                     doc["consent"]["notice_version"],
                     datetime.fromisoformat(doc["consent"]["given_at"]),
                     True,
+                    doc["consent"].get("external_ai_notice_version"),
                 )
                 chosen = credential or Credential(**doc["credential"])
                 try:

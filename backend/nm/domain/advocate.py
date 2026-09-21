@@ -60,7 +60,7 @@ INVITATION_HOURS = 48
 #: carries the same value on the notice element and sends it back with the
 #: consent, so the record says which words were shown. CHANGE IT WHEN THE WORDS
 #: CHANGE: a consent is to a notice, and a new notice is not the one agreed to.
-PRIVACY_NOTICE_VERSION = "2026-09-15"
+PRIVACY_NOTICE_VERSION = "2026-09-21"
 
 #: How long an emailed password-reset link stays usable. Thirty minutes: long
 #: enough for the mail to arrive and be opened, short enough that a link left
@@ -632,6 +632,7 @@ class Consent:
     notice_version: str
     given_at: datetime
     adult_confirmed: bool
+    external_ai_notice_version: str | None = None
 
     def __post_init__(self) -> None:
         if blank(self.notice_version):
@@ -642,11 +643,13 @@ class Consent:
     def as_dict(self) -> dict:
         return {"notice_version": self.notice_version,
                 "given_at": self.given_at.isoformat(),
-                "adult_confirmed": self.adult_confirmed}
+                "adult_confirmed": self.adult_confirmed,
+                "external_ai_notice_version": self.external_ai_notice_version}
 
 
 def registration_consent(notice_version: str | None, agreed: bool, adult: bool,
-                         now: datetime) -> Consent:
+                         now: datetime, *, external_ai: bool = False,
+                         external_ai_notice_version: str | None = None) -> Consent:
     """The consent a registration carries, or `ValueError` naming what is missing.
 
     `is True`, not truthiness: a JSON `"false"` string or a `1` is not somebody
@@ -656,8 +659,16 @@ def registration_consent(notice_version: str | None, agreed: bool, adult: bool,
         raise ValueError(CONSENT_REQUIRED)
     if (notice_version or "").strip() != PRIVACY_NOTICE_VERSION:
         raise ValueError(CONSENT_TO_AN_OLD_NOTICE)
+    from nm.domain.external_ai import NOTICE_VERSION
+    if type(external_ai) is not bool:
+        raise ValueError("OpenAI processing permission must be an explicit choice")
+    if external_ai and external_ai_notice_version != NOTICE_VERSION:
+        raise ValueError("The OpenAI processing notice changed; read the current notice")
+    if not external_ai and external_ai_notice_version is not None:
+        raise ValueError("An unaccepted OpenAI notice cannot record permission")
     return Consent(notice_version=PRIVACY_NOTICE_VERSION, given_at=now,
-                   adult_confirmed=True)
+                   adult_confirmed=True,
+                   external_ai_notice_version=NOTICE_VERSION if external_ai else None)
 
 
 @dataclass(frozen=True)

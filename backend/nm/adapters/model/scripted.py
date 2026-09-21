@@ -1060,7 +1060,32 @@ def scripted_consistency(user: str) -> str:
     })
 
 
+def scripted_investigation(user: str) -> str:
+    """Offline rehearsal only; this does not evaluate model judgment."""
+    try:
+        state = json.loads(user)
+    except json.JSONDecodeError:
+        # Port conformance probes use arbitrary text, not a research prompt.
+        return json.dumps({"snapshot": "", "action": "stop", "basis_id": "",
+                           "focus": "", "purpose": "needs_input"})
+    message = state["basis"]["instruction"]["text"].lower()
+    requested = any(word in message for word in (
+        "authority", "authorities", "judgment", "judgement", "precedent",
+        "case law", "caselaw", "ruling", "citation", "cited", "court",
+        "decisions i can rely on"))
+    if state["previous_searches"] or not requested:
+        return json.dumps({"snapshot": state["snapshot"], "action": "stop",
+                           "basis_id": "", "focus": "", "purpose": "no_useful_search"})
+    source_id = next((key for key, value in state["basis"].items()
+                      if value["kind"] == "retrieved_text"), "instruction")
+    return json.dumps({"snapshot": state["snapshot"], "action": "retrieve",
+                       "basis_id": source_id,
+                       "focus": state["basis"][source_id]["text"][:1200],
+                       "purpose": "interpretation"})
+
+
 SCRIPTED_READS: dict[str, object] = {
+    "investigation": scripted_investigation,
     "accrual": scripted_accrual,
     "consistency": scripted_consistency,
     "parties": scripted_parties,

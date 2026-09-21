@@ -27,6 +27,7 @@ from nm.domain.advocate import (
     Session,
 )
 from nm.domain.attempts import Verdict
+from nm.domain.external_ai import ModelPermission
 from nm.domain.professional_access import ProfessionalApproval
 
 
@@ -68,6 +69,15 @@ class AuthenticationUnavailable(RuntimeError):
 
 
 class DirectoryPort(Protocol):
+    def model_permission(self, advocate_id: str) -> ModelPermission | None:
+        """Current sealed permission; damaged state raises, absence grants nothing."""
+        ...
+
+    def record_model_permission(self, permission: ModelPermission, *,
+                                expected_version: int) -> ModelPermission:
+        """Authenticated account's versioned acceptance/withdrawal, never a roster grant."""
+        ...
+
     def begin_pending_registration(self, enrolment: Enrolment, now: datetime) -> dict:
         """Hold a bounded inactive signup and return the internal mail challenge."""
         ...

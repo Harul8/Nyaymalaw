@@ -1015,6 +1015,8 @@ def test_phase_13_a_send_that_fails_keeps_the_brief_and_offers_one_retry(
     # has to answer. `The turn was refused: HTTP 500` answered none of it.
     assert ("was NOT saved" in shown or "could not tell whether" in shown), (
         f"the failure does not say whether the brief was saved: {shown[:600]}")
+    assert "The response could not be received" in shown
+    assert "The turn was refused" not in shown, "a lost response is not a known refusal"
 
 
 def test_phase_13b_a_cancelled_turn_does_not_claim_it_was_not_saved(
@@ -1040,6 +1042,7 @@ def test_phase_13b_a_cancelled_turn_does_not_claim_it_was_not_saved(
 
     shown = _visible_text(page)
     assert "You cancelled this turn" in shown
+    assert "The turn was refused" not in shown
     assert "could not tell whether" in shown, (
         "a cancelled turn claims to know whether the brief was saved")
     assert "was NOT saved" not in shown, (

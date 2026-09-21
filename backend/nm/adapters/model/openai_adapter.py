@@ -15,12 +15,13 @@ from __future__ import annotations
 import json
 import random
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from nm.adapters.model._budget import guard_budget
 from nm.adapters.model.config import CONTEXT_BUDGET, ModelConfig, TierConfig
 from nm.domain.budget import Completion
+from nm.domain.external_ai import ModelPermissionRefused
 from nm.domain.text import blank
 from nm.ports.model import (
     ConfigurationError,
@@ -71,6 +72,7 @@ def _completion_of(reason) -> Completion:
 class OpenAIModelAdapter:
     def __init__(self, config: ModelConfig, client: Any | None = None) -> None:
         self._config = config
+        self._before_dispatch: Callable[[], None] | None = None
         if client is not None:
             self._client = client
             return
@@ -86,10 +88,21 @@ class OpenAIModelAdapter:
                 "NM_MODEL_API_KEY is not set (or is still the placeholder). "
                 "An unconfigured key is a hard failure, never a silent no-op."
             )
-        kwargs: dict[str, Any] = {"api_key": cfg.api_key}
-        if cfg.base_url:
-            kwargs["base_url"] = cfg.base_url
+        import httpx
+        # The approved recipient must not redirect text/credentials elsewhere.
+        # Disable implicit environment proxies as well as transport redirects.
+        kwargs: dict[str, Any] = {
+            "api_key": cfg.api_key, "max_retries": 0,
+            "http_client": httpx.Client(follow_redirects=False, trust_env=False),
+            "base_url": cfg.base_url or "https://api.openai.com/v1",
+        }
         self._client = OpenAI(**kwargs)
+
+    def for_matter_text(self, before_dispatch: Callable[[], None]) -> OpenAIModelAdapter:
+        """Request-bound authority, shared transport; no shared consent state."""
+        bound = OpenAIModelAdapter(self._config, client=self._client)
+        bound._before_dispatch = before_dispatch
+        return bound
 
     # ------------------------------------------------------------- port ---
     @property
@@ -117,6 +130,8 @@ class OpenAIModelAdapter:
         return self._call(prompt, tier, schema=schema, max_tokens=max_tokens)
 
     def embed(self, texts: tuple[str, ...]) -> EmbeddingResult:
+        if self._before_dispatch is not None:
+            raise ModelPermissionRefused("Matter-text permission does not enable embeddings.")
         cfg = self._cfg(Tier.EMBED)
         resp = self._retrying(lambda: self._client.embeddings.create(
             model=cfg.model, input=list(texts)))
@@ -132,6 +147,10 @@ class OpenAIModelAdapter:
         return self._config.for_tier(tier)
 
     def _call(self, prompt: Prompt, tier: Tier, schema, max_tokens) -> ModelResult:
+        if self._before_dispatch is not None and (
+                (prompt.system is not None and not isinstance(prompt.system, str))
+                or not isinstance(prompt.user, str)):
+            raise ModelPermissionRefused("Only text is permitted; raw media cannot be sent.")
         cfg = self._cfg(tier)
         # The port's budget, enforced BEFORE the call and identically to every
         # other adapter. Relying on the provider to report overflow would make
@@ -148,7 +167,7 @@ class OpenAIModelAdapter:
             messages.append({"role": "system", "content": prompt.system})
         messages.append({"role": "user", "content": prompt.user})
 
-        kwargs: dict[str, Any] = {"model": cfg.model, "messages": messages}
+        kwargs: dict[str, Any] = {"model": cfg.model, "messages": messages, "store": False}
         if max_tokens:
             kwargs["max_completion_tokens"] = max_tokens
         if schema is not None:
@@ -207,10 +226,9 @@ class OpenAIModelAdapter:
             except json.JSONDecodeError as exc:
                 raise SchemaViolation(f"response was not valid JSON: {exc}") from exc
             # THE DECLARED SCHEMA IS ENFORCED HERE, not by the provider.
-            # `strict` is off above, so the provider treats `enum` as a
-            # hint -- and a role read declaring eleven permitted values
-            # returned "claimant", which reached the core. The port owns
-            # this check so every adapter applies the same one.
+            # Provider strict output is defence in depth, not a substitute
+            # for validating the actual returned bytes. The port owns this
+            # check so every adapter applies the same contract.
             require_schema(data, schema)
             text = None
 
@@ -239,6 +257,8 @@ class OpenAIModelAdapter:
         an invisible retry is an invisible cost."""
         last: Exception | None = None
         for attempt in range(MAX_RETRIES):
+            if self._before_dispatch is not None:
+                self._before_dispatch()
             try:
                 return fn(), attempt
             except Exception as exc:  # noqa: BLE001 - re-raised as typed below

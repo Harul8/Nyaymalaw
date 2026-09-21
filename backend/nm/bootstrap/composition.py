@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from types import MappingProxyType
 
@@ -293,8 +293,9 @@ class Application:
         # never reach the provider, so the policy wraps the tracer rather than
         # the other way round. The trace still records the attempt, because a
         # refusal is exactly the call an operator wants to find later.
+        self._model_adapter = model or build_model(self.config)
         self.model = PolicedModel(
-            inner=TracedModel(inner=model or build_model(self.config)),
+            inner=TracedModel(inner=self._model_adapter),
             policy=self._gate.policy, audit=self._egress_audit,
             gate=self._gate)
         self.coverage = CoverageProfile.load(
@@ -310,6 +311,28 @@ class Application:
                                  model=self.model, coverage=self.coverage,
                                  elements=self.elements,
                                  professional_approval=self.directory.professional_approval)
+
+    def engine_for(self, advocate_id: str, *,
+                   session_current: Callable[[], bool] | None = None) -> TurnEngine:
+        """Authenticated turn route; generic tooling remains deny-by-default."""
+        if not isinstance(self._model_adapter, OpenAIModelAdapter):
+            return self.engine
+        from nm.bootstrap.model_permission import require_permission, text_policy
+        from nm.domain.external_ai import ModelPermissionRefused
+
+        def authorize():
+            if session_current is None or not session_current():
+                raise ModelPermissionRefused(
+                    "Your session no longer permits AI processing. Sign in again to continue.")
+            require_permission(self.directory, advocate_id, self.config)
+
+        authorize()
+        bound = PolicedModel(
+            inner=TracedModel(inner=self._model_adapter.for_matter_text(authorize)),
+            policy=text_policy(), audit=self._egress_audit, authorize=authorize)
+        return TurnEngine(store=self.store, evidence=self.evidence, model=bound,
+                          coverage=self.coverage, elements=self.elements,
+                          professional_approval=self.directory.professional_approval)
 
     # ------------------------------------------------------------ P21 ------
 

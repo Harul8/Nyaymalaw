@@ -403,6 +403,10 @@ function clearPrivileged() {
   state.sessionsGeneration += 1;
   state.casefileGeneration += 1;
   $('sessions-dialog').close();
+  $('ai-sharing-dialog').close();
+  aiPermission = null;
+  $('ai-sharing-status').textContent = '';
+  $('ai-sharing-accept').checked = false;
   $('sessions-body').textContent = '';
   if (activeDelivery) {
     activeDelivery.entry.state = 'unknown';
@@ -1330,7 +1334,15 @@ function renderTurn(entry) {
     f.className = 'failure';
     const refusal = entry.refusal;
 
-    if (refusal && refusal.withheld_by && refusal.withheld_by.length) {
+    if (refusal?.code === 'model_permission_required') {
+      const why = document.createElement('p');
+      why.textContent = refusal.why;
+      const settings = document.createElement('button');
+      settings.type = 'button'; settings.className = 'ghost';
+      settings.textContent = 'Review AI data sharing';
+      settings.addEventListener('click', openAiSharing);
+      f.append(why, settings);
+    } else if (refusal && refusal.withheld_by && refusal.withheld_by.length) {
       const h = document.createElement('div');
       h.className = 'refusal-head';
       h.textContent = `Withheld by ${refusal.withheld_by.join(', ')} — nothing was emitted.`;
@@ -1346,7 +1358,9 @@ function renderTurn(entry) {
         f.appendChild(d);
       }
     } else {
-      f.textContent = `The turn was refused: ${entry.error}`;
+      f.textContent = entry.state === 'unknown'
+        ? `The response could not be received: ${entry.error}`
+        : `The turn was refused: ${entry.error}`;
     }
 
     // BK-36. WAS IT SAVED, AND WHAT DO I DO NOW.
@@ -1525,12 +1539,13 @@ function renderTurn(entry) {
     into.appendChild(d);
   }
 
-  // THE SUPPORT, FOLDED, WITH A COUNT. `left_out` is the precedent in this
-  // product: a reader told something is hidden learns less than one told how
-  // much. A bare "details" gives no reason to open it.
+  // Support is visible by default. The advocate may collapse ordinary support,
+  // but material signals and disclosures stay outside that choice. This shows
+  // the passages actually supplied; it does not claim full-source verification.
   if (support.length) {
     const fold = document.createElement('details');
     fold.className = 'support';
+    fold.open = true;
     const sum = document.createElement('summary');
     sum.textContent = support.length === 1
       ? '1 supporting passage'
@@ -1792,8 +1807,11 @@ async function deliver(entry) {
     if (matchesIntake(entry, intent.intake)) intent.intake = null;
     if ((answer.input_admitted === true || answer.route === 'non_matter')
         && intent.text.trim() === entry.brief.trim()) intent.text = '';
-    intent.intakeOpen = Boolean(answer.blocked && /screen|scope|capacity|part(y|ies)/i.test(
-      answer.blocked_reason || ''));
+    // A reply belongs to the conversation that sent it. An unestablished
+    // screen may ask for information, but prose must never navigate back to
+    // the opening form or hide that question. Opening is an explicit user
+    // action; correcting a saved cover uses the matter's own controls.
+    intent.intakeOpen = false;
     // A saved opening acquires a file identity, but its original turn envelope
     // keeps matter_id:null for idempotent replay if this acknowledgement is lost.
     const previousKey = intent.key;
@@ -2359,6 +2377,71 @@ $('home-start').addEventListener('click', startMatter);
  * These two ran at load, unconditionally, so the board fetched and
  * painted before anything asked whether this browser was signed in.
  * `boot()` resolves the session and only then starts the application. */
+let aiPermission = null;
+let aiSharingRequest = 0;
+for (const host of document.querySelectorAll('[data-ai-notice]')) {
+  host.append($('openai-text-notice').content.cloneNode(true));
+}
+function syncAiSharing() {
+  $('ai-sharing-save').disabled = !aiPermission || !$('ai-sharing-accept').checked;
+  $('ai-sharing-withdraw').disabled = !aiPermission || !aiPermission.accepted;
+}
+async function openAiSharing() {
+  setAccountMenu(false);
+  const request = ++aiSharingRequest;
+  aiPermission = null;
+  $('ai-sharing-accept').checked = false;
+  $('ai-sharing-status').textContent = 'Checking your current permission…';
+  syncAiSharing();
+  if (!$('ai-sharing-dialog').open) $('ai-sharing-dialog').showModal();
+  try {
+    const result = await api('/api/account/model-permission');
+    if (request !== aiSharingRequest) return;
+    if (result.notice_version !== $('openai-text-notice').dataset.noticeVersion) {
+      throw new Error('The notice changed. Reload this page before accepting it.');
+    }
+    aiPermission = result;
+    $('ai-sharing-status').textContent = result.accepted
+      ? 'OpenAI text processing is enabled for your account.'
+      : 'OpenAI text processing is not enabled. Your matters remain accessible.';
+  } catch (err) {
+    if (!err.obsolete && request === aiSharingRequest) $('ai-sharing-status').textContent = err.message;
+  }
+  if (request === aiSharingRequest) syncAiSharing();
+}
+async function saveAiSharing(accepted) {
+  if (!aiPermission || (accepted && !$('ai-sharing-accept').checked)) return;
+  const request = ++aiSharingRequest;
+  const version = aiPermission.version;
+  aiPermission = null;
+  syncAiSharing();
+  $('ai-sharing-status').textContent = 'Recording your choice…';
+  try {
+    const result = await api('/api/account/model-permission', {
+      method: 'POST', headers: {'content-type': 'application/json'},
+      body: JSON.stringify({accepted, expected_version: version,
+        notice_version: $('openai-text-notice').dataset.noticeVersion}),
+    });
+    if (request !== aiSharingRequest) return;
+    aiPermission = result;
+    $('ai-sharing-accept').checked = false;
+    $('ai-sharing-status').textContent = result.accepted
+      ? 'Permission recorded for OpenAI text processing.'
+      : 'Permission withdrawn. Subsequent OpenAI requests are blocked; your matters remain accessible.';
+  } catch (err) {
+    if (!err.obsolete && request === aiSharingRequest) {
+      $('ai-sharing-status').textContent = 'Your choice was not confirmed. Reopen this panel to check. '
+        + err.message;
+    }
+  }
+  if (request === aiSharingRequest) syncAiSharing();
+}
+$('ai-sharing').addEventListener('click', openAiSharing);
+$('ai-sharing-accept').addEventListener('change', syncAiSharing);
+$('ai-sharing-save').addEventListener('click', () => saveAiSharing(true));
+$('ai-sharing-withdraw').addEventListener('click', () => saveAiSharing(false));
+$('ai-sharing-close').addEventListener('click', () => $('ai-sharing-dialog').close());
+$('ai-sharing-dialog').addEventListener('close', () => { ++aiSharingRequest; aiPermission = null; });
 boot();
 
 /* ============================== THE TABS ==============================
@@ -4526,6 +4609,9 @@ function consentGiven() {
     notice_version: $('privacy-notice').dataset.noticeVersion,
     agreed: $('reg-consent').checked,
     adult: $('reg-adult').checked,
+    external_ai: $('reg-external-ai').checked,
+    external_ai_notice_version: $('reg-external-ai').checked
+      ? $('openai-text-notice').dataset.noticeVersion : null,
   };
 }
 
@@ -4836,6 +4922,7 @@ $('register').addEventListener('submit', async (ev) => {
     // on this screen ticks its own.
     $('reg-consent').checked = false;
     $('reg-adult').checked = false;
+    $('reg-external-ai').checked = false;
     // REGISTERED, NOT SIGNED IN. A form post that created a session would mean
     // creating an account also logs in whatever machine sent it, and the
     // device binding is minted at sign-in for exactly that reason.

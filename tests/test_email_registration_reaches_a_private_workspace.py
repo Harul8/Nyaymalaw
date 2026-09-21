@@ -42,7 +42,8 @@ def test_email_registration_opens_own_workspace_and_matter(page, journey, width)
     assert response.status == 202
     assert response.request.post_data_json == {
         "email": email, "password": journey["password"],
-        "password_again": journey["password"], "consent": CONSENT,
+        "password_again": journey["password"], "consent": {
+            **CONSENT, "external_ai": False, "external_ai_notice_version": None},
     }
     assert "x-enrolment-invitation" not in response.request.headers
     page.wait_for_selector('#confirm-email:not([hidden])')
@@ -57,6 +58,8 @@ def test_email_registration_opens_own_workspace_and_matter(page, journey, width)
     assert page.locator("#recovery-code-list li").count() == 0
     assert page.input_value("#reg-password") == page.input_value("#reg-password2") == ""
     assert not page.is_checked("#reg-consent") and not page.is_checked("#reg-adult")
+    assert not page.is_checked('#reg-external-ai')
+    assert journey['box'].directory.model_permission(email) is None
     assert page.request.get(journey["base"] + "/api/session").status == 401
     page.click("#outcome-signin")
     assert page.locator("#recovery-code-list li").count() == 0
