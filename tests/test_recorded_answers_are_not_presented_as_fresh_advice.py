@@ -23,6 +23,7 @@ def test_changed_instructions_do_not_relabel_the_saved_answer_as_a_fresh_assessm
     matter_id = _new_matter(page, "Synthetic changed-instruction client")
     before = journey["box"].application.store.load(matter_id)
     assert before.turn_receipts, "the historical answer must have really been saved"
+    page.locator('#workspace-more summary').click()
     page.get_by_role("button", name="Matter cover & instructions", exact=True).click()
     page.get_by_role("button", name="Record the instructions", exact=True).click()
     page.fill("#mw-objective", "Review the changed synthetic instruction before any new assessment")

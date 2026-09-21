@@ -336,7 +336,6 @@
 <!-- F-A-12. THE WARNING BEFORE AN IDLE SIGN-OUT, two minutes ahead. Any use of
      the page hides it and starts the thirty minutes again. -->
   <div id="idle-warning" class="idle-warning" role="alert" hidden></div>
-  <div id="draft-recovery" class="draft-recovery" aria-live="polite"></div>
 <div id="rehearsal-warning" class="rehearsal-warning" role="status" hidden>Local rehearsal · Responses are scripted test output, not legal advice. Use synthetic information only.</div>
 
 <!-- ================== F-A-18 — HOME ==================
@@ -393,6 +392,12 @@
       <div><p class="eyebrow" id="workspace-eyebrow">YOUR WORKSPACE</p>
         <h1 id="matter-heading">My work</h1></div>
       <div class="workspace-actions">
+        <details id="workspace-more" class="workspace-more">
+          <summary>More</summary>
+          <div id="workspace-menu" class="workspace-menu">
+            <button type="button" id="draft-open">Recover a draft</button>
+          </div>
+        </details>
         <!-- F-A-17. CASE FILE AND HISTORY BELONG TO A MATTER, so they are
              offered here, for the matter that is open, and not as tabs. -->
         <nav class="work-links" id="work-links" aria-label="This matter" hidden>
@@ -478,6 +483,8 @@
          child of `main`: that is a two-column grid, and a third child takes a
          cell -- which put the board in the chat's column and the chat below it. -->
     <p id="draft-status" class="draft-status" role="status"></p>
+    <p id="draft-restored" class="draft-status" role="status"></p>
+    <button type="button" id="jump-latest" class="ghost jump-latest" hidden>Jump to latest</button>
 
     <form id="composer" class="composer" autocomplete="off">
       <label class="composer-label" for="message">Your instruction or brief</label>
@@ -522,6 +529,14 @@
     </form>
   </section>
 </main>
+
+<dialog id="draft-dialog" aria-labelledby="draft-title">
+  <div class="dialog-head"><h2 id="draft-title">Saved drafts for this matter</h2>
+    <button type="button" id="draft-close" class="ghost">Close</button></div>
+  <p class="help">Choose a version to continue. Your current unsent work is kept separately.
+    Drafts expire 72 hours after their last changed save. Signing out discards local drafts.</p>
+  <div id="draft-recovery" class="draft-recovery" aria-live="polite"></div>
+</dialog>
 
 <!-- ===================== A4 — SEARCH THE CORPUS =====================
      Ranked case paragraphs. It cannot identify an Act and does not try:

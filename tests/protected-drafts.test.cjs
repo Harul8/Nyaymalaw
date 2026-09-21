@@ -49,6 +49,29 @@ test('two tabs keep different recoverable versions',async()=>{
   await Promise.all([vault.save(intent),other.save({...intent,text:'A different edit'})]);
   assert.equal((await vault.list()).length,2);
 });
+
+test('restoring another version preserves current work and subsequent edits',async()=>{
+  const {vault,storage}=await setup();const other=(await setup(storage)).vault;
+  await other.save({...intent,text:'Earlier alternative'});
+  const alternative=(await other.list())[0];
+  await vault.save({...intent,text:'Current unsent work'});
+  await vault.adopt(alternative);
+  await vault.save({...intent,text:'Edited recovered work'});
+  const texts=(await vault.list()).map(row=>row.intent.text).sort();
+  assert.deepEqual(texts,['Current unsent work','Edited recovered work']);
+});
+
+test('failed adoption keeps both existing versions and the current writer',async()=>{
+  const {vault,storage}=await setup();const other=(await setup(storage)).vault;
+  await other.save({...intent,text:'Alternative'});
+  const alternative=(await other.list())[0];
+  await vault.save({...intent,text:'Current'});
+  const tab=vault.tab,write=storage.setItem.bind(storage);
+  storage.setItem=()=>{throw new Error('quota');};
+  await assert.rejects(vault.adopt(alternative),/quota/);
+  assert.equal(vault.tab,tab);storage.setItem=write;
+  assert.deepEqual((await vault.list()).map(row=>row.intent.text).sort(),['Alternative','Current']);
+});
 test('discard prevents old tabs and queued writes from resurrecting work',async()=>{
   const {vault,storage}=await setup();const other=(await setup(storage)).vault;
   await vault.save(intent);const pending=other.save({...intent,text:'Late edit'});

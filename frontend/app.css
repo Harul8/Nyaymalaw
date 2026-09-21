@@ -1,13 +1,15 @@
 :root {
   /* Locally available fonts and shared tokens: rendering never sends a
      request to a font service from an advocate's workspace. */
-  --paper:      #f7f8f5;
+  --paper:      #ffffff;
   --surface:    #ffffff;
   --surface-2:  #edf1ed;
-  --ink:        #192e2b;
-  --ink-2:      #455751;
-  --ink-3:      #5e7068;
-  --rule:       #d8e0d9;
+  --ink:        #3b3b3b;
+  --ink-2:      #494949;
+  --ink-3:      #606060;
+  --rule:       #ddddda;
+  --board:      #fbf8f1;
+  --user-message: #f2f2f2;
   --accent:     #185748;
   --accent-2:   #0d4034;
   --accent-w:   #e4efe8;
@@ -26,6 +28,7 @@
   :root:not([data-theme="light"]) {
     /* The same flattening, one ground rather than three. */
     --paper: #0e1216; --surface: #0e1216; --surface-2: #0e1216;
+    --board: #171b1e; --user-message: #242a30;
     --ink: #e6ebef; --ink-2: #b3bec6; --ink-3: #7f8b94; --rule: #2c353d;
     --accent: #6fb3c0; --accent-2: #8fc9d4; --accent-w: #16292f;
     --signal: #d98c82; --signal-w: #2c1d1b;
@@ -130,7 +133,7 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 
 /* ------------------------------------------------------------------ rail --- */
 .rail {
-  background: var(--surface); border-right: 1px solid var(--rule);
+  background: var(--board); border-right: 1px solid var(--rule);
   display: flex; flex-direction: column; min-height: 0;
 }
 .rail-head {
@@ -186,12 +189,12 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .state.unbuildable{ color: var(--signal); border-color: var(--signal); }
 
 /* ---------------------------------------------------------- conversation --- */
-.conversation { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+.conversation { display: flex; flex-direction: column; min-height: 0; background: var(--surface); }
 .mode-line {
   padding: 0.5rem 1.5rem; font-size: 0.78rem; color: var(--ink-3);
   font-style: italic; border-bottom: 1px solid var(--rule); flex: none;
 }
-.thread { overflow-y: auto; flex: 1; padding: 1.8rem 2.2rem 0.75rem; }
+.thread { overflow-y: auto; flex: 1; min-height: 0; padding: 1.8rem 2.2rem 0.75rem; scrollbar-gutter: stable; }
 
 .turn { max-width: 52rem; margin: 0 auto 2rem; }
 
@@ -201,11 +204,8 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
    having to read it. */
 .said-row { display: flex; justify-content: flex-end; margin-bottom: 1.1rem; }
 .brief {
-  /* A HAIRLINE, NOT A FILL. On a white page the right-alignment and this
-     rule are what still say "you said this" -- and that is not decoration:
-     an advocate scanning back through a long matter has to find their own
-     words without reading them. */
-  border: 1px solid var(--rule); border-radius: 12px;
+  /* Separate attributed user text without turning NM's reply into a card. */
+  background: var(--user-message); border: 1px solid transparent; border-radius: 16px;
   padding: 0.65rem 0.95rem; max-width: 80%;
   white-space: pre-wrap; font-size: 0.94rem; line-height: 1.55;
   color: var(--ink);
@@ -298,21 +298,20 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 
 /* -------------------------------------------------------------- composer --- */
 .composer {
-  flex: none; background: var(--paper);
-  padding: 0.8rem 1.5rem 1rem;
+  flex: none; background: var(--surface); width: calc(100% - 2rem); max-width: 52rem;
+  margin: 0.65rem auto max(1rem, env(safe-area-inset-bottom));
+  padding: 1rem 1.1rem 0.75rem; border: 1px solid var(--rule); border-radius: 20px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
 }
 .composer textarea {
-  width: 100%; max-width: 46rem; margin: 0 auto; display: block;
-  font-family: var(--f-sans); font-size: 0.95rem; line-height: 1.5;
-  padding: 0.6rem 0.7rem; border: 1px solid var(--rule); border-radius: 3px;
-  background: var(--paper); color: var(--ink); resize: vertical;
-  /* THE GREY LINE. Everything else on this page is flat, so the one
-     surface the advocate types into has to declare itself. */
-  border: 1px solid var(--rule); border-radius: 8px;
+  width: 100%; margin: 0; display: block; min-height: 56px; max-height: 180px;
+  font-family: var(--f-sans); font-size: 1rem; line-height: 1.6;
+  padding: 0.5rem; border: 0; border-radius: 8px; overflow-y: auto;
+  background: var(--surface); color: var(--ink); resize: none;
 }
 .composer textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .composer-row {
-  max-width: 46rem; margin: 0.5rem auto 0; display: flex;
+  margin: 0.5rem auto 0; display: flex;
   align-items: center; justify-content: space-between; gap: 1rem;
 }
 /* F-C-01, F-C-02. The plus and the mic, just under the brief. */
@@ -377,7 +376,8 @@ button.wide { margin: 0.5rem 0.6rem 0.8rem; }
 #pane-advise[data-view="opening"] .matters-toggle { display: none; }
 /* The form and nothing above it: no "New matter / Not yet saved" heading, which
    belongs to a matter that exists (product owner, 15 Sep). */
-#pane-advise[data-view="opening"] .workspace-heading { display: none; }
+#pane-advise[data-view="opening"] .workspace-heading { justify-content: flex-end; padding: .3rem 1rem; border: 0; }
+#pane-advise[data-view="opening"] .workspace-heading > div:first-child { display: none; }
 /* F-B-02. The matter board sits above the issues in the left pane. */
 .matter-board { padding: 0 0.6rem; }
 .matter-board .r-title { margin: 0; }
@@ -1058,7 +1058,19 @@ main.home { display: flex; align-items: flex-start; justify-content: center; ove
 .page-intro p:not(.eyebrow) { color: var(--ink-2); line-height: 1.8; }
 .row[role="button"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-#thread:empty { flex: 0; padding: 0; }
+#thread:empty { padding: 0; }
+#pane-advise[data-view="opening"] #thread:empty { flex: 0; }
+#pane-advise[data-view="opening"] .intake { overflow-y: auto; min-height: 0; }
+.thread .el .body { font-size: 1rem; line-height: 1.7; }
+.workspace-more { position: relative; }
+.workspace-more summary { cursor: pointer; padding: 0.6rem; min-height: 44px; }
+.workspace-menu { position: absolute; right: 0; top: 100%; z-index: 65; width: max-content;
+  max-width: min(22rem, calc(100vw - 2rem)); padding: .4rem; border: 1px solid var(--rule);
+  border-radius: 12px; background: var(--surface); box-shadow: 0 4px 15px rgba(0,0,0,.08); }
+.workspace-menu button { display: block; text-align: left; width: 100%; min-height: 44px; }
+.workspace-menu .matter-tools { display: grid; padding: 0; }
+.workspace-more summary:focus-visible { outline: 2px solid var(--accent); }
+.jump-latest { align-self: center; flex: none; }
 #rail-body:empty { min-height: 3rem; }
 /* F-A-13. LANDSCAPE TABLETS: two columns still, and the story panel and the gap
    give way before the card does. The ribbon's name gives way the same way. */
@@ -1321,12 +1333,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .state.problem { color: var(--signal); border-color: var(--signal); }
 /* Protected local drafts use the same restrained account-state vocabulary. */
 .draft-recovery:empty, .draft-status:empty { display: none; }
-.draft-recovery { max-width: 72rem; margin: 1rem auto; padding: 0 1.25rem; }
-.draft-recovery button { margin: .25rem .5rem .25rem 0; }
+.draft-recovery { display: grid; gap: .6rem; margin: 1rem 0; }
+.draft-recovery button { text-align: left; white-space: normal; }
+#draft-dialog { max-width: min(38rem, calc(100vw - 2rem)); color: var(--ink); background: var(--surface);
+  border: 1px solid var(--rule); border-radius: 16px; padding: 1.25rem; }
+#draft-dialog .dialog-head { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+#draft-dialog h2 { font-size: 1.2rem; margin: .5rem 0; }
 .draft-status {
-  font-size: .82rem; line-height: 1.5; color: #52645e;
-  margin: 0; padding: .6rem 1.5rem 0;
-  max-width: 49rem;
+  flex: none; font-size: .82rem; line-height: 1.5; color: var(--ink-2);
+  width: calc(100% - 2rem); max-width: 52rem; margin: 0 auto; padding: .4rem .5rem 0;
 }
 .opening-details { border-top: 1px solid #dce5df; padding: .8rem 0; margin-top: .65rem; }
 .opening-details summary { cursor: pointer; font-weight: 600; color: #234a40; padding: .25rem 0; }

@@ -8386,6 +8386,52 @@ These are specification/format checks, not product tests. Registry ownership
 reconciliation remains OPEN under LB-43; browser and accessibility acceptance
 must be earned when the changes are implemented.
 
+#### Legal-brain implementation start — 21 September 2026
+
+Planning baseline committed as `2246989`. Owner authorises implementation and
+stepwise real-browser validation of UI and the continuing legal brain against
+Before Build. No professional review, real-client-data use, production release
+or unlimited model spend is implied. Bounded live-model approval is requested
+separately. Current stage is BUILD OPEN; no whole-brain completion claim.
+
+Sequence: (1) recovery/composer/readability; (2) source-linked matter board and
+reader; (3) reconcile LB-01–92 against the served reasoning/retrieval path,
+implement missing grounding and adaptive-loop contracts; (4) approved complex
+multi-dispute validation with exact response/source/state evidence; (5) login
+through sign-out and cumulative regression. Test each coherent increment before
+dependent work. Existing BK-31/32/40 own draft/navigation outcomes; BK-53/93/95
+and the other substantive delivery owners must be reconciled before dependent
+brain changes. No second status owner is introduced by this work log.
+
+**Step 1 Start READY:** LB-75/84/88 and Arrive A.8.2–A.8.2b, registered below as
+BK-32-AC2 and BK-40-AC3. Explicit authenticated recovery, unchanged encryption,
+retention/sign-out policy, no silent replacement and no auto-send. The existing
+global account/workspace list explains the supplied screenshot; `adopt` saves
+over the current tab slot before switching to the restored intent, so preserve
+the outgoing version at that shared storage boundary. Scope: all UI recovery,
+draft checkpoint, selection, logout and composer consumers. Model/retrieval
+changes are excluded from this first increment. Graph refreshed at f5b5413;
+tracked UI/source/tests inspected after semantic searches. New files and dynamic
+DOM bindings need direct-source checks too.
+
+Proof planned: same-matter and opening restoration after reload; five-second
+success and persistent failure; competing versions/newer text; expiry and
+sign-out; late callbacks/matter switch; IME input; independent transcript scroll;
+desktop/tablet/phone layout and existing opening/account regression. Synthetic
+browser rehearsal proves mechanics only, never reasoning quality.
+
+**First increment, measured:** recovery and composer changes are implemented.
+The latest affected browser run passes 22 tests. A 129-test integration run
+passes, and the updated arrival source contract passes 63 tests. Populations
+overlap; these are not a claimed unique total or a full Class-A result. Manual
+isolated browser review confirmed reload/reopen, explicit same-matter recovery,
+the transient notice beside restored text, retained unsent input and compact
+narrow-screen controls. Failed earlier runs and their corrections remain in
+`docs/backlog/evidence/legal-brain-20260921/README.md`. No legal-quality,
+independent-review or whole-item completion claim is made. Further brain/UI
+work remains OPEN. Real-model evaluation awaits the requested bounded-run
+approval; the current browser server uses a visibly labelled scripted adapter.
+
 Registered 12 September 2026 after the a3d9c47 conformance review found real
 route code with no genuine B1 delivery owner. The route reader and no-file
 non-matter path are existing partial implementation, not newly completed work.

@@ -42,19 +42,19 @@ class NMDraftVault {
     return this.key && generation === this.generation
       && (this.storage.getItem(this.epochKey) || 'initial') === this.epoch;
   }
-  async slotFor(key) {
+  async slotFor(key, tab = this.tab) {
     const digest = Array.from(new Uint8Array(await this.crypto.subtle.digest(
       'SHA-256', new TextEncoder().encode(key))))
       .map(b => b.toString(16).padStart(2, '0')).join('');
-    return this.prefix + digest + '.' + this.tab;
+    return this.prefix + digest + '.' + tab;
   }
-  save(intent) {
+  save(intent, {tab = this.tab} = {}) {
     // Snapshot before awaiting: later edits must not be labelled as this save.
     const text = JSON.stringify(intent);
     const generation = this.generation;
     const job = this.writes.catch(() => {}).then(async () => {
       if (!this.current(generation)) throw new Error('Draft access ended.');
-      const slot = await this.slotFor(intent.key);
+      const slot = await this.slotFor(intent.key, tab);
       if (this.last.get(slot)?.text === text) return this.last.get(slot).savedAt;
       const savedAt = Number.isFinite(intent.editedAt) ? intent.editedAt : this.now();
       if (savedAt > this.now() || savedAt + this.lifetime <= this.now()) {
@@ -104,7 +104,13 @@ class NMDraftVault {
     return result.sort((a,b)=>b.savedAt-a.savedAt);
   }
   async adopt(saved) {
-    await this.save({...saved.intent, editedAt:saved.savedAt});
+    // Restoration starts a new slot. The current tab may already contain
+    // different unsent work; selecting a version must not destroy that work.
+    const generation = this.generation;
+    const tab = this.crypto.randomUUID();
+    await this.save({...saved.intent, editedAt:saved.savedAt}, {tab});
+    if (!this.current(generation)) throw new Error('Draft access ended.');
+    this.tab = tab;
     if (this.storage.getItem(saved.slot) === saved.raw) this.storage.removeItem(saved.slot);
   }
   async removeOwn(key) {

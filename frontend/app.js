@@ -86,6 +86,9 @@ let draftVault = null;
 let draftWrite = 0;
 let draftUnlock = Promise.resolve();
 let storedDraftCount = 0;
+let recoveryGeneration = 0;
+let checkpointTimer = null;
+let restoredTimer = null;
 try { draftVault = new NMDraftVault(window.localStorage, window.crypto); }
 catch { /* Unavailable storage is reported before any durable-save claim. */ }
 
@@ -101,6 +104,7 @@ async function saveProtectedDraft({previousKey = null} = {}) {
   const generation = state.sessionGeneration;
   const revision = ++draftWrite;
   const status = $('draft-status');
+  clearTimeout(checkpointTimer);
   status.textContent = 'Saving draft…';
   try {
     // Sign-in reveals the workspace before its device-bound draft key finishes
@@ -129,11 +133,11 @@ async function saveProtectedDraft({previousKey = null} = {}) {
     };
     const savedAt = await draftVault.save(snapshot);
     if (previousKey && previousKey !== held.key) await draftVault.removeOwn(previousKey);
-    if (generation !== state.sessionGeneration || revision !== draftWrite) return;
+    if (generation !== state.sessionGeneration || revision !== draftWrite || !ownsIntent(held)) return;
     showDraftCheckpoint(savedAt);
     return true;
   } catch (error) {
-    if (generation !== state.sessionGeneration || revision !== draftWrite) return;
+    if (generation !== state.sessionGeneration || revision !== draftWrite || !ownsIntent(held)) return;
     status.textContent = 'Could not save this draft. Changes may not survive closing the page. '
       + error.message;
     return false;
@@ -141,17 +145,38 @@ async function saveProtectedDraft({previousKey = null} = {}) {
 }
 
 function showDraftCheckpoint(savedAt) {
-  $('draft-status').textContent = `Saved on this device at ${new Date(savedAt).toLocaleString()}. `
-    + `Expires ${new Date(savedAt + 72 * 60 * 60 * 1000).toLocaleString()}. `
-    + 'Choosing Sign out discards unsent drafts.';
+  clearTimeout(checkpointTimer);
+  $('draft-status').textContent = 'Saved on this device';
+  $('draft-status').dataset.savedAt = String(savedAt);
+  checkpointTimer = setTimeout(() => { $('draft-status').textContent = ''; }, 5000);
+}
+
+function clearDraftNotices() {
+  clearTimeout(checkpointTimer);
+  clearTimeout(restoredTimer);
+  $('draft-status').textContent = '';
+  $('draft-restored').textContent = '';
+  delete $('draft-status').dataset.savedAt;
+}
+
+function showDraftRestored() {
+  clearTimeout(restoredTimer);
+  const anchor = activeIntent?.matterId ? $('message') : $('intake').querySelector('h2');
+  anchor.insertAdjacentElement('beforebegin', $('draft-restored'));
+  $('draft-restored').textContent = 'Draft restored';
+  restoredTimer = setTimeout(() => { $('draft-restored').textContent = ''; }, 5000);
+}
+
+function closeDraftRecovery() {
+  recoveryGeneration += 1;
+  $('draft-dialog').close();
+  $('draft-recovery').replaceChildren();
 }
 
 async function unlockDrafts() {
   const generation = state.sessionGeneration;
   const account = state.advocate;
   const workspace = state.workspace;
-  const panel = $('draft-recovery');
-  panel.replaceChildren();
   try {
     // An older sign-in's delayed key import must never replace or lock the
     // current account's vault. Construct privately, then publish under its generation.
@@ -163,26 +188,59 @@ async function unlockDrafts() {
     draftVault = vault;
     const drafts = await vault.list();
     if (generation !== state.sessionGeneration) return;
-    const seen = new Set();
-    storedDraftCount = drafts.filter(saved => draftHasWork(saved.intent)).length;
+    storedDraftCount = drafts.filter(saved => saved.intent.advocate === account
+      && saved.intent.workspace === workspace && draftHasWork(saved.intent)).length;
+  } catch (error) {
+    if (generation === state.sessionGeneration) {
+      $('draft-status').textContent = 'Draft protection is unavailable. ' + error.message;
+    }
+  }
+}
+
+async function openDraftRecovery() {
+  if (!state.advocate || !activeIntent) return;
+  $('workspace-more').open = false;
+  const generation = ++recoveryGeneration;
+  const session = state.sessionGeneration;
+  const context = activeIntent;
+  const current = () => generation === recoveryGeneration
+    && session === state.sessionGeneration && ownsIntent(context);
+  const panel = $('draft-recovery');
+  $('draft-title').textContent = context.matterId ? 'Saved drafts for this matter' : 'Saved opening drafts';
+  panel.textContent = 'Loading protected drafts…';
+  $('draft-dialog').showModal();
+  try {
+    await draftUnlock;
+    if (!current()) return;
+    const vault = draftVault;
+    if (!vault?.key) throw new Error('Draft protection is unavailable.');
+    const drafts = await vault.list();
+    if (!current()) return;
+    panel.replaceChildren();
+    let count = 0;
     for (const saved of drafts) {
       const intent = saved.intent;
-      if (intent.advocate !== account || intent.workspace !== workspace || !draftHasWork(intent)) continue;
-      const signature = JSON.stringify(intent);
-      if (seen.has(signature)) continue;
-      seen.add(signature);
+      if (intent.advocate !== state.advocate || intent.workspace !== state.workspace
+          || intent.key !== context.key || intent.matterId !== context.matterId
+          || !draftHasWork(intent)) continue;
+      count += 1;
       const button = document.createElement('button');
       button.type = 'button'; button.className = 'ghost';
       button.textContent = `Recover unsent draft saved ${new Date(saved.savedAt).toLocaleString()} · expires ${new Date(saved.expiresAt).toLocaleString()}`;
       button.addEventListener('click', async () => {
-        button.disabled = true;
+        const buttons = [...panel.querySelectorAll('button')];
+        buttons.forEach(item => { item.disabled = true; });
         try {
-          if (generation !== state.sessionGeneration) return;
+          if (!current()) return;
           if (intent.matterId) await api(`/api/matters/${encodeURIComponent(intent.matterId)}`);
-          if (generation !== state.sessionGeneration) return;
+          if (!current()) return;
           snapshotIntent();
+          if (draftHasWork(context) && !await saveProtectedDraft()) {
+            throw new Error('Your current draft could not be protected. It has not been replaced.');
+          }
+          if (!current()) return;
           await vault.adopt(saved);
-          if (generation !== state.sessionGeneration) return;
+          if (!current()) return;
           intent.editedAt = saved.savedAt;
           intent.pending.forEach(entry=>{entry.context=intent;});
           // Recover explicitly, keeping other tab versions in protected storage.
@@ -190,23 +248,22 @@ async function unlockDrafts() {
           activeIntent = null;
           if (intent.matterId) { showTab('advise'); await showThreadBoard(intent.matterId); }
           else startMatter();
-          if (generation !== state.sessionGeneration) return;
-          panel.replaceChildren();
-          showDraftCheckpoint(saved.savedAt);
-          $('message').focus();
+          if (session !== state.sessionGeneration || !ownsIntent(intent)) return;
+          closeDraftRecovery();
+          showDraftRestored();
+          (intent.matterId ? $('message') : $('in-title')).focus();
         } catch (error) {
-          if (generation === state.sessionGeneration) {
+          if (current()) {
             panel.appendChild(stateBlock('loud', `Draft was not opened: ${error.message}`));
           }
-        } finally { button.disabled = false; }
+        } finally { buttons.forEach(item => { item.disabled = false; }); }
       });
       panel.appendChild(button);
     }
-    if (seen.size > 1) panel.prepend(stateBlock('quiet',
-      'More than one unsent version is held. Choose the version to continue; none was silently overwritten.'));
+    if (!count) panel.textContent = 'No recoverable drafts for this input.';
   } catch (error) {
-    if (generation === state.sessionGeneration) {
-      panel.appendChild(stateBlock('loud', 'Draft recovery is unavailable. ' + error.message));
+    if (current()) {
+      panel.replaceChildren(stateBlock('loud', 'Draft recovery is unavailable. ' + error.message));
     }
   }
 }
@@ -248,6 +305,7 @@ function snapshotIntent({ edited = false } = {}) {
 function restoreIntent() {
   const intent = activeIntent;
   $('message').value = intent ? intent.text : '';
+  sizeComposer();
   state.intake = intent ? intent.intake : null;
   INTAKE_INPUTS.forEach((id) => {
     $(id).value = (intent && intent.fields[id]) || ($(id).tagName === 'SELECT' ? 'not_known' : '');
@@ -260,6 +318,8 @@ function restoreIntent() {
 
 function selectIntent(matterId, { opening = false } = {}) {
   snapshotIntent();
+  clearDraftNotices();
+  closeDraftRecovery();
   if (!state.advocate || (!matterId && !opening)) activeIntent = null;
   else {
     const key = intentKey(matterId);
@@ -326,8 +386,8 @@ function keepDraft() {
 // the session behind it is gone.
 function clearPrivileged() {
   if (draftVault) draftVault.lock();
-  $('draft-recovery').replaceChildren();
-  $('draft-status').textContent = '';
+  closeDraftRecovery();
+  clearDraftNotices();
   stopIdleWatch();
   setAccountMenu(false);
   // A RECORDING IN PROGRESS BELONGS TO THE SESSION THAT STARTED IT (F-C-02),
@@ -1614,9 +1674,18 @@ function renderTurn(entry) {
 
 function repaint() {
   const t = $('thread');
+  const follow = t.scrollHeight - t.scrollTop - t.clientHeight < 48;
+  const top = t.scrollTop;
   t.replaceChildren(...state.turns.map(renderTurn));
-  t.scrollTop = t.scrollHeight;
+  t.scrollTop = follow ? t.scrollHeight : top;
+  $('jump-latest').hidden = follow;
   updateWorkspace();
+}
+
+function sizeComposer() {
+  const box = $('message');
+  box.style.height = 'auto';
+  box.style.height = `${Math.min(Math.max(box.scrollHeight, 56), 180)}px`;
 }
 
 function updateWorkspace() {
@@ -1792,7 +1861,7 @@ $('composer').addEventListener('submit', (ev) => {
 });
 
 $('message').addEventListener('keydown', (ev) => {
-  if (ev.key === 'Enter' && !ev.shiftKey) {
+  if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing && ev.keyCode !== 229) {
     ev.preventDefault();
     $('composer').requestSubmit();
   }
@@ -4255,6 +4324,20 @@ async function retryRevoke(token = retiringSession) {
 $('signout').addEventListener('click', signOut);
 ['message', ...INTAKE_INPUTS, 'in-capacity'].forEach(id => {
   $(id).addEventListener('input', () => snapshotIntent({edited:true}));
+});
+
+$('message').addEventListener('input', sizeComposer);
+$('draft-open').addEventListener('click', openDraftRecovery);
+$('workspace-menu').addEventListener('click', event => {
+  if (event.target.closest('button')) $('workspace-more').open = false;
+});
+$('draft-close').addEventListener('click', closeDraftRecovery);
+$('draft-dialog').addEventListener('cancel', (event) => {
+  event.preventDefault(); closeDraftRecovery();
+});
+$('jump-latest').addEventListener('click', () => {
+  $('thread').scrollTop = $('thread').scrollHeight;
+  $('jump-latest').hidden = true;
 });
 
 // BK-31. THE SESSIONS AN ADVOCATE HOLDS, AND THE WAY TO END THEM.

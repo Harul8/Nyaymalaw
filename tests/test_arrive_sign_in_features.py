@@ -1197,7 +1197,9 @@ def start_opens_the_intake_alone(page_script, stylesheet):
                  "selectIntent(null, { opening: true });"):
         assert part in start, part
     assert "showMatterList" not in start, "a new matter must not load the list of other matters"
-    for hidden in (".rail", ".matters-toggle", ".workspace-heading"):
+    # LB-84 keeps the intake's recovery menu reachable, but no matter heading
+    # or board is shown before a matter exists.
+    for hidden in (".rail", ".matters-toggle", ".workspace-heading > div:first-child"):
         assert "display: none" in declarations(stylesheet, f"{OPENING} {hidden}"), hidden
 
 
@@ -1350,8 +1352,11 @@ def _composer(page: str) -> str:
       "header beside Case file and History")
 def matter_tools_in_the_header():
     tools = _frontend_file("matter-workspace.js")
-    assert "document.querySelector('#workspace-focus .workspace-actions').prepend(toolbar);" \
+    assert "document.getElementById('workspace-menu').prepend(toolbar);" \
         in tools
+    page = _frontend_file('index.html')
+    header = page[page.index('id="workspace-focus"'):page.index('<form id="intake"')]
+    assert 'id="workspace-menu"' in header and '<summary>More</summary>' in header
     assert ".after(toolbar)" not in tools, "the tools are still a bar of their own"
     for label in ("'Matter cover & instructions'", "'Attributed file'", "'Protective handoff'"):
         assert label in tools, label

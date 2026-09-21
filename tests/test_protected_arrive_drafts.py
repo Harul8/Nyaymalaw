@@ -57,4 +57,4 @@ def test_protected_browser_storage_contract_runs_in_class_a():
     result = subprocess.run([node, '--test', 'tests/protected-drafts.test.cjs'],
                             cwd=root, capture_output=True, text=True, encoding='utf8', timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert 'tests 10' in result.stdout, 'the expected draft-control population was not executed'
+    assert 'tests 12' in result.stdout, 'the expected draft-control population was not executed'

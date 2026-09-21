@@ -1212,6 +1212,13 @@ items:
     negative_control:
       mutation: "hide the matter rail without a reachable replacement or clip a primary control"
       expected_failure: "the affected width and unreachable user action fail visibly"
+  - id: BK-32-AC2
+    requirement: Before Build LB-75/84/88 conversation keeps a readable transcript and reachable bottom composer at desktop/tablet/phone widths, preserves reading and editing state, handles IME input without accidental send and retains visible material warnings
+    required_evidence: [browser_journey]
+    evidence: {}
+    negative_control:
+      mutation: force-scroll while reading history, obscure the composer with the mobile keyboard, or submit an Enter composition event
+      expected_failure: the served conversation test detects lost reading/input state, unreachable actions or an unintended request
 - id: BK-33
   title: recognisable matter cover, truthful board and real reopen
   kind: journey
@@ -1498,6 +1505,13 @@ items:
     negative_control:
       mutation: "stop the server during logout then restart and reload"
       expected_failure: "the interface does not claim successful revocation while the server session remains valid"
+  - id: BK-40-AC3
+    requirement: Before Build LB-84 and Arrive A.8.2 use explicit authenticated context-scoped on-demand draft recovery with no persistent global recovery UI; successful restoration shows one quiet five-second confirmation without removing text, overwriting competing versions or auto-sending; save failures stay visible and retention/logout rules remain unchanged
+    required_evidence: [integration_test, browser_journey]
+    evidence: {}
+    negative_control:
+      mutation: recover over newer work, expose another matter's draft, replay a notice after re-render, expire a failure after five seconds or restore after authority ends
+      expected_failure: storage/served-browser witnesses reject lost versions, disclosure, misleading success and stale-context mutation
 - id: BK-41
   title: latency, progress, cancellation and degraded-service behaviour
   kind: journey

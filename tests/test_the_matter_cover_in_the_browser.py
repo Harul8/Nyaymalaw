@@ -29,6 +29,7 @@ def test_the_browser_cover_shows_the_file_the_advocate_just_worked(page, journey
     assert cover["client"] == "Synthetic CoverBrowserClient"
     assert cover["last_activity"]
     assert cover["case_deadlines"]["deadline_entries"], "must really have worked a dated file"
+    page.locator('#workspace-more summary').click()
     page.get_by_role("button", name="Matter cover & instructions", exact=True).click()
     dialog = page.locator("#matter-workspace-dialog")
     dialog.wait_for(state="visible")
