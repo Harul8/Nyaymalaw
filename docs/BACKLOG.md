@@ -8099,6 +8099,293 @@ enough is known for the immediate task. Preserve future media entry points and
 existing restrictions. Save the current implementation at a truthful checkpoint
 before starting the next build; no checkpoint commit is made by this note.
 
+#### Continuing legal-brain requirements — 21 September 2026
+
+The subsequent owner discussion approves treating Take the brief, retrieval,
+assessment and advice as one continuing capability, starting with typed input.
+NM must assess independently of the preferred answer, give a realistic position,
+and expose the links between case details, evidence, legal material and its own
+conclusions so the advocate can validate and decide. This is a requirements
+amendment, not authority for another application build or a paid evaluation.
+
+Planning work completed in `docs/Nyaymalaw_Implementation_Plan.xlsx`,
+**Before Build rows 156–200**: a scope row plus **44 requirements (LB-01–44)**,
+each populated across all ten columns with three named acceptance clauses
+(**132 planned clauses; none executed by this update**). The requirements cover
+the typed journey, professional conversation, attributed matter memory,
+private-material and Indian-law retrieval, cross-validation, realistic merits,
+alternative theories, practical advice, human decisions and bounded actions.
+
+Transparency is an acceptance obligation: a material conclusion leads to its
+actual factual and legal basis, including adverse material, assumptions and
+gaps. The source view exposes the examined version and surrounding context;
+reverse links identify dependent assessments and drafts. Corrections preserve
+the original and visibly invalidate affected work pending reassessment. Access,
+source rights, retention and unavailable material qualify what can be shown.
+
+Eleven existing current contracts are clarified where their historical wording
+conflicts with the agreed principles, and 22 existing feature rows gain links
+to the integrated requirements. In particular, a winning theory is not forced,
+weak cases need not always be salvaged, criticism has no quota, and material
+warnings are not limited to once. All original A4:A155 descriptions and the full
+Implementation Plan are preserved. Spreadsheet checks cover populated fields,
+unique requirement/criterion identifiers, references, errors, text fit and
+unchanged workbook parts; rendered changed views receive visual review.
+
+**Readiness remains qualified.** LB IDs are planning references, not newly
+registered backlog deliverables. LB-43 explicitly requires reconciliation to
+registered delivery/contract/evidence owners before the affected build slice;
+LB-44 records the unresolved coverage, processing, reviewer/rubric/population,
+quality thresholds, latency/cost and release-accountability decisions. Existing
+BK-93–96 are relevant owners, not evidence that this expanded scope is already
+delivered. Their registry status and historical evidence are not changed.
+
+No application code, tests, Class-A evidence, model evaluation, browser product
+validation or professional sign-off is changed or claimed. The parked media,
+voice, action-permission and qualified-review obligations remain OPEN.
+
+#### Expert-practice research refinement — 21 September 2026
+
+**Scope: planning only.** At the owner's request, review the 44 legal-brain
+requirements against primary Indian judicial/professional material and explicitly
+identified comparative advocacy and witness-memory research. Preserve the
+existing descriptions and clauses; refine current contracts where they are too
+broad, and add missing depth rather than a fixed scenario-based conversation.
+
+Amendment: add LB-45–56 covering decision/stage fit, operative record,
+decisive argument structure, lawful proof development, recollection integrity,
+strategic sequencing, principled concessions, workable resolution, specialist
+limits, responsive hearing preparation, advisory instruments and controlled
+reflection. Add AC4 to twelve existing requirements, giving 56 requirements and
+180 planned clauses. Supporting research and transfer limits are recorded in
+`docs/blueprint/LEGAL_BRAIN_PRACTICE_RESEARCH.md`; the workbook remains the
+requirements source for this pass.
+
+**Planning amendment validated:** 56 requirements and 180 unique planned clauses
+at rows 156–212 (section introduction plus 56 requirements). Twelve new rows have
+all ten fields populated; twelve existing requirements gain AC4 without losing
+their original 132 clauses. Original A4:A200 descriptions are preserved, and all
+13 other workbook ZIP parts, including the full Implementation Plan, remain
+byte-identical to the immediately preceding workbook. Reference bounds, formula
+errors, unchanged-cell/style checks and edited-cell text-fit checks passed.
+Eight rendered views were inspected: decision/record, issue/proof, memory/candour,
+strategy/settlement, specialist/hearing, advisory/learning, transparency and
+readiness. No clipped edited cells were detected. The verification report is
+`outputs/01a07b76-6b21-71f3-bb09-261f64617594/legal-brain-expert-20260921/verification.json`.
+
+No application code, paid evaluation, counsel approval or release claim is
+authorised or inferred. Registry/delivery reconciliation stays OPEN under LB-43;
+all added acceptance stays NOT_RUN. Existing packet evidence/status is untouched.
+
+#### Grounded reasoning loops, harness and UI contracts — 21 September 2026
+
+**Planning amendment completed; application work remains open.** The owner requested that the complete agreed
+adaptive legal-brain and enforcement design be incorporated into Before Build.
+Preserve earlier descriptions, the ten-column schema and unrelated workbook
+parts. Add LB-57–74 for grounding, durable matter snapshots, typed dependencies,
+task contracts, adaptive proposals, action/result admission, bounded loops,
+independent challenge, layered verification, publication, reassessment, shared
+budgets, the user-facing journey, model qualification, evaluation, architecture
+migration and staged delivery. Link existing requirements to these mechanisms.
+
+The owner additionally requested what the interface should show, omit and put
+on demand. Add LB-75–89 for workspace hierarchy, professional response structure,
+inspectable basis/source views, precise statuses, living case file, questions,
+progress, changes, composition/recovery, decisions/actions, errors, disclosure,
+accessible visual design and real-user validation. These are proposed detailed
+design contracts under the requested direction, not claims of deployed screens.
+Targeted read-only inspection of the existing browser workspace and current
+frontend renderer found a credible restrained style and preserved disclosures,
+but prominent recovery controls, engineering-language replies and mixed
+diagnostic/explanation content. One expanded control said `clear` while its
+detail said the check did not run; LB-79 requires shared status semantics that
+cannot turn unassessed into passed. This is not a complete UI conformance audit.
+No matter was edited, submitted or sent to a model during this inspection.
+The code-review graph search returned no result and reported an old index;
+the current frontend source was therefore inspected directly.
+
+This is an authorised requirements update, not application implementation. The
+owner permits architectural changes when necessary, but this amendment does not
+claim those changes have been built. Component roles are proposed owners;
+registry reconciliation stays OPEN. Model/live-browser/professional acceptance
+remains NOT_RUN. Preserve prior status/evidence and explicitly update the
+LB-43 population clause to the enlarged scope rather than leave stale counts.
+
+**Verification:** Before Build now has 245 rows, with the legal-brain section at
+156–245: 89 requirements and 312 planned clauses. Added 33 fully populated
+ten-column requirements (18 harness and 15 UI), containing 132 new clauses;
+linked/refined the existing contracts. Preserved original descriptions A4:A212,
+all 180 existing criterion IDs and 179 original clause texts; LB-43-AC4 alone
+updates its reconciliation population from 56/180 to 89/312. All 13 other ZIP
+parts, including the full Implementation Plan sheet, are byte-identical to the
+input. Reference/ID/count/preservation checks passed; no error cells or clipped
+edited cells. Reviewed 19 selected spreadsheet previews across the amendment.
+Published the exact validated output only after checking that the source had
+not changed. Validation record:
+`outputs/01a07b76-6b21-71f3-bb09-261f64617594/legal-brain-harness-20260921/verification.json`.
+The preferred artifact library was unavailable; the preservation-checked XML
+editor changed only Before Build, with openpyxl used for reading/validation.
+These spreadsheet checks and targeted UI observations do not execute the new
+product acceptance clauses. No application source, tests, status registry,
+existing evidence, commit or push was changed/performed by this amendment.
+
+#### Legal basis visible in the response — 21 September 2026
+
+**Planning clarification completed; implementation remains open.** The owner
+requires relevant Acts/judgments to be explained in the response, followed by
+retrieved verbatim passages and their application, by default. Refined LB-25,
+LB-27, LB-76–78, LB-87 and LB-89; removed the implication that the advocate must
+expand a panel to inspect the material legal basis. Default content also retains
+case premises, adverse basis, uncertainty and material check limitations.
+Optional inspection adds full originals, wider context and detailed histories.
+Quotes require exact retrieved wording, pinpoints, clear separation from NM's
+explanation/translation, consequential qualifications and truthful reproduction
+limits. No model-memory reconstruction or invented extract is permitted.
+
+**Verification:** 22 cells in seven existing requirements updated; nine existing
+acceptance clauses strengthened, without adding IDs. All 312 criterion IDs and
+all original first-column descriptions preserved, with the population still
+89 requirements/312 clauses. All 13 other workbook ZIP parts are byte-identical;
+four changed-view previews reviewed; zero error cells or clipped edited cells.
+Saved the validated output after checking for concurrent edits. Record:
+`outputs/01a07b76-6b21-71f3-bb09-261f64617594/legal-brain-inline-authority-20260921/verification.json`.
+No application code changed; acceptance NOT_RUN and registry reconciliation OPEN.
+
+#### Selected Agentified NM interface patterns — 21 September 2026
+
+**Planning transfer completed; no application transfer performed.** The owner
+nominated `C:/Users/rahul/Agentified NM` for its matter board, inline document
+citations and source-opening behaviour, then explicitly chose Before Build
+first. Added LB-90–92 at rows 246–248, with four acceptance clauses each.
+Current scope is 92 requirements and 324 planned clauses. Linked LB-75/77/78/80/89
+and the delivery/reconciliation requirements. The prior rule that legal
+explanation, exact retrieved passages and application appear inline by default
+is preserved; the source drawer supplements that response.
+
+**Code evidence and bounded adaptation:**
+
+- `frontend/src/App.jsx` in the reference project: `PartiesTable` (1080),
+  `MatterBoardCard` (1131), `ActivityPane` (1201), `buildCitationMaps` (566),
+  `resolveCitation` (598), `linkifyCitations` (705), `OpinionMarkdown` (846),
+  `openSourcePane` (2538), and the source pane (6801). Its board presents
+  forum, roles by proceeding, stage, relief/objective, focus, checklist and
+  authority risks. Links activate an in-app right-hand source drawer with
+  target highlighting, surrounding/full-text controls and excerpt fallback.
+- Reference `nm/app/consult.py` `_board` (1199) derives another board shape
+  from turn state. `nm/app/server.py` instead serves `nm/app/ui.html`; its
+  current Python source contains none of the three `/retrieval/document`,
+  `/retrieval/authority`, `/retrieval/section` routes called by the React
+  drawer. The richer React interaction is a design/code reference, not proven
+  live functionality of that server. No reference application was launched.
+- Current NM `frontend/app.js` `renderMatterBoard` (1024) reads a matter-list
+  projection; `renderTurn` displays reference IDs as text. The plan requires
+  current canonical projections and permissioned source contracts, not copying
+  incompatible donor payloads or replacing NM's frontend framework.
+- Do not transfer section-number-only/fresh-lookup fallback, successor-statute
+  substitution, global completion percentages, missing focus/race safeguards,
+  or fixed forum defaults. Require exact response/source/version binding,
+  unknown/stale states, source permissions, obsolete-request rejection and
+  keyboard/mobile return to the same response/draft. Exclude donor auth,
+  intake, agents, retrieval engine, application shell and document generators.
+
+The code-review graph was consulted first in both projects. Its stale results
+served only as location leads; findings were checked against current files.
+The reference project was read only. No credentials, paid model calls or matter
+data were needed. These observations are static inspection, not browser proof.
+
+**Workbook verification:** 43 cells updated/added, all original A4:A245 and
+312 previous criterion IDs preserved; 311 prior clause texts unchanged and
+LB-43-AC4's population updated to 92/324. All 13 non-target ZIP parts remain
+byte-identical, including the full Implementation Plan sheet. Five previews
+reviewed; no error cells or clipped edited cells. Source-hash guard passed
+before publishing the validated workbook. Validation record:
+`outputs/01a07b76-6b21-71f3-bb09-261f64617594/legal-brain-reference-ui-20260921/verification.json`.
+Implementation NOT_ASSESSED; acceptance NOT_RUN; registry ownership OPEN.
+No application code, acceptance evidence, commit or push changed/performed.
+
+#### Refinements within the three selected interface patterns — 21 September 2026
+
+**Planning refinement completed; implementation remains open.** The owner
+authorised useful enhancements to the three bounded items. Refined LB-90–92
+in place, without adding requirements or importing more of Agentified NM.
+
+- Board: coherent snapshot/as-at context, changed-item cues, prioritised urgent
+  decisions, explicit information/permission/service gaps, inspectable basis
+  and version-checked corrections. Filtering/dismissing cannot clear risk;
+  historical responses must not masquerade as the current assessment.
+- Citations: distinguish same-title/version labels, retain separate pinpoints
+  and supporting/qualifying/adverse relationships, accessible wrapped labels,
+  explicit wrong-citation reporting, no quiet provenance loss or unsafe links.
+- Reader: original versus extracted/OCR/translated view, find-within-document
+  with truthful search coverage, return to citation, copy passage with its
+  attribution/qualifications, stable anchor history, permission-checked cache
+  reuse, and robust expiry/sign-out/late-result handling. Missing anchors do not
+  highlight approximate matches as exact; partial search does not prove absence.
+  Opening a stored citation cannot silently invoke a model or fresh legal search.
+
+**Verification:** Only 19 cells in rows 246–248 changed, strengthening the same
+12 acceptance clauses. All 324 IDs, all original first-column descriptions,
+the 92-requirement population, other rows and the full Implementation Plan
+remain preserved. All 13 other ZIP parts are byte-identical; four previews
+reviewed with zero error/clipped cells. Source-hash checks passed before saving.
+Record:
+`outputs/01a07b76-6b21-71f3-bb09-261f64617594/legal-brain-reference-enhancements-20260921/verification.json`.
+Application code unchanged; product acceptance NOT_RUN, ownership reconciliation
+OPEN. Reader performance budgets and copy/cache contracts require agreement
+before their dependent acceptance. No commit or push performed.
+
+#### Conversation presentation and transient draft recovery — 21 September 2026
+
+**Scope/status:** Before Build refinement completed, application implementation
+and acceptance remain NOT_ASSESSED/NOT_RUN. The owner rejected persistent
+recovery notices and requested a quiet confirmation beside recovered text for
+about five seconds, then disappearance. No application code or draft data was
+changed; no commit or push was requested.
+
+**Observed cause:** `frontend/app.js` `unlockDrafts` lists protected drafts for
+the account/workspace in the global `draft-recovery` region of
+`frontend/index.html`, not just the active matter. Separate encrypted tab slots
+in `frontend/draft-vault.js` preserve concurrent versions. These notices are not
+new messages from NM. Semantic graph searches were attempted first; stale
+indexes and empty results required bounded source reads. No live-browser
+conformance is claimed by that inspection.
+
+**Plan amendments:** Updated existing Arrive rows 49–51 and LB-75/76/84/88/89/90
+(rows 231/232/240/244/245/246), rather than adding another requirement namespace.
+
+- Remove global recovery banners, persistent recovery badges and timestamp
+  button lists from normal work. Keep a scoped version chooser available only
+  on request. Explicit recovery remains protected and cannot silently overwrite
+  newer work. After successful restoration, show `Draft restored` beside the
+  input for about five seconds, once, without flashing, stealing focus or
+  sending. Remove only the notice, never the restored text. Failed restoration
+  cannot show success. Save failures and material loss warnings do not time out.
+- Preserve the existing protected storage, same-device recovery, 72-hour
+  expiry, uncertain-submission reconciliation and deliberate sign-out rules.
+- Carry selected visual ideas from Agentified NM's React conversation source:
+  white surfaces, charcoal text, soft-grey user messages, warm-ivory board,
+  restrained borders and a rounded composer. Specify a bottom-docked composer
+  within the chat column, readable text, aligned widths, stable reading position,
+  mobile-keyboard access and on-demand details. Keep required legal explanation
+  and retrieved quotations visible in responses by default.
+- Correct the earlier reference placement description: `convo-activity-pane`
+  precedes `convo-chat-pane` and has a right divider, so the matter board is
+  **left-hand**; the source drawer is **right-hand**. Prior recorded wording is
+  preserved as history, not a continuing placement requirement. No legacy model
+  selector, queue, authentication or retrieval machinery is authorised for copy.
+
+**Verification:** 30 cells across nine existing rows updated. All first-column
+descriptions, 92 legal-brain requirements and 324 acceptance IDs are preserved;
+12 legal-brain criteria were refined and two Arrive criteria extended. The full
+Implementation Plan and all 13 other workbook ZIP parts remain byte-identical.
+Five edited-range previews reviewed; zero error cells and zero measured clipped
+edited cells. Source/output hashes were checked before publishing the exact
+reviewed workbook. Record:
+`outputs/01a07b76-6b21-71f3-bb09-261f64617594/legal-brain-conversation-ui-20260921/verification.json`.
+These are specification/format checks, not product tests. Registry ownership
+reconciliation remains OPEN under LB-43; browser and accessibility acceptance
+must be earned when the changes are implemented.
+
 Registered 12 September 2026 after the a3d9c47 conformance review found real
 route code with no genuine B1 delivery owner. The route reader and no-file
 non-matter path are existing partial implementation, not newly completed work.
