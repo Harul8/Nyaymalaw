@@ -1396,7 +1396,7 @@ items:
   verification: partial
   phase: E
   record: docs/BACKLOG.md#bk-37-senior-counsel-answer-shape-and-plain-language-trust-surface
-  next_action: assert the promised sections, not a count of two
+  next_action: LB-93–99 chat-reference slice implemented with targeted core and browser proof in docs/backlog/evidence/legal-brain-20260922/chat-references.md; independent model and counsel acceptance for BK-37-AC1 remains open
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#bk-37-senior-counsel-answer-shape-and-plain-language-trust-surface}
     build: {result: OPEN, ref: docs/BACKLOG.md#bk-37-senior-counsel-answer-shape-and-plain-language-trust-surface}
@@ -4123,7 +4123,7 @@ items:
   verification: partial
   affects_phases: [B, C, D, E, F, G, H]
   record: docs/BACKLOG.md#bk-91-adaptive-grounded-lead-reasoning
-  next_action: bounded judgment-research proposals and current retrieved-text transfer are implemented on 21 September 2026; verify the complete adaptive conversation, full-turn budget and cancellation, source linkage and independent legal quality before claiming the legal brain complete. GPT-4o mini evaluation is owner-approved for at most eight synthetic matters, forty turns and USD25, but the authenticated external-processor path is not yet built and no paid call has run. Normal client processing also needs that path and confirmed provider data-handling settings; counsel and deployment sign-off remain separate and unrecorded.
+  next_action: "22 September 2026: shared reasoning/communication disciplines, private exact-step assessments and stronger judged-evidence controls are implemented under DG-15. Final focused suite 187 passed; controlled browser suite 26 passed. Real GPT-4o mini Chrome evaluation has run through authenticated owner-approved OpenAI processing. DG-16 acknowledgement routing is fixed and retested, but DG-13 advice-only posture and independent dispute assessment remain open. Five browser submissions including one retry produced 42 provider responses, with no completed matter acceptance. Complete those generalised fixes and the sequential five-matter evaluation, then independently measure legal and communication quality. Existing batch limit remains eight synthetic matters, forty turns and USD25; no different paid judge, counsel approval or production sign-off is inferred. See docs/backlog/evidence/legal-brain-20260922/reasoning-communication.md."
   stage_records:
     start: {result: READY, ref: docs/BACKLOG.md#p46-start-record--adaptive-investigation--12-september-2026}
     build: {result: OPEN, ref: docs/BACKLOG.md#p46-start-record--adaptive-investigation--12-september-2026}

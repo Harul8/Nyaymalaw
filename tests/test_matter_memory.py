@@ -321,7 +321,10 @@ def test_a_question_asked_twice_is_not_put_a_third_time_in_the_same_words(tmp_pa
         "the same question was put a third time in the same words. Two "
         "unanswered asks is the advocate telling you the question is not "
         "landing.")
-    assert "asked twice" in asks[2]
+    assert "position on this issue remains unresolved" in asks[2]
+    assert "not released a side-dependent recommendation" in asks[2]
+    assert "need not repeat the brief" in asks[2]
+    assert "Reply with one word" not in asks[2] and "NOTHING" not in asks[2]
     q = out.matter.open_question("G-POSTURE", out.matter.threads[0].id)
     assert q is not None and q.times_asked >= 3 and q.ignored
 

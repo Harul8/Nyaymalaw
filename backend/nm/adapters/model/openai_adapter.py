@@ -19,6 +19,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from nm.adapters.model._budget import guard_budget
+from nm.adapters.model.call_budget import CallBudget
 from nm.adapters.model.config import CONTEXT_BUDGET, ModelConfig, TierConfig
 from nm.domain.budget import Completion
 from nm.domain.external_ai import ModelPermissionRefused
@@ -70,8 +71,10 @@ def _completion_of(reason) -> Completion:
 
 
 class OpenAIModelAdapter:
-    def __init__(self, config: ModelConfig, client: Any | None = None) -> None:
+    def __init__(self, config: ModelConfig, client: Any | None = None,
+                 call_budget: CallBudget | None = None) -> None:
         self._config = config
+        self._call_budget = call_budget
         self._before_dispatch: Callable[[], None] | None = None
         if client is not None:
             self._client = client
@@ -100,8 +103,13 @@ class OpenAIModelAdapter:
 
     def for_matter_text(self, before_dispatch: Callable[[], None]) -> OpenAIModelAdapter:
         """Request-bound authority, shared transport; no shared consent state."""
-        bound = OpenAIModelAdapter(self._config, client=self._client)
+        bound = OpenAIModelAdapter(self._config, client=self._client, call_budget=self._call_budget)
         bound._before_dispatch = before_dispatch
+        return bound
+
+    def with_call_budget(self, budget: CallBudget) -> OpenAIModelAdapter:
+        bound = OpenAIModelAdapter(self._config, client=self._client, call_budget=budget)
+        bound._before_dispatch = self._before_dispatch
         return bound
 
     # ------------------------------------------------------------- port ---
@@ -130,7 +138,7 @@ class OpenAIModelAdapter:
         return self._call(prompt, tier, schema=schema, max_tokens=max_tokens)
 
     def embed(self, texts: tuple[str, ...]) -> EmbeddingResult:
-        if self._before_dispatch is not None:
+        if self._before_dispatch is not None or self._call_budget is not None:
             raise ModelPermissionRefused("Matter-text permission does not enable embeddings.")
         cfg = self._cfg(Tier.EMBED)
         resp = self._retrying(lambda: self._client.embeddings.create(
@@ -191,7 +199,7 @@ class OpenAIModelAdapter:
             }
 
         resp, retries = self._retrying_counted(
-            lambda: self._client.chat.completions.create(**kwargs))
+            lambda: self._client.chat.completions.create(**kwargs), model=cfg.model)
 
         choice = resp.choices[0]
         completion = _completion_of(getattr(choice, "finish_reason", None))
@@ -252,15 +260,19 @@ class OpenAIModelAdapter:
     def _retrying(self, fn):
         return self._retrying_counted(fn)[0]
 
-    def _retrying_counted(self, fn) -> tuple[Any, int]:
+    def _retrying_counted(self, fn, *, model: str = "") -> tuple[Any, int]:
         """Bounded retry with backoff. Retries are COUNTED and returned --
         an invisible retry is an invisible cost."""
         last: Exception | None = None
         for attempt in range(MAX_RETRIES):
             if self._before_dispatch is not None:
                 self._before_dispatch()
+            reservation = self._call_budget.reserve(model) if self._call_budget else None
             try:
-                return fn(), attempt
+                response = fn()
+                if reservation:
+                    self._call_budget.settle(reservation, response)
+                return response, attempt
             except Exception as exc:  # noqa: BLE001 - re-raised as typed below
                 normalised = _normalise(exc)
                 last = normalised

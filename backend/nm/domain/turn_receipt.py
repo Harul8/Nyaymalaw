@@ -32,13 +32,15 @@ def opening_id(advocate_id: str, turn_id: str) -> str:
     return "mat_" + fingerprint({"advocate": advocate_id, "opening_turn": turn_id})[:32]
 
 
-def answer_payload(answer) -> dict:
+def answer_payload(answer, *, source_text: bool = True) -> dict:
     """The same approved answer representation for live, replay and readback."""
     from nm.domain import brief
 
     value = json.loads(json.dumps(asdict(answer), default=_json_value))
     for encoded, element in zip(value["elements"], answer.elements, strict=True):
         encoded["section"] = brief.section_of(element).value
+        if element.source is not None and not source_text:
+            encoded["source"] = element.source.header()
     return value
 
 
@@ -92,6 +94,12 @@ def _answer_value(kind, value):
 def answer_from_payload(value: dict):
     from nm.domain.answer import Answer
 
+    # Explicit additive migration only. Old releases have no saved source
+    # snapshot; never reconstruct one from today's corpus or the archive.
+    if isinstance(value, dict) and isinstance(value.get("elements"), list):
+        value = {**value, "elements": [
+            ({"source": None, **row} if isinstance(row, dict) else row)
+            for row in value["elements"]]}
     answer = _answer_value(Answer, value)
     # Section is a domain projection, not caller-authored authority. Comparing
     # the canonical round-trip also refuses representations the decoder ignored.
@@ -154,7 +162,7 @@ class TurnReceipt:
         return answer_from_payload(self.answer)
 
     def projected(self, matter_id: str) -> dict:
-        return {**answer_payload(self.validated_answer()),
+        return {**answer_payload(self.validated_answer(), source_text=False),
                 "turn_id": self.turn_id, "matter_id": matter_id,
                 "message": self.message, "at": self.recorded_at,
                 "release_state": "released", "committed": True,

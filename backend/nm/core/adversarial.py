@@ -19,7 +19,7 @@ So `ExposureReport` has three states and one of them is NOT_RUN. An empty
 report and an absent one are different facts and this type refuses to let them
 render alike.
 
-D8: ALMOST EVERY "YOU LOSE" IS ONE COORDINATE FAILING
+D8: TEST WHICH COORDINATES FAIL, WITHOUT PRESUMING A RESCUE
 -------------------------------------------------------
 *Treat a claim as a set of coordinates — party, cause, relief, forum, timing,
 procedure, burden — and ask which coordinate can move.* The measured original
@@ -27,7 +27,7 @@ error was advice that a claim was dead where a different framing on the same
 facts was available.
 
 Hence `failure_scope`: **we lose** and **we lose on this framing** are different
-answers, and the overwhelming majority of weak-case reports are the second.
+answers. Their frequency is not assumed; the supplied record must decide.
 
 AND THE BOUND, WHICH IS THE HARDER HALF
 -----------------------------------------
@@ -41,6 +41,7 @@ with no strength and no citation, which is how a manufactured one arrives.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import Enum
 
@@ -146,11 +147,12 @@ def cross_thread(threads: tuple[ThreadId, ...],
     if found is None:
         return ExposureReport(
             ExposureState.NOT_RUN,
-            not_run_because="the cross-file pass did not run on this turn")
+        not_run_because="a complete cross-dispute assessment was not established on this turn")
     if len(threads) < 2:
         return ExposureReport(ExposureState.NONE_FOUND)
-    real = tuple(e for e in found
-                 if e.from_thread in threads and e.to_thread in threads)
+    if any(e.from_thread not in threads or e.to_thread not in threads for e in found):
+        return cross_thread(threads, None)
+    real = found
     return (ExposureReport(ExposureState.FOUND, real) if real
             else ExposureReport(ExposureState.NONE_FOUND))
 
@@ -171,7 +173,7 @@ def unanswered(attacks: tuple[Attack, ...]) -> tuple[str, ...]:
 
 
 class Coordinate(str, Enum):
-    """D8's seven. *Almost every "you lose" is the failure of one of them.*"""
+    """D8's seven dimensions to examine, not a presumption that one can rescue the claim."""
 
     PARTY = "party"
     CAUSE = "cause"
@@ -263,17 +265,17 @@ ATTACK_SCHEMA: dict = {
                 "properties": {
                     "ground": {
                         "type": "string",
-                        "description": "The ground they will run it on.",
+                        "description": "The supported ground of a recorded or plausible "
+                                       "opposing argument.",
                     },
                     "their_case": {
                         "type": "string",
-                        "description": "Their argument AT ITS STRONGEST, put "
-                                       "as they would put it.",
+                        "description": "Their strongest supported argument, labelled as "
+                                       "recorded or anticipated.",
                     },
                     "our_answer": {
                         "type": "string",
-                        "description": "Our answer. Empty ONLY if there is "
-                                       "genuinely none.",
+                        "description": "Our supported answer, if one can presently be established.",
                     },
                     "no_answer": {"type": "boolean"},
                     "no_answer_because": {
@@ -296,14 +298,14 @@ ATTACK_SCHEMA: dict = {
 ATTACK_SYSTEM = (
     "You put the OTHER SIDE\'s case against an Indian advocate\'s client, at "
     "its strongest.\n\n"
-    "Not a list of weaknesses and not a hedge: the argument as opposing "
-    "counsel would actually make it, on the ground they would actually take. "
-    "A softened version of their case is worth nothing to prepare "
-    "against.\n\n"
+    "Develop the strongest plausible opposing argument supported by this record. "
+    "Distinguish an argument already recorded from one anticipated conditionally; "
+    "never predict what a party or judge will actually do. Preserve missing "
+    "premises and adverse source limitations without weakening the argument.\n\n"
     "For each, give our answer. Where there is NO good answer, say so — "
-    "`no_answer` true — and then say what we DO about it: concede it early, "
-    "settle, plead in the alternative, prepare the client. An unanswerable "
-    "attack reported and left there is half a finding."
+    "`no_answer` true — distinguish no supported answer yet from an established "
+    "unanswerable objection. Explain the missing material or supported response "
+    "if one exists. Do not invent a remedy or authorise a concession."
 
     "\n\n" + PEER)
 
@@ -340,11 +342,12 @@ EXPOSURE_SCHEMA: dict = {
 EXPOSURE_SYSTEM = (
     "You read an Indian advocate\'s FILE — several disputes for one client — "
     "and find where a position on ONE dispute damages another.\n\n"
-    "The example that matters: the client\'s own recovery suit asserts he was "
-    "owed money, and his defence in the cheque matter says the debt was never "
-    "owed. Neither dispute reveals it alone.\n\n"
-    "Name the threads by their ids. An empty list is a real answer and the "
-    "usual one — do not manufacture a connection between unrelated disputes."
+    "Compare the supplied attributed positions, preserving uncertainty and "
+    "distinguishing alternative hypotheses from contradictory factual commitments. "
+    "Labels alone establish no substantive position. Name the threads by their ids "
+    "only in from_thread/to_thread; use labels in prose. State what supplied "
+    "material supports each connection. An empty list means this supplied "
+    "material was assessed and no connection identified; never invent one."
 
     "\n\n" + PEER)
 
@@ -381,23 +384,20 @@ def build_attack_prompt(account: str, acting_for: str):
 
 
 @implements("D7")
-def build_exposure_prompt(threads: tuple[tuple[str, str], ...]):
-    """The disputes on this file, BY LABEL.
+def build_exposure_prompt(threads: tuple[tuple[str, str], ...], positions: tuple = ()):
+    """Stable identities for binding; labelled, attributed positions for reasoning.
 
-    It used to send `{tid}\\t{label}` -- this product's own keys -- so the
-    model answered in ids and the served element rendered them straight
-    back at the advocate: *`... on thr_016c52910d37 - This damages the
-    defence ...`*. An advocate cannot act on a question addressed to a key
-    they have never seen (B-103).
-
-    The caller maps the labels back to ids. Sending the label is the fix
-    at source; stripping ids from the rendered text afterwards would leave
-    the model reasoning in identifiers and the next renderer free to leak
-    them again.
+    Identifiers stay in private structured fields. Labels alone cannot establish
+    an exposure; the caller must provide substantive positions and enforce that
+    the result names only offered identities before anything is rendered.
     """
+    import json
+
     from nm.ports.model import Prompt
 
-    listed = "\n".join(f"  {label}" for _tid, label in threads)
+    listed = json.dumps({"threads": [{"id": tid, "label": label}
+                                    for tid, label in threads],
+                         "positions": positions}, ensure_ascii=False)
     return Prompt(system=EXPOSURE_SYSTEM,
                   user=f"THE DISPUTES ON THIS FILE:\n{listed}")
 
@@ -447,24 +447,24 @@ def read_attacks(said: dict, thread: ThreadId) -> ReadAttacks:
 
 @implements("D7")
 def read_exposures(said: dict, threads: tuple[ThreadId, ...],
-                   ) -> tuple[Exposure, ...]:
+                   ) -> tuple[Exposure, ...] | None:
     """Exposures between threads THE FILE ACTUALLY HOLDS.
 
     A pair naming a thread that does not exist would make the file-level pass
     look as though it had found something, which is the one thing E-082's
     "emitted twice" half and this share: noise the advocate learns to skip.
     """
-    rows = said.get("exposures")
+    rows = said.get("exposures") if isinstance(said, dict) else None
     if not isinstance(rows, list):
-        return ()
+        return None
     known = set(threads)
     out: list[Exposure] = []
     for row in rows:
         if not isinstance(row, dict):
-            continue
+            return None
         frm, to = str(row.get("from_thread") or ""), str(row.get("to_thread") or "")
         if frm not in known or to not in known or frm == to:
-            continue
+            return None
         try:
             out.append(Exposure(
                 from_thread=ThreadId(frm), to_thread=ThreadId(to),
@@ -473,8 +473,18 @@ def read_exposures(said: dict, threads: tuple[ThreadId, ...],
         except ValueError:
             # The type refuses a blank `what` or `consequence`. An exposure
             # that names no consequence is a worry, not a finding.
-            continue
+            return None
     return tuple(out)
+
+
+def labelled_text(text: str, labels: dict[str, str]) -> str:
+    """Render exact offered identities as labels; refuse unbound private keys."""
+    for identity in sorted(labels, key=len, reverse=True):
+        text = re.sub(r"(?<!\w)" + re.escape(identity) + r"(?!\w)",
+                      lambda _, label=labels[identity]: label, text)
+    if re.search(r"\b(?:thr|mat|fact|fac)_[a-zA-Z0-9_]+\b", text):
+        raise ValueError("exposure prose names an unbound private identity")
+    return text
 
 
 # =========================== READING A SALVAGE =============================
@@ -503,7 +513,7 @@ SALVAGE_SCHEMA: dict = {
     "x-nm-read": "salvage",
     "type": "object",
     "properties": {
-        "failure_scope": {"type": "string", "enum": ["case", "framing"]},
+        "failure_scope": {"type": "string", "enum": [s.value for s in FailureScope]},
         "varied": {
             "type": "array",
             "items": {
@@ -550,16 +560,18 @@ SALVAGE_SYSTEM = (
     "that is said, treat the claim as a set of COORDINATES — party, cause, "
     "relief, forum, timing, procedure, burden — and ask which one can "
     "move.\n\n"
-    "Almost every \"you lose\" is the failure of ONE of them, not of the "
-    "case. For each coordinate say what CHANGES if it moves, whether or not a "
-    "route follows.\n\n"
+    "Do not presume that a failed claim can be rescued. For each material "
+    "coordinate, assess what would change and which premises would need support. "
+    "Distinguish a failure of this framing from a demonstrated failure of the "
+    "case, and preserve uncertainty where the record cannot decide.\n\n"
     "DO NOT MANUFACTURE A ROUTE. An empty `route` is the ordinary answer and a "
     "hopeless alternative cause costs the client money and the advocate "
     "credibility. Where you do give one, cite it from the RETRIEVED list you "
     "were given and mark how strongly you would run it — never present a route "
     "you would not run as though you would.\n\n"
-    "`failure_scope` is `framing` where a different framing on these same "
-    "facts is available, and `case` only where none is."
+    "`failure_scope` is `framing` where a supported different framing is available, "
+    "`case` only where the supplied record establishes case-wide failure, and "
+    "`not_assessed` where the available record cannot decide."
 
     "\n\n" + PEER)
 

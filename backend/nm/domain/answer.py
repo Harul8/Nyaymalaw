@@ -20,6 +20,7 @@ from datetime import date
 from enum import Enum
 
 from nm.domain.matter import ThreadId
+from nm.domain.source_excerpt import SourceExcerpt
 from nm.domain.text import blank, refuses_blank_text
 
 
@@ -59,6 +60,7 @@ class Element:
     by_when: date | None = None
     no_deadline_reason: str | None = None
     refs: tuple[str, ...] = ()
+    source: SourceExcerpt | None = None
     signal: Signal = Signal.NONE
     collapsible: bool = False
     gate: str | None = None
@@ -104,6 +106,9 @@ class Element:
     model writes can opt out of the gate."""
 
     def __post_init__(self) -> None:
+        if self.source is not None and (not isinstance(self.source, SourceExcerpt)
+                                        or self.source.locator not in self.refs):
+            raise ValueError("a source excerpt must bind to this element's exact reference")
         if blank(self.text):
             raise ValueError("an Element must say something")
         if self.kind is ElementKind.ACTION and blank(self.by_when) \
@@ -121,6 +126,8 @@ class Element:
 class Mode(str, Enum):
     SHORT_QUESTION = "short_question"
     FULL_BRIEF = "full_brief"
+    EXPLANATION = "explanation"
+    ASSESSMENT = "assessment"
 
 
 class Route(str, Enum):
@@ -143,6 +150,11 @@ class Answer:
             return
         if not self.elements:
             raise ValueError("a matter-route answer must contain at least one element")
+        # Purpose governs presentation, not permission, grounding or truth.
+        # Blocked work still leads with the real blocking question. Substantive
+        # explanations/assessments may be complete without prescribing an act.
+        if self.mode in (Mode.EXPLANATION, Mode.ASSESSMENT) and not self.blocked:
+            return
         first = self.elements[0]
         if first.kind not in (ElementKind.ACTION, ElementKind.QUESTION):
             # If the recommendation is not at the top, the analysis was written

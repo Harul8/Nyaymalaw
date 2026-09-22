@@ -1,0 +1,273 @@
+[
+  {
+    "id": "DG-01",
+    "cells": [
+      "DG-01\nDIAGNOSTIC\nExecutable scenarios do not reconcile with the workbook",
+      "Keep requirements and executable tests traceable without claiming full coverage.",
+      "Attached review; reproduce by invoking plan_scenarios.sheet_rows on the saved workbook.",
+      "Measured: named Implementation Plan has 91 features; generator requires three absent executable-scenario columns. Nineteen feature files exist.",
+      "Named-sheet check, explicit Planned/Executable states and generated-file agreement pass. Empty populations and mutations must fail.",
+      "Preserve the original prose and historical scenarios; migrate the retained executable subset, not all prose into pretend tests.",
+      "Never infer coverage or feature completion from reconciliation. Never select the user's active worksheet as a schema contract.",
+      "Schema mutation tests; existing edited/missing/orphan tests; execute the retained BDD suite.",
+      "BK-48; all original cells/history must remain unchanged except separately authorised current requirements.",
+      "22 September 2026: REPAIRED / ENGINEERING VERIFIED. Named-sheet and schema reconciliation: 18 tests pass; 19 generated files match, 91 features retained, 72 explicitly without executable scenarios. Retained BDD suite passes (see retained-bdd.xml). This is not whole-feature acceptance."
+    ]
+  },
+  {
+    "id": "DG-02",
+    "cells": [
+      "DG-02\nDIAGNOSTIC\nLimitation-dependent recommendations lack their declared gate",
+      "Prevent unsafe recommendations while preserving useful fact gathering.",
+      "F-D-03, F-B-11, F-D-08; a thread has missing or conditional limitation premises.",
+      "Confirmed G-LIMITATION is declared unbuilt. Existing code already computes dates, conditional premises and arithmetic checks; the gap is dependency-sensitive recommendation enforcement.",
+      "A limitation-dependent directive cannot pass on unknown or conditional premises. Independent evidence gathering remains available.",
+      "Explain which premise is missing and re-evaluate after correction; do not suppress all conversation.",
+      "No blanket all-thread block and no incident-specific date or phrase patch. Do not confuse a recent event with a legally established accrual event.",
+      "Exercise computed, conditional, not-computed, not-applicable and ambiguous dependency through the served recommendation path.",
+      "BK-35/BK-65; current gate matrix and recommendation contract.",
+      "22 September 2026: IMPLEMENTED / ENGINEERING VERIFIED. Exact-step dependency gate and stale-recommendation removal exercised through the served path; 17 targeted tests pass. Conditional/missing/ambiguous states refuse the dependent action while independent gathering proceeds. Live classifier quality remains NOT RUN."
+    ]
+  },
+  {
+    "id": "DG-03",
+    "cells": [
+      "DG-03\nDIAGNOSTIC\nServed capabilities need explicit surface ownership",
+      "Know which capabilities a real advocate can reach.",
+      "Attached review reports 22 routes without a literal frontend path match.",
+      "Independently counted 92 decorated served routes, including the home page. Literal frontend search confirms no matching path strings for the listed gap families, but is not a browser-reachability proof. Route ownership and real UI validation remain required.",
+      "Every capability has a demonstrated user surface or an explicit operator/internal/out-of-release classification and reason.",
+      "A newly added route without a classification must fail reconciliation, not disappear from the denominator.",
+      "A frontend string is not proof of a working path. Do not enable privileged operations merely to add a button.",
+      "Positive control: add an unclassified route and reject it; exercise representative claimed browser callers.",
+      "Route ownership, role permissions and pilot scope; no blanket allowlist.",
+      "22 September 2026: OPEN diagnostic. Literal-search evidence alone does not establish all 22 are unreachable."
+    ]
+  },
+  {
+    "id": "DG-04",
+    "cells": [
+      "DG-04\nDIAGNOSTIC\nIncident domain code is not proof of deployed incident operation",
+      "Distinguish incident rules from a working operational process.",
+      "Attached review questions callers of domain/incident.py.",
+      "Direct import/caller check found incident domain references in assurance but no production operational importer. A standalone domain model does not establish deployed incident handling.",
+      "A real operational caller exercises the rule and stores attributable events, or the operational capability remains explicitly unverified.",
+      "Unavailable clocks, applicability or accountable actors must not read as compliant handling.",
+      "Do not issue legal incident notifications or claim statutory compliance from module presence.",
+      "Trace imports and operational entry points; exercise unavailable and overdue states without sending notifications.",
+      "BK-85; legal applicability review remains deferred, not certified.",
+      "22 September 2026: OPEN. No production incident-readiness claim made."
+    ]
+  },
+  {
+    "id": "DG-05",
+    "cells": [
+      "DG-05\nDIAGNOSTIC\nAccount lifecycle requirements remain broader than registration",
+      "Keep account deletion, rights, profile and email-change gaps visible.",
+      "F-A-14/15/16/25; review reports absent served account-lifecycle routes.",
+      "Registration, sessions and model permission do not establish the remaining lifecycle requirements.",
+      "Each promised lifecycle operation has authenticated served behaviour, persistence, recovery and verified browser evidence.",
+      "Deletion must reconcile holds and retention; email changes must preserve access and prevent takeover.",
+      "Never delete existing user data to demonstrate a feature or claim a module closes a whole packet.",
+      "Independent route/source inventory and isolated-account tests before real-user interaction.",
+      "Ownership verification, retention policy and legal review where required.",
+      "22 September 2026: OPEN. Separate from the five synthetic legal-matter journeys; not represented as completed."
+    ]
+  },
+  {
+    "id": "DG-06",
+    "cells": [
+      "DG-06\nDIAGNOSTIC\nTerms acceptance and translated notices need approved content",
+      "Record acceptance of the actual applicable version in clear language.",
+      "F-A-19/F-A-20; registration acknowledgement and optional OpenAI permission are distinct obligations.",
+      "Review identifies missing terms-version acceptance and English/Telugu notice delivery. No approved legal text supplied in this pass.",
+      "Approved versioned content, explicit acceptance and current language rendering are evidenced separately.",
+      "Missing approved content remains a named blocker; do not invent legal approval or retroactively opt accounts in.",
+      "Legal sign-off is deferred by the owner. Optional provider sharing cannot become mandatory workspace access.",
+      "Verify version binding, stale versions, unticked controls and registration-only agreement placement after content approval.",
+      "Approved terms and validated translation; BK-85-AC3 remains NOT_RUN.",
+      "22 September 2026: OPEN, CONTENT/REVIEW DEPENDENCY. No legal acceptance is fabricated."
+    ]
+  },
+  {
+    "id": "DG-07",
+    "cells": [
+      "DG-07\nDIAGNOSTIC\nMatter memory requires behavioural proof, not vocabulary search",
+      "Retain material facts, unresolved questions and source dependencies across turns and reopening.",
+      "F-C-09/10/11; five live synthetic matters with changed facts and adverse evidence.",
+      "Review correction: domain/summary.py already rebuilds MatterSummary from persisted matter facts, threads and questions; core/turn.py uses it as context. Vocabulary search understated existing memory. Preservation of decisive information still needs multi-turn/live proof.",
+      "Material facts survive reopening; corrections invalidate dependent positions; another matter cannot contaminate the response.",
+      "Disclose context limits and unresolved information. Do not reconstruct forgotten evidence from model memory.",
+      "No blanket summary treated as original evidence and no silent truncation of decisive facts.",
+      "Changed-fact turn, reopening, source-link persistence and cross-matter distinguishing facts.",
+      "LB-35/58/63/68/69; evidence must identify matter, turn, version, actual model and environment.",
+      "22 September 2026: OPEN diagnostic. Live proof not yet run."
+    ]
+  },
+  {
+    "id": "DG-08",
+    "cells": [
+      "DG-08\nDIAGNOSTIC\nLegal-brain and opening requirements need plan visibility",
+      "Review every requirement alongside its delivery and verification limits.",
+      "Before Build carries LB-01–92 and OM principles not represented as current Implementation Plan rows.",
+      "Migration will add linked Requirement rows while preserving the original Before Build narrative and all historical cells.",
+      "All 115 LB/OM identifiers resolve once in Implementation Plan; statuses remain unassessed until evidence is mapped.",
+      "New or duplicate requirements must be detected. Code presence is not changed automatically into Built or Verified.",
+      "Do not treat these rows as 115 new features or generate unimplemented scenarios. Do not overwrite the original product-owner descriptions.",
+      "ID reconciliation in both directions, duplicate/removed-row mutation controls and unchanged-cell preservation.",
+      "BK-48; backlog acceptance mapping and release assignment remain separate obligations.",
+      "22 September 2026: LINK RECONCILIATION VERIFIED. All 115 LB/OM requirements now have faithful, uniquely keyed Requirement rows; deletion, duplicates and content drift are tested. They are not counted as new features. Release assignment and criterion/evidence mapping remain OPEN."
+    ]
+  },
+  {
+    "id": "DG-09",
+    "cells": [
+      "DG-09\nDIAGNOSTIC\nLive legal-quality evidence is absent",
+      "Observe genuine model responses and saved history through the advocate's Chrome session.",
+      "Owner approved five synthetic complex matters sequentially, GPT-4o mini only, cumulative forty turns and USD25.",
+      "Prior browser evidence used scripted responses and a fixture corpus. It does not validate live legal quality. Chrome account access confirmed at localhost:8071.",
+      "Each matter has a recorded turn-by-turn verdict, actual provider usage and verified saved history; defects are fixed and rechecked before advancing.",
+      "Stop on material defects, model mismatch, unsafe processing or budget exhaustion. Preserve the failed response as evidence.",
+      "No mock substituted for live output; no real client facts used; no independent counsel-quality sign-off claimed.",
+      "Real retrieval, verbatim/source checking, contradiction handling, opposition, changed-fact reassessment, reload and reopening.",
+      "Provider permission, actual runtime configuration, corpus readiness and bounded usage accounting.",
+      "22 September 2026: LIVE RUN IN PROGRESS. Owner confirmed account-wide OpenAI permission; Chrome displays permission recorded. Server restarted with the persistent USD25 pinned-model cap. Synthetic matter 1 opened through the UI and its first turn reached real GPT-4o mini; response IDs/token usage recorded. No matter-quality PASS yet."
+    ]
+  },
+  {
+    "id": "DG-10",
+    "cells": [
+      "DG-10\nDIAGNOSTIC\nApproved live-evaluation spending needs durable dispatch accounting",
+      "Keep the approved GPT-4o mini batch within its cumulative spending limit, including failures and retries.",
+      "Five synthetic browser matters; owner-approved maximum 40 turns / USD25; model GPT-4o mini only.",
+      "The domain's specialist budget does not itself measure every provider wire attempt. A process-local counter would lose failed/retried calls or reset on server restart.",
+      "Before each wire attempt, recheck permission and reserve a conservative maximum in durable shared storage. Settle from actual token usage; retain full reservations when usage is unknown.",
+      "A restart, timeout or retry cannot reset the allowance. Refuse non-approved models and embeddings. Stop when another bounded request cannot be funded.",
+      "No prompts, credentials or client text in this spending ledger. No fabricated zero-cost usage. This is evaluation-only configuration, not a new production pricing promise.",
+      "Ten local tests: restart, concurrent reservations, model mismatch, unknown usage, truncation, permission refusal and independently funded retry. Actual provider ledger still pending the first approved browser call.",
+      "BK-92; existing specialist planning budget remains separate. Official OpenAI GPT-4o mini context/output bounds and prices checked 22 September 2026. Forty-turn limit tracked in the browser run record.",
+      "22 September 2026: ACTIVE DURING LIVE EVALUATION. Durable USD25 ledger created and used by real pinned GPT-4o mini calls, with measured usage and in-flight reservations distinguished. Ten engineering tests passed. Aggregate usage and forty-turn count continue to be monitored."
+    ]
+  },
+  {
+    "id": "DG-11",
+    "cells": [
+      "DG-11\nDIAGNOSTIC\nA live turn crashes while ordering the answer",
+      "Always deliver a structurally valid, honest next step or blocking question before supporting material.",
+      "Synthetic live matter 1, first browser message: distinct family title and new access obstruction; GPT-4o mini, actual local corpus.",
+      "Chrome returned HTTP 500 after 19 paid responses. Answer.__post_init__ rejected first content kind ground at core/turn.py answer construction. Matter board remained at zero recorded issues. The unsent input remained available for retry.",
+      "Every assembled route starts with an actual action or blocking question as required by the domain contract. All support-only, refusal and multi-thread outcomes are covered; preserve disclosure meaning.",
+      "Fix the producing assembly path rather than weaken Answer validation. Retry the same receipt and inspect history for neither duplication nor silently lost inputs.",
+      "No scenario-name, property-dispute or phrase-specific branch. Never convert background prose into an action merely to satisfy validation.",
+      "Regression must reproduce the support-first assembly with varied thread outcomes, prove the invalid order fails without the fix, and re-run this actual Chrome matter.",
+      "LB harness/presentation; answer contract PRD 6.2 S3; prior 247 controlled tests did not expose this live combination.",
+      "22 September 2026: ASSEMBLY DEFECT FIXED AND RETRIED LIVE. Six of nine counterexamples failed before the fix; 59 focused tests passed afterwards. The same Chrome receipt now returns an answer, not HTTP 500. Its reasoning gaps are separately recorded as DG-13. No next matter begun."
+    ]
+  },
+  {
+    "id": "DG-12",
+    "cells": [
+      "DG-12\nDIAGNOSTIC\nConversation space and sent-text lifecycle",
+      "Keep the matter board beside one continuous conversation with a compact bottom composer.",
+      "Owner screenshot from live matter 1: long submitted text remained in an oversized composer after HTTP 500.",
+      "The composer retained submitted text until acknowledgement, competing with the answer for space. The left board also repeated the full recorded opening.",
+      "Clear and shrink the composer immediately when a send is accepted locally. Keep the submitted text in the conversation, with a separately protected immutable retry receipt. Keep the opening record in Case file, not the board. Remove the MATTER WORKSPACE label and keep the header title on one line in an approximately 60 percent shorter bar.",
+      "Failure, cancellation, refresh and reauthentication must retain the original receipt. A later acknowledgement or retry must not erase a newly typed draft. Refuse dispatch when the retry receipt cannot be protected.",
+      "No loss of opening data, retry identity, keyboard access, mobile reachability or uncertainty about whether a failed request committed.",
+      "Check pending, successful, cancelled and failed sends; reload and retry using identical request bytes; independent follow-up draft survives. Verify desktop and narrow layouts plus actual Chrome matter 1.",
+      "BK-36 durable retry; quiet draft recovery; owner-approved 22 September 2026 UI change. Earlier tests requiring text to remain in the composer must instead verify protected receipt and transcript preservation.",
+      "22 September 2026: UI IMPLEMENTED AND VERIFIED. 67 browser/structural regression checks passed, no failures or skips. Real Chrome measured a 44.8px header and 115.2px empty composer. Live Send immediately cleared and shrank the field while retaining one submitted message and the original retry receipt. New drafts survive replies and receipt reconciliation even when their words match the submitted text."
+    ]
+  },
+  {
+    "id": "DG-13",
+    "cells": [
+      "DG-13\nDIAGNOSTIC\nPre-proceeding context and explicit dispute separation are not respected",
+      "Understand the advocate's stated task and procedural position without forcing a litigation posture or repeating answered questions.",
+      "Matter 1 live retry after DG-11: no proceedings, advice only, distinct family title and recent obstruction expressly described.",
+      "The answer asked whether the client filed or was answering a proceeding. It retained two detected disputes in one thread and sought permission to separate them although the instruction explicitly requested independent assessment. It also labelled screens all cleared beside an express coverage gap.",
+      "Represent no-proceedings separately from unknown proceedings and unknown represented client. Honour an explicit, grounded instruction to separate disputes while preserving fact attribution, individual dates and shared evidence. Distinguish permission to continue limited research from coverage clearance.",
+      "Inspect role, split-authority and screen-presentation contracts before a general fix. Recheck unknown identity, ambiguous grouping, opposed instructions and changed procedural position as negative controls.",
+      "Do not guess a filed role, disable posture or split safeguards, hard-code property terms, invent a second cause, or imply full legal coverage.",
+      "Requires invariant regression controls and another real browser turn on this matter, including a changed-fact follow-up and reopened history. This row is not evidence of a passing legal brain.",
+      "C3 posture; C4 dispute boundaries; grounded assessment and coverage disclosure. Independent from the completed compact-header and composer repair.",
+      "22 September 2026: REPRODUCED LIVE / OPEN. Two browser submissions including one retry; 26 actual provider responses total, 44,519 input and 3,897 output tokens, estimated USD0.009025. Zero of five matters accepted as complete."
+    ]
+  },
+  {
+    "id": "DG-14",
+    "cells": [
+      "DG-14\nDIAGNOSTIC\nOne matter board and an advocate-facing conversation",
+      "Use one full-height desktop sidebar with navigation, the matter board and the profile at its foot; reserve the right pane for the conversation and composer.",
+      "Owner screenshots on 22 September 2026 show a duplicate recorded-issue card, client unknown despite opening identity, a top-wide ribbon and internal answer labels.",
+      "The duplicate card labels a procedural role as our client. A known client is not proof of a filed role. The renderer also groups answers into internal sections and prints element/signal labels before every paragraph.",
+      "Show the opening client and opposing party once on the matter board. Remove duplicate issue cards without deleting issue data. Keep Case file and History reachable. Present substantive answers as ordered paragraphs, with sources and material limitations visible; keep diagnostic metadata on demand.",
+      "Relocate the existing sidebar and account controls without duplicating identity state. Retain a reachable mobile board. Render validated answer content without a second ungrounded model rewrite; preserve historical response wording and its recorded-response warning.",
+      "Do not infer plaintiff or defendant from client identity, hide a substantive warning, suppress a deadline gap, weaken permission checks or replace a recorded answer with newly invented prose.",
+      "Verify desktop, tablet and phone layout; profile menu and navigation; opening identity with unresolved role; paragraph order; all signal/disclosure variants and visible sources; actual signed-in Chrome matter and history.",
+      "Owner-approved UI change; extends DG-12. DG-13 remains the separate reasoning-quality defect until revalidated against a live model.",
+      "22 September 2026: PRESENTATION IMPLEMENTED AND VERIFIED. Broad run: 115 checks, six obsolete UI expectations; affected-suite rerun: 33 passed. Latest result for each of 115 distinct checks passes, with no skips. Actual signed-in Chrome: one board, no issue cards or internal element headings, full-height right chat, bottom-left profile, one saved History turn and intact opening identities/no-proceedings instruction. DG-13 remains open; no new live-model call or legal-quality PASS."
+    ]
+  }
+  ,
+  {
+    "id": "DG-15",
+    "cells": [
+      "DG-15\nDIAGNOSTIC\nReasoning and communication disciplines",
+      "Use independent evidence-led judgment and a clear, proportionate professional conversation.",
+      "Owner instruction of 22 September 2026 and critical review of the proposed R1-R13 and C1-C14 principles.",
+      "Conflicting local instructions could force one theory, unsupported replacement advice or removal of caveats. Dependency decisions did not retain a structured exact-input basis. Existing evaluation omitted several conversational and uncertainty dimensions.",
+      "Compose shared disciplines once at the relevant model boundary. Retain material alternatives, independent unknowns, source limitations and useful neutral questions. Keep private candidate assessments out of the served answer and plaintext metrics.",
+      "Preserve schemas and existing release controls. Record dependency assessment in the encrypted transcript. Require exact quotations for judged verdicts, preserve the whole tested input and seal reviews under contributing matter keys. Malformed or unattributable judgments remain not assessed.",
+      "No canned production dialogues, arbitrary confidence score, fabricated remedy, new provider permission or self-certified legal-quality claim. Test evidence is not counsel sign-off.",
+      "Focused tests of composition, exact-step binding, privacy, withheld advice, persistence and evaluation controls; browser checks of paragraphs, sources, recovery and navigation; bounded live check recorded separately.",
+      "BK-91, BK-96, BK-29. Research: https://barcouncilkerala.org/professional-etiquette and https://www.judiciary.uk/about-the-judiciary/diversity/equal-treatment-bench-book/ . Independent model evaluation, full uncertainty-state coverage and professional review remain separate obligations.",
+      "22 September 2026: IMPLEMENTED / SCOPED CHECKS PASS. Final focused suite: 187 passed, no failures/errors/skips. Controlled browser suite: 26 passed. Three real Chrome submissions exposed DG-16, verified its acknowledgement fix and confirmed substantive routing. Four saved turns were verified in History. DG-13, five-matter acceptance, independent semantic evaluation and professional review remain open."
+    ]
+  },
+  {
+    "id": "DG-16",
+    "cells": [
+      "DG-16\nDIAGNOSTIC\nAn acknowledgement request triggers substantive work",
+      "Respect the current instruction inside an existing matter without discarding meaningful new facts or questions.",
+      "Actual Chrome synthetic matter 1, third submission: acknowledge the brief only, with no further assessment or questions.",
+      "The response repeated the procedural-role question, inferred an Act and reported screens. Seven real GPT-4o mini calls were spent. The route prompt's file-context wrapper said any continuation belongs to the matter, conflicting with purpose-sensitive conversational routing.",
+      "Keep historical file context separate from the current authorised task. An acknowledgement with no new matter work must use the conversational boundary, preserve the saved exchange and leave facts, screens, deadlines and recommendations unchanged.",
+      "Remove the contradictory context instruction. Test structured route assembly, mixed substantive messages, unavailable routing, no derived-state mutation and history recovery. Repeat through actual Chrome before recording this defect fixed.",
+      "No acknowledgement keyword branch, no deletion of matter context, no hard-coded fictional-name exception and no bypass of gates when substantive work is requested.",
+      "Controlled positive and negative routing outcomes with saved-history checks, then live acknowledgement and contextual legal follow-up to show the boundary can distinguish both.",
+      "DG-15, BK-91. Semantic routing remains model-dependent. A courtesy response does not validate the unresolved multi-dispute legal assessment in DG-13.",
+      "22 September 2026: ROUTING FIX VERIFIED IN LIVE CHROME. After removing the conflicting instruction, acknowledgement stopped without legal work. A substantive follow-up entered the matter path; its broader DG-13 posture defect remains open. History retained both exchanges. Cumulative: five browser submissions including the original retry, 42 provider responses, 73,877 input and 4,834 output tokens, ledger charge USD0.014001. Zero of five matters accepted. This is scoped routing evidence, not a semantic accuracy rate."
+    ]
+  },
+  {
+    "id": "DG-17",
+    "cells": [
+      "DG-17\nDIAGNOSTIC\nConflicting assembled instructions",
+      "Keep reasoning and communication consistent across prompts, context, schemas, admission checks and saved answers.",
+      "Owner authorised fixes after the read-only audit of older instructions on 22 September 2026.",
+      "Cross-dispute input lacked positions and compatible IDs. Date and correction admission was too permissive. Proof/theory could force certainty, roles could be approximated, and the answer type required actions even for explanations. Memory and tone instructions also conflicted.",
+      "Bind substantive positions to stable identities. Preserve unsupported dates, unresolved adverse propositions and non-litigation status. Match response structure to the current purpose. Revisit recorded context for a material reason. Use conditional opposition and grounded, proportionate explanation.",
+      "Repair instructions and consumers together. Add reproducible date admission, separately quoted correction authority, honest cross-dispute refusal, persisted unresolved propositions, purpose-aware answer modes and schema-field alignment. Update controlled doubles to the actual input format.",
+      "No case-keyword patch, invented date, implied concession, false empty-result clearance, fabricated recommendation, private-ID leak or permission/grounding bypass. Model interpretation still requires independent quality evaluation.",
+      "Final combined run: 401 passed, zero failures/errors/skips, including 68 prompt/consumer regressions and 26 controlled browser checks. Positive and negative controls cover admission, assembly, API responses, history and presentation.",
+      "BK-91, BK-94, BK-95 and BK-96 remain partial. Detailed method and execution record: docs/backlog/evidence/legal-brain-20260922/prompt-consistency.md. No full Class-A, paid model or professional acceptance claimed.",
+      "22 September 2026: IMPLEMENTED / SCOPED CHECKS PASS. Source-code fixes and controlled verification complete for this increment. DG-13, complete contextual advisory reasoning, five live matters, independent semantic evaluation and qualified professional review remain open."
+    ]
+  },
+  {
+    "id": "DG-18",
+    "cells": [
+      "DG-18\nDIAGNOSTIC\nLegacy schema and consumer conflicts",
+      "Prevent old nested instructions and downstream assumptions from overriding the latest workflow.",
+      "Independent parallel review traced active prompts, nested wire schemas, model wrappers, role transitions and the free-text repair path. Historical text was distinguished from instructions actually sent to the model.",
+      "Proof schema still forced absent; unknown writing became oral and a negative limitation finding; issues required litigation; theory and inventory schemas contradicted current states. Advice repair accepted unfinished output, and later filing was treated as a side reversal.",
+      "Align all transmitted schema descriptions with their state vocabularies and current purpose. Distinguish unknown from negative. Admit only complete repaired advice. Permit expressly supported filing progression without permitting inferred or opposing-side reversals.",
+      "Reviewed 24 prompt constructors, 19 system constants and 21 transmitted schemas plus provider, policing, tracing and configuration wrappers. Fixed active conflicts and obsolete examples. Added bounded source-only explanation for explicit non-filed matters without removing side-dependent gates.",
+      "Do not equate a source explanation with complete advisory assessment. Do not suppress blockers, treat nullable writing as false, approximate a role, weaken completion admission or claim that a static scan proves model behaviour.",
+      "Regression controls exercise written/oral/unknown states, nested descriptions, malformed outputs, advisory issue admission, incomplete repairs, filing transitions and served explanations. Final frozen-source combined run passed all 401 checks; static and layer checks pass.",
+      "No hidden provider/configuration prompt override found. Historical replay is an approval-gated diagnostic, not a served path. Agentified NM is unchanged. No additional paid model calls, commit, push or evidence promotion.",
+      "22 September 2026: IMPLEMENTED / SCOPED CHECKS PASS. Live semantic behaviour and broader non-contentious contextual advice remain open. Earlier run failures and the clean final rerun are retained in the diagnostic record; no full release acceptance is inferred."
+    ]
+  }
+]

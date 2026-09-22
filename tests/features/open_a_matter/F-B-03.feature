@@ -1,4 +1,4 @@
-# GENERATED from docs/Nyaymalaw_Implementation_Plan.xlsx, row F-B-03, column "Scenarios (Given / When / Then)".
+# GENERATED from docs/Nyaymalaw_Implementation_Plan.xlsx, row F-B-03, column "Executable scenarios (Gherkin)".
 # Edit the sheet, then run `python assurance/control_plane/plan_scenarios.py --write`.
 Feature: F-B-03 My work lists the matters, and opening one resumes it
 

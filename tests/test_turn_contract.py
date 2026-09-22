@@ -731,24 +731,26 @@ def test_every_screen_is_named_to_the_advocate_and_none_reads_as_clear(tmp_path)
                  "dated 14 March 2023 unpaid")))
 
     said = " ".join(e.text for e in out.answer.elements)
-    assert "Screens on this matter" in said, (
-        "the advocate is told nothing about the screens; the gate fires into "
-        "the metrics and the answer carries none of it")
+    assert "Screens on this matter" not in said, "routine audit reports are not conversation"
 
     # EVERY KIND, by name. An advocate reading four rows believes the fifth
     # was checked -- which is `unscreened`'s own argument for drawing its
     # population from the vocabulary, and it holds whether the screens cleared
     # or not.
-    for kind in ScreenKind:
-        assert kind.value in said, f"{kind.value} is not named to the advocate"
+    from nm.core.screens import from_stored
+    saved_screens = from_stored(out.matter.screens)
+    assert {s.kind for s in saved_screens} == set(ScreenKind)
+    assert all(s.detail or s.not_assessed_because for s in saved_screens)
 
     # AND WHAT THE ROW MEANS CHANGED WITH BK-34. It used to have to say that
     # substance was admitted with the screens outstanding, because it always
     # was. Now a matter that has been through intake CLEARS them, and the row
     # says which -- so the assertion is that the advocate is told the outcome,
     # not that the outcome is always an exception.
-    assert ("all cleared" in said or "not a finding that they clear" in said), (
-        "the screen row does not say whether the screens cleared")
+    # LB-113 changes presentation, not screening: a material coverage limit
+    # still reaches the actual released answer and carries its gate identity.
+    assert any(e.gate == "G-COMPETENCE" and e.disclosure for e in out.answer.elements)
+    assert "all cleared" not in said
 
 
 def test_the_coverage_position_reaches_the_advocate_not_only_the_metrics(
@@ -783,8 +785,8 @@ def test_the_coverage_position_reaches_the_advocate_not_only_the_metrics(
     assert fired[0].response == "disclose"
 
     said = " ".join(e.text for e in out.answer.elements)
-    assert "competence" in said, (
-        "the competence screen is not named to the advocate")
+    assert any(e.gate == "G-COMPETENCE" and e.disclosure for e in out.answer.elements), (
+        "the material coverage limit did not reach the advocate")
     # WHAT IT FOUND, not merely that it ran. `covered` and `COVERAGE GAP` are
     # opposite facts and an advocate who cannot tell them apart has been told
     # nothing worth the line.

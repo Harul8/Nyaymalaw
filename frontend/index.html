@@ -343,6 +343,9 @@
          shipped, and the four steps are a sequence an advocate walks. -->
     <button class="tab" data-tab="prepare">Preparation</button>
   </nav>
+  <!-- The one existing matter board moves here at desktop widths. On a
+       phone it remains in My work's reachable drawer. No duplicate state. -->
+  <div id="sidebar-board" class="sidebar-board"></div>
 </header>
 
 <!-- F-A-12. THE WARNING BEFORE AN IDLE SIGN-OUT, two minutes ahead. Any use of
@@ -373,9 +376,9 @@
   <!-- ================= MY WORK'S LIST / THE MATTER BOARD =================
        One pane, two surfaces, deliberately distinct. In My work it is the list
        of matters, bounded by MATTER count. In an open matter it is the MATTER
-       BOARD (F-B-02): this matter's details, then its issues, bounded by
-       THREAD count. Conflating them is how a board ends up scaling on the
-       wrong axis. There is no way to start a matter here; that is Home's. -->
+       BOARD (F-B-02): this matter's details only. Issue-level records remain
+       in the Case file; repeating them here confused identity with role.
+       There is no way to start a matter here; that is Home's. -->
   <aside class="rail" id="rail">
     <div class="rail-head">
       <h2 id="rail-title">Matters</h2>
@@ -388,11 +391,6 @@
         <dl id="board-fields" class="r-fields"></dl>
       </div>
       <div id="board-state"></div>
-      <details id="opening-record" class="opening-details" hidden>
-        <summary>Recorded opening brief</summary>
-        <p class="help">These are recorded instructions, not verified facts or legal clearance.</p>
-        <dl id="opening-fields" class="r-fields"></dl>
-      </details>
     </section>
     <div class="rail-meta" id="rail-meta"></div>
     <div id="rail-body"></div>
@@ -401,8 +399,7 @@
   <!-- ========================= THE ANSWER ========================= -->
   <section class="conversation" aria-label="Matter workspace">
     <div class="workspace-heading" id="workspace-focus" tabindex="-1">
-      <div><p class="eyebrow" id="workspace-eyebrow">YOUR WORKSPACE</p>
-        <h1 id="matter-heading">My work</h1></div>
+      <div class="workspace-title"><h1 id="matter-heading">My work</h1></div>
       <div class="workspace-actions">
         <details id="workspace-more" class="workspace-more">
           <summary>More</summary>
@@ -499,8 +496,8 @@
     <button type="button" id="jump-latest" class="ghost jump-latest" hidden>Jump to latest</button>
 
     <form id="composer" class="composer" autocomplete="off">
-      <label class="composer-label" for="message">Your instruction or brief</label>
-      <textarea id="message" rows="3" placeholder="Tell NM what you need, ask a question, or add material."></textarea>
+      <label class="sr-only" for="message">Your instruction or brief</label>
+      <textarea id="message" rows="1" placeholder="Tell NM what you need, ask a question, or add material."></textarea>
       <div class="composer-row">
         <div class="composer-tools">
           <!-- F-C-01. THE PLUS: documents, photos, audio or video, or a voice note
@@ -541,6 +538,30 @@
     </form>
   </section>
 </main>
+
+<dialog id="source-reader" aria-labelledby="source-title" aria-describedby="source-coverage">
+  <header class="source-reader-head">
+    <div><p class="hint">Source passage</p><h2 id="source-title">Source passage</h2></div>
+    <button type="button" id="source-close" class="ghost" aria-label="Close source reader">Close</button>
+  </header>
+  <div class="source-reader-body">
+    <p id="source-coverage">Exact saved retrieved passage · extracted text, not an original facsimile or the complete Act or judgment.</p>
+    <p id="source-meta" class="hint"></p>
+    <label for="source-search">Find in loaded passage</label>
+    <input id="source-search" type="search" autocomplete="off" maxlength="200">
+    <p id="source-search-result" class="hint" role="status"></p>
+    <button type="button" id="source-return" class="ghost">Return to cited passage</button>
+    <blockquote id="source-text" tabindex="-1" aria-label="Saved cited passage"></blockquote>
+    <button type="button" id="source-more" class="ghost" hidden>Load more of this passage</button>
+    <p class="source-qualification-label">Qualification recorded with the response</p>
+    <p id="source-qualification"></p>
+  </div>
+  <footer class="source-reader-foot">
+    <p id="source-status" role="status" aria-live="polite"></p>
+    <button type="button" id="source-retry" class="ghost" hidden>Retry this reference</button>
+    <button type="button" id="source-copy" disabled>Copy loaded passage with attribution</button>
+  </footer>
+</dialog>
 
 <dialog id="draft-dialog" aria-labelledby="draft-title">
   <div class="dialog-head"><h2 id="draft-title">Saved drafts for this matter</h2>
@@ -646,6 +667,11 @@
       <select id="casefile-matter" aria-label="Matter"><option value="">Choose a matter…</option></select>
     </div>
     <div id="casefile-state"></div>
+    <details id="opening-record" class="opening-details" hidden>
+      <summary>Recorded opening brief</summary>
+      <p class="help">These are recorded instructions, not verified facts or legal clearance.</p>
+      <dl id="opening-fields" class="r-fields"></dl>
+    </details>
 
     <section class="currency" id="currency" aria-labelledby="currency-h">
       <h3 id="currency-h">What still holds</h3>
@@ -938,6 +964,7 @@
   <button type="button" id="ai-sharing-withdraw" class="ghost" disabled>Withdraw permission</button>
 </dialog>
 <script src="/static/draft-vault.js"></script>
+<script src="/static/source-reader.js"></script>
 <script src="/static/app.js"></script>
 <script src="/static/matter-workspace.js"></script>
 <script src="/static/intake-materials.js"></script>

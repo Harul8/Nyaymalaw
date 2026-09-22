@@ -595,13 +595,13 @@ def test_a_pending_answer_can_rejoin_its_own_reopened_context(page, journey):
 
     page.route(transcript_pattern, unavailable)
     _open_by_keyboard(page, original)
-    assert page.get_by_text("Settling the frame and checking the corpus…", exact=True).is_visible()
+    assert page.get_by_text("Working on your brief…", exact=True).is_visible()
     held.release()
     page.wait_for_selector("#send:not([disabled])")
     assert page.get_attribute("#pane-advise", "data-matter-id") == original
     assert page.input_value("#message") == ""
     assert not page.get_by_text(
-        "Settling the frame and checking the corpus…", exact=True).count()
+        "Working on your brief…", exact=True).count()
     assert page.locator("#thread .brief").filter(has_text=brief).count() == 1
     assert not page.errors, page.errors
 
@@ -729,7 +729,8 @@ def test_lost_acknowledgement_and_expired_session_keep_the_exact_turn_envelope(
     _sign_in_without_reloading(page, journey)
     retry = page.get_by_role("button", name="Send this brief again", exact=True)
     retry.wait_for(state="visible")
-    assert page.input_value("#message") == brief
+    assert page.input_value("#message") == ""
+    assert brief in page.locator('#thread .brief').all_text_contents()
     disclosure = page.inner_text("#thread")
     if readback == "unavailable":
         assert "cannot verify the conversation's completeness" in disclosure
@@ -747,7 +748,8 @@ def test_lost_acknowledgement_and_expired_session_keep_the_exact_turn_envelope(
     assert "file itself is intact" not in disclosure
     held.release()
     assert retry.is_visible()
-    assert page.input_value("#message") == brief
+    assert page.input_value("#message") == ""
+    assert brief in page.locator('#thread .brief').all_text_contents()
     page.unroute(transcript_pattern, unavailable)
     retry.click()
     page.wait_for_selector("#send:not([disabled])", timeout=60000)
@@ -866,7 +868,8 @@ def test_a_protective_retry_discloses_saved_history_without_releasing_expired_pe
     assert "No new answer was saved or released" in page.inner_text("#thread")
     assert "Your brief was NOT saved" not in page.inner_text("#thread")
     assert retry.count() == 0
-    assert page.input_value("#message") == brief
+    assert page.input_value("#message") == ""
+    assert brief in page.locator('#thread .brief').all_text_contents()
     assert journey["box"].application.store.load(matter_id) == before
     requests = [row for row in page.request_identities if row["path"] == "/api/turn"]
     assert requests[-1]["envelope"] == requests[-2]["envelope"]

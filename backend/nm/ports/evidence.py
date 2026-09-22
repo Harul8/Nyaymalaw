@@ -235,6 +235,8 @@ class Coverage(Spoken, str, Enum):
     """
 
     ANSWERED = "answered"
+    SEARCHED_NO_MATCH = "searched_no_match"
+    """The bounded query ran but yielded no candidate; corpus absence is unknown."""
     NOT_HELD = "not_held"
     HELD_NOT_FOUND = "held_not_found"   # a DEFECT that escalates
     NOT_ASSESSED = "not_assessed"       # the search did not happen
@@ -249,6 +251,7 @@ class Coverage(Spoken, str, Enum):
     #: good point or hunts a defect that is not there.
     SAID = nonmember({
         "answered": "the corpus answered this",
+        "searched_no_match": "this search found no candidate; relevant law may still be held",
         "not_held": "the corpus does not hold this",
         "held_not_found": ("the corpus holds this and the search did not "
                            "find it, which is a defect on our side"),
@@ -309,7 +312,11 @@ class Finding:
     binding: Binding
     binding_for: str
     binding_reason: str
-    supports: bool
+    supports: bool | None
+    """True/False is an assessed proposition; None means support not assessed.
+
+    Search rank and quote fidelity cannot supply a semantic support verdict.
+    """
     para_kind: ParaKind
     treatment: Treatment
     valid_from: date | None = None
@@ -336,6 +343,8 @@ class Finding:
     what H3 requires a resolved Finding to be able to say about itself."""
 
     def __post_init__(self) -> None:
+        if self.supports is not None and type(self.supports) is not bool:
+            raise ValueError("support must be assessed true/false or unassessed None")
         if not self.span.strip():
             raise ValueError("a Finding without a verbatim span is not a Finding")
         if not self.locator.strip():
@@ -412,7 +421,10 @@ class Finding:
         and the advocate is entitled to know which of five different things
         went wrong.
         """
-        if not self.supports:
+        if self.supports is None:
+            return ("G-GROUND: semantic support was not assessed for "
+                    f"{self.proposition!r}; this is a retrieved candidate, not a verified premise")
+        if self.supports is False:
             return (f"G-GROUND: the retrieved span does not support "
                     f"{self.proposition!r}")
         if self.source_kind is SourceKind.AUTHORITY:
@@ -457,7 +469,9 @@ class Finding:
         one whose treatment was never checked. What may never be quoted is a
         span that does not support what it is cited for, or text that was not
         in force."""
-        return self.supports and self.in_force
+        # An unassessed candidate can be inspected, not relied on. A known
+        # mismatch must not be quoted as support for the proposition either.
+        return self.supports is not False and self.in_force
 
 
 @refuses_blank_text()
@@ -513,7 +527,13 @@ class EvidenceResult:
     not say so is indistinguishable from one that knew — and the guess sends an
     exact section lookup into the wrong Act."""
 
+    search_note: str | None = None
+    """What was searched and bounded, not a legal inference or advocate decision."""
+
     def __post_init__(self) -> None:
+        if self.coverage is Coverage.SEARCHED_NO_MATCH:
+            if self.findings or blank(self.missing):
+                raise ValueError("a searched-no-match result needs a reason and no findings")
         if self.coverage is Coverage.NOT_HELD and blank(self.missing):
             # `blank`, not falsy: a reason of spaces is silence in NO
             # words, and it would have satisfied the check this raises.

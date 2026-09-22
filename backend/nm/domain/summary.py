@@ -36,7 +36,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from nm.domain.intake import ReadQuality
-from nm.domain.matter import AskedQuestion, Certainty, FactBasis, Matter, Role, Thread
+from nm.domain.matter import AskedQuestion, Certainty, FactBasis, Matter, Thread
 from nm.domain.opening import instruction_context
 from nm.domain.text import refuses_blank_text, snippet
 
@@ -322,12 +322,14 @@ class MatterSummary:
             blocks.append("WHAT IS ON THIS MATTER — the advocate's own words "
                           "unless a source is named:\n" + self.account)
         if self.established:
-            blocks.append("ALREADY ESTABLISHED — do not ask for any of this "
-                          "again:\n"
+            blocks.append("PREVIOUSLY RECORDED — retain the stated basis. Avoid "
+                          "unnecessary repetition; new evidence, ambiguity or changed "
+                          "instructions may justify reopening, with the reason stated:\n"
                           + "\n".join(f"  - {e}" for e in self.established))
         if self.answered:
             blocks.append(
-                "ALREADY ASKED AND ANSWERED — these are settled:\n"
+                "PREVIOUSLY ASKED AND ANSWERED — not independent verification. "
+                "Revisit only for a stated material reason:\n"
                 + "\n".join(f"  - {snippet(q.text, 160)}" for q in self.answered))
         if self.open_questions:
             lines = []
@@ -374,15 +376,14 @@ class MatterSummary:
 
 
 def _established_on(thread: Thread) -> list[str]:
-    """What this thread has SETTLED — never what it has merely been told.
+    """Recorded positions and their status, not an instruction never to revisit.
 
-    A line here means "you do not need to ask this". Anything provisional
-    belongs in the account, where the model can weigh it, rather than here,
-    where it reads as decided.
+    The context wrapper permits material reconfirmation and requires its reason.
+    A previous answer or calculated position is not independent verification.
     """
     out: list[str] = []
     p = thread.posture
-    if p.role is not Role.UNKNOWN:
+    if p.resolved:
         out.append(
             f"On {thread.label!r}: we act for the {p.role.value} — the "
             f"{p.side.value} party ({p.basis.value})."
@@ -416,7 +417,8 @@ def _established_on(thread: Thread) -> list[str]:
         # so the blocking question can NARROW instead of repeating.
         out.append(
             f"On {thread.label!r}: the client is the {p.client_described_as}. "
-            f"Their procedural role is NOT yet settled.")
+            f"Procedural status: {p.role.value.replace('_', ' ')}; "
+            f"no litigating side has been established.")
     for c in p.conflicts:
         out.append(
             f"On {thread.label!r}: THE SIDE IS IN DISPUTE. The file records "

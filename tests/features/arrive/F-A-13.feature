@@ -1,4 +1,4 @@
-# GENERATED from docs/Nyaymalaw_Implementation_Plan.xlsx, row F-A-13, column "Scenarios (Given / When / Then)".
+# GENERATED from docs/Nyaymalaw_Implementation_Plan.xlsx, row F-A-13, column "Executable scenarios (Gherkin)".
 # Edit the sheet, then run `python assurance/control_plane/plan_scenarios.py --write`.
 Feature: F-A-13 The sign-in page works on desktop, tablet and phone
 

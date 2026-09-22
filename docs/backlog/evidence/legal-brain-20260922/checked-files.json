@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "scope": "Selected source, workbook and test report hashes; not a whole-tree verification fingerprint or formal evidence promotion",
+  "base": "43f80a9",
+  "result": "LOCAL_FOCUSED_PASS",
+  "population": {
+    "tests": 247,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0
+  },
+  "live_matters_completed": 0,
+  "files": [
+    {
+      "path": "backend/nm/core/turn.py",
+      "sha256": "e14c75df6565920fe8098111854dc2c6655571af25ec1a24e49ece096df6a773"
+    },
+    {
+      "path": "backend/nm/core/step_dependency.py",
+      "sha256": "6a657e14af3f99614737a053a2f62d0859070e22f46fb6f610dda4048074f52a"
+    },
+    {
+      "path": "backend/nm/adapters/model/call_budget.py",
+      "sha256": "22c333c8c61af47452c815f10e4e96fc79e21709c561006a322c761aa6d5e5f9"
+    },
+    {
+      "path": "backend/nm/adapters/model/openai_adapter.py",
+      "sha256": "ed4a2afaeb733e4c1bafcda355862fdde28e0cdb877071ff39d2b4b2a3139e69"
+    },
+    {
+      "path": "backend/nm/adapters/model/scripted.py",
+      "sha256": "1d4e742ad05e654019ef3811323038ae3e6a324921d3635e1f8c554eb652c135"
+    },
+    {
+      "path": "backend/nm/bootstrap/composition.py",
+      "sha256": "548379574ecf0e6b5d1c01a972dbef61a5cb47e4033bcb35adc81372c90cf5d0"
+    },
+    {
+      "path": "backend/nm/domain/gates.py",
+      "sha256": "35aa30c5298b80e072c524f49fabd6171cb6a66c87bc3a764a4636aaa72f886b"
+    },
+    {
+      "path": "backend/nm/domain/reads.py",
+      "sha256": "4919e8fd78073f9382423cb7cbf134350dcf980a589465efcfb19e59ac5abeca"
+    },
+    {
+      "path": "assurance/control_plane/plan_scenarios.py",
+      "sha256": "5bedd5ee33d8634ebf6b4d1863c2ba48e1af6b584f27e0774196d901f33734be"
+    },
+    {
+      "path": "docs/Nyaymalaw_Implementation_Plan.xlsx",
+      "sha256": "92f13f46c3ae7c41837194e8311521a115fc096fdc46e0d50800c876beba6deb"
+    },
+    {
+      "path": "tests/test_limitation_step_gate.py",
+      "sha256": "98db7cab5566ad6995675c72c7a65ea08dd6654e3555a6ad137c56145c549f54"
+    },
+    {
+      "path": "tests/test_live_evaluation_budget.py",
+      "sha256": "cc6074fa406159da8ec7796bdb3cdb7227c0be2b5538b915c5b001a647165fdf"
+    },
+    {
+      "path": "tests/test_openai_text_permission.py",
+      "sha256": "1b8f49f223b5978ed9e55e3a12812ac4445e5505b1eaa754f3875a83c591ac57"
+    },
+    {
+      "path": "tests/test_bounded_judgment_investigation.py",
+      "sha256": "bda6aba60a7e6f73effe8f9fbba74465c9ca2648533db875ffc62c2491474a72"
+    },
+    {
+      "path": "tests/test_turn_contract.py",
+      "sha256": "704becc021464fab45503742b56d702b1c91b68ac5493d7195fc7aec49a71eb0"
+    },
+    {
+      "path": "tests/test_a_step_cannot_contradict_the_figures.py",
+      "sha256": "0f8de5aad2caa6729c1c4d541ffcc20b7bfdecdf40a1a9822aabbb3a3718b983"
+    },
+    {
+      "path": "tests/test_the_scenarios_come_from_the_plan.py",
+      "sha256": "2b08279311967b1fb27f73807fbe6ae6be076bb4f59ba3e16ca09d93b237b36e"
+    },
+    {
+      "path": "tests/test_model_port_contract.py",
+      "sha256": "2288efdd2465173d83f8b8c29bacf0d359ad047c3d1ac078b546e4696de738ee"
+    },
+    {
+      "path": "tests/test_arrive_sign_in_features.py",
+      "sha256": "805ab7fdfe8cc4726bc7b4664ad5eedf54cfd9d9f5c180a41fdda5e5857769c4"
+    },
+    {
+      "path": "docs/backlog/evidence/legal-brain-20260922/final-regression.xml",
+      "sha256": "b989382e1fab5e85e28769bb717140b04ee6abf735386da9ef07d11396169984"
+    }
+  ]
+}

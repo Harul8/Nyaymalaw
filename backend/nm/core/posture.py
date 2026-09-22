@@ -93,7 +93,8 @@ POSTURE_SCHEMA: dict = {
             # the advocate having said nothing. Defect shape S1, in a schema.
             "enum": ["stated", "inferred", "not_stated"],
             "description": "'stated' if the advocate used a procedural term or "
-                           "said who filed. 'inferred' if you worked it out "
+                           "said who filed, or expressly stated that no proceeding "
+                           "applies or has begun. 'inferred' if you worked it out "
                            "from the account plus who they act for. "
                            "'not_stated' if role is 'not_stated' — there is "
                            "then no basis to describe.",
@@ -101,13 +102,12 @@ POSTURE_SCHEMA: dict = {
         "client_described_as": {
             "type": "string",
             "description": "The advocate's own word for the client where they "
-                           "gave one without a procedural role -- 'the "
-                           "workman', 'the wife'. Empty string if none.",
+                           "gave one without a procedural role. Empty string if none.",
         },
         "opponent": {
             "type": "string",
             "description": "Who the client is AGAINST, in the advocate's own "
-                           "words -- 'Sharma', 'the tenant', 'the State'. Only "
+                           "words. Only "
                            "where they said it. Empty string if they did not.",
         },
         "quoted": {
@@ -128,23 +128,30 @@ SYSTEM = (
     "You extract, from an Indian advocate's message, ONLY what they have "
     "STATED about whom they act for. You never infer a side from the facts "
     "described.\n\n"
-    "A message that describes events — 'the landlord issued a quit notice', "
-    "'a fitter was dismissed' — states NOTHING about which side the advocate "
-    "is on. Return states_client false for those.\n\n"
-    "A message where the advocate says who they act for, or who filed, DOES "
-    "state it: 'we act for the workman', 'we filed the claim', 'this was "
-    "filed against our client', 'appearing for the second respondent'.\n\n"
+    "A description of events alone does not identify the represented party. "
+    "Use the advocate's actual representation instruction, not familiar party "
+    "vocabulary or an assumed aggrieved side.\n\n"
     "Once the advocate has said WHO they act for, you may work out that "
-    "client's procedural role from the account — a wife bringing a maintenance "
-    "claim is the applicant; a workman challenging a dismissal is the "
-    "claimant. Mark that role_basis 'inferred'. Use 'stated' only where they "
-    "named a procedural term or said who filed.\n\n"
+    "client's procedural role from an unambiguous proceeding. Do not assign a "
+    "filed role to advisory work or an uninstituted proceeding. "
+    "Use prospective_claimant or prospective_respondent when the advocate "
+    "expressly identifies their client's intention to seek or resist relief "
+    "on THIS unfiled dispute. These are substantive positions, not claims "
+    "that proceedings exist; they require stated support in the quotation. "
+    "Do not infer them merely from being aggrieved. "
+    "Use not_applicable for expressly non-contentious work, not_yet_instituted "
+    "for an expressly unfiled proceeding whose intended position is not stated, "
+    "and unsupported_role for a stated "
+    "role outside the supported vocabulary. These do not establish a litigating side. "
+    "Mark an inferred role_basis 'inferred'. Use 'stated' only where they "
+    "named a procedural term, said who filed, stated their prospective claim or "
+    "defence, or expressly stated no proceeding "
+    "applies or has begun.\n\n"
     "Where the role genuinely cannot be told even knowing the client, return "
     "role 'not_stated' and put their own word for the client in "
     "client_described_as.\n\n"
     "`opponent` is who the client is AGAINST, in the advocate's own words, "
-    "and ONLY where they said it -- 'against Sharma', 'the tenant has "
-    "filed'. Do not work it out from the events. Empty string if they did "
+    "and ONLY where they said it. Do not work it out from the events. Empty string if they did "
     "not name one.\n\n"
     "`quoted` must be the exact words from the message, copied character for "
     "character."
@@ -250,19 +257,15 @@ ROLE_SYSTEM = (
     "You are not deciding whose side they are on — they have told you. You "
     "are naming the forum-correct label for the position that client is "
     "already in.\n\n"
-    "Work it out from the account. A payee whose cheque bounced and who has "
-    "issued the statutory notice is the complainant. A wife bringing a "
-    "maintenance claim is the petitioner. A tenant resisting an eviction the "
-    "landlord filed is the respondent or defendant. A workman challenging a "
-    "dismissal before a Labour Court is the petitioner; his employer "
-    "answering it is the respondent.\n\n"
+    "Use the stated proceeding and represented party. Non-contentious work is "
+    "not_applicable; an expressly uninstituted proceeding is not_yet_instituted. "
+    "Use unsupported_role for a known role outside the supported vocabulary. "
+    "These states grant no litigating side or permission.\n\n"
     "ANSWER ONLY FROM THIS LIST: " + ", ".join(ROLE_VALUES) + ". These are "
     "the positions this product knows how to reason about, and a role "
-    "outside them is one it could not use. Where the closest fit is "
-    "imperfect, choose the closest fit rather than inventing a word.\n\n"
-    "Answer 'cannot_tell' ONLY where the account does not say what "
-    "proceeding exists or who moved it. If it describes a proceeding and "
-    "says who the client is, the role follows and you must give it."
+    "outside them must not be approximated.\n\n"
+    "Answer cannot_tell whenever the supplied record does not establish a "
+    "supported role or one of the explicit non-litigation states. Do not guess."
 )
 
 
@@ -279,12 +282,13 @@ def build_role_prompt(described: str, account: str):
 
     who = (f"The client is: {described}" if (described or "").strip()
            else "The advocate has not given their client a separate label. "
-                "Read from the account which party is theirs — they speak "
-                "of it in the first person.")
+                "Use only an explicit representation instruction in the account. "
+                "First-person language alone does not identify the represented party; "
+                "return cannot_tell when representation is not established.")
     return Prompt(
         system=ROLE_SYSTEM,
         user=(f"{who}\n\n"
-              f"The account so far:\n{account.strip()[:2500]}\n\n"
+              f"The account so far:\n{account.strip()}\n\n"
               f"Which procedural role does the client occupy?"))
 
 
@@ -304,7 +308,10 @@ def interpret_role(data: dict) -> tuple["Role | None", str]:
         return None, (data.get("why") or "the account does not say what "
                                         "proceeding exists or who moved it")
     try:
-        return Role(raw), (data.get("why") or "").strip()
+        role = Role(raw)
+        if role in (Role.PROSPECTIVE_CLAIMANT, Role.PROSPECTIVE_RESPONDENT):
+            return None, "a prospective position requires the source-bound stated-posture read"
+        return role, (data.get("why") or "").strip()
     except ValueError:
         return None, (f"the model answered {raw!r}, which is not a role this "
                       f"product knows")
@@ -428,4 +435,8 @@ def interpret(quotable: Quotable, data: dict) -> StatedPosture:
     # advocate sees it and can correct it in a word.
     basis = (Basis.STATED if (data.get("role_basis") or "").strip().lower()
              == "stated" else Basis.INFERRED)
+    if (role in (Role.PROSPECTIVE_CLAIMANT, Role.PROSPECTIVE_RESPONDENT)
+            and basis is not Basis.STATED):
+        return StatedPosture(Role.UNKNOWN, Basis.UNKNOWN, described, quoted,
+                             refused="a prospective position was inferred rather than stated")
     return StatedPosture(role, basis, described, quoted, opponent=against)

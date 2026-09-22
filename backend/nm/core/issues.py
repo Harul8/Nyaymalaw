@@ -71,8 +71,8 @@ ISSUE_SCHEMA: dict = {
                 "properties": {
                     "statement": {
                         "type": "string",
-                        "description": "The issue in one sentence, as a "
-                                       "question the court must answer.",
+                        "description": "The legal or factual question material to "
+                                       "the advocate's current matter or requested work.",
                     },
                     "kind": {
                         "type": "string",
@@ -114,17 +114,19 @@ ISSUE_SCHEMA: dict = {
 
 SYSTEM = (
     "You read an Indian advocate's account of a matter and list the ISSUES — "
-    "the questions a court would have to answer to dispose of it.\n\n"
+    "the legal or factual questions material to the requested work. Matters may "
+    "be contentious, advisory or transactional; a proceeding is not required.\n\n"
     "For each, say WHOSE CLAIM it runs against: `moving` for the party "
     "asserting the claim, `defending` for the party resisting it. That is a "
-    "fact about the issue and not about who you are helping — a limitation "
-    "point runs against whoever is asserting the claim, whichever side "
-    "instructs you.\n\n"
+    "fact about the issue and not about who you are helping. Use unknown where "
+    "no claim or supported procedural side applies. Do not invent an opponent.\n\n"
     "A threshold issue — limitation, jurisdiction, forum, notice, court fees — "
-    "disposes of a claim WITHOUT reaching the merits, so list it whether or "
-    "not it looks decisive. `quoted` must be the advocate's own words, copied "
+    "may dispose of a claim without reaching the merits. Include relevant "
+    "thresholds when that work applies, not a compulsory litigation checklist. "
+    "`quoted` must be the advocate's own words, copied "
     "exactly.\n\n"
-    "Return an empty list if the account does not yet describe a dispute."
+    "Return an empty list only when the supplied account supports no issue "
+    "material to the current task, not merely because there is no dispute."
 )
 
 

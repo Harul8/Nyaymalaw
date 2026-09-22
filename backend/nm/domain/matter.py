@@ -241,6 +241,11 @@ class Role(str, Enum):
     APPLICANT = "applicant"
     DECREE_HOLDER = "decree_holder"
     JUDGMENT_DEBTOR = "judgment_debtor"
+    NOT_APPLICABLE = "not_applicable"
+    NOT_INSTITUTED = "not_yet_instituted"
+    PROSPECTIVE_CLAIMANT = "prospective_claimant"
+    PROSPECTIVE_RESPONDENT = "prospective_respondent"
+    UNSUPPORTED = "unsupported_role"
     UNKNOWN = "unknown"
 
 
@@ -268,12 +273,17 @@ _SIDE_OF: dict[Role, Side] = {
     Role.APPELLANT: Side.MOVING,
     Role.APPLICANT: Side.MOVING,
     Role.DECREE_HOLDER: Side.MOVING,
+    Role.PROSPECTIVE_CLAIMANT: Side.MOVING,
+    Role.PROSPECTIVE_RESPONDENT: Side.DEFENDING,
     Role.DEFENDANT: Side.DEFENDING,
     Role.ACCUSED: Side.DEFENDING,
     Role.RESPONDENT: Side.DEFENDING,
     Role.OPPOSITE_PARTY: Side.DEFENDING,
     Role.JUDGMENT_DEBTOR: Side.DEFENDING,
     Role.UNKNOWN: Side.UNKNOWN,
+    Role.NOT_APPLICABLE: Side.UNKNOWN,
+    Role.NOT_INSTITUTED: Side.UNKNOWN,
+    Role.UNSUPPORTED: Side.UNKNOWN,
 }
 
 
@@ -322,7 +332,7 @@ class Posture:
 
     @property
     def resolved(self) -> bool:
-        return self.role is not Role.UNKNOWN and self.basis is not Basis.UNKNOWN
+        return self.side is not Side.UNKNOWN and self.basis is not Basis.UNKNOWN
 
     def enrich(self, role: Role, basis: Basis, source_fact: FactId | None = None) -> "Posture":
         """Monotonic enrichment. A STATED posture is never silently flipped.
@@ -333,6 +343,20 @@ class Posture:
         advocate has acted on it.
         """
         if self.role is Role.UNKNOWN or self.basis is Basis.UNKNOWN:
+            return replace(self, role=role, basis=basis, source_fact=source_fact,
+                           version=self.version + 1)
+        # An expressly instituted role can follow the same client's unfiled
+        # matter. That lifecycle progress is not an opposing-side reversal.
+        # An inference, an outstanding conflict, or a change of established
+        # litigating side still takes the contested path below.
+        if (self.role in (Role.NOT_APPLICABLE, Role.NOT_INSTITUTED)
+                and _SIDE_OF[role] is not Side.UNKNOWN
+                and basis is Basis.STATED and not self.conflicts):
+            return replace(self, role=role, basis=basis, source_fact=source_fact,
+                           version=self.version + 1)
+        if (self.role in (Role.PROSPECTIVE_CLAIMANT, Role.PROSPECTIVE_RESPONDENT)
+                and _SIDE_OF[role] is self.side and basis is Basis.STATED
+                and not self.conflicts):
             return replace(self, role=role, basis=basis, source_fact=source_fact,
                            version=self.version + 1)
         if role is self.role:

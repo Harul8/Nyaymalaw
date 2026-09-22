@@ -24,12 +24,13 @@ from __future__ import annotations
 import re
 import sqlite3
 from pathlib import Path
+from typing import Callable, TypeVar
 
 from nm.domain.citation import reporter_key
 from nm.knowledge.identity import IdentityIndex
 from nm.knowledge.jurisdiction import stored_court
 from nm.knowledge.manifest import CorpusPublicationRefused, PublishedCorpus
-from nm.ports.evidence import Coverage, Treatment
+from nm.ports.evidence import Coverage, Treatment, TreatmentState
 from nm.ports.search import (
     CaseDiscovery,
     CaseExpansion,
@@ -53,6 +54,7 @@ MAX_LIMIT = 100
 #: term does not read the whole index to answer "which cases"; the bound is
 #: reported through `paragraphs_ranked`, so a discovery that hit it says so.
 DISCOVERY_POOL = 200
+_T = TypeVar("_T")
 
 
 class AuthorityIndexSearch:
@@ -93,10 +95,32 @@ class AuthorityIndexSearch:
         return ident.corpus_version if ident is not None else ""
 
     def treatment(self, case_id: str) -> Treatment:
+        try:
+            return self._published_read(lambda: self._treatment(case_id))
+        except CorpusPublicationRefused as exc:
+            return Treatment(TreatmentState.NOT_CHECKED,
+                             f"Published legal source is not usable: {exc}")
+
+    def _treatment(self, case_id: str) -> Treatment:
         return self._identity_index.treatment(case_id)
 
     def case_identity(self, case_id: str):
+        try:
+            return self._published_read(lambda: self._case_identity(case_id))
+        except CorpusPublicationRefused:
+            return None
+
+    def _case_identity(self, case_id: str):
         return self._identity_index.case(case_id)
+
+    def _published_read(self, read: Callable[[], _T]) -> _T:
+        """One boundary for ALL reads, including withdrawal during a read."""
+        if self._published_snapshot is not None:
+            self._published_snapshot.require_usable()
+        result = read()
+        if self._published_snapshot is not None:
+            self._published_snapshot.require_usable()
+        return result
 
     @classmethod
     def from_published_corpus(
@@ -176,14 +200,10 @@ class AuthorityIndexSearch:
                limit: int = 20) -> CorpusSearch:
         """A cached reader may not serve law withdrawn before it emits."""
         try:
-            if self._published_snapshot is not None:
-                self._published_snapshot.require_usable()
-            result = self._search(
-                query, court=court, from_year=from_year, to_year=to_year, limit=limit,
-            )
-            if self._published_snapshot is not None:
-                self._published_snapshot.require_usable()
-            return result
+            return self._published_read(lambda: self._search(
+                query, court=court, from_year=from_year, to_year=to_year,
+                limit=max(1, min(int(limit), MAX_LIMIT)),
+            ))
         except CorpusPublicationRefused as exc:
             return CorpusSearch(
                 query=query, index=self.name, coverage=Coverage.NOT_ASSESSED,
@@ -294,7 +314,7 @@ class AuthorityIndexSearch:
                 where.append("cast(year as integer) <= ?")
                 args.append(int(to_year))
 
-            args.append(max(1, min(int(limit), MAX_LIMIT)))
+            args.append(max(1, min(int(limit), DISCOVERY_POOL)))
             rows = con.execute(
                 "select case_id, case_name, court, year, para_type, "
                 "       snippet(paras, 6, '', '', ' … ', 40), rank "
@@ -325,6 +345,19 @@ class AuthorityIndexSearch:
     def discover(self, query: str, *, court: str | None = None,
                  from_year: int | None = None, to_year: int | None = None,
                  limit: int = 20) -> CaseDiscovery:
+        try:
+            return self._published_read(lambda: self._discover(
+                query, court=court, from_year=from_year, to_year=to_year, limit=limit))
+        except CorpusPublicationRefused as exc:
+            return CaseDiscovery(
+                query=query, index=self.name, coverage=Coverage.NOT_ASSESSED,
+                filters={k: v for k, v in (("court", court), ("from_year", from_year),
+                                           ("to_year", to_year)) if v is not None},
+                why=f"Published legal source is not usable: {exc}")
+
+    def _discover(self, query: str, *, court: str | None = None,
+                  from_year: int | None = None, to_year: int | None = None,
+                  limit: int = 20) -> CaseDiscovery:
         """Cases, ranked by their best paragraph. BK-25-AC1.
 
         ONE FTS QUERY, GROUPED, and not a second ranking. The paragraph
@@ -356,8 +389,8 @@ class AuthorityIndexSearch:
             return CaseDiscovery(query=query, index=self.name, coverage=Coverage.ANSWERED,
                                  identity=identity, filters=filters, cases=(),
                                  why=court_said)
-        pooled = self.search(query, court=court, from_year=from_year,
-                             to_year=to_year, limit=DISCOVERY_POOL)
+        pooled = self._search(query, court=court, from_year=from_year,
+                              to_year=to_year, limit=DISCOVERY_POOL)
         if pooled.coverage is Coverage.NOT_ASSESSED:
             return CaseDiscovery(query=query, index=self.name,
                                  coverage=Coverage.NOT_ASSESSED,
@@ -395,6 +428,15 @@ class AuthorityIndexSearch:
 
     def expand(self, case_id: str, *, query: str | None = None,
                limit: int = 200) -> CaseExpansion:
+        try:
+            return self._published_read(lambda: self._expand(case_id, query=query, limit=limit))
+        except CorpusPublicationRefused as exc:
+            return CaseExpansion(case_id=case_id, index=self.name,
+                                 coverage=Coverage.NOT_ASSESSED,
+                                 why=f"Published legal source is not usable: {exc}")
+
+    def _expand(self, case_id: str, *, query: str | None = None,
+                limit: int = 200) -> CaseExpansion:
         """Every indexed paragraph of one case, BY LOCATOR, in source order.
 
         `complete` IS `False` BY CONSTRUCTION for this index: it holds the
@@ -423,7 +465,7 @@ class AuthorityIndexSearch:
                 "attributable_kinds", "")
             match = _fts_query(query) if query else None
             if match:
-                where, args = "paras match ?", [f'case_id:"{case_id}" AND ({match})']
+                where, args = "case_id = ? and paras match ?", [case_id, match]
             else:
                 where, args = "case_id = ?", [case_id]
             rows = con.execute(
@@ -447,6 +489,13 @@ class AuthorityIndexSearch:
                  f"hold the case under another id, or not at all"))
 
     def passage(self, locator: str) -> Paragraph | None:
+        """Exact paragraph or unavailable; None is NOT proof of corpus absence."""
+        try:
+            return self._published_read(lambda: self._passage(locator))
+        except CorpusPublicationRefused:
+            return None
+
+    def _passage(self, locator: str) -> Paragraph | None:
         """ONE paragraph, by its exact chunk id. `None` means not held --
         which the caller must not read as absence of the law; the index says
         which kinds it holds."""
@@ -467,6 +516,14 @@ class AuthorityIndexSearch:
         return _paragraph(row) if row else None
 
     def resolve(self, citation: str) -> CitationResolution:
+        try:
+            return self._published_read(lambda: self._resolve(citation))
+        except CorpusPublicationRefused as exc:
+            return CitationResolution(raw=citation, key=reporter_key(citation) or "?",
+                                      state=ResolutionState.INDEX_UNAVAILABLE,
+                                      why=f"Published legal source is not usable: {exc}")
+
+    def _resolve(self, citation: str) -> CitationResolution:
         """A typed citation, to exactly one case or to nothing. BK-38-AC1.
 
         Through the identity index's `citations` table on the reporter KEY --
@@ -516,8 +573,8 @@ def _fts_query(raw: str) -> str | None:
     read as a corpus that does not hold the section.
     """
     cleaned = _OPERATORS.sub(" ", raw)
-    terms = [t for t in (re.sub(r"\W+", "", w) for w in cleaned.split())
-             if len(t) > 1]
+    # Punctuation is a boundary, not permission to invent a concatenated word.
+    terms = [t for t in re.findall(r"[^\W_]+", cleaned) if len(t) > 1]
     if not terms:
         return None
     return " ".join(f'"{t}"' for t in terms)

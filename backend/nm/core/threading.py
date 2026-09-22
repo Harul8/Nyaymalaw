@@ -40,7 +40,7 @@ that the advocate has the facts to make and the product does not.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 
 from nm.domain.matter import Fact, Matter, Thread
@@ -100,9 +100,8 @@ class BindResult:
     looks_like: int = 0
     """HOW MANY DISPUTES THE MESSAGE APPEARED TO DESCRIBE.
 
-    Reported, never acted on. The read behind it measures 2-3 of 6, so a
-    file is not split on it -- the advocate is told the count and asked,
-    and one sentence from them opens the second thread."""
+    A reported count alone creates nothing. Only validated source-span
+    allocations create separate working disputes; the count is diagnostic."""
     """Did anything actually COUNT the disputes in this message?
 
     False means the read did not run, and the single thread below is a
@@ -111,17 +110,9 @@ class BindResult:
     described one dispute."""
 
     others: tuple[Thread, ...] = ()
-    """ALWAYS EMPTY NOW, and kept so the shape does not churn.
-
-    A message describing several disputes used to open a thread for
-    each and return the rest here. It no longer does: the count read
-    measures 2-3 of 6 and is unstable on identical input, so the file
-    is not split on it -- `looks_like` carries the count and the engine
-    states it to the advocate instead.
-
-    The field stays because the callers that add these to the matter
-    are the ones a future confirmed split would use, and deleting them
-    would mean writing them again."""
+    """Other working disputes inventoried by this turn, not yet advised on."""
+    allocations: tuple[tuple[str, tuple[str, ...]], ...] = ()
+    """Current-message spans scoped to dispute IDs, never a copied mixed brief."""
 
     @property
     def blocks(self) -> bool:
@@ -135,6 +126,7 @@ def identifiers_in(text: str) -> dict[str, str]:
     are one identifier, because an identifier that only matches its own spelling
     is not an identifier.
     """
+
     found: dict[str, str] = {}
     for kind, pattern in _IDENTIFIERS:
         m = pattern.search(text or "")
@@ -163,6 +155,52 @@ def bind(matter: Matter, message: str, fact: Fact,
     the person holding the file.
     """
     disclosed = identifiers_in(message)
+
+    # Successful source-bound inventory: keep each working dispute visible.
+    # The model proposes organisation, not factual truth or legal completion.
+    # Validate again at this boundary so a caller cannot bypass interpret().
+    if described:
+        if any(not d.quoted or any(s not in message for s in d.spans)
+               or (d.thread_id and matter.thread(d.thread_id) is None)
+               for d in described):
+            return BindResult(BindState.UNBINDABLE, None, False,
+                              "dispute allocation is not source-bound",
+                              question=("I could not reliably place these instructions. "
+                                        "Which dispute should I work on?"))
+        if (matter.threads and any(not d.thread_id for d in described)
+                and opens_new_dispute is not True):
+            # Legacy single-dispute reads may continue the sole record, but
+            # cannot spawn duplicates from a clarification.
+            if len(matter.threads) == 1 and opens_new_dispute is False and len(described) == 1:
+                described = (replace(described[0], thread_id=matter.threads[0].id),)
+            else:
+                return BindResult(BindState.AMBIGUOUS, None, False,
+                                  "existing and new disputes were not distinguished",
+                                  question=("I have not reliably distinguished the existing "
+                                            "disputes from any new one. Please choose the dispute "
+                                            "on the board; I have kept your instructions."))
+        made, allocations = {}, {}
+        for d in described:
+            thread = (matter.thread(d.thread_id) if d.thread_id
+                      else Thread.create(label=_dispute_label(d)))
+            thread = _with_identifiers(thread, identifiers_in("\n".join(d.spans)))
+            made[thread.id] = thread
+            allocations[thread.id] = tuple(dict.fromkeys(
+                (*allocations.get(thread.id, ()), *d.spans)))
+        if thread_hint and thread_hint not in made:
+            target = matter.thread(thread_hint)
+            if target is None:
+                return BindResult(BindState.UNBINDABLE, None, False,
+                                  "selected dispute is not on this matter",
+                                  question=("That dispute is not on this matter. "
+                                            "Please select it again."))
+            made[target.id], allocations[target.id] = target, ()
+        active = made[thread_hint] if thread_hint else next(iter(made.values()))
+        return BindResult(BindState.BOUND, active, matter.thread(active.id) is None,
+                          "instructions allocated to source-bound working disputes",
+                          looks_like=len(made),
+                          others=tuple(t for t in made.values() if t.id != active.id),
+                          allocations=tuple(allocations.items()))
 
     # 1. The advocate named the thread.
     if thread_hint:
@@ -270,10 +308,8 @@ def bind(matter: Matter, message: str, fact: Fact,
         BindState.AMBIGUOUS, None, False,
         f"{len(matter.threads)} open threads and no number of record in the message",
         question=(
-            f"Which thread does this belong to — {labels}? I will not guess from "
-            f"the wording: two disputes between the same parties are the ordinary "
-            f"case, and attaching facts to the wrong one puts the wrong posture "
-            f"and the wrong limitation on them."))
+            f"I have not reliably placed this update. Does it concern {labels}? "
+            "You can also select the dispute on the board. Your instructions are saved."))
 
 
 
@@ -328,10 +364,7 @@ def _with_identifiers(thread: Thread, disclosed: dict[str, str]) -> Thread:
         merged.setdefault(k, v)
     if merged == thread.identifiers:
         return thread
-    return Thread(
-        id=thread.id, label=thread.label, aliases=thread.aliases,
-        identifiers=merged, posture=thread.posture, chronology=thread.chronology,
-        deferred_reason=thread.deferred_reason)
+    return replace(thread, identifiers=merged)
 
 
 def _label(message: str) -> str:

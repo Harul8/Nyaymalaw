@@ -188,13 +188,17 @@ def scripted_dates(user: str) -> str:
             "corrects": (_first_dated_id(user)
                          if any(w in said.lower() for w in _CORRECTS_DATE)
                          else ""),
+            "correction_instruction": next(
+                (said[i:i + len(w)] for w in _CORRECTS_DATE
+                 if (i := said.lower().find(w)) >= 0), ""),
         })
     if not events and "yesterday" in said.lower() and ref:
         import datetime
         on = datetime.date.fromisoformat(ref.group(1)) - datetime.timedelta(days=1)
         events.append({"event": snippet(said.split(".")[0], 70) or "an event",
                        "date_expression": "yesterday",
-                       "resolved": on.isoformat(), "documented": False})
+                       "resolved": on.isoformat(), "documented": False,
+                       "corrects": "", "correction_instruction": ""})
     return json.dumps({"events": events})
 
 
@@ -215,7 +219,8 @@ def scripted_dispute(user: str) -> str:
     # dispute. The verbatim guard in `dispute.interpret` refused the span and
     # turned it into `cannot_tell`, which is that guard doing its job on the
     # test double.
-    said = user.split("just said:", 1)[-1].rsplit(chr(10) * 2, 1)[0].lower()
+    said = user.split("[this turn]\n", 1)[-1].split("\n\n", 1)[0]
+    navigation = {"focus_thread_id": "", "focus_quote": "", "advance_quote": ""}
 
     # HOW MANY DISPUTES, counted the same deterministic way. The product
     # reads this with a model; the double marks off on the same ordinal
@@ -225,16 +230,16 @@ def scripted_dispute(user: str) -> str:
     described = _described_spans(said)
 
     for needle in _OPENS_A_DISPUTE:
-        if needle in said:
-            start = said.index(needle)
+        if needle in said.lower():
+            start = said.lower().index(needle)
             return json.dumps({
                 "verdict": "opens",
                 "quoted": said[start:start + len(needle)],
                 "why": f"the advocate marks it off with {needle!r}",
-                "disputes": described})
+                "disputes": described, **navigation})
     return json.dumps({"verdict": "continues", "quoted": "",
                        "why": "it adds detail to what is on the file",
-                       "disputes": described})
+                       "disputes": described, **navigation})
 
 
 def _described_spans(said: str) -> list[dict]:
@@ -247,7 +252,7 @@ def _described_spans(said: str) -> list[dict]:
     found nothing -- which is the failure the guard exists to cause, and
     a poor way to discover it.
     """
-    cuts = [(said.index(w), w) for w in _ENUMERATES if w in said]
+    cuts = [(said.lower().index(w), w) for w in _ENUMERATES if w in said.lower()]
     if len(cuts) < 2:
         return []
     cuts.sort()
@@ -257,7 +262,8 @@ def _described_spans(said: str) -> list[dict]:
         span = said[start:end].strip().rstrip(".,;")
         if len(span) < 12:
             continue
-        out.append({"quoted": span, "label": snippet(span, 60)})
+        out.append({"quoted": span, "label": snippet(span, 60),
+                    "thread_id": "", "additional_quotes": []})
     return out
 
 
@@ -375,8 +381,9 @@ def scripted_factors(user: str) -> str:
                 "kind": kind,
                 "fact_id": fact_id,
                 "quoted": user[i:i + len(needle) + 24].split("\n")[0].strip(),
-                "in_writing": "wrote" in lower or "writing" in lower
-                              or "letter" in lower,
+                "in_writing": (True if any(word in lower for word in
+                                          ("wrote", "writing", "letter"))
+                               else False if "oral" in lower else None),
                 "why": f"the account says {needle!r}",
             })
 
@@ -577,6 +584,7 @@ def scripted_theory(user: str) -> str:
         "chosen_because": "",
         "explains": ids,
         "concedes": [],
+        "unresolved": [],
         # EMPTY, WHICH IS THE ORDINARY ANSWER AND THE ONE WORTH SCRIPTING.
         # A double that always revised would make the persisted theory look
         # unstable in every offline test; one that never can would hide the
@@ -635,10 +643,9 @@ def scripted_exposure(user: str) -> str:
     between unrelated disputes*. It fires only where two disputes on the same
     file take opposite positions on a debt -- D7's own counterexample.
     """
-    lines = [ln.strip() for ln in (user or "").splitlines()
-             if "\t" in ln]
-    ids = [ln.split("\t", 1)[0].strip() for ln in lines]
-    labels = [ln.split("\t", 1)[1].lower() for ln in lines]
+    payload = json.loads(user.split("THE DISPUTES ON THIS FILE:\n", 1)[1])
+    ids = [row["id"] for row in payload["threads"]]
+    labels = [row["label"].lower() for row in payload["threads"]]
 
     recovery = next((i for i, lab in enumerate(labels) if "recovery" in lab), None)
     cheque = next((i for i, lab in enumerate(labels) if "cheque" in lab), None)
@@ -1084,7 +1091,22 @@ def scripted_investigation(user: str) -> str:
                        "purpose": "interpretation"})
 
 
+def scripted_step_dependency(user: str) -> str:
+    """Controlled independent-step fixture, NOT a semantic safety assessment.
+
+    Tests of the guard replace this responder with dependent/unknown results.
+    A scripted rehearsal cannot provide evidence of live classification quality.
+    """
+    try:
+        step = json.loads(user).get("step", "")
+    except (ValueError, AttributeError):
+        return json.dumps({"dependence": "unknown", "step": "", "reason": "No step supplied."})
+    return json.dumps({"dependence": "independent", "step": step,
+                       "reason": "Scripted independent-step fixture, not legal evaluation."})
+
+
 SCRIPTED_READS: dict[str, object] = {
+    "step_dependency": scripted_step_dependency,
     "investigation": scripted_investigation,
     "accrual": scripted_accrual,
     "consistency": scripted_consistency,

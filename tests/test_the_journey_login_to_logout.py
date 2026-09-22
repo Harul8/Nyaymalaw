@@ -256,7 +256,7 @@ def _reach_rail(page, width):
         f"advocate can work the matter they are in and reach no other one")
     toggle.click()
     page.wait_for_selector("#rail", state="visible", timeout=10000)
-    assert page.is_visible("#rail-body"), (
+    assert page.is_visible("#rail"), (
         f"at {width}px the control opened nothing")
 
 
@@ -430,7 +430,7 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
         "=== expected", arg=first, timeout=15000)
     assert page.get_attribute("#pane-advise", "data-matter-id") != second, (
         f"at {width}px clicking another row left the same matter open")
-    page.wait_for_selector("#thread h3.section", timeout=30000)
+    page.wait_for_selector("#thread .el > p.body", timeout=30000)
     assert f"Width {width} First Traders" in page.inner_text("#matter-heading")
     assert "Goods were supplied" in page.inner_text("#thread")
     assert not page.errors, f"at {width}px opening a file threw: {page.errors}"
@@ -539,7 +539,7 @@ def test_phase_4_a_brief_can_be_filed_without_a_mouse(page, journey):
     assert answer["committed"] == "committed" and answer["input_admitted"] is True
     assert answer["elements"], "a keyboard submit must release an actual nonempty answer"
     page.wait_for_selector("#send:not([disabled])", timeout=90000)
-    page.wait_for_selector("#thread h3.section", timeout=30000)
+    page.wait_for_selector("#thread .el > p.body", timeout=30000)
     assert BRIEF in page.inner_text("#thread")
     assert page.input_value("#message") == ""
     assert page.get_attribute("#pane-advise", "data-matter-id") == answer["matter_id"]
@@ -643,43 +643,19 @@ def test_phase_5b_the_answer_does_not_speak_engineering(page, journey):
 
 
 def test_phase_5c_the_answer_reads_as_a_brief_and_not_a_log(page, journey):
-    """BK-37. Sections, in the order counsel reads them.
-
-    J-6 measured a single-dispute answer at 31 elements in a flat sequence:
-    nothing wrong in it, no order anyone chose, and the two lines an advocate
-    acts on somewhere in the middle of nine "they will say" paragraphs.
-
-    THE ASSERTION IS ON HEADINGS AND NOT ON LENGTH. A shorter answer is not
-    the goal -- everything in those 31 elements was true and sourced, and
-    dropping any of it would be this product doing the one thing it exists
-    not to do. What changes is that each line is filed under the question it
-    answers, so a reader looking for the position is not reading the adverse
-    case to find it.
-    """
+    """DG-14: ordered prose, every substantive element kept, no internal labels."""
     _open_matter(page, journey)
-    _advise(page, BRIEF)
-    page.wait_for_selector("h3.section", timeout=60000)
-
-    # UPPER-CASED, because `h3.section` carries `text-transform: uppercase`
-    # and `inner_text` returns what is RENDERED. The first version of this
-    # phase compared against title case, so the intersection was empty and
-    # the order assertion read `[] == []` -- a check that passes on any
-    # product at all. That is S11 inside the suite written to catch S11, and
-    # it was found only because phase 9 failed on the same rendering.
-    headings = [h.strip().upper()
-                for h in page.locator("h3.section").all_inner_texts()]
-    assert headings, "the answer has no sections at all"
-
-    order = ["WHERE THIS STANDS", "TIME", "WHAT CUTS AGAINST US", "NEXT STEP",
-             "WHAT I STILL NEED", "WHY", "WHAT IT RESTS ON"]
-    seen = [h for h in order if h in headings]
-    assert len(seen) >= 2, (
-        f"fewer than two known sections were rendered, so there is no order "
-        f"to check and this phase would pass on anything: {headings}")
-    # THE ORDER IS THE PRODUCT'S, read back. A renderer that emitted them in
-    # arrival order would pass a membership check and fail the reader.
-    assert seen == [h for h in headings if h in order], (
-        f"the sections are not in reading order: {headings}")
+    with page.expect_response(lambda r: r.url.endswith('/api/turn')
+                              and r.request.method == 'POST') as returned:
+        _advise(page, BRIEF)
+    elements = returned.value.json()['elements']
+    assert len(elements) >= 2
+    paragraphs = page.locator('#thread .el > p.body').all_text_contents()
+    assert len(paragraphs) >= 2
+    assert elements[0]['kind'] in ('action', 'question')
+    assert paragraphs[0] == elements[0]['text'], 'the next step must still lead'
+    assert all(el['text'] in paragraphs for el in elements), 'a substantive element was lost'
+    assert page.locator('#thread h3.section, #thread .el .k').count() == 0
 
 
 def test_phase_5d_the_masthead_is_not_a_configuration_dump(page, journey):
@@ -854,16 +830,18 @@ def test_phase_8b_history_is_a_record_and_not_a_json_dump(page, journey):
     """
     _open_matter(page, journey, client="History Test Traders")
     _advise(page, BRIEF)
+    matter_id = page.get_attribute('#pane-advise', 'data-matter-id')
+    original = page.locator('#thread .el > p.body').all_text_contents()
+    assert original
 
     _tab(page, "history")
-    page.select_option("#history-matter", index=1)
+    page.select_option("#history-matter", value=matter_id)
     page.wait_for_selector("#pane-history .turn", timeout=30000)
-    page.wait_for_selector("#pane-history h3.section", timeout=30000)
+    page.wait_for_selector("#pane-history .el > p.body", timeout=30000)
 
     shown = page.inner_text("#pane-history")
-    assert "WHERE THIS STANDS" in shown.upper() or "NEXT STEP" in shown.upper(), (
-        f"History does not render the answer the advocate was given:\n"
-        f"{shown[:600]}")
+    assert page.locator('#pane-history .el > p.body').all_text_contents() == original
+    assert page.locator('#pane-history h3.section, #pane-history .el .k').count() == 0
     # NOT RAW, AND NOT DELETED. The JSON is behind the same door every served
     # turn already has.
     assert '"turn_id"' not in shown, (
@@ -881,6 +859,8 @@ def test_phase_9_reload_restores_the_matter(page, journey):
     _open_matter(page, journey, client=mine)
     _advise(page, BRIEF)
     before = _visible_text(page)
+    original = page.locator('#thread .el > p.body').all_text_contents()
+    assert original
     assert "Goods were supplied" in before
 
     page.reload()
@@ -902,7 +882,7 @@ def test_phase_9_reload_restores_the_matter(page, journey):
     # had the brief and none of the advice -- the third time in this suite
     # that waiting for a container rather than for the content reported a
     # working product as broken.
-    page.wait_for_selector("h3.section", timeout=30000)
+    page.wait_for_selector("#thread .el > p.body", timeout=30000)
     page.wait_for_selector("details.audit summary", timeout=30000)
     after = _visible_text(page)
 
@@ -910,12 +890,7 @@ def test_phase_9_reload_restores_the_matter(page, journey):
         "the brief the advocate wrote is not on the screen after a reload")
     # AND WHAT THEY WERE TOLD, not only what they said. A transcript that
     # restored the question and lost the answer would be the worse half.
-    # UPPER-CASED for the reason phase 5c records: `h3.section` is rendered
-    # `text-transform: uppercase`, and `inner_text` returns what is on the
-    # screen rather than what is in the markup.
-    loud = after.upper()
-    assert "WHERE THIS STANDS" in loud or "NEXT STEP" in loud, (
-        f"the served answer did not come back:\n{after[:600]}")
+    assert page.locator('#thread .el > p.body').all_text_contents() == original
     # A READ-BACK TURN SAYS SO. The run's latency, calls and cost are not on
     # the record, and rendering them as zeros would show a measurement nobody
     # made.
@@ -1007,8 +982,8 @@ def test_phase_13_a_send_that_fails_keeps_the_brief_and_offers_one_retry(
 
     shown = _visible_text(page)
     assert BRIEF[:40] in shown, "the brief the advocate wrote is gone"
-    assert page.input_value("#message").strip() == BRIEF.strip(), (
-        "the composer was cleared before the brief was known to be saved")
+    assert page.input_value("#message") == "", "submitted text still occupies the typing field"
+    assert page.locator('#thread .brief').last.inner_text() == BRIEF
     assert "Send this brief again" in shown, (
         "a failed send offers no way to try again")
     # AND IT SAYS WHETHER IT LANDED, which is the one question a failed send
@@ -1051,7 +1026,8 @@ def test_phase_13b_a_cancelled_turn_does_not_claim_it_was_not_saved(
     assert "Send this brief again" in shown
     # AND THE BRIEF IS STILL THERE. Cancelling must not cost them what they
     # wrote any more than a failure does.
-    assert page.input_value("#message").strip() == BRIEF.strip()
+    assert page.input_value("#message") == ""
+    assert page.locator('#thread .brief').last.inner_text() == BRIEF
 
 
 @pytest.mark.parametrize("width,height", WIDTHS,

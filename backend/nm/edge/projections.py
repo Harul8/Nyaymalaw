@@ -239,12 +239,14 @@ def board_projection(matter: Matter, deadlines, today=None) -> dict:
     rows = nearest_first([_thread_row(t, deadlines, today,
                                       currency=getattr(matter, "dependencies", None))
                           for t in matter.threads])
+    agenda = _briefing.dispute_agenda.project(matter)
     return {
         "state": "ok",
         "matter_id": matter.id,
         "title": matter.title,
         "version": matter.version,
         "threads": rows,
+        "agenda": agenda,
         # The regression to watch: this must be a function of thread count
         # alone, never of turns, facts, issues or authorities.
         "row_count": len(rows),

@@ -1,6 +1,5 @@
-# Registration scenarios linked to Implementation Plan F-A-02 and F-A-09.
-# The optional OpenAI choice follows the owner's 2026-09-21 amendment in BACKLOG.md.
-# Full-sheet generation is pending migration to the re-filed workbook schema.
+# GENERATED from docs/Nyaymalaw_Implementation_Plan.xlsx, row F-A-02, column "Executable scenarios (Gherkin)".
+# Edit the sheet, then run `python assurance/control_plane/plan_scenarios.py --write`.
 Feature: F-A-02 Register a private account with email and password
 
   Scenario: The register card shows the registration details and the privacy notice

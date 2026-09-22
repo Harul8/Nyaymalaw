@@ -136,7 +136,7 @@ class MatterSealer:
 
     # --------------------------------------------------------- the bytes ----
 
-    def seal(self, matter_id: str, data: bytes) -> bytes:
+    def seal(self, matter_id: str, data: bytes, *, create_key: bool = True) -> bytes:
         """Seal under THIS matter's key. THE KEY IS NOT IN HERE.
 
         An earlier draft embedded the wrapped key in every record as well as
@@ -146,7 +146,13 @@ class MatterSealer:
         is all it needs to say: both are things a reader must know before it
         can ask for a key, and neither is a key.
         """
-        _, data_key = self.matter_key(matter_id)
+        if create_key:
+            _, data_key = self.matter_key(matter_id)
+        else:
+            path = self._keys / f"{matter_id}.key"
+            if not path.is_file():
+                raise KeyUnavailable("The matter key is unavailable; no new key was created.")
+            _, data_key = self._read_key(matter_id, path)
         return json.dumps({
             "envelope": 1,
             "matter_id": matter_id,

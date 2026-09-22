@@ -2,6 +2,95 @@
 
 What is known, not done, and not yet a defect row. Opened 6 September 2026.
 
+## Active diagnostic pass — review and five live matters, 22 September 2026
+
+**DG-17 / DG-18 — conflicting and legacy instructions: IMPLEMENTED / scoped verification.** Owner authorised
+repair after the read-only prompt audit. Scope: cross-dispute identity/context
+and false-clear handling; supported date resolution and explicit correction
+provenance; uncertainty in proof/theory; procedural-role refusal and complete
+context; purpose-appropriate answers; revisable memory; conditional adversarial
+language; explanation policy; schema-field agreement; example-free production
+instructions. Repair contracts and consumers together, not only prompt wording.
+Owners BK-91/BK-94/BK-95/BK-96 remain partial. Record counterexamples and scoped
+test results in `backlog/evidence/legal-brain-20260922/prompt-consistency.md`
+and Before Build. No additional paid evaluation, legal sign-off, or whole-brain
+acceptance is implied. Agentified NM is reference-only and stays unchanged.
+
+Final frozen-source run: 401 passed, zero failures/errors/skips, including 68
+prompt/consumer regressions and 26 controlled browser checks (131.930 seconds).
+Reviewed population: 24 core prompt constructors, 19 system constants and 21
+transmitted schemas, plus provider/policing/tracing/configuration wrappers.
+Legacy findings also repaired unknown-writing semantics, advisory issue wording,
+unfinished repair admission and explicit unfiled-to-filed progression. Non-filed
+source explanations remain bounded; broader side-dependent advisory assessment
+and live semantic quality stay open under DG-13. This is not a full Class-A pass.
+
+**DG-15 — reasoning and communication: IMPLEMENTED / scoped verification.** Owner authorised
+implementation on 22 September 2026. Registered owners BK-91/BK-96/BK-29 remain
+partial; this is not their acceptance. Plan, scope, counterexamples and actual
+results: [reasoning/communication record](backlog/evidence/legal-brain-20260922/reasoning-communication.md).
+No new paid-judge or legal-signoff authority is inferred.
+
+**DG-16 — acknowledgement routed into substantive work: fixed and retested live.**
+The context wrapper incorrectly treated any continuation as matter work. Routing
+now distinguishes historical context from the current task. Actual Chrome verified
+acknowledgement-only and substantive follow-up boundaries and four saved History
+turns. Final focused suite: 187 passed; controlled browser suite: 26 passed. DG-13
+still blocks broader legal-quality acceptance. Fixed language no longer blames the
+advocate or equates limited screen permission with complete coverage. No safeguard
+was removed to make a response appear helpful.
+
+Owner requested verification of the attached two-sheet review, meaningful fixes,
+and five sequential synthetic matters through the signed-in Chrome account.
+Owners: BK-48 (plan reconciliation), BK-35/BK-65 (dated premises), BK-85-AC1
+(permitted processing), BK-91/BK-92 (grounded reasoning and evaluation).
+Before Build receives individually identified DIAGNOSTIC rows with reproduction,
+expected behaviour, actual result, fix, evidence and remaining scope. A declared
+route, an executable scenario and an observed passing journey are different claims.
+
+First repair the named-sheet/scenario contract while retaining original prose
+and historical evidence. Preserve planned-but-unexecuted scenarios explicitly.
+Then verify the limitation and served-path claims against source; implement
+generalised safeguards with counterexamples, not case-specific answers. Test
+each matter interactively, inspect retrieval and changing-fact reasoning, then
+reopen its saved history. Stop advancing on material defects, fix and recheck.
+Only GPT-4o mini is approved, with cumulative limits of forty turns and USD25.
+Do not silently use scripted responses, fabricated law or a different model.
+Qualified legal sign-off remains deferred by the owner; BK-85-AC3 stays NOT_RUN.
+Account/legal-policy gaps requiring unavailable decisions remain visible rather
+than being self-approved. Existing user matters and unrelated edits are preserved.
+Progress: scenario contract repaired; 115 LB/OM requirements reconciled; current
+registration/provider requirements amended; dependency-sensitive limitation
+enforcement and conservative live-call spending reservations implemented. Fourteen
+DIAGNOSTIC rows (DG-01–14) are recorded in Before Build, with evidence and explicit
+remaining scope. See `docs/backlog/evidence/legal-brain-20260922/README.md`.
+Final focused regression: 247 passed, zero failures/errors/skips; no paid model
+calls in this test suite and no inference of a full Class-A result.
+
+Status: PARTIAL / FIRST LIVE MATTER UNDER REVIEW. The owner explicitly approved
+account-wide OpenAI sharing, and it was enabled in signed-in Chrome. Two browser
+submissions (including a same-receipt retry) produced 26 real GPT-4o mini responses,
+estimated USD0.009025. DG-11's answer-order crash is repaired and live retry returned
+an answer. DG-12's compact header/composer and draft-preservation changes passed
+67 browser/structural checks and actual Chrome observation. DG-13 records the
+remaining pre-proceeding, dispute-separation and coverage-presentation failures.
+DG-14 now records one desktop sidebar with the profile at its foot, a full-height
+right conversation, no duplicate issue cards, and ordered answer paragraphs
+without internal section/type labels. Recorded identity is not a litigation role.
+All 115 distinct selected checks have a passing latest result across the broad
+run and 33-check affected-suite rerun; actual Chrome confirmed layout, opening
+record and History. Six superseded test expectations were updated without
+weakening receipt equality, stale-date or disclosure checks. See `dg14-ui.md`.
+DG-14 follow-up, 22 September: owner requested all four navigation tabs in one
+compact row above the matter board. Planned: a segmented navigation control with
+full labels, no wrapping or clipping, retained keyboard/current-page behaviour,
+and responsive plus actual Chrome verification. Status: DONE. Eleven focused
+browser checks pass, including six viewport widths and keyboard navigation.
+Actual Chrome shows all four full labels in one 41.6px-high control; the matter
+board starts 51.5px higher. No matter data or model behaviour changed.
+Zero of five live matters accepted as complete. No scripted result is substituted,
+and no full Class-A, production or legal-quality PASS is claimed.
+
 ## Active change — authenticated OpenAI text permission, 21 September 2026
 
 Owner explicitly approved disclosure and use of global direct OpenAI API
@@ -8551,4 +8640,39 @@ historical claims. Partial code is recorded, not completed professional advice;
 fallback, changing fact, action owner/time and qualified substantive proof stay
 open. See `docs/backlog/status.yaml` and the detailed adoption record in
 `docs/backlog/evidence/a3-conformance-packet-inventory.json`.
+
+### 22 September — selected chat-reference implementation (BK-37 / BK-38)
+
+Before Build LB-93–99 finalises the selected Agentified NM presentation patterns
+and current-code observations. Preserve the existing single left matter board,
+compact navigation and integrated composer. Add exact saved citation identities,
+readable links, an authorised paged passage reader, honest coverage labels,
+keyboard/mobile operation and asynchronous account/matter isolation. No source
+is identified from a bare section number or silently replaced with current law.
+The saved passage is not the whole document. Existing legal-quality and broader
+source/export obligations remain open. Start/build/test record and status:
+`docs/backlog/evidence/legal-brain-20260922/chat-references.md`.
+
+### 22 September — retrieval integrity and research-quality audit
+
+BK-25 / BK-38 / BK-84 / BK-91 / BK-95: tighten source withdrawal checks on every
+read, exact case expansion, honest search outcomes and bounds, query handling,
+and the separation of ranked candidates from assessed legal support. Record
+the paper comparison, acceptance, execution results and remaining quality work
+in `docs/backlog/evidence/legal-brain-20260922/retrieval-hardening.md`.
+This scoped work does not close the owning packets or certify legal recall.
+
+### 22 September — whole-matter loop and fresh US$1 live diagnostic
+
+BK-27 / BK-54 / BK-91 / BK-37 / BK-35 / BK-65 / BK-95:
+Before Build LB-109–116 records source-bound dispute inventory, scoped histories,
+prospective roles, derived review agenda, compact board and the actual Chrome
+retest. One fictional three-dispute matter ran on GPT-4o mini: 23 measured calls,
+US$0.008617. Inventory, pre-filing roles and persistence improved; substantive
+reasoning and communication FAILED. Further live submissions stopped on the
+material failure. General inferred-accrual and agenda corrections are distinct
+from the still-open semantic-grounding, synthesis, truncation and routing gaps.
+Evidence, implemented scope and remaining acceptance:
+`docs/backlog/evidence/legal-brain-20260922/dispute-loop.md`.
+No owning item is promoted to done, and no historical answer is overwritten.
 

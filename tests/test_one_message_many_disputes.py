@@ -64,7 +64,7 @@ def _described(*pairs: tuple[str, str]) -> tuple[Described, ...]:
 # --------------------------------------------------------------- the rule ---
 
 @pytest.mark.parametrize("n", [2, 3, 5])
-def test_a_message_describing_n_disputes_still_opens_one_thread(n):
+def test_a_source_bound_inventory_opens_each_dispute_without_shared_state(n):
     """THE INVARIANT, and it is the reverse of what this file used to assert.
 
     The count is not good enough to split a file on. It is good enough to
@@ -72,13 +72,14 @@ def test_a_message_describing_n_disputes_still_opens_one_thread(n):
     """
     described = _described(*((f"the {i}th thing that happened",
                               f"dispute {i}") for i in range(n)))
-    result = bind(_matter(), "several things have happened",
-                  _fact("several things have happened"), described=described)
+    message = "; ".join(d.quoted for d in described)
+    result = bind(_matter(), message, _fact(message), described=described)
 
     assert result.thread is not None
-    assert not result.others, (
-        "the file was split on a read that measures 2-3 of 6 across six "
-        "briefs and is unstable on identical input")
+    assert len(result.others) == n - 1
+    assert len({t.id for t in (result.thread, *result.others)}) == n
+    assert len(result.allocations) == n
+    assert all(not t.chronology and not t.posture.resolved for t in result.others)
     assert result.looks_like == n, (
         f"the count was neither acted on NOR reported, so the advocate has no "
         f"way to know the message read as {n} disputes")
@@ -92,16 +93,15 @@ def test_the_thread_is_labelled_from_the_first_dispute_read():
         ("he was put into possession and no sale deed followed", "sale deed"),
         ("two cheques came back unpaid", "dishonoured cheques"),
     )
-    result = bind(_matter(), "My client is a retired bank employee. First, ...",
-                  _fact("My client is a retired bank employee. First, ..."),
-                  described=described)
+    message = "My client is a retired bank employee. " + "; ".join(d.quoted for d in described)
+    result = bind(_matter(), message, _fact(message), described=described)
     assert result.thread.label == "sale deed"
     assert "retired bank employee" not in result.thread.label
 
 
 def test_a_single_described_dispute_reports_one():
     described = _described(("one thing happened", "the thing"))
-    result = bind(_matter(), "one thing", _fact("one thing"),
+    result = bind(_matter(), "one thing happened", _fact("one thing happened"),
                   described=described)
     assert result.looks_like == 1
     assert not result.others

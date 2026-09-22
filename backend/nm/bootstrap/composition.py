@@ -294,6 +294,13 @@ class Application:
         # the other way round. The trace still records the attempt, because a
         # refusal is exactly the call an operator wants to find later.
         self._model_adapter = model or build_model(self.config)
+        budget_path = settings.get("NM_EVAL_BUDGET_FILE")
+        if budget_path:
+            if not isinstance(self._model_adapter, OpenAIModelAdapter):
+                raise ValueError("A live evaluation budget requires the real OpenAI adapter.")
+            from nm.adapters.model.call_budget import CallBudget
+            self._model_adapter = self._model_adapter.with_call_budget(
+                CallBudget(Path(budget_path), settings.get("NM_EVAL_MAX_USD", "25")))
         self.model = PolicedModel(
             inner=TracedModel(inner=self._model_adapter),
             policy=self._gate.policy, audit=self._egress_audit,

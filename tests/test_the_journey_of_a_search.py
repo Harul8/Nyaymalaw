@@ -33,6 +33,7 @@ sys.path.insert(0, str(ROOT))
 
 sys.path.insert(0, str(ROOT / "backend"))
 
+from tests.test_the_journey_login_to_logout import _intake as _opening_intake  # noqa: E402
 from tests.test_the_journey_login_to_logout import _start_matter  # noqa: E402
 from tests.test_the_journey_login_to_logout import _tab as _open_surface  # noqa: E402
 
@@ -96,14 +97,9 @@ def _sign_in(page, journey):
 
 
 def _intake(page):
-    if page.is_hidden("#intake"):
-        return
-    page.fill("#in-client", "Research Traders")
-    page.fill("#in-adverse", "Kiran Steels")
-    page.fill("#in-scope", "recover the price of goods sold")
-    page.check("#in-capacity")
-    page.click("#in-go")
-    page.wait_for_selector("#intake", state="hidden", timeout=10000)
+    # Share the current visible opening journey, including expanding optional
+    # fields. Do not force-fill hidden controls or weaken research assertions.
+    _opening_intake(page, client="Research Traders")
 
 
 def _advise(page, message: str):

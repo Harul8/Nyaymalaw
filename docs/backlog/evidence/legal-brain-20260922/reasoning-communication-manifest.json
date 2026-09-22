@@ -1,0 +1,79 @@
+{
+  "scope": "DG-15/DG-16 scoped verification, not full Class-A or legal acceptance",
+  "base": "43f80a9",
+  "files": [
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\backend\\nm\\core\\conversation.py",
+      "Hash": "231076925F631247B67DCF0713619242C3807D248A8FD49A4C4F5A520E2FC3E9"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\backend\\nm\\core\\route.py",
+      "Hash": "7308DFF7484631157F5324C615F80350EDB7413B9FB8200644EA5B6DCA3722AF"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\backend\\nm\\core\\consistency.py",
+      "Hash": "620A8D1A835DCEBE8991615F015D05FB801BC005AC562B195FACA5A5554DA8D9"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\backend\\nm\\core\\theory.py",
+      "Hash": "F8F3E442B7057829EED71E1782953CCAB2058A8C901B17ACBE9711D0DF68295B"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\backend\\nm\\core\\turn.py",
+      "Hash": "EB87106E2EE87B1D8D70EFD7D05C4A72C4293945D5FD9493F436FB66395E329A"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\backend\\nm\\core\\step_dependency.py",
+      "Hash": "CC4B4A57A7D9BD6C1710CFDB9C774DB861D806AB5788597F267A5962DBB5014F"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\backend\\nm\\domain\\register.py",
+      "Hash": "50B783AEC0C2691D3C73EE3FA70752C924688A0778BF0373C85D033F7583790A"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\backend\\nm\\domain\\metrics.py",
+      "Hash": "A68539229440D824CCE028AE2B1626BE9631DA73C67A8C25FBCC4CA297F32965"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\backend\\nm\\adapters\\store\\sealing.py",
+      "Hash": "75C776AEF83DFF34BC83F34C9676754D994888496B404A8B50F1CAB5D110780F"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\assurance\\journeys\\judge.py",
+      "Hash": "71F91E7B9E9358BCC499FFEF2E2D64EAB21EEF3777FA2EEDD475F9FC204FAE05"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\tests\\test_reasoning_communication_discipline.py",
+      "Hash": "7EC2A5738AC61DC89892ACA665E31B08ED232F37C3E07DFC2350373137AD27E4"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\docs\\backlog\\evidence\\legal-brain-20260922\\reasoning-communication-final.xml",
+      "Hash": "1E1628F5D8637F484C657FB2881C5E9D374227168E7A0B0F0C67164B7AA4B3C2"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\docs\\backlog\\evidence\\legal-brain-20260922\\reasoning-communication-browser.xml",
+      "Hash": "8FB9674AA0BA05262AD0A7DD35B1871E57DF27FC4904AEB5CCF6866537D7A966"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\docs\\backlog\\evidence\\legal-brain-20260922\\reasoning-communication-plan.xml",
+      "Hash": "C61C23CD01DC7EBDB7BA1F51672450600E8D63C0AD852447439782AA1F435392"
+    },
+    {
+      "Path": "C:\\Users\\rahul\\Nyaymalaw\\docs\\Nyaymalaw_Implementation_Plan.xlsx",
+      "Hash": "83C887CB42A0207CA400C5D03713F3193BFF9A3FAA80AF078548431D1D29A433"
+    }
+  ],
+  "tests": {
+    "focused": 187,
+    "browser_controlled": 26,
+    "plan": 21
+  },
+  "full_backlog_lint": "20 problems; stale broad evidence and unresolved BK-76 test reference",
+  "live": {
+    "matters_accepted": 0,
+    "submissions_cumulative": 5,
+    "measured_calls_cumulative": 42,
+    "model": "gpt-4o-mini-2024-07-18",
+    "judge_runs": 0
+  }
+}

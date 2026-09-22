@@ -124,7 +124,7 @@ def test_every_gate_names_a_feature_and_a_visible_response():
 
 
 def test_unbuilt_gates_are_declared_unbuilt():
-    """ONE GATE IS UNBUILT, and the edit that got it there was deliberate.
+    """The remaining unbuilt population must be an explicit, current decision.
 
     THE FIVE SCREEN GATES LANDED ON 8 SEPTEMBER 2026 (BK-34). Until then
     `_run_screens` built five NOT_ASSESSED rows, watched `may_admit_substance`
@@ -135,17 +135,18 @@ def test_unbuilt_gates_are_declared_unbuilt():
     would be the specification a release behind the code, which `trace` T9
     refuses in as many words.
 
-    `G-LIMITATION` IS THE ONE THAT REMAINS, and it is unchanged. D2 computes
-    the position and D1 renders it BLOCKED with the reason where it could not
-    be computed — so the *state* is built. What is not built is the other half
-    of the condition the PRD states: whether the step being recommended is
-    merits work that DEPENDS on limitation. "Obtain the sale deed" does not;
-    "file the suit" does, and nothing before D5 can tell them apart. Firing on
-    the whole set would repeat G-POSTURE's recorded defect — a gate applied to
-    a case it was not written for.
+    G-LIMITATION remained unbuilt until 22 September: date computation alone
+    could not establish whether a proposed step depended on that date. DG-02
+    now binds a dependency assessment to the exact step and refuses dependent
+    or ambiguous steps while leaving independent work available. The served
+    tests demonstrate enforcement; live-model classification quality remains
+    a separate obligation. A whole-thread block would still be incorrect.
     """
     unbuilt = {g.id for g in GATES if not g.built}
-    assert unbuilt == {"G-LIMITATION"}, (
+    # DG-02: dependency-sensitive enforcement now covers the last gate.
+    # This inventory is paired with served positive/negative controls in
+    # test_limitation_step_gate, not accepted as proof of semantic quality.
+    assert unbuilt == set(), (
         "the unbuilt set changed — either something landed, or something "
         "regressed, and both need a deliberate edit here")
 

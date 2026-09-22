@@ -1,11 +1,11 @@
 """Case theory. D6.
 
-ONE THEORY PER THREAD, AND A MENU IS NOT A THEORY
----------------------------------------------------
-D6's first NEVER: *never offer two theories in parallel. A menu is the survey
-this document already rejects.* An advocate handed three theories has been
-handed the work back, so `for_thread` refuses a second one on the same thread
-rather than ranking them.
+ONE CURRENT POSITION PER THREAD, NOT ONE POSSIBLE HYPOTHESIS
+-----------------------------------------------------------
+The aggregate retains one preferred, revisable theory. That is not a ban on
+considering alternatives: material rival explanations and unresolved premises
+belong in the account and legal assessment. Do not assert contradictory facts
+as simultaneously established, or choose a winning story without support.
 
 A DEFENDING PARTY'S THEORY IS NOT "WE DENY"
 ---------------------------------------------
@@ -60,7 +60,7 @@ class Stance(str, Enum):
 @refuses_blank_text("chosen_because", "relief")
 @dataclass(frozen=True)
 class Theory:
-    """One sentence: what happened and why we win. D6's PRODUCES."""
+    """A supported, revisable position on the account, not a promise that we win."""
 
     thread: ThreadId
     theme: str
@@ -92,6 +92,8 @@ class Theory:
     """Adverse facts EXPRESSLY CONCEDED. Conceding is an answer; ignoring is not."""
     chosen_because: str = ""
     """Required for a DENIAL. See the module docstring."""
+    unresolved: dict[FactId, str] = field(default_factory=dict)
+    """Adverse propositions acknowledged but disputed, unverified or still open."""
 
     def __post_init__(self) -> None:
         if self.stance is Stance.DENIAL and blank(self.chosen_because):
@@ -109,6 +111,10 @@ class Theory:
             raise ValueError(
                 "a fact cannot be both explained and conceded. Which one it is "
                 "decides what is pleaded.")
+        if set(self.unresolved) & (set(self.explains) | set(self.concedes)):
+            raise ValueError("an adverse proposition cannot be resolved and unresolved")
+        if any(blank(key) or blank(reason) for key, reason in self.unresolved.items()):
+            raise ValueError("an unresolved adverse proposition needs its identity and reason")
 
 
 @implements("D6")
@@ -148,7 +154,7 @@ def unaccounted(adverse: tuple[FactId, ...], theory: Theory | None,
     """
     if theory is None:
         return tuple(adverse)
-    handled = set(theory.explains) | set(theory.concedes)
+    handled = set(theory.explains) | set(theory.concedes) | set(theory.unresolved)
     return tuple(f for f in adverse if f not in handled)
 
 
@@ -287,9 +293,10 @@ THEORY_SCHEMA: dict = {
         },
         "relief": {
             "type": "string",
-            "description": "What is asked for. Required unless this is a denial.",
+            "description": "What is asked for. Required for an affirmative theory; "
+                           "may be empty for denial or not_established. Do not invent relief.",
         },
-        "stance": {"type": "string", "enum": ["affirmative", "denial"]},
+        "stance": {"type": "string", "enum": ["affirmative", "denial", "not_established"]},
         "chosen_because": {
             "type": "string",
             "description": "Why a bare denial is the right strategy here. "
@@ -303,31 +310,45 @@ THEORY_SCHEMA: dict = {
             "type": "array", "items": {"type": "string"},
             "description": "Adverse fact ids this theory expressly CONCEDES.",
         },
+        "unresolved": {
+            "type": "array", "items": {
+                "type": "object", "additionalProperties": False,
+                "properties": {"fact_id": {"type": "string"},
+                               "why": {"type": "string"}},
+                "required": ["fact_id", "why"],
+            },
+            "description": "Adverse propositions disputed, unverified or still open, "
+                           "with the reason and material needed to resolve them.",
+        },
         "revises_because": {
             "type": "string",
             "description": "EMPTY STRING if the theory already on the thread "
                            "still holds and you are restating it. If you are "
-                           "CHANGING it, name what in the file no longer fits "
-                           "the old one -- a fact, a date, a provision. "
+                           "CHANGING it, state the supported material reason: "
+                           "new material, changed instructions, corrected interpretation "
+                           "or an earlier error. "
                            "'It could be phrased better' is not a reason.",
         },
     },
     "required": ["theme", "account", "legal_theory", "relief", "stance",
-                 "chosen_because", "explains", "concedes", "revises_because"],
+                 "chosen_because", "explains", "concedes", "unresolved", "revises_because"],
     "additionalProperties": False,
 }
 
 THEORY_SYSTEM = (
-    "You state ONE case theory for an Indian advocate: what happened and why "
-    "their client wins, in a sentence a judge could repeat back.\n\n"
-    "NOT TWO. A menu of theories hands the work back to the advocate.\n\n"
-    "Every adverse fact you are given must be either EXPLAINED by the theory "
-    "or expressly CONCEDED. A theory that works only because three of them "
-    "went unmentioned reads perfectly and loses.\n\n"
-    "A denial is a theory only when it is CHOSEN. \"The complainant has not "
-    "proved his case\" is a hope that the other side fails; if you answer "
-    "`denial`, `chosen_because` must say why that is the right strategy on "
-    "these facts."
+    "State the current preferred case theory for an Indian advocate in the "
+    "single record required by this schema. Explain what the supplied record "
+    "supports, not why the client must win. Compare plausible competing hypotheses "
+    "before selecting a provisional position; name any unresolved premise or "
+    "material alternative in the account or legal_theory. Do not erase alternatives "
+    "merely because the schema stores one current preferred theory. Do not assert "
+    "incompatible factual accounts as simultaneously established.\n\n"
+    "Account for every adverse proposition: explained, analytically conceded, "
+    "or unresolved with its disputed/unverified status and what would resolve it. "
+    "Do not manufacture an explanation or concede an allegation to complete a "
+    "record. No analytical concession authorises an admission or act.\n\n"
+    "Choose denial only for a supported strategic reason in chosen_because. "
+    "Use not_established when no preferred position can yet be supported."
 
     "\n\n" + PEER)
 
@@ -417,18 +438,18 @@ def build_theory_prompt(account: str, adverse_lines: tuple[str, ...],
         f"THE THEORY ALREADY ON THIS THREAD:\n"
         f"  {standing.theme}\n"
         f"  relief: {standing.relief or '(none stated)'}\n\n"
-        f"Your job is to REVISE it, not to replace it. If it still fits the "
-        f"file, restate it and leave `revises_because` EMPTY. Change it only "
-        f"where something in the file no longer fits, and say in "
-        f"`revises_because` what that was.\n\n"
+        f"Review the standing theory against the current task and evidence. "
+        f"Keep it if still best supported; reconsider for new material, a "
+        f"corrected interpretation, changed instructions or an identified earlier "
+        f"error. Explain a material change in revises_because.\n\n"
         if standing is not None else
-        "No theory has been formed on this thread yet. Form one and leave "
-        "`revises_because` empty.\n\n")
+        "No theory has been formed on this thread yet. Form one only if supported; "
+        "otherwise use not_established. Leave revises_because empty.\n\n")
     return Prompt(
         system=THEORY_SYSTEM,
         user=(f"WE ACT FOR: {acting_for}\n\n{current}"
-              f"ADVERSE FACTS, every one of which must be explained or "
-              f"conceded:\n{listed}\n\nTHE FILE:\n{account}"))
+              f"ADVERSE PROPOSITIONS, every one of which must be accounted for, "
+              f"including explicitly unresolved ones:\n{listed}\n\nTHE FILE:\n{account}"))
 
 
 @implements("D6")
@@ -474,6 +495,9 @@ def read_theory(said: dict, thread: ThreadId, side: Side,
     stance = (Stance.DENIAL if stance_said == "denial"
               else Stance.AFFIRMATIVE if stance_said == "affirmative"
               else Stance.NOT_ESTABLISHED)
+    if stance is Stance.NOT_ESTABLISHED:
+        return ReadTheory(examined=True, adverse=adverse,
+                          why_not="the record does not yet support a preferred theory")
 
     # ONLY IDS THAT ARE ACTUALLY ADVERSE. A theory claiming to explain a fact
     # nobody called adverse would shrink `unaccounted` without answering
@@ -484,6 +508,20 @@ def read_theory(said: dict, thread: ThreadId, side: Side,
                      if f in on_file)
     concedes = tuple(FactId(f) for f in _ids(said.get("concedes"))
                      if f in on_file and f not in set(explains))
+    unresolved_rows = said.get("unresolved", [])
+    if not isinstance(unresolved_rows, list) or any(
+            not isinstance(row, dict) or not isinstance(row.get("fact_id"), str)
+            or row["fact_id"] not in on_file or not isinstance(row.get("why"), str)
+            or not row["why"].strip() for row in unresolved_rows):
+        return ReadTheory(examined=True, adverse=adverse,
+                          refused="invalid unresolved propositions",
+                          why_not="unresolved propositions were not attributable "
+                                  "to the supplied record")
+    unresolved = {row["fact_id"]: row["why"].strip() for row in unresolved_rows}
+    if len(unresolved) != len(unresolved_rows):
+        return ReadTheory(examined=True, adverse=adverse,
+                          refused="duplicate unresolved proposition",
+                          why_not="the same proposition received multiple unresolved assessments")
 
     try:
         theory = Theory(
@@ -493,6 +531,8 @@ def read_theory(said: dict, thread: ThreadId, side: Side,
             relief=str(said.get("relief") or ""),
             stance=stance, for_side=side,
             explains=explains, concedes=concedes,
+            unresolved=unresolved,
+            revises_because=str(said.get("revises_because") or ""),
             chosen_because=str(said.get("chosen_because") or ""),
         )
     except ValueError as exc:
@@ -545,6 +585,7 @@ def from_stored(value) -> "Theory | None":
             for_side=Side(value.get("for_side") or Side.UNKNOWN),
             explains=tuple(FactId(f) for f in value.get("explains") or ()),
             concedes=tuple(FactId(f) for f in value.get("concedes") or ()),
+            unresolved=dict(value.get("unresolved") or {}),
             chosen_because=str(value.get("chosen_because") or ""),
         )
     except (ValueError, TypeError):

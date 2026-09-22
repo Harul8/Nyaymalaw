@@ -94,7 +94,7 @@ FACTOR_SCHEMA: dict = {
             # finding forces one, and the product then restarts a limitation
             # period on a letter that admits nothing. Same reason
             # `cannot_tell` is in the cause schema.
-            "enum": [*(k.value for k in READS), "none"],
+            "enum": [*(k.value for k in READS), "none", "cannot_tell"],
         },
         "fact_id": {
             "type": "string",
@@ -107,10 +107,11 @@ FACTOR_SCHEMA: dict = {
                            "the payment, verbatim. Empty when `kind` is `none`.",
         },
         "in_writing": {
-            "type": "boolean",
-            "description": "True only if the account says it was WRITTEN. A "
-                           "spoken admission is not an acknowledgment under "
-                           "s.18, however clear it was.",
+            "type": ["boolean", "null"],
+            "description": "True if the account expressly establishes writing; "
+                           "false if it expressly establishes an oral-only admission; "
+                           "null if writing is unestablished. Missing information "
+                           "is not an oral admission.",
         },
         "why": {
             "type": "string",
@@ -124,14 +125,16 @@ FACTOR_SCHEMA: dict = {
 
 SYSTEM = (
     "You read an Indian advocate's account of a matter and decide ONE thing: "
-    "does it describe a WRITING that admits the liability, or a PAYMENT made "
+    "does it describe an admission of liability, or a PAYMENT made "
     "on account of it — and which entry in the chronology is it.\n\n"
     "You are not deciding whether the claim is in time and you are not "
     "computing any date. Both of those are done for you from what you "
     "return.\n\n"
-    "Answer `none` unless the account plainly describes one. `in_writing` is "
-    "true only where the account says it was written; an admission made on the "
-    "telephone is not an acknowledgment under s.18 however clear it was.\n\n"
+    "Answer none only when the account can be assessed and describes no candidate; "
+    "cannot_tell when it cannot be assessed. For a candidate admission, in_writing "
+    "is true for established writing, false for established oral-only form, and "
+    "null where the form is unestablished. Do not infer a negative from missing "
+    "information. Legal effect remains for the retrieved provision and rule checks.\n\n"
     "`quoted` must be the advocate's own words, copied exactly. Never quote "
     "the questions put to them and never paraphrase."
 )
@@ -199,7 +202,7 @@ def build_prompt(quotable: Quotable, chronology: tuple[Fact, ...]):
     return Prompt(
         system=SYSTEM,
         user=(f"THE CHRONOLOGY (id, date, what it says). Name an id from here "
-              f"in `entry`; the statements are shown so you know which entry "
+              f"in `fact_id`; the statements are shown so you know which entry "
               f"is which:\n{entries}\n\n{quotable.block()}"),
     )
 
@@ -216,7 +219,9 @@ def read(said: dict, chronology: tuple[Fact, ...], quotable: Quotable,
     from memory cannot be constructed, and filling it with a summary of the
     section would defeat the type while satisfying it.
     """
-    kind_said = str(said.get("kind") or "none")
+    kind_said = str(said.get("kind") or "cannot_tell")
+    if kind_said == "cannot_tell":
+        return not_assessed("the supplied account does not establish a factor assessment")
     if kind_said == "none":
         return ReadFactors(examined=True, why_not=str(said.get("why") or ""),
                            quoted="")
@@ -259,7 +264,9 @@ def read(said: dict, chronology: tuple[Fact, ...], quotable: Quotable,
             "have.")
 
     # s.18 REQUIRES A WRITING, IN TERMS. A spoken admission does not restart.
-    if kind is FactorKind.ACKNOWLEDGMENT and not said.get("in_writing"):
+    if kind is FactorKind.ACKNOWLEDGMENT and not isinstance(said.get("in_writing"), bool):
+        return not_assessed("whether the reported admission was in writing is not established")
+    if kind is FactorKind.ACKNOWLEDGMENT and said.get("in_writing") is False:
         return ReadFactors(
             examined=True, quoted=quoted,
             why_not=("the account describes an admission that was not in "

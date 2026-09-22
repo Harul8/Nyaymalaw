@@ -15,6 +15,7 @@ features:
   delivered_by:
   - BK-31
   declared_in:
+  - backend/nm/adapters/mail/outbox.py
   - backend/nm/adapters/store/directory.py
   - backend/nm/edge/api.py
   does:

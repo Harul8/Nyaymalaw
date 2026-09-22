@@ -45,7 +45,7 @@ def _run(tmp_path, *messages):
 def _cross_file(out):
     return [e.text for e in out.answer.elements
             if e.text.startswith("Across this file")
-            or "CROSS-FILE PASS DID NOT RUN" in e.text]
+            or "complete comparison between these disputes" in e.text]
 
 
 # ============== E-082: exactly once, empty or not, every file ==============
@@ -102,13 +102,14 @@ def test_an_exposure_between_a_thread_and_itself_is_refused():
                      consequence="y")
 
 
-def test_an_exposure_naming_a_thread_the_file_does_not_hold_is_dropped():
+def test_an_exposure_naming_a_thread_the_file_does_not_hold_is_not_a_clean_read():
     kept = adv.read_exposures({"exposures": [
         {"from_thread": "th_1", "to_thread": "th_2", "what": "a",
          "consequence": "b"},
         {"from_thread": "th_1", "to_thread": "th_9", "what": "c",
          "consequence": "d"}]}, ("th_1", "th_2"))
-    assert len(kept) == 1
+    assert kept is None
+    assert adv.cross_thread(("th_1", "th_2"), kept).state is adv.ExposureState.NOT_RUN
 
 
 # ================= E-083: an attack is answered or resolved ================
@@ -117,7 +118,7 @@ def test_an_exposure_naming_a_thread_the_file_does_not_hold_is_dropped():
 def test_the_other_sides_case_reaches_the_advocate(tmp_path):
     grounds = [e.text for e in _run(tmp_path).answer.elements
                if e.kind is ElementKind.GROUND
-               and e.text.startswith("They will say")]
+               and e.feature == "D7" and not e.disclosure]
     assert grounds, "the other side's case was never put"
 
 

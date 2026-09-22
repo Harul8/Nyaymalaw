@@ -291,9 +291,8 @@ INVENTORY_SCHEMA: dict = {
                 "properties": {
                     "what": {
                         "type": "string",
-                        "description": "The item, in a few words — 'the "
-                                       "original agreement', 'the WhatsApp "
-                                       "exchange', 'the site engineer'.",
+                        "description": "A concise, identifiable description of "
+                                       "the item actually mentioned in the account.",
                     },
                     "holder": {
                         "type": "string",
@@ -330,11 +329,11 @@ INVENTORY_SYSTEM = (
     "You read an Indian advocate's account of a matter and list the EVIDENCE "
     "it mentions — documents, records, messages, and people who saw "
     "something.\n\n"
-    "For each, say WHO HAS IT and WHAT FORM it is in. `form` matters because a "
-    "photocopy is not the document: whether secondary evidence is admissible "
-    "under s.65 is the whole answer on a file where the original sits with the "
-    "other side.\n\n"
-    "Use `not_assessed` for anything the account does not say. Do NOT decide "
+    "For each, say WHO HAS IT and WHAT FORM it is in. Keep original, copy, "
+    "reported existence and inspected material distinct. Form alone does not "
+    "establish admissibility, authenticity or weight.\n\n"
+    "For an unestablished holder use unknown; for an unestablished form use "
+    "not_assessed, matching each field's own vocabulary. Do NOT decide "
     "whether an item is admissible or how much weight it carries — those are "
     "separate questions and they are not yours.\n\n"
     "`quoted` must be the advocate's own words, copied exactly. Return an "

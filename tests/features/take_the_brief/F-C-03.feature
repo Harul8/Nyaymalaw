@@ -1,4 +1,4 @@
-# GENERATED from docs/Nyaymalaw_Implementation_Plan.xlsx, row F-C-03, column "Scenarios (Given / When / Then)".
+# GENERATED from docs/Nyaymalaw_Implementation_Plan.xlsx, row F-C-03, column "Executable scenarios (Gherkin)".
 # Edit the sheet, then run `python assurance/control_plane/plan_scenarios.py --write`.
 Feature: F-C-03 Live words while the advocate speaks
 

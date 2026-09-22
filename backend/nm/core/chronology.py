@@ -48,6 +48,7 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 
+from nm.core.date_resolution import resolve as resolve_calendar_expression
 from nm.domain.matter import Certainty, Fact, FactId
 from nm.domain.quotable import Quotable
 from nm.domain.text import fold, refuses_blank_text, snippet
@@ -81,8 +82,7 @@ DATE_SCHEMA: dict = {
                     "date_expression": {
                         "type": "string",
                         "description": "The EXACT words that give the date — "
-                                       "'yesterday', '15 April', 'last "
-                                       "Deepavali'. Copied character for "
+                                       "copied character for "
                                        "character from the message. EMPTY if "
                                        "they gave no date for this event.",
                     },
@@ -108,15 +108,19 @@ DATE_SCHEMA: dict = {
                                        "the chronology you were given. Empty "
                                        "otherwise, which is the ordinary "
                                        "answer. Use it when they say the "
-                                       "earlier entry was wrong — 'sorry, that "
-                                       "is wrong', 'I meant', 'it is actually' "
-                                       "— or when they give the same event a "
-                                       "different date. A NEW event on a "
-                                       "different day is NOT a correction.",
+                                       "earlier instruction is being corrected. "
+                                       "A conflicting source or a different date "
+                                       "alone is NOT a correction.",
+                    },
+                    "correction_instruction": {
+                        "type": "string",
+                        "description": "Exact current advocate words instructing replacement "
+                                       "of the earlier account, separate from the date itself. "
+                                       "Empty for additional, disputed or contradictory evidence.",
                     },
                 },
                 "required": ["event", "date_expression", "resolved",
-                             "documented", "corrects"],
+                             "documented", "corrects", "correction_instruction"],
                 "additionalProperties": False,
             },
         },
@@ -135,14 +139,16 @@ SYSTEM = (
     "empty and the event is recorded as undated — which is an ordinary thing "
     "on a real file. An invented date produces a limitation calculation the "
     "advocate will act on, and nothing downstream can tell it from a real one. "
-    "'Some time last year', 'a few months ago' and 'around Diwali' do NOT fix "
-    "a date. 'Last Deepavali' does, if you know the year's festival date; if "
-    "you do not, leave it empty.\n\n"
+    "Resolve only a fully specified supplied calendar date or reproducible "
+    "calendar arithmetic from the stated reference. External calendar knowledge, "
+    "missing years, cultural events and approximate ranges do not supply a date. "
+    "Leave them undated pending verified material or clarification.\n\n"
     "`date_expression` is copied CHARACTER FOR CHARACTER from the message. It "
     "is what lets the advocate see what you read the date from.\n\n"
-    "`documented` is true only where they say it comes from a document — a "
-    "notice dated the 15th, a receipt, an order sheet. What they remember is "
-    "asserted, however confidently they say it."
+    "`documented` records an attributed documentary origin only, not inspection, "
+    "authenticity or proof. Recollection remains asserted. A differing source is "
+    "not authority to replace an earlier account. Set corrects only with a separate "
+    "verbatim correction_instruction from the current advocate contribution."
 )
 
 
@@ -299,6 +305,13 @@ def interpret(quotable: Quotable, reference: date, data: dict,
         corrects = str(raw.get("corrects") or "").strip()
         if corrects and corrects not in known:
             corrects = ""
+        instruction = str(raw.get("correction_instruction") or "").strip()
+        # Admission requires a separately attributable current instruction.
+        # A model still interprets its meaning; a bare date/old context cannot
+        # authorise a replacement. The case-file correction route remains available.
+        if corrects and (not Quotable(turn=quotable.turn).accepts(instruction)
+                         or not instruction or instruction == expr):
+            corrects = ""
 
         if not iso:
             # NO DATE IS AN ANSWER. The event is on the chart, undated.
@@ -315,7 +328,7 @@ def interpret(quotable: Quotable, reference: date, data: dict,
 
         # GUARD 1 -- the span must be the ADVOCATE'S words, not the prompt's.
         # The same `quotable` the prompt was built from (B-108).
-        if not quotable.accepts(expr):
+        if not Quotable(turn=quotable.turn).accepts(expr):
             out.append(DatedEvent(
                 event=event, state=DateState.UNDATED, certainty=certainty,
                 refused=f"the date was read from {expr!r}, which is not in "
@@ -328,6 +341,14 @@ def interpret(quotable: Quotable, reference: date, data: dict,
             out.append(DatedEvent(
                 event=event, state=DateState.UNDATED, certainty=certainty,
                 refused=f"{iso!r} is not a date"))
+            continue
+
+        established = resolve_calendar_expression(expr, reference)
+        if established is None or established != on:
+            out.append(DatedEvent(
+                event=event, state=DateState.UNDATED, certainty=certainty,
+                date_expression=expr, reference=reference.isoformat(),
+                refused="the supplied expression does not reproducibly establish this date"))
             continue
 
         out.append(DatedEvent(

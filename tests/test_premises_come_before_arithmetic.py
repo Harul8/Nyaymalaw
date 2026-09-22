@@ -253,10 +253,19 @@ def test_a_corrected_trigger_date_is_not_served_as_current(tmp_path):
     The correction supersedes the fact the limitation rests on, and P18's
     currency marks the deadline stale -- it cannot be served as current."""
     c = _client(tmp_path)
-    # A curated cause so the first computation is a real (COMPUTED) deadline.
+    # Retrieval alone does not approve application to an event. Establish the
+    # premise explicitly so this test still corrects a REAL deadline, not an
+    # inferred date dressed as one.
     out = _turn(c, "We act for the plaintiff at Hyderabad. Goods were supplied "
                    "against invoices on 14 March 2023 and were never paid for.")
     matter_id = out["matter_id"]
+    tid = c.get(f"/api/matters/{matter_id}").json()["threads"][0]["thread_id"]
+    approved = c.post(f"/api/matters/{matter_id}/threads/{tid}/premises/accrual_rule",
+                      json={"statement": "The identified invoices fell due on 14 March 2023",
+                            "source": "the advocate's review of the invoices",
+                            "expected_version": out["matter_version"]})
+    assert approved.status_code == 201, approved.text
+    _turn(c, "Recalculate on the recorded accrual premise.", matter_id)
     board = c.get(f"/api/matters/{matter_id}").json()["threads"][0]
     assert board["next_deadline"], "no deadline to correct"
 

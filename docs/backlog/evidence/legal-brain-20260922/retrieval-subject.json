@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "scope": "Retrieval hardening local targeted evidence; not a full gate or release stamp",
+  "base_commit": "43f80a9bc4272c898bc93f949e3a3e64d9fe21dd",
+  "working_tree": "dirty; preserved pre-existing changes",
+  "files_sha256": {
+    "backend/nm/adapters/search/authority.py": "7145d5ddb1fccffe3825526572f96c9f2644e0c49bd7a77341df1c1af1e89a83",
+    "backend/nm/adapters/evidence/corpus.py": "1f0970b4bb55bee4be34d39a66682f79943b7d1473c474483c578ba941ac8613",
+    "backend/nm/core/investigation.py": "addb98b0431285cd95f601755b5b8864a2b697b8d028d9e6758b545f15e79eb2",
+    "backend/nm/core/conversation.py": "343c5d4dab800cf221aea30882b191fe27ea82b84f5f7a50b24f4a9e50d529f9",
+    "backend/nm/core/grounding.py": "60f1713a93debbf6647b3c31be5fed47acb5278e9200a7c8d6ae62146140b544",
+    "backend/nm/core/turn.py": "8a77add89338575530bc1f413c455adb9b4956d2a79c1cadd119e538c79c7c3f",
+    "backend/nm/ports/evidence.py": "86aa402723b5cf931457a993880f853ffcc187701971e32f6056028312cbae21",
+    "tests/test_retrieval_trust_boundaries.py": "b458970aca8f79f6ae58d4a66471c09a7066aa63fe05b90137e9d0841512d0f9",
+    "tests/test_the_journey_of_a_search.py": "e0b450e1ae66af99400d804174b0f82e8795c668b84dad8c4edcd8fe03799879"
+  },
+  "results": {
+    "core": {"collected": 369, "passed": 366, "failed": 3, "skipped": 0},
+    "browser": {"collected": 7, "passed": 7, "failed": 0, "skipped": 0},
+    "corpus": {"collected": 6, "passed": 6, "failed": 0, "skipped": 0}
+  },
+  "live_model": "NOT_RUN",
+  "full_gate": "NOT_RUN"
+}

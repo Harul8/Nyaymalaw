@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="26" time="27.976" timestamp="2026-09-22T07:52:13.849687+05:30" hostname="Haarul_LOQ"><testcase classname="tests.test_single_board_conversation" name="test_one_board_and_reachable_account_without_a_ribbon_over_chat[390-844]" time="5.444" /><testcase classname="tests.test_single_board_conversation" name="test_one_board_and_reachable_account_without_a_ribbon_over_chat[768-1024]" time="3.211" /><testcase classname="tests.test_single_board_conversation" name="test_one_board_and_reachable_account_without_a_ribbon_over_chat[1280-900]" time="3.031"><failure message="assert (32.609375 &lt;= 1)">page = &lt;Page url='http://127.0.0.1:56387/'&gt;
+journey = {'box': Served(app=&lt;fastapi.applications.FastAPI object at 0x000002FAAC1ABE30&gt;, application=&lt;nm.bootstrap.composition....ourney0')), 'base': 'http://127.0.0.1:56387', 'advocate': 'adv_journey', 'password': 'Journey-password-not-a-secret-1'}
+width = 1280, height = 900
+
+    @pytest.mark.parametrize("width,height", WIDTHS)
+    def test_one_board_and_reachable_account_without_a_ribbon_over_chat(
+        page, journey, width, height,
+    ):
+        client = f"Synthetic recorded client {width}"
+        _open_matter(page, journey, client=client, width=width, height=height)
+        mid, _ = saved(page)
+        _advise(page, BRIEF)
+        page.wait_for_function("document.getElementById('rail-body').children.length === 0")
+        data = page.request.get(f"{journey['base']}/api/matters/{mid}").json()
+        assert len(data["threads"]) &gt; 0, "removing issue cards must not remove saved issues"
+        assert page.locator("#matter-board").count() == 1
+        assert page.locator("#rail-body .row").count() == 0
+        assert page.locator("#rail-meta").inner_text() == ""
+        if width &lt;= 820:
+            page.click("#matters-toggle")
+        page.locator("#board-fields").filter(has_text=client).wait_for()
+        assert client in page.locator("#matter-board").inner_text()
+        assert "Kiran Steels" in page.locator("#matter-board").inner_text()
+        assert "our client" not in page.locator("#rail").inner_text().lower()
+        if width &lt;= 820:
+            page.click("#matters-toggle")
+        else:
+            assert page.locator("#sidebar-board &gt; #rail").count() == 1
+            chat = page.locator(".conversation").bounding_box()
+            sidebar = page.locator("#masthead").bounding_box()
+            profile = page.locator("#account-toggle").bounding_box()
+            assert chat and sidebar and profile
+&gt;           assert chat["y"] &lt;= 1 and chat["height"] &gt;= height - 1
+E           assert (32.609375 &lt;= 1)
+
+tests\test_single_board_conversation.py:44: AssertionError</failure></testcase><testcase classname="tests.test_single_board_conversation" name="test_resizing_moves_one_board_and_keeps_it_reachable" time="2.625" /><testcase classname="tests.test_single_board_conversation" name="test_answer_is_ordered_paragraphs_not_internal_labels" time="2.664" /><testcase classname="tests.test_every_legal_signal_remains_visible_in_the_browser" name="test_all_domain_signals_cross_the_real_renderer_without_a_fold[390-844]" time="3.720" /><testcase classname="tests.test_every_legal_signal_remains_visible_in_the_browser" name="test_all_domain_signals_cross_the_real_renderer_without_a_fold[768-1024]" time="3.102" /><testcase classname="tests.test_every_legal_signal_remains_visible_in_the_browser" name="test_all_domain_signals_cross_the_real_renderer_without_a_fold[1280-900]" time="3.090" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_only_plain_ground_is_ever_folded" time="0.003" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_spoken_half_is_the_complement_and_not_a_second_list" time="0.002" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_fold_says_how_much_is_inside_it" time="0.002" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_advocates_own_words_are_still_marked_as_theirs" time="0.002" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_a_disclosure_still_looks_different_from_an_assertion" time="0.002" /><testcase classname="tests.test_the_screen_never_folds_a_disclosure" name="test_the_rendered_turn_puts_no_disclosure_inside_a_fold" time="0.452" /><testcase classname="tests.test_the_page_and_the_script_agree" name="test_every_element_the_script_reaches_for_is_on_the_page" time="0.002" /><testcase classname="tests.test_the_page_and_the_script_agree" name="test_the_registration_outcome_is_wired_in_both_directions" time="0.008" /><testcase classname="tests.test_the_page_and_the_script_agree" name="test_the_outcome_card_reports_failure_as_well_as_success" time="0.001" /><testcase classname="tests.test_the_page_and_the_script_agree" name="test_every_password_reveal_is_a_button_and_not_a_submit" time="0.001" /><testcase classname="tests.test_the_page_and_the_script_agree" name="test_stacking_check_preserves_inherited_value_and_catches_real_overrides" time="0.001" /><testcase classname="tests.test_the_page_and_the_script_agree" name="test_the_build_banner_draws_above_the_gate" time="0.002" /><testcase classname="tests.test_the_page_and_the_script_agree" name="test_the_scan_would_catch_a_missing_element" time="0.002" /><testcase classname="tests.test_the_page_and_the_script_agree" name="test_late_rail_work_cannot_overwrite_newer_navigation" time="0.001" /><testcase classname="tests.test_the_page_and_the_script_agree" name="test_public_registration_sends_email_without_invitation_or_profile_claims" time="0.002" /><testcase classname="tests.test_the_page_and_the_script_agree" name="test_registration_surface_control_catches_each_failure" time="0.017" /><testcase classname="tests.test_the_page_and_the_script_agree" name="test_the_sign_in_page_matches_the_plan_and_workspace_is_visible_before_matter_work" time="0.001" /><testcase classname="tests.test_the_page_and_the_script_agree" name="test_the_sign_in_and_workspace_scan_can_see_each_planted_failure" time="0.005" /></testsuite></testsuites>

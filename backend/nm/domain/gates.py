@@ -240,28 +240,19 @@ GATES: tuple[Gate, ...] = (
     ),
     Gate(
         id="G-LIMITATION",
-        condition="Merits work is done on a thread whose limitation has not "
-                  "been computed.",
+        condition="A proposed directive depends on an unresolved or conditional "
+                  "limitation position, or its independence cannot be established.",
         states=("computed", "not_applicable", "not_computed"),
         response=Response.BLOCK,
         scope=Scope.STEP,
         persistence=Persistence.TURN,
         recovery=Recovery.ADVOCATE,
-        visible="Nothing side-dependent is recommended until the period is "
-                "computed, and the reason is named.",
+        visible="The dependent directive is replaced by a question naming the "
+                "unresolved premise. Independent evidence gathering remains available.",
         feature="D1",
-        # UNBUILT, DELIBERATELY, and the reason is in
-        # `test_unbuilt_gates_are_declared_unbuilt`: the STATE is computed and
-        # rendered, but nothing can yet tell whether the step being
-        # recommended is merits work that DEPENDS on limitation. "Obtain the
-        # sale deed" does not; "file the suit" does. Firing on the whole set
-        # applies a gate to cases it was not written for -- G-POSTURE's
-        # recorded defect.
-        #
-        # I built it and had to back it out: it suppressed the action on every
-        # uncomputed thread, which broke slice 4's tested contract that *the
-        # action says which* window could not be established.
-        built=False,
+        # Dependency classification is bound to the exact proposed sentence.
+        # Missing/conditional computation does not suppress the whole thread.
+        built=True,
     ),
     Gate(
         id="G-PREMISE",

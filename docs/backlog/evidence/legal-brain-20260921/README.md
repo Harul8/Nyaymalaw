@@ -185,8 +185,9 @@ the actual server-side refusal is independently exercised in the API suite.
 Ruff and layercheck passed (181 modules for layercheck). The earlier 60-second
 browser shutdown error did not recur in the 38-phase run; its original cause is
 not claimed fixed. Code Review Graph was used in local FTS mode, with direct
-source review for dynamic bindings and unindexed new files. No external graph
-embeddings were sent.
+source review for dynamic bindings and unindexed new files. Direct MCP review
+calls requested no external embeddings; the subsequent commit hook is a separate
+event, recorded below.
 
 The workbook amendment is pending, not reported as applied. The declared bundled
 Node packages directory is empty and @oai/artifact-tool cannot import. Separately,
@@ -197,7 +198,23 @@ Do not turn that history back into current requirements to obtain a green check.
 The F-A-02 fixture now names the explicit owner amendment instead of claiming it
 was newly generated. Full plan reconciliation and full Class-A remain open.
 
-No real account has been opted in on the owner's behalf, no paid OpenAI request
-has run (USD0), and no production evidence or counsel review is promoted. The
+No real account has been opted in on the owner's behalf, no paid matter-model
+evaluation has run (USD0), and no production evidence or counsel review is promoted. The
 scoped, budgeted synthetic evaluation mechanism and broader legal-brain acceptance
 remain unfinished work, separately from the text-permission implementation.
+
+### Commit-hook correction, after 43f80a9
+
+The existing enabled Git hook invoked its separate cloud code-index refresh.
+Despite Python not resolving in PowerShell, it resolved inside the Git hook's
+shell. `graph_vectors.py --embed` invokes OpenAI automatically and suppresses
+successful command output. The resulting index holds embeddings for the newly
+added permission definitions under
+`openai:text-embedding-3-large@https://api.openai.com/v1`.
+Therefore a statement that this entire work caused no external provider calls
+would be wrong. No client-matter evaluation was run; the code-index invocation
+is distinct from the approved GPT-4o mini matter batch and its USD0 usage. Its
+own incremental token usage and cost were not reported by the hook and are
+unknown. No key value was printed, no real-account acceptance was recorded,
+and the hook was not modified. This correction is left uncommitted to avoid
+invoking that automatic external refresh again without reviewing its authority.

@@ -65,14 +65,13 @@ def _considered(threads, born):
 
 # ------------------------------------------------------------------ J-5 ---
 
-def test_the_exposure_prompt_carries_no_internal_ids():
-    """THE LEAK AT ITS SOURCE. A prompt that sends ids gets ids back."""
+def test_the_exposure_prompt_binds_ids_but_keeps_prose_labelled():
+    """DG-17: structured identity is necessary; prose must still use labels."""
     prompt = build_exposure_prompt(
         (("thr_abc123def456", "Supply of steel"),
          ("thr_999888777666", "Cheque bounce")))
-    assert "thr_" not in prompt.user, (
-        f"the prompt sends this product's own keys, so the read will answer "
-        f"in them:\n{prompt.user}")
+    assert "thr_abc123def456" in prompt.user
+    assert "only in from_thread/to_thread; use labels in prose" in prompt.system
     assert "Supply of steel" in prompt.user, (
         "the disputes are not named at all, so the read has nothing to "
         "distinguish them by")

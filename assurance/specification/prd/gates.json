@@ -116,7 +116,7 @@
   },
   {
     "id": "G-LIMITATION",
-    "condition": "Merits work is done on a thread whose limitation has not been computed.",
+    "condition": "A proposed directive depends on an unresolved or conditional limitation position, or its independence cannot be established.",
     "states": [
       "computed",
       "not_applicable",
@@ -126,9 +126,9 @@
     "scope": "step",
     "persistence": "turn",
     "recovery": "advocate",
-    "visible": "Nothing side-dependent is recommended until the period is computed, and the reason is named.",
+    "visible": "The dependent directive is replaced by a question naming the unresolved premise. Independent evidence gathering remains available.",
     "feature": "D1",
-    "built": false
+    "built": true
   },
   {
     "id": "G-PREMISE",

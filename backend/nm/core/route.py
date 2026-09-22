@@ -71,18 +71,22 @@ ROUTE_SCHEMA: dict = {
                 "`matter` for work about a particular matter, including non-contentious "
                 "work. `question_of_law` for a genuinely abstract legal enquiry, not "
                 "a contextual continuation of this file. `about_the_product` for "
-                "capability questions. `neither` for purely conversational content "
-                "without a substantive request. `cannot_tell` preserves uncertainty. "
+                "capability questions. `neither` when the current contribution "
+                "requests only conversational acknowledgement or contains no new "
+                "substantive work, even if it refers to an existing brief. "
+                "`cannot_tell` preserves uncertainty. "
                 "Read meaning and context; length and keywords do not decide."),
         },
         "depth": {
             "type": "string",
-            "enum": ["a_question", "a_full_brief"],
+            "enum": ["a_question", "a_full_brief", "explanation", "assessment"],
             "description": (
                 "`a_full_brief` when the advocate has set out a situation for "
                 "you to work through. `a_question` when they are asking one "
                 "thing. NOT a judgement about length -- a long question is a "
-                "question and a short brief is a brief."),
+                "question and a short brief is a brief. Use explanation for "
+                "requested understanding, or assessment for an evaluation without "
+                "a requested next action. These remain matter work with all safeguards."),
         },
         "why": {
             "type": "string",
@@ -101,8 +105,11 @@ SYSTEM = (
     "a request for a full workup by objective, not by message length.\n\n"
     "A contextual legal question belongs to its matter. A genuinely unrelated "
     "abstract question remains abstract even when a file is open; the presence of "
-    "a file alone does not settle intent. Pure courtesy need not trigger substantive "
-    "work. Mixed contributions containing substantive matter work must not lose it "
+    "a file alone does not settle intent. Decide what work the CURRENT contribution "
+    "authorises. A reference to the brief is not itself an instruction to analyse it. "
+    "An acknowledgement-only contribution belongs to neither, including when there "
+    "are unresolved issues in the file. Historical tasks are context, not renewed "
+    "instructions. Mixed contributions containing new substantive matter work must not lose it "
     "through the conversational-only boundary. Preserve uncertainty with cannot_tell. "
     "This decision grants no authority, establishes no facts and clears no screen."
 )
@@ -145,8 +152,7 @@ def build_prompt(message: str, on_file: str = ""):
     """
     from nm.ports.model import Prompt
 
-    context = (f"ALREADY ON THIS FILE. A message that continues any of this is "
-               f"part of the matter, however short:\n{on_file.strip()}"
+    context = (f"ALREADY ON THIS FILE (recorded context, not a new instruction):\n{on_file.strip()}"
                f"\n\n" if on_file.strip() else "")
     return Prompt(system=SYSTEM,
                   user=f"{context}The advocate typed:\n{message.strip()}")
@@ -167,7 +173,8 @@ def interpret(said: dict) -> ReadRoute:
     raw = str(said.get("discloses") or "").strip().lower()
     depth = str(said.get("depth") or "").strip().lower()
     why = snippet(said.get("why"), 160)
-    mode = Mode.FULL_BRIEF if depth == "a_full_brief" else Mode.SHORT_QUESTION
+    mode = {"a_full_brief": Mode.FULL_BRIEF, "explanation": Mode.EXPLANATION,
+            "assessment": Mode.ASSESSMENT}.get(depth, Mode.SHORT_QUESTION)
 
     if raw == "about_the_product":
         return ReadRoute(

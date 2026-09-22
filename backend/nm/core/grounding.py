@@ -53,6 +53,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from nm.core.source_excerpt import capture as capture_source
 from nm.domain.answer import Answer, Element
 from nm.domain.citation import (
     cases_named,
@@ -208,7 +209,9 @@ def _covered_provisions(findings: tuple[Finding, ...]) -> set[str]:
     """
     covered: set[str] = set()
     for f in findings:
-        for text in (f.ref, f.proposition, f.locator, f.span):
+        # The proposition is the question/claim being assessed. Counting it
+        # would let a requested but never retrieved citation certify itself.
+        for text in (f.ref, f.locator, f.span):
             covered |= provisions_cited(text)
             # `Article_65` and `::6::` do not match the prose patterns, so the
             # locator's own conventions are read as well. A locator format the
@@ -288,4 +291,11 @@ def verify(answer: Answer, relied_on: tuple[Finding, ...],
     report.violations.extend(verify_quotes(answer.elements, quotable))
     report.violations.extend(verify_citations(answer.elements, quotable))
     report.violations.extend(verify_findings(relied_on))
+    # Drawer text is published content too. A correct digest proves identity,
+    # not retrieval: require the exact captured Finding, including its namespace.
+    captured = tuple(capture_source(f) for f in quotable)
+    for element in answer.elements:
+        if element.source is not None and element.source not in captured:
+            report.violations.append(GroundingViolation(
+                "G-GROUND", "the saved source excerpt was not retrieved on this turn"))
     return report

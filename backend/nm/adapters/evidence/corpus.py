@@ -534,8 +534,7 @@ class CorpusEvidenceAdapter:
                 coverage=Coverage.HELD_NOT_FOUND,
                 missing=(
                     "the authority index is not built, so no judgment was "
-                    "searched. 451,553 attributable paragraphs are held and "
-                    "none of them was consulted on this turn. Build it with "
+                    "searched. No claim about the held population can be made. Build it with "
                     "`python pipeline/indexing/build_authority_index.py`."),
                 searched_stores=("authority_index:absent",),
             )
@@ -543,25 +542,46 @@ class CorpusEvidenceAdapter:
         terms = self._terms(need)
         if not terms:
             return EvidenceResult(
-                coverage=Coverage.NOT_HELD,
+                coverage=Coverage.NOT_ASSESSED,
                 missing="no searchable terms were identified in the question.",
                 searched_stores=("authority_index",))
 
-        con = sqlite3.connect(f"file:{self._authority_db}?mode=ro", uri=True)
+        con = None
         try:
+            con = sqlite3.connect(f"file:{self._authority_db}?mode=ro", uri=True)
+            identity = dict(con.execute("select key, value from identity"))
+            if not identity or not identity.get("corpus_version"):
+                return EvidenceResult(
+                    coverage=Coverage.NOT_ASSESSED,
+                    missing="the authority index carries no corpus identity; nothing was searched",
+                    searched_stores=())
             rows = con.execute(
-                """select case_id, case_name, court, year, para_type, chunk_id, text
+                """select rowid, case_id, case_name, court, year, para_type, chunk_id, text
                    from paras where paras match ?
                    order by rank limit ?""",
-                (" OR ".join(f'"{t}"' for t in terms),
+                ('text:(' + " OR ".join(f'"{t}"' for t in terms) + ')',
                  EXAMINED_CEILING + 1)).fetchall()
-        except sqlite3.OperationalError as exc:
+            # Count matches with the SAME tokenizer as retrieval. Substring
+            # matching counted 'title' in 'entitlement' yet rejected porter
+            # inflections that FTS had actually matched. Bound every probe to
+            # the candidate rows, never rescan the corpus to score a result.
+            matched_by_row = {r[0]: 0 for r in rows[:EXAMINED_CEILING]}
+            if matched_by_row:
+                slots = ','.join('?' for _ in matched_by_row)
+                for term in terms:
+                    for (row_id,) in con.execute(
+                        f'select rowid from paras where rowid in ({slots}) and paras match ?',
+                        [*matched_by_row, f'text:"{term}"'],
+                    ):
+                        matched_by_row[row_id] += 1
+        except sqlite3.Error as exc:
             return EvidenceResult(
-                coverage=Coverage.HELD_NOT_FOUND,
+                coverage=Coverage.NOT_ASSESSED,
                 missing=f"the authority index could not be queried: {exc}",
                 searched_stores=("authority_index",))
         finally:
-            con.close()
+            if con is not None:
+                con.close()
 
         # H4 — A CEILING THAT BINDS IS REPORTED, never silent.
         #
@@ -591,7 +611,7 @@ class CorpusEvidenceAdapter:
         # is counted and the count is reported.
         floor = 2 if len(terms) >= 2 else 1
         thin = 0
-        for case_id, case_name, court, year, para_type, chunk_id, text in rows:
+        for row_id, case_id, case_name, court, year, para_type, chunk_id, text in rows:
             if chunk_id in self._denylist():
                 continue
             kind = kind_for_corpus_label(para_type)
@@ -600,8 +620,7 @@ class CorpusEvidenceAdapter:
                 # reads exactly like a holding, so it is dropped here rather
                 # than ranked lower.
                 continue
-            body = (text or "").lower()
-            matched = sum(1 for t in terms if t in body)
+            matched = matched_by_row[row_id]
             if matched < floor:
                 thin += 1
                 continue
@@ -618,7 +637,7 @@ class CorpusEvidenceAdapter:
                 binding=ruling.status,
                 binding_for=need.jurisdiction,
                 binding_reason=f"{ruling.rule}: {ruling.reason}",
-                supports=True,
+                supports=None,
                 para_kind=kind,
                 treatment=self._citator.treatment(case_name, case_id=case_id),
                 governing_date=need.governing_date,
@@ -629,27 +648,27 @@ class CorpusEvidenceAdapter:
                 confidence=round(matched / len(terms), 2),
             ))
 
-        if findings:
-            findings.sort(key=lambda f: -(f.confidence or 0.0))
-            era = self._era_note(need)
-            cut = (f"The index returned more than {EXAMINED_CEILING} ranked "
-                   f"matches and only the first {EXAMINED_CEILING} were "
-                   f"examined. There may be authority I did not reach; this is "
-                   f"a bound on my search, not a statement about the corpus."
-                   if truncated else None)
-            return EvidenceResult(
-                coverage=Coverage.ANSWERED, findings=tuple(findings),
-                searched_stores=("authority_index",),
-                assumption=". ".join(x for x in (era, cut) if x) or None)
+        findings.sort(key=lambda f: -(f.confidence or 0.0))
+        cut = (f"The index returned more than {EXAMINED_CEILING} ranked "
+               f"matches and only the first {EXAMINED_CEILING} were "
+               f"examined. There may be authority I did not reach; this is "
+               f"a bound on my search, not a statement about the corpus."
+               if truncated else None)
+        omitted = len(set(self._primary_terms(need)) - set(terms))
+        query_note = (f"Searched authority index paragraph text for: {', '.join(terms)}. "
+                      f"Examined {len(rows)} ranked paragraph(s); {thin} failed "
+                      f"the {floor}-term lexical floor. This does not assess semantic support.")
+        if omitted:
+            query_note += (f" The query-term budget omitted {omitted} further input term(s); "
+                           "a narrower query may reach different material.")
+        if not findings:
+            query_note += (" No attributable candidate survived this search. "
+                           "That is not proof that the corpus holds no relevant authority.")
         return EvidenceResult(
-            coverage=Coverage.NOT_HELD,
-            missing=(
-                f"no attributable paragraph in the authority index matched at "
-                f"least {floor} of the terms {', '.join(terms)}."
-                + (f" {thin} paragraph(s) matched only one term and were rejected "
-                   f"as incidental rather than served as authority." if thin else "")
-                + " The index covers ratio, reasoning and order paragraphs only."),
-            searched_stores=("authority_index",))
+            coverage=Coverage.ANSWERED if findings else Coverage.SEARCHED_NO_MATCH,
+            findings=tuple(findings), missing=query_note if not findings else None,
+            searched_stores=("authority_index",),
+            search_note=" ".join(x for x in (self._era_note(need), query_note, cut) if x))
 
     # Words that say WHAT KIND of thing is wanted rather than what it is about.
     # In an authority search "is there any judgment we can rely on" is entirely
@@ -668,6 +687,12 @@ class CorpusEvidenceAdapter:
     }
 
     @classmethod
+    def _primary_terms(cls, need: EvidenceNeed) -> list[str]:
+        """Literal input words, without concatenating punctuation or losing numbers."""
+        words = re.findall(r"[^\W_]+", need.question.lower())
+        return list(dict.fromkeys(w for w in words if len(w) > 1 and w not in cls._SCAFFOLD))
+
+    @classmethod
     def _terms(cls, need: EvidenceNeed) -> list[str]:
         """The search terms, in the order they will be spent.
 
@@ -677,11 +702,7 @@ class CorpusEvidenceAdapter:
         subject -- and taking six terms positionally from the question alone
         spends every slot on scaffolding.
         """
-        words = re.findall(r"[a-zA-Z][a-zA-Z\-]{3,}", need.question.lower())
-        seen: list[str] = []
-        for w in words:
-            if w not in cls._SCAFFOLD and w not in seen:
-                seen.append(w)
+        seen = cls._primary_terms(need)[:8]
         # D3B — THE SUBJECT UNDER THE OTHER CODE, ADDED TO THE TERMS.
         #
         # "Case law is overwhelmingly pre-2024 and cites the old numbering, so
@@ -694,7 +715,7 @@ class CorpusEvidenceAdapter:
         # be right, and the advocate's own words stay at the front of the
         # budget — this widens recall rather than redirecting it.
         seen.extend(w for w in cls._corresponding_terms(need) if w not in seen)
-        return seen[:8]
+        return seen
 
     @implements("D4")
     def _era_note(self, need: EvidenceNeed) -> str | None:

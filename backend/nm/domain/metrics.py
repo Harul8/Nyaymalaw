@@ -77,6 +77,7 @@ class TurnMetrics:
     violations: list[Violation] = field(default_factory=list)
     gates_fired: list[GateFiring] = field(default_factory=list)
     grounding: dict = field(default_factory=dict)
+    step_assessments: list[dict] = field(default_factory=list)
     evidence_rounds: int = 0
     evidence_bound_hit: bool = False
     route_reads: int = 0
@@ -292,6 +293,9 @@ class TurnMetrics:
         with the matter key because it is privileged material.
         """
         record = self.as_served()
+        # Full candidate assessments never enter either metrics projection:
+        # a refused candidate is not advice. The encrypted transcript retains
+        # the diagnostic record; gate details carry the release explanation.
         record["gates_fired"] = [
             {k: v for k, v in g.items() if k not in self._FREE_TEXT}
             for g in record["gates_fired"]]

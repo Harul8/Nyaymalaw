@@ -39,9 +39,10 @@ ability to tell whether the step being recommended actually depends on
 limitation. My version fired on every thread and broke slice 4's tested
 contract that the action says WHICH window could not be established.
 
-So the row is DECLARED below rather than fixed, carrying the argument.
-The check still earns its place: it would catch the next feature that
-outran its gate without anybody deciding to let it.
+That historical exception was removed on 22 September 2026 (DG-02) when
+dependency-sensitive step enforcement landed. Uncertainty blocks the step,
+not the conversation. The check still catches features outrunning their gates;
+the separate served tests exercise the actual new enforcement boundary.
 """
 from __future__ import annotations
 
@@ -76,22 +77,7 @@ def _status() -> dict[str, str]:
 #: Features that legitimately claim to be done while a gate of theirs is
 #: unbuilt, with the REASON. Not a convenience list: each entry is a
 #: decision somebody made, written so it can be argued with.
-DECLARED: dict[str, str] = {
-    "G-LIMITATION":
-        "D1 is `tested` and this gate is deliberately unbuilt, per "
-        "`test_unbuilt_gates_are_declared_unbuilt`. D2 computes the "
-        "position and D1 renders it BLOCKED with the reason, so the STATE "
-        "is built. What is not built is the other half of the condition: "
-        "whether the step being recommended is merits work that DEPENDS "
-        "on limitation. `Obtain the sale deed` does not; `file the suit` "
-        "does, and nothing before D5 tells them apart. Firing on the "
-        "whole set applies a gate to cases it was not written for, which "
-        "is G-POSTURE's recorded defect. I BUILT IT AND BACKED IT OUT: "
-        "it suppressed the action on every uncomputed thread and broke "
-        "slice 4's tested contract that the action says WHICH window "
-        "could not be established, collapsing `assessed, no dated "
-        "deadline` and `nobody computed one` into one silence.",
-}
+DECLARED: dict[str, str] = {}
 
 
 def test_no_feature_claims_to_be_done_while_a_gate_of_its_own_is_unbuilt():

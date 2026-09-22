@@ -1,0 +1,72 @@
+{
+  "files": [
+    {
+      "sha256": "c98ba4382999fd39b57af6472e1786b3b396a32794464637c9928d37a093c224",
+      "path": "backend/nm/domain/source_excerpt.py"
+    },
+    {
+      "sha256": "07a0501d0f050b80ee918714351bfebdc8afba65fee0fd90c4e12f7585bc3421",
+      "path": "backend/nm/core/source_excerpt.py"
+    },
+    {
+      "sha256": "ad7ec1dcbf020c108be1a09b16e716074075af2b28e09d16f7d0fa11e59dc719",
+      "path": "backend/nm/domain/answer.py"
+    },
+    {
+      "sha256": "c70ee9b0570cef7fa0b6a3259366d1d01548804b3708aa4f41b2dd1317ce9024",
+      "path": "backend/nm/domain/turn_receipt.py"
+    },
+    {
+      "sha256": "f00e4af646cbdd5ee81eb7654dda2e99084e201fa7b3f667c6b5dc87242486dd",
+      "path": "backend/nm/core/grounding.py"
+    },
+    {
+      "sha256": "98a7e222def0080662860e5d0b84ec0c143348a11a8e0e9807ed6fef789b5b86",
+      "path": "backend/nm/core/turn.py"
+    },
+    {
+      "sha256": "214408c74d326c1fb7101a177bff1c674180a0d02abfaf080f1bac218a58205d",
+      "path": "backend/nm/edge/api.py"
+    },
+    {
+      "sha256": "91cb89480c3a8f5ddc3db8747853e993779a41edc95c23a390620b1dcb8d7aeb",
+      "path": "frontend/app.js"
+    },
+    {
+      "sha256": "a8fbe7398c702b52c3018067dfd64dc6c90042d190c78b100610c9802642dca7",
+      "path": "frontend/source-reader.js"
+    },
+    {
+      "sha256": "204d879b948d9efaac4baad04c919e4af47f0291b7a34819a76b302eaa09419f",
+      "path": "frontend/app.css"
+    },
+    {
+      "sha256": "7cf6aee61250c7e0165b8a08c2acd64c218039fed0d9ee6d726a635b9adb8893",
+      "path": "frontend/index.html"
+    },
+    {
+      "sha256": "0ab77ed763c6068e130009d1f8ce8994a2371f4fb2b36fd788cb1ab8c08eb701",
+      "path": "tests/test_saved_source_reader.py"
+    },
+    {
+      "sha256": "68f9c6d93d2d2563083d7b9741bb88eb1bfe451d8a55fb4599db180d4246ab96",
+      "path": "tests/test_source_reader_journey.py"
+    },
+    {
+      "sha256": "34f50c4cbfa7877e295297a19f36211abebb170ff0cf4c53be28d36a9680e429",
+      "path": "docs/Nyaymalaw_Implementation_Plan.xlsx"
+    },
+    {
+      "sha256": "61ef2f81e635adf64aefbe78ecaabd91902466a288c4dca7876e5c7f668f3359",
+      "path": "docs/backlog/evidence/legal-brain-20260922/chat-reference-core.xml"
+    },
+    {
+      "sha256": "8787fe88b0bb03a681279ffe5bef6a3ec8c21ee85cdcf7b094d2e54856d32d2d",
+      "path": "docs/backlog/evidence/legal-brain-20260922/chat-reader-browser.xml"
+    }
+  ],
+  "observed_at": "2026-09-22T10:29:23.8908494+05:30",
+  "head": "43f80a9bc4272c898bc93f949e3a3e64d9fe21dd",
+  "schema": 1,
+  "scope": "LB-93–99 bounded chat/source-reader verification, not full-tree release"
+}

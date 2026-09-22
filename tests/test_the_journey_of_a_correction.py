@@ -29,6 +29,7 @@ import pathlib
 
 import pytest
 
+from tests.test_the_journey_login_to_logout import _intake as _current_intake
 from tests.test_the_journey_login_to_logout import _start_matter
 from tests.test_the_journey_login_to_logout import _tab as _open_surface
 
@@ -118,14 +119,7 @@ def _sign_in(page, journey):
 
 
 def _intake(page):
-    if page.is_hidden("#intake"):
-        return
-    page.fill("#in-client", CLIENT)
-    page.fill("#in-adverse", "Kiran Steels")
-    page.fill("#in-scope", "recover the price of goods sold")
-    page.check("#in-capacity")
-    page.click("#in-go")
-    page.wait_for_selector("#intake", state="hidden", timeout=10000)
+    _current_intake(page, client=CLIENT)
 
 
 def _advise(page, message: str):
@@ -136,7 +130,13 @@ def _advise(page, message: str):
 
 
 def _tab(page, name: str):
+    matter_id = page.get_attribute('#pane-advise', 'data-matter-id')
     _open_surface(page, name)
+    # My work now deliberately opens the matter list, not a prior chat.
+    # Re-enter this journey's own file through its row, as the user must.
+    if name == 'advise' and matter_id:
+        page.locator(f'#rail-body [data-matter-id="{matter_id}"]').click()
+        page.wait_for_selector('#composer:not([hidden])')
 
 
 def _board_text(page) -> str:
@@ -146,7 +146,7 @@ def _board_text(page) -> str:
     written that way passes vacuously on `[] == []`. Phase 5c of the
     login-to-logout journey made exactly that mistake; this helper is the
     one place the case is normalised."""
-    return page.inner_text("#rail-body").lower()
+    return page.inner_text("#rail").lower()
 
 
 def _dated_entry(page):
@@ -279,7 +279,7 @@ def test_phase_3b_correcting_the_date_marks_exactly_the_dependents_stale(page, j
 
 def test_phase_4_the_board_shows_the_window_as_stale_not_as_the_deadline(page, journey):
     _tab(page, "advise")
-    page.wait_for_selector("#rail-body .row", timeout=15000)
+    page.wait_for_selector("#matter-board .row", timeout=15000)
     board = _board_text(page)
     assert "stale" in board, board
     assert "awaiting recomputation" in board, board
@@ -288,9 +288,9 @@ def test_phase_4_the_board_shows_the_window_as_stale_not_as_the_deadline(page, j
         "cannot recognise the number they were working to")
     assert "2035-03-14" in board, board
     # AND IT DOES NOT LEAD. The deadline field carries STALE, not the date.
-    row_text = page.locator("#rail-body .row").first.inner_text().lower()
+    row_text = page.locator("#matter-board .row").inner_text().lower()
     assert "stale — awaiting recomputation" in row_text, row_text
-    assert page.locator("#rail-body .row dt", has_text="deadline").count() >= 1
+    assert page.locator("#matter-board .row dt", has_text="deadline").count() >= 1
 
 
 # ====================================================== 5. the reload ===========
@@ -310,7 +310,7 @@ def test_phase_5_a_reload_reads_the_same_currency_from_the_file(page, journey):
     if page.is_hidden("#back"):
         page.locator("#rail-body .row").first.click()
         page.wait_for_selector("#back:not([hidden])", timeout=15000)
-        page.wait_for_selector("#rail-body .row dt", timeout=15000)
+        page.wait_for_selector("#matter-board .row dt", timeout=15000)
     board = _board_text(page)
     assert "stale" in board and "2035-03-14" in board, board
 

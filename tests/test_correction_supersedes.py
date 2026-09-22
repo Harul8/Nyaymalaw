@@ -60,7 +60,8 @@ MSG = "sorry, that is wrong. It is dated 15-4-2024"
 
 def _row(**kw):
     base = {"event": "It is dated", "date_expression": "15-4-2024",
-            "resolved": "2024-04-15", "documented": False, "corrects": ""}
+            "resolved": "2024-04-15", "documented": False, "corrects": "",
+            "correction_instruction": "sorry, that is wrong"}
     return {"events": [{**base, **kw}]}
 
 

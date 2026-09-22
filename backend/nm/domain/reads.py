@@ -83,6 +83,10 @@ class Read:
 #: on a schema in `backend/nm/` that is not here, so a twelfth read cannot be added
 #: without someone deciding which kind it is.
 READS: tuple[Read, ...] = (
+    Read("step_dependency", False,
+         "Assesses whether the exact proposed step depends on an unresolved "
+         "limitation position. Does not establish a date or law; unknown blocks "
+         "the step while evidence gathering and the conversation remain available.", echoes=True),
     Read("investigation", False,
          "Proposes a judgment search over exact current source spans. It cannot "
          "settle a legal identifier, deadline, fact or permission; returned "

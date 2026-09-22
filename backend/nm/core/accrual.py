@@ -65,9 +65,8 @@ ACCRUAL_SCHEMA: dict = {
             "type": "string",
             "description": (
                 "WHICH limb of the trigger this entry satisfies, in the "
-                "trigger's own words -- Article 54 runs from the date fixed "
-                "for performance OR from notice of refusal, and they give "
-                "different dates. One clause."),
+                "retrieved trigger's own words. Distinct alternatives must not "
+                "be collapsed. One clause; no invented trigger."),
         },
         "why": {
             "type": "string",
@@ -84,15 +83,10 @@ SYSTEM = (
     "An Indian advocate's chronology is below, and the statutory trigger that "
     "starts the limitation period for their cause of action.\n\n"
     "Name the ONE entry the period runs from.\n\n"
-    "THE TRIGGER IS THE QUESTION, NOT THE DATES. The earliest entry is very "
-    "often NOT the answer: a suit for specific performance runs from the date "
-    "fixed for performance, or from notice that performance was refused, and "
-    "not from the agreement -- which is usually the earliest thing on the "
-    "file. Read the trigger and find the entry that satisfies it.\n\n"
-    "WHERE THE TRIGGER HAS LIMBS, SAY WHICH ONE. If a date was fixed for "
-    "performance, that is the limb. If none was fixed and performance was "
-    "refused, the refusal is the limb. They give different dates and the "
-    "advocate needs to know which you used.\n\n"
+    "THE TRIGGER IS THE QUESTION, NOT THE DATES. Do not select the earliest "
+    "entry merely because it is earliest. Apply the supplied statutory trigger "
+    "to the attributed events. If it has alternative limbs, identify the supported "
+    "limb; unresolved applicability or competing dates require no selection.\n\n"
     "ANSWER WITH AN EMPTY `fact_id` IF NO ENTRY IS THAT EVENT. That is a real "
     "answer and the right one: the period will not be computed, the advocate "
     "will be told what was being looked for, and they can supply it. A wrong "

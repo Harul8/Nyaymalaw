@@ -84,9 +84,9 @@ PROOF_SCHEMA: dict = {
                         "description": "For OBTAINABLE ONLY: the specific "
                                        "document or evidence that would "
                                        "establish this, and where it "
-                                       "ordinarily sits. 'More evidence' is "
-                                       "not an answer. If you cannot name "
-                                       "one, the status is `absent`.",
+                                       "can be obtained on the supplied record. "
+                                       "If availability cannot be assessed, use "
+                                       "not_assessed, not absent.",
                     },
                     "dead_end": {
                         "type": "string",
@@ -112,13 +112,11 @@ SYSTEM = (
     "  obtainable  it is not held, and you can NAME what would get it\n"
     "  absent      nothing identified would establish it\n"
     "  not_assessed you cannot tell from what you were given\n\n"
-    "OBTAINABLE REQUIRES A NAMED DOCUMENT. 'The bank statement for March and "
-    "the ledger entry, both ordinarily with the client' is an answer; 'further "
-    "evidence' is not. If you cannot name the material, the honest status is "
-    "`absent` with the reason, and `absent` is what you must say however "
-    "unwelcome it is. An element reported as obtainable because that sounds "
-    "better than absent sends the advocate looking for a document that does "
-    "not exist.\n\n"
+    "OBTAINABLE REQUIRES SPECIFIC MATERIAL and a supported acquisition basis. "
+    "Do not invent a document or its availability. If the supplied record does "
+    "not let you assess availability, use not_assessed. Use absent only for an "
+    "identified evidential gap with its supported reason, not because information "
+    "is missing from this prompt. A proof gap is not a verdict on the case.\n\n"
     "Do not say anything about the client's honesty, reliability or "
     "character. You have not met them and hold nothing on which such a "
     "finding could rest, and you are speaking to their advocate.\n\n"

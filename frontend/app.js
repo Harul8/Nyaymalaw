@@ -23,6 +23,7 @@ const state = {
   // can refuse a write built on a file this tab has never read.
   matterVersion: null,
   matterReady: false,
+  disputeFocus: null,
   // B3-B5. The intake answers, held from the form until the first brief
   // carries them onto the file.
   intake: null,
@@ -133,8 +134,10 @@ async function saveProtectedDraft({previousKey = null} = {}) {
     };
     const savedAt = await draftVault.save(snapshot);
     if (previousKey && previousKey !== held.key) await draftVault.removeOwn(previousKey);
-    if (generation !== state.sessionGeneration || revision !== draftWrite || !ownsIntent(held)) return;
-    showDraftCheckpoint(savedAt);
+    if (generation !== state.sessionGeneration || !ownsIntent(held)) return false;
+    // A newer edit may have saved too. That does not undo protection of this
+    // receipt; it only owns the latest status notice.
+    if (revision === draftWrite) showDraftCheckpoint(savedAt);
     return true;
   } catch (error) {
     if (generation !== state.sessionGeneration || revision !== draftWrite || !ownsIntent(held)) return;
@@ -340,10 +343,9 @@ function reconcileIntent(transcript) {
     && turn.release_state === 'released').map(turn => turn.turn_id).filter(Boolean));
   activeIntent.pending = activeIntent.pending.filter((entry) => {
     if (!recorded.has(entry.turnId)) return true;
-    const receipt = transcript.find(turn => turn.turn_id === entry.turnId);
-    if (receipt.input_admitted === true && activeIntent.text.trim() === entry.brief.trim()) {
-      activeIntent.text = '';
-    }
+    // The protected receipt and the current typing draft are independent.
+    // Reconciliation must not consume a follow-up merely because its words
+    // happen to match the acknowledged message.
     if (matchesIntake(entry, activeIntent.intake)) activeIntent.intake = null;
     return false;
   });
@@ -385,6 +387,7 @@ function keepDraft() {
 // surface added later cannot be the one that keeps painting a matter after
 // the session behind it is gone.
 function clearPrivileged() {
+  closeSourceReader(false);
   if (draftVault) draftVault.lock();
   closeDraftRecovery();
   clearDraftNotices();
@@ -424,7 +427,7 @@ function clearPrivileged() {
    'who-detail', 'professional-approval', 'save-status', 'search-index', 'search-state', 'history-state']
     .forEach((id) => { const el = $(id); if (el) el.textContent = ''; });
   $('matter-heading').textContent = 'My work';
-  $('workspace-eyebrow').textContent = 'YOUR WORKSPACE';
+  $('matter-heading').removeAttribute('title');
   state.matterVersion = null;
   state.matterReady = false;
   state.intake = null;
@@ -838,7 +841,21 @@ function staleDeadlineFields(dl, t) {
 //   matter   the matter board on the left, the chat on the right
 function setWorkView(view) {
   $('pane-advise').dataset.view = view;
+  syncBoardHost();
 }
+
+// Move, never clone, the board: the list still belongs to My work and the
+// narrow-screen toggle still owns the drawer. Resize must preserve both.
+function syncBoardHost() {
+  const pane = $('pane-advise');
+  const rail = $('rail');
+  if (window.innerWidth > 820 && pane.dataset.view === 'matter') {
+    $('sidebar-board').appendChild(rail);
+  } else {
+    pane.insertBefore(rail, pane.querySelector('.conversation'));
+  }
+}
+window.addEventListener('resize', syncBoardHost);
 
 // ONE WAY OUT OF AN OPEN MATTER, whether to My work's list or to a new
 // opening. Any render still in flight for the old matter loses the right to
@@ -866,8 +883,9 @@ function matterFields(dl, m) {
   field(dl, 'client', m.client || 'not recorded');
   field(dl, 'against', m.opponent || 'not recorded');
   field(dl, 'deadline', deadlineField(m));
+  staleDeadlineFields(dl, m);
   field(dl, 'last worked', m.last_touched || 'never worked');
-  field(dl, 'posture', m.blocked
+  field(dl, 'position', m.blocked
     ? { pill: 'blocked', text: m.blocked }
     : { pill: 'unknown', text: 'no unresolved posture recorded' });
 }
@@ -879,7 +897,7 @@ async function showMatterList({ preserveIntent = false } = {}) {
   setWorkView('list');
   $('rail-title').textContent = 'Matters';
   $('matter-heading').textContent = 'My work';
-  $('workspace-eyebrow').textContent = 'YOUR WORKSPACE';
+  $('matter-heading').removeAttribute('title');
   updateWorkspace();
   window.dispatchEvent(new Event('nm:matter-changed'));
   const body = $('rail-body');
@@ -951,6 +969,7 @@ async function showThreadBoard(
     await saveProtectedDraft({previousKey});
   }
   selectIntent(matterId);
+  if (state.matterId !== matterId) state.disputeFocus = null;
   const generation = ++state.railGeneration;
   // OPENING A MATTER CLOSES THE LIST at narrow widths. Leaving it up would
   // put the advocate on the answer they asked for with the index still over
@@ -964,6 +983,7 @@ async function showThreadBoard(
   state.matterReady = false;
   updateWorkspace();
   $('matter-heading').textContent = 'Loading matter…';
+  $('matter-heading').removeAttribute('title');
   $('save-status').textContent = '';
   if (restore) {
     state.turns = [];
@@ -972,6 +992,7 @@ async function showThreadBoard(
   window.dispatchEvent(new Event('nm:matter-changed'));
   $('pane-advise').dataset.matterId = matterId;
   $('rail-title').textContent = 'Matter board';
+  $('rail-meta').textContent = '';
   $('back').hidden = false;
   $('matter-board').hidden = false;
   $('board-state').replaceChildren(stateBlock('building', 'Reading the matter board…'));
@@ -979,7 +1000,7 @@ async function showThreadBoard(
   // not leave the matter's details saying they are still being read.
   renderMatterBoard(matterId, generation);
   const body = $('rail-body');
-  body.replaceChildren(stateBlock('building', 'Loading threads…'));
+  body.replaceChildren();
 
   let data;
   try {
@@ -996,16 +1017,15 @@ async function showThreadBoard(
   } catch (e) {
     if (generation !== state.railGeneration) return;
     body.replaceChildren(stateBlock(
-      'unbuildable', `The thread board could not be built: ${e.message}`));
+      'unbuildable', `The matter could not be loaded: ${e.message}`));
     $('rail-meta').textContent = 'Matter could not be loaded';
     return;
   }
 
-  $('rail-meta').textContent = `${data.row_count} recorded issue${data.row_count === 1 ? '' : 's'}`;
+  $('rail-meta').textContent = '';
   $('matter-heading').textContent = data.title || 'Untitled matter';
-  $('workspace-eyebrow').textContent = 'MATTER WORKSPACE';
+  $('matter-heading').title = data.title || 'Untitled matter';
   $('save-status').textContent = 'Recorded file';
-  renderOpeningBrief(data.opening_brief);
   updateWorkspace();
   window.dispatchEvent(new Event('nm:matter-changed'));
 
@@ -1031,25 +1051,49 @@ async function showThreadBoard(
   if (restore && !(await restoreConversation(matterId, generation))) return;
   if (generation !== state.railGeneration) return;
 
-  body.replaceChildren(...data.threads.map((t) => {
-    const row = document.createElement('div');
-    // Unresolved posture renders LOUDLY, as a value, not as an empty field.
-    row.className = 'row static' + (t.loud ? ' loud' : '');
-    const title = document.createElement('div');
-    title.className = 'r-title'; title.textContent = t.thread;
-    const dl = document.createElement('dl'); dl.className = 'r-fields';
-    field(dl, 'our client', t.our_client_is === 'unknown'
-      ? { pill: 'unknown', text: 'unknown' } : t.our_client_is);
-    field(dl, 'side', t.side === 'unknown'
-      ? { pill: 'unknown', text: 'unknown — blocks advice' } : t.side);
-    field(dl, 'against', t.against);
-    field(dl, 'forum', t.forum);
-    field(dl, 'stage', t.stage);
-    field(dl, 'deadline', deadlineField(t));
-    staleDeadlineFields(dl, t);
-    row.append(title, dl);
-    return row;
-  }));
+  renderDisputeAgenda(body, data.agenda);
+}
+
+function renderDisputeAgenda(body, agenda) {
+  body.replaceChildren();
+  if (!agenda || !Array.isArray(agenda.disputes)) {
+    body.appendChild(stateBlock('unbuildable', 'Dispute progress could not be read.'));
+    return;
+  }
+  const rows = agenda.disputes;
+  if (!rows.some((r) => r.thread_id === state.disputeFocus)) state.disputeFocus = null;
+  const heading = document.createElement('h3');
+  heading.textContent = 'Disputes'; body.appendChild(heading);
+  const automatic = document.createElement('button');
+  automatic.type = 'button'; automatic.className = 'dispute-focus';
+  automatic.textContent = 'Whole matter';
+  automatic.setAttribute('aria-pressed', String(!state.disputeFocus));
+  automatic.onclick = () => { state.disputeFocus = null; renderDisputeAgenda(body, agenda); body.querySelector('button').focus(); };
+  body.appendChild(automatic);
+  const labels = { not_assessed: 'Not yet reviewed', needs_review: 'Needs review',
+    needs_information: 'Needs information', waiting: 'Waiting for information',
+    paused: 'Paused', reviewed: 'Reviewed on current record' };
+  for (const row of rows) {
+    const item = document.createElement('section'); item.className = 'dispute-row';
+    const button = document.createElement('button'); button.type = 'button';
+    button.className = 'dispute-focus'; button.textContent = row.label;
+    button.setAttribute('aria-pressed', String(state.disputeFocus === row.thread_id));
+    button.onclick = () => {
+      state.disputeFocus = row.thread_id; renderDisputeAgenda(body, agenda);
+      const selected = body.querySelector('[aria-pressed="true"]'); if (selected) selected.focus();
+    };
+    item.appendChild(button);
+    const status = document.createElement('p'); status.className = 'dispute-status';
+    status.textContent = labels[row.status] || 'Progress not established'; item.appendChild(status);
+    if (row.thread_id === agenda.next_thread_id) status.textContent += ' · Next to review';
+    const need = document.createElement('p'); need.className = 'dispute-need';
+    need.textContent = row.next_need || 'No next step recorded.'; item.appendChild(need);
+    body.appendChild(item);
+  }
+  const note = document.createElement('p'); note.className = 'hint';
+  note.textContent = rows.length ? 'Select a dispute to focus your next message. Other disputes remain open.'
+    : 'The disputes will appear here as your brief is assessed.';
+  body.appendChild(note);
 }
 
 function renderOpeningBrief(record) {
@@ -1172,12 +1216,6 @@ async function restoreConversation(matterId, generation = state.railGeneration) 
 
 /* -------------------------------------------------------------- the answer --- */
 
-const KIND_LABEL = {
-  action: 'Action',
-  finding: 'Finding',
-  question: 'Blocking question',
-  ground: 'Ground',
-};
 
 // Both matter re-entry and History consume the same release projection.
 // Diagnostic presence alone never turns a withheld draft into ordinary advice.
@@ -1190,28 +1228,12 @@ function restoredTurn(turn) {
         not_established: turn.not_established || [] } };
   }
   return { brief: turn.message || turn.asked || '', answer: {
+    matter_id: turn.matter_id, turn_id: turn.turn_id,
     elements: turn.elements || [], blocked: turn.blocked,
     blocked_reason: turn.blocked_reason, metrics: null, restored: true,
     at: turn.at || '', raw: turn,
   } };
 }
-
-// BK-37. THE SECTIONS, IN THE ORDER COUNSEL READS THEM.
-//
-// The order and the headings come from `backend/nm/domain/brief.py`; this is the
-// rendering of a decision made there, not a second one. A flat answer of 31
-// elements was measured on one single-dispute brief (J-6) -- nothing in it
-// wrong, and no order anyone chose, so the two lines an advocate acts on were
-// somewhere in the middle of nine "they will say" paragraphs.
-const SECTIONS = [
-  ['position',  'Where this stands'],
-  ['window',    'Time'],
-  ['risk',      'What cuts against us'],
-  ['next',      'Next step'],
-  ['needed',    'What I still need'],
-  ['because',   'Why'],
-  ['authority', 'What it rests on'],
-];
 
 // WHAT THE ADVOCATE IS NOT SHOWN BY DEFAULT, and it is a door rather than a
 // deletion. J-7: gate ids, rule ids, token counts and the trace line are
@@ -1406,10 +1428,9 @@ function renderTurn(entry) {
   if (!entry.answer) {
     const pending = document.createElement('div');
     pending.className = 'el ground';
-    pending.innerHTML = '<span class="k">Working</span>';
     const b = document.createElement('div');
     b.className = 'body';
-    b.textContent = 'Settling the frame and checking the corpus…';
+    b.textContent = 'Working on your brief…';
     pending.appendChild(b);
     wrap.appendChild(pending);
     return wrap;
@@ -1459,48 +1480,27 @@ function renderTurn(entry) {
     support = [];
   }
 
-  // BK-37. FILED UNDER THE QUESTION EACH ANSWERS, in reading order.
-  //
-  // THE SECTION COMES FROM THE SERVER (`backend/nm/domain/brief.py`), so this groups
-  // and does not judge. Anything the server did not label -- an older reply
-  // still in the transcript, a courtesy answer -- lands in `position`, which
-  // is the visible default rather than a silent drop.
-  //
-  // DEDUPLICATED, WITH THE COUNT KEPT. "I could not assess this" said once
-  // and said nine times are different facts about the file, and an advocate
-  // reading the shorter answer must not believe the product looked less hard
-  // than it did. Nothing loud is ever collapsed.
-  const filed = new Map();
+  // The validated answer already has a reading order. Present its prose,
+  // not its internal section/type/signal taxonomy, and never reclassify it
+  // with another model. Metadata remains available in the response record.
+  const rows = [];
   for (const el of spoken) {
-    const key = el.section || 'position';
-    if (!filed.has(key)) filed.set(key, []);
-    const rows = filed.get(key);
     const same = (el.signal && el.signal !== 'none') ? -1
       : rows.findIndex((r) => r.el.kind === el.kind
                            && r.el.thread === el.thread
-                           && r.el.text.trim() === el.text.trim());
+                           && r.el.section === el.section
+                           && r.el.text.trim() === el.text.trim()
+                           && JSON.stringify(r.el.refs) === JSON.stringify(el.refs)
+                           && JSON.stringify(r.el.source) === JSON.stringify(el.source)
+                           && r.el.disclosure === el.disclosure
+                           && r.el.by_when === el.by_when
+                           && r.el.no_deadline_reason === el.no_deadline_reason);
     if (same >= 0) rows[same].said += 1;
     else rows.push({ el, said: 1 });
   }
+  for (const row of rows) renderElement(wrap, row.el);
 
-  for (const [key, heading] of SECTIONS) {
-    const rows = filed.get(key);
-    if (!rows || !rows.length) continue;   // an empty heading answers nothing
-    const h = document.createElement('h3');
-    h.className = 'section';
-    h.textContent = heading;
-    wrap.appendChild(h);
-    for (const row of rows) renderElement(wrap, row.el, row.said);
-  }
-  // Anything under a section this client does not know about still shows.
-  // A renderer that dropped what it could not place would hide exactly the
-  // element a newer server added.
-  for (const [key, rows] of filed) {
-    if (SECTIONS.some(([k]) => k === key) || key === 'audit') continue;
-    for (const row of rows) renderElement(wrap, row.el, row.said);
-  }
-
-  function renderElement(into, el, said) {
+  function renderElement(into, el) {
     const d = document.createElement('div');
     // A loud signal is never collapsed, whatever the server says about
     // collapsibility -- the client does not get to quiet it.
@@ -1508,16 +1508,9 @@ function renderTurn(entry) {
     // "Here is the law" and "here is what I could not establish" rendered
     // identically is how a gap becomes a finding in the reader's memory.
     d.className = `el ${el.kind}${el.disclosure ? ' disclosure' : ''}`;
-    const k = document.createElement('span');
-    k.className = 'k';
-    k.textContent = el.disclosure
-      ? 'Not established'
-      : (el.signal && el.signal !== 'none'
-        ? `${KIND_LABEL[el.kind]} · ${el.signal.replace(/_/g, ' ')}`
-        : KIND_LABEL[el.kind]);
-    const body = document.createElement('div');
+    const body = document.createElement('p');
     body.className = 'body'; body.textContent = el.text;
-    d.append(k, body);
+    d.appendChild(body);
 
     if (el.by_when || el.no_deadline_reason) {
       const w = document.createElement('span');
@@ -1527,16 +1520,34 @@ function renderTurn(entry) {
     }
     if (el.refs && el.refs.length) {
       const r = document.createElement('span');
-      r.className = 'refs'; r.textContent = el.refs.join(' · ');
+      r.className = 'refs'; fillReferences(r, el);
       d.appendChild(r);
     }
-    if (said > 1) {
-      const n = document.createElement('span');
-      n.className = 'said-times';
-      n.textContent = `said ${said} times on this turn`;
-      d.appendChild(n);
-    }
     into.appendChild(d);
+  }
+
+  function fillReferences(row, el) {
+    const bound = el.source && el.refs.includes(el.source.locator)
+      && entry.answer.matter_id && entry.answer.turn_id;
+    if (bound) {
+      const link = document.createElement('button');
+      link.type = 'button'; link.className = 'citation-link';
+      link.textContent = el.source.label;
+      link.setAttribute('aria-label', `Open saved passage: ${el.source.label}`);
+      link.addEventListener('click', () => openSourceReader(entry.answer, el,
+        entry.answer.elements.indexOf(el), link));
+      row.appendChild(link);
+      const others = el.refs.filter(ref => ref !== el.source.locator);
+      if (others.length) row.appendChild(document.createTextNode(
+        ` · ${others.join(' · ')} — saved source inspection unavailable`));
+    } else {
+      // Preserve historical references. Never manufacture a clickable identity.
+      const label = document.createElement('span'); label.textContent = el.refs.join(' · ');
+      row.appendChild(label);
+      const note = document.createElement('span'); note.className = 'source-unavailable';
+      note.textContent = ' — saved source inspection unavailable';
+      row.appendChild(note);
+    }
   }
 
   // Support is visible by default. The advocate may collapse ordinary support,
@@ -1564,19 +1575,12 @@ function renderTurn(entry) {
       // behavioural check GREEN, because the class it looks for was
       // being stripped at exactly the moment it mattered.
       d.className = `el ${el.kind}${el.disclosure ? ' disclosure' : ''}`;
-      const k = document.createElement('span');
-      k.className = 'k';
-      k.textContent = el.disclosure
-        ? 'Not established'
-        : (el.signal && el.signal !== 'none'
-          ? `${KIND_LABEL[el.kind]} \u00b7 ${el.signal.replace(/_/g, ' ')}`
-          : KIND_LABEL[el.kind]);
-      const body = document.createElement('div');
+      const body = document.createElement('p');
       body.className = 'body'; body.textContent = el.text;
-      d.append(k, body);
+      d.appendChild(body);
       if (el.refs && el.refs.length) {
         const r = document.createElement('span');
-        r.className = 'refs'; r.textContent = el.refs.join(' \u00b7 ');
+        r.className = 'refs'; fillReferences(r, el);
         d.appendChild(r);
       }
       fold.appendChild(d);
@@ -1700,7 +1704,8 @@ function repaint() {
 function sizeComposer() {
   const box = $('message');
   box.style.height = 'auto';
-  box.style.height = `${Math.min(Math.max(box.scrollHeight, 56), 180)}px`;
+  // CSS owns the viewport-aware maximum. Recompute after both input and clear.
+  box.style.height = `${Math.max(box.scrollHeight, 44)}px`;
 }
 
 function updateWorkspace() {
@@ -1734,18 +1739,28 @@ function newTurnId() {
   return `turn_${Date.now().toString(16)}${Math.random().toString(16).slice(2, 10)}`;
 }
 
+function consumeComposer(entry) {
+  // Only explicit Send consumes the field. A receipt retry preserves even an
+  // identical follow-up draft typed since the original submission.
+  if ($('message').value.trim() !== entry.brief.trim()) return;
+  $('message').value = '';
+  entry.context.text = '';
+  sizeComposer();
+}
+
 async function send(message, { workProduct } = {}) {
   if (activeDelivery || (state.matterId && !state.matterReady)) return;
   if (!activeIntent) selectIntent(state.matterId, { opening: !state.matterId });
   snapshotIntent();
   // Re-entering Send with an unresolved identical intent is also a retry.
   const pending = activeIntent.pending.find((entry) => entry.brief === message
+    && (entry.request.thread_id || null) === (state.disputeFocus || null)
     && entry.request.work_product === workProduct && matchesIntake(entry, state.intake)
     && ['unknown', 'not_committed', 'sending'].includes(entry.state));
-  if (pending) { await deliver(pending); return; }
+  if (pending) { consumeComposer(pending); await deliver(pending); return; }
   const entry = { brief: message, turnId: newTurnId(), state: 'sending',
     context: activeIntent,
-    request: { matter_id: state.matterId, expected_version: state.matterVersion,
+    request: { matter_id: state.matterId, thread_id: state.disputeFocus, expected_version: state.matterVersion,
       parties: { ...((state.intake && state.intake.parties) || {}) },
       release: { ...((state.intake && state.intake.release) || {}) },
       capacity: state.intake && state.intake.capacity ? { ...state.intake.capacity } : null,
@@ -1753,13 +1768,14 @@ async function send(message, { workProduct } = {}) {
   // This serialized envelope never changes across navigation, reauthentication
   // or retry. Only the rendering attempt receives a fresh lifetime.
   entry.envelope = JSON.stringify({
-    message: entry.brief, matter_id: entry.request.matter_id, turn_id: entry.turnId,
+    message: entry.brief, matter_id: entry.request.matter_id, thread_id: entry.request.thread_id, turn_id: entry.turnId,
     parties: entry.request.parties, release: entry.request.release,
     capacity: entry.request.capacity,
     expected_version: entry.request.expected_version, work_product: entry.request.work_product,
   });
   activeIntent.pending.push(entry);
   state.turns.push(entry);
+  consumeComposer(entry);
   repaint();
   await deliver(entry);
 }
@@ -1791,6 +1807,8 @@ async function deliver(entry) {
   entry.refusal = null;
   entry.cancelled = false;
   repaint();
+  $('thread').scrollTop = $('thread').scrollHeight;
+  $('jump-latest').hidden = true;
   try {
     if (!await saveProtectedDraft()) {
       throw new Error('The retry details could not be saved on this device. No request was sent.');
@@ -1805,8 +1823,6 @@ async function deliver(entry) {
     entry.state = answer.replayed ? 'replayed' : 'committed';
     intent.pending = intent.pending.filter((item) => item !== entry);
     if (matchesIntake(entry, intent.intake)) intent.intake = null;
-    if ((answer.input_admitted === true || answer.route === 'non_matter')
-        && intent.text.trim() === entry.brief.trim()) intent.text = '';
     // A reply belongs to the conversation that sent it. An unestablished
     // screen may ask for information, but prose must never navigate back to
     // the opening form or hide that question. Opening is an explicit user
@@ -1869,12 +1885,8 @@ $('composer').addEventListener('submit', (ev) => {
   const box = $('message');
   const text = box.value.trim();
   if (!text) return;
-  // BK-36. THE COMPOSER IS NOT CLEARED HERE ANY MORE.
-  //
-  // It was cleared before the request, so a request that failed before
-  // commitment left the advocate's only copy of a long brief in a failed card
-  // in memory -- gone on reload, gone on sign-out. It is cleared by `deliver`
-  // once the server has said the brief is on the file, and not before.
+  // deliver clears the typing field after minting the retry receipt, and
+  // refuses network dispatch unless that receipt has been protected locally.
   send(text);
 });
 
@@ -2362,7 +2374,7 @@ function startMatter() {
   $('mode-line').hidden = true;
   $('rail-title').textContent = 'Matters';
   $('matter-heading').textContent = 'New matter';
-  $('workspace-eyebrow').textContent = 'THE INSTRUCTION';
+  $('matter-heading').removeAttribute('title');
   $('save-status').textContent = 'Not yet saved';
   window.dispatchEvent(new Event('nm:matter-changed'));
   if (!$('intake').hidden) $('in-client').focus();
@@ -2474,6 +2486,8 @@ function openTab(name) {
 }
 
 function showTab(name) {
+  closeSourceReader(false);
+  document.body.dataset.pane = name;
   PANES.forEach((p) => { $(`pane-${p}`).hidden = (p !== name); });
   const tab = tabFor(name);
   document.querySelectorAll('#tabs .tab').forEach((b) => {
@@ -3529,6 +3543,7 @@ async function showCasefile(matterId) {
   const generation = ++state.casefileGeneration;
   const st = $('casefile-state');
   const entries = $('casefile-entries');
+  renderOpeningBrief(null);
   if (!matterId) {
     st.textContent = '';
     entries.replaceChildren();
@@ -3537,11 +3552,12 @@ async function showCasefile(matterId) {
     return;
   }
 
-  let file; let deps;
+  let file; let deps; let matter;
   try {
-    [file, deps] = await Promise.all([
+    [file, deps, matter] = await Promise.all([
       api(`/api/matters/${matterId}/casefile`),
       api(`/api/matters/${matterId}/dependencies`),
+      api(`/api/matters/${matterId}`),
     ]);
   } catch (err) {
     if (generation !== state.casefileGeneration) return;
@@ -3558,6 +3574,7 @@ async function showCasefile(matterId) {
     return;
   }
   if (generation !== state.casefileGeneration) return;
+  renderOpeningBrief(matter.opening_brief);
 
   // Build the entry population off-DOM, then publish entries before currency.
   // A consumer waiting on the currency pill can therefore never observe a

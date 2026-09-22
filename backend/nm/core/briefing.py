@@ -35,8 +35,8 @@ fixed questionnaire. This is how P46 reaches the actual briefing interaction.
 """
 from __future__ import annotations
 
-from nm.core import lead
-from nm.domain.lead import Plan
+from nm.core import dispute_agenda, lead
+from nm.domain.lead import Action, Plan, StepProposal
 
 
 def live_gaps(gap_whats: tuple[str, ...],
@@ -89,24 +89,39 @@ def block(matter) -> dict:
     if matter is None:
         return {"state": "not_assessed", "why": "no matter on this route",
                 "open_needs": [], "paused": [], "intake_complete_refused": ""}
+    agenda = dispute_agenda.project(matter)
     gap_whats = tuple(
         (g.get("what") if isinstance(g, dict) else getattr(g, "what", ""))
         for t in matter.threads for g in (getattr(t, "gaps", ()) or ()))
     gap_whats = tuple(w for w in gap_whats if w)
+    gap_whats = tuple(dict.fromkeys(gap_whats))
     paused = matter.paused_need_texts
     state = readiness(gap_whats, paused)
+    # Work NM has not done is not information the advocate can obtain. Keep
+    # the populations separate, while refusing completion over either gap.
+    review_pending = not agenda["review_complete"]
+    if state.state == "ready" and review_pending:
+        state = lead.Readiness(
+            "blocked" if agenda["state"] == "waiting" else "open",
+            "The matter review is paused." if agenda["state"] == "waiting"
+            else "NM has not completed the review of every dispute.", ())
     # THE LEAD CHOOSES THE NEXT MOVE (P46). The briefing does not walk a fixed
     # questionnaire: the adaptive lead reads the live gaps and proposes the next
     # action -- retrieve/ask when a gap is open, stop when none is. This is how
     # the lead reaches the actual briefing interaction, and its production path.
     step = next_step(gap_whats, paused)
+    if not gap_whats and review_pending and agenda["state"] != "waiting":
+        step = StepProposal(Action.ASSESS, "Review the outstanding disputes", 0,
+                            "The missing work is NM's assessment, not a request for user material.")
     return {
         "state": state.state, "why": state.why,
         "open_needs": list(live_gaps(gap_whats, paused)),
         "paused": [{"need": p.get("need"), "resume_when": p.get("resume_when", "")}
                    for p in matter.paused_needs if isinstance(p, dict)],
-        "intake_complete_refused": refuse_completion(gap_whats, paused),
+        "intake_complete_refused": (refuse_completion(gap_whats, paused)
+                                    or (state.why if review_pending else "")),
         "next_step": {"action": step.action.value, "rationale": step.rationale},
+        "agenda": agenda,
     }
 
 

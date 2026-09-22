@@ -115,13 +115,32 @@ DISPUTE_SCHEMA: dict = {
                         "description": "A few words naming it, as an "
                                        "advocate would on a file cover.",
                     },
+                    "thread_id": {
+                        "type": "string",
+                        "description": ("Existing dispute ID when these instructions belong to it; "
+                                        "empty only for a genuinely new dispute. Never merge IDs."),
+                    },
+                    "additional_quotes": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": ("Other exact spans belonging to THIS dispute, including "
+                                        "facts, corrections and requests. Shared instructions "
+                                        "must apply to this dispute."),
+                    },
                 },
-                "required": ["quoted", "label"],
+                "required": ["quoted", "label", "thread_id", "additional_quotes"],
                 "additionalProperties": False,
             },
         },
+        "focus_thread_id": {"type": "string", "description":
+                            "Existing dispute expressly prioritised by the advocate, else empty."},
+        "focus_quote": {"type": "string", "description":
+                        "Exact current words instructing that focus, otherwise empty."},
+        "advance_quote": {"type": "string", "description":
+                          "Exact request to continue the whole-file review or the next dispute, "
+                          "else empty. Not an acknowledgement, fact or request to stop."},
     },
-    "required": ["verdict", "quoted", "why", "disputes"],
+    "required": ["verdict", "quoted", "why", "disputes", "focus_thread_id", "focus_quote",
+                 "advance_quote"],
     # STRICT MODE REQUIRES IT. Without `additionalProperties: false` on
     # every object the provider cannot compile the grammar, and the
     # schema silently degrades to a hint.
@@ -134,28 +153,31 @@ SYSTEM = (
     "message add to the dispute already on the file, or does it describe a "
     "DIFFERENT dispute?\n\n"
     "A different dispute means a different proceeding, a different opponent, "
-    "or a different subject matter. One client commonly has several at once — "
-    "a cheque case against him, a labour claim by an employee, a tenancy he is "
-    "defending, and a recovery suit he has filed himself are FOUR disputes, "
-    "not one matter with four facts.\n\n"
+    "or a different subject matter, assessed in context. Do not equate additional "
+    "facts or legal issues within one dispute with another dispute.\n\n"
     "Adding detail to what is already there — a date, a name, a document, an "
     "answer to a question — CONTINUES. So does asking what to do about it.\n\n"
     "Answer 'cannot_tell' where it genuinely could be either. That is a real "
     "answer and it is better than a wrong one: the advocate will be asked, and "
     "they know.\n\n"
-    "SECOND, AND IT IS A DIFFERENT QUESTION: list every distinct dispute "
-    "THIS MESSAGE ITSELF describes, whatever you answered above. Do not "
-    "compare it to the file for this part -- there may not be a file yet. "
-    "Read the message on its own.\n\n"
+    "Map all substantive instructions in this message to the existing dispute "
+    "IDs supplied in context, or identify genuinely new disputes. A clarification, "
+    "correction, renamed description or new argument is not by itself a new dispute. "
+    "A single dispute can contain several remedies, defences and evidential issues. "
+    "Never silently merge existing disputes. Where allocation is genuinely unclear, "
+    "return cannot_tell rather than create a duplicate to avoid the question.\n\n"
     "An advocate handing over a file commonly describes several disputes "
-    "at once, and marks them off: first this, second that, third the "
-    "other. Each has its own opponent, its own dates and its own posture, "
-    "and each must be listed separately. A message describing three "
-    "disputes gets THREE entries.\n\n"
+    "at once. Keep independently described disputes distinct while recognising "
+    "shared parties, evidence and events. Enumeration alone is not proof that "
+    "the underlying disputes are separate.\n\n"
     "Quote the advocate's OWN WORDS for each -- copy the span out of the "
     "message exactly. A paraphrase is discarded.\n\n"
-    "Return an empty list ONLY where the message describes no dispute of "
-    "its own: a date, a name, a document, or an answer to a question."
+    "Include continuing disputes when assigning a date, correction or answer; "
+    "collect all exact relevant spans, not just a label-sized fragment. Preserve "
+    "different chronologies and positions. Map explicitly shared instructions to "
+    "each affected dispute, never copy unrelated facts across them. For a pure "
+    "navigation instruction leave disputes empty and quote the requested focus or "
+    "advance. The agenda is a suggestion, not permission to override the advocate."
 )
 
 
@@ -166,6 +188,12 @@ class Described:
 
     quoted: str
     label: str
+    thread_id: str = ""
+    additional_quotes: tuple[str, ...] = ()
+
+    @property
+    def spans(self) -> tuple[str, ...]:
+        return tuple(dict.fromkeys((self.quoted, *self.additional_quotes)))
 
 
 @refuses_blank_text("quoted", "why")
@@ -176,6 +204,8 @@ class DisputeRead:
     why: str = ""
     refused: str | None = None
     described: tuple[Described, ...] = ()
+    focus_thread_id: str = ""
+    advance: bool = False
     """EVERY dispute this message describes, each carrying the words it was
     read from.
 
@@ -219,11 +249,14 @@ def build_prompt(quotable: Quotable):
               f"1. Does this continue the dispute already on the file, or "
               f"open a different one? (If there is no file yet, answer "
               f"cannot_tell.)\n"
-              f"2. How many distinct disputes does this message itself "
-              f"describe? List each one with the advocate's own words."))
+              f"2. Allocate each substantive instruction to its existing dispute ID "
+              f"or a genuinely new dispute, with all relevant exact spans. "
+              f"Distinguish clarification from new work. Record explicit focus or "
+              f"a request to advance separately; never infer either from an acknowledgement."))
 
 
-def interpret(quotable: Quotable, data: dict) -> DisputeRead:
+def interpret(quotable: Quotable, data: dict, *,
+              thread_ids: frozenset[str] = frozenset()) -> DisputeRead:
     """Turn the model's answer into a verdict, or REFUSE it.
 
     A refusal lands on CANNOT_TELL, never on CONTINUES. Falling back to
@@ -251,9 +284,18 @@ def interpret(quotable: Quotable, data: dict) -> DisputeRead:
     # disputes on an empty matter has no verdict worth having and three
     # threads to create.
     described = _described(quotable, data)
+    if any(d.thread_id and d.thread_id not in thread_ids for d in described):
+        return DisputeRead(Dispute.CANNOT_TELL, refused="a dispute ID is not on this matter")
+    focus = data.get("focus_thread_id") or ""
+    if focus and (focus not in thread_ids
+                  or not quotable.accepts(data.get("focus_quote") or "")):
+        return DisputeRead(Dispute.CANNOT_TELL,
+                           refused="the requested focus is not source-bound to this matter")
+    advance = bool(data.get("advance_quote") and quotable.accepts(data["advance_quote"]))
 
     if verdict is not Dispute.OPENS:
-        return DisputeRead(verdict, quoted, why, described=described)
+        return DisputeRead(verdict, quoted, why, described=described,
+                           focus_thread_id=focus, advance=advance)
 
     # OPENING A THREAD IS THE ANSWER THAT CREATES SOMETHING, so it carries the
     # evidence. `continues` and `cannot_tell` both leave the file as it was.
@@ -264,7 +306,8 @@ def interpret(quotable: Quotable, data: dict) -> DisputeRead:
         return DisputeRead(Dispute.CANNOT_TELL, quoted, why,
                            refused=(f"the model said this opens a new dispute "
                                     f"and {quotable.refusal(quoted)}"))
-    return DisputeRead(Dispute.OPENS, quoted, why, described=described)
+    return DisputeRead(Dispute.OPENS, quoted, why, described=described,
+                       focus_thread_id=focus, advance=advance)
 
 
 def _described(quotable: Quotable, data: dict) -> tuple[Described, ...]:
@@ -289,5 +332,12 @@ def _described(quotable: Quotable, data: dict) -> tuple[Described, ...]:
         label = (row.get("label") or "").strip()
         if not span or not label or not quotable.accepts(span):
             continue
-        out.append(Described(span, label))
+        extra = row.get("additional_quotes", [])
+        if not isinstance(extra, list) or any(
+                not isinstance(s, str) or not quotable.accepts(s) for s in extra):
+            continue
+        target = row.get("thread_id", "")
+        if not isinstance(target, str):
+            continue
+        out.append(Described(span, label, target, tuple(extra)))
     return tuple(out)

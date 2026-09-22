@@ -34,11 +34,13 @@ from nm.core import (
     consistency,
     deadlines,
     dependency,
+    dispute_agenda,
     grounding,
     investigation,
     limitation,
     proof,
     proof_read,
+    step_dependency,
     thresholds,
 )
 from nm.core import briefing as briefing_mod
@@ -59,7 +61,8 @@ from nm.core import screens as screens_mod
 from nm.core import theory as theory_reader
 from nm.core.conversation import guided, with_evidence
 from nm.core.professional_access import read_professional_status
-from nm.core.threading import BindResult, BindState, bind, identifiers_in
+from nm.core.source_excerpt import capture as capture_source
+from nm.core.threading import BindResult, BindState, bind
 from nm.domain import advice, citation, decision, engagement, issue, reads, reservation
 from nm.domain import brief as brief_mod
 from nm.domain import proof as domain_proof
@@ -68,6 +71,7 @@ from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
 from nm.domain.budget import refuse_partial
 from nm.domain.capacity import CapacityPosition
 from nm.domain.clock import FORUM
+from nm.domain.gates import Response
 from nm.domain.matter import (
     Basis,
     CauseOfAction,
@@ -355,6 +359,7 @@ def _record(into: list, what: str, thread: Thread,
 EXCERPT = 180
 
 
+
 def _excerpt(span: str, cap: int = EXCERPT) -> str:
     """The first sentence of a span, capped. NEVER with the ellipsis inside.
 
@@ -467,7 +472,7 @@ def _reactivated(matter) -> list:
               + " ".join(r.as_current_finding() for r in back)))]
 
 
-def _with_screens(elements: list, screens, split=None) -> tuple:
+def _with_screens(elements: list, screens, split=None, *, mode: Mode | None = None) -> tuple:
     """The answer's elements, with the trailing background after the action.
 
     BACKGROUND FOLLOWS THE ACTION. `Answer.__post_init__` refuses a leading
@@ -481,8 +486,35 @@ def _with_screens(elements: list, screens, split=None) -> tuple:
     # G-SPLIT RIDES HERE FOR THE SAME REASON AND NOT BESIDE IT. A second
     # place that appends trailing background is a second place to get the
     # ordering wrong, and this one already has the rule written down.
+    # DG-11: reads performed before derivation can already have emitted a
+    # disclosure (for example a party the conflict screen did not cover).
+    # Lead with the actual operative element, preserving every other element
+    # and its type/order. Never invent a step or disguise support as one: if
+    # there is none, Answer still rejects the result.
+    ordered = list(elements)
+    explanatory = mode in (Mode.EXPLANATION, Mode.ASSESSMENT)
+    lead = next((i for i, element in enumerate(ordered)
+                 if element.kind in (ElementKind.ACTION, ElementKind.QUESTION)
+                 and (not explanatory or element.gate)), None)
+    if lead is not None and lead > 0:
+        ordered.insert(0, ordered.pop(lead))
     tail = [split] if split is not None else []
-    if screens.rows:
+    if screens.rows and screens.clear and screens.assessed and screens.screens:
+        # Routine successful checks are retained in the matter/audit record,
+        # not recited as the advocate's answer. A permitted-but-limited screen
+        # (notably corpus coverage) remains visible and cannot be hidden merely
+        # because it did not block processing.
+        for screen in screens.screens:
+            gate_id, outcome = screens_mod.gate_for(screen)
+            material = (screen.state is not screens_mod.ScreenState.CLEAR
+                        or (screen.kind is screens_mod.ScreenKind.COMPETENCE
+                            and outcome != "covered") or screen.released is not None)
+            if material:
+                tail.append(Element(
+                    kind=ElementKind.GROUND, disclosure=True,
+                    text=screen.detail or screen.not_assessed_because,
+                    gate=gate_id))
+    elif screens.rows:
         # THE ROW SAYS WHAT HAPPENED, AND SAYS IT ONCE.
         #
         # It used to hard-code "none of which has run" and a closing sentence
@@ -503,7 +535,7 @@ def _with_screens(elements: list, screens, split=None) -> tuple:
                      ". Substance is admitted with them outstanding, which "
                      "is recorded as an exception and is not a finding that "
                      "they clear."))))
-    return (*elements, *tail)
+    return (*ordered, *tail)
 
 
 
@@ -827,6 +859,14 @@ class TurnEngine:
 
         # ---- ADMIT-B: substance ---------------------------------------------
         matter, bound = self._admit_facts(matter, turn, metrics)
+        # The original input remains the receipt/history. Derivation receives
+        # only the active dispute's allocated words, never a mixed chronology.
+        scopes = dict(bound.allocations)
+        work_turn = turn
+        if bound.thread is not None and bound.thread.id in scopes:
+            scoped = "\n".join(scopes[bound.thread.id])
+            work_turn = replace(
+                turn, message=scoped or f"Review the recorded dispute: {bound.thread.label}")
         metrics.stages["admit_ms"] = int((time.perf_counter() - t0) * 1000)
 
         # WHAT MOVED ON THE FILE, before anything is derived from it. P18.
@@ -903,9 +943,7 @@ class TurnEngine:
                          "because one dispute was found")
         elif bound.looks_like > 1:
             metrics.fire("G-SPLIT", "split",
-                         f"this message reads as {bound.looks_like} disputes; "
-                         f"kept on {bound.thread.label!r} until the advocate "
-                         f"says otherwise")
+                         f"instructions allocated across {bound.looks_like} working disputes")
         else:
             metrics.fire("G-SPLIT", "single",
                          "this message reads as one dispute")
@@ -914,13 +952,10 @@ class TurnEngine:
         if bound.thread is not None and bound.counted and bound.looks_like > 1:
             split_note = (Element(
                 kind=ElementKind.GROUND,
-                text=(f"This reads to me as {bound.looks_like} separate "
-                      f"disputes. I have kept it on one thread — "
-                      f"{bound.thread.label!r} — because splitting a file is "
-                      f"not something I will do on my own reading of it. If "
-                      f"they are separate, say so and I will open them: each "
-                      f"would carry its own posture, its own dates and its "
-                      f"own limitation."),
+                text=(f"I have organised these instructions across {bound.looks_like} "
+                      f"disputes on the board and am working on {bound.thread.label!r}. "
+                      "Their facts and dates remain separate. You can change the focus "
+                      "or correct that organisation."),
                 gate="G-SPLIT", disclosure=True, signal=Signal.NONE))
 
         if bound.blocks:
@@ -959,15 +994,19 @@ class TurnEngine:
             # the side -- and refusing them meant an advocate asking a bare
             # question of law was told "whose side are we on?".
             thread = bound.thread
+            no_proceeding = (thread.posture.role in (Role.NOT_APPLICABLE, Role.NOT_INSTITUTED)
+                             and thread.posture.basis is Basis.STATED)
+            source_explanation = no_proceeding and mode is Mode.EXPLANATION
             metrics.fire("G-POSTURE", "unresolved",
-                         f"thread {thread.id} has role=unknown; no directive step "
+                         f"thread {thread.id} has role={thread.posture.role.value}; "
+                         f"no directive step "
                          f"and no authority set is computed")
             described = thread.posture.client_described_as
             if described:
                 # THE QUESTION NARROWS. Repeating the general question at an
                 # advocate who has already named their client is how the
                 # previous version trapped every multi-turn conversation.
-                ask = (f"You act for the {described}. Did they file, or are they "
+                ask = (f"You act for {described}. Did they file, or are they "
                        f"answering something filed against them? I am not able "
                        f"to recommend a step until that is settled — the same "
                        f"provision helps one side and hurts the other, and "
@@ -979,40 +1018,51 @@ class TurnEngine:
                        "recommend a step until that is settled, because the same "
                        "provision helps one side and hurts the other.")
 
-            # ASKED TWICE ALREADY AND STILL OPEN. Putting it a third time in
-            # the same words is the product failing to listen: an advocate
-            # who has passed over a question twice is telling you something,
-            # usually that they read it as rhetorical. So it stops being a
-            # question and becomes a stated blocker with the answer spelled
-            # out, which is the one form they have not yet ignored.
+            # A repeated unresolved question is not evidence that the advocate
+            # ignored us. State the remaining limitation without blame or an
+            # instruction to invent a procedural role.
             standing = matter.open_question("G-POSTURE", thread.id)
             if standing is not None and standing.ignored:
-                ask = (f"I have asked twice and this is still open, so I am "
-                       f"stating it rather than asking again: NOTHING on this "
-                       f"thread can be advised until I know which side we are "
-                       f"on. Reply with one word — {'moving' !r} or "
-                       f"{'defending' !r} — or name the role "
-                       f"(plaintiff, defendant, petitioner, respondent, "
-                       f"appellant, accused). Everything else you have told me "
-                       f"is on the file and I will not ask for it again.")
+                ask = ("The client's position on this issue remains unresolved in "
+                       "my assessment. I have retained your instructions, but have "
+                       "not released a side-dependent recommendation. You need not "
+                       "repeat the brief or choose a role that does not fit; we can "
+                       "retain the material and review the relevant provisions "
+                       "while that limitation remains.")
+            opening = matter.intake_answers.get("opening", {}).get("answer", {})
+            if opening.get("proceedings") == "none" or no_proceeding:
+                # A recorded absence of proceedings is not a missing answer to
+                # 'who filed'. This disclosure does not fabricate a resolved
+                # side or bypass the still-open advisory-role modelling work.
+                ask = ("Your instructions record no proceedings. I have retained "
+                       "that instruction and will not assign a filed role. My "
+                       "assessment has not established the client's position on "
+                       "this issue sufficiently to release a side-dependent "
+                       "recommendation. The material is retained, and any retrieved "
+                       "provisions below are background, not a concluded view.")
             # THE QUESTION LEADS. It is the blocking thing, and S3 requires
             # the first element to be an action or a question -- what
             # follows is what could be established without knowing the side.
+            if source_explanation:
+                ask = ("No filed role is needed to read the retrieved provisions below. "
+                       "This is a limited source explanation, not a concluded assessment "
+                       "of how the law applies to your client's position or a recommendation.")
             elements.append(Element(
-                kind=ElementKind.QUESTION, thread=thread.id, text=ask,
+                kind=ElementKind.GROUND if source_explanation else ElementKind.QUESTION,
+                thread=thread.id, text=ask, disclosure=source_explanation,
                 gate="G-POSTURE", signal=Signal.UNRESOLVED_POSTURE,
             ))
             derived, relied_on, retrieved, derived_values = self._derive(
-                thread, turn, metrics, memory, side_blind=True,
-                facts=matter.facts, matter_id=matter.id)
+                thread, work_turn, metrics, memory, side_blind=True,
+                facts=matter.facts, matter_id=matter.id, response_mode=mode)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
-                            elements=_with_screens(elements, screens, split_note),
-                            blocked=True,
-                            blocked_reason="G-POSTURE: posture unresolved")
+                            elements=_with_screens(elements, screens, split_note, mode=mode),
+                            blocked=not source_explanation,
+                            blocked_reason=None if source_explanation
+                                else "G-POSTURE: posture unresolved")
         else:
             thread = bound.thread
-            head = list(elements)
             # WHO THIS BRIEF NAMES, recorded for the NEXT turn's conflict
             # screen. BK-34.
             #
@@ -1035,13 +1085,15 @@ class TurnEngine:
             # `matter_id` and not the matter, and what this read produces is
             # a change to the file.
             matter = self._read_parties(turn, memory, matter, metrics, elements)
+            # Carry these disclosures into any late-source re-derivation too.
+            head = list(elements)
             derived, relied_on, retrieved, derived_values = self._derive(
-                thread, turn, metrics, memory, facts=matter.facts,
+                thread, work_turn, metrics, memory, facts=matter.facts,
                 matter_id=matter.id, concluded=concluded,
-                paused=matter.paused_need_texts)
+                paused=matter.paused_need_texts, response_mode=mode)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
-                            elements=_with_screens(elements, screens, split_note))
+                            elements=_with_screens(elements, screens, split_note, mode=mode))
 
         # D7 -- THE CROSS-FILE PASS, AFTER the threads and EXACTLY ONCE.
         #
@@ -1183,7 +1235,10 @@ class TurnEngine:
                                *( (bound.thread,) if bound.created
                                   and bound.thread is not None else ()))
             )
-            exposure = list(self._exposure(matter, metrics, born))
+            # Source-bound multi-dispute admission is not the old count-only
+            # split. All admitted accounts must be compared, including siblings.
+            exposure = list(self._exposure(
+                matter, metrics, frozenset() if bound.allocations else born))
             answer = replace(answer, elements=tuple(
                 [*answer.elements, *exposure]))
 
@@ -1265,9 +1320,9 @@ class TurnEngine:
             if late:
                 concluded.clear()
                 derived, relied_on, retrieved, derived_values = self._derive(
-                    thread, turn, metrics, memory, facts=matter.facts,
+                    thread, work_turn, metrics, memory, facts=matter.facts,
                     matter_id=matter.id, seed=late, concluded=concluded,
-                    paused=matter.paused_need_texts)
+                    paused=matter.paused_need_texts, response_mode=mode)
                 # ONE CONSTRUCTION, THROUGH THE ASSEMBLER, like every
                 # other branch. This built an Answer from `head`, then
                 # replaced it with a longer tail, and neither call went
@@ -1294,7 +1349,7 @@ class TurnEngine:
                          *self._decisive_empties(metrics),
                          *self._refused_reads(metrics), *_reactivated(matter),
                          *self._tier_degraded(metrics), *currency_notes],
-                        screens, split_note))
+                        screens, split_note, mode=mode))
                 self._assert_invariants(answer, metrics)
                 report = grounding.verify(answer, relied_on, retrieved)
 
@@ -1393,6 +1448,16 @@ class TurnEngine:
                 tuple(t.label for t in matter.threads)),
             assessed=tuple(dict.fromkeys(
                 (*matter.assessed, "engagement"))))
+
+        # A current review requires actual assessed sections and a released
+        # answer, not merely a finished turn or a nonempty thread list.
+        if thread is not None and not answer.blocked:
+            from nm.domain.summary import DERIVED_SECTIONS
+
+            current = matter.thread(thread.id)
+            if current is not None and set(DERIVED_SECTIONS) <= set(current.assessed):
+                matter = matter.with_thread(replace(current, assessed=tuple(dict.fromkeys(
+                    (*current.assessed, "review_current")))))
 
         try:
             matter = self._commit_released(matter, turn, answer, expected_version)
@@ -1527,6 +1592,7 @@ class TurnEngine:
                 "gates_fired": [
                     {"gate": g.gate_id, "state": g.state}
                     for g in metrics.gates_fired],
+                "step_assessments": [dict(row) for row in metrics.step_assessments],
                 "violations": [
                     {"rule": v.rule, "detail": v.detail}
                     for v in metrics.violations],
@@ -1716,7 +1782,8 @@ class TurnEngine:
             return ScreenResult(
                 clear=True, assessed=True,
                 reason="every screen clears: " + why,
-                rows=(("Screens on this matter, all cleared: "
+                rows=(("Screens on this matter permit the current work within the "
+                       "recorded limits; this is not complete legal coverage: "
                        + "; ".join(f"{s.kind.value} — {s.detail}"
                                    for s in outstanding)),),
                 screens=outstanding)
@@ -2067,18 +2134,61 @@ class TurnEngine:
         # only when a number of record decides the binding on a matter that
         # already has threads. That is one extra call on a first turn.
         read = dispute_reader.UNREAD
-        if not (matter.threads and identifiers_in(turn.message)):
-            read = self._read_dispute(matter, turn, metrics)
+        read = self._read_dispute(matter, turn, metrics)
         opens = True if read.opens else (False if read.continues else None)
-
-        bound = bind(matter, turn.message, fact, thread_hint=turn.thread_id,
+        focus = turn.thread_id or read.focus_thread_id
+        if read.advance and not focus and not read.described:
+            focus = dispute_agenda.project(
+                matter, after_thread_id=dispute_agenda.last_focus(matter))["next_thread_id"]
+            if focus is None:
+                return matter, BindResult(
+                    state=BindState.UNBINDABLE, thread=None, created=False,
+                    reason="no other dispute available for automatic review",
+                    question="There is no other dispute ready to work through. Outstanding "
+                             "questions remain on the board; the matter has not been closed.",
+                    counted=read is not dispute_reader.UNREAD)
+        bound = bind(matter, turn.message, fact, thread_hint=focus,
                      opens_new_dispute=opens, described=read.described)
         # WHETHER ANYONE COUNTED, carried out of the only place that knows.
         bound = replace(bound, counted=read is not dispute_reader.UNREAD)
         if bound.state is not BindState.BOUND or bound.thread is None:
             return matter, bound
+        if (read.advance or read.focus_thread_id) and not read.described:
+            return matter, replace(bound, allocations=((bound.thread.id, ()),))
+        if bound.allocations:
+            records = {t.id: t for t in (bound.thread, *bound.others)}
+            for tid, spans in bound.allocations:
+                thread = records[tid]
+                matter = matter.with_thread(thread)
+                if not spans:
+                    continue
+                # Retain exact evidence spans separately; the whole incoming
+                # account remains on the matter, outside every scoped chart.
+                ids = []
+                for span in spans:
+                    scoped_fact = Fact.create(statement=span, provenance=Provenance(
+                        kind="advocate_statement", turn=turn.turn_id, span=span),
+                        certainty=Certainty.ASSERTED)
+                    matter, scoped_fact = matter.recording(scoped_fact)
+                    ids.append(scoped_fact.id)
+                thread = replace(
+                    thread, chronology=tuple(dict.fromkeys((*thread.chronology, *ids))),
+                    assessed=tuple(a for a in thread.assessed if a != "review_current"))
+                matter = matter.with_thread(thread)
+                scoped_turn = replace(turn, message="\n".join(spans))
+                matter, updated = self._admit_thread(matter, scoped_turn, metrics,
+                                                   replace(bound, thread=thread),
+                                                   next(f for f in matter.facts if f.id == ids[0]))
+                records[tid] = updated.thread
+            return matter, replace(bound, thread=matter.thread(bound.thread.id),
+                                   others=tuple(matter.thread(t.id) for t in bound.others))
+        return self._admit_thread(matter, turn, metrics, bound, fact)
 
+    def _admit_thread(self, matter, turn, metrics, bound, fact):
+        """Read one scoped account; other disputes keep their own evidence."""
         thread = bound.thread
+        thread = replace(
+            thread, assessed=tuple(a for a in thread.assessed if a != "review_current"))
         posture: Posture = thread.posture
         # ONLY WHILE UNRESOLVED. Once the advocate has settled it, no further
         # call is made -- the extraction is cheap but it is not free, and a
@@ -2255,8 +2365,6 @@ class TurnEngine:
         # no chronology -- nothing has been read for them and inventing
         # either would be the merge defect with extra rows -- but they
         # EXIST, and the advocate can name one and be advised on it.
-        for other in bound.others:
-            matter = matter.with_thread(other)
         return matter, replace(bound, thread=thread)
 
     @implements("D4")
@@ -2473,10 +2581,7 @@ class TurnEngine:
         than assume a continuation, and an empty `described` still falls
         back to one thread rather than none.
         """
-        on_file = "\n".join(
-            f"- {t.label}" + (f" (we act for the {t.posture.role.value})"
-                              if t.posture.role is not Role.UNKNOWN else "")
-            for t in matter.threads)
+        on_file = dispute_agenda.context(matter)
         # OPENING A THREAD CARRIES THE EVIDENCE, so only this turn is
         # quotable: a span lifted out of the thread list would let an
         # old dispute open a new thread.
@@ -2489,7 +2594,8 @@ class TurnEngine:
                       dispute_reader.DISPUTE_SCHEMA, "dispute", Tier.ROUTINE)
             metrics.record_call(res)
             metrics.binding_reads += 1
-            read = dispute_reader.interpret(quotable, res.data or {})
+            read = dispute_reader.interpret(quotable, res.data or {},
+                                            thread_ids=frozenset(t.id for t in matter.threads))
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
                          f"the dispute read could not run: {exc}")
@@ -2551,6 +2657,7 @@ class TurnEngine:
                 seed: tuple[Finding, ...] = (),
                 concluded: dict | None = None,
                 paused: frozenset[str] = frozenset(),
+                response_mode: Mode = Mode.SHORT_QUESTION,
                 ) -> tuple[list[Element], tuple, tuple, tuple]:
         """Retrieve, then assemble. Returns (elements, relied_on, retrieved).
 
@@ -2716,7 +2823,7 @@ class TurnEngine:
             grounds.extend(attacks_out)
             _record(derived, "the opponent's case", thread, thread.chronology,
                     sum(1 for e in attacks_out
-                        if e.text.startswith("They will say")))
+                        if e.feature == "D7" and not e.disclosure))
 
         if metrics.evidence_bound_hit:
             # THE BOUND PRODUCES A VISIBLE GAP, never a quiet stop. A turn that
@@ -2751,11 +2858,14 @@ class TurnEngine:
                         kind=ElementKind.GROUND, thread=thread.id,
                         text=disc, disclosure=True))
 
+        request_satisfied = False
         if not side_blind:
-            elements.append(
-                self._recommend(thread, turn, result, metrics, memory,
+            response = self._recommend(thread, turn, result, metrics, memory,
                                 register, position, relief_position=relief_pos,
-                                concluded=concluded, sources=tuple(retrieved)))
+                                concluded=concluded, sources=tuple(retrieved),
+                                response_mode=response_mode)
+            elements.append(response)
+            request_satisfied = response.kind is ElementKind.FINDING
         # A3 §5.4. WHAT THIS TURN DERIVED, and what MOVED since the last one.
         #
         # Run before the queue is drained so a changed value can raise its own
@@ -2775,7 +2885,10 @@ class TurnEngine:
         # briefing block instead. Dropping it here stops the loop; it stays a
         # gap on the file, so intake is not reported complete over it.
         askable = [g for g in gaps if getattr(g, "what", None) not in paused]
-        elements.extend(self._ask(askable, thread, metrics))
+        # A completed explanation need not become a fresh intake interview.
+        # Gaps still persist below and material safety blocks remain in the answer.
+        if not request_satisfied and not (side_blind and response_mode is Mode.EXPLANATION):
+            elements.extend(self._ask(askable, thread, metrics))
 
         # PHASE 3 -- THE REGISTER AND THE QUEUE SURVIVE THE TURN.
         #
@@ -3047,19 +3160,14 @@ class TurnEngine:
         # `Edge.accrues_on` carries the trigger from the Schedule's third
         # column, and `_read_accrual` reads WHICH entry satisfies it.
         #
-        # THREE CASES, and the middle one is the one worth stating. One dated
-        # entry leaves nothing to choose. Several WITHOUT a curated trigger is
-        # the old behaviour and stays: no trigger means this product does not
-        # know enough about the cause to do better than the file's own order,
-        # and refusing there would trade a working answer for a shrug. Several
-        # WITH a trigger is the case that produced the defect, so it is read --
-        # and a read that cannot name an entry refuses rather than falling back
-        # to the earliest, because the fallback IS the defect.
+        # Even one event must satisfy the trigger. Exact fact identity does
+        # not establish legal applicability. A model-selected event remains
+        # inferred below even when the statutory trigger is retrieved.
         dated = [f for f in chart if f.date is not None]
         trigger = self._accrual_trigger(cause_read)
         accrual = dated[0] if dated else None
         accrual_limb = ""
-        if len(dated) > 1 and trigger:
+        if dated and trigger:
             read = self._read_accrual(trigger, dated, metrics)
             if not read.identified:
                 return limitation.not_computed(
@@ -3182,9 +3290,9 @@ class TurnEngine:
         alternatives: list[dict] = []
         if premise_mod.Kind.ACCRUAL_RULE in premises.inferred():
             conditional_because = (
-                f"the period was run from {accrual_reason} because the cause "
-                f"carries no curated accrual trigger; confirm it or name the "
-                f"entry it should run from")
+                f"the period was provisionally run from {accrual_reason}. "
+                f"Identifying a dated event does not establish that it satisfies "
+                f"the legal trigger; that application has not been confirmed")
             for other in dated:
                 if other.id == accrual.id or other.date is None:
                     continue
@@ -3250,12 +3358,16 @@ class TurnEngine:
             items.append(make(kind=kinds.ACCRUAL_RULE,
                            statement="no dated event to run the period from",
                            basis=bases.UNESTABLISHED))
-        elif trigger and (accrual_limb or len(dated) == 1):
+        elif trigger:
             items.append(make(
                 kind=kinds.ACCRUAL_RULE,
-                statement=(f"the period runs from {trigger}"
-                           + (f" — {accrual_limb}" if accrual_limb else "")),
-                basis=bases.ATTRIBUTED, source=f"curated trigger for the cause: {trigger}"))
+                statement=(f"The candidate event {snippet(accrual.statement, 120)} "
+                           f"is proposed as satisfying {trigger}"),
+                basis=bases.INFERRED,
+                inferred_from=("a model's application of the retrieved trigger "
+                               "to a dated instruction, not an established accrual"),
+                alternatives=tuple(f"{snippet(f.statement, 44)} ({f.date.isoformat()})"
+                                   for f in dated if f.date is not None and f.id != accrual.id)))
         else:
             others = tuple(f"{snippet(f.statement, 44)} ({f.date.isoformat()})"
                            for f in dated if f.date is not None and f.id != accrual.id)
@@ -3333,6 +3445,9 @@ class TurnEngine:
             alts = "; ".join(
                 f"from {a['accrual_on']} it would be {a['expires_on']}"
                 for a in lim.alternatives)
+            other_events = "; ".join(
+                f"{f.date.isoformat()} ({snippet(f.statement, 90)})"
+                for f in chart if f.date is not None and f.id != lim.accrual)
             # WHOSE PERIOD IT IS COMES FIRST, IN THE SAME WORDS AS THE
             # COMPUTED LINE BELOW. It used to be buried mid-sentence, after a
             # conditional clause long enough to hold a whole chronology entry,
@@ -3354,6 +3469,10 @@ class TurnEngine:
                       f"would run to {lim.expires_on.isoformat()} on "
                       f"{lim.article}."
                       + (f" On other readings: {alts}." if alts else "")
+                      + (f" This calculation is not from: {other_events}. "
+                         "Those events have not been established as alternative legal triggers; "
+                         "say which event satisfies the trigger if the current reading is wrong."
+                         if other_events else "")
                       + " I have not entered a deadline for it: confirm the "
                         "accrual and it becomes one."))]
         if lim.state is not limitation.LimitationState.COMPUTED:
@@ -3623,7 +3742,7 @@ class TurnEngine:
         if exploratory and metrics.evidence_rounds >= MAX_EVIDENCE_ROUNDS:
             metrics.evidence_bound_hit = True
             return EvidenceResult(
-                coverage=Coverage.NOT_HELD,
+                coverage=Coverage.NOT_ASSESSED,
                 missing=(f"the evidence bound of {MAX_EVIDENCE_ROUNDS} rounds "
                          f"was reached before this need could be met, so it was "
                          f"NOT searched."),
@@ -3684,6 +3803,16 @@ class TurnEngine:
           HELD_NOT_FOUND  a RETRIEVAL DEFECT that escalates. It is never shown
                           to the advocate as though the corpus lacked it
         """
+        # Search instrumentation never becomes a legal or advocate decision.
+        if result.search_note:
+            grounds.append(Element(kind=ElementKind.GROUND, thread=thread.id,
+                                   text=result.search_note, disclosure=True))
+        if result.coverage is Coverage.SEARCHED_NO_MATCH:
+            if not result.search_note:
+                grounds.append(Element(kind=ElementKind.GROUND, thread=thread.id,
+                                       text=result.missing, disclosure=True))
+            return
+
         # AN INFERENCE THE RETRIEVAL RESTED ON. Disclosed before the
         # findings, because an advocate who is not told which Act was assumed
         # cannot tell a right answer from a right answer to the wrong question.
@@ -3726,7 +3855,8 @@ class TurnEngine:
                           f"hold it.")))
             concluded["decisions"] = decision.merge(standing, (settled,))
 
-        elif turn is not None and concluded is not None and result.findings:
+        elif (turn is not None and concluded is not None and result.findings
+              and result.findings[0].source_kind is SourceKind.PROVISION):
             # THE ADVOCATE RESOLVED IT, so nothing had to be assumed.
             #
             # The branch above discloses an inference and ends by saying
@@ -3803,7 +3933,7 @@ class TurnEngine:
                               f"({f.locator}; "
                               f"{f.binding.said} for {f.binding_for} — "
                               f"{f.binding_reason}).{checked}"),
-                        refs=(f.locator,)))
+                        refs=(f.locator,), source=capture_source(f)))
                 elif f.quotable:
                     # SHOWN, with its status disclosed, and NOT relied on.
                     #
@@ -3819,17 +3949,25 @@ class TurnEngine:
                     # gets one clause. Giving both the same weight makes the
                     # rare one invisible.
                     adverse = f.treatment.state is TreatmentState.NEGATIVE
-                    note = (f"ADVERSE TREATMENT — {', '.join(f.treatment.verbs)}. "
-                            f"Do not rely on this without reading it."
-                            if adverse else
-                            "Not relied on: subsequent treatment unverified.")
+                    limits = []
+                    if f.supports is None:
+                        limits.append("Whether this passage supports the question "
+                                      "has not been assessed.")
+                    if not f.binding.assessed:
+                        limits.append("Its binding status has not been established.")
+                    if adverse:
+                        limits.append(f"ADVERSE TREATMENT — {', '.join(f.treatment.verbs)}. "
+                                      "Do not rely on this without reading it.")
+                    elif not f.treatment.state.usable_alone:
+                        limits.append("Not relied on: subsequent treatment unverified.")
+                    note = " ".join(limits)
                     grounds.append(Element(
                         kind=ElementKind.GROUND, thread=thread.id,
                         text=(f'{f.ref} — "{_excerpt(f.span)}"'
                               f'{" [...]" if _shortened(f.span) else ""} '
                               f"({f.locator}; "
                               f"{f.binding.said} for {f.binding_for}). {note}"),
-                        refs=(f.locator,),
+                        refs=(f.locator,), source=capture_source(f),
                         signal=Signal.ADVERSE_TREATMENT if adverse else Signal.NONE,
                         disclosure=not adverse))
                 else:
@@ -4022,7 +4160,8 @@ class TurnEngine:
                       if a.no_answer else a.our_answer)
             out.append(Element(
                 kind=ElementKind.GROUND, thread=thread.id,
-                text=f"They will say, on {a.ground}: {a.their_case} — {answer}"))
+                feature="D7",
+                text=f"An opposing argument on {a.ground}: {a.their_case} — {answer}"))
 
         # E-083. Should be empty, because the type refuses one at construction.
         # Computed anyway: a type guard says nothing about objects decoded from
@@ -4188,20 +4327,39 @@ class TurnEngine:
                 considered = (*considered, first)
 
         threads = tuple(t.id for t in considered)
+        positions = tuple({"thread": t.id,
+                           "facts": [{"id": f.id, "statement": f.statement,
+                                      "certainty": f.certainty.value,
+                                      "source": f.provenance.kind,
+                                      "date": str(f.date) if f.date else None}
+                                     for f in chronology.chart(matter.facts, t.chronology)],
+                           "role": t.posture.role.value,
+                           "role_basis": t.posture.basis.value}
+                          for t in considered)
 
         found: tuple | None
         if len(threads) < 2:
             # NOT a skip. `cross_thread` returns NONE_FOUND for a single-thread
             # file, which is a finding: there is no pair.
             found = ()
+        elif any(not p["facts"] for p in positions):
+            # A title and role are not substantive positions. No empty-population
+            # "nothing found" verdict, and no model call can manufacture the input.
+            found = None
         else:
             try:
                 res = self._read(
                           adversarial.build_exposure_prompt(
-                        tuple((t.id, t.label) for t in considered)),
+                        tuple((t.id, t.label) for t in considered), positions),
                           adversarial.EXPOSURE_SCHEMA, "exposure", Tier.ROUTINE)
                 metrics.record_call(res)
                 found = adversarial.read_exposures(res.data or {}, threads)
+                if found is not None:
+                    labels = {t.id: t.label for t in considered}
+                    found = tuple(replace(e,
+                        what=adversarial.labelled_text(e.what, labels),
+                        consequence=adversarial.labelled_text(e.consequence, labels))
+                        for e in found)
             except ModelError as exc:
                 metrics.fire("G-MODEL", "unavailable",
                              f"the cross-file pass did not run: {exc}")
@@ -4218,9 +4376,9 @@ class TurnEngine:
         if report.state is adversarial.ExposureState.NOT_RUN:
             return [Element(
                 kind=ElementKind.GROUND, disclosure=True,
-                text=(f"THE CROSS-FILE PASS DID NOT RUN: "
-                      f"{report.not_run_because}. Nothing here says these "
-                      f"disputes do not damage each other — nobody looked."))]
+                text=("I could not establish a complete comparison between these disputes. "
+                      "The available positions or the returned assessment were incomplete. "
+                      "This does not establish that the disputes are consistent with each other."))]
 
         if report.state is adversarial.ExposureState.NONE_FOUND:
             held = len(born_together) - 1 if len(born_together) > 1 else 0
@@ -4234,13 +4392,11 @@ class TurnEngine:
                          f"disputes." if held else "")))]
 
         # LABELS, NEVER IDS. `{e.from_thread}` is a ThreadId and this
-        # rendered it into advocate-facing text -- `... on
-        # thr_016c52910d37 - This damages the defence ...`. The prompt now
-        # sends labels so the read answers in them; `_label_of` is the
-        # fallback for a value that is still an id.
+        # Structured endpoints use IDs; every prose field is labelled before
+        # this point. A rejected field makes the whole comparison unassessed.
         labels = {t.id: t.label for t in matter.threads}
         return [Element(
-            kind=ElementKind.GROUND, disclosure=True, signal=Signal.CONTRADICTION,
+            kind=ElementKind.GROUND, disclosure=False, signal=Signal.CONTRADICTION,
             text=(f"Across this file: {e.what} on "
                   f"{_label_of(e.from_thread, labels)} — "
                   f"{e.consequence} on {_label_of(e.to_thread, labels)}."))
@@ -4341,6 +4497,14 @@ class TurnEngine:
 
         # E-080. THE ADVERSE FACTS NOBODY ANSWERED, BY NAME.
         left = theory_reader.unaccounted(read.adverse, read.theory)
+        unresolved = read.theory.unresolved if read.theory else {}
+        if unresolved:
+            metrics.fire("G-ADVERSE", "unaccounted", ", ".join(unresolved))
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id,
+                text="Adverse points remain open: " + "; ".join(
+                    f"{next((f.statement for f in chart if f.id == fid), 'Recorded proposition')}: "
+                    f"{reason}" for fid, reason in unresolved.items())))
         if left:
             metrics.fire("G-ADVERSE", "unaccounted", ", ".join(left))
             named = "; ".join(
@@ -4352,7 +4516,7 @@ class TurnEngine:
                       f"explained nor conceded by the theory: {named}. A "
                       f"theory that works only because these went unmentioned "
                       f"reads perfectly and loses.")))
-        else:
+        elif not unresolved:
             # THE CLEAN STATE, SAID -- E-082's rule, applied to the gate
             # next door. `_exposure` already says "I looked ... and found
             # none" on a file with no exposure, and this said nothing at
@@ -5476,7 +5640,12 @@ class TurnEngine:
                    relief_position: "relief_mod.ReliefPosition | None" = None,
                    concluded: "dict | None" = None,
                    sources: tuple[Finding, ...] = (),
+                   response_mode: Mode = Mode.SHORT_QUESTION,
                    ) -> Element:
+        if concluded is not None:
+            # A newly refused/failed derivation must not leave yesterday's
+            # recommendation presented as current. Its transcript is retained.
+            concluded["recommendation"] = {}
         side = thread.posture.side.value
         cited = ""
         if result.usable:
@@ -5566,7 +5735,9 @@ class TurnEngine:
                     f"settled: a limitation of {position.expires_on.isoformat()} "
                     f"was computed under a premise the product inferred "
                     f"({position.conditional_because}). Do NOT tell them to "
-                    f"file by that date; the step is to confirm the premise.")
+                    f"file by that date as though settled. Ask to confirm the premise "
+                    f"only if needed for the present request; independent evidence "
+                    f"preservation or clarification remains possible within its limits.")
             else:
                 worked = (f"\n\nNOT worked out: {position.not_computed_because}. "
                           f"Do not assume a position either way.")
@@ -5619,6 +5790,16 @@ class TurnEngine:
             "is one nobody looked up, and it will cost the advocate the whole "
             "turn."
         )
+        explanatory = response_mode in (Mode.EXPLANATION, Mode.ASSESSMENT)
+        if explanatory:
+            system = (
+                "Answer the requested explanation or assessment in natural paragraphs, "
+                "proportionate to its complexity. Do not manufacture an action or question. "
+                "Use the supplied file, computed positions and retrieved passages only. "
+                "Distinguish allegations, supported conclusions, assumptions and unknowns. "
+                "Explain applicable law and material alternatives, keeping consequential "
+                "qualifications visible. Do not direct an act, concede a position or "
+                "claim permission to act. Keep the answer within 240 words.\n" + PEER)
         # THE FILE, THEN THIS TURN. A next step recommended off the last
         # message alone re-opens ground the advocate has already covered,
         # which reads to them as the product having forgotten the matter --
@@ -5640,11 +5821,13 @@ class TurnEngine:
                 f"{cited}{worked}{relief_note}{held}")
         if file_note:
             user += f"\n\n{file_note}"
-        user += (f"\n\nWhat they have just asked: {turn.message.strip()}"
-                 f"\n\nThe single next step:")
+        user += (f"\n\nWhat they have just asked: {turn.message.strip()}\n\n"
+                 + ("The requested explanation or assessment:" if explanatory
+                    else "The single next step:"))
         prompt = with_evidence(Prompt(system=system, user=user), sources or result.findings)
         try:
-            res = self._model.complete(guided(prompt), Tier.ROUTINE, max_tokens=120)
+            res = self._model.complete(guided(prompt), Tier.ROUTINE,
+                                       max_tokens=768 if explanatory else 120)
             metrics.record_call(res)
             partial = refuse_partial(res.completion, doing="the recommendation")
             if partial:
@@ -5675,7 +5858,8 @@ class TurnEngine:
         claims = consistency.claims_for(
             position, register, side, turn.today, thread.chronology,
             relief_position=relief_position)
-        text, verdict = self._consistent_step(text, claims, metrics, file_note)
+        text, verdict = self._consistent_step(text, claims, metrics, file_note,
+                                             allow_repair=not explanatory)
         if verdict.contradicted:
             named = next(c for c in claims if c.id == verdict.claim_id)
             # BLOCK, AND THE BLOCK IS THE ANSWER (the matrix, Scope.STEP).
@@ -5692,6 +5876,13 @@ class TurnEngine:
                       f"{verdict.quoted.strip()!r} — {verdict.why}. Tell me "
                       f"what you want to do given that position and I will "
                       f"work it."))
+
+        limitation_block = self._limitation_step(text, position, metrics, thread.id, file_note)
+        if limitation_block is not None:
+            return limitation_block
+
+        if explanatory:
+            return Element(kind=ElementKind.FINDING, text=text, thread=thread.id)
 
         by_when, no_deadline = self._by_when(register, turn.today)
 
@@ -5757,8 +5948,43 @@ class TurnEngine:
             kind=ElementKind.ACTION, thread=thread.id, text=text,
             by_when=by_when, no_deadline_reason=no_deadline)
 
+    def _limitation_step(self, text, position, metrics, thread_id, context):
+        """Refuse dependent/unknown directives, not evidence-gathering or the turn."""
+        settled = position is not None and (
+            position.state is limitation.LimitationState.NOT_APPLICABLE
+            or (position.state is limitation.LimitationState.COMPUTED
+                and position.expires_on is not None))
+        if settled:
+            metrics.fire("G-LIMITATION", position.state.value, "dated premise established")
+            return None
+        assessment = step_dependency.assess({}, text, context)
+        try:
+            res = self._read(step_dependency.build_prompt(text, context),
+                             step_dependency.SCHEMA, "step_dependency")
+            metrics.record_call(res)
+            assessment = step_dependency.assess(res.data or {}, text, context)
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable", f"step dependency was not assessed: {exc}")
+        metrics.step_assessments.append(assessment.record(thread_id))
+        if assessment.dependence is step_dependency.Dependence.INDEPENDENT:
+            metrics.fire("G-LIMITATION", "not_applicable",
+                         "The proposed step was assessed as independent of the unresolved "
+                         "limitation position: " + assessment.basis)
+            return None
+        reason = (position.conditional_because or position.not_computed_because
+                  if position is not None else "no limitation position was established")
+        response = metrics.fire("G-LIMITATION", "not_computed", reason)
+        if response is not Response.BLOCK:
+            raise ValueError("G-LIMITATION must block the dependent step")
+        return Element(
+            kind=ElementKind.QUESTION, thread=thread_id, gate="G-LIMITATION",
+            text=("I have not released a limitation-dependent recommendation on this "
+                  f"thread. {reason}. I could not establish that this step can proceed "
+                  "independently. We can continue gathering evidence and clarify "
+                  "the relevant dates or legal premise before deciding that step."))
+
     def _consistent_step(self, text: str, claims, metrics: TurnMetrics,
-                         file_note: str = ""):
+                         file_note: str = "", *, allow_repair: bool = True):
         """The step, verified against the turn's own computed facts.
 
         ONE REPAIR, THEN THE STEP GOES. The rewrite is handed the
@@ -5775,7 +6001,7 @@ class TurnEngine:
         """
         verdict = self._verify_step(text, claims, metrics, file_note)
 
-        if verdict.contradicted:
+        if verdict.contradicted and allow_repair:
             named = next(c for c in claims if c.id == verdict.claim_id)
             repaired = self._repair_step(text, named, verdict, metrics,
                                          file_note)
@@ -5845,9 +6071,12 @@ class TurnEngine:
         try:
             res = self._model.complete(
                 guided(consistency.repair_prompt(text, claim, verdict.why,
-                                                 file_note)),
+                                                 file_note), communicates=True),
                 Tier.ROUTINE, max_tokens=120)
             metrics.record_call(res)
+            partial = refuse_partial(res.completion, doing="the repaired recommendation")
+            if partial:
+                raise OutputTruncated(partial)
             return (res.text or "").strip()
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
@@ -6047,7 +6276,7 @@ class TurnEngine:
                     text=(f'{f.ref} — "{_excerpt(f.span)}"'
                           f'{" [...]" if _shortened(f.span) else ""} '
                           f"({f.locator})."),
-                    refs=(f.locator,)))
+                    refs=(f.locator,), source=capture_source(f)))
             rows.append(Element(
                 kind=ElementKind.GROUND, disclosure=True,
                 text=("What that needs is evidence of the thing itself — who "
@@ -6137,7 +6366,7 @@ class TurnEngine:
             text=(f'{f.ref} — "{_excerpt(f.span)}"'
                   f'{" [...]" if _shortened(f.span) else ""} '
                   f"({f.locator})."),
-            refs=(f.locator,)) for f in cited[:3]]
+            refs=(f.locator,), source=capture_source(f)) for f in cited[:3]]
         return Answer(route=Route.NON_MATTER, mode=mode,
                       mode_statement=mode_statement, elements=tuple(rows))
 
@@ -6145,27 +6374,10 @@ class TurnEngine:
         """Class-B checks, on the assembled Answer, BEFORE the byte boundary."""
         if answer.route is Route.NON_MATTER:
             return
-        # S3 -- "the first content element is an action or a blocking
-        # question" -- IS ENFORCED BY THE TYPE TOO, and the check that used to
-        # sit here could no more fire than the D2 one described below.
-        #
-        # `Answer.__post_init__` raises on exactly this condition, so the
-        # answer never reaches this line with a background element first. A
-        # mutation disabling the runtime check SURVIVED, which is how it was
-        # found -- and the paragraph immediately below had already written the
-        # rule it was breaking three lines further up.
-        #
-        # D2 -- "every turn contains a recommendation or a blocking
-        # question" -- IS ENFORCED BY THE TYPE, not here.
-        #
-        # `Answer.__post_init__` refuses a matter-route answer whose first
-        # element is neither, so there is always at least one and the check
-        # that used to sit here could never fire. A mutation deleting it
-        # changed nothing, which is how it was found.
-        #
-        # A runtime check for something a type makes impossible is not a
-        # second line of defence. It is a line that never executes, and a
-        # reader takes it for a live guard.
+        # Answer owns purpose-sensitive assembly: actionable/blocked work leads
+        # with its action or controlling question. An unblocked explanation or
+        # assessment may consist of findings. This is not permission to bypass
+        # any release check, and duplicating the type's check here proves nothing.
         for e in answer.loud_signals:
             if e.collapsible:
                 metrics.violate("S5", f"loud signal {e.signal.value} is collapsible")

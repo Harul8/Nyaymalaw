@@ -231,7 +231,8 @@ def test_every_kind_the_schema_offers_names_the_section_it_needs():
     """A kind the producer can return with no section mapped would fall
     through to `provisions.get(None)` and build a factor on nothing."""
     for value in factors.FACTOR_SCHEMA["properties"]["kind"]["enum"]:
-        if value == "none":
+        if value in ("none", "cannot_tell"):
+            # These are assessment outcomes, never legal factors.
             continue
         assert FactorKind(value) in factors.SECTION_FOR
 
@@ -317,7 +318,7 @@ def test_the_kinds_not_read_are_still_declared_not_assessed():
     from nm.core import factors
     from nm.core.limitation import FactorKind
 
-    offered = set(factors.FACTOR_SCHEMA["properties"]["kind"]["enum"]) - {"none"}
+    offered = set(factors.FACTOR_SCHEMA["properties"]["kind"]["enum"]) - {"none", "cannot_tell"}
     assert offered == {k.value for k in factors.READS}, (
         "the schema offers a kind this read has no section for, so the model "
         "can report something that will be silently refused")

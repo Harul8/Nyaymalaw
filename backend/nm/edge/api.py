@@ -217,6 +217,7 @@ def _release(output) -> _Released:
                 "collapsible": e.collapsible,
                 "disclosure": e.disclosure,
                 "refs": list(e.refs),
+                "source": (e.source.header() if e.source else None),
                 # BK-37. WHICH QUESTION THIS ELEMENT ANSWERS.
                 #
                 # Computed HERE and not in the browser, because a renderer
@@ -737,6 +738,41 @@ async def dictation_socket(socket: WebSocket,
     except DictationUnavailable as exc:
         await socket.send_json({"live": False, "why": str(exc)})
         await socket.close(code=1011)
+
+
+@app.get("/api/matters/{matter_id}/turns/{turn_id}/sources/{element_index}")
+def source_excerpt(matter_id: str, turn_id: str, element_index: int,
+                   advocate_id: Advocate, response: Response, offset: int = 0) -> dict:
+    """Read only a saved, released passage. Never search or replace its version."""
+    from nm.domain.turn_receipt import release_index
+
+    response.headers["Cache-Control"] = "no-store"
+    matter = application().store.load(matter_id)
+    if matter is None or matter.advocate_id != advocate_id:
+        raise HTTPException(404, "No accessible saved source.")
+    receipts, problems = release_index(matter)
+    receipt = receipts.get(turn_id)
+    if problems or receipt is None:
+        raise HTTPException(404, "No accessible saved source.")
+    answer = receipt.validated_answer()
+    if element_index < 0 or element_index >= len(answer.elements):
+        raise HTTPException(404, "No accessible saved source.")
+    element = answer.elements[element_index]
+    source = element.source
+    if source is None:
+        raise HTTPException(404, "No accessible saved source.")
+    if offset < 0 or offset >= len(source.text):
+        raise HTTPException(416, "This position is outside the saved passage.")
+    end = min(offset + 6000, len(source.text))
+    return {"label": source.label, "locator": source.locator,
+            "digest": source.digest, "kind": source.kind,
+            "valid_from": source.valid_from, "valid_to": source.valid_to,
+            "recorded_at": receipt.recorded_at,
+            "coverage": "saved_passage", "representation": "extracted_text",
+            "text": source.text[offset:end], "offset": offset,
+            "next_offset": end if end < len(source.text) else None,
+            "total_characters": len(source.text), "qualification": element.text,
+            "full_document_available": False}
 
 
 @app.get("/api/matters/{matter_id}/transcript")
