@@ -1088,12 +1088,88 @@ function renderDisputeAgenda(body, agenda) {
     if (row.thread_id === agenda.next_thread_id) status.textContent += ' · Next to review';
     const need = document.createElement('p'); need.className = 'dispute-need';
     need.textContent = row.next_need || 'No next step recorded.'; item.appendChild(need);
+    renderRequirements(item, row);
     body.appendChild(item);
   }
   const note = document.createElement('p'); note.className = 'hint';
   note.textContent = rows.length ? 'Select a dispute to focus your next message. Other disputes remain open.'
     : 'The disputes will appear here as your brief is assessed.';
   body.appendChild(note);
+}
+
+// F-B-17. WHAT THIS DISPUTE NEEDS, read out of the passages retrieved for it.
+//
+// Every row states which passage requires it and shows those words, because a
+// requirement an advocate cannot check is this product inventing law and
+// asking them to chase it. The mark is DERIVED on the server from the file and
+// from what the advocate answered; nothing here can set one.
+const REQUIREMENT_MARK = {
+  held: { mark: '\u2713', label: 'on the file' },
+  promised: { mark: '\u25CF', label: 'promised' },
+  unavailable: { mark: '\u2717', label: 'not available' },
+  outstanding: { mark: '\u25CB', label: 'not yet asked' },
+};
+
+function renderRequirements(item, row) {
+  if (row.requirements_state !== 'established') {
+    const none = document.createElement('p');
+    none.className = 'requirement-none';
+    // Nothing retrieved is not the same as nothing needed, and the board must
+    // not let the advocate read the first as the second.
+    none.textContent = 'What this dispute needs has not been established yet.';
+    item.appendChild(none);
+    return;
+  }
+  const list = document.createElement('ul');
+  list.className = 'requirement-list';
+  for (const need of row.requirements || []) {
+    const mark = REQUIREMENT_MARK[need.state] || REQUIREMENT_MARK.outstanding;
+    const line = document.createElement('li');
+    line.className = `requirement requirement--${need.state}`;
+    const tick = document.createElement('span');
+    tick.className = 'requirement-mark'; tick.textContent = mark.mark;
+    // The mark is decorative; the state is in words for anyone who cannot see
+    // a colour or a glyph.
+    tick.setAttribute('aria-hidden', 'true');
+    line.appendChild(tick);
+    const what = document.createElement('span');
+    what.className = 'requirement-need';
+    what.textContent = need.need;
+    line.appendChild(what);
+    const state = document.createElement('span');
+    state.className = 'requirement-state';
+    state.textContent = need.state === 'promised' && need.due
+      ? `promised by ${need.due}` : mark.label;
+    line.appendChild(state);
+    if (need.force === 'strengthening') {
+      const force = document.createElement('span');
+      force.className = 'requirement-force';
+      force.textContent = 'strengthens';
+      force.title = 'A judgment looks for this; the section does not require it.';
+      line.appendChild(force);
+    }
+    const basis = document.createElement('p');
+    basis.className = 'requirement-basis';
+    basis.textContent = need.basis ? `${need.source} \u00b7 ${need.basis}` : need.source;
+    line.appendChild(basis);
+    const span = document.createElement('blockquote');
+    span.className = 'requirement-span';
+    span.textContent = need.span;
+    line.appendChild(span);
+    list.appendChild(line);
+  }
+  item.appendChild(list);
+  const state = document.createElement('p');
+  state.className = 'requirement-summary';
+  // Two different facts, and the board says which it means: asking is finished
+  // when nothing is outstanding; the dispute is finished when nothing is also
+  // merely promised.
+  state.textContent = row.requirements_settled
+    ? 'Everything this dispute needs is settled.'
+    : row.nothing_to_ask
+      ? 'Nothing further to ask; waiting on what was promised.'
+      : `${row.outstanding_requirements} still to ask about.`;
+  item.appendChild(state);
 }
 
 function renderOpeningBrief(record) {

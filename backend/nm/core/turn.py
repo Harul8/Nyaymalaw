@@ -40,6 +40,7 @@ from nm.core import (
     limitation,
     proof,
     proof_read,
+    requirements,
     step_dependency,
     thresholds,
 )
@@ -1171,6 +1172,10 @@ class TurnEngine:
                 gaps=concluded.get("gaps", thread.gaps),
                 authorities=concluded.get(
                     "authorities", thread.authorities),
+                # F-B-17. MERGED IN `_requirements`, so a later judgment adds a
+                # row without dropping what the section established.
+                requirements=concluded.get(
+                    "requirements", thread.requirements),
                 evidence=concluded.get("evidence", thread.evidence),
                 thresholds_told=concluded.get(
                     "thresholds_told", thread.thresholds_told),
@@ -2923,7 +2928,59 @@ class TurnEngine:
         # actually relied on, retrieved on the turn that used them.
         concluded["authorities"] = tuple(relied_on)
 
+        # F-B-17. WHAT THIS DISPUTE NEEDS, read out of the passages that were
+        # actually retrieved for it -- not from a table of dispute types and
+        # not from the model's memory of the law.
+        found = self._requirements(thread, tuple(relied_on), metrics)
+        if found is not None:
+            concluded["requirements"] = found
+
         return elements, tuple(relied_on), tuple(retrieved), tuple(derived)
+
+    def _requirements(self, thread: Thread, relied_on: tuple, metrics: TurnMetrics):
+        """The checklist for one dispute, or None when there is nothing to read.
+
+        ONE CALL PER NEW PASSAGE, NOT PER TURN. A requirement is a function of
+        the passage it came from, so re-reading passages already read buys
+        nothing and spends a model call on every ordinary message. The guard is
+        the locators: if this turn retrieved nothing whose locator is absent
+        from the checklist, there is nothing new to read.
+
+        A FAILED READ LEAVES THE CHECKLIST ALONE. Returning an empty tuple
+        would erase requirements an earlier passage established, and the
+        advocate would watch the list empty itself for no reason they could
+        see -- so `None` means "no change", which is what the caller persists.
+        """
+        quotable = tuple(f for f in relied_on if f.quotable and (f.span or "").strip())
+        if not quotable:
+            return None
+        held = tuple(r for r in (thread.requirements or ())
+                     if isinstance(r, requirements.Requirement))
+        already = {r.locator for r in held}
+        fresh = tuple(f for f in quotable if f.locator not in already)
+        if not fresh:
+            return None
+        passages = tuple(
+            requirements.Passage(
+                source=f.ref, text=f.span, locator=f.locator,
+                kind="provision" if f.source_kind is SourceKind.PROVISION else "authority")
+            for f in fresh)
+        try:
+            answer = self._read(requirements.build_prompt(thread.label, passages),
+                                requirements.SCHEMA, "requirements")
+            metrics.record_call(answer)
+        except ModelError as exc:
+            metrics.fire("G-MODEL", "unavailable",
+                         f"what this dispute needs was not read: {exc}")
+            return None
+        reading = requirements.read(answer.data or {}, passages)
+        if reading.dropped:
+            # Counted where it can be seen. A reader that keeps inventing
+            # requirements looks exactly like a reader finding fewer of them.
+            metrics.fire("G-GROUND", "matched",
+                         f"{reading.dropped} requirement(s) were not in the retrieved passages")
+        merged = requirements.merge(held, reading)
+        return merged if merged != held else None
 
     def _remember_questions(self, matter: Matter, answer: Answer,
                             metrics: TurnMetrics, turn: TurnInput) -> Matter:

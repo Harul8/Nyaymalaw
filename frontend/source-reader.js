@@ -26,10 +26,14 @@ function ownsSourceRead(read) {
 }
 
 async function readSourcePage(read, offset) {
-  const page = await api(read.url + `?offset=${offset}`);
+  const page = await api(read.url + `?offset=${offset}&view=${read.view}`);
   if (!ownsSourceRead(read)) return null;
+  // The coverage the server states must be the coverage this view asked for.
+  // A document page accepted into the passage view would put the current text
+  // under a heading that says "exact saved retrieved passage".
+  const wanted = read.view === 'document' ? 'stored_document' : 'saved_passage';
   if (page.digest !== read.digest || page.offset !== offset
-      || page.coverage !== 'saved_passage' || typeof page.text !== 'string') {
+      || page.coverage !== wanted || typeof page.text !== 'string') {
     throw new Error('The saved source identity changed.');
   }
   return page;
@@ -53,6 +57,26 @@ function paintSourceText() {
   const text = sourceRead.text, query = sourceNode('source-search').value;
   const host = sourceNode('source-text');
   host.replaceChildren();
+  if (!query && sourceRead.view === 'document' && sourceRead.anchor !== null
+      && sourceRead.anchor !== undefined) {
+    // THE CITED SPAN, marked as itself and not as a search hit. Only when it
+    // was located by its own text: a span the current document does not carry
+    // is reported, never approximated to the nearest paragraph.
+    const start = sourceRead.anchor - sourceRead.pages[0];
+    const stop = start + sourceRead.anchorLength;
+    if (start >= 0 && stop <= text.length) {
+      host.appendChild(document.createTextNode(text.slice(0, start)));
+      const cited = document.createElement('mark');
+      cited.className = 'cited-span';
+      cited.id = 'source-cited-span';
+      cited.textContent = text.slice(start, stop);
+      host.appendChild(cited);
+      host.appendChild(document.createTextNode(text.slice(stop)));
+      sourceNode('source-search-result').textContent =
+        'The passage this answer relied on is marked in the current text.';
+      return;
+    }
+  }
   let cursor = 0, count = 0, position;
   // Literal case-sensitive matching preserves Unicode offsets. Never parse HTML.
   while (query && (position = text.indexOf(query, cursor)) !== -1) {
@@ -63,9 +87,12 @@ function paintSourceText() {
     if (count >= 500) break;
   }
   host.appendChild(document.createTextNode(text.slice(cursor)));
+  const scope = sourceRead.view === 'document'
+    ? 'the loaded part of the current document' : 'the loaded saved passage';
   sourceNode('source-search-result').textContent = query
-    ? `${count === 500 ? 'At least ' : ''}${count} match${count === 1 ? '' : 'es'} in loaded text only (case-sensitive).`
-    : 'Search covers the loaded saved passage only, not the full document.';
+    ? `${count === 500 ? 'At least ' : ''}${count} match${count === 1 ? '' : 'es'} in ${scope} only (case-sensitive). `
+      + 'No match here does not mean the word is absent from the rest.'
+    : `Search covers ${scope} only.`;
 }
 
 async function loadSourcePage(read, offset = 0) {
@@ -89,12 +116,36 @@ async function loadSourcePage(read, offset = 0) {
       + (page.valid_to ? `Recorded effective to ${page.valid_to}. ` : '')
       + 'This is not a new check of legal currency or applicability.';
     sourceNode('source-qualification').textContent = page.qualification;
-    sourceNode('source-status').textContent = page.next_offset === null
-      ? 'All of this saved passage is loaded. The full document was not retained with this answer.'
-      : `${page.next_offset} of ${page.total_characters} saved passage characters loaded. More is available below.`;
+    if (read.view === 'document') {
+      read.anchor = page.anchor_offset; read.anchorLength = page.anchor_length || 0;
+      sourceNode('source-coverage').textContent =
+        `The source as this corpus holds it now${page.snapshot_id ? ` (generation ${page.snapshot_id})` : ''}`
+        + ' · extracted text, not an original facsimile.';
+      // A CHANGED SOURCE IS A FINDING, not a silent substitution: the owner
+      // asked for the latest text, so the reader shows it and says plainly
+      // when it is no longer the text the answer rested on.
+      sourceNode('source-anchor-note').textContent = page.anchor_note || '';
+      sourceNode('source-anchor-note').hidden = !page.anchor_note;
+      sourceNode('source-status').textContent = page.next_offset === null
+        ? `All ${page.total_characters} characters of the stored document are loaded.`
+        : `${page.next_offset} of ${page.total_characters} characters of the stored document loaded.`;
+    } else {
+      sourceNode('source-anchor-note').hidden = true;
+      sourceNode('source-full').hidden = !page.full_document_available;
+      read.fullWhyNot = page.full_document_unavailable_because || '';
+      sourceNode('source-status').textContent = page.next_offset === null
+        ? 'All of this saved passage is loaded.'
+          + (page.full_document_available ? ' Full document is available below.'
+             : ` The full document is not available: ${read.fullWhyNot}`)
+        : `${page.next_offset} of ${page.total_characters} saved passage characters loaded. More is available below.`;
+    }
     sourceNode('source-more').hidden = page.next_offset === null;
+    sourceNode('source-more').textContent = read.view === 'document'
+      ? 'Load more of this document' : 'Load more of this passage';
+    sourceNode('source-passage').hidden = read.view !== 'document';
     sourceNode('source-copy').disabled = false;
     paintSourceText();
+    if (read.view === 'document' && offset === 0) scrollToCitedSpan();
   } catch { sourceReadError(read); }
   finally {
     read.loading = false;
@@ -107,11 +158,17 @@ function openSourceReader(answer, el, elementIndex, opener) {
   const read = { generation: sourceReadGeneration, session: state.sessionGeneration,
     advocate: state.advocate, pageMatter: state.matterId, opener,
     digest: el.source.digest, text: '', pages: [], next: null, loading: false,
+    view: 'passage', anchor: null, anchorLength: 0, fullWhyNot: '',
     url: `/api/matters/${encodeURIComponent(answer.matter_id)}/turns/`
       + `${encodeURIComponent(answer.turn_id)}/sources/${elementIndex}` };
   sourceRead = read;
   sourceNode('source-title').textContent = el.source.label;
   sourceNode('source-more').hidden = true;
+  sourceNode('source-full').hidden = true;
+  sourceNode('source-passage').hidden = true;
+  sourceNode('source-anchor-note').hidden = true;
+  sourceNode('source-coverage').textContent = 'Exact saved retrieved passage · extracted '
+    + 'text, not an original facsimile or the complete Act or judgment.';
   sourceNode('source-reader').showModal();
   sourceNode('source-close').focus();
   loadSourcePage(read);
@@ -128,8 +185,11 @@ async function copySourcePassage() {
   } catch { sourceReadError(read); return; }
   if (!ownsSourceRead(read)) return;
   try {
+    const coverageLine = read.view === 'document'
+      ? 'Loaded part of the stored document as this corpus holds it now; not a facsimile.'
+      : 'Loaded saved passage only; not the full document.';
     await navigator.clipboard.writeText(`${read.label}\n${read.locator}\n`
-      + `Saved content ${read.digest}\nLoaded saved passage only; not the full document.\n\n`
+      + `Saved content ${read.digest}\n${coverageLine}\n\n`
       + `${text}\n\nQualification recorded with this response:\n${qualification}`);
     if (ownsSourceRead(read)) sourceNode('source-status').textContent = 'Copied the loaded passage with its attribution, coverage and recorded qualifications.';
   } catch {
@@ -146,7 +206,22 @@ sourceNode('source-more').addEventListener('click', () => { if (sourceRead) load
 sourceNode('source-retry').addEventListener('click', () => { if (sourceRead) loadSourcePage(sourceRead); });
 sourceNode('source-copy').addEventListener('click', copySourcePassage);
 sourceNode('source-search').addEventListener('input', paintSourceText);
-sourceNode('source-return').addEventListener('click', () => {
-  sourceNode('source-text').scrollIntoView({ block: 'start' });
+function scrollToCitedSpan() {
+  const cited = sourceNode('source-cited-span');
+  const target = cited || sourceNode('source-text');
+  target.scrollIntoView({ block: 'center' });
   sourceNode('source-text').focus({ preventScroll: true });
-});
+}
+
+function switchSourceView(view) {
+  const read = sourceRead;
+  if (!read || read.loading || read.view === view) return;
+  read.view = view; read.text = ''; read.pages = []; read.next = null;
+  read.anchor = null; read.anchorLength = 0;
+  sourceNode('source-search').value = '';
+  loadSourcePage(read);
+}
+
+sourceNode('source-full').addEventListener('click', () => switchSourceView('document'));
+sourceNode('source-passage').addEventListener('click', () => switchSourceView('passage'));
+sourceNode('source-return').addEventListener('click', scrollToCitedSpan);

@@ -64,6 +64,7 @@ from nm.ports.evidence import (
     Finding,
     Origin,
     ParaKind,
+    SourceDocument,
     SourceKind,
     Treatment,
     kind_for_corpus_label,
@@ -75,6 +76,12 @@ from nm.ports.evidence import (
 #: work; it does not decide relevance. When it binds, the answer says so and
 #: says how many were not examined -- so a miss caused by the ceiling can be
 #: told apart from an absence in the corpus.
+
+def _section_order(number: str) -> tuple:
+    """Sections sort as an advocate reads them: 2, 2A, 3, 10 -- not 10, 2, 2A."""
+    digits = re.match(r"(\d+)", number or "")
+    return (int(digits.group(1)) if digits else 10**9, number or "")
+
 EXAMINED_CEILING = 40
 
 
@@ -524,6 +531,136 @@ class CorpusEvidenceAdapter:
         # The fullest text wins, and EVERY store searched is named.
         best = max(candidates, key=lambda f: len(f.span))
         return (best,), tuple(stores)
+
+    # ------------------------------------------------------ document reader ---
+
+    def document(self, locator: str, kind: str) -> SourceDocument:
+        """The whole Act or judgment a saved passage came from. LB-92.
+
+        A READ OF WHAT IS HELD, and nothing else: the same database the passage
+        was retrieved from, the generation currently bound, no search, no model
+        call, no successor-statute substitution. The donor build resolved a
+        missing citation by fetching the successor sanhita and rendering it
+        under the original reference; LB-91 refuses exactly that, and so does
+        this method -- an unreadable locator returns `not_held` by name rather
+        than the nearest thing that would fill the pane.
+
+        THE TARGET IS LOCATED OR IT IS NOT. `target` names the segment the
+        passage came from; where the locator's segment is absent from the
+        current generation it stays `None`, and the reader says the passage
+        could not be located instead of highlighting a neighbour.
+        """
+        if not self.available:
+            return SourceDocument(
+                state="no_reader",
+                missing="the corpus is not readable on this installation")
+        parts = (locator or "").split("::")
+        if len(parts) != 3 or not parts[0].strip():
+            return SourceDocument(
+                state="not_held",
+                missing=f"{locator!r} is not a locator this corpus can resolve")
+        if kind == "provision":
+            return self._act_document(parts[0], parts[1])
+        if kind == "authority":
+            return self._judgment_document(parts[0], parts[1])
+        return SourceDocument(
+            state="not_held", missing=f"{kind!r} is not a kind of source this reader holds")
+
+    def _act_document(self, act_id: str, section: str) -> SourceDocument:
+        """Every section of one Act, in its own order, with the cited one marked."""
+        rows = self._rows(
+            self._db,
+            """select section_number, atom_type, chunk_id, blob from chunks
+               where doc_type='bare_act' and act_id=?""",
+            (act_id,))
+        if rows is None:
+            return SourceDocument(
+                state="no_reader",
+                missing="the provision store could not be opened for reading")
+        best: dict[str, tuple[str, str]] = {}
+        for section_number, atom_type, chunk_id, blob in rows:
+            if chunk_id in self._denylist():
+                continue
+            body = " ".join((json.loads(blob).get("full_text") or "").split())
+            if not body:
+                continue
+            number = str(section_number or "").strip()
+            # THE FULLEST TEXT WINS, the same rule `_union_lookup` applies and
+            # for the same measured reason: the thin copies are truncated, and
+            # a 13-section copy of a 44-section Act reads as a corpus gap.
+            held = best.get(number)
+            if held is None or len(body) > len(held[1]):
+                best[number] = (f"Section {number}" if number else str(atom_type), body)
+        if not best:
+            return SourceDocument(
+                state="not_held",
+                missing=f"this corpus holds no readable text for {act_id}")
+        ordered = sorted(best.items(), key=lambda item: _section_order(item[0]))
+        segments = tuple(value for _, value in ordered)
+        wanted = str(section or "").strip()
+        target = next((i for i, (number, _) in enumerate(ordered) if number == wanted), None)
+        return SourceDocument(
+            state="read", label=act_id, store=act_id,
+            snapshot_id=self.published_snapshot_id or "",
+            segments=segments, target=target,
+            missing="" if target is not None else
+            f"section {wanted} could not be located in the text held for {act_id}")
+
+    def _judgment_document(self, case_id: str, chunk_id: str) -> SourceDocument:
+        """Every attributable paragraph of one judgment, in its stored order."""
+        if not (self._authority_db and self._authority_db.exists()):
+            return SourceDocument(
+                state="no_reader",
+                missing="the authority index is not built on this installation")
+        rows = self._rows(
+            self._authority_db,
+            """select rowid, para_type, chunk_id, text, case_name, court, year from paras
+               where case_id=? order by rowid""",
+            (case_id,))
+        if rows is None:
+            return SourceDocument(
+                state="no_reader",
+                missing="the authority index could not be opened for reading")
+        segments, target, named = [], None, ""
+        for _, para_type, para_chunk, body, case_name, court, year in rows:
+            # THE CASE IS NAMED BY ITS NAME. `IdentityIndex.describe()` returns
+            # the bench ("3-judge bench"), which is detail about a judgment the
+            # advocate has not been told the name of.
+            named = named or f"{case_name} ({court}, {year})"
+            if para_chunk in self._denylist():
+                continue
+            spoken = " ".join((body or "").split())
+            if not spoken:
+                continue
+            if para_chunk == chunk_id:
+                target = len(segments)
+            segments.append((str(para_type or "paragraph"), spoken))
+        if not segments:
+            return SourceDocument(
+                state="not_held",
+                missing=f"this corpus holds no readable paragraphs for {case_id}")
+        ident = self._identity.case(case_id)
+        bench = f" — {ident.describe()}" if ident else ""
+        return SourceDocument(
+            state="read", label=f"{named or case_id}{bench}",
+            store="authority_index", snapshot_id=self.published_snapshot_id or "",
+            segments=tuple(segments), target=target,
+            missing="" if target is not None else
+            "the cited paragraph could not be located in the judgment as held")
+
+    def _rows(self, database, sql: str, values: tuple):
+        """Read-only, and a store that will not open says so rather than
+        returning an empty result that reads exactly like an empty document."""
+        try:
+            con = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+        except sqlite3.Error:
+            return None
+        try:
+            return con.execute(sql, values).fetchall()
+        except sqlite3.Error:
+            return None
+        finally:
+            con.close()
 
     # ---------------------------------------------------------- authorities ---
     def _fetch_authority(self, need: EvidenceNeed) -> EvidenceResult:

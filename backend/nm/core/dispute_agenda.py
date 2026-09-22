@@ -6,7 +6,7 @@ population can pass by disappearing, and a pause never answers a question.
 
 from __future__ import annotations
 
-from nm.core import dependency
+from nm.core import dependency, requirements
 from nm.domain.summary import DERIVED_SECTIONS
 
 
@@ -68,6 +68,11 @@ def project(matter, *, after_thread_id=None) -> dict:
                 "reviewed",
                 "Reviewed on the available record; this does not close the matter.",
             )
+        # F-B-17. THE CHECKLIST TRAVELS WITH ITS DISPUTE. `requirements_state`
+        # tells "nothing retrieved for this dispute yet" apart from "retrieved
+        # and it needs nothing", which are opposite facts and would otherwise
+        # both render as an empty list.
+        checklist = requirements.checklist(thread)
         rows.append(
             {
                 "thread_id": thread.id,
@@ -76,6 +81,11 @@ def project(matter, *, after_thread_id=None) -> dict:
                 "next_need": reason,
                 "open_needs": list(needs),
                 "missing_assessments": list(missing),
+                "requirements": [item.rendered() for item in checklist],
+                "requirements_state": "established" if checklist else "not_established",
+                "outstanding_requirements": sum(1 for item in checklist if item.outstanding),
+                "nothing_to_ask": requirements.nothing_to_ask(thread),
+                "requirements_settled": requirements.settled(thread),
             }
         )
 

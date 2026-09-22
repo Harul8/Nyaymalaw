@@ -550,6 +550,51 @@ class EvidenceResult:
         return tuple(f for f in self.findings if not f.usable)
 
 
+@dataclass(frozen=True)
+class SourceDocument:
+    """THE WHOLE STORED DOCUMENT a saved passage was taken from — or why not.
+
+    LB-92. The advocate opens a citation at its passage and asks to see the
+    rest of it. That is a READ of the corpus this installation holds; it is
+    never a fresh search, a model call, or a fetch from anywhere else, and it
+    never substitutes a different Act, judgment or successor provision for the
+    one cited. Those are the donor build's two defects and the owner's own
+    LB-91/92 refuse them.
+
+    THREE STATES, AND THE THIRD IS VISIBLE (S1). `read` carries the document;
+    `not_held` says this corpus does not hold it; `no_reader` says this
+    installation cannot read documents at all. An empty `segments` tuple with
+    no state would be the shape of a clean result for a read that never ran.
+
+    `target` is the index of the segment the saved passage came from, or
+    `None` when it cannot be located — and `None` is said out loud rather than
+    highlighting a nearby segment as though it were the cited one.
+
+    `snapshot_id` names the corpus generation THIS READ came from. The saved
+    passage carries its own; when they differ the reader says so, because a
+    changed source is a finding the advice resting on it has to meet
+    (`G-CURRENCY`), not a silent replacement.
+    """
+
+    state: str
+    label: str = ""
+    store: str = ""
+    snapshot_id: str = ""
+    segments: tuple[tuple[str, str], ...] = ()
+    target: int | None = None
+    missing: str = ""
+
+    def __post_init__(self) -> None:
+        if self.state not in ("read", "not_held", "no_reader"):
+            raise ValueError("a source document read has three states")
+        if self.state == "read" and not self.segments:
+            raise ValueError("a document that was read has segments")
+        if self.state != "read" and not self.missing.strip():
+            raise ValueError(
+                "a document that was not read must NAME what is missing. A "
+                "vague disclaimer is silence in more words (PRD M4).")
+
+
 @runtime_checkable
 class EvidencePort(Protocol):
     def fetch(self, need: EvidenceNeed) -> EvidenceResult: ...
@@ -640,3 +685,21 @@ class EvidencePort(Protocol):
         from an adapter that had answered and had no capabilities.
         """
         return {}
+
+    def document(self, locator: str, kind: str) -> SourceDocument:
+        """The stored document behind a saved passage's locator. LB-92.
+
+        ON THE PORT rather than reached by `getattr`, because the sweep in
+        `tests/test_every_evidence_adapter_answers_the_whole_port.py` draws
+        its population from every member the product reaches on an evidence
+        adapter — a member the engine calls and the Protocol does not declare
+        is the shape that produced a 500 on `/api/health`.
+
+        DEFAULTS TO `no_reader`, the honest direction: an adapter nobody has
+        asked holds no documents, and the reader shows the saved passage and
+        says the rest is unavailable. A default of `not_held` would be a claim
+        about a corpus nobody consulted.
+        """
+        return SourceDocument(
+            state="no_reader",
+            missing="this installation has no reader for stored source documents")

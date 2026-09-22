@@ -671,6 +671,34 @@ class Thread:
         """
         return "C4"
 
+    requirements: tuple[object, ...] = ()
+    """WHAT THIS DISPUTE NEEDS, read out of the passages retrieved for it. F-B-17.
+
+    Persisted for the same reason `gaps` and `issues` are: the board shows it
+    between turns, and a checklist recomputed only when retrieval runs would
+    empty itself on the next ordinary message.
+
+    MERGED, NEVER REPLACED. Later retrieval adds requirements -- a judgment
+    read on turn nine can require proof of service that the section never
+    mentioned -- and replacing would silently drop what an earlier passage
+    established. `nm.core.requirements` owns the merge.
+
+    Untyped for the cycle reason `gaps` and `issues` carry.
+    """
+
+    requirement_outcomes: dict[str, dict] = field(default_factory=dict)
+    """WHAT THE ADVOCATE SAID about those requirements, by requirement key.
+
+    A SECOND RECORD ON PURPOSE. `requirements` is what the law asks for and
+    `requirement_outcomes` is what the person holding the file answered; one
+    store for both would let a re-reading of the passages overwrite an answer
+    the advocate gave, and there is no way back from that.
+
+    Nothing here is a tick somebody set. An outcome carries the fact it rests
+    on, or the advocate's own words and when they said them -- the state on the
+    board is derived from this and from the file's atoms, never written.
+    """
+
     def renamed(self, label: str) -> "Thread":
         """A rename loses nothing: the label is a display name and an alias."""
         aliases = self.aliases if self.label in self.aliases else self.aliases + (self.label,)

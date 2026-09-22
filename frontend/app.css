@@ -284,6 +284,12 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 #source-text { margin: 1rem 0; padding: .8rem 1rem; border-left: 3px solid var(--accent);
   white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.75; background: var(--surface-2); }
 #source-text mark { background: var(--amber-w); color: var(--ink); border-bottom: 2px solid var(--amber); }
+/* LB-92: the cited span and a search hit must not look alike. The search is the
+   advocate's own query; this is the text the answer actually rested on. */
+#source-text mark.cited-span { background: transparent; border-bottom: 0;
+  box-shadow: inset 3px 0 0 var(--accent); padding-left: .5rem; font-weight: 600; }
+.source-anchor-note { margin: .6rem 0 0; padding: .6rem .75rem; font-size: .85rem;
+  border-left: 3px solid var(--signal); background: var(--surface-2); color: var(--ink); }
 .source-qualification-label { font-weight: 600; margin-bottom: .35rem; }
 #source-qualification { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 0; font-size: .88rem; }
 .source-reader-foot { flex: none; padding: .8rem 1.25rem max(.8rem, env(safe-area-inset-bottom));
@@ -1464,3 +1470,28 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .dispute-focus[aria-pressed="true"] { background: #e3eee8; color: #174f44; }
 .dispute-status { font-size: .8rem; font-weight: 600; margin: .35rem 0; }
 .dispute-need { font-size: .82rem; line-height: 1.45; margin: .2rem 0; }
+
+/* F-B-17. What a dispute needs, and where each row came from. The state is in
+   words beside the mark: colour and glyph are not how this is read. */
+.requirement-none { font-size: .8rem; color: var(--ink-2); margin: .35rem 0; }
+.requirement-list { list-style: none; margin: .45rem 0 .2rem; padding: 0; }
+.requirement { display: grid; grid-template-columns: 1.1rem 1fr auto;
+  gap: .1rem .45rem; align-items: baseline; padding: .4rem 0;
+  border-top: 1px solid var(--line, #deded8); }
+.requirement-mark { font-size: .9rem; line-height: 1.3; }
+.requirement--held .requirement-mark { color: #1f6f4a; }
+.requirement--promised .requirement-mark { color: var(--amber); }
+.requirement--unavailable .requirement-mark { color: var(--signal); }
+.requirement--outstanding .requirement-mark { color: var(--ink-2); }
+.requirement-need { font-size: .82rem; line-height: 1.4; }
+.requirement-state { font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--ink-2); white-space: nowrap; }
+.requirement-force { grid-column: 2 / -1; justify-self: start; font-size: .68rem;
+  text-transform: uppercase; letter-spacing: .04em; color: var(--amber);
+  border: 1px solid var(--amber); border-radius: 2px; padding: 0 .25rem; }
+.requirement-basis { grid-column: 2 / -1; margin: .15rem 0 0; font-size: .74rem;
+  color: var(--ink-2); }
+.requirement-span { grid-column: 2 / -1; margin: .2rem 0 0; padding-left: .5rem;
+  border-left: 2px solid var(--rule); font-size: .74rem; line-height: 1.45;
+  color: var(--ink-2); }
+.requirement-summary { font-size: .78rem; font-weight: 600; margin: .45rem 0 .2rem; }

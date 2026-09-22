@@ -742,8 +742,22 @@ async def dictation_socket(socket: WebSocket,
 
 @app.get("/api/matters/{matter_id}/turns/{turn_id}/sources/{element_index}")
 def source_excerpt(matter_id: str, turn_id: str, element_index: int,
-                   advocate_id: Advocate, response: Response, offset: int = 0) -> dict:
-    """Read only a saved, released passage. Never search or replace its version."""
+                   advocate_id: Advocate, response: Response, offset: int = 0,
+                   view: str = "passage") -> dict:
+    """Read a saved released passage, or the stored document it came from.
+
+    `view=passage` is the passage the answer relied on, byte for byte.
+    `view=document` is LB-92's Full document: the same Act or judgment as the
+    corpus holds it TODAY, read from the bound generation, with the cited span
+    located or explicitly not located. It never searches, never calls a model,
+    and never renders a different provision under the same citation.
+
+    WHERE THE TWO DIFFER THE READER SAYS SO. The owner's instruction is to show
+    the latest source; a changed source is then a finding the advice resting on
+    it has to meet (`G-CURRENCY`), not a silent replacement, so the response
+    carries `relied_on_matches` rather than letting current text pass as the
+    text that was read.
+    """
     from nm.domain.turn_receipt import release_index
 
     response.headers["Cache-Control"] = "no-store"
@@ -761,6 +775,27 @@ def source_excerpt(matter_id: str, turn_id: str, element_index: int,
     source = element.source
     if source is None:
         raise HTTPException(404, "No accessible saved source.")
+    if view not in ("passage", "document"):
+        raise HTTPException(400, "There is no such view of this source.")
+
+    # THE PASSAGE DOES NOT DEPEND ON THE DOCUMENT READER. Measured 22 September
+    # 2026: `document()` raised, and because the passage view called it too,
+    # EVERY drawer open returned 500 -- the saved passage, which needs nothing
+    # from the corpus, was taken down by the capability that reads more of it.
+    # A reader that cannot run is a missing Full document button, never a lost
+    # passage, so its failure is caught here and named rather than propagated.
+    from nm.ports.evidence import SourceDocument
+
+    try:
+        held = application().evidence.document(source.locator, source.kind)
+    except Exception:  # noqa: BLE001 -- logged with its traceback, then said plainly
+        logging.getLogger("nm.source_reader").exception(
+            "the stored document could not be read for %s", source.locator)
+        held = SourceDocument(state="no_reader",
+                              missing="the document reader failed on this installation")
+    if view == "document":
+        return _stored_document(held, source, element, receipt, offset)
+
     if offset < 0 or offset >= len(source.text):
         raise HTTPException(416, "This position is outside the saved passage.")
     end = min(offset + 6000, len(source.text))
@@ -772,7 +807,44 @@ def source_excerpt(matter_id: str, turn_id: str, element_index: int,
             "text": source.text[offset:end], "offset": offset,
             "next_offset": end if end < len(source.text) else None,
             "total_characters": len(source.text), "qualification": element.text,
-            "full_document_available": False}
+            "full_document_available": held.state == "read",
+            "full_document_unavailable_because": "" if held.state == "read" else held.missing}
+
+
+def _stored_document(held, source, element, receipt, offset: int) -> dict:
+    """LB-92's document view, paged, with the cited span located or not.
+
+    THE PASSAGE IS FOUND BY ITS OWN TEXT, not by trusting the locator's
+    position: a generation that renumbered or re-split its sections would
+    otherwise highlight whatever now sits where the citation used to point,
+    which is the "nearest match as exact" LB-92 refuses.
+    """
+    if held.state != "read":
+        raise HTTPException(404, held.missing)
+    body = "\n\n".join(f"{heading}\n{content}" for heading, content in held.segments)
+    saved = " ".join(source.text.split())
+    at = body.find(saved) if saved else -1
+    if offset < 0 or (body and offset >= len(body)):
+        raise HTTPException(416, "This position is outside the stored document.")
+    end = min(offset + 6000, len(body))
+    return {"label": held.label or source.label, "locator": source.locator,
+            "digest": source.digest, "kind": source.kind,
+            "valid_from": source.valid_from, "valid_to": source.valid_to,
+            "recorded_at": receipt.recorded_at,
+            "coverage": "stored_document", "representation": "extracted_text",
+            "store": held.store, "snapshot_id": held.snapshot_id,
+            "text": body[offset:end], "offset": offset,
+            "next_offset": end if end < len(body) else None,
+            "total_characters": len(body), "qualification": element.text,
+            "segment_count": len(held.segments),
+            "anchor_offset": at if at >= 0 else None,
+            "anchor_length": len(saved) if at >= 0 else None,
+            "relied_on_matches": at >= 0,
+            "anchor_note": ("" if at >= 0 else
+                            "The passage this answer relied on is not in the text now held "
+                            "for this source. The reading below is the current text; it is "
+                            "not what the answer was based on."),
+            "full_document_available": True}
 
 
 @app.get("/api/matters/{matter_id}/transcript")

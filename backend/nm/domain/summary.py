@@ -433,6 +433,19 @@ def _established_on(thread: Thread) -> list[str]:
 
 
 
+def _requirement_state(thread) -> dict:
+    """Three states for the checklist itself, counted rather than asserted."""
+    rows = tuple(getattr(thread, "requirements", ()) or ())
+    if not rows:
+        return {"state": "not_established", "held": 0, "outstanding": 0, "total": 0}
+    outcomes = getattr(thread, "requirement_outcomes", None) or {}
+    held = sum(1 for row in outcomes.values()
+               if isinstance(row, dict) and row.get("state") == "held")
+    answered = sum(1 for row in outcomes.values() if isinstance(row, dict))
+    return {"state": "established", "held": held,
+            "outstanding": max(len(rows) - answered, 0), "total": len(rows)}
+
+
 def _states(owner, names: tuple[str, ...]) -> dict:
     """What each derived section holds on this thread, and WHETHER IT RAN.
 
@@ -498,6 +511,17 @@ def build(matter: Matter, thread_id: str | None = None,
             "facts": len(t.chronology),
             # WHAT WAS DERIVED, AND WHETHER IT RAN (BK-10).
             "sections": _states(t, DERIVED_SECTIONS),
+            # F-B-17. WHAT THIS DISPUTE NEEDS, so a receiving advocate can tell
+            # a checklist that was established from one that was never built.
+            #
+            # DELIBERATELY NOT A `DERIVED_SECTIONS` MEMBER. That vocabulary
+            # decides whether a thread earns `review_current`
+            # (`set(DERIVED_SECTIONS) <= set(assessed)` in the turn), so adding
+            # this would mean a dispute whose law retrieved nothing could never
+            # read as reviewed -- a real regression on exactly the files where
+            # the corpus is thin. The receiving advocate gets the fact; the
+            # review contract keeps its seven sections.
+            "requirements": _requirement_state(t),
         })
         established.extend(_established_on(t))
 
