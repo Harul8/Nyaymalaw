@@ -300,8 +300,33 @@ def build_prompt(quotable: Quotable):
               "duplicates of the existing disputes."))
 
 
-def schema_for(quotable: Quotable) -> dict:
-    """Make omission of a source unit a schema error, without dictating its meaning."""
+def schema_for(quotable: Quotable, *,
+               thread_ids: frozenset[str] = frozenset()) -> dict:
+    """Make omission of a source unit a schema error, without dictating its meaning.
+
+    AN ENTRY MAY NAME ONLY A DISPUTE THIS MATTER HOLDS. `interpret` refuses
+    one that does not ("a dispute ID is not on this matter"); naming the
+    permitted values here means the model is never shown an ID it could offer
+    wrongly. Empty always belongs: it is how a genuinely new dispute says so.
+
+    THE VERDICT IS DELIBERATELY NOT NARROWED, and the reason is worth keeping.
+    On 22 September 2026 a four-dispute brief was refused with "the inventory
+    marks new disputes but the verdict denies new work", and removing
+    `continues` from the enum on a file with no disputes looked like the fix.
+    It is not: `continues` with NO described entries is how an ordinary
+    single-dispute matter opens -- the message adds detail, nothing is
+    separated out, and `bind` creates the first thread. Narrowing the enum
+    broke that path and six tests with it.
+
+    What is actually contradictory is `continues` TOGETHER WITH entries that
+    carry no thread_id, which is a cross-field condition a JSON enum cannot
+    state. `interpret` owns it and keeps owning it.
+
+    THE GUARDS IN `interpret` STAY REGARDLESS. A schema is the model's
+    contract, not a proof about its output -- a provider that does not enforce
+    enums, a repaired payload, a future caller. The schema stops inviting an
+    answer; the guard still refuses it.
+    """
     schema = deepcopy(DISPUTE_SCHEMA)
     props = schema['properties']
     props['verdict']['description'] = (
@@ -313,6 +338,13 @@ def schema_for(quotable: Quotable) -> dict:
     item = props['disputes']['items']
     item['properties'] = {k: v for k, v in item['properties'].items()
                           if k in ('label', 'thread_id')}
+    # AN ID THAT IS NOT ON THIS MATTER IS NOT AN ID. `interpret` refuses one
+    # ("a dispute ID is not on this matter"); naming the permitted values here
+    # means the model cannot offer one in the first place. Empty always
+    # belongs: it is how a genuinely new dispute says so.
+    item['properties']['thread_id'] = {
+        **item['properties'].get('thread_id', {'type': 'string'}),
+        'enum': ['', *sorted(thread_ids)]}
     item['required'] = ['label', 'thread_id']
     props['source_allocations'] = {
         'type': 'object', 'additionalProperties': False,
@@ -342,8 +374,35 @@ def fixed_allocation_repair(quotable: Quotable, data: dict, threads):
         return None
     existing = [r['thread_id'] for r in rows if r['thread_id']]
     new = [r for r in rows if not r['thread_id']]
-    if (len(existing) != len(set(existing))
-            or data.get('verdict') != ('opens' if new else 'continues')):
+    # A DUPLICATED EXISTING ID MAKES THE TABLE ITSELF WRONG, so there is
+    # nothing to constrain against and this still declines.
+    if len(existing) != len(set(existing)):
+        return None
+    # A VERDICT MAY BE CORRECTED WHERE IT UNDER-CLAIMS, NEVER WHERE IT
+    # OVER-CLAIMS, and the asymmetry is the whole rule.
+    #
+    # This used to require `verdict == ('opens' if new else 'continues')`
+    # outright, so a first answer that got the verdict wrong AS WELL AS the
+    # allocation fell through to the unconstrained schema and the model
+    # repeated the same class of mistake -- the repair declining in exactly
+    # the case that needed it. Measured 22 September 2026 on one four-dispute
+    # brief: "the inventory marks new disputes but the verdict denies new
+    # work", then "the allocation for S1 names dispute 6, and this inventory
+    # has 5", which is the failure this function's own docstring describes.
+    #
+    # UNDER-CLAIMING IS RECOVERABLE: rows carrying new work and a verdict of
+    # `continues` disagree, and the rows are the evidence -- repairing adds
+    # nothing and drops nothing, and `apply_fixed_allocation` derives `opens`
+    # from the table.
+    #
+    # OVER-CLAIMING IS NOT. `opens` with no new row means the model says there
+    # is new work its own inventory does not show, and the likeliest reading
+    # is that a dispute was OMITTED. Deriving `continues` there would silently
+    # drop it -- the wrong-merge defect, which is the worst outcome in this
+    # module and what `test_repair_keeps_source_supported_new_work_and_refuses
+    # _to_drop_it` exists for. So that one still declines, and the read is
+    # refused rather than quietly reconciled.
+    if not new and data.get('verdict') == Dispute.OPENS.value:
         return None
     table = [{'label': t.label, 'thread_id': t.id} for t in threads]
     table.extend({'label': r['label'], 'thread_id': ''} for r in new)
@@ -386,11 +445,69 @@ def apply_fixed_allocation(data: dict, repaired: dict, table: list) -> dict:
     if any(i not in used for i, row in enumerate(table, 1) if not row['thread_id']):
         return {**data, 'source_allocations': {}}
     new_index = {old: n for n, old in enumerate(used, 1)}
-    return {**data, 'disputes': [table[i - 1] for i in used], 'quoted': '',
+    kept = [table[i - 1] for i in used]
+    # DERIVED, NOT CARRIED. The verdict is a function of the rows that
+    # survived the repair -- anything without a thread_id is new work -- and
+    # carrying the first answer's verdict through was how a repaired
+    # allocation kept the contradiction that sent it for repair. Asking a
+    # model for a value determined by its own other answers is asking it to
+    # contradict itself; here the table is known, so nobody needs to ask.
+    verdict = 'opens' if any(not row['thread_id'] for row in kept) else 'continues'
+    return {**data, 'disputes': kept, 'quoted': '', 'verdict': verdict,
             'focus_thread_id': repaired.get('focus_thread_id', ''),
             'focus_quote': repaired.get('focus_quote', ''),
             'source_allocations': {key: [new_index[i] for i in values]
                                    for key, values in allocation.items()}}
+
+
+def _allocation_refusal(rows: object, allocations: object,
+                        units: dict) -> str | None:
+    """WHICH allocation rule failed, or None. Never "one of five things".
+
+    THE OLD MESSAGE WAS ONE SENTENCE FOR FIVE CONDITIONS -- *each source unit
+    must have a valid dispute allocation* -- and a refusal that names its
+    family instead of its member cannot be diagnosed from the record it
+    leaves. Measured 22 September 2026: a four-dispute brief failed here,
+    twice, through the bounded repair; the transcript said only that sentence,
+    and the next session had to re-run a live matter to find out which rule
+    had fired. A check that knows exactly what is wrong and reports a
+    category is spending the diagnosis it already computed.
+
+    IT IS ALSO WHAT THE REPAIR READS. The feedback prompt quotes
+    `read.refused` back to the model, so "one of these five" is the
+    instruction the model gets; naming the member makes the second attempt
+    address the thing that actually failed.
+    """
+    if not isinstance(rows, list):
+        return "the dispute inventory is not a list of entries"
+    if not isinstance(allocations, dict):
+        return "the source allocation is not a mapping of source unit to disputes"
+    missing = sorted(set(units) - set(allocations))
+    unknown = sorted(set(allocations) - set(units))
+    if missing or unknown:
+        said = []
+        if missing:
+            said.append("no allocation for " + ", ".join(missing))
+        if unknown:
+            said.append("allocated a source unit that is not in the message: "
+                        + ", ".join(unknown))
+        return "; ".join(said)
+    for key in sorted(allocations):
+        targets = allocations[key]
+        if not isinstance(targets, list):
+            return f"the allocation for {key} is not a list of dispute numbers"
+        if rows and not targets:
+            return f"{key} was allocated to no dispute"
+        for i in targets:
+            # `type(i) is not int` and NOT `isinstance`: `True` is an `int`
+            # and a bool here would index row 1 on every truthy answer.
+            if type(i) is not int:
+                return (f"the allocation for {key} names {i!r}, which is not a "
+                        f"dispute number")
+            if not 1 <= i <= len(rows):
+                return (f"the allocation for {key} names dispute {i}, and this "
+                        f"inventory has {len(rows)}")
+    return None
 
 
 def interpret(quotable: Quotable, data: dict, *,
@@ -424,20 +541,17 @@ def interpret(quotable: Quotable, data: dict, *,
     rows = data.get("disputes")
     allocations = data.get('source_allocations')
     if allocations is not None:
-        units = source_units(quotable.words)
-        if (not isinstance(rows, list) or not isinstance(allocations, dict)
-                or set(allocations) != set(units)
-                or any(not isinstance(targets, list)
-                       or (rows and not targets)
-                       or any(type(i) is not int or not 1 <= i <= len(rows) for i in targets)
-                       for targets in allocations.values())):
-            return DisputeRead(Dispute.CANNOT_TELL,
-                               refused='each source unit must have a valid dispute allocation')
+        wrong = _allocation_refusal(rows, allocations, source_units(quotable.words))
+        if wrong:
+            return DisputeRead(Dispute.CANNOT_TELL, refused=wrong)
     described = _described(quotable, data)
-    if not isinstance(rows, list) or len(described) != len(rows):
+    if not isinstance(rows, list):
         return DisputeRead(Dispute.CANNOT_TELL, described=described,
-                           refused="the dispute inventory contains unreadable "
-                                   "or unsupported entries")
+                           refused="the dispute inventory is not a list of entries")
+    if len(described) != len(rows):
+        return DisputeRead(Dispute.CANNOT_TELL, described=described,
+                           refused=f"{len(rows) - len(described)} of {len(rows)} dispute "
+                                   f"entries were unreadable or unsupported by the source")
     if any(d.thread_id and d.thread_id not in thread_ids for d in described):
         return DisputeRead(Dispute.CANNOT_TELL, refused="a dispute ID is not on this matter")
     existing = [d.thread_id for d in described if d.thread_id]

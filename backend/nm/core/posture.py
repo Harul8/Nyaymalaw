@@ -58,7 +58,11 @@ from dataclasses import dataclass
 
 from nm.domain.matter import Basis, Role
 from nm.domain.quotable import Quotable
-from nm.domain.text import refuses_blank_text, snippet
+from nm.domain.text import (
+    refuses_blank_text,
+    snippet,
+    speaks_of_the_representation,
+)
 
 #: The permitted answers, from the product's own type. Offered to the model so
 #: it selects rather than invents -- an out-of-vocabulary role is blanked and
@@ -165,12 +169,6 @@ SYSTEM = (
     "character."
 )
 
-#: Grammar, not vocabulary. An advocate stating their client speaks in the
-#: first person about the representation; an account of events does not. This
-#: set is CLOSED and complete in a way a list of party descriptors can never be.
-_FIRST_PERSON = re.compile(
-    r"\b(?:we|we're|us|our|ours|my|mine|i|client'?s?|behalf)\b", re.I)
-
 #: A descriptor that names nobody. GRAMMAR, not vocabulary: these are the
 #: ways English refers to a person WITHOUT identifying them -- by their
 #: relation to the speaker -- and the set is closed in a way a list of party
@@ -199,20 +197,14 @@ _NAMES_NOBODY = re.compile(
 
 
 
-def speaks_of_the_representation(text: str) -> bool:
-    """Has the advocate spoken in the FIRST PERSON about their own side?
-
-    The same closed grammatical set guard 2 uses, asked of the account
-    rather than of one span. It is what separates an advocate stating their
-    position -- `we act for`, `we want to file`, `our client`, `on behalf`
-    -- from a description of events.
-
-    C3's counterexample contains none of it: *the landlord has issued a
-    quit notice to the tenant* names two parties and speaks of neither in
-    the first person, so nothing here fires and the reinstatement defect
-    stays impossible.
-    """
-    return bool(_FIRST_PERSON.search(text or ""))
+#: `speaks_of_the_representation` IS IMPORTED, NOT DEFINED HERE.
+#:
+#: `nm.domain.summary` has to ask the same question -- is this statement about
+#: the representation, and therefore about the FILE rather than about one
+#: dispute -- and `domain` may import only `domain`. Defining it twice is the
+#: second copy CLAUDE.md §4 asks about, and the failure it guards is exactly
+#: the one a drifting copy reintroduces. It stays re-exported from this module
+#: so `posture.speaks_of_the_representation` keeps working for its callers.
 
 
 def names_nobody(descriptor: str) -> bool:
@@ -412,7 +404,7 @@ def interpret(quotable: Quotable, data: dict) -> StatedPosture:
                                       f"and {quotable.refusal(quoted)}"))
 
     # GUARD 2 -- the span must speak of the REPRESENTATION, not the events.
-    if not _FIRST_PERSON.search(quoted):
+    if not speaks_of_the_representation(quoted):
         return StatedPosture(Role.UNKNOWN, Basis.UNKNOWN, None, quoted,
                              refused=f"the quoted span describes events rather "
                                      f"than stating whom the advocate acts for: "

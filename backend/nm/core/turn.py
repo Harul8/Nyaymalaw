@@ -1056,6 +1056,10 @@ class TurnEngine:
             ))
             derived, relied_on, retrieved, derived_values = self._derive(
                 thread, work_turn, metrics, memory, side_blind=True,
+                # THE SAME EXPRESSION THE ANSWER IS BUILT WITH, four lines
+                # below. Deriving "will this be served?" twice from different
+                # conditions is how the two drift.
+                blocked=not source_explanation,
                 facts=matter.facts, matter_id=matter.id, response_mode=mode)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
@@ -2634,7 +2638,10 @@ class TurnEngine:
         try:
             res = self._read(
                       dispute_reader.build_prompt(quotable),
-                      dispute_reader.schema_for(quotable), "dispute", Tier.ROUTINE)
+                      dispute_reader.schema_for(
+                          quotable,
+                          thread_ids=frozenset(t.id for t in matter.threads)),
+                      "dispute", Tier.ROUTINE)
             metrics.record_call(res)
             metrics.binding_reads += 1
             read = dispute_reader.interpret(quotable, res.data or {},
@@ -2645,8 +2652,26 @@ class TurnEngine:
                 # One bounded repair of the same contract. No scenario keywords,
                 # invented inventory, dropped quote guard or unlimited retry.
                 prompt = dispute_reader.build_prompt(quotable)
-                fixed = dispute_reader.fixed_allocation_repair(
-                    quotable, res.data or {}, matter.threads)
+                # THE REPAIR HAS TO MATCH THE FAULT, and there are two.
+                #
+                # `fixed_allocation_repair` builds its table FROM THE FIRST
+                # ANSWER'S ROWS and hands the model an enum over their indices.
+                # That is the right tool when the inventory is complete and the
+                # LINKING is wrong -- an index out of range, a verdict that
+                # under-claims -- because the rows are already correct and only
+                # need pinning.
+                #
+                # IT CANNOT ADD A DISPUTE THE FIRST ANSWER OMITTED. Its table
+                # has no row for one, and its enum cannot name what is not in
+                # the table. So where paragraphs went UNALLOCATED -- the reader
+                # stopped at the final subject and missed the others, which is
+                # the failure `uncovered_paragraphs` exists to catch -- the
+                # constrained schema makes recovery impossible, and the open
+                # one is what lets the model return a fuller inventory.
+                #
+                # Diagnosed once, here, rather than by each repair guessing.
+                fixed = (None if missing else dispute_reader.fixed_allocation_repair(
+                    quotable, res.data or {}, matter.threads))
                 feedback = ("Your previous inventory was incomplete or unsupported. "
                             "Re-read the WHOLE message, not just its final subject. "
                             "Return the full corrected inventory, including shared "
@@ -2661,7 +2686,9 @@ class TurnEngine:
                 if fixed:
                     prompt, repair_schema, table = fixed
                 else:
-                    repair_schema = dispute_reader.schema_for(quotable)
+                    repair_schema = dispute_reader.schema_for(
+                        quotable,
+                        thread_ids=frozenset(t.id for t in matter.threads))
                 repaired = self._read(replace(prompt, user=prompt.user + "\n\n" + feedback),
                     repair_schema, "dispute", Tier.ROUTINE)
                 metrics.record_call(repaired)
@@ -2733,6 +2760,7 @@ class TurnEngine:
                 metrics: TurnMetrics,
                 memory: "matter_memory.MatterSummary | None" = None,
                 *, side_blind: bool = False,
+                blocked: bool = False,
                 facts: tuple[Fact, ...] = (),
                 matter_id: str = "",
                 seed: tuple[Finding, ...] = (),
@@ -2741,6 +2769,14 @@ class TurnEngine:
                 response_mode: Mode = Mode.SHORT_QUESTION,
                 ) -> tuple[list[Element], tuple, tuple, tuple]:
         """Retrieve, then assemble. Returns (elements, relied_on, retrieved).
+
+        `blocked` is whether this turn's answer will be REFUSED. It is a
+        different question from `side_blind` and they were conflated once in
+        each direction: a blocked turn may spend only what settles the gate,
+        because nothing it derives is shown, while a side-blind turn that is
+        still served may derive anything that does not depend on the side.
+        The caller knows both and passes both rather than either standing in
+        for the other.
 
         `side_blind` is the posture gate holding. It permits exactly what
         does not depend on which side we are on -- the text of a provision,
@@ -2941,8 +2977,39 @@ class TurnEngine:
 
         # Source-derived requirements are available to this turn's response,
         # not discovered after the model has already asked its questions.
+        #
+        # AND THEY RUN WHILE THE POSTURE GATE HOLDS, because what the retrieved
+        # law REQUIRES is the same on either side -- the section's own words do
+        # not change according to whom we act for. G-POSTURE's visible text
+        # already draws that line: "I will still read back what a provision
+        # says, that is the same on either side, but no directive step is
+        # computed." A checklist is the first half, not the second.
+        #
+        # MEASURED 22 September 2026: a four-dispute advice-only matter, where
+        # nothing had been filed and the advocate had said so, reported "what
+        # this dispute needs has not been established yet" on every dispute --
+        # the one thing that path could have given them, withheld with the
+        # recommendation it had nothing to do with. Suppressing what is side-
+        # blind along with what is side-dependent is the shape; this is the
+        # site where it was found, and `_thresholds` is the neighbouring one.
+        #
+        # AND THE CONDITION IS `blocked`, NOT `side_blind`. Running this
+        # unconditionally was the same conflation one level up: it bought a
+        # derivation read on every BLOCKED turn and served nothing from it.
+        # Measured the same day -- a blocked turn made 7 model calls to 6
+        # settling reads, and no element mentioning what the dispute needs
+        # reached the advocate, because a blocked answer carries the question
+        # and the provisions and stops. `test_nothing_is_computed_behind_a_
+        # closed_posture_gate` is right about that and was the thing that
+        # caught it.
+        #
+        # A side-blind turn that IS served -- the source explanation, which
+        # says in terms "no filed role is needed to read the retrieved
+        # provisions below" -- is where the checklist was missing, and it
+        # still runs there. What a blocked turn may spend is what settles the
+        # gate; what a served turn may spend is what the advocate will read.
         found = None
-        if not side_blind:
+        if not blocked:
             found = self._requirements(thread, tuple(relied_on), metrics,
                                        context=memory.as_context() if memory else "",
                                        concluded=concluded, facts=facts, turn=turn)
@@ -3813,9 +3880,27 @@ class TurnEngine:
             # keep the advocate's words quotable and this product's own
             # rendering not, and the swap made the guard protect the wrong one.
             file=memory.advocate_words if memory else "",
-            context=(f"ACTIVE DISPUTE: {thread_label}. Read representation and opponent "
-                     "for THIS dispute only. Other disputes in the file are context, "
-                     "not a source of its opponent or procedural role.\n"
+            # A SHARED INSTRUCTION IS NOT ANOTHER DISPUTE'S FACT, and conflating
+            # the two blocked a four-dispute matter on G-POSTURE while the
+            # advocate had already written "no suit is filed by us and I am not
+            # defending any proceeding yet except the cheque case" (live run,
+            # 22 September 2026). An advocate states representation ONCE for the
+            # file; asking again per dispute is asking for what the file holds.
+            #
+            # THE INVENTORY READ ALREADY SAYS THIS -- "include shared
+            # representation, proposed-claim or defence instructions in the
+            # allocation for each affected dispute" -- so this read saying the
+            # opposite was two owners disagreeing about one rule, which is the
+            # contradiction P6 refuses. What stays scoped is what must: the
+            # opponent and the procedural role of THIS dispute.
+            context=(f"ACTIVE DISPUTE: {thread_label}. Read the opponent and the "
+                     "procedural role for THIS dispute only: another dispute's "
+                     "events, parties and stage are never a source of them.\n"
+                     "A representation or task instruction the advocate states for "
+                     "the file -- whom they act for, that nothing is filed, that "
+                     "they are advising only, what they intend to seek or resist -- "
+                     "applies to THIS dispute too unless this dispute's own account "
+                     "contradicts it. Quote that instruction where you rely on it.\n"
                      f"Currently recorded opponent: {opponent or 'not established'}. "
                      "Only an express correction in the current message can replace it.\n"
                      + (memory.as_context() if memory is not None else "")),

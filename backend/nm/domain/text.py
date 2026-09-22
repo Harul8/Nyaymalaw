@@ -199,6 +199,70 @@ def words(text: str | None) -> tuple[str, ...]:
     return tuple(_WORDS.findall((text or "").lower()))
 
 
+#: Grammar, not vocabulary. An advocate stating their client speaks in the
+#: first person about the representation; an account of events does not. This
+#: set is CLOSED and complete in a way a list of party descriptors can never be.
+#:
+#: IT LIVES HERE BECAUSE TWO LAYERS NEED IT. `nm.core.posture` asks it of one
+#: quoted span; `nm.domain.summary` asks it of a fact, to decide whether a
+#: statement belongs to the whole file or to one dispute. `domain` may import
+#: only `domain`, so a copy in core would have been a copy -- and the failure
+#: this predicate guards is exactly the one a second copy reintroduces.
+_FIRST_PERSON = re.compile(
+    r"\b(?:we|we're|us|our|ours|my|mine|i|client'?s?|behalf)\b", re.I)
+
+
+def speaks_of_the_representation(text: str | None) -> bool:
+    """Has the advocate spoken in the FIRST PERSON about their own side?
+
+    What separates an advocate stating their position -- `we act for`, `we
+    want to file`, `our client`, `on behalf` -- from a description of events.
+
+    C3's counterexample contains none of it: *the landlord has issued a quit
+    notice to the tenant* names two parties and speaks of neither in the first
+    person, so nothing here fires and the reinstatement defect stays impossible.
+
+    ASK IT OF THE ADVOCATE'S WORDS AND NOTHING ELSE. Asked of a string this
+    product composed it fires on our own prose -- `_FIRST_PERSON` matches the
+    word `client`, and the note "How the client KNOWS any of this has not been
+    assessed" once made it true on every matter, settling a COMPLAINANT posture
+    out of "a cheque was dishonoured on 3 March". That is why `advocate_words`
+    is built from the statements alone, and why this takes a string rather than
+    reaching for one itself.
+    """
+    return bool(_FIRST_PERSON.search(text or ""))
+
+
+#: Sentence and line boundaries, for splitting an advocate's statement into the
+#: parts that speak of the representation and the parts that narrate events.
+#: Deliberately coarse: a boundary missed keeps two sentences together, which
+#: is visible, while a boundary invented would cut a quotation in half and the
+#: guard would then refuse the advocate's own words.
+_SENTENCE = re.compile(r"(?<=[.!?])\s+|\n+")
+
+
+def representation_only(statement: str | None) -> str:
+    """The parts of a statement that speak of the representation, and no more.
+
+    AN OPENING BRIEF IS ONE FACT. `Fact.create(statement=turn.message)` records
+    the whole message, so "I act for X" and four disputes' narratives share a
+    single statement. Anything that wants the first without the others has to
+    cut, and the cut belongs here beside the predicate that decides which parts
+    qualify -- `nm.domain.summary` carries these across disputes and
+    `nm.core.posture` guards one span against the same rule.
+
+    MEASURED 22 September 2026. Carrying the whole fact for the sake of its
+    first sentence put the cheque case's events into the lease dispute's
+    quotable words, and the role read came back `respondent` reasoned out of
+    the wrong dispute -- the client being the one owed rent. Sentences that
+    narrate events are dropped; what is kept is what the advocate said about
+    whom they act for, in their own words, so a quotation of it still matches.
+    """
+    parts = [p.strip() for p in _SENTENCE.split(statement or "")]
+    return "\n".join(p for p in parts
+                     if p and speaks_of_the_representation(p))
+
+
 def required_text_fields(cls, exempt: frozenset[str] = frozenset()) -> tuple[str, ...]:
     """Every field of `cls` annotated `str` with no default.
 

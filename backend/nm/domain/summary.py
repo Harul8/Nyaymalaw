@@ -33,12 +33,16 @@ what had been said in the last thirty seconds.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from nm.domain.intake import ReadQuality
 from nm.domain.matter import AskedQuestion, Certainty, FactBasis, Matter, Thread
 from nm.domain.opening import instruction_context
-from nm.domain.text import refuses_blank_text, snippet
+from nm.domain.text import (
+    refuses_blank_text,
+    representation_only,
+    snippet,
+)
 
 #: How much of the account a prompt is given.
 #:
@@ -527,8 +531,52 @@ def build(matter: Matter, thread_id: str | None = None,
         if f.date:
             established.append(f"{f.date.isoformat()}: {snippet(f.statement, 120)}")
 
+    # WHOM WE ACT FOR IS A FACT ABOUT THE FILE, NOT ABOUT ONE DISPUTE.
+    #
+    # The narrowing above is right for the NARRATIVE and wrong for the
+    # REPRESENTATION, and those were being narrowed together. An advocate
+    # states whom they act for ONCE, at the top of a brief; the opening fact
+    # carrying that sentence lands in one thread's chronology, and every other
+    # thread then has no first-person span anywhere in `words`.
+    #
+    # MEASURED 22 September 2026, on a four-dispute brief opening "I act for
+    # Sattaru Ramulu": the posture read ran per dispute and could not win.
+    # Quoting the shared sentence failed GUARD 1 -- "the quoted span is in
+    # nothing the advocate wrote" -- because it was not in this thread's words;
+    # quoting the dispute's own paragraph failed GUARD 2, "describes events
+    # rather than stating whom the advocate acts for". Both guards were right.
+    # Posture never resolved and G-POSTURE blocked the whole matter.
+    #
+    # CARRIED INTO `words` AND NOT INTO `account`, which is the whole point:
+    # the guard may accept the sentence the advocate actually wrote, and no
+    # other dispute's events reach this dispute's derivation. The model is
+    # already shown these instructions -- `opening_instructions` puts them in
+    # every prompt -- so this stops refusing what we asked for.
+    #
+    # THE PREDICATE IS THE ONE GUARD 2 USES. A second rule for "is this about
+    # the representation" would drift from the guard it has to agree with.
+    #
+    # SENTENCE BY SENTENCE, AND THAT IS NOT A DETAIL. An opening brief is ONE
+    # fact -- `Fact.create(statement=turn.message)` -- so it holds the
+    # representation AND every dispute's narrative in a single statement.
+    # Carrying the fact whole to get its first sentence carries the other
+    # three disputes with it, and the live run of 22 September proved the cost:
+    # the lease dispute's procedural role came back `respondent`, reasoned out
+    # of the CHEQUE case -- "the client is involved in the cheque case where he
+    # is responding to the claim" -- which is a wrong side on a dispute where
+    # the client is the one owed money.
+    #
+    # The first version of this carry passed its own negative control because
+    # the fixture had the representation and the other dispute as separate
+    # facts. The shape that matters has them in one.
+    carried = [replace(fact, statement=kept)
+               for fact in matter.facts
+               if in_scope is not None and fact.id not in in_scope
+               for kept in [representation_only(fact.statement)]
+               if kept]
+
     account, left_out, words, notes = _account(
-        on_thread, thread, about, load_bearing)
+        on_thread, thread, about, load_bearing, carried=carried)
 
     return MatterSummary(
         matter_id=matter.id,
@@ -636,8 +684,15 @@ def _marks(f) -> str:
 
 
 def _account(facts: list, thread, about: str,
-             load_bearing: frozenset[str]) -> tuple[str, int]:
+             load_bearing: frozenset[str],
+             carried: list | None = None) -> tuple[str, int, str, str]:
     """The account, SELECTED to fit. Returns it and how much did not.
+
+    `carried` holds facts from ELSEWHERE ON THE FILE that this dispute may
+    quote but must not narrate -- see the call site. They reach `words` and
+    never `account`, so the quotation guard accepts a sentence the advocate
+    really wrote without another dispute's events entering this one's
+    derivation.
 
     PINNED FIRST, and this is the half that makes truncation safe:
 
@@ -745,7 +800,10 @@ def _account(facts: list, thread, about: str,
     #
     # Rewording the note would have fixed this note. Building the two strings
     # apart fixes the next one.
-    words = "\n".join(f.statement.strip() for f in shown)
+    # THE CARRIED FACTS JOIN HERE AND NOWHERE ELSE. `account` above is this
+    # dispute's narrative; this is what may be QUOTED, and a representation
+    # the advocate stated for the file is quotable on every dispute in it.
+    words = "\n".join(f.statement.strip() for f in (*shown, *(carried or ())))
     return account, max(left_out, 0), words, "\n".join(notes)
 
 

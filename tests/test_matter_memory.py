@@ -944,3 +944,44 @@ def test_the_account_budget_stays_a_fraction_of_the_window_it_must_fit_in():
         f"the account is only {share:.1%} of the window. That is the defect "
         f"this test was written after: 3,000 characters against 100,000 "
         f"tokens, discarding a matter to save a rounding error.")
+
+
+def test_a_served_side_blind_turn_still_derives_what_does_not_turn_on_the_side(
+        tmp_path):
+    """THE OTHER HALF, and without it the rule above is only a suppression.
+
+    `side_blind` and `blocked` are different questions, and conflating them
+    cost something in each direction on 22 September 2026. Suppressing the
+    source-derived requirement checklist whenever the posture gate held meant
+    a four-dispute advice-only matter was told "what this dispute needs has
+    not been established yet" on every dispute -- the checklist is read out of
+    the retrieved section's own words, and what a s.138 case requires is the
+    same whether you prosecute or defend. Running it unconditionally then
+    bought that read on every BLOCKED turn and served nothing from it.
+
+    So: a turn that is side-blind AND SERVED -- the source explanation, which
+    tells the advocate in terms that "no filed role is needed to read the
+    retrieved provisions below" -- must still derive it. Asserting only that a
+    blocked turn spends nothing would pass with the checklist removed from the
+    product entirely, which is the state this test exists to refuse.
+    """
+    from nm.domain.metrics import TurnMetrics
+
+    def calls(*, blocked: bool) -> int:
+        recorder = _Recorder()
+        engine, _ = _engine(tmp_path / f"blocked-{blocked}", model=recorder)
+        engine._derive(
+            Thread.create(label="the cheque"),
+            TurnInput(advocate_id="adv",
+                      message="what does section 138 of the NI Act require?"),
+            TurnMetrics(turn_id="t1"), None, side_blind=True, blocked=blocked)
+        return len(recorder.prompts)
+
+    served, refused = calls(blocked=False), calls(blocked=True)
+    assert served > refused, (
+        f"a served side-blind derivation made {served} model call(s) and a "
+        f"blocked one {refused}. They are equal, so the side-blind work the "
+        f"advocate would actually read -- what the retrieved section itself "
+        f"requires -- is either suppressed on both or run on both. The first "
+        f"is the defect measured on 22 September; the second is the one the "
+        f"blocked-turn invariant above refuses.")

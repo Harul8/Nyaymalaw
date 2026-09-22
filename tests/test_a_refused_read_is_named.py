@@ -100,9 +100,20 @@ ACCRUAL = ("We act for the plaintiff at Hyderabad in a suit for specific "
 #: `REACHED_BY` naming a brief that does not exist is a KeyError rather than a
 #: silent fall-through to `PLAIN` — which is how the accrual row appeared to
 #: run for a while against a brief that never reached the read.
+#: A CLIENT NAMED AND NO PROCEDURAL ROLE, which is the only shape that still
+#: reaches `_read_role`. The fallback exists for exactly this: the advocate has
+#: said whom they act for, so nothing about the CLIENT is inferred, and what is
+#: worked out is the procedural label for a client already identified.
+UNPLACED = ("I act for Ramulu. Advise me on the shop lease at Sangareddy.",)
+
+#: The briefs, by name. A dict rather than a ternary chain so that adding the
+#: fifth is an entry rather than an edit to the dispatch, and so that
+#: `REACHED_BY` naming a brief that does not exist is a KeyError rather than a
+#: silent fall-through to `PLAIN` — which is how the accrual row appeared to
+#: run for a while against a brief that never reached the read.
 BRIEFS: dict[str, tuple[str, ...]] = {
     "plain": (PLAIN,), "expired": (EXPIRED,), "two": TWO,
-    "accrual": (ACCRUAL,),
+    "accrual": (ACCRUAL,), "unplaced": UNPLACED,
 }
 
 #: read -> the brief that REACHES it. Measured on 7 September 2026 by refusing
@@ -127,7 +138,21 @@ REACHED_BY: dict[str, str] = {
     "dates": "plain", "factors": "plain", "inventory": "plain",
     "issues": "plain", "posture": "plain", "route": "plain",
     "theory": "plain",
-    "dispute": "two", "exposure": "two", "role": "two",
+    "dispute": "two", "exposure": "two",
+    # RE-MEASURED 22 September 2026, and the move is the point.
+    #
+    # `role` was reached by `two`. It no longer is, because the posture read
+    # now SETTLES the role on that brief: a representation the advocate states
+    # once for the file became quotable on every dispute in it, so guard 1
+    # stopped refusing the shared span and `_read_role` -- the fallback for a
+    # client who is named with no procedural role -- is not needed there.
+    #
+    # The read is not dead: `unplaced` reaches it, and so did a live
+    # four-dispute matter the same day, where one thread still came back
+    # role=unknown. What went stale is this MAPPING, which its own comment
+    # says was measured; a measurement outlives its behaviour and has to be
+    # taken again rather than reasoned about.
+    "role": "unplaced",
     "proof": "expired", "salvage": "expired",
     # G-DUTY runs on EVERY turn, so any brief reaches it. `plain` keeps the
     # table honest about that: a read driven on a brief chosen to provoke it

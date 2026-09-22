@@ -41,6 +41,7 @@ because `nobody counted` and `one dispute` are still different facts.
 from __future__ import annotations
 
 import pytest
+from nm.core import dispute
 from nm.core.dispute import Described, interpret
 from nm.core.threading import bind
 from nm.domain.matter import Fact, Matter, Provenance
@@ -169,3 +170,44 @@ def test_the_count_is_read_whatever_the_verdict_says():
                 {"quoted": "the cheque bounced", "label": "cheque"},
             ]})
         assert len(read.described) == 2, f"the count was lost on {verdict!r}"
+
+
+# ===== the schema names only the disputes this matter actually holds =======
+
+def test_no_entry_may_name_a_dispute_that_is_not_on_this_matter():
+    """THE RULE: the model is never shown an ID it could offer wrongly.
+
+    `interpret` refuses an entry naming a dispute the matter does not hold.
+    Listing the permitted values in the schema means the answer cannot be
+    formed in the first place -- the guard and the contract agreeing rather
+    than the guard cleaning up after it. Empty always belongs: it is how a
+    genuinely new dispute says so.
+    """
+    item = dispute.schema_for(Quotable(turn="x"),
+                              thread_ids=frozenset({"th_1", "th_2"})
+                              )["properties"]["disputes"]["items"]
+    assert item["properties"]["thread_id"]["enum"] == ["", "th_1", "th_2"]
+    empty = dispute.schema_for(Quotable(turn="x"))["properties"]["disputes"]["items"]
+    assert empty["properties"]["thread_id"]["enum"] == [""]
+
+
+def test_every_verdict_stays_available_on_a_file_with_no_disputes():
+    """THE NEGATIVE CONTROL, and it records a fix that was WRONG.
+
+    Removing `continues` from a file with no disputes looks right -- nothing
+    is there to continue -- and it broke the commonest path in the product.
+    `continues` with no described entries is how an ordinary single-dispute
+    matter opens: the message adds detail, nothing is separated out, and
+    `bind` creates the first thread. Six tests went red before the premise was
+    checked.
+
+    What is contradictory is `continues` together with entries carrying no
+    thread_id, which is a cross-field condition no enum can state and which
+    `interpret` already refuses by name.
+    """
+    for ids in (frozenset(), frozenset({"th_1"})):
+        schema = dispute.schema_for(Quotable(turn="and another thing"),
+                                    thread_ids=ids)
+        assert set(schema["properties"]["verdict"]["enum"]) == {
+            d.value for d in dispute.Dispute}, (
+            f"a verdict was withdrawn for thread_ids={set(ids)}")

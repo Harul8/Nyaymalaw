@@ -153,6 +153,15 @@ WITHHELD: dict[str, str] = {
     "Matter.title": "derived FROM the account, so telling it back would "
                     "spend budget restating the first line of the file.",
     "Thread.id": "an identifier, as above.",
+    "Thread.checklist_session":
+        "an identifier, and one whose only use is COMPARISON. "
+        "`turn.session_reference != thread.checklist_session` is how a "
+        "resumed checklist is told from a continuing one; the value itself "
+        "says nothing about the dispute, and a model shown an opaque session "
+        "key either ignores it or writes about it. What the comparison "
+        "CONCLUDES -- that this is a resumption -- is already told, as "
+        "`resumed`. Reopens if a read is ever asked which session an answer "
+        "came from, which is an audit question and not a legal one.",
     "Posture.version": "structure — the posture's own revision counter.",
     "Posture.source_fact": "an identifier. The fact it points AT is in the "
                            "account; the pointer is not content.",
@@ -605,3 +614,117 @@ def test_the_account_stays_inside_its_budget_with_every_note_appended():
         f"{summary.ACCOUNT_BUDGET} budget")
     assert "has not been assessed" in built.account, (
         "the basis note was dropped rather than reserved for")
+
+
+# ===== a representation is about the FILE, an account is about ONE dispute ====
+#
+# MEASURED 22 September 2026, on a live four-dispute brief opening "I act for
+# Sattaru Ramulu". `summary.build(matter, thread_id)` narrows the account to
+# one dispute, which is right for the NARRATIVE and was also narrowing the
+# REPRESENTATION. The opening fact carrying that sentence lands in one
+# thread's chronology, so on every other thread the posture read could not
+# win: quoting the shared sentence failed guard 1 -- "the quoted span is in
+# nothing the advocate wrote" -- and quoting the dispute's own paragraph
+# failed guard 2, "describes events rather than stating whom the advocate acts
+# for". Both guards were right. G-POSTURE blocked the whole matter.
+
+_REPRESENTATION = ("I act for Sattaru Ramulu, who runs a hardware business "
+                   "at Sangareddy.")
+_OTHER_DISPUTE = ("Fourth, unrelated: Ramulu leased a shop to Meena Traders. "
+                  "Rent unpaid since January 2026.")
+
+
+def _two_disputes() -> tuple[Matter, Thread, Thread]:
+    """One file, two disputes, the representation stated once on the first."""
+    opening = Fact(id="f_open", statement=_REPRESENTATION, provenance=SAID)
+    other = Fact(id="f_other", statement=_OTHER_DISPUTE, provenance=SAID)
+    first = replace(Thread.create(label="the land agreement"),
+                    chronology=("f_open",))
+    second = replace(Thread.create(label="the lease"), chronology=("f_other",))
+    matter = replace(Matter.create(advocate_id="adv_1", title="Ramulu"),
+                     facts=(opening, other), threads=(first, second))
+    return matter, first, second
+
+
+def test_a_representation_stated_once_stays_quotable_on_every_dispute():
+    """THE RULE: whom the advocate acts for is a fact about the FILE.
+
+    An advocate states it once, at the top of a brief. Every dispute on that
+    file may quote it, because they really did write it -- which is the only
+    question the quotation guard asks.
+    """
+    matter, first, second = _two_disputes()
+    for thread in (first, second):
+        words = summary.build(matter, thread.id).advocate_words
+        assert _REPRESENTATION in words, (
+            f"on {thread.label!r} the advocate's own statement of whom they "
+            f"act for is not quotable, so the posture read cannot satisfy "
+            f"guard 1 with it and guard 2 refuses everything else")
+
+
+def test_one_fact_holding_both_carries_only_its_representation():
+    """THE SHAPE THAT ACTUALLY FAILED, and the first version of this fix did
+    not survive it.
+
+    An opening brief is ONE fact -- `Fact.create(statement=turn.message)` --
+    so the representation and every dispute's narrative share a statement.
+    Carrying the fact whole to get its first sentence carried the rest, and on
+    22 September 2026 the live lease dispute came back `role=respondent`
+    reasoned out of the CHEQUE case: "the client is involved in the cheque
+    case where he is responding to the claim". The client is owed the rent.
+    That is a wrong side, on a dispute the contaminating facts had nothing to
+    do with.
+
+    The earlier negative control passed throughout, because its fixture had
+    the two as separate facts. A fixture that cannot express the failure is
+    not a control over it.
+    """
+    whole = Fact(id="f_brief",
+                 statement=(_REPRESENTATION
+                            + " Four things, treated separately.\n\n"
+                            + _OTHER_DISPUTE),
+                 provenance=SAID)
+    first = replace(Thread.create(label="the land agreement"),
+                    chronology=("f_brief",))
+    second = replace(Thread.create(label="the lease"), chronology=())
+    matter = replace(Matter.create(advocate_id="adv_1", title="Ramulu"),
+                     facts=(whole,), threads=(first, second))
+
+    words = summary.build(matter, second.id).advocate_words
+    assert _REPRESENTATION in words, (
+        "the representation did not reach the other dispute at all")
+    assert "Meena Traders" not in words, (
+        "another dispute's events rode in on the representation's fact and "
+        "became quotable evidence for a role read that is not about them")
+
+
+def test_carrying_the_representation_does_not_carry_the_other_dispute():
+    """THE NEGATIVE CONTROL, and it is the reason the carry is narrow.
+
+    Widening `words` to the whole matter would also pass the test above, and
+    would reintroduce the wrong-merge defect the narrowing exists for: one
+    dispute's events reaching another dispute's derivation. Only a statement
+    that SPEAKS OF THE REPRESENTATION travels, and it travels into what may be
+    quoted -- never into the account this dispute reasons from.
+    """
+    matter, first, _second = _two_disputes()
+    built = summary.build(matter, first.id)
+    assert _OTHER_DISPUTE not in built.advocate_words, (
+        "another dispute's events became quotable here")
+    assert "Meena Traders" not in built.account, (
+        "another dispute's narrative entered this dispute's account")
+
+
+def test_the_carry_asks_the_same_question_guard_two_asks():
+    """ONE OWNER. A second rule for `is this about the representation` would
+    drift from the guard it has to agree with, and the drift is invisible:
+    the carry would admit a sentence guard 2 then refuses, which is the state
+    this whole change exists to leave behind."""
+    from nm.core import posture as posture_reader
+    from nm.domain.text import speaks_of_the_representation
+
+    assert posture_reader.speaks_of_the_representation is (
+        speaks_of_the_representation)
+    assert speaks_of_the_representation(_REPRESENTATION)
+    assert not speaks_of_the_representation(
+        "the landlord has issued a quit notice to the tenant")
