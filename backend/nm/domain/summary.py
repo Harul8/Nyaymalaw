@@ -433,17 +433,10 @@ def _established_on(thread: Thread) -> list[str]:
 
 
 
-def _requirement_state(thread) -> dict:
+def _requirement_state(thread, facts=()) -> dict:
     """Three states for the checklist itself, counted rather than asserted."""
-    rows = tuple(getattr(thread, "requirements", ()) or ())
-    if not rows:
-        return {"state": "not_established", "held": 0, "outstanding": 0, "total": 0}
-    outcomes = getattr(thread, "requirement_outcomes", None) or {}
-    held = sum(1 for row in outcomes.values()
-               if isinstance(row, dict) and row.get("state") == "held")
-    answered = sum(1 for row in outcomes.values() if isinstance(row, dict))
-    return {"state": "established", "held": held,
-            "outstanding": max(len(rows) - answered, 0), "total": len(rows)}
+    from nm.domain.requirements import summary
+    return summary(thread, facts)
 
 
 def _states(owner, names: tuple[str, ...]) -> dict:
@@ -521,7 +514,7 @@ def build(matter: Matter, thread_id: str | None = None,
             # read as reviewed -- a real regression on exactly the files where
             # the corpus is thin. The receiving advocate gets the fact; the
             # review contract keeps its seven sections.
-            "requirements": _requirement_state(t),
+            "requirements": _requirement_state(t, matter.facts),
         })
         established.extend(_established_on(t))
 

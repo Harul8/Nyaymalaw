@@ -71,6 +71,7 @@ from nm.domain import summary as matter_memory
 from nm.domain.answer import Answer, Element, ElementKind, Mode, Route, Signal
 from nm.domain.budget import refuse_partial
 from nm.domain.capacity import CapacityPosition
+from nm.domain.capacity import record_on as record_capacity
 from nm.domain.clock import FORUM
 from nm.domain.gates import Response
 from nm.domain.matter import (
@@ -189,6 +190,8 @@ class TurnInput:
     request_offer: dict | None = None
     """Normalized transport offer, excluding only its id; None for core callers."""
     expected_version: int | None = None
+    session_reference: str = ""
+    """Server-derived management reference, never a cookie or authentication token."""
 
     parties: dict = field(default_factory=dict)
     """BK-34. WHO IS INVOLVED, given at intake: name -> `client` | `adverse`
@@ -659,7 +662,7 @@ class TurnEngine:
     def _offer(turn: TurnInput, matter_id: str) -> str:
         offer = dict(turn.request_offer) if turn.request_offer is not None else {
             key: value for key, value in asdict(turn).items()
-            if key not in {"request_offer", "turn_id"}}
+            if key not in {"request_offer", "turn_id", "session_reference"}}
         # The assigned id and an opening whose id was not acknowledged name
         # the same target, not different instructions. Every other field stays.
         offer["matter_id"] = matter_id
@@ -797,13 +800,7 @@ class TurnEngine:
                    for kind, answer in turn.release.items()},
             })
         if capacity is not None:
-            answers = dict(matter.intake_answers or {})
-            previous = answers.get("capacity")
-            history = tuple(answers.get("capacity_history") or ())
-            if previous is not None:
-                history = (*history, previous)
-            answers.update(capacity=capacity.as_dict(), capacity_history=history)
-            matter = replace(matter, intake_answers=answers)
+            matter = record_capacity(matter, capacity)
 
         # ---- ADMIT-A: screens, on names and danger only --------------------
         # An external review found this code doing what the first draft of the
@@ -1176,6 +1173,10 @@ class TurnEngine:
                 # row without dropping what the section established.
                 requirements=concluded.get(
                     "requirements", thread.requirements),
+                requirement_reads=concluded.get("requirement_reads", thread.requirement_reads),
+                requirement_outcomes=concluded.get(
+                    "requirement_outcomes", thread.requirement_outcomes),
+                checklist_session=concluded.get("checklist_session", thread.checklist_session),
                 evidence=concluded.get("evidence", thread.evidence),
                 thresholds_told=concluded.get(
                     "thresholds_told", thread.thresholds_told),
@@ -2185,9 +2186,14 @@ class TurnEngine:
                                                    replace(bound, thread=thread),
                                                    next(f for f in matter.facts if f.id == ids[0]))
                 records[tid] = updated.thread
+            matter = requirements.apply_answers(matter, read.requirement_answers,
+                message=turn.message, turn_id=turn.turn_id, today=turn.today)
             return matter, replace(bound, thread=matter.thread(bound.thread.id),
                                    others=tuple(matter.thread(t.id) for t in bound.others))
-        return self._admit_thread(matter, turn, metrics, bound, fact)
+        matter, bound = self._admit_thread(matter, turn, metrics, bound, fact)
+        matter = requirements.apply_answers(matter, read.requirement_answers,
+            message=turn.message, turn_id=turn.turn_id, today=turn.today)
+        return matter, replace(bound, thread=matter.thread(bound.thread.id))
 
     def _admit_thread(self, matter, turn, metrics, bound, fact):
         """Read one scoped account; other disputes keep their own evidence."""
@@ -2586,7 +2592,8 @@ class TurnEngine:
         than assume a continuation, and an empty `described` still falls
         back to one thread rather than none.
         """
-        on_file = dispute_agenda.context(matter)
+        on_file = (dispute_agenda.context(matter) + "\nExisting checklist items:\n"
+                   + requirements.answer_context(matter))
         # OPENING A THREAD CARRIES THE EVIDENCE, so only this turn is
         # quotable: a span lifted out of the thread list would let an
         # old dispute open a new thread.
@@ -2863,12 +2870,32 @@ class TurnEngine:
                         kind=ElementKind.GROUND, thread=thread.id,
                         text=disc, disclosure=True))
 
+        # Source-derived requirements are available to this turn's response,
+        # not discovered after the model has already asked its questions.
+        found = None
+        if not side_blind:
+            found = self._requirements(thread, tuple(relied_on), metrics,
+                                       context=memory.as_context() if memory else "",
+                                       concluded=concluded, facts=facts, turn=turn)
+        if found is not None:
+            concluded["requirements"] = found
+        thread_for_reply = replace(thread, requirements=concluded.get(
+            "requirements", thread.requirements), requirement_reads=concluded.get(
+                "requirement_reads", thread.requirement_reads),
+            requirement_outcomes=concluded.get("requirement_outcomes", thread.requirement_outcomes))
+        checklist_note = requirements.conversation_context(thread_for_reply, facts, turn.today,
+            resumed=bool(turn.session_reference and thread.checklist_session
+                         and turn.session_reference != thread.checklist_session)
+            or any(i.outcome and i.outcome.at < turn.today.isoformat()
+                   for i in requirements.checklist(thread_for_reply, facts)))
+        if turn.session_reference and not side_blind:
+            concluded["checklist_session"] = turn.session_reference
         request_satisfied = False
         if not side_blind:
             response = self._recommend(thread, turn, result, metrics, memory,
                                 register, position, relief_position=relief_pos,
                                 concluded=concluded, sources=tuple(retrieved),
-                                response_mode=response_mode)
+                                response_mode=response_mode, checklist_note=checklist_note)
             elements.append(response)
             request_satisfied = response.kind is ElementKind.FINDING
         # A3 §5.4. WHAT THIS TURN DERIVED, and what MOVED since the last one.
@@ -2931,20 +2958,18 @@ class TurnEngine:
         # F-B-17. WHAT THIS DISPUTE NEEDS, read out of the passages that were
         # actually retrieved for it -- not from a table of dispute types and
         # not from the model's memory of the law.
-        found = self._requirements(thread, tuple(relied_on), metrics)
-        if found is not None:
-            concluded["requirements"] = found
-
         return elements, tuple(relied_on), tuple(retrieved), tuple(derived)
 
-    def _requirements(self, thread: Thread, relied_on: tuple, metrics: TurnMetrics):
+    def _requirements(self, thread: Thread, relied_on: tuple, metrics: TurnMetrics,
+                      *, context="", concluded=None, facts=(), turn=None):
         """The checklist for one dispute, or None when there is nothing to read.
 
-        ONE CALL PER NEW PASSAGE, NOT PER TURN. A requirement is a function of
-        the passage it came from, so re-reading passages already read buys
-        nothing and spends a model call on every ordinary message. The guard is
-        the locators: if this turn retrieved nothing whose locator is absent
-        from the checklist, there is nothing new to read.
+        Read newly retrieved or changed passages together within this turn.
+        Successful reads, including empty ones, are cached by passage identity,
+        not merely locator. Ordinary replies update answers in the existing
+        dispute read; they do not add a separate checklist-answer model call.
+        Cache invalidation for changed dispute applicability remains an explicit
+        open obligation, not a claim that the text alone determines relevance.
 
         A FAILED READ LEAVES THE CHECKLIST ALONE. Returning an empty tuple
         would erase requirements an earlier passage established, and the
@@ -2954,24 +2979,31 @@ class TurnEngine:
         quotable = tuple(f for f in relied_on if f.quotable and (f.span or "").strip())
         if not quotable:
             return None
-        held = tuple(r for r in (thread.requirements or ())
-                     if isinstance(r, requirements.Requirement))
-        already = {r.locator for r in held}
-        fresh = tuple(f for f in quotable if f.locator not in already)
-        if not fresh:
-            return None
+        held = requirements.restored(thread)
         passages = tuple(
             requirements.Passage(
                 source=f.ref, text=f.span, locator=f.locator,
                 kind="provision" if f.source_kind is SourceKind.PROVISION else "authority")
-            for f in fresh)
+            for f in quotable)
+        passages = tuple(p for p in passages
+                         if thread.requirement_reads.get(p.locator) != p.identity)
+        if not passages:
+            return None
+        scoped_facts = tuple(f for f in facts if f.id in thread.chronology
+                             and f.superseded_by is None
+                             and f.provenance.kind == "advocate_statement")
+        context += "\nAdvocate facts (quotable for answers):\n" + "\n".join(
+            f.statement for f in scoped_facts)
         try:
-            answer = self._read(requirements.build_prompt(thread.label, passages),
+            answer = self._read(requirements.build_prompt(thread.label, passages, context=context),
                                 requirements.SCHEMA, "requirements")
             metrics.record_call(answer)
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
                          f"what this dispute needs was not read: {exc}")
+            return None
+        if refuse_partial(answer.completion, doing="the requirement reading"):
+            metrics.fire("G-MODEL", "unavailable", "The requirement reading was incomplete.")
             return None
         reading = requirements.read(answer.data or {}, passages)
         if reading.dropped:
@@ -2979,7 +3011,33 @@ class TurnEngine:
             # requirements looks exactly like a reader finding fewer of them.
             metrics.fire("G-GROUND", "matched",
                          f"{reading.dropped} requirement(s) were not in the retrieved passages")
+        if (not reading.dropped and isinstance(answer.data, dict)
+                and isinstance(answer.data.get("requirements"), list) and concluded is not None):
+            concluded["requirement_reads"] = {**thread.requirement_reads,
+                                             **{p.locator: p.identity for p in passages}}
         merged = requirements.merge(held, reading)
+        if concluded is not None and turn is not None and reading.requirements:
+            proposals = []
+            for row in (answer.data or {}).get("requirements", ()):
+                if not isinstance(row, dict) or not row.get("answer"):
+                    continue
+                matches = [r for r in reading.requirements
+                           if r.source == row.get("source")
+                           and r.span == " ".join(str(row.get("span", "")).split())]
+                if len(matches) == 1:
+                    proposals.append({"thread_id": thread.id, "key": requirements.key(matches[0]),
+                                      "answer": row.get("answer"),
+                                      "quoted": row.get("answer_quote"),
+                                      "due_expression": row.get("due_expression", "")})
+            # Reuse the same scoped validator as later conversation replies.
+            # This local projection is never independently stored or admitted.
+            snapshot = Matter.create(advocate_id=turn.advocate_id, title="Checklist validation")
+            snapshot = replace(snapshot, facts=scoped_facts,
+                               threads=(replace(thread, requirements=merged),))
+            checked = requirements.apply_answers(snapshot, proposals,
+                message="\n".join(f.statement for f in scoped_facts),
+                turn_id=turn.turn_id, today=turn.today, current_only=False)
+            concluded["requirement_outcomes"] = checked.threads[0].requirement_outcomes
         return merged if merged != held else None
 
     def _remember_questions(self, matter: Matter, answer: Answer,
@@ -5698,6 +5756,7 @@ class TurnEngine:
                    concluded: "dict | None" = None,
                    sources: tuple[Finding, ...] = (),
                    response_mode: Mode = Mode.SHORT_QUESTION,
+                   checklist_note: str = "",
                    ) -> Element:
         if concluded is not None:
             # A newly refused/failed derivation must not leave yesterday's
@@ -5881,6 +5940,7 @@ class TurnEngine:
         user += (f"\n\nWhat they have just asked: {turn.message.strip()}\n\n"
                  + ("The requested explanation or assessment:" if explanatory
                     else "The single next step:"))
+        user += checklist_note
         prompt = with_evidence(Prompt(system=system, user=user), sources or result.findings)
         try:
             res = self._model.complete(guided(prompt), Tier.ROUTINE,

@@ -245,6 +245,7 @@ def test_served_engine_keeps_scoped_accounts_and_persists_all_disputes(tmp_path,
                 "focus_thread_id": "",
                 "focus_quote": "",
                 "advance_quote": "",
+                "requirement_answers": [],
             }
         )
 

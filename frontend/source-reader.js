@@ -26,7 +26,8 @@ function ownsSourceRead(read) {
 }
 
 async function readSourcePage(read, offset) {
-  const page = await api(read.url + `?offset=${offset}&view=${read.view}`);
+  const page = await api(read.url + `?offset=${offset}&view=${read.view}`
+    + (read.documentIdentity ? `&document_identity=${encodeURIComponent(read.documentIdentity)}` : ''));
   if (!ownsSourceRead(read)) return null;
   // The coverage the server states must be the coverage this view asked for.
   // A document page accepted into the passage view would put the current text
@@ -35,6 +36,13 @@ async function readSourcePage(read, offset) {
   if (page.digest !== read.digest || page.offset !== offset
       || page.coverage !== wanted || typeof page.text !== 'string') {
     throw new Error('The saved source identity changed.');
+  }
+  if (read.view === 'document') {
+    if (typeof page.document_identity !== 'string' || !page.document_identity
+        || (read.documentIdentity && read.documentIdentity !== page.document_identity)) {
+      throw new Error('The current document changed while reading.');
+    }
+    read.documentIdentity = page.document_identity;
   }
   return page;
 }
@@ -45,8 +53,11 @@ function sourceReadError(read) {
   for (const id of ['source-text', 'source-qualification', 'source-meta']) {
     sourceNode(id).replaceChildren();
   }
-  sourceNode('source-status').textContent = 'The saved passage could not be opened. '
+  sourceNode('source-status').textContent = (read.view === 'document'
+    ? 'The current document could not be opened consistently. Return to the saved passage, or reopen the citation. '
+    : 'The saved passage could not be opened. ')
     + 'No replacement source has been substituted. Check your access and retry.';
+  sourceNode('source-passage').hidden = read.view !== 'document';
   sourceNode('source-retry').hidden = false;
   sourceNode('source-more').hidden = true;
   sourceNode('source-copy').disabled = true;
@@ -88,7 +99,7 @@ function paintSourceText() {
   }
   host.appendChild(document.createTextNode(text.slice(cursor)));
   const scope = sourceRead.view === 'document'
-    ? 'the loaded part of the current document' : 'the loaded saved passage';
+    ? 'the loaded part of the current document' : 'the loaded text';
   sourceNode('source-search-result').textContent = query
     ? `${count === 500 ? 'At least ' : ''}${count} match${count === 1 ? '' : 'es'} in ${scope} only (case-sensitive). `
       + 'No match here does not mean the word is absent from the rest.'
@@ -103,10 +114,26 @@ async function loadSourcePage(read, offset = 0) {
   sourceNode('source-retry').hidden = true;
   sourceNode('source-status').textContent = 'Opening the saved passage…';
   try {
-    const page = await readSourcePage(read, offset);
+    let page = await readSourcePage(read, offset);
     if (!page) return;
     if (offset === 0) { read.text = ''; read.pages = []; }
-    read.text += page.text; read.pages.push(offset); read.next = page.next_offset;
+    if (offset === 0 && read.view === 'document' && read.atCitation !== false
+        && page.anchor_offset !== null && page.anchor_offset >= page.text.length) {
+      page = await readSourcePage(read, Math.floor(page.anchor_offset / 6000) * 6000);
+      if (!page) return;
+    }
+    read.text += page.text; read.pages.push(page.offset); read.next = page.next_offset;
+    // A cited passage may cross a page boundary. Load its remaining pages before
+    // claiming to have opened at it, retaining the same document identity.
+    if (offset === 0 && read.view === 'document' && read.atCitation !== false
+        && page.anchor_offset !== null) {
+      const end = page.anchor_offset + page.anchor_length;
+      while (read.next !== null && read.next < end) {
+        page = await readSourcePage(read, read.next);
+        if (!page) return;
+        read.text += page.text; read.pages.push(page.offset); read.next = page.next_offset;
+      }
+    }
     read.qualification = page.qualification; read.label = page.label;
     read.locator = page.locator;
     sourceNode('source-title').textContent = page.label;
@@ -126,9 +153,13 @@ async function loadSourcePage(read, offset = 0) {
       // when it is no longer the text the answer rested on.
       sourceNode('source-anchor-note').textContent = page.anchor_note || '';
       sourceNode('source-anchor-note').hidden = !page.anchor_note;
-      sourceNode('source-status').textContent = page.next_offset === null
+      sourceNode('source-meta').textContent = `Current document ${page.document_identity.slice(0, 12)}. `
+        + `The answer relied on saved passage ${page.digest.slice(0, 12)} from ${page.recorded_at}. `
+        + 'Opening the current text does not reassess the saved answer.';
+      sourceNode('source-status').textContent = read.pages[0] === 0 && page.next_offset === null
         ? `All ${page.total_characters} characters of the stored document are loaded.`
-        : `${page.next_offset} of ${page.total_characters} characters of the stored document loaded.`;
+        : `Showing characters ${read.pages[0] + 1}–${page.offset + page.text.length} `
+          + `of ${page.total_characters}. Earlier text is available from Beginning of document.`;
     } else {
       sourceNode('source-anchor-note').hidden = true;
       sourceNode('source-full').hidden = !page.full_document_available;
@@ -143,6 +174,7 @@ async function loadSourcePage(read, offset = 0) {
     sourceNode('source-more').textContent = read.view === 'document'
       ? 'Load more of this document' : 'Load more of this passage';
     sourceNode('source-passage').hidden = read.view !== 'document';
+    sourceNode('source-beginning').hidden = read.view !== 'document';
     sourceNode('source-copy').disabled = false;
     paintSourceText();
     if (read.view === 'document' && offset === 0) scrollToCitedSpan();
@@ -159,6 +191,7 @@ function openSourceReader(answer, el, elementIndex, opener) {
     advocate: state.advocate, pageMatter: state.matterId, opener,
     digest: el.source.digest, text: '', pages: [], next: null, loading: false,
     view: 'passage', anchor: null, anchorLength: 0, fullWhyNot: '',
+    documentIdentity: '', atCitation: true,
     url: `/api/matters/${encodeURIComponent(answer.matter_id)}/turns/`
       + `${encodeURIComponent(answer.turn_id)}/sources/${elementIndex}` };
   sourceRead = read;
@@ -166,6 +199,7 @@ function openSourceReader(answer, el, elementIndex, opener) {
   sourceNode('source-more').hidden = true;
   sourceNode('source-full').hidden = true;
   sourceNode('source-passage').hidden = true;
+  sourceNode('source-beginning').hidden = true;
   sourceNode('source-anchor-note').hidden = true;
   sourceNode('source-coverage').textContent = 'Exact saved retrieved passage · extracted '
     + 'text, not an original facsimile or the complete Act or judgment.';
@@ -186,7 +220,9 @@ async function copySourcePassage() {
   if (!ownsSourceRead(read)) return;
   try {
     const coverageLine = read.view === 'document'
-      ? 'Loaded part of the stored document as this corpus holds it now; not a facsimile.'
+      ? `Current document ${read.documentIdentity}.\n`
+        + 'Loaded part of the stored document as this corpus holds it now; not a facsimile.\n'
+        + sourceNode('source-anchor-note').textContent
       : 'Loaded saved passage only; not the full document.';
     await navigator.clipboard.writeText(`${read.label}\n${read.locator}\n`
       + `Saved content ${read.digest}\n${coverageLine}\n\n`
@@ -217,6 +253,7 @@ function switchSourceView(view) {
   const read = sourceRead;
   if (!read || read.loading || read.view === view) return;
   read.view = view; read.text = ''; read.pages = []; read.next = null;
+  read.documentIdentity = ''; read.atCitation = true;
   read.anchor = null; read.anchorLength = 0;
   sourceNode('source-search').value = '';
   loadSourcePage(read);
@@ -224,4 +261,11 @@ function switchSourceView(view) {
 
 sourceNode('source-full').addEventListener('click', () => switchSourceView('document'));
 sourceNode('source-passage').addEventListener('click', () => switchSourceView('passage'));
-sourceNode('source-return').addEventListener('click', scrollToCitedSpan);
+sourceNode('source-return').addEventListener('click', () => {
+  if (sourceRead?.view === 'document' && !sourceNode('source-cited-span')) {
+    sourceRead.atCitation = true; loadSourcePage(sourceRead);
+  } else scrollToCitedSpan();
+});
+sourceNode('source-beginning').addEventListener('click', () => {
+  if (sourceRead) { sourceRead.atCitation = false; loadSourcePage(sourceRead); }
+});

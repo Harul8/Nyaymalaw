@@ -197,6 +197,10 @@ READS: tuple[Read, ...] = (
          "analysis on the wrong thread — visible to the advocate immediately, "
          "and correctable in a sentence.",
          echoes=True),
+    Read("requirements", False,
+         "Applicable needs extracted from retrieved passages; no tick or legal conclusion. "
+         "Failed or partial reads preserve previous requirements and remain unassessed.",
+         echoes=True),
     Read("issues", False,
          "A missed issue makes the answer thinner and the advocate can SEE it "
          "is thinner. It changes no number.",

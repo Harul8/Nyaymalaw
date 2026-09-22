@@ -157,6 +157,15 @@
       ['Saved file version', String(cover.version)]
     ]);
     body.replaceChildren(summary);
+    const capacity = section('Capacity to instruct');
+    const assessment = cover.capacity_assessment;
+    fields(capacity, [['Assessment', human(assessment?.state)],
+      ['Basis', named(assessment?.basis)]]);
+    capacity.append(node('p', 'This is your assessment of these instructions, not independent verification or permission for NM to act externally.', 'matter-notice'));
+    capacity.append(button('Record capacity assessment', () => {
+      if (current(token)) renderCapacityForm(cover.version, token);
+    }));
+    body.append(capacity);
     if (Array.isArray(cover.postures) && cover.postures.length) {
       const postures = section('Position in each dispute');
       cover.postures.forEach(row => {
@@ -195,6 +204,15 @@
       }
     }
     body.append(deadlines);
+    if (Array.isArray(register?.information_followups) && register.information_followups.length) {
+      const followups = section('Promised information — not legal deadlines');
+      register.information_followups.forEach(row => {
+        const entry = section(`${human(row.status)} · ${row.on || 'Date not given'}`);
+        fields(entry, [['Information', named(row.action)], ['Owner', named(row.owner)]]);
+        followups.append(entry);
+      });
+      body.append(followups);
+    }
     body.append(node('p', 'Recording who instructs or decides describes the instruction. It does not grant authority to concede, settle, waive or act externally.', 'matter-notice'));
     if (cover.commission) body.append(commissionCard(cover.commission));
     else body.append(node('p', 'No commission is recorded. The objective, work product, scope, parties, forum and deadline remain to be established.', 'matter-warning'));
@@ -229,8 +247,29 @@
     else if (type === 'textarea') control.rows = 3;
     else control.type = type;
     control.value = value;
-    wrap.append(node('span', label), control); form.append(wrap);
+    const caption = node('span', label); caption.id = `mw-label-${name}`;
+    control.setAttribute('aria-labelledby', caption.id);
+    wrap.append(caption, control); form.append(wrap);
     return control;
+  }
+  function renderCapacityForm(observedVersion, token) {
+    const form = node('form', undefined, 'matter-form');
+    const choice = input(form, 'capacity_state', 'Your capacity assessment', '', {required: true,
+      options: [['', 'Choose an assessment'], ['not_assessed', 'Not yet assessed'],
+        ['in_doubt', 'Capacity is in doubt'], ['not_in_doubt', 'Assessed: capacity is not in doubt']]});
+    const basis = input(form, 'capacity_basis', 'Basis for your assessment', '',
+      {type: 'textarea', required: true});
+    basis.maxLength = 4000;
+    const save = node('button', 'Save capacity assessment', 'primary'); save.type = 'submit';
+    form.append(save, button('Back to cover', () => open('cover')));
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!current(token) || save.disabled || !form.reportValidity()) return;
+      await write(token, 'capacity', {state: choice.value, basis: basis.value.trim(),
+        expected_version: observedVersion}, save, 'recorded', () =>
+        'Capacity assessment recorded. Return to the conversation when ready; all other checks still apply.');
+    });
+    body.replaceChildren(form); status.textContent = ''; choice.focus();
   }
   function renderCommissionForm(previous, observedVersion, token) {
     const data = previous || {};

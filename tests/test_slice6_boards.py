@@ -60,7 +60,7 @@ def test_a_screen_that_was_never_run_is_not_reported_as_clear():
 
 
 @pytest.mark.eval_id("E-063c")
-def test_an_unbuilt_gate_is_never_listed_as_something_to_action():
+def test_an_unassessed_file_lists_no_gate_as_advocate_work():
     """The other half. A gate the product cannot evaluate must not appear on
     the advocate's list of open items — that is work they cannot do, on a
     condition nothing is checking.
@@ -71,15 +71,18 @@ def test_an_unbuilt_gate_is_never_listed_as_something_to_action():
     """
     from nm.domain.gates import GATES
 
-    unbuilt = {g.id for g in GATES if not g.built}
-    assert unbuilt, "no unbuilt gates, so this proves nothing"
+    # All gates are implemented now. Test the stronger current contract over
+    # every registered gate, rather than relying on an extinct unbuilt subset.
+    # This file has undergone no assessment: none may become advocate work.
+    candidates = {g.id for g in GATES}
+    assert candidates, "an empty registered population proves nothing"
 
     m = _matter_with(Thread.create(label="a dispute"))
     board = board_projection(m, None, TODAY)
     rendered = str(board)
-    for gate_id in unbuilt:
+    for gate_id in candidates:
         assert gate_id not in rendered, (
-            f"{gate_id} is declared unbuilt and appears on the board as "
+            f"{gate_id} was never assessed and appears on the board as "
             f"something the advocate can act on")
 
 

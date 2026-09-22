@@ -77,7 +77,11 @@ DERIVED = ("theory", "issues", "decisions", "proof", "deadlines", "gaps",
            # owner and a date -- so a withheld turn discarding everything else
            # while keeping THAT would leave the advocate the one sentence they
            # would act on, drawn from an answer the gate refused to serve.
-           "recommendation")
+           "recommendation",
+           # Checklist derivation and its cache/session markers must be swept
+           # too; otherwise a refused answer could leave a green board behind.
+           "requirements", "requirement_reads", "requirement_outcomes",
+           "checklist_session")
 
 
 class _Ungrounded(ScriptedModelAdapter):

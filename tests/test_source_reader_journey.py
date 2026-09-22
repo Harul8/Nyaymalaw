@@ -8,6 +8,7 @@ import pytest
 from nm.core.source_excerpt import capture
 from nm.domain.answer import Element, ElementKind
 from nm.domain.turn_receipt import answer_payload
+from nm.ports.evidence import SourceDocument
 
 from tests.test_conversation_recovery_journey import reopen
 from tests.test_opening_journey import saved
@@ -204,3 +205,41 @@ def test_dark_mode_and_zoom_keep_reader_operable(page, journey):
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
     page.keyboard.press('Escape')
     assert not page.locator('#source-reader').is_visible()
+
+
+def test_full_document_opens_at_a_late_cross_page_citation(page, journey, monkeypatch):
+    link = _ready(page, journey)
+    mid, _ = saved(page)
+    app = journey['box'].application
+    receipt = app.store.load(mid).turn_receipts[-1]
+    source = next(e.source for e in receipt.validated_answer().elements if e.source)
+    # Heading plus padding places the actual saved citation across page two/three.
+    prefix = 'Earlier material. ' * 666
+    prefix += ' ' * (11990 - len('Heading\n') - len(prefix))
+    held = SourceDocument('read', label='Full current source', store='test',
+                          snapshot_id='one',
+                          segments=(('Heading', prefix + source.text + '\nLater.'),))
+    monkeypatch.setattr(app.evidence, 'document', lambda *args, **kwargs: held)
+    page.fill('#message', 'Keep this unsent note.')
+    link.click()
+    page.locator('#source-full').wait_for()
+    page.click('#source-full')
+    page.locator('#source-cited-span').wait_for()
+    assert page.locator('#source-cited-span').text_content() == source.text
+    assert 'Showing characters 6001' in page.locator('#source-status').inner_text()
+    page.click('#source-beginning')
+    page.wait_for_function("document.getElementById('source-text').textContent.startsWith('Heading')")
+    page.click('#source-return')
+    page.locator('#source-cited-span').wait_for()
+    # A corpus replacement may never be silently combined with already loaded pages.
+    held = replace(held, snapshot_id='two', segments=(('Heading', 'Different words.'),))
+    page.click('#source-copy')
+    page.get_by_text('The current document could not be opened consistently.',
+                     exact=False).wait_for()
+    assert page.locator('#source-text').text_content() == ''
+    page.click('#source-passage')
+    page.wait_for_function("document.getElementById('source-text').textContent.length > 0")
+    assert page.locator('#source-text').text_content() == source.text
+    page.keyboard.press('Escape')
+    assert page.input_value('#message') == 'Keep this unsent note.'
+    assert not page.errors

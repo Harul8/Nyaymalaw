@@ -6,7 +6,7 @@ the complete E4 DecisionRecord and grants no action authority.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from enum import Enum
 
@@ -19,6 +19,17 @@ class Capacity(str, Enum):
     NOT_IN_DOUBT = "not_in_doubt"
     IN_DOUBT = "in_doubt"
     NOT_ASSESSED = "not_assessed"
+
+
+def record_on(matter, position):
+    """One assessment history for intake, later correction and turn input."""
+    answers = dict(matter.intake_answers or {})
+    previous = answers.get("capacity")
+    history = tuple(answers.get("capacity_history") or ())
+    if previous is not None:
+        history = (*history, previous)
+    answers.update(capacity=position.as_dict(), capacity_history=history)
+    return replace(matter, intake_answers=answers)
 
 
 @dataclass(frozen=True)
@@ -91,8 +102,16 @@ class CapacityPosition:
         return "Reassess if the basis or the instruction materially changes."
 
     def said(self) -> str:
-        source = f" Recorded by {self.raised_by}." if self.raised_by else ""
-        return f"Capacity to instruct: {self.state.value}. {self.basis}{source} {self.next_step}"
+        # Identity and timestamps remain in the attributable record; conversation
+        # carries the human assessment and action, not status codes or account IDs.
+        assessment = {
+            Capacity.NOT_ASSESSED: "Capacity to give these instructions has not yet been assessed.",
+            Capacity.IN_DOUBT: "Capacity to give these instructions remains in doubt.",
+            Capacity.NOT_IN_DOUBT: (
+                "The recorded assessment finds capacity to give these instructions "
+                "is not in doubt."),
+        }[self.state]
+        return f"{assessment} {self.basis} {self.next_step}"
 
     def as_dict(self) -> dict:
         return {

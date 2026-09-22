@@ -8676,3 +8676,14 @@ Evidence, implemented scope and remaining acceptance:
 `docs/backlog/evidence/legal-brain-20260922/dispute-loop.md`.
 No owning item is promoted to done, and no historical answer is overwritten.
 
+### 22 September — conversation-driven requirements and source-reader close-out
+
+BK-37 / BK-38 / BK-54 / BK-91 / BK-95: Before Build LB-117 and LB-118 now own
+F-B-17 and F-C-13; existing LB-100/101 are preserved. LB-92 records the current
+full-document decision. Implement conversational answers, source-backed checklist
+restoration, non-legal promise reminders and separately identified document paging.
+Reconcile requirement/delivery mirrors without promoting acceptance. BK-76-AC2
+is aligned with the owner's already recorded non-blocking commit-hook decision.
+Build details, actual controlled results, bounded live execution and open claims:
+`docs/backlog/evidence/legal-brain-20260922/conversational-checklist.md`.
+

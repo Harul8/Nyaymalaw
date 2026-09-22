@@ -25,6 +25,7 @@ from nm.core import retention as _retention
 from nm.domain.clock import today as forum_today
 from nm.domain.matter import Matter, Role
 from nm.domain.traceability import implements
+from nm.domain.turn_receipt import release_index
 
 
 def nearest_first(rows: list[dict]) -> list[dict]:
@@ -113,7 +114,14 @@ def _currency_of(ledger, thread_id: str, deadline) -> tuple[str, str]:
 
 def _deadline_window(deadlines, today, *, thread_id=None, currency=None) -> dict:
     """One deadline and currency rule shared by list, board and cover."""
-    from nm.core.deadlines import DeadlineStatus, RegisterRead, passed, register, upcoming
+    from nm.core.deadlines import (
+        DeadlineKind,
+        DeadlineStatus,
+        RegisterRead,
+        passed,
+        register,
+        upcoming,
+    )
     from nm.core.dependency import Ledger
 
     if isinstance(deadlines, RegisterRead):
@@ -129,6 +137,11 @@ def _deadline_window(deadlines, today, *, thread_id=None, currency=None) -> dict
         unreadable, unassessed, assessed = [], [], []
         complete = deadlines is not None
 
+    # An advocate's promised document belongs on the follow-up list, not in
+    # legal urgency, deadline assessment or the nearest filing-date summary.
+    followups = register(tuple(d for d in held
+                               if d.kind is DeadlineKind.INFORMATION_FOLLOWUP), today)
+    held = tuple(d for d in held if d.kind is not DeadlineKind.INFORMATION_FOLLOWUP)
     ledger = Ledger.from_stored(currency)
     judged = {id(d): _currency_of(ledger, d.thread, d) for d in held}
     current = tuple(d for d in held if judged[id(d)][0] != "stale")
@@ -170,6 +183,12 @@ def _deadline_window(deadlines, today, *, thread_id=None, currency=None) -> dict
                              if held or complete else None),
         "uncomputed_deadlines": [row(d) for d in unknown],
         "deadline_entries": [row(d) for d in all_ordered],
+        "information_followups": [
+            {"thread": d.thread, "on": d.on.isoformat() if d.on else None,
+             "action": d.action, "owner": d.owner, "source": d.source,
+             "status": ("date_not_given" if d.on is None else
+                        "due" if d.on <= today else "upcoming")}
+            for d in followups],
     }
 
 
@@ -240,6 +259,25 @@ def board_projection(matter: Matter, deadlines, today=None) -> dict:
                                       currency=getattr(matter, "dependencies", None))
                           for t in matter.threads])
     agenda = _briefing.dispute_agenda.project(matter)
+    receipts, problems = release_index(matter)
+    sources = []
+    if not problems:
+        for receipt in receipts.values():
+            for index, element in enumerate(receipt.validated_answer().elements):
+                if element.source is not None:
+                    sources.append((receipt.turn_id, index, element.source))
+    for dispute in agenda["disputes"]:
+        for need in dispute.get("requirements", ()):
+            # Only a saved, released exact source grants a reader link. A
+            # similar title or a fresh search result is never a substitute.
+            match = next(((turn_id, index, source) for turn_id, index, source in sources
+                          if source.locator == need["locator"]
+                          and need["span"] in " ".join(source.text.split())), None)
+            if match:
+                turn_id, index, source = match
+                need["citation"] = {"matter_id": matter.id, "turn_id": turn_id,
+                                    "element_index": index,
+                                    "source": {"digest": source.digest, "label": source.label}}
     return {
         "state": "ok",
         "matter_id": matter.id,

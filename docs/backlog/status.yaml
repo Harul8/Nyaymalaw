@@ -3162,13 +3162,14 @@ items:
       expected_failure: the subprocess fails while importing tools._console before it can report vector freshness
   - id: BK-76-AC2
     requirement: the canonical pre-commit hook invokes that executable reporter as
-      a best-effort semantic-index refresh while retaining the blocking gate-stamp decision
+      a best-effort semantic-index refresh without blocking commits, per the owner's
+      15 September 2026 workflow decision; release and evidence gates remain separate
     required_evidence: [domain_test]
     evidence:
-      domain_test: {result: PASS, ref: tests/test_tooling_bites.py::test_the_hook_refreshes_vectors_and_keeps_the_gate_blocking}
+      domain_test: {result: PASS, ref: tests/test_tooling_bites.py::test_the_hook_refreshes_vectors_and_never_blocks_a_commit, note: '22 September: criterion reconciled to the existing owner decision and the actual current test passed in the 160-test controlled run; cumulative Class-A evidence is still separate and stale.'}
     negative_control:
-      mutation: remove the vector reporter or make the gate stamp best effort
-      expected_failure: the hook contract test identifies the missing refresh or weakened release decision
+      mutation: remove the vector reporter or reintroduce a blocking commit decision
+      expected_failure: the hook contract test identifies the missing refresh or the unauthorised commit blocker
   - id: BK-76-AC3
     requirement: every local git path that changes the tree -- commit, merge, rewrite --
       refreshes the graph and its vectors through one owner script, and no hook carries

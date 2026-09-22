@@ -72,7 +72,13 @@ def project(matter, *, after_thread_id=None) -> dict:
         # tells "nothing retrieved for this dispute yet" apart from "retrieved
         # and it needs nothing", which are opposite facts and would otherwise
         # both render as an empty list.
-        checklist = requirements.checklist(thread)
+        checklist = requirements.checklist(thread, matter.facts)
+        if status == "reviewed" and any(
+                i.state is requirements.State.OUTSTANDING for i in checklist):
+            status, reason = "needs_information", "Some relevant information remains outstanding."
+        elif status == "reviewed" and any(
+                i.state is requirements.State.PROMISED for i in checklist):
+            status, reason = "waiting", "Waiting for the information you offered to provide."
         rows.append(
             {
                 "thread_id": thread.id,
@@ -84,8 +90,8 @@ def project(matter, *, after_thread_id=None) -> dict:
                 "requirements": [item.rendered() for item in checklist],
                 "requirements_state": "established" if checklist else "not_established",
                 "outstanding_requirements": sum(1 for item in checklist if item.outstanding),
-                "nothing_to_ask": requirements.nothing_to_ask(thread),
-                "requirements_settled": requirements.settled(thread),
+                "nothing_to_ask": requirements.nothing_to_ask(thread, matter.facts),
+                "requirements_settled": requirements.settled(thread, matter.facts),
             }
         )
 

@@ -47,6 +47,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from nm.core.requirements import ANSWER_RULE, ANSWER_SCHEMA
 from nm.domain.quotable import Quotable
 from nm.domain.text import refuses_blank_text
 
@@ -138,9 +139,10 @@ DISPUTE_SCHEMA: dict = {
         "advance_quote": {"type": "string", "description":
                           "Exact request to continue the whole-file review or the next dispute, "
                           "else empty. Not an acknowledgement, fact or request to stop."},
+        "requirement_answers": ANSWER_SCHEMA,
     },
     "required": ["verdict", "quoted", "why", "disputes", "focus_thread_id", "focus_quote",
-                 "advance_quote"],
+                 "advance_quote", "requirement_answers"],
     # STRICT MODE REQUIRES IT. Without `additionalProperties: false` on
     # every object the provider cannot compile the grammar, and the
     # schema silently degrades to a hint.
@@ -149,7 +151,7 @@ DISPUTE_SCHEMA: dict = {
 
 SYSTEM = (
     "An Indian advocate is briefing a matter. You are told what is already on "
-    "the file and what they have just said. Decide ONE thing: does the new "
+    "the file and what they have just said. First decide: does the new "
     "message add to the dispute already on the file, or does it describe a "
     "DIFFERENT dispute?\n\n"
     "A different dispute means a different proceeding, a different opponent, "
@@ -178,6 +180,7 @@ SYSTEM = (
     "each affected dispute, never copy unrelated facts across them. For a pure "
     "navigation instruction leave disputes empty and quote the requested focus or "
     "advance. The agenda is a suggestion, not permission to override the advocate."
+    + ANSWER_RULE
 )
 
 
@@ -206,6 +209,7 @@ class DisputeRead:
     described: tuple[Described, ...] = ()
     focus_thread_id: str = ""
     advance: bool = False
+    requirement_answers: tuple[dict, ...] = ()
     """EVERY dispute this message describes, each carrying the words it was
     read from.
 
@@ -292,10 +296,12 @@ def interpret(quotable: Quotable, data: dict, *,
         return DisputeRead(Dispute.CANNOT_TELL,
                            refused="the requested focus is not source-bound to this matter")
     advance = bool(data.get("advance_quote") and quotable.accepts(data["advance_quote"]))
+    answers = data.get("requirement_answers", [])
+    answers = tuple(answers) if isinstance(answers, list) else ()
 
     if verdict is not Dispute.OPENS:
         return DisputeRead(verdict, quoted, why, described=described,
-                           focus_thread_id=focus, advance=advance)
+                           focus_thread_id=focus, advance=advance, requirement_answers=answers)
 
     # OPENING A THREAD IS THE ANSWER THAT CREATES SOMETHING, so it carries the
     # evidence. `continues` and `cannot_tell` both leave the file as it was.
@@ -307,7 +313,7 @@ def interpret(quotable: Quotable, data: dict, *,
                            refused=(f"the model said this opens a new dispute "
                                     f"and {quotable.refusal(quoted)}"))
     return DisputeRead(Dispute.OPENS, quoted, why, described=described,
-                       focus_thread_id=focus, advance=advance)
+                       focus_thread_id=focus, advance=advance, requirement_answers=answers)
 
 
 def _described(quotable: Quotable, data: dict) -> tuple[Described, ...]:

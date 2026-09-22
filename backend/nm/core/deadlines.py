@@ -68,6 +68,7 @@ class DeadlineKind(str, Enum):
     OBJECTION = "objection"
     LISTED_HEARING = "listed_hearing"
     UNDERTAKING = "undertaking"
+    INFORMATION_FOLLOWUP = "information_followup"
     OTHER = "other"
 
 
@@ -239,6 +240,18 @@ def read_matter(matter) -> RegisterRead:
                 rows.append(from_stored(value, thread=identity))
             except (KeyError, TypeError, ValueError):
                 problems.append(RegisterProblem(identity, index, "saved deadline row unreadable"))
+        # Derived from the same validated answers as the board. These are
+        # reminders, not a statutory clock or a computed legal deadline.
+        from nm.domain.requirements import State, checklist
+        for item in checklist(thread, matter.facts):
+            if item.state is not State.PROMISED:
+                continue
+            due = date.fromisoformat(item.outcome.due) if item.outcome.due else None
+            rows.append(Deadline(thread=identity, kind=DeadlineKind.INFORMATION_FOLLOWUP,
+                source="Advocate's information promise; not a legal deadline",
+                action=item.requirement.need, owner="Instructing advocate",
+                consequence="Follow up on the missing information; no legal consequence inferred",
+                on=due))
     return RegisterRead(tuple(rows), tuple(problems), tuple(unassessed), tuple(assessed),
                         tuple(threads))
 
@@ -287,7 +300,8 @@ def nearest_thread(deadlines: tuple[Deadline, ...], today: date) -> ThreadId | N
     A PASSED deadline outranks a future one: what can be done about it shrinks
     every day, and the interesting thread will still be interesting next week.
     """
-    ordered = register(deadlines, today)
+    ordered = register(tuple(d for d in deadlines
+                             if d.kind is not DeadlineKind.INFORMATION_FOLLOWUP), today)
     for d in ordered:
         if d.status(today) is not DeadlineStatus.NOT_COMPUTED:
             return d.thread

@@ -12,6 +12,7 @@ class Element {
   set textContent(value) { this.text = String(value); this.children = []; }
   get textContent() { return (this.text || '') + this.children.map(el => el.textContent).join(' '); }
   append(...els) { for (const el of els) { el.parentElement = this; this.children.push(el); } }
+  prepend(...els) { for (const el of [...els].reverse()) { el.parentElement = this; this.children.unshift(el); } }
   after(el) { this.parentElement.append(el); }
   replaceChildren(...els) { this.text = ''; this.children = []; this.append(...els); }
   setAttribute(name, value) { this.attributes[name] = value; }
@@ -26,7 +27,7 @@ class Element {
 }
 function fixture(source = original) {
   const body = new Element('body');
-  for (const id of ['workspace-focus', 'save-status']) { const el = new Element('div'); el.id = id; body.append(el); }
+  for (const id of ['workspace-focus', 'workspace-menu', 'save-status']) { const el = new Element('div'); el.id = id; body.append(el); }
   const events = {};
   const state = { matterId: 'matter_a', advocate: 'adv_a', ended: false, matterReady: true, sessionGeneration: 1, railGeneration: 1 };
   const calls = [], sends = [], boards = [];

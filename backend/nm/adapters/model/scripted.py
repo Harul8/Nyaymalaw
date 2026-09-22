@@ -220,7 +220,8 @@ def scripted_dispute(user: str) -> str:
     # turned it into `cannot_tell`, which is that guard doing its job on the
     # test double.
     said = user.split("[this turn]\n", 1)[-1].split("\n\n", 1)[0]
-    navigation = {"focus_thread_id": "", "focus_quote": "", "advance_quote": ""}
+    navigation = {"focus_thread_id": "", "focus_quote": "", "advance_quote": "",
+                  "requirement_answers": []}
 
     # HOW MANY DISPUTES, counted the same deterministic way. The product
     # reads this with a model; the double marks off on the same ordinal
@@ -643,6 +644,8 @@ def scripted_exposure(user: str) -> str:
     between unrelated disputes*. It fires only where two disputes on the same
     file take opposite positions on a debt -- D7's own counterexample.
     """
+    if "THE DISPUTES ON THIS FILE:\n" not in user:
+        return json.dumps({"links": []})
     payload = json.loads(user.split("THE DISPUTES ON THIS FILE:\n", 1)[1])
     ids = [row["id"] for row in payload["threads"]]
     labels = [row["label"].lower() for row in payload["threads"]]
@@ -1105,7 +1108,13 @@ def scripted_step_dependency(user: str) -> str:
                        "reason": "Scripted independent-step fixture, not legal evaluation."})
 
 
+def scripted_requirements(_prompt):
+    """No legal extraction claimed by the offline default; tests supply passages explicitly."""
+    return json.dumps({"requirements": []})
+
+
 SCRIPTED_READS: dict[str, object] = {
+    "requirements": scripted_requirements,
     "step_dependency": scripted_step_dependency,
     "investigation": scripted_investigation,
     "accrual": scripted_accrual,

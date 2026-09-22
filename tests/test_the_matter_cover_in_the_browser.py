@@ -45,3 +45,24 @@ def test_the_browser_cover_shows_the_file_the_advocate_just_worked(page, journey
         assert row["action"] in shown
         assert row["status"].replace("_", " ") in shown.lower()
     assert not page.errors
+
+
+def test_capacity_correction_is_reachable_and_preserves_the_conversation(page, journey):
+    from tests.test_opening_journey import saved
+    _open_matter(page, journey, client='Synthetic CapacityCorrection')
+    matter_id, _ = saved(page)
+    page.fill('#message', 'Keep this unsent instruction.')
+    page.locator('#workspace-more summary').click()
+    page.get_by_role('button', name='Matter cover & instructions', exact=True).click()
+    page.get_by_role('button', name='Record capacity assessment', exact=True).click()
+    assert page.get_by_label('Your capacity assessment', exact=True).input_value() == ''
+    page.get_by_label('Your capacity assessment', exact=True).select_option('not_in_doubt')
+    page.get_by_label('Basis for your assessment', exact=True).fill(
+        'The advocate explicitly assessed the current instructions.')
+    page.get_by_role('button', name='Save capacity assessment', exact=True).click()
+    page.get_by_text('Capacity assessment recorded.', exact=False).wait_for()
+    assert page.input_value('#message') == 'Keep this unsent instruction.'
+    cover = page.request.get(f"{journey['base']}/api/matters/{matter_id}/cover").json()
+    assert cover['capacity_assessment']['state'] == 'not_in_doubt'
+    assert cover['capacity_assessment']['raised_by']
+    assert not page.errors

@@ -176,6 +176,63 @@ def test_future_or_damaged_stored_clearance_is_not_current():
     assert not screens.capacity_screen(damaged, NOW + timedelta(days=2)).clears
 
 
+def test_capacity_can_be_corrected_after_opening_without_a_model_call(client, monkeypatch):
+    from nm.edge.api import application
+    first = _saved(client, client.post('/api/turn', json=_request(capacity={
+        'state': 'not_assessed', 'basis': 'Not yet assessed.'})))
+    receipt = first.turn_receipts
+    with monkeypatch.context() as patch:
+        engine = application().engine
+        patch.setattr(getattr(engine, 'inner', engine), 'run',
+                      lambda *a, **k: pytest.fail('paid call'))
+        result = client.post(f'/api/matters/{first.id}/capacity', json={
+            'expected_version': first.version, 'state': 'not_in_doubt',
+            'basis': 'The advocate has assessed these instructions.'})
+        assert result.status_code == 200, result.text
+    current = application().store.load(first.id)
+    assert current.turn_receipts == receipt
+    assert current.intake_answers['capacity_history'][-1]['state'] == 'not_assessed'
+    assert current.intake_answers['capacity']['raised_by'] == 'adv_demo'
+    assert client.post(f'/api/matters/{first.id}/capacity', json={
+        'expected_version': first.version, 'state': 'in_doubt', 'basis': 'Changed.'}
+    ).status_code == 409
+    cover = client.get(f'/api/matters/{first.id}/cover').json()
+    assert cover['capacity_assessment']['state'] == 'not_in_doubt'
+    # The real next-turn screen, not this endpoint, determines admission.
+    next_turn = _saved(client, client.post('/api/turn', json=_request(matter_id=first.id)))
+    assert _capacity_screen(next_turn).clears
+    revoked = client.post(f'/api/matters/{first.id}/capacity', json={
+        'expected_version': next_turn.version, 'state': 'in_doubt', 'basis': 'New concern.'})
+    assert revoked.status_code == 200
+    blocked = client.post('/api/turn', json=_request(matter_id=first.id))
+    assert blocked.status_code == 200 and blocked.json()['blocked']
+    assert not _capacity_screen(application().store.load(first.id)).clears
+
+
+@pytest.mark.parametrize('extra', [{'basis': ' '}, {'raised_by': 'forged'},
+                                  {'raised_at': '2026-01-01'}, {'state': 'yes'}])
+def test_capacity_correction_rejects_forged_or_incomplete_records(client, extra):
+    first = _saved(client, client.post('/api/turn', json=_request()))
+    value = {'expected_version': first.version, 'state': 'not_in_doubt',
+             'basis': 'Explicit assessment.', **extra}
+    assert client.post(f'/api/matters/{first.id}/capacity', json=value).status_code == 422
+    stranger = client.sign_in('adv_capacity_stranger', fresh=True)
+    assert stranger.post(f'/api/matters/{first.id}/capacity', json={
+        'expected_version': first.version, 'state': 'not_in_doubt',
+        'basis': 'Explicit assessment.'}).status_code == 404
+
+
+@pytest.mark.parametrize('state', list(Capacity))
+def test_capacity_conversation_is_plain_language_without_losing_attribution(state):
+    position = CapacityPosition.record({'state': state.value, 'basis': 'The recorded human basis.'},
+                                       actor='adv_internal_identity', now=NOW)
+    said = position.said()
+    assert state.value not in said
+    assert 'adv_internal_identity' not in said
+    assert 'The recorded human basis.' in said
+    assert position.as_dict()['raised_by'] == 'adv_internal_identity'
+
+
 def test_the_served_negative_control_bites_when_capacity_admission_is_bypassed(client, monkeypatch):
     def require_refusal():
         response = client.post("/api/turn", json=_request(capacity={

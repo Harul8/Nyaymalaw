@@ -1107,7 +1107,7 @@ const REQUIREMENT_MARK = {
   held: { mark: '\u2713', label: 'on the file' },
   promised: { mark: '\u25CF', label: 'promised' },
   unavailable: { mark: '\u2717', label: 'not available' },
-  outstanding: { mark: '\u25CB', label: 'not yet asked' },
+  outstanding: { mark: '\u25CB', label: 'still outstanding' },
 };
 
 function renderRequirements(item, row) {
@@ -1139,13 +1139,14 @@ function renderRequirements(item, row) {
     const state = document.createElement('span');
     state.className = 'requirement-state';
     state.textContent = need.state === 'promised' && need.due
-      ? `promised by ${need.due}` : mark.label;
+      ? `promised by ${need.due}` : need.state === 'promised'
+        ? 'promised — no confirmed date' : mark.label;
     line.appendChild(state);
     if (need.force === 'strengthening') {
       const force = document.createElement('span');
       force.className = 'requirement-force';
       force.textContent = 'strengthens';
-      force.title = 'A judgment looks for this; the section does not require it.';
+      force.title = 'Read the quoted judgment for its conditions and applicability.';
       line.appendChild(force);
     }
     const basis = document.createElement('p');
@@ -1156,6 +1157,14 @@ function renderRequirements(item, row) {
     span.className = 'requirement-span';
     span.textContent = need.span;
     line.appendChild(span);
+    if (need.citation) {
+      const cited = document.createElement('button');
+      cited.type = 'button'; cited.className = 'citation-link';
+      cited.textContent = 'Read the supporting passage';
+      cited.addEventListener('click', () => openSourceReader(need.citation,
+        {source: need.citation.source}, need.citation.element_index, cited));
+      line.appendChild(cited);
+    }
     list.appendChild(line);
   }
   item.appendChild(list);
@@ -1165,7 +1174,7 @@ function renderRequirements(item, row) {
   // when nothing is outstanding; the dispute is finished when nothing is also
   // merely promised.
   state.textContent = row.requirements_settled
-    ? 'Everything this dispute needs is settled.'
+    ? 'Checklist follow-up complete on the available record; this is not a decision on the dispute.'
     : row.nothing_to_ask
       ? 'Nothing further to ask; waiting on what was promised.'
       : `${row.outstanding_requirements} still to ask about.`;

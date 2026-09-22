@@ -13,6 +13,7 @@ invariant-check, and commit.
 from __future__ import annotations
 
 import hmac
+import json
 import logging
 import os
 import uuid
@@ -743,7 +744,7 @@ async def dictation_socket(socket: WebSocket,
 @app.get("/api/matters/{matter_id}/turns/{turn_id}/sources/{element_index}")
 def source_excerpt(matter_id: str, turn_id: str, element_index: int,
                    advocate_id: Advocate, response: Response, offset: int = 0,
-                   view: str = "passage") -> dict:
+                   view: str = "passage", document_identity: str = "") -> dict:
     """Read a saved released passage, or the stored document it came from.
 
     `view=passage` is the passage the answer relied on, byte for byte.
@@ -794,7 +795,7 @@ def source_excerpt(matter_id: str, turn_id: str, element_index: int,
         held = SourceDocument(state="no_reader",
                               missing="the document reader failed on this installation")
     if view == "document":
-        return _stored_document(held, source, element, receipt, offset)
+        return _stored_document(held, source, element, receipt, offset, document_identity)
 
     if offset < 0 or offset >= len(source.text):
         raise HTTPException(416, "This position is outside the saved passage.")
@@ -811,7 +812,8 @@ def source_excerpt(matter_id: str, turn_id: str, element_index: int,
             "full_document_unavailable_because": "" if held.state == "read" else held.missing}
 
 
-def _stored_document(held, source, element, receipt, offset: int) -> dict:
+def _stored_document(held, source, element, receipt, offset: int,
+                     document_identity: str = "") -> dict:
     """LB-92's document view, paged, with the cited span located or not.
 
     THE PASSAGE IS FOUND BY ITS OWN TEXT, not by trusting the locator's
@@ -822,8 +824,15 @@ def _stored_document(held, source, element, receipt, offset: int) -> dict:
     if held.state != "read":
         raise HTTPException(404, held.missing)
     body = "\n\n".join(f"{heading}\n{content}" for heading, content in held.segments)
-    saved = " ".join(source.text.split())
-    at = body.find(saved) if saved else -1
+    from hashlib import sha256
+
+    from nm.core.source_excerpt import document_anchor
+    identity = sha256(json.dumps([held.store, held.snapshot_id, body],
+                                ensure_ascii=False).encode("utf8")).hexdigest()
+    if document_identity and document_identity != identity:
+        raise HTTPException(409, "The current document changed while it was being read. Reopen it.")
+    anchor = document_anchor(body, source.text)
+    at, length = anchor if anchor is not None else (-1, 0)
     if offset < 0 or (body and offset >= len(body)):
         raise HTTPException(416, "This position is outside the stored document.")
     end = min(offset + 6000, len(body))
@@ -833,16 +842,18 @@ def _stored_document(held, source, element, receipt, offset: int) -> dict:
             "recorded_at": receipt.recorded_at,
             "coverage": "stored_document", "representation": "extracted_text",
             "store": held.store, "snapshot_id": held.snapshot_id,
+            "document_identity": identity,
             "text": body[offset:end], "offset": offset,
             "next_offset": end if end < len(body) else None,
             "total_characters": len(body), "qualification": element.text,
             "segment_count": len(held.segments),
             "anchor_offset": at if at >= 0 else None,
-            "anchor_length": len(saved) if at >= 0 else None,
+            "anchor_length": length if at >= 0 else None,
             "relied_on_matches": at >= 0,
             "anchor_note": ("" if at >= 0 else
-                            "The passage this answer relied on is not in the text now held "
-                            "for this source. The reading below is the current text; it is "
+                            "The passage this answer relied on cannot be uniquely located "
+                            "in the text now held for this source: it is absent or repeated. "
+                            "The reading below is the current text; it is "
                             "not what the answer was based on."),
             "full_document_available": True}
 
@@ -972,7 +983,11 @@ def matter_cover(matter_id: str, advocate_id: Advocate) -> dict:
     arity rule a second bound.
     """
     m = _owned(matter_id, advocate_id)
-    return cover_projection(m, _register_of(m))
+    from nm.domain.capacity import CapacityPosition
+    return {**cover_projection(m, _register_of(m)),
+            "capacity_assessment": CapacityPosition.from_stored(
+                m.intake_answers.get("capacity")).as_dict(),
+            "capacity_history": list(m.intake_answers.get("capacity_history", ()))}
 
 
 @app.get("/api/matters/{matter_id}/casefile")
@@ -1182,6 +1197,29 @@ def state_relief(matter_id: str, thread_id: str, body: ReliefStatement,
     return {"state": "stated", "matter_id": committed.id,
             "version": committed.version, "thread_id": thread_id,
             "relief": relief.as_dict(), "objective": obj_row}
+
+
+class CapacityUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    state: Literal["not_assessed", "in_doubt", "not_in_doubt"]
+    basis: NonBlank = Field(min_length=1, max_length=4000)
+    expected_version: int = Field(ge=0)
+
+
+@app.post("/api/matters/{matter_id}/capacity", dependencies=[CsrfProtected])
+def update_capacity(matter_id: str, body: CapacityUpdate, advocate_id: Advocate) -> dict:
+    """An attributable human assessment, not a screen bypass or model decision."""
+    from nm.domain.capacity import CapacityPosition, record_on
+
+    matter = _owned(matter_id, advocate_id)
+    if matter.version != body.expected_version:
+        raise HTTPException(409, "The matter changed. Reopen the cover before recording this.")
+    position = CapacityPosition.record({"state": body.state, "basis": body.basis},
+                                       actor=advocate_id, now=utcnow())
+    updated = record_on(matter, position)
+    committed = _commit_matter(replace(updated, version=matter.version + 1), matter.version)
+    return {"state": "recorded", "matter_id": committed.id, "version": committed.version,
+            "capacity_assessment": position.as_dict()}
 
 
 class UnavailableNeed(BaseModel):
@@ -3934,6 +3972,7 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released
         release=dict(req.release or {}),
         capacity=dict(req.capacity) if req.capacity is not None else None,
         expected_version=req.expected_version,
+        session_reference=request.state.account_session.reference,
         request_offer=req.model_dump(mode="json", exclude={"turn_id"}),
         **({"turn_id": req.turn_id} if req.turn_id else {}),
     )

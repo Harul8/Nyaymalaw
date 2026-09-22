@@ -35,9 +35,10 @@ def test_requirement_rows_reconcile_both_sheets():
 
 def test_active_sheet_does_not_choose_the_schema():
     rows = plan_scenarios.sheet_rows()
-    assert len(rows) == 91
+    assert len(rows) == 93
+    assert {"F-B-17", "F-C-13"} <= {r["ID"] for r in rows}
     assert sum(row[plan_scenarios.STATE_COLUMN] == "Executable" for row in rows) == 19
-    assert sum(row[plan_scenarios.STATE_COLUMN] == "Planned" for row in rows) == 72
+    assert sum(row[plan_scenarios.STATE_COLUMN] == "Planned" for row in rows) == 74
 
 
 @pytest.mark.parametrize(

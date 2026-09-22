@@ -50,6 +50,7 @@ SITES = {
     "posture:build_prompt",
     "proof_read:build_prompt",
     "route:build_prompt",
+    "requirements:build_prompt",
     "step_dependency:build_prompt",
     "theory:build_adverse_prompt",
     "theory:build_theory_prompt",
@@ -76,7 +77,7 @@ def _sites(root):
     return found
 
 
-def test_all_24_production_prompt_sites_are_in_the_reviewed_population(tmp_path):
+def test_all_25_production_prompt_sites_are_in_the_reviewed_population(tmp_path):
     found = _sites(ROOT / "backend/nm/core")
     assert found == dict.fromkeys(SITES, 1), found
     # This guard can fail: neither an empty scope nor a new call is a green pass.
@@ -481,8 +482,10 @@ def test_actual_wire_schemas_do_not_reintroduce_the_old_prompt_instructions():
                         key,
                     )
                 schemas.append((name, key))
-    # 19 system constants, plus the investigation/dependency wire schemas.
-    assert len(schemas) == 21, schemas
+    # Original 21, plus the dispute's answer contract and both requirement schemas.
+    assert len(schemas) == 24, schemas
+    assert ('requirements', 'SCHEMA') in schemas
+    assert ('dispute', 'ANSWER_SCHEMA') in schemas
     closing = proof_read.PROOF_SCHEMA["properties"]["positions"]["items"]["properties"]
     assert "not_assessed" in closing["closing_material"]["description"]
     assert factors.FACTOR_SCHEMA["properties"]["in_writing"]["type"] == ["boolean", "null"]

@@ -699,6 +699,16 @@ class Thread:
     board is derived from this and from the file's atoms, never written.
     """
 
+    requirement_reads: dict[str, str] = field(default_factory=dict)
+    """Successful requirement reads by locator and exact passage identity.
+
+    An empty successful reading is remembered too. A failure never records a
+    successful read or removes earlier requirements. Changed text is re-read.
+    """
+
+    checklist_session: str = ""
+    """Non-authenticating session reference of the last checklist conversation."""
+
     def renamed(self, label: str) -> "Thread":
         """A rename loses nothing: the label is a display name and an alias."""
         aliases = self.aliases if self.label in self.aliases else self.aliases + (self.label,)
