@@ -728,3 +728,33 @@ def test_the_carry_asks_the_same_question_guard_two_asks():
     assert speaks_of_the_representation(_REPRESENTATION)
     assert not speaks_of_the_representation(
         "the landlord has issued a quit notice to the tenant")
+
+
+def test_being_unfiled_and_having_a_side_are_asked_for_as_two_facts():
+    """THE RULE: one field may not be made to carry two independent facts.
+
+    `role` answers "which side is this client on". Whether a proceeding
+    exists is a different fact, and the file already holds it -- the opening
+    brief records `proceedings`. When the posture prompt offered
+    `not_yet_instituted` and the prospective roles as alternatives, a matter
+    that was BOTH unfiled AND had a stated position got the status, because
+    "nothing is filed" is the more defensible sentence. The side was lost and
+    `Side.UNKNOWN` leaves G-POSTURE blocking every turn.
+
+    MEASURED 22 September 2026 on two live matters, four disputes each. Every
+    thread came back `not_yet_instituted`, each with the same reason --
+    "Nothing is filed by us yet" -- including the dispute where the advocate
+    had written "We want an injunction urgently". Eight threads, one sentence,
+    no side, and both matters refused on every turn including the correction.
+    """
+    from nm.core.posture import SYSTEM
+
+    assert "TWO DIFFERENT FACTS" in SYSTEM, (
+        "the prompt no longer separates whether a proceeding exists from "
+        "which side the client is on, so one field carries both again")
+    assert "already recorded on the file from intake" in SYSTEM, (
+        "the prompt does not say the unfiled status is held elsewhere, so "
+        "spending the role field on it still looks like the safe answer")
+    # THE ABSENCE OF AN ANSWER, not an alternative to one. Without this the
+    # rule above reads as a preference and the model keeps a coin to flip.
+    assert "not a second way of giving one" in SYSTEM
