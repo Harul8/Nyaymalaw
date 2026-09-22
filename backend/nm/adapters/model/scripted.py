@@ -70,7 +70,7 @@ def scripted_posture(message: str) -> str:
     if not m:
         return json.dumps({"states_client": False, "role": "not_stated",
                            "role_basis": "stated", "client_described_as": "",
-                           "opponent": "", "quoted": ""})
+                           "opponent": "", "quoted": "", "opponent_correction_quote": ""})
     party = " ".join(m.group(1).split()).lower()
     role = next((r for r in _SCRIPTED_ROLES if party.startswith(r)), None)
     against = _SCRIPTED_OPPONENT.search(message or "")
@@ -80,6 +80,7 @@ def scripted_posture(message: str) -> str:
         "role_basis": "stated",
         "client_described_as": "" if role else party.split(" in ")[0],
         "opponent": " ".join(against.group(1).split()) if against else "",
+        "opponent_correction_quote": "",
         "quoted": m.group(0),
     })
 
@@ -237,7 +238,9 @@ def scripted_dispute(user: str) -> str:
                 "verdict": "opens",
                 "quoted": said[start:start + len(needle)],
                 "why": f"the advocate marks it off with {needle!r}",
-                "disputes": described, **navigation})
+                "disputes": described or [{"quoted": said, "label": snippet(said, 60),
+                                           "thread_id": "", "additional_quotes": [],
+                                           "span_ids": []}], **navigation})
     return json.dumps({"verdict": "continues", "quoted": "",
                        "why": "it adds detail to what is on the file",
                        "disputes": described, **navigation})
@@ -264,7 +267,7 @@ def _described_spans(said: str) -> list[dict]:
         if len(span) < 12:
             continue
         out.append({"quoted": span, "label": snippet(span, 60),
-                    "thread_id": "", "additional_quotes": []})
+                    "thread_id": "", "additional_quotes": [], "span_ids": []})
     return out
 
 
@@ -645,7 +648,7 @@ def scripted_exposure(user: str) -> str:
     file take opposite positions on a debt -- D7's own counterexample.
     """
     if "THE DISPUTES ON THIS FILE:\n" not in user:
-        return json.dumps({"links": []})
+        return json.dumps({"exposures": []})
     payload = json.loads(user.split("THE DISPUTES ON THIS FILE:\n", 1)[1])
     ids = [row["id"] for row in payload["threads"]]
     labels = [row["label"].lower() for row in payload["threads"]]
@@ -1088,9 +1091,12 @@ def scripted_investigation(user: str) -> str:
                            "basis_id": "", "focus": "", "purpose": "no_useful_search"})
     source_id = next((key for key, value in state["basis"].items()
                       if value["kind"] == "retrieved_text"), "instruction")
+    focus = next((key for key, value in state.get('focus_choices', {}).items()
+                  if value['basis_id'] == source_id),
+                 state['basis'][source_id]['text'][:1200])
     return json.dumps({"snapshot": state["snapshot"], "action": "retrieve",
                        "basis_id": source_id,
-                       "focus": state["basis"][source_id]["text"][:1200],
+                       "focus": focus,
                        "purpose": "interpretation"})
 
 
@@ -1206,6 +1212,32 @@ class ScriptedModelAdapter:
             # NEVER best-effort parsed. Lenient parsing is how an invented
             # vocabulary once emptied a charge map.
             raise SchemaViolation(f"scripted response is not JSON: {exc}") from exc
+        if schema.get('x-nm-read') == 'posture' and isinstance(data, dict):
+            # Older controlled responses assert representation, not a correction.
+            # An absent correction remains absent; never invent supporting words.
+            data.setdefault('opponent_correction_quote', '')
+        if (schema.get('x-nm-read') == 'dispute'
+                and 'source_allocations' in schema.get('properties', {})):
+            # Test-double transport conversion only: never fill an unallocated
+            # source with a guessed target. Production performs its own judgment.
+            units = schema['properties']['source_allocations']['properties']
+            fixed = schema.get('x-nm-fixed-inventory')
+            rows = ([(i, row) for i, target in enumerate(fixed, 1)
+                     for row in data['disputes'] if row.get('thread_id') == target['thread_id']]
+                    if fixed else list(enumerate(data['disputes'], 1)))
+            data['source_allocations'] = {
+                key: [i for i, row in rows
+                      if any(span and (span in unit['description'] or unit['description'] in span)
+                             for span in [row['quoted'], *row['additional_quotes']])]
+                for key, unit in units.items()}
+            data['disputes'] = [{k: row[k] for k in ('label', 'thread_id')}
+                                for row in data['disputes']]
+            data['quoted'] = ''
+            if fixed:
+                data = {k: data[k] for k in (
+                    'source_allocations', 'focus_thread_id', 'focus_quote')}
+        if schema.get('x-nm-read') == 'investigation' and 'basis_id' not in schema['properties']:
+            data.pop('basis_id', None)
         require_schema(data, schema)
         return self._result(None, data, prompt, tier, started)
 

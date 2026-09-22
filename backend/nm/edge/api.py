@@ -4010,7 +4010,9 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released
             # a retry the SAME turn rather than a second one.
             "turn_id": req.turn_id,
             "committed": ("previously_committed" if exc.prior_receipt_saved
-                          else "not_committed"),
+                          else exc.persistence),
+            **({"matter_id": exc.matter_id, "matter_version": exc.matter_version}
+               if exc.persistence == "input_only" else {}),
             **({"prior_receipt_saved": True, "release_state": "replay_refused"}
                if exc.prior_receipt_saved else {}),
         }) from exc

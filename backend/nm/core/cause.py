@@ -106,7 +106,11 @@ SYSTEM = (
     "Answer `cannot_tell` unless what they wrote plainly supports one. A "
     "wrong cause sends an exact lookup into the wrong Article, which is "
     "worse than no lookup at all: the advocate gets a confident date "
-    "computed from a period that does not govern their suit.\n\n"
+    "computed from a period that does not govern their suit. "
+    "This vocabulary is incomplete. Do not select a broad neighbouring cause "
+    "merely because the precise relief is absent. A contract in the history "
+    "does not make every claim a claim for compensation for breach. Match "
+    "the relief actually sought, and use cannot_tell when that is unresolved.\n\n"
     "`quoted` must be the advocate's own words, copied exactly from what they "
     "wrote. Never quote the questions put to them and never paraphrase."
 )

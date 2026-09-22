@@ -1481,6 +1481,9 @@ function renderTurn(entry) {
     const SAID = {
       not_committed: 'Your brief was NOT saved. Nothing was recorded on the '
                    + 'file, so sending it again adds it once.',
+      input_only: 'Your brief is saved. The proposed answer was withheld and no '
+                + 'new conclusions were saved. Review the recorded file, then '
+                + 'tell NM how you would like to continue.',
       stale: 'This matter moved while you were writing. I have re-read it — '
            + 'check the answer above, then send again if it still applies.',
       unknown: 'I could not tell whether your brief was saved. Sending again '
@@ -1939,6 +1942,7 @@ async function deliver(entry) {
     entry.refusal = (e.detail && typeof e.detail === 'object') ? e.detail : null;
     const said = entry.refusal && entry.refusal.committed;
     entry.state = said === 'not_committed' ? 'not_committed' : 'unknown';
+    if (said === 'input_only') entry.state = 'input_only';
     if (said === 'previously_committed' && entry.refusal.release_state === 'replay_refused') {
       entry.state = 'replay_refused';
     }
@@ -1948,6 +1952,14 @@ async function deliver(entry) {
     }
     if (e.status === 409) entry.state = 'stale';
     if (!current()) return;
+    if (entry.state === 'input_only' && entry.refusal.matter_id === state.matterId) {
+      if (Number.isInteger(entry.refusal.matter_version)) {
+        state.matterVersion = entry.refusal.matter_version;
+      }
+      await showThreadBoard(state.matterId, {
+        restore: false, closeNavigator: false,
+      }).catch(() => {});
+    }
     if (entry.state === 'stale' && state.matterId) {
       await showThreadBoard(state.matterId).catch(() => {});
     }

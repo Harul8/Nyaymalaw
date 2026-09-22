@@ -296,25 +296,16 @@ def test_a_ceiling_that_binds_is_reported_and_never_silent(tmp_path):
     scanned the source for `limit 40` and failed on the comment explaining the
     fix, which is what a source scan is worth.
     """
-    import sqlite3
-
     from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
     from nm.knowledge.manifest import Manifest
 
-    db = tmp_path / "authority.db"
-    con = sqlite3.connect(db)
-    con.executescript(
-        "create virtual table paras using fts5("
-        "  case_id, case_name, court, year UNINDEXED, para_type UNINDEXED,"
-        "  chunk_id UNINDEXED, text, tokenize = 'porter unicode61');")
+    from tests.test_retrieval_trust_boundaries import index
+
     body = ("the doctrine of adverse possession requires animus possidendi "
             "against the true owner throughout the statutory period")
-    con.executemany(
-        "insert into paras values (?,?,?,?,?,?,?)",
+    db = index(tmp_path,
         [(f"case_{i}", f"Case {i} vs State", "Supreme Court of India", 2015,
           "ratio", f"chunk_{i}", body) for i in range(EXAMINED_CEILING + 12)])
-    con.commit()
-    con.close()
 
     # The corpus dir need not hold chunks.db: this exercises the authority
     # path, which reads its own index.
@@ -328,38 +319,29 @@ def test_a_ceiling_that_binds_is_reported_and_never_silent(tmp_path):
     result = adapter.fetch(need)
 
     assert result.findings, "the fixture index returned nothing at all"
-    assert result.assumption, (
+    assert result.search_note, (
         "more paragraphs matched than were examined and the answer said "
         "nothing about it — a miss caused by the ceiling is then "
         "indistinguishable from an absence in the corpus")
-    assert "did not reach" in result.assumption
-    assert "not a statement about the corpus" in result.assumption
-    assert str(EXAMINED_CEILING) in result.assumption
+    assert "did not reach" in result.search_note
+    assert "not a statement about the corpus" in result.search_note
+    assert str(EXAMINED_CEILING) in result.search_note
 
 
 @pytest.mark.eval_id("E-052")
 def test_a_ceiling_that_does_not_bind_claims_nothing(tmp_path):
     """THE POSITIVE CONTROL. A disclosure that fires on every answer teaches
     the advocate to ignore it, which costs more than it buys."""
-    import sqlite3
-
     from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
     from nm.knowledge.manifest import Manifest
 
-    db = tmp_path / "authority.db"
-    con = sqlite3.connect(db)
-    con.executescript(
-        "create virtual table paras using fts5("
-        "  case_id, case_name, court, year UNINDEXED, para_type UNINDEXED,"
-        "  chunk_id UNINDEXED, text, tokenize = 'porter unicode61');")
+    from tests.test_retrieval_trust_boundaries import index
+
     body = ("the doctrine of adverse possession requires animus possidendi "
             "against the true owner throughout the statutory period")
-    con.executemany(
-        "insert into paras values (?,?,?,?,?,?,?)",
+    db = index(tmp_path,
         [(f"case_{i}", f"Case {i} vs State", "Supreme Court of India", 2015,
           "ratio", f"chunk_{i}", body) for i in range(3)])
-    con.commit()
-    con.close()
     (tmp_path / "chunks.db").write_bytes(b"")
 
     adapter = CorpusEvidenceAdapter(
@@ -369,7 +351,7 @@ def test_a_ceiling_that_does_not_bind_claims_nothing(tmp_path):
         governing_date=TODAY, want_authority=True))
 
     assert result.findings
-    assert "did not reach" not in (result.assumption or ""), (
+    assert "did not reach" not in (result.search_note or ""), (
         "the ceiling reported binding on three rows")
 
 

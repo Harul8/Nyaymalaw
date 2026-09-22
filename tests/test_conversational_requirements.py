@@ -286,6 +286,23 @@ def test_information_promises_cannot_become_the_nearest_legal_deadline():
     assert deadlines.nearest_thread(register.rows, TODAY) is None
 
 
+def test_unsupported_requirement_read_preserves_the_held_checklist_without_crashing(
+        tmp_path, monkeypatch):
+    engine, _ = _engine(tmp_path)
+    m = answer(record(), 0, "held", "The current record is available.")
+    t = replace(m.threads[0], requirement_reads={"previous:1": "prior-hash"})
+    before, concluded = asdict(t), {}
+    monkeypatch.setitem(SCRIPTED_READS, "requirements", lambda _: json.dumps({
+        "requirements": [{"need": "Invented requirement", "why": "Unsupported",
+                          "span": "Words not in the source", "source": "unknown",
+                          "force": "required", "answer": "", "answer_quote": "",
+                          "due_expression": ""}]}))
+    metrics = TurnMetrics(turn_id="test")
+    assert engine._requirements(t, (finding(),), metrics, concluded=concluded) is None
+    assert not concluded and asdict(t) == before
+    assert any(g.gate_id == "G-MODEL" and g.state == "unavailable" for g in metrics.gates_fired)
+
+
 def test_live_turn_updates_an_existing_item_without_an_extra_reply_read(tmp_path, monkeypatch):
     engine, store = _engine(tmp_path)
     first = engine.run(

@@ -53,6 +53,7 @@ than settling it.
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from dataclasses import dataclass
 
 from nm.domain.matter import Basis, Role
@@ -110,6 +111,13 @@ POSTURE_SCHEMA: dict = {
                            "words. Only "
                            "where they said it. Empty string if they did not.",
         },
+        "opponent_correction_quote": {
+            "type": "string",
+            "description": "Exact CURRENT words expressly correcting the recorded opponent "
+                           "for this dispute. Include both the rejected name and replacement. "
+                           "Empty unless the advocate corrects it; a different name alone "
+                           "is not a correction.",
+        },
         "quoted": {
             "type": "string",
             "description": "The EXACT words from the message that state this. "
@@ -121,7 +129,7 @@ POSTURE_SCHEMA: dict = {
     # Every property, because strict mode compiles the grammar from `required`
     # and a property left out of it cannot be emitted at all.
     "required": ["states_client", "role", "role_basis",
-                 "client_described_as", "opponent", "quoted"],
+                 "client_described_as", "opponent", "quoted", "opponent_correction_quote"],
 }
 
 SYSTEM = (
@@ -334,6 +342,7 @@ class StatedPosture:
     this type is unchanged -- there are eight, and a positional insertion
     would have silently shifted `refused` into it.
     """
+    opponent_correction_quote: str = ""
 
     @property
     def settles_role(self) -> bool:
@@ -341,6 +350,16 @@ class StatedPosture:
 
 
 UNSTATED = StatedPosture(Role.UNKNOWN, Basis.UNKNOWN, None, "")
+
+
+def schema_for(quotable: Quotable) -> dict:
+    """Correction quotes select actual current sentences, never a paraphrase."""
+    from nm.core.dispute import source_units
+
+    schema = deepcopy(POSTURE_SCHEMA)
+    schema['properties']['opponent_correction_quote']['enum'] = [
+        '', *source_units(quotable.turn).values()]
+    return schema
 
 
 def build_prompt(quotable: Quotable):
@@ -439,4 +458,10 @@ def interpret(quotable: Quotable, data: dict) -> StatedPosture:
             and basis is not Basis.STATED):
         return StatedPosture(Role.UNKNOWN, Basis.UNKNOWN, described, quoted,
                              refused="a prospective position was inferred rather than stated")
-    return StatedPosture(role, basis, described, quoted, opponent=against)
+    correction = data.get("opponent_correction_quote") or ""
+    if correction and (not isinstance(correction, str)
+                       or not Quotable(turn=quotable.turn).accepts(correction)
+                       or not against or against.casefold() not in correction.casefold()):
+        correction = ""
+    return StatedPosture(role, basis, described, quoted, opponent=against,
+                         opponent_correction_quote=correction)

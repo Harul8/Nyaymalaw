@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 
@@ -38,6 +39,13 @@ SCHEMA = {
 }
 
 
+def schema_for(step: str) -> dict:
+    """Bind the verdict to the entire candidate, not a model's shortened echo."""
+    schema = deepcopy(SCHEMA)
+    schema["properties"]["step"]["enum"] = [step]
+    return schema
+
+
 def build_prompt(step: str, context: str) -> Prompt:
     return Prompt(
         system=(
@@ -46,7 +54,10 @@ def build_prompt(step: str, context: str) -> Prompt:
             "if carrying it out relies on a time-bar/maintainability conclusion or "
             "commits to pursuing or abandoning substantive relief. Independent is "
             "limited to gathering or preserving evidence, clarifying instructions, "
-            "or reviewing the missing premise without such a commitment. If a "
+            "or examining what the supplied evidence does and does not establish "
+            "without such a commitment. An explanation is not automatically independent: "
+            "if it asserts timeliness, maintainability, entitlement to relief or a "
+            "legal consequence that needs the unresolved premise, classify dependent. If a "
             "compound step contains any dependent action, classify dependent. "
             "Use unknown when you cannot establish the distinction. Echo the exact "
             "entire step and give the reason from the supplied context. Neither "

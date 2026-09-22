@@ -157,7 +157,9 @@ READS: tuple[Read, ...] = (
          "asymmetry the routing has recorded since it was written."),
     Read("posture", True,
          "Which side we are on. Nothing side-dependent can be computed without "
-         "it, and a wrong one advises the opponent's case."),
+         "it, and a wrong one advises the opponent's case. Exact representation "
+         "and opponent-correction quotations can grow with the supplied instructions.",
+         echoes=True),
     Read("role", True,
          "The procedural role, which resolves the posture. Same consequence, "
          "one step earlier."),
@@ -230,8 +232,10 @@ READS: tuple[Read, ...] = (
          "reports what is unaccounted rather than computing anything.",
          echoes=True),
     Read("theory", False,
-         "The spine. Wrong, it is an argument the advocate rejects — which is "
-         "the ordinary way an advocate uses a draft."),
+         "The spine accounts for each supplied adverse fact, including unresolved "
+         "facts and their reasons. Its output grows with that population; it is "
+         "not a fixed-size verdict. A theory remains provisional, not a verified fact.",
+         echoes=True),
     Read("attacks", False,
          "The opponent's case. A weak one is a preparation gap, not a false "
          "statement about the file.",

@@ -247,6 +247,16 @@ let bubble = false;
 })(turn);
 if (!bubble) fails.push("the advocate's own words are not set apart");
 
+const inputOnly = context.renderTurn({
+  brief: 'Saved instructions', state: 'input_only', turnId: 'withheld-input',
+  error: 'Answer withheld', refusal: {withheld_by: ['G-QUOTE'], why: 'Unsupported quotation'}
+});
+if (!inputOnly.textContent.includes('Your brief is saved.')
+    || !inputOnly.textContent.includes('no new conclusions were saved')
+    || inputOnly.textContent.includes('brief was NOT saved')) {
+  fails.push('input-only persistence is presented as either a full save or a lost brief');
+}
+
 if (fails.length) {
   console.error("FAIL\n  " + fails.join("\n  "));
   process.exit(1);

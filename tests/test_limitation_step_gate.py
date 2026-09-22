@@ -123,6 +123,26 @@ def test_missing_or_unbound_assessment_is_unknown(data):
     assert step_dependency.interpret(data, "target") is step_dependency.Dependence.UNKNOWN
 
 
+def test_dependency_schema_binds_the_whole_candidate_without_mutating_the_base():
+    from jsonschema import ValidationError, validate
+    step = "Provisional view\nThe record does not establish the missing date."
+    schema = step_dependency.schema_for(step)
+    data = {"dependence": "independent", "step": step, "reason": "No legal outcome asserted."}
+    validate(data, schema)
+    with pytest.raises(ValidationError):
+        validate({**data, "step": "Provisional view"}, schema)
+    assert "enum" not in step_dependency.SCHEMA["properties"]["step"]
+    assert step_dependency.assess({**data, "step": "Provisional view"}, step, "file").dependence \
+        is step_dependency.Dependence.UNKNOWN
+
+
+def test_explanation_is_not_a_blanket_exemption_from_the_limitation_boundary():
+    prompt = step_dependency.build_prompt("Explain the missing date", "file")
+    assert "not automatically independent" in prompt.system
+    assert "maintainability, entitlement to relief" in prompt.system
+    assert "any dependent action" in prompt.system
+
+
 def test_unavailable_classifier_does_not_release_a_directive(tmp_path, monkeypatch):
     def unavailable(_):
         raise ModelError("unavailable")

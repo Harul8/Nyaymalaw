@@ -174,11 +174,13 @@ def bind(matter: Matter, message: str, fact: Fact,
             if len(matter.threads) == 1 and opens_new_dispute is False and len(described) == 1:
                 described = (replace(described[0], thread_id=matter.threads[0].id),)
             else:
+                proposed = "; ".join(d.label for d in described if not d.thread_id)
                 return BindResult(BindState.AMBIGUOUS, None, False,
                                   "existing and new disputes were not distinguished",
-                                  question=("I have not reliably distinguished the existing "
-                                            "disputes from any new one. Please choose the dispute "
-                                            "on the board; I have kept your instructions."))
+                                  question=(f"Should I add these as separate disputes: {proposed}? "
+                                            "Or do they belong to an existing dispute? "
+                                            "I have kept your instructions; those additions "
+                                            "have not been recorded as separate disputes yet."))
         made, allocations = {}, {}
         for d in described:
             thread = (matter.thread(d.thread_id) if d.thread_id

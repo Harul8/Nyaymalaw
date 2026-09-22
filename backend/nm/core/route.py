@@ -81,12 +81,12 @@ ROUTE_SCHEMA: dict = {
             "type": "string",
             "enum": ["a_question", "a_full_brief", "explanation", "assessment"],
             "description": (
-                "`a_full_brief` when the advocate has set out a situation for "
-                "you to work through. `a_question` when they are asking one "
-                "thing. NOT a judgement about length -- a long question is a "
-                "question and a short brief is a brief. Use explanation for "
-                "requested understanding, or assessment for an evaluation without "
-                "a requested next action. These remain matter work with all safeguards."),
+                "Choose PURPOSE first: explanation for requested understanding; "
+                "assessment for a requested evaluation, even across a detailed brief "
+                "or several disputes. a_question requests a focused next action; "
+                "a_full_brief requests a full advisory workup including next steps. "
+                "Do not let length or file complexity override an express assessment "
+                "request. All retain the same safeguards."),
         },
         "why": {
             "type": "string",
@@ -103,6 +103,12 @@ SYSTEM = (
     "response or a fixed intake sequence. Matters include advisory and transactional "
     "work; a dispute or opponent is not required. Distinguish a narrow question from "
     "a request for a full workup by objective, not by message length.\n\n"
+    "Choose the RESPONSE PURPOSE before its breadth. Requested explanation or "
+    "independent evaluation uses explanation or assessment even when a long brief "
+    "or several disputes accompany it. Asking what is supportable, what weakens a "
+    "position or what information would change it does not itself request a "
+    "directive next action. Reserve a_full_brief for an unrestricted full advisory "
+    "workup, not as a synonym for detailed assessment.\n\n"
     "A contextual legal question belongs to its matter. A genuinely unrelated "
     "abstract question remains abstract even when a file is open; the presence of "
     "a file alone does not settle intent. Decide what work the CURRENT contribution "

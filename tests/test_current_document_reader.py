@@ -12,6 +12,23 @@ from tests.test_turn_contract import finding
 pytestmark = pytest.mark.class_a
 
 
+@pytest.mark.parametrize('act_id,title', [('the_limitation_act_1963', 'Limitation Act, 1963'),
+                                       ('unmapped_internal_key', 'Legislation')])
+def test_statute_document_uses_registered_title_without_changing_source_identity(
+        tmp_path, monkeypatch, act_id, title):
+    import json
+
+    from nm.adapters.evidence.corpus import CorpusEvidenceAdapter
+    from nm.knowledge.manifest import Manifest
+    adapter = CorpusEvidenceAdapter(tmp_path, Manifest.load('pipeline/manifest.yaml'))
+    monkeypatch.setattr(adapter, '_rows', lambda *a: [
+        ('Article_52', 'schedule_article', 'c', json.dumps({'full_text': 'Held text.'}))])
+    monkeypatch.setattr(adapter, '_denylist', lambda: set())
+    doc = adapter._act_document(act_id, 'Article_52')
+    assert doc.label == title and doc.store == act_id
+    assert doc.target == 0 and doc.segments == (('Article 52', 'Held text.'),)
+
+
 def test_unique_anchor_preserves_original_whitespace_offsets():
     body = 'Header\n\nBefore. A\nretrieved   clause is retained. After.'
     start, length = document_anchor(body, 'A retrieved clause is retained.')

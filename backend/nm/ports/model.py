@@ -236,7 +236,7 @@ def estimate_tokens(text: str) -> int:
     return max(1, len(text) // 4)
 
 
-NM_SCHEMA_KEYS = ("x-nm-read",)
+NM_SCHEMA_KEYS = ("x-nm-read", "x-nm-fixed-inventory")
 
 
 def on_the_wire(schema) -> dict:
@@ -291,12 +291,17 @@ def require_schema(data: Any, schema: Mapping[str, Any]) -> None:
 
 
 _TYPES = {"string": str, "integer": int, "number": (int, float),
-          "boolean": bool, "object": dict, "array": list}
+          "boolean": bool, "object": dict, "array": list, "null": type(None)}
 
 
 def _require_type(key: str, value: Any, spec: Mapping[str, Any]) -> None:
     want = spec.get("type")
-    if want and want in _TYPES and not isinstance(value, _TYPES[want]):
+    choices = want if isinstance(want, list) else [want]
+    known = [kind for kind in choices if isinstance(kind, str) and kind in _TYPES]
+    matches = any(isinstance(value, _TYPES[kind])
+                  and not (kind in ('integer', 'number') and isinstance(value, bool))
+                  for kind in known)
+    if known and not matches:
         raise SchemaViolation(
             f"property {key!r} should be {want}, got {type(value).__name__}")
     if "enum" in spec and value not in spec["enum"]:

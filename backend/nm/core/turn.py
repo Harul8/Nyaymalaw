@@ -162,7 +162,9 @@ class TurnRefused(Exception):
     def __init__(self, message: str, *, gates: tuple[str, ...] = (),
                  disclosures: tuple[str, ...] = (),
                  matter_id: str | None = None,
-                 prior_receipt_saved: bool = False) -> None:
+                 prior_receipt_saved: bool = False,
+                 persistence: str = "not_committed",
+                 matter_version: int | None = None) -> None:
         super().__init__(message)
         self.message = message
         self.gates = gates
@@ -174,6 +176,8 @@ class TurnRefused(Exception):
         turn — which is how GS-15 came to run four turns across four
         different files, each blocking on a posture nobody had stated."""
         self.prior_receipt_saved = prior_receipt_saved
+        self.persistence = persistence
+        self.matter_version = matter_version
 
 
 @refuses_blank_text()
@@ -952,7 +956,7 @@ class TurnEngine:
                 kind=ElementKind.GROUND,
                 text=(f"I have organised these instructions across {bound.looks_like} "
                       f"disputes on the board and am working on {bound.thread.label!r}. "
-                      "Their facts and dates remain separate. You can change the focus "
+                      "Please check the allocation; you can change the focus "
                       "or correct that organisation."),
                 gate="G-SPLIT", disclosure=True, signal=Signal.NONE))
 
@@ -1381,12 +1385,14 @@ class TurnEngine:
             # input is committed and the answer is not. `turns_applied` is
             # deliberately NOT set: the turn is not done, and a retry must
             # re-derive rather than replay a no-op.
+            persistence = "unknown"
             try:
                 # `admitted`, NOT `matter`. See the snapshot above: what
                 # this turn derived is discarded with the answer it was
                 # derived for, and what the advocate said is kept.
                 matter = self._store.commit(
                     admitted, expected_version=expected_version)
+                persistence = "input_only"
             except Exception as exc:  # noqa: BLE001 -- reported, never fatal
                 # Losing the note is worse than the refusal and is not worth
                 # turning the refusal into a crash over.
@@ -1415,7 +1421,8 @@ class TurnEngine:
                 # THE FILE THEY ARE ON. Without it a caller cannot continue
                 # the conversation and opens a new matter on the next turn,
                 # which is how GS-15 came to run four turns on four files.
-                matter_id=matter.id)
+                matter_id=matter.id, persistence=persistence,
+                matter_version=matter.version if persistence == "input_only" else None)
 
         # ======== BYTE BOUNDARY: nothing above has been shown or saved.
 
@@ -2123,6 +2130,8 @@ class TurnEngine:
             certainty=Certainty.ASSERTED,
         )
         matter = matter.with_fact(fact)
+        pending = dispute_reader.pending_accounts(matter, turn.turn_id)
+        allocation_text = "\n".join((turn.message, *(f.statement for f in pending)))
 
         # TWO QUESTIONS, AND THE SECOND ONE HAS NO FILE IN IT.
         #
@@ -2141,6 +2150,13 @@ class TurnEngine:
         # already has threads. That is one extra call on a first turn.
         read = dispute_reader.UNREAD
         read = self._read_dispute(matter, turn, metrics)
+        if read.refused:
+            return matter, BindResult(
+                state=BindState.UNBINDABLE, thread=None, created=False,
+                reason="the full dispute inventory could not be established",
+                question=("I have kept your full instructions, but could not reliably "
+                          "separate all the disputes and their shared instructions. "
+                          "I have not treated a partial reading as the whole matter."))
         opens = True if read.opens else (False if read.continues else None)
         focus = turn.thread_id or read.focus_thread_id
         if read.advance and not focus and not read.described:
@@ -2153,7 +2169,7 @@ class TurnEngine:
                     question="There is no other dispute ready to work through. Outstanding "
                              "questions remain on the board; the matter has not been closed.",
                     counted=read is not dispute_reader.UNREAD)
-        bound = bind(matter, turn.message, fact, thread_hint=focus,
+        bound = bind(matter, allocation_text, fact, thread_hint=focus,
                      opens_new_dispute=opens, described=read.described)
         # WHETHER ANYONE COUNTED, carried out of the only place that knows.
         bound = replace(bound, counted=read is not dispute_reader.UNREAD)
@@ -2172,8 +2188,10 @@ class TurnEngine:
                 # account remains on the matter, outside every scoped chart.
                 ids = []
                 for span in spans:
+                    origin = (turn.turn_id if span in turn.message else
+                              next(f.provenance.turn for f in pending if span in f.statement))
                     scoped_fact = Fact.create(statement=span, provenance=Provenance(
-                        kind="advocate_statement", turn=turn.turn_id, span=span),
+                        kind="advocate_statement", turn=origin, span=span),
                         certainty=Certainty.ASSERTED)
                     matter, scoped_fact = matter.recording(scoped_fact)
                     ids.append(scoped_fact.id)
@@ -2295,7 +2313,7 @@ class TurnEngine:
                     turn.turn_id, thread.id)
 
 
-        if not posture.resolved:
+        if not posture.resolved or posture_reader.speaks_of_the_representation(turn.message):
             # THE WHOLE FILE, not just this message and not just the
             # narrative. What was already established, what has already
             # been asked, and what came back -- so an advocate who
@@ -2303,7 +2321,8 @@ class TurnEngine:
             memory = matter_memory.build(
                 matter, thread.id, about=turn.message,
                 load_bearing=self._load_bearing(matter, thread))
-            stated = self._read_posture(turn, metrics, memory)
+            stated = self._read_posture(turn, metrics, memory, thread_label=thread.label,
+                                       opponent=posture.opponent or "")
             if stated.settles_role:
                 posture = posture.enrich(stated.role, stated.basis,
                                          source_fact=fact.id)
@@ -2339,6 +2358,13 @@ class TurnEngine:
             # corrects it -- which is the correction path, not this one.
             if stated.opponent and not posture.opponent:
                 posture = replace(posture, opponent=stated.opponent)
+            elif (stated.opponent and stated.opponent != posture.opponent
+                  and stated.opponent_correction_quote
+                  and posture.opponent.casefold() in stated.opponent_correction_quote.casefold()):
+                # Explicit current correction, never a silent flip from a new read.
+                # The original words and prior posture remain in saved history.
+                metrics.fire("G-CORRECTION", "superseded", "opponent expressly corrected")
+                posture = replace(posture, opponent=stated.opponent, source_fact=fact.id)
 
             # THE CLIENT IS KNOWN AND THE ROLE IS NOT. Ask the one question,
             # once. The five-field extraction answers `not_stated` here
@@ -2380,7 +2406,7 @@ class TurnEngine:
 
     @implements("D4")
     def _read_cause(self, turn: TurnInput, memory, metrics: TurnMetrics,
-                    grounds: list[Element]) -> str | None:
+                    grounds: list[Element], *, thread_label: str = "") -> str | None:
         """H3. Which cause of action, so the Article can be LOOKED UP.
 
         `None` on any doubt, and `None` is cheap: retrieval falls through to
@@ -2407,7 +2433,10 @@ class TurnEngine:
         quotable = Quotable(
             turn=turn.message,
             file=memory.advocate_words if memory else "",
-            context=memory.notes if memory else "",
+            context=(f"Active working dispute: {thread_label}. Read the cause for this "
+                     "dispute only. References distinguishing other disputes do not make "
+                     "their causes applicable here.\n" if thread_label else "")
+                    + (memory.notes if memory else ""),
             context_is="notes this product wrote about the file")
         try:
             res = self._read(
@@ -2587,39 +2616,79 @@ class TurnEngine:
 
         RETURNS THE READ, NOT A BOOLEAN. It used to return `bool | None`,
         which could carry the first answer and had nowhere to put the
-        second. `UNREAD` is the value for every failure path, so the
-        THREE STATES survive: `cannot_tell` still makes `bind` ask rather
-        than assume a continuation, and an empty `described` still falls
-        back to one thread rather than none.
+        second. A failed read carries an explicit refusal so it cannot
+        fall back to inventing one dispute from an unread multi-dispute brief.
         """
         on_file = (dispute_agenda.context(matter) + "\nExisting checklist items:\n"
                    + requirements.answer_context(matter))
         # OPENING A THREAD CARRIES THE EVIDENCE, so only this turn is
         # quotable: a span lifted out of the thread list would let an
         # old dispute open a new thread.
-        quotable = Quotable(turn=turn.message, context=on_file,
+        quotable = Quotable(turn=turn.message,
+                            file="\n".join(f.statement for f in
+                                           dispute_reader.pending_accounts(matter, turn.turn_id)),
+                            context=on_file,
                             context_is="the list of threads already open "
                                        "on this matter, as we labelled them")
+        repair_attempted = False
         try:
             res = self._read(
                       dispute_reader.build_prompt(quotable),
-                      dispute_reader.DISPUTE_SCHEMA, "dispute", Tier.ROUTINE)
+                      dispute_reader.schema_for(quotable), "dispute", Tier.ROUTINE)
             metrics.record_call(res)
             metrics.binding_reads += 1
             read = dispute_reader.interpret(quotable, res.data or {},
                                             thread_ids=frozenset(t.id for t in matter.threads))
+            missing = dispute_reader.uncovered_paragraphs(quotable.words, read)
+            if read.refused or missing:
+                repair_attempted = True
+                # One bounded repair of the same contract. No scenario keywords,
+                # invented inventory, dropped quote guard or unlimited retry.
+                prompt = dispute_reader.build_prompt(quotable)
+                fixed = dispute_reader.fixed_allocation_repair(
+                    quotable, res.data or {}, matter.threads)
+                feedback = ("Your previous inventory was incomplete or unsupported. "
+                            "Re-read the WHOLE message, not just its final subject. "
+                            "Return the full corrected inventory, including shared "
+                            "representation and task instructions on EACH affected dispute. "
+                            "Check that independently contested rights and chronologies have "
+                            "not been merged merely because parties or property overlap. "
+                            "Every quotation "
+                            "must remain literal; prefer source-unit IDs. "
+                            f"Validation: {read.refused or 'unallocated paragraphs'}. "
+                            "\nUnallocated paragraphs:\n"
+                            + "\n\n".join(missing))
+                if fixed:
+                    prompt, repair_schema, table = fixed
+                else:
+                    repair_schema = dispute_reader.schema_for(quotable)
+                repaired = self._read(replace(prompt, user=prompt.user + "\n\n" + feedback),
+                    repair_schema, "dispute", Tier.ROUTINE)
+                metrics.record_call(repaired)
+                metrics.binding_reads += 1
+                repair_data = (dispute_reader.apply_fixed_allocation(
+                    res.data or {}, repaired.data or {}, table) if fixed else repaired.data or {})
+                read = dispute_reader.interpret(quotable, repair_data,
+                    thread_ids=frozenset(t.id for t in matter.threads))
+                if dispute_reader.uncovered_paragraphs(quotable.words, read):
+                    read = replace(read, refused="paragraphs were omitted "
+                                                   "from the dispute inventory")
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
                          f"the dispute read could not run: {exc}")
-            return dispute_reader.UNREAD
+            return replace(dispute_reader.UNREAD, refused=(
+                "the incomplete inventory could not be repaired" if repair_attempted
+                else "the dispute inventory could not be read"))
         except Exception as exc:  # noqa: BLE001 -- ERROR, never a warning
             metrics.violate("C4", f"dispute read failed: "
                                   f"{type(exc).__name__}: {exc}")
-            return dispute_reader.UNREAD
+            return replace(dispute_reader.UNREAD, refused=(
+                "the incomplete inventory could not be repaired" if repair_attempted
+                else "the dispute inventory could not be read"))
 
         if read.refused:
             metrics.violate("C4", f"dispute read refused: {read.refused}")
-            return dispute_reader.UNREAD
+            return read
         if read.opens:
             # DISCLOSED. A split is the recoverable direction, but it is
             # still a decision about the advocate's file and they can see it.
@@ -2716,7 +2785,7 @@ class TurnEngine:
         # forgetting look like an ordinary value.
         derived: list[cascade.Derived] = []
 
-        cause_read = self._read_cause(turn, memory, metrics, grounds)
+        cause_read = self._read_cause(turn, memory, metrics, grounds, thread_label=thread.label)
         need = EvidenceNeed(question=turn.message.strip(),
                             governing_date=turn.today,
                             jurisdiction=turn.jurisdiction,
@@ -2996,7 +3065,7 @@ class TurnEngine:
             f.statement for f in scoped_facts)
         try:
             answer = self._read(requirements.build_prompt(thread.label, passages, context=context),
-                                requirements.SCHEMA, "requirements")
+                                requirements.schema_for(passages), "requirements")
             metrics.record_call(answer)
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",
@@ -3009,8 +3078,13 @@ class TurnEngine:
         if reading.dropped:
             # Counted where it can be seen. A reader that keeps inventing
             # requirements looks exactly like a reader finding fewer of them.
-            metrics.fire("G-GROUND", "matched",
-                         f"{reading.dropped} requirement(s) were not in the retrieved passages")
+            # The unsupported candidates never enter the answer or checklist.
+            # This is an unusable read, not a supported-grounding verdict and
+            # not a reason to publish a partial replacement for the held list.
+            metrics.fire("G-MODEL", "unavailable",
+                         f"{reading.dropped} checklist candidate(s) failed source checks; "
+                         "the existing checklist has not been replaced")
+            return None
         if (not reading.dropped and isinstance(answer.data, dict)
                 and isinstance(answer.data.get("requirements"), list) and concluded is not None):
             concluded["requirement_reads"] = {**thread.requirement_reads,
@@ -3062,7 +3136,7 @@ class TurnEngine:
             frozenset(g.gate_id for g in metrics.gates_fired), turn.turn_id)
 
     def _read_accrual(self, trigger: str, dated: list[Fact],
-                      metrics: TurnMetrics) -> accrual_reader.Accrual:
+                      metrics: TurnMetrics, *, context: str = "") -> accrual_reader.Accrual:
         """WHICH dated entry satisfies the statutory trigger.
 
         FAILS TOWARD NOT COMPUTING, and that is the whole safety argument. A
@@ -3077,7 +3151,7 @@ class TurnEngine:
         """
         try:
             res = self._read(
-                      accrual_reader.build_prompt(trigger, dated),
+                      accrual_reader.build_prompt(trigger, dated, context=context),
                       accrual_reader.ACCRUAL_SCHEMA, "accrual", Tier.ROUTINE)
             metrics.record_call(res)
         except ModelError as exc:
@@ -3283,7 +3357,10 @@ class TurnEngine:
         accrual = dated[0] if dated else None
         accrual_limb = ""
         if dated and trigger:
-            read = self._read_accrual(trigger, dated, metrics)
+            read = self._read_accrual(trigger, dated, metrics, context=(
+                f"ACTIVE DISPUTE: {thread.label}\nCURRENT INSTRUCTION: {turn.message}\n"
+                "SCOPED ACCOUNT (attributed, not findings):\n"
+                + "\n".join(f"{f.id}: {f.statement}" for f in chart)))
             if not read.identified:
                 return limitation.not_computed(
                     for_side,
@@ -3711,7 +3788,7 @@ class TurnEngine:
 
     @implements("C3")
     def _read_posture(self, turn: TurnInput, metrics: TurnMetrics,
-                      memory=None):
+                      memory=None, *, thread_label="", opponent=""):
         """What the advocate STATED about whom they act for, read by model.
 
         There is no phrase list. There was one, of ten exact phrases, and an
@@ -3736,14 +3813,19 @@ class TurnEngine:
             # keep the advocate's words quotable and this product's own
             # rendering not, and the swap made the guard protect the wrong one.
             file=memory.advocate_words if memory else "",
-            context=memory.as_context() if memory is not None else "",
+            context=(f"ACTIVE DISPUTE: {thread_label}. Read representation and opponent "
+                     "for THIS dispute only. Other disputes in the file are context, "
+                     "not a source of its opponent or procedural role.\n"
+                     f"Currently recorded opponent: {opponent or 'not established'}. "
+                     "Only an express correction in the current message can replace it.\n"
+                     + (memory.as_context() if memory is not None else "")),
             context_is="this product's own rendering of the file, "
                        "INCLUDING QUESTIONS WE HAVE ASKED -- one of which "
                        "names both sides of the dispute")
         try:
             res = self._read(
                       posture_reader.build_prompt(quotable),
-                      posture_reader.POSTURE_SCHEMA, "posture", Tier.ROUTINE)
+                      posture_reader.schema_for(quotable), "posture", Tier.ROUTINE)
             metrics.record_call(res)
             metrics.posture_reads += 1
             stated = posture_reader.interpret(quotable, res.data or {})
@@ -4244,6 +4326,12 @@ class TurnEngine:
         if not account.strip():
             return []
 
+        if not any(f.quotable and (f.span or '').strip() for f in sources):
+            return [Element(kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                            text="The legal basis for opposing arguments has not yet been "
+                                 "retrieved. I have not treated speculative legal arguments "
+                                 "as an established answer to this dispute.")]
+
         try:
             res = self._read(
                       with_evidence(adversarial.build_attack_prompt(
@@ -4468,7 +4556,7 @@ class TurnEngine:
                         tuple((t.id, t.label) for t in considered), positions),
                           adversarial.EXPOSURE_SCHEMA, "exposure", Tier.ROUTINE)
                 metrics.record_call(res)
-                found = adversarial.read_exposures(res.data or {}, threads)
+                found = adversarial.read_exposures(res.data or {}, threads, positions)
                 if found is not None:
                     labels = {t.id: t.label for t in considered}
                     found = tuple(replace(e,
@@ -5989,10 +6077,9 @@ class TurnEngine:
                 gate="G-CONSISTENT",
                 text=(f"I withheld the next step on this thread because it "
                       f"contradicted what this same answer worked out. "
-                      f"{named.sentence} The step said "
-                      f"{verdict.quoted.strip()!r} — {verdict.why}. Tell me "
-                      f"what you want to do given that position and I will "
-                      f"work it."))
+                      f"{named.sentence} No recommendation has been recorded. "
+                      f"I can re-examine the supporting material; if the recorded "
+                      f"position is wrong, please correct it."))
 
         limitation_block = self._limitation_step(text, position, metrics, thread.id, file_note)
         if limitation_block is not None:
@@ -6077,7 +6164,7 @@ class TurnEngine:
         assessment = step_dependency.assess({}, text, context)
         try:
             res = self._read(step_dependency.build_prompt(text, context),
-                             step_dependency.SCHEMA, "step_dependency")
+                             step_dependency.schema_for(text), "step_dependency")
             metrics.record_call(res)
             assessment = step_dependency.assess(res.data or {}, text, context)
         except ModelError as exc:

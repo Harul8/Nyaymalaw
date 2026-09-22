@@ -112,6 +112,29 @@ def test_every_read_declares_whether_it_echoes():
         f"not being made")
 
 
+def unbudgeted_fixed_reads(population):
+    return [read.key for read in population if not read.echoes and read.key not in ceiling.FIXED]
+
+
+def test_every_registered_non_scaling_read_has_an_explicit_budget():
+    assert reads.READS, 'No registered reads were examined'
+    assert not unbudgeted_fixed_reads(reads.READS)
+    # A registered name alone used to pass while silently receiving the floor.
+    planted = reads.Read('new_fixed_read', False, 'A bounded verdict')
+    assert unbudgeted_fixed_reads((*reads.READS, planted)) == ['new_fixed_read']
+
+
+def test_theory_population_and_exact_posture_quotations_receive_scaling_budgets():
+    from nm.ports.model import Prompt
+    short = Prompt(user='A short account.')
+    long = Prompt(user='An adverse fact with its own unresolved reason. ' * 100)
+    for key in ('theory', 'posture'):
+        assert reads.echoes(key)
+        assert ceiling.for_read(key, long, echoes=reads.echoes(key)) > \
+            ceiling.for_read(key, short, echoes=reads.echoes(key))
+        assert ceiling.for_read(key, long, echoes=reads.echoes(key)) <= ceiling.CAP
+
+
 # ============================================================ the derivation ==
 
 def test_an_echoing_read_gets_more_room_for_a_longer_brief():

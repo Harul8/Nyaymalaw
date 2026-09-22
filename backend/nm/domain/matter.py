@@ -95,6 +95,7 @@ class CauseOfAction(str, Enum):
 
     GOODS_SOLD_PRICE = "goods_sold_price"
     MONEY_LENT = "money_lent"
+    ARREARS_OF_RENT = "arrears_of_rent"
     BREACH_OF_CONTRACT = "breach_of_contract"
     SPECIFIC_PERFORMANCE = "specific_performance"
     POSSESSION_ON_TITLE = "possession_on_title"
@@ -136,7 +137,12 @@ CAUSE_MEANS: dict[CauseOfAction, str] = {
         "services already supplied, it is not this.",
     CauseOfAction.BREACH_OF_CONTRACT:
         "compensation for a contract broken, where the claim is damages "
-        "rather than a fixed price or the performance itself.",
+        "rather than a fixed price, rent arrears or the performance itself. "
+        "Not a catch-all for every obligation originating in an agreement.",
+    CauseOfAction.ARREARS_OF_RENT:
+        "rent that became payable under a letting but remains unpaid. "
+        "Distinguish recovery of rent from eviction, possession, damages "
+        "and a dispute over the right to let the property.",
     CauseOfAction.SPECIFIC_PERFORMANCE:
         "the contract PERFORMED -- typically a sale deed executed -- "
         "rather than damages for its breach.",

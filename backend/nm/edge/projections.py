@@ -542,15 +542,20 @@ def premises_projection(matter: Matter) -> dict:
     threads = []
     any_conditional = False
     any_computed = False
+    any_missing = not matter.threads
     inconsistent = []
     for t in matter.threads:
         rows = getattr(t, "premises", ()) or ()
         if not rows:
+            any_missing = True
             threads.append({"thread_id": t.id, "thread": t.label,
                             "state": "not_assessed", "premises": []})
             continue
         any_computed = True
-        digest = Premises.from_stored(rows).digest()
+        premises = Premises.from_stored(rows)
+        missing = bool(premises.unestablished())
+        any_missing = any_missing or missing
+        digest = premises.digest()
         conditional = any(p.get("basis") == "inferred" for p in rows)
         any_conditional = any_conditional or conditional
         # THE REGISTER ROWS FOR THIS THREAD, and their premise digest.
@@ -563,7 +568,7 @@ def premises_projection(matter: Matter) -> dict:
             inconsistent.append(t.id)
         threads.append({
             "thread_id": t.id, "thread": t.label,
-            "state": "conditional" if conditional else "established",
+            "state": "not_assessed" if missing else "conditional" if conditional else "established",
             "digest": digest,
             "consistent_with_register": not mismatch,
             "premises": [{
@@ -573,6 +578,7 @@ def premises_projection(matter: Matter) -> dict:
                 "reviewed_by": p.get("reviewed_by", ""),
                 "alternatives": p.get("alternatives", [])} for p in rows]})
     state = ("inconsistent" if inconsistent
+             else "not_assessed" if any_missing
              else "conditional" if any_conditional
              else "established" if any_computed
              else "not_assessed")
@@ -580,6 +586,8 @@ def premises_projection(matter: Matter) -> dict:
             "inconsistent_threads": inconsistent,
             "said": ("a thread's cover and deadline register rest on different "
                      "premise versions" if inconsistent
+                     else "the legal premises are not established for every dispute; "
+                          "no complete limitation assessment is claimed" if any_missing
                      else "a thread's limitation rests on a premise the product "
                           "inferred; confirm it before relying on the date"
                      if any_conditional

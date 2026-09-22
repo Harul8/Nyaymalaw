@@ -40,6 +40,7 @@ SITES = {
     "consistency:build_prompt",
     "consistency:repair_prompt",
     "dispute:build_prompt",
+    "dispute:fixed_allocation_repair",
     "duty:build_prompt",
     "evidence_item:build_inventory_prompt",
     "factors:build_prompt",
@@ -77,7 +78,7 @@ def _sites(root):
     return found
 
 
-def test_all_25_production_prompt_sites_are_in_the_reviewed_population(tmp_path):
+def test_all_production_prompt_sites_are_in_the_reviewed_population(tmp_path):
     found = _sites(ROOT / "backend/nm/core")
     assert found == dict.fromkeys(SITES, 1), found
     # This guard can fail: neither an empty scope nor a new call is a green pass.
@@ -273,7 +274,9 @@ def test_exposure_uses_substantive_positions_and_labels_its_output(tmp_path, mon
                         "from_thread": "thr_a",
                         "to_thread": "thr_b",
                         "what": "thr_a asserts money is due",
-                        "consequence": "thr_b disputes that position",
+                            "consequence": "thr_b disputes that position",
+                            "from_fact": "fact_a", "to_fact": "fact_b",
+                            "from_quote": "Money is due", "to_quote": "Money was repaid",
                     }
                 ]
             }

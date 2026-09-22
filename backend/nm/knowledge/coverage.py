@@ -71,7 +71,7 @@ class CoverageProfile:
             return CoveragePosition(
                 CoverageState.NOT_MEASURED, jurisdiction,
                 "corpus coverage has never been measured on this installation. "
-                "Run `python pipeline/quality/releasegate.py --write`. Until then I cannot "
+                "Until that is checked I cannot "
                 "tell you whether the binding court's output is held, and I am "
                 "not going to imply that it is.")
 
@@ -87,12 +87,9 @@ class CoverageProfile:
 
         gap = (entry.get("gap") or "").strip()
         if gap:
-            held = entry.get("held") or {}
             return CoveragePosition(
                 CoverageState.UNMET, jurisdiction,
-                f"{gap} What is held: "
-                + ", ".join(f"{k} {v:,}" for k, v in sorted(held.items()))
-                + ".",
+                gap,
                 self.measured_at, self.corpus_version)
 
         return CoveragePosition(

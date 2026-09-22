@@ -120,7 +120,7 @@ class Accrual:
 UNREAD = Accrual(why="the accrual read did not run", limb="not read")
 
 
-def build_prompt(trigger: str, chronology):
+def build_prompt(trigger: str, chronology, *, context: str = ""):
     """The trigger, and the dated entries it might name.
 
     ONLY DATED ENTRIES ARE OFFERED. An undated fact cannot start a period, so
@@ -136,7 +136,13 @@ def build_prompt(trigger: str, chronology):
         system=SYSTEM,
         user=(f"THE PERIOD RUNS FROM: {trigger}\n\n"
               f"THE DATED ENTRIES ON THIS CHRONOLOGY:\n{rows or '  (none)'}\n\n"
-              f"Which entry is that event?"))
+              "CONTEXT, INCLUDING UNDATED LIMITS AND CORRECTIONS:\n"
+              f"{context or '(none supplied)'}\n\n"
+              "Only dated entries above are selectable. Apply the trigger to this dispute, "
+              "not to a similarly dated event on a different dispute. An instruction "
+              "excluding an event or saying the relevant event is unknown is material; "
+              "it must not disappear merely because it has no date. Unknown applicability "
+              "means no selection, not a provisional date. Which entry is that event?"))
 
 
 def interpret(data: dict, offered: frozenset[str]) -> Accrual:

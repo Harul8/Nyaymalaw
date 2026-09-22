@@ -104,7 +104,6 @@ def for_echo(prompt) -> int:
 FIXED: dict[str, int] = {
     # A verdict and a quoted trigger. Short by construction.
     "route": 120,
-    "posture": 200,
     "role": 150,
     "cause": 300,
     "duty": 250,

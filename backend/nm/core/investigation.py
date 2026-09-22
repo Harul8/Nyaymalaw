@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Callable
 
@@ -38,14 +39,16 @@ Consider interpretations and adverse positions; do not flatter the client.
 Search rank is not proof of semantic support. A candidate's support, treatment,
 binding and governing-date applicability are independent checks. Do not treat
 an unavailable or bounded search as absence of law or completion of research.
-Use only the supplied basis identifiers and an EXACT contiguous focus from that
-basis, up to 1200 characters. You cannot invent a case, provision, fact, URL or
-tool. The focus is a search question's factual/textual basis, not a conclusion.
+Use only the identifiers in focus_choices. Each identifies an EXACT contiguous
+span and its source basis; the application restores both, up to 1200 characters.
+You cannot invent a case, provision, fact, URL or tool. The selected text is a
+search question's factual/textual basis, not a conclusion. Do not independently
+choose or output basis_id; it is derived from the selector.
 Select a useful focus rather than boilerplate. Review actual returned results
 before proposing another search. Stop when another search adds no useful work,
 the immediate request needs no judgment, or a missing input prevents progress.
 Do not keep searching for a favourable answer or repeat a previous search.
-For stop, basis_id and focus must be empty; purpose must be request_satisfied,
+For stop, focus must be empty; purpose must be request_satisfied,
 needs_input or no_useful_search. For retrieve, choose interpretation,
 adverse_position or procedural_fit. Return only the schema; no hidden reasoning
 or substantive advice. Copy the snapshot identity. A stop is not legal clearance.
@@ -84,6 +87,28 @@ def catalogue(message: str, account: str, findings: tuple[Finding, ...]) -> dict
             "valid_to": str(finding.valid_to) if finding.valid_to else None,
         }
     return rows
+
+
+def focus_choices(rows: dict) -> dict[str, dict]:
+    """Stable identifiers select literal text without putting case prose in grammar."""
+    from nm.core.dispute import source_units
+
+    return {f"focus_{_digest([basis, span])}": {'basis_id': basis, 'text': span}
+            for basis, row in rows.items() for span in source_units(row['text']).values()
+            if len(span) <= 1200}
+
+
+def schema_for(rows: dict, snapshot: str) -> dict:
+    """Offer source selectors, never paraphrases or source text as grammar tokens."""
+    schema = deepcopy(SCHEMA)
+    schema['properties']['snapshot']['enum'] = [snapshot]
+    # Basis is determined by the selector, not independently guessed a second time.
+    del schema['properties']['basis_id']
+    schema['required'].remove('basis_id')
+    schema['properties']['focus']['enum'] = ['', *focus_choices(rows)]
+    schema['properties']['focus']['description'] = (
+        'Choose a focus identifier from focus_choices, not its text. Empty only for stop.')
+    return schema
 
 
 def admit(data: dict, rows: dict, snapshot: str, version: int) -> StepProposal:
@@ -157,11 +182,24 @@ def run(*, message: str, account: str, initial: tuple[Finding, ...],
         snapshot = _digest([thread_id, version, rows])
         prompt = Prompt(system=PRINCIPLES, operation="investigation", user=json.dumps({
             "snapshot": snapshot, "basis": rows,
+            "focus_choices": focus_choices(rows),
+            "selection_rule": ("Return the focus identifier in focus; "
+                               "the application restores its exact text and basis. "
+                               "Do not output basis_id."),
             "previous_searches": [p.objective for p in proposals],
             "remaining_searches": round_budget - len(results),
         }, ensure_ascii=False))
         try:
-            proposal = admit(read(prompt, SCHEMA), rows, snapshot, version)
+            data = read(prompt, schema_for(rows, snapshot))
+            if isinstance(data, dict) and isinstance(data.get('focus'), str):
+                selected = focus_choices(rows).get(data['focus'])
+                if selected:
+                    if 'basis_id' in data and data['basis_id'] != selected['basis_id']:
+                        raise SchemaViolation('focus belongs to another basis')
+                    data = {**data, 'focus': selected['text'], 'basis_id': selected['basis_id']}
+                elif data.get('action') == 'stop' and data['focus'] == '':
+                    data = {'basis_id': '', **data}
+            proposal = admit(data, rows, snapshot, version)
         except SchemaViolation:
             stop = "invalid_proposal"
             break

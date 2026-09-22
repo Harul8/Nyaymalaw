@@ -34,6 +34,7 @@ import re
 import sqlite3
 from dataclasses import dataclass
 from datetime import date
+from fnmatch import fnmatchcase
 from pathlib import Path
 
 from nm.domain.citation import last_wanted_section, wanted_section
@@ -452,14 +453,15 @@ class CorpusEvidenceAdapter:
             # report a retrieval defect as a legal answer.
             return None
 
-        note = (f"You named no provision, so I resolved one: the cause reads as "
-                f"{cause.value.replace('_', ' ')}, which the graph routes to "
-                f"{edge.act} {edge.provision.replace('_', ' ')} "
-                f"({edge.curated_from})")
+        note = (f"I resolved one possible starting point for "
+                f"{cause.value.replace('_', ' ')}: "
+                f"{edge.act}, {edge.provision.replace('_', ' ')}. "
+                "This is a provision to examine, not a finding that it governs "
+                "the claim or that a limitation period has begun.")
         if edge.alternatives:
             # WHAT ELSE IT COULD HAVE BEEN, named. A wrong route is then
             # visible at a glance instead of after the advocate has acted on it.
-            note += f". Also arguable: {'; '.join(edge.alternatives)}"
+            note += f" Also arguable: {'; '.join(edge.alternatives).replace('_', ' ')}"
         return _Routed(entry=entry, provision=edge.provision, note=note)
 
     def _union_lookup(self, patterns: tuple[str, ...], section: str, entry,
@@ -568,6 +570,10 @@ class CorpusEvidenceAdapter:
 
     def _act_document(self, act_id: str, section: str) -> SourceDocument:
         """Every section of one Act, in its own order, with the cited one marked."""
+        names = {entry.act_name for entry in self._manifest.entries
+                 if any(fnmatchcase(act_id.lower(), pattern.lower().replace('%', '*')
+                                    .replace('_', '?')) for pattern in entry.act_patterns)}
+        label = next(iter(names)) if len(names) == 1 else "Legislation"
         rows = self._rows(
             self._db,
             """select section_number, atom_type, chunk_id, blob from chunks
@@ -578,7 +584,7 @@ class CorpusEvidenceAdapter:
                 state="no_reader",
                 missing="the provision store could not be opened for reading")
         best: dict[str, tuple[str, str]] = {}
-        for section_number, atom_type, chunk_id, blob in rows:
+        for section_number, _atom_type, chunk_id, blob in rows:
             if chunk_id in self._denylist():
                 continue
             body = " ".join((json.loads(blob).get("full_text") or "").split())
@@ -590,21 +596,23 @@ class CorpusEvidenceAdapter:
             # a 13-section copy of a 44-section Act reads as a corpus gap.
             held = best.get(number)
             if held is None or len(body) > len(held[1]):
-                best[number] = (f"Section {number}" if number else str(atom_type), body)
+                heading = number.replace('_', ' ')
+                best[number] = (heading if heading.startswith('Article ') else
+                                f"Section {heading}" if heading else "Provision", body)
         if not best:
             return SourceDocument(
                 state="not_held",
-                missing=f"this corpus holds no readable text for {act_id}")
+                missing=f"this corpus holds no readable text for {label}")
         ordered = sorted(best.items(), key=lambda item: _section_order(item[0]))
         segments = tuple(value for _, value in ordered)
         wanted = str(section or "").strip()
         target = next((i for i, (number, _) in enumerate(ordered) if number == wanted), None)
         return SourceDocument(
-            state="read", label=act_id, store=act_id,
+            state="read", label=label, store=act_id,
             snapshot_id=self.published_snapshot_id or "",
             segments=segments, target=target,
             missing="" if target is not None else
-            f"section {wanted} could not be located in the text held for {act_id}")
+            f"the cited provision could not be located in the text held for {label}")
 
     def _judgment_document(self, case_id: str, chunk_id: str) -> SourceDocument:
         """Every attributable paragraph of one judgment, in its stored order."""
@@ -638,11 +646,11 @@ class CorpusEvidenceAdapter:
         if not segments:
             return SourceDocument(
                 state="not_held",
-                missing=f"this corpus holds no readable paragraphs for {case_id}")
+                missing="this corpus holds no readable paragraphs for this judgment")
         ident = self._identity.case(case_id)
         bench = f" — {ident.describe()}" if ident else ""
         return SourceDocument(
-            state="read", label=f"{named or case_id}{bench}",
+            state="read", label=f"{named or 'Judgment'}{bench}",
             store="authority_index", snapshot_id=self.published_snapshot_id or "",
             segments=tuple(segments), target=target,
             missing="" if target is not None else

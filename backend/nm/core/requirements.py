@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from copy import deepcopy
 from dataclasses import dataclass
 
 from nm.core.date_resolution import resolve
@@ -88,6 +89,14 @@ SCHEMA = {
     "required": ["requirements"],
     "additionalProperties": False,
 }
+
+
+def schema_for(passages: tuple["Passage", ...]) -> dict:
+    """The source vocabulary is retrieved law, not the surrounding case account."""
+    schema = deepcopy(SCHEMA)
+    schema['properties']['requirements']['items']['properties']['source']['enum'] = list(
+        dict.fromkeys(p.source for p in passages))
+    return schema
 
 
 def build_prompt(dispute: str, passages: tuple["Passage", ...], *, context="") -> Prompt:

@@ -128,6 +128,11 @@ def test_a_grounding_withheld_archive_is_never_released_or_marked_committed(
     refused = client.post("/api/turn", json=offer)
     assert refused.status_code == 422, refused.text
     assert refused.json()["detail"]["withheld_by"], "must actually reach a withholding gate"
+    detail = refused.json()["detail"]
+    assert detail["committed"] == ("unknown" if commit_fails else "input_only")
+    if not commit_fails:
+        assert detail["matter_id"] == opened["matter_id"]
+        assert detail["matter_version"] == store.load(opened["matter_id"]).version
     archived = [row for row in store.transcripts_for(opened["matter_id"])
                 if row["turn_id"] == offer["turn_id"]]
     assert len(archived) == 1 and archived[0]["withheld_by"]

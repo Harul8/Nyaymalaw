@@ -162,7 +162,7 @@ CONSISTENCY_SCHEMA: dict = {
 }
 
 SYSTEM = (
-    "Below is a single next step written for an Indian advocate, and the "
+    "Below is a proposed answer or next step written for an Indian advocate, and the "
     "facts this same answer has already COMPUTED and will print beside it.\n\n"
     "Say whether the step CONTRADICTS one of those computed facts.\n\n"
     "A CONTRADICTION IS THE STEP ASSERTING, ASSUMING OR DIRECTING SOMETHING "
@@ -172,6 +172,16 @@ SYSTEM = (
     "An instruction to investigate an unresolved question is not an assertion "
     "that it has already been resolved. Preserve the distinction between a "
     "proposed examination, a conditional hypothesis and an established result.\n\n"
+    "Explaining a rule or its trigger is not asserting that its factual premises "
+    "have been satisfied. Unknown is not false: a missing computed date does not "
+    "contradict an explanation of which event would be needed to compute it. "
+    "Identify incompatible assertions about the SAME subject and status; mere "
+    "mention of limitation, a date, a weakness or an opponent is not contradiction.\n\n"
+    "Accurately describing an opponent's contention, testing an adverse fact, or "
+    "acknowledging weakness in our client's case is not advising the opponent. "
+    "Independent assessment must be able to do all three. A side contradiction "
+    "requires actually misidentifying whom we represent or directing the wrong "
+    "party's action, not merely discussing material that may hurt our client.\n\n"
     "IT IS NOT A CONTRADICTION FOR THE STEP TO BE ABOUT SOMETHING ELSE. Most "
     "steps do not assert the truth or effect of a computed fact. Such a step does not "
     "contradict it, and answering with an empty `claim_id` is the ordinary "
@@ -245,8 +255,9 @@ def claims_for(position, register, side: str, today: date,
             out.append(Claim(
                 "limitation",
                 f"NO limitation period has been computed on this thread: "
-                f"{position.not_computed_because}. There is no window to act "
-                f"within and none has been established as open or closed."))
+                f"{position.not_computed_because}. Whether a window is open or "
+                "closed is NOT ESTABLISHED. This does not prevent explaining a "
+                "retrieved rule or investigating its missing premises."))
 
     if register is None:
         out.append(Claim(
@@ -275,9 +286,11 @@ def claims_for(position, register, side: str, today: date,
     if side:
         out.append(Claim(
             "side",
-            f"We act for the {side} party. The step is advice to THEM, and "
-            f"advising the other side's move is advising against our own "
-            f"client."))
+            f"The represented party is the {side} party. This records client identity, "
+            "not the strength of that party's case. A weak claim, an adverse admission, "
+            "a possible concession or an unfavourable assessment can all be compatible "
+            "with representing that party. Only a changed represented identity or "
+            "directing an act for the other party contradicts this identity."))
 
     # RELIEF (BK-70). Built by its own owner and wrapped here so `consistency`
     # need not import `relief` at module load (the pair would import each

@@ -152,6 +152,13 @@ LIMITATION_ARTICLE: dict[CauseOfAction, Edge] = {
                    "successive breaches, when the breach sued on "
                    "occurred",
         alternatives=("Article_113 as the residuary article",)),
+    CauseOfAction.ARREARS_OF_RENT: Edge(
+        cause=CauseOfAction.ARREARS_OF_RENT,
+        act="Limitation Act, 1963", provision="Article_52",
+        curated_from="Limitation Act, 1963, Schedule, Article 52 — arrears of rent; "
+                     "India Code https://www.indiacode.nic.in/bitstream/123456789/1565/5/A1963-36.pdf",
+        accrues_on="when the arrears become due; establish the due date of each "
+                   "claimed instalment, not a single date for the whole tenancy"),
     CauseOfAction.SPECIFIC_PERFORMANCE: Edge(
         cause=CauseOfAction.SPECIFIC_PERFORMANCE,
         act="Limitation Act, 1963", provision="Article_54",

@@ -47,7 +47,7 @@ from enum import Enum
 
 from nm.domain.matter import ThreadId
 from nm.domain.register import PEER
-from nm.domain.text import blank, refuses_blank_text, snippet
+from nm.domain.text import blank, fold, refuses_blank_text, snippet
 from nm.domain.traceability import implements
 
 # ============================================================ D7 ==========
@@ -329,8 +329,13 @@ EXPOSURE_SCHEMA: dict = {
                         "type": "string",
                         "description": "What follows for the second thread.",
                     },
+                    "from_fact": {"type": "string"},
+                    "to_fact": {"type": "string"},
+                    "from_quote": {"type": "string"},
+                    "to_quote": {"type": "string"},
                 },
-                "required": ["from_thread", "to_thread", "what", "consequence"],
+                "required": ["from_thread", "to_thread", "what", "consequence",
+                             "from_fact", "to_fact", "from_quote", "to_quote"],
                 "additionalProperties": False,
             },
         },
@@ -348,6 +353,14 @@ EXPOSURE_SYSTEM = (
     "only in from_thread/to_thread; use labels in prose. State what supplied "
     "material supports each connection. An empty list means this supplied "
     "material was assessed and no connection identified; never invent one."
+    " Identify a fact ID and exact quotation from EACH named dispute which establishes "
+    "the incompatible factual commitments. Shared client identity, different opponents, "
+    "missing evidence, and speculation that losing one dispute damages credibility in "
+    "another do not establish a cross-dispute conflict. A single shared instruction "
+    "cannot contradict itself. No legal rules are supplied to this read: do not infer "
+    "legal priority, subordination, entitlement or consequences from model memory. "
+    "State a factual inconsistency only when the attributed accounts support it; "
+    "otherwise return an empty list."
 
     "\n\n" + PEER)
 
@@ -447,6 +460,7 @@ def read_attacks(said: dict, thread: ThreadId) -> ReadAttacks:
 
 @implements("D7")
 def read_exposures(said: dict, threads: tuple[ThreadId, ...],
+                   positions: tuple | None = None,
                    ) -> tuple[Exposure, ...] | None:
     """Exposures between threads THE FILE ACTUALLY HOLDS.
 
@@ -465,6 +479,20 @@ def read_exposures(said: dict, threads: tuple[ThreadId, ...],
         frm, to = str(row.get("from_thread") or ""), str(row.get("to_thread") or "")
         if frm not in known or to not in known or frm == to:
             return None
+        if positions is not None:
+            by_thread = {p['thread']: {f['id']: f['statement'] for f in p['facts']}
+                         for p in positions}
+            quotes = []
+            for tid, prefix in ((frm, 'from'), (to, 'to')):
+                held = by_thread.get(tid, {}).get(row.get(prefix + '_fact'))
+                quote = row.get(prefix + '_quote')
+                if not held or not isinstance(quote, str) or not quote.strip():
+                    return None
+                if fold(quote) not in fold(held):
+                    return None
+                quotes.append(fold(quote))
+            if quotes[0] == quotes[1]:
+                return None
         try:
             out.append(Exposure(
                 from_thread=ThreadId(frm), to_thread=ThreadId(to),
