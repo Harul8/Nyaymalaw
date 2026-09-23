@@ -248,7 +248,7 @@ class TracedModel:
                     raise
                 result = self.inner.structured(prompt, schema, Tier.ROUTINE,
                                                max_tokens=max_tokens)
-                return replace(result, downgraded_from=tier)
+                return replace(result, downgraded_from=tier, read=read_name(schema))
 
         return self._traced("structured", read_name(schema), prompt, tier,
                             run, schema=schema)

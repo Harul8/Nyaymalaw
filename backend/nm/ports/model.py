@@ -157,6 +157,10 @@ class ModelResult:
     latency_ms: int
     retries: int = 0
     downgraded_from: Tier | None = None
+    read: str = ""
+    """WHICH READ this answered, set where a downgrade is recorded, so the
+    disclosure can say which check ran on the cheaper tier instead of assuming
+    it was a date read. Empty where nothing needed it."""
     completion: Completion = Completion.NOT_ESTABLISHED
     """HOW THE PROVIDER STOPPED, and the default is not `COMPLETE`. BK-49-AC1.
 

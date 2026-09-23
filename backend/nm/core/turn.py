@@ -4596,13 +4596,30 @@ class TurnEngine:
         """
         if not metrics.tier_downgrades:
             return []
-        return [Element(
-            kind=ElementKind.GROUND, disclosure=True, signal=Signal.NONE,
-            text=("The reads that decide a date, an amount, or which law is "
-                  "read ran on the cheaper model this turn, because the "
-                  "stronger one is not configured here. The answer below is "
-                  "the same shape it would otherwise be and it is worth less "
-                  "than it looks."))]
+        # SAY WHICH CHECK DEGRADED. This sentence assumed every downgrade was a
+        # decisive read -- true when those were the only reads on `hard`, false
+        # since they were withdrawn on 6 September and the step-consistency
+        # read became the one step there. For that read the cost is concrete
+        # and measured, and the advocate needs it: on the cheaper model it
+        # withholds most sound steps, so a missing next step may be ITS error.
+        reads = {d.get("read") or "" for d in metrics.tier_downgrades}
+        said = []
+        if "consistency" in reads:
+            said.append(
+                "The check that a recommended step does not contradict what this "
+                "answer worked out ran on the cheaper model, because the stronger "
+                "one it was measured on is not configured here. On the cheaper "
+                "model that check withholds most sound steps, so if no next step "
+                "appears below, that may be the check's error rather than a real "
+                "conflict.")
+        if reads - {"consistency"}:
+            said.append(
+                "A read measured on the stronger model ran on the cheaper one this "
+                "turn, because the stronger one is not configured here. The answer "
+                "below is the same shape it would otherwise be and it is worth less "
+                "than it looks.")
+        return [Element(kind=ElementKind.GROUND, disclosure=True, signal=Signal.NONE,
+                        text=" ".join(said))]
 
     def _decisive_empties(self, metrics: TurnMetrics) -> list[Element]:
         """G-READ. WHICH decisive read answered with nothing, said out loud.
@@ -6492,7 +6509,7 @@ class TurnEngine:
         try:
             res = self._read(
                       consistency.build_prompt(text, claims, file_note),
-                      consistency.CONSISTENCY_SCHEMA, "consistency", Tier.ROUTINE)
+                      consistency.CONSISTENCY_SCHEMA, "consistency", consistency.TIER)
             metrics.record_call(res)
         except ModelError as exc:
             metrics.fire("G-MODEL", "unavailable",

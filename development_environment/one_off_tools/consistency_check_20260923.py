@@ -302,11 +302,39 @@ def measure(run: bool) -> int:
     from nm.ports.model import Prompt, Tier
 
     load_dotenv(ROOT / ".env")
-    budget = os.environ.get("NM_EVAL_BUDGET_FILE")
-    if not budget:
-        raise SystemExit("set NM_EVAL_BUDGET_FILE: this makes provider calls")
-    adapter = OpenAIModelAdapter(load(dict(os.environ))).with_call_budget(
-        CallBudget(pathlib.Path(budget), os.environ.get("NM_EVAL_MAX_USD", "2")))
+    if TIER == "judge":
+        # ONE OWNER-APPROVED RUN ON gpt-5.1, 23 September 2026 -- "use gpt-5.1,
+        # only once for this testing". Its own ledger, so its spend is never
+        # mixed with the matters' and its model is never admitted there; its
+        # own cap, so the whole activity stays inside the owner's USD 2; and a
+        # guard that refuses a second measured run, so "once" is enforced
+        # rather than promised.
+        #
+        # Price from the provider's model page, checked 23 September 2026:
+        # $1.25 input / $10 output per million, 400,000 context, 128,000 max
+        # output. Output is capped at 6,000 tokens a call (reasoning counts as
+        # output); the reservation covers 40,000 input tokens at that cap.
+        budget = os.environ.get("NM_EVAL_JUDGE_BUDGET_FILE")
+        if not budget:
+            raise SystemExit("set NM_EVAL_JUDGE_BUDGET_FILE: a dedicated ledger for this run")
+        ledger = pathlib.Path(budget)
+        if ledger.exists():
+            import sqlite3
+            with sqlite3.connect(ledger) as db:
+                done = db.execute("SELECT COUNT(*) FROM attempts WHERE state='measured'"
+                                  ).fetchone()[0]
+            if done:
+                raise SystemExit(f"this gpt-5.1 measurement was authorised ONCE and has "
+                                 f"already run ({done} measured calls in {ledger.name}).")
+        spend = CallBudget(ledger, os.environ.get("NM_EVAL_JUDGE_MAX_USD", "1.40"),
+                           model="gpt-5.1", price_per_million=("1.25", "10"),
+                           reservation_micro_usd=40_000 * 1.25 + 6_000 * 10)
+    else:
+        budget = os.environ.get("NM_EVAL_BUDGET_FILE")
+        if not budget:
+            raise SystemExit("set NM_EVAL_BUDGET_FILE: this makes provider calls")
+        spend = CallBudget(pathlib.Path(budget), os.environ.get("NM_EVAL_MAX_USD", "2"))
+    adapter = OpenAIModelAdapter(load(dict(os.environ))).with_call_budget(spend)
 
     counts = {"false_contradiction": 0, "missed_contradiction": 0, "correct": 0}
     rows = []
@@ -323,8 +351,17 @@ def measure(run: bool) -> int:
             sent = _extraction_user(user)
         elif VARIANT == "pipeline_one_owner":
             sent = _without_unresolved_limitation(user)
-        answer = adapter.structured(guided(Prompt(system=system, user=sent)), schema,
-                                    Tier(TIER))
+        try:
+            answer = adapter.structured(guided(Prompt(system=system, user=sent)), schema,
+                                        Tier(TIER),
+                                        max_tokens=6_000 if TIER == "judge" else None)
+        except Exception as exc:  # noqa: BLE001 -- counted and shown, never silent
+            counts.setdefault("failed", 0)
+            counts["failed"] += 1
+            rows.append({"source": source, "label": label, "verdict": "failed",
+                         "outcome": "failed", "error": f"{type(exc).__name__}: {exc}"})
+            print(f"  FAILED {type(exc).__name__}: {str(exc)[:120]}  {source[:40]}")
+            continue
         data = answer.data or {}
         if VARIANT == "candidate":
             hit = _candidate_contradicted(data, step, offered)

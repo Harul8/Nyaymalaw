@@ -199,9 +199,10 @@ def test_every_hard_tier_step_carries_a_recorded_measurement():
     """THE COUNTEREXAMPLE: a step promoted to the expensive model because it
     read better on a sample of one.
 
-    The register is EMPTY, and that is the current answer — nothing has been
-    shown to need the expensive tier. An empty register is a claim, and this
-    makes it checkable instead of leaving it to memory.
+    The register holds ONE step since 23 September 2026 -- the step-consistency
+    read, with the measurement that earned it -- after standing empty from the
+    6 September reversal. Whatever it holds is a claim, and this makes it
+    checkable instead of leaving it to memory.
     """
     import re
     uses = []

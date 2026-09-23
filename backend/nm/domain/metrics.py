@@ -176,7 +176,7 @@ class TurnMetrics:
             # A downgrade is NEVER silent.
             self.tier_downgrades.append(
                 {"from": result.downgraded_from.value, "to": result.tier.value,
-                 "model": key})
+                 "model": key, "read": getattr(result, "read", "") or ""})
 
     def violate(self, rule: str, detail: str, *, gating: bool = False) -> None:
         self.violations.append(Violation(rule=rule, detail=detail, gating=gating))

@@ -973,3 +973,44 @@ Now refused, toward consistent -- the module's own direction.
   disclose: serve the step with the named possible conflict. That keeps the
   advice on thirteen of seventeen turns, and it is a policy change on a gate
   B-074 exists for, so it is not made here.
+
+
+## 11.5 Option 1, taken -- the one gpt-5.1 run, and the read moved to `hard`
+
+Owner-authorised, "only once for this testing". Its own ledger
+(`.nm/evaluations/consistency-gpt51-once-20260923.sqlite`), capped at USD 1.40 so
+the whole activity stays inside USD 2, with a guard that refuses a second
+measured run. **23 calls, USD 0.0661**, every row recorded as gpt-5.1. The
+matters' ledger stands at 864 calls, USD 0.5653. Combined: USD 0.6313.
+
+The production prompt, schema and verdict logic UNCHANGED:
+
+| | gpt-4o-mini | gpt-5.1 |
+|---|---|---|
+| sound steps deleted | 13/17 | **1/17** |
+| true contradictions missed | 0/6 | **0/6** |
+| correct | 10/23 | **22/23** |
+
+The one residual (#27, which was labelled borderline) is a verdict its own
+reason disowns: "...so there is in fact no contradiction", written AFTER the
+schema had already asked for the fact's id. Reason-first ordering would plausibly
+remove it; that is UNMEASURED on gpt-5.1 and is not claimed.
+
+What changed in the code:
+
+* `CallBudget` admits a model other than the pin only when it is NAMED with its
+  price and a per-call reservation bounding its worst case. The default is
+  still the pin, and a test says so.
+* `HARD_TIER_STEPS` holds its first entry since the 6 September reversal: the
+  consistency read, with this measurement. The read declares its tier in its
+  own module (`consistency.TIER`), so the register permits that module and not
+  the whole engine -- the build guard matches by file.
+* A downgrade now records WHICH read degraded, and the disclosure says the true
+  thing: for this read, that on the cheaper model it withholds most sound steps
+  and a missing next step may be its error.
+
+**Not done, and the owner's to do:** `NM_MODEL_HARD=gpt-5.1` in `.env`. Until
+then the read degrades to routine exactly as before, now said out loud. And
+P4 requires the judge tier to differ from the hard tier -- `NM_MODEL_JUDGE` is
+gpt-5.1 today, so it would need another model, or `test_reads_registry` P4
+fails. Ledger-bound live runs would also need gpt-5.1 admitted to their ledger.

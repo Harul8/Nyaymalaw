@@ -23,7 +23,29 @@ RESERVATION_MICRO_USD = 30_000
 
 
 class CallBudget:
-    def __init__(self, path: Path, maximum_usd: str):
+    def __init__(self, path: Path, maximum_usd: str, *, model: str = MODEL,
+                 price_per_million: tuple[str, str] = ("0.15", "0.60"),
+                 reservation_micro_usd: int = RESERVATION_MICRO_USD):
+        """A bounded evaluation, pinned to ONE owner-approved model.
+
+        THE DEFAULT IS THE PIN, and every server path relies on it: nothing
+        that passes no model can spend on anything but GPT-4o mini. A
+        different model is authorised only by EXPLICITLY naming it together
+        with its price and a per-call reservation that bounds its worst case
+        -- the three facts that make the ledger conservative. Added 23
+        September 2026 for one owner-approved measurement of G-CONSISTENT on
+        gpt-5.1 (PRD 7.4.1), which the pin correctly refused.
+
+        The price must be the provider's published price, checked when it is
+        passed; the reservation must cover the largest charge one call can
+        make at the output ceiling the caller sets. An estimate that can
+        under-count is not a reservation.
+        """
+        self.model = model
+        self.price_in, self.price_out = (Decimal(x) for x in price_per_million)
+        self.reservation = int(reservation_micro_usd)
+        if self.reservation <= 0:
+            raise ConfigurationError("A per-call reservation must be positive.")
         amount = Decimal(maximum_usd)
         if not amount.is_finite() or amount <= 0 or amount > 25:
             raise ConfigurationError("Evaluation budget must be positive and at most USD25.")
@@ -53,15 +75,15 @@ class CallBudget:
             yield db
 
     def reserve(self, model: str) -> str:
-        if model != MODEL:
+        if model != self.model:
             raise ConfigurationError(
-                "This evaluation authorises only the pinned GPT-4o mini model."
+                f"This evaluation authorises only the pinned {self.model} model."
             )
         token = str(uuid.uuid4())
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
             spent = db.execute("SELECT COALESCE(SUM(charge),0) FROM attempts").fetchone()[0]
-            if spent + RESERVATION_MICRO_USD > self.maximum:
+            if spent + self.reservation > self.maximum:
                 raise ProviderUnavailable(
                     "The approved evaluation budget cannot fund another bounded request."
                 )
@@ -70,7 +92,7 @@ class CallBudget:
                 (
                     token,
                     datetime.now(timezone.utc).isoformat(),
-                    RESERVATION_MICRO_USD,
+                    self.reservation,
                     "reserved_or_unknown",
                     model,
                 ),
@@ -85,10 +107,10 @@ class CallBudget:
             return  # Unknown usage retains the full reservation; never pretend zero.
         cost = int(
             (
-                Decimal(incoming) * Decimal("0.15") + Decimal(outgoing) * Decimal("0.60")
+                Decimal(incoming) * self.price_in + Decimal(outgoing) * self.price_out
             ).to_integral_value(rounding=ROUND_CEILING)
         )
-        if cost > RESERVATION_MICRO_USD:
+        if cost > self.reservation:
             raise ProviderUnavailable(
                 "Provider usage exceeded the evaluation model's reserved bound."
             )

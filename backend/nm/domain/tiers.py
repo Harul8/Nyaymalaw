@@ -83,6 +83,28 @@ class HardTierStep:
 #: own extraction -- were NOT measured, and reverting all six on evidence from
 #: two is deliberate: no read showed a benefit, one showed serious harm, and
 #: the cost was real.
-HARD_TIER_STEPS: tuple[HardTierStep, ...] = ()
+#:
+#: ONE ENTRY AGAIN, 23 September 2026 -- the step-consistency read, which gates
+#: whether the advocate's next step is served at all. Owner-authorised as a
+#: single gpt-5.1 run on its own ledger (USD 0.066, 23 calls).
+HARD_TIER_STEPS: tuple[HardTierStep, ...] = (
+    HardTierStep(
+        step="backend/nm/core/consistency.py",
+        measurement=(
+            "development_environment/one_off_tools/consistency_check_20260923.py: "
+            "17 real sound steps (production prompts, complete records only) and "
+            "6 true contradictions built from real fact sentences, replayed with "
+            "the production prompt, schema and verdict logic UNCHANGED. Evidence: "
+            "docs/backlog/evidence/legal-brain-20260922/consistency-check-"
+            "baseline.json (gpt-4o-mini) and consistency-check-baseline-judge.json "
+            "(gpt-5.1)."),
+        measured_at="2026-09-23",
+        delta=(
+            "Sound steps deleted 13/17 on gpt-4o-mini -> 1/17 on gpt-5.1; true "
+            "contradictions missed 0/6 -> 0/6; correct 10/23 -> 22/23. Cost "
+            "measured at about USD 0.003 per call. Four prompt and structure "
+            "variants on gpt-4o-mini, measured first, deleted 14-16/17."),
+    ),
+)
 
 PERMITTED = {s.step for s in HARD_TIER_STEPS}

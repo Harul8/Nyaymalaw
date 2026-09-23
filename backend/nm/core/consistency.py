@@ -69,6 +69,7 @@ from datetime import date
 
 from nm.core import deadlines, limitation
 from nm.domain.text import fold, refuses_blank_text, snippet
+from nm.ports.model import Tier
 
 
 @refuses_blank_text()
@@ -131,6 +132,21 @@ UNVERIFIED = Verdict(ran=False, why="the consistency read did not run")
 #: a turn that had nothing to check.
 NOTHING_TO_CHECK = Verdict(
     ran=False, why="nothing was computed on this turn for the step to contradict")
+
+
+#: THIS READ RUNS ON THE `hard` TIER, and it is the one step in the register
+#: (`nm.domain.tiers.HARD_TIER_STEPS`) with the measurement that earned it.
+#: Declared HERE, beside the schema, rather than at the call site, so the
+#: register permits this module and nothing else in the engine.
+#:
+#: Measured 23 September 2026, 17 real sound steps and 6 true contradictions,
+#: the production prompt UNCHANGED: gpt-4o-mini deleted 13 of 17 sound steps;
+#: gpt-5.1 deleted 1 of 17. Both missed 0 of 6. Four prompt and structure
+#: variants on gpt-4o-mini were tried first and none moved it.
+#:
+#: Where `hard` is not configured the read degrades to routine and the answer
+#: SAYS SO -- see `TurnEngine._tier_degraded`.
+TIER = Tier.HARD
 
 
 CONSISTENCY_SCHEMA: dict = {
