@@ -30,7 +30,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 ARTIFACTS = ROOT / ".nm" / "journey"
 sys.path.insert(0, str(ROOT))
 
-from tests.test_the_journey_login_to_logout import _start_matter  # noqa: E402
+from tests.test_the_journey_login_to_logout import _intake, _start_matter  # noqa: E402
 from tests.test_the_journey_login_to_logout import _tab as _open_surface  # noqa: E402
 
 pytestmark = [pytest.mark.journey, pytest.mark.class_d]
@@ -174,15 +174,12 @@ def _open_matter(page) -> None:
     A new matter is started from Home (F-B-01).
     """
     _start_matter(page)
-    page.wait_for_selector("#intake:not([hidden])", timeout=15000)
-    if page.is_hidden("#intake"):
-        return
-    page.fill("#in-client", "Ledger Traders")
-    page.fill("#in-adverse", "Kiran Steels")
-    page.fill("#in-scope", "recover the price of goods sold")
-    page.check("#in-capacity")
-    page.click("#in-go")
-    page.wait_for_selector("#intake", state="hidden", timeout=15000)
+    # THE SHARED ANSWER TO THE FORM. This journey typed its own, into the
+    # four-field form that `f5b5413` replaced with progressive disclosure --
+    # so `#in-adverse` sat hidden and every phase timed out on it. One helper
+    # owns the form, and a change to it is swept once.
+    _intake(page, client="Ledger Traders", adverse="Kiran Steels",
+            scope="recover the price of goods sold")
 
 
 def _advise(page, message: str) -> None:

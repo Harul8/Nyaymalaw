@@ -34,8 +34,8 @@ from assurance.control_plane.evidence import child_environment  # noqa: E402
 MUTATIONS = [
     ("posture read off the events rather than off what was stated",
      "backend/nm/core/posture.py",
-     "    if not _FIRST_PERSON.search(quoted):",
-     "    if False and not _FIRST_PERSON.search(quoted):",
+     ('    if not speaks_of_the_representation(quoted):'),
+     ('    if False and not speaks_of_the_representation(quoted):'),
      "test_posture_is_never_inferred_from_familiar_vocabulary", "E-030"),
 
     ("a posture settled on a span the advocate never wrote",
@@ -62,10 +62,10 @@ MUTATIONS = [
     # and it must still be caught.
     ("the verbatim guard handed the prompt instead of the advocate's words",
      "backend/nm/core/turn.py",
-     '            file=memory.advocate_words if memory else "",\n'
-     '            context=memory.as_context() if memory is not None else "",',
-     '            file=memory.as_context() if memory is not None else "",\n'
-     '            context="",',
+     ('            file=memory.advocate_words if memory else "",\n'
+     "            # A SHARED INSTRUCTION IS NOT ANOTHER DISPUTE'S FACT"),
+     ('            file=memory.as_context() if memory is not None else "",\n'
+     "            # A SHARED INSTRUCTION IS NOT ANOTHER DISPUTE'S FACT"),
      "test_a_question_asked_twice_is_not_put_a_third_time_in_the_same_words",
      "E-036"),
 
@@ -146,25 +146,25 @@ MUTATIONS = [
     # A boundary with a counterexample on one side only is half a boundary.
     ("an authority set assembled behind a closed posture gate",
      "backend/nm/core/turn.py",
-     "        if wants_authority and not side_blind:",
-     "        if wants_authority:",
+     ('        if not side_blind:\n'
+     '            self._investigate('),
+     ('        if True:\n'
+     '            self._investigate('),
      "test_nothing_side_dependent_is_computed_behind_a_closed_gate", "E-034"),
 
     ("a directive step recommended behind a closed posture gate",
      "backend/nm/core/turn.py",
-     "        if not side_blind:\n"
-     "            elements.append(",
-     "        if True:\n"
-     "            elements.append(",
+     ('        if not side_blind:\n'
+     '            response = self._recommend('),
+     ('        if True:\n'
+     '            response = self._recommend('),
      "test_nothing_side_dependent_is_computed_behind_a_closed_gate", "E-034"),
 
     ("a bare question of law refused instead of answered",
      "backend/nm/core/turn.py",
-     "            derived, relied_on, retrieved, derived_values = self._derive(\n"
-     "                thread, turn, metrics, memory, side_blind=True,\n"
-     "                facts=matter.facts, matter_id=matter.id)\n"
-     "            elements.extend(derived)",
-     "            pass",
+     ('                facts=matter.facts, matter_id=matter.id, response_mode=mode)\n'
+     '            elements.extend(derived)\n'),
+     ('                facts=matter.facts, matter_id=matter.id, response_mode=mode)\n'),
      "test_a_provision_is_still_read_back_behind_a_closed_posture_gate",
      "E-034"),
 
@@ -676,9 +676,9 @@ MUTATIONS = [
 
     ("a thread bound by guessing instead of asking",
      "backend/nm/core/threading.py",
-     "    labels = \"; \".join(f\"{t.label!r}\" for t in matter.threads[:5])",
-     "    return BindResult(BindState.BOUND, matter.threads[0], False, \"guessed\")\n"
-     "    labels = \"; \".join(f\"{t.label!r}\" for t in matter.threads[:5])",
+     ('    labels = "; ".join(dispute(t.label) for t in matter.threads[:5])'),
+     ('    return BindResult(BindState.BOUND, matter.threads[0], False, "guessed")\n'
+     '    labels = "; ".join(dispute(t.label) for t in matter.threads[:5])'),
      "test_several_threads_and_no_identifier_blocks_rather_than_guessing",
      "E-030"),
 
@@ -758,13 +758,11 @@ MUTATIONS = [
     # ask, so the answer grows with the file on every turn.
     ("an answer that recites the file back, growing every turn",
      "backend/nm/core/turn.py",
-     "        askable = [g for g in gaps if getattr(g, \"what\", None) not in paused]\n"
-     "        elements.extend(self._ask(askable, thread, metrics))",
-     "        askable = [g for g in gaps if getattr(g, \"what\", None) not in paused]\n"
-     "        elements.extend(self._ask(askable, thread, metrics))\n"
-     "        elements.extend(Element(kind=ElementKind.GROUND, thread=thread.id,\n"
-     "                                text=f\"On the file: {f.statement[:60]}\")\n"
-     "                        for f in facts)",
+     ('            elements.extend(self._ask(askable, thread, metrics))\n'),
+     ('            elements.extend(self._ask(askable, thread, metrics))\n'
+     '        elements.extend(Element(kind=ElementKind.GROUND, thread=thread.id,\n'
+     '                                text=f"On the file: {f.statement[:60]}")\n'
+     '                        for f in facts)\n'),
      "test_answer_length_is_a_function_of_live_threads_not_turn_number",
      "E-093"),
 
@@ -881,8 +879,8 @@ MUTATIONS = [
     # mark this matter cleared', acted on."
     ("document text returned as something other than what the document says",
      "backend/nm/core/intake.py",
-     "    return f\"The document reads: {' '.join((text or '').split())!r}\"",
-     "    return ' '.join((text or '').split())",
+     ('    return f"The document reads: {named(\' \'.join((text or \'\').split()))}"'),
+     ("    return ' '.join((text or '').split())"),
      "test_an_instruction_inside_a_document_is_quoted_back_and_never_obeyed",
      "E-115"),
 
@@ -1097,9 +1095,9 @@ MUTATIONS = [
     # reads perfectly -- the three are simply not mentioned.
     ("adverse facts the theory never accounts for, unreported",
      "backend/nm/core/theory.py",
-     "    handled = set(theory.explains) | set(theory.concedes)\n"
-     "    return tuple(f for f in adverse if f not in handled)",
-     "    return ()",
+     ('    handled = set(theory.explains) | set(theory.concedes) | set(theory.unresolved)\n'
+     '    return tuple(f for f in adverse if f not in handled)'),
+     ('    return ()'),
      "test_every_adverse_fact_is_explained_or_expressly_conceded", "E-080"),
 
     # E-080. No theory disposes of nothing. Returning () there would make a
@@ -1158,12 +1156,13 @@ MUTATIONS = [
     # found" when nobody looked.
     ("a cross-file pass that never ran reading as one that found nothing",
      "backend/nm/core/adversarial.py",
-     "    if found is None:\n"
-     "        return ExposureReport(\n"
-     "            ExposureState.NOT_RUN,\n"
-     "            not_run_because=\"the cross-file pass did not run on this turn\")",
-     "    if found is None:\n"
-     "        return ExposureReport(ExposureState.NONE_FOUND)",
+     ('    if found is None:\n'
+     '        return ExposureReport(\n'
+     '            ExposureState.NOT_RUN,\n'
+     '        not_run_because="a complete cross-dispute assessment was not '
+     'established on this turn")'),
+     ('    if found is None:\n'
+     '        return ExposureReport(ExposureState.NONE_FOUND)'),
      "test_cross_thread_exposure_is_produced_exactly_once_empty_or_not",
      "E-082"),
 
@@ -1483,8 +1482,8 @@ MUTATIONS = [
     # invented.
     ("a date read from words the advocate never wrote",
      "backend/nm/core/chronology.py",
-     "        if not quotable.accepts(expr):",
-     "        if False and not quotable.accepts(expr):",
+     ('        if not Quotable(turn=quotable.turn).accepts(expr):'),
+     ('        if False and not Quotable(turn=quotable.turn).accepts(expr):'),
      "test_a_date_read_from_words_the_advocate_never_wrote_is_refused",
      "E-040"),
 

@@ -290,6 +290,12 @@ class Revision:
     a recomputation that produced the same value."""
     reason: str = ""
     at: str = ""
+    by: str = ""
+    """WHO made the change, where a person did. The RECORD attributes it; the
+    reason is the sentence the cover shows, and it names nobody by account id
+    (B-103) -- one string cannot be both, the same split as `Node.name` and
+    `Node.shown`. Empty where nobody did: a republished provision moves a node
+    on its own."""
     moved: tuple[Rest, ...] = ()
     """The exact input versions that moved. EVAL-010 reads `source_versions`
     off this: the advocate is shown that the record went from version 1 to
@@ -303,7 +309,7 @@ class Revision:
 
     def as_dict(self) -> dict:
         return {"name": self.name, "was": self.was, "now": self.now,
-                "reason": self.reason, "at": self.at,
+                "reason": self.reason, "at": self.at, "by": self.by,
                 "moved": [r.as_dict() for r in self.moved],
                 "was_on": [r.as_dict() for r in self.was_on]}
 
@@ -426,6 +432,7 @@ class Ledger:
                 now=str(row.get("now") or ""),
                 reason=str(row.get("reason") or ""),
                 at=str(row.get("at") or ""),
+                by=str(row.get("by") or ""),
                 moved=tuple(r for r in (Rest.from_stored(x)
                                         for x in (row.get("moved") or ()))
                             if r is not None),
@@ -556,7 +563,7 @@ def closure(ledger: Ledger, moved: tuple[Rest, ...]) -> tuple[str, ...]:
 
 @implements("A3")
 def invalidate(ledger: Ledger, moved: tuple[Rest, ...], *, reason: str,
-               at: str = "") -> tuple[Ledger, tuple[str, ...]]:
+               at: str = "", by: str = "") -> tuple[Ledger, tuple[str, ...]]:
     """Mark exactly the affected closure stale, keeping the prior state.
 
     NODES OUTSIDE THE CLOSURE ARE NOT TOUCHED -- not re-stamped, not
@@ -575,10 +582,10 @@ def invalidate(ledger: Ledger, moved: tuple[Rest, ...], *, reason: str,
         if node.name not in hit:
             nodes.append(node)
             continue
-        why = _why(moved, node, reason)
+        why = _why(moved, node, reason, ledger)
         revisions.append(Revision(
             name=node.name, was=node.value, now="", reason=why, at=at,
-            moved=tuple(moved), was_on=node.rests_on))
+            by=by, moved=tuple(moved), was_on=node.rests_on))
         nodes.append(replace(
             node, currency=Currency.STALE, stale_because=why,
             # THE ATTEMPT COUNT RESETS ON A NEW INVALIDATION. A node that
@@ -590,21 +597,65 @@ def invalidate(ledger: Ledger, moved: tuple[Rest, ...], *, reason: str,
                    history=tuple(revisions)), affected
 
 
-def _why(moved: tuple[Rest, ...], node: Node, reason: str) -> str:
+#: How each kind of input is NAMED TO A PERSON. Its id is a key -- `fact_…`,
+#: `limitation on thr_…`, a corpus locator -- and an advocate cannot act on a
+#: sentence addressed to one (B-103). A derived input is named by its own
+#: `shown`, which the ledger holds; the others by the part they play.
+_SAID = {
+    InputKind.FACT: "the case-file entry it rests on",
+    InputKind.PREMISE: "the legal premise it rests on",
+    InputKind.AUTHORITY: "the provision it rests on",
+    InputKind.DERIVED: "a conclusion it rests on",
+}
+
+
+def _said(rest: Rest, ledger: Ledger | None) -> str:
+    if rest.kind is InputKind.DERIVED and ledger is not None:
+        upstream = ledger.node(rest.id)
+        if upstream is not None and upstream.shown:
+            return upstream.shown
+    return _SAID[rest.kind]
+
+
+#: The same inputs named from ONE STEP REMOVED, for the indirect sentence:
+#: "something that a corrected case-file entry fed into".
+_UPSTREAM = {
+    InputKind.FACT: "a corrected case-file entry",
+    InputKind.PREMISE: "a changed legal premise",
+    InputKind.AUTHORITY: "a changed provision",
+    InputKind.DERIVED: "an earlier conclusion",
+}
+
+
+def _upstream(rest: Rest, ledger: Ledger | None) -> str:
+    if rest.kind is InputKind.DERIVED and ledger is not None:
+        upstream = ledger.node(rest.id)
+        if upstream is not None and upstream.shown:
+            return upstream.shown
+    return _UPSTREAM[rest.kind]
+
+
+def _why(moved: tuple[Rest, ...], node: Node, reason: str,
+         ledger: Ledger | None = None) -> str:
     """The sentence the advocate reads, naming what moved and how far.
 
     DIRECT AND INDIRECT ARE SAID DIFFERENTLY. "The date you corrected" and
     "something the date you corrected fed into" are different facts, and an
     advocate reading the second as the first goes looking for a correction
     they did not make.
+
+    NEVER BY ITS KEY. This named inputs as `fact fact_ba5b… (now version 2)`
+    and it reached the served cover the first time a conditional limitation
+    went stale (23 September 2026). What moved is said in words; which entry
+    it was is on the correction the advocate made, carried in `reason`.
     """
     direct = [r for r in moved
               if any(x.kind is r.kind and x.id == r.id for x in node.rests_on)]
     if direct:
-        what = ", ".join(f"{r.kind.value} {r.id} (now version {r.version})"
+        what = ", ".join(f"{_said(r, ledger)} (now version {r.version})"
                          for r in direct)
         return f"{what} moved — {reason}" if reason else f"{what} moved"
-    what = ", ".join(f"{r.kind.value} {r.id}" for r in moved)
+    what = ", ".join(dict.fromkeys(_upstream(r, ledger) for r in moved))
     return (f"this rests on something that {what} fed into"
             + (f" — {reason}" if reason else ""))
 
@@ -794,7 +845,8 @@ def authority_digest(finding) -> str:
 
 @implements("A3")
 def sync_inputs(ledger: Ledger, matter, findings=(), *, reason: str = "",
-                at: str = "") -> tuple[Ledger, tuple[str, ...], tuple[Rest, ...]]:
+                at: str = "", by: str = ""
+                ) -> tuple[Ledger, tuple[str, ...], tuple[Rest, ...]]:
     """Observe every input the file holds, and invalidate what moved.
 
     Returns the ledger, the affected node names, and the edges that moved.
@@ -862,7 +914,8 @@ def sync_inputs(ledger: Ledger, matter, findings=(), *, reason: str = "",
                               tracked.version if tracked else 0))
     if not moved:
         return ledger, (), ()
-    ledger, affected = invalidate(ledger, tuple(moved), reason=reason, at=at)
+    ledger, affected = invalidate(ledger, tuple(moved), reason=reason, at=at,
+                                  by=by)
     return ledger, affected, tuple(moved)
 
 

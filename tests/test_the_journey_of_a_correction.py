@@ -172,14 +172,36 @@ def _the_matter(journey):
 
 # =============================================== 1. a deadline exists ==========
 
+def _confirm_the_accrual(page, statement: str):
+    """THE ADVOCATE'S CONFIRMATION, through the case file's own control.
+
+    Since `602e3f0` a model-selected accrual is CONDITIONAL: the first brief
+    serves the arithmetic and registers no dated deadline, so there is nothing
+    for a correction to reach. The advocate settles it on the case file with
+    `Confirm premise`, and the next brief computes under it -- the same path
+    `tests.test_turn_contract.confirmed` takes at the engine.
+    """
+    _tab(page, "casefile")
+    form = page.locator(".premise-row[data-kind='accrual_rule'] form.premise-confirm")
+    form.first.wait_for(timeout=15000)
+    form.first.locator("input[name='statement']").fill(statement)
+    form.first.locator("button[type='submit']").click()
+    page.locator(".premise-state", has_text="Recorded").first.wait_for(timeout=15000)
+    _tab(page, "advise")
+
+
 def test_phase_1_a_brief_puts_a_current_deadline_on_the_board(page, journey):
     _sign_in(page, journey)
     _start_matter(page)
     _intake(page)
     _advise(page, BRIEF)
+    _confirm_the_accrual(page, "time runs from the delivery of the goods")
+    _advise(page, "Where does the limitation stand now?")
 
     board = _board_text(page)
     assert "deadline" in board, board[:600]
+    assert "no date established" not in board, (
+        "the confirmed accrual did not become a dated deadline:\n" + board[:600])
     assert "stale" not in board, "the board reads stale before anything moved"
 
     matter = _the_matter(journey)

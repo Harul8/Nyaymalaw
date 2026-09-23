@@ -30,6 +30,13 @@ import sys
 import zipfile
 from pathlib import Path
 
+_REPO = Path(__file__).resolve().parents[2]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+from assurance.common._console import utf8_console  # noqa: E402
+
+utf8_console()
+
 # Before `ssl` is reached by anything: see the module docstring.
 os.environ.pop("SSLKEYLOGFILE", None)
 

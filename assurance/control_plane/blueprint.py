@@ -33,6 +33,23 @@ MODULE_IDS = frozenset(f"M{i:02}" for i in range(13))
 MODULE_FIELDS = frozenset({"id", "title", "requires", "guide", "features", "steps", "items"})
 
 
+
+def local_links(path: Path, content: str | None = None) -> list[tuple[str, Path]]:
+    """Every local Markdown link in a blueprint chapter, as (target, resolved).
+
+    ONE READING OF THE RULE. The checker refuses a link that resolves to
+    nothing, and a test that copies the tree must copy what these resolve to;
+    two patterns for "a local link" would disagree the first time a chapter
+    used a form one of them did not know.
+    """
+    text = path.read_text(encoding="utf-8") if content is None else content
+    out = []
+    for target in re.findall(r"\]\(([^)]+)\)", text):
+        if target.startswith(("https://", "http://", "#")):
+            continue
+        out.append((target, (path.parent / target.split("#", 1)[0]).resolve()))
+    return out
+
 def load(root: Path = ROOT) -> tuple[dict, dict]:
     """Read only; don't bind or promote execution evidence."""
     status = safe_load((root / "docs/backlog/status.yaml").read_text(encoding="utf-8"))
@@ -142,10 +159,7 @@ def check(manifest: dict, registry: dict, root: Path = ROOT) -> list[str]:
         for ref in set(re.findall(r"\bSTEP-[A-I]-\d{2}\b", content)):
             if ref not in populations["steps"]:
                 errors.append(f"{path.name}: unknown step reference {ref}")
-        for target in re.findall(r"\]\(([^)]+)\)", content):
-            if target.startswith(("https://", "http://", "#")):
-                continue
-            local = (path.parent / target.split("#", 1)[0]).resolve()
+        for target, local in local_links(path, content):
             if not local.exists():
                 errors.append(f"{path.name}: missing local link {target}")
     return errors

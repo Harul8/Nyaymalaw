@@ -112,6 +112,13 @@ def test_composer_is_reachable_and_ime_enter_is_not_a_send(page, journey, width,
     assert page.locator("#message").input_value() == "Synthetic multi-dispute instruction"
     assert not page.errors
 
+    # THE POSITIVE CONTROL. `assert not requests` passes just as well when the
+    # listener never matches a send, so the same listener must SEE the Enter
+    # that is not composing.
+    with page.expect_request(lambda request: "/api/turn" in request.url):
+        page.locator("#message").dispatch_event("keydown", {"key": "Enter"})
+    assert requests, "a real send reached the server and the listener saw nothing"
+
 
 @pytest.mark.parametrize("outcome", ["reply", "failure", "cancel"])
 def test_send_consumes_only_the_submitted_draft_before_the_response(page, journey, outcome):
@@ -193,7 +200,8 @@ def test_failed_receipt_protection_never_dispatches_or_loses_the_text(page, jour
     calls = []
     page.on("request", lambda req: calls.append(req) if req.url.endswith("/api/turn") else None)
     page.evaluate(
-        "() => { Storage.prototype.setItem = () => { throw Error('Synthetic quota'); }; }"
+        "() => { window.__setItem = Storage.prototype.setItem; "
+        "Storage.prototype.setItem = () => { throw Error('Synthetic quota'); }; }"
     )
     page.fill("#message", BRIEF)
     page.click("#send")
@@ -202,6 +210,14 @@ def test_failed_receipt_protection_never_dispatches_or_loses_the_text(page, jour
     assert page.locator("#message").input_value() == ""
     assert page.locator("#thread .brief").last.inner_text() == BRIEF
     assert page.get_by_role("button", name="Send this brief again", exact=True).is_visible()
+
+    # THE POSITIVE CONTROL. `assert not calls` passes just as well when the
+    # listener's filter never matches a real send, so with storage back the
+    # retry must be SEEN by the same listener.
+    page.evaluate("() => { Storage.prototype.setItem = window.__setItem; }")
+    with page.expect_request(lambda request: "/api/turn" in request.url):
+        page.get_by_role("button", name="Send this brief again", exact=True).click()
+    assert calls, "a real send reached the server and the listener saw nothing"
 
 
 @pytest.mark.parametrize("width,height", WIDTHS)

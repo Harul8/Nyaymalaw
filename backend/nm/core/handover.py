@@ -245,6 +245,7 @@ def re_entry(matter) -> dict:
 
 
 def record_event(ledger: Ledger, *, kind: str, event_id: str, reason: str,
+                 by: str = "",
                  at: str = "") -> tuple[Ledger, tuple[str, ...]]:
     """A material event moves what rests on it. BK-59-AC1.
 
@@ -255,7 +256,7 @@ def record_event(ledger: Ledger, *, kind: str, event_id: str, reason: str,
     """
     moved = (Rest(kind=InputKind.FACT, id=event_id, version=1),)
     del kind  # the event's kind is recorded by the caller, not by the ledger
-    return invalidate(ledger, moved, reason=reason, at=at)
+    return invalidate(ledger, moved, reason=reason, at=at, by=by)
 
 
 def with_closure(matter, record: ClosureRecord):

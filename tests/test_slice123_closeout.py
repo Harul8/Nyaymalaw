@@ -459,8 +459,15 @@ def test_a_provision_is_still_read_back_behind_a_closed_posture_gate(tmp_path):
     assert out.answer.blocked, "the directive step is still refused"
     assert out.answer.elements[0].kind is ElementKind.QUESTION
     assert not any(e.kind is ElementKind.ACTION for e in out.answer.elements)
-    assert len(out.answer.elements) > 1, (
-        "the turn returned the blocking question and nothing else. The "
+    # THE PROVISION ITSELF, not a count of elements. `len(...) > 1` held on
+    # the screen rows and the coverage disclosure alone, so deleting the
+    # read-back left this green -- measured 23 September 2026 by the mutation
+    # "a bare question of law refused instead of answered", which survived.
+    read_back = [e for e in out.answer.elements
+                 if e.kind is not ElementKind.QUESTION
+                 and "Article 65" in e.text and "twelve years" in e.text]
+    assert read_back, (
+        "the turn returned the blocking question and no provision. The "
         "provision text does not depend on which side we are on, and an "
         "advocate asking what a provision says was told to state a posture "
         "before they could be told.")

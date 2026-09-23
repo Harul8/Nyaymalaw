@@ -98,8 +98,24 @@ def tree(tmp_path) -> pathlib.Path:
         target = tmp_path / name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / name, target)
+    from assurance.control_plane.blueprint import local_links
+
     for path in (ROOT / "docs" / "blueprint").glob("*.md"):
         shutil.copy2(path, tmp_path / "docs" / "blueprint" / path.name)
+        # AND WHAT EACH CHAPTER LINKS TO, read by the checker's own rule. The
+        # checker refuses a local link that resolves to nothing, so a copy
+        # that leaves the target behind fails for a reason unrelated to the
+        # mutation under test -- which is what happened when COMMUNICATION.md
+        # and REASONING.md began linking evidence records.
+        for _target, local in local_links(path):
+            if not local.exists() or ROOT.resolve() not in local.parents:
+                continue
+            copy = tmp_path / local.relative_to(ROOT.resolve())
+            copy.parent.mkdir(parents=True, exist_ok=True)
+            if local.is_dir():
+                shutil.copytree(local, copy, dirs_exist_ok=True)
+            else:
+                shutil.copy2(local, copy)
 
     packets = json.loads(
         (ROOT / "docs/blueprint/packets.json").read_text(encoding="utf-8"))

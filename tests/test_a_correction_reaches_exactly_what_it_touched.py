@@ -186,10 +186,14 @@ def test_a_direct_change_and_an_indirect_one_are_said_differently():
     ledger, _ = _corrected(_two_issues())
     direct = ledger.node("meeting-timeline").stale_because
     indirect = ledger.node("filing-deadline").stale_because
-    assert "source-date" in direct
     assert "now version 2" in direct
     assert direct != indirect
     assert "fed into" in indirect
+    # AND NEITHER NAMES AN INPUT BY ITS KEY. This asserted the id was in the
+    # sentence -- current behaviour, and the leak: an advocate reads
+    # `stale_because` on the cover.
+    assert "source-date" not in direct and "source-date" not in indirect
+    assert "the case-file entry it rests on" in direct
 
 
 def test_a_cycle_terminates_and_reports_both_nodes():
@@ -484,7 +488,9 @@ def test_a_value_from_a_superseded_source_version_cannot_be_served_as_current():
     assert allowed is False, (
         "a conclusion computed from source version 1 was served as current "
         "after version 2 was accepted")
-    assert "source-date" in why
+    # SAID IN WORDS, not by the input's key -- `why` is what the cover shows.
+    assert "the case-file entry it rests on" in why
+    assert "source-date" not in why
     assert "version 2" in why
 
     # AND THE STALE VALUE IS STILL ON THE FILE, labelled. Hiding it would tell

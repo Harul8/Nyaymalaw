@@ -1282,7 +1282,10 @@ def board_is_my_works_row(page_script):
     assert "row.matter_id === matterId" in board and "matterFields(fields, m);" in board
     assert "matterFields(dl, m);" in _function(page_script, "showMatterList")
     fields = _function(page_script, "matterFields")
-    for label in ("'client'", "'against'", "'deadline'", "'last worked'", "'posture'"):
+    # `'posture'` WAS RENAMED `'position'` in 602e3f0's plain-language pass;
+    # the field and what it shows -- blocked, or no unresolved posture -- did
+    # not change.
+    for label in ("'client'", "'against'", "'deadline'", "'last worked'", "'position'"):
         assert label in fields, label
 
 
@@ -1305,7 +1308,13 @@ def issues_on_the_board(app_page, page_script):
         < rail.index('id="rail-body"')
     show = _function(page_script, "showThreadBoard")
     assert "$('rail-title').textContent = 'Matter board';" in show
-    assert "body.replaceChildren(...data.threads.map(" in show
+    # THE DISPUTE AGENDA, since 602e3f0: one row per dispute on the matter,
+    # read from the board's `agenda`, and an agenda that cannot be read says
+    # so rather than rendering an empty board.
+    assert "renderDisputeAgenda(body, data.agenda);" in show
+    agenda = _function(page_script, "renderDisputeAgenda")
+    assert "const rows = agenda.disputes;" in agenda
+    assert "if (!agenda || !Array.isArray(agenda.disputes))" in agenda
 
 
 # ---------------------------------------------------------------- F-B-03 ---

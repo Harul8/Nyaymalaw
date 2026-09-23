@@ -706,6 +706,12 @@ def currency_projection(matter: Matter) -> dict:
                    "currency": n.currency.value, "because": n.stale_because,
                    "rework_exhausted": n.rework_exhausted}
                   for n in stale],
-        "history": [r.as_dict() for r in ledger.history],
+        # EACH REVISION CARRIES ITS NODE'S LABEL, so the case file names a
+        # conclusion the way the stale list above it does -- by `shown`, never
+        # by the key that keeps two threads' limitations apart (B-103).
+        "history": [{**r.as_dict(),
+                     "shown": (ledger.node(r.name).label
+                               if ledger.node(r.name) is not None else "")}
+                    for r in ledger.history],
         "tracked": [t.as_dict() for t in ledger.tracked],
     }

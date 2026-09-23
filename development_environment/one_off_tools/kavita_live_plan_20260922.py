@@ -12,6 +12,15 @@ from openpyxl import load_workbook
 from chat_reference_plan_20260922 import sheet_features
 from checklist_plan_20260922 import OUT, SOURCE
 from reconcile_implementation_20260922 import preview
+import sys
+from pathlib import Path
+
+_REPO = Path(__file__).resolve().parents[2]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+from assurance.common._console import utf8_console  # noqa: E402
+
+utf8_console()
 
 
 NOTES = {

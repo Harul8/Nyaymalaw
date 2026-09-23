@@ -6,7 +6,12 @@ import json
 
 import pytest
 
-from tests.test_the_journey_login_to_logout import WIDTHS, _sign_in
+from tests.test_the_journey_login_to_logout import (
+    WIDTHS,
+    _intake,
+    _sign_in,
+    _start_matter,
+)
 from tests.test_the_workspace_respects_its_current_context import (
     _assert_no_overflow,
     _HeldReply,
@@ -23,8 +28,30 @@ journey = _base_journey
 page = _base_page
 
 
+#: The title the intake records, so a test can show uploads do not rename it.
+TITLE_CLIENT = "Synthetic Originals Traders"
+
+
 def _open(page):
-    page.click("#materials-open")
+    """THE ORIGINAL-MATERIAL WINDOW, reached the way it is reached now.
+
+    Since `474f917` (18 September 2026) the window opens from the plus menu
+    under the brief, and ONLY on an open matter: a matter is opened by the
+    intake form first (F-B-01), and material offered with none open sends the
+    advocate there. This journey used to open the window from Home with no
+    matter and let the first file name title one -- a flow the product no
+    longer has, so `#materials-open` was waited on until every phase timed out.
+    What it proves is unchanged: originals are sealed and never read, and
+    nothing in them becomes a fact.
+    """
+    if not page.get_attribute("#pane-advise", "data-matter-id"):
+        _start_matter(page)
+        _intake(page, client=TITLE_CLIENT)
+    page.click("#plus-toggle")
+    # `Upload documents` also opens the file chooser; the journey sets files
+    # on the input itself, so the chooser is taken and left unanswered.
+    with page.expect_file_chooser():
+        page.click("#plus-documents")
     page.wait_for_selector("#materials-dialog[open]")
 
 
@@ -64,15 +91,19 @@ def test_original_files_open_a_matter_without_a_placeholder_narrative(
 ):
     _sign_in(page, journey, width, height)
     _open(page)
+    opened = len(page.request_identities)
     _assert_no_overflow(page)
     originals = [_file(), _file("Second supplied file.pdf", b"%PDF- synthetic unvalidated bytes")]
     _upload(page, originals)
     matter_id, rows = _rows(page, journey)
     assert len(rows) == 2
     assert page.input_value("#message") == ""
-    assert not any(request["path"] == "/api/turn" for request in page.request_identities)
+    assert not any(request["path"] == "/api/turn"
+                   for request in page.request_identities[opened:])
     matter = journey["box"].application.store.load(matter_id)
-    assert matter.title == originals[0]["name"]
+    # SUPPLYING ORIGINALS NAMES NOTHING AND ESTABLISHES NOTHING: the matter
+    # keeps the title the intake gave it, and no turn ran over the files.
+    assert TITLE_CLIENT in matter.title
     assert not matter.facts and not matter.turns_applied
     saved_by_name = {row["filename"]: row for row in rows}
     assert set(saved_by_name) == {original["name"] for original in originals}
@@ -99,11 +130,12 @@ def test_original_files_open_a_matter_without_a_placeholder_narrative(
 def test_upload_needs_explicit_instructions_and_rejects_an_oversized_original(page, journey):
     _sign_in(page, journey)
     _open(page)
+    opened = len(page.request_identities)
     page.set_input_files("#materials-files", _file())
     page.click("#materials-upload")
     assert page.locator("#materials-purpose").evaluate("el => el.validity.valueMissing")
     assert not any("/uploads" in row["path"] or row["path"] == "/api/matters/intake"
-                   for row in page.request_identities)
+                   for row in page.request_identities[opened:])
     _instructions(page)
     page.fill("#materials-purpose", "   ")
     page.click("#materials-upload")
@@ -114,9 +146,13 @@ def test_upload_needs_explicit_instructions_and_rejects_an_oversized_original(pa
       const input = document.querySelector('#materials-files');
       input.files = files.files; input.dispatchEvent(new Event('change', {bubbles: true}));
     }""")
-    assert "at most 32 MiB" in page.inner_text("#materials-status")
+    # THE SERVER'S LIMIT, NAMED, and the file that broke it -- not a
+    # generic "within the limits" that tells the advocate neither.
+    status = page.inner_text("#materials-status")
+    assert "at most" in status and "too-large.bin" in status, status
+    assert "Nothing was uploaded" in status
     assert not any(row["method"] in ("PUT", "POST") and "/uploads" in row["path"]
-                   for row in page.request_identities)
+                   for row in page.request_identities[opened:])
 
 
 def _partial(page):
@@ -257,13 +293,14 @@ def test_microphone_permission_is_requested_only_by_the_explicit_record_button(p
     })()""")
     _sign_in(page, journey)
     _open(page)
+    opened = len(page.request_identities)
     assert page.evaluate("window.__micCalls") == 0
     page.click("#materials-record")
     page.wait_for_function("""() => document.querySelector('#materials-record-state').textContent
         .includes('permission declined')""")
     assert page.evaluate("window.__micCalls") == 1
     assert not any(row["path"] == "/api/matters/intake" or "/uploads" in row["path"]
-                   for row in page.request_identities)
+                   for row in page.request_identities[opened:])
 
 
 @pytest.mark.parametrize("exit_kind", ["dialog_close", "session_expiry"])

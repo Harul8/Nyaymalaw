@@ -16,6 +16,14 @@ from openpyxl import load_workbook
 from openpyxl.worksheet.table import TableColumn
 from openpyxl.worksheet.datavalidation import DataValidation
 from PIL import Image, ImageDraw, ImageFont
+import sys
+
+_REPO = Path(__file__).resolve().parents[2]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+from assurance.common._console import utf8_console  # noqa: E402
+
+utf8_console()
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "docs/Nyaymalaw_Implementation_Plan.xlsx"

@@ -24,6 +24,13 @@ import sys
 from contextlib import closing
 from pathlib import Path
 
+_REPO = Path(__file__).resolve().parents[2]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+from assurance.common._console import utf8_console  # noqa: E402
+
+utf8_console()
+
 ROOT = Path(__file__).resolve().parents[2]
 SHEET = ROOT / "docs" / "Nyaymalaw_Implementation_Plan.xlsx"
 FEATURES = ROOT / "tests" / "features"

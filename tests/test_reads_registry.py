@@ -364,10 +364,16 @@ def test_the_judge_is_not_the_model_under_test():
     while `hard` was absent; it is enforceable in fact from today.
     """
     from nm.adapters.model.config import load, load_dotenv
-    from nm.ports.model import Tier
+    from nm.ports.model import ConfigurationError, Tier
 
     load_dotenv(ROOT / ".env")
-    config = load()
+    try:
+        config = load()
+    except ConfigurationError as exc:
+        # NO PROVIDER AT ALL is the same "not testable here" as a missing
+        # tier, and it is said as a skip with its reason -- not raised as a
+        # failure of P4 on an installation that has no models configured.
+        pytest.skip(f"no model provider is configured: {exc}")
     if not (config.configured(Tier.HARD) and config.configured(Tier.JUDGE)):
         pytest.skip("both tiers must be configured for P4 to be testable")
 

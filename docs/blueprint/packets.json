@@ -861,6 +861,7 @@
         "BK-86-AC3",
         "BK-40-AC1",
         "BK-40-AC2",
+        "BK-40-AC3",
         "BK-46-AC1"
       ],
       "prerequisites": [
@@ -924,6 +925,7 @@
         "BK-86-AC3",
         "BK-40-AC1",
         "BK-40-AC2",
+        "BK-40-AC3",
         "BK-46-AC1"
       ],
       "requires_completed_items": []
@@ -1239,7 +1241,8 @@
         "BK-53-AC1",
         "BK-53-AC2",
         "BK-48-AC3",
-        "BK-93-AC1"
+        "BK-93-AC1",
+        "BK-93-AC3"
       ],
       "prerequisites": [
         "P13"
@@ -1318,7 +1321,8 @@
         "BK-53-AC1",
         "BK-53-AC2",
         "BK-48-AC3",
-        "BK-93-AC1"
+        "BK-93-AC1",
+        "BK-93-AC3"
       ],
       "requires_completed_items": []
     },
@@ -2517,6 +2521,7 @@
       "kind": "implementation",
       "criteria": [
         "BK-37-AC1",
+        "BK-37-AC2",
         "BK-50-AC1",
         "BK-96-AC2",
         "BK-96-AC3"
@@ -2591,6 +2596,7 @@
       "rollback": "Disable affected advice surface and show safe incomplete state with accepted work preserved; do not relabel old advice as fresh.",
       "final_criteria": [
         "BK-37-AC1",
+        "BK-37-AC2",
         "BK-50-AC1",
         "BK-96-AC2",
         "BK-96-AC3"
@@ -3381,6 +3387,7 @@
       "criteria": [
         "BK-68-AC1",
         "BK-32-AC1",
+        "BK-32-AC2",
         "BK-43-AC1",
         "BK-47-AC1",
         "BK-72-AC1",
@@ -3469,6 +3476,7 @@
       "final_criteria": [
         "BK-68-AC1",
         "BK-32-AC1",
+        "BK-32-AC2",
         "BK-43-AC1",
         "BK-47-AC1",
         "BK-72-AC1",
@@ -4393,7 +4401,9 @@
       "kind": "implementation",
       "criteria": [
         "BK-91-AC1",
-        "BK-91-AC2"
+        "BK-91-AC2",
+        "BK-91-AC5",
+        "BK-91-AC6"
       ],
       "prerequisites": [
         "P47",
@@ -4481,7 +4491,9 @@
       "rollback": "Disable the new planner/delegation route and preserve accepted source versions, task history, cancelled/unknown results and existing non-agent paths. Do not replay consequential effects or remove evidence to obtain a green result.",
       "final_criteria": [
         "BK-91-AC1",
-        "BK-91-AC2"
+        "BK-91-AC2",
+        "BK-91-AC5",
+        "BK-91-AC6"
       ],
       "requires_completed_items": []
     },

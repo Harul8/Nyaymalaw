@@ -267,10 +267,26 @@
   });
   el('files').addEventListener('change', () => {
     const incoming = Array.from(el('files').files);
-    if (!limits || incoming.some(file => !file.size || file.size > limits.original_bytes)
-        || incoming.length > limits.receipts_per_matter) {
-      say('Choose nonempty files within the confirmed server limits. If limits are unavailable, refresh receipts first. Nothing was uploaded.');
-      files = []; selected(); el('files').value = ''; return;
+    // THE REFUSAL NAMES THE LIMIT IT APPLIED. Unknown limits and a file over
+    // them are different facts, and "within the confirmed limits" told the
+    // advocate neither what the limit is nor which file broke it.
+    const refuse = (why) => {
+      say(`${why} Nothing was uploaded.`);
+      files = []; selected(); el('files').value = '';
+    };
+    if (!limits) {
+      refuse('The server limits could not be confirmed, so no file can be checked against them. Refresh receipts first.');
+      return;
+    }
+    const over = incoming.filter(file => !file.size || file.size > limits.original_bytes);
+    if (over.length) {
+      refuse(`Each original must be nonempty and at most ${bytes(limits.original_bytes)}; `
+        + `${over.map(file => `${file.name} is ${bytes(file.size)}`).join('; ')}.`);
+      return;
+    }
+    if (incoming.length > limits.receipts_per_matter) {
+      refuse(`At most ${limits.receipts_per_matter} originals can be held on a matter; ${incoming.length} were chosen.`);
+      return;
     }
     files = incoming; selected(); say('Selected locally. Supply the purpose, authority and retention instruction before uploading.');
   });

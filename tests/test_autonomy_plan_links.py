@@ -235,11 +235,18 @@ def test_new_case_substantive_populations_cannot_become_empty(identity, path):
 def test_planning_proof_is_not_authored_as_unbuilt_product_evidence():
     _, registry, contracts = _inputs()
     inspected = []
+    # THE AUTONOMY CONTRACT'S CRITERIA, not every criterion the item has grown.
+    # BK-91-AC5/AC6 were added on 22 September 2026 for the legal-brain work
+    # (LB-57/60/61/64) and are ordinary product criteria with their own final
+    # owner; pinning the item's total at four read their arrival as a breach
+    # of this contract.
+    contract = {owner[1] for owner in OWNERS.values()}
     for item_id in ("BK-91", "BK-92"):
         item = _one(registry["items"], item_id)
         assert not item.get("legacy", False)
-        assert len(item["acceptance"]) == 4
-        for ac in item["acceptance"]:
+        mine = [ac for ac in item["acceptance"] if ac["id"] in contract]
+        assert len(mine) == 4
+        for ac in mine:
             inspected.append(ac["id"])
             assert set(ac["required_evidence"]) - {"domain_test", "adversarial_test"}
             if item["implementation"] == "none":

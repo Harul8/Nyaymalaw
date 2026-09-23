@@ -192,6 +192,37 @@ def test_a_corrected_date_moves_the_value_and_says_what_it_was(tmp_path):
 
 
 @pytest.mark.eval_id("E-092")
+def test_a_conditional_figure_that_moves_is_announced_with_its_prior(tmp_path):
+    """THE RULE HOLDS BEFORE THE ADVOCATE CONFIRMS ANYTHING.
+
+    A model-selected accrual is conditional (602e3f0), so on an unconfirmed
+    file the figure the advocate is shown is CONDITIONAL -- and it is still a
+    date they read. Measured 23 September 2026: correcting the supply date
+    moved the served figure with no G-CASCADE and no prior, because only a
+    definitive position was ever recorded. Silently moving a conditional date
+    is the same defect as silently moving a deadline.
+    """
+    engine, _ = build(tmp_path)
+    first = engine.run(TurnInput(advocate_id="adv_1", message=AT_RISK,
+                                 today=date(2026, 9, 4)))
+    assert "CONDITIONAL, not a deadline" in _text(first), (
+        "the fixture no longer serves a conditional figure, so this proves "
+        "nothing")
+    second = engine.run(TurnInput(
+        advocate_id="adv_1", matter_id=first.matter.id,
+        message=("Correction: the goods were supplied on 14 March 2019, not "
+                 "2023. What now?"),
+        today=date(2026, 9, 4)))
+
+    moved = [e.text for e in second.answer.elements
+             if "has MOVED since the last turn" in e.text]
+    assert moved, "a conditional figure moved and nothing said so:\n" + _text(second)[:900]
+    assert "(conditional)" in moved[0], (
+        "the move is reported without saying the figure was only conditional")
+    assert "G-CASCADE" in {g.gate_id for g in second.metrics.gates_fired}
+
+
+@pytest.mark.eval_id("E-092")
 def test_a_change_reported_without_its_prior_cannot_be_built():
     with pytest.raises((ValueError, TypeError)):
         cascade.Change(name="limitation", now="2027-01-01")

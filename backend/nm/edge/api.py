@@ -64,6 +64,7 @@ from nm.domain.commission import (
 from nm.domain.emergency import Declaration, latest
 from nm.domain.identity import source_fingerprint
 from nm.domain.intake import MAX_CHUNK_BYTES
+from nm.domain.spoken import named
 from nm.domain.traceability import implements
 from nm.edge.projections import (
     board_projection,
@@ -2383,8 +2384,8 @@ def record_matter_event(matter_id: str, body: EventBody,
     ledger = dependency.Ledger.from_stored(m.dependencies)
     ledger, reached = ho.record_event(
         ledger, kind=body.kind, event_id=body.event_id.strip(),
-        reason=f"{body.kind} recorded by {advocate_id}: {body.what.strip()}",
-        at=_today().isoformat())
+        reason=f"{body.kind} recorded by the advocate: {body.what.strip()}",
+        at=_today().isoformat(), by=advocate_id)
 
     m = replace(m, dependencies=ledger.as_dict(), version=m.version + 1,
                 last_activity=_today().isoformat())
@@ -3241,8 +3242,8 @@ def correct_fact(matter_id: str, fact_id: str, body: Correction,
 
     ledger = dependency.Ledger.from_stored(m.dependencies)
     ledger, affected, moved = dependency.sync_inputs(
-        ledger, m, reason=f"corrected by {advocate_id}: {body.reason.strip()}",
-        at=today.isoformat())
+        ledger, m, reason=f"corrected by the advocate: {body.reason.strip()}",
+        at=today.isoformat(), by=advocate_id)
     m = replace(m, dependencies=ledger.as_dict(),
                 last_activity=today.isoformat())
 
@@ -4419,7 +4420,7 @@ def attach_source(matter_id: str, research_id: str, body: AttachRequest,
     ledger, _did = dependency.observe(
         ledger, dependency.InputKind.AUTHORITY, reliance.ledger_id,
         dependency.digest_of(passage.text),
-        reason=f"attached by {advocate_id} to {reliance.issue!r}")
+        reason=f"attached by the advocate to {named(reliance.issue)}")
 
     m = replace(m, research=tuple(r.as_dict() for r in rs.put(_research_rows(m), record)),
                 dependencies=ledger.as_dict(), last_activity=today)

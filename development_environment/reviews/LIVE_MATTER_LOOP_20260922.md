@@ -351,3 +351,100 @@ no pytest facts. A pytest fact is the exact rendered failure, so a baseline
 recorded in a checkout that cannot run the PRD generator would declare this
 container's reds, not the build's. It has to be taken where the gate runs,
 after the plan reconciliation above; the ratchet then keeps it shrinking.
+
+---
+
+## 6. Second follow-up, 23 September 2026 — section 5.5 closed
+
+Same container, now with the `docx` npm package, `pytest-bdd` and Playwright
+installed — Playwright pinned at **1.56.0**, the release matching the
+preinstalled Chromium build 1194, rather than downloading a browser.
+**Installing Playwright un-skipped about two hundred browser journeys**, and
+twenty-five of them turned out red on HEAD too: failures a missing dependency
+had been reporting as skips. They are counted and fixed below.
+
+**Measured, full suite:** 21 red, all one cause (6.6). Everything else
+passes: 4,807 passed, 53 skipped.
+
+### 6.1 A conditional figure that moves is announced — FIXED
+
+`_derived_now` records a CONDITIONAL limitation under the same key as a
+definitive one, with the state in the value (`2035-03-14 (conditional)`). A
+conditional figure that moves is reported with its prior; the same date later
+confirmed reads as a change to definitive; nothing reads as lost.
+`test_a_conditional_figure_that_moves_is_announced_with_its_prior` fails with
+the fix reverted.
+
+**It reached three renderers that had never been exercised, and each named a
+key to the advocate.** Found by `test_no_internal_id_reaches_the_advocate`,
+fixed at each owner:
+
+* the `lost` disclosure and its gap question used `Derived.name`, where its
+  siblings `report` and `unresolved_undo` already used `shown`;
+* `dependency._why` named inputs `fact fact_ba5b… (now version 2)`; it now
+  says what moved in words (`the case-file entry it rests on`, a derived
+  input by its own `shown`), with a separate phrasing one step removed;
+* every ledger `reason` carried the turn id or the advocate id. Reasons are
+  now words and a date. WHO is the record's: `Revision.by`, persisted,
+  decoded, and shown on the case file's history (`(by …)`), which also names
+  each revision by its node's label.
+
+### 6.2 The plan/blueprint cluster — FIXED except the workbook
+
+* **Six criteria had no final owner** — each given to the packet that owns
+  its siblings: BK-32-AC2→P36, BK-37-AC2→P26, BK-40-AC3→P09,
+  BK-91-AC5/AC6→P46, BK-93-AC3→P14. That one gap was 36 of the reds.
+* `BACKLOG.md` board regenerated with `backlog.py render`.
+* The autonomy test pinned BK-91 at four criteria; it now inspects the
+  contract's own criteria.
+* The reconcile tests copied the blueprint chapters but not what they link
+  to. `blueprint.local_links` is now the one reading of a local link, used by
+  the checker and the copy.
+* **Eleven mutation anchors had gone stale** — two from this review's own
+  renames, not swept at the time. Re-anchored, and each run: ten were caught
+  at once. The eleventh SURVIVED: `test_a_provision_is_still_read_back…`
+  asserted `len(elements) > 1`, which the screen rows satisfy alone. It now
+  asserts the provision, and the mutation is caught.
+* Eight tools lacked `utf8_console()`; the two BDD steps are moved to the
+  renamed `position` field and the dispute agenda.
+
+### 6.3 The two browser sweeps have verified controls — FIXED
+
+Each now ends with a real send its own listener must see. Verified by breaking
+the listener's filter: all four runs failed on the control. Registered in
+`CONTROLS`; `UNCONTROLLED` is empty again.
+
+### 6.4 The browser journeys that were skipped, not passing — FIXED
+
+| Journey | Cause | Done |
+|---|---|---|
+| correction (4) | the accrual-conditional precondition, in the browser | confirms the premise through the case file's own `Confirm premise` control |
+| comprehension (3) | removing the section headings took "Next step" with them; an undated action read as analysis | the action's when-line says `Next step` — product copy |
+| custody and decisions (6) | typed into the pre-`f5b5413` four-field intake | uses the one shared intake helper |
+| login to logout (1) | the chat is served a source HEADER, the receipt keeps the excerpt | compares the served header with the header of what was recorded |
+| original materials (11) | the window moved to the plus menu and opens only on a matter (`474f917`) | reached the current way; "no placeholder narrative" still asserted |
+| — oversized original | the refusal no longer named the limit | the refusal names the server's limit and the file; product copy |
+
+The conflict-scope sentence is now said ONCE, beside the party fields, in the
+words the conflict screen uses — the intake held two claims about one scope.
+
+### 6.5 The judge test
+
+`NM_MODEL_PROVIDER` unset now SKIPS with its reason, as a missing tier
+already did, rather than failing P4 on an installation with no models.
+
+### 6.6 Still open
+
+* **The saved workbook (21 reds).** `docs/Nyaymalaw_End_to_End_Project_Plan.xlsx`
+  is generated by `build_current_plan.mjs`, which needs the `@oai/artifact-tool`
+  runtime (`--runtime-path`). It is not in this container or on the public
+  registry. openpyxl cannot write the cached formula values the checker
+  compares, and hand-editing cells is what CLAUDE.md forbids. It was already
+  stale at HEAD. Rebuild where the runtime is:
+  `node assurance/specification/plan/build_current_plan.mjs --python <python> --runtime-path <runtime>`.
+* **Matter 5 turn 1 (3.3).** Its brief lived in an uncommitted local runner and
+  its transcript in `.nm/`; neither is in the repository or on
+  `origin/s0-foundations`. It needs the transcript and an approved live run.
+* **`known_failures.yaml`** still holds no pytest facts. The only red left is
+  the workbook, which a rebuild clears; declaring it would be debt the ratchet
+  must retire the day the workbook is rebuilt.

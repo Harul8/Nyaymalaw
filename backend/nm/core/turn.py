@@ -4873,13 +4873,29 @@ class TurnEngine:
         `from_facts` is what makes the cascade possible at all: without it a
         correction has to re-run everything and cannot say what it touched.
         """
-        if position is None or position.state is not \
-                limitation.LimitationState.COMPUTED:
+        # A CONDITIONAL FIGURE IS A VALUE THE ADVOCATE WAS SHOWN, so it is
+        # recorded too. It was not, and a corrected date then moved the served
+        # figure with no G-CASCADE and no prior -- E-092's defect, "silently
+        # moving a limitation date", on the path every first turn takes since
+        # a model-selected accrual became conditional (602e3f0).
+        #
+        # ONE KEY, THE STATE IN THE VALUE. A conditional figure moving is
+        # reported with its prior; the same date later CONFIRMED reads as a
+        # change from "(conditional)" to definitive, which is news; and a
+        # separate key would make confirmation look like the conditional
+        # figure being LOST.
+        if position is None or position.expires_on is None:
+            return ()
+        if position.state is limitation.LimitationState.COMPUTED:
+            value = position.expires_on.isoformat()
+        elif position.state is limitation.LimitationState.CONDITIONAL:
+            value = f"{position.expires_on.isoformat()} (conditional)"
+        else:
             return ()
         return (cascade.Derived(
             name=f"limitation on {thread.id}",
             shown=f"the limitation on {dispute(thread.label)}",
-            value=position.expires_on.isoformat(),
+            value=value,
             from_facts=tuple(thread.chronology)),)
 
     @implements("A3")
@@ -4923,16 +4939,20 @@ class TurnEngine:
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 signal=Signal.CONTRADICTION,
                 text=("This turn derived LESS than the last one. "
-                      + "; ".join(f"{d.name} was {d.value} and is not "
-                                  f"computed now" for d in gone)
+                      # `shown`, NEVER THE KEY -- the same rule `report` and
+                      # `unresolved_undo` follow (B-103). This path used the
+                      # key and nothing reached it until a conditional figure
+                      # could be recorded and then not recomputed.
+                      + "; ".join(f"{d.shown or d.name} was {d.value} and is "
+                                  f"not computed now" for d in gone)
                       + ". Nothing on the file was withdrawn — the reading "
                         "simply did not produce it this turn, and it is said "
                         "rather than left as a thinner answer."))]
             # AND IT BLOCKS, because a silently thinner answer is the failure
             # this whole mechanism exists to make impossible.
             gaps.append(gap_queue.Gap(
-                what=(f"whether {gone[0].name} still holds — it was computed "
-                      f"before and not on this turn"),
+                what=(f"whether {gone[0].shown or gone[0].name} still holds "
+                      f"— it was computed before and not on this turn"),
                 blocks="relying on this turn as a complete picture",
                 thread=thread.id,
                 kind=gap_queue.GapKind.BLOCKING_GATE))
@@ -5030,8 +5050,8 @@ class TurnEngine:
         ledger = dependency.Ledger.from_stored(matter.dependencies)
         ledger, affected, moved = dependency.sync_inputs(
             ledger, matter,
-            reason=f"corrected on turn {turn.turn_id} by {turn.advocate_id}",
-            at=turn.today.isoformat())
+            reason=f"corrected by the advocate on {turn.today.isoformat()}",
+            at=turn.today.isoformat(), by=turn.advocate_id)
         # A SOURCE THE PUBLICATION LAYER WITHDREW (P20 → P21 → P18). Every
         # passage attached to this file names the version it was read from;
         # one the generation has since withdrawn is marked WITHDRAWN on the
@@ -5129,7 +5149,7 @@ class TurnEngine:
         # again costs a digest comparison and moves nothing.
         ledger, affected, _moved = dependency.sync_inputs(
             ledger, matter, retrieved,
-            reason=f"the retrieved text moved before turn {turn.turn_id}",
+            reason=f"the retrieved text moved before {turn.today.isoformat()}",
             at=at)
         if affected:
             metrics.fire("G-CURRENCY", "stale",
@@ -5158,7 +5178,7 @@ class TurnEngine:
                 # computed from a provision nothing can name rests on
                 # something the product cannot track.
                 unknown=article is None,
-                reason=f"computed on turn {turn.turn_id}", at=at))
+                reason=f"computed on {at}", at=at))
 
         # THE DEADLINE, resting on the limitation -- the edge that makes a
         # corrected date reach the register two hops away.
@@ -5174,7 +5194,7 @@ class TurnEngine:
                 shown=f"the limitation deadline on {dispute(thread.label)}",
                 rests_on=(dependency.Rest(dependency.InputKind.DERIVED,
                                           names.limitation),),
-                computed_at=at, reason=f"computed on turn {turn.turn_id}"))
+                computed_at=at, reason=f"computed on {at}"))
             break
 
         # THE ROLE, resting on the statement it was read from.
@@ -5186,7 +5206,7 @@ class TurnEngine:
             produced.append(dependency.Node(
                 name=names.role, value=posture.role.value,
                 shown=f"our side on {dispute(thread.label)}", rests_on=rests,
-                computed_at=at, reason=f"read on turn {turn.turn_id}"))
+                computed_at=at, reason=f"read on {at}"))
 
         ledger = dependency.settle(
             ledger, tuple(produced),

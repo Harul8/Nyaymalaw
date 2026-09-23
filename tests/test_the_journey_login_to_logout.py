@@ -560,7 +560,16 @@ def test_phase_4_a_brief_can_be_filed_without_a_mouse(page, journey):
     assert receipt.validated_answer().elements
     held = receipt.answer["elements"]
     assert len(held) == len(answer["elements"])
+    from nm.domain.source_excerpt import SourceExcerpt
+
     for recorded, served in zip(held, answer["elements"], strict=True):
+        recorded = dict(recorded)
+        # THE SOURCE IS SERVED AS ITS HEADER. The receipt keeps the whole
+        # excerpt, because the saved-source reader pages its text from there;
+        # the chat carries identity only (`SourceExcerpt.header`). What must
+        # hold is that the header served IS the header of what was recorded.
+        if recorded.get("source"):
+            recorded["source"] = SourceExcerpt(**recorded["source"]).header()
         assert {key: recorded[key] for key in served} == served
     assert not page.errors, f"the page threw: {page.errors}"
 

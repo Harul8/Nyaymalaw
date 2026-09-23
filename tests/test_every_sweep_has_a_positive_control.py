@@ -295,6 +295,14 @@ CONTROLS: dict[str, str] = {
     # sweep claims to catch, each a site that was in the product.
     "test_no_advocate_facing_renderer_delimits_by_repr":
         "test_the_repr_sweep_sees_each_shape_it_refuses",
+    # Two browser journeys that assert no `/api/turn` request was sent. Each
+    # now ends with a REAL send that its own listener must see -- verified 23
+    # September 2026 by breaking the listener's filter, which failed all four
+    # runs on the control and none elsewhere. Control planted inline.
+    "test_composer_is_reachable_and_ime_enter_is_not_a_send":
+        "test_composer_is_reachable_and_ime_enter_is_not_a_send",
+    "test_failed_receipt_protection_never_dispatches_or_loses_the_text":
+        "test_failed_receipt_protection_never_dispatches_or_loses_the_text",
 }
 
 #: SWEEPS WITH NO VERIFIED CONTROL, declared 9 September 2026. BK-52.
@@ -315,18 +323,7 @@ CONTROLS: dict[str, str] = {
 #:
 #: So each is verified and moved into CONTROLS one at a time. An admitted gap
 #: is work; a silent one is a surprise.
-UNCONTROLLED: dict[str, str] = {
-    # Declared 23 September 2026. Two BROWSER journeys that listen for
-    # `/api/turn` requests and assert none were sent. If the listener's filter
-    # never matched a real send -- a query string on the URL, a renamed route --
-    # both would pass exactly as they do now. The candidate control is a real
-    # send in the same page proving the listener sees it. NOT REGISTERED,
-    # because it was not run: Playwright is not installed where this was found.
-    "test_composer_is_reachable_and_ime_enter_is_not_a_send":
-        "candidate: a non-composing Enter in the same page, asserted to send",
-    "test_failed_receipt_protection_never_dispatches_or_loses_the_text":
-        "candidate: restore storage, `Send this brief again`, assert one request",
-}
+UNCONTROLLED: dict[str, str] = {}
 
 
 def test_no_sweep_is_left_in_the_admitted_gap_table():

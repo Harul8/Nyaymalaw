@@ -1603,7 +1603,13 @@ function renderTurn(entry) {
     if (el.by_when || el.no_deadline_reason) {
       const w = document.createElement('span');
       w.className = 'when';
-      w.textContent = el.by_when ? `by ${el.by_when}` : `no deadline — ${el.no_deadline_reason}`;
+      // SAID AS THE NEXT STEP. The section headings went with the plain-
+      // language pass (602e3f0), and with them the only words that told the
+      // advocate this paragraph is what to do next -- a recommended step with
+      // no date read as one more paragraph of analysis. Every ACTION carries
+      // this line, so this is where it is named.
+      w.textContent = el.by_when ? `Next step, by ${el.by_when}`
+        : `Next step — no deadline: ${el.no_deadline_reason}`;
       d.appendChild(w);
     }
     if (el.refs && el.refs.length) {
@@ -3983,10 +3989,12 @@ function renderCurrency(deps) {
     const row = document.createElement('div');
     row.className = 'revision';
     row.dataset.node = h.name;
+    // THE LABEL, not the key; and WHO, from the record's own field -- the
+    // reason is a sentence and attributes nobody.
     row.textContent =
-      `${h.at || ''} — ${h.name}: was ${h.was || '—'}` +
+      `${h.at || ''} — ${h.shown || h.name}: was ${h.was || '—'}` +
       (h.now ? `, now ${h.now}` : ', not yet recomputed') +
-      ` — ${h.reason || ''}`;
+      ` — ${h.reason || ''}` + (h.by ? ` (by ${h.by})` : '');
     histEl.appendChild(row);
   });
 }

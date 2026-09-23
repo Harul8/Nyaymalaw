@@ -243,8 +243,11 @@ def test_correcting_the_date_invalidates_the_deadline_and_not_the_role(client):
     history = {h["name"]: h for h in currency["history"]}
     assert names["limitation"] in history
     assert history[names["limitation"]]["was"], "the prior value was not kept"
-    assert "adv_demo" in history[names["limitation"]]["reason"], (
+    # WHO IS THE RECORD'S, not the sentence's: `reason` is what the cover
+    # shows and names nobody by account id; `by` attributes the change.
+    assert history[names["limitation"]]["by"] == "adv_demo", (
         "the revision does not say who changed it")
+    assert "adv_demo" not in history[names["limitation"]]["reason"]
     assert "typing error" in history[names["limitation"]]["reason"]
     moved = corrected["moved"]
     assert any(r["kind"] == "fact" and r["id"] == entry["fact_id"]
