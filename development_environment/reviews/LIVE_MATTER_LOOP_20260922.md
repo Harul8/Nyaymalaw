@@ -554,3 +554,128 @@ signed in`. Running them needs a session, and the runs are the only way to
 confirm 7.1 on a real brief and to settle what a withheld turn looks like on
 screen (3.2 — the frontend does render the refusal in `app.js`, so the recorded
 "surfaces as a transport error" is not confirmed from the code).
+
+
+---
+
+# 8. Live again — 23 September 2026, on the repaired tree
+
+Three matters re-run against the real server and the real provider, through the
+product's own intake form, under the same USD 2 ledger. Spend across this
+round: **USD 0.115** (0.204 -> 0.319 of 2.00).
+
+## 8.1 What the earlier fixes did, measured
+
+| Matter | Before | Now |
+|---|---|---|
+| 1 — Ramulu, 4 disputes | blocked every turn on G-POSTURE | turn 1 asks the answerable question; **turn 2 serves, `blocked: False`** |
+| 3 — Vaishnavi, 4 issues | **withheld** on G-QUOTE over `'VAISHNAVI'` | serves, `blocked: False`, no withholding |
+| 5 — Anjali, 4 disputes | 3.3, recorded OPEN and undiagnosed | **serves, `blocked: False`** |
+
+The posture block now reads, on a live brief:
+
+> Your instructions record no proceedings, and I have retained that — I will not
+> assign a filed role. **That is not the same as knowing which side the client is
+> on**, and the side is what I still need. You act for Sattaru Ramulu. **Are they
+> the one seeking something here, or the one resisting what the other side
+> seeks?**
+
+Preface **and** question. The advocate answered it in one sentence per dispute
+and the matter went through.
+
+## 8.2 Four defects the live run found, each fixed at its owner
+
+### 8.2.1 `s.Article_64` — a citation in a form that does not exist
+
+Served as the authority an answer rested on. Four sites built the reference as
+`f"{act} s.{section}"`, and the corpus's `section_number` holds `Article_64` for
+a schedule article exactly as it holds `53A` for a section.
+
+**THE PREFIX BELONGS TO THE UNIT'S KIND, NOT TO THE RENDERER.** An Act is not
+made only of sections: the Limitation Act's periods are Schedule Articles, the
+CPC's procedure is Orders and Rules. `nm.domain.citation.provision_label` is the
+owner — the module CLAUDE.md section 4 already makes the only home for a
+provision pattern — and a sweep fails the build on a fifth site.
+
+Not cosmetic: the citation line exists so the advocate can go and read the
+source, which is the whole mechanism by which a wrong authority is caught. A
+reference that cannot be looked up cannot be checked.
+
+### 8.2.2 and 8.2.3 A matching key rendered as a name — TWICE
+
+> You act for **sattaru ramulu**.
+>
+> It did not cover **lakshmi devi, vaishnavi textiles**, named just now
+
+Two sites, one shape. `posture.interpret` did `.strip().lower()` on
+`client_described_as` and stored the result; `Parties.names` is a lowercased KEY
+SET and `Screen.uncovered` returns keys, which went straight into a sentence
+whose own docstring says a disclosure that cannot name the party is one the
+advocate cannot act on.
+
+**A NORMALISATION FOR MATCHING IS NEVER THE VALUE RENDERED.** The repository
+already draws that line for text — `fold` answers *are these the same* and never
+replaces the sentence it folded. These were the two places a fold was being
+shown.
+
+Swept: **thirteen other `.strip().lower()` calls** in `core/` and `domain/` were
+read one by one. Every one lowers an ENUM DISCRIMINATOR (`cause`, `verdict`,
+`role`, `role_basis`, `ground`, `side`) or a COMPARISON KEY (`conflict`,
+`parties`, `intake`). Those are correct and stay. Only these two were lowered
+and then rendered. `Parties.display_for` is the way back from a key to the
+advocate's own spelling, and it lives beside `side_of`, which already knows how
+a name and its key correspond.
+
+### 8.2.4 A reason that did not exist, rendered as a gap in a sentence
+
+> NO limitation period has been computed on this thread: **.** Whether a window
+> is open or closed is NOT ESTABLISHED.
+
+`not_computed_because` is EXEMPT from `refuses_blank_text` on its own class,
+because emptiness is a state it must be able to express — so every renderer has
+to handle it, and **three of the four did not**. The fourth, `nm.core.thresholds`,
+wrote `or "limitation was not computed"` inline: right, and the beginning of
+four copies of one rule.
+
+Moved onto the type as `Limitation.why_not_computed`, which always returns a
+sentence, and all four renderers now read it. CLAUDE.md section 9 in the one
+line an advocate uses to decide whether to go and work it out themselves.
+
+## 8.3 Verified on the served bytes, not the return value
+
+After restarting on the repaired tree, matter 5's served answer was checked for
+each defect by searching the text an advocate reads:
+
+    malformed 's.Article_'  False        lower-cased client   False
+    empty reason ': .'      False        'Anjali Sharma'      True
+    citation seen           Limitation Act, 1963 Article 65
+    conflict note           It did not cover Ravi, named just now
+
+## 8.4 Still open, from this round
+
+* **`G-MODEL=unavailable` on a served turn while the model was working.** Fired
+  on matters 1 and 5 with 21-23 successful provider calls on the same turn. The
+  recorded shape ("fired G-MODEL unavailable on every served turn while the
+  model was perfectly available") with a new cause. Not diagnosed.
+* **Authority relevance.** A goods-price brief was served Article 65 (possession
+  of immovable property); a possession brief was served Baljit Singh (UP land,
+  1976), Chinnathayi (1951 family settlement) and a Land Acquisition Act case,
+  each quoted on an incidental sentence. The search matches paragraphs on
+  keywords, and the query for matter 3 was literally `first, dissolution` — the
+  brief's own numbering. Reasoning and the curated cause->Article edge were both
+  CORRECT throughout; this is retrieval.
+* **The advocate asked about four disputes and was answered on one.** The split
+  note says which one is being worked; there is no per-dispute advice in a
+  single turn.
+* Matters 2 and 4 were not run this round.
+
+## 8.5 A method note worth keeping
+
+`preview_stop` / `preview_start` **clears the preview pane's cookies**, and the
+session record and signing key both survive on disk. A restart therefore looks
+exactly like a session failure from the pane and not at all like one from any
+other browser — confirmed by restarting mid-run with Chrome signed in, where the
+session survived untouched. Six rounds went to that before it was measured;
+`auth.log` records a rejected credential within a second, so the log answers
+"did a request arrive" definitively, and asking it first would have been cheaper
+than reasoning about it.

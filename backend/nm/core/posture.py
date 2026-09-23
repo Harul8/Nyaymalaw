@@ -59,6 +59,7 @@ from dataclasses import dataclass
 from nm.domain.matter import Basis, Role
 from nm.domain.quotable import Quotable
 from nm.domain.text import (
+    clean,
     refuses_blank_text,
     snippet,
     speaks_of_the_representation,
@@ -417,12 +418,40 @@ def interpret(quotable: Quotable, data: dict) -> StatedPosture:
                                      f"than stating whom the advocate acts for: "
                                      f"{snippet(quoted, 60)!r}")
 
-    described = (data.get("client_described_as") or "").strip().lower() or None
-    if described and names_nobody(described):
+    # THE ADVOCATE'S OWN WORD FOR THEIR CLIENT, IN THEIR OWN CASE.
+    #
+    # THE MEASURED DEFECT, 23 September 2026, on a live matter. The advocate
+    # wrote "I act for Sattaru Ramulu" and the blocking question came back:
+    #
+    #     You act for sattaru ramulu. Are they the one seeking something here?
+    #
+    # `.strip().lower()` was doing two jobs at once. Lowercasing is right for
+    # ASKING QUESTIONS OF the value -- `names_nobody` and the leading-article
+    # strip both want a case-insensitive probe -- and wrong for the value that
+    # is STORED AND SHOWN, because this is the advocate's own word for their
+    # client and it is put back in front of them in a sentence.
+    #
+    # THE GENERAL RULE: a normalisation for MATCHING is never the value kept
+    # for DISPLAY. This repository already draws that line for text -- `fold`
+    # answers "are these the same" and never replaces the sentence it folded --
+    # and this was the one place a fold was being stored.
+    #
+    # Swept, 23 September 2026: thirteen other `.strip().lower()` calls in
+    # `core/` and `domain/` were read, and every one lowers an ENUM
+    # DISCRIMINATOR (`cause`, `verdict`, `role`, `role_basis`, `ground`,
+    # `side`) or a COMPARISON KEY (`conflict`, `parties`, `intake`). Those are
+    # correct and stay. This was the only value that was lowered and then
+    # rendered.
+    described = clean(data.get("client_described_as")) or None
+    if described and names_nobody(described.lower()):
         # NAMES NOBODY, so it is not recorded. See `_NAMES_NOBODY`.
         described = None
     if described:
-        described = re.sub(r"^(?:the|a|an)\s+", "", described)[:40] or None
+        # The article is stripped case-insensitively and what remains keeps
+        # the advocate's capitalisation -- "the Landlord" gives "Landlord",
+        # and "Sattaru Ramulu" is untouched.
+        described = re.sub(r"^(?:the|a|an)\s+", "", described,
+                           flags=re.IGNORECASE)[:40].strip() or None
 
     # NAMES NOBODY applies here too, and it is the same mechanism rather than
     # a second one: "the opposite party" is a grammatical placeholder, not a

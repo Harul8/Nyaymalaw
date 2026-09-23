@@ -80,6 +80,41 @@ class Parties:
         return frozenset(p.name.strip().lower() for p in self.parties
                          if p.name.strip())
 
+    def display_for(self, key: str) -> str:
+        """The party's name AS THE ADVOCATE WROTE IT, from its matching key.
+
+        `names` above is a KEY SET -- lowercased, so two spellings of one
+        party are one party. That is right for matching and wrong for
+        rendering, and the two were the same value.
+
+        THE MEASURED DEFECT, 23 September 2026, on a live matter. The
+        conflict-coverage disclosure read:
+
+            It did not cover lakshmi devi, vaishnavi textiles, named just now
+
+        Those are a person and a registered firm, written by the advocate as
+        "Lakshmi Devi" and "Vaishnavi Textiles". `Screen.uncovered` returns
+        keys, and the keys went straight into a sentence -- whose own
+        docstring says a disclosure that cannot name the party is one the
+        advocate cannot act on.
+
+        THE GENERAL RULE: A NORMALISATION FOR MATCHING IS NEVER THE VALUE
+        RENDERED. This repository already draws that line for text -- `fold`
+        answers "are these the same" and never replaces the sentence it
+        folded. A key set is the same idea for parties, and this is the way
+        back.
+
+        It lives beside `side_of`, which already does the key comparison, so
+        there is one place that knows how a name and its key correspond.
+        An unknown key comes back unchanged: it is better to show the advocate
+        the key than to show them nothing.
+        """
+        probe = key.strip().lower()
+        for p in self.parties:
+            if p.name.strip().lower() == probe:
+                return p.name.strip()
+        return key
+
     def side_of(self, name: str) -> str:
         for p in self.parties:
             if p.name.strip().lower() == name.strip().lower():

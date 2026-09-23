@@ -173,7 +173,7 @@ def from_limitation(lim: Limitation) -> ThresholdAnswer:
     if lim.state is not LimitationState.COMPUTED or lim.article is None:
         return ThresholdAnswer(
             threshold=Threshold.LIMITATION, state=ThresholdState.BLOCKED,
-            reason=lim.not_computed_because or "limitation was not computed")
+            reason=lim.why_not_computed)
     return ThresholdAnswer(
         threshold=Threshold.LIMITATION, state=ThresholdState.ANSWERED,
         reason=f"accrual: {lim.accrual_reason}",

@@ -2599,7 +2599,13 @@ class TurnEngine:
                 # be a second copy of a rule that already has an owner, and
                 # `_parties_of` normalises, so the two would drift and the
                 # staleness check would silently stop matching.
-                fresh = conflict.uncovered(widened_names)
+                # KEYS OUT, NAMES IN. `uncovered` answers WHICH parties in
+                # the key vocabulary the clearance never covered; the sentence
+                # below is read by a person, so each key is put back into the
+                # advocate's own spelling. See `Parties.display_for`.
+                known = self._parties_of(widened)
+                fresh = tuple(known.display_for(key)
+                              for key in conflict.uncovered(widened_names))
                 grounds.append(Element(
                     kind=ElementKind.GROUND, disclosure=True,
                     text=(f"The conflict check on this turn covered the "
@@ -3811,7 +3817,7 @@ class TurnEngine:
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 text=(f"I have not computed the limitation position for "
                       f"{whose} side on this thread: "
-                      f"{lim.not_computed_because}."
+                      f"{lim.why_not_computed}."
                       + (f" It was not computed from any of the dated entries "
                          f"on this thread — not from: {dated}. If the period "
                          f"should run from one of those, say which."
@@ -6089,7 +6095,7 @@ class TurnEngine:
                     f"only if needed for the present request; independent evidence "
                     f"preservation or clarification remains possible within its limits.")
             else:
-                worked = (f"\n\nNOT worked out: {position.not_computed_because}. "
+                worked = (f"\n\nNOT worked out: {position.why_not_computed}. "
                           f"Do not assume a position either way.")
 
         system = (

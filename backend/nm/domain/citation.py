@@ -64,6 +64,60 @@ CASE = re.compile(
     r"([A-Z][\w.&'-]*(?:\s+[A-Z][\w.&'-]*){0,5})")
 
 
+#: A provision unit that NAMES ITS OWN KIND. An Act is not made only of
+#: sections: the Limitation Act's periods are SCHEDULE ARTICLES, the CPC's
+#: procedure is ORDERS and RULES, and a constitution has ARTICLES throughout.
+#: Where the unit says what it is, it is rendered as it says.
+_NAMES_ITS_KIND = re.compile(
+    r"^\s*(article|order|rule|schedule|clause|regulation|part|chapter|form|"
+    r"proviso|paragraph|para)\b", re.I)
+
+
+def provision_label(act: str, unit: str) -> str:
+    """One rendering of "this provision of this Act". ONE COPY, and this is it.
+
+    THE MEASURED DEFECT, 23 September 2026, on a live matter. A possession
+    brief was served this, as the authority it rested on:
+
+        Limitation Act, 1963 s.Article_64 -- "For possession of immovable
+        property based on previous possession"
+
+    `s.Article_64`. Four sites built the reference as `f"{act} s.{section}"`,
+    hard-coding the prefix for EVERY provision -- and the corpus's
+    `section_number` column holds `Article_64` for a schedule article just as
+    it holds `53A` for a section. The advocate reads a citation that does not
+    exist in the form given, on the one line whose whole job is to let them
+    check the source themselves.
+
+    THE GENERAL RULE: THE PREFIX BELONGS TO THE UNIT'S KIND, NOT TO THE
+    RENDERER. An Act is not made only of sections. The Limitation Act's
+    periods are Schedule Articles, the CPC's procedure is Orders and Rules,
+    and a unit that names its own kind is rendered as it names itself. Only a
+    bare designation -- `53A`, `138` -- is a section and takes `s.`.
+
+    Underscores become spaces because they are a STORAGE artefact of the atom
+    id, never how anyone writes a citation.
+
+    It lives here because CLAUDE.md section 4 puts every provision-reference
+    pattern in this module and `tests/test_citation_patterns.py` fails the
+    build on a second one. A renderer of the same references answers to the
+    same rule: `SECTION` and `ARTICLE` above already know the two are
+    different, and a renderer elsewhere that did not would be that second
+    definition wearing a different hat.
+    """
+    unit = " ".join(str(unit or "").replace("_", " ").split())
+    act = " ".join(str(act or "").split())
+    if not unit:
+        return act
+    if _NAMES_ITS_KIND.match(unit):
+        # `Article 64`, `Order VII Rule 11`, `Schedule I` -- said as written,
+        # with the leading word capitalised the way a citation is.
+        head, _, rest = unit.partition(" ")
+        unit = f"{head[:1].upper()}{head[1:].lower()}" + (f" {rest}" if rest else "")
+        return f"{act} {unit}" if act else unit
+    return f"{act} s.{unit}" if act else f"s.{unit}"
+
+
 def wanted_section(text: str) -> str | None:
     """The provision a question is ASKING FOR, in the corpus's own key form.
 

@@ -255,7 +255,7 @@ def claims_for(position, register, side: str, today: date,
             out.append(Claim(
                 "limitation",
                 f"NO limitation period has been computed on this thread: "
-                f"{position.not_computed_because}. Whether a window is open or "
+                f"{position.why_not_computed}. Whether a window is open or "
                 "closed is NOT ESTABLISHED. This does not prevent explaining a "
                 "retrieved rule or investigating its missing premises."))
 

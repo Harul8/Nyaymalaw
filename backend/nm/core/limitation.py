@@ -50,7 +50,7 @@ from datetime import date
 from enum import Enum
 
 from nm.domain.matter import FactId, Side
-from nm.domain.text import refuses_blank_text
+from nm.domain.text import clean, refuses_blank_text
 from nm.domain.traceability import implements
 
 # ------------------------------------------------------- calendar arithmetic ---
@@ -213,6 +213,35 @@ class Limitation:
     are visibly inconsistent rather than quietly disagreeing (BK-35-AC2)."""
     conditional_because: str = ""
     """Why the state is CONDITIONAL: the inferred premise, in words."""
+
+    @property
+    def why_not_computed(self) -> str:
+        """Why there is no period, ALWAYS a sentence. ONE COPY, and this is it.
+
+        THE MEASURED DEFECT, 23 September 2026, on a live matter. The advocate
+        was served:
+
+            NO limitation period has been computed on this thread: . Whether a
+            window is open or closed is NOT ESTABLISHED.
+
+        `f"...thread: {position.not_computed_because}."` with an empty reason.
+        The field is EXEMPT from `refuses_blank_text` on this very class,
+        because emptiness is a state it must be able to express -- so every
+        renderer has to handle it, and three of the four did not. The fourth,
+        `nm.core.thresholds`, wrote `or "limitation was not computed"` inline,
+        which was right and was also the beginning of four copies of one rule.
+
+        THE RULE: A REASON THAT DOES NOT EXIST IS SAID, NOT LEFT AS A GAP IN A
+        SENTENCE. An empty interpolation renders as though the product had
+        nothing to say and meant it -- CLAUDE.md section 9, where an absent
+        input reads as a clean result, in the one line the advocate uses to
+        decide whether to go and work it out themselves.
+
+        Owned by the type rather than by its readers, so the next renderer is
+        correct the day it is written.
+        """
+        return clean(self.not_computed_because) or (
+            "no reason was recorded for this, which is itself a gap")
     alternatives: tuple[dict, ...] = ()
     """The same arithmetic under each competing factual trigger, as
     `{"accrual": fact_id, "accrual_on": iso, "expires_on": iso}` rows. The

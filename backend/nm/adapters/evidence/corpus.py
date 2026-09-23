@@ -45,6 +45,7 @@ from nm.domain.traceability import implements
 from nm.knowledge.citator import Citator
 from nm.knowledge.identity import IdentityIndex
 from nm.knowledge.jurisdiction import binding_status
+from nm.domain.citation import provision_label
 from nm.knowledge.manifest import (
     CorpusPublicationRefused,
     Manifest,
@@ -384,7 +385,7 @@ class CorpusEvidenceAdapter:
         if self._manifest.intends(entry, section):
             return EvidenceResult(
                 coverage=Coverage.HELD_NOT_FOUND,
-                missing=(f"{entry.act_name} s.{section} is declared as intended "
+                missing=(f"{provision_label(entry.act_name, section)} is declared as intended "
                          f"coverage but was not retrieved from {', '.join(stores)}. "
                          f"This is a RETRIEVAL DEFECT, not a corpus gap."),
                 searched_stores=stores,
@@ -392,7 +393,7 @@ class CorpusEvidenceAdapter:
             )
         return EvidenceResult(
             coverage=Coverage.NOT_HELD,
-            missing=f"{entry.act_name} s.{section} is not held in the corpus.",
+            missing=f"{provision_label(entry.act_name, section)} is not held in the corpus.",
             searched_stores=stores,
             assumption=note,
         )
@@ -505,9 +506,9 @@ class CorpusEvidenceAdapter:
                 if not text:
                     continue
                 candidates.append(Finding(
-                    proposition=f"{entry.act_name} s.{section}",
+                    proposition=provision_label(entry.act_name, section),
                     source_kind=SourceKind.PROVISION,
-                    ref=f"{entry.act_name} s.{section}",
+                    ref=provision_label(entry.act_name, section),
                     span=text,
                     locator=f"{act_id}::{section}::{atom_type}",
                     store=act_id,
