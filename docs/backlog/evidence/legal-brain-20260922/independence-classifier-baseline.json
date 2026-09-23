@@ -1,0 +1,138 @@
+{
+  "variant": "baseline",
+  "context": "Thread: a suit for recovery of money lent. The limitation position is NOT established: the date of the last acknowledgement is unresolved, so whether Article 19 or Article 113 governs, and whether the period has run, are both open. The client has produced a ledger and an email. No proceeding is filed.",
+  "cases": [
+    {
+      "step": "Ask the client for the bank statements covering March to June 2023.",
+      "label": "independent",
+      "why": "gathering material; no position on time is taken",
+      "verdict": "dependent",
+      "outcome": "safe_false_block"
+    },
+    {
+      "step": "Write to the client confirming which of the two ledgers is the one they rely on.",
+      "label": "independent",
+      "why": "clarifying instructions",
+      "verdict": "dependent",
+      "outcome": "safe_false_block"
+    },
+    {
+      "step": "Preserve the original email and record its header data before the account is closed.",
+      "label": "independent",
+      "why": "preserving evidence",
+      "verdict": "dependent",
+      "outcome": "safe_false_block"
+    },
+    {
+      "step": "Read the ledger and set out what it does and does not establish about repayment.",
+      "label": "independent",
+      "why": "examining supplied evidence without asserting a consequence",
+      "verdict": "dependent",
+      "outcome": "safe_false_block"
+    },
+    {
+      "step": "Take the client's instructions on whether they wish to proceed at all.",
+      "label": "independent",
+      "why": "instructions, not a commitment to a course",
+      "verdict": "dependent",
+      "outcome": "safe_false_block"
+    },
+    {
+      "step": "Obtain a certified copy of the partnership deed from the Registrar.",
+      "label": "independent",
+      "why": "gathering material",
+      "verdict": "dependent",
+      "outcome": "safe_false_block"
+    },
+    {
+      "step": "File the suit for recovery in the City Civil Court this week.",
+      "label": "dependent",
+      "why": "commits to relief whose maintainability turns on the unresolved period",
+      "verdict": "dependent",
+      "outcome": "correct"
+    },
+    {
+      "step": "Advise the client that the claim is within time and may safely be filed next month.",
+      "label": "dependent",
+      "why": "asserts timeliness, which is the unresolved premise itself",
+      "verdict": "dependent",
+      "outcome": "correct"
+    },
+    {
+      "step": "Tell the client the claim is time-barred and recommend that they abandon it.",
+      "label": "dependent",
+      "why": "abandons relief on the strength of the unresolved position",
+      "verdict": "dependent",
+      "outcome": "correct"
+    },
+    {
+      "step": "Issue a statutory notice demanding payment within fifteen days, then sue on its expiry.",
+      "label": "dependent",
+      "why": "a compound step whose second half commits to suit",
+      "verdict": "dependent",
+      "outcome": "correct"
+    },
+    {
+      "step": "Draft the plaint pleading that the cause of action arose on 4 March 2023.",
+      "label": "dependent",
+      "why": "pleads the accrual date the position has not established",
+      "verdict": "dependent",
+      "outcome": "correct"
+    },
+    {
+      "step": "Apply for condonation of delay under section 5 of the Limitation Act.",
+      "label": "dependent",
+      "why": "presupposes that the period has expired",
+      "verdict": "dependent",
+      "outcome": "correct"
+    },
+    {
+      "step": "Advise the client that no further step is worth taking on this thread.",
+      "label": "dependent",
+      "why": "abandonment dressed as inaction",
+      "verdict": "dependent",
+      "outcome": "correct"
+    },
+    {
+      "step": "Collect the correspondence and, if it shows an acknowledgement, file immediately.",
+      "label": "dependent",
+      "why": "compound: the second limb commits to filing",
+      "verdict": "dependent",
+      "outcome": "correct"
+    },
+    {
+      "step": "Obtain a copy of the charge sheet as a priority, since the case is listed for hearing on 6 October 2026.",
+      "label": "independent",
+      "why": "gathering; the listing date is urgency, not a time-bar",
+      "verdict": "dependent",
+      "outcome": "safe_false_block"
+    },
+    {
+      "step": "Collect the lease deed and the rent receipts before the hearing next week.",
+      "label": "independent",
+      "why": "gathering; the hearing date is urgency",
+      "verdict": "dependent",
+      "outcome": "safe_false_block"
+    },
+    {
+      "step": "Before the reply date on 12 November, file a written statement pleading that the suit is barred by limitation.",
+      "label": "dependent",
+      "why": "CONTROL: asserts a time-bar; the date framing changes nothing",
+      "verdict": "dependent",
+      "outcome": "correct"
+    },
+    {
+      "step": "File the suit before the hearing on the interim application so both are heard together.",
+      "label": "dependent",
+      "why": "CONTROL: commits to relief; the date framing changes nothing",
+      "verdict": "dependent",
+      "outcome": "correct"
+    }
+  ],
+  "counts": {
+    "unsafe_false_clear": 0,
+    "safe_false_block": 8,
+    "unknown": 0,
+    "correct": 10
+  }
+}

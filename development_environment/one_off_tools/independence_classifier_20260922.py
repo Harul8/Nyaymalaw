@@ -36,6 +36,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import pathlib
 import sys
 from pathlib import Path
 
@@ -44,6 +45,10 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "backend"))
 
 os.environ.pop("SSLKEYLOGFILE", None)  # Norton's keylog path aborts the first TLS call
+
+#: "baseline" measures the prompt as the source holds it; "candidate" measures
+#: it with URGENCY_RULE appended. Set by --variant.
+VARIANT = "baseline"
 
 CONTEXT = (
     "Thread: a suit for recovery of money lent. The limitation position is NOT "
@@ -84,7 +89,45 @@ CASES: tuple[tuple[str, str, str], ...] = (
      "dependent", "abandonment dressed as inaction"),
     ("Collect the correspondence and, if it shows an acknowledgement, file immediately.",
      "dependent", "compound: the second limb commits to filing"),
+    # URGENCY-FRAMED, added 23 September 2026 from live matter 4, where the
+    # served step "Obtain a copy of the charge sheet ... since the case is
+    # listed for hearing on 6 October 2026" was classified DEPENDENT because it
+    # "necessitates the assumption of legal timelines". A date the step is
+    # scheduled against is urgency, not a time-bar. BOTH DIRECTIONS, so a
+    # prompt change that merely softens the classifier shows up as an unsafe
+    # false clear on the controls rather than as an improvement.
+    ("Obtain a copy of the charge sheet as a priority, since the case is listed "
+     "for hearing on 6 October 2026.",
+     "independent", "gathering; the listing date is urgency, not a time-bar"),
+    ("Collect the lease deed and the rent receipts before the hearing next week.",
+     "independent", "gathering; the hearing date is urgency"),
+    ("Before the reply date on 12 November, file a written statement pleading "
+     "that the suit is barred by limitation.",
+     "dependent", "CONTROL: asserts a time-bar; the date framing changes nothing"),
+    ("File the suit before the hearing on the interim application so both are "
+     "heard together.",
+     "dependent", "CONTROL: commits to relief; the date framing changes nothing"),
 )
+
+#: A CANDIDATE ADDENDUM, measured before it is written into the source.
+#:
+#: THE BASELINE ANSWERED `dependent` FOR ALL EIGHTEEN STEPS -- a constant, not
+#: a classifier. The task text is right but lopsided: four sentences steer to
+#: dependent and one, framed as an exception ("limited to"), to independent.
+#: This gives the model the DEFINITION AS A TEST it can apply: a step is
+#: independent of the limitation position exactly when it is the right step
+#: whichever way that position turns out. It handles urgency framing without
+#: naming it, and it keeps every control dependent -- you only file if in time,
+#: and only plead a bar or seek condonation if out of time.
+URGENCY_RULE = (
+    " THE TEST TO APPLY. Suppose the limitation position is later settled "
+    "EITHER way -- in time, or out of time. If this step would be the right "
+    "thing to do on BOTH answers, it is independent. If it is right on only one "
+    "answer -- it files or pleads, asserts or denies timeliness, abandons or "
+    "commits to relief, or seeks condonation -- it is dependent. A date the "
+    "step is scheduled against (a hearing, a listing, a reply date) says when "
+    "to act, not what the limitation position is, and does not change the "
+    "answer.")
 
 
 def measure(run: bool) -> int:
@@ -98,17 +141,42 @@ def measure(run: bool) -> int:
         print("\n--dry-run made no provider call.")
         return 0
 
-    from nm.adapters.model.config import ModelConfig
-    from nm.adapters.model.openai_adapter import OpenAIAdapter
+    from dataclasses import replace
+
+    from nm.adapters.model.call_budget import CallBudget
+    from nm.adapters.model.config import load, load_dotenv
+    from nm.adapters.model.openai_adapter import OpenAIModelAdapter
+    from nm.core.conversation import guided
     from nm.ports.model import Tier
 
-    config = ModelConfig.from_environment(os.environ)
-    adapter = OpenAIAdapter(config)
+    # THE SAME LEDGER AS THE LIVE MATTERS, so this spend is counted with theirs
+    # and capped by the same maximum. A measurement outside the ledger is the
+    # mistake the dated review already records once.
+    load_dotenv(ROOT / ".env")
+    budget = os.environ.get("NM_EVAL_BUDGET_FILE")
+    if not budget:
+        raise SystemExit("set NM_EVAL_BUDGET_FILE: this makes provider calls")
+    adapter = OpenAIModelAdapter(load(dict(os.environ))).with_call_budget(
+        CallBudget(pathlib.Path(budget), os.environ.get("NM_EVAL_MAX_USD", "2")))
     counts = {"unsafe_false_clear": 0, "safe_false_block": 0, "unknown": 0, "correct": 0}
     rows = []
     for step, label, why in CASES:
-        answer = adapter.read(step_dependency.build_prompt(step, CONTEXT),
-                              step_dependency.schema_for(step), Tier.ROUTINE)
+        prompt = step_dependency.build_prompt(step, CONTEXT)
+        if VARIANT in ("candidate", "reason_first_test") \
+                and URGENCY_RULE not in (prompt.system or ""):
+            prompt = replace(prompt, system=prompt.system + URGENCY_RULE)
+        schema = step_dependency.schema_for(step)
+        if VARIANT.startswith("reason_first"):
+            # STRICT STRUCTURED OUTPUT EMITS PROPERTIES IN SCHEMA ORDER. With
+            # `dependence` first the model commits to a verdict before it has
+            # written a word of its reason; this variant asks for the reason
+            # first. Same fields, same `required`, same validation.
+            props = schema["properties"]
+            schema = {**schema, "properties": {k: props[k] for k in
+                                               ("reason", "step", "dependence")}}
+        # `guided` because the engine sends every read through it; measuring a
+        # prompt the product never sends would measure something else.
+        answer = adapter.structured(guided(prompt), schema, Tier.ROUTINE)
         verdict = step_dependency.assess(answer.data or {}, step, CONTEXT).dependence.value
         if verdict == "unknown":
             outcome = "unknown"
@@ -120,7 +188,10 @@ def measure(run: bool) -> int:
             outcome = "safe_false_block"
         counts[outcome] += 1
         rows.append({"step": step, "label": label, "why": why, "verdict": verdict,
-                     "outcome": outcome})
+                     "outcome": outcome,
+                     # THE MODEL'S OWN REASON, kept so a wrong verdict can be
+                     # read rather than guessed at.
+                     "model_reason": str((answer.data or {}).get("reason") or "")})
         print(f"  {outcome:18} labelled {label:11} -> {verdict:11} {step[:52]}")
 
     total = len(CASES)
@@ -132,8 +203,10 @@ def measure(run: bool) -> int:
     print(f"SAFE FALSE BLOCK   {counts['safe_false_block']}/{independent} "
           f"({counts['safe_false_block'] / independent:.0%} of independent steps refused)")
     out = ROOT / "docs" / "backlog" / "evidence" / "legal-brain-20260922" / \
-        "independence-classifier.json"
-    out.write_text(json.dumps({"context": CONTEXT, "cases": rows, "counts": counts},
+        f"independence-classifier-{VARIANT}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({"variant": VARIANT, "context": CONTEXT, "cases": rows,
+                               "counts": counts},
                               indent=2, ensure_ascii=False), encoding="utf8")
     print(f"\nwritten to {out.relative_to(ROOT)}")
     print("A measurement of this classifier on these labels. Not a professional "
@@ -146,4 +219,8 @@ if __name__ == "__main__":
     group = ap.add_mutually_exclusive_group(required=True)
     group.add_argument("--dry-run", action="store_true", help="show the cases, call nothing")
     group.add_argument("--run", action="store_true", help="make one provider call per case")
-    raise SystemExit(measure(ap.parse_args().run))
+    ap.add_argument("--variant", default="baseline",
+                    choices=("baseline", "candidate", "reason_first", "reason_first_test"))
+    args = ap.parse_args()
+    VARIANT = args.variant
+    raise SystemExit(measure(args.run))

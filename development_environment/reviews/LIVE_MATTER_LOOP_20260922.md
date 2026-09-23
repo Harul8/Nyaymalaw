@@ -679,3 +679,132 @@ session survived untouched. Six rounds went to that before it was measured;
 `auth.log` records a rejected credential within a second, so the log answers
 "did a request arrive" definitively, and asking it first would have been cheaper
 than reasoning about it.
+
+
+---
+
+# 9. Matters 2 and 4, and the classifier nobody had measured — 23 September 2026
+
+Spend this round: **USD 0.133** (0.319 -> 0.453 of 2.00), including 90 calls of
+classifier measurement.
+
+## 9.1 Matter 2 — blocked, then withheld, now served end to end
+
+**Blocked on G-POSTURE with the side written out.** The brief said "We act for
+Sunitha Reddy, the landlord..." and, three sentences later, "We filed RC 88/2025
+before the Rent Controller". The posture read returned `not_yet_instituted`
+quoting the first sentence; the fallback role read said `applicant` "in the RC
+88/2025 proceeding" and could not be used, having no quotation. One `quoted`
+field was carrying two facts — 1.5's shape one field over. Fixed with
+`role_quote`, accepted only from THIS dispute's current words. The re-run proved
+the guard the same hour: the arrears thread quoted "We act for the plaintiff —
+the moving party.", which is this product's own summary line, and it was not
+recorded as stated.
+
+**Then withheld by G-QUOTE on the advocate's own sentence.** The proof read
+returned HELD material wrapped in quotation marks; `accepts` rightly took it;
+the model's copy — marks and all — was rendered and read as a claim about
+retrieved text. It is the matter-2 string 3.1 recorded on 22 September and
+noted as not explained by `repr`. Fixed with `Quotable.verbatim`: a span
+accepted as the advocate's words is kept as the advocate's words.
+
+**Re-run: status 200, not blocked, not withheld.**
+
+## 9.2 Matter 4 turn 1 — G-GROUND caught a case from memory
+
+Withheld: *the answer names the case 'National Insurance v Nicolletta Rohtagi',
+which was not retrieved on this turn.* The `attacks` read put it in an opposing
+argument. **The gate is right and it is the user's hardest line** — no legal
+authority that did not come from the corpus.
+
+**The prompt rule was present.** The recorded system prompt showed neither "law
+from model memory" nor "Do not invent identifiers", and that looked like the
+cause — until the record turned out to be truncated ("[... 3003 more characters
+not kept ...]"). The composed prompt carries both. So: told, disobeyed, caught.
+
+**Open, and a decision for the owner, not taken here.** `salvage` filters its own
+output at the read ("discarding routes that rest on nothing retrieved");
+`attacks`, in the same module, does not. A read-level filter would drop the one
+opposing argument and serve the rest of a three-dispute turn; today one
+remembered case name withholds all of it. That is a change in the neighbourhood
+of a withholding gate, so it is proposed rather than made.
+
+## 9.3 Matter 4 turn 2 — the right step, withheld by a constant
+
+The advocate asked what was urgent about a criminal listing on 6 October with
+no charge-sheet copy. The product computed EXACTLY the right step — *"Obtain a
+copy of the charge sheet ... as a priority, since the case is listed for hearing
+on 6 October 2026"* — and served **no action at all**. The step-independence
+read called it `dependent`: it "necessitates the assumption of legal timelines".
+A hearing date read as a time-bar.
+
+**R2 measured for the first time**, on eighteen labelled steps through the real
+adapter, `guided`, and the ledger:
+
+| Variant | Correct | Unsafe false clear | Safe false block |
+|---|---|---|---|
+| as shipped | 10/18 | 0/10 | **8/8** |
+| the counterfactual test alone | 11/18 | 0/10 | 7/8 |
+| reason before verdict alone | 11/18 | 0/10 | 7/8 |
+| **both, run 1** | **16/18** | **0/10** | **2/8** |
+| **both, run 2** | **15/18** | **0/10** | **3/8** |
+
+As shipped it answered `dependent` for all eighteen — a constant. So
+G-LIMITATION withheld **every** recommended step on any matter whose limitation
+was unresolved, which is why matter after matter led with "I withheld the next
+step on this thread". Safe, and useless.
+
+Two changes, measured separately and together, and neither works alone:
+* **the reason before the verdict** — strict structured output emits
+  properties in schema order, so the model had been committing before it
+  reasoned;
+* **the definition as a test** — a step is independent of the limitation
+  position exactly when it is right whichever way that position is settled.
+
+Across both runs **not one dependent step was released**, including two
+controls framed with a date. The unsafe direction is the one that reaches an
+advocate as advice, and it did not move. Evidence: five JSON files beside this
+review's evidence, each case with the model's own reason.
+
+The two residuals are honest: the charge-sheet case still blocked once in the
+harness because its fixed context is a money-lent suit and the model tied the
+step to that debt — a fixture mismatch, not the live matter's context; the
+other ("take instructions on whether to proceed at all") is a borderline label.
+
+**Live confirmation on matter 4 is pending**: the session hit the product's
+30-minute idle timeout while the measurement ran offline.
+
+## 9.4 Wrong this round, recorded so it is not re-derived
+
+* **"G-MODEL is misclassifying a refused answer as an unavailable model."**
+  The matrix defines G-MODEL's condition as "unreachable, over budget, **or
+  returns unusable output**". A checklist candidate failing its source check is
+  unusable output. By design. What it costs is recorded in 9.5.
+* **"The attacks read was never told the corpus-only rule."** It was; the
+  record is truncated. See 9.2.
+* **"The follow-up was bound to the wrong dispute."** It was bound correctly.
+  A G-CONSERVE note comparing against the previous turn's DIFFERENT thread made
+  it look otherwise — which is itself 9.5's first item.
+
+Three wrong readings, and every one came from reading a record as more complete
+than it was. Measuring the instrument first would have been cheaper each time.
+
+## 9.5 Open from this round
+
+* **A change of focus reads as lost work.** "This turn derived LESS than the
+  last one. issues on 'Claim for injuries' was 3 and is not computed now" — on
+  a turn that correctly worked a different dispute.
+* **One failed checklist candidate discards the whole reading** (a deliberate
+  all-or-nothing, defended in the code), so on live matters the checklist
+  rarely updates.
+* **`attacks` has no read-level authority filter** while `salvage` does (9.2).
+* **Authority relevance and query construction** — the eviction brief's
+  index query was literally `one, eviction`; a rent-control eviction was served
+  Article 65 (possession of immovable property).
+* **`session activity not recorded: PermissionError`** in `auth.log` — a
+  failed activity write can let the idle timeout sign an advocate out while they
+  are working.
+* The recorded `system` prompt in a transcript is truncated at 4,000 characters
+  with a marker, and gate details are absent from transcripts entirely. Both are
+  deliberate; both made this round's diagnosis slower. The served response is
+  the complete record.

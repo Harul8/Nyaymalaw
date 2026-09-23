@@ -1,0 +1,156 @@
+{
+  "variant": "reason_first_test",
+  "context": "Thread: a suit for recovery of money lent. The limitation position is NOT established: the date of the last acknowledgement is unresolved, so whether Article 19 or Article 113 governs, and whether the period has run, are both open. The client has produced a ledger and an email. No proceeding is filed.",
+  "cases": [
+    {
+      "step": "Ask the client for the bank statements covering March to June 2023.",
+      "label": "independent",
+      "why": "gathering material; no position on time is taken",
+      "verdict": "independent",
+      "outcome": "correct",
+      "model_reason": "Requesting the bank statements is a necessary step to gather evidence regarding the financial transactions in question, irrespective of the uncertain limitation position. This action does not ask for a legal conclusion about timeliness or maintainability and is simply a matter of gathering evidence for the case."
+    },
+    {
+      "step": "Write to the client confirming which of the two ledgers is the one they rely on.",
+      "label": "independent",
+      "why": "clarifying instructions",
+      "verdict": "independent",
+      "outcome": "correct",
+      "model_reason": "This step is necessary to clarify the client's position regarding which ledger they rely on, but it does not settle the limitation position or commit to pursuing or abandoning relief. Therefore, it is gathering necessary information without making a legal commitment."
+    },
+    {
+      "step": "Preserve the original email and record its header data before the account is closed.",
+      "label": "independent",
+      "why": "preserving evidence",
+      "verdict": "independent",
+      "outcome": "correct",
+      "model_reason": "The step of preserving the original email and recording its header data is necessary to maintain evidence that could be critical, irrespective of the limitation position or the outcome of any future legal proceedings. It does not imply any commitment to pursuing or abandoning substantive relief and solely focuses on preserving evidence."
+    },
+    {
+      "step": "Read the ledger and set out what it does and does not establish about repayment.",
+      "label": "independent",
+      "why": "examining supplied evidence without asserting a consequence",
+      "verdict": "independent",
+      "outcome": "correct",
+      "model_reason": "The step of reading the ledger and assessing what it does and does not establish about repayment does not rely on a time-bar or maintainability conclusion and does not commit to pursuing or abandoning substantive relief. It is purely about gathering and preserving evidence related to the client's case."
+    },
+    {
+      "step": "Take the client's instructions on whether they wish to proceed at all.",
+      "label": "independent",
+      "why": "instructions, not a commitment to a course",
+      "verdict": "dependent",
+      "outcome": "safe_false_block",
+      "model_reason": "This step is dependent because it involves deciding to proceed or not with the case, which ties directly to the uncertain limitation position. The client's instructions on whether to proceed depend on whether the limitation is established, which affects the timeliness of any claim to be filed."
+    },
+    {
+      "step": "Obtain a certified copy of the partnership deed from the Registrar.",
+      "label": "independent",
+      "why": "gathering material",
+      "verdict": "independent",
+      "outcome": "correct",
+      "model_reason": "The step of obtaining a certified copy of the partnership deed does not rely on whether the limitation position is settled. It is simply a preparatory action to gather evidence that may be relevant to the suit for recovery of money lent. It does not commit to pursuing or abandoning substantive relief or assert or deny timeliness."
+    },
+    {
+      "step": "File the suit for recovery in the City Civil Court this week.",
+      "label": "dependent",
+      "why": "commits to relief whose maintainability turns on the unresolved period",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "Filing the suit relies on an established limitation position, which is currently unresolved. The action of filing is contingent on determining whether the suit is timely or out of time, as both Article 19 and Article 113 could apply depending on the last acknowledgement date. Hence, this step is dependent."
+    },
+    {
+      "step": "Advise the client that the claim is within time and may safely be filed next month.",
+      "label": "dependent",
+      "why": "asserts timeliness, which is the unresolved premise itself",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "The limitation position is unresolved, and advising the client that the claim is within time requires a firm conclusion about the last acknowledgement date, which is still open. This step commits to a legal consequence based on an assumption about timeliness that has not been established, making it dependent."
+    },
+    {
+      "step": "Tell the client the claim is time-barred and recommend that they abandon it.",
+      "label": "dependent",
+      "why": "abandons relief on the strength of the unresolved position",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "The step involves asserting that the claim is time-barred and recommending abandonment, which relies on the unresolved limitation position. Since the date of the last acknowledgement is not established and the applicable limitation period is still open to question, this step cannot be definitively taken until the limitation issue is clarified."
+    },
+    {
+      "step": "Issue a statutory notice demanding payment within fifteen days, then sue on its expiry.",
+      "label": "dependent",
+      "why": "a compound step whose second half commits to suit",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "This step is dependent because it involves issuing a statutory notice and subsequently filing a suit, which implies an assertion of timeliness in the limitation position. Since the limitation position is presently unresolved, this action is contingent on determining whether the claim is within the statutory period."
+    },
+    {
+      "step": "Draft the plaint pleading that the cause of action arose on 4 March 2023.",
+      "label": "dependent",
+      "why": "pleads the accrual date the position has not established",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "Drafting the plaint involves asserting a specific date for the cause of action, which could affect the resolution of limitations. Since the limitation position is not established and the assertion of the date relies on further conclusions about timeliness, this step is dependent."
+    },
+    {
+      "step": "Apply for condonation of delay under section 5 of the Limitation Act.",
+      "label": "dependent",
+      "why": "presupposes that the period has expired",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "The action of applying for condonation of delay under section 5 of the Limitation Act is dependent because it presumes a conclusion about the timeliness of the claim, which is currently unresolved. If the limitation position is later found to be out of time, then seeking condonation would be inappropriate. Therefore, this step is contingent upon the determination of the limitation position."
+    },
+    {
+      "step": "Advise the client that no further step is worth taking on this thread.",
+      "label": "dependent",
+      "why": "abandonment dressed as inaction",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "The step suggests concluding that no further action is necessary regarding this matter, but whether to advise the client in that manner depends on the resolution of the limitation period, which remains in question. Therefore, this assessment hinges on a legal conclusion regarding timing and maintainability which is not yet settled, rendering the step dependent."
+    },
+    {
+      "step": "Collect the correspondence and, if it shows an acknowledgement, file immediately.",
+      "label": "dependent",
+      "why": "compound: the second limb commits to filing",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "The step involves filing the correspondence if it shows an acknowledgement, which relies on the unresolved limitation position because it could impact whether the claim is timely or not. If the acknowledgment is established, it may affect whether the action can be pursued or abandoned based on the limitation rules, making this step dependent."
+    },
+    {
+      "step": "Obtain a copy of the charge sheet as a priority, since the case is listed for hearing on 6 October 2026.",
+      "label": "independent",
+      "why": "gathering; the listing date is urgency, not a time-bar",
+      "verdict": "dependent",
+      "outcome": "safe_false_block",
+      "model_reason": "The step of obtaining a copy of the charge sheet is dependent because it relates to the maintenance of the substantive action and its success is contingent upon the established limitation position regarding the acknowledgment of the debt. If the limitation is ultimately determined to be out of time, obtaining the charge sheet may be irrelevant. This action ties directly to the ongoing question of whether the suit can proceed."
+    },
+    {
+      "step": "Collect the lease deed and the rent receipts before the hearing next week.",
+      "label": "independent",
+      "why": "gathering; the hearing date is urgency",
+      "verdict": "independent",
+      "outcome": "correct",
+      "model_reason": "The step requires collecting specific documents before a hearing, which relates to readiness for action but does not assert or depend on the limitation position being established. It involves gathering evidence without committing to a legal stance regarding maintainability or timeliness. Thus, regardless of the outcome regarding limitation, this collection is independent of that conclusion."
+    },
+    {
+      "step": "Before the reply date on 12 November, file a written statement pleading that the suit is barred by limitation.",
+      "label": "dependent",
+      "why": "CONTROL: asserts a time-bar; the date framing changes nothing",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "The step involves filing a written statement that asserts the suit is barred by limitation, which depends on the resolution of whether the limitation period has expired. Since the limitation position is unresolved, this action implies a commitment to pursuing a substantive legal relief based on an uncertain premise."
+    },
+    {
+      "step": "File the suit before the hearing on the interim application so both are heard together.",
+      "label": "dependent",
+      "why": "CONTROL: commits to relief; the date framing changes nothing",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "Filing the suit relies on the limitation position being resolved; if the suit is filed and later determined to be out of time based on the unresolved acknowledgment date, the action would be improper. Conversely, if filed timely, it could be valid. Therefore, this step could assert timeliness or risk abandoning a legitimate claim depending on the established limitation status."
+    }
+  ],
+  "counts": {
+    "unsafe_false_clear": 0,
+    "safe_false_block": 2,
+    "unknown": 0,
+    "correct": 16
+  }
+}
