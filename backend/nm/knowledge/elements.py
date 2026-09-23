@@ -252,6 +252,16 @@ WITHHELD: dict[CauseOfAction, str] = {
         "probabilities is how a standard gets applied to the wrong case. It "
         "needs its own curation with the presumptions expressed as "
         "`Burden.shifted_by`, and that is work rather than a line here.",
+    # Added 23 September 2026 as a VOCABULARY entry only -- see the enum. Neither
+    # an Article nor a list of ingredients is authored here without a source.
+    CauseOfAction.POSSESSION_FROM_TENANT:
+        "what recovering possession from a tenant, lessee or licensee must "
+        "prove depends on the route -- an eviction petition turns on the "
+        "grounds the State's rent control statute lists, a civil suit on the "
+        "tenancy having been determined -- and neither list has been curated "
+        "from a source in this product. It is not worked out here, and the "
+        "title suit's list is not borrowed for it: that would ask the advocate "
+        "to prove title, which a landlord against their own tenant need not.",
     # Added 22 September 2026 (79e2da5) so the limitation route could be
     # found: its Article is curated in `nm.knowledge.resolution` WITH its
     # source. Its ingredients were not, and are not authored here without one.

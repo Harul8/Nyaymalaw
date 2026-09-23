@@ -102,6 +102,15 @@ class CauseOfAction(str, Enum):
     POSSESSION_ON_PREVIOUS_POSSESSION = "possession_on_previous_possession"
     DECLARATION = "declaration"
     CHEQUE_DISHONOUR = "cheque_dishonour"
+    #: RECOVERING POSSESSION FROM SOMEONE WHO CAME IN UNDER US. Added 23
+    #: September 2026 WITHOUT a limitation edge or curated elements -- a word
+    #: in the vocabulary, not law. Measured the same day: with only the title
+    #: and previous-possession causes to choose from, the read put a landlord's
+    #: Rent Controller eviction into one of them three times in three, even
+    #: after the title cause's definition excluded tenants in terms, and Article
+    #: 65 followed. Given the right bucket, the read has a correct answer that
+    #: selects no Article, and the lookup falls through to search.
+    POSSESSION_FROM_TENANT = "possession_from_tenant"
 
     NOT_ESTABLISHED = "not_established"
     """Nobody worked out what the cause is. NOT "no cause arises".
@@ -171,6 +180,12 @@ CAUSE_MEANS: dict[CauseOfAction, str] = {
     CauseOfAction.CHEQUE_DISHONOUR:
         "a cheque returned unpaid, and the statutory route that follows "
         "it. Not the underlying debt -- the dishonour itself.",
+    CauseOfAction.POSSESSION_FROM_TENANT:
+        "recovering POSSESSION from someone who came in UNDER us -- a tenant, "
+        "lessee or licensee, including one holding over after the term, and "
+        "whether by suit or by an eviction petition before a Rent Controller. "
+        "Not a stranger in possession with no right from us (that is title), "
+        "and not the unpaid rent itself (that is arrears of rent).",
 }
 
 class Weight(str, Enum):

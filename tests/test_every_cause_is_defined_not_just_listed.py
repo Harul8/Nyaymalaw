@@ -128,3 +128,25 @@ def test_cannot_tell_survives_the_vocabulary():
     assert "cannot_tell" not in CAUSE_VALUES, (
         "`cannot_tell` leaked into the routable vocabulary, so the product "
         "could route on it")
+
+
+def test_a_tenant_is_not_a_title_claim_and_has_its_own_word():
+    """MEASURED 23 September 2026. A landlord's Rent Controller eviction was
+    read as `possession_on_title` -- "we own it and somebody else holds it" is
+    literally true of a landlord and a tenant -- and Article 65 followed.
+    Narrowing that definition alone did not stop it (3 of 3 still forced a
+    neighbour); giving the read its own word did (3 of 3). So both hold: the
+    title cause excludes a holder who came in under us, and that holder has a
+    cause of their own -- with NO limitation edge and NO curated elements,
+    because a word in the vocabulary is not law."""
+    title = CAUSE_MEANS[CauseOfAction.POSSESSION_ON_TITLE].lower()
+    tenant = CAUSE_MEANS[CauseOfAction.POSSESSION_FROM_TENANT].lower()
+    assert "tenant" in title and "not" in title
+    assert "tenant" in tenant and "rent controller" in tenant
+
+    from nm.knowledge.elements import ELEMENTS, WITHHELD
+    from nm.knowledge.resolution import LIMITATION_ARTICLE
+    assert CauseOfAction.POSSESSION_FROM_TENANT not in LIMITATION_ARTICLE, (
+        "an Article was attached to the tenant cause without a curated source")
+    assert CauseOfAction.POSSESSION_FROM_TENANT not in ELEMENTS
+    assert CauseOfAction.POSSESSION_FROM_TENANT in WITHHELD
