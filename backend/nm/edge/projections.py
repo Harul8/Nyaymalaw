@@ -192,6 +192,44 @@ def _deadline_window(deadlines, today, *, thread_id=None, currency=None) -> dict
     }
 
 
+#: WHAT A BOARD ROW CARRIES FROM THE DEADLINE WINDOW. An ALLOWLIST, and the
+#: switch from a denylist is the fix rather than an implementation detail.
+#:
+#: THE MEASURED DEFECT, 22 September 2026. Both board projections said
+#: `window.pop("deadline_entries")` and then `**window` -- naming the one key
+#: that must not pass and admitting everything else. That is a denylist, and a
+#: denylist FAILS OPEN for the key added after it was written. D-INFO added
+#: `information_followups` to `_deadline_window`, nothing popped it, and an
+#: analysis list -- what to chase, from whom -- landed on every thread row of
+#: a board whose whole rule is that it carries status and never analysis.
+#:
+#: A2's NEVER clause is not a style preference: a board is what the advocate
+#: scans to choose a file, so a conclusion sitting on it is one they act on
+#: without the reasoning that produced it.
+#:
+#: Stated positively, a key added to the window tomorrow does NOT reach the
+#: board, and whoever wants it there adds it here -- where
+#: `test_neither_board_carries_analysis` asks them to justify it. That test
+#: keeps its OWN copy of this set on purpose: a control that reads the
+#: production list would ratify whatever production says.
+_BOARD_WINDOW = (
+    "next_deadline", "next_deadline_status", "next_deadline_currency",
+    "stale_deadline", "stale_deadlines", "deadline_assessment",
+    "deadline_unreadable", "deadline_unassessed", "passed_deadlines",
+    "uncomputed_deadlines",
+)
+
+
+def _board_window(window: dict) -> dict:
+    """The status fields of a deadline window, and nothing else.
+
+    ONE OWNER FOR TWO BOARDS. The thread board and the matter listing had the
+    same `pop`-and-spread in two places, so the leak arrived on both at once
+    and either could have been fixed without the other.
+    """
+    return {key: window[key] for key in _BOARD_WINDOW if key in window}
+
+
 def _thread_row(thread, deadlines, today=None, currency=None) -> dict:
     """Six fields. One row. No analysis.
 
@@ -222,7 +260,6 @@ def _thread_row(thread, deadlines, today=None, currency=None) -> dict:
     today = today or forum_today()   # BK-14: the forum's date
     window = _deadline_window(
         deadlines, today, thread_id=thread.id, currency=currency)
-    window.pop("deadline_entries")  # The board stays a summary, not a second register.
     posture = thread.posture
     unresolved = not posture.resolved
     return {
@@ -235,7 +272,7 @@ def _thread_row(thread, deadlines, today=None, currency=None) -> dict:
         "against": posture.opponent or "unknown",
         "forum": "not established",
         "stage": "opening",
-        **window,
+        **_board_window(window),
         # Rendered LOUDLY by the client, and never collapsed.
         "loud": unresolved or bool(posture.conflicts),
         "conflict": bool(posture.conflicts),
@@ -345,7 +382,7 @@ def matter_list_projection(matters, registers=None) -> dict:
         register = None if registers is None else registers.get(m.id)
         window = _deadline_window(
             register, today, currency=getattr(m, "dependencies", None))
-        window.pop("deadline_entries")
+        window = _board_window(window)
         rows.append({
             "matter_id": m.id,
             "matter": m.title,

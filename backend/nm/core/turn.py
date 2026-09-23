@@ -1010,40 +1010,79 @@ class TurnEngine:
                 # THE QUESTION NARROWS. Repeating the general question at an
                 # advocate who has already named their client is how the
                 # previous version trapped every multi-turn conversation.
-                ask = (f"You act for {described}. Did they file, or are they "
-                       f"answering something filed against them? I am not able "
-                       f"to recommend a step until that is settled — the same "
-                       f"provision helps one side and hurts the other, and "
-                       f"{described} does not by itself say which side they are "
-                       f"on.")
+                #
+                # IT ASKS ABOUT THE SIDE, NOT ABOUT THE FILING. "Did they file"
+                # is answerable "no" on every advice-only matter, and a "no"
+                # leaves the gate exactly where it was -- which is how five
+                # live matters blocked turn after turn. What the gate needs is
+                # who is SEEKING and who is RESISTING, and an advocate advising
+                # before any proceeding can always answer that.
+                question = (f"You act for {described}. Are they the one seeking "
+                            f"something here, or the one resisting what the other "
+                            f"side seeks? I am not able to recommend a step until "
+                            f"that is settled — the same provision helps one side "
+                            f"and hurts the other, and {described} does not by "
+                            f"itself say which side they are on.")
             else:
-                ask = ("Whose side are we on in this matter — do we act for the "
-                       "party moving, or the party answering? I am not able to "
-                       "recommend a step until that is settled, because the same "
-                       "provision helps one side and hurts the other.")
+                question = ("Whose side are we on in this matter — is the client "
+                            "the one seeking something, or the one resisting what "
+                            "the other side seeks? I am not able to recommend a "
+                            "step until that is settled, because the same provision "
+                            "helps one side and hurts the other.")
 
             # A repeated unresolved question is not evidence that the advocate
             # ignored us. State the remaining limitation without blame or an
             # instruction to invent a procedural role.
+            preface = ""
+            repeat = True
             standing = matter.open_question("G-POSTURE", thread.id)
             if standing is not None and standing.ignored:
-                ask = ("The client's position on this issue remains unresolved in "
-                       "my assessment. I have retained your instructions, but have "
-                       "not released a side-dependent recommendation. You need not "
-                       "repeat the brief or choose a role that does not fit; we can "
-                       "retain the material and review the relevant provisions "
-                       "while that limitation remains.")
+                # THE ONE BRANCH THAT DELIBERATELY STOPS ASKING. An advocate who
+                # has left the question alone is not to be nagged. It still says
+                # what would lift the block, because a limitation stated without
+                # its remedy is a dead end rather than a courtesy.
+                repeat = False
+                question = ("The client's position on this issue remains unresolved "
+                            "in my assessment. I have retained your instructions, but "
+                            "have not released a side-dependent recommendation. You "
+                            "need not repeat the brief or choose a role that does not "
+                            "fit; we can retain the material and review the relevant "
+                            "provisions while that limitation remains. When you are "
+                            "ready, naming the client as the one seeking or the one "
+                            "resisting is all it takes.")
             opening = matter.intake_answers.get("opening", {}).get("answer", {})
             if opening.get("proceedings") == "none" or no_proceeding:
                 # A recorded absence of proceedings is not a missing answer to
-                # 'who filed'. This disclosure does not fabricate a resolved
-                # side or bypass the still-open advisory-role modelling work.
-                ask = ("Your instructions record no proceedings. I have retained "
-                       "that instruction and will not assign a filed role. My "
-                       "assessment has not established the client's position on "
-                       "this issue sufficiently to release a side-dependent "
-                       "recommendation. The material is retained, and any retrieved "
-                       "provisions below are background, not a concluded view.")
+                # "which side". IT PREFACES THE QUESTION; IT DOES NOT REPLACE IT.
+                #
+                # THE MEASURED DEFECT, 22 September 2026, matter 5 turn 1. This
+                # branch ASSIGNED OVER the narrowed question above, so an
+                # advocate who had written "I act for Anjali Sharma" and "We
+                # want an injunction urgently" was served a paragraph about this
+                # product's own assessment and was asked NOTHING. The turn
+                # blocked, and blocked again on the next turn, because the one
+                # thing that would lift the block was never requested.
+                #
+                # It is the review's 1.5 conflation surviving one level up. That
+                # fix taught the MODEL that being unfiled and having a side are
+                # two different facts; this branch was still treating the first
+                # as an answer to the second, in the sentence an advocate reads.
+                #
+                # THE GENERAL RULE: a branch that knows a DIFFERENT fact may add
+                # to the ask and may never silently discard it. `ask` is composed
+                # below from a preface and a question, so these branches stop
+                # being last-writer-wins over a value whose conditions are not
+                # mutually exclusive -- `no_proceeding` and `described` are both
+                # true on an ordinary advice-only brief.
+                preface = ("Your instructions record no proceedings, and I have "
+                           "retained that — I will not assign a filed role. That is "
+                           "not the same as knowing which side the client is on, "
+                           "and the side is what I still need. ")
+            # COMPOSED ONCE, from the parts the branches above established, and
+            # never by assignment. A preface cannot eat the question: whatever
+            # else this turn says, the advocate can always read what would lift
+            # the block.
+            ask = f"{preface}{question}" if repeat else question
             # THE QUESTION LEADS. It is the blocking thing, and S3 requires
             # the first element to be an action or a question -- what
             # follows is what could be established without knowing the side.

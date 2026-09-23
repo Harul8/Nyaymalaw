@@ -448,3 +448,109 @@ already did, rather than failing P4 on an installation with no models.
 * **`known_failures.yaml`** still holds no pytest facts. The only red left is
   the workbook, which a rebuild clears; declaring it would be debt the ratchet
   must retire the day the workbook is rebuilt.
+
+
+---
+
+# 7. Two more closed — 23 September 2026
+
+Picked up on the local checkout, which still held what 6.6 said was missing:
+matter 5's transcript in `.nm/` and the briefs of all five matters. Read at no
+cost, per the method note in section 4.
+
+## 7.1 Matter 5 turn 1 — 3.3 closed. The block asked the advocate nothing.
+
+Read out of `store.transcripts_for("m_ade15f41c785968c4c4a46e2730a2d86")`. The
+QUESTION element served was:
+
+> Your instructions record no proceedings. I have retained that instruction and
+> will not assign a filed role. My assessment has not established the client's
+> position on this issue sufficiently to release a side-dependent
+> recommendation. The material is retained, and any retrieved provisions below
+> are background, not a concluded view.
+
+Four sentences about this product's own assessment, and not one thing an
+advocate could do. The brief had said *"I act for Anjali Sharma"* and *"We want
+an injunction urgently"*.
+
+**THE CAUSE IS `ask = ...` IN FOUR BRANCHES.** The branch that knows *nothing is
+filed* assigned OVER the branch that had already composed a good narrow question
+from the named client. Those two conditions are **not mutually exclusive** —
+both are true on any ordinary advice-only brief, which is most of them. Last
+writer wins over a value whose branches co-occur.
+
+**It is 1.5 surviving one level up.** That fix taught the MODEL that being
+unfiled and having a side are two different facts. This branch was still
+treating the first as an answer to the second, in the sentence an advocate
+reads. A prompt rule does not reach a hand-written f-string.
+
+**And the question itself was unanswerable.** It asked *"Did they file, or are
+they answering something filed against them?"* On an unfiled matter the honest
+answer is "neither", and it leaves the gate exactly where it was — which is how
+five live matters blocked turn after turn. It now asks who is **seeking** and
+who is **resisting**, which an advocate advising before any proceeding can
+always answer.
+
+`ask` is now composed once from a **preface** and a **question**: a branch that
+knows a different fact may add to the ask and may never discard it. The one
+branch that deliberately stops asking — the advocate has left the question
+alone and is not to be nagged — keeps that behaviour and now names what would
+lift the block anyway.
+
+`tests/test_a_block_says_what_lifts_it.py` states the rule, and it is not about
+G-POSTURE: **a gate that stops the work names what would let it continue.**
+Asserted as the vocabulary of the choice rather than as one sentence, so the
+wording can be improved without rewriting the control. It reads the SERVED
+projection — the bytes the browser gets, which carry `kind` and `text` and
+deliberately no `gate` — so it asks its question of what the advocate sees.
+
+## 7.2 The board carried analysis because its filter was a denylist
+
+`test_neither_board_carries_analysis` was red on the committed tree and is not
+in 6.4's journey table. Both board projections said:
+
+```python
+window.pop("deadline_entries")   # the board stays a summary
+...
+**window,
+```
+
+Naming the one key that must not pass, and admitting everything else. **A
+denylist fails open for the key added after it was written.**
+`information_followups` was added to `_deadline_window`, nothing popped it, and
+an analysis list — what to chase, from whom — landed on every thread row of a
+board whose whole rule is that it carries status and never analysis.
+
+Replaced with `_board_window`, an allowlist, with one owner for both boards —
+the thread board and the matter listing had the same pop-and-spread in two
+places, so the leak arrived on both at once and either could have been fixed
+without the other. A key added to the window tomorrow does not reach the board,
+and whoever wants it there adds it where the NEVER-clause test asks them to
+justify it.
+
+That test keeps its own copy of the permitted set on purpose, and it should: a
+control that read the production list would ratify whatever production says.
+
+## 7.3 Superseded, and recorded so it is not re-derived
+
+Two fixes were made locally before `0df3b79` and `bb200ef` were fetched, and
+both are **dropped in favour of the committed ones** — keeping either would be
+two owners for one rule, which is the defect this repository refuses hardest.
+
+| Made locally | Superseded by | Why theirs |
+|---|---|---|
+| `nm.domain.text.named`, 18 sites swept | `nm.domain.spoken.named`, 23 sites | `spoken` is the designated renderer, and `spoken.dispute` was **itself** `repr` — the local sweep missed that the owner was the offender |
+| `_derived_now` stamping a node on a CONDITIONAL position | `bb200ef` | one key with the state in the value, so a later confirmation reads as a change rather than as a second node |
+
+The diagnosis was the same in both cases and arrived independently: `repr`
+picks its delimiter from the content, so one apostrophe makes a label a
+double-quoted string and G-QUOTE reads it as a claim about retrieved text.
+
+## 7.4 Still open, unchanged
+
+The live matters have **not** been re-run. The server is up with the ledger
+bound and **USD 1.80 of the 2.00 unspent**, and `/api/turn` answers `401 not
+signed in`. Running them needs a session, and the runs are the only way to
+confirm 7.1 on a real brief and to settle what a withheld turn looks like on
+screen (3.2 — the frontend does render the refusal in `app.js`, so the recorded
+"surfaces as a transport error" is not confirmed from the code).

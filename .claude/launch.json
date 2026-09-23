@@ -4,14 +4,29 @@
     {
       "name": "nm",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-c", "import runpy, sys; sys.path[:0] = ['backend', '.']; sys.argv = ['nm.bootstrap.main', '--port', '8071']; runpy.run_module('nm.bootstrap.main', run_name='__main__')"],
+      "runtimeArgs": [
+        "-c",
+        "import runpy, sys; sys.path[:0] = ['backend', '.']; sys.argv = ['nm.bootstrap.main', '--port', '8071']; runpy.run_module('nm.bootstrap.main', run_name='__main__')"
+      ],
       "port": 8071
     },
     {
       "name": "nm-alternate-port",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-c", "import runpy, sys; sys.path[:0] = ['backend', '.']; sys.argv = ['nm.bootstrap.main', '--port', '8072']; runpy.run_module('nm.bootstrap.main', run_name='__main__')"],
+      "runtimeArgs": [
+        "-c",
+        "import runpy, sys; sys.path[:0] = ['backend', '.']; sys.argv = ['nm.bootstrap.main', '--port', '8072']; runpy.run_module('nm.bootstrap.main', run_name='__main__')"
+      ],
       "port": 8072
+    },
+    {
+      "name": "nm-live-ledger",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-c",
+        "import os, runpy, sys; sys.path[:0] = ['backend', '.']; os.environ['NM_EVAL_BUDGET_FILE'] = '.nm/evaluations/five-matters-20260922.sqlite'; os.environ['NM_EVAL_MAX_USD'] = '2'; os.environ.pop('SSLKEYLOGFILE', None); sys.argv = ['nm.bootstrap.main', '--port', '8073']; runpy.run_module('nm.bootstrap.main', run_name='__main__')"
+      ],
+      "port": 8073
     }
   ]
 }
