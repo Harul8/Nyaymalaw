@@ -1114,9 +1114,12 @@ def scripted_step_dependency(user: str) -> str:
     try:
         step = json.loads(user).get("step", "")
     except (ValueError, AttributeError):
-        return json.dumps({"dependence": "unknown", "step": "", "reason": "No step supplied."})
-    return json.dumps({"dependence": "independent", "step": step,
-                       "reason": "Scripted independent-step fixture, not legal evaluation."})
+        return json.dumps({"reason": "No step supplied.", "step": "",
+                           "right_if_in_time": "unknown",
+                           "right_if_out_of_time": "unknown", "dependence": "unknown"})
+    return json.dumps({"reason": "Scripted independent-step fixture, not legal evaluation.",
+                       "step": step, "right_if_in_time": "yes",
+                       "right_if_out_of_time": "yes", "dependence": "independent"})
 
 
 def scripted_requirements(_prompt):
@@ -1225,6 +1228,16 @@ class ScriptedModelAdapter:
             # written before `role_quote` existed states the role, if at all,
             # inside `quoted`. Empty is that assertion, not an invented one.
             data.setdefault('role_quote', '')
+        if schema.get('x-nm-read') == 'step_dependency' and isinstance(data, dict)                 and 'right_if_in_time' not in data:
+            # A controlled response written before the two halves existed
+            # states only its verdict. It is restated in the new shape so that
+            # the DERIVED verdict equals the stated one -- independent is right
+            # on both answers; unknown is unknown on both; dependent is wrong on
+            # at least one, recorded as the out-of-time half. Nothing is added
+            # that changes what the fixture asserted.
+            said = data.get('dependence')
+            halves = {'independent': ('yes', 'yes'), 'dependent': ('unknown', 'no')}
+            data['right_if_in_time'], data['right_if_out_of_time'] =                 halves.get(said, ('unknown', 'unknown'))
         if (schema.get('x-nm-read') == 'dispute'
                 and 'source_allocations' in schema.get('properties', {})):
             # Test-double transport conversion only: never fill an unallocated

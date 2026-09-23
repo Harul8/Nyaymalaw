@@ -72,3 +72,61 @@ def test_the_unknown_state_and_the_fail_closed_binding_survive():
     empty = step_dependency.assess({"reason": " ", "step": step,
                                     "dependence": "independent"}, step, "ctx")
     assert empty.dependence is step_dependency.Dependence.UNKNOWN
+
+
+# ------------------------------------------------ the verdict is derived ---
+#
+# Live matter 4, after everything above: told the reason first, given the
+# either-way test, AND told exactly which position was unresolved, the read
+# still called "Request a copy of the charge sheet from the police" dependent.
+# The abstract test is the part the model cannot hold, so it now answers the
+# two halves and CODE derives the verdict. These state the derivation.
+
+STEP = "Request a copy of the charge sheet from the police."
+
+
+def _answer(in_time, out_of_time, said="dependent"):
+    return {"reason": "r", "step": STEP, "right_if_in_time": in_time,
+            "right_if_out_of_time": out_of_time, "dependence": said}
+
+
+@pytest.mark.parametrize("in_time,out_of_time,said,expected", [
+    ("yes", "yes", "independent", "independent"),
+    ("yes", "no", "dependent", "dependent"),
+    ("no", "yes", "dependent", "dependent"),
+    ("no", "no", "dependent", "dependent"),
+    ("yes", "unknown", "independent", "unknown"),
+    ("unknown", "unknown", "unknown", "unknown"),
+])
+def test_released_only_when_right_on_both_answers_and_the_verdict_agrees(
+        in_time, out_of_time, said, expected):
+    got = step_dependency.assess(_answer(in_time, out_of_time, said), STEP, "ctx").dependence
+    assert got.value == expected
+
+
+def test_any_no_is_dependent_whatever_the_label_says():
+    """The safe direction needs no agreement: a step wrong on either answer
+    depends on which answer it is, even if the model wrote `independent`."""
+    assert step_dependency.assess(_answer("no", "yes", said="independent"), STEP,
+                                  "ctx").dependence is step_dependency.Dependence.DEPENDENT
+
+
+def test_halves_that_contradict_the_verdict_release_nothing():
+    """THE MEASURED UNSAFE CASE. On the labelled set the model reasoned that
+    condonation "hinges on the limitation position", said dependent, and
+    answered yes/yes to the halves. The first derivation trusted the halves and
+    RELEASED it. An answer that disagrees with itself is not an answer: it is
+    UNKNOWN, which the gate treats as dependent."""
+    got = step_dependency.assess(_answer("yes", "yes", said="dependent"), STEP, "ctx")
+    assert got.dependence is step_dependency.Dependence.UNKNOWN
+
+
+def test_the_read_is_told_whose_position_is_unresolved():
+    """Given only the file note, the read invented a limitation period on
+    requesting a document. It is told the position, whose it is, and that it is
+    the only limitation question in issue."""
+    theirs = step_dependency.position_context(False, "which provision governs", "FILE")
+    assert "OPPOSING party's claim" in theirs
+    assert "ONLY limitation question" in theirs
+    assert "which provision governs" in theirs
+    assert "OUR CLIENT's own claim" in step_dependency.position_context(True, "x")

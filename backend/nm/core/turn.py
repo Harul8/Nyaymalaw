@@ -6233,7 +6233,11 @@ class TurnEngine:
                       f"I can re-examine the supporting material; if the recorded "
                       f"position is wrong, please correct it."))
 
-        limitation_block = self._limitation_step(text, position, metrics, thread.id, file_note)
+        limitation_block = self._limitation_step(
+            text, position, metrics, thread.id, file_note,
+            # WHOSE position this is. On a defending thread the gate is
+            # handed the opponent's; the read must be told so.
+            ours=position is None or position.for_side is thread.posture.side)
         if limitation_block is not None:
             return limitation_block
 
@@ -6304,7 +6308,8 @@ class TurnEngine:
             kind=ElementKind.ACTION, thread=thread.id, text=text,
             by_when=by_when, no_deadline_reason=no_deadline)
 
-    def _limitation_step(self, text, position, metrics, thread_id, context):
+    def _limitation_step(self, text, position, metrics, thread_id, context, *,
+                         ours: bool = True):
         """Refuse dependent/unknown directives, not evidence-gathering or the turn."""
         settled = position is not None and (
             position.state is limitation.LimitationState.NOT_APPLICABLE
@@ -6313,6 +6318,12 @@ class TurnEngine:
         if settled:
             metrics.fire("G-LIMITATION", position.state.value, "dated premise established")
             return None
+        # THE READ IS TOLD WHICH POSITION IS UNRESOLVED. See
+        # `step_dependency.position_context`: given only the file note, it
+        # invented a limitation period on requesting a charge sheet.
+        why = (position.conditional_because or position.why_not_computed
+               if position is not None else "no limitation position was established")
+        context = step_dependency.position_context(ours, why, context)
         assessment = step_dependency.assess({}, text, context)
         try:
             res = self._read(step_dependency.build_prompt(text, context),

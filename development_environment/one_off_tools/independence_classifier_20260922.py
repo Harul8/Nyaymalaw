@@ -50,12 +50,24 @@ os.environ.pop("SSLKEYLOGFILE", None)  # Norton's keylog path aborts the first T
 #: it with URGENCY_RULE appended. Set by --variant.
 VARIANT = "baseline"
 
-CONTEXT = (
-    "Thread: a suit for recovery of money lent. The limitation position is NOT "
-    "established: the date of the last acknowledgement is unresolved, so whether "
-    "Article 19 or Article 113 governs, and whether the period has run, are both "
-    "open. The client has produced a ledger and an email. No proceeding is filed."
-)
+#: BUILT THE WAY PRODUCTION BUILDS IT, through `step_dependency.position_context`.
+#: The first version hand-wrote a context that spelled the unresolved position
+#: out, so it measured a better-informed prompt than the product sent -- and on
+#: live matter 4 the product's read, told only the file note, invented a
+#: limitation period on requesting a charge sheet. A harness that measures a
+#: prompt the product does not send measures something else.
+def _context() -> str:
+    from nm.core import step_dependency
+    return step_dependency.position_context(
+        ours=True,
+        why=("the date of the last acknowledgement is unresolved, so whether "
+             "Article 19 or Article 113 governs, and whether the period has run, "
+             "are both open"),
+        file_note=("Thread: a suit for recovery of money lent. The client has "
+                   "produced a ledger and an email. No proceeding is filed."))
+
+
+CONTEXT = "(built by _context() at run time)"
 
 #: (step, label, why this label). `dependent` means carrying it out relies on a
 #: time-bar or maintainability conclusion, or commits to pursuing or abandoning
@@ -137,7 +149,7 @@ def measure(run: bool) -> int:
         print(f"{len(CASES)} labelled steps; {sum(1 for _, l, _ in CASES if l == 'dependent')} "
               f"dependent, {sum(1 for _, l, _ in CASES if l == 'independent')} independent.")
         print("\nThe prompt each one would be sent with:\n")
-        print(step_dependency.build_prompt(CASES[0][0], CONTEXT).system)
+        print(step_dependency.build_prompt(CASES[0][0], _context()).system)
         print("\n--dry-run made no provider call.")
         return 0
 
@@ -161,7 +173,7 @@ def measure(run: bool) -> int:
     counts = {"unsafe_false_clear": 0, "safe_false_block": 0, "unknown": 0, "correct": 0}
     rows = []
     for step, label, why in CASES:
-        prompt = step_dependency.build_prompt(step, CONTEXT)
+        prompt = step_dependency.build_prompt(step, _context())
         if VARIANT in ("candidate", "reason_first_test") \
                 and URGENCY_RULE not in (prompt.system or ""):
             prompt = replace(prompt, system=prompt.system + URGENCY_RULE)
@@ -177,7 +189,7 @@ def measure(run: bool) -> int:
         # `guided` because the engine sends every read through it; measuring a
         # prompt the product never sends would measure something else.
         answer = adapter.structured(guided(prompt), schema, Tier.ROUTINE)
-        verdict = step_dependency.assess(answer.data or {}, step, CONTEXT).dependence.value
+        verdict = step_dependency.assess(answer.data or {}, step, _context()).dependence.value
         if verdict == "unknown":
             outcome = "unknown"
         elif verdict == label:
@@ -205,7 +217,7 @@ def measure(run: bool) -> int:
     out = ROOT / "docs" / "backlog" / "evidence" / "legal-brain-20260922" / \
         f"independence-classifier-{VARIANT}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({"variant": VARIANT, "context": CONTEXT, "cases": rows,
+    out.write_text(json.dumps({"variant": VARIANT, "context": _context(), "cases": rows,
                                "counts": counts},
                               indent=2, ensure_ascii=False), encoding="utf8")
     print(f"\nwritten to {out.relative_to(ROOT)}")

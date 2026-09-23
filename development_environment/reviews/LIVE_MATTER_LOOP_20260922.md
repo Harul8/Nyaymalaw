@@ -808,3 +808,49 @@ than it was. Measuring the instrument first would have been cheaper each time.
   with a marker, and gate details are absent from transcripts entirely. Both are
   deliberate; both made this round's diagnosis slower. The served response is
   the complete record.
+
+
+## 9.6 The live re-run, and two more corrections to the classifier
+
+**The first fix measured well in the harness and did not move the live
+matter.** Re-asked on matter 4, the read reasoned first and applied the
+either-way test -- and still called the charge-sheet request dependent,
+because it had never been told WHICH position was unresolved: "if the request
+is ultimately found to be time-barred". It invented a limitation period on
+asking for a document. The gate hands it the opposing party's position on a
+defending thread, correctly, but the read received only the file note.
+
+**The harness hid this.** Its fixed context spelled the position out, so it
+measured a better-informed prompt than production sends. It now builds its
+context through the same `step_dependency.position_context` the gate uses.
+
+**Told the position, the model still misapplied the abstract test** ("the
+preparation for the case may hinge on whether the opposing party's claim is
+within time"). So the model now answers the two halves -- right if in time?
+right if out of time? -- and code decides.
+
+**And the first version of THAT released a dependent step.** It derived the
+verdict from the halves alone; the model answered yes/yes to "Apply for
+condonation of delay" while its own reason and verdict said dependent, and the
+step was released -- UNSAFE FALSE CLEAR 1/10. The rule is now the project's
+usual one: an answer that disagrees with itself is not an answer. Released
+only when both halves are yes AND the verdict agrees; any "no" is dependent
+whatever the label; disagreement is unknown, which the gate treats as
+dependent. The test that encoded the wrong rule was rewritten to state this
+one, with the condonation case as its counterexample.
+
+| Version | Correct | Unsafe false clear | Safe false block |
+|---|---|---|---|
+| as shipped | 10/18 | 0/10 | 8/8 |
+| reason first + test (hand-written context) | 15-16/18 | 0/10 | 2-3/8 |
+| + position stated (production context) | 17/18 | 0/10 | 1/8 |
+| + two halves, derived alone | 17/18 | **1/10** | 0/8 |
+| **+ two halves, halves and verdict must agree, run 1** | **17/18** | **0/10** | **1/8** |
+| **same, run 2** | **17/18** | **0/10** | **1/8** |
+
+**Live, matter 4:** the answer now LEADS with "Request the charge sheet copy
+from the prosecuting authority before the 6 October 2026 hearing". G-LIMITATION
+`not_applicable`, assessed independent. The one thing the advocate asked for
+reaches them.
+
+Ledger after this round: **665 calls, USD 0.5056 of 2.00.**

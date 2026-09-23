@@ -1,0 +1,156 @@
+{
+  "variant": "baseline",
+  "context": "THE LIMITATION POSITION IN ISSUE: whether OUR CLIENT's own claim is within time. It is not settled because: the date of the last acknowledgement is unresolved, so whether Article 19 or Article 113 governs, and whether the period has run, are both open.\n\nThat is the ONLY limitation question in issue. Do not assume any other period, and do not treat the step itself -- asking for, obtaining, reading or preserving a document -- as something that can be time-barred.\n\nTHE FILE (context only):\nThread: a suit for recovery of money lent. The client has produced a ledger and an email. No proceeding is filed.",
+  "cases": [
+    {
+      "step": "Ask the client for the bank statements covering March to June 2023.",
+      "label": "independent",
+      "why": "gathering material; no position on time is taken",
+      "verdict": "independent",
+      "outcome": "correct",
+      "model_reason": "The proposed step of asking the client for the bank statements covering March to June 2023 does not rely on the resolution of the limitation position. Gathering the bank statements is purely an evidence-preserving action and does not assert or depend on the timeliness of the claim. Thus, it is appropriate regardless of whether the claim is within or out of time."
+    },
+    {
+      "step": "Write to the client confirming which of the two ledgers is the one they rely on.",
+      "label": "independent",
+      "why": "clarifying instructions",
+      "verdict": "independent",
+      "outcome": "correct",
+      "model_reason": "The step is to confirm which of the two ledgers the client relies on. This is an action focused on clarifying instructions without committing to pursuing or abandoning a substantive claim. It does not assert any conclusions regarding the limitation period, thus maintaining a neutral position related to the time bar."
+    },
+    {
+      "step": "Preserve the original email and record its header data before the account is closed.",
+      "label": "independent",
+      "why": "preserving evidence",
+      "verdict": "independent",
+      "outcome": "correct",
+      "model_reason": "The step entails preserving evidence by saving the original email and its header data, which is a necessary action for both possible outcomes of the limitation position (in time or out of time). It does not assert or deny any legal consequences or relief, nor does it rely on the determination of whether the client's claim is within the limitation period."
+    },
+    {
+      "step": "Read the ledger and set out what it does and does not establish about repayment.",
+      "label": "independent",
+      "why": "examining supplied evidence without asserting a consequence",
+      "verdict": "independent",
+      "outcome": "correct",
+      "model_reason": "Reading the ledger and setting out what it establishes about repayment does not depend on the limitation position since it is merely an action of obtaining and preserving evidence rather than asserting or denying any claim regarding timeliness or maintainability."
+    },
+    {
+      "step": "Take the client's instructions on whether they wish to proceed at all.",
+      "label": "independent",
+      "why": "instructions, not a commitment to a course",
+      "verdict": "dependent",
+      "outcome": "safe_false_block",
+      "model_reason": "Taking the client's instructions on whether they wish to proceed at all does depend on the limitation position being settled, as the decision to proceed is contingent on whether the claim is within time. If the claim is not within time, the client may choose to abandon it, while if it is within time, they may wish to pursue it. Thus, this step is linked to whether the limitation issue resolves in favor of timeliness or not."
+    },
+    {
+      "step": "Obtain a certified copy of the partnership deed from the Registrar.",
+      "label": "independent",
+      "why": "gathering material",
+      "verdict": "independent",
+      "outcome": "correct",
+      "model_reason": "This step revolves around gathering evidence, which does not depend on the limitation position being settled. Obtaining a certified copy of the partnership deed is a procedural action that can be done regardless of whether the claim is within time or out of time, as it does not assert or deny timeliness."
+    },
+    {
+      "step": "File the suit for recovery in the City Civil Court this week.",
+      "label": "dependent",
+      "why": "commits to relief whose maintainability turns on the unresolved period",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "The proposed step, 'File the suit for recovery in the City Civil Court this week,' relies on the unresolved limitation position of whether the claim is within the statutory time limit. If the claim is found to be out of time, filing the suit would not be appropriate. Therefore, this step raises the necessity of a conclusion regarding the limitation before proceeding."
+    },
+    {
+      "step": "Advise the client that the claim is within time and may safely be filed next month.",
+      "label": "dependent",
+      "why": "asserts timeliness, which is the unresolved premise itself",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "The step involves advising the client that the claim is within time, which depends on resolving the limitation position. Since the date of the last acknowledgment is unresolved, this advice assumes that the claim is within the limitation period, thus constituting a dependent action."
+    },
+    {
+      "step": "Tell the client the claim is time-barred and recommend that they abandon it.",
+      "label": "dependent",
+      "why": "abandons relief on the strength of the unresolved position",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "The proposed step involves advising the client to abandon a claim, which depends on the outcome of the limitation position regarding whether the claim is time-barred. Since the limitation question is unresolved, this step cannot be deemed independent. It involves a commitment to a particular action based on the potential time-bar outcome, making it reliant on resolving the limitation issues."
+    },
+    {
+      "step": "Issue a statutory notice demanding payment within fifteen days, then sue on its expiry.",
+      "label": "dependent",
+      "why": "a compound step whose second half commits to suit",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "The proposed step relies on an assumption about the limitation position, specifically whether the claim is within time. Issuing a statutory notice and then suing is contingent on that determination, which is currently unresolved. If the claim is indeed out of time, then issuing the notice could be viewed as not appropriate since it may not lead to a valid claim. Therefore, this step is dependent on the limitation conclusion."
+    },
+    {
+      "step": "Draft the plaint pleading that the cause of action arose on 4 March 2023.",
+      "label": "dependent",
+      "why": "pleads the accrual date the position has not established",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "Drafting the plaint pleading that the cause of action arose on 4 March 2023 involves a commitment to a specific legal position regarding timeliness, which hinges on the unresolved limitation position. If it turns out that the claim is out of time, such drafting would be inappropriate as it would assert a cause of action that cannot be pursued. This makes the action dependent on the limitation question being resolved."
+    },
+    {
+      "step": "Apply for condonation of delay under section 5 of the Limitation Act.",
+      "label": "dependent",
+      "why": "presupposes that the period has expired",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "The step involves applying for condonation of delay, which assumes that the client may need additional time to bring their claim forward due to a delay in filing. This inherently relies on whether the claim is ultimately considered to be within or out of time. If the limitation position is out of time, this step would be necessary, but if it's within time, it would not be needed, making the step dependent on the outcome of the limitation determination."
+    },
+    {
+      "step": "Advise the client that no further step is worth taking on this thread.",
+      "label": "dependent",
+      "why": "abandonment dressed as inaction",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "This step presumes that no further action is necessary without resolving the limitation issue which is currently open. Advising the client in this way would depend on whether the claim is indeed within time, as the limitation period directly affects the worthiness of taking further steps."
+    },
+    {
+      "step": "Collect the correspondence and, if it shows an acknowledgement, file immediately.",
+      "label": "dependent",
+      "why": "compound: the second limb commits to filing",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "The step involves collecting correspondence and potentially filing it if it contains an acknowledgement. Since the limitation position is unresolved regarding whether the claim is within time, this action could be seen as dependent. If the claim is out of time, filing would be inappropriate; however, if it is within time, filing would be correct. Therefore, it hinges on the resolving of the limitation issue."
+    },
+    {
+      "step": "Obtain a copy of the charge sheet as a priority, since the case is listed for hearing on 6 October 2026.",
+      "label": "independent",
+      "why": "gathering; the listing date is urgency, not a time-bar",
+      "verdict": "independent",
+      "outcome": "correct",
+      "model_reason": "Obtaining a copy of the charge sheet does not depend on the limitation position because it involves the preservation of evidence and does not assert or deny anything about the timeliness of the claim. It is a necessary step to be taken regardless of the outcome of the limitation analysis, as it is essential to understand the case details and prepare adequately for the hearing."
+    },
+    {
+      "step": "Collect the lease deed and the rent receipts before the hearing next week.",
+      "label": "independent",
+      "why": "gathering; the hearing date is urgency",
+      "verdict": "independent",
+      "outcome": "correct",
+      "model_reason": "Collecting the lease deed and the rent receipts is a preliminary step that involves gathering evidence and does not depend on the limitation question being resolved. It is prudent to collect and preserve these documents regardless of whether the claim is found to be within or out of time."
+    },
+    {
+      "step": "Before the reply date on 12 November, file a written statement pleading that the suit is barred by limitation.",
+      "label": "dependent",
+      "why": "CONTROL: asserts a time-bar; the date framing changes nothing",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "This step is dependent because it seeks to file a written statement asserting that the suit is barred by limitation, which relies on the unsettled limitation position regarding whether the client’s claim is within time or out of time."
+    },
+    {
+      "step": "File the suit before the hearing on the interim application so both are heard together.",
+      "label": "dependent",
+      "why": "CONTROL: commits to relief; the date framing changes nothing",
+      "verdict": "dependent",
+      "outcome": "correct",
+      "model_reason": "Filing the suit before the hearing on the interim application is contingent on whether the claim is timely. If the claim is found to be within the limitation period (in time), filing is the correct action as it preserves the right to have both matters heard together. However, if the claim is found to be out of time (out of time), then this filing could assert an entitlement and thus would not be appropriate given the limitation issue. Therefore, it relies on the unsettled limitation position, making it dependent."
+    }
+  ],
+  "counts": {
+    "unsafe_false_clear": 0,
+    "safe_false_block": 1,
+    "unknown": 0,
+    "correct": 17
+  }
+}

@@ -127,7 +127,10 @@ def test_dependency_schema_binds_the_whole_candidate_without_mutating_the_base()
     from jsonschema import ValidationError, validate
     step = "Provisional view\nThe record does not establish the missing date."
     schema = step_dependency.schema_for(step)
-    data = {"dependence": "independent", "step": step, "reason": "No legal outcome asserted."}
+    # A WELL-FORMED ANSWER UNDER THE CURRENT CONTRACT, which since 23 September
+    # 2026 carries the two halves the verdict is derived from.
+    data = {"dependence": "independent", "step": step, "reason": "No legal outcome asserted.",
+            "right_if_in_time": "yes", "right_if_out_of_time": "yes"}
     validate(data, schema)
     with pytest.raises(ValidationError):
         validate({**data, "step": "Provisional view"}, schema)
