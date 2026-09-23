@@ -854,3 +854,61 @@ from the prosecuting authority before the 6 October 2026 hearing". G-LIMITATION
 reaches them.
 
 Ledger after this round: **665 calls, USD 0.5056 of 2.00.**
+
+
+---
+
+# 10. The attacks filter, the authority query, and the next false blocker
+
+Commits `6cea129`, `cded56d`, `b7e4aac`. Ledger after: **696 calls, USD 0.5153 of 2.00.**
+
+## 10.1 One remembered authority no longer costs the turn
+
+G-GROUND's per-text test is now `grounding.unretrieved_authorities`, and both
+the gate and the reads call it -- one detector, so a read-level filter cannot
+keep what the gate would withhold. `attacks` drops the one item naming
+authority it was not given and serves the rest; `theory` does the same and also
+declines to STORE such a theory, since a stored theory is fed back on every
+later turn. The dropped authority is counted on screen, named only in the
+encrypted diagnostics. The gate is unchanged, as the backstop.
+
+## 10.2 The authority query is spent on words that can find law
+
+Fifteen served queries, measured: the eight-term budget went on list numbering,
+function words, the file's own dates and case numbers, and the matter's own
+parties. Now: the cause already read leads (from the closed vocabulary, never
+model text); closed grammatical sets never take a slot; a bare number is kept
+only where it is a cited provision, a digit-letter designation always; the
+matter's own parties are never searched for.
+
+Re-measured on the real index, same sentences, no model call: better on four
+(intestacy, charge sheet, rent arrears, the RC filing), about the same on three,
+junk either way on the meta sentence, and "First, dissolution" one term where
+it was two. Reported as measured.
+
+## 10.3 A cause that fitted a tenant, fixed in two steps -- the first failed
+
+Narrowing `possession_on_title` did NOT work: 3 of 3 runs still forced a
+neighbour. Giving the read its own word -- `possession_from_tenant`, with no
+Article edge and no curated elements -- did: 3 of 3, both controls unchanged.
+Live: the landlord brief no longer serves Article 65.
+
+Recommended to the owner, not done: curate a limitation edge and elements for
+the new cause from a source. The honest fall-through is the right default until
+then.
+
+## 10.4 OPEN -- G-CONSISTENT withholds most recommended steps
+
+On the landlord re-run the step was withheld as CONTRADICTED with this reason:
+
+> The step acknowledges the non-establishment of a limitation period, whereas
+> the fact states that no limitation period has been computed and the legal
+> position is not established.
+
+Those AGREE. Measured across the last day's stored turns: G-CONSISTENT ran on
+23, returned `contradicted` on **16**, and on all 16 the advocate's next step
+was withheld. One was read and was agreement misread as contradiction; **the
+false-positive rate across the sixteen is NOT established**. It is the same
+shape as the independence read -- a model verdict inside a gate -- and the same
+method applies: a labelled harness in both directions, then structure rather
+than wording.
