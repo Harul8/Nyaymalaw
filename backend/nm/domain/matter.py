@@ -146,9 +146,22 @@ CAUSE_MEANS: dict[CauseOfAction, str] = {
     CauseOfAction.SPECIFIC_PERFORMANCE:
         "the contract PERFORMED -- typically a sale deed executed -- "
         "rather than damages for its breach.",
+    # THE BOUNDARY WAS IN THE WRONG PLACE. Measured 23 September 2026, live:
+    # a landlord's brief -- tenant holding over, "We filed RC 88/2025 before
+    # the Rent Controller" -- was read as this cause, because "we own it and
+    # somebody else holds it" is literally true of a landlord and a tenant.
+    # Article 65 was then served as the authority for a Rent Controller
+    # eviction, and the authority search was led with "possession, title".
+    # Recovering possession from someone who came in UNDER us is a different
+    # claim with its own period, and this vocabulary does not hold it; so it
+    # is excluded here and the read answers cannot_tell, which falls through
+    # to search -- "a worse answer and an honest one" (resolution.py).
     CauseOfAction.POSSESSION_ON_TITLE:
         "possession of immovable property claimed ON TITLE: we own it and "
-        "somebody else holds it.",
+        "somebody else holds it WITHOUT having come in under us. NOT where "
+        "the holder entered as our tenant, lessee or licensee -- recovering "
+        "possession from a tenant (including one holding over, or before a "
+        "Rent Controller) is a different claim that this list does not hold.",
     CauseOfAction.POSSESSION_ON_PREVIOUS_POSSESSION:
         "possession claimed on PREVIOUS POSSESSION and not on title -- we "
         "were in possession and were put out, whoever owns it.",

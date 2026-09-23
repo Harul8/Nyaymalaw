@@ -1101,7 +1101,8 @@ class TurnEngine:
                 # below. Deriving "will this be served?" twice from different
                 # conditions is how the two drift.
                 blocked=not source_explanation,
-                facts=matter.facts, matter_id=matter.id, response_mode=mode)
+                facts=matter.facts, matter_id=matter.id, response_mode=mode,
+                parties=self._parties_of(matter).names)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=_with_screens(elements, screens, split_note, mode=mode),
@@ -1137,7 +1138,8 @@ class TurnEngine:
             derived, relied_on, retrieved, derived_values = self._derive(
                 thread, work_turn, metrics, memory, facts=matter.facts,
                 matter_id=matter.id, concluded=concluded,
-                paused=matter.paused_need_texts, response_mode=mode)
+                paused=matter.paused_need_texts, response_mode=mode,
+                parties=self._parties_of(matter).names)
             elements.extend(derived)
             answer = Answer(route=route, mode=mode, mode_statement=mode_statement,
                             elements=_with_screens(elements, screens, split_note, mode=mode))
@@ -1377,7 +1379,8 @@ class TurnEngine:
                 derived, relied_on, retrieved, derived_values = self._derive(
                     thread, work_turn, metrics, memory, facts=matter.facts,
                     matter_id=matter.id, seed=late, concluded=concluded,
-                    paused=matter.paused_need_texts, response_mode=mode)
+                    paused=matter.paused_need_texts, response_mode=mode,
+                parties=self._parties_of(matter).names)
                 # ONE CONSTRUCTION, THROUGH THE ASSEMBLER, like every
                 # other branch. This built an Answer from `head`, then
                 # replaced it with a longer tail, and neither call went
@@ -2807,6 +2810,7 @@ class TurnEngine:
                 metrics: TurnMetrics,
                 memory: "matter_memory.MatterSummary | None" = None,
                 *, side_blind: bool = False,
+                parties: frozenset[str] = frozenset(),
                 blocked: bool = False,
                 facts: tuple[Fact, ...] = (),
                 matter_id: str = "",
@@ -2890,7 +2894,11 @@ class TurnEngine:
                             # question on one turn is two answers that can
                             # disagree -- at model prices, with the downstream
                             # one recorded nowhere.
-                            cause_of_action=cause_read)
+                            cause_of_action=cause_read,
+                            # Carried into every fetch made from this need,
+                            # the investigation lane's included, so no search
+                            # spends a slot on this matter's own parties.
+                            parties=parties)
         result = self._fetch(need, metrics)
         # B-104. A PROVISION THE LAST PASS NAMED AND THIS ONE WAS GIVEN.
         #

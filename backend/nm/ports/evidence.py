@@ -491,6 +491,15 @@ class EvidenceNeed:
     cause_of_action: str | None = None
     provision_hint: str | None = None
     want_authority: bool = False
+    parties: frozenset[str] = frozenset()
+    """THIS MATTER'S OWN PARTIES, as lowercased match keys.
+
+    Never searched for. Measured 23 September 2026 on the live matters'
+    authority queries: "prakash, rao", "kandi, ramulu, narsimha", "ravi" took
+    slots in an eight-term budget, and a judgment paragraph that happens to
+    share a name with this matter's parties shares nothing that matters. KEYS,
+    not names -- this is matching, and nothing here is ever shown.
+    """
     account: str = ""
     """What the advocate has already said on this thread.
 

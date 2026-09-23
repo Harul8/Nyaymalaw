@@ -832,11 +832,98 @@ class CorpusEvidenceAdapter:
         "have", "has", "been", "was", "were", "are", "will", "shall",
     }
 
+    #: WORDS THAT CANNOT CARRY A LEGAL SUBJECT. Grammar, not vocabulary -- each
+    #: set is CLOSED in English, the way `_FIRST_PERSON` is, and none of them
+    #: names a topic. They extend `_SCAFFOLD`, which already made the same call
+    #: for a shorter list.
+    #:
+    #: MEASURED 23 September 2026, every authority query served on the live
+    #: matters that day -- fifteen. Most of each eight-term budget went on:
+    #:
+    #:     list numbering    one, first, second, third, three, so
+    #:     function words    at, her, he, it, but, do, not, them, still, had
+    #:     the file's dates  february 2018, august 2019, october 2026, 88 2025
+    #:
+    #: -- "one, eviction", "first, dissolution", and twice "three, connected,
+    #: but, separate, matters, do, not, them". A judgment paragraph matched on
+    #: "at" and "not" is incidental by construction.
+    _FUNCTION = {
+        "i", "me", "my", "you", "your", "he", "him", "his", "she", "her", "hers",
+        "it", "its", "they", "them", "their", "us", "at", "by", "into", "over",
+        "since", "before", "after", "until", "upon", "onto", "within", "between",
+        "against", "through", "during", "but", "or", "so", "if", "because",
+        "while", "though", "although", "as", "than", "do", "did", "done", "not",
+        "no", "had", "be", "being", "still", "yet", "also", "just", "now", "then",
+        "some", "all", "each", "every", "these", "those", "who", "whom", "whose",
+        "when", "where", "how", "why", "here", "very", "only", "even", "again",
+        "said", "say", "says", "told", "tell", "get", "got", "go", "went",
+    }
+    #: A brief's own numbering: "First, ...", "Two, arrears." They order the
+    #: advocate's list and say nothing about any of its items.
+    _LIST_MARKERS = {
+        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+        "ten", "first", "second", "third", "fourth", "fifth", "sixth",
+        "firstly", "secondly", "thirdly", "fourthly", "lastly", "finally",
+        "next", "another", "other",
+    }
+    _MONTHS = {
+        "january", "february", "march", "april", "may", "june", "july",
+        "august", "september", "october", "november", "december",
+        "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "sept", "oct",
+        "nov", "dec",
+    }
+
     @classmethod
     def _primary_terms(cls, need: EvidenceNeed) -> list[str]:
-        """Literal input words, without concatenating punctuation or losing numbers."""
+        """The advocate's words that can carry a legal subject, in their order.
+
+        A BARE NUMBER IS KEPT ONLY WHERE IT IS A PROVISION the question cites
+        -- "section 138", "Article 64" -- through `nm.domain.citation`, the one
+        owner of that pattern. Every other bare number in a brief is this
+        file's own date, amount or case number ("2019", "88", "45,000"), and a
+        judgment paragraph sharing one of those shares nothing that matters.
+
+        A DESIGNATION MIXING DIGITS AND LETTERS IS ALWAYS KEPT -- "53A",
+        "138A". It is a provision whether or not "s." precedes it, and
+        `test_query_numbers_and_truncation_remain_visible` holds that line:
+        losing a section number is the failure this search exists to avoid.
+        """
+        from nm.domain.citation import provisions_cited
+
+        cited = {str(n).lower() for n in provisions_cited(need.question)}
         words = re.findall(r"[^\W_]+", need.question.lower())
-        return list(dict.fromkeys(w for w in words if len(w) > 1 and w not in cls._SCAFFOLD))
+        # THE MATTER'S OWN PARTIES ARE NEVER SEARCHED FOR -- exact tokens of the
+        # names on the file, nothing inferred. See `EvidenceNeed.parties`.
+        named = {t for key in (need.parties or ()) for t in re.findall(r"[^\W_]+", key)
+                 if len(t) > 1}
+        drop = (cls._SCAFFOLD | cls._FUNCTION | cls._LIST_MARKERS | cls._MONTHS
+                | named)
+        return list(dict.fromkeys(
+            w for w in words
+            if len(w) > 1 and w not in drop
+            and (not w.isdigit() or w in cited)))
+
+    @classmethod
+    def _subject_terms(cls, need: EvidenceNeed) -> list[str]:
+        """The legal subject the turn already settled, as search words.
+
+        THE CALLER WAS MEANT TO SUPPLY THIS, and `_terms` says so: "the caller
+        puts the resolved provision's subject FIRST". The one caller that
+        searches authority -- the investigation lane -- selects a literal
+        sentence of the brief and supplies nothing else, so the subject never
+        arrived. It is on the need already: `cause_of_action`, read ONCE on the
+        turn and carried into every fetch made from it.
+
+        FROM THE PRODUCT'S OWN CLOSED VOCABULARY, never from model text, so
+        this puts no model-written law into a search. A cause that was not
+        established contributes nothing -- an unknown subject is not searched
+        for as though it were known.
+        """
+        cause = (need.cause_of_action or "").strip().lower()
+        if not cause or cause in ("not_established", "cannot_tell"):
+            return []
+        drop = cls._SCAFFOLD | cls._FUNCTION
+        return [w for w in cause.split("_") if len(w) > 1 and w not in drop]
 
     @classmethod
     def _terms(cls, need: EvidenceNeed) -> list[str]:
@@ -848,7 +935,10 @@ class CorpusEvidenceAdapter:
         subject -- and taking six terms positionally from the question alone
         spends every slot on scaffolding.
         """
-        seen = cls._primary_terms(need)[:8]
+        # THE SUBJECT FIRST, THEN THE ADVOCATE'S WORDS, as this docstring has
+        # always said. Eight slots, spent on words that can find law.
+        seen = list(dict.fromkeys([*cls._subject_terms(need),
+                                   *cls._primary_terms(need)]))[:8]
         # D3B — THE SUBJECT UNDER THE OTHER CODE, ADDED TO THE TERMS.
         #
         # "Case law is overwhelmingly pre-2024 and cites the old numbering, so
