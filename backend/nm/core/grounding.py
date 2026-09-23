@@ -190,6 +190,7 @@ def verify_findings(findings: tuple[Finding, ...]) -> list[GroundingViolation]:
 # used to be defined here, and the copy in the evidence adapter was hardened
 # separately -- see backend/nm/domain/citation.py for what that cost.
 __all__ = ["verify", "verify_citations", "verify_quotes", "verify_findings",
+           "unretrieved_authorities",
            "quoted_spans", "provisions_cited", "cases_named",
            "GroundingReport", "GroundingViolation"]
 
@@ -237,7 +238,6 @@ def verify_citations(elements: tuple[Element, ...],
     sentence claims, or a case that does not exist.
     """
     covered = _covered_provisions(findings)
-    known_cases = {_citation_fold(f.ref) for f in findings}
     out: list[GroundingViolation] = []
 
     for element in elements:
@@ -246,21 +246,50 @@ def verify_citations(elements: tuple[Element, ...],
             # `Element.disclosure` -- the distinction is a field precisely so
             # this exception cannot be reached by phrasing.
             continue
-        for number in provisions_cited(element.text):
-            if number not in covered:
+        for kind, name in unretrieved_authorities(element.text, findings):
+            if kind == "provision":
                 out.append(GroundingViolation(
                     "G-GROUND",
-                    f"the answer cites provision {number!r}, which was not "
+                    f"the answer cites provision {name!r}, which was not "
                     f"retrieved on this turn. Retrieved: "
                     f"{sorted(covered) or 'nothing'}"))
-        for case in cases_named(element.text):
-            folded = _citation_fold(case)
-            if not any(folded in ref for ref in known_cases):
+            else:
                 out.append(GroundingViolation(
                     "G-GROUND",
-                    f"the answer names the case {case!r}, which was not "
+                    f"the answer names the case {name!r}, which was not "
                     f"retrieved on this turn"))
     return out
+
+
+def unretrieved_authorities(text: str, findings: tuple[Finding, ...]
+                            ) -> tuple[tuple[str, str], ...]:
+    """Every provision or case named in `text` that no finding covers.
+
+    G-GROUND's OWN TEST, CALLABLE ON ONE STRING. `verify_citations` asks it of
+    every element of the assembled answer; a READ asks it of its own items
+    before they are assembled, so it can drop the one item that names a
+    remembered authority instead of letting that item withhold the whole turn.
+
+    ONE DETECTOR, because two would disagree. CLAUDE.md section 4 records the
+    grounding gate and the evidence adapter each holding a provision pattern,
+    one hardened and one not, and a useless answer living in the gap between
+    them. A read-level filter with its own notion of "names a case" would be
+    that defect again: an item it kept could still be one the gate withholds.
+
+    Returns `("provision", number)` and `("case", name)` pairs, in the order
+    the gate reports them.
+    """
+    covered = _covered_provisions(findings)
+    known_cases = {_citation_fold(f.ref) for f in findings}
+    out: list[tuple[str, str]] = []
+    for number in provisions_cited(text):
+        if number not in covered:
+            out.append(("provision", number))
+    for case in cases_named(text):
+        folded = _citation_fold(case)
+        if not any(folded in ref for ref in known_cases):
+            out.append(("case", case))
+    return tuple(out)
 
 
 @implements("P1")

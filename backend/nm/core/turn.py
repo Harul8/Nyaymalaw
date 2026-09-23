@@ -4490,13 +4490,18 @@ class TurnEngine:
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 text=f"I put an attack and could not resolve it: {refused}"))
 
+        put: list[Element] = []
         for a in read.attacks:
             answer = (f"No good answer: {a.no_answer_because}"
                       if a.no_answer else a.our_answer)
-            out.append(Element(
+            put.append(Element(
                 kind=ElementKind.GROUND, thread=thread.id,
                 feature="D7",
                 text=f"An opposing argument on {a.ground}: {a.their_case} — {answer}"))
+        # ONE ITEM THAT NAMES A REMEMBERED AUTHORITY NO LONGER COSTS THE TURN.
+        out.extend(self._without_unretrieved(
+            put, sources, metrics, thread_id=thread.id,
+            what="opposing argument(s)"))
 
         # E-083. Should be empty, because the type refuses one at construction.
         # Computed anyway: a type guard says nothing about objects decoded from
@@ -4511,6 +4516,60 @@ class TurnEngine:
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 text=f"The other side's case, as I read it: {read.why_not}"))
         return out
+
+    def _without_unretrieved(self, items: list[Element], sources, metrics: TurnMetrics,
+                             *, thread_id, what: str) -> list[Element]:
+        """A READ'S ITEMS, less any that names authority it was not given.
+
+        THE MEASURED DEFECT, 23 September 2026, live matter 4 -- three
+        disputes, one brief. The `attacks` read wrote "(referencing cases like
+        National Insurance v. Nicolletta Rohtagi)" into ONE opposing argument.
+        It had been told not to supply law from memory, and did. G-GROUND
+        caught it -- rightly, and it is the hardest line in this product -- and
+        WITHHELD THE WHOLE TURN: the answers on all three disputes, for one
+        clause in one item of one read.
+
+        `salvage` already refused this at the read ("discarding routes that
+        rest on nothing retrieved"); `attacks`, in the same module, did not.
+        One guard on one site -- the shape CLAUDE.md measured on 47 of 52
+        register entries.
+
+        THE ITEM GOES; THE TURN IS SERVED. The detector is G-GROUND's own
+        (`grounding.unretrieved_authorities`), asked of the SAME sources the
+        read was given, which are a subset of what the gate checks against --
+        so nothing this keeps can be withheld by the gate for this reason, and
+        nothing it drops would have survived the gate. The gate stays exactly
+        as it is, as the backstop for everything this does not reach.
+
+        THE DROPPED AUTHORITY IS NOT NAMED TO THE ADVOCATE. It came from model
+        memory, and saying it -- even as "the other side may rely on" -- is
+        exactly the legal data this product does not supply. It is counted on
+        the screen and named only in the encrypted diagnostics.
+        """
+        pool = tuple(f for f in (sources or ()) if getattr(f, "quotable", True))
+        kept: list[Element] = []
+        dropped = 0
+        for item in items:
+            if item.disclosure:
+                kept.append(item)
+                continue
+            named = grounding.unretrieved_authorities(item.text, pool)
+            if not named:
+                kept.append(item)
+                continue
+            dropped += 1
+            metrics.violate("P1", f"{what}: an item named authority not given to "
+                                  f"the read and was left out: "
+                                  + ", ".join(f"{k} {n!r}" for k, n in named))
+        if dropped:
+            kept.append(Element(
+                kind=ElementKind.GROUND, thread=thread_id, disclosure=True,
+                text=(f"I left out {dropped} {what} on this thread because "
+                      f"{'it relied' if dropped == 1 else 'each relied'} on an "
+                      f"authority that was not retrieved on this turn. I do not "
+                      f"supply authority from memory; the rest of this answer "
+                      f"does not rest on it.")))
+        return kept
 
     @implements("D7")
     def _tier_degraded(self, metrics: TurnMetrics) -> list[Element]:
@@ -4821,14 +4880,24 @@ class TurnEngine:
                 # and told to name what stopped fitting, and it did not.
                 moved = (" (this differs from the theory on the file and no "
                          "reason was given for the change)")
-            # WHAT THE TURN CONCLUDED, kept so the next turn revises it
-            # rather than rebuilding it. This is the whole of Phase 1.
-            concluded["theory"] = t
-            out.append(Element(
+            stated = Element(
                 kind=ElementKind.FINDING, thread=thread.id,
                 text=(f"Theory: {t.theme}"
                       + (f" Relief: {t.relief}." if t.relief else "")
-                      + moved)))
+                      + moved))
+            # THE SAME FILTER AS THE ATTACKS, and here it also decides what is
+            # KEPT. A theory is stored and fed back as the standing theory on
+            # every later turn, so dropping only the element would leave a
+            # remembered authority on the file to be re-read and re-served.
+            # A theory resting on authority the read was not given is not
+            # taken -- the outcome the `read.refused` path above already has.
+            shown = self._without_unretrieved(
+                [stated], sources, metrics, thread_id=thread.id, what="theory")
+            if stated in shown:
+                # WHAT THE TURN CONCLUDED, kept so the next turn revises it
+                # rather than rebuilding it. This is the whole of Phase 1.
+                concluded["theory"] = t
+            out.extend(shown)
 
         # E-080. THE ADVERSE FACTS NOBODY ANSWERED, BY NAME.
         left = theory_reader.unaccounted(read.adverse, read.theory)
