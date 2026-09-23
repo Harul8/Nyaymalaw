@@ -78,9 +78,14 @@ def test_the_exposure_prompt_binds_ids_but_keeps_prose_labelled():
 
 
 def test_a_thread_is_named_to_the_advocate_by_its_label():
+    # THROUGH THE ONE RENDERER, not `repr`: `repr` double-quotes a label with
+    # an apostrophe in it, and G-QUOTE withholds the turn on the product's
+    # own words (`nm.domain.spoken.named`).
+    from nm.domain.spoken import dispute
+
     labels = {"thr_abc": "Supply of steel"}
-    assert _label_of("thr_abc", labels) == "'Supply of steel'"
-    assert _label_of("Supply of steel", labels) == "'Supply of steel'"
+    assert _label_of("thr_abc", labels) == dispute("Supply of steel")
+    assert _label_of("Supply of steel", labels) == dispute("Supply of steel")
 
 
 def test_an_unrecognised_id_is_never_shown_raw():

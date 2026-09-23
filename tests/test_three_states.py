@@ -69,6 +69,14 @@ ESCAPES = (
 #: Enums that are CLOSED VOCABULARIES, not outcomes. Each with the reason it
 #: cannot be "not assessed" — because something always chose it.
 CLOSED: dict[str, str] = {
+    "Force": (
+        "HOW NECESSARY a source-bound requirement is -- required or "
+        "strengthening -- and a requirement exists only where the read stated "
+        "one. `nm.core.requirements.read` DROPS a row whose force is "
+        "missing or unrecognised and counts it in `Reading.dropped`, so no "
+        "requirement ever carries a force nobody established; a third member "
+        "meaning 'unclear' would keep a requirement the source did not "
+        "support."),
     "ClaimKind": (
         "WHAT a piece of security evidence asserts -- inventoried, scanned, "
         "penetration tested, IAM enforced, credential rotated -- and whoever "
@@ -353,6 +361,28 @@ def _keys_at_any_depth(doc) -> set[str]:
     return out
 
 
+#: TurnMetrics fields deliberately kept OFF `as_dict()`, each with the reason.
+#: ONE declaration, read by the scan AND its positive control: the control kept
+#: its own copy, so a field declared here and not there failed the control
+#: rather than the scan -- a second copy of a list is a second answer.
+OFF_RECORD: frozenset[str] = frozenset({
+    # A monotonic clock read, not a measurement. `latency_ms` is what the
+    # record carries and is derived from it.
+    "started",
+    # Carried under `tokens` with shortened keys -- {"in", "out", "cached"} --
+    # so they ARE written and a name match cannot see it. Declared rather than
+    # inferred: guessing which renamed key holds which field is exactly the
+    # kind of inference that passes a record missing something.
+    "tokens_in", "tokens_out", "cached_tokens",
+    # MATTER-PRIVATE, so it is written to the ENCRYPTED transcript
+    # (`TurnEngine._record_turn`) and never to this plaintext projection. Each
+    # row carries the recommended step's own words and the model's basis for
+    # judging it independent of the limitation -- the same reason `detail` is
+    # held back from the metrics store (`_FREE_TEXT`).
+    "step_assessments",
+})
+
+
 def test_every_metric_field_survives_into_the_persisted_record():
     """A METRIC THAT IS NOT SERIALISED CANNOT BE MEASURED.
 
@@ -371,26 +401,14 @@ def test_every_metric_field_survives_into_the_persisted_record():
     from nm.domain.metrics import TurnMetrics
 
     m = TurnMetrics(turn_id="t", matter_id="m")
-    #: Fields deliberately kept OFF the record, each with the reason.
-    off_record = {
-        # A monotonic clock read, not a measurement. `latency_ms` is what the
-        # record carries and is derived from it.
-        "started",
-        # Carried under `tokens` with shortened keys -- {"in", "out",
-        # "cached"} -- so they ARE written and a name match cannot see it.
-        # Declared rather than inferred: guessing which renamed key holds
-        # which field is exactly the kind of inference that passes a record
-        # missing something.
-        "tokens_in", "tokens_out", "cached_tokens",
-    }
     written = _keys_at_any_depth(m.as_dict())
     missing = sorted(
         f.name for f in dataclasses.fields(TurnMetrics)
-        if f.name not in written and f.name not in off_record)
+        if f.name not in written and f.name not in OFF_RECORD)
     assert not missing, (
         "these metrics are counted and never written, so nothing downstream "
         f"can read them: {missing}\n\nAdd them to `as_dict`, or to "
-        "`off_record` above with the reason they are not a measurement.")
+        "`OFF_RECORD` with the reason they are not a measurement.")
 
 
 def test_the_metric_scan_can_see_an_unserialised_field():
@@ -403,6 +421,6 @@ def test_the_metric_scan_can_see_an_unserialised_field():
     written = _keys_at_any_depth(TurnMetrics(turn_id="t", matter_id="m").as_dict())
     planted = "zz_never_serialised"
     assert planted not in written
-    off = {"started", "tokens_in", "tokens_out", "cached_tokens"}
     names = {f.name for f in dataclasses.fields(TurnMetrics)} | {planted}
-    assert sorted(n for n in names if n not in written and n not in off)         == [planted]
+    assert sorted(n for n in names
+                  if n not in written and n not in OFF_RECORD) == [planted]

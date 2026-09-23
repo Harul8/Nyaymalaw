@@ -44,6 +44,7 @@ from dataclasses import dataclass, replace
 from enum import Enum
 
 from nm.domain.matter import Fact, Matter, Thread
+from nm.domain.spoken import dispute
 from nm.domain.text import refuses_blank_text, snippet
 from nm.domain.traceability import implements
 
@@ -298,14 +299,14 @@ def bind(matter: Matter, message: str, fact: Fact,
             "one open thread, no number of record, and it could not be "
             "told whether this continues it",
             question=(
-                f"Does this belong to {matter.threads[0].label!r}, or is it "
+                f"Does this belong to {dispute(matter.threads[0].label)}, or is it "
                 f"a separate dispute? I will not assume it is the same one: "
                 f"attaching it to the wrong thread puts the wrong posture "
                 f"and the wrong limitation on it, and every citation would "
                 f"still be correct."))
 
     # 6. Several threads and nothing decisive. THE QUESTION IS THE ANSWER.
-    labels = "; ".join(f"{t.label!r}" for t in matter.threads[:5])
+    labels = "; ".join(dispute(t.label) for t in matter.threads[:5])
     return BindResult(
         BindState.AMBIGUOUS, None, False,
         f"{len(matter.threads)} open threads and no number of record in the message",

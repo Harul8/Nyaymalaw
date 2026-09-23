@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import date
 from enum import Enum
 
+from nm.domain.text import refuses_blank_text
+
 
 class Force(str, Enum):
     """Source-bound interpretation of necessity, not a document-type shortcut."""
@@ -13,6 +15,9 @@ class Force(str, Enum):
     REQUIRED = "required"
     STRENGTHENING = "strengthening"
 
+# `locator` MAY BE EMPTY: it is the passage's own, and `Passage.locator`
+# defaults to empty for a passage the store gave no locator.
+@refuses_blank_text("locator")
 @dataclass(frozen=True)
 class Requirement:
     """One thing this dispute needs, and the retrieved words that say so."""
@@ -58,6 +63,13 @@ class State(str, Enum):
     PROMISED = "promised"          # amber: the advocate undertook to provide it
     UNAVAILABLE = "unavailable"    # red: the advocate says it cannot be obtained
     OUTSTANDING = "outstanding"    # grey: not yet asked, or asked and unanswered
+
+    @classmethod
+    def not_established(cls) -> "State":
+        """The third state, declared rather than guessed from a name. An item
+        nobody has answered is OUTSTANDING -- never HELD by default and never
+        UNAVAILABLE, which is the advocate saying it cannot be had."""
+        return cls.OUTSTANDING
 
 
 @dataclass(frozen=True)

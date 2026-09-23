@@ -286,6 +286,15 @@ CONTROLS: dict[str, str] = {
     # not fail while the planted collision was refused.
     "test_concurrent_publisher_is_refused_while_first_writer_holds_lock":
         "test_concurrent_publisher_is_refused_while_first_writer_holds_lock",
+    # the gate-vocabulary scan -- control planted inline: it requires
+    # `inspect` to REPORT `fire("G-GROUND", "matched", ...)` before it trusts
+    # an empty result over the product.
+    "test_literal_gate_calls_use_the_registered_vocabulary_across_the_product":
+        "test_literal_gate_calls_use_the_registered_vocabulary_across_the_product",
+    # held strings set into prose by `repr` -- one planted site per shape the
+    # sweep claims to catch, each a site that was in the product.
+    "test_no_advocate_facing_renderer_delimits_by_repr":
+        "test_the_repr_sweep_sees_each_shape_it_refuses",
 }
 
 #: SWEEPS WITH NO VERIFIED CONTROL, declared 9 September 2026. BK-52.
@@ -306,7 +315,18 @@ CONTROLS: dict[str, str] = {
 #:
 #: So each is verified and moved into CONTROLS one at a time. An admitted gap
 #: is work; a silent one is a surprise.
-UNCONTROLLED: dict[str, str] = {}
+UNCONTROLLED: dict[str, str] = {
+    # Declared 23 September 2026. Two BROWSER journeys that listen for
+    # `/api/turn` requests and assert none were sent. If the listener's filter
+    # never matched a real send -- a query string on the URL, a renamed route --
+    # both would pass exactly as they do now. The candidate control is a real
+    # send in the same page proving the listener sees it. NOT REGISTERED,
+    # because it was not run: Playwright is not installed where this was found.
+    "test_composer_is_reachable_and_ime_enter_is_not_a_send":
+        "candidate: a non-composing Enter in the same page, asserted to send",
+    "test_failed_receipt_protection_never_dispatches_or_loses_the_text":
+        "candidate: restore storage, `Send this brief again`, assert one request",
+}
 
 
 def test_no_sweep_is_left_in_the_admitted_gap_table():

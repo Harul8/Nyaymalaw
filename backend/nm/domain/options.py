@@ -41,6 +41,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from nm.domain.spoken import named
 from nm.domain.text import blank, refuses_blank_text
 
 
@@ -97,7 +98,7 @@ class Figure:
     def problems(self) -> tuple[str, ...]:
         out: list[str] = []
         if self.certainty is Certainty.ESTABLISHED and blank(self.basis):
-            out.append(f"{self.text!r} is recorded as established and names "
+            out.append(f"{named(self.text)} is recorded as established and names "
                        f"nothing it rests on; established means checkable")
         if self.certainty is not Certainty.UNKNOWN and blank(self.text):
             out.append("a figure with no value is not an estimate, it is a gap")

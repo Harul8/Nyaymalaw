@@ -34,6 +34,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from nm.domain.spoken import named
 from nm.domain.text import blank, refuses_blank_text, snippet
 from nm.domain.text import words as text_words
 from nm.domain.traceability import implements
@@ -97,7 +98,7 @@ def quoted_back(text: str) -> str:
     There is no branch here that inspects the text. Inspecting it would imply
     that some text is safe to act on, and none of it is.
     """
-    return f"The document reads: {' '.join((text or '').split())!r}"
+    return f"The document reads: {named(' '.join((text or '').split()))}"
 
 
 @implements("C6")
@@ -165,6 +166,6 @@ def conflicts_with_account(facts: tuple[DocumentFact, ...],
         said = account_says.get(f.document)
         if said and said.strip().lower() != f.text.strip().lower():
             out.append(
-                f"{f.document} p.{f.page} reads {snippet(f.text, 60)!r}; the account "
-                f"says {snippet(said, 60)!r}. Both are on the file.")
+                f"{f.document} p.{f.page} reads {named(snippet(f.text, 60))}; the account "
+                f"says {named(snippet(said, 60))}. Both are on the file.")
     return tuple(out)

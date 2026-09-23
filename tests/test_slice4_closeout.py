@@ -27,7 +27,7 @@ from nm.core.turn import TurnInput
 from nm.domain.answer import ElementKind, Signal
 from nm.ports.evidence import Coverage, EvidenceResult
 
-from tests.test_turn_contract import _Evidence, build, finding
+from tests.test_turn_contract import _Evidence, build, confirmed, finding
 
 pytestmark = pytest.mark.class_a
 
@@ -46,6 +46,15 @@ def run(tmp_path, message, evidence=None, today=TODAY):
     engine, _ = build(tmp_path, evidence=evidence)
     return engine.run(TurnInput(advocate_id="adv", message=message,
                                 today=today)).answer
+
+
+def run_confirmed(tmp_path, message, evidence=None, today=TODAY):
+    """`run`, with the advocate confirming the accrual first. For the rules
+    about a DEFINITIVE window -- see `tests.test_turn_contract.confirmed`."""
+    engine, store = build(tmp_path, evidence=evidence)
+    return confirmed(engine, store,
+                     TurnInput(advocate_id="adv", message=message, today=today),
+                     trigger="time runs from the dispossession").answer
 
 
 def grounds(answer) -> str:
@@ -174,7 +183,7 @@ def test_a_bar_is_signalled_loudly_and_is_not_reported_as_a_verdict(tmp_path):
     LIMITATION_BAR signal, which §6.2 forbids collapsing — and the sentence
     beside it turns to what else the file offers.
     """
-    answer = run(tmp_path, MOVING, today=date(2040, 1, 1))
+    answer = run_confirmed(tmp_path, MOVING, today=date(2040, 1, 1))
 
     bars = [e for e in answer.elements if e.signal is Signal.LIMITATION_BAR]
     assert bars, "twelve years from 2019 had run by 2040 and nothing was loud"
@@ -197,7 +206,7 @@ def test_a_recommended_action_carries_the_by_when_the_register_holds(tmp_path):
     every recommendation it ever made: a finding that nothing was found,
     asserted whether or not anything had been looked for. Defect shape S1.
     """
-    answer = run(tmp_path, MOVING)
+    answer = run_confirmed(tmp_path, MOVING)
     actions = [e for e in answer.elements if e.kind is ElementKind.ACTION]
     assert actions, "the turn recommended nothing"
 
@@ -243,7 +252,7 @@ def test_a_passed_deadline_never_becomes_the_by_when_of_an_action(tmp_path):
     by-when would file the thing that can no longer be done among the things
     that still can, and the advocate scans the second for work.
     """
-    answer = run(tmp_path, MOVING, today=date(2040, 1, 1))
+    answer = run_confirmed(tmp_path, MOVING, today=date(2040, 1, 1))
     actions = [e for e in answer.elements if e.kind is ElementKind.ACTION]
     assert actions and actions[0].by_when is None, (
         "an expiry twelve years in the past was presented as a live by-when")
@@ -471,7 +480,7 @@ def test_a_fact_nobody_examined_is_never_recorded_as_having_no_effect(tmp_path):
     record was complete and the gap never fired. A false statement about each
     fact bought silence about all of them.
     """
-    answer = run(tmp_path, MOVING)
+    answer = run_confirmed(tmp_path, MOVING)
     text = grounds(answer)
 
     assert "Limitation for our side runs to" in text, (

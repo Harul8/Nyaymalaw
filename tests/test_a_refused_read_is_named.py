@@ -58,7 +58,7 @@ from nm.adapters.store.file_store import FileMatterStore
 from nm.core.turn import TurnEngine, TurnInput
 from nm.ports.model import ModelError
 
-from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
+from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed, confirmed
 
 pytestmark = pytest.mark.class_a
 
@@ -114,7 +114,15 @@ UNPLACED = ("I act for Ramulu. Advise me on the shop lease at Sangareddy.",)
 BRIEFS: dict[str, tuple[str, ...]] = {
     "plain": (PLAIN,), "expired": (EXPIRED,), "two": TWO,
     "accrual": (ACCRUAL,), "unplaced": UNPLACED,
+    # THE EXPIRED BRIEF WITH ITS ACCRUAL CONFIRMED. Since `602e3f0` a
+    # model-selected accrual is conditional, so the period is not definitively
+    # run on `expired` alone and salvage -- which answers a claim that FAILS --
+    # is never reached. `_run` takes the advocate's confirmation for this one.
+    "expired_confirmed": (EXPIRED,),
 }
+
+#: The briefs `_run` confirms the accrual on, through the one shared path.
+CONFIRMED = {"expired_confirmed": "time runs from the delivery of the goods"}
 
 #: read -> the brief that REACHES it. Measured on 7 September 2026 by refusing
 #: each of the fifteen against each brief and parsing the disclosure line.
@@ -153,7 +161,17 @@ REACHED_BY: dict[str, str] = {
     # says was measured; a measurement outlives its behaviour and has to be
     # taken again rather than reasoned about.
     "role": "unplaced",
-    "proof": "expired", "salvage": "expired",
+    "proof": "expired",
+    # A PERIOD THAT HAS RUN DEFINITIVELY, which since the accrual became
+    # conditional means one the advocate confirmed. Re-measured 23 September
+    # 2026: `expired` alone no longer reaches it.
+    "salvage": "expired_confirmed",
+    # RE-MEASURED 23 September 2026, by recording every read each brief
+    # reaches. All three run on an ordinary one-dispute brief: the
+    # source-derived checklist and its answers, what to investigate next, and
+    # whether a step depends on an unresolved limitation.
+    "investigation": "plain", "requirements": "plain",
+    "step_dependency": "plain",
     # G-DUTY runs on EVERY turn, so any brief reaches it. `plain` keeps the
     # table honest about that: a read driven on a brief chosen to provoke it
     # would suggest this one is conditional, and it is not -- an instruction
@@ -176,15 +194,23 @@ def _engine(tmp_path, read: str):
                 raise ModelError(f"the {read} read was refused by a test")
             return super().structured(prompt, schema, tier, **kw)
 
-    return briefed(TurnEngine(
-        store=FileMatterStore(tmp_path, key=KEY),
+    store = FileMatterStore(tmp_path, key=KEY)
+    engine = briefed(TurnEngine(
+        store=store,
         evidence=_Evidence(),
         model=TracedModel(inner=_Fails(
             _model_config(), responses={"__default__": "File the suit."})),
         elements=CuratedElements()))
+    return engine, store
 
 
-def _run(engine, brief: str):
+def _run(built, brief: str):
+    engine, store = built
+    if brief in CONFIRMED:
+        (message,) = BRIEFS[brief]
+        return confirmed(engine, store, TurnInput(
+            advocate_id="adv_1", message=message, today=TODAY),
+            trigger=CONFIRMED[brief])
     out = None
     for message in BRIEFS[brief]:
         out = engine.run(TurnInput(

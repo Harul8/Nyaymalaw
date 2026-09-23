@@ -234,3 +234,120 @@ against a HEAD export by hand to tell its own breakage from the tree's.
 * **The fingerprint follows the git index.** Staging a byte-identical file moves
   the tree identity and stales evidence; an untracked source file is invisible
   to it.
+
+---
+
+## 5. Follow-up, 23 September 2026 — what section 3 turned out to be
+
+Worked in a fresh Linux checkout of `9779b22`, with no corpus, no transcripts
+and no model key, so nothing below is a live run. Every red was re-measured
+against a pristine `git worktree` of HEAD before anything was changed, and
+**two of section 3's diagnoses were wrong** — recorded here, beside the
+originals, so they are not re-derived.
+
+**Measured, full suite, same container, `-n 4`:** HEAD 156 red; after 118
+red + 1 error. 41 fixed; the only new red is the declared `UNCONTROLLED`
+closure test (5.5). Two `test_the_spec_says_what_is_true_now` cases went red
+in the parallel run and pass in isolation on both trees — ordering, not this
+change. Everything still red is in 5.5.
+
+### 5.1 (was 3.1) The labels were quoted by `repr`, not by the composer — FIXED
+
+The composer was never the source. `repr` picks its delimiter from the
+content, so one apostrophe turns a label into a **double-quoted** string:
+`repr("Use of firm's mark 'VAISHNAVI'")` is `"Use of firm's mark 'VAISHNAVI'"`,
+and G-QUOTE reads double quotes as a quotation of retrieved text. All three
+withheld labels carry an apostrophe (`firm's`, `Ravi's`, `tenant's`). The
+designated renderer, `spoken.dispute`, was itself `repr`.
+
+The labels reached G-QUOTE by two paths, both measured: product text straight
+into the answer (`_label_of` on the exposure section, the split note, `shown=`
+on the ledger) and the file memory the model reads (`summary._established_on`),
+which a model then quotes back verbatim.
+
+**The mechanism:** `spoken.named` sets a held string into prose between
+typographic *single* quotes, which the gate deliberately ignores; the content
+is untouched, so a quotation the string really carries is still checked.
+`spoken.dispute` uses it. **Swept:** 23 sites across `turn.py`, `summary.py`,
+`threading.py`, `relief.py`, `intake.py`, `drafting.py` and `options.py`.
+**The check:** a second sweep in
+`tests/test_every_advocate_facing_renderer_speaks_english.py`, over the same
+whole-product population as the key sweep, refuses `repr` (`!r` or `repr()`)
+in any advocate-facing sink and on any thread label anywhere. Run against
+HEAD's source it reports every one of those sites; its controls plant each
+shape.
+
+### 5.2 (was 3.2) HTTP 422 is not a defect — NOT CHANGED
+
+`frontend/app.js` reads the 422 body into `entry.refusal` and renders
+*"Withheld by G-QUOTE — nothing was emitted."* with the reason and each
+`not_established` line. The advocate sees a refusal. The live-run harness
+read the status code; the page reads the body. The contract is pinned by
+tests and is left as it is.
+
+### 5.3 (was 3.3) Matter 5 turn 1 — NOT REPRODUCIBLE HERE
+
+Needs the transcript in `.nm/evaluations/five-matters-20260922.sqlite` and a
+live run. Neither is in this checkout, and a live run needs approval. Open.
+
+### 5.4 (was 3.4) The "dead correction cascade" was a stale precondition — FIXED
+
+**The cascade works.** `602e3f0` decided that a MODEL-SELECTED accrual is
+conditional until the advocate confirms it, so a first turn registers no
+dated deadline. Nineteen tests asked a first turn for one. Given the
+advocate's confirmation — `POST .../premises/accrual_rule`, the product's own
+path — every one of them passes unchanged in what it asserts: the correction
+reaches exactly the limitation and the deadline; the action carries the
+register's by-when; a passed window says so; salvage runs.
+
+The review's clusters "correction cascade dead" (8) and "deadline not carried
+to the action" (4) were this one cause. **One helper**,
+`tests.test_turn_contract.confirmed`, now takes that path for every
+engine-level test that needs a definitive window, so they cannot each invent a
+different way.
+
+**And two negative tests had gone vacuous.** *"A read that names nothing does
+not start the period"* asserted `on is None` — true on every turn once every
+window became conditional. They now refuse a conditional date too.
+`test_salvage_on_a_served_turn` confirms on every brief for the same reason:
+*no salvage on a live claim* passes just as well when salvage cannot run.
+
+The other reds, each with its cause:
+
+| Red | Cause | Done |
+|---|---|---|
+| provider independence (3) | `requirements.ANSWER_SCHEMA` is a FRAGMENT inside the dispute read, named like a read; and the provider name sat in `nm.domain` | renamed `ANSWER_ROWS`; `PROVIDER` moved to the composition root |
+| refused reads named (4) | three reads nothing drove; salvage unreachable without a confirmed accrual; the exposure refusal reworded in `602e3f0` | re-measured which brief reaches each read; one shared phrase constant |
+| G-SPLIT (1) | the scripted double left the shared "We act for …" sentence unallocated, and its fixed-inventory repair matched `'' == ''` | double allocates a unit no dispute covers to all of them (what the prompt asks); repair matches new rows by label |
+| three states (3) | `requirements.State` has its third state under another name; `Force` is closed; `step_assessments` is matter-private | `not_established()` declared; `Force` CLOSED with the reason; `OFF_RECORD` hoisted to one list used by scan and control |
+| blank values (1) | 13 required string fields on five new types | `@refuses_blank_text`, with three exemptions each stating why emptiness is a state |
+| board carries analysis (1) | `information_followups` is dated, owned obligations — status | declared in both allow-lists with the argument |
+| unreached functions (1) | 11 new routes | declared; `update_capacity` recorded as having no page caller |
+| hand-rolled quotation (1) | exposure reader's own `fold() in fold()` | `Quotable.accepts` |
+| prompt pins (3), stale exemptions (1), reserved field (1), sign-in copy (1), uncurated cause (1) | rewording in `602e3f0`/`f5b5413`; cuts removed; a copy-constructor mistaken for a writer; a new cause | pins moved to the surviving rule; conflict-scope sentence restored; `ARREARS_OF_RENT` withheld with its reason, no elements authored |
+
+### 5.5 What is still red, and why it is not fixed here
+
+* **A conditional figure that moves is not announced — NEW, P1.** Measured:
+  correct the date from 2023 to 2019 under an unconfirmed accrual and the
+  served conditional figure is recomputed from the new date, with no
+  G-CASCADE and no "has MOVED" — the advocate was last told 2035-03-14. *Silently
+  moving a date* is the defect E-092 exists for. Whether a conditional figure
+  is a ledger node is a product decision, so it is not guessed here.
+* **The plan/blueprint cluster (~110).** A registry reconciliation — e.g. 214
+  active criteria in the execution packets against 220 declared. Assigning
+  criteria to packets is a delivery decision in the control plane.
+* **Two browser sweeps with no verified control.** Declared in
+  `UNCONTROLLED` with their candidate controls; Playwright is not installed
+  here, and that file forbids registering a control nobody ran.
+* **Environment only:** the PRD generator needs the `docx` npm package,
+  `test_arrive_sign_in_features` needs `pytest_bdd`, and the judge test needs
+  `NM_MODEL_PROVIDER`.
+
+### 5.6 (was 3.5) Baselining `known_failures.yaml` — NOT DONE, deliberately
+
+The file is not empty — it holds six backlog-population rows — but it holds
+no pytest facts. A pytest fact is the exact rendered failure, so a baseline
+recorded in a checkout that cannot run the PRD generator would declare this
+container's reds, not the build's. It has to be taken where the gate runs,
+after the plan reconciliation above; the ratchet then keeps it shrinking.

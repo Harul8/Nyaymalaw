@@ -27,7 +27,7 @@ from nm.core import gaps as gap_queue
 from nm.core.turn import TurnInput
 from nm.domain.answer import ElementKind
 
-from tests.test_turn_contract import _model_config, build
+from tests.test_turn_contract import _model_config, build, confirmed
 
 pytestmark = pytest.mark.class_a
 
@@ -157,9 +157,14 @@ def test_a_corrected_date_moves_the_value_and_says_what_it_was(tmp_path):
     a number they cannot reconcile against what they remember reads as though
     they misread it the first time.
     """
-    engine, _ = build(tmp_path)
-    first = engine.run(TurnInput(advocate_id="adv_1", message=AT_RISK,
-                                 today=date(2026, 9, 4)))
+    # A CONFIRMED accrual: the cascade tracks a definitive limitation, and a
+    # model-selected accrual is conditional until the advocate confirms it
+    # (`tests.test_turn_contract.confirmed`).
+    engine, store = build(tmp_path)
+    first = confirmed(engine, store,
+                      TurnInput(advocate_id="adv_1", message=AT_RISK,
+                                today=date(2026, 9, 4)),
+                      trigger="time runs from the delivery of the goods")
     second = engine.run(TurnInput(
         advocate_id="adv_1", matter_id=first.matter.id,
         message=("Correction: the goods were supplied on 14 March 2019, not "
@@ -225,9 +230,14 @@ def test_an_unanswered_undo_becomes_a_blocking_gap(tmp_path):
                             now="2022-03-14"),)
     assert cascade.unresolved_undo(moved) == ("limitation on th_1",)
 
-    engine, _ = build(tmp_path)
-    first = engine.run(TurnInput(advocate_id="adv_1", message=AT_RISK,
-                                 today=date(2026, 9, 4)))
+    # A CONFIRMED accrual: the cascade tracks a definitive limitation, and a
+    # model-selected accrual is conditional until the advocate confirms it
+    # (`tests.test_turn_contract.confirmed`).
+    engine, store = build(tmp_path)
+    first = confirmed(engine, store,
+                      TurnInput(advocate_id="adv_1", message=AT_RISK,
+                                today=date(2026, 9, 4)),
+                      trigger="time runs from the delivery of the goods")
     second = engine.run(TurnInput(
         advocate_id="adv_1", matter_id=first.matter.id,
         message="Correction: the goods were supplied on 14 March 2019.",

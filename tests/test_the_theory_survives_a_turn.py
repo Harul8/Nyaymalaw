@@ -151,7 +151,11 @@ def test_the_read_is_shown_the_theory_it_must_revise():
 
     assert "THE THEORY ALREADY ON THIS THREAD" in prompt.user
     assert "The plaintiff is entitled to possession." in prompt.user
-    assert "REVISE it, not to replace it" in prompt.user
+    # REWORDED IN `602e3f0`, and still a revision rather than a fresh
+    # formation: the standing theory is KEPT unless something named changes
+    # it, and a change must be explained.
+    assert "Keep it if still best supported" in prompt.user
+    assert "Explain a material change in revises_because" in prompt.user
 
     fresh = theory_reader.build_theory_prompt("the file", (), "moving")
     assert "No theory has been formed" in fresh.user, (

@@ -52,6 +52,7 @@ from nm.domain.requirements import (
 from nm.domain.requirements import Item as Item
 from nm.domain.requirements import nothing_to_ask as nothing_to_ask
 from nm.domain.requirements import settled as settled
+from nm.domain.text import refuses_blank_text
 from nm.ports.model import Prompt
 
 #: A span shorter than this is not evidence that a passage requires anything --
@@ -137,6 +138,7 @@ def build_prompt(dispute: str, passages: tuple["Passage", ...], *, context="") -
     )
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class Passage:
     """One retrieved passage offered to the reader, with where it came from."""
@@ -252,7 +254,14 @@ def merge(held: tuple, reading: Reading) -> tuple:
     return tuple(out)
 
 
-ANSWER_SCHEMA = {
+#: A FRAGMENT, NOT A READ, and named so. It is the `requirement_answers`
+#: property inside `nm.core.dispute.DISPUTE_SCHEMA`; nothing sends it to a
+#: model on its own. `_SCHEMA` is how the product's scans find the READS --
+#: every one must carry an `x-nm-read` key and a scripted responder -- and a
+#: fragment wearing that suffix was reported as two schemas the second
+#: provider could not answer, twice (once here, once where `dispute` imports
+#: it), while the read that carries it was answered all along.
+ANSWER_ROWS = {
     "type": "array", "items": {
         "type": "object", "properties": {
             "thread_id": {"type": "string"}, "key": {"type": "string"},

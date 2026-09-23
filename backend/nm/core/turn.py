@@ -91,6 +91,8 @@ from nm.domain.metrics import Outcome, Phase, TurnMetrics
 from nm.domain.proof import ProofStatus
 from nm.domain.quotable import Quotable
 from nm.domain.register import PEER
+from nm.domain.spoken import dispute
+from nm.domain.spoken import named as in_prose
 from nm.domain.text import blank, refuses_blank_text, snippet
 from nm.domain.traceability import implements
 from nm.domain.turn_receipt import (
@@ -348,7 +350,7 @@ def _record(into: list, what: str, thread: Thread,
             # THE KEY carries the thread id, so two threads' counts are
             # different values. THE LABEL is what a person reads. B-103.
             name=f"{what} on {thread.id}",
-            shown=f"{what} on {thread.label!r}",
+            shown=f"{what} on {dispute(thread.label)}",
             value=str(produced),
             from_facts=tuple(from_facts),
             # A COUNT. It grows as the file grows, so its growth is not a
@@ -408,8 +410,8 @@ def _label_of(value: str, labels: dict) -> str:
     would name no dispute at all.
     """
     if value in labels:
-        return repr(labels[value])
-    return repr(value) if not str(value).startswith(("thr_", "mat_")) \
+        return dispute(labels[value])
+    return in_prose(value) if not str(value).startswith(("thr_", "mat_")) \
         else "another dispute on this file"
 
 def _positions_note(thread) -> str:
@@ -955,7 +957,7 @@ class TurnEngine:
             split_note = (Element(
                 kind=ElementKind.GROUND,
                 text=(f"I have organised these instructions across {bound.looks_like} "
-                      f"disputes on the board and am working on {bound.thread.label!r}. "
+                      f"disputes on the board and am working on {dispute(bound.thread.label)}. "
                       "Please check the allocation; you can change the focus "
                       "or correct that organisation."),
                 gate="G-SPLIT", disclosure=True, signal=Signal.NONE))
@@ -2308,7 +2310,7 @@ class TurnEngine:
                              f"named as replaced")
                 matter = matter.asking(
                     "G-CORRECTION",
-                    (f"You said {phrase!r}. I have not taken anything as "
+                    (f"You said {in_prose(phrase)}. I have not taken anything as "
                      f"replaced, so both are still on the file: "
                      + "; ".join(f"{snippet(f.statement, 44)} ({f.date.isoformat()})"
                                  for f in [*others, *added]
@@ -4876,7 +4878,7 @@ class TurnEngine:
             return ()
         return (cascade.Derived(
             name=f"limitation on {thread.id}",
-            shown=f"the limitation on {thread.label!r}",
+            shown=f"the limitation on {dispute(thread.label)}",
             value=position.expires_on.isoformat(),
             from_facts=tuple(thread.chronology)),)
 
@@ -5169,7 +5171,7 @@ class TurnEngine:
                 continue
             produced.append(dependency.Node(
                 name=names.deadline, value=row.on.isoformat(),
-                shown=f"the limitation deadline on {thread.label!r}",
+                shown=f"the limitation deadline on {dispute(thread.label)}",
                 rests_on=(dependency.Rest(dependency.InputKind.DERIVED,
                                           names.limitation),),
                 computed_at=at, reason=f"computed on turn {turn.turn_id}"))
@@ -5183,7 +5185,7 @@ class TurnEngine:
                      if posture.source_fact else ())
             produced.append(dependency.Node(
                 name=names.role, value=posture.role.value,
-                shown=f"our side on {thread.label!r}", rests_on=rests,
+                shown=f"our side on {dispute(thread.label)}", rests_on=rests,
                 computed_at=at, reason=f"read on turn {turn.turn_id}"))
 
         ledger = dependency.settle(

@@ -252,6 +252,15 @@ WITHHELD: dict[CauseOfAction, str] = {
         "probabilities is how a standard gets applied to the wrong case. It "
         "needs its own curation with the presumptions expressed as "
         "`Burden.shifted_by`, and that is work rather than a line here.",
+    # Added 22 September 2026 (79e2da5) so the limitation route could be
+    # found: its Article is curated in `nm.knowledge.resolution` WITH its
+    # source. Its ingredients were not, and are not authored here without one.
+    CauseOfAction.ARREARS_OF_RENT:
+        "what a claim for arrears of rent must prove has not yet been curated "
+        "from a source in this product, so it is not worked out here. Another "
+        "claim's list is not borrowed for it: a price claim or a contract "
+        "claim would ask for material a rent claim may not turn on, and miss "
+        "what it does -- the letting and the due date of each instalment.",
 }
 
 

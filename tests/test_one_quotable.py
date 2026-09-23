@@ -334,7 +334,11 @@ def test_the_reads_that_take_notes_say_which_they_take():
     reads as an inconsistency to whoever finds it next."""
     turn = (pathlib.Path(__file__).resolve().parents[1]
             / "backend" / "nm" / "core" / "turn.py").read_text(encoding="utf-8")
-    assert turn.count("context=memory.notes if memory else \"\"") == 3, (
+    # THE NOTES, HOWEVER THEY ARE PREFIXED. The cause read now puts a line
+    # scoping it to the active dispute ahead of them (79e2da5), which is the
+    # same trade with an instruction in front -- counting the exact
+    # `context=` assignment reported the cause read as having left.
+    assert turn.count("memory.notes if memory else \"\"") == 3, (
         "the cause, inventory and proof reads take the notes; if a fourth "
         "joined them or one left, the trade was re-made and this is where it "
         "gets re-stated")

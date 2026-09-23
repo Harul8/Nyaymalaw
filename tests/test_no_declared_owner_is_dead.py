@@ -51,6 +51,22 @@ ROOT = Path(__file__).resolve().parents[1]
 REACHED_ELSEWHERE = {
     # FastAPI routes -- the router calls them by registration, not by name.
     #
+    # RE-MEASURED 23 September 2026: eleven routes added since the last entry,
+    # each checked to be `@app.*`-registered and each named here with its
+    # caller. Ten have a BROWSER caller in `frontend/app.js` (or
+    # `source-reader.js`) as a string literal this scan cannot see:
+    # registration and password recovery, sessions and activity, the AI
+    # data-sharing permission, draft protection, and the saved source reader.
+    "account_capabilities", "cancel_registration", "confirm_email",
+    "resend_confirmation", "forgot_password", "revoke_selected_session",
+    "session_activity", "set_model_permission", "draft_key", "source_excerpt",
+    # AND ONE WITH NO PAGE CALLER, which is recorded rather than smoothed
+    # over: `update_capacity` is reached over HTTP by
+    # `tests/test_capacity_admission_uses_a_record_not_prose.py`, and the page
+    # records capacity through intake instead. A route only a test calls is
+    # an API, not yet a feature.
+    "update_capacity",
+    #
     # P33's two. Registered by decorator like every route here, and named
     # in `commands.json` as the current_route for `create-retention-request`
     # and `get-retention-request` -- so the mapping is recorded rather than

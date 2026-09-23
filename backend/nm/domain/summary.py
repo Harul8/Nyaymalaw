@@ -38,6 +38,7 @@ from dataclasses import dataclass, field, replace
 from nm.domain.intake import ReadQuality
 from nm.domain.matter import AskedQuestion, Certainty, FactBasis, Matter, Thread
 from nm.domain.opening import instruction_context
+from nm.domain.spoken import dispute
 from nm.domain.text import (
     refuses_blank_text,
     representation_only,
@@ -389,7 +390,7 @@ def _established_on(thread: Thread) -> list[str]:
     p = thread.posture
     if p.resolved:
         out.append(
-            f"On {thread.label!r}: we act for the {p.role.value} — the "
+            f"On {dispute(thread.label)}: we act for the {p.role.value} — the "
             f"{p.side.value} party ({p.basis.value})."
             + (f" Against: {p.opponent}." if p.opponent else "")
             # THE ADVOCATE'S OWN WORD FOR THEIR CLIENT, kept once the role is
@@ -420,19 +421,19 @@ def _established_on(thread: Thread) -> list[str]:
         # of C3: naming the client does not say which side they are on. Recorded
         # so the blocking question can NARROW instead of repeating.
         out.append(
-            f"On {thread.label!r}: the client is the {p.client_described_as}. "
+            f"On {dispute(thread.label)}: the client is the {p.client_described_as}. "
             f"Procedural status: {p.role.value.replace('_', ' ')}; "
             f"no litigating side has been established.")
     for c in p.conflicts:
         out.append(
-            f"On {thread.label!r}: THE SIDE IS IN DISPUTE. The file records "
+            f"On {dispute(thread.label)}: THE SIDE IS IN DISPUTE. The file records "
             f"our client as the {c.on_record.value}; this turn reads as the "
             f"{c.now_suggested.value}. Do not choose between them — say what "
             f"holds either way, and ask.")
     for kind, value in sorted(thread.identifiers.items()):
-        out.append(f"On {thread.label!r}: {kind.replace('_', ' ')} is {value}.")
+        out.append(f"On {dispute(thread.label)}: {kind.replace('_', ' ')} is {value}.")
     if thread.deferred_reason:
-        out.append(f"On {thread.label!r}: deferred — {thread.deferred_reason}.")
+        out.append(f"On {dispute(thread.label)}: deferred — {thread.deferred_reason}.")
     return out
 
 

@@ -131,6 +131,22 @@ def _window(out):
     return rows[0]
 
 
+def _ran_to(window):
+    """The date the period was computed to, DEFINITIVE OR CONDITIONAL.
+
+    Since `602e3f0` a model-selected accrual is conditional until the advocate
+    confirms it, so the window carries `conditional_on` and leaves `on` empty
+    (`tests/test_premises_come_before_arithmetic.py`). WHICH ENTRY the period
+    runs from is the same question either way, and it is this file's question.
+
+    AND THE NEGATIVE TESTS NEED BOTH. Asserting `on is None` alone went
+    vacuous the day every window became conditional: a period started from an
+    entry nobody identified would have passed, because `on` is empty on every
+    turn now. No date of either kind is what "not computed" means.
+    """
+    return window.on or window.conditional_on
+
+
 def _said(out) -> str:
     """Every word the advocate is shown on this turn."""
     return " ".join(e.text for e in out.answer.elements)
@@ -159,7 +175,8 @@ def test_the_period_runs_from_the_entry_the_read_named(
         "the two entries share a date, so the window cannot tell them apart")
 
     window = _window(out)
-    assert window.on is not None, "the period was not computed at all"
+    ran_to = _ran_to(window)
+    assert ran_to is not None, "the period was not computed at all"
 
     expected = (offered[-1] if which == "last" else offered[0])[1]
     other = (offered[0] if which == "last" else offered[-1])[1]
@@ -167,10 +184,10 @@ def test_the_period_runs_from_the_entry_the_read_named(
     # entry's own month and day whatever the period is — and NOT on the
     # other entry's. A product that had gone back to sorting would hold the
     # `first` case and miss the `last` one by the 58 days between them.
-    assert (window.on.month, window.on.day) == (expected.month, expected.day), (
+    assert (ran_to.month, ran_to.day) == (expected.month, expected.day), (
         f"the read named the {which} entry ({expected}) and the window "
-        f"closes on {window.on} — the accrual is not following the read")
-    assert (window.on.month, window.on.day) != (other.month, other.day)
+        f"closes on {ran_to} — the accrual is not following the read")
+    assert (ran_to.month, ran_to.day) != (other.month, other.day)
 
 
 def test_a_read_that_names_nothing_does_not_start_the_period(
@@ -184,7 +201,7 @@ def test_a_read_that_names_nothing_does_not_start_the_period(
     """
     out, _offered = _run(tmp_path, monkeypatch, lambda rows: "")
 
-    assert _window(out).on is None, (
+    assert _ran_to(_window(out)) is None, (
         "a date was produced from an accrual nothing identified")
     said = _said(out).lower()
     assert "performance" in said and "refus" in said, (
@@ -203,7 +220,7 @@ def test_an_entry_that_is_not_on_the_chart_is_not_an_accrual(
     out, _offered = _run(tmp_path, monkeypatch,
                          lambda rows: "fact_deadbeef00")
 
-    assert _window(out).on is None, (
+    assert _ran_to(_window(out)) is None, (
         "an id that names nothing on this thread started the period")
 
 
@@ -218,7 +235,7 @@ def test_the_limb_reaches_the_advocate(tmp_path, monkeypatch):
     """
     out, _offered = _run(tmp_path, monkeypatch, lambda rows: rows[-1][0])
 
-    assert _window(out).on is not None
+    assert _ran_to(_window(out)) is not None
     assert "notice that performance is refused" in _said(out), (
         f"the limb was dropped between the read and the advocate:\n"
         f"{_said(out)}")

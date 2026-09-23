@@ -13,6 +13,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 
+from nm.domain.text import refuses_blank_text
 from nm.ports.model import Prompt
 
 
@@ -67,6 +68,7 @@ def build_prompt(step: str, context: str) -> Prompt:
     )
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class Assessment:
     dependence: Dependence

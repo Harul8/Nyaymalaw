@@ -12,7 +12,6 @@ from datetime import datetime
 from nm.domain.egress import EgressRefused
 
 NOTICE_VERSION = "openai-text-2026-09-21"
-PROVIDER = "openai"
 PURPOSE = "matter_text"
 
 

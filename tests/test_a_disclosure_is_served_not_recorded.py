@@ -45,7 +45,7 @@ from nm.core.turn import TurnInput
 from nm.ports.evidence import Coverage, EvidenceResult
 from nm.ports.model import ModelError
 
-from tests.test_turn_contract import _Evidence, _model_config, build
+from tests.test_turn_contract import _Evidence, _model_config, build, confirmed
 
 pytestmark = pytest.mark.class_a
 
@@ -68,6 +68,13 @@ FIRST = ("We act for the defendant at Hyderabad in a cheque matter. The "
 SECOND = ("Separately, we have a recovery suit for the same client against "
           "a supplier at Secunderabad.")
 
+
+#: THE EXPOSURE PASS'S NOT-RUN SENTENCE. Reworded in `602e3f0` from "THE
+#: CROSS-FILE PASS DID NOT RUN ... nobody looked" to plain language; the rule
+#: -- a refused pass is DISCLOSED and never reads as one that ran clean -- did
+#: not change, so both tests below match the one phrase rather than each
+#: carrying its own copy of the words.
+NOT_COMPARED = "could not establish a complete comparison between these disputes"
 
 class _Fails(ScriptedModelAdapter):
     """Refuses ONE read, by the name the schema already carries.
@@ -136,7 +143,7 @@ def test_the_cross_file_pass_is_disclosed_once_on_every_file(tmp_path):
 
     lines = [e.text for e in out.answer.elements
              if e.text.startswith("Across this file")
-             or "CROSS-FILE PASS DID NOT RUN" in e.text]
+             or NOT_COMPARED in e.text]
     assert len(lines) == 1, (
         f"E-082 wants the section EXACTLY once, empty or not; this answer "
         f"carries {len(lines)}:\n" + "\n".join(lines))
@@ -160,7 +167,7 @@ def test_a_refused_read_is_named_to_the_advocate_and_not_only_to_the_metrics(
 
     assert "G-MODEL" in _fired(out)
     said = _served(out)
-    assert "CROSS-FILE PASS DID NOT RUN" in said, (
+    assert NOT_COMPARED in said, (
         "the exposure read was refused and the answer does not say so — an "
         "absent pass and an empty one are opposite facts:\n" + said[:900])
     # THE EXPOSURE PASS'S OWN SENTENCE, not the fragment. "found none"
@@ -216,10 +223,13 @@ def test_a_salvage_pass_that_could_not_run_says_so_on_the_served_turn(tmp_path):
     section reads as a claim nobody could save, and a claim whose salvage read
     fell over reads identically.
     """
-    engine, _ = build(tmp_path, model=_Fails(_model_config(), "salvage",
-                                             responses={"__default__": "Act."}))
-    out = engine.run(TurnInput(advocate_id="adv_1", message=EXPIRED,
-                               today=TODAY))
+    # CONFIRMED: salvage answers a period that has run DEFINITIVELY, and a
+    # model-selected accrual is conditional until the advocate confirms it.
+    engine, store = build(tmp_path, model=_Fails(_model_config(), "salvage",
+                                                 responses={"__default__": "Act."}))
+    out = confirmed(engine, store,
+                    TurnInput(advocate_id="adv_1", message=EXPIRED, today=TODAY),
+                    trigger="time runs from the delivery of the goods")
 
     assert "G-SALVAGE" in _fired(out), (
         "the period has run on this brief and the salvage pass never fired — "
@@ -330,20 +340,33 @@ def test_the_disputes_not_advised_on_are_named_in_the_answer(tmp_path):
                                today=TODAY))
 
     assert 'G-SPLIT' in _fired(out), 'G-SPLIT did not fire at all'
-    assert len(out.matter.threads) == 1, (
-        'the file was split on the count read: '
-        + str([t.label for t in out.matter.threads]))
 
-    said = [e.text for e in out.answer.elements
-            if 'separate' in e.text and 'one thread' in e.text]
+    # RE-MEASURED 23 September 2026. The file IS split now, and on different
+    # evidence: not the count read BK-27 split on and this test then refused,
+    # but SOURCE-BOUND allocation -- every paragraph of the brief assigned to
+    # the disputes it belongs to, the shared representation to all of them,
+    # and the read refused where any paragraph is left over. What must hold
+    # either way is that each dispute is one the advocate actually wrote.
+    said_by_advocate = THREE_AT_ONCE.lower()
+    for thread in out.matter.threads:
+        stem = thread.label.rstrip('…').lower()
+        assert stem and stem in said_by_advocate, (
+            f'a dispute was opened on words the advocate did not write: '
+            f'{thread.label!r}')
+
+    said = [e.text for e in out.answer.elements if e.gate == 'G-SPLIT'
+            or 'disputes on the board' in e.text]
     assert len(said) == 1, (
-        'the count reached the metrics and not the advocate, so a message '
-        'that read as several disputes became one thread in silence: '
+        'the organisation reached the metrics and not the advocate, so a '
+        'message that read as several disputes was reorganised in silence: '
         + ' | '.join(e.text[:90] for e in out.answer.elements))
+    assert str(len(out.matter.threads)) in said[0], (
+        'the advocate is not told how many disputes the file was organised '
+        'into: ' + said[0])
 
     # AND IT INVITES THE CORRECTION. A disclosure the advocate cannot act
     # on is a note, not a question.
-    assert 'say so' in said[0].lower(), (
+    assert 'correct' in said[0].lower(), (
         'the advocate is told the count and not how to correct it: '
         + said[0])
 

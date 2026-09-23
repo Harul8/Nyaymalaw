@@ -49,7 +49,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 
-from nm.core.requirements import ANSWER_RULE, ANSWER_SCHEMA
+from nm.core.requirements import ANSWER_ROWS, ANSWER_RULE
 from nm.domain.quotable import Quotable
 from nm.domain.text import fold, refuses_blank_text
 
@@ -146,7 +146,7 @@ DISPUTE_SCHEMA: dict = {
         "advance_quote": {"type": "string", "description":
                           "Exact request to continue the whole-file review or the next dispute, "
                           "else empty. Not an acknowledgement, fact or request to stop."},
-        "requirement_answers": ANSWER_SCHEMA,
+        "requirement_answers": ANSWER_ROWS,
     },
     "required": ["verdict", "quoted", "why", "disputes", "focus_thread_id", "focus_quote",
                  "advance_quote", "requirement_answers"],

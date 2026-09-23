@@ -57,6 +57,34 @@ def _turn(client, message: str, matter_id: str | None = None) -> dict:
     return r.json()
 
 
+def _advised(client) -> dict:
+    """THE BRIEF, THEN THE ADVOCATE CONFIRMS THE ACCRUAL. Returns the turn that
+    computes under it.
+
+    Since `602e3f0` a MODEL-SELECTED accrual is conditional: naming a dated
+    entry does not establish that it satisfies the Article's trigger, so the
+    first turn serves the arithmetic as CONDITIONAL and records no deadline
+    (G-PREMISE, `tests/test_premises_come_before_arithmetic.py`). These tests
+    were written before that decision and asked the first turn for a
+    deadline; the rule they state -- a correction reaches exactly what rests
+    on the corrected fact -- is about a DEFINITIVE limitation, and the product
+    reaches one only through the advocate. So they take that path.
+
+    The premise names the TRIGGER, not a date: the period must still run from
+    the dated entry, or correcting that entry would have nothing to reach.
+    """
+    first = _turn(client, BRIEF)
+    matter_id = first["matter_id"]
+    thread_id = client.get(f"/api/matters/{matter_id}").json()["threads"][0]["thread_id"]
+    r = client.post(
+        f"/api/matters/{matter_id}/threads/{thread_id}/premises/accrual_rule",
+        json={"statement": "time runs from the delivery of the goods against "
+                           "the invoices", "source": "the advocate",
+              "expected_version": first["matter_version"]})
+    assert r.status_code == 201, r.text
+    return _turn(client, "Where does the limitation stand now?", matter_id)
+
+
 def _dated_fact(client, matter_id: str) -> dict:
     """The live entry that carries the date the limitation ran from."""
     casefile = client.get(f"/api/matters/{matter_id}/casefile").json()
@@ -126,7 +154,7 @@ def _names(matter_id: str, client) -> dict:
 def test_a_served_turn_records_what_it_derived_and_what_each_rests_on(client):
     """THE FIRST HALF OF THE WIRING: the ledger exists on the matter after a
     turn, and the three nodes name their inputs by kind."""
-    out = _turn(client, BRIEF)
+    out = _advised(client)
     matter_id = out["matter_id"]
     names = _names(matter_id, client)
 
@@ -181,7 +209,7 @@ def test_correcting_the_date_invalidates_the_deadline_and_not_the_role(client):
     and no unrelated conclusion, while preserving the prior state and reason
     for change.`
     """
-    out = _turn(client, BRIEF)
+    out = _advised(client)
     matter_id = out["matter_id"]
     names = _names(matter_id, client)
 
@@ -246,7 +274,7 @@ def test_the_correction_needs_the_version_it_was_composed_against(client):
 def test_a_withdrawn_entry_cannot_be_corrected_twice(client):
     """One correction is one revision. Correcting the superseded entry again
     would make one change read as two, and leave a chain nothing walks."""
-    out = _turn(client, BRIEF)
+    out = _advised(client)
     matter_id = out["matter_id"]
     entry, _ = _correct_the_date(client, matter_id)
     version = client.get(f"/api/matters/{matter_id}/casefile").json()["version"]
@@ -289,7 +317,7 @@ def test_a_stale_conclusion_is_labelled_stale_on_the_served_cover(client, tmp_pa
     is read from the file, and the file must say the deadline is stale, keep
     the role current, and never put the old date at the top of the board.
     """
-    out = _turn(client, BRIEF)
+    out = _advised(client)
     matter_id = out["matter_id"]
     names = _names(matter_id, client)
     board_before = client.get(f"/api/matters/{matter_id}").json()
@@ -345,7 +373,7 @@ def test_the_next_turn_recomputes_and_closes_the_revision(client):
     """REWORK THROUGH THE EXISTING MECHANISM: the next turn derives the
     limitation again, from the corrected date, and the revision closes with
     `was` AND `now`."""
-    out = _turn(client, BRIEF)
+    out = _advised(client)
     matter_id = out["matter_id"]
     names = _names(matter_id, client)
     _correct_the_date(client, matter_id)
@@ -385,7 +413,7 @@ def test_planted_serving_the_old_figure_as_current_is_refused(client):
     from nm.edge.api import _register_of
     from nm.edge.projections import _thread_row
 
-    out = _turn(client, BRIEF)
+    out = _advised(client)
     matter_id = out["matter_id"]
     names = _names(matter_id, client)
     _correct_the_date(client, matter_id)

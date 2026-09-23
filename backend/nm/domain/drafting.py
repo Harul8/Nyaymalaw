@@ -42,6 +42,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from nm.domain.spoken import named
 from nm.domain.text import blank, refuses_blank_text, snippet
 
 
@@ -143,17 +144,17 @@ class Claim:
     def problems(self) -> tuple[str, ...]:
         out: list[str] = []
         if self.provenance.needs_a_locator and blank(self.locator):
-            out.append(f"{snippet(self.text, 60)!r} is {self.provenance.value} and "
+            out.append(f"{named(snippet(self.text, 60))} is {self.provenance.value} and "
                        f"names no locator; extracted text that cannot be found "
                        f"again is an assertion with a citation-shaped label")
         if self.provenance.needs_a_locator and blank(self.source_version):
-            out.append(f"{snippet(self.text, 60)!r} names a locator and no source "
+            out.append(f"{named(snippet(self.text, 60))} names a locator and no source "
                        f"version; a passage that moved is a different passage")
         if not blank(self.quoted) and not self.verified:
-            out.append(f"{snippet(self.text, 60)!r} carries a quotation nobody checked "
+            out.append(f"{named(snippet(self.text, 60))} carries a quotation nobody checked "
                        f"against its source")
         if self.provenance is Provenance.UNRESOLVED_GAP and blank(self.why_unresolved):
-            out.append(f"{snippet(self.text, 60)!r} is an unresolved gap and does not "
+            out.append(f"{named(snippet(self.text, 60))} is an unresolved gap and does not "
                        f"say what is missing, so nobody can close it")
         return tuple(out)
 

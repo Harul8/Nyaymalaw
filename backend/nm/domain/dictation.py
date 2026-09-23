@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from nm.domain.text import refuses_blank_text
+
 #: The largest recording accepted for one dictation. Five minutes of the Opus
 #: audio a browser records is a few MiB; this leaves room for other codecs and
 #: refuses anything that is not a spoken note before it is read.
@@ -26,6 +28,10 @@ DICTATION_MEDIA = frozenset({
 })
 
 
+# `text` EMPTY IS "HEARD NOTHING": the speech model filters silence, and a
+# recording with no speech in it transcribes to no words -- a result, not a
+# missing value. `language` EMPTY IS "COULD NOT TELL", as documented below.
+@refuses_blank_text("text", "language")
 @dataclass(frozen=True)
 class Transcript:
     """What the speech model heard. Carries no audio, deliberately."""

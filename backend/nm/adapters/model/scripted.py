@@ -1222,21 +1222,44 @@ class ScriptedModelAdapter:
             # source with a guessed target. Production performs its own judgment.
             units = schema['properties']['source_allocations']['properties']
             fixed = schema.get('x-nm-fixed-inventory')
+
+            def same(row, target):
+                # A NEW DISPUTE HAS NO THREAD ID YET, so on the fixed table it is
+                # the LABEL that names it. Matching `'' == ''` put every new row
+                # on every new target and allocated each paragraph to all of them.
+                if target['thread_id']:
+                    return row.get('thread_id') == target['thread_id']
+                return not row.get('thread_id') and row.get('label') == target['label']
+
             rows = ([(i, row) for i, target in enumerate(fixed, 1)
-                     for row in data['disputes'] if row.get('thread_id') == target['thread_id']]
+                     for row in data['disputes'] if same(row, target)]
                     if fixed else list(enumerate(data['disputes'], 1)))
             data['source_allocations'] = {
                 key: [i for i, row in rows
                       if any(span and (span in unit['description'] or unit['description'] in span)
                              for span in [row['quoted'], *row['additional_quotes']])]
                 for key, unit in units.items()}
+            # A SHARED INSTRUCTION GOES TO EVERY DISPUTE, which is what the read
+            # is told (`nm.core.dispute`: "allocating shared instructions to
+            # every affected entry"). On an enumerated brief the unit that no
+            # dispute's own span covers -- "We act for the plaintiff." ahead of
+            # "First, ... Second, ..." -- is that instruction. Not a guessed
+            # target: all of them, which is the only answer that names none.
+            # A single-dispute brief is untouched, so a unit the double cannot
+            # place there still reaches the product's refusal.
+            everyone = sorted({i for i, _row in rows})
+            if len(everyone) > 1:
+                data['source_allocations'] = {
+                    key: found or everyone
+                    for key, found in data['source_allocations'].items()}
             data['disputes'] = [{k: row[k] for k in ('label', 'thread_id')}
                                 for row in data['disputes']]
             data['quoted'] = ''
             if fixed:
                 data = {k: data[k] for k in (
                     'source_allocations', 'focus_thread_id', 'focus_quote')}
-        if schema.get('x-nm-read') == 'investigation' and 'basis_id' not in schema['properties']:
+        if (schema.get('x-nm-read') == 'investigation'
+                and 'basis_id' not in schema.get('properties', {})):
             data.pop('basis_id', None)
         require_schema(data, schema)
         return self._result(None, data, prompt, tier, started)

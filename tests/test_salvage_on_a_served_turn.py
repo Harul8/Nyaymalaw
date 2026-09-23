@@ -24,7 +24,7 @@ import pytest
 from nm.core import adversarial as adv
 from nm.core.turn import TurnInput
 
-from tests.test_turn_contract import build
+from tests.test_turn_contract import build, confirmed
 
 pytestmark = pytest.mark.class_a
 
@@ -42,9 +42,20 @@ EXPIRED = ("We act for the plaintiff, a supplier at Hyderabad. Goods were "
 
 
 def _run(tmp_path, message=EXPIRED):
-    engine, _ = build(tmp_path)
-    return engine.run(TurnInput(advocate_id="adv_1", message=message,
-                                today=date(2026, 9, 4)))
+    """A turn whose accrual the ADVOCATE HAS CONFIRMED, on every brief.
+
+    Salvage answers a claim that FAILS, and since `602e3f0` a model-selected
+    accrual is conditional -- so without the confirmation no period has run
+    definitively and salvage never fires. That would turn this file's negative
+    tests vacuous: *no salvage on a live claim* passes just as well when
+    salvage cannot run at all. Confirming on every brief keeps both halves
+    about the same thing (`tests.test_turn_contract.confirmed`).
+    """
+    engine, store = build(tmp_path)
+    return confirmed(engine, store,
+                     TurnInput(advocate_id="adv_1", message=message,
+                               today=date(2026, 9, 4)),
+                     trigger="time runs from the delivery of the goods")
 
 
 def _text(out):

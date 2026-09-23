@@ -46,6 +46,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from nm.domain.matter import ThreadId
+from nm.domain.quotable import Quotable
 from nm.domain.register import PEER
 from nm.domain.text import blank, fold, refuses_blank_text, snippet
 from nm.domain.traceability import implements
@@ -488,7 +489,9 @@ def read_exposures(said: dict, threads: tuple[ThreadId, ...],
                 quote = row.get(prefix + '_quote')
                 if not held or not isinstance(quote, str) or not quote.strip():
                     return None
-                if fold(quote) not in fold(held):
+                # THE ONE GUARD (`Quotable.accepts`), asked of the fact the row
+                # names -- not a second `fold(...) in fold(...)` beside it.
+                if not Quotable(file=held).accepts(quote):
                     return None
                 quotes.append(fold(quote))
             if quotes[0] == quotes[1]:

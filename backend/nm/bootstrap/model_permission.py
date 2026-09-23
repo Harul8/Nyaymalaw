@@ -10,7 +10,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from nm.domain.egress import DataClass, Policy, ProcessingException, Processor, Sink
-from nm.domain.external_ai import NOTICE_VERSION, PROVIDER, ModelPermissionRefused
+from nm.domain.external_ai import NOTICE_VERSION, ModelPermissionRefused
+
+#: The one processor the owner's exception names. HERE, in the composition
+#: root, and not in `nm.domain.external_ai`: a provider named in the domain is
+#: provider knowledge on a path that must not have it
+#: (`tests/test_provider_independence.py`).
+PROVIDER = "openai"
 
 OWNER_BASIS = "OWNER-2026-09-21-GLOBAL-OPENAI-TEXT-NOT-COUNSEL-CLEARANCE"
 

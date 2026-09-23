@@ -199,7 +199,12 @@ def test_the_rule_is_about_subject_matter_and_not_about_tone():
     # Six copies of a sentence drift within a slice.
     assert "+ PEER +" in body
     assert "Where the file already holds the material" in PEER
-    assert "the section restated" in PEER
+    # REWORDED IN `602e3f0` under the owner-approved PEER policy: an
+    # explanation the advocate asked for, or needs to assess the held
+    # material, is now permitted (see `nm.domain.register`'s docstring). The
+    # rule this asserts survived the change -- the generic requirement is
+    # not restated UNASKED -- and it is the rule, not the old sentence.
+    assert "Avoid unsolicited repetition of generic requirements" in PEER
 
     assert "_positions_note(thread)" in body, (
         "the rule is in the prompt and the material it needs is not, which "

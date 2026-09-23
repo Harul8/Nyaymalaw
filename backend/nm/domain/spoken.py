@@ -122,7 +122,34 @@ def dispute(label: str) -> str:
     does not reach them at all.
     """
     clean = (label or "").strip()
-    return repr(clean) if clean else "an unlabelled dispute"
+    return named(clean) if clean else "an unlabelled dispute"
+
+
+#: The marks `named` delimits with. Typographic SINGLE quotes, because the
+#: grounding gate reads straight and curly DOUBLE quotes as a quotation of
+#: retrieved text (`nm.core.grounding._QUOTED`) and deliberately ignores
+#: single ones.
+_OPEN, _CLOSE = "‘", "’"
+
+
+def named(text: str) -> str:
+    """A string the product HOLDS, set into prose a person or the model reads.
+
+    NEVER `repr`, and this is the whole reason the function exists. `repr`
+    picks its delimiter from the content: `'lease arrears'` but `"Use of
+    firm's mark 'VAISHNAVI'"` -- one apostrophe and the product's own label
+    arrives in DOUBLE quotes, which is exactly what G-QUOTE reads as a
+    quotation of retrieved text. Measured on 22 September 2026: three of five
+    live matters withheld on thread labels this product composed itself,
+    `"Injunction against Ravi's intention to sell the property."` among them.
+    The gate was right each time; the renderer was handing it a quotation
+    nobody made.
+
+    So the delimiter is FIXED and it is one the gate does not read. The
+    content is not touched: a double-quoted phrase INSIDE the string is a
+    quotation that string really carries, and checking it is the gate's job.
+    """
+    return f"{_OPEN}{text}{_CLOSE}"
 
 
 def phrase(value: Enum | None, absent: str = "not stated") -> str:

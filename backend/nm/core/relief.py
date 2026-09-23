@@ -66,6 +66,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from nm.core.premise import SUFFICIENT, Basis
+from nm.domain.spoken import named
 from nm.domain.text import blank, refuses_blank_text
 from nm.domain.traceability import implements
 
@@ -456,21 +457,21 @@ def consistency_claims(position: ReliefPosition | None,
         remedy, _coord, why = position.defeated[0]
         out.append((
             "relief",
-            f"The relief that would serve {obj!r} ({remedy}) is {why}. A step "
+            f"The relief that would serve {named(obj)} ({remedy}) is {why}. A step "
             f"that pursues it as though it will deliver contradicts this; "
             f"pursuing it needs an explicit reservation that it may not."))
     elif position.state is ReliefState.CONTINGENT and position.contingent:
         remedy, _coord, why = position.contingent[0]
         out.append((
             "relief",
-            f"Whether the relief that would serve {obj!r} ({remedy}) delivers "
+            f"Whether the relief that would serve {named(obj)} ({remedy}) delivers "
             f"is NOT established -- {why}. A step that pursues it as though it "
             f"certainly will deliver contradicts this; it needs an express "
             f"reservation, or the shortfall confirmed first."))
     for remedy, why in position.disproportionate:
         out.append((
             "proportionality",
-            f"The route {remedy!r} {why}. A step recommending it as plainly "
+            f"The route {named(remedy)} {why}. A step recommending it as plainly "
             f"worthwhile, without stating that the cost exceeds the recovery, "
             f"contradicts this."))
     return tuple(out)

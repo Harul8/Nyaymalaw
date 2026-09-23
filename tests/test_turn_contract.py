@@ -206,6 +206,41 @@ def build(tmp_path, evidence=None, responses=None, model=None,
     return (briefed(engine) if intake else engine), store
 
 
+def confirmed(engine, store, turn: TurnInput, *, trigger: str,
+              again: str = "Where does the limitation stand now?"):
+    """ONE TURN, THEN THE ADVOCATE CONFIRMS THE ACCRUAL, THEN THE TURN THAT
+    COMPUTES UNDER IT. Returns that second turn's output.
+
+    Since `602e3f0` a MODEL-SELECTED accrual is conditional: naming a dated
+    entry does not establish that it satisfies the Article's trigger, so a
+    first turn serves the arithmetic as CONDITIONAL and registers no dated
+    deadline. A rule about a DEFINITIVE window -- a by-when, a passed bar, a
+    correction reaching the deadline -- is reached only through the advocate,
+    and this is that path at the engine, recorded exactly as
+    `POST .../premises/accrual_rule` records it (`nm.edge.api.state_premise`).
+
+    ONE HELPER, so the tests that need a confirmed accrual cannot each invent
+    a different way of getting one. `trigger` names the event, never a date:
+    the period must still rest on the dated entry, or a correction to that
+    entry would have nothing to reach.
+    """
+    from dataclasses import replace
+
+    from nm.domain.matter import new_id
+
+    first = engine.run(turn)
+    matter = store.load(first.matter.id)
+    thread = matter.threads[0]
+    stated = dict(thread.premises_stated or {})
+    stated["accrual_rule"] = {"statement": trigger, "source": "the advocate",
+                              "by": turn.advocate_id, "at": turn.today.isoformat()}
+    store.commit(matter.with_thread(replace(thread, premises_stated=stated)),
+                 expected_version=matter.version)
+    # A NEW TURN ID, or the engine replays the first turn's receipt.
+    return engine.run(replace(turn, message=again, matter_id=matter.id,
+                              turn_id=new_id("turn"), expected_version=None))
+
+
 # ======================================================= routing ==========
 
 @refuses("B1", 0)

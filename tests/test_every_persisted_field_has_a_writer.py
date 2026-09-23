@@ -260,6 +260,17 @@ RESERVED: dict[str, str] = {
         "reason. Reserved rather than deleted: the field is what makes the "
         "exception visible on the file afterwards, and an exception nobody "
         "can see later is indistinguishable from a screen that passed.",
+    "Thread.deferred_reason":
+        "OPEN. Four readers and no workflow that sets it. The dispute agenda "
+        "shows a thread carrying a reason as PAUSED with that reason, the "
+        "cover's stage reads it as BLOCKED, the board shows it, and the file "
+        "memory tells the model the dispute is deferred -- all fail-closed. "
+        "What looked like a writer until 22 September 2026 was "
+        "`threading._with_identifiers` COPYING the field through an explicit "
+        "`Thread(...)` constructor; `602e3f0` replaced that with `replace(...)`, "
+        "and this scan then correctly found nothing had ever put a value "
+        "there. Retire this reservation when an advocate can defer a dispute "
+        "and the reason is recorded from their words.",
     # -- guarded, so the reservation cannot rot into a silent gap ------------
     "Provenance.document":
         "`Provenance.__post_init__` REFUSES a `kind='document'` provenance "

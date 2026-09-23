@@ -485,10 +485,16 @@ def test_actual_wire_schemas_do_not_reintroduce_the_old_prompt_instructions():
                         key,
                     )
                 schemas.append((name, key))
-    # Original 21, plus the dispute's answer contract and both requirement schemas.
-    assert len(schemas) == 24, schemas
+    # Original 21, plus the requirement read. The dispute's answer contract is
+    # a FRAGMENT (`requirements.ANSWER_ROWS`), not a read: it is scanned where
+    # it is sent, inside the dispute read's schema, and that is asserted here
+    # so renaming it out of the `*SCHEMA` population did not drop it.
+    assert len(schemas) == 22, schemas
     assert ('requirements', 'SCHEMA') in schemas
-    assert ('dispute', 'ANSWER_SCHEMA') in schemas
+    from nm.core import dispute, requirements
+    assert (dispute.DISPUTE_SCHEMA["properties"]["requirement_answers"]
+            is requirements.ANSWER_ROWS)
+    assert ('dispute', 'DISPUTE_SCHEMA') in schemas
     closing = proof_read.PROOF_SCHEMA["properties"]["positions"]["items"]["properties"]
     assert "not_assessed" in closing["closing_material"]["description"]
     assert factors.FACTOR_SCHEMA["properties"]["in_writing"]["type"] == ["boolean", "null"]

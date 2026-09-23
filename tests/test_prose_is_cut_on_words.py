@@ -75,14 +75,6 @@ PROSE = frozenset({
 #: above it -- an exemption that drifts onto a different line is worse than no
 #: exemption, because it silently permits whatever lands there next.
 EXEMPT: dict[tuple[str, str], str] = {
-    ("backend/nm/core/posture.py", "account.strip()[:2500]"):
-        "the account into a model prompt: a budget, and nobody reads the seam",
-    ("backend/nm/core/route.py", "message.strip()[:1200]"):
-        "the message into a model prompt: a budget",
-    ("backend/nm/core/turn.py", "turn.message.strip()[:1500]"):
-        "the message into a model prompt: a budget",
-    ("backend/nm/core/turn.py", "turn.message.strip()[:300]"):
-        "the message into a model prompt: a budget",
     ("backend/nm/core/turn.py", "element.text[:400]"):
         "a fragment kept to seed a retrieval, never rendered",
     ("backend/nm/core/turn.py", "read.described[:6]"):
@@ -285,10 +277,10 @@ def test_no_sentence_an_advocate_reads_is_cut_to_a_character_count():
           "fits and marks the elision, so the shortening is visible and the "
           "remainder is not silently reported as absent.")
 
-    assert len(EXEMPT) == 6, (
+    assert len(EXEMPT) == 2, (
         f"the exemption list is now {len(EXEMPT)} long. Each entry is a cut "
         f"nobody reads as English -- a model budget or a tuple of labels -- "
-        f"and a seventh needs the same argument made in writing.")
+        f"and a third needs the same argument made in writing.")
     missing = set(EXEMPT) - seen_exempt
     assert not missing, (
         f"{sorted(missing)} is exempted and no longer exists. A stale "

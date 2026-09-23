@@ -533,7 +533,14 @@ def test_neither_board_carries_analysis(client):
                    "passed_deadlines", "loud", "conflict", "deferred_reason",
                    "deadline_assessment", "deadline_unreadable", "deadline_unassessed",
                    "uncomputed_deadlines", "next_deadline_currency",
-                   "stale_deadline", "stale_deadlines"}
+                   "stale_deadline", "stale_deadlines",
+                   # `information_followups` IS STATUS (4cf913b). Each row is
+                   # an obligation the advocate recorded -- who is getting
+                   # what, by when, and whether that date is due -- the same
+                   # shape as `uncomputed_deadlines`, and it carries no
+                   # `because` and no consequence. Its `status` is arithmetic
+                   # on the date: `date_not_given`, `due`, `upcoming`.
+                   "information_followups"}
     for row in board["threads"]:
         extra = set(row) - thread_keys
         assert not extra, (
@@ -558,7 +565,9 @@ def test_neither_board_carries_analysis(client):
                    "next_deadline", "next_deadline_status", "blocked",
                    "last_touched", "deadline_assessment", "deadline_unreadable",
                    "deadline_unassessed", "passed_deadlines", "uncomputed_deadlines",
-                   "next_deadline_currency", "stale_deadline", "stale_deadlines"}
+                   "next_deadline_currency", "stale_deadline", "stale_deadlines",
+                   # Status, for the reason given on the thread board above.
+                   "information_followups"}
     for row in listing["matters"]:
         extra = set(row) - matter_keys
         assert not extra, f"the matter list carries {sorted(extra)}"
