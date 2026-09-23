@@ -411,6 +411,18 @@ def interpret(data: dict, step: str, offered: frozenset[str]) -> Verdict:
             refused=(f"the consistency read named {claim_id!r}, which is not "
                      f"one of the computed facts it was shown"))
 
+    # AN EMPTY QUOTATION POINTS AT NOTHING. It used to pass the check below,
+    # because the empty string is inside every step: measured 23 September
+    # 2026, two live verdicts named `limitation`, quoted nothing, and withheld
+    # the step -- one whose own reason read "the step does not assert anything
+    # about a limitation period". The rule above is that a contradiction
+    # nobody can point at is not one; this is the case it did not reach.
+    if not fold(quoted):
+        return Verdict(
+            why=why or "the read named a fact but pointed at nothing in the step",
+            refused=(f"the consistency read named {claim_id!r} and quoted nothing "
+                     f"from the step"))
+
     held = fold(step)
     if not held or fold(quoted) not in held:
         return Verdict(

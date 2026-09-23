@@ -1,0 +1,263 @@
+{
+ "variant": "extraction",
+ "counts": {
+  "false_contradiction": 15,
+  "missed_contradiction": 0,
+  "correct": 8
+ },
+ "cases": [
+  {
+   "source": "live m_2ff27ae4de t0 (#2 as read)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step asserts that the eight unassessed factors will be examined to determine their impact on the limitation period, which suggests no current knowledge of their effect, contradicting the computed fact that states this effect is not computed.",
+    "claim_id": "unweighed",
+    "quoted": "the eight unassessed factors against the limitation period specified in Article 65 to determine their impact"
+   }
+  },
+  {
+   "source": "live m_2ff27ae4de t0 (#3 as read)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step states that the impact of the unassessed factors on the limitation period has not been computed, whereas the computed fact states that the unweighed items do not restart or extend the period, which creates a contradiction.",
+    "claim_id": "unweighed",
+    "quoted": "their impact on the limitation period has not been computed"
+   }
+  },
+  {
+   "source": "live m_3924fbe7cd t0 (#4 as read)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step asserts a basis for calculating the limitation period starting from a specific date, while the computed fact states that no limitation period has been established.",
+    "claim_id": "limitation",
+    "quoted": "calculating the limitation period starting from August 1, 2019"
+   }
+  },
+  {
+   "source": "live m_3924fbe7cd t0 (#5 as read)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step asserts the need to investigate the limitation period, but the computed fact states that no limitation period has been computed on this thread; thus, the established fact regarding limitation is contradicted by the step's implications of determining a limitation period, thus presuming one exists.",
+    "claim_id": "limitation",
+    "quoted": "limitation period related to the tenant's possession"
+   }
+  },
+  {
+   "source": "live m_39c8b67085 t0 (#6 as read)",
+   "label": "consistent",
+   "verdict": "consistent",
+   "outcome": "correct",
+   "answer": {
+    "why": "The step asserts to review the tenant's written statement to identify any defenses that may affect the eviction proceedings, while the computed fact states that we act for the plaintiff against Prakash Rao and our client is the landlord Sunitha Reddy as the moving party, and not identifying any weaknesses on the landlord's side.",
+    "claim_id": "side",
+    "quoted": "we act for the plaintiff — the moving party (stated). Against: Prakash Rao. Our client is Sunitha Reddy."
+   }
+  },
+  {
+   "source": "live m_39c8b67085 t0 (#7 as read)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step acknowledges that the limitation period has not been established, while the computed fact states that the legal position is not established regarding limitation; hence it contradicts the lack of a clear expiry date or established position on the limitation period.",
+    "claim_id": "limitation",
+    "quoted": "the limitation period has not been established in this matter"
+   }
+  },
+  {
+   "source": "live m_4aba1ac854 t0 (#8 as read)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step asserts that Kiran Kumar's exit triggers the right to sue for dissolution, which contrasts with the computed fact stating there is no limitation period established.",
+    "claim_id": "limitation",
+    "quoted": "the limitation period."
+   }
+  },
+  {
+   "source": "live m_4aba1ac854 t0 (#9 as read)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step asserts that Kiran Kumar's exit on January 3, 2026, may influence the understanding of potential actions for dissolution, while the computed fact indicates that no limitation period has been computed on this thread and does not establish a date's influence on the matter.",
+    "claim_id": "limitation",
+    "quoted": "January 3, 2026"
+   }
+  },
+  {
+   "source": "live m_782fc33e87 t0 (#12 as read)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step asserts whether the tenant's possession became adverse as of August 1, 2019. The computed fact states that no limitation period has been computed and whether a window is open or closed is not established, contradicting a settled position regarding a limitation expiry date.",
+    "claim_id": "limitation",
+    "quoted": "as of August 1, 2019"
+   }
+  },
+  {
+   "source": "live m_782fc33e87 t0 (#13 as read)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step asserts that there is an inference regarding the tenant's possession becoming adverse as of August 1, 2019, while the computed fact states that no limitation period has been established on the thread regarding this matter.",
+    "claim_id": "limitation",
+    "quoted": "adverse as of August 1, 2019"
+   }
+  },
+  {
+   "source": "live m_eb4da73fee t0 (#19 as read)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step states a relevant date for the hearing, while the computed fact indicates the absence of an established deadline.",
+    "claim_id": "register",
+    "quoted": "6 October hearing"
+   }
+  },
+  {
+   "source": "live m_eb4da73fee t0 (#20 as read)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step suggests that the criminal case is set for a hearing on 6 October, indicating a specific date, which contradicts the fact that no deadline with an established date has been recorded.",
+    "claim_id": "register",
+    "quoted": "the 6 October hearing"
+   }
+  },
+  {
+   "source": "live m_f9884f074f t1 (#26 as read)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step asserts the request for a copy of the charge sheet for timely preparation for the upcoming criminal case, implying a specific deadline related to the criminal case. The computed fact indicates that no limitation period has been established, and mentioning a specific hearing date would contradict that.",
+    "claim_id": "limitation",
+    "quoted": "upcoming criminal case hearing scheduled for October 6, 2026."
+   }
+  },
+  {
+   "source": "live m_f9884f074f t1 (#27 as read)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step asserts that the date of the upcoming criminal case hearing is pending, while the computed fact states a specific date for the criminal case, which contradicts this assertion.",
+    "claim_id": "limitation",
+    "quoted": "the date of which is not established but is pending"
+   }
+  },
+  {
+   "source": "live m_66384fc2ea t0 (unflagged)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step asserts that there is no limitation period computed, while the computed fact states that words are needed to establish a limitation expiry date or to determine if the claim is within or out of time.",
+    "claim_id": "limitation",
+    "quoted": "no limitation period has been computed on this thread"
+   }
+  },
+  {
+   "source": "live m_9618acaf88 t5 (unflagged)",
+   "label": "consistent",
+   "verdict": "consistent",
+   "outcome": "correct",
+   "answer": {
+    "why": "The step asserts that the ownership claim is being assessed first, which suggests that the matter is being treated as settled without any ongoing limitation or deadline. However, the computed fact states there's no established limitation period, deadline for filing, or compliance for this matter.",
+    "claim_id": "limitation",
+    "quoted": "the ownership claim is being assessed first"
+   }
+  },
+  {
+   "source": "live m_eb4da73fee t1 (unflagged)",
+   "label": "consistent",
+   "verdict": "contradicted",
+   "outcome": "false_contradiction",
+   "answer": {
+    "why": "The step asserts a hearing date for the criminal case was established (6 October 2026), while the computed fact states no deadline has been established on this thread for which provision governs.",
+    "claim_id": "register",
+    "quoted": "the case is listed for hearing on 6 October 2026"
+   }
+  },
+  {
+   "source": "constructed: File the suit before 14 March 2027, when your limi",
+   "label": "contradicted",
+   "verdict": "contradicted",
+   "outcome": "correct",
+   "answer": {
+    "why": "The step asserts a limitation expiry date, while the computed fact states that no limitation period has been established for this matter.",
+    "claim_id": "limitation",
+    "quoted": "before 14 March 2027, when your limitation period expires."
+   }
+  },
+  {
+   "source": "constructed: File the written statement by 12 November 2026, th",
+   "label": "contradicted",
+   "verdict": "contradicted",
+   "outcome": "correct",
+   "answer": {
+    "why": "The step asserts that there is a deadline of 12 November 2026 for filing the written statement, contradicting the computed fact that states there is no filing or compliance deadline established for this matter.",
+    "claim_id": "register",
+    "quoted": "the deadline on your register"
+   }
+  },
+  {
+   "source": "constructed: Advise the defendant to file a counter-claim again",
+   "label": "contradicted",
+   "verdict": "contradicted",
+   "outcome": "correct",
+   "answer": {
+    "why": "The step asserts that the defendant is advised to file a counter-claim against our client, which contradicts the fact stating we act for the moving party and advising the other side's move is against our own client.",
+    "claim_id": "side",
+    "quoted": "advise the defendant to file a counter-claim against our client"
+   }
+  },
+  {
+   "source": "constructed: Proceed now: the limitation window is still open, ",
+   "label": "contradicted",
+   "verdict": "contradicted",
+   "outcome": "correct",
+   "answer": {
+    "why": "The step asserts that the limitation window is still open, contradicting the computed fact stating the limitation for our side has expired.",
+    "claim_id": "limitation",
+    "quoted": "the limitation window is still open"
+   }
+  },
+  {
+   "source": "constructed: None of the eight factors restarts the period, so ",
+   "label": "contradicted",
+   "verdict": "contradicted",
+   "outcome": "correct",
+   "answer": {
+    "why": "The step asserts that the eight factors do not restart the period, indicating that the claim is time-barred, while the computed fact states that the effect of the unweighed items has not been determined.",
+    "claim_id": "unweighed",
+    "quoted": "None of the eight factors restarts the period, so the claim is time-barred."
+   }
+  },
+  {
+   "source": "constructed: The limitation position is settled: the claim is w",
+   "label": "contradicted",
+   "verdict": "contradicted",
+   "outcome": "correct",
+   "answer": {
+    "why": "The step asserts that the claim is within time, while the computed fact states that the legal position on limitation is not established.",
+    "claim_id": "limitation",
+    "quoted": "the claim is within time"
+   }
+  }
+ ]
+}

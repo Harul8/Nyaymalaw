@@ -912,3 +912,64 @@ false-positive rate across the sixteen is NOT established**. It is the same
 shape as the independence read -- a model verdict inside a gate -- and the same
 method applies: a labelled harness in both directions, then structure rather
 than wording.
+
+
+---
+
+# 11. G-CONSISTENT, measured -- and why the fix is a decision, not a prompt
+
+Ledger after: **864 calls, USD 0.5653 of 2.00.**
+
+## 11.1 The population, labelled
+
+Across the last day's stored turns the consistency read named a contradiction on
+**27 of 33** calls, and G-CONSISTENT withheld the next step on **16 of 23**
+turns. Read one by one against the prompt's own definition: **24** were not
+contradictions (a rule explained, a fact asked to be confirmed, the date the
+advocate gave mentioned, the opponent's claim described -- and four that
+AGREED with the fact in so many words); **2** arguable; **1** already refused
+by the id guard; **0** clear contradictions.
+
+Two records cost time and are worth knowing: the transcript stores a model's
+answer as a Python repr STRING, and truncates a prompt at 4,000 characters --
+11 of 28 recorded consistency prompts lost part or all of the step, so the
+harness replays only the 17 complete ones rather than a prompt production never
+sent.
+
+## 11.2 Five variants, one answer
+
+Seventeen real sound steps and six constructed true contradictions (built from
+real fact sentences through `consistency.build_prompt`):
+
+| Variant | Sound steps deleted | Contradictions missed |
+|---|---|---|
+| as shipped | 13/17 | 0/6 |
+| "could both be true?" + reason first | 15/17, 15/17 | 0/6 |
+| extraction instead of judgment | 14/17, 15/17 | 0/6 |
+| whole pipeline, as today | 14/17 | 0/6 |
+| whole pipeline, limitation given one owner | 16/17 | 0/6 |
+
+The last row is the tell. With the unresolved-limitation fact withdrawn --
+G-LIMITATION owns that condition and withheld NONE of the sound steps -- the
+read simply named `register` instead, thirteen times. It names SOME fact almost
+every time; which one is incidental. On this model the read catches every flat
+contradiction and cannot tell agreement from contradiction, and no framing
+moved it.
+
+## 11.3 Fixed
+
+An EMPTY quotation passed the "point at it in the step" guard, because the
+empty string is inside every step. Two live withholdings were exactly that.
+Now refused, toward consistent -- the module's own direction.
+
+## 11.4 For the owner to decide
+
+* **Measure a stronger model on this read.** PRD 7.4.1 moves a read to `hard`
+  only with a recorded measurement of what it bought. The harness is ready
+  (`--tier`), but the evaluation ledger authorises only the pinned GPT-4o mini
+  -- correctly -- so running it needs your authorisation. If it works, the
+  change is configuring the hard tier and declaring this read on it.
+* **Or change G-CONSISTENT's RESPONSE** in the gate matrix from block to
+  disclose: serve the step with the named possible conflict. That keeps the
+  advice on thirteen of seventeen turns, and it is a policy change on a gate
+  B-074 exists for, so it is not made here.
