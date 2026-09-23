@@ -125,16 +125,28 @@ POSTURE_SCHEMA: dict = {
         },
         "quoted": {
             "type": "string",
-            "description": "The EXACT words from the message that state this. "
+            "description": "The EXACT words stating WHOM the advocate acts for. "
                            "Must appear verbatim. Empty string if nothing was "
                            "stated.",
+        },
+        # WHOM WE ACT FOR AND WHICH SIDE OF WHICH PROCEEDING ARE TWO FACTS, and
+        # an advocate usually states them in two sentences. See `interpret`.
+        "role_quote": {
+            "type": "string",
+            "description": "The EXACT words stating the client's procedural "
+                           "role or position on THIS dispute -- who filed, the "
+                           "procedural term used, or what the client seeks or "
+                           "resists. Often a DIFFERENT sentence from `quoted`. "
+                           "Must appear verbatim in THIS dispute's own words. "
+                           "Empty string if the role is not stated.",
         },
     },
     "additionalProperties": False,
     # Every property, because strict mode compiles the grammar from `required`
     # and a property left out of it cannot be emitted at all.
     "required": ["states_client", "role", "role_basis",
-                 "client_described_as", "opponent", "quoted", "opponent_correction_quote"],
+                 "client_described_as", "opponent", "quoted", "role_quote",
+                 "opponent_correction_quote"],
 }
 
 SYSTEM = (
@@ -173,8 +185,20 @@ SYSTEM = (
     "`opponent` is who the client is AGAINST, in the advocate's own words, "
     "and ONLY where they said it. Do not work it out from the events. Empty string if they did "
     "not name one.\n\n"
-    "`quoted` must be the exact words from the message, copied character for "
-    "character."
+    "WHOM YOU ACT FOR AND THE CLIENT'S ROLE ARE TWO FACTS, and they are "
+    "often stated in two different sentences. Put the sentence saying whom the "
+    "advocate acts for in `quoted`, and the sentence stating the role on THIS "
+    "dispute -- who filed, the procedural term, what the client seeks or "
+    "resists -- in `role_quote`. Do not choose a role because it is the only "
+    "one the representation sentence alone supports: read the dispute's own "
+    "words for the role.\n\n"
+    "A PROCEEDING THE ADVOCATE SAYS WAS FILED IS INSTITUTED. Where they say "
+    "they filed, instituted or are appearing in a proceeding -- or give its "
+    "case number, forum or stage -- give the filed role that forum uses "
+    "(plaintiff, petitioner, applicant, complainant, appellant, or the "
+    "answering role where the other side filed). Never not_yet_instituted.\n\n"
+    "`quoted` and `role_quote` must be the exact words from the message, "
+    "copied character for character."
 )
 
 #: A descriptor that names nobody. GRAMMAR, not vocabulary: these are the
@@ -482,6 +506,40 @@ def interpret(quotable: Quotable, data: dict) -> StatedPosture:
     # advocate sees it and can correct it in a word.
     basis = (Basis.STATED if (data.get("role_basis") or "").strip().lower()
              == "stated" else Basis.INFERRED)
+
+    # THE ROLE'S OWN QUOTATION, AND IT IS HELD TO THIS DISPUTE'S WORDS.
+    #
+    # THE MEASURED DEFECT, 23 September 2026, live matter 2. The advocate
+    # wrote "We act for Sunitha Reddy, the landlord..." and, three sentences
+    # later, "We filed RC 88/2025 before the Rent Controller and he has filed
+    # his written statement." The posture read returned `not_yet_instituted`
+    # on the eviction thread -- quoting the FIRST sentence, which says whom we
+    # act for and nothing about any proceeding. The fallback role read, on the
+    # same turn, answered `applicant` "in the RC 88/2025 proceeding", and could
+    # not be used because it carries no quotation. The matter blocked on
+    # G-POSTURE with the side written out in plain words.
+    #
+    # ONE FIELD WAS CARRYING TWO FACTS, the shape 1.5 of the dated review
+    # found for filing-versus-side, one field over. With a single `quoted`
+    # the answer could be source-bound for the representation OR for the
+    # role, and the model chose the representation.
+    #
+    # `role_quote` IS ACCEPTED ONLY FROM THIS TURN'S WORDS, which on a scoped
+    # turn are THIS dispute's allocation -- the rule `opponent_correction_quote`
+    # already applies. `quoted` may come from representation lines carried in
+    # from other disputes, because whom we act for is shared; the ROLE may
+    # not, because a role quoted out of another dispute is 1.1's contamination
+    # (a lease dispute read as `respondent` out of the cheque case) arriving
+    # through the new field. A role quote that is not this dispute's words
+    # therefore leaves the role INFERRED rather than stated -- and a
+    # prospective role, which must be stated, is then refused as it always was.
+    #
+    # An EMPTY role_quote keeps the old behaviour: many advocates name the role
+    # inside the representation sentence ("we act for the plaintiff"), and
+    # `quoted` already carries it.
+    role_quote = (data.get("role_quote") or "").strip()
+    if role_quote and not Quotable(turn=quotable.turn).accepts(role_quote):
+        basis = Basis.INFERRED
     if (role in (Role.PROSPECTIVE_CLAIMANT, Role.PROSPECTIVE_RESPONDENT)
             and basis is not Basis.STATED):
         return StatedPosture(Role.UNKNOWN, Basis.UNKNOWN, described, quoted,

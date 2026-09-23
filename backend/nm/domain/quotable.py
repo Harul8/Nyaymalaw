@@ -64,7 +64,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from nm.domain.text import fold, snippet
+from nm.domain.text import fold, snippet, words
 
 #: THE SECTION HEADINGS, as constants, because two other places need to find
 #: these sections in a rendered prompt and a literal copy there goes stale the
@@ -125,6 +125,51 @@ class Quotable:
             return False
         held = fold(self.words)
         return bool(held) and fold(quoted) in held
+
+    def verbatim(self, quoted: str) -> str:
+        """The ADVOCATE'S OWN CHARACTERS for a span `accepts` would accept.
+
+        Empty when it would not. `accepts` answers "is this their words?" and
+        folds typography to answer it; this answers "then what exactly did
+        they write?", and the two questions have to have two answers.
+
+        THE MEASURED DEFECT, 23 September 2026, live matter 2. The proof read
+        returned its HELD material wrapped in quotation marks --
+        `"The tenant Prakash Rao has been in occupation since 1 August 2019
+        ..."` -- and `accepts` rightly took it, because folding removes the
+        marks. The MODEL'S COPY was kept and rendered as "It is held on
+        "The tenant Prakash Rao ...".", and G-QUOTE, which reads a double-
+        quoted span as a claim about retrieved text, WITHHELD THE WHOLE TURN.
+        The guard was right, the renderer added nothing, and the defect was
+        keeping the transcription instead of the text it was checked against.
+
+        THE RULE: A SPAN ACCEPTED AS THE ADVOCATE'S WORDS IS KEPT AS THE
+        ADVOCATE'S WORDS. Whatever the model added around or inside it --
+        quotation marks, a changed capital, reflowed spacing -- is not what
+        the advocate wrote, and it reaches their screen as if it were.
+
+        Found by matching the folded words back onto the source as a sequence,
+        word boundary to word boundary, so the result begins and ends on the
+        advocate's words and never on a mark the model supplied. Not fuzzy
+        (CLAUDE.md section 5): the same exact-after-typography test `accepts`
+        applies, answered with a position instead of a boolean.
+        """
+        import re
+
+        if not self.accepts(quoted):
+            return ""
+        tokens = words(quoted)
+        pattern = (r"(?<![A-Za-z0-9])"
+                   + r"[^A-Za-z0-9]+".join(re.escape(t) for t in tokens)
+                   + r"(?![A-Za-z0-9])")
+        found = re.search(pattern, self.words, flags=re.IGNORECASE)
+        if found:
+            return found.group(0)
+        # `accepts` compares folded strings as substrings, so it can accept a
+        # span that begins or ends inside a word. There is then no boundary-
+        # to-boundary match to return, and the honest fallback is the span
+        # with only the marks a model wraps a quotation in removed.
+        return quoted.strip().strip("\"'\u201c\u201d\u2018\u2019").strip()
 
     def refusal(self, quoted: str) -> str:
         """The refusal, worded once.

@@ -70,7 +70,8 @@ def scripted_posture(message: str) -> str:
     if not m:
         return json.dumps({"states_client": False, "role": "not_stated",
                            "role_basis": "stated", "client_described_as": "",
-                           "opponent": "", "quoted": "", "opponent_correction_quote": ""})
+                           "opponent": "", "quoted": "", "role_quote": "",
+                           "opponent_correction_quote": ""})
     party = " ".join(m.group(1).split()).lower()
     role = next((r for r in _SCRIPTED_ROLES if party.startswith(r)), None)
     against = _SCRIPTED_OPPONENT.search(message or "")
@@ -82,6 +83,10 @@ def scripted_posture(message: str) -> str:
         "opponent": " ".join(against.group(1).split()) if against else "",
         "opponent_correction_quote": "",
         "quoted": m.group(0),
+        # The scripted read states the role inside the representation sentence
+        # ("we act for the plaintiff"), so it has no separate role sentence --
+        # the empty-role_quote path, which keeps the pre-existing behaviour.
+        "role_quote": "",
     })
 
 
@@ -1216,6 +1221,10 @@ class ScriptedModelAdapter:
             # Older controlled responses assert representation, not a correction.
             # An absent correction remains absent; never invent supporting words.
             data.setdefault('opponent_correction_quote', '')
+            # The same conversion for the same reason: a controlled response
+            # written before `role_quote` existed states the role, if at all,
+            # inside `quoted`. Empty is that assertion, not an invented one.
+            data.setdefault('role_quote', '')
         if (schema.get('x-nm-read') == 'dispute'
                 and 'source_allocations' in schema.get('properties', {})):
             # Test-double transport conversion only: never fill an unallocated

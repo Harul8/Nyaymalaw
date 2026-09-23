@@ -253,7 +253,12 @@ def _position(row: dict, ing: Ingredient, elements: Elements,
         # is the one whose material must actually be ON the file. The same
         # verbatim guard every other read applies, reached through the same
         # value the prompt was built from.
-        grounded = tuple(m for m in material if quotable.accepts(m))
+        #
+        # KEPT AS THE ADVOCATE'S WORDS, not as the model's copy of them. The
+        # model wraps a quotation in marks; folding lets the guard accept it,
+        # and the marks then reached the screen as a claimed quotation and
+        # G-QUOTE withheld the turn. See `Quotable.verbatim`.
+        grounded = tuple(v for v in (quotable.verbatim(m) for m in material) if v)
         if not grounded:
             refused.append(
                 f"{ing.element[:50]}: reported as HELD and "
