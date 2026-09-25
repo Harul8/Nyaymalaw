@@ -644,6 +644,38 @@ holds it so.
 `NOT_MEASURED` is never collapsed into `NOT_INTENDED`: an installation that
 cannot ask has not learned that the answer is no.
 
+## The codebase caught me again, twice, and both after I had pushed
+
+Recorded because the lesson is the same one this file already has a section
+for, and because I said the touched suites were green when I had not run these
+two.
+
+1. **`test_no_enum_value_reaches_the_advocate`** caught LB-124 serving
+   `bindingness.value` and `extension.value` -- so an advocate would have read
+   `not_recorded`. `Bindingness` and `Extension` are now `Spoken`, with the
+   phrases on the enum and completeness checked when the class is created, and
+   the served text reads *it binds* / *it cannot be extended*. A second
+   invariant now holds the same line from the served end, scoped to the
+   underscored values, because `commercial` and `mandatory` are ordinary
+   English words the prose uses legitimately and asserting on those would fail
+   on correct text and get relaxed away.
+
+2. **`test_a_threshold_with_its_own_renderer_is_not_said_twice`** -- LB-121's
+   own test -- caught LB-125's three rows joining the generic
+   *"Before this can be filed"* loop. They put **four** near-identical lines on
+   the page, two naming the same missing Act, which an advocate reads as four
+   separate problems. They also are not "before this can be filed" statements
+   at all: that sentence is for things the advocate DOES, and this is what the
+   product cannot READ. `_filing_requirements` now serves the three as **one**
+   sentence, and the three thresholds are declared in
+   `_THRESHOLDS_RENDERED_ELSEWHERE` -- the set that exists precisely so the
+   next dedicated renderer is an entry rather than a duplicated line.
+
+The generalisation, which is CLAUDE.md section 4 again: **a threshold row and
+its renderer are one thing, and adding the row without the entry is the second
+copy.** The set already refused it. What it could not refuse was my not running
+the suite that reads it.
+
 ## Still open after these four
 
 * **Counsel review of all five tables.** Not done. Every `curated_from` in

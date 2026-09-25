@@ -36,10 +36,11 @@ does not reintroduce it one door down.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, nonmember
 from typing import Protocol
 
 from nm.domain.matter import Role
+from nm.domain.spoken import Spoken
 from nm.domain.text import refuses_blank_text
 
 
@@ -61,23 +62,36 @@ class Track(str, Enum):
         return cls.NOT_ESTABLISHED
 
 
-class Bindingness(str, Enum):
+class Bindingness(Spoken, str, Enum):
     """Whether the period BINDS, or is a direction the court may relax.
 
     `NOT_RECORDED` is a gap in what is curated, not a finding that the period
     is directory. The two send an advocate in opposite directions.
+
+    SPOKEN, because `not_recorded` on a page is an identifier and the advocate
+    is the one person who cannot be expected to read this product's internal
+    vocabulary.
     """
 
     MANDATORY = "mandatory"
     DIRECTORY = "directory"
     NOT_RECORDED = "not_recorded"
 
+    SAID = nonmember({
+        "mandatory": "it binds",
+        "directory": "it is a direction the court may relax",
+        "not_recorded": "whether it binds is not recorded here",
+    })
+
     @classmethod
     def not_established(cls) -> "Bindingness":
         return cls.NOT_RECORDED
 
 
-class Extension(str, Enum):
+Bindingness.complete()
+
+
+class Extension(Spoken, str, Enum):
     """Whether the period can be extended once it has run.
 
     Kept apart from `Bindingness` because the two are genuinely separate
@@ -89,9 +103,18 @@ class Extension(str, Enum):
     BARRED = "barred"
     NOT_RECORDED = "not_recorded"
 
+    SAID = nonmember({
+        "available": "it can be extended",
+        "barred": "it cannot be extended",
+        "not_recorded": "whether it can be extended is not recorded here",
+    })
+
     @classmethod
     def not_established(cls) -> "Extension":
         return cls.NOT_RECORDED
+
+
+Extension.complete()
 
 
 @refuses_blank_text()

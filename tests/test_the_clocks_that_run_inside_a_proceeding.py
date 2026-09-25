@@ -231,8 +231,38 @@ def test_the_advocate_is_told_the_period_binds_and_whether_it_extends(tmp_path):
     said = " ".join(e.text for e in out.answer.elements)
     assert "A period runs inside this proceeding" in said, said[-1500:]
     assert "leave to defend" in said
-    assert "mandatory" in said
-    assert "extension is available" in said
+    # THROUGH `said`, NEVER THE VALUE. `mandatory` and `not_recorded` on a
+    # page are identifiers, and the advocate is the one person who cannot be
+    # expected to read this product's internal vocabulary.
+    assert Bindingness.MANDATORY.said in said
+    assert Extension.AVAILABLE.said in said
+
+
+def test_no_period_reaches_the_advocate_as_its_own_identifier(tmp_path):
+    """THE INVARIANT BESIDE THE SCENARIO. `test_no_enum_value_reaches_the_
+    advocate` sweeps the whole product for `.value` inside an `Element`; this
+    holds the same line from the other end, on the served text, so a phrase
+    rewritten to interpolate the member some other way is still caught.
+
+    THE POPULATION IS THE UNDERSCORED VALUES, and the restriction is the whole
+    of its honesty. `commercial` and `mandatory` are ordinary English words
+    that the surrounding prose uses legitimately -- "whether this is a
+    commercial suit" is a sentence, not a leaked identifier -- so asserting on
+    them would fail on correct text and get relaxed away. `not_recorded` and
+    `not_established` cannot be anything but this product's vocabulary.
+    """
+    engine, _ = build(tmp_path)
+    said = " ".join(e.text for e in
+                    engine.run(TurnInput(advocate_id="adv_1",
+                                         message=BRIEF)).answer.elements)
+    checked = 0
+    for enum in (Bindingness, Extension, Track):
+        for member in enum:
+            if "_" not in member.value:
+                continue
+            checked += 1
+            assert member.value not in said, f"{enum.__name__}.{member.name}"
+    assert checked >= 3, "the population emptied out, so this checks nothing"
 
 
 def test_neither_reading_of_the_written_statement_rule_is_picked(tmp_path):

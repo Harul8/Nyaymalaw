@@ -600,7 +600,21 @@ def _matter_name(message: str, parties: dict | None) -> str:
 #:
 #: `LIMITATION` is rendered in full by `_limitation_elements`, with its
 #: Article, its accrual and its alternatives.
-_THRESHOLDS_RENDERED_ELSEWHERE = frozenset({thresholds.Threshold.LIMITATION})
+#:
+#: `FORUM`, `VALUATION` and `COURT_FEES` are rendered by
+#: `_filing_requirements`, IN ONE SENTENCE. They are not three findings: they
+#: read from overlapping instruments, and served through the generic loop they
+#: put three near-identical "Before this can be filed" lines on the page, two
+#: of them naming the same missing Act. An advocate reads that as three
+#: separate problems. They are also not "before this can be filed" statements
+#: at all -- they are whether the filing will be ACCEPTED, which is a
+#: different question with a different answer. LB-125.
+_THRESHOLDS_RENDERED_ELSEWHERE = frozenset({
+    thresholds.Threshold.LIMITATION,
+    thresholds.Threshold.FORUM,
+    thresholds.Threshold.VALUATION,
+    thresholds.Threshold.COURT_FEES,
+})
 
 
 class TurnEngine:
@@ -3457,9 +3471,9 @@ class TurnEngine:
                 text=(f"A period runs inside this proceeding \u2014 "
                       f"{r.period.said} \u2014 because {r.why}. It runs from "
                       f"{r.period.runs_from}, which is not on this file, so no "
-                      f"date is computed. {r.period.period_said}. It is "
-                      f"{r.period.bindingness.value}, and extension is "
-                      f"{r.period.extension.value}: "
+                      f"date is computed. {r.period.period_said}. As to "
+                      f"whether it binds, {r.period.bindingness.said}; as to "
+                      f"extension, {r.period.extension.said} \u2014 "
                       f"{r.period.extension_said}.")))
         if undecided:
             said = "; ".join(sorted(p.said for p in undecided))
@@ -3471,6 +3485,43 @@ class TurnEngine:
                       f"one: {said}. The two read differently and I will not "
                       f"pick one because nobody said.")))
         return rows, out
+
+    def _filing_requirements(self, thread) -> list[Element]:
+        """WHETHER THE FILING WILL BE ACCEPTED, in ONE sentence. LB-125.
+
+        Forum, valuation and court fee read from overlapping instruments --
+        the same Telangana enactment answers two of the three -- so a line
+        each puts three near-identical sentences on the page naming the same
+        missing Act twice. An advocate reads that as three separate problems.
+        The gap is ONE gap and is said once, with every title named.
+
+        AND IT IS NOT A "BEFORE THIS CAN BE FILED" LINE. That sentence belongs
+        to the pre-institution conditions, which are things the advocate DOES.
+        This is what this product cannot READ, which is a different statement
+        with a different answer, and putting the two in the same words was how
+        three of them arrived wearing the fourth's clothes.
+        """
+        if self._filing is None:
+            return []
+        missing: list[str] = []
+        unreadable: list[str] = []
+        for requirement in FilingRequirement:
+            got = self._filing.readiness(requirement)
+            if got.computable:
+                continue
+            unreadable.append(requirement.value.replace("_", " "))
+            for title in got.missing:
+                if title not in missing:
+                    missing.append(title)
+        if not unreadable:
+            return []
+        return [Element(
+            kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+            text=(f"I cannot work out {', '.join(unreadable)} for this "
+                  f"filing, and I am not estimating any of them. What would "
+                  f"answer them is not held: {'; '.join(missing)}. That is "
+                  f"measured against what this corpus intends to hold, not "
+                  f"guessed from a search that returned nothing."))]
 
     def _relative_weight(self, shown, thread) -> list[Element]:
         """WHICH OF THE RETRIEVED AUTHORITIES THIS COURT MUST FOLLOW. LB-122.
@@ -3710,6 +3761,7 @@ class TurnEngine:
                 text=f"Before this can be filed — {row.reason}."))
 
         out.extend(procedural_said)
+        out.extend(self._filing_requirements(thread))
 
         if blocked:
             # IN FULL WHEN IT CHANGES, SHORT WHEN IT HAS NOT (BK-7).
