@@ -66,6 +66,12 @@ class DeadlineKind(str, Enum):
     APPEAL = "appeal"
     REVISION = "revision"
     OBJECTION = "objection"
+    #: LB-124. A period that runs INSIDE a proceeding -- the written
+    #: statement, leave to defend, the life of a caveat. Its own kind rather
+    #: than `OTHER`, because the board and the cover filter on the kind and a
+    #: procedural clock buried in `OTHER` is one an advocate cannot pick out
+    #: from the row that says "other".
+    PROCEDURAL_PERIOD = "procedural_period"
     LISTED_HEARING = "listed_hearing"
     UNDERTAKING = "undertaking"
     INFORMATION_FOLLOWUP = "information_followup"

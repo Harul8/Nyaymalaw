@@ -208,10 +208,14 @@ def build(tmp_path, evidence=None, responses=None, model=None,
     # here and appear on a served turn.
     from nm.adapters.knowledge.institution import CuratedPreInstitution
     from nm.adapters.knowledge.interim_relief import CuratedInterimRelief
+    from nm.adapters.knowledge.procedural_period import (
+        CuratedProceduralPeriods,
+    )
     engine = TurnEngine(store=store, evidence=evidence or _Evidence(),
                         model=model, coverage=profile,
                         pre_institution=CuratedPreInstitution(),
-                        interim_relief=CuratedInterimRelief())
+                        interim_relief=CuratedInterimRelief(),
+                        procedural=CuratedProceduralPeriods())
     return (briefed(engine) if intake else engine), store
 
 

@@ -16,6 +16,7 @@ from types import MappingProxyType
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
 from nm.adapters.knowledge.authority_weight import CuratedAuthorityWeight
 from nm.adapters.knowledge.interim_relief import CuratedInterimRelief
+from nm.adapters.knowledge.procedural_period import CuratedProceduralPeriods
 from nm.adapters.knowledge.elements import CuratedElements
 from nm.adapters.knowledge.institution import CuratedPreInstitution
 from nm.adapters.mail.outbox import FileOutbox
@@ -335,12 +336,18 @@ class Application:
         # them sets out no test at all, instead of reporting that none is held
         # for the relief the advocate asked about.
         self.interim_relief = CuratedInterimRelief()
+        # LB-124. The clocks that run INSIDE a proceeding, on the same
+        # register as limitation. Wired here for the same reason as the rest:
+        # an installation that has not curated them enters no period, rather
+        # than entering one it cannot source.
+        self.procedural = CuratedProceduralPeriods()
         self.engine = TurnEngine(store=self.store, evidence=self.evidence,
                                  model=self.model, coverage=self.coverage,
                                  elements=self.elements,
                                  pre_institution=self.pre_institution,
                                  authority_weight=self.authority_weight,
                                  interim_relief=self.interim_relief,
+                                 procedural=self.procedural,
                                  professional_approval=self.directory.professional_approval)
 
     def engine_for(self, advocate_id: str, *,
@@ -366,6 +373,7 @@ class Application:
                           pre_institution=self.pre_institution,
                           authority_weight=self.authority_weight,
                           interim_relief=self.interim_relief,
+                          procedural=self.procedural,
                           professional_approval=self.directory.professional_approval)
 
     # ------------------------------------------------------------ P21 ------

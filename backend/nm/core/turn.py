@@ -109,6 +109,7 @@ from nm.ports.interim_relief import (
     InterimReliefPort,
     LimbState,
 )
+from nm.ports.procedural_period import ProceduralPeriodPort, Track
 from nm.ports.coverage import CoveragePort
 from nm.ports.elements import ElementsPort
 from nm.ports.evidence import (
@@ -607,7 +608,8 @@ class TurnEngine:
                  professional_approval: Callable[[str], object] | None = None,
                  pre_institution: "PreInstitutionPort | None" = None,
                  authority_weight: "AuthorityWeightPort | None" = None,
-                 interim_relief: "InterimReliefPort | None" = None) -> None:
+                 interim_relief: "InterimReliefPort | None" = None,
+                 procedural: "ProceduralPeriodPort | None" = None) -> None:
         from nm.domain.advocate import utcnow
 
         self._clock = clock or utcnow
@@ -638,6 +640,11 @@ class TurnEngine:
         # this relief" by an installation that holds no table at all would
         # read that as a fact about the law.
         self._interim_relief = interim_relief
+        # LB-124's PROCEDURAL PERIODS. Absent, no period is entered and none
+        # is reported undecided either: "these two readings cannot be chosen
+        # between" is a statement about this matter, and an installation with
+        # no table has nothing to say about it.
+        self._procedural = procedural
         # Optional, and its ABSENCE IS NOT SILENCE: with no coverage port the
         # engine fires G-COVERAGE in the `not_measured` state rather than
         # skipping the gate, so an unwired installation discloses that it
@@ -3388,6 +3395,73 @@ class TurnEngine:
                       f"{assessment.because}.")))
         return out
 
+    def _procedural_periods(self, thread):
+        """THE CLOCKS THAT RUN INSIDE THIS PROCEEDING. LB-124.
+
+        Returns (register rows, elements). Limitation decides whether a claim
+        can be brought at all and was the only clock computed; the ones that
+        lose a DEFENCE rather than a claim -- the written statement, leave to
+        defend, the life of a caveat -- had no row anywhere.
+
+        NO DATE IS COMPUTED AND THAT IS THE HONEST POSITION. Every period runs
+        from a trigger, and whether the trigger happened, and when, is a fact
+        about the advocate's own file that nothing here reads. Each engaged
+        period therefore enters the register with `on=None`, which renders as
+        NOT_COMPUTED, NAMING THE TRIGGER that would compute it. Leaving it off
+        would tell the advocate there is no such deadline, which is the
+        opposite of what is known -- the rule the register already keeps.
+
+        THE TRACK IS NOT INFERRED. Nothing in this product establishes that a
+        suit is a commercial one, so the track-specific readings of Order VIII
+        r.1 are UNDECIDED and said to be, never resolved to the ordinary one
+        because nobody said otherwise. A defendant told their written
+        statement is late-but-curable when the right to file has been
+        forfeited has been given one sentence of confident wrong advice, and
+        so has one told the reverse.
+        """
+        if self._procedural is None:
+            return (), []
+        role = thread.posture.role
+        # STATED NEVER INFERRED, and today nothing states it. Written as a
+        # value rather than omitted so the day a track statement exists there
+        # is one line to change, not a branch to discover.
+        track = Track.not_established()
+        running = self._procedural.engaged(role, track)
+        undecided = self._procedural.undecided(role, track)
+
+        rows = tuple(deadlines.Deadline(
+            thread=thread.id, kind=deadlines.DeadlineKind.PROCEDURAL_PERIOD,
+            source=f"{r.period.act}, {r.period.said}",
+            action=(f"establish {r.period.runs_from}, then read "
+                    f"{r.period.curated_from.split(' -- ')[0]} for the period"),
+            owner="the instructing advocate",
+            consequence=(f"the period is {r.period.bindingness.value} and "
+                         f"extension is {r.period.extension.value}: "
+                         f"{r.period.extension_said}"),
+            on=None) for r in running)
+
+        out: list[Element] = []
+        for r in running:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"A period runs inside this proceeding \u2014 "
+                      f"{r.period.said} \u2014 because {r.why}. It runs from "
+                      f"{r.period.runs_from}, which is not on this file, so no "
+                      f"date is computed. {r.period.period_said}. It is "
+                      f"{r.period.bindingness.value}, and extension is "
+                      f"{r.period.extension.value}: "
+                      f"{r.period.extension_said}.")))
+        if undecided:
+            said = "; ".join(sorted(p.said for p in undecided))
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"{len(undecided)} period(s) cannot be read on this "
+                      f"thread until it is settled whether this is a "
+                      f"commercial suit of a specified value or an ordinary "
+                      f"one: {said}. The two read differently and I will not "
+                      f"pick one because nobody said.")))
+        return rows, out
+
     def _relative_weight(self, shown, thread) -> list[Element]:
         """WHICH OF THE RETRIEVED AUTHORITIES THIS COURT MUST FOLLOW. LB-122.
 
@@ -3536,6 +3610,12 @@ class TurnEngine:
             "ours; a counterclaim would have its own accrual",
             thread.chronology) if defending else claimant)
         register = self._register(thread, claimant)
+        # LB-124. THE OTHER CLOCKS, on the SAME register, because a second
+        # place that holds dated obligations is a second answer to "what is
+        # due" -- the three-stores defect on the question an advocate opens
+        # the board to ask.
+        procedural_rows, procedural_said = self._procedural_periods(thread)
+        register = register + procedural_rows
         assessed = {thresholds.Threshold.LIMITATION:
                     thresholds.from_limitation(claimant)}
         # LB-121. WHAT MUST BE DONE BEFORE THIS CAN BE FILED. The row said
@@ -3607,6 +3687,8 @@ class TurnEngine:
             out.append(Element(
                 kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
                 text=f"Before this can be filed — {row.reason}."))
+
+        out.extend(procedural_said)
 
         if blocked:
             # IN FULL WHEN IT CHANGES, SHORT WHEN IT HAS NOT (BK-7).

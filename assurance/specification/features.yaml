@@ -935,8 +935,10 @@ features:
   - BK-95
   declared_in:
   - backend/nm/adapters/knowledge/authority_weight.py
+  - backend/nm/adapters/knowledge/procedural_period.py
   - backend/nm/core/deadlines.py
   - backend/nm/core/turn.py
+  - backend/nm/knowledge/procedural_period.py
   does:
   - 'Hold every deadline on the file in one register: limitation, statutory notice windows, appeal and
     revision periods, objection periods, listed court dates, and **factual urgency that no statute creates**
