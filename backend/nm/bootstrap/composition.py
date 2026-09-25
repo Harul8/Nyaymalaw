@@ -15,6 +15,7 @@ from types import MappingProxyType
 
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
 from nm.adapters.knowledge.elements import CuratedElements
+from nm.adapters.knowledge.institution import CuratedPreInstitution
 from nm.adapters.mail.outbox import FileOutbox
 from nm.adapters.model.config import ModelConfig, load, load_dotenv
 from nm.adapters.model.openai_adapter import OpenAIModelAdapter
@@ -314,9 +315,16 @@ class Application:
         # producing a conclusion with no proof section, which reads as though
         # everything were established.
         self.elements = CuratedElements()
+        # LB-121. THE SAME SPLIT AGAIN: the curated pre-institution conditions
+        # live in the knowledge plane and reach the turn through a port, so
+        # `nm.core` holds no legal table of its own. Wired here rather than
+        # defaulted inside the engine, so a deployment that has not curated
+        # these conditions is a deployment whose map says so.
+        self.pre_institution = CuratedPreInstitution()
         self.engine = TurnEngine(store=self.store, evidence=self.evidence,
                                  model=self.model, coverage=self.coverage,
                                  elements=self.elements,
+                                 pre_institution=self.pre_institution,
                                  professional_approval=self.directory.professional_approval)
 
     def engine_for(self, advocate_id: str, *,
@@ -339,6 +347,7 @@ class Application:
             policy=text_policy(), audit=self._egress_audit, authorize=authorize)
         return TurnEngine(store=self.store, evidence=self.evidence, model=bound,
                           coverage=self.coverage, elements=self.elements,
+                          pre_institution=self.pre_institution,
                           professional_approval=self.directory.professional_approval)
 
     # ------------------------------------------------------------ P21 ------

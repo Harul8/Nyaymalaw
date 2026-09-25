@@ -401,3 +401,138 @@ the schedule cannot be held and versioned, this row ships as an honest
    and most decisive, and their text is largely held already (CPC, NI Act, IPC,
    BNS, CrPC, BNSS). LB-125 goes last: it depends on sources the corpus is not
    measured to hold.
+
+---
+
+# Build record — LB-121 and LB-120, 25 September 2026
+
+The owner selected these six rows and asked for LB-121 and LB-120 first. All
+six are now in `docs/Nyaymalaw_Implementation_Plan.xlsx` (Before Build, with
+the Implementation Plan mirror), written by
+`development_environment/one_off_tools/practice_layer_plan_20260925.py` under the
+same discipline the other workbook tools use: every cell's value and style
+snapshotted, only the intended cells written, then the saved file reloaded and
+every other cell and every native sheet feature proved unchanged.
+
+**A stale claim found while doing it.** The row-2 note read *"All 115 LB/OM
+requirements are linked into Implementation Plan"* while the sheet already
+carried **142**. It was wrong before this change, not because of it. The tool
+now computes that figure from the sheet rather than restating it, so the count
+cannot drift again; it reads 148.
+
+## What was built
+
+Both follow the split the elements plane already uses — shapes in
+`nm/ports/`, curation in `nm/knowledge/`, served by an adapter, and `nm.core`
+importing neither. `assurance/gate/layercheck.py` passes.
+
+### LB-121 — pre-institution conditions. WIRED.
+
+`ports/institution.py`, `knowledge/institution.py`,
+`adapters/knowledge/institution.py`, reaching the served turn through
+`TurnEngine(pre_institution=...)` and the `statutory_notice` threshold row.
+
+Four curated conditions, each carrying `curated_from`: the s.138 demand, the
+s.142(1)(b) complaint window, the CPC s.80 government notice, and the TPA
+s.106 lease notice. Engagement is decided by exact membership of the closed
+`CauseOfAction` and `Against` vocabularies — nothing is matched on prose.
+
+**Two questions kept apart, which is the substance of the row.** Whether a
+condition is ENGAGED is answered here. Whether the file shows it SATISFIED is
+not, because nothing yet reads the advocate's words for it — so the row is
+`BLOCKED` and names the condition, never `ANSWERED`, which would dispose of
+the threshold. An unestablished cause or opponent is `undecided` and never
+`NOT_APPLICABLE`, which is a finding that it does not arise.
+
+Served, on a dishonoured-cheque matter:
+
+> Before this can be filed — this matter engages the written demand for payment
+> after the cheque was returned (Negotiable Instruments Act, 1881 s.138); the
+> window for making the complaint once the cause of action arose (Negotiable
+> Instruments Act, 1881 s.142). Whether the file shows it done is not assessed
+> — tell me and I will read it against the section.
+
+**Two things the build found that the draft had not.**
+
+1. *The threshold map's reasons never reached the advocate.* Only the names
+   did — nine words in a list. So a row that says something particular is now
+   said as its own line, and a row carrying the map's default sentence is
+   still counted. `thresholds.NOT_ASSESSED` is the one owner of that default,
+   so two spellings cannot make a generic row look assessed.
+2. *Limitation would then have been said twice.* It has a dedicated renderer,
+   and the map's clipped version read as a second finding about the same
+   question. `_THRESHOLDS_RENDERED_ELSEWHERE` declares that population, so the
+   next threshold to get a renderer is an entry rather than a duplicated line.
+
+**`Against` is always `UNKNOWN` in this slice, deliberately.** Whether the
+opponent is the Government is what engages CPC s.80, and answering it by
+matching words in a party's name would be fuzzy matching doing identification
+— CLAUDE.md §5. So s.80 reports as undecided, and a later slice records the
+answer from the advocate rather than guessing it.
+
+### LB-120 — which code governs, from the dates. BUILT, NOT WIRED.
+
+`ports/governing_law.py`, `knowledge/governing_law.py`,
+`adapters/knowledge/governing_law.py`. Three successions, one per limb,
+each naming its commencement and its saving provision.
+
+The limbs are answered separately and can disagree, which is the whole point:
+an offence before 1 July 2024 charged after it reads the old substantive code
+and the new procedural one. The substantive answer never moves with the
+pending status; the procedural answer names no Act at all while the pending
+status is unknown, because that is exactly what the saving provision turns on.
+
+**NOT WIRED, and that is declared rather than implied.**
+`tests/test_reached_from_production.py` caught the unreached adapter on its
+first run. `CauseOfAction` is a closed vocabulary with no criminal cause in
+it, so nothing a served turn can establish reaches this table — and adding a
+cause to give the wiring a caller would put a word in the legal vocabulary to
+justify a code path. The entry in `UNWIRED` names what will wire it: a
+criminal cause with its own curated elements, plus the reads that establish an
+offence date and whether a proceeding was pending.
+
+**The correspondence table is not built, and LB-120-AC3 is a tripwire.** No
+official mapping is held, so there is nothing to test the mapping of. The test
+fails the day a `CORRESPONDENCE` table or a `corresponding` function appears
+without curation behind it — the form this repository already uses for an
+unbuilt capability, rather than a check that passes because nothing happens.
+
+## Proof that the checks bite
+
+Every rule was mutated and the right test failed:
+
+| Mutation | Caught by |
+|---|---|
+| always read the current code | `test_conduct_before_commencement_is_never_read_under_the_replacing_code` |
+| unknown pending defaults to the new code | `test_an_unknown_pending_status_names_no_procedural_act` |
+| substantive limb reads the pending status | `test_the_substantive_limb_never_turns_on_the_pending_status` |
+| an engaged condition reported as not applicable | 3 tests, including `test_an_engaged_condition_is_blocked_and_named_never_answered` |
+| an undecided key reported as inapplicable | `test_an_unestablished_key_is_undecided_and_never_not_applicable` |
+
+## The codebase caught me, twice
+
+Worth recording, because both are the controls working rather than my care.
+
+1. **`test_reached_from_production`** refused the unwired adapter. Declaring it
+   is the honest answer; inventing a caller would have passed.
+2. **`test_a_provision_is_cited_the_way_it_is_written`** — added by the owner
+   on 23 September after `s.Article_64` reached a live matter — caught my
+   threshold row building `f"{act} s.{provision}"`. Fixed to
+   `nm.domain.citation.provision_label`, the one owner.
+
+That second sweep had **no positive control**, which is why it was one of the
+four reds standing at `f90df19`. It has one now, planted with the exact shape
+my own code produced, and it is registered in `CONTROLS`. Its finder was
+lifted out of the sweep so the control exercises the same code — a finder that
+exists only inside its sweep cannot be shown to work (B-049).
+
+## Still open on these two rows
+
+* **The satisfaction read for LB-121.** Everything engaged currently reads
+  `not assessed`. Reading the advocate's words for whether a notice went, and
+  when, is the next slice; the disclosure already invites exactly that reply.
+* **Counsel review of both tables.** Not done. No entry in either table has
+  been signed off by a practising advocate, and LB-120's evidentiary row
+  depends on an Act (`Bharatiya Sakshya Adhiniyam`) that BASELINE does not
+  record as held — its own `curated_from` says so.
+* **LB-122 to LB-125** are drafted and unbuilt.

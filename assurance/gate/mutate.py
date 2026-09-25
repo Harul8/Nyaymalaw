@@ -109,8 +109,8 @@ MUTATIONS = [
     # "You act for the our client. Did they file...?"
     ("a descriptor that names nobody recorded as though it named someone",
      "backend/nm/core/posture.py",
-     "    if described and names_nobody(described):",
-     "    if False and described and names_nobody(described):",
+     "    if described and names_nobody(described.lower()):",
+     "    if False and described and names_nobody(described.lower()):",
      "test_a_descriptor_that_names_nobody_is_not_recorded", "E-030"),
 
     # B-039's trigger, widened until it swallows C3. The role read must not
@@ -162,9 +162,21 @@ MUTATIONS = [
 
     ("a bare question of law refused instead of answered",
      "backend/nm/core/turn.py",
-     ('                facts=matter.facts, matter_id=matter.id, response_mode=mode)\n'
+     # THE SIDE-BLIND DERIVE, anchored from `side_blind=True` down: the
+     # closing line alone now matches three call sites, and the first
+     # match is not the one this test guards.
+     ('                thread, work_turn, metrics, memory, side_blind=True,\n'
+     '                # THE SAME EXPRESSION THE ANSWER IS BUILT WITH, four lines\n'
+     '                # below. Deriving "will this be served?" twice from different\n'
+     '                # conditions is how the two drift.\n'
+     '                blocked=not source_explanation,\n'
+     '                facts=matter.facts, matter_id=matter.id, response_mode=mode,\n'
+     '                parties=self._parties_of(matter).names)\n'
      '            elements.extend(derived)\n'),
-     ('                facts=matter.facts, matter_id=matter.id, response_mode=mode)\n'),
+     ('                thread, work_turn, metrics, memory, side_blind=True,\n'
+     '                blocked=not source_explanation,\n'
+     '                facts=matter.facts, matter_id=matter.id, response_mode=mode,\n'
+     '                parties=self._parties_of(matter).names)\n'),
      "test_a_provision_is_still_read_back_behind_a_closed_posture_gate",
      "E-034"),
 

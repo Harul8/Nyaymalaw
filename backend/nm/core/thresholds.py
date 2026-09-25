@@ -35,6 +35,7 @@ from datetime import date
 from enum import Enum
 
 from nm.core.limitation import Limitation, LimitationState
+from nm.domain.citation import provision_label
 from nm.domain.text import refuses_blank_text
 from nm.domain.traceability import implements
 
@@ -108,6 +109,14 @@ class ThresholdAnswer:
                 f"memory is thinner by definition.")
 
 
+#: THE ROW NOBODY ASSESSED, worded once. A caller that wants to know whether a
+#: blocked row says anything PARTICULAR compares against this rather than
+#: against a copy of the sentence -- two spellings of the default would make a
+#: generic row look like an assessed one the first time either was reworded.
+NOT_ASSESSED = ("not assessed on this thread — this is a gap in the map, "
+                "not a finding that it does not arise")
+
+
 @implements("D1")
 def for_thread(assessed: dict[Threshold, ThresholdAnswer]) -> tuple[ThresholdAnswer, ...]:
     """The map: ONE ROW PER THRESHOLD, whatever the caller assessed.
@@ -118,9 +127,7 @@ def for_thread(assessed: dict[Threshold, ThresholdAnswer]) -> tuple[ThresholdAns
     """
     return tuple(
         assessed.get(t) or ThresholdAnswer(
-            threshold=t, state=ThresholdState.BLOCKED,
-            reason="not assessed on this thread — this is a gap in the map, "
-                   "not a finding that it does not arise")
+            threshold=t, state=ThresholdState.BLOCKED, reason=NOT_ASSESSED)
         for t in Threshold)
 
 
@@ -162,6 +169,49 @@ def absurd(map_: tuple[ThresholdAnswer, ...], chronology: tuple[date, ...],
                 f"({latest.isoformat()}). Either the accrual is wrong or the "
                 f"chronology is.")
     return tuple(out)
+
+
+def from_institution(engaged: tuple, undecided: tuple) -> ThresholdAnswer:
+    """The `statutory_notice` row, from the pre-institution table. LB-121.
+
+    THREE STATES AND NOT ONE OF THEM IS "SATISFIED". This slice establishes
+    which conditions a cause and an opponent ENGAGE; whether the file shows one
+    done is a question about the advocate's own words that nothing here reads.
+    So a condition that is engaged is BLOCKED and NAMED -- never ANSWERED,
+    which would dispose of the threshold, and never NOT_APPLICABLE, which is a
+    finding that it does not arise.
+
+    `NOT_APPLICABLE` IS REACHED ONLY WHEN NOTHING IS UNDECIDED. A cause nobody
+    has established engages nothing, and reporting that as "no condition
+    applies" is the silence D1 forbids wearing a finding's clothes.
+    """
+    if engaged:
+        named = "; ".join(
+            f"{e.condition.said} "
+            f"({provision_label(e.condition.act, e.condition.provision)})"
+            for e in engaged)
+        return ThresholdAnswer(
+            threshold=Threshold.STATUTORY_NOTICE,
+            state=ThresholdState.BLOCKED,
+            reason=(f"this matter engages {named}. Whether the file shows it "
+                    f"done is not assessed -- tell me and I will read it "
+                    f"against the section"))
+    if undecided:
+        named = "; ".join(
+            f"{c.said} ({provision_label(c.act, c.provision)})"
+            for c in undecided)
+        return ThresholdAnswer(
+            threshold=Threshold.STATUTORY_NOTICE,
+            state=ThresholdState.BLOCKED,
+            reason=(f"whether this matter engages {named} cannot be settled "
+                    f"until the cause and who the proceeding is against are "
+                    f"established. That is undecided, not inapplicable"))
+    return ThresholdAnswer(
+        threshold=Threshold.STATUTORY_NOTICE,
+        state=ThresholdState.NOT_APPLICABLE,
+        reason="no pre-institution condition this product holds is engaged by "
+               "this cause or this opponent. That is what the curated table "
+               "says, not a search of every statute")
 
 
 def from_limitation(lim: Limitation) -> ThresholdAnswer:

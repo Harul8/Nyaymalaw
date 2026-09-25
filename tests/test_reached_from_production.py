@@ -55,6 +55,26 @@ ENTRY_POINTS: dict[str, str] = {
 #: behaviour does not, and the difference is invisible to every other check in
 #: this build.
 UNWIRED: dict[str, str] = {
+    # LB-120's curated successions -- which code governs, from the dates.
+    #
+    # NOT WIRED, AND WIRING IT TODAY WOULD BE WORSE THAN LEAVING IT. The table
+    # answers a question about criminal matters, and `CauseOfAction` is a
+    # CLOSED vocabulary with no criminal cause in it: nothing a served turn
+    # can establish reaches this succession. Adding a cause so that the
+    # wiring had a caller would put a word in the legal vocabulary to justify
+    # a code path, which is the tail wagging the dog -- and CauseOfAction's
+    # own docstring records what happened the last time a cause was added
+    # without the law behind it (POSSESSION_FROM_TENANT, 23 September 2026).
+    #
+    # What wires it is a criminal cause of action with its own curated
+    # elements and Article, plus the reads that establish an offence date and
+    # whether a proceeding was pending at commencement. Until then the table
+    # is exercised by its own suite and reaches no advocate, which is the
+    # honest state and is declared here rather than implied by silence.
+    "nm.adapters.knowledge.governing_law":
+        "LB-120: no criminal cause exists in the closed CauseOfAction "
+        "vocabulary, so no served turn can reach it. Wired by a criminal "
+        "cause plus the offence-date and pending-proceeding reads.",
     # P38's restore rehearsal. It is NOT reached from a served turn and must
     # not be: a restore runs with every egress off, against a store that is
     # not the active one, under roles the application does not hold while
@@ -300,6 +320,12 @@ def test_the_scan_can_see_an_unreached_module():
 #: was actually wrong, was the one it could not see. A join that silently
 #: drops members is the same defect as a scan whose population went to zero.
 OWNER: dict[str, tuple[str, ...]] = {
+    # LB-120's successions answer "which Act do I read for this matter", which
+    # is D4's question -- WHICH LAW APPLIES -- one step before D4's cause-to-
+    # Article lookup. Named against D4 rather than given a feature of its own,
+    # because what it adds is a condition on reading the right provision and
+    # not a new promise to the advocate.
+    "nm.adapters.knowledge.governing_law": ("D4",),
     # P38's restore serves the persistence promise the store makes -- one
     # matter, versioned and sealed -- so it is named against I1 rather than
     # given a feature of its own. What it adds is that the promise survives

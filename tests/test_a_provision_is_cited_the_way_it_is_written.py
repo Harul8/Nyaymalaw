@@ -90,6 +90,44 @@ def test_the_storage_underscore_never_reaches_a_citation():
                                       "Order_VII_Rule_11")
 
 
+def _hard_coded_prefixes(tree: ast.AST, where: str) -> list[str]:
+    """Every f-string in one module that gives a designation the `s.` prefix.
+
+    READ OFF THE SOURCE and lifted out of the sweep so a planted case can
+    exercise the same finder. A sweep whose finder exists only inside itself
+    cannot be shown to work, and a checker that always returns `[]` passes a
+    sweep identically (B-049).
+    """
+    found: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.JoinedStr):
+            continue
+        rendered = ast.unparse(node)
+        # `... s.{<anything>}` -- an interpolated designation given the
+        # section prefix by the caller rather than by the unit's kind.
+        if " s.{" in rendered:
+            found.append(f"{where}:{node.lineno}  {rendered[:90]}")
+    return found
+
+
+def test_the_prefix_sweep_can_see_a_planted_one():
+    """THE POSITIVE CONTROL. Not hypothetical: on 25 September 2026 the
+    pre-institution threshold row was written as `f"{act} s.{provision}"` and
+    this sweep caught it before it reached an advocate. This plants the same
+    shape so the finder is proven rather than trusted."""
+    planted = ast.parse('text = f"{cond.act} s.{cond.provision} applies"')
+    assert _hard_coded_prefixes(planted, "planted.py"), (
+        "the finder cannot see a hard-coded prefix, so the sweep's empty "
+        "result says nothing about the package")
+
+
+def test_the_prefix_sweep_leaves_the_one_owner_alone():
+    """NEGATIVE CONTROL. A reference built through `provision_label` is the
+    fix, and a sweep that refused it would be switched off within a week."""
+    clean = ast.parse('text = f"{provision_label(act, unit)} applies"')
+    assert _hard_coded_prefixes(clean, "planted.py") == []
+
+
 def test_nothing_else_in_the_package_builds_a_provision_reference():
     """THE SWEEP, drawn from the source.
 
@@ -113,14 +151,7 @@ def test_nothing_else_in_the_package_builds_a_provision_reference():
             tree = ast.parse(path.read_text(encoding="utf8"))
         except SyntaxError:                      # pragma: no cover -- defensive
             continue
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.JoinedStr):
-                continue
-            rendered = ast.unparse(node)
-            # `... s.{<anything>}` -- an interpolated designation given the
-            # section prefix by the caller rather than by the unit's kind.
-            if " s.{" in rendered:
-                found.append(f"{rel}:{node.lineno}  {rendered[:90]}")
+        found += _hard_coded_prefixes(tree, rel)
 
     assert not found, (
         "A provision reference is built with a hard-coded `s.` prefix. The "

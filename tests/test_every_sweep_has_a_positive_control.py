@@ -295,6 +295,11 @@ CONTROLS: dict[str, str] = {
     # sweep claims to catch, each a site that was in the product.
     "test_no_advocate_facing_renderer_delimits_by_repr":
         "test_the_repr_sweep_sees_each_shape_it_refuses",
+    # The hard-coded `s.` prefix. Its control plants the exact shape that
+    # reached a live matter as `s.Article_64`, and the same finder the sweep
+    # uses must report it.
+    "test_nothing_else_in_the_package_builds_a_provision_reference":
+        "test_the_prefix_sweep_can_see_a_planted_one",
     # Two browser journeys that assert no `/api/turn` request was sent. Each
     # now ends with a REAL send that its own listener must see -- verified 23
     # September 2026 by breaking the listener's filter, which failed all four

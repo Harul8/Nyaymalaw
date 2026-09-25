@@ -114,6 +114,7 @@ from nm.ports.evidence import (
     SourceKind,
     TreatmentState,
 )
+from nm.ports.institution import Against, PreInstitutionPort
 from nm.ports.model import (
     ModelError,
     ModelPort,
@@ -580,13 +581,25 @@ def _matter_name(message: str, parties: dict | None) -> str:
     return snippet(first, 60)
 
 
+#: THRESHOLDS THAT ALREADY HAVE AN OWNER FOR THEIR PROSE, so the map does not
+#: say them twice. A declared set rather than a condition written inline: the
+#: second threshold to get a dedicated renderer is an entry here, and a
+#: renderer added without one is a duplicated line an advocate reads as two
+#: findings. That is CLAUDE.md section 4 -- what refuses the second copy.
+#:
+#: `LIMITATION` is rendered in full by `_limitation_elements`, with its
+#: Article, its accrual and its alternatives.
+_THRESHOLDS_RENDERED_ELSEWHERE = frozenset({thresholds.Threshold.LIMITATION})
+
+
 class TurnEngine:
     """Pure orchestration. Every dependency arrives as a port."""
 
     def __init__(self, store: StorePort, evidence: EvidencePort, model: ModelPort,
                  coverage: CoveragePort | None = None,
                  elements: "ElementsPort | None" = None, clock=None,
-                 professional_approval: Callable[[str], object] | None = None) -> None:
+                 professional_approval: Callable[[str], object] | None = None,
+                 pre_institution: "PreInstitutionPort | None" = None) -> None:
         from nm.domain.advocate import utcnow
 
         self._clock = clock or utcnow
@@ -600,6 +613,12 @@ class TurnEngine:
         # sees no proof positions must be able to tell "nothing was worked
         # out" from "everything is held".
         self._elements = elements
+        # LB-121's PRE-INSTITUTION TABLE, and its absence is not silence: with
+        # no port the `statutory_notice` threshold stays BLOCKED with the
+        # map's own "not assessed on this thread" reason, exactly as it read
+        # before this table existed. An unwired installation says nothing it
+        # cannot support rather than reporting that no condition arises.
+        self._pre_institution = pre_institution
         # Optional, and its ABSENCE IS NOT SILENCE: with no coverage port the
         # engine fires G-COVERAGE in the `not_measured` state rather than
         # skipping the gate, so an unwired installation discloses that it
@@ -3291,6 +3310,37 @@ class TurnEngine:
             metrics.violate("D2", read.refused)
         return read
 
+    @implements("D1")
+    def _pre_institution_row(self, cause_read: str | None):
+        """The `statutory_notice` row, from the curated table. LB-121.
+
+        `None` WHERE NO TABLE IS WIRED, so the map keeps its own "not assessed
+        on this thread" reason rather than this method inventing a quieter one.
+        An unwired installation must not read as one that looked.
+
+        THE OPPONENT IS ALWAYS `UNKNOWN` IN THIS SLICE, and that is a decision
+        rather than an omission. Whether the other side is the Government or a
+        public officer -- which is what engages CPC s.80 -- is a question about
+        a party, and answering it by matching words in a party's name would be
+        fuzzy matching doing IDENTIFICATION, which CLAUDE.md section 5 records
+        as not merely weak but wrong. So it stays unestablished, `undecided`
+        reports s.80 as a question nobody can yet settle, and a later slice
+        records the answer from the advocate rather than guessing it.
+        """
+        if self._pre_institution is None:
+            return None
+        try:
+            cause = (CauseOfAction(cause_read) if cause_read
+                     else CauseOfAction.NOT_ESTABLISHED)
+        except ValueError:
+            # A cause outside the closed vocabulary is not established, which
+            # is what the vocabulary being closed is for.
+            cause = CauseOfAction.NOT_ESTABLISHED
+        against = Against.UNKNOWN
+        return thresholds.from_institution(
+            self._pre_institution.engaged(cause, against),
+            self._pre_institution.undecided(cause, against))
+
     def _accrual_trigger(self, cause_read) -> str:
         """The statutory trigger for this cause, or empty.
 
@@ -3361,9 +3411,17 @@ class TurnEngine:
             "ours; a counterclaim would have its own accrual",
             thread.chronology) if defending else claimant)
         register = self._register(thread, claimant)
-        map_ = thresholds.for_thread(
-            {thresholds.Threshold.LIMITATION:
-             thresholds.from_limitation(claimant)})
+        assessed = {thresholds.Threshold.LIMITATION:
+                    thresholds.from_limitation(claimant)}
+        # LB-121. WHAT MUST BE DONE BEFORE THIS CAN BE FILED. The row said
+        # "not assessed on this thread" on every turn because nothing assessed
+        # it; the curated table now names the conditions this cause engages,
+        # and says plainly that whether the file shows them done is a separate
+        # question nothing here has read.
+        notice = self._pre_institution_row(cause_read)
+        if notice is not None:
+            assessed[thresholds.Threshold.STATUTORY_NOTICE] = notice
+        map_ = thresholds.for_thread(assessed)
 
         # D1.1 -- arithmetic checked against THE FILE'S OWN DATES. A twelve-year
         # clock is not absurd; one that expires before the file's earliest
@@ -3400,6 +3458,31 @@ class TurnEngine:
 
         blocked = [a for a in map_
                    if a.state is thresholds.ThresholdState.BLOCKED]
+
+        # A ROW THAT SAYS SOMETHING PARTICULAR IS SAID, not counted.
+        #
+        # The summary below names the thresholds NOBODY ASSESSED, which is
+        # right for a row carrying the map's own default sentence and wrong
+        # for one that has been assessed far enough to name what is missing:
+        # counting it puts a checkable question inside a list an advocate has
+        # learned to skim. Measured on LB-121's first served turn -- the
+        # curated demand-notice condition reached the map and the advocate saw
+        # the word `statutory_notice` in a list of nine.
+        #
+        # THESE REPEAT EVERY TURN, deliberately, and BK-7 is not against it:
+        # what that measured was the same forty-word list of NAMES four times
+        # over. A named condition that must be satisfied before this can be
+        # filed is substantive, like the limitation position beside it, and
+        # substantive lines are served whenever they hold.
+        for row in blocked:
+            if row.reason == thresholds.NOT_ASSESSED:
+                continue
+            if row.threshold in _THRESHOLDS_RENDERED_ELSEWHERE:
+                continue
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=f"Before this can be filed — {row.reason}."))
+
         if blocked:
             # IN FULL WHEN IT CHANGES, SHORT WHEN IT HAS NOT (BK-7).
             #

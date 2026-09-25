@@ -826,8 +826,10 @@ features:
   delivered_by:
   - BK-95
   declared_in:
+  - backend/nm/adapters/knowledge/institution.py
   - backend/nm/core/thresholds.py
   - backend/nm/core/turn.py
+  - backend/nm/knowledge/institution.py
   does:
   - 'Check, per thread: jurisdiction, forum, standing, maintainability, **limitation**, statutory notice
     and preconditions, valuation, court fees, arbitration or ADR clauses, territorial and pecuniary competence,
@@ -972,8 +974,10 @@ features:
   - BK-95
   declared_in:
   - backend/nm/adapters/evidence/corpus.py
+  - backend/nm/adapters/knowledge/governing_law.py
   - backend/nm/core/cause.py
   - backend/nm/core/turn.py
+  - backend/nm/knowledge/governing_law.py
   - backend/nm/knowledge/resolution.py
   does:
   - Translate the matter into propositions and issues, ranked by consequence and uncertainty. **Research

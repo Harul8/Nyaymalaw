@@ -42,6 +42,13 @@ import os
 import pathlib
 import sys
 
+_REPO = pathlib.Path(__file__).resolve().parents[2]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+from assurance.common._console import utf8_console  # noqa: E402
+
+utf8_console()
+
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / "backend")]
 os.environ.pop("SSLKEYLOGFILE", None)

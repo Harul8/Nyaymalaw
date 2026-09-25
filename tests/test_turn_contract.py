@@ -201,8 +201,15 @@ def build(tmp_path, evidence=None, responses=None, model=None,
     from nm.knowledge.coverage import CoverageProfile
     profile = (CoverageProfile.load(ROOT / "assurance" / "specification" / "coverage.yaml")
                if coverage else None)
+    # LB-121's CURATED PRE-INSTITUTION TABLE, wired because the composition
+    # root wires it. A fixture that composes less than the composition root
+    # tests a deployment that does not ship (CLAUDE.md section 8), and the
+    # `statutory_notice` row is exactly the kind of difference that would hide
+    # here and appear on a served turn.
+    from nm.adapters.knowledge.institution import CuratedPreInstitution
     engine = TurnEngine(store=store, evidence=evidence or _Evidence(),
-                        model=model, coverage=profile)
+                        model=model, coverage=profile,
+                        pre_institution=CuratedPreInstitution())
     return (briefed(engine) if intake else engine), store
 
 
