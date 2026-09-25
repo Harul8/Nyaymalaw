@@ -69,6 +69,7 @@ from nm.core.premise import SUFFICIENT, Basis
 from nm.domain.spoken import named
 from nm.domain.text import blank, refuses_blank_text
 from nm.domain.traceability import implements
+from nm.ports.interim_relief import InterimRelief
 
 
 class Availability(str, Enum):
@@ -242,6 +243,16 @@ class Relief:
     enforceability: Enforceability = Enforceability.NOT_ASSESSED
     proportionality: Proportionality = Proportionality.NOT_ASSESSED
     prerequisites: tuple[str, ...] = ()
+    interim: InterimRelief = InterimRelief.NOT_STATED
+    """The INTERIM order sought while this remedy is pursued, if any. LB-123.
+
+    IT IS NOT A SIXTH COORDINATE and it is deliberately not read by
+    `delivers`. Whether an interim injunction will be granted is decided on
+    its own test (`nm.knowledge.interim_relief`), not on whether the FINAL
+    relief is available, valuable, timely and enforceable -- and the reverse
+    is equally false. Folding it into the five would make each answer the
+    other's question, which is the defect LB-123 exists to refuse.
+    """
     basis: Basis = Basis.UNESTABLISHED
     source: str = ""
     """Required for ATTRIBUTED -- what says the debtor has no assets, that the
@@ -289,6 +300,7 @@ class Relief:
             "enforceability": self.enforceability.value,
             "proportionality": self.proportionality.value,
             "prerequisites": list(self.prerequisites),
+            "interim": self.interim.value,
             "basis": self.basis.value, "source": self.source,
             "inferred_from": self.inferred_from, "reason": self.reason,
         }
@@ -323,6 +335,7 @@ class Relief:
                                   Proportionality.NOT_ASSESSED),
             prerequisites=tuple(str(p) for p in pre) if isinstance(pre, list)
             else (),
+            interim=_enum(InterimRelief, "interim", InterimRelief.NOT_STATED),
             basis=basis, source=str(row.get("source") or ""),
             inferred_from=str(row.get("inferred_from") or ""),
             reason=str(row.get("reason") or ""),

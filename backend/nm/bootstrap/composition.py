@@ -14,6 +14,8 @@ from pathlib import Path
 from types import MappingProxyType
 
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
+from nm.adapters.knowledge.authority_weight import CuratedAuthorityWeight
+from nm.adapters.knowledge.interim_relief import CuratedInterimRelief
 from nm.adapters.knowledge.elements import CuratedElements
 from nm.adapters.knowledge.institution import CuratedPreInstitution
 from nm.adapters.mail.outbox import FileOutbox
@@ -321,10 +323,24 @@ class Application:
         # defaulted inside the engine, so a deployment that has not curated
         # these conditions is a deployment whose map says so.
         self.pre_institution = CuratedPreInstitution()
+        # LB-122. IT READS THE SAME IDENTITY INDEX THE EVIDENCE ADAPTER
+        # READS, beside the authority index, so the bench a ranking rests on
+        # is the bench the authority was rendered with. A second index would
+        # be a second answer to "how many judges decided this".
+        self.authority_weight = CuratedAuthorityWeight(
+            settings.get("NM_IDENTITY_INDEX")
+            or (self.root / ".nm" / "identity.db"))
+        # LB-123. THE INTERIM TESTS, same split. Wired here rather than
+        # defaulted in the engine so that an installation that has not curated
+        # them sets out no test at all, instead of reporting that none is held
+        # for the relief the advocate asked about.
+        self.interim_relief = CuratedInterimRelief()
         self.engine = TurnEngine(store=self.store, evidence=self.evidence,
                                  model=self.model, coverage=self.coverage,
                                  elements=self.elements,
                                  pre_institution=self.pre_institution,
+                                 authority_weight=self.authority_weight,
+                                 interim_relief=self.interim_relief,
                                  professional_approval=self.directory.professional_approval)
 
     def engine_for(self, advocate_id: str, *,
@@ -348,6 +364,8 @@ class Application:
         return TurnEngine(store=self.store, evidence=self.evidence, model=bound,
                           coverage=self.coverage, elements=self.elements,
                           pre_institution=self.pre_institution,
+                          authority_weight=self.authority_weight,
+                          interim_relief=self.interim_relief,
                           professional_approval=self.directory.professional_approval)
 
     # ------------------------------------------------------------ P21 ------

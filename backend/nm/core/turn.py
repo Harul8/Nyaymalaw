@@ -103,6 +103,12 @@ from nm.domain.turn_receipt import (
     release_index,
 )
 from nm.domain.turn_receipt import fingerprint as offer_fingerprint
+from nm.ports.authority_weight import AuthorityWeightPort, Standing
+from nm.ports.interim_relief import (
+    InterimRelief,
+    InterimReliefPort,
+    LimbState,
+)
 from nm.ports.coverage import CoveragePort
 from nm.ports.elements import ElementsPort
 from nm.ports.evidence import (
@@ -599,7 +605,9 @@ class TurnEngine:
                  coverage: CoveragePort | None = None,
                  elements: "ElementsPort | None" = None, clock=None,
                  professional_approval: Callable[[str], object] | None = None,
-                 pre_institution: "PreInstitutionPort | None" = None) -> None:
+                 pre_institution: "PreInstitutionPort | None" = None,
+                 authority_weight: "AuthorityWeightPort | None" = None,
+                 interim_relief: "InterimReliefPort | None" = None) -> None:
         from nm.domain.advocate import utcnow
 
         self._clock = clock or utcnow
@@ -619,6 +627,17 @@ class TurnEngine:
         # before this table existed. An unwired installation says nothing it
         # cannot support rather than reporting that no condition arises.
         self._pre_institution = pre_institution
+        # LB-122's RELATIVE WEIGHT. Absent, no pair is ranked and none is
+        # reported unrankable either: "these two could not be compared" is a
+        # statement about the judgments, and an installation with no identity
+        # index has no business making it. The coverage disclosure owns what
+        # this installation cannot see.
+        self._authority_weight = authority_weight
+        # LB-123's INTERIM TESTS. Absent, no interim test is set out and none
+        # is reported missing either -- an advocate told "no test is held for
+        # this relief" by an installation that holds no table at all would
+        # read that as a fact about the law.
+        self._interim_relief = interim_relief
         # Optional, and its ABSENCE IS NOT SILENCE: with no coverage port the
         # engine fires G-COVERAGE in the `not_measured` state rather than
         # skipping the gate, so an unwired installation discloses that it
@@ -3048,6 +3067,7 @@ class TurnEngine:
                     grounds.append(Element(
                         kind=ElementKind.GROUND, thread=thread.id,
                         text=disc, disclosure=True))
+            grounds.extend(self._interim_position(thread))
 
         # Source-derived requirements are available to this turn's response,
         # not discovered after the model has already asked its questions.
@@ -3309,6 +3329,111 @@ class TurnEngine:
         if read.refused:
             metrics.violate("D2", read.refused)
         return read
+
+    @implements("D3")
+    def _interim_position(self, thread) -> list[Element]:
+        """THE INTERIM APPLICATION IS DECIDED ON ITS OWN TEST. LB-123.
+
+        An advocate who asks whether they will get an injunction on Monday is
+        not asking whether the suit will succeed, and a product that answered
+        the second in a confident voice would be answering a different
+        question. So where a stated relief carries an interim order, the test
+        for THAT order is set out -- the rule it is sought under, its limbs,
+        the threshold where the threshold is higher, and the statutory bar
+        BEFORE the limbs, because an advocate who reads three limbs and then
+        meets s.41 has read them for nothing.
+
+        NOT ONE LIMB IS CALLED MADE OUT. Nothing here reads the affidavit or
+        the documents on the file, so every limb is NOT ASSESSED and says what
+        would answer it. An interim assessment nobody made must never read as
+        one that was made and came out weak (CLAUDE.md section 9).
+
+        THE MERITS ARE NOT CONSULTED AND DO NOT MOVE THIS. `nm.core.relief`
+        continues to answer whether the FINAL relief is available, valuable,
+        timely and enforceable; neither reading is derived from the other.
+        """
+        if self._interim_relief is None:
+            return []
+        seen: list[InterimRelief] = []
+        for stored in relief_mod.reliefs_from_stored(thread.reliefs):
+            if stored.interim is not InterimRelief.NOT_STATED \
+                    and stored.interim not in seen:
+                seen.append(stored.interim)
+        out: list[Element] = []
+        for relief in seen:
+            assessment = self._interim_relief.assess(relief)
+            said = relief.value.replace("_", " ")
+            if not assessment.established:
+                # A GAP, NAMED. No test held is not "no test applies", and the
+                # sentence says which -- the shape B-163 earned, where a zero
+                # from one index read as absence from the corpus.
+                out.append(Element(
+                    kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                    text=(f"On the {said} sought: {assessment.because}. It is "
+                          f"not decided on the strength of the suit.")))
+                continue
+            test = assessment.test
+            said_limbs = "; ".join(
+                f"{name} \u2014 {limb.what_would_answer_it}"
+                for (name, _state), limb in zip(assessment.states, test.limbs))
+            lead = (f"The {said} sought is decided on its own test, under "
+                    f"{test.source}, and not on the strength of the suit.")
+            if test.bar:
+                lead += f" Read first: {test.bar}."
+            if test.threshold_note:
+                lead += f" Note the threshold: {test.threshold_note}."
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"{lead} It must show: {said_limbs}. "
+                      f"{assessment.because}.")))
+        return out
+
+    def _relative_weight(self, shown, thread) -> list[Element]:
+        """WHICH OF THE RETRIEVED AUTHORITIES THIS COURT MUST FOLLOW. LB-122.
+
+        The rule is `nm.knowledge.identity.supersedes` and it is not restated
+        here; this hands it the authorities of one turn, which nothing did --
+        measured 25 September 2026, its only callers were tests. Every
+        authority was rendered with its own bench inside its `ref` and nothing
+        compared them, so an advocate reading two decisions on one point was
+        left to work out which one binds them.
+
+        CO-ORDINATE IS SAID AND UNRANKABLE IS NOT. Two equal benches that
+        disagree is a FINDING an advocate acts on -- the conflict goes to a
+        larger bench. A bench nobody recorded is a gap in the corpus, and
+        saying it for every unindexed pair would bury the finding under the
+        gap. So the gap is counted in one clause and the findings are named.
+        """
+        if self._authority_weight is None:
+            return []
+        locators = tuple(f.locator for f in shown
+                         if f.source_kind is SourceKind.AUTHORITY and f.locator)
+        if len(locators) < 2:
+            return []
+        weighed = self._authority_weight.weigh(locators)
+        out: list[Element] = []
+        for weighing in weighed:
+            if weighing.standing is Standing.SUPERSEDES:
+                out.append(Element(
+                    kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                    text=(f"Of the authorities above, {weighing.higher} "
+                          f"supersedes {weighing.lower}: {weighing.reason}.")))
+            elif weighing.standing is Standing.CO_ORDINATE:
+                out.append(Element(
+                    kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                    signal=Signal.CONTRADICTION,
+                    text=(f"Two of the authorities above are of equal weight: "
+                          f"{weighing.reason}. Neither disposes of the other.")))
+        unranked = sum(1 for w in weighed if w.standing is Standing.NOT_RECORDED)
+        if unranked:
+            out.append(Element(
+                kind=ElementKind.GROUND, thread=thread.id, disclosure=True,
+                text=(f"{unranked} pair(s) of the authorities above could not "
+                      f"be ranked against each other, because the bench is not "
+                      f"recorded for at least one of them. That is a gap in "
+                      f"what is held, not a finding that they are of equal "
+                      f"weight.")))
+        return out
 
     @implements("D1")
     def _pre_institution_row(self, cause_read: str | None):
@@ -4401,6 +4526,7 @@ class TurnEngine:
                         text=(f"{f.ref} was retrieved and is NOT being relied on: "
                               f"{f.blocking_reason}"),
                         refs=(f.locator,), disclosure=True))
+            grounds.extend(self._relative_weight(shown, thread))
             return
 
         if result.coverage is Coverage.NOT_HELD:

@@ -827,9 +827,11 @@ features:
   - BK-95
   declared_in:
   - backend/nm/adapters/knowledge/institution.py
+  - backend/nm/adapters/knowledge/interim_relief.py
   - backend/nm/core/thresholds.py
   - backend/nm/core/turn.py
   - backend/nm/knowledge/institution.py
+  - backend/nm/knowledge/interim_relief.py
   does:
   - 'Check, per thread: jurisdiction, forum, standing, maintainability, **limitation**, statutory notice
     and preconditions, valuation, court fees, arbitration or ADR clauses, territorial and pecuniary competence,
@@ -932,6 +934,7 @@ features:
   delivered_by:
   - BK-95
   declared_in:
+  - backend/nm/adapters/knowledge/authority_weight.py
   - backend/nm/core/deadlines.py
   - backend/nm/core/turn.py
   does:

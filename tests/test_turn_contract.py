@@ -207,9 +207,11 @@ def build(tmp_path, evidence=None, responses=None, model=None,
     # `statutory_notice` row is exactly the kind of difference that would hide
     # here and appear on a served turn.
     from nm.adapters.knowledge.institution import CuratedPreInstitution
+    from nm.adapters.knowledge.interim_relief import CuratedInterimRelief
     engine = TurnEngine(store=store, evidence=evidence or _Evidence(),
                         model=model, coverage=profile,
-                        pre_institution=CuratedPreInstitution())
+                        pre_institution=CuratedPreInstitution(),
+                        interim_relief=CuratedInterimRelief())
     return (briefed(engine) if intake else engine), store
 
 

@@ -1107,6 +1107,13 @@ class ReliefStatement(BaseModel):
     timing: str = "not_assessed"
     enforceability: str = "not_assessed"
     proportionality: str = "not_assessed"
+    interim: str = "not_stated"
+    """The interim order sought while this remedy is pursued. LB-123.
+
+    Validated against the SAME closed vocabulary the five coordinates are, and
+    for the same reason: an approximate read of which order is wanted decides
+    which threshold the application is measured against.
+    """
     reason: str = ""
     source: str = ""
     expected_version: int
@@ -1130,11 +1137,16 @@ def state_relief(matter_id: str, thread_id: str, body: ReliefStatement,
     from nm.core import relief as relief_mod
     from nm.core.premise import Basis
     from nm.domain.clock import today as _today
+    from nm.ports.interim_relief import InterimRelief
 
     coord_types = {
         "availability": relief_mod.Availability, "value": relief_mod.Value,
         "timing": relief_mod.Timing, "enforceability": relief_mod.Enforceability,
         "proportionality": relief_mod.Proportionality,
+        # NOT A COORDINATE -- it is carried here only because the validation
+        # is the same one, and a second hand-written membership check is how
+        # two spellings of "reject what is not in the vocabulary" drift apart.
+        "interim": InterimRelief,
     }
     coords = {}
     for name, enum in coord_types.items():
