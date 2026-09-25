@@ -207,6 +207,9 @@ def build(tmp_path, evidence=None, responses=None, model=None,
     # `statutory_notice` row is exactly the kind of difference that would hide
     # here and appear on a served turn.
     from nm.adapters.knowledge.institution import CuratedPreInstitution
+    from nm.adapters.knowledge.filing_requirement import (
+        CuratedFilingRequirements,
+    )
     from nm.adapters.knowledge.interim_relief import CuratedInterimRelief
     from nm.adapters.knowledge.procedural_period import (
         CuratedProceduralPeriods,
@@ -215,7 +218,9 @@ def build(tmp_path, evidence=None, responses=None, model=None,
                         model=model, coverage=profile,
                         pre_institution=CuratedPreInstitution(),
                         interim_relief=CuratedInterimRelief(),
-                        procedural=CuratedProceduralPeriods())
+                        procedural=CuratedProceduralPeriods(),
+                        filing=CuratedFilingRequirements(
+                            ROOT / "pipeline" / "manifest.yaml"))
     return (briefed(engine) if intake else engine), store
 
 

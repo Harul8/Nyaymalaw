@@ -214,6 +214,36 @@ def from_institution(engaged: tuple, undecided: tuple) -> ThresholdAnswer:
                "says, not a search of every statute")
 
 
+def from_filing_requirement(readiness) -> ThresholdAnswer:
+    """The `forum`, `valuation` and `court_fees` rows, MEASURED. LB-125.
+
+    NOT ONE OF THESE CAN BE `ANSWERED` TODAY, and that is the finding rather
+    than a shortfall in the row. A fee is computed from the schedule in force,
+    and the instruments that fix it are not among the corpus's intended
+    coverage -- so the honest answer is BLOCKED, naming the titles that would
+    have to be held.
+
+    THE REASON IS NOT THE MAP'S GENERIC SENTENCE, which is the whole point.
+    `not assessed on this thread` is what these three rows said on every turn,
+    and an advocate could not tell it from a threshold somebody had looked at.
+    A named gap is something they can act on -- or hand to whoever maintains
+    the corpus.
+
+    `NOT_APPLICABLE` IS NEVER REACHED FROM HERE. Every filing has a forum, a
+    valuation and a fee; the question is only whether this product can read
+    them. Reporting "does not arise" would be the silence D1 forbids wearing a
+    finding's clothes.
+    """
+    threshold = Threshold(readiness.requirement.value)
+    if readiness.computable:
+        return ThresholdAnswer(
+            threshold=threshold, state=ThresholdState.ANSWERED,
+            reason=readiness.why)
+    return ThresholdAnswer(
+        threshold=threshold, state=ThresholdState.BLOCKED,
+        reason=readiness.why)
+
+
 def from_limitation(lim: Limitation) -> ThresholdAnswer:
     """The limitation row, from the computation rather than beside it.
 

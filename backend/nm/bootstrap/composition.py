@@ -15,6 +15,9 @@ from types import MappingProxyType
 
 from nm.adapters.evidence.corpus import CorpusEvidenceAdapter, default_authority_index
 from nm.adapters.knowledge.authority_weight import CuratedAuthorityWeight
+from nm.adapters.knowledge.filing_requirement import (
+    CuratedFilingRequirements,
+)
 from nm.adapters.knowledge.interim_relief import CuratedInterimRelief
 from nm.adapters.knowledge.procedural_period import CuratedProceduralPeriods
 from nm.adapters.knowledge.elements import CuratedElements
@@ -341,6 +344,12 @@ class Application:
         # an installation that has not curated them enters no period, rather
         # than entering one it cannot source.
         self.procedural = CuratedProceduralPeriods()
+        # LB-125. IT READS THE MANIFEST, the curated assertion of intended
+        # coverage, at the moment it is asked -- so the day the Telangana
+        # schedule is ingested the forum, valuation and court-fee rows answer
+        # differently with nothing here edited. A manifest that cannot be read
+        # measures nothing and says so, rather than reading as an empty one.
+        self.filing = CuratedFilingRequirements(self.root / "pipeline" / "manifest.yaml")
         self.engine = TurnEngine(store=self.store, evidence=self.evidence,
                                  model=self.model, coverage=self.coverage,
                                  elements=self.elements,
@@ -348,6 +357,7 @@ class Application:
                                  authority_weight=self.authority_weight,
                                  interim_relief=self.interim_relief,
                                  procedural=self.procedural,
+                                 filing=self.filing,
                                  professional_approval=self.directory.professional_approval)
 
     def engine_for(self, advocate_id: str, *,
@@ -374,6 +384,7 @@ class Application:
                           authority_weight=self.authority_weight,
                           interim_relief=self.interim_relief,
                           procedural=self.procedural,
+                          filing=self.filing,
                           professional_approval=self.directory.professional_approval)
 
     # ------------------------------------------------------------ P21 ------

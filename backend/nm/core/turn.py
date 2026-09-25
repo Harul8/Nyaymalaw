@@ -104,6 +104,10 @@ from nm.domain.turn_receipt import (
 )
 from nm.domain.turn_receipt import fingerprint as offer_fingerprint
 from nm.ports.authority_weight import AuthorityWeightPort, Standing
+from nm.ports.filing_requirement import (
+    FilingRequirementPort,
+    Requirement as FilingRequirement,
+)
 from nm.ports.interim_relief import (
     InterimRelief,
     InterimReliefPort,
@@ -609,7 +613,8 @@ class TurnEngine:
                  pre_institution: "PreInstitutionPort | None" = None,
                  authority_weight: "AuthorityWeightPort | None" = None,
                  interim_relief: "InterimReliefPort | None" = None,
-                 procedural: "ProceduralPeriodPort | None" = None) -> None:
+                 procedural: "ProceduralPeriodPort | None" = None,
+                 filing: "FilingRequirementPort | None" = None) -> None:
         from nm.domain.advocate import utcnow
 
         self._clock = clock or utcnow
@@ -645,6 +650,11 @@ class TurnEngine:
         # between" is a statement about this matter, and an installation with
         # no table has nothing to say about it.
         self._procedural = procedural
+        # LB-125's FILING REQUIREMENTS. Absent, the three rows keep the map's
+        # own reason exactly as they read before this existed. An installation
+        # that cannot measure must not report a gap it has not measured --
+        # that is the same absent-input shape one door down.
+        self._filing = filing
         # Optional, and its ABSENCE IS NOT SILENCE: with no coverage port the
         # engine fires G-COVERAGE in the `not_measured` state rather than
         # skipping the gate, so an unwired installation discloses that it
@@ -3626,6 +3636,17 @@ class TurnEngine:
         notice = self._pre_institution_row(cause_read)
         if notice is not None:
             assessed[thresholds.Threshold.STATUTORY_NOTICE] = notice
+        # LB-125. FORUM, VALUATION AND COURT FEE, measured rather than left at
+        # the map's generic sentence. None of the three can be ANSWERED today
+        # and that is the finding: the instruments that fix the pecuniary
+        # tier, the valuation and the fee are not among the corpus's intended
+        # coverage, and the row now names the titles instead of saying
+        # "not assessed on this thread" in the same words as eight others.
+        if self._filing is not None:
+            for requirement in FilingRequirement:
+                assessed[thresholds.Threshold(requirement.value)] = \
+                    thresholds.from_filing_requirement(
+                        self._filing.readiness(requirement))
         map_ = thresholds.for_thread(assessed)
 
         # D1.1 -- arithmetic checked against THE FILE'S OWN DATES. A twelve-year

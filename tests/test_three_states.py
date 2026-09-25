@@ -69,6 +69,14 @@ ESCAPES = (
 #: Enums that are CLOSED VOCABULARIES, not outcomes. Each with the reason it
 #: cannot be "not assessed" — because something always chose it.
 CLOSED: dict[str, str] = {
+    "Requirement": (
+        "WHICH FILING REQUIREMENT IS BEING ASKED ABOUT -- forum, valuation or "
+        "court fee. The caller always knows which of the three it wants, "
+        "because it asks one at a time and every filing has all three. It is "
+        "not an outcome: the OUTCOME is `Readiness`, whose `SourceState` "
+        "carries both NOT_INTENDED and NOT_MEASURED, and whose `computable` "
+        "is false for three of its four values. A fourth member meaning "
+        "'unknown requirement' would be a question nobody asked. LB-125."),
     "Limb": (
         "WHICH QUESTION IS BEING ASKED of a statute -- what conduct was an "
         "offence, how a proceeding runs, what may be proved -- and the caller "

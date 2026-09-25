@@ -826,10 +826,12 @@ features:
   delivered_by:
   - BK-95
   declared_in:
+  - backend/nm/adapters/knowledge/filing_requirement.py
   - backend/nm/adapters/knowledge/institution.py
   - backend/nm/adapters/knowledge/interim_relief.py
   - backend/nm/core/thresholds.py
   - backend/nm/core/turn.py
+  - backend/nm/knowledge/filing_requirement.py
   - backend/nm/knowledge/institution.py
   - backend/nm/knowledge/interim_relief.py
   does:

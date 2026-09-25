@@ -536,3 +536,126 @@ exists only inside its sweep cannot be shown to work (B-049).
   depends on an Act (`Bharatiya Sakshya Adhiniyam`) that BASELINE does not
   record as held — its own `curated_from` says so.
 * **LB-122 to LB-125** are drafted and unbuilt.
+
+---
+
+# Build record — LB-122 to LB-125, 25 September 2026
+
+All four are built, wired at the composition root, and green. Twenty-four
+mutations were run across them and every one was caught by the test that states
+the rule rather than the scenario.
+
+## LB-122 — which authority this court must follow
+
+**Four of the five pieces already existed**, and measuring that before writing
+anything is what kept this row small. `jurisdiction.binding_status`,
+`citator.py`, the ratio/obiter split behind G-ATTRIB and
+`identity.supersedes` were all built. The gap was that **`supersedes` had no
+production caller** — its only callers were tests — so every authority was
+rendered with its own bench inside its `ref` and nothing compared them.
+
+`nm.knowledge.authority_weight` therefore supplies the POPULATION and states no
+hierarchy rule of its own, and `test_this_module_states_no_hierarchy_rule_of_
+its_own` reads that off the source, because a comment promising not to restate
+a rule is not a mechanism.
+
+The distinction the module turns on: **co-ordinate benches are a FINDING and an
+unrecorded bench is a GAP.** Two equal benches that disagree is something an
+advocate acts on; calling an unrecorded bench co-ordinate asserts equal weight
+on the strength of not knowing. The two are read off the wording `supersedes`
+already chose, so they cannot drift apart.
+
+## LB-123 — the interim application on its own test
+
+`nm.core.relief` answers whether the FINAL relief is available, valuable,
+timely, enforceable and proportionate. Nothing answered what an interim
+injunction must SHOW, so an advocate asking "can I get an injunction on Monday"
+got a confident answer to a different question.
+
+Four curated tests (Order XXXIX rr.1–3 and 3A; Order XXXVIII r.5; Order XL
+r.1), with the **statutory bar named BEFORE the limbs** — an advocate who reads
+three supported limbs and then meets SRA s.41 has read them for nothing — and
+the **higher mandatory threshold stated separately** rather than folded into
+the same test. The two injunction rows share ONE limbs tuple, by identity, so
+there is nothing to drift.
+
+**Every limb comes back NOT_ASSESSED** and that is held as an invariant, not a
+comment: nothing here reads the affidavit, so no limb may be called made out
+and none may be called weak. `STAY` is deliberately uncurated, and the answer
+names that gap rather than borrowing the injunction test beside it.
+
+`Relief.interim` is carried on the file and is **deliberately not read by
+`delivers`** — neither question answers the other, in either direction.
+
+## LB-124 — the clocks that run inside a proceeding
+
+Four periods, keyed to the closed `Role` vocabulary. Two things are said about
+every one and they are separate fields: whether it **BINDS** and whether it can
+be **EXTENDED**. Order XXXVII r.3 is the counterexample the design exists for —
+the period binds and the court may still excuse the delay — so one field would
+not have done.
+
+**No row states a number of days**, and a sweep fails the build on one that
+does. **Limitation Act s.5 is recorded as NOT the extension route** for any of
+them, with the reason: it condones delay in *instituting*, not delay inside a
+suit on foot, and offering it would send an advocate to make an application the
+court has no occasion to entertain.
+
+**No date is computed.** Every period runs from a trigger that is a fact about
+the advocate's own file, so each engaged period enters the **same** deadline
+register with `on=None` — NOT_COMPUTED, naming the trigger — rather than being
+left off, which would say there is no such deadline.
+
+**And the track is never picked.** Order VIII r.1 reads one way on a commercial
+suit of a specified value and another on an ordinary one. Both readings are
+UNDECIDED and said to be. A defendant told their written statement is
+late-but-curable when the right to file has been forfeited has had one sentence
+of confident wrong advice — and so has one told the reverse.
+
+## LB-125 — forum, valuation and court fee
+
+This row ships as the draft said it would: **an honest `not assessed`, with the
+gap named.** `forum`, `valuation` and `court_fees` have been declared
+thresholds since D1 and all three answered with the map's generic sentence on
+every turn, indistinguishable from a threshold somebody had looked at.
+
+**Measured, 25 September 2026, against `pipeline/manifest.yaml`:** of its 22
+entries, none is a court-fees and suits valuation Act and none is a civil
+courts Act. *That measurement is against the MANIFEST — intended coverage — and
+is not a claim about `legal_database/raw_data/`, which was not reachable from
+the build container and is measured there and nowhere else.*
+
+**The gap is measured at turn time, not written into the code.** `readiness`
+asks the manifest when it is called, matching **by exact title, never by
+overlap** — CLAUDE.md §5 measured three wrong Acts in one hour from shared
+words. A sentence in the source saying the schedule is not held would be B-141
+exactly: a claim about the filesystem nothing compares to the filesystem, which
+went unnoticed for eight days last time.
+`test_the_same_code_answers_differently_when_the_corpus_catches_up` proves the
+day the Act is ingested this answers differently with no edit.
+
+**Four states, and `HELD_UNVERSIONED` is not a weaker `HELD`.** A fee from a
+schedule whose version nobody recorded is wrong in a way that reads exactly
+like right — the amendment that moved it leaves no trace in the figure. That is
+defect shape **S11**'s argument: the dense index was knowable as unusable only
+because it shipped an `identity.json`. `SCHEDULE_VERSIONS` is empty and a test
+holds it so.
+
+`NOT_MEASURED` is never collapsed into `NOT_INTENDED`: an installation that
+cannot ask has not learned that the answer is no.
+
+## Still open after these four
+
+* **Counsel review of all five tables.** Not done. Every `curated_from` in
+  `institution.py`, `governing_law.py`, `interim_relief.py`,
+  `procedural_period.py` and `filing_requirement.py` is to be retrieved and
+  verified before release. LB-125's two Telangana titles are marked in the
+  source as **to be verified** — the adapted title and its year are exactly the
+  kind of thing a remembered citation gets wrong.
+* **The corpus gap LB-125 measures is real work, not just a disclosure.** Who
+  supplies and maintains the Telangana court-fees schedule, and at what
+  version, remains open. Until it is answered no fee is computed.
+* **No golden or e2e run.** Neither was run; both need per-run approval.
+* **LB-123's limb assessment and LB-124's trigger dates** are both the same
+  next slice: reading the advocate's own material. Each disclosure already
+  invites exactly that reply.
