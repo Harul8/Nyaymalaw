@@ -5,7 +5,7 @@ You are continuing work on **Nyaymalaw (NM)**, an AI legal assistant for Indian 
 ## Where things are
 - Repo `Harul8/Nyaymalaw`, branch **`claude/defect-shapes-review-q843ph`**, head at or after **`b5e25f6`** (this handover), pushed, working tree clean.
 - **The plan:** `docs/Nyaymalaw_Implementation_Plan.xlsx`. Sheet **Before Build** holds the requirements (10 columns per row); sheet **Implementation Plan** mirrors every LB/OM row and holds build state (col 39 Build status, 41 Evidence, 43 Test date, 44 Remaining gaps). `assurance/control_plane/plan_scenarios.requirement_problems()` must return `[]` after any edit. Workbook edits are made by one-off tools in `development_environment/one_off_tools/legal_brain_*_20260926.py`, which snapshot every cell, write only intended cells, and prove the rest unchanged on the saved file before replacing the source. Copy that pattern; never hand-edit cells.
-- **Decision record for this session:** `development_environment/reviews/SESSION_DECISIONS_20260926.md` (60 settled items, all verified present in the rows; re-run `development_environment/one_off_tools/session_decisions_check_20260926.py`).
+- **Decision record for this session:** `development_environment/reviews/SESSION_DECISIONS_20260926.md` (85 settled items, all verified present in the rows; re-run `development_environment/one_off_tools/session_decisions_check_20260926.py`).
 - **Build status of every legal-brain row:** the table below this handover.
 
 ## What was built in code this session (all pushed, tested, mutation-checked)
@@ -48,6 +48,8 @@ Owner-directed rows added this session, **LB-126 to LB-167** (drafts for owner r
 2. **LB-134**: floor or principle for each of the 13 judgment gates.
 3. **LB-140**: what counts as a dispute's "key details" before pass 2 (proposed: the elements' required facts answered or marked unobtainable).
 4. **LB-148/LB-167**: the first practice-area playbooks, and who does counsel review of the curated legal tables (none has been counsel-reviewed).
+
+5. **Raised in the 25 September review, never answered** (not in the plan): ten rows that define "great" bound to golden conversations; practising Telangana advocates as the LB-40 reviewers with a rubric agreed before release; Telugu-language material; Order VII/VIII pleadings; CPC state amendments and Telangana High Court rules; Indian sources (Bar Council of India Rules) for the expert-practice research. See `development_environment/reviews/SESSION_DECISIONS_20260926.md`.
 
 ## Next step (was about to start)
 **Slice 1, as a pull request for the owner's review:** tool calling in `backend/nm/ports/model.py` + OpenAI, Anthropic and scripted adapters (LB-127); the loop runner with step/token/cost/time budgets (LB-128); typed step events and a saved step log (LB-164); the append-only conversation (LB-147); record-and-replay so the loop is testable without an API key (LB-146). Built beside the existing `TurnEngine`, behind a switch.

@@ -92,6 +92,40 @@ CHECKLIST = [
     ("Slices cover everything now planned (loop foundation, tools, harness, scratch pad, answer and board, opposing counsel, context, switch)", [("LB-138", "scratch pad")]),
 ]
 
+EXTRA = [
+    # --- reading the matter -------------------------------------------------------------------
+    ("Each message: the understanding is stated first, shown first in the scratch pad", [("LB-163", "state the understanding"), ("LB-139", "what nm understood")]),
+    ("The matter is read from the checked file through tools, not loaded wholesale", [("LB-135", "read through tools"), ("LB-155", "matter_brief")]),
+    ("The advocate's own words kept verbatim and retrievable", [("LB-135", "verbatim"), ("LB-155", "read_turn")]),
+    # --- decomposing into disputes ---------------------------------------------------------
+    ("Disputes identified per message, new or existing; each kept distinct", [("LB-163", "identify the disputes"), ("LB-109", "dispute")]),
+    ("Everything after identification is done per dispute and grouped by dispute", [("LB-139", "grouped under each dispute"), ("LB-164", "dispute it belongs to")]),
+    ("Two disputes' analysis never merged", [("LB-165", "never merge two disputes")]),
+    # --- retrieval ------------------------------------------------------------------------------
+    ("Per dispute: Acts retrieved, sections considered, relevant, finalised", [("LB-163", "consider the candidate sections and finalise")]),
+    ("Statute tool reports candidates considered and which were kept or set aside, with reasons", [("LB-156", "set aside")]),
+    ("Per dispute: case law retrieved and the relevant portions identified", [("LB-163", "identify the passages relevant")]),
+    ("Case-law tool reports which passages were found relevant, with reasons", [("LB-157", "found relevant")]),
+    ("Finalised sections and relevant passages are what the answer shows", [("LB-165", "finalised")]),
+    ("What each dispute needs is worked out from the Act and case-law passages", [("LB-163", "from the passages, work out what the dispute needs")]),
+    # --- follow-up questions ---------------------------------------------------------------------
+    ("Questions per dispute come from the passages and elements, each saying why", [("LB-166", "each item names the passage or defence")]),
+    ("Pass 1 anticipated defences shape the questions", [("LB-166", "anticipated defence"), ("LB-140", "shape the matter-board questions")]),
+    ("Only questions whose answer changes the position; never asked twice", [("LB-166", "never ask twice"), ("LB-140", "would not change our position")]),
+    ("Answers from the board or the conversation go through checked writes and reopen the dispute", [("LB-166", "reopens that dispute")]),
+    ("Unobtainable details are marked so and the analysis proceeds with the limit", [("LB-166", "cannot be obtained")]),
+    # --- matter board and scratch pad -----------------------------------------------------
+    ("Matter board on the left lists every dispute with its status", [("LB-166", "left-hand matter board")]),
+    ("Scratch pad is the live stream of what the loop does, and it is streamed", [("LB-164", "server-sent-events")]),
+    ("Scratch pad works on phone and desktop", [("LB-139", "phone")]),
+    ("Each pass of the other side is labelled in the scratch pad", [("LB-139", "labelled with its pass")]),
+    ("Final answer: other side from pass 2, cross-matter risks from pass 3", [("LB-165", "from pass 2"), ("LB-165", "pass 3")]),
+    ("Final answer: questions outstanding listed", [("LB-165", "questions outstanding")]),
+    ("Unsupported items left out or stated as a limit", [("LB-165", "stated as a limit")]),
+    ("Streaming does not exist today (stated as a dependency)", [("LB-139", "streaming does not exist today")]),
+]
+CHECKLIST = CHECKLIST + EXTRA
+
 missing = []
 for topic, needs in CHECKLIST:
     absent = [(rid, phrase) for rid, phrase in needs if phrase.lower() not in text.get(rid, "")]
