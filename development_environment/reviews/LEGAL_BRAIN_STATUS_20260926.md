@@ -70,7 +70,7 @@ Every legal-brain row in `docs/Nyaymalaw_Implementation_Plan.xlsx`, assessed aga
 
 Verification status is unchanged: building is not acceptance, and no acceptance criterion was run as written for this pass.
 
-**Totals:** 13 built, 147 in progress, 29 not started, of 189 (LB-167 added after the pass).
+**Totals:** 13 built, 147 in progress, 29 not started, of 189 at the pass. Added since: LB-167 (in progress); and, from the 26 September review (`development_environment/one_off_tools/legal_brain_review_20260926.py`), LB-168 (in progress), LB-169 and LB-170 (not started).
 
 ## L.0  (11 built, 26 in progress, 2 not started)
 
@@ -285,16 +285,19 @@ Verification status is unchanged: building is not acceptance, and no acceptance 
 | LB-115 | Opposing arguments must not invent facts or law | In progress | As previously recorded. |
 | LB-117 | A source-backed checklist within the conversation | In progress | As previously recorded. |
 
-## L.8  (0 built, 6 in progress, 0 not started)
+## L.8  (0 built, 7 in progress, 2 not started)
 
 | Row | Title | Status | Remaining |
 |---|---|---|---|
 | LB-120 | Apply the law in force on the date that governs it | In progress | The table and port are built and tested but deliberately unwired: no criminal cause exists in the closed vocabulary. |
-| LB-121 | Mandatory steps before a proceeding can be instituted | In progress | Engaged conditions are named on the served turn; whether the file shows them done is not read; s.12A not curated (Act not held). |
+| LB-121 | Mandatory steps before a proceeding can be instituted | In progress | Engaged conditions are named on the served turn; whether the file shows them done is not read; s.12A is not curated -- the Commercial Courts Act is held (raw_data/, chunks.db and legal.db, measured 26 September 2026) but absent from the manifest, so it cannot be identified exactly. |
 | LB-122 | Weigh a precedent by what binds this court | In progress | Bench and court ranking reaches the answer; references to a larger bench and per incuriam are not detected. |
 | LB-123 | Assess interim relief on its own test | In progress | The test is set out; limbs are not assessed against the record. |
 | LB-124 | Time limits that run inside a proceeding | In progress | Periods are engaged and entered undated; no trigger date is read, so none is computed; the track is never established. |
-| LB-125 | Whether a filing will be accepted: forum, valuation and court fee | In progress | The gap is measured and named; no forum, valuation or fee is computed (Telangana schedules not held). |
+| LB-125 | Whether a filing will be accepted: forum, valuation and court fee | In progress | No forum, valuation or fee is computed. The Telangana Court-fees and Suits Valuation Act and the Civil Courts Act are held (raw_data/, chunks.db and legal.db, measured 26 September 2026) but not in the manifest, and the fee schedules were never atomised. |
+| LB-168 | Whether each document relied on can be read in evidence | In progress | The evidence inventory keeps existence, admissibility and weight apart, admissibility not assessed by default; no curated admissibility conditions exist, so nothing assesses it. |
+| LB-169 | What a pleading must contain, and what gets it rejected or returned | Not started | The drafting package exists; no pleading requirement from Order VI, VII or VIII is checked against a draft. |
+| LB-170 | Local procedure: the Telangana rules of practice, the Civil Courts Act and the CPC's state amendments | Not started | The local sources are held but none is in the manifest, and the Civil Rules of Practice are not in the derived store; nothing identifies or reads them exactly. |
 
 ## L.9  (0 built, 9 in progress, 1 not started)
 
