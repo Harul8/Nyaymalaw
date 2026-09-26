@@ -4471,6 +4471,37 @@ items:
     negative_control:
       mutation: retain persuasive recommendation prose after failing a controlling grounding check, move the operative block behind background or remove a material reservation in the concise view
       expected_failure: unsafe or incomplete output never presents normal concluded advice and every view retains the same controlling limits and first actionable content
+- id: BK-97
+  title: an abbreviation surface for Act identification
+  kind: control
+  priority: P1
+  delivery_status: verifying
+  implementation: complete
+  verification: partial
+  affects_phases: [C, D]
+  record: docs/BACKLOG.md#bk-97-an-abbreviation-surface-for-act-identification
+  stage_records:
+    start: {result: READY, ref: docs/blueprint/ACT_ALIAS_SURFACE.md}
+    build: {result: BUILT, ref: docs/blueprint/ACT_ALIAS_SURFACE.md}
+    test: {result: OPEN, ref: docs/blueprint/ACT_ALIAS_SURFACE.md}
+    signoff: {result: NOT_RUN, ref: docs/blueprint/ACT_ALIAS_SURFACE.md}
+  next_action: add an alias vocabulary to the Act manifest, matched only in the slot immediately following a provision reference and only where no full title already matched, so the commonest Indian citation forms resolve NAMED instead of falling through to keyword scoring; the substring and single-owner guards extend to aliases and a new behavioural guard proves BNS and BNSS stay distinguished
+  acceptance:
+  - id: BK-97-AC1
+    requirement: an Act written as an abbreviation or a title variant in the slot immediately following a provision reference resolves to ActBasis.NAMED with the matched form recorded, while a form the manifest does not hold still resolves INFERRED or NOT_RESOLVED and is disclosed as now; a full title continues to outrank every alias, so no input that resolves NAMED today changes the Act it resolves to
+    required_evidence: [domain_test, adversarial_test]
+    evidence: {}
+    negative_control:
+      mutation: match an alias anywhere in the text rather than at the position, or let a shorter alias win over a longer one that also matches there
+      expected_failure: a case-number prefix such as O.S. or C.C. is read as an Act, and BNSS resolves to the Bharatiya Nyaya Sanhita because BNS is a substring of it
+  - id: BK-97-AC2
+    requirement: the manifest guards cover aliases as well as titles - no alias sits inside another Act's title, no alias is claimed by two Acts once forms are normalised, and an alias that contains another is still distinguished by the resolver rather than by the spelling
+    required_evidence: [domain_test]
+    evidence: {}
+    negative_control:
+      mutation: give two Acts the same alias, or rely on the strings differing rather than on the matcher discriminating them
+      expected_failure: the winner depends on iteration order, which is a coin toss wearing a score, and the BNS/BNSS pair resolves by whichever is visited first
+
 
 events:
 - item: BK-54

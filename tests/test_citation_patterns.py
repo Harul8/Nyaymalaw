@@ -200,6 +200,136 @@ def test_no_act_title_is_a_substring_of_another():
         f"ambiguous: {collisions}")
 
 
+def test_no_alias_sits_inside_an_act_title():
+    """BK-97. The substring guard, extended to the population that grew.
+
+    `test_no_act_title_is_a_substring_of_another` protects title matching. An
+    alias is matched by the same resolver and needs the same property: an alias
+    living inside a different Act's title would make a question naming that Act
+    also match the alias's owner, and the choice between them is a guess again.
+    """
+    from nm.knowledge.manifest import Manifest, _flatten, title_without_year
+
+    m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
+    titles = {_flatten(title_without_year(e.act_name)): e.act_name
+              for e in m.entries}
+    collisions = [(alias, e.act_name, titles[t])
+                  for e in m.entries for alias in e.aliases
+                  for t in titles
+                  if _flatten(alias) in t and titles[t] != e.act_name]
+    assert not collisions, (
+        "an alias sits inside another Act's title, so the resolver cannot tell "
+        f"which Act was named: {collisions}")
+
+
+def test_no_alias_is_claimed_by_two_acts():
+    """BK-97. The single-owner guard, mirrored for aliases.
+
+    Compared on the FLATTENED form. `CPC` and `C.P.C.` are one alias of one Act
+    written two ways, and comparing raw strings would let two spellings of the
+    same abbreviation belong to two different Acts without anything noticing.
+    """
+    import collections
+
+    from nm.knowledge.manifest import Manifest, _flatten
+
+    m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
+    owners = collections.defaultdict(set)
+    for e in m.entries:
+        for alias in e.aliases:
+            owners[_flatten(alias)].add(e.act_name)
+    shared = {k: sorted(v) for k, v in owners.items() if len(v) > 1}
+    assert not shared, f"aliases claimed by more than one Act: {shared}"
+
+
+def test_an_alias_that_contains_another_is_still_distinguished():
+    """BK-97. THE ONE THE VOCABULARY ACTUALLY NEEDS.
+
+    `BNS` is a substring of `BNSS`. The Bharatiya Nyaya Sanhita and the
+    Bharatiya Nagarik Suraksha Sanhita are different codes, both in force from
+    1 July 2024, so NEITHER the substring guard above NOR `in_force_on`
+    separates them. Plain substring matching would resolve a BNSS question to
+    the BNS whenever the BNS was visited first -- iteration order deciding
+    which code an advocate is advised under.
+
+    This is a BEHAVIOURAL guard rather than a string one, and deliberately so.
+    The property that matters is that the RESOLVER tells them apart; asserting
+    that the strings differ would pass while the matcher was broken.
+    """
+    from datetime import date
+
+    from nm.knowledge.manifest import ActBasis, Manifest
+
+    m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
+    after = date(2025, 3, 1)
+
+    nyaya = m.resolve("offence under section 329 of the BNS", on=after)
+    assert nyaya.basis is ActBasis.NAMED and nyaya.entry is not None
+    assert nyaya.entry.act_name == "Bharatiya Nyaya Sanhita, 2023", (
+        f"`BNS` resolved to {nyaya.entry.act_name!r}")
+
+    suraksha = m.resolve("petition under section 482 of BNSS", on=after)
+    assert suraksha.basis is ActBasis.NAMED and suraksha.entry is not None
+    assert suraksha.entry.act_name == "Bharatiya Nagarik Suraksha Sanhita, 2023", (
+        f"`BNSS` resolved to {suraksha.entry.act_name!r} -- the longer alias "
+        f"lost to the one it contains")
+
+
+def test_an_alias_is_read_only_after_a_provision_reference():
+    """BK-97. WHY THE POSITION IS THE SAFETY ARGUMENT, not the vocabulary.
+
+    Measured over 1,285 prayer windows from real Telangana and Andhra Pradesh
+    High Court orders: the abbreviation namespace is SHARED between Acts and
+    case types -- `OS` in 86 documents, `CC` in 48, `WP` in 43. An alias read
+    anywhere in the text would take a case-number prefix for an Act, which is
+    `citation.py`'s `O.S. 442` defect one level up.
+
+    In the slot after a provision reference those prefixes appear four times in
+    1,187 windows. So the alias is read there and nowhere else.
+    """
+    from datetime import date
+
+    from nm.knowledge.manifest import ActBasis, Manifest
+
+    m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
+    on = date(2023, 6, 1)
+
+    at_position = m.resolve("petition under Section 151 CPC praying that", on=on)
+    assert at_position.basis is ActBasis.NAMED
+    assert at_position.entry.act_name == "Code of Civil Procedure, 1908"
+    assert "CPC" in at_position.matched_on, (
+        f"the matched form is not recorded: {at_position.matched_on}")
+
+    # The same abbreviation loose in the text, with no provision reference in
+    # front of it, must NOT be read as the Act the advocate named.
+    loose = m.resolve("we act for the respondent and the CPC applies here", on=on)
+    assert loose.basis is not ActBasis.NAMED, (
+        f"an alias with no provision before it resolved NAMED to "
+        f"{loose.entry.act_name if loose.entry else None!r}")
+
+
+def test_a_full_title_still_outranks_every_alias():
+    """BK-97 is ADDITIVE, and this is the property that makes it safe to land.
+
+    Aliases run only where no title matched. Nothing that resolved NAMED before
+    the alias surface existed resolves to a different Act because of it, so the
+    change cannot regress a case that already worked -- which is why it could
+    be taken before the question of what the label MEANS was settled.
+    """
+    from datetime import date
+
+    from nm.knowledge.manifest import ActBasis, Manifest
+
+    m = Manifest.load(ROOT / "pipeline" / "manifest.yaml")
+    both = m.resolve(
+        "the offence under Section 420 of the Indian Penal Code and the "
+        "petition under Section 482 CrPC",
+        on=date(2023, 6, 1))
+    assert both.basis is ActBasis.NAMED
+    assert both.entry.act_name == "Indian Penal Code, 1860", (
+        f"an alias outranked a written-out title: {both.entry.act_name!r}")
+
+
 def test_no_keyword_is_claimed_by_two_acts():
     """The other half. Keyword routing only produces ONE candidate honestly
     while each keyword belongs to one Act; a shared keyword makes the winner

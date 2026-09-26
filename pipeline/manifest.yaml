@@ -33,6 +33,7 @@ acts:
   - article 65
   - part payment
 - act_name: Negotiable Instruments Act, 1881
+  aliases: ['NI Act', 'N.I. Act']
   act_patterns:
   - the_negotiable_instruments_act_1881
   - '%NEGOTIABLE INSTRUMENTS ACT, 1881%'
@@ -47,6 +48,7 @@ acts:
   - negotiable instrument
   - section 138
 - act_name: Indian Evidence Act, 1872
+  aliases: ['Evidence Act']
   act_patterns:
   - the_indian_evidence_act_1872
   - '%INDIAN EVIDENCE ACT, 1872%'
@@ -73,6 +75,7 @@ acts:
   - collateral purpose
   - sale deed
 - act_name: Code of Criminal Procedure, 1973
+  aliases: ['CrPC', 'Cr.P.C.', 'Criminal Procedure Code']
   act_patterns:
   - the_code_of_criminal_procedure_1973
   - '%CODE OF CRIMINAL PROCEDURE, 1973%'
@@ -88,6 +91,7 @@ acts:
   - police custody
   - magistrate
 - act_name: Bharatiya Nagarik Suraksha Sanhita, 2023
+  aliases: ['BNSS', 'B.N.S.S.']
   act_patterns:
   - '%BHARATIYA NAGARIK SURAKSHA SANHITA%'
   - bharatiya_nagarik_suraksha_sanhita_2023
@@ -100,6 +104,7 @@ acts:
   - arrested today
   - produced before
 - act_name: Indian Penal Code, 1860
+  aliases: ['IPC', 'I.P.C.', 'Penal Code']
   act_patterns:
   - the_indian_penal_code_1860
   - '%INDIAN PENAL CODE, 1860%'
@@ -114,6 +119,7 @@ acts:
   - cheating
   - assault
 - act_name: Bharatiya Nyaya Sanhita, 2023
+  aliases: ['BNS', 'B.N.S.']
   act_patterns:
   - bharatiya_nyaya_sanhita_2023
   - '%BHARATIYA NYAYA SANHITA%'
@@ -138,6 +144,7 @@ acts:
   - lease
   - sale of immovable
 - act_name: Hindu Marriage Act, 1955
+  aliases: ['HMA']
   act_patterns:
   - '%HINDU MARRIAGE ACT, 1955%'
   - the_hindu_marriage_act_1955
@@ -215,6 +222,7 @@ acts:
   - servient
   - dominant heritage
 - act_name: Code of Civil Procedure, 1908
+  aliases: ['CPC', 'C.P.C.', 'Civil Procedure Code']
   act_patterns:
   - the_code_of_civil_procedure_1908
   - '%CODE OF CIVIL PROCEDURE, 1908%'
@@ -244,6 +252,7 @@ acts:
   - labour court
   - industrial tribunal
 - act_name: Arbitration and Conciliation Act, 1996
+  aliases: ['A&C Act']
   act_patterns:
   - '%THE ARBITRATION AND CONCILIATION ACT, 1996%'
   - the_arbitration_and_conciliation_act_1996

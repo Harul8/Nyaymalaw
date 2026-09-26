@@ -1,0 +1,41 @@
+{
+  "artefact": "golden evaluation document set",
+  "built_at": "2026-09-20T03:47:45.636526+00:00",
+  "source_bucket": "https://indian-high-court-judgments.s3.amazonaws.com/",
+  "licence": "CC-BY-4.0",
+  "licence_read_at": "https://github.com/vanga/indian-high-court-judgments",
+  "attribution": [
+    "High Court for the State of Telangana",
+    "High Court of Andhra Pradesh"
+  ],
+  "authorisation": null,
+  "rights_state": "LICENCE_STATED_NOT_REVIEWED",
+  "frame": {
+    "courts": [
+      "36_29",
+      "28_2"
+    ],
+    "years": [
+      2023,
+      2026
+    ],
+    "rows": 364739,
+    "distinct_case_types": 65,
+    "strata_eligible": 24,
+    "strata_excluded": 41,
+    "rows_naming_a_provision": 37858,
+    "distinct_cases": 363193
+  },
+  "seed": 20260920,
+  "documents": {
+    "selected": 1000,
+    "reserve": 488,
+    "not_held": 4
+  },
+  "document_states": {
+    "held": 1488,
+    "not_held": 4
+  },
+  "shortfall_strata": {},
+  "builder_sha256": "2818fbfb718f8ad8d337ab1e4c9dc7add82c05ed3c5f90ad9ed99e33f7a65684"
+}

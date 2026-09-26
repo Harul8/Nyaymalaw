@@ -59,3 +59,10 @@ assurance/specification/prd/node_modules/
 Thumbs.db
 *.swp
 .nm/dev-matter-key
+
+# Golden evaluation documents: the bytes live in the bucket, the manifest
+# reconstitutes them exactly. Never commit the PDFs or the parquet cache.
+golden/docs/
+golden/manifest.json
+golden/_metadata_cache/
+golden/labels.json

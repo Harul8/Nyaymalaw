@@ -20,6 +20,9 @@ dependencies = [
 openai = ["openai>=1.40"]
 anthropic = ["anthropic>=0.40"]
 knowledge = ["openpyxl>=3.1"]
+# PDF text for the evaluation-set labeller. Nothing in the served product
+# reads a PDF, so this stays out of the runtime dependency set.
+acquisition = ["pymupdf>=1.24"]
 dev = [
     "jsonschema>=4.26,<5",
     "pytest>=8.0",
