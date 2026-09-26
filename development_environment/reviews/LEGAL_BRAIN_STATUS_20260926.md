@@ -1,3 +1,65 @@
+# HANDOVER -- read this first (session of 25-26 September 2026)
+
+You are continuing work on **Nyaymalaw (NM)**, an AI legal assistant for Indian advocates (Telangana and Union law). The previous session ran out of usage; this section is everything you need to pick up. Read `CLAUDE.md` at the repo root before anything else -- its rules bind (generalised fixes only, invariant tests, measure before diagnosing, no fuzzy Act identification, three states, verify on the served path).
+
+## Where things are
+- Repo `Harul8/Nyaymalaw`, branch **`claude/defect-shapes-review-q843ph`**, head **`6634547`**, pushed, working tree clean.
+- **The plan:** `docs/Nyaymalaw_Implementation_Plan.xlsx`. Sheet **Before Build** holds the requirements (10 columns per row); sheet **Implementation Plan** mirrors every LB/OM row and holds build state (col 39 Build status, 41 Evidence, 43 Test date, 44 Remaining gaps). `assurance/control_plane/plan_scenarios.requirement_problems()` must return `[]` after any edit. Workbook edits are made by one-off tools in `development_environment/one_off_tools/legal_brain_*_20260926.py`, which snapshot every cell, write only intended cells, and prove the rest unchanged on the saved file before replacing the source. Copy that pattern; never hand-edit cells.
+- **Decision record for this session:** `development_environment/reviews/SESSION_DECISIONS_20260926.md` (60 settled items, all verified present in the rows; re-run `development_environment/one_off_tools/session_decisions_check_20260926.py`).
+- **Build status of every legal-brain row:** the table below this handover.
+
+## What was built in code this session (all pushed, tested, mutation-checked)
+The **Indian practice layer**, each a curated table in `backend/nm/knowledge/`, a port in `backend/nm/ports/`, an adapter in `backend/nm/adapters/knowledge/`, wired in `backend/nm/bootstrap/composition.py` and `backend/nm/core/turn.py`:
+- LB-120 governing code by date (IPC/BNS, CrPC/BNSS, Evidence/BSA) -- built but deliberately **unwired** (no criminal cause in the closed vocabulary).
+- LB-121 pre-institution conditions (NI Act s.138/142 notice, CPC s.80, TPA s.106) -- names engaged conditions; does not read whether done.
+- LB-122 which authority binds (bench/court ranking through `identity.supersedes`).
+- LB-123 interim relief on its own test (Order XXXIX, XXXVIII r.5, XL; SRA s.41 bar; limbs NOT ASSESSED).
+- LB-124 procedural periods (Order VIII r.1 ordinary/commercial, XXXVII, s.148A) -- entered on the deadline register undated; track never inferred.
+- LB-125 forum/valuation/court fee -- honest measured gap (Telangana schedules not in `pipeline/manifest.yaml`).
+Full suite at that point: only the 21 pre-existing `tests/test_current_plan_view.py` failures (they need a runtime absent from the cloud container).
+
+## The direction the owner set (the heart of this session)
+1. **No model training.** Use frontier models as they are (Opus 5.5, Fable, or an OpenAI model), provider-neutral.
+2. **The model works autonomously in a loop** -- decide, act through tools, verify, decide again -- guided by **principles, not fixed rules** that work against its capabilities.
+3. **A strong harness checks everything the model produces**; a failed check goes back to the model with its reason (**repair**), bounded; still failing is withheld with the reason. **Zero invention / hallucination is non-negotiable**: every answer is a set of **claims tied to retrieved passages or the advocate's own words**.
+4. The existing gates were sorted: **18 output checks** (keep, run after the loop), **6 professional boundaries** (fixed), **13 judgment gates** -- owner to decide floor or principle (LB-134; recommendation recorded).
+5. **Build beside the current pipeline, behind a switch; switch on a golden-set comparison** (LB-138). Never run golden/e2e evals without the owner's per-run approval.
+
+## The plan structure (Before Build)
+**A Arrive** (unchanged) -> **L Legal brain**: L.0 entry, L.1 guiding principles, L.2 the reasoning loop, L.3 tools, L.4 retrieval and grounding, L.5 the harness, L.6 context and memory, L.7 legal reasoning and advice, L.8 Indian practice layer, L.9 models, evaluation and build discipline -> **U** interface -> **P** later phases -> **X** diagnostics.
+
+Owner-directed rows added this session, **LB-126 to LB-167** (drafts for owner review):
+- L.1: LB-126 principles document the model reads every turn.
+- L.2: LB-127 tool calling across providers; LB-128 the loop with budgets and a step log; **LB-140 opposing counsel in three passes**; LB-163 the guided method per message; LB-164 typed step events (streamed and saved); **LB-139 the scratch pad**.
+- L.3 Tools: LB-129, LB-154 (envelope, 10 tool rules, registry, build order) to LB-162 (matter, statute, case-law, computation, practice-table, checking/delegation, advocate/action tools incl. **`submit_answer` -- the answer is a tool call**; discovery; deliberately not tools: open web search, command line, DB access).
+- L.4: LB-130 claims tied to sources; LB-137 model-chosen retrieval with exact Act identity; LB-144 every number from a tool.
+- L.5: LB-131 18 checks; LB-132 6 boundaries; LB-133 repair; LB-134 13 gates; LB-141 independent verifier; LB-143 checks before/after each tool call.
+- L.6 (modelled on how Claude manages context): LB-135/136/142/145, LB-147 stable prefix + append-only conversation, LB-148 on-demand tools and practice playbooks, LB-149 clear spent results / page by locator, **LB-150 compaction rebuilds the brief from the checked file**, LB-151 advocate memory, LB-152 freshness, LB-153 one context policy on every provider.
+- L.7: **LB-165 the answer dispute by dispute** (Act passages finalised, case-law passages, evidence to collect, case to prepare incl. relief, arguments, what the other side will say, how to strengthen); **LB-166 matter-board questions per dispute**, each naming the passage or anticipated defence behind it.
+- L.9: LB-138 build beside and switch (with the proposed slice order), LB-146 record/replay/compare, **LB-167 owner review and keeping status true**.
+
+## Decisions the owner made (recorded in the rows)
+- Order of work is **guided by the principles; the final sections are required**, not enforced step by step (LB-163).
+- **Each turn's scratch pad is saved with the matter**; closed by default; interim lines marked as working, not advice; reasons for setting a section aside labelled as NM's judgment (LB-139).
+- **Opposing counsel in three passes**: pass 1 anticipated defences early per dispute (shape the board's questions); pass 2 full attack per dispute once its details are in; pass 3 once across the matter; every defence backed by a passage; re-run only when what it rested on changes (LB-140).
+
+## Open -- the owner has not decided
+1. Confirm the **slice order** in LB-138 (proposed: loop foundation -> envelope/registry/core tools -> harness after the loop -> streaming + scratch pad -> per-dispute answer + board questions -> opposing counsel -> context work -> document extraction -> golden comparison and switch).
+2. **LB-134**: floor or principle for each of the 13 judgment gates.
+3. **LB-140**: what counts as a dispute's "key details" before pass 2 (proposed: the elements' required facts answered or marked unobtainable).
+4. **LB-148/LB-167**: the first practice-area playbooks, and who does counsel review of the curated legal tables (none has been counsel-reviewed).
+
+## Next step (was about to start)
+**Slice 1, as a pull request for the owner's review:** tool calling in `backend/nm/ports/model.py` + OpenAI, Anthropic and scripted adapters (LB-127); the loop runner with step/token/cost/time budgets (LB-128); typed step events and a saved step log (LB-164); the append-only conversation (LB-147); record-and-replay so the loop is testable without an API key (LB-146). Built beside the existing `TurnEngine`, behind a switch.
+
+## Facts to keep in mind
+- Today the turn engine (`backend/nm/core/turn.py`, ~7,200 lines) is a **fixed pipeline** of ~22 model reads; only evidence retrieval loops (max 3 rounds). The model port has `complete`, `structured`, `embed` -- **no tool calling**. `/api/turn` returns one finished answer -- **no streaming**.
+- **Uploaded documents are stored but never read** (no PDF/OCR/media extraction). Retrieval is **keyword (FTS) only**; semantic support is mostly "not assessed".
+- The cloud container has **no model API key** and **no corpus** (`legal_database/` is a Windows junction on the owner's machine). Live runs happen on the owner's machine with approval.
+- Status legend below: **Built** = works on the served path with tests for its acceptance criteria; **In progress** = partially built; **Not started** = none of the row's behaviour exists. Verification columns were deliberately left "Not verified".
+
+---
+
 # Legal brain -- build status, 26 September 2026
 
 Every legal-brain row in `docs/Nyaymalaw_Implementation_Plan.xlsx`, assessed against the code. Recorded in the Implementation Plan sheet's Build status, Evidence references, Test date and Remaining gaps columns.
