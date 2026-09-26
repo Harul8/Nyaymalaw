@@ -4820,6 +4820,58 @@ d("B-144", "2026-09-18", "tooling",
   "wiring fixture in its signature -- matched on the call in the AST, not "
   "on the text, so a docstring naming the mistake is not the mistake.")
 
+d("B-165", "2026-09-26", "retrieval",
+  "A PROVISION WAS READ AS ONE OF ITS ATOMS. The provision reader took one "
+  "atom per section per store -- the section head where there was one, else "
+  "the first -- and the document reader kept the longest. Of the 3,402 "
+  "provisions the manifest intends, 760 came back part-read and marked "
+  "resolved and supporting: Limitation Act s.18 as sub-section (1) alone, "
+  "without (2) or the Explanation.",
+  "Reviewing the capabilities the tool layer would wrap. The reader was "
+  "written when the fuller store kept whole sections in its head atom, and "
+  "the `limit 1` held there; stores that split a section into atoms, or keep "
+  "the head as a heading, were read through the same line.",
+  "S9 -- two owners for one truth (and S6: a resolved, supporting verdict "
+  "from an input that was incomplete)",
+  "Measuring every intended provision against every atom its store holds. "
+  "The first two measurements over-counted (68%, then 35%) because the "
+  "instrument compared atom labels; it was corrected against a section read "
+  "by hand before the 22% was relied on.",
+  "`assemble_section` builds the text from every atom of the section in the "
+  "store's order, nothing said twice, the head kept whole; both readers call "
+  "it. After the fix 3,395 of 3,402 return every atom their store holds.",
+  "Yes -- the rule names no Act or atom type, and the scan draws its "
+  "population from every function in backend/nm that reads provision atoms.",
+  "tests/test_a_provision_is_read_whole.py::"
+  "test_every_reader_of_provision_atoms_assembles_through_the_one_function "
+  "fails the build on a reader that does not assemble; "
+  "test_every_intended_provision_is_read_whole_from_its_store checks the "
+  "whole manifest against the corpus (Class C).")
+
+d("B-166", "2026-09-26", "limitation",
+  "A RESTART DROPPED A PERIOD COUNTED IN DAYS. `compute` and `expiry_from` "
+  "each held the arithmetic, and both restart copies re-added years and "
+  "months but not days: a ninety-day period restarted by a written "
+  "acknowledgment on 1 March 2024 expired on 1 March 2024, reporting a "
+  "revived claim barred the day it was revived. The listed-last restart also "
+  "governed, whatever its date.",
+  "Reviewing the capabilities the tool layer would wrap. The arithmetic was "
+  "written twice in one module, and the docstring of the second copy said it "
+  "was the first, so nothing compared them.",
+  "S9 -- two owners for one truth",
+  "Reading the arithmetic while reviewing compute_limitation as a tool, then "
+  "running the ninety-day case directly.",
+  "`run_period` is the one place a period is laid over a date; `expiry_from` "
+  "restarts from the LATEST restart and runs the whole period through it, "
+  "and `compute` takes its date from `expiry_from`.",
+  "Yes -- asserted for every unit a period can carry, and the single-owner "
+  "scan covers every function in backend/nm.",
+  "tests/test_a_restart_runs_the_whole_period.py::"
+  "test_period_arithmetic_has_one_owner_across_the_product fails the build "
+  "on a second copy; "
+  "test_a_restart_runs_the_whole_period_from_its_own_date asserts it for "
+  "years, months and days.")
+
 
 sheet("Defects", ["ID", "Found", "Area", "What broke",
                   "What I was doing that introduced it", "Shape",

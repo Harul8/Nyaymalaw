@@ -87,6 +87,53 @@ def _section_order(number: str) -> tuple:
 EXAMINED_CEILING = 40
 
 
+def _squash(text: str) -> str:
+    """Whitespace collapsed, case folded: the form containment is judged in."""
+    return " ".join((text or "").split()).lower()
+
+
+def assemble_section(atoms: list[tuple[str, str]]) -> str:
+    """THE WHOLE TEXT OF ONE PROVISION, from every atom a store holds for it.
+
+    ONE COPY, and both readers call it: the provision a turn retrieves
+    (`_union_lookup`) and the provision the document reader shows (LB-92).
+
+    `atoms` is `(atom_type, full_text)` in the store's own order. Each atom's
+    `full_text` is a label line -- "<Act> . s.18(2)(a): <heading>" -- and then
+    the provision's own words.
+
+    THE MEASURED DEFECT, 26 September 2026. Both readers took ONE atom per
+    section -- the section head where there was one, else whichever came
+    first or was longest. Where a store keeps the head as a heading only, or
+    has no head at all, that one atom is part of the section: Limitation Act
+    s.18 came back as sub-section (1) alone, without (2) or the Explanation
+    the acknowledgment cases turn on. Across the 3,402 provisions the manifest
+    intends, 760 were returned part-read, and every one was marked resolved
+    and supporting.
+
+    THE TEXT IS THE UNION, IN ORDER, WITH NOTHING SAID TWICE. The head leads
+    and is kept whole, label included, so a section it already carries in full
+    reads exactly as it did; every other atom adds its own words -- its label
+    line dropped -- unless those words are already in the text. Verbatim
+    throughout: nothing is paraphrased, reordered within an atom or supplied.
+    """
+    ordered = ([a for a in atoms if a[0] == "section_head"]
+               + [a for a in atoms if a[0] != "section_head"])
+    parts: list[str] = []
+    for _atom_type, full_text in ordered:
+        text = (full_text or "").strip()
+        if not text:
+            continue
+        # The label is the first line; the words are the rest. The first atom
+        # keeps its label, because the text has always begun with one.
+        head, _, rest = text.partition("\n")
+        words = rest.strip() or head
+        if parts and _squash(words) in _squash(" ".join(parts)):
+            continue
+        parts.append(text if not parts else words)
+    return " ".join(" ".join(parts).split())
+
+
 @dataclass(frozen=True)
 class _Routed:
     """What the graph resolved: the Act, the provision, and the disclosure."""
@@ -491,18 +538,24 @@ class CorpusEvidenceAdapter:
         try:
             for pattern in patterns:
                 stores.append(pattern)
-                row = con.execute(
-                    """select act_id, atom_type, chunk_id, blob from chunks
-                       where doc_type='bare_act' and act_id like ? and section_number=?
-                       order by case atom_type when 'section_head' then 0 else 1 end
-                       limit 1""",
-                    (pattern, section)).fetchone()
-                if row is None:
+                # EVERY ATOM OF THE SECTION, in the store's order -- never one.
+                # The provision is assembled from all of them (`assemble_section`);
+                # one atom was part of the section for 760 of 3,402 provisions.
+                by_store: dict[str, list[tuple[str, str]]] = {}
+                for act_id, atom_type, chunk_id, blob in con.execute(
+                        """select act_id, atom_type, chunk_id, blob from chunks
+                           where doc_type='bare_act' and act_id like ? and section_number=?
+                           order by act_id, pos""",
+                        (pattern, section)):
+                    if chunk_id in self._denylist():
+                        continue
+                    by_store.setdefault(act_id, []).append(
+                        (atom_type, json.loads(blob).get("full_text") or ""))
+                if not by_store:
                     continue
-                act_id, atom_type, chunk_id, blob = row
-                if chunk_id in self._denylist():
-                    continue
-                text = " ".join((json.loads(blob).get("full_text") or "").split())
+                act_id, text = max(((store, assemble_section(atoms))
+                                    for store, atoms in by_store.items()),
+                                   key=lambda pair: len(pair[1]))
                 if not text:
                     continue
                 candidates.append(Finding(
@@ -510,7 +563,7 @@ class CorpusEvidenceAdapter:
                     source_kind=SourceKind.PROVISION,
                     ref=provision_label(entry.act_name, section),
                     span=text,
-                    locator=f"{act_id}::{section}::{atom_type}",
+                    locator=f"{act_id}::{section}::section",
                     store=act_id,
                     binding=Binding.BINDING,
                     binding_for=self._jurisdiction,
@@ -578,28 +631,29 @@ class CorpusEvidenceAdapter:
         rows = self._rows(
             self._db,
             """select section_number, atom_type, chunk_id, blob from chunks
-               where doc_type='bare_act' and act_id=?""",
+               where doc_type='bare_act' and act_id=? order by pos""",
             (act_id,))
         if rows is None:
             return SourceDocument(
                 state="no_reader",
                 missing="the provision store could not be opened for reading")
-        best: dict[str, tuple[str, str]] = {}
-        for section_number, _atom_type, chunk_id, blob in rows:
+        # EVERY ATOM OF EVERY SECTION, assembled by the one function the turn's
+        # reader uses. This kept the LONGEST ATOM per section, which is the same
+        # defect in a second place: the reader showed s.18(1) as section 18.
+        atoms: dict[str, list[tuple[str, str]]] = {}
+        for section_number, atom_type, chunk_id, blob in rows:
             if chunk_id in self._denylist():
                 continue
-            body = " ".join((json.loads(blob).get("full_text") or "").split())
+            atoms.setdefault(str(section_number or "").strip(), []).append(
+                (atom_type, json.loads(blob).get("full_text") or ""))
+        best: dict[str, tuple[str, str]] = {}
+        for number, section_atoms in atoms.items():
+            body = assemble_section(section_atoms)
             if not body:
                 continue
-            number = str(section_number or "").strip()
-            # THE FULLEST TEXT WINS, the same rule `_union_lookup` applies and
-            # for the same measured reason: the thin copies are truncated, and
-            # a 13-section copy of a 44-section Act reads as a corpus gap.
-            held = best.get(number)
-            if held is None or len(body) > len(held[1]):
-                heading = number.replace('_', ' ')
-                best[number] = (heading if heading.startswith('Article ') else
-                                f"Section {heading}" if heading else "Provision", body)
+            heading = number.replace('_', ' ')
+            best[number] = (heading if heading.startswith('Article ') else
+                            f"Section {heading}" if heading else "Provision", body)
         if not best:
             return SourceDocument(
                 state="not_held",

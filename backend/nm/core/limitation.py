@@ -46,7 +46,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from enum import Enum
 
 from nm.domain.matter import FactId, Side
@@ -74,6 +74,31 @@ def add_months(on: date, months: int) -> date:
     """
     total = (on.year * 12 + (on.month - 1)) + months
     return _clamped(total // 12, total % 12 + 1, on.day)
+
+
+def run_period(start: date, period: "Period") -> date:
+    """The date `period` ends when it runs from `start`. THE ONLY COPY.
+
+    Years, then months, then days -- calendar first so month-end clamping
+    happens once. Every place a period is laid over a date comes here: the
+    accrual, and every restart.
+
+    IT WAS WRITTEN FOUR TIMES, and two of the four dropped the days. `compute`
+    and `expiry_from` each held the accrual arithmetic and the restart
+    arithmetic, and both restart copies re-added years and months but not
+    days -- so an acknowledgment inside a ninety-day period put the expiry ON
+    the acknowledgment's own date, reporting a revived claim barred the day it
+    was revived. Measured 26 September 2026. One function cannot run a period
+    partially in one caller and fully in another.
+    """
+    on = start
+    if period.years:
+        on = add_years(on, period.years)
+    if period.months:
+        on = add_months(on, period.months)
+    if period.days:
+        on = on + timedelta(days=period.days)
+    return on
 
 
 def _clamped(year: int, month: int, day: int) -> date:
@@ -401,33 +426,11 @@ def compute(for_side: Side, article: str, accrual: FactId, accrual_on: date,
     """
     considered = considered or {}
     years, months, days = period.years, period.months, period.days
-
-    # THE CALENDAR, NOT THE DAYS. Years and months first so that clamping
-    # happens once, at the month end, rather than compounding.
-    on = accrual_on
-    if years:
-        on = add_years(on, years)
-    if months:
-        on = add_months(on, months)
-    if days:
-        from datetime import timedelta
-        on = on + timedelta(days=days)
+    # ONE ARITHMETIC. The date comes from `expiry_from`, which this function
+    # used to restate line for line -- and the restated restart dropped days.
+    on = expiry_from(accrual_on, period, factors)
 
     applied_facts = {f.fact for f in factors}
-    for f in factors:
-        if f.restarts_from is not None:
-            # A RESTART recomputes from the new date -- it does not add to the
-            # old expiry. Adding would give a period longer than the statute
-            # allows, which is the error that favours our own client.
-            on = f.restarts_from
-            if years:
-                on = add_years(on, years)
-            if months:
-                on = add_months(on, months)
-    for f in factors:
-        if f.adds_days:
-            from datetime import timedelta
-            on = on + timedelta(days=f.adds_days)
 
     rows: list[Entry] = []
     for fid in chronology:
@@ -467,30 +470,25 @@ def compute(for_side: Side, article: str, accrual: FactId, accrual_on: date,
 
 def expiry_from(accrual_on: date, period: Period,
                 factors: tuple[Factor, ...] = ()) -> date:
-    """The bare arithmetic, once, for the alternatives a conditional position
-    carries. THE SAME STEPS AS `compute` -- calendar years and months, then
-    restarts, then days -- so a competing trigger's date is computed the way
-    the chosen one was and not by a second, shorter copy."""
-    on = accrual_on
-    if period.years:
-        on = add_years(on, period.years)
-    if period.months:
-        on = add_months(on, period.months)
-    if period.days:
-        from datetime import timedelta
-        on = on + timedelta(days=period.days)
-    for f in factors:
-        if f.restarts_from is not None:
-            on = f.restarts_from
-            if period.years:
-                on = add_years(on, period.years)
-            if period.months:
-                on = add_months(on, period.months)
-    for f in factors:
-        if f.adds_days:
-            from datetime import timedelta
-            on = on + timedelta(days=f.adds_days)
-    return on
+    """The expiry, once. `compute` and a conditional position's alternatives
+    both come here, so a competing trigger's date is computed the way the
+    chosen one was.
+
+    A RESTART RUNS THE WHOLE PERIOD AFRESH FROM ITS DATE -- years, months AND
+    days, through `run_period` -- and does not add to the old expiry. Adding
+    would give a period longer than the statute allows, which is the error
+    that favours our own client.
+
+    THE LATEST RESTART GOVERNS, whatever order the factors arrive in. A fresh
+    period runs from each acknowledgment or payment made in time, so the one
+    that ends latest is the one in force; taking whichever was listed last
+    made the date depend on the order a caller happened to build the tuple.
+    Excluded days are added after, once.
+    """
+    restarts = [f.restarts_from for f in factors if f.restarts_from is not None]
+    on = run_period(max(restarts) if restarts else accrual_on, period)
+    extra = sum(f.adds_days for f in factors if f.adds_days)
+    return on + timedelta(days=extra) if extra else on
 
 
 
