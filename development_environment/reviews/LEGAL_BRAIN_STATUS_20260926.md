@@ -6,7 +6,7 @@ Every legal-brain row in `docs/Nyaymalaw_Implementation_Plan.xlsx`, assessed aga
 
 Verification status is unchanged: building is not acceptance, and no acceptance criterion was run as written for this pass.
 
-**Totals:** 13 built, 146 in progress, 29 not started, of 188.
+**Totals:** 13 built, 147 in progress, 29 not started, of 189 (LB-167 added after the pass).
 
 ## L.0  (11 built, 26 in progress, 2 not started)
 
@@ -232,12 +232,13 @@ Verification status is unchanged: building is not acceptance, and no acceptance 
 | LB-124 | Time limits that run inside a proceeding | In progress | Periods are engaged and entered undated; no trigger date is read, so none is computed; the track is never established. |
 | LB-125 | Whether a filing will be accepted: forum, valuation and court fee | In progress | The gap is measured and named; no forum, valuation or fee is computed (Telangana schedules not held). |
 
-## L.9  (0 built, 8 in progress, 1 not started)
+## L.9  (0 built, 9 in progress, 1 not started)
 
 | Row | Title | Status | Remaining |
 |---|---|---|---|
 | LB-138 | Build beside the pipeline, compare, then switch | Not started | The loop does not exist to be built beside the pipeline. |
 | LB-146 | Record, replay and compare: the loop tested on every commit | In progress | Model calls are kept and a scripted model exists; no replay adapter from recordings, no provider comparison. |
+| LB-167 | The owner's review of what is built, and a status that stays true | In progress | Added after this pass; the first status pass is recorded, no review step has begun. |
 | LB-40 | Qualified review and realistic quality measures | In progress | No qualified Indian reviewer rubric has been run. |
 | LB-43 | Plan reconciliation and delivery ownership | In progress | This status pass is part of it; delivery owners per clause not mapped. |
 | LB-44 | Decisions required before implementation and release | In progress | Decisions open: LB-134 gates, LB-148 playbooks, pass-2 key details, thresholds and budgets. |
