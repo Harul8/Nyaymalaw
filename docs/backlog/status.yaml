@@ -3023,17 +3023,6 @@ items:
     negative_control:
       mutation: record production PASS as an unstructured phrase with no evidence record
       expected_failure: backlog lint refuses the claim
-  - id: BK-73-AC4
-    requirement: every pushed commit is independently checked by a repository-defined
-      Class-A CI job whose result is tied to that commit
-    required_evidence: [integration_test]
-    evidence:
-      integration_test:
-        result: PASS
-        ref: tests/test_evidence_is_bound_to_execution.py::test_pushes_and_pull_requests_run_the_repository_class_a_gate
-    negative_control:
-      mutation: remove the CI workflow or its Class-A command
-      expected_failure: the repository control test reports that pushes have no independent gate
 - id: BK-74
   title: Start Build Test and Sign-off are enforced delivery states with records
   kind: control
@@ -4638,3 +4627,9 @@ events:
   to: verifying
   reason: re-measured; the row named a list the product no longer holds
   evidence: docs/BACKLOG.md, the hard-coding audit
+- item: BK-73
+  at: '2026-09-26'
+  from: verifying
+  to: verifying
+  reason: the owner retired BK-73-AC4 as an old requirement -- the Class-A CI workflow on every push and pull request is deleted with its test; AC1 to AC3 are unchanged
+  evidence: docs/BACKLOG.md#bk-73-evidence-results-are-bound-to-the-build-and-execution-that-earned-them

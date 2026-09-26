@@ -88,10 +88,6 @@
           "kind": "existing"
         },
         {
-          "path": ".github/workflows/class-a.yml",
-          "kind": "existing"
-        },
-        {
           "path": "tests/test_the_spec_says_what_is_true_now.py",
           "kind": "existing"
         },
@@ -1872,7 +1868,9 @@
         "BK-38-AC1",
         "BK-38-AC2",
         "BK-45-AC1",
-        "BK-95-AC3"
+        "BK-95-AC3",
+        "BK-97-AC1",
+        "BK-97-AC2"
       ],
       "prerequisites": [
         "P17",
@@ -2045,7 +2043,9 @@
         "BK-38-AC1",
         "BK-38-AC2",
         "BK-45-AC1",
-        "BK-95-AC3"
+        "BK-95-AC3",
+        "BK-97-AC1",
+        "BK-97-AC2"
       ],
       "requires_completed_items": []
     },
@@ -4015,7 +4015,6 @@
         "BK-73-AC1",
         "BK-73-AC2",
         "BK-73-AC3",
-        "BK-73-AC4",
         "BK-74-AC1",
         "BK-74-AC2",
         "BK-74-AC3",
@@ -4108,7 +4107,6 @@
         "BK-73-AC1",
         "BK-73-AC2",
         "BK-73-AC3",
-        "BK-73-AC4",
         "BK-74-AC1",
         "BK-74-AC2",
         "BK-74-AC3",

@@ -3,7 +3,9 @@
 The exporter executes the JavaScript PRD generator.  A developer machine can
 hide a missing CI dependency behind an untracked ``node_modules`` directory,
 which is exactly how the first P01 implementation passed locally and failed in
-an isolated checkout.  The workflow and lockfile are therefore one contract.
+an isolated checkout.  The lockfile is therefore the contract: a clean install
+reproduces the renderer from it.  (The CI workflow that also installed it was
+retired by the owner on 26 September 2026 with BK-73-AC4.)
 """
 from __future__ import annotations
 
@@ -12,34 +14,13 @@ import json
 from pathlib import Path
 
 import pytest
-import yaml
 
 pytestmark = pytest.mark.class_a
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_class_a_ci_installs_the_locked_prd_renderer_before_running_export():
-    workflow = yaml.load(
-        (ROOT / ".github/workflows/class-a.yml").read_text(encoding="utf-8"),
-        Loader=yaml.BaseLoader,
-    )
-    steps = workflow["jobs"]["class-a"]["steps"]
-
-    setup = next((row for row in steps
-                  if row.get("uses") == "actions/setup-node@v4"), None)
-    assert setup is not None, "a clean Class-A worker never installs Node"
-    assert setup.get("with", {}).get("node-version") == "22"
-    assert setup["with"].get("cache-dependency-path") == \
-        "assurance/specification/prd/package-lock.json"
-
-    install = next((row for row in steps
-                    if row.get("name") == "Install locked PRD renderer dependencies"),
-                   None)
-    assert install is not None
-    assert install.get("working-directory") == "assurance/specification/prd"
-    assert install.get("run") == "npm ci --ignore-scripts"
-
+def test_the_prd_renderer_is_locked_so_a_clean_install_reproduces_it():
     prd = ROOT / "assurance" / "specification" / "prd"
     package = json.loads((prd / "package.json").read_text(encoding="utf-8"))
     lock = json.loads((prd / "package-lock.json").read_text(encoding="utf-8"))

@@ -5446,6 +5446,15 @@ evidence now contains only completed passing nodes; a skip makes the artifact
 unpublishable rather than a qualified success. The P4 separation check is
 Class D and retains its approved-run/configuration requirement.
 
+**BK-73-AC4 retired by the owner, 26 September 2026.** The requirement that
+every pushed commit be checked by a repository Class-A CI job is withdrawn as
+an old requirement. `.github/workflows/class-a.yml`, the test that proved it
+(`test_pushes_and_pull_requests_run_the_repository_class_a_gate`) and the
+criterion are removed; the owner checks changes manually. AC1 to AC3 -- evidence
+bound to the exact execution that earned it -- are unchanged, and
+`assurance/control_plane/evidence.py ci` still runs the canonical Class-A
+selection locally when asked.
+
 ## BK-74 — Start Build Test and Sign-off are enforced delivery states with records
 
 Opened 10 September 2026 after reviewing the split build playbooks.

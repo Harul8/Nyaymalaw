@@ -226,8 +226,8 @@ successful complete Class-A selection, and its source fingerprint must still
 match the product, tests, tools, browser assets and plan contract. A test path
 is a promise to run something; it is not evidence that it ran. `python
 assurance/control_plane/evidence.py ci` performs the canonical run and then checks the current
-artifact and backlog; the repository workflow runs it on every push and pull
-request.
+artifact and backlog. It runs locally when asked; no repository workflow runs
+it on push (BK-73-AC4 was retired by the owner on 26 September 2026).
 
 The fingerprint deliberately excludes authored delivery status, evidence
 verdicts and generated prose, so publishing a result does not invalidate

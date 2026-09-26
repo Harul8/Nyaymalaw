@@ -101,12 +101,3 @@ def test_non_automated_pass_needs_a_structured_dated_record():
 
     assert any("structured evidence record" in problem for problem in problems)
     assert evidence["_effective_result"] == "NOT_RUN"
-
-
-def test_pushes_and_pull_requests_run_the_repository_class_a_gate():
-    """BK-73-AC4. Independent CI executes the canonical evidence command."""
-    workflow = ROOT / ".github" / "workflows" / "class-a.yml"
-    text = workflow.read_text(encoding="utf-8")
-    assert "push:" in text and "pull_request:" in text
-    assert "python assurance/control_plane/evidence.py ci" in text
-    assert "pip install -e .[dev]" in text
