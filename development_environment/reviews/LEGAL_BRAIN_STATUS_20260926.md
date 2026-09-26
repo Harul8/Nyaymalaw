@@ -3,7 +3,7 @@
 You are continuing work on **Nyaymalaw (NM)**, an AI legal assistant for Indian advocates (Telangana and Union law). The previous session ran out of usage; this section is everything you need to pick up. Read `CLAUDE.md` at the repo root before anything else -- its rules bind (generalised fixes only, invariant tests, measure before diagnosing, no fuzzy Act identification, three states, verify on the served path).
 
 ## Where things are
-- Repo `Harul8/Nyaymalaw`, branch **`claude/defect-shapes-review-q843ph`**, head **`6634547`**, pushed, working tree clean.
+- Repo `Harul8/Nyaymalaw`, branch **`claude/defect-shapes-review-q843ph`**, head at or after **`b5e25f6`** (this handover), pushed, working tree clean.
 - **The plan:** `docs/Nyaymalaw_Implementation_Plan.xlsx`. Sheet **Before Build** holds the requirements (10 columns per row); sheet **Implementation Plan** mirrors every LB/OM row and holds build state (col 39 Build status, 41 Evidence, 43 Test date, 44 Remaining gaps). `assurance/control_plane/plan_scenarios.requirement_problems()` must return `[]` after any edit. Workbook edits are made by one-off tools in `development_environment/one_off_tools/legal_brain_*_20260926.py`, which snapshot every cell, write only intended cells, and prove the rest unchanged on the saved file before replacing the source. Copy that pattern; never hand-edit cells.
 - **Decision record for this session:** `development_environment/reviews/SESSION_DECISIONS_20260926.md` (60 settled items, all verified present in the rows; re-run `development_environment/one_off_tools/session_decisions_check_20260926.py`).
 - **Build status of every legal-brain row:** the table below this handover.
