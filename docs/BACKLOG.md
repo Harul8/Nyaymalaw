@@ -8779,3 +8779,94 @@ verdict in the development container: it exceeds a 900-second budget, and it
 does so **at HEAD~1 as well**, in a worktree that never held the evaluation
 documents — so the cause is the container, not this change and not the drawn
 set. A suite that could not run is NOT ASSESSED and is recorded as such.
+
+## BK-98 — curated Indian practice tables: exact, sourced and counsel-reviewed
+
+Registered 26 September 2026 under LB-43, reconciling the legal-brain rows to the backlog on
+the owner's instruction. The practice-layer rows LB-120 to LB-125 were built on 25 September 2026 as curated
+tables in `backend/nm/knowledge/` (governing law, institution, interim relief, procedural periods, filing
+requirements) with the bench ranking through `identity.supersedes`, each behind a port and adapter and wired in
+the composition root; LB-120 is built but unwired.
+
+**What this item owns is the tables themselves** -- exact identification, `curated_from` on every entry, the
+provision read back rather than recited, counsel review, and the premise record. **It does not own the
+behaviours the tables serve**, which stay where the backlog already has them: notice, forum and maintainability
+thresholds (BK-95-AC1), the deadline register (BK-95-AC2), governing legal premises (BK-65-AC2) and interim
+protection (BK-70-AC1). Binding authority is validated by qualified review under BK-67-AC3.
+
+Tests exist for each table (`tests/test_which_code_governs_this_matter.py`,
+`tests/test_what_must_happen_before_a_filing.py`, `tests/test_which_authority_this_court_must_follow.py`,
+`tests/test_an_interim_application_is_decided_on_its_own_test.py`,
+`tests/test_the_clocks_that_run_inside_a_proceeding.py`, `tests/test_whether_a_filing_will_be_accepted.py`);
+they passed in the build container's full suite on 25 September and are not bound to a published Class-A
+result, so every criterion's evidence is empty. **No curated entry has been counsel-reviewed.**
+
+Candidates awaiting the owner's selection, not registered as criteria: LB-168 (admissibility of documents
+relied on), LB-169 (pleading requirements, checked inside BK-56's F-F-03) and LB-170 (Telangana local procedure;
+corpus identity with BK-84). Measured 26 September 2026: the Commercial Courts Act, the Telangana Court-fees and
+Suits Valuation Act and the Telangana Civil Courts Act are held in every store and absent only from
+`pipeline/manifest.yaml`.
+
+## BK-99 — the provider-neutral tool loop: tool calling, the tool envelope, the step log, replay and the switch
+
+Registered 26 September 2026 under LB-43 from the owner-directed loop rows LB-126 to LB-167,
+which are drafts awaiting the owner's approval; the item is `planned` and its Start Record is BLOCKED on that
+approval and on the LB-138 slice order.
+
+**What is new here**: tool calling on the model port across providers (LB-127), the tool envelope and registry
+(LB-129, LB-154, LB-162), the typed and saved step log (LB-164), record-and-replay (LB-146), the scratch-pad
+stream (LB-139) and building beside the pipeline with a switch per kind of turn (LB-138).
+
+**What it does not own**: the loop's choices of next action, completion and escalation are BK-91-AC1 and AC5;
+the golden comparison is BK-91-AC4; delegated work, its shared budget and its enabling evidence are BK-92. Six of
+the nine LB-138 slices are execution packets (P49 to P54); slices 5, 6 and 8 deliver only behaviour the backlog
+already owns and are re-sequencings of its existing packets, decided at the switch.
+
+## BK-100 — the loop's answer is checked, repaired and independently verified on every channel
+
+Registered 26 September 2026 under LB-43 from LB-133 (repair), LB-141 (the independent
+verifier), LB-144 (every figure from a tool) and the review's LB-67 amendment (one citation detector on every
+channel, the scratch pad included). Planned; depends on BK-99.
+
+**What it does not own**: the eighteen output checks and six professional boundaries already exist and keep
+their current owners; they run on the loop path through BK-99-AC6's one-implementation rule. Claims tied to
+sources are BK-64-AC1 and BK-91-AC2; authority to act is BK-63-AC1; the single acceptance path for findings is
+BK-92-AC2. The verifier's verdict fills the assessed states LB-103 already carries.
+
+## BK-101 — what the loop's model reads: the principles, a stable prefix, compaction from the file and the advocate's memory
+
+Registered 26 September 2026 under LB-43 from LB-126 (the principles document), LB-147 (stable
+prefix and append-only history), LB-135, LB-145, LB-149 and LB-150 (clearing, compaction from the file, tagged
+context), LB-148 (playbooks) and LB-151 (the advocate's memory). Planned; depends on BK-99.
+
+**What it does not own**: freshness and durable, version-checked writes are BK-36-AC2 and BK-65-AC1; the
+research sub-loop is delegated work under BK-92-AC1 and AC2 with BK-95-AC3; model output budgets are BK-29-AC1.
+
+## 26 September 2026 — the legal-brain rows reconciled to the backlog (LB-43)
+
+The owner chose to reconcile rather than register an item per slice: an item per slice would have restated
+about fifteen criteria the backlog already owns. New items exist only for work nobody owned (BK-98 to BK-101),
+and every one of today's LB rows names its delivery owner in its Dependencies column in
+`docs/Nyaymalaw_Implementation_Plan.xlsx`.
+
+**A packet contributes only to criteria it finally owns.** The blueprint requires every contribution to come
+before its criterion's final packet, so the loop's packets cannot contribute to criteria that P10 to P47 already
+finalise without making those earlier packets wait for the loop. Whether the loop re-delivers them is a
+re-sequencing the owner decides at the switch (LB-138); until then they are named, not rewired:
+
+| Slice | Packet | Final owner of | Related criteria already owned (their final packet) |
+|---|---|---|---|
+| — the practice tables | P48 | BK-98-AC1 to AC4 | BK-95-AC1, AC2 (P22), BK-65-AC2 (P22), BK-70-AC1 (P23) |
+| 1 loop foundation | P49 | BK-99-AC1, AC3, AC4 | BK-91-AC1, AC5 (P46), BK-92-AC1 (P47) |
+| 2 tools and born-digital text | P50 | BK-99-AC2 | BK-54-AC1 (P25), BK-97-AC1 (P21) |
+| 3 the harness after the loop | P51 | BK-100-AC1 to AC4 | BK-64-AC1 (P17), BK-63-AC1 (P32), BK-92-AC2 (P47), BK-91-AC2 (P46) |
+| 4 the scratch pad | P52 | BK-99-AC5 | BK-41-AC1 (P37), BK-66-AC1 (P34) |
+| 5 per-dispute answer and board | none | — | BK-37-AC1, AC2 (P26), BK-95-AC9 (P23), BK-54-AC2, AC3 (P24) |
+| 6 opposing counsel | none | — | BK-95-AC5, AC6 (P23), BK-92-AC4 (P37) |
+| 7 context | P53 | BK-101-AC1 to AC4 | BK-36-AC2 (P10), BK-65-AC1 (P18), BK-92-AC1 (P47), BK-95-AC3 (P21) |
+| 8 scans, photographs, audio | none | — | BK-54-AC1, BK-79-AC1 (P25) |
+| 9 comparison and switch | P54 | BK-99-AC6 | BK-91-AC4, BK-67-AC1 (P35) |
+
+The slice order is the review's revised proposal (born-digital PDF text in slice 2) and remains the owner's to
+confirm. Each packet's proof cites existing evaluation cases; dedicated cases for the loop are not yet
+specified.

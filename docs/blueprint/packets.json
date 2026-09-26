@@ -4593,6 +4593,530 @@
         "BK-92-AC2"
       ],
       "requires_completed_items": []
+    },
+    {
+      "id": "P48",
+      "module": "M07",
+      "title": "Curate the Indian practice tables and put each through counsel review",
+      "kind": "implementation",
+      "criteria": [
+        "BK-98-AC1",
+        "BK-98-AC2",
+        "BK-98-AC3",
+        "BK-98-AC4"
+      ],
+      "prerequisites": [
+        "P21",
+        "P22"
+      ],
+      "decisions": [
+        "CHOICE-01",
+        "CHOICE-07"
+      ],
+      "commands": [
+        "submit-turn",
+        "get-advice"
+      ],
+      "boundaries": [
+        {
+          "path": "backend/nm/knowledge/governing_law.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/knowledge/institution.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/knowledge/interim_relief.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/knowledge/procedural_period.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/knowledge/filing_requirement.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/knowledge/identity.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "The retrieved and read-back text of each provision or judgment an entry points to.",
+        "The owner's selection of rows, and a practising Telangana advocate's counsel review of every entry."
+      ],
+      "outputs": [
+        "Curated tables in backend/nm/knowledge with curated_from on every entry, each behind a port and adapter.",
+        "A counsel-review record per table before any dependent criterion is signed off."
+      ],
+      "steps": [
+        "Keep one curated table per rule family, identified on an exact key and never by fuzzy match.",
+        "Retrieve and read back the provision or judgment behind every entry; the table points to text and never replaces it.",
+        "Write each determination into the premise record so a correction reopens it through the dependency ledger.",
+        "With BK-84, add manifest entries and schedule atoms for the held Telangana court-fee and Civil Courts Acts and the Commercial Courts Act before any fee or s.12A condition is computed."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-015"
+        ],
+        "negative": [
+          "EVAL-011"
+        ],
+        "live": [
+          "EVAL-015"
+        ]
+      },
+      "expected": [
+        "A table entry never stands in for the provision it points to.",
+        "An uncurated key returns 'no curated table', never a neighbouring entry.",
+        "No criterion relying on a table is signed off before the table's counsel review."
+      ],
+      "rollback": "Withdraw an unreviewed or disputed entry to 'no curated table' and keep the retrieval path; never serve an entry whose source cannot be read back.",
+      "final_criteria": [
+        "BK-98-AC1",
+        "BK-98-AC2",
+        "BK-98-AC3",
+        "BK-98-AC4"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P49",
+      "module": "M07",
+      "title": "Slice 1 -- the loop foundation: tool calling on every provider, the budgeted runner, the step log and replay",
+      "kind": "implementation",
+      "criteria": [
+        "BK-99-AC1",
+        "BK-99-AC3",
+        "BK-99-AC4"
+      ],
+      "prerequisites": [],
+      "decisions": [
+        "CHOICE-02",
+        "CHOICE-05",
+        "CHOICE-06"
+      ],
+      "commands": [
+        "submit-turn"
+      ],
+      "boundaries": [
+        {
+          "path": "backend/nm/ports/model.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/adapters/model",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/core/turn.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/core/loop.py",
+          "kind": "planned"
+        },
+        {
+          "path": "backend/nm/adapters/model/anthropic_adapter.py",
+          "kind": "planned"
+        },
+        {
+          "path": "backend/nm/adapters/model/replay.py",
+          "kind": "planned"
+        }
+      ],
+      "inputs": [
+        "The model port (complete, structured, embed) and its OpenAI and scripted adapters.",
+        "The owner's approval of LB-127, LB-128, LB-146, LB-147 and LB-164 and of the LB-138 slice order."
+      ],
+      "outputs": [
+        "A tool-calling method on the model port with OpenAI, Anthropic and scripted adapters.",
+        "A loop runner with declared step, token, cost and time budgets, beside the TurnEngine behind a switch.",
+        "A typed, ordered, saved step log per turn, and a replay adapter from recordings."
+      ],
+      "steps": [
+        "Add one tool-calling method to the model port; provider formats stay inside the adapters.",
+        "Run the loop -- decide, call, read, decide again -- to an answer, a question, a no-progress stop or a budget stop, each disclosed; build it beside the TurnEngine behind a switch.",
+        "Append every step as a typed event to the turn's saved log.",
+        "Record model responses with the principles and tool versions in force, and replay them with no network on every commit."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-031"
+        ],
+        "negative": [
+          "EVAL-031"
+        ],
+        "live": [
+          "EVAL-031"
+        ]
+      },
+      "expected": [
+        "No provider format reaches the core.",
+        "No loop runs without a budget, and a budget stop is never presented as a finished answer.",
+        "A replay proves the harness and the tools, never live model quality."
+      ],
+      "rollback": "Keep the switch off: the TurnEngine serves every turn, and recordings and step logs are kept as evidence.",
+      "final_criteria": [
+        "BK-99-AC1",
+        "BK-99-AC3",
+        "BK-99-AC4"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P50",
+      "module": "M06",
+      "title": "Slice 2 -- tools: the envelope, the registry and the core tools over existing code, with born-digital document text",
+      "kind": "implementation",
+      "criteria": [
+        "BK-99-AC2"
+      ],
+      "prerequisites": [
+        "P49"
+      ],
+      "decisions": [
+        "CHOICE-02",
+        "CHOICE-07"
+      ],
+      "commands": [
+        "submit-turn",
+        "get-source",
+        "get-casefile"
+      ],
+      "boundaries": [
+        {
+          "path": "backend/nm/ports",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/knowledge/manifest.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/edge/uploads.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/core/tools.py",
+          "kind": "planned"
+        }
+      ],
+      "inputs": [
+        "The search, evidence and matter ports, the curated tables, and the limitation and deadline arithmetic.",
+        "Born-digital PDF uploads already admitted and stored."
+      ],
+      "outputs": [
+        "A registry declaring each tool once with its description, schema, parallel safety, kind and tests.",
+        "Core tools wrapping existing code, each returning the envelope.",
+        "Page-located text extracted from born-digital PDFs for read_document and search_matter."
+      ],
+      "steps": [
+        "Declare the envelope and the registry, with a planted-failure test for every tool.",
+        "Wrap existing code in the core tools: matter reads, identify_act and read_provision, authority search and resolve_citation, compute_limitation, ask_advocate and submit_answer.",
+        "Extract text with page locators from born-digital PDFs; a page with no text layer is reported as not extracted, never as empty."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-013"
+        ],
+        "negative": [
+          "EVAL-014"
+        ],
+        "live": [
+          "EVAL-013"
+        ]
+      },
+      "expected": [
+        "A zero result names its index.",
+        "Tools that identify never rank, and tools that rank never identify.",
+        "Nothing unextracted is read as searched and empty."
+      ],
+      "rollback": "Remove a tool from the registry and return 'not available' to the model; extracted text is a derivative and the original upload is untouched.",
+      "final_criteria": [
+        "BK-99-AC2"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P51",
+      "module": "M07",
+      "title": "Slice 3 -- the harness after the loop: checks, boundaries on tool calls, repair and the independent verifier",
+      "kind": "implementation",
+      "criteria": [
+        "BK-100-AC1",
+        "BK-100-AC2",
+        "BK-100-AC3",
+        "BK-100-AC4"
+      ],
+      "prerequisites": [
+        "P50"
+      ],
+      "decisions": [
+        "CHOICE-05",
+        "CHOICE-07"
+      ],
+      "commands": [
+        "submit-turn",
+        "get-advice"
+      ],
+      "boundaries": [
+        {
+          "path": "backend/nm/domain/gates.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/core/grounding.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/core/consistency.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/core/verifier.py",
+          "kind": "planned"
+        }
+      ],
+      "inputs": [
+        "The gate matrix and its existing checks.",
+        "A labelled set of claim-passage pairs for the verifier, chosen by the owner."
+      ],
+      "outputs": [
+        "The existing output checks and professional boundaries run on the loop path, with checks before and after every tool call.",
+        "A bounded repair step and an independent verifier.",
+        "One citation detector applied on every advocate-visible channel."
+      ],
+      "steps": [
+        "Run the eighteen output checks after the loop and the six boundaries around every tool call, calling the gate functions the pipeline calls.",
+        "Return a failed check to the model with its reason; withhold what still fails after the bound.",
+        "Add the independent verifier, reason first, its tier set by the labelled measurement.",
+        "Pass every model-written line on every channel through G-GROUND's detector."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-016"
+        ],
+        "negative": [
+          "EVAL-013"
+        ],
+        "live": [
+          "EVAL-016"
+        ]
+      },
+      "expected": [
+        "The model never skips, disables or waives a check.",
+        "A check that cannot run is not assessed, never passed.",
+        "The author never grades its own claim."
+      ],
+      "rollback": "Keep the switch off for any kind of turn whose checks do not all run on the loop path.",
+      "final_criteria": [
+        "BK-100-AC1",
+        "BK-100-AC2",
+        "BK-100-AC3",
+        "BK-100-AC4"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P52",
+      "module": "M09",
+      "title": "Slice 4 -- stream the loop's steps to the scratch pad",
+      "kind": "implementation",
+      "criteria": [
+        "BK-99-AC5"
+      ],
+      "prerequisites": [
+        "P51"
+      ],
+      "decisions": [
+        "CHOICE-02",
+        "CHOICE-06"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "backend/nm/edge/api.py",
+          "kind": "existing"
+        },
+        {
+          "path": "frontend/matter-workspace.js",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "The saved step log (P49) and the citation detector on every channel (P51).",
+        "The matter board in frontend/matter-workspace.js."
+      ],
+      "outputs": [
+        "A server-sent-events endpoint beside /api/turn, and a collapsible scratch-pad panel, closed by default, saved with each turn."
+      ],
+      "steps": [
+        "Stream each step event with its sequence number; resume a reconnecting client from its last number.",
+        "Render the panel grouped by dispute, in plain words, marked as working, with NM's judgment labelled.",
+        "Save each turn's scratch pad with the matter and show it again on reopening."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-031"
+        ],
+        "negative": [
+          "EVAL-034"
+        ],
+        "live": [
+          "EVAL-031"
+        ]
+      },
+      "expected": [
+        "The stream never shows an event the log does not hold.",
+        "No interim line reads as advice or shows an internal identifier."
+      ],
+      "rollback": "Hide the panel and show the saved record when the turn ends; the step log is unaffected.",
+      "final_criteria": [
+        "BK-99-AC5"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P53",
+      "module": "M04",
+      "title": "Slice 7 -- context for long matters: principles, stable prefix, clearing, compaction from the file, the research loop and memory",
+      "kind": "implementation",
+      "criteria": [
+        "BK-101-AC1",
+        "BK-101-AC2",
+        "BK-101-AC3",
+        "BK-101-AC4"
+      ],
+      "prerequisites": [
+        "P49"
+      ],
+      "decisions": [
+        "CHOICE-02",
+        "CHOICE-08"
+      ],
+      "commands": [
+        "submit-turn",
+        "get-casefile"
+      ],
+      "boundaries": [
+        {
+          "path": "backend/nm/domain/summary.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/domain/matter.py",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/core/context.py",
+          "kind": "planned"
+        }
+      ],
+      "inputs": [
+        "The matter file and its summary.",
+        "Owner-edited principles and the first playbooks, once approved."
+      ],
+      "outputs": [
+        "A principles document read every turn; a stable prefix with append-only history; clearing by locator; compaction to a brief regenerated from the file; a fresh-context research loop; the advocate memory."
+      ],
+      "steps": [
+        "Read the versioned principles at the start of every turn and freeze the prefix for the conversation.",
+        "Clear spent results to locator stubs, and compact to a brief regenerated from the checked file.",
+        "Run long reading as a fresh-context research loop that returns only findings with spans.",
+        "Keep the advocate's memory apart from every matter, written only with approval."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-010"
+        ],
+        "negative": [
+          "EVAL-006"
+        ],
+        "live": [
+          "EVAL-010"
+        ]
+      },
+      "expected": [
+        "A summary of the chat never replaces the file as the thing worked from.",
+        "No client fact enters the advocate's memory."
+      ],
+      "rollback": "Build each request from the file as today; keep the full transcript and step log on the record.",
+      "final_criteria": [
+        "BK-101-AC1",
+        "BK-101-AC2",
+        "BK-101-AC3",
+        "BK-101-AC4"
+      ],
+      "requires_completed_items": []
+    },
+    {
+      "id": "P54",
+      "module": "M09",
+      "title": "Slice 9 -- compare on the golden set and switch, one kind of turn at a time",
+      "kind": "implementation",
+      "criteria": [
+        "BK-99-AC6"
+      ],
+      "prerequisites": [
+        "P51",
+        "P52",
+        "P53"
+      ],
+      "decisions": [
+        "CHOICE-06",
+        "CHOICE-10"
+      ],
+      "commands": [],
+      "boundaries": [
+        {
+          "path": "assurance/journeys/run_goldens.py",
+          "kind": "existing"
+        },
+        {
+          "path": "docs/GOLDEN_SET.md",
+          "kind": "existing"
+        },
+        {
+          "path": "backend/nm/core/turn.py",
+          "kind": "existing"
+        }
+      ],
+      "inputs": [
+        "docs/GOLDEN_SET.md re-tagged with these slices, and the owner's approval of each live run.",
+        "The ledger for every live comparison."
+      ],
+      "outputs": [
+        "A recorded comparison per kind of turn with its date, versions, grounding, correctness and cost.",
+        "The switch per kind of turn, and the retired pipeline stages removed."
+      ],
+      "steps": [
+        "Run each kind of turn's golden subset through the pipeline and the loop, with the owner's approval of each run.",
+        "Switch a kind of turn only when the loop matches or beats the pipeline, with the cost per turn measured as a release row.",
+        "Remove the pipeline stages a switched kind no longer uses, so no second live path survives."
+      ],
+      "proof": {
+        "positive": [
+          "EVAL-034"
+        ],
+        "negative": [
+          "EVAL-034"
+        ],
+        "live": [
+          "EVAL-028"
+        ]
+      },
+      "expected": [
+        "No live golden run happens without the owner's approval of that run.",
+        "No second live path survives a switch."
+      ],
+      "rollback": "Turn the switch back for that kind of turn; pipeline stages are removed only after the switch has held.",
+      "final_criteria": [
+        "BK-99-AC6"
+      ],
+      "requires_completed_items": []
     }
   ],
   "planning_delivery_exclusions": [

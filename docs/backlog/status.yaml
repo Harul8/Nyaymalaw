@@ -4492,6 +4492,198 @@ items:
       expected_failure: the winner depends on iteration order, which is a coin toss wearing a score, and the BNS/BNSS pair resolves by whichever is visited first
 
 
+- id: BK-98
+  title: "curated Indian practice tables: exact, sourced and counsel-reviewed"
+  kind: substrate
+  priority: P1
+  delivery_status: in_progress
+  implementation: partial
+  verification: partial
+  affects_phases: [D, E]
+  record: docs/BACKLOG.md#bk-98-curated-indian-practice-tables-exact-sourced-and-counsel-reviewed
+  next_action: "put every curated entry through counsel review (none is reviewed yet); add manifest entries and schedule atoms for the held Telangana court-fee and Civil Courts Acts and the Commercial Courts Act with BK-84; the behaviours the tables serve stay owned by BK-95-AC1, BK-95-AC2, BK-65-AC2 and BK-70-AC1"
+  stage_records:
+    start: {result: READY, ref: docs/BACKLOG.md#bk-98-curated-indian-practice-tables-exact-sourced-and-counsel-reviewed}
+    build: {result: OPEN, ref: docs/BACKLOG.md#bk-98-curated-indian-practice-tables-exact-sourced-and-counsel-reviewed}
+    test: {result: OPEN, ref: docs/BACKLOG.md#bk-98-curated-indian-practice-tables-exact-sourced-and-counsel-reviewed}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-98-curated-indian-practice-tables-exact-sourced-and-counsel-reviewed}
+  acceptance:
+  - id: BK-98-AC1
+    requirement: "each curated practice table -- governing code by date, pre-institution conditions, binding authority, interim-relief tests, procedural periods and filing requirements -- identifies its entry on an exact key and never by fuzzy match, carries curated_from on every entry, and returns applies, does not apply, not assessed or no curated table"
+    required_evidence: [domain_test, adversarial_test]
+    evidence: {}
+    negative_control:
+      mutation: "look an entry up by a neighbouring key, or add an entry without curated_from"
+      expected_failure: "the lookup returns no curated table and the type refuses the entry"
+  - id: BK-98-AC2
+    requirement: "a table entry never stands in for the provision it points to: the provision is retrieved and read back before the answer relies on it, and no section is mapped across the old and new codes by equal number"
+    required_evidence: [domain_test, adversarial_test]
+    evidence: {}
+    negative_control:
+      mutation: "rely on an entry without retrieving its provision, or map an IPC section to the BNS by number"
+      expected_failure: "the reliance is withheld by G-GROUND and correspondence comes only from the curated table"
+  - id: BK-98-AC3
+    requirement: "every curated entry has a recorded counsel review against the actual section or judgment before any criterion relying on it is signed off"
+    required_evidence: [counsel_review]
+    evidence: {}
+    negative_control:
+      mutation: "sign off a criterion that relies on an unreviewed table entry"
+      expected_failure: "sign-off is refused and the unreviewed entry is named"
+  - id: BK-98-AC4
+    requirement: "a table determination enters the premise record, so correcting the date, court, relief or amount it rests on reopens it and everything resting on it through the dependency ledger"
+    required_evidence: [domain_test, integration_test]
+    evidence: {}
+    negative_control:
+      mutation: "correct a service date or a claimed amount across a boundary"
+      expected_failure: "the determination and its dependants reopen, with the prior value reported"
+- id: BK-99
+  title: "the provider-neutral tool loop: tool calling, the tool envelope, the step log, replay and the switch"
+  kind: substrate
+  priority: P1
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases: [B, C, D, E, F, G, H]
+  record: docs/BACKLOG.md#bk-99-the-provider-neutral-tool-loop-tool-calling-the-tool-envelope-the-step-log-replay-and-the-switch
+  next_action: "owner to approve LB-127, LB-129, LB-138, LB-146, LB-154, LB-164 and LB-139 and to confirm the LB-138 slice order; the loop's reasoning stays owned by BK-91-AC1, AC4 and AC5, and delegation by BK-92"
+  stage_records:
+    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-99-the-provider-neutral-tool-loop-tool-calling-the-tool-envelope-the-step-log-replay-and-the-switch}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-99-the-provider-neutral-tool-loop-tool-calling-the-tool-envelope-the-step-log-replay-and-the-switch}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-99-the-provider-neutral-tool-loop-tool-calling-the-tool-envelope-the-step-log-replay-and-the-switch}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-99-the-provider-neutral-tool-loop-tool-calling-the-tool-envelope-the-step-log-replay-and-the-switch}
+  acceptance:
+  - id: BK-99-AC1
+    requirement: "tool calling is one model-port method translated by each provider's adapter: one scripted conversation produces identical tool invocations through the OpenAI, Anthropic and scripted adapters, and a call to an undeclared tool or with malformed arguments is returned to the model as an error and never executed"
+    required_evidence: [domain_test, integration_test, adversarial_test]
+    evidence: {}
+    negative_control:
+      mutation: "execute an undeclared tool, act on malformed arguments, or let a provider tool format reach the core"
+      expected_failure: "the call is refused and returned to the model, and the core check fails on a provider format"
+  - id: BK-99-AC2
+    requirement: "every tool is declared once in a registry and returns one envelope -- found, not held, not found, not assessed or error, with its source, locator, index consulted and exclusions -- so a zero names its index; a closed vocabulary is required only as a tool's input key, and a tool absent from the registry cannot be called"
+    required_evidence: [domain_test, adversarial_test]
+    evidence: {}
+    negative_control:
+      mutation: "return an empty list with no status, or call a tool the registry does not declare"
+      expected_failure: "the result is refused before the model sees it and the repository check fails the build"
+  - id: BK-99-AC3
+    requirement: "every step of the loop is a typed event appended in order to the turn's saved log, which survives a failed turn and is what the harness reads as process evidence"
+    required_evidence: [domain_test, integration_test]
+    evidence: {}
+    negative_control:
+      mutation: "fail a turn mid-loop, or append a step out of order"
+      expected_failure: "the log keeps every step up to the failure, in order"
+  - id: BK-99-AC4
+    requirement: "a recorded conversation replays through the loop, tools and harness with no network or API key and reaches the same answer; a recording made under older principles or tools is marked stale, never replayed as current"
+    required_evidence: [domain_test, integration_test]
+    evidence: {}
+    negative_control:
+      mutation: "change the harness so an unsupported claim passes, or replay a recording across a principles change"
+      expected_failure: "the replay turns red, and the stale recording is refused"
+  - id: BK-99-AC5
+    requirement: "the step events stream to a scratch pad that is closed by default on desktop and phone, groups steps by dispute in plain words and marks them as working; the streamed events equal the saved ones in order, and a client that reconnects receives each later event exactly once"
+    required_evidence: [integration_test, browser_journey]
+    evidence: {}
+    negative_control:
+      mutation: "drop the stream mid-turn, or stream an event the log does not hold"
+      expected_failure: "the client resumes from its last sequence number and the stream and the log still agree"
+  - id: BK-99-AC6
+    requirement: "the loop is built beside the pipeline and switched one kind of turn at a time: during the overlap both call one implementation of each gate, after a kind is switched no code path reaches its retired stage, and the cost per turn is a release row measured before a live turn is served"
+    required_evidence: [domain_test, integration_test, production_measure]
+    evidence: {}
+    negative_control:
+      mutation: "call a copied gate on the loop path, reach a retired stage after the switch, or serve a live turn with its cost not measured"
+      expected_failure: "the repository check fails the build and the release row reads NOT MEASURED"
+- id: BK-100
+  title: "the loop's answer is checked, repaired and independently verified on every channel"
+  kind: substrate
+  priority: P0
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases: [B, C, D, E, F, G, H]
+  depends_on: [BK-99]
+  record: docs/BACKLOG.md#bk-100-the-loops-answer-is-checked-repaired-and-independently-verified-on-every-channel
+  next_action: "owner to approve LB-133, LB-141, LB-144 and the LB-67 amendment; the eighteen existing output checks and the professional boundaries keep their owners and run on the loop path through BK-99-AC6"
+  stage_records:
+    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-100-the-loops-answer-is-checked-repaired-and-independently-verified-on-every-channel}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-100-the-loops-answer-is-checked-repaired-and-independently-verified-on-every-channel}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-100-the-loops-answer-is-checked-repaired-and-independently-verified-on-every-channel}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-100-the-loops-answer-is-checked-repaired-and-independently-verified-on-every-channel}
+  acceptance:
+  - id: BK-100-AC1
+    requirement: "a failed check goes back to the model with its reason and is revised within a bound; what still fails is withheld with the conclusions resting on it, every attempt is in the step log, and the served bytes are the answer the harness checked"
+    required_evidence: [domain_test, adversarial_test]
+    evidence: {}
+    negative_control:
+      mutation: "submit an answer with one fabricated quotation, or edit the answer after its check"
+      expected_failure: "it is repaired or withheld with its reason, and the edited answer is refused"
+  - id: BK-100-AC2
+    requirement: "an independent verifier -- never the author and never shown the conversation -- gives its reason first and judges each claim against its cited passage, filling LB-103's assessed states; its tier and agreement are set by a labelled measurement counting both error directions"
+    required_evidence: [domain_test, adversarial_test, model_eval]
+    evidence: {}
+    negative_control:
+      mutation: "cite a real passage for a proposition it does not state, or let the author grade its own claim"
+      expected_failure: "the claim is marked does not support and repaired, and the self-grade is refused"
+  - id: BK-100-AC3
+    requirement: "every number and date in an answer maps to a computation tool's result or to the advocate's or a document's own words; an unmatched figure goes to repair, and a figure resting on an inferred premise is labelled conditional"
+    required_evidence: [domain_test, adversarial_test]
+    evidence: {}
+    negative_control:
+      mutation: "state a limitation expiry the tool did not compute"
+      expected_failure: "the figure is refused before release"
+  - id: BK-100-AC4
+    requirement: "every model-written line on every channel the advocate sees -- the answer, the step events and scratch pad, board items, questions and the compaction handover -- passes G-GROUND's own citation detector before it leaves, proved by one test that plants an unretrieved authority on each channel"
+    required_evidence: [domain_test, integration_test, adversarial_test]
+    evidence: {}
+    negative_control:
+      mutation: "plant a case that was never retrieved in a step event, a board item or a question"
+      expected_failure: "it reaches the advocate on none of them and the omission is shown"
+- id: BK-101
+  title: "what the loop's model reads: the principles, a stable prefix, compaction from the file and the advocate's memory"
+  kind: substrate
+  priority: P1
+  delivery_status: planned
+  implementation: none
+  verification: none
+  affects_phases: [B, C, D, E, F, G, H]
+  depends_on: [BK-99]
+  record: docs/BACKLOG.md#bk-101-what-the-loops-model-reads-the-principles-a-stable-prefix-compaction-from-the-file-and-the-advocates-memory
+  next_action: "owner to approve LB-126 and LB-147 to LB-151 and to choose the first playbooks; matter-state freshness and durability stay owned by BK-36-AC2 and BK-65-AC1"
+  stage_records:
+    start: {result: BLOCKED, ref: docs/BACKLOG.md#bk-101-what-the-loops-model-reads-the-principles-a-stable-prefix-compaction-from-the-file-and-the-advocates-memory}
+    build: {result: NOT_STARTED, ref: docs/BACKLOG.md#bk-101-what-the-loops-model-reads-the-principles-a-stable-prefix-compaction-from-the-file-and-the-advocates-memory}
+    test: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-101-what-the-loops-model-reads-the-principles-a-stable-prefix-compaction-from-the-file-and-the-advocates-memory}
+    signoff: {result: NOT_RUN, ref: docs/BACKLOG.md#bk-101-what-the-loops-model-reads-the-principles-a-stable-prefix-compaction-from-the-file-and-the-advocates-memory}
+  acceptance:
+  - id: BK-101-AC1
+    requirement: "one owner-edited principles document is read at the start of every turn and its version is recorded on the turn; a missing document stops the loop with a visible reason, and a change takes effect at the next turn boundary through compaction"
+    required_evidence: [domain_test, integration_test]
+    evidence: {}
+    negative_control:
+      mutation: "copy a principle into the turn path as a hard-coded rule, or run a turn without the document"
+      expected_failure: "the repository check refuses the copy and the turn is refused with its reason"
+  - id: BK-101-AC2
+    requirement: "within a conversation the principles and tools form a byte-stable prefix and the history is append-only on every provider; a corrected fact, a change notice or the remaining budget is appended, never edited into an earlier message"
+    required_evidence: [domain_test, integration_test]
+    evidence: {}
+    negative_control:
+      mutation: "inject a timestamp into the prefix or edit an earlier message"
+      expected_failure: "the prefix comparison reports the defect"
+  - id: BK-101-AC3
+    requirement: "spent results are cleared to a stub with their locator and re-fetched when needed; past the context budget the conversation restarts from a brief regenerated from the checked file with every line tagged by source and status, a handover that alters a fact is rejected, and an earlier turn stays readable word for word"
+    required_evidence: [domain_test, integration_test, adversarial_test]
+    evidence: {}
+    negative_control:
+      mutation: "alter a date in the compaction handover, or clear a span a pending claim cites"
+      expected_failure: "the handover is rejected against the file and the clearing is refused"
+  - id: BK-101-AC4
+    requirement: "the advocate's memory holds working preferences, written only with approval and never a client's facts, and practice-area playbooks load on demand with every legal pointer an exact key that resolves through the exact tools"
+    required_evidence: [domain_test, adversarial_test]
+    evidence: {}
+    negative_control:
+      mutation: "write a client's name to the advocate memory, or give a playbook a period with no source or a case named by its parties alone"
+      expected_failure: "the write is refused and the repository check fails on the playbook"
 events:
 - item: BK-54
   at: '2026-09-12'
