@@ -46,7 +46,7 @@ class SealedDocumentStore:
         if not isinstance(data, bytes) or not 0 < len(data) <= MAX_DERIVATIVE_BYTES:
             raise ValueError("the derivative is empty or exceeds its byte bound")
         path = self._path(matter_id, object_id)
-        sealed = self._sealer.seal(matter_id, data)
+        sealed = self._sealer.seal(matter_id, data, create_key=False)
         path.parent.mkdir(parents=True, exist_ok=True)
         # A failed write is unpublished; it may leave a sealed orphan but may
         # never overwrite another accepted object's identity.

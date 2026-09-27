@@ -338,20 +338,34 @@ class PostgresMatterStore:
         interleaving on one derivation graph both win.
         """
         saved = _with_version(matter, expected_version + 1)
-        sealed = self.sealer.seal(str(saved.id),
-                                  json.dumps(_encode(saved)).encode("utf8"))
         stamp = now_text()
         if expected_version == 0:
+            # Admit creation under the database's unique constraint BEFORE
+            # permitting key creation. A caller's expected_version=0 is only
+            # intent: sealing first could mint a replacement key for an
+            # existing erased matter before ON CONFLICT refused its write.
+            # This provisional row is private to _tx, and must be filled or
+            # rolled back in that same transaction; no empty row is committed.
             cur.execute(
                 "INSERT INTO nm_matter (workspace_id, matter_id, advocate_id, "
                 "version, sealed, updated_at) VALUES (%s, %s, %s, %s, %s, %s) "
                 "ON CONFLICT (workspace_id, matter_id) DO NOTHING",
                 (self.workspace_id, str(matter.id), matter.advocate_id, 1,
-                 sealed, stamp))
+                 b"", stamp))
             if cur.rowcount == 0:
                 raise StaleWrite(
                     f"matter {matter.id} already exists; this write expected "
                     f"to create it. Re-derive against the current state.")
+        sealed = self.sealer.seal(str(saved.id),
+                                  json.dumps(_encode(saved)).encode("utf8"),
+                                  create_key=expected_version == 0)
+        if expected_version == 0:
+            cur.execute(
+                "UPDATE nm_matter SET sealed = %s WHERE workspace_id = %s "
+                "AND matter_id = %s AND version = %s AND sealed = %s",
+                (sealed, self.workspace_id, str(matter.id), 1, b""))
+            if cur.rowcount != 1:
+                raise StaleWrite("The admitted matter creation did not retain its row")
             return saved
 
         cur.execute(

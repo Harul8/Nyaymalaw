@@ -63,7 +63,7 @@ class SealedUploadStore:
         if not 0 < len(data) <= MAX_CHUNK_BYTES:
             raise ValueError("upload chunk exceeds the observed-byte bound")
         path = self._path(matter_id, object_id)
-        sealed = self._sealer.seal(matter_id, data)
+        sealed = self._sealer.seal(matter_id, data, create_key=False)
         path.parent.mkdir(parents=True, exist_ok=True)
         # Never replace an object another receipt could already reference.
         with path.open("xb") as handle:

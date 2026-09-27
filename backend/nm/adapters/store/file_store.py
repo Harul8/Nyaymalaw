@@ -328,10 +328,10 @@ class FileMatterStore:
 
     # ------------------------------------------------------- the envelope ---
 
-    def _seal(self, matter_id: str, data: bytes) -> bytes:
+    def _seal(self, matter_id: str, data: bytes, *, create_key: bool = False) -> bytes:
         if self._sealer is None:
             return self._cipher.encrypt(data)
-        return self._sealer.seal(matter_id, data)
+        return self._sealer.seal(matter_id, data, create_key=create_key)
 
     def _open(self, matter_id: str, blob: bytes) -> bytes:
         """A sealed record, or one written before there were any.
@@ -393,7 +393,8 @@ class FileMatterStore:
                     f"against the current state rather than overwriting it."
                 )
             blob = self._seal(
-                str(matter.id), json.dumps(_enc(matter)).encode("utf8"))
+                str(matter.id), json.dumps(_enc(matter)).encode("utf8"),
+                create_key=current is None)
             # Atomic: a crash mid-write leaves the previous file intact.
             fd, tmp = tempfile.mkstemp(dir=str(self._matters), suffix=".tmp")
             try:

@@ -56,7 +56,12 @@ def test_device_namespace_is_not_treated_as_a_filesystem_upload_root():
 
 
 def test_actual_directory_link_cannot_redirect_original_reads_or_writes(tmp_path):
-    objects = FileMatterStore(tmp_path / "store", key=KEY).upload_storage()
+    from nm.domain.matter import Matter
+
+    store = FileMatterStore(tmp_path / "store", key=KEY)
+    store.commit(Matter(id="m_inside", advocate_id="owner", title="Inside", version=1),
+                 expected_version=0)
+    objects = store.upload_storage()
     objects.put("m_inside", "chunk_inside", b"synthetic original")
     assert objects.read("m_inside", "chunk_inside") == b"synthetic original"
     outside = tmp_path / "outside"
@@ -88,7 +93,12 @@ def test_actual_directory_link_cannot_redirect_original_reads_or_writes(tmp_path
 
 
 def test_parent_creation_during_resolution_preserves_one_storage_identity(tmp_path, monkeypatch):
-    objects = FileMatterStore(tmp_path / "store", key=KEY).upload_storage()
+    from nm.domain.matter import Matter
+
+    store = FileMatterStore(tmp_path / "store", key=KEY)
+    store.commit(Matter(id="m_race", advocate_id="owner", title="Race", version=1),
+                 expected_version=0)
+    objects = store.upload_storage()
     candidate = objects._root / "m_race" / "chunk_race.nm"
     assert not candidate.parent.exists()
     errors = []

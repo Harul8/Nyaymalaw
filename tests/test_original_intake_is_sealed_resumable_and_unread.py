@@ -294,6 +294,11 @@ def test_original_objects_cannot_be_overwritten_or_decrypted_under_another_matte
     from tests.test_turn_contract import KEY
 
     store = FileMatterStore(tmp_path, key=KEY)
+    # Custody belongs to an actual initial matter, never to an upload writer.
+    from nm.domain.matter import Matter
+
+    store.commit(Matter(id="m_one", advocate_id="owner", title="Upload custody", version=1),
+                 expected_version=0)
     objects = store.upload_storage()
     objects.put("m_one", "chunk_one", b"PRIVILEGED-SYNTHETIC")
     assert objects.read("m_one", "chunk_one") == b"PRIVILEGED-SYNTHETIC"

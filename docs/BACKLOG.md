@@ -2,6 +2,21 @@
 
 What is known, not done, and not yet a defect row. Opened 6 September 2026.
 
+## Tested custody checkpoint — 27 September 2026
+
+**IMPLEMENTED / scoped verification.** Only an admitted initial matter creation
+may create its encryption key. Existing matter, transcript, upload and derivative
+writers refuse missing custody instead of recreating an erased key. PostgreSQL
+admits the initial insert under its unique constraint before key creation; a
+sealing refusal rolls back the provisional transaction. The population test
+enumerates all four backend sealing call sites. Existing upload/containment
+fixtures now establish a real matter first; their security assertions remain.
+Final checkpoint: 61 passed, no failures/errors/skips, in 22.40 seconds;
+`.nm/evaluations/custody-checkpoint-20260927.xml`. PostgreSQL statement/rollback
+controls are not live database durability proof. No full Class-A, live legal-brain
+journey, legal qualification or whole-brain completion is asserted. Detail:
+`development_environment/reviews/MATTER_CUSTODY_CHECKPOINT_20260927.md`.
+
 ## Active diagnostic pass — review and five live matters, 22 September 2026
 
 **DG-17 / DG-18 — conflicting and legacy instructions: IMPLEMENTED / scoped verification.** Owner authorised
